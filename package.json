@@ -215,7 +215,7 @@
 		"runed": "^0.23.4",
 		"sharp": "^0.34.0",
 		"sortablejs": "^1.15.6",
-		"svelte-sonner": "^1.0.5",
+		"svelte-sonner": "^1.0.5"
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [
