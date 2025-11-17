@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import type { BuiltArea, BuiltCollection } from '$lib/core/config/types';
+	import { PARAMS } from '$lib/core/constant';
 	import { t__ } from '$lib/core/i18n/index.js';
 	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte';
 	import { ExternalLink, PencilRuler, X } from '@lucide/svelte';
@@ -21,6 +22,15 @@
 
 	const onCloseIsDefined = !!onClose;
 	const buttonLabel = $derived(form.values.id ? t__('common.save') : t__('common.create'));
+
+	function buildDocumentURL() {
+		let url = form.values.url;
+		if (url && form.values.versionId) {
+			url = url.includes('?') ? `${url}&` : `${url}?`;
+			url += `${PARAMS.VERSION_ID}=${form.values.versionId}`;
+		}
+		return url;
+	}
 </script>
 
 {#snippet topLeft()}
@@ -34,7 +44,13 @@
 
 	{#snippet bottomRight()}
 		{#if form.values.url}
-			<Button icon={ExternalLink} target="_blank" href={form.values.url} size="icon-sm" variant="secondary" />
+			<Button
+				icon={ExternalLink}
+				target="_blank"
+				href={buildDocumentURL()}
+				size="icon-sm"
+				variant="secondary"
+			/>
 		{/if}
 
 		{#if config.live && form.values._live}
@@ -54,7 +70,12 @@
 
 		{#if !form.config.versions}
 			<!-- scenario 1: no versions -->
-			<ButtonSave size="sm" label={buttonLabel} disabled={!form.canSubmit} processing={form.processing} />
+			<ButtonSave
+				size="sm"
+				label={buttonLabel}
+				disabled={!form.canSubmit}
+				processing={form.processing}
+			/>
 		{:else if form.config.versions && !form.config.versions.draft}
 			<!-- scenario 2: versions without draft -->
 			<ButtonSave
@@ -86,7 +107,13 @@
 			<!-- scenario 4: versions and draft, on a draft doc -->
 
 			<!-- PUBLISH -->
-			<ButtonSave size="sm" disabled={!form.canSubmit} processing={form.processing} label={buttonLabel} data-submit />
+			<ButtonSave
+				size="sm"
+				disabled={!form.canSubmit}
+				processing={form.processing}
+				label={buttonLabel}
+				data-submit
+			/>
 		{/if}
 	{/snippet}
 
