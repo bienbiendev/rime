@@ -3,6 +3,7 @@ import { VersionOperations } from '$lib/core/collections/versions/operations.js'
 import { VERSIONS_STATUS } from '$lib/core/constant.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { withVersionsSuffix } from '$lib/core/naming.js';
+import { recursiveRemoveKeys } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import path from 'path';
 import type { BuiltArea, BuiltCollection } from '../../../../types.js';
@@ -109,6 +110,9 @@ async function prepareDataForNewVersion(args: {
 	if (!data.status) {
 		data.status = VERSIONS_STATUS.DRAFT;
 	}
+
+	// Remove ownerId and id props from data
+	data = recursiveRemoveKeys('ownerId', 'id').from(data);
 
 	data.ownerId = originalDoc.id;
 	delete data.id;
