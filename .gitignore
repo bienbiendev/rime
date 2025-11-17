@@ -44,6 +44,7 @@ pnpm-lock.yaml
 
 .auto
 src/params
+src/lib/site
 /.zed
 rime.code-workspace
 
