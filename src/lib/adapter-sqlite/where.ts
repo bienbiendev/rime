@@ -54,12 +54,20 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 
 		// Handle id field for versioned collections
 		// if "id" inside the query it should refer to the root table
-		// record id not from the versions table
 		if (hasVersionsSuffix(slug) && 'id' in conditionObject) {
 			// Replace id with ownerId and keep the same operator and value
 			const idOperator = conditionObject.id;
 			delete conditionObject.id;
 			conditionObject.ownerId = idOperator;
+		}
+
+		// Handle versionId field for versioned collections
+		// if "versionId" inside the query it should refer to the id of the version table (current)
+		if (hasVersionsSuffix(slug) && 'versionId' in conditionObject) {
+			// Replace id with ownerId and keep the same operator and value
+			const idOperator = conditionObject.versionId;
+			delete conditionObject.versionId;
+			conditionObject.id = idOperator;
 		}
 
 		// Handle regular field conditions
