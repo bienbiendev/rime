@@ -353,7 +353,7 @@ export function recursiveRemoveKeys<K extends string>(...keys: K[]) {
 			return obj.map((item) => removeIn(item)) as RemoveKeysDeep<T, K>;
 		}
 
-		if (typeof obj === 'object') {
+		if (isObjectLiteral(obj)) {
 			const result: Record<string, unknown> = {};
 			for (const [key, value] of Object.entries(obj)) {
 				if (!keys.includes(key as K)) {
