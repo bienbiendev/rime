@@ -1,5 +1,5 @@
-import { toHash } from '$lib/util/string.js';
 import { json, type RequestEvent, type RequestHandler } from '@sveltejs/kit';
+import { createHash } from 'node:crypto';
 import { definePlugin, type Plugin } from '../index.js';
 import { Cache } from './cache.server.js';
 import { handler } from './handler.server.js';
@@ -21,6 +21,18 @@ type CacheOptions = {
 	 * isEnabled: (event) => !event.locals.user // default
 	 */
 	isEnabled?: (event: RequestEvent) => boolean;
+};
+
+/**
+ * Generates a numeric hash from a string using sha256 hashing algorithm.
+ * Useful for generating deterministic IDs from string content.
+ *
+ * @example
+ * // Returns a consistent numeric hash string
+ * toHash("hello");
+ */
+export const toHash = (str: string): string => {
+	return createHash('sha256').update(str).digest('hex'); // Full 64-char hex string
 };
 
 export const cache = definePlugin((options?: CacheOptions) => {
