@@ -58,7 +58,7 @@
 	let interceptedLeave = $state<{ url: string } | null>(null);
 	let isRedirect = $state(false);
 
-	beforeNavigate(async ({ cancel, complete, to, type }) => {
+	beforeNavigate(async ({ cancel, to }) => {
 		const hasCHanges = Object.keys(form.changes).length > 0;
 		if (!hasCHanges) return;
 		if (isRedirect) return;

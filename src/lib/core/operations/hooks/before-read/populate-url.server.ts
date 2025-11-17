@@ -24,7 +24,7 @@ export const populateURL = Hooks.beforeRead<'generic'>(async (args) => {
 		let url;
 
 		try {
-			url = config.$url(document as any);
+			url = config.$url(document);
 		} catch (err: any) {
 			logger.error(
 				`Error while generating url of ${config.slug} with id: ${args.doc.id}, ${err.message}`
