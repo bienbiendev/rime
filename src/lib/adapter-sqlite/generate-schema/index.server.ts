@@ -40,15 +40,15 @@ export async function generateSchemaString<T extends Config>(config: T) {
 
 		schema.push(templateHead(collectionSlug));
 
+		// utility function to filter out fields
+		const isRootField = (field: (typeof collection.fields)[number]) =>
+			'_root' in field.raw && field.raw._root;
+		const isNotRootField = (field: (typeof collection.fields)[number]) =>
+			!('_root' in field.raw) || !field.raw._root;
+
 		if (collection.versions) {
 			// Collection that have versions may need some fields forced on the root table and not root_versions
 			// process the root table with these fields first then, handle versions related tables creation
-
-			// utility function to filter out fields
-			const isRootField = (field: (typeof collection.fields)[number]) =>
-				'_root' in field.raw && field.raw._root;
-			const isNotRootField = (field: (typeof collection.fields)[number]) =>
-				!('_root' in field.raw) || !field.raw._root;
 
 			// 1. Process root table
 
@@ -77,8 +77,6 @@ export async function generateSchemaString<T extends Config>(config: T) {
 			// overwrite the collection name with the _versions one to generate all table
 			// eg. blocks, relation related to the _versions one
 			rootTableName = withVersionsSuffix(collectionSlug);
-			// Filter fields that should be processed, remove the _root ones
-			collection.fields = collection.fields.filter(isNotRootField);
 
 			// create specific relations between root <-> root_verions
 			const manyVersionsToOneName = `rel_${rootTableName}HasOne${toPascalCase(collectionSlug)}`;
@@ -112,7 +110,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
 			relationFieldsHasLocale
 		} = await buildRootTable({
 			blocksRegister,
-			fields: collection.fields,
+			fields: collection.versions ? collection.fields.filter(isNotRootField) : collection.fields,
 			rootName: rootTableName,
 			locales: config.localization?.locales || [],
 			hasAuth: !!collection.auth,
