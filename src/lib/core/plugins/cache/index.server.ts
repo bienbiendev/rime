@@ -9,7 +9,7 @@ export type CacheActions = {
 	get: <T>(name: string, get: () => Promise<T>) => Promise<T>;
 	clear: () => ReturnType<RequestHandler>;
 	isEnabled: (event: RequestEvent) => boolean;
-	createKey: (namespace: string, params: Record<string, unknown>) => string;
+	createKey: (namespace: string, params?: Record<string, unknown>) => string;
 };
 
 type CacheOptions = {
@@ -52,7 +52,7 @@ export const cache = definePlugin((options?: CacheOptions) => {
 	const actions: CacheActions = {
 		get: getAction,
 		clear: clearCache,
-		createKey: (namespace: string, params: Record<string, unknown>) => {
+		createKey: (namespace: string, params: Record<string, unknown> = {}) => {
 			// Start with the namespace
 			const values = [namespace];
 			// Add all parameter values in a consistent order (sort keys)
