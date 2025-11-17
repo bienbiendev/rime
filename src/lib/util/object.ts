@@ -335,3 +335,47 @@ export function matchStructure(source?: Dic, target?: Dic): boolean {
 	const sourceSet = new Set(sourceKeys);
 	return targetKeys.every((key) => sourceSet.has(key));
 }
+
+/**
+ * Recursively removes keys from any object or nested structure
+ *
+ * @example
+ *
+ * const cleaned = recursiveRemoveKeys('dishes', 'dirt').from(kitchen)
+ */
+export function recursiveRemoveKeys<K extends string>(...keys: K[]) {
+	function removeIn<T>(obj: T): RemoveKeysDeep<T, K> {
+		if (obj === null || obj === undefined) {
+			return obj as RemoveKeysDeep<T, K>;
+		}
+
+		if (Array.isArray(obj)) {
+			return obj.map((item) => removeIn(item)) as RemoveKeysDeep<T, K>;
+		}
+
+		if (typeof obj === 'object') {
+			const result: Record<string, unknown> = {};
+			for (const [key, value] of Object.entries(obj)) {
+				if (!keys.includes(key as K)) {
+					result[key] = removeIn(value);
+				}
+			}
+			return result as RemoveKeysDeep<T, K>;
+		}
+
+		return obj as RemoveKeysDeep<T, K>;
+	}
+
+	return {
+		from: removeIn
+	};
+}
+
+// Helper type for deep key removal
+type RemoveKeysDeep<T, K extends string> = T extends (infer U)[]
+	? RemoveKeysDeep<U, K>[]
+	: T extends object
+		? {
+				[P in keyof T as P extends K ? never : P]: RemoveKeysDeep<T[P], K>;
+			}
+		: T;
