@@ -40,7 +40,7 @@ function analyzeRoute(pathname: string): RouteInfo {
  * Ensures panel is properly set up before allowing access
  */
 async function ensureFirstAuthSetup<C extends Config>(rime: RimeContext<C>): Promise<void> {
-	if ((await rime.adapter.auth.hasAuthUser()) && !dev) {
+	if (!(await rime.adapter.auth.hasAuthUser()) && !dev) {
 		throw new RimeError(RimeError.NOT_FOUND);
 	}
 }
