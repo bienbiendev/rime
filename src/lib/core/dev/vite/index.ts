@@ -12,6 +12,7 @@ const dev = process.env.NODE_ENV === 'development';
 
 export function rime(): Plugin {
 	const VCoreId = '$rime/config';
+	const VSchemaId = '$rime/schema';
 
 	const resolvedVModule = (name: string) => '\0' + name;
 
@@ -95,6 +96,9 @@ export function rime(): Plugin {
 			if (id === VCoreId) {
 				return resolvedVModule(id);
 			}
+			if (id === VSchemaId) {
+				return resolvedVModule(id);
+			}
 
 			return null;
 		},
@@ -105,6 +109,14 @@ export function rime(): Plugin {
 			if (id === resolvedVModule(VCoreId)) {
 				const corePath = isServer ? 'rimecms/config/server' : 'rimecms/config/client';
 				return `export * from '${corePath}';`;
+			}
+
+			if (id === resolvedVModule(VSchemaId) && isServer) {
+				const schemaPath = path.resolve(process.cwd(), `src/lib/${OUTPUT_DIR}/schema.server.ts`);
+				if (existsSync(schemaPath)) {
+					const modulePath = schemaPath.replace('.ts', '.js');
+					return `export * from '${modulePath}'; export { default } from '${modulePath}';`;
+				}
 			}
 
 			return null;

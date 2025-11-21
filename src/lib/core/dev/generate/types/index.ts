@@ -129,6 +129,9 @@ const templateDeclareVirtualModule = () =>
 		`declare module '$rime/config' {`,
 		...(IS_PACKAGE_DEV ? ['\t// eslint-disable-next-line no-restricted-imports'] : []),
 		`\texport * from '${PACKAGE_NAME}/config/server';`,
+		`}`,
+		`declare module '$rime/schema' {`,
+		`\texport * from '$lib/+rime.generated/schema.server.js';`,
 		`}`
 	].join('\n');
 

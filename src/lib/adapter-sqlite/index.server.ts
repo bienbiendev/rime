@@ -1,5 +1,4 @@
 import type { Config } from '$lib/core/config/types.js';
-import { OUTPUT_DIR } from '$lib/core/dev/constants.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { GetRegisterType } from '$lib/index.js';
 import type { Dic } from '$lib/util/types.js';
@@ -39,9 +38,11 @@ const createAdapter = async <const C extends Config>(args: {
 }) => {
 	const { database, configCtx } = args;
 
-	const schema = (await import(
-		path.resolve(/* @vite-ignore */ process.cwd(), `src/lib/${OUTPUT_DIR}/schema.server.js`)
-	)) as { tables: Tables; default: Schema; relationFieldsMap: any };
+	const schema = (await import('$rime/schema')) as {
+		tables: Tables;
+		default: Schema;
+		relationFieldsMap: any;
+	};
 
 	const dbPath = path.join(process.cwd(), 'db', database);
 	const db = drizzle('file:' + dbPath, { schema: schema.default });
