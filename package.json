@@ -166,7 +166,7 @@
 	"dependencies": {
 		"@babel/generator": "^7.28.3",
 		"@babel/types": "^7.28.4",
-		"@bien-bien/css-reset": "^0.1.0",
+		"@bienbien/css-reset": "^0.1.2",
 		"@floating-ui/dom": "^1.7.4",
 		"@internationalized/date": "^3.8.2",
 		"@libsql/client": "^0.15.15",
