@@ -28,7 +28,8 @@
 			const { newIndex, oldIndex } = evt;
 
 			//@ts-expect-error annoying
-			const fromParentId = evt.item.getAttribute('data-parent') || evt.item.__attributes?.['data-parent'];
+			const fromParentId =
+				evt.item.getAttribute('data-parent') || evt.item.__attributes?.['data-parent'];
 			//@ts-expect-error annoying
 			const toParentId = evt.to.getAttribute('data-id') || evt.to.__attributes?.['data-id'];
 			//@ts-expect-error annoying
@@ -58,6 +59,7 @@
 	};
 
 	const initSortable = () => {
+		console.log('initSortable');
 		// Get all sortable containers including the root and nested ones
 		const sortableContainers = document.querySelectorAll('.rz-collection-sortable');
 
@@ -133,7 +135,9 @@
 					translate: calc(-1 * var(--rz-size-6)) calc(-1 * var(--gap));
 					position: absolute;
 					top: 0;
-					height: calc(var(--gap) + var(--half-h) + (var(--rows) - 1) * calc(var(--h) + var(--gap)));
+					height: calc(
+						var(--gap) + var(--half-h) + (var(--rows) - 1) * calc(var(--h) + var(--gap))
+					);
 					left: 0;
 				}
 				margin-top: var(--gap);
