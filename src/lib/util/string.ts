@@ -1,5 +1,5 @@
 import camelCase from 'camelcase';
-import sanitizeHtml from 'sanitize-html';
+import DOMPurify from 'isomorphic-dompurify';
 
 /**
  * Capitalizes the first letter of a string.
@@ -158,24 +158,15 @@ export const isCamelCase = (str: string) => /^[a-z][a-zA-Z0-9]*$/.test(str);
 export const isValidSlug = (str: string): boolean => /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(str);
 
 /**
- * Sanitizes user input by removing dangerous HTML tags while preserving allowed formatting tags
- * default options :
- * ```ts
- * const options = {
- *    allowedTags: ['strong', 'b', 'em', 'i', 'u', 'br', 'a'],
- *    allowedAttributes: {
- *      a: ['href', '_target']
- *    }
- * }
- * ```
+ * Sanitizes user input by removing dangerous HTML tags while preserving allowed formatting tags,
+ * allowed tags : ['strong', 'b', 'em', 'i', 'u', 'br', 'a']
+ * allowedAttributes : ['href', '_target']
  */
 export const sanitize = (value?: string): string => {
 	if (!value) return value || '';
 	const options = {
-		allowedTags: ['strong', 'b', 'em', 'i', 'u', 'br', 'a'],
-		allowedAttributes: {
-			a: ['href', '_target']
-		}
+		ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'u', 'br', 'a'],
+		ALLOWED_ATTR: ['href', '_target']
 	};
-	return sanitizeHtml(value, options);
+	return DOMPurify.sanitize(value, options);
 };
