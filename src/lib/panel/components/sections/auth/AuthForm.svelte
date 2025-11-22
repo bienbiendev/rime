@@ -112,7 +112,7 @@
 		}
 	}
 
-	.rz-auth__left.rz-auth--image {
+	.rz-auth.rz-auth--image {
 		background-size: cover;
 	}
 </style>
