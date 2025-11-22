@@ -1,5 +1,5 @@
 import camelCase from 'camelcase';
-import DOMPurify from 'isomorphic-dompurify';
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * Capitalizes the first letter of a string.
@@ -159,14 +159,36 @@ export const isValidSlug = (str: string): boolean => /^[a-zA-Z][a-zA-Z0-9_-]*$/.
 
 /**
  * Sanitizes user input by removing dangerous HTML tags while preserving allowed formatting tags,
+ * this doesn't encode/decode HTML entities.
  * allowed tags : ['strong', 'b', 'em', 'i', 'u', 'br', 'a']
  * allowedAttributes : ['href', '_target']
  */
 export const sanitize = (value?: string): string => {
 	if (!value) return value || '';
-	const options = {
-		ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'u', 'br', 'a'],
-		ALLOWED_ATTR: ['href', '_target']
-	};
-	return DOMPurify.sanitize(value, options);
+
+	const decode = (value: string) =>
+		value
+			.replace(/&amp;/g, '&')
+			.replace(/&quot;/g, '"')
+			.replace(/&lt;/g, '<')
+			.replace(/&gt;/g, '>')
+			.replace(/&#x27;/g, "'")
+			.replace(/&#39;/g, "'")
+			.replace(/&#38;/g, '&');
+
+	// Decode multiple levels of encoding on input
+	let decodedValue = value;
+	while (decodedValue.match(/&amp;|&quot;|&lt;|&gt;|&#x27;|&#39;|&#38;/)) {
+		decodedValue = decode(decodedValue);
+	}
+
+	const sanitized = sanitizeHtml(decodedValue, {
+		allowedTags: ['strong', 'b', 'em', 'i', 'u', 'br', 'a'],
+		allowedAttributes: {
+			a: ['href', '_target']
+		},
+		disallowedTagsMode: 'discard'
+	});
+
+	return decode(sanitized);
 };

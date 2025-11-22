@@ -206,7 +206,6 @@
 		"dotenv": "^16.4.7",
 		"drizzle-orm": "^0.44.2",
 		"flat": "^6.0.1",
-		"isomorphic-dompurify": "^2.32.0",
 		"js-cookie": "^3.0.5",
 		"magic-string-ast": "^1.0.2",
 		"nodemailer": "^6.10.0",

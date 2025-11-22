@@ -99,7 +99,7 @@ describe('sanitize', () => {
 		it('should preserve br tags', () => {
 			const input = 'Line 1<br>Line 2';
 			const result = sanitize(input);
-			expect(result).toBe('Line 1<br>Line 2');
+			expect(result).toBe('Line 1<br />Line 2');
 		});
 
 		it('should preserve a tags with allowed attributes', () => {
@@ -155,6 +155,18 @@ describe('sanitize', () => {
 			expect(result).toBe(input);
 		});
 
+		it('should preserve &', () => {
+			const input = 'one & two';
+			const result = sanitize(input);
+			expect(result).toBe(input);
+		});
+
+		it('should preserve accent, \' and "', () => {
+			const input = 'Il est important de s\'exprimer avec "élégance"';
+			const result = sanitize(input);
+			expect(result).toBe(input);
+		});
+
 		it('should handle mixed allowed and disallowed tags', () => {
 			const input = '<strong>Bold</strong><script>alert("XSS")</script><em>Italic</em>';
 			const result = sanitize(input);
@@ -162,7 +174,7 @@ describe('sanitize', () => {
 		});
 	});
 
-	describe('Filter Bypass Techniques (PortSwigger)', () => {
+	describe('Filter Bypass Techniques', () => {
 		it('should prevent nested script tag bypass', () => {
 			const malicious = '<script><script>alert(1)</script>';
 			const result = sanitize(malicious);
@@ -209,13 +221,57 @@ describe('sanitize', () => {
 			const result = sanitize(malicious);
 			expect(result).not.toContain('svg');
 			expect(result).not.toContain('onload');
+			expect(result).not.toContain('alert');
 		});
 
-		it('should safely handle HTML entities (no XSS risk)', () => {
+		it('should safely handle HTML entities', () => {
 			const malicious = '&lt;script&gt;alert(&#x27;XSS&#x27;)&lt;/script&gt;';
 			const result = sanitize(malicious);
-			// HTML entities are safe as plain text - they don't execute
-			expect(result).toBe('&lt;script&gt;alert(&#x27;XSS&#x27;)&lt;/script&gt;');
+			expect(result).toBe('');
+		});
+
+		it('should keep string after handling HTML entities', () => {
+			const malicious = '&lt;script&gt;alert(&#x27;XSS&#x27;)&lt;/script&gt;Hello';
+			const result = sanitize(malicious);
+			expect(result).toBe('Hello');
+		});
+
+		it('should handle double encoded HTML entities', () => {
+			const malicious = '&lt;script&gt;alert(&#x27;XSS&#x27;)&lt;/script&gt;Hello';
+			const encodedStr = malicious.replace(
+				/[\u00A0-\u9999<>&]/g,
+				(i) => '&#' + i.charCodeAt(0) + ';'
+			);
+			const result = sanitize(encodedStr);
+			expect(result).toBe('Hello');
+		});
+
+		it('should handle triple encoded HTML entities', () => {
+			const malicious = '<iframe src="javascript:alert(1)">Content</iframe>';
+			// First encoding: < becomes &lt;
+			let encoded = malicious.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+			// Second encoding: & becomes &amp;
+			encoded = encoded.replace(/&/g, '&amp;');
+			// Third encoding: & becomes &amp; again
+			encoded = encoded.replace(/&/g, '&amp;');
+			const result = sanitize(encoded);
+			expect(result).toBe('Content');
+		});
+
+		it('should handle mixed numeric and named entity encoding', () => {
+			// Mix of &#38; (numeric &) and &lt; (named <)
+			const encoded = '&#38;lt;script&#38;gt;alert(&#34;XSS&#34;)&#38;lt;/script&#38;gt;Text';
+			const result = sanitize(encoded);
+			expect(result).toBe('Text');
+		});
+
+		it('should handle deeply nested encoding with allowed tags', () => {
+			const input = '<strong>Bold</strong><script>alert(1)</script><em>Italic</em>';
+			// Double encode everything
+			let encoded = input.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+			encoded = encoded.replace(/&/g, '&amp;');
+			const result = sanitize(encoded);
+			expect(result).toBe('<strong>Bold</strong><em>Italic</em>');
 		});
 	});
 });
