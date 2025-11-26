@@ -1,5 +1,7 @@
+import { Parser } from '@thednp/domparser';
 import camelCase from 'camelcase';
-import DOMPurify from 'isomorphic-dompurify';
+
+let parser: ReturnType<typeof Parser>;
 
 /**
  * Capitalizes the first letter of a string.
@@ -161,10 +163,10 @@ export const isValidSlug = (str: string): boolean => /^[a-zA-Z][a-zA-Z0-9_-]*$/.
  * Sanitizes user input by removing dangerous HTML tags while preserving allowed formatting tags,
  * this doesn't encode/decode HTML entities.
  * allowed tags : ['strong', 'b', 'em', 'i', 'u', 'br', 'a']
- * allowedAttributes : ['href', '_target']
  */
 export const sanitize = (value?: string): string => {
 	if (!value) return value || '';
+	if (!parser) parser = Parser();
 
 	const decode = (value: string) =>
 		value
@@ -182,10 +184,95 @@ export const sanitize = (value?: string): string => {
 		decodedValue = decode(decodedValue);
 	}
 
-	const sanitized = DOMPurify.sanitize(decodedValue, {
-		ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'u', 'br', 'a'],
-		ALLOWED_ATTR: ['href', '_target']
-	});
+	const { root } = parser.parseFromString(decodedValue);
+
+	const allowedTags = new Set(['strong', 'b', 'em', 'i', 'u', 'br', 'a']);
+	const dangerousTags = new Set(['script', 'style', 'iframe', 'object', 'embed', 'svg']);
+	const eventHandlers = /^on[a-z]+$/i;
+	const dangerousUrls = /^(javascript:|data:text\/html)/i;
+
+	const processNode = (node: any): string => {
+		if (!node) return '';
+
+		// Handle text nodes
+		if (node.nodeName === '#text') {
+			return node.nodeValue || '';
+		}
+
+		// Handle comment nodes - remove them
+		if (node.nodeName === '#comment') {
+			return '';
+		}
+
+		// Handle element nodes
+		if (node.tagName) {
+			const tagName = node.tagName.toLowerCase();
+
+			// Remove dangerous tags entirely (including their content)
+			if (dangerousTags.has(tagName)) {
+				return '';
+			}
+
+			// Process children first
+			const childContent = node.children ? node.children.map(processNode).join('') : '';
+
+			// If not an allowed tag, return only the child content (strip the tag)
+			if (!allowedTags.has(tagName)) {
+				return childContent;
+			}
+
+			// For allowed tags, filter attributes
+			const safeAttributes: string[] = [];
+
+			if (node.attributes) {
+				for (const [key, value] of Object.entries(node.attributes)) {
+					const attrName = key.toLowerCase();
+					const attrValue = value as string;
+
+					// Remove event handlers
+					if (eventHandlers.test(attrName)) {
+						continue;
+					}
+
+					// For 'a' tags, only allow specific attributes
+					if (tagName === 'a') {
+						if (attrName === 'href') {
+							// Remove dangerous URLs
+							if (dangerousUrls.test(attrValue)) {
+								continue;
+							}
+							safeAttributes.push(`${attrName}="${attrValue}"`);
+						} else if (attrName === '_target') {
+							safeAttributes.push(`${attrName}="${attrValue}"`);
+						}
+						// Skip all other attributes for 'a' tags
+						continue;
+					}
+
+					// For other allowed tags, remove dangerous attributes
+					if (attrName === 'href' || attrName === 'src') {
+						if (dangerousUrls.test(attrValue)) {
+							continue;
+						}
+					}
+				}
+			}
+
+			// Build the tag
+			const attributeString = safeAttributes.length > 0 ? ' ' + safeAttributes.join(' ') : '';
+
+			// Handle self-closing tags
+			if (tagName === 'br') {
+				return `<${tagName}${attributeString}>`;
+			}
+
+			return `<${tagName}${attributeString}>${childContent}</${tagName}>`;
+		}
+
+		return '';
+	};
+
+	const sanitized = root.children ? root.children.map(processNode).join('') : '';
 
 	return decode(sanitized);
 };
