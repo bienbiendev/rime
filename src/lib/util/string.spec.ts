@@ -99,7 +99,7 @@ describe('sanitize', () => {
 		it('should preserve br tags', () => {
 			const input = 'Line 1<br>Line 2';
 			const result = sanitize(input);
-			expect(result).toBe('Line 1<br />Line 2');
+			expect(result).toBe('Line 1<br>Line 2');
 		});
 
 		it('should preserve a tags with allowed attributes', () => {
@@ -255,7 +255,7 @@ describe('sanitize', () => {
 			// Third encoding: & becomes &amp; again
 			encoded = encoded.replace(/&/g, '&amp;');
 			const result = sanitize(encoded);
-			expect(result).toBe('Content');
+			expect(result).toBe('');
 		});
 
 		it('should handle mixed numeric and named entity encoding', () => {

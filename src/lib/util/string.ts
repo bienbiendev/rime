@@ -1,5 +1,5 @@
 import camelCase from 'camelcase';
-import sanitizeHtml from 'sanitize-html';
+import DOMPurify from 'isomorphic-dompurify';
 
 /**
  * Capitalizes the first letter of a string.
@@ -182,12 +182,9 @@ export const sanitize = (value?: string): string => {
 		decodedValue = decode(decodedValue);
 	}
 
-	const sanitized = sanitizeHtml(decodedValue, {
-		allowedTags: ['strong', 'b', 'em', 'i', 'u', 'br', 'a'],
-		allowedAttributes: {
-			a: ['href', '_target']
-		},
-		disallowedTagsMode: 'discard'
+	const sanitized = DOMPurify.sanitize(decodedValue, {
+		ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'u', 'br', 'a'],
+		ALLOWED_ATTR: ['href', '_target']
 	});
 
 	return decode(sanitized);
