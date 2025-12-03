@@ -14,6 +14,7 @@ export const augmentPanel = <const T extends { panel?: Omit<PanelConfig, '$acces
 	] as const;
 
 	const panel = {
+		...config.panel,
 		routes: config.panel?.routes ? config.panel.routes : {},
 		language: config.panel?.language || 'en',
 		navigation: { groups: panelNavigationGroups },
