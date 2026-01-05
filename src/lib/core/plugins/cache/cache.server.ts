@@ -1,4 +1,5 @@
 import { getRequestEvent } from '$app/server';
+import { RimeError } from '$lib/core/errors';
 import { logger } from '$lib/core/logger/index.server.js';
 import fs from 'fs';
 import path from 'path';
@@ -105,9 +106,14 @@ export class Cache {
 	static clear() {
 		this.memoryCache.clear();
 
-		if (fs.existsSync(cachePath)) {
-			fs.rmSync(cachePath, { recursive: true });
-			fs.mkdirSync(cachePath);
+		try {
+			if (fs.existsSync(cachePath)) {
+				fs.rmSync(cachePath, { recursive: true });
+				fs.mkdirSync(cachePath);
+			}
+		} catch (err: any) {
+			logger.error('Failed to clear disk cache:', err);
+			throw new RimeError(RimeError.OPERATION_ERROR, err.message);
 		}
 	}
 }
