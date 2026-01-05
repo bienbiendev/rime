@@ -5,6 +5,7 @@
 	import Cookies from 'js-cookie';
 	import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
 	import { Languages } from '@lucide/svelte';
+	import { dev } from '$app/environment';
 
 	type Props = { onLocalClick: (code: string) => void };
 	const { onLocalClick }: Props = $props();
@@ -35,7 +36,10 @@
 					disabled={isActive(item.code)}
 					data-active={isActive(item.code) ? '' : null}
 					onclick={() => {
-						Cookies.set('Locale', item.code);
+						Cookies.set('Locale', item.code, { 
+							sameSite: 'strict',
+							secure: !dev
+						});
 						onLocalClick(item.code);
 					}}
 				>

@@ -6,6 +6,7 @@
 	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 	import Cookies from 'js-cookie';
 	import type { TabBuilder, TabsField } from '../index.js';
+	import { dev } from '$app/environment';
 
 	type Props = { config: TabsField; path: string; form: DocumentFormContext };
 
@@ -14,8 +15,7 @@
 	const cookieKey = `Tabs:${form.values.id || 'create'}:${initialPath}:${config.tabs.map((t) => t.name).join('-')}`;
 	let activeTabName = $state(Cookies.get(cookieKey) || config.tabs[0].name);
 
-	// Prevent localStorage opened tab to open
-	// if tab.live is false
+	// Prevent localStorage opened tab to open when tab.live is false
 	$effect(() => {
 		if (form.isLive) {
 			const currentActiveTab = config.tabs.find((tab) => tab.name === activeTabName);
@@ -26,18 +26,25 @@
 	});
 
 	let tabErrors = $state<string[]>([]);
-	const tabIds = $derived(config.tabs.map((tab) => `${tab.name}-${new Date().getTime().toString()}`));
+	const tabIds = $derived(
+		config.tabs.map((tab) => `${tab.name}-${new Date().getTime().toString()}`)
+	);
 
 	function onActiveTabChange(value: string | undefined): void {
 		value = value || config.tabs[0].name;
-		Cookies.set(cookieKey, value);
+		Cookies.set(cookieKey, value, {
+			sameSite: 'strict',
+			secure: !dev
+		});
 		activeTabName = value;
 	}
 
 	// Emphasize tabs that includes errors
 	$effect(() => {
 		if (form.errors.length) {
-			const errorsTabs = document.querySelectorAll<HTMLElement>('.rz-tabs-content:has(*[data-error])');
+			const errorsTabs = document.querySelectorAll<HTMLElement>(
+				'.rz-tabs-content:has(*[data-error])'
+			);
 			if (errorsTabs) {
 				tabErrors = Array.from(errorsTabs)
 					.map((el: HTMLElement) => (el.dataset.tabId ? el.dataset.tabId : false))
@@ -59,7 +66,10 @@
 	<Tabs.Root onValueChange={onActiveTabChange} value={activeTabName}>
 		<Tabs.List>
 			{#each config.tabs.filter(isTabVisible) as tab, index (index)}
-				<Tabs.Trigger data-error={tabErrors.includes(tabIds[index]) ? 'true' : null} value={tab.name}>
+				<Tabs.Trigger
+					data-error={tabErrors.includes(tabIds[index]) ? 'true' : null}
+					value={tab.name}
+				>
 					{tab.raw.label || tab.name}
 				</Tabs.Trigger>
 			{/each}
@@ -70,7 +80,12 @@
 				<!-- If the first field is a rich text field, render it directly -->
 				{#if tab.fields.length === 1 && tab.raw.fields[0].type === 'richText'}
 					{@const firstField = tab.raw.fields[0] as RichTextFieldBuilder}
-					<RichText standAlone={true} path="{path}{tab.name}.{firstField.name}" config={firstField.raw} {form} />
+					<RichText
+						standAlone={true}
+						path="{path}{tab.name}.{firstField.name}"
+						config={firstField.raw}
+						{form}
+					/>
 				{:else}
 					<!-- Otherwise, render the fields -->
 					<RenderFields fields={tab.raw.fields} path="{path}{tab.name}" {form} />

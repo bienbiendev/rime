@@ -42,7 +42,7 @@ export const signInActions: Actions = {
 			cookies.set(name, decodedValue, {
 				path: '/',
 				httpOnly: true,
-				sameSite: 'lax',
+				sameSite: 'strict',
 				maxAge: 604800,
 				secure: !dev
 			});
