@@ -23,10 +23,16 @@ export const ensureRelationExists: FieldHookShared = async (
 	// Skip relation validation on panel as it will be done server-side
 	if (browser) return value;
 
+	const getRequsetEvent = await import('$app/server').then((m) => m.getRequestEvent);
 	const output = [];
+
 	const retrieveRelation = async (id: string) => {
 		const [err, response] = await trycatchFetch(
-			`${env.PUBLIC_RIME_URL}/api/${config.relationTo}/${id}?${PARAMS.SELECT}=id`
+			`${env.PUBLIC_RIME_URL}/api/${config.relationTo}/${id}?${PARAMS.SELECT}=id`,
+			{
+				method: 'GET',
+				headers: getRequsetEvent().request.headers
+			}
 		);
 		if (err) return null;
 		const { doc } = await response.json();
