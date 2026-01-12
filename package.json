@@ -1,6 +1,6 @@
 {
 	"name": "rimecms",
-	"version": "0.23.18",
+	"version": "0.23.19",
 	"homepage": "https://github.com/bienbiendev/rime",
 	"scripts": {
 		"dev": "vite dev",
@@ -69,6 +69,10 @@
 		"./fields/rich-text": {
 			"types": "./dist/fields/rich-text/client.d.ts",
 			"import": "./dist/fields/rich-text/client.js"
+		},
+		"./fields/relation": {
+			"types": "./dist/fields/relation/client.d.ts",
+			"import": "./dist/fields/relation/client.js"
 		},
 		"./i18n": {
 			"types": "./dist/core/i18n/index.d.ts",
