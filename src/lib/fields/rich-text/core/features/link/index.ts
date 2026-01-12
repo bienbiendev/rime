@@ -8,9 +8,9 @@ import LinkSelector from './component/link-selector.svelte';
 const linkExtension = import.meta.env.SSR
 	? undefined
 	: Link.extend({
+			// @ts-expect-error @tiptap error
 			addOptions() {
 				return {
-					// @ts-expect-error @tiptap error
 					...this.parent?.(),
 					types: []
 				};

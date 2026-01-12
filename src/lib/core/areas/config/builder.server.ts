@@ -9,7 +9,10 @@ import { Hooks } from '$lib/core/operations/hooks/index.server.js';
 import { capitalize, toKebabCase } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';
 
-export const create = <S extends string>(slug: S, incomingConfig: AreaWithoutSlug<S>): BuiltArea => {
+export const create = <S extends string>(
+	slug: S,
+	incomingConfig: AreaWithoutSlug<S>
+): BuiltArea => {
 	const area: Area<S> = { ...incomingConfig, slug };
 
 	const initial = { ...area };
@@ -22,6 +25,7 @@ export const create = <S extends string>(slug: S, incomingConfig: AreaWithoutSlu
 	return {
 		...augmented,
 		type: 'area',
+		fields: augmented.fields || [],
 		slug: augmented.slug as BuiltArea['slug'],
 		kebab: toKebabCase(augmented.slug),
 		$url: augmented.$url as BuiltArea['$url'],

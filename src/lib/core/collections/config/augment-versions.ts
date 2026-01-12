@@ -3,14 +3,14 @@ import { VERSIONS_STATUS } from '$lib/core/constant.js';
 import { text } from '$lib/fields/text/index.js';
 import type { Collection } from '../../../types.js';
 
-type Input = { versions?: Collection<any>['versions']; fields: Collection<any>['fields'] };
+type Input = { versions?: Collection<any>['versions']; fields?: Collection<any>['fields'] };
 type WithVersionsConfig<T> = Omit<T, 'versions'> & { versions?: Required<VersionsConfig> };
 
 /**
  * Normalize versions prop and add status field if config.versions.draft is true
  */
 export const augmentVersions = <T extends Input>(config: T): WithVersionsConfig<T> => {
-	const fields = [...config.fields];
+	const fields = [...(config.fields || [])];
 	const { versions, ...rest } = config;
 
 	let normalizedVersions: Required<VersionsConfig> | undefined;

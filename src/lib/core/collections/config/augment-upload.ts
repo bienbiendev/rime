@@ -6,7 +6,9 @@ import { validatePath } from '../upload/util/path.js';
 
 export type WithNormalizedUpload<T> = Omit<T, 'upload'> & { upload?: UploadConfig };
 
-const withNormalizedUpload = <T extends { upload?: boolean | UploadConfig }>(config: T): WithNormalizedUpload<T> => {
+const withNormalizedUpload = <T extends { upload?: boolean | UploadConfig }>(
+	config: T
+): WithNormalizedUpload<T> => {
 	// Create a new object without the auth property
 	const { upload, ...rest } = config;
 	// Determine the normalized upload value
@@ -34,12 +36,13 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
 	if (!normalizedUploadConfig.upload) return normalizedUploadConfig;
 
 	const { upload } = normalizedUploadConfig;
-	let fields = [...config.fields];
+	let fields = [...(config.fields || [])];
 
 	if (upload) {
 		// Add panel thumbnail size if not already present
 		const isPanelThumbnailInSizes =
-			upload.imageSizes && upload.imageSizes.some((size: ImageSizesConfig) => size.name === 'thumbnail');
+			upload.imageSizes &&
+			upload.imageSizes.some((size: ImageSizesConfig) => size.name === 'thumbnail');
 		if (!isPanelThumbnailInSizes) {
 			const thumbnailSize = { name: 'thumbnail', width: 400, compression: 60 };
 			upload.imageSizes = [thumbnailSize, ...(upload.imageSizes || [])];
@@ -47,7 +50,9 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
 
 		// Add image size fields
 		if ('imageSizes' in upload && upload.imageSizes?.length) {
-			const sizesFields = upload.imageSizes.map((size: ImageSizesConfig) => text(toCamelCase(size.name)).hidden());
+			const sizesFields = upload.imageSizes.map((size: ImageSizesConfig) =>
+				text(toCamelCase(size.name)).hidden()
+			);
 			fields = [...fields, ...sizesFields];
 		}
 

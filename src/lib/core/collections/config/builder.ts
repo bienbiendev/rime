@@ -38,7 +38,7 @@ export const create = <S extends string>(
 		auth: augmented.auth,
 		nested: augmented.nested,
 		upload: augmented.upload,
-		fields: augmented.fields,
+		fields: augmented.fields || [],
 		asTitle: augmented.asTitle,
 		asThumbnail: augmented.asThumbnail,
 		versions: augmented.versions,

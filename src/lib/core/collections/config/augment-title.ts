@@ -5,7 +5,7 @@ import type { Collection } from '../../../types.js';
 type Input = {
 	upload?: UploadConfig;
 	auth?: false | CollectionAuthConfig;
-	fields: Collection<any>['fields'];
+	fields?: Collection<any>['fields'];
 };
 type WithAsTitle<T> = T & { asTitle: string };
 /**

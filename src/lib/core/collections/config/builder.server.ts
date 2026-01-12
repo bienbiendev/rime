@@ -34,6 +34,7 @@ export const create = <S extends string>(
 
 	return {
 		...augmented,
+		fields: augmented.fields || [],
 		$url: augmented.$url as BuiltCollection['$url'],
 		slug: augmented.slug as BuiltCollection['slug'],
 		kebab: toKebabCase(augmented.slug),

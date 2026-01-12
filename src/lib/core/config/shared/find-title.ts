@@ -8,7 +8,9 @@ import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import type { TextField } from '$lib/fields/text/index.js';
 import type { Field, FormField } from '$lib/fields/types.js';
 
-export const hasMaybeTitle = (field: Field): field is TextField | DateField | SlugField | EmailField =>
+export const hasMaybeTitle = (
+	field: Field
+): field is TextField | DateField | SlugField | EmailField =>
 	['text', 'date', 'slug', 'email'].includes(field.type);
 
 interface TitleFieldResult {
@@ -16,7 +18,10 @@ interface TitleFieldResult {
 	path: string;
 }
 
-export function findTitleField(fields: FieldBuilder<Field>[], basePath: string = ''): TitleFieldResult | null {
+export function findTitleField(
+	fields: FieldBuilder<Field>[] = [],
+	basePath: string = ''
+): TitleFieldResult | null {
 	for (const field of fields) {
 		// Direct check for isTitle
 		if (

@@ -10,9 +10,10 @@ export const augmentAuthServer = <T extends Collection<any>>(config: T): WithNor
 	/**
 	 * For APIKeys auth collections,
 	 * register the staff ownerId as a reference
+	 * this way APIKeys are always correlated to a staff member
 	 */
 	function addSchemaStaffReferenceForAPIKeys() {
-		collection.fields.forEach((field) => {
+		(collection.fields || []).forEach((field) => {
 			if (field instanceof FormFieldBuilder && field.name === 'ownerId') {
 				field = field.$generateSchema(
 					() => `ownerId: text('onwer_id').references(() => staff.id, {onDelete: 'cascade'})`

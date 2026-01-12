@@ -49,6 +49,7 @@ export function makeUploadDirectoriesCollections<C extends Config>(config: C) {
 					beforeCreate: [exctractPath]
 				},
 				asTitle: 'path',
+				asThumbnail: collection.asThumbnail,
 				panel: false,
 				_generateTypes: false,
 				_generateSchema: false

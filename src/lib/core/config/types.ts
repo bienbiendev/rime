@@ -183,7 +183,7 @@ export type PrototypePanelConfig = {
 type PrototypeConfig<S extends string = string> = {
 	slug: S;
 	/** Document fields definition */
-	fields: FieldBuilder<Field>[];
+	fields?: FieldBuilder<Field>[];
 	/** Optional icon */
 	icon?: Component<IconProps>;
 	/** Enable document versions */
@@ -285,6 +285,8 @@ export type ImageSizesConfig = {
 export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'upload' | 'auth'> & {
 	slug: CollectionSlug;
 	type: 'collection';
+	/** Make fields mandatory */
+	fields: FieldBuilder<Field>[];
 	/** The kebab-case version of the slug for urls */
 	kebab: string;
 	label: CollectionLabel;
@@ -305,12 +307,13 @@ export type BuiltAreaClient = Omit<BuiltArea, '$url' | '$hooks'>;
 export type BuiltArea = Omit<Area<string>, 'versions'> & {
 	slug: AreaSlug;
 	type: 'area';
+	/** Make fields mandatory */
+	fields: FieldBuilder<Field>[];
 	/** The kebab-case version of the slug for urls */
 	kebab: string;
 	label: string;
 	asTitle: string;
 	versions?: Required<VersionsConfig>;
-	fields: FieldBuilder<Field>[];
 	icon: Component<IconProps>;
 	access: WithRequired<Access, 'create' | 'read' | 'update' | 'delete'>;
 	_generateTypes?: false;

@@ -7,7 +7,10 @@ import type { Area, BuiltArea } from '$lib/core/config/types.js';
 import { capitalize, toKebabCase } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';
 
-export const create = <S extends string>(slug: S, incomingConfig: AreaWithoutSlug<S>): BuiltArea => {
+export const create = <S extends string>(
+	slug: S,
+	incomingConfig: AreaWithoutSlug<S>
+): BuiltArea => {
 	const area: Area<S> = { ...incomingConfig, slug };
 
 	const initial = { ...area };
@@ -22,7 +25,7 @@ export const create = <S extends string>(slug: S, incomingConfig: AreaWithoutSlu
 		kebab: toKebabCase(augmented.slug),
 		icon: augmented.icon || FileText,
 		label: augmented.label ? augmented.label : capitalize(area.slug),
-		fields: augmented.fields,
+		fields: augmented.fields || [],
 		asTitle: augmented.asTitle,
 		versions: augmented.versions,
 		live: incomingConfig.live || false,

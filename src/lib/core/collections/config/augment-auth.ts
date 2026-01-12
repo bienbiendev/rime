@@ -8,7 +8,7 @@ import { usersFields } from '../auth/fields.js';
 type Input = {
 	slug: string;
 	auth?: boolean | CollectionAuthConfig;
-	fields: Collection<any>['fields'];
+	fields?: Collection<any>['fields'];
 };
 export type WithNormalizedAuth<T> = Omit<T, 'auth'> & { auth?: CollectionAuthConfig };
 
@@ -88,7 +88,7 @@ export const augmentAuth = <T extends Input>(config: T): WithNormalizedAuth<T> =
 		// Add email field for non api key auth type.
 		...(!IS_API_AUTH ? [usersFields.email.clone()] : []),
 		rolesField,
-		...normalizedAuthConfig.fields,
+		...(normalizedAuthConfig.fields || []),
 		// Add apiKeyId for api key auth type.
 		...(IS_API_AUTH
 			? [

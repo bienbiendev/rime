@@ -1,12 +1,14 @@
 import type { CollectionWithoutSlug } from '$lib/core/collections/config/types.js';
-import type { Option } from '$lib/types.js';
+import type { Field, Option } from '$lib/types.js';
 import { access } from '$lib/util/index.js';
 import { UsersRound } from '@lucide/svelte';
 import cloneDeep from 'clone-deep';
 
-import type { AdditionalStaffConfig, CollectionAuthConfig } from '../types.js';
+import type { Access, AdditionalStaffConfig, Collection, CollectionAuthConfig } from '../types.js';
+import type { WithRequired } from '$lib/util/types.js';
+import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 
-export const staffCollection: CollectionWithoutSlug<'staff'> & { auth: CollectionAuthConfig } = {
+export const staffCollection = {
 	label: { singular: 'User', plural: 'Users' },
 	panel: {
 		description: 'Manage who can access your admin panel',
@@ -17,18 +19,18 @@ export const staffCollection: CollectionWithoutSlug<'staff'> & { auth: Collectio
 		roles: ['admin', 'staff']
 	},
 	icon: UsersRound,
-	fields: [],
+	fields: [] as FieldBuilder<Field>[],
 	access: {
 		read: (user) => access.isAdmin(user),
 		create: (user) => access.isAdmin(user),
 		delete: (user) => access.isAdmin(user),
 		update: (user, { id }) => access.isAdminOrMe(user, id)
-	}
-} as const;
+	} as Access
+};
 
 export const getStaffCollection = ({
 	roles: incomingRoles = [],
-	fields,
+	fields = [],
 	access,
 	panel,
 	label
@@ -71,5 +73,5 @@ export const getStaffCollection = ({
 		staffConfig.label = label;
 	}
 
-	return staffConfig;
+	return staffConfig as CollectionWithoutSlug<'staff'>;
 };

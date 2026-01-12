@@ -11,7 +11,7 @@ interface ThumbnailFieldResult {
 }
 
 export function findThumbnailField(
-	fields: FieldBuilder<Field>[],
+	fields: FieldBuilder<Field>[] = [],
 	basePath: string = ''
 ): ThumbnailFieldResult | null {
 	for (const field of fields) {

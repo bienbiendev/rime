@@ -2,7 +2,7 @@ import { findTitleField } from '$lib/core/config/shared/find-title.js';
 import type { Area } from '../../../types.js';
 
 type Input = {
-	fields: Area<any>['fields'];
+	fields?: Area<any>['fields'];
 };
 type WithAsTitle<T> = T & { asTitle: string };
 
