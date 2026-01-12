@@ -9,5 +9,8 @@
 	padding: var(--rz-size-1);
 	box-shadow: var(--rz-shadow-xl);
 	visibility: hidden;
+	position: absolute;
+	left: -9999px;
+	top: -9999px;
 	height: var(--rz-input-height);
 }
