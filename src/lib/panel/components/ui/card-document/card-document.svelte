@@ -5,7 +5,6 @@
 	type Props = { doc: GenericDoc };
 	const { doc }: Props = $props();
 
-	const hasPreview = $derived(doc.mimeType && doc.mimeType.includes('image'));
 	const thumbnailUrl = $derived.by(() => {
 		if (doc.mimeType && doc.mimeType.includes('image')) {
 			return doc._thumbnail;
@@ -16,9 +15,7 @@
 
 <div class="rz-document-card">
 	<div class="rz-document-card__preview">
-		{#if hasPreview}
-			<UploadThumbCell mimeType={doc.mimeType} url={thumbnailUrl} />
-		{/if}
+		<UploadThumbCell mimeType={doc.mimeType} url={thumbnailUrl} />
 	</div>
 
 	<div class="rz-document-card__body">
@@ -37,7 +34,8 @@
 <style lang="postcss">
 	/** */
 	:root {
-		--rz-card-hover-bg: light-dark(hsl(var(--rz-gray-14)), hsl(var(--rz-gray-1)));
+		--rz-card-hover-bg: light-dark(hsl(var(--rz-gray-14)), hsl(var(--rz-gray-4)));
+		--rz-card-bg: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));
 	}
 
 	.rz-document-card {
@@ -79,7 +77,9 @@
 	}
 
 	.rz-document-card__body {
-		display: block;
+		display: flex;
+		flex-direction: column;
+		gap: var(--rz-size-2);
 		text-align: left;
 		padding: 0 0.6rem 0.6rem 0.6rem;
 	}

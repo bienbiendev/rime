@@ -82,7 +82,10 @@
 					</div>
 				{:else}
 					{@const FileIcon = mimeTypeToIcon(form.values.mimeType)}
-					<FileIcon size="40" />
+					<div class="rz-doc-upload-header__prewiew-file">
+						<FileIcon size="40" />
+						<span>{form.values.mimeType}</span>
+					</div>
 				{/if}
 			</div>
 			<div class="rz-doc-upload-header__info">
@@ -109,6 +112,7 @@
 	}
 
 	.rz-doc-upload-header__file {
+		min-height: 250px;
 		border: var(--rz-border);
 		overflow: hidden;
 		border-radius: var(--radius-md);
@@ -122,6 +126,7 @@
 		overflow: hidden;
 		width: clamp(var(--rz-size-60), 40vw, 80%);
 		max-height: 400px;
+		background-color: light-dark(hsl(var(--rz-gray-12)), hsl(var(--rz-gray-3)));
 		@mixin radius-top md;
 	}
 
@@ -199,7 +204,8 @@
 		@mixin py var(--rz-size-4);
 	}
 	.rz-doc-upload-header__info h4 {
-		@mixin font-bold;
+		opacity: 0.4;
+		margin-bottom: var(--rz-size-1);
 		font-size: var(--rz-text-xs);
 	}
 	.rz-doc-upload-header__info a {
@@ -209,5 +215,12 @@
 	}
 	.rz-doc-upload-header__info p {
 		margin-bottom: var(--rz-size-3);
+	}
+	.rz-doc-upload-header__prewiew-file {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: var(--rz-size-2);
 	}
 </style>
