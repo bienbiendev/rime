@@ -174,7 +174,12 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			const ownersWithTotalCount = db
 				.select({ id: relationTable.ownerId })
 				.from(relationTable)
-				.where(and(...(localized ? [eq(relationTable.locale, locale)] : [])))
+				.where(
+					and(
+						eq(relationTable.path, column),
+						...(localized ? [eq(relationTable.locale, locale)] : [])
+					)
+				)
 				.groupBy(relationTable.ownerId)
 				.having(drizzleORM.eq(drizzleORM.count(relationTable.id), values.length));
 
@@ -185,12 +190,12 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 				.where(
 					and(
 						drizzleORM.inArray(relationTable[`${to}Id`], values),
+						eq(relationTable.path, column),
 						...(localized ? [eq(relationTable.locale, locale)] : [])
 					)
 				)
 				.groupBy(relationTable.ownerId)
 				.having(drizzleORM.eq(drizzleORM.count(relationTable.id), values.length));
-
 			return and(
 				inArray(table.id, ownersWithTotalCount),
 				inArray(table.id, ownersWithMatchingCount)
@@ -198,7 +203,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 		}
 
 		// Default behavior (membership checks with in_array etc.)
-		const conditions = [fn(relationTable[`${to}Id`], value)];
+		const conditions = [eq(relationTable.path, column), fn(relationTable[`${to}Id`], value)];
 
 		if (localized) {
 			conditions.push(eq(relationTable.locale, locale));

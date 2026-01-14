@@ -898,12 +898,22 @@ test('Contributors equality/membership (isolated)', async ({ request }) => {
 			attributes: {
 				title: 'Contributors Test',
 				slug: 'contributors-test',
+				author: [editor2Id],
 				contributors: [adminUserId, editor2Id]
 			}
 		}
 	});
 	const { doc } = await createRes.json();
 	const pid = doc.id;
+
+	// equals should find the page when searching one author
+	const authorIsEqualRes = await request
+		.get(`${API_BASE_URL}/pages?where[attributes.author][equals]=${editor2Id}`)
+		.then((r) => r.json());
+	expect(authorIsEqualRes.docs).toBeDefined();
+	expect(authorIsEqualRes.docs).toHaveLength(1);
+	expect(authorIsEqualRes.docs[0].attributes.author).toHaveLength(1);
+	expect(authorIsEqualRes.docs[0].attributes.author[0].documentId).toBe(editor2Id);
 
 	// in_array should find the page when searching by one contributor
 	const inArrayRes = await request
