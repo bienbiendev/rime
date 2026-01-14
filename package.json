@@ -114,8 +114,8 @@
 			"types": "./dist/types.d.ts"
 		},
 		"./upload": {
-			"types": "./dist/core/collections/upload/client.d.ts",
-			"import": "./dist/core/collections/upload/client.js"
+			"types": "./dist/core/collections/upload/util/client.d.ts",
+			"import": "./dist/core/collections/upload/util/client.js"
 		},
 		"./util": {
 			"types": "./dist/util/index.d.ts",
