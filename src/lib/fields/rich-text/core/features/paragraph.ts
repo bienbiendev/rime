@@ -1,4 +1,3 @@
-// /Users/ai/Dev/rime/src/lib/fields/rich-text/core/features/bold.ts
 import { Text } from '@lucide/svelte';
 import Paragraph from '@tiptap/extension-paragraph';
 import type { RichTextFeature, RichTextFeatureNode } from '../types.js';
