@@ -1,4 +1,4 @@
-const mimeTypesMap: Record<string, string[]> = {
+export const mimeTypesMap: Record<string, string[]> = {
 	// Images
 	'image/jpeg': ['jpg', 'jpeg'],
 	'image/png': ['png'],
