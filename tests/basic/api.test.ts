@@ -131,9 +131,11 @@ test('Should return 2 pages', async ({ request }) => {
 /** ---------------- SELECT ---------------- */
 
 test('Should return 2 pages with only attributes.slug and id prop', async ({ request }) => {
-	const response = await request.get(`${API_BASE_URL}/pages?select=attributes.slug`).then((response) => {
-		return response.json();
-	});
+	const response = await request
+		.get(`${API_BASE_URL}/pages?select=attributes.slug`)
+		.then((response) => {
+			return response.json();
+		});
 	expect(response.docs).toBeDefined();
 	expect(response.docs.length).toBe(2);
 	expect(response.docs[0].id).toBeDefined();
@@ -258,7 +260,9 @@ test('Should get correct offset / limit', async ({ request }) => {
 		const pagination = i;
 		const offset = (pagination - 1) * 10;
 		const response = await request
-			.get(`${API_BASE_URL}/pages?where[attributes.slug][like]=other-&limit=10&offset=${offset}&sort=createdAt`)
+			.get(
+				`${API_BASE_URL}/pages?where[attributes.slug][like]=other-&limit=10&offset=${offset}&sort=createdAt`
+			)
 			.then((response) => {
 				return response.json();
 			});
@@ -449,13 +453,18 @@ test('Should get editor user', async ({ request }) => {
 });
 
 test('Should logout super admin', async ({ request }) => {
+	const headers = await signInSuperAdmin(request);
 	const response = await request
 		.post(`${API_BASE_URL}/auth/sign-out`, {
-			headers: await signInSuperAdmin(request)
+			headers
 		})
 		.then((r) => r.json());
 
 	expect(response.success).toBe(true);
+	const responseSession = await request.get(`${API_BASE_URL}/auth/get-session`, { headers });
+	expect(responseSession.status()).toBe(200);
+	const json = await responseSession.json();
+	expect(json).toBeNull();
 });
 
 test('Should not update Home', async ({ request }) => {
@@ -628,8 +637,20 @@ test('Should get settings with only id and maintenance', async ({ request }) => 
 /****************************************************/
 
 test('Should not logout admin user', async ({ request }) => {
-	const response = await request.post(`${API_BASE_URL}/auth/sign-out`);
-	expect(response.status()).toBe(400);
+	const headersAdmin = await signInSuperAdmin(request);
+	const headersUser = await signInEditor(request);
+	await request.post(`${API_BASE_URL}/auth/sign-out`);
+	await request.post(`${API_BASE_URL}/auth/sign-out`, {
+		headers: headersUser
+	});
+	const response = await request.get(`${API_BASE_URL}/auth/get-session`, {
+		headers: headersAdmin
+	});
+	expect(response.status()).toBe(200);
+	const data = await response.json();
+	expect(data.user).toBeDefined();
+	expect(data.user.email).toBe('admin@bienoubien.studio');
+	expect(data.session).toBeDefined();
 });
 
 test('Should login editor', async ({ request }) => {
@@ -752,19 +773,19 @@ test('Editor should not update other editors', async ({ request }) => {
 	expect(response.status()).toBe(403);
 });
 
-test('Should not logout editor', async ({ request }) => {
-	const response = await request.post(`${API_BASE_URL}/auth/sign-out`);
-	expect(response.status()).toBe(400);
-});
-
 test('Should logout editor', async ({ request }) => {
+	const headers = await signInEditor(request);
 	const response = await request
 		.post(`${API_BASE_URL}/auth/sign-out`, {
-			headers: await signInEditor(request)
+			headers
 		})
 		.then((r) => r.json());
 
 	expect(response.success).toBe(true);
+	const responseSession = await request.get(`${API_BASE_URL}/auth/get-session`, { headers });
+	expect(responseSession.status()).toBe(200);
+	const json = await responseSession.json();
+	expect(json).toBeNull();
 });
 
 /****************************************************/
