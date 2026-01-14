@@ -151,6 +151,17 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			return eq(table.id, '-1'); // No document will have ID = -1, so this will always be false
 		}
 
+		// Unsupported operator for multi-valued relations
+		const supportedRelationManyOperators = ['equals', 'not_equals', 'in_array', 'not_in_array'];
+
+		if (fieldConfig.many && !supportedRelationManyOperators.includes(operator)) {
+			logger.warn(
+				`the operator "${operator}" is not supported for multi-valued relation field "${column}" in ${documentConfig.slug} document`
+			);
+			// Return a condition that will always be false
+			return eq(table.id, '-1'); // No document will have ID = -1, so this will always be false
+		}
+
 		// Only compare with the relation ID for now
 		// @TODO handle relation props ex: author.email
 		const [to, localized] = [fieldConfig.relationTo, fieldConfig.localized];
@@ -161,11 +172,12 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 		// strict equality semantics (the relation set must equal the provided value(s)).
 		if (fieldConfig.many && operator === 'equals') {
 			// Accept array inputs, repeated params, or CSV values for equality checks
-			let values: any[] = Array.isArray(rawValue)
-				? rawValue
-				: typeof rawValue === 'string' && rawValue.includes(',')
-					? rawValue.split(',')
-					: [value];
+			let values: any[] = (() => {
+				if (Array.isArray(rawValue)) return rawValue;
+				if (typeof rawValue === 'string' && rawValue.includes(',')) return rawValue.split(',');
+				if (Array.isArray(value)) return value;
+				return [value];
+			})();
 
 			// Ensure values are unique
 			values = Array.from(new Set(values));
@@ -202,27 +214,16 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			);
 		}
 
-		// Warn and return always-false for unsupported operators on multi-valued relations
-		if (
-			fieldConfig.many &&
-			!['equals', 'in_array', 'not_in_array', 'not_equals'].includes(operator)
-		) {
-			logger.warn(
-				`Unsupported operator "${operator}" for multi-valued relation field "${column}" in ${documentConfig.slug} document`
-			);
-			// Return a condition that will always be false
-			return eq(table.id, '-1');
-		}
-
 		// For multi-valued relations, allow `in_array` to act as a subset check:
 		// The provided values must contain ALL relation values of the document.
 		if (fieldConfig.many && operator === 'in_array') {
 			// Accept array inputs, repeated params, or CSV values for in_array checks
-			let values: any[] = Array.isArray(rawValue)
-				? rawValue
-				: typeof rawValue === 'string' && rawValue.includes(',')
-					? rawValue.split(',')
-					: [value];
+			let values: any[] = (() => {
+				if (Array.isArray(rawValue)) return rawValue;
+				if (typeof rawValue === 'string' && rawValue.includes(',')) return rawValue.split(',');
+				if (Array.isArray(value)) return value;
+				return [value];
+			})();
 
 			// Ensure values are unique
 			values = Array.from(new Set(values));
@@ -262,13 +263,14 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 		}
 
 		// For multi-valued relations, `not_in_array` should match documents where the provided
-		// set does NOT contain all of the document's relation values (i.e. inverse of `in_array`).
+		// set does NOT contain all of the document's relation values (inverse of `in_array`).
 		if (fieldConfig.many && operator === 'not_in_array') {
-			let values: any[] = Array.isArray(rawValue)
-				? rawValue
-				: typeof rawValue === 'string' && rawValue.includes(',')
-					? rawValue.split(',')
-					: [value];
+			let values: any[] = (() => {
+				if (Array.isArray(rawValue)) return rawValue;
+				if (typeof rawValue === 'string' && rawValue.includes(',')) return rawValue.split(',');
+				if (Array.isArray(value)) return value;
+				return [value];
+			})();
 
 			values = Array.from(new Set(values));
 
@@ -290,11 +292,12 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 
 		// For multi-valued relations, `not_equals` is the inverse of `equals` (exact-set inequality)
 		if (fieldConfig.many && operator === 'not_equals') {
-			let values: any[] = Array.isArray(rawValue)
-				? rawValue
-				: typeof rawValue === 'string' && rawValue.includes(',')
-					? rawValue.split(',')
-					: [value];
+			let values: any[] = (() => {
+				if (Array.isArray(rawValue)) return rawValue;
+				if (typeof rawValue === 'string' && rawValue.includes(',')) return rawValue.split(',');
+				if (Array.isArray(value)) return value;
+				return [value];
+			})();
 
 			values = Array.from(new Set(values));
 
@@ -315,7 +318,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 				.from(relationTable)
 				.where(
 					and(
-						drizzleORM.inArray(relationTable[`${to}Id`], values),
+						inArray(relationTable[`${to}Id`], values),
 						eq(relationTable.path, column),
 						...(localized ? [eq(relationTable.locale, locale)] : [])
 					)
