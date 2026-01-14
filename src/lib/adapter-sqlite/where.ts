@@ -156,6 +156,48 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 		const [to, localized] = [fieldConfig.relationTo, fieldConfig.localized];
 		const relationTableName = `${slug}Rels`;
 		const relationTable = getTable(relationTableName);
+
+		// Handle multi-valued relations specially when operator is `equals` to provide
+		// strict equality semantics (the relation set must equal the provided value(s)).
+		if (fieldConfig.many && operator === 'equals') {
+			// Accept array inputs, repeated params, or CSV values for equality checks
+			let values: any[] = Array.isArray(rawValue)
+				? rawValue
+				: typeof rawValue === 'string' && rawValue.includes(',')
+					? rawValue.split(',')
+					: [value];
+
+			// Ensure values are unique
+			values = Array.from(new Set(values));
+
+			// Owners with total relation count equal to values.length
+			const ownersWithTotalCount = db
+				.select({ id: relationTable.ownerId })
+				.from(relationTable)
+				.where(and(...(localized ? [eq(relationTable.locale, locale)] : [])))
+				.groupBy(relationTable.ownerId)
+				.having(drizzleORM.eq(drizzleORM.count(relationTable.id), values.length));
+
+			// Owners with matching relations count equal to values.length
+			const ownersWithMatchingCount = db
+				.select({ id: relationTable.ownerId })
+				.from(relationTable)
+				.where(
+					and(
+						drizzleORM.inArray(relationTable[`${to}Id`], values),
+						...(localized ? [eq(relationTable.locale, locale)] : [])
+					)
+				)
+				.groupBy(relationTable.ownerId)
+				.having(drizzleORM.eq(drizzleORM.count(relationTable.id), values.length));
+
+			return and(
+				inArray(table.id, ownersWithTotalCount),
+				inArray(table.id, ownersWithMatchingCount)
+			);
+		}
+
+		// Default behavior (membership checks with in_array etc.)
 		const conditions = [fn(relationTable[`${to}Id`], value)];
 
 		if (localized) {

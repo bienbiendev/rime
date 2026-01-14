@@ -399,6 +399,25 @@ test('Should return last created page with author depth', async ({ request }) =>
 	expect(doc.attributes.author.at(0).name).toBe('Admin');
 });
 
+// Relations queries: author (single) should work with equals and in_array
+test('Should find pages by author equals', async ({ request }) => {
+	const url = `${API_BASE_URL}/pages?where[attributes.author][equals]=${adminUserId}`;
+	const response = await request.get(url).then((r) => r.json());
+	expect(response.docs).toBeDefined();
+	const ids = response.docs.map((d: any) => d.id);
+	expect(ids).toContain(homeId);
+	expect(ids).toContain(pageWithAuthorId);
+});
+
+test('Should find pages by author in_array', async ({ request }) => {
+	const url = `${API_BASE_URL}/pages?where[attributes.author][in_array]=${adminUserId}`;
+	const response = await request.get(url).then((r) => r.json());
+	expect(response.docs).toBeDefined();
+	const ids = response.docs.map((d: any) => d.id);
+	expect(ids).toContain(homeId);
+	expect(ids).toContain(pageWithAuthorId);
+});
+
 test('Should return Page 2 (query)', async ({ request }) => {
 	const qs = `where[and][0][attributes.author][in_array]=${adminUserId}&where[and][1][attributes.slug][equals]=page-2&locale=en`;
 	const url = `${API_BASE_URL}/pages?${qs}`;
@@ -848,15 +867,6 @@ test('Should create page with multiple relations', async ({ request }) => {
 		}
 	};
 
-	clearLog();
-	logToFile({
-		title: 'Relations Test',
-		slug: 'relations-test',
-		author: [adminUserId],
-		contributors: [adminUserId, editor2Id],
-		ambassadors: [editor2Id]
-	});
-
 	const response = await request.post(`${API_BASE_URL}/pages`, {
 		headers: await signInSuperAdmin(request),
 		data: payload
@@ -875,6 +885,79 @@ test('Should create page with multiple relations', async ({ request }) => {
 	expect(verifyDoc.attributes.author).toHaveLength(1);
 	expect(verifyDoc.attributes.ambassadors).toHaveLength(1);
 	expect(verifyDoc.attributes.contributors).toHaveLength(2);
+});
+
+// Contributors exact-match and membership tests (isolated)
+
+test('Contributors equality/membership (isolated)', async ({ request }) => {
+	const headers = await signInSuperAdmin(request);
+	// Create an isolated page with two contributors
+	const createRes = await request.post(`${API_BASE_URL}/pages`, {
+		headers,
+		data: {
+			attributes: {
+				title: 'Contributors Test',
+				slug: 'contributors-test',
+				contributors: [adminUserId, editor2Id]
+			}
+		}
+	});
+	const { doc } = await createRes.json();
+	const pid = doc.id;
+
+	// in_array should find the page when searching by one contributor
+	const inArrayRes = await request
+		.get(`${API_BASE_URL}/pages?where[attributes.contributors][in_array]=${adminUserId}`)
+		.then((r) => r.json());
+	expect(inArrayRes.docs).toBeDefined();
+	const idsIn = inArrayRes.docs.map((d: any) => d.id);
+	expect(idsIn).toContain(pid);
+
+	// equals with single id should NOT match the page (since it has 2 contributors)
+	const equalsSingle = await request
+		.get(`${API_BASE_URL}/pages?where[attributes.contributors][equals]=${adminUserId}`)
+		.then((r) => r.json());
+	expect(equalsSingle.docs).toBeDefined();
+	const idsEqSingle = equalsSingle.docs.map((d: any) => d.id);
+	expect(idsEqSingle).not.toContain(pid);
+
+	// equals with CSV of both ids should match the page (exact set)
+	const equalsCSV = await request
+		.get(`${API_BASE_URL}/pages?where[attributes.contributors][equals]=${adminUserId},${editor2Id}`)
+		.then((r) => r.json());
+	expect(equalsCSV.docs).toBeDefined();
+	const idsEqCsv = equalsCSV.docs.map((d: any) => d.id);
+	expect(idsEqCsv).toContain(pid);
+
+	// cleanup
+	await request.delete(`${API_BASE_URL}/pages/${pid}`, { headers });
+});
+
+// Ambassadors (localized) tests
+test('Should match ambassadors equals for locale FR', async ({ request }) => {
+	const url = `${API_BASE_URL}/pages?where[attributes.ambassadors][equals]=${editor2Id}&locale=fr`;
+	const response = await request.get(url).then((r) => r.json());
+	expect(response.docs).toBeDefined();
+	const ids = response.docs.map((d: any) => d.id);
+	expect(ids).toContain(page2Id);
+});
+
+test('Should NOT match ambassadors equals for locale EN', async ({ request }) => {
+	const headers = await signInSuperAdmin(request);
+	// Update EN version with different ambassadors
+	await request.patch(`${API_BASE_URL}/pages/${page2Id}?locale=en`, {
+		headers,
+		data: {
+			attributes: {
+				ambassadors: [adminUserId, editor2Id]
+			}
+		}
+	});
+	const url = `${API_BASE_URL}/pages?where[attributes.ambassadors][equals]=${editor2Id}&locale=en`;
+	const response = await request.get(url).then((r) => r.json());
+	expect(response.docs).toBeDefined();
+	const ids = response.docs.map((d: any) => d.id);
+	expect(ids).not.toContain(page2Id);
 });
 
 test('Should empty author relation', async ({ request }) => {
