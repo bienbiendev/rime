@@ -202,6 +202,133 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			);
 		}
 
+		// Warn and return always-false for unsupported operators on multi-valued relations
+		if (
+			fieldConfig.many &&
+			!['equals', 'in_array', 'not_in_array', 'not_equals'].includes(operator)
+		) {
+			logger.warn(
+				`Unsupported operator "${operator}" for multi-valued relation field "${column}" in ${documentConfig.slug} document`
+			);
+			// Return a condition that will always be false
+			return eq(table.id, '-1');
+		}
+
+		// For multi-valued relations, allow `in_array` to act as a subset check:
+		// The provided values must contain ALL relation values of the document.
+		if (fieldConfig.many && operator === 'in_array') {
+			// Accept array inputs, repeated params, or CSV values for in_array checks
+			let values: any[] = Array.isArray(rawValue)
+				? rawValue
+				: typeof rawValue === 'string' && rawValue.includes(',')
+					? rawValue.split(',')
+					: [value];
+
+			// Ensure values are unique
+			values = Array.from(new Set(values));
+
+			// Owners that have at least one relation row not included in the provided set
+			const ownersWithNonMatching = db
+				.select({ id: relationTable.ownerId })
+				.from(relationTable)
+				.where(
+					and(
+						drizzleORM.notInArray(relationTable[`${to}Id`], values),
+						eq(relationTable.path, column),
+						...(localized ? [eq(relationTable.locale, locale)] : [])
+					)
+				)
+				.groupBy(relationTable.ownerId)
+				.having(drizzleORM.gt(drizzleORM.count(relationTable.id), 0));
+
+			// Owners that have any relation rows (to exclude docs with no relations)
+			const ownersWithRelations = db
+				.select({ id: relationTable.ownerId })
+				.from(relationTable)
+				.where(
+					and(
+						eq(relationTable.path, column),
+						...(localized ? [eq(relationTable.locale, locale)] : [])
+					)
+				)
+				.groupBy(relationTable.ownerId)
+				.having(drizzleORM.gt(drizzleORM.count(relationTable.id), 0));
+
+			// Match documents that have relations and do NOT have any non-matching relation rows
+			return and(
+				drizzleORM.notInArray(table.id, ownersWithNonMatching),
+				inArray(table.id, ownersWithRelations)
+			);
+		}
+
+		// For multi-valued relations, `not_in_array` should match documents where the provided
+		// set does NOT contain all of the document's relation values (i.e. inverse of `in_array`).
+		if (fieldConfig.many && operator === 'not_in_array') {
+			let values: any[] = Array.isArray(rawValue)
+				? rawValue
+				: typeof rawValue === 'string' && rawValue.includes(',')
+					? rawValue.split(',')
+					: [value];
+
+			values = Array.from(new Set(values));
+
+			const ownersWithNonMatching = db
+				.select({ id: relationTable.ownerId })
+				.from(relationTable)
+				.where(
+					and(
+						drizzleORM.notInArray(relationTable[`${to}Id`], values),
+						eq(relationTable.path, column),
+						...(localized ? [eq(relationTable.locale, locale)] : [])
+					)
+				)
+				.groupBy(relationTable.ownerId)
+				.having(drizzleORM.gt(drizzleORM.count(relationTable.id), 0));
+
+			return inArray(table.id, ownersWithNonMatching);
+		}
+
+		// For multi-valued relations, `not_equals` is the inverse of `equals` (exact-set inequality)
+		if (fieldConfig.many && operator === 'not_equals') {
+			let values: any[] = Array.isArray(rawValue)
+				? rawValue
+				: typeof rawValue === 'string' && rawValue.includes(',')
+					? rawValue.split(',')
+					: [value];
+
+			values = Array.from(new Set(values));
+
+			const ownersWithTotalCount = db
+				.select({ id: relationTable.ownerId })
+				.from(relationTable)
+				.where(
+					and(
+						eq(relationTable.path, column),
+						...(localized ? [eq(relationTable.locale, locale)] : [])
+					)
+				)
+				.groupBy(relationTable.ownerId)
+				.having(drizzleORM.eq(drizzleORM.count(relationTable.id), values.length));
+
+			const ownersWithMatchingCount = db
+				.select({ id: relationTable.ownerId })
+				.from(relationTable)
+				.where(
+					and(
+						drizzleORM.inArray(relationTable[`${to}Id`], values),
+						eq(relationTable.path, column),
+						...(localized ? [eq(relationTable.locale, locale)] : [])
+					)
+				)
+				.groupBy(relationTable.ownerId)
+				.having(drizzleORM.eq(drizzleORM.count(relationTable.id), values.length));
+
+			return or(
+				drizzleORM.notInArray(table.id, ownersWithTotalCount),
+				drizzleORM.notInArray(table.id, ownersWithMatchingCount)
+			);
+		}
+
 		// Default behavior (membership checks with in_array etc.)
 		const conditions = [eq(relationTable.path, column), fn(relationTable[`${to}Id`], value)];
 

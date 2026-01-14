@@ -915,29 +915,69 @@ test('Contributors equality/membership (isolated)', async ({ request }) => {
 	expect(authorIsEqualRes.docs[0].attributes.author).toHaveLength(1);
 	expect(authorIsEqualRes.docs[0].attributes.author[0].documentId).toBe(editor2Id);
 
-	// in_array should find the page when searching by one contributor
+	// in_array with a single id should NOT match the page (subset semantics require a superset)
 	const inArrayRes = await request
 		.get(`${API_BASE_URL}/pages?where[attributes.contributors][in_array]=${adminUserId}`)
 		.then((r) => r.json());
 	expect(inArrayRes.docs).toBeDefined();
 	const idsIn = inArrayRes.docs.map((d: any) => d.id);
-	expect(idsIn).toContain(pid);
+	expect(idsIn).not.toContain(pid);
 
-	// equals with single id should NOT match the page (since it has 2 contributors)
-	const equalsSingle = await request
-		.get(`${API_BASE_URL}/pages?where[attributes.contributors][equals]=${adminUserId}`)
+	// in_array with both ids should match the page (provided set is a superset)
+	const inArrayCsv = await request
+		.get(
+			`${API_BASE_URL}/pages?where[attributes.contributors][in_array]=${adminUserId},${editor2Id}`
+		)
 		.then((r) => r.json());
-	expect(equalsSingle.docs).toBeDefined();
-	const idsEqSingle = equalsSingle.docs.map((d: any) => d.id);
-	expect(idsEqSingle).not.toContain(pid);
+	expect(inArrayCsv.docs).toBeDefined();
+	const idsInCsv = inArrayCsv.docs.map((d: any) => d.id);
+	expect(idsInCsv).toContain(pid);
 
-	// equals with CSV of both ids should match the page (exact set)
-	const equalsCSV = await request
-		.get(`${API_BASE_URL}/pages?where[attributes.contributors][equals]=${adminUserId},${editor2Id}`)
+	// in_array with a superset (extra id) should still match
+	const inArraySuperset = await request
+		.get(
+			`${API_BASE_URL}/pages?where[attributes.contributors][in_array]=${adminUserId},${editor2Id},00000000-0000-0000-0000-000000000000`
+		)
 		.then((r) => r.json());
-	expect(equalsCSV.docs).toBeDefined();
-	const idsEqCsv = equalsCSV.docs.map((d: any) => d.id);
-	expect(idsEqCsv).toContain(pid);
+	expect(inArraySuperset.docs).toBeDefined();
+	const idsInSup = inArraySuperset.docs.map((d: any) => d.id);
+	expect(idsInSup).toContain(pid);
+
+	// not_in_array with a single id should match (provided set is not a superset)
+	const notInSingle = await request
+		.get(`${API_BASE_URL}/pages?where[attributes.contributors][not_in_array]=${adminUserId}`)
+		.then((r) => r.json());
+	expect(notInSingle.docs).toBeDefined();
+	const idsNotIn = notInSingle.docs.map((d: any) => d.id);
+	expect(idsNotIn).toContain(pid);
+
+	// not_in_array with both ids should NOT match (provided set is superset)
+	const notInCsv = await request
+		.get(
+			`${API_BASE_URL}/pages?where[attributes.contributors][not_in_array]=${adminUserId},${editor2Id}`
+		)
+		.then((r) => r.json());
+	expect(notInCsv.docs).toBeDefined();
+	const idsNotInCsv = notInCsv.docs.map((d: any) => d.id);
+	expect(idsNotInCsv).not.toContain(pid);
+
+	// not_equals with single id should match (sets differ)
+	const notEqSingle = await request
+		.get(`${API_BASE_URL}/pages?where[attributes.contributors][not_equals]=${adminUserId}`)
+		.then((r) => r.json());
+	expect(notEqSingle.docs).toBeDefined();
+	const idsNotEqSingle = notEqSingle.docs.map((d: any) => d.id);
+	expect(idsNotEqSingle).toContain(pid);
+
+	// not_equals with exact set should NOT match
+	const notEqCsv = await request
+		.get(
+			`${API_BASE_URL}/pages?where[attributes.contributors][not_equals]=${adminUserId},${editor2Id}`
+		)
+		.then((r) => r.json());
+	expect(notEqCsv.docs).toBeDefined();
+	const idsNotEqCsv = notEqCsv.docs.map((d: any) => d.id);
+	expect(idsNotEqCsv).not.toContain(pid);
 
 	// cleanup
 	await request.delete(`${API_BASE_URL}/pages/${pid}`, { headers });
