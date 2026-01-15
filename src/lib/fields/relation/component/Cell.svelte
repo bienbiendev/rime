@@ -17,7 +17,7 @@
 	let { value }: Props = $props();
 	let displayCount = $derived(value && value.length > 1);
 
-	const APIProxy = getAPIProxyContext(API_PROXY.DOCUMENT);
+	const APIProxy = getAPIProxyContext(API_PROXY.ROOT);
 
 	let APIUrl = $derived.by(() => {
 		if (value && value.length && value[0].documentId) {
