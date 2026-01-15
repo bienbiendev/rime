@@ -28,6 +28,7 @@ import { getCollectionContext } from './collection.svelte.js';
 import { setErrorsContext } from './errors.svelte.js';
 import { getLocaleContext } from './locale.svelte.js';
 import { getUserContext } from './user.svelte.js';
+import { richTextJSONToText } from 'rimecms/fields/rich-text';
 
 function createDocumentFormState<T extends GenericDoc = GenericDoc>({
 	initial,
@@ -77,8 +78,20 @@ function createDocumentFormState<T extends GenericDoc = GenericDoc>({
 			titleContext.value = documentConfig.label;
 			return documentConfig.label;
 		} else {
+			function computeTitleFromValue(value: unknown): string {
+				// Handle rich text value
+				if (isObjectLiteral(value) && 'content' in value) {
+					return richTextJSONToText(value as any);
+				}
+				if (typeof value === 'string') {
+					return value;
+				}
+				return initialTitle || doc.id;
+			}
+
 			$effect(() => {
-				title = getValueAtPath(documentConfig.asTitle, doc) || '[untitled]';
+				const rawTitle = getValueAtPath(documentConfig.asTitle, doc) || '[untitled]';
+				title = computeTitleFromValue(rawTitle);
 				if (nestedLevel === 0) {
 					titleContext.value = title;
 				}

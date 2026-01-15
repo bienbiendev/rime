@@ -69,6 +69,7 @@
 	}
 
 	h1 {
+		@mixin line-clamp 1;
 		font-size: var(--rz-text-3xl);
 		@mixin font-semibold;
 	}

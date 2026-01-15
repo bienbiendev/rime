@@ -40,6 +40,11 @@ export class RichTextFieldBuilder extends FormFieldBuilder<RichTextField> {
 		return Cell;
 	}
 
+	isTitle() {
+		this.field.isTitle = true;
+		return this;
+	}
+
 	/**
 	 * Sets a custom TipTap editor configuration for the rich text field.
 	 *
@@ -142,6 +147,7 @@ type RichTextContent = { type: 'doc'; content: JSONContent[] };
 
 export type RichTextField = FormField & {
 	type: 'richText';
+	isTitle?: true;
 	features?: Array<RichTextFeature>;
 	defaultValue?: RichTextContent | DefaultValueFn<RichTextContent>;
 };
