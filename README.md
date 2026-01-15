@@ -31,6 +31,7 @@ Headless CMS powered by SvelteKit.
 ### Content Management
 
 Fields types:
+
 - Blocks
 - Tree (nested array)
 - Tabs
@@ -52,6 +53,7 @@ Fields types:
 npx sv create my-app
 cd my-app
 ```
+
 > [!NOTE]
 > Select TypeScript when prompted
 
@@ -83,7 +85,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { rime } from 'rimecms/vite';
 
 export default defineConfig({
-  plugins: [rime(), sveltekit()]
+	plugins: [rime(), sveltekit()]
 });
 ```
 
@@ -198,29 +200,37 @@ export default rime({
 
 ```ts
 export const load = async (event: LayoutServerLoadEvent) => {
-  const { rime } = event.locals;
-  // Get an Area document
-  const menu = await rime.area('menu').find();
-  // Get all pages documents
-  const pages = await rime.collection('pages').findAll({ locale: 'en' });
-  // Get a page byId
-  const home = await rime.collection('pages').findById({ locale: 'en', id: 'some-id' });
-  // Get a user with a query
-  const [user] = await rime.collection('users').find({
-    query: `where[email][equals]=some@email.com` // qs query or ParsedQsQuery
-  });
-  // Get some config values
-  const languages = rime.config.getLocalesCodes();
-  const collections = rime.config.collections;
-  //...
+	const { rime } = event.locals;
+	// Get an Area document
+	const menu = await rime.area('menu').find();
+	// Get all pages documents
+	const pages = await rime.collection('pages').findAll({ locale: 'en' });
+	// Get a page byId
+	const home = await rime.collection('pages').findById({ locale: 'en', id: 'some-id' });
+	// Get a user with a query
+	const [user] = await rime.collection('users').find({
+		query: `where[email][equals]=some@email.com` // qs query or ParsedQsQuery
+	});
+	// Get some config values
+	const languages = rime.config.getLocalesCodes();
+	const collections = rime.config.collections;
+	//...
 };
 ```
 
 ### From the API :
+
 ```ts
-const { docs } = await fetch('http://localhost:5173/api/pages').then(r => r.json())
-const { docs } = await fetch('http://localhost:5173/api/pages?sort=title&limit=1').then(r => r.json())
-const { docs } = await fetch('http://localhost:5173/api/pages?where[author][like]=some-id&locale=en`;').then(r => r.json())
+const { docs } = await fetch('http://localhost:5173/api/pages').then((r) => r.json());
+const { docs } = await fetch('http://localhost:5173/api/pages?sort=title&limit=1').then((r) =>
+	r.json()
+);
+const { docs } = await fetch(
+	'http://localhost:5173/api/pages?where[author][equals]=some-id&locale=en`;'
+).then((r) => r.json());
+const { docs } = await fetch(
+	'http://localhost:5173/api/pages?where[author.email][equals]=some@email.com&locale=en`;'
+).then((r) => r.json());
 ```
 
 ## DEPLOYING
@@ -228,10 +238,12 @@ const { docs } = await fetch('http://localhost:5173/api/pages?where[author][like
 For now I am using it with @svelte/adapter-node, other adapter not tested and probably not working.
 
 With the node adapter :
+
 ```sh
 npx rime build
 npx rime build -d # to copy the database directory
 ```
+
 It's doing bascically `vite build` under the hood and create the polka server file inside an app directory, plus giving some info on how to run it.
 
 ## ROADMAP
@@ -246,6 +258,7 @@ It's doing bascically `vite build` under the hood and create the polka server fi
 - [x] Document version
 - [x] collection nested
 - [x] more better-auth integration
+- [x] Handle relation poperties in queries
 - [~] Documentation
 - [ ] Live Edit system in practice
 - [ ] auto-saved draft
