@@ -3,15 +3,16 @@ import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.j
 import type { DateField } from '$lib/fields/date/index.js';
 import type { EmailField } from '$lib/fields/email/index.js';
 import { isGroupField } from '$lib/fields/group/index.js';
+import type RichText from '$lib/fields/rich-text/component/RichText.svelte';
 import type { SlugField } from '$lib/fields/slug/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import type { TextField } from '$lib/fields/text/index.js';
-import type { Field, FormField } from '$lib/fields/types.js';
+import type { Field, FormField, RichTextField } from '$lib/fields/types.js';
 
 export const hasMaybeTitle = (
 	field: Field
-): field is TextField | DateField | SlugField | EmailField =>
-	['text', 'date', 'slug', 'email'].includes(field.type);
+): field is TextField | DateField | SlugField | EmailField | RichTextField =>
+	['text', 'date', 'slug', 'email', 'richText'].includes(field.type);
 
 interface TitleFieldResult {
 	field: FormFieldBuilder<FormField>;

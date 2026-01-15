@@ -90,6 +90,8 @@
 			width: var(--rz-size-10);
 			border-radius: var(--rz-radius-md);
 			display: flex;
+			flex-shrink: 0;
+			flex-grow: 0;
 			align-items: center;
 			justify-content: center;
 			background-color: light-dark(hsl(var(--rz-gray-15)), hsl(var(--rz-gray-1)));

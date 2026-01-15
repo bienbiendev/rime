@@ -83,7 +83,7 @@
 		>
 			{#each selectedItems as item (item.documentId)}
 				<Tag onRemove={() => removeValue(item.documentId)} {readOnly}>
-					{item.label}
+					<a href={item.editUrl}>{item.label}</a>
 				</Tag>
 			{/each}
 

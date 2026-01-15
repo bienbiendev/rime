@@ -17,7 +17,7 @@
 	let { value }: Props = $props();
 	let displayCount = $derived(value && value.length > 1);
 
-	const APIProxy = getAPIProxyContext(API_PROXY.DOCUMENT);
+	const APIProxy = getAPIProxyContext(API_PROXY.ROOT);
 
 	let APIUrl = $derived.by(() => {
 		if (value && value.length && value[0].documentId) {
@@ -33,7 +33,7 @@
 	});
 </script>
 
-<span>
+<span class="rz-relation-cell">
 	{#if displayCount}
 		{value.length} items
 	{:else if ressource?.data?.doc}
@@ -44,15 +44,18 @@
 			/>
 			{ressource.data.doc.title}
 		{:else}
-			{ressource.data.doc.title}
+			<span class="rz-relation-cell__title">{ressource.data.doc.title}</span>
 		{/if}
 	{/if}
 </span>
 
 <style lang="postcss">
-	span {
+	.rz-relation-cell {
 		display: flex;
 		gap: var(--rz-size-2);
 		align-items: center;
+	}
+	.rz-relation-cell__title {
+		@mixin line-clamp 1;
 	}
 </style>

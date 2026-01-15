@@ -41,6 +41,7 @@
 		}
 	}
 	.rz-aria__last {
+		@mixin line-clamp 1;
 		opacity: 1;
 	}
 </style>
