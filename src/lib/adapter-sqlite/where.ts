@@ -126,14 +126,40 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			throw new Error(`${slug} not found (should never happen)`);
 		}
 
-		// Get the field config
-		const fieldConfig = getFieldConfigByPath(
-			column,
-			documentConfig.fields.map((f) => f.compile())
-		);
+		logger.debug(`Looking for field config for ${slug}: ${column}`);
+
+		// Get the compiled fields for lookups
+		const compiledFields = documentConfig.fields.map((f) => f.compile());
+		let fieldConfig = getFieldConfigByPath(column, compiledFields);
+
+		// Track relation-property detection (e.g. attributes.author.name)
+		let matchedPrefix = column;
+		let relationPropertyPath: string | null = null;
+		let isRelationProperty = false;
+
+		// If the exact path isn't found, try progressively shorter prefixes to support
+		// relation property queries like `attributes.author.name` -> `attributes.author`
+		if (!fieldConfig) {
+			const parts = column.split('.');
+			for (let i = parts.length - 1; i > 0; i--) {
+				const prefix = parts.slice(0, i).join('.');
+				const candidate = getFieldConfigByPath(prefix, compiledFields);
+				if (candidate) {
+					fieldConfig = candidate;
+					// If prefix shorter than original column, record the property suffix
+					if (i < parts.length) {
+						matchedPrefix = prefix;
+						relationPropertyPath = parts.slice(i).join('.');
+						isRelationProperty = true;
+					}
+					break;
+				}
+			}
+		}
+
+		logger.debug(`Building where condition for ${slug}: ${column} ${operator} ${rawValue}`);
 
 		if (!fieldConfig) {
-			// @TODO handle relation props ex: author.email
 			logger.warn(
 				`the query contains the field "${column}", not found for ${documentConfig.slug} document`
 			);
@@ -141,6 +167,8 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			// This ensures no documents match when a non-existent field is queried
 			return eq(table.id, '-1'); // No document will have ID = -1, so this will always be false
 		}
+
+		logger.debug(`Found field config for ${slug}: ${column} is a ${fieldConfig.type}`);
 
 		// Not a relation
 		if (!isRelationField(fieldConfig)) {
@@ -151,10 +179,19 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			return eq(table.id, '-1'); // No document will have ID = -1, so this will always be false
 		}
 
+		logger.debug(`Building relation where condition for ${slug}: ${column}`);
+
 		// Unsupported operator for multi-valued relations
 		const supportedRelationManyOperators = ['equals', 'not_equals', 'in_array', 'not_in_array'];
 
-		if (fieldConfig.many && !supportedRelationManyOperators.includes(operator)) {
+		// Only enforce the restriction for direct relation field queries.
+		// If this is a relation property query (e.g. attributes.author.name) we allow
+		// any operator because those will be applied to the related collection.
+		if (
+			!isRelationProperty &&
+			fieldConfig.many &&
+			!supportedRelationManyOperators.includes(operator)
+		) {
 			logger.warn(
 				`the operator "${operator}" is not supported for multi-valued relation field "${column}" in ${documentConfig.slug} document`
 			);
@@ -162,8 +199,52 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			return eq(table.id, '-1'); // No document will have ID = -1, so this will always be false
 		}
 
-		// Only compare with the relation ID for now
-		// @TODO handle relation props ex: author.email
+		logger.debug(`Processing relation field for ${slug}: ${column}`);
+
+		// If this query targets a property on the related document (e.g. attributes.author.name)
+		// then execute a recursive where on the related collection and join via the relations table.
+		if (isRelationProperty && relationPropertyPath) {
+			const relatedSlug = fieldConfig.relationTo;
+			const relatedTable = getTable(relatedSlug as any);
+
+			// Build a where clause for the related collection using the same operator/value
+			const relatedWhere = { [relationPropertyPath]: { [operator]: rawValue } } as any;
+			const relatedCondition = buildWhereParam({
+				query: { where: relatedWhere } as any,
+				slug: relatedSlug as PrototypeSlug,
+				db,
+				locale,
+				tables,
+				configCtx
+			});
+
+			if (!relatedCondition) {
+				// No documents in related collection match => no parent documents match
+				return eq(table.id, '-1');
+			}
+
+			// Subquery of related document ids that match the property condition
+			const matchingRelatedIds = db
+				.select({ id: relatedTable.id })
+				.from(relatedTable)
+				.where(relatedCondition);
+
+			const relsTable = getTable(`${slug}Rels`);
+			// Join relation rows to documents by matching the related id and the relation path
+			const ownersWithMatching = db
+				.select({ id: relsTable.ownerId })
+				.from(relsTable)
+				.where(
+					and(
+						inArray(relsTable[`${relatedSlug}Id`], matchingRelatedIds),
+						eq(relsTable.path, matchedPrefix),
+						...(fieldConfig.localized ? [eq(relsTable.locale, locale)] : [])
+					)
+				);
+
+			return inArray(table.id, ownersWithMatching);
+		}
+
 		const [to, localized] = [fieldConfig.relationTo, fieldConfig.localized];
 		const relationTableName = `${slug}Rels`;
 		const relationTable = getTable(relationTableName);

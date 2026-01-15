@@ -418,6 +418,16 @@ test('Should find pages by author in_array', async ({ request }) => {
 	expect(ids).toContain(pageWithAuthorId);
 });
 
+// Querying relation properties (e.g., author.name) should work and reuse the same query builder
+test('Should find pages by author.name equals', async ({ request }) => {
+	const url = `${API_BASE_URL}/pages?where[attributes.author.name][equals]=Admin`;
+	const response = await request.get(url).then((r) => r.json());
+	expect(response.docs).toBeDefined();
+	const ids = response.docs.map((d: any) => d.id);
+	expect(ids).toContain(homeId);
+	expect(ids).toContain(pageWithAuthorId);
+});
+
 test('Should return Page 2 (query)', async ({ request }) => {
 	const qs = `where[and][0][attributes.author][in_array]=${adminUserId}&where[and][1][attributes.slug][equals]=page-2&locale=en`;
 	const url = `${API_BASE_URL}/pages?${qs}`;
