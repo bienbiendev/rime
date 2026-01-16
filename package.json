@@ -1,6 +1,6 @@
 {
 	"name": "rimecms",
-	"version": "0.24.1",
+	"version": "0.24.2",
 	"homepage": "https://github.com/bienbiendev/rime",
 	"scripts": {
 		"dev": "vite dev",
