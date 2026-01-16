@@ -1,5 +1,6 @@
 import { filePathToBase64 } from '$lib/core/collections/upload/util/converter.js';
 import test, { expect } from '@playwright/test';
+import { readFileSync } from 'fs';
 import path from 'path';
 import { API_BASE_URL, signIn } from '../util.js';
 
@@ -193,6 +194,17 @@ test('Should return 1 page', async ({ request }) => {
 	});
 	expect(response.docs).toBeDefined();
 	expect(response.docs.length).toBe(1);
+});
+
+/****************************************************/
+/* Check server config has been generated (hooks should be active)
+/****************************************************/
+
+test('Server config should have hooks configured', async () => {
+	const dateStr = new Date().toISOString().split('T')[0];
+	const logFileName = `${dateStr}.log`;
+	const logs = readFileSync(path.resolve(process.cwd(), `logs/${logFileName}`), 'utf-8');
+	expect(logs).toContain('Reading a page document');
 });
 
 /****************************************************/

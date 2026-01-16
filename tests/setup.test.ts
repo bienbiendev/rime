@@ -1,7 +1,8 @@
 import test, { expect } from '@playwright/test';
 import { execSync } from 'node:child_process';
 
-execSync('rm -fr ./log.md');
+execSync('rm -fr ./debug.md');
+execSync('rm -fr ./logs');
 
 test('First init should work', async ({ request }) => {
 	const response = await request.post(`${process.env.PUBLIC_RIME_URL}/api/init`, {
