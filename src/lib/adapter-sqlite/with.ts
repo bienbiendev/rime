@@ -5,7 +5,7 @@ import { isRelationField } from '$lib/fields/relation/index.js';
 import { isTreeFieldRaw } from '$lib/fields/tree/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
-import { asc, eq, getTableColumns, SQL } from 'drizzle-orm';
+import { asc, eq, getTableColumns, or, SQL } from 'drizzle-orm';
 import { getBlocksTableNames, getTreeTableNames } from './generate-schema/util.js';
 
 export const buildWithParam = (args: {
@@ -43,11 +43,6 @@ export const buildWithParam = (args: {
 		if (fieldConfig && isRelationField(fieldConfig)) {
 			// Handle relation fields
 			directRelationPaths.push(path);
-			if (!withParam[`${slug}Rels`]) {
-				withParam[`${slug}Rels`] = {
-					orderBy: [asc(tables[`${slug}Rels`].path), asc(tables[`${slug}Rels`].position)]
-				};
-			}
 		} else if (fieldConfig && isBlocksFieldRaw(fieldConfig)) {
 			// Handle blocks fields
 			blockPaths.push(path);
@@ -132,47 +127,48 @@ export const buildWithParam = (args: {
 		}
 	}
 
+	// Compute direct relationships if defined
+	// this ensure we only fetch the necessary relations
+	if (directRelationPaths.length) {
+		withParam[`${slug}Rels`] = {
+			where: or(...directRelationPaths.map((path) => eq(tables[`${slug}Rels`].path, path))),
+			orderBy: [asc(tables[`${slug}Rels`].path), asc(tables[`${slug}Rels`].position)]
+		};
+	}
+
 	// Handle nested relationships
 
-	// 1. Include relations table if we have any container paths (blocks or trees)
-	if (
-		(directRelationPaths.length > 0 || blockPaths.length > 0 || treePaths.length > 0) &&
-		`${slug}Rels` in tables &&
-		!withParam[`${slug}Rels`]
-	) {
+	// 1. Include relations table if container paths exist (blocks or trees).
+	//    If container paths are present we include relations for those containers
+	//    and also include any direct relation paths.
+	if ((blockPaths.length > 0 || treePaths.length > 0) && `${slug}Rels` in tables) {
 		const relsTable = tables[`${slug}Rels`];
 
-		if (blockPaths.length > 0 || treePaths.length > 0) {
-			// Create a where condition that matches relations within any of the container paths
-			withParam[`${slug}Rels`] = {
-				where: (relation: any, { like, or }: any) => {
-					const conditions = [];
+		// Create a where condition that matches relations within any of the container paths,
+		// and include direct relation paths as exact matches.
+		withParam[`${slug}Rels`] = {
+			where: (relation: any, { like, or }: any) => {
+				const conditions = [];
 
-					// Add conditions for block paths
-					for (const path of blockPaths) {
-						conditions.push(like(relation.path, `${path}__%`));
-					}
+				// Add conditions for block paths
+				for (const path of blockPaths) {
+					conditions.push(like(relation.path, `${path}__%`));
+				}
 
-					// Add conditions for tree paths
-					for (const path of treePaths) {
-						conditions.push(like(relation.path, `${path}__%`));
-					}
+				// Add conditions for tree paths
+				for (const path of treePaths) {
+					conditions.push(like(relation.path, `${path}__%`));
+				}
 
-					// Add direct relation paths if any
-					for (const path of directRelationPaths) {
-						conditions.push(like(relation.path, path));
-					}
+				// Add direct relation paths if any (exact match via like)
+				for (const path of directRelationPaths) {
+					conditions.push(eq(relation.path, path));
+				}
 
-					return or(...conditions);
-				},
-				orderBy: [asc(relsTable.path), asc(relsTable.position)]
-			};
-		} else {
-			// If we only have direct relation paths, use the standard approach
-			withParam[`${slug}Rels`] = {
-				orderBy: [asc(relsTable.path), asc(relsTable.position)]
-			};
-		}
+				return or(...conditions);
+			},
+			orderBy: [asc(relsTable.path), asc(relsTable.position)]
+		};
 	}
 
 	// 2. Include tree tables for blocks that might contain trees
