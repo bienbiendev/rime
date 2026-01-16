@@ -50,6 +50,22 @@ export async function sanitize() {
 	// Scan all TypeScript files (excluding .server.ts)
 	const allFiles = await scanConfigFiles(configDir);
 
+	// Pre-scan files to determine which ones will be split (contain server content)
+	for (const filePath of allFiles) {
+		const relativePath = path.relative(configDir, filePath);
+		try {
+			const content = fs.readFileSync(filePath, 'utf-8');
+			const ast = babelParse(content, 'ts', { sourceType: 'module', attachComment: false });
+			const analysis = analyzeFile(ast);
+			if (analysis.hasServerContent) {
+				// Normalize to forward slashes to match how imports are compared later
+				splitFiles.add(relativePath.split(path.sep).join('/'));
+			}
+		} catch (err) {
+			logger.warn(`Failed to analyze ${relativePath} during pre-scan: ${err.message}`);
+		}
+	}
+
 	// Also scan and copy all existing .server.ts files
 	const serverFiles = await scanServerFiles(configDir);
 
@@ -666,11 +682,19 @@ function removeUnusedImports(ast) {
 /**
  * Updates imports in server files to use server versions of split modules
  */
-function updateServerImports(content, splitFiles, currentDir) {
+export function updateServerImports(content, splitFiles, currentDir) {
 	try {
 		const ast = babelParse(content, 'ts', { sourceType: 'module', attachComment: false });
 
 		let hasChanges = false;
+
+		// Helper to normalize paths for comparison with splitFiles entries
+		const normalizeForCompare = (p) =>
+			p
+				.replace(/^\.\/?/, '')
+				.split(path.sep)
+				.join('/');
+		const splitFilesSet = new Set(Array.from(splitFiles).map((s) => normalizeForCompare(s)));
 
 		// Walk through all import declarations
 		for (const node of ast.body) {
@@ -682,25 +706,47 @@ function updateServerImports(content, splitFiles, currentDir) {
 					continue;
 				}
 
-				// Resolve the import path relative to current file's directory
-				let resolvedPath = path.resolve(currentDir, importPath);
+				// Skip already server imports
+				if (importPath.includes('.server')) continue;
 
-				// Handle .js extension - convert to .ts for checking
-				if (resolvedPath.endsWith('.js')) {
-					resolvedPath = resolvedPath.slice(0, -3) + '.ts';
+				// Normalize import path: remove trailing slashes and explicit extensions
+				const cleanedImport = importPath.replace(/\/+$/, '');
+				const importNoExt = cleanedImport.replace(/(\.js|\.ts)$/, '');
+
+				// Build candidate relative paths (relative to config dir)
+				const candidateFile = path.normalize(path.join(currentDir, importNoExt + '.ts'));
+				const candidateIndex = path.normalize(path.join(currentDir, importNoExt, 'index.ts'));
+
+				const candidateFileNorm = normalizeForCompare(candidateFile);
+				const candidateIndexNorm = normalizeForCompare(candidateIndex);
+
+				let matched = null;
+				let matchedIsIndex = false;
+
+				if (splitFilesSet.has(candidateFileNorm)) {
+					matched = candidateFileNorm;
+					matchedIsIndex = false;
+				} else if (splitFilesSet.has(candidateIndexNorm)) {
+					matched = candidateIndexNorm;
+					matchedIsIndex = true;
 				}
 
-				// Check if this import points to a split file
-				const relativeResolvedPath = path.relative('.', resolvedPath);
-				if (splitFiles.has(relativeResolvedPath)) {
-					// Update import to use server version
-					let newImportPath = importPath;
-					if (newImportPath.endsWith('.js')) {
-						newImportPath = newImportPath.slice(0, -3) + '.server.js';
+				if (matched) {
+					// Build new import path: prefer .server.js so runtime imports point to JS server files
+					let newImportPath;
+					if (matchedIsIndex) {
+						newImportPath = importNoExt + '/index.server.js';
 					} else {
-						newImportPath += '.server';
+						newImportPath = importNoExt + '.server.js';
 					}
+
+					// Set the node's source value and ensure it renders with single quotes
 					node.source.value = newImportPath;
+					if (!node.source.extra || typeof node.source.extra !== 'object') {
+						node.source.extra = {};
+					}
+					node.source.extra.raw = `'${newImportPath}'`;
+					node.source.extra.rawValue = newImportPath;
 					hasChanges = true;
 				}
 			}
