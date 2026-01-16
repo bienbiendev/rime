@@ -30,7 +30,12 @@
 </script>
 
 {#if config.blocks.length === 1}
-	<Button onclick={() => add(config.blocks[0].block)} variant="ghost" icon={CirclePlus} size="icon" />
+	<Button
+		onclick={() => add(config.blocks[0].block)}
+		variant="ghost"
+		icon={CirclePlus}
+		size="icon"
+	/>
 {:else}
 	<Button onclick={() => (open = true)} variant="ghost" icon={CirclePlus} size="icon" />
 
@@ -77,13 +82,13 @@
 			</Command.List>
 
 			<div class="rz-add-block-button__preview-wrap">
-				{#each config.blocks as block, index (index)}
+				{#each config.blocks as blockFieldBuilder, index (index)}
 					<div
-						class:rz-add-block-button__preview--active={ariaSelected === block.name}
+						class:rz-add-block-button__preview--active={ariaSelected === blockFieldBuilder.name}
 						class="rz-add-block-button__preview"
 					>
-						{#if block.block.image}
-							<img src="{env.PUBLIC_RIME_URL}{block.image}" alt="preview" />
+						{#if blockFieldBuilder.block.image}
+							<img src="{env.PUBLIC_RIME_URL}{blockFieldBuilder.block.image}" alt="preview" />
 						{:else}
 							no preview
 						{/if}
