@@ -34,9 +34,9 @@ function createI18n() {
 	};
 
 	const t__ = (key: TranslationKey | ModifiedKey | string, ...params: string[]) => {
-		const isPredefinedError = namespaces.some((ns) => key.startsWith(`${ns}.`));
+		const isNamespacedKey = namespaces.some((ns) => key.startsWith(`${ns}.`));
 
-		if (!isPredefinedError) {
+		if (!isNamespacedKey) {
 			return key;
 		}
 

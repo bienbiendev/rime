@@ -18,7 +18,6 @@ program
 program
 	.command('build')
 	.option('-d, --with-database', 'Include database', false)
-	.option('-f, --force', 'Force init with default package name', false)
 	.action(async (args) => {
 		const build = await import('./build/index.js').then((m) => m.build);
 		build(args);
