@@ -27,7 +27,11 @@ export const castBase64ToFile = Hooks.beforeUpsert<'upload'>(async (args) => {
 				filesize: data.filesize || filesize,
 				mimeType: data.mimeType || mimeType
 			};
-		} catch {
+		} catch (err: any) {
+			args.event.locals.rime.logger.error(
+				'Failed to convert base64 string to File object',
+				err.message
+			);
 			throw new RimeError(RimeError.UPLOAD, 'Unable to process file');
 		}
 	}
