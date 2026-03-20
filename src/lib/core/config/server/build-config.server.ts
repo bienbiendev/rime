@@ -4,10 +4,10 @@ import { augmentPanel } from '../client/augment-panel.js';
 import { augmentPlugins } from '../client/augment-plugins.js';
 import { augmentIcons } from '../shared/augment-icons.js';
 import { augmentPrototypes } from '../shared/augment-prototypes.js';
-import { makeUploadDirectoriesCollections } from '../shared/upload-directories.js';
 import { makeVersionsCollectionsAliases } from '../shared/versions-alias.server.js';
 import type { Config } from '../types.js';
 import { augmentCORS } from './augment-cors.js';
+import { augmentDirectoriesServer } from './augment-directories.server.js';
 import { augmentPanelAccess } from './augment-panel-access.server.js';
 import { augmentPluginsServer } from './augment-plugins.server.js';
 import { augmentStaffServer } from './augment-staff.server.js';
@@ -16,11 +16,7 @@ export const buildConfig = <const C extends Config>(config: C) => {
 	const augmented = augmentConfig(config);
 	// Versions collection aliases
 	// create {slug}_versions collections
-	const withVersions = makeVersionsCollectionsAliases(augmented);
-	// Upload collection directories
-	// create {slug}_directories collections
-	const output = makeUploadDirectoriesCollections(withVersions);
-
+	const output = makeVersionsCollectionsAliases(augmented);
 	return createRime(output as any as BuildConfig<C>);
 };
 
@@ -32,7 +28,8 @@ function augmentConfig<T extends Config>(config: T) {
 	const withPanelAccess = augmentPanelAccess(withPanel);
 	const withCORS = augmentCORS(withPanelAccess);
 	const withPluginsServer = augmentPluginsServer(withCORS);
-	const output = augmentPlugins(withPluginsServer);
+	const withDirectories = augmentDirectoriesServer(withPluginsServer);
+	const output = augmentPlugins(withDirectories);
 	return output;
 }
 
@@ -76,9 +73,8 @@ type InferCorePlugins<C extends Config> = {
 	cache: import('$lib/core/plugins/cache/index.server.js').CacheActions;
 	sse: import('$lib/core/plugins/sse/index.server.js').SSEActions;
 } & (C['$smtp'] extends SMTPConfig
-	? { mailer: import('$lib/core/plugins/mailer/index.server.js').MailerActions; }
-	: Record<string, never>
-);
+	? { mailer: import('$lib/core/plugins/mailer/index.server.js').MailerActions }
+	: Record<string, never>);
 
 // Helper type to extract custom plugins from original config
 type ExtractCustomPlugins<C> = C extends { $plugins: readonly (infer P)[] }

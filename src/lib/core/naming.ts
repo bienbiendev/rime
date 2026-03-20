@@ -6,11 +6,12 @@ import type { CollectionSlug } from '$lib/types.js';
  * Prevent a version table name from being used, force the use of the main one.
  *
  * @example
- * // Returns botth 'pages_directories'
+ * // Returns both 'pages_directories'
  * withDirectoriesSuffix('pages');
  * withDirectoriesSuffix('pages_versions');
  */
-export const withDirectoriesSuffix = (slug: string) => `${slug.replace('_versions', '')}_directories` as CollectionSlug;
+export const withDirectoriesSuffix = (slug: string) =>
+	`${slug.replace('_versions', '')}_directories` as CollectionSlug;
 
 /**
  * Add a _versions suffix to a given name.

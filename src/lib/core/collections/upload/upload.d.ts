@@ -1,3 +1,4 @@
+import type { GenericDoc } from '$lib/types.js';
 import type { UploadPath } from './util/path.js';
 
 export type JsonFile = {
@@ -8,7 +9,7 @@ export type JsonFile = {
 	lastModified?: number;
 };
 
-export type Directory = {
+export type Directory = GenericDoc & {
 	id: UploadPath;
 	name: string;
 	parent: UploadPath | null;

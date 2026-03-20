@@ -146,7 +146,8 @@
 
 	const getAvailableItems = () => {
 		return initialItems.filter(
-			(initialItem) => !selectedItems.some((selectedItem) => selectedItem.documentId === initialItem.documentId)
+			(initialItem) =>
+				!selectedItems.some((selectedItem) => selectedItem.documentId === initialItem.documentId)
 		);
 	};
 

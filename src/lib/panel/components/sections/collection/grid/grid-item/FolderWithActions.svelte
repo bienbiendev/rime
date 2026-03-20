@@ -1,72 +1,51 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import { apiUrl } from '$lib/core/api/index.js';
-	import { directoryInput } from '$lib/core/collections/upload/directory-input-config.js';
 	import type { Directory } from '$lib/core/collections/upload/upload.js';
-	import type { UploadPath } from '$lib/core/collections/upload/util/path.js';
 	import type { BuiltCollectionClient } from '$lib/core/config/types.js';
 	import { PARAMS } from '$lib/core/constant.js';
 	import { withDirectoriesSuffix } from '$lib/core/naming.js';
 	import type { GenericDoc } from '$lib/core/types/doc.js';
-	import Input from '$lib/fields/text/component/Text.svelte';
 	import Button from '$lib/panel/components/ui/button/button.svelte';
 	import ContextMenu from '$lib/panel/components/ui/context-menu/ContextMenu.svelte';
 	import ContextMenuItem from '$lib/panel/components/ui/context-menu/ContextMenuItem.svelte';
 	import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
 	import { API_PROXY, getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
-	import { setFormContext } from '$lib/panel/context/form.svelte.js';
 	import { panelUrl } from '$lib/panel/util/url.js';
 	import { trycatchFetch } from '$lib/util/function.js';
 	import { toast } from 'svelte-sonner';
 	import { t__ } from '../../../../../../core/i18n/index.js';
 	import Folder from './Folder.svelte';
+	import FolderEdit from './FolderEdit.svelte';
 
 	type Props = {
 		folder: Directory;
 		collection: BuiltCollectionClient;
 		onDelete?: (path: string) => void;
-		onRename?: (oldPath: UploadPath, newPath: UploadPath) => void;
+		onEdited?: (folder: Directory) => void;
 		onDocumentDrop: (args: { documentId: string; path: string }) => void;
 		draggable?: 'true';
 	};
-	const { folder, collection, onDelete, onRename, onDocumentDrop, draggable }: Props = $props();
+	const { folder, collection, onDelete, onEdited, onDocumentDrop, draggable }: Props = $props();
 
 	let deleteConfirmOpen = $state(false);
-	let renameDialogOpen = $state(false);
+	let editFolderDialogOpen = $state(false);
 	let message = $state('');
 	let rootElement = $state<HTMLButtonElement>();
 	let isDragging = $state(false);
 	const isRoot = $derived(folder.name === '...');
 	const APIProxy = getAPIProxyContext(API_PROXY.ROOT);
-	const childFilesURL = $derived(`${apiUrl(collection.kebab)}?where[_path][equals]=${folder.id}&select=id`);
+	const childFilesURL = $derived(
+		`${apiUrl(collection.kebab)}?where[_path][equals]=${folder.id}&select=id`
+	);
 	const childFiles = $derived(APIProxy.getRessource<{ docs: GenericDoc[] }>(childFilesURL));
 	const childFilesCount = $derived(childFiles.data?.docs?.length || 0);
 	const baseFolderApiURL = $derived(`${apiUrl(withDirectoriesSuffix(collection.kebab))}`);
-	const childFoldersURL = $derived(`${baseFolderApiURL}?where[parent][equals]=${folder.id}&select=id`);
+	const childFoldersURL = $derived(
+		`${baseFolderApiURL}?where[parent][equals]=${folder.id}&select=id`
+	);
 	const childFolders = $derived(APIProxy.getRessource<{ docs: GenericDoc[] }>(childFoldersURL));
 	const childFoldersCount = $derived(childFolders.data?.docs?.length || 0);
-	const renameFolderForm = setFormContext({ name: '' }, 'rename-folder');
-
-	const renameField = renameFolderForm.useField('name', directoryInput);
-
-	async function handleRename() {
-		const renameURL = `${baseFolderApiURL}/${folder.id}`;
-		const newPath = `${folder.parent}:${renameField.value}` as UploadPath;
-		const [error] = await trycatchFetch(renameURL, {
-			method: 'PATCH',
-			body: JSON.stringify({
-				id: newPath
-			})
-		});
-		if (error) {
-			return toast.error('Error renaming folder');
-		}
-		toast.success(t__('rename_success'));
-		renameDialogOpen = false;
-		if (onRename) {
-			onRename(folder.id, newPath);
-		}
-	}
 
 	async function handleGetDeleteInfos() {
 		message = t__(
@@ -184,7 +163,7 @@
 			<!--  -->
 			{#snippet content()}
 				<ContextMenuItem onclick={handleGetDeleteInfos}>Delete</ContextMenuItem>
-				<ContextMenuItem onclick={() => (renameDialogOpen = true)}>Rename</ContextMenuItem>
+				<ContextMenuItem onclick={() => (editFolderDialogOpen = true)}>Edit</ContextMenuItem>
 			{/snippet}
 			<!--  -->
 		</ContextMenu>
@@ -208,18 +187,7 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<Dialog.Root bind:open={renameDialogOpen}>
-	<Dialog.Content>
-		<Dialog.Header>
-			{t__('common.rename_dialog_title', folder.name)}
-		</Dialog.Header>
-		<Input form={renameFolderForm} config={directoryInput} />
-		<Dialog.Footer --rz-justify-content="space-between">
-			<Button disabled={!renameFolderForm.canSubmit} onclick={handleRename}>Rename</Button>
-			<Button onclick={() => (renameDialogOpen = false)} variant="secondary">Cancel</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+<FolderEdit bind:open={editFolderDialogOpen} {folder} {collection} {onEdited} />
 
 <style lang="postcss">
 	:root {

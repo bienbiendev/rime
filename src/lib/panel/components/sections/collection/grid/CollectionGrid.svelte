@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { UploadPath } from '$lib/core/collections/upload/util/path';
+	import type { Directory } from '$lib/core/collections/upload/upload';
 	import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
 	import Empty from '../Empty.svelte';
 	import Folder from './grid-item/FolderWithActions.svelte';
@@ -8,17 +8,19 @@
 	type Props = { collection: CollectionContext };
 	const { collection }: Props = $props();
 
-	const currentPathDocuments = $derived(collection.docs.filter((doc) => doc._path === collection.upload.currentPath));
+	const currentPathDocuments = $derived(
+		collection.docs.filter((doc) => doc._path === collection.upload.currentPath)
+	);
 
 	function onDeleteFolder(path: string) {
 		collection.upload.directories = collection.upload.directories.filter((dir) => dir.id !== path);
 	}
 
-	function onRenameFolder(oldPath: UploadPath, newPath: UploadPath) {
+	function onEditedFolder(folder: Directory) {
 		collection.upload.directories = collection.upload.directories.map((dir) => {
-			if (dir.id === oldPath) {
-				dir.id = newPath;
-				dir.name = newPath.split(':').at(-1)!;
+			if (dir.id === folder.id) {
+				dir.id = folder.id;
+				dir.name = folder.name;
 			}
 			return dir;
 		});
@@ -38,7 +40,9 @@
 		}
 	}
 
-	const dragEnabled = $derived(!!(collection.upload.directories.length || collection.upload.parentDirectory));
+	const dragEnabled = $derived(
+		!!(collection.upload.directories.length || collection.upload.parentDirectory)
+	);
 </script>
 
 {#if collection.docs.length || collection.upload.directories || collection.upload.parentDirectory}
@@ -60,7 +64,7 @@
 				{folder}
 				collection={collection.config}
 				onDelete={onDeleteFolder}
-				onRename={onRenameFolder}
+				onEdited={onEditedFolder}
 			/>
 		{/each}
 
