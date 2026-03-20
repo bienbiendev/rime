@@ -12,7 +12,12 @@ import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field, FormField } from '$lib/fields/types.js';
 import { toPascalCase } from '$lib/util/string.js';
 import type { RelationFieldsMap } from './relations/definition.server.js';
-import { templateHasAuth, templateLocale, templateParent, templateTable } from './templates.server.js';
+import {
+	templateHasAuth,
+	templateLocale,
+	templateParent,
+	templateTable
+} from './templates.server.js';
 const p = toPascalCase;
 
 type Args = {
@@ -35,6 +40,11 @@ type Return = {
 	relationFieldsHasLocale: boolean;
 };
 
+/**
+ * This function generates the root table schema for collection/areas, including its localized version if needed,
+ * and also generates tables for blocks and tree fields.
+ * It also keeps track of relation fields and their localization status to properly generate relations later on.
+ */
 const buildRootTable = async ({
 	fields: incomingFields,
 	tableName,
@@ -68,7 +78,11 @@ const buildRootTable = async ({
 		for (const field of fields) {
 			if (field instanceof GroupFieldBuilder) {
 				const groupPath = parentPath ? `${parentPath}__${field.name}` : field.name;
-				const groupFields = await generateFieldsTemplates(field.raw.fields, withLocalized, groupPath);
+				const groupFields = await generateFieldsTemplates(
+					field.raw.fields,
+					withLocalized,
+					groupPath
+				);
 				templates = [...templates, ...groupFields];
 			} else if (isTabsField(field.raw)) {
 				for (const tab of field.raw.tabs) {

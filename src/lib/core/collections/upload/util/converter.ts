@@ -58,7 +58,8 @@ export const jsonFileToFile = (jsonFile: JsonFile) => {
 				lastModified: lastModified
 			})
 		};
-	} catch {
+	} catch (err: any) {
+		logger.error('Error converting base64 to File:', err.message);
 		throw new RimeError(RimeError.UPLOAD, 'Invalid base64 content');
 	}
 };
@@ -73,8 +74,8 @@ export async function filePathToBase64(filePath: string): Promise<string> {
 		}
 		const base64 = data.toString('base64');
 		return `data:${mimeType};base64,${base64}`;
-	} catch (error) {
-		console.error('Error:', error);
+	} catch (error: any) {
+		logger.error('Error converting file path to base64:', error.message);
 		throw error;
 	}
 }

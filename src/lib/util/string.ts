@@ -23,6 +23,27 @@ export const capitalize = (str: string): string => str.charAt(0).toUpperCase() +
 export const toCamelCase = (str: string): string => camelCase(str);
 
 /**
+ * Converts a string to camelCase while preserving a trailing _suffix if it exists.
+ * 
+ * @example
+ * // Returns "helloWorld"
+ * toCamelCasePreserveTrailingUnderscoreSuffix("helloWorld");
+ * 
+ * // Returns "helloWorld_directories"
+ * toCamelCasePreserveTrailingUnderscoreSuffix("hello-world_directories");
+ 
+* // Returns "helloWorld_"
+ * toCamelCasePreserveTrailingUnderscoreSuffix("hello-world");
+ */
+export const toCamelCasePreserveTrailingUnderscoreSuffix = (str: string): string => {
+	const suffixMatch = str.match(/(_[a-zA-Z]+)$/);
+	const suffix = suffixMatch ? suffixMatch[1] : '';
+	const baseString = suffix ? str.slice(0, -suffix.length) : str;
+
+	return camelCase(baseString) + suffix;
+};
+
+/**
  * Converts a string to kebab-case.
  * Source : https://github.com/angus-c/just/blob/master/packages/string-kebab-case
  *

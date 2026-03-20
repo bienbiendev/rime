@@ -226,6 +226,13 @@ export type UploadConfig = {
 	 * ```
 	 */
 	accept?: string[];
+	/** Directories */
+	directories?: {
+		fields: FieldBuilder<Field>[];
+		access?: Access;
+		// @TODO better types
+		$hooks?: CollectionHooks<any>;
+	};
 };
 
 export type CollectionAuthConfig = (

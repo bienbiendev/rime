@@ -1,9 +1,14 @@
 import type { Config } from '$lib/core/config/types.js';
 import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { withDirectoriesSuffix, withVersionsSuffix } from '$lib/core/naming.js';
+import { withVersionsSuffix } from '$lib/core/naming.js';
 import { date } from '$lib/fields/date/index.js';
 import { getFieldPrivateModule } from '$lib/fields/index.server.js';
-import { toCamelCase, toPascalCase, toSnakeCase } from '$lib/util/string.js';
+import {
+	toCamelCase,
+	toCamelCasePreserveTrailingUnderscoreSuffix,
+	toPascalCase,
+	toSnakeCase
+} from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import { generateRelationshipDefinitions } from './relations/definition.server.js';
 import { generateJunctionTableDefinition } from './relations/junction.server.js';
@@ -11,7 +16,6 @@ import buildRootTable from './root.server.js';
 import {
 	templateAPIKey,
 	templateAuth,
-	templateDirectories,
 	templateExportRelationsFieldsToTable,
 	templateExportSchema,
 	templateExportTables,
@@ -34,7 +38,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
 	const blocksRegister: string[] = [];
 
 	for (const collection of collections) {
-		const collectionSlug = toCamelCase(collection.slug);
+		const collectionSlug = toCamelCasePreserveTrailingUnderscoreSuffix(collection.slug);
 		let rootTableName = collectionSlug;
 		let versionsRelationsDefinitions: string[] = [];
 
@@ -59,7 +63,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
 			const rootFieldsFromConfig = [...collection.fields].filter(isRootField);
 			const rootFields = [...rootFieldsFromConfig, ...baseRootFields];
 
-			// Buiuld the main root buildRootTable with only _root fields and created/updatedAt
+			// Build the main root buildRootTable with only _root fields and created/updatedAt
 			const { schema: rootCollectionSchema } = await buildRootTable({
 				blocksRegister: [],
 				fields: rootFields,
@@ -142,10 +146,10 @@ export async function generateSchemaString<T extends Config>(config: T) {
 			[rootTableName]: relationFieldsMap
 		};
 
-		if (collection.upload) {
-			schema.push(templateDirectories(collection.slug));
-			enumTables = [...enumTables, withDirectoriesSuffix(collection.slug)];
-		}
+		// if (collection.upload) {
+		// 	schema.push(templateDirectories(collection.slug));
+		// 	enumTables = [...enumTables, withDirectoriesSuffix(collection.slug)];
+		// }
 
 		schema.push(
 			collectionSchema,

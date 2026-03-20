@@ -24,16 +24,25 @@ export function makeUploadDirectoriesCollections<C extends Config>(config: C) {
 			// for exemple a versions collections of an upload
 			// collection should not have a directories related table
 			if ((config.collections || []).filter((c) => c.slug === slug).length) continue;
+
+			const directoriesConfig = collection.upload.directories;
+
 			// else create the directory collection
 			let directoriesCollection: BuiltCollection = {
 				slug: slug as CollectionSlug,
 				kebab: withDirectoriesSuffix(toKebabCase(collection.slug)),
 				versions: undefined,
-				access: collection.access,
+				access: {
+					read: directoriesConfig?.access?.read || collection.access.read,
+					create: directoriesConfig?.access?.create || collection.access.create,
+					update: directoriesConfig?.access?.update || collection.access.update,
+					delete: directoriesConfig?.access?.delete || collection.access.delete
+				},
 				fields: [
 					text('id').validate(validatePath).unique().required(),
 					text('name'),
 					text('parent'),
+					...(directoriesConfig?.fields || []),
 					date('createdAt'),
 					date('updatedAt')
 				],
@@ -44,15 +53,24 @@ export function makeUploadDirectoriesCollections<C extends Config>(config: C) {
 				},
 				icon: collection.icon,
 				$hooks: {
-					beforeUpdate: [exctractPath, prepareDirectoryChildren],
-					afterUpdate: [updateDirectoryChildren],
-					beforeCreate: [exctractPath]
+					beforeOperation: directoriesConfig?.$hooks?.beforeOperation || [],
+					beforeCreate: [exctractPath, ...(directoriesConfig?.$hooks?.beforeCreate || [])],
+					beforeRead: directoriesConfig?.$hooks?.beforeRead || [],
+					beforeUpdate: [
+						exctractPath,
+						prepareDirectoryChildren,
+						...(directoriesConfig?.$hooks?.beforeUpdate || [])
+					],
+					beforeDelete: directoriesConfig?.$hooks?.beforeDelete || [],
+					afterCreate: directoriesConfig?.$hooks?.afterCreate || [],
+					afterUpdate: [updateDirectoryChildren, ...(directoriesConfig?.$hooks?.afterUpdate || [])],
+					afterDelete: directoriesConfig?.$hooks?.afterDelete || []
 				},
 				asTitle: 'path',
 				asThumbnail: collection.asThumbnail,
-				panel: false,
-				_generateTypes: false,
-				_generateSchema: false
+				panel: false
+				// _generateTypes: false,
+				// _generateSchema: false
 			};
 
 			directoriesCollection = augmentHooks(directoriesCollection);

@@ -28,12 +28,15 @@ const pk = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
  * })
  * ```
  */
-export const templateTable = (table: string, content: string): string => `
-export const ${table} = sqliteTable( '${s(table)}', {
-  id: pk(),
-  ${content}
-})
-`;
+export const templateTable = (table: string, content: string): string => {
+	if (!content.includes('id:')) {
+		content = `id: pk(),\n${content}`;
+	}
+	return `export const ${table} = sqliteTable( '${s(table)}', {
+		${content}
+	})
+	`;
+};
 
 /**
  * Generates a locale field for internationalized tables
