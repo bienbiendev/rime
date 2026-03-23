@@ -45,7 +45,7 @@
 			{/if}
 			<label for="checkbox-{doc.id}" class="rz-list-row__title">{doc.title || '[untitled]'}</label>
 		{:else}
-			<a class="rz-list-row__link" href="/panel/{collection.config.slug}/{doc.id}">
+			<a class="rz-list-row__link" href="/panel/{collection.config.kebab}/{doc.id}">
 				{#if doc._thumbnail}
 					<UploadThumbCell url={doc._thumbnail} mimeType={doc.mimeType} />
 				{:else}

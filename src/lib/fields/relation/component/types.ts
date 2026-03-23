@@ -4,7 +4,6 @@ import type { GenericDoc } from '$lib/core/types/doc.js';
 export type RelationFieldItem = {
 	id?: string;
 	documentId: string;
-	label: string;
 	title: string;
 	filename?: string;
 	filesize?: string;

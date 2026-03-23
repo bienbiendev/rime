@@ -667,8 +667,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 	};
 
 	const buildPanelActionUrl = () => {
-		console.log('@buildPanelActionUrl----');
-		console.log(operation);
 		// Start with the base URI for the panel
 		let panelUri = `/panel/${config.kebab}`;
 		// Add the item ID to the URI if we're updating a collection doc

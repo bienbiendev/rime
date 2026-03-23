@@ -10,7 +10,6 @@
 	import { getLocaleContext } from '$lib/panel/context/locale.svelte';
 	import { panelUrl } from '$lib/panel/util/url.js';
 	import { moveItem } from '$lib/util/array.js';
-	import { getValueAtPath } from '$lib/util/object.js';
 	import { snapshot } from '$lib/util/state.js';
 	import { API_PROXY, getAPIProxyContext } from '../../../panel/context/api-proxy.svelte.js';
 	import type { Relation, RelationField } from '../index.js';
@@ -58,7 +57,6 @@
 	function documentToRelationFieldItem(doc: GenericDoc) {
 		const itemInFieldValue = retreiveRelation(doc.id);
 		const item: RelationFieldItem = {
-			label: getValueAtPath(relationConfig.asTitle, doc) || '[untitled]',
 			documentId: doc.id,
 			title: doc.title,
 			editUrl: panelUrl(relationConfig.kebab, doc.id),

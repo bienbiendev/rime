@@ -83,7 +83,7 @@
 		>
 			{#each selectedItems as item (item.documentId)}
 				<Tag onRemove={() => removeValue(item.documentId)} {readOnly}>
-					<a href={item.editUrl}>{item.label}</a>
+					<a href={item.editUrl}>{item.title}</a>
 				</Tag>
 			{/each}
 
@@ -107,8 +107,8 @@
 				{#if inputFocused}
 					<Command.List>
 						{#each availableItems as item (item.documentId)}
-							<Command.Item value={item.label} onSelect={() => onSelect(item)}>
-								<span>{item.label}</span>
+							<Command.Item value={item.title} onSelect={() => onSelect(item)}>
+								<span>{item.title}</span>
 							</Command.Item>
 						{/each}
 						<Command.Empty>Nothing to select</Command.Empty>
