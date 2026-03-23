@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { getUserContext } from '$lib/panel/context/user.svelte';
-	import Button from '../button/button.svelte';
-	import { LogOut } from '@lucide/svelte';
-	import * as Tooltip from '$lib/panel/components/ui/tooltip';
-	import { authClient } from '$lib/panel/util/auth.js';
 	import { env } from '$env/dynamic/public';
+	import * as Tooltip from '$lib/panel/components/ui/tooltip';
+	import { getUserContext } from '$lib/panel/context/user.svelte.js';
+	import { authClient } from '$lib/panel/util/auth.js';
+	import { LogOut } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
+	import Button from '../button/button.svelte';
 
 	type Props = { navCollapsed: boolean };
 	const { navCollapsed }: Props = $props();

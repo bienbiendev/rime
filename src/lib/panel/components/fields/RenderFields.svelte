@@ -4,8 +4,8 @@
 	import { ComponentFieldBuilder } from '$lib/fields/component';
 	import { isTabsField } from '$lib/fields/tabs';
 	import type { FormField } from '$lib/fields/types.js';
-	import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte';
-	import { getUserContext } from '$lib/panel/context/user.svelte';
+	import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+	import { getUserContext } from '$lib/panel/context/user.svelte.js';
 	import type { GenericDoc } from '$lib/types';
 	import type { WithOptional } from '$lib/util/types';
 

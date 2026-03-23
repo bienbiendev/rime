@@ -6,7 +6,11 @@
 	import Button from '$lib/panel/components/ui/button/button.svelte';
 	import * as Command from '$lib/panel/components/ui/command/index.js';
 	import Input from '$lib/panel/components/ui/input/input.svelte';
-	import { API_PROXY, getAPIProxyContext, type Resource } from '$lib/panel/context/api-proxy.svelte';
+	import {
+		API_PROXY,
+		getAPIProxyContext,
+		type Resource
+	} from '$lib/panel/context/api-proxy.svelte.js';
 	import { getLocaleContext } from '$lib/panel/context/locale.svelte';
 	import validate from '$lib/util/validate.js';
 	import { CornerDownLeft, ExternalLink, Link2, Newspaper, Trash } from '@lucide/svelte';
@@ -16,7 +20,12 @@
 	import type { RichTextContext } from '../../../types';
 	import './link-selector.css';
 
-	type Props = { options?: LinkFeatureOptions; editor: Editor; context: RichTextContext; active: boolean };
+	type Props = {
+		options?: LinkFeatureOptions;
+		editor: Editor;
+		context: RichTextContext;
+		active: boolean;
+	};
 	type LinkResource = { title: string; url: string };
 	let { options, editor, context, active }: Props = $props();
 
@@ -36,7 +45,9 @@
 	$effect(() => {
 		if (Array.isArray(options?.resources) && !resources.length) {
 			resources = options.resources.map((resourceOption) => {
-				let params = resourceOption.query ? `?${resourceOption.query}&select=title,url` : '?select=title,url';
+				let params = resourceOption.query
+					? `?${resourceOption.query}&select=title,url`
+					: '?select=title,url';
 				params = locale.code ? `${params}&locale=${locale.code}` : params;
 				const url = `${apiUrl(resourceOption.slug)}${params}`;
 				return APIProxy.getRessource<LinkResource[]>(url, {
@@ -189,7 +200,9 @@
 			<div class="rz-link-selector__button">
 				{#if editor.getAttributes('link').href}
 					<Button
-						--rz-button-ghost-fg={isTargetBlank ? 'hsl(var(--rz-color-spot))' : 'hsl(var(--rz-color-fg))'}
+						--rz-button-ghost-fg={isTargetBlank
+							? 'hsl(var(--rz-color-spot))'
+							: 'hsl(var(--rz-color-fg))'}
 						onclick={() => (isTargetBlank = !isTargetBlank)}
 						variant="ghost"
 						size="icon-sm"
@@ -198,7 +211,12 @@
 					<Button size="icon-sm" variant="ghost" icon={Trash} onclick={onDelete} />
 				{:else}
 					{#if options?.resources?.length}
-						<Button onclick={() => (resourceDialogOpen = true)} size="icon-sm" icon={Newspaper} variant="ghost" />
+						<Button
+							onclick={() => (resourceDialogOpen = true)}
+							size="icon-sm"
+							icon={Newspaper}
+							variant="ghost"
+						/>
 					{/if}
 					<Button type="submit" variant="ghost" size="icon-sm" icon={CornerDownLeft}></Button>
 				{/if}

@@ -2,7 +2,7 @@
 	import type { WithUpload } from '$lib/core/collections/upload/util/config';
 	import type { BuiltCollection } from '$lib/core/config/types';
 	import Button from '$lib/panel/components/ui/button/button.svelte';
-	import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte';
+	import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 	import { mimeTypeToIcon } from '$lib/panel/util/upload.js';
 	import * as util from '$lib/util/file.js';
 	import { capitalize } from '$lib/util/string.js';

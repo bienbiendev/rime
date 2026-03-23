@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte';
+	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 	import { Link } from '@lucide/svelte';
 
 	const { form }: { form: DocumentFormContext } = $props();

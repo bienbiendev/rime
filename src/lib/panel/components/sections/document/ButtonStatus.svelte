@@ -4,7 +4,7 @@
 	import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant.js';
 	import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
 	import * as Radio from '$lib/panel/components/ui/radio-group/index.js';
-	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte';
+	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 	import { toKebabCase } from '$lib/util/string';
 	import { toast } from 'svelte-sonner';
 	import { t__ } from '../../../../core/i18n/index.js';

@@ -8,7 +8,7 @@
 	import FieldsPreviewTrigger from '$lib/panel/components/fields/FieldsPreviewTrigger.svelte';
 	import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
 	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-	import { getUserContext } from '$lib/panel/context/user.svelte';
+	import { getUserContext } from '$lib/panel/context/user.svelte.js';
 	import { ChevronDown, FolderClosed, FolderOpen } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 

@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { Eye } from '@lucide/svelte';
-	import Button from '$lib/panel/components/ui/button/button.svelte';
-	import PageHeader from '$lib/panel/components/ui/page-header/PageHeader.svelte';
-	import { getConfigContext } from '$lib/panel/context/config.svelte';
-	import LanguageSwitcher from '$lib/panel/components/ui/language-switcher/LanguageSwitcher.svelte';
-	import { t__ } from '$lib/core/i18n/index.js';
-	import type { DashboardEntry } from './types.js';
 	import { invalidateAll } from '$app/navigation';
 	import type { User } from '$lib/core/collections/auth/types.js';
+	import { t__ } from '$lib/core/i18n/index.js';
 	import Page from '$lib/panel/components/sections/page-layout/Page.svelte';
+	import Button from '$lib/panel/components/ui/button/button.svelte';
+	import LanguageSwitcher from '$lib/panel/components/ui/language-switcher/LanguageSwitcher.svelte';
+	import PageHeader from '$lib/panel/components/ui/page-header/PageHeader.svelte';
+	import { getConfigContext } from '$lib/panel/context/config.svelte.js';
+	import { Eye } from '@lucide/svelte';
+	import type { DashboardEntry } from './types.js';
 
 	type Props = { entries: DashboardEntry[]; user?: User };
 	const { entries, user }: Props = $props();
@@ -86,7 +86,7 @@
 		flex-direction: column;
 		gap: var(--rz-size-4);
 		transition: background-color 0.3s ease-out;
-		
+
 		&:hover {
 			background-color: light-dark(hsl(var(--rz-gray-15)), hsl(var(--rz-gray-4)));
 		}

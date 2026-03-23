@@ -5,7 +5,7 @@
 	import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant.js';
 	import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
 	import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
-	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte';
+	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 	import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
 	import { panelUrl } from '$lib/panel/util/url.js';
 	import { trycatchFetch } from '$lib/util/function.js';

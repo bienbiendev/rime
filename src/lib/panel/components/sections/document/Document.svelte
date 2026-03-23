@@ -5,13 +5,13 @@
 	import { t__ } from '$lib/core/i18n/index.js';
 	import type { GenericDoc } from '$lib/core/types/doc';
 	import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-	import { getConfigContext } from '$lib/panel/context/config.svelte';
+	import { getConfigContext } from '$lib/panel/context/config.svelte.js';
 	import {
 		setDocumentFormContext,
 		type FormSuccessData
-	} from '$lib/panel/context/documentForm.svelte';
-	import { getLocaleContext } from '$lib/panel/context/locale.svelte';
-	import { getUserContext } from '$lib/panel/context/user.svelte';
+	} from '$lib/panel/context/documentForm.svelte.js';
+	import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
+	import { getUserContext } from '$lib/panel/context/user.svelte.js';
 	import RenderFields from '../../fields/RenderFields.svelte';
 	import Button from '../../ui/button/button.svelte';
 	import AuthApiKeyDialog from './AuthAPIKeyDialog.svelte';

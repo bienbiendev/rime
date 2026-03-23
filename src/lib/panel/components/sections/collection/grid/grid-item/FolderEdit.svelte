@@ -1,18 +1,18 @@
 <script lang="ts">
 	import type { Directory } from '$lib/core/collections/upload/upload';
 	import type { BuiltCollectionClient } from '$lib/core/config/types';
+	import { t__ } from '$lib/core/i18n/index.js';
 	import { withDirectoriesSuffix } from '$lib/core/naming';
+	import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
+	import Button from '$lib/panel/components/ui/button/button.svelte';
 	import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-	import { t__ } from 'rimecms/i18n';
-	import RenderFields from 'rimecms/panel/components/fields/RenderFields.svelte';
-	import Button from 'rimecms/panel/components/ui/button/button.svelte';
-	import { API_PROXY, setAPIProxyContext } from 'rimecms/panel/context/api-proxy.svelte';
-	import { getConfigContext } from 'rimecms/panel/context/config.svelte';
+	import { API_PROXY, setAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+	import { getConfigContext } from '$lib/panel/context/config.svelte.js';
 	import {
 		setDocumentFormContext,
 		type FormSuccessData
-	} from 'rimecms/panel/context/documentForm.svelte';
-	import { getUserContext } from 'rimecms/panel/context/user.svelte';
+	} from '$lib/panel/context/documentForm.svelte.js';
+	import { getUserContext } from '$lib/panel/context/user.svelte.js';
 
 	type Props = {
 		open: boolean;

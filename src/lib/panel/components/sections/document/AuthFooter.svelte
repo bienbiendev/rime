@@ -4,8 +4,8 @@
 	import type { BuiltCollection } from '$lib/core/config/types.js';
 	import { t__ } from '$lib/core/i18n';
 	import { text } from '$lib/fields';
-	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte';
-	import { getUserContext } from '$lib/panel/context/user.svelte';
+	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+	import { getUserContext } from '$lib/panel/context/user.svelte.js';
 	import { authClient } from '$lib/panel/util/auth';
 	import validate from '$lib/util/validate';
 	import { toast } from 'svelte-sonner';

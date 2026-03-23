@@ -2,7 +2,7 @@
 	import type { GenericBlock } from '$lib/core/types/doc.js';
 	import type { BlocksFieldBlock } from '$lib/fields/types';
 	import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
-	import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte';
+	import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 	import { useOnce } from '$lib/panel/util/once.svelte.js';
 	import { capitalize } from '$lib/util/string.js';
 	import { GripVertical, ToyBrick } from '@lucide/svelte';

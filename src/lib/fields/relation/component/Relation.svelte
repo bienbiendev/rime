@@ -5,7 +5,7 @@
 	import { Field } from '$lib/panel/components/fields/index.js';
 	import { root } from '$lib/panel/components/fields/root.svelte.js';
 	import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
-	import { getConfigContext } from '$lib/panel/context/config.svelte';
+	import { getConfigContext } from '$lib/panel/context/config.svelte.js';
 	import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 	import { getLocaleContext } from '$lib/panel/context/locale.svelte';
 	import { panelUrl } from '$lib/panel/util/url.js';

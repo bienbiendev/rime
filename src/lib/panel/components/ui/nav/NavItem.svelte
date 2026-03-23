@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import * as Tooltip from '$lib/panel/components/ui/tooltip';
-	import { getConfigContext } from '$lib/panel/context/config.svelte';
+	import { getConfigContext } from '$lib/panel/context/config.svelte.js';
 	import type { Route } from '$lib/panel/types';
 	import { File } from '@lucide/svelte';
 	import NavItemButton from './NavItemButton.svelte';
@@ -15,7 +15,8 @@
 
 	const config = getConfigContext();
 
-	const RouteIcon = typeof route.icon === 'function' ? route.icon : config.raw.icons[route.icon] || File;
+	const RouteIcon =
+		typeof route.icon === 'function' ? route.icon : config.raw.icons[route.icon] || File;
 
 	let pathname = page.url.pathname;
 

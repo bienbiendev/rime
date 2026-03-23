@@ -5,7 +5,7 @@
 	import Folder from '$lib/panel/components/sections/collection/grid/grid-item/Folder.svelte';
 	import CardDocument from '$lib/panel/components/ui/card-document/card-document.svelte';
 	import * as Sheet from '$lib/panel/components/ui/sheet/index.js';
-	import { API_PROXY, getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte';
+	import { API_PROXY, getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
 	import type { BuiltCollection, UploadDoc } from '$lib/types';
 
 	type Props = { open: boolean; addValue: (item: string) => void; config: BuiltCollection };

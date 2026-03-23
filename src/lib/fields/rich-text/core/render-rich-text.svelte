@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { JSONContent } from '@tiptap/core';
-	import type { RichTextNodeRenderer } from 'rimecms/fields/rich-text';
 	import RenderRichText from './render-rich-text.svelte';
+	import type { RichTextNodeRenderer } from './types';
 
 	type Props = {
 		json?: JSONContent;

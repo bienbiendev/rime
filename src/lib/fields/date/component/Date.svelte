@@ -4,7 +4,7 @@
 	import { Button } from '$lib/panel/components/ui/button/index.js';
 	import { Calendar } from '$lib/panel/components/ui/calendar/index.js';
 	import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-	import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte';
+	import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 	import { getLocaleContext } from '$lib/panel/context/locale.svelte';
 	import { CalendarDate, getLocalTimeZone, type DateValue } from '@internationalized/date';
 	import { Calendar as CalendarIcon } from '@lucide/svelte';
@@ -48,7 +48,7 @@
 </script>
 
 <fieldset class="rz-date-field {config.className || ''}" use:root={field}>
-	<Field.Label {config} for={path || config.name} />
+	<Field.Label {config} for={path || config.name} />
 
 	<Button
 		id="foo"
@@ -65,7 +65,12 @@
 
 	<Dialog.Root bind:open={dialogOpen}>
 		<Dialog.Content size="sm" class="rz-date__dialog-content">
-			<Calendar type="single" value={calendarDate} onValueChange={handleCalendarChange} initialFocus />
+			<Calendar
+				type="single"
+				value={calendarDate}
+				onValueChange={handleCalendarChange}
+				initialFocus
+			/>
 		</Dialog.Content>
 	</Dialog.Root>
 	<Field.Hint {config} />
@@ -77,7 +82,6 @@
 		.rz-dialog-content.rz-date__dialog-content {
 			width: 100px;
 			padding: 12rem;
-			
 		}
 		.rz-date__button.rz-button {
 			width: 200px;

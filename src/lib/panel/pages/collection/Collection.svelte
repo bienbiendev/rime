@@ -16,7 +16,7 @@
 	import LanguageSwitcher from '$lib/panel/components/ui/language-switcher/LanguageSwitcher.svelte';
 	import PageHeader from '$lib/panel/components/ui/page-header/PageHeader.svelte';
 	import { setCollectionContext } from '$lib/panel/context/collection.svelte.js';
-	import { getConfigContext } from '$lib/panel/context/config.svelte';
+	import { getConfigContext } from '$lib/panel/context/config.svelte.js';
 	import { CopyPlus } from '@lucide/svelte';
 	import { getContext, setContext } from 'svelte';
 

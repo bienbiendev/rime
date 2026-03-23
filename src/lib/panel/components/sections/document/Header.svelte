@@ -3,7 +3,7 @@
 	import type { BuiltArea, BuiltCollection } from '$lib/core/config/types';
 	import { PARAMS } from '$lib/core/constant';
 	import { t__ } from '$lib/core/i18n/index.js';
-	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte';
+	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 	import { ExternalLink, PencilRuler, X } from '@lucide/svelte';
 	import { Button } from '../../ui/button';
 	import LanguageSwitcher from '../../ui/language-switcher/LanguageSwitcher.svelte';

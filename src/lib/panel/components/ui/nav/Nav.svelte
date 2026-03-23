@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { getConfigContext } from '$lib/panel/context/config.svelte';
+	import { getConfigContext } from '$lib/panel/context/config.svelte.js';
 	import type { Route } from '$lib/panel/types';
 	import { panelUrl } from '$lib/panel/util/url.js';
 	import { PanelsTopLeft } from '@lucide/svelte';
@@ -70,7 +70,12 @@
 		</div>
 	</div>
 
-	<button class="rz-nav__toggle" onclick={() => setCollapsed(!isCollapsed)} aria-label="Toggle navigation"> </button>
+	<button
+		class="rz-nav__toggle"
+		onclick={() => setCollapsed(!isCollapsed)}
+		aria-label="Toggle navigation"
+	>
+	</button>
 </div>
 
 <style type="postcss">

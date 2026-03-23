@@ -6,7 +6,7 @@
 	import * as Command from '$lib/panel/components/ui/command/index.js';
 	import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
 	import Input from '$lib/panel/components/ui/input/input.svelte';
-	import { API_PROXY, setAPIProxyContext } from '$lib/panel/context/api-proxy.svelte';
+	import { API_PROXY, setAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
 	import { X } from '@lucide/svelte';
 	import type { NodeViewProps } from '@tiptap/core';
 	import { onMount } from 'svelte';
@@ -125,10 +125,17 @@
 <NodeViewWrapper>
 	<div data-drag-handle class="rz-richtext-media" class:rz-richtext-media--selected={!!selected}>
 		{#if !selected}
-			<Button class="rz-richtext-media__add" variant="outline" onclick={handleClick}>Add a media</Button>
+			<Button class="rz-richtext-media__add" variant="outline" onclick={handleClick}
+				>Add a media</Button
+			>
 		{:else}
 			<div class="rz-richtext-media__actions">
-				<Button size="xs" class="rz-richtext-media__button" type="button" onclick={() => (dialogLegendOpen = true)}>
+				<Button
+					size="xs"
+					class="rz-richtext-media__button"
+					type="button"
+					onclick={() => (dialogLegendOpen = true)}
+				>
 					{legend || 'set legend'}
 				</Button>
 				<Button

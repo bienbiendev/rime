@@ -1,5 +1,5 @@
 import { getContext, setContext } from 'svelte';
-import { getConfigContext } from './config.svelte';
+import { getConfigContext } from './config.svelte.js';
 
 const LOCALE_KEY = Symbol('rime.locale');
 
