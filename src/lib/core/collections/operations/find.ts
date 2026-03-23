@@ -1,4 +1,5 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
+import { logger } from '$lib/core/logger/index.server.js';
 import type { OperationContext } from '$lib/core/operations/hooks/index.server.js';
 import type { CollectionSlug, GenericDoc, RawDoc } from '$lib/core/types/doc.js';
 import type { OperationQuery } from '$lib/core/types/index.js';
@@ -84,15 +85,21 @@ export const find = async <T extends GenericDoc>(args: FindArgs): Promise<T[]> =
 		});
 
 		for (const hook of config.$hooks?.beforeRead || []) {
-			const result = await hook({
-				doc: document as RegisterCollection[CollectionSlug],
-				config,
-				operation: 'read',
-				event,
-				context
-			});
-			context = result.context;
-			document = result.doc;
+			try {
+				const result = await hook({
+					doc: document as RegisterCollection[CollectionSlug],
+					config,
+					operation: 'read',
+					event,
+					context
+				});
+				context = result.context;
+				document = result.doc;
+			} catch (error: any) {
+				// If a beforeRead hook throws an error, we skip processing this document and continue with the next one
+				logger.error(error.message, error);
+				return null; // Indicate that this document should be filtered out
+			}
 		}
 
 		return document;
@@ -100,5 +107,5 @@ export const find = async <T extends GenericDoc>(args: FindArgs): Promise<T[]> =
 
 	const documents = await Promise.all(documentsRaw.map((doc) => processDocument(doc)));
 
-	return documents as T[];
+	return documents.filter((d) => !!d) as T[];
 };
