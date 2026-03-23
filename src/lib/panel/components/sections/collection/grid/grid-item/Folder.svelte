@@ -37,8 +37,10 @@
 
 	h3 {
 		@mixin font-semibold;
+		@mixin line-clamp 1;
+		font-size: var(--rz-text-sm);
 		text-align: center;
-		padding: var(--rz-size-3);
+		margin-block: var(--rz-size-3);
 	}
 	.rz-folder-svg {
 		aspect-ratio: 5 / 4;

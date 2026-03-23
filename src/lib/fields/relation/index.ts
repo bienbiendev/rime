@@ -13,6 +13,7 @@ import type {
 import type { RegisterCollection } from '$lib/index.js';
 import { trycatchFetch } from '$lib/util/function';
 import { hasProps, isObjectLiteral } from '$lib/util/object.js';
+import { toKebabCase } from '$lib/util/string.js';
 import type { WithOptional } from '$lib/util/types';
 import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
@@ -29,7 +30,7 @@ export const ensureRelationExists: FieldHookShared = async (
 
 	const retrieveRelation = async (id: string) => {
 		const [err, response] = await trycatchFetch(
-			`${env.PUBLIC_RIME_URL}/api/${config.relationTo}/${id}?${PARAMS.SELECT}=id`,
+			`${env.PUBLIC_RIME_URL}/api/${toKebabCase(config.relationTo)}/${id}?${PARAMS.SELECT}=id`,
 			{
 				method: 'GET',
 				headers: getRequsetEvent().request.headers

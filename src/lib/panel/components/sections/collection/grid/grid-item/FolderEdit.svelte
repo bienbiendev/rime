@@ -8,10 +8,7 @@
 	import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
 	import { API_PROXY, setAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
 	import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-	import {
-		setDocumentFormContext,
-		type FormSuccessData
-	} from '$lib/panel/context/documentForm.svelte.js';
+	import { setDocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 	import { getUserContext } from '$lib/panel/context/user.svelte.js';
 
 	type Props = {
@@ -24,13 +21,8 @@
 	const user = getUserContext();
 	const configCtx = getConfigContext();
 	const config = configCtx.getCollection(withDirectoriesSuffix(collection.slug));
-	setAPIProxyContext(API_PROXY.DOCUMENT);
 	let formElement = $state<HTMLFormElement>();
-
-	async function beforeRedirect(data?: FormSuccessData) {
-		open = false;
-		return false;
-	}
+	setAPIProxyContext(API_PROXY.DOCUMENT);
 
 	const form = setDocumentFormContext({
 		element: () => formElement,
@@ -38,7 +30,7 @@
 		config,
 		readOnly: !config.access.update(user.attributes, { id: folder.id }),
 		key: folder._type,
-		beforeRedirect: beforeRedirect
+		afterSuccess: () => (open = false)
 	});
 
 	function handleKeyDown(event: KeyboardEvent) {
@@ -64,11 +56,7 @@
 	<Dialog.Content>
 		{#snippet child({ props })}
 			<form use:form.enhance action={form.buildPanelActionUrl()} bind:this={formElement} {...props}>
-				<Dialog.Header>
-					{t__('common.rename_dialog_title', folder.name)}
-				</Dialog.Header>
 				<RenderFields {form} fields={config.fields} />
-
 				<Dialog.Footer --rz-justify-content="space-between">
 					<Button data-submit disabled={!form.canSubmit} type="submit">{t__('common.save')}</Button>
 					<Button onclick={() => (open = false)} variant="secondary">{t__('common.cancel')}</Button>

@@ -37,6 +37,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 	readOnly,
 	key,
 	onNestedDocumentCreated,
+	afterSuccess,
 	onDataChange,
 	beforeSubmit,
 	beforeRedirect,
@@ -602,6 +603,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 				// Form so no need to assign the returned doc
 				if (onNestedDocumentCreated) onNestedDocumentCreated(doc);
 			}
+			if (afterSuccess) afterSuccess(doc);
 		}
 
 		async function handleError(data?: Dic) {
@@ -818,6 +820,7 @@ type Args<T> = {
 	element: () => HTMLFormElement | undefined;
 	beforeSubmit?: (data: Dic) => Promise<Dic>;
 	beforeRedirect?: (data?: FormSuccessData) => Promise<boolean>;
+	afterSuccess?: (doc?: T) => void;
 	initial: T;
 	config: (AreaSlug extends never ? never : BuiltAreaClient) | BuiltCollectionClient;
 	readOnly: boolean;
