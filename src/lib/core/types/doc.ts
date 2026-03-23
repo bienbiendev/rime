@@ -71,7 +71,13 @@ export type Docs = {
 	upload: UploadDoc;
 	version: VersionDoc;
 	auth: GenericAuthDoc;
-	directory: { id: UploadPath; parent: string | null; name: string; createdAt: Date; updatedAt: Date };
+	directory: {
+		id: UploadPath;
+		parent: string | null;
+		name: string;
+		createdAt: Date;
+		updatedAt: Date;
+	};
 } & RegisterCollection &
 	RegisterArea;
 

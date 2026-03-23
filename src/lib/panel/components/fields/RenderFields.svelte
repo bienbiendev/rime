@@ -6,11 +6,13 @@
 	import type { FormField } from '$lib/fields/types.js';
 	import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte';
 	import { getUserContext } from '$lib/panel/context/user.svelte';
+	import type { GenericDoc } from '$lib/types';
+	import type { WithOptional } from '$lib/util/types';
 
 	type Props = {
 		path?: string;
 		fields: FieldBuilder[];
-		form: DocumentFormContext;
+		form: DocumentFormContext<WithOptional<GenericDoc, 'id'>>;
 	};
 
 	const { form, fields, path: initialPath = '' }: Props = $props();
@@ -28,7 +30,8 @@
 
 	const path = $derived(initialPath === '' ? '' : `${initialPath}.`);
 
-	const widthClassModifier = (field: FormField) => `rz-render-fields__field--${field.width || 'full'}`;
+	const widthClassModifier = (field: FormField) =>
+		`rz-render-fields__field--${field.width || 'full'}`;
 
 	//
 </script>

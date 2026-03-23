@@ -13,6 +13,7 @@ import type {
 import type { RegisterCollection } from '$lib/index.js';
 import { trycatchFetch } from '$lib/util/function';
 import { hasProps, isObjectLiteral } from '$lib/util/object.js';
+import type { WithOptional } from '$lib/util/types';
 import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
 
@@ -171,7 +172,7 @@ export type RelationField<Doc extends GenericDoc = GenericDoc> = FormField & {
 	layout?: 'tags' | 'list';
 	many?: boolean;
 	defaultValue?: string | string[] | DefaultValueFn<string | string[]>;
-	query?: string | ((doc: Doc) => string);
+	query?: string | ((doc: WithOptional<Doc, 'id'>) => string);
 	isThumbnail?: boolean;
 };
 
@@ -186,4 +187,4 @@ export type Relation = {
 	livePreview?: GenericDoc;
 };
 
-type QueryResolver<Doc extends GenericDoc = GenericDoc> = (doc: Doc) => string;
+type QueryResolver<Doc extends GenericDoc = GenericDoc> = (doc: WithOptional<Doc, 'id'>) => string;

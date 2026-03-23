@@ -12,11 +12,12 @@ import type { FormField, SimplerField } from '$lib/fields/types.js';
 import { normalizeFieldPath } from '$lib/util/doc.js';
 import { random } from '$lib/util/index.js';
 import { isObjectLiteral, omit } from '$lib/util/object.js';
-import type { Dic } from '$lib/util/types.js';
+import type { Dic, WithOptional } from '$lib/util/types.js';
 import type { ActionResult } from '@sveltejs/kit';
 import cloneDeep from 'clone-deep';
 import { diff } from 'deep-object-diff';
 import { flatten } from 'flat';
+import { richTextJSONToText } from 'rimecms/fields/rich-text';
 import { getContext, setContext } from 'svelte';
 import { toast } from 'svelte-sonner';
 import { t__ } from '../../core/i18n/index.js';
@@ -28,9 +29,8 @@ import { getCollectionContext } from './collection.svelte.js';
 import { setErrorsContext } from './errors.svelte.js';
 import { getLocaleContext } from './locale.svelte.js';
 import { getUserContext } from './user.svelte.js';
-import { richTextJSONToText } from 'rimecms/fields/rich-text';
 
-function createDocumentFormState<T extends GenericDoc = GenericDoc>({
+function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = GenericDoc>({
 	initial,
 	element,
 	config,
@@ -43,13 +43,13 @@ function createDocumentFormState<T extends GenericDoc = GenericDoc>({
 	onFieldFocus
 }: Args<T>) {
 	//
-	let intialDoc = $state(initial);
+	let initialDoc = $state(initial);
 	let doc = $state<T>(initial);
 	const documentConfig = compileDocumentConfig(config);
-	const changes = $derived<Partial<GenericDoc>>(diff(intialDoc, doc));
+	const changes = $derived<Partial<GenericDoc>>(diff(initialDoc, doc));
 	let isDisabled = $state(readOnly);
 	let processing = $state(false);
-	const operation = $derived(doc.id ? 'update' : 'create');
+	const operation = doc.id ? 'update' : 'create';
 	const user = getUserContext();
 	const errors = setErrorsContext(key);
 	const isCollection = documentConfig.type === 'collection';
@@ -58,6 +58,7 @@ function createDocumentFormState<T extends GenericDoc = GenericDoc>({
 	const canSubmit = $derived(
 		!isDisabled && !readOnly && Object.keys(changes).length > 0 && !hasError
 	);
+
 	const nestedLevel = initLevel();
 	const isLiveEdit = !!onDataChange;
 	const locale = getLocaleContext();
@@ -86,7 +87,7 @@ function createDocumentFormState<T extends GenericDoc = GenericDoc>({
 				if (typeof value === 'string') {
 					return value;
 				}
-				return initialTitle || doc.id;
+				return initialTitle || doc.id || '[untitled]';
 			}
 
 			$effect(() => {
@@ -133,7 +134,7 @@ function createDocumentFormState<T extends GenericDoc = GenericDoc>({
 
 	function setValue(path: string, value: any) {
 		doc = setValueAtPath(path, doc, value);
-		if (collection && operation === 'update') collection.updateDoc(doc);
+		if (collection && operation === 'update') collection.updateDoc(doc as GenericDoc);
 		if (onDataChange) onDataChange({ path, value });
 	}
 
@@ -592,7 +593,7 @@ function createDocumentFormState<T extends GenericDoc = GenericDoc>({
 
 			if (nestedLevel === 0) {
 				await invalidateAll();
-				intialDoc = doc;
+				initialDoc = doc;
 			} else {
 				toast.success(t__('common.doc_created'));
 				apiProxy.invalidateAll();
@@ -666,6 +667,8 @@ function createDocumentFormState<T extends GenericDoc = GenericDoc>({
 	};
 
 	const buildPanelActionUrl = () => {
+		console.log('@buildPanelActionUrl----');
+		console.log(operation);
 		// Start with the base URI for the panel
 		let panelUri = `/panel/${config.kebab}`;
 		// Add the item ID to the URI if we're updating a collection doc
@@ -787,19 +790,28 @@ function createDocumentFormState<T extends GenericDoc = GenericDoc>({
 
 const FORM_KEY = 'rime.form';
 
-export function setDocumentFormContext<T extends GenericDoc>(args: Args<T>) {
-	const store = createDocumentFormState(args);
+export function setDocumentFormContext<T extends WithOptional<GenericDoc, 'id'>>(args: Args<T>) {
+	const initial = {
+		...args.initial,
+		_type: args.initial._type || args.config.type,
+		_prototype: args.initial._prototype || args.config.slug,
+		title: args.initial.title || '[untitled]'
+	};
+	const store = createDocumentFormState({ ...args, initial });
 	return setContext(`${FORM_KEY}.${args.key}`, store);
 }
 
-export function getDocumentFormContext<T extends GenericDoc>(key: string = 'root') {
+export function getDocumentFormContext<T extends WithOptional<GenericDoc, 'id'> = GenericDoc>(
+	key: string = 'root'
+) {
 	return getContext<DocumentFormContext<T>>(`${FORM_KEY}.${key}`);
 }
 
-export type DocumentFormContext<T extends GenericDoc = GenericDoc> = ReturnType<
+export type DocumentFormContext<T extends WithOptional<GenericDoc, 'id'> = GenericDoc> = ReturnType<
 	typeof setDocumentFormContext<T>
 >;
 
+type InitialDoc = Partial<GenericDoc>;
 type AddBlock = (block: Omit<GenericBlock, 'id' | 'path'>) => void;
 type MoveBlock = (from: number, to: number) => void;
 export type FormSuccessData = { redirectUrl?: string; document?: GenericDoc; message?: string };

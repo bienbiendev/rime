@@ -21,7 +21,9 @@
 	let deleteConfirmOpen = $state(false);
 	let dupplicateConfirmOpen = $state(false);
 	const isCollection = $derived(form.config.type === 'collection');
-	const allowDuplicate = $derived(form.config.type === 'collection' && !form.config.auth && !form.config.upload);
+	const allowDuplicate = $derived(
+		form.config.type === 'collection' && !form.config.auth && !form.config.upload
+	);
 	const locale = getLocaleContext();
 
 	function handleNewDraft() {
@@ -42,7 +44,9 @@
 	const isVersionPage = $derived(page.url.pathname.includes('/versions'));
 
 	function handleViewVersion() {
-		const basUrl = isCollection ? panelUrl(form.config.kebab, form.values.id) : panelUrl(form.config.kebab);
+		const basUrl = isCollection
+			? panelUrl(form.config.kebab, form.values.id)
+			: panelUrl(form.config.kebab);
 		return goto(`${basUrl}/versions?${PARAMS.VERSION_ID}=${form.values.versionId}`);
 	}
 

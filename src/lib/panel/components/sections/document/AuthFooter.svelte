@@ -25,6 +25,7 @@
 	});
 
 	async function sendPasswordResetLink() {
+		// @ts-expect-error better-auth type issue to resolve
 		const { data, error } = await authClient.forgetPassword({
 			email: form.values.email,
 			redirectTo: `/reset-password?slug=staff`
@@ -37,7 +38,10 @@
 		}
 	}
 
-	const passwordConfig = text('password').placeholder(t__('fields.password')).required().validate(validate.password);
+	const passwordConfig = text('password')
+		.placeholder(t__('fields.password'))
+		.required()
+		.validate(validate.password);
 	const Text = text('mock').component;
 
 	const confirmPasswordConfig = text('confirmPassword')
@@ -59,7 +63,12 @@
 		{#if operation === 'create'}
 			{#if isAuthConfig(collection) && collection.auth.type === 'password'}
 				<Text {form} type="password" config={passwordConfig.compile()} path="password" />
-				<Text {form} type="password" config={confirmPasswordConfig.compile()} path="confirmPassword" />
+				<Text
+					{form}
+					type="password"
+					config={confirmPasswordConfig.compile()}
+					path="confirmPassword"
+				/>
 			{/if}
 		{:else if user.attributes.roles.includes('admin') && page.data?.hasMailer}
 			{#if isAuthConfig(collection) && collection.auth.type === 'password'}

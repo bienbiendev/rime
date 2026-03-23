@@ -22,11 +22,10 @@
 		folder: Directory;
 		collection: BuiltCollectionClient;
 		onDelete?: (path: string) => void;
-		onEdited?: (folder: Directory) => void;
 		onDocumentDrop: (args: { documentId: string; path: string }) => void;
 		draggable?: 'true';
 	};
-	const { folder, collection, onDelete, onEdited, onDocumentDrop, draggable }: Props = $props();
+	const { folder, collection, onDelete, onDocumentDrop, draggable }: Props = $props();
 
 	let deleteConfirmOpen = $state(false);
 	let editFolderDialogOpen = $state(false);
@@ -187,7 +186,7 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<FolderEdit bind:open={editFolderDialogOpen} {folder} {collection} {onEdited} />
+<FolderEdit bind:open={editFolderDialogOpen} {folder} {collection} />
 
 <style lang="postcss">
 	:root {

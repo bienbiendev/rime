@@ -59,7 +59,9 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
 	const hasDraft = $derived(config.versions && config.versions.draft);
 
 	onMount(() => {
-		displayMode = (localStorage.getItem(`collection.${config.slug}.display`) as DisplayMode) || DISPLAY_MODE.LIST;
+		displayMode =
+			(localStorage.getItem(`collection.${config.slug}.display`) as DisplayMode) ||
+			DISPLAY_MODE.LIST;
 		const localSortBy = localStorage.getItem(`collection.${config.slug}.sortBy`);
 		sortingBy = localSortBy || 'updatedAt';
 		const localSortOrder = localStorage.getItem(`collection.${config.slug}.sortOrder`) as SortMode;

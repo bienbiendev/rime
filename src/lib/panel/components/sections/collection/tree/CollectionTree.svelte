@@ -27,8 +27,8 @@
 		onEnd: function (evt) {
 			const { newIndex, oldIndex } = evt;
 
-			//@ts-expect-error annoying
 			const fromParentId =
+				//@ts-expect-error annoying
 				evt.item.getAttribute('data-parent') || evt.item.__attributes?.['data-parent'];
 			//@ts-expect-error annoying
 			const toParentId = evt.to.getAttribute('data-id') || evt.to.__attributes?.['data-id'];

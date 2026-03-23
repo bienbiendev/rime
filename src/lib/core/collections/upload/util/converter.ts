@@ -104,7 +104,7 @@ export async function filePathToFile(filePath: string): Promise<File> {
 		const mimeType = getMimeTypeFromExtension(ext) || 'application/octet-stream';
 
 		// Create a Blob with the file content
-		const blob = new Blob([buffer], { type: mimeType });
+		const blob = new Blob([new Uint8Array(buffer)], { type: mimeType });
 
 		// Create and return a File object
 		return new File([blob], filename, {

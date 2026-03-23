@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { type CollectionContext } from '$lib/panel/context/collection.svelte.js';
 	import { getContext } from 'svelte';
-	import CreateUploadFolder from './CreateUploadFolder.svelte';
+	import CreateUploadFolder from './create-folder/CreateFolder.svelte';
 	import DisplayMode from './DisplayMode.svelte';
 	import SelectUI from './SelectUI.svelte';
 	import Separator from './Separator.svelte';

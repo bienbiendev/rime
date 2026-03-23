@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { Directory } from '$lib/core/collections/upload/upload';
 	import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
 	import Empty from '../Empty.svelte';
 	import Folder from './grid-item/FolderWithActions.svelte';
@@ -14,16 +13,6 @@
 
 	function onDeleteFolder(path: string) {
 		collection.upload.directories = collection.upload.directories.filter((dir) => dir.id !== path);
-	}
-
-	function onEditedFolder(folder: Directory) {
-		collection.upload.directories = collection.upload.directories.map((dir) => {
-			if (dir.id === folder.id) {
-				dir.id = folder.id;
-				dir.name = folder.name;
-			}
-			return dir;
-		});
 	}
 
 	/**
@@ -64,7 +53,6 @@
 				{folder}
 				collection={collection.config}
 				onDelete={onDeleteFolder}
-				onEdited={onEditedFolder}
 			/>
 		{/each}
 

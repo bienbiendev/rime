@@ -1,43 +1,42 @@
 <script lang="ts">
-	import type { Directory } from '$lib/core/collections/upload/upload';
-	import type { BuiltCollectionClient } from '$lib/core/config/types';
+	import { invalidateAll } from '$app/navigation';
+	import { t__ } from '$lib/core/i18n/index.js';
 	import { withDirectoriesSuffix } from '$lib/core/naming';
+	import Button from '$lib/panel/components/ui/button/button.svelte';
 	import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-	import { t__ } from 'rimecms/i18n';
+	import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
+	import { FolderPlus } from '@lucide/svelte';
 	import RenderFields from 'rimecms/panel/components/fields/RenderFields.svelte';
-	import Button from 'rimecms/panel/components/ui/button/button.svelte';
 	import { API_PROXY, setAPIProxyContext } from 'rimecms/panel/context/api-proxy.svelte';
 	import { getConfigContext } from 'rimecms/panel/context/config.svelte';
 	import {
 		setDocumentFormContext,
 		type FormSuccessData
 	} from 'rimecms/panel/context/documentForm.svelte';
-	import { getUserContext } from 'rimecms/panel/context/user.svelte';
 
-	type Props = {
-		open: boolean;
-		folder: Directory;
-		collection: BuiltCollectionClient;
-	};
-	let { folder, collection, open = $bindable() }: Props = $props();
+	type Props = { collection: CollectionContext };
+	const { collection }: Props = $props();
 
-	const user = getUserContext();
 	const configCtx = getConfigContext();
-	const config = configCtx.getCollection(withDirectoriesSuffix(collection.slug));
+	const directoriesConfig = configCtx.getCollection(withDirectoriesSuffix(collection.config.slug));
+	let open = $state(false);
 	setAPIProxyContext(API_PROXY.DOCUMENT);
 	let formElement = $state<HTMLFormElement>();
 
 	async function beforeRedirect(data?: FormSuccessData) {
 		open = false;
+		invalidateAll();
 		return false;
 	}
 
 	const form = setDocumentFormContext({
 		element: () => formElement,
-		initial: folder,
-		config,
-		readOnly: !config.access.update(user.attributes, { id: folder.id }),
-		key: folder._type,
+		initial: {
+			parent: collection.upload.currentPath
+		},
+		readOnly: false,
+		config: directoriesConfig,
+		key: withDirectoriesSuffix(collection.config.slug),
 		beforeRedirect: beforeRedirect
 	});
 
@@ -61,17 +60,29 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 <Dialog.Root bind:open>
-	<Dialog.Content>
+	<Dialog.Trigger>
+		{#snippet child(props)}
+			<Button
+				disabled={collection.selectMode}
+				onclick={() => (open = true)}
+				size="icon-sm"
+				variant="ghost"
+				{...props}
+			>
+				<FolderPlus size={17} />
+			</Button>
+		{/snippet}
+	</Dialog.Trigger>
+	<Dialog.Content class="rz-status-dialog">
 		{#snippet child({ props })}
 			<form use:form.enhance action={form.buildPanelActionUrl()} bind:this={formElement} {...props}>
-				<Dialog.Header>
-					{t__('common.rename_dialog_title', folder.name)}
-				</Dialog.Header>
-				<RenderFields {form} fields={config.fields} />
-
+				<Dialog.Header>{t__('common.create_folder')}</Dialog.Header>
+				<RenderFields {form} fields={directoriesConfig.fields} />
 				<Dialog.Footer --rz-justify-content="space-between">
-					<Button data-submit disabled={!form.canSubmit} type="submit">{t__('common.save')}</Button>
-					<Button onclick={() => (open = false)} variant="secondary">{t__('common.cancel')}</Button>
+					<Button data-submit disabled={!form.canSubmit} type="submit">
+						{t__('common.create')}
+					</Button>
+					<Button variant="secondary" onclick={() => (open = false)}>Cancel</Button>
 				</Dialog.Footer>
 			</form>
 		{/snippet}
