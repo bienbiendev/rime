@@ -59,7 +59,6 @@
 	};
 
 	const initSortable = () => {
-		console.log('initSortable');
 		// Get all sortable containers including the root and nested ones
 		const sortableContainers = document.querySelectorAll('.rz-collection-sortable');
 

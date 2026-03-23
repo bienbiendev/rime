@@ -88,7 +88,6 @@ class SvelteNodeView extends NodeView<
 				context.set(key, ctx);
 			}
 		}
-		console.log(context);
 
 		const as = this.options.as ?? (this.node.isInline ? 'span' : 'div');
 		const target = document.createElement(as);

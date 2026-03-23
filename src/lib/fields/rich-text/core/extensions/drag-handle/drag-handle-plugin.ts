@@ -40,7 +40,14 @@ const getAbsolutePos = (state: EditorState, relativePos: any) => {
 		return -1;
 	}
 
-	return relativePositionToAbsolutePosition(ystate.doc, ystate.type, relativePos, ystate.binding.mapping) || 0;
+	return (
+		relativePositionToAbsolutePosition(
+			ystate.doc,
+			ystate.type,
+			relativePos,
+			ystate.binding.mapping
+		) || 0
+	);
 };
 
 const getOuterDomNode = (view: EditorView, domNode: HTMLElement) => {
@@ -211,7 +218,6 @@ export const DragHandlePlugin = ({
 
 							if (newPos !== currentNodePos) {
 								// TODO: Remove
-								// console.log('Position has changed …', { old: currentNodePos, new: newPos }, tr);
 
 								// Set the new position for our current node.
 								currentNodePos = newPos;
