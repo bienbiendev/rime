@@ -40,9 +40,9 @@
 	{#each authorizedFields as field, index (index)}
 		{#if !form.isLive || (form.isLive && isLiveField(field.raw))}
 			{#if field instanceof ComponentFieldBuilder}
-				{@const FieldComponent = field.component}
+				{@const FieldComponent = field.raw.component}
 				<div data-type={field.type} class="rz-render-fields__field rz-render-fields__field--full">
-					<FieldComponent {path} config={field} {form} />
+					<FieldComponent {path} config={field.raw} {form} />
 				</div>
 			{:else if isPresentative(field.raw)}
 				{@const Separator = field.component}

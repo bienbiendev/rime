@@ -1,13 +1,14 @@
 import { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import type { GenericDoc } from '$lib/core/types/doc.js';
 import type { Field, FieldAccess } from '$lib/fields/types.js';
 import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+import type { GenericDoc } from '$lib/types.js';
+import type { WithOptional } from '$lib/util/types.js';
 import type { Component } from 'svelte';
 
 type TypedComponent = Component<{
 	path: string;
 	config: ComponentField;
-	form: DocumentFormContext<GenericDoc>;
+	form: DocumentFormContext<WithOptional<GenericDoc, 'id'>>;
 }>;
 
 export const component = (component: TypedComponent) => new ComponentFieldBuilder(component);
