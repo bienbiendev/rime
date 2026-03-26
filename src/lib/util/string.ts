@@ -189,6 +189,7 @@ export const sanitize = (value?: string): string => {
 	if (!value) return value || '';
 	if (!parser) parser = Parser();
 
+	const WHITESPACE_MARKER = '\uE000';
 	const decode = (value: string) =>
 		value
 			.replace(/&amp;/g, '&')
@@ -199,13 +200,27 @@ export const sanitize = (value?: string): string => {
 			.replace(/&#39;/g, "'")
 			.replace(/&#38;/g, '&');
 
+	const encodeTextSpace = (html: string): string =>
+		html
+			.split(/(<[^>]*>)/g)
+			.map((segment) =>
+				segment.startsWith('<') && segment.endsWith('>')
+					? segment
+					: segment.replace(/ /g, WHITESPACE_MARKER)
+			)
+			.join('');
+
+	const restoreWhitespace = (str: string) => str.replace(new RegExp(WHITESPACE_MARKER, 'g'), ' ');
+
 	// Decode multiple levels of encoding on input
 	let decodedValue = value;
 	while (decodedValue.match(/&amp;|&quot;|&lt;|&gt;|&#x27;|&#39;|&#38;/)) {
 		decodedValue = decode(decodedValue);
 	}
 
-	const { root } = parser.parseFromString(decodedValue);
+	const protectedInput = encodeTextSpace(decodedValue);
+
+	const { root } = parser.parseFromString(protectedInput);
 
 	const allowedTags = new Set(['strong', 'b', 'em', 'i', 'u', 'br', 'a']);
 	const dangerousTags = new Set(['script', 'style', 'iframe', 'object', 'embed', 'svg']);
@@ -217,7 +232,7 @@ export const sanitize = (value?: string): string => {
 
 		// Handle text nodes
 		if (node.nodeName === '#text') {
-			return node.nodeValue || '';
+			return (node.nodeValue || '').replace(new RegExp(WHITESPACE_MARKER, 'g'), ' ');
 		}
 
 		// Handle comment nodes - remove them
@@ -295,5 +310,5 @@ export const sanitize = (value?: string): string => {
 
 	const sanitized = root.children ? root.children.map(processNode).join('') : '';
 
-	return decode(sanitized);
+	return decode(restoreWhitespace(sanitized));
 };
