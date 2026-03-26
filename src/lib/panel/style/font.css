@@ -1,20 +1,20 @@
 @font-face {
 	font-family: 'Lora';
-	src: url('/panel/fonts/Lora-Italic-VariableFont_wght.ttf') format('truetype');
+	src: url('/assets/panel/fonts/Lora-Italic-VariableFont_wght.ttf') format('truetype');
 	font-weight: 100 1000;
 	font-style: Italic;
 }
 
 @font-face {
 	font-family: 'Lora';
-	src: url('/panel/fonts/Lora-VariableFont_wght.ttf') format('truetype');
+	src: url('/assets/panel/fonts/Lora-VariableFont_wght.ttf') format('truetype');
 	font-weight: 100 1000;
 	font-style: normal;
 }
 
 @font-face {
 	font-family: 'Chivo';
-	src: url('/panel/fonts/ChivoMono-Italic-VariableFont_wght.ttf') format('truetype');
+	src: url('/assets/panel/fonts/ChivoMono-Italic-VariableFont_wght.ttf') format('truetype');
 	font-weight: 100 1000;
 	font-style: Italic;
 }
@@ -23,8 +23,8 @@
 	--rz-font-scale: 0.8;
 
 	--rz-font-sans:
-		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji',
-		'Segoe UI Emoji', 'Segoe UI Symbol';
+		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
+		'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
 	--rz-font-mono: 'SFMono-Regular', Consolas, Liberation Mono, Menlo, Courier, monospace;
 	--rz-font-serif: 'Lora';
 

@@ -173,10 +173,10 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
 	async function copyAssets() {
 		try {
 			const currentDir = path.dirname(fileURLToPath(import.meta.url));
-			await mkdir(path.resolve(process.cwd(), 'static/panel/fonts'), { recursive: true });
+			await mkdir(path.resolve(process.cwd(), 'static/assets/panel/fonts'), { recursive: true });
 			await cp(
 				path.join(currentDir, '../../../../panel/fonts'),
-				path.resolve(process.cwd(), 'static/panel/fonts'),
+				path.resolve(process.cwd(), 'static/assets/panel/fonts'),
 				{
 					recursive: true
 				}

@@ -134,8 +134,8 @@ export type PanelConfig = {
 	};
 	/** a relative path from the "static" directory or an external url
 	 * @example
-	 * // for static/panel/custom.css
-	 * css : '/panel/custom.css'
+	 * // for static/assets/custom.css
+	 * css : '/assets/custom.css'
 	 */
 	css?: string;
 };
