@@ -27,14 +27,14 @@
 	});
 
 	async function sendResetPasswordMail() {
-		// @ts-expect-error better-auth type issue to resolve
-		const { data, error } = await authClient.forgetPassword({
+		const { data, error } = await authClient.requestPasswordReset({
 			email: context.values.email,
 			redirectTo: `/reset-password`
 		});
 		if (error && error.message) {
 			toast.error(error.message);
 		}
+		console.log(data);
 		if (data && data.status) {
 			success = data.status;
 		}

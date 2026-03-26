@@ -25,8 +25,7 @@
 	});
 
 	async function sendPasswordResetLink() {
-		// @ts-expect-error better-auth type issue to resolve
-		const { data, error } = await authClient.forgetPassword({
+		const { data, error } = await authClient.requestPasswordReset({
 			email: form.values.email,
 			redirectTo: `/reset-password?slug=staff`
 		});
