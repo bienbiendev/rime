@@ -120,6 +120,26 @@ describe('sanitize', () => {
 		});
 	});
 
+	describe('Non destructive string', () => {
+		it('should preserve leading and trailing spaces', () => {
+			const input = ' Phasellus nec ';
+			const result = sanitize(input);
+			expect(result).toBe(input);
+		});
+
+		it('should preserve leading spaces', () => {
+			const input = ' Phasellus nec';
+			const result = sanitize(input);
+			expect(result).toBe(input);
+		});
+
+		it('should preserve trailing spaces', () => {
+			const input = 'Phasellus nec ';
+			const result = sanitize(input);
+			expect(result).toBe(input);
+		});
+	});
+
 	describe('Edge Cases', () => {
 		it('should handle undefined input', () => {
 			const result = sanitize(undefined);
