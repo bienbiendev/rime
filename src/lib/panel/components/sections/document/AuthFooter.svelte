@@ -57,7 +57,7 @@
 
 <!-- For creation show passwords fields -->
 <!-- For updates show reset password if mailer plugin exists -->
-{#if operation === 'create' || (user.attributes.roles.includes('admin') && page.data?.hasMailer)}
+{#if operation === 'create' || (user.attributes.isStaff && page.data?.hasMailer)}
 	<div class="rz-document-auth">
 		{#if operation === 'create'}
 			{#if isAuthConfig(collection) && collection.auth.type === 'password'}
@@ -69,7 +69,7 @@
 					path="confirmPassword"
 				/>
 			{/if}
-		{:else if user.attributes.roles.includes('admin') && page.data?.hasMailer}
+		{:else if user.attributes.isStaff && page.data?.hasMailer}
 			{#if isAuthConfig(collection) && collection.auth.type === 'password'}
 				<div>
 					<Button onclick={sendPasswordResetLink} variant="outline">
