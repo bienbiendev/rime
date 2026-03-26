@@ -35,8 +35,9 @@ export const processFileUpload = Hooks.beforeUpsert<'upload'>(async (args) => {
 	const sizesConfig = hasSizeConfig ? config.upload.imageSizes : [];
 
 	if (data.file) {
-		if (operation === 'update' && args.context.originalDoc)
+		if (operation === 'update' && args.context.originalDoc) {
 			await cleanupStoredFiles({ config, rime, id: args.context.originalDoc.id });
+		}
 		const { filename, imageSizes } = await saveFile(data.file, sizesConfig!);
 		data = {
 			...omit(['file'], data),
@@ -48,8 +49,9 @@ export const processFileUpload = Hooks.beforeUpsert<'upload'>(async (args) => {
 	// If data.file is explicitly set to null : delete file
 	if (data.file === null) {
 		// delete files
-		if (operation === 'update' && args.context.originalDoc)
+		if (operation === 'update' && args.context.originalDoc) {
 			await cleanupStoredFiles({ config, rime, id: args.context.originalDoc.id });
+		}
 		// update data for DB update
 		for (const size of sizesConfig!) {
 			data = {
