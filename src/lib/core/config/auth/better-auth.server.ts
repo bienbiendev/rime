@@ -12,6 +12,7 @@ export function getBaseAuthConfig<const C extends Config>(ctx: {
 	config: ConfigContext<C>;
 }) {
 	const betterAuthOptions = {
+		baseUrl: ctx.config.raw.siteUrl,
 		plugins: configurePlugins(ctx.config.raw),
 		rateLimit: {
 			enabled: !dev,
@@ -63,7 +64,7 @@ export function getBaseAuthConfig<const C extends Config>(ctx: {
 	return betterAuthOptions;
 }
 
-const configurePlugins = (config: BuildConfig<Config>) => {
+const configurePlugins = <const C extends Config>(config: BuildConfig<C>) => {
 	const HAS_API_KEY = (config.collections || []).filter((c) => c.auth?.type === 'apiKey').length;
 
 	return [
