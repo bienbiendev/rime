@@ -12,7 +12,7 @@ export function getBaseAuthConfig<const C extends Config>(ctx: {
 	config: ConfigContext<C>;
 }) {
 	const betterAuthOptions = {
-		baseUrl: ctx.config.raw.siteUrl,
+		baseURL: ctx.config.raw.siteUrl,
 		plugins: configurePlugins(ctx.config.raw),
 		rateLimit: {
 			enabled: !dev,
