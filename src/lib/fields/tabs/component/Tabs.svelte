@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dev } from '$app/environment';
 	import RichText from '$lib/fields/rich-text/component/RichText.svelte';
 	import { RichTextFieldBuilder } from '$lib/fields/rich-text/index.js';
 	import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
@@ -6,13 +7,12 @@
 	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 	import Cookies from 'js-cookie';
 	import type { TabBuilder, TabsField } from '../index.js';
-	import { dev } from '$app/environment';
 
 	type Props = { config: TabsField; path: string; form: DocumentFormContext };
 
 	const { config, path: initialPath, form }: Props = $props();
 
-	const cookieKey = `Tabs:${form.values.id || 'create'}:${initialPath}:${config.tabs.map((t) => t.name).join('-')}`;
+	const cookieKey = `rime.Tabs:${form.values.id || 'create'}:${initialPath}:${config.tabs.map((t) => t.name).join('-')}`;
 	let activeTabName = $state(Cookies.get(cookieKey) || config.tabs[0].name);
 
 	// Prevent localStorage opened tab to open when tab.live is false

@@ -96,7 +96,7 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
 		const searchParamLocale = hasParams && searchParams.get('locale');
 
 		// locale from the cookie
-		const cookieLocale = event.cookies.get('Locale');
+		const cookieLocale = event.cookies.get('rime.locale');
 		const defaultLocale = configCtx.getDefaultLocale();
 		const locale = paramLocale || searchParamLocale || cookieLocale;
 
