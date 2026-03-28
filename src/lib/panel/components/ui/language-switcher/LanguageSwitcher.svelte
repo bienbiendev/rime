@@ -41,7 +41,7 @@
 						disabled={isActive(item.code)}
 						data-active={isActive(item.code) ? '' : null}
 						onclick={() => {
-							Cookies.set('Locale', item.code, {
+							Cookies.set('rime.locale', item.code, {
 								sameSite: 'strict',
 								secure: !dev
 							});
