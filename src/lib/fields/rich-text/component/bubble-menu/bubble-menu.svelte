@@ -110,7 +110,11 @@
 	let activeItems = $state<Record<string, boolean>>({});
 </script>
 
-<div id={pluginKey} bind:this={element} class="rz-bubble-menu">
+<div
+	id={pluginKey}
+	bind:this={element}
+	class="rz-bubble-menu {isOpen ? 'rz-bubble-menu--open' : ''}"
+>
 	{#if nodeItems.length > 1}
 		<NodeSelector {editor} items={nodeItems} isMenuOpen={isOpen} />
 	{/if}
@@ -140,3 +144,14 @@
 		{/each}
 	{/if}
 </div>
+
+<style>
+	.rz-bubble-menu {
+		opacity: 0;
+		pointer-events: none;
+		&.rz-bubble-menu--open {
+			opacity: 1;
+			pointer-events: all;
+		}
+	}
+</style>
