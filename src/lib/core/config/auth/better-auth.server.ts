@@ -1,4 +1,5 @@
 import { dev } from '$app/environment';
+import { env } from '$env/dynamic/public';
 import type { MailerActions } from '$lib/core/plugins/mailer/index.server.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { Config } from '$lib/types.js';
@@ -12,7 +13,7 @@ export function getBaseAuthConfig<const C extends Config>(ctx: {
 	config: ConfigContext<C>;
 }) {
 	const betterAuthOptions = {
-		baseURL: ctx.config.raw.siteUrl,
+		baseURL: env.PUBLIC_RIME_URL,
 		plugins: configurePlugins(ctx.config.raw),
 		rateLimit: {
 			enabled: !dev,
