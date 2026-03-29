@@ -17,7 +17,7 @@ import { getTableColumns } from 'drizzle-orm';
 import { flatten, unflatten } from 'flat';
 import { logger } from '../core/logger/index.server.js';
 import { extractFieldName } from '../fields/tree/util.js';
-import { omit } from '../util/object.js';
+import { isObjectLiteral, omit } from '../util/object.js';
 import {
 	getBlocksTableNames,
 	getTreeTableNames,
@@ -225,6 +225,17 @@ export const transformerFacade = <const C extends Config>(args: {
 
 				/** Assign relation */
 				if (!relation.locale || relation.locale === locale) {
+					const parentPath = relationPath.split('.').slice(0, -1).join('.');
+					// If parent path ends with .[digits], it means the relation is inside a blocks/tree array,
+					// then check if the parent path exists in the flatDoc.
+					if (/.*\.[\d]+$/.test(parentPath)) {
+						if (!flatDoc[parentPath]) {
+							logger.warn(
+								`Orphean ${config.slug} relation at ${relationPath} with id ${relation.id} because parent path ${parentPath} doesn't exist in the document`
+							);
+							continue;
+						}
+					}
 					flatDoc[relationPath] = [...(flatDoc[relationPath] || []), relationOutput];
 				}
 			}
@@ -239,6 +250,23 @@ export const transformerFacade = <const C extends Config>(args: {
 		if (tableNameRelationFields in output) {
 			keysToDelete.push(tableNameRelationFields);
 		}
+
+		// Filter out arrays that contains empty elements
+		function cleanEmptyElementsInArrays<T>(obj: T): T {
+			if (Array.isArray(obj)) {
+				return obj
+					.map((item) => cleanEmptyElementsInArrays(item))
+					.filter((item) => item !== null && item !== undefined) as unknown as T;
+			} else if (isObjectLiteral(obj)) {
+				const cleanedObj: any = {};
+				for (const key in obj) {
+					cleanedObj[key] = cleanEmptyElementsInArrays(obj[key]);
+				}
+				return cleanedObj;
+			}
+			return obj;
+		}
+		output = cleanEmptyElementsInArrays(output);
 
 		if (!isPanel || !event.locals.user) {
 			keysToDelete.push('editedBy');

@@ -5,6 +5,7 @@ import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
+import { getValueAtPath } from './object.js';
 import { snapshot } from './state.js';
 
 /**
@@ -148,4 +149,18 @@ export const toNestedStructure = (documents: GenericDoc[]) => {
 export const normalizeFieldPath = (path: string) => {
 	const regExpBlockType = /:[a-zA-Z0-9]+/g;
 	return path.replace(regExpBlockType, '');
+};
+
+/**
+ * Ensure path exists, meaning the path hold anything else than undefined.
+ *
+ * @example
+ * const obj = { foo: { baz: null }, bar: 1 };
+ * ensurePathExists('foo.bar', obj); // false
+ * ensurePathExists('foo.baz', obj); // true
+ * ensurePathExists('bar', obj); // true
+ */
+export const ensurePathExists = (path: string, obj: Dic): boolean => {
+	const value = getValueAtPath(path, obj);
+	return value !== undefined;
 };
