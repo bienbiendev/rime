@@ -15,7 +15,7 @@
 	import { trycatchFetch } from '$lib/util/function.js';
 	import { Pencil, Trash2 } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
-	import { t__ } from '../../../../../../core/i18n/index.js';
+	import { t__ } from '../../../../../core/i18n/index.js';
 	import Folder from './Folder.svelte';
 	import FolderEdit from './FolderEdit.svelte';
 
@@ -25,15 +25,23 @@
 		onDelete?: (path: string) => void;
 		onDocumentDrop: (args: { documentId: string; path: string }) => void;
 		draggable?: 'true';
+		display?: 'grid' | 'list';
 	};
-	const { folder, collection, onDelete, onDocumentDrop, draggable }: Props = $props();
+	const {
+		folder,
+		collection,
+		onDelete,
+		onDocumentDrop,
+		draggable,
+		display = 'grid'
+	}: Props = $props();
 
 	let deleteConfirmOpen = $state(false);
 	let editFolderDialogOpen = $state(false);
 	let message = $state('');
 	let rootElement = $state<HTMLButtonElement>();
 	let isDragging = $state(false);
-	const isRoot = $derived(folder.name === '...');
+	const isFolderUpperPath = $derived(folder.name === '...');
 	const APIProxy = getAPIProxyContext(API_PROXY.ROOT);
 	const childFilesURL = $derived(
 		`${apiUrl(collection.kebab)}?where[_path][equals]=${folder.id}&select=id`
@@ -145,7 +153,7 @@
 <button
 	bind:this={rootElement}
 	onclick={handleGoToFolder}
-	class="rz-folder"
+	class="rz-folder rz-folder--{display}"
 	class:rz-folder--dragging={isDragging}
 	ondragleave={handleDragLeave}
 	ondragover={!isDragging ? handleDragEnter : null}
@@ -154,7 +162,7 @@
 	draggable={draggable === 'true' ? 'true' : null}
 	ondragstart={draggable === 'true' ? handleDragStart : null}
 >
-	{#if !isRoot}
+	{#if !isFolderUpperPath}
 		<ContextMenu>
 			<!--  -->
 			{#snippet trigger()}
@@ -172,7 +180,9 @@
 			<!--  -->
 		</ContextMenu>
 	{:else}
-		<Folder>{folder.name}</Folder>
+		<div>
+			<Folder>{folder.name}</Folder>
+		</div>
 	{/if}
 
 	<span></span>
@@ -205,7 +215,6 @@
 
 	.rz-folder {
 		width: 100%;
-		aspect-ratio: 4 / 5;
 		padding: var(--rz-size-5);
 		border-radius: var(--rz-radius-lg);
 
@@ -216,7 +225,34 @@
 		}
 	}
 
-	.rz-folder:hover {
+	.rz-folder.rz-folder--grid {
+		aspect-ratio: 4 / 5;
+	}
+	.rz-folder.rz-folder--list {
+		height: var(--rz-row-height);
+		padding: var(--rz-size-1-5);
+
+		:global {
+			> div {
+				padding: 0;
+				display: flex;
+				gap: var(--rz-size-4);
+				align-items: center;
+				justify-content: flex-start;
+				h3 {
+					font-size: var(--rz-text-md);
+				}
+				svg {
+					display: block;
+					height: auto;
+					width: 2rem;
+					transform: translateY(-0.12em);
+				}
+			}
+		}
+	}
+
+	.rz-folder.rz-folder--grid:hover {
 		background-color: var(--rz-folder-hover-bg);
 	}
 </style>

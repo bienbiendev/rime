@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { X } from '@lucide/svelte';
 	import {
 		Dialog as DialogPrimitive,
 		type DialogContentSnippetProps,
@@ -23,7 +24,7 @@
 				}
 			]
 		>;
-		size?: 'sm' | 'default' | 'lg';
+		size?: 'sm' | 'default' | 'lg' | 'xl';
 	} = $props();
 </script>
 
@@ -34,6 +35,9 @@
 		class="rz-dialog-content rz-dialog-content--{size} {className}"
 		{...restProps}
 	>
+		<Dialog.Close>
+			<X size="18" />
+		</Dialog.Close>
 		{@render children?.()}
 	</DialogPrimitive.Content>
 </Dialog.Portal>

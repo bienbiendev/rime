@@ -19,8 +19,14 @@ export default function (slug: CollectionSlug) {
 		const collectionAPI = rime.collection(slug);
 
 		function buildSelect(params: typeof event.url.searchParams) {
-			const paramSelect = params.get(PARAMS.SELECT) ? params.get(PARAMS.SELECT)!.split(',') : undefined;
-			if (paramSelect && paramSelect.includes('title') && !paramSelect.includes(collectionAPI.config.asTitle)) {
+			const paramSelect = params.get(PARAMS.SELECT)
+				? params.get(PARAMS.SELECT)!.split(',')
+				: undefined;
+			if (
+				paramSelect &&
+				paramSelect.includes('title') &&
+				!paramSelect.includes(collectionAPI.config.asTitle)
+			) {
 				paramSelect.push(collectionAPI.config.asTitle);
 			}
 			return paramSelect;

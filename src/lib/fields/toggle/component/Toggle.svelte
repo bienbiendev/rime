@@ -6,7 +6,6 @@
 	import type { ToggleProps } from './props';
 
 	const { path, config, form }: ToggleProps = $props();
-
 	const field = $derived(form.useField<boolean>(path, config));
 	const inputId = slugify(`${form.key}-${path}`);
 
@@ -17,7 +16,12 @@
 
 <fieldset class="rz-toggle-field {config.className || ''}" use:root={field}>
 	<div class="rz-toggle-field-wrap">
-		<Switch data-error={field.error ? '' : null} checked={field.value} {onCheckedChange} id={inputId} />
+		<Switch
+			data-error={field.error ? '' : null}
+			checked={field.value}
+			{onCheckedChange}
+			id={inputId}
+		/>
 		<Field.LabelFor {config} for={inputId} />
 	</div>
 	<Field.Hint {config} />
@@ -28,12 +32,13 @@
 		display: flex;
 		align-items: center;
 	}
+
 	.rz-toggle-field-wrap > :global(* + *) {
 		margin-left: var(--rz-size-2);
 	}
 
 	.rz-toggle-field {
-		@mixin my var(--rz-size-3);
+		margin-block: var(--rz-size-3);
 	}
 
 	.rz-toggle-field :global {

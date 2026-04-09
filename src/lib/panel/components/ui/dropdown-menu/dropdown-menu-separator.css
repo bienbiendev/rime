@@ -1,5 +1,5 @@
 .rz-dropdown-separator {
 	background-color: hsl(var(--rz-color-border));
-	@mixin my var(--rz-size-1);
+	margin-block: var(--rz-size-1);
 	height: 1px;
 }

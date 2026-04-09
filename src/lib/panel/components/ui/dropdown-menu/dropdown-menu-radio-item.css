@@ -8,7 +8,7 @@
 	padding-left: var(--rz-size-8);
 	font-size: var(--rz-text-sm);
 	outline: none;
-	@mixin py var(--rz-size-1-5);
+	padding-block: var(--rz-size-1-5);
 }
 
 .rz-dropdown-radio[data-disabled] {

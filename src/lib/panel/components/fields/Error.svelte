@@ -10,7 +10,10 @@
 		// subfield::error
 		const cleanError = error.split('::').at(-1) ?? '';
 		// If it's a predefined error from RimeError or RimeFormError
-		if (Object.values(RimeError).includes(cleanError) || Object.values(RimeFormError).includes(cleanError)) {
+		if (
+			Object.values(RimeError).includes(cleanError) ||
+			Object.values(RimeFormError).includes(cleanError)
+		) {
 			return t__(`errors.${cleanError}`);
 		}
 		// Otherwise return as-is (user defined message)
@@ -25,6 +28,7 @@
 {/if}
 
 <style type="postcss">
+	@import '../../style/mixins/index.css';
 	.rz-field-error {
 		@mixin color ground-6;
 		background-color: hsl(var(--rz-color-alert));
@@ -33,8 +37,8 @@
 		top: 0;
 		border-radius: var(--rz-radius-sm);
 		font-size: var(--rz-text-xs);
-		@mixin px var(--rz-size-1);
-		@mixin py var(--rz-size-0-5);
+		padding-inline: var(--rz-size-1);
+		padding-block: var(--rz-size-0-5);
 		@mixin font-medium;
 	}
 </style>

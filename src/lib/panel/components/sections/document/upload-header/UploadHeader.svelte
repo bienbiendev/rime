@@ -106,6 +106,8 @@
 </div>
 
 <style type="postcss">
+	@import '../../../../style/mixins/index.css';
+
 	.rz-doc-upload-header {
 		container: inline-size;
 		padding: 0 var(--rz-fields-padding);
@@ -139,7 +141,7 @@
 			@mixin radius-left md;
 		}
 		.rz-doc-upload-header__info {
-			@mixin px var(--rz-size-8);
+			padding-inline: var(--rz-size-8);
 		}
 	}
 
@@ -200,8 +202,8 @@
 	.rz-doc-upload-header__info {
 		flex: 1;
 		font-size: var(--rz-text-sm);
-		@mixin px var(--rz-size-4);
-		@mixin py var(--rz-size-4);
+		padding-inline: var(--rz-size-4);
+		padding-block: var(--rz-size-4);
 	}
 	.rz-doc-upload-header__info h4 {
 		opacity: 0.4;

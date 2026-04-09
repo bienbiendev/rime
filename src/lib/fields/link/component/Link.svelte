@@ -105,7 +105,10 @@
 	<Field.Label {config} for={path || config.name} />
 
 	<div class="rz-link-field__wrap">
-		<div class="rz-link-field__row" style="--rz-corner-radius:{hasTarget ? 0 : 'var(--rz-radius-md)'}">
+		<div
+			class="rz-link-field__row"
+			style="--rz-corner-radius:{hasTarget ? 0 : 'var(--rz-radius-md)'}"
+		>
 			<!-- Type -->
 			{#if linkTypes.length === 1}
 				<Button class="rz-link__type-single" variant="secondary">

@@ -37,7 +37,7 @@
 	--rz-popover-highlight-bg: hsl(var(--rz-gray-15));
 
 	@media (prefers-color-scheme: dark) {
-		--rz-overlay-color: hsl(var(--rz-gray-0) / 0.7);
+		--rz-overlay-color: hsl(var(--rz-gray-0) / 0.2);
 		--rz-color-fg: var(--rz-gray-17);
 		--rz-color-border: var(--rz-gray-4);
 		--rz-color-bg: var(--rz-gray-2);

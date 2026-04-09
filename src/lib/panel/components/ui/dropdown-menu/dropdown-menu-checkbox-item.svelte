@@ -1,6 +1,6 @@
 <script lang="ts">
+	import { Check, Minus } from '@lucide/svelte';
 	import { DropdownMenu as DropdownMenuPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
-	import { Minus, Check } from '@lucide/svelte';
 
 	import type { Snippet } from 'svelte';
 
@@ -36,6 +36,8 @@
 </DropdownMenuPrimitive.CheckboxItem>
 
 <style type="postcss">
+	@import '../../../style/mixins/index.css';
+
 	:global {
 		.rz-dropdown-checkbox {
 			position: relative;
@@ -47,7 +49,7 @@
 			padding-left: var(--rz-size-8);
 			font-size: var(--rz-text-sm);
 			outline: none;
-			@mixin py var(--rz-size-1-5);
+			padding-block: var(--rz-size-1-5);
 			& [data-disabled] {
 				pointer-events: none;
 				opacity: 0.5;

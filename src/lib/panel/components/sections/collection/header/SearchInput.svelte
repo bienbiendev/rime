@@ -14,11 +14,9 @@
 </script>
 
 <div class="rz-header-search-input">
-	<div class="rz-header-search-input__icon">
-		<Search size={16} />
-	</div>
 	<Input
-		class="rz-header-search-input__input"
+		name="search"
+		icon={Search}
 		placeholder={t__('common.search', `${collection.length} document(s)`)}
 		type="text"
 		bind:value={searchValue}
@@ -26,6 +24,8 @@
 </div>
 
 <style type="postcss">
+	@import '../../../../style/mixins/index.css';
+
 	.rz-header-search-input {
 		position: relative;
 		display: none;
@@ -33,13 +33,16 @@
 		align-items: center;
 		width: var(--rz-size-80);
 
-		& :global(.rz-input) {
-			height: var(--rz-size-9);
-			width: 100%;
-			padding-left: var(--rz-size-12);
-			font-size: var(--rz-text-sm);
-			&:focus-visible {
-				@mixin ring var(--rz-color-ring);
+		:global {
+			.rz-input {
+				height: var(--rz-size-9);
+				font-size: var(--rz-text-sm);
+			}
+			.rz-input-wrapper {
+				width: 100%;
+				&:focus-visible {
+					@mixin ring var(--rz-color-ring);
+				}
 			}
 		}
 	}
@@ -48,10 +51,5 @@
 		.rz-header-search-input {
 			display: flex;
 		}
-	}
-
-	.rz-header-search-input__icon {
-		position: absolute;
-		left: var(--rz-size-3);
 	}
 </style>

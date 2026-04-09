@@ -1,5 +1,7 @@
 <script lang="ts">
+	import type { IconProps } from '@lucide/svelte';
 	import type { WithElementRef, WithoutChildren } from 'bits-ui';
+	import type { Component } from 'svelte';
 	import type { HTMLInputAttributes } from 'svelte/elements';
 
 	type PrimitiveInputAttributes = WithElementRef<HTMLInputAttributes>;
@@ -8,13 +10,24 @@
 		ref = $bindable(null),
 		value = $bindable(),
 		class: className,
+		icon,
 		...restProps
-	}: WithoutChildren<PrimitiveInputAttributes> = $props();
+	}: WithoutChildren<PrimitiveInputAttributes> & { icon?: Component<IconProps> } = $props();
 </script>
 
-<input bind:this={ref} class="rz-input {className}" bind:value {...restProps} />
+<div class="rz-input-wrapper {className}">
+	{#if icon}
+		{@const Icon = icon}
+		<div class="rz-input__icon">
+			<Icon size={14} strokeWidth="2px" />
+		</div>
+	{/if}
+	<input bind:this={ref} class="rz-input" bind:value {...restProps} />
+</div>
 
 <style type="postcss">
+	@import '../../../style/mixins/index.css';
+
 	:root {
 		--rz-input-border-color: light-dark(hsl(var(--rz-gray-14)), hsl(var(--rz-gray-6) / 0.6));
 		--rz-input-padding-x: var(--rz-size-3);
@@ -30,6 +43,10 @@
 		border-radius: var(--rz-radius-lg);
 		transition: all 0.1s ease-in-out;
 		padding: var(--rz-input-padding-y) var(--rz-input-padding-x);
+	}
+
+	.rz-input__icon + .rz-input {
+		padding-left: calc(var(--rz-input-padding-x) + var(--rz-size-6));
 	}
 
 	input.rz-input:is(:-webkit-autofill, :autofill) {
@@ -64,5 +81,22 @@
 	.rz-input[data-error] {
 		outline: none;
 		@mixin ring var(--rz-color-alert);
+	}
+
+	.rz-input-wrapper {
+		position: relative;
+
+		.rz-input__icon {
+			position: absolute;
+			left: var(--rz-size-3);
+			top: 50%;
+			transform: translateY(-50%);
+			pointer-events: none;
+			color: hsl(var(--rz-color-fg) / 0.4);
+		}
+
+		.rz-input__icon:has(+ .rz-input:focus-visible) {
+			color: hsl(var(--rz-color-fg));
+		}
 	}
 </style>

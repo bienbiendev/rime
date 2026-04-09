@@ -17,7 +17,8 @@
 	background-color: var(--rz-input-bg);
 	border-radius: var(--rz-radius-full);
 	transition: all 0.066s ease-in-out;
-	@mixin size var(--rz-size-5);
+	height: var(--rz-size-5);
+	width: var(--rz-size-5);
 	flex-shrink: 0;
 	cursor: pointer;
 }

@@ -36,7 +36,8 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 		const tableLocales = getTable(tableNameLocales);
 
 		// Get localized and unlocalized columns
-		const localizedColumns = locale && tableNameLocales in tables ? Object.keys(getTableColumns(tableLocales)) : [];
+		const localizedColumns =
+			locale && tableNameLocales in tables ? Object.keys(getTableColumns(tableLocales)) : [];
 		const unlocalizedColumns = Object.keys(getTableColumns(table));
 
 		return { table, tableLocales, localizedColumns, unlocalizedColumns };
@@ -53,13 +54,17 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 	const buildCondition = (conditionObject: Dic): any | false => {
 		// Handle nested AND conditions
 		if ('and' in conditionObject && Array.isArray(conditionObject.and)) {
-			const subConditions = conditionObject.and.map((condition) => buildCondition(condition as Dic)).filter(Boolean);
+			const subConditions = conditionObject.and
+				.map((condition) => buildCondition(condition as Dic))
+				.filter(Boolean);
 			return subConditions.length ? and(...subConditions) : false;
 		}
 
 		// Handle nested OR conditions
 		if ('or' in conditionObject && Array.isArray(conditionObject.or)) {
-			const subConditions = conditionObject.or.map((condition) => buildCondition(condition as Dic)).filter(Boolean);
+			const subConditions = conditionObject.or
+				.map((condition) => buildCondition(condition as Dic))
+				.filter(Boolean);
 			return subConditions.length ? or(...subConditions) : false;
 		}
 
@@ -177,7 +182,10 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			}
 
 			// Subquery of related document ids that match the property condition
-			const matchingRelatedIds = db.select({ id: relatedTable.id }).from(relatedTable).where(relatedCondition);
+			const matchingRelatedIds = db
+				.select({ id: relatedTable.id })
+				.from(relatedTable)
+				.where(relatedCondition);
 
 			const relsTable = getTable(`${slug}Rels`);
 			// Join relation rows to documents by matching the related id and the relation path
@@ -224,7 +232,9 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			db
 				.select({ id: relsTable.ownerId })
 				.from(relsTable)
-				.where(and(eq(relsTable.path, column), ...(localized ? [eq(relsTable.locale, locale)] : [])))
+				.where(
+					and(eq(relsTable.path, column), ...(localized ? [eq(relsTable.locale, locale)] : []))
+				)
 				.groupBy(relsTable.ownerId)
 				.having(drizzleORM.eq(drizzleORM.count(relsTable.id), count));
 
@@ -263,7 +273,9 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			db
 				.select({ id: relsTable.ownerId })
 				.from(relsTable)
-				.where(and(eq(relsTable.path, column), ...(localized ? [eq(relsTable.locale, locale)] : [])))
+				.where(
+					and(eq(relsTable.path, column), ...(localized ? [eq(relsTable.locale, locale)] : []))
+				)
 				.groupBy(relsTable.ownerId)
 				.having(drizzleORM.gt(drizzleORM.count(relsTable.id), 0));
 
@@ -276,7 +288,10 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			const ownersWithTotalCount = buildOwnersWithTotalCount(values.length);
 			// Owners with matching relations count equal to values.length
 			const ownersWithMatchingCount = buildOwnersWithMatchingCount(values);
-			return and(inArray(table.id, ownersWithTotalCount), inArray(table.id, ownersWithMatchingCount));
+			return and(
+				inArray(table.id, ownersWithTotalCount),
+				inArray(table.id, ownersWithMatchingCount)
+			);
 		}
 
 		// For multi-valued relations, allow `in_array` to act as a subset check:
@@ -289,7 +304,10 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 			// Owners that have any relation rows (to exclude docs with no relations)
 			const ownersWithRelations = buildOwnersWithRelations();
 			// Match documents that have relations and do NOT have any non-matching relation rows
-			return and(drizzleORM.notInArray(table.id, ownersWithNonMatching), inArray(table.id, ownersWithRelations));
+			return and(
+				drizzleORM.notInArray(table.id, ownersWithNonMatching),
+				inArray(table.id, ownersWithRelations)
+			);
 		}
 
 		// For multi-valued relations, `not_in_array` should match documents where the provided
@@ -390,7 +408,10 @@ function getConditionMembers(obj: Dic) {
 
 // Determine if we should handle versioned hierarchy fields
 function shouldHandleVersionedHierarchyFields(slug: string, sqlColumn: string) {
-	return hasVersionsSuffix(slug) && (sqlColumn === '_parent' || sqlColumn === '_position' || sqlColumn === '_path');
+	return (
+		hasVersionsSuffix(slug) &&
+		(sqlColumn === '_parent' || sqlColumn === '_position' || sqlColumn === '_path')
+	);
 }
 
 // Normalize condition object for versioned collections

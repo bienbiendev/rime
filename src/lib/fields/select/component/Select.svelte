@@ -154,6 +154,8 @@
 </fieldset>
 
 <style type="postcss">
+	@import '../../../panel/style/mixins/index.css';
+
 	.rz-select {
 		margin-bottom: var(--rz-size-2);
 		position: relative;

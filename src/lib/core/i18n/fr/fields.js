@@ -7,5 +7,7 @@ export default {
 	delete_block: 'Supprimer le bloc',
 	create_one: 'Créer {un|une} $1',
 	generate_from: 'Générer à partir du champs $1',
-	get_data_from: 'Importer les données'
+	get_data_from: 'Importer les données',
+	filter_by_type: 'Filtrer par type',
+	all_types: 'Tous les types'
 };

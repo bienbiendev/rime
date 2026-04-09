@@ -19,10 +19,7 @@
 	border-top-left-radius: var(--rz-radius-$(size));
 	border-bottom-left-radius: var(--rz-radius-$(size));
 }
-@define-mixin radius-right $size {
-	border-top-right-radius: var(--rz-radius-$(size));
-	border-bottom-right-radius: var(--rz-radius-$(size));
-}
+
 @define-mixin radius-top $size {
 	border-top-right-radius: var(--rz-radius-$(size));
 	border-top-left-radius: var(--rz-radius-$(size));
@@ -55,29 +52,4 @@
 @define-mixin font-bold {
 	font-variation-settings: 'wght' 700;
 	font-weight: 700;
-}
-
-/**************************************/
-/* Spacing */
-/**************************************/
-
-@define-mixin size $size {
-	height: $size;
-	width: $size;
-}
-@define-mixin px $size {
-	padding-left: $size;
-	padding-right: $size;
-}
-@define-mixin py $size {
-	padding-top: $size;
-	padding-bottom: $size;
-}
-@define-mixin mx $size {
-	margin-left: $size;
-	margin-right: $size;
-}
-@define-mixin my $size {
-	margin-top: $size;
-	margin-bottom: $size;
 }

@@ -205,6 +205,8 @@
 </form>
 
 <style type="postcss">
+	@import '../../../style/mixins/index.css';
+
 	.rz-document {
 		container: rz-document / inline-size;
 		min-height: 100vh;
@@ -222,8 +224,8 @@
 	}
 	.rz-document__infos {
 		border-top: var(--rz-border);
-		@mixin px var(--rz-page-gutter);
-		@mixin py var(--rz-size-6);
+		padding-inline: var(--rz-page-gutter);
+		padding-block: var(--rz-size-6);
 	}
 	.rz-document__metas {
 		font-size: var(--rz-text-xs);

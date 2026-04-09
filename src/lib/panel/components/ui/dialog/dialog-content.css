@@ -14,6 +14,12 @@
 	box-shadow: var(--rz-shadow-lg);
 	border-radius: var(--rz-radius-lg);
 	margin: 0 var(--gutter);
+
+	&.rz-dialog-content--xl {
+		height: calc(100vh - 4 * var(--gutter));
+		overflow-y: auto;
+		top: 50%;
+	}
 }
 
 @media (min-width: 768px) {
@@ -26,9 +32,12 @@
 	.rz-dialog-content--lg {
 		width: var(--rz-size-lg);
 	}
+	.rz-dialog-content--xl {
+		width: calc(100vw - 4 * var(--gutter));
+	}
 }
 
-.rz-dialog-content__close {
+[data-dialog-close] {
 	@mixin color color-fg, 0.7;
 	position: absolute;
 	right: var(--rz-size-4);
@@ -38,12 +47,12 @@
 	transition: opacity 0.2s;
 }
 
-.rz-dialog-content__close:focus {
+[data-dialog-close]:focus {
 	outline: none;
 	/* --rz-ring-offset-2: 2px; */
 	@mixin ring var(--rz-color-ring);
 }
 
-.rz-dialog-content__close:disabled {
+[data-dialog-close]:disabled {
 	pointer-events: none;
 }

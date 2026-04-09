@@ -24,13 +24,26 @@
 
 	{#if collection.selectMode}
 		{#if collection.isAllSelected}
-			<Button variant="text" icon={SquareMinus} onclick={() => (collection.selected = [])}>Deselect All</Button>
+			<Button
+				variant="text"
+				size="sm"
+				icon={SquareMinus}
+				onclick={() => (collection.selected = [])}
+			>
+				Deselect All
+			</Button>
 		{:else}
-			<Button variant="text" icon={SquareCheck} onclick={collection.selectAll}>
+			<Button variant="text" size="sm" icon={SquareCheck} onclick={collection.selectAll}>
 				{t__('common.select_all')}
 			</Button>
 		{/if}
-		<Button disabled={selectedCount === 0} icon={Trash} variant="text" onclick={collection.deleteSelection}>
+		<Button
+			disabled={selectedCount === 0}
+			size="sm"
+			icon={Trash}
+			variant="text"
+			onclick={collection.deleteSelection}
+		>
 			{t__('common.delete', `${selectedCount} doc${pluralSuffix}`)}
 		</Button>
 	{/if}

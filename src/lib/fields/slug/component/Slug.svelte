@@ -60,20 +60,25 @@
 	<Field.Label {config} for={path || config.name} />
 
 	<div class="rz-slug">
-		<Hash class="rz-slug__icon" size="14" />
-
 		<Input
 			id={path || config.name}
 			placeholder={config.placeholder}
 			data-error={field.error ? '' : null}
 			type="text"
+			icon={Hash}
 			value={field.value}
 			name={path || config.name}
 			oninput={onInput}
 		/>
 
 		{#if config.slugify}
-			<Button disabled={!field.editable} onclick={generateFromField} type="button" size="sm" variant="secondary">
+			<Button
+				disabled={!field.editable}
+				onclick={generateFromField}
+				type="button"
+				size="sm"
+				variant="secondary"
+			>
 				{t__('fields.generate_from', config.slugify)}
 			</Button>
 		{/if}
@@ -88,7 +93,6 @@
 
 		:global(.rz-input) {
 			font-family: var(--rz-font-mono);
-			padding: 0 0 0 2rem;
 		}
 
 		:global(.rz-button) {

@@ -300,7 +300,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
 	}
 
 	function selectAll() {
-		if (config.upload && displayMode === 'display_grid') {
+		if (config.upload) {
 			selected = docs.filter((doc) => doc._path === upload.currentPath).map((doc) => doc.id);
 		} else {
 			selected = docs.map((doc) => doc.id);
@@ -448,7 +448,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
 			selectMode = bool;
 		},
 		get isAllSelected() {
-			if (config.upload && displayMode === 'display_grid') {
+			if (config.upload) {
 				return selected.length === docs.filter((d) => d._path === upload.currentPath).length;
 			} else {
 				return selected.length === docs.length;

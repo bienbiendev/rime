@@ -7,5 +7,7 @@ export default {
 	delete_block: 'Delete block',
 	create_one: 'Create one $1',
 	generate_from: 'Generate from $1',
-	get_data_from: 'Get data from'
+	get_data_from: 'Get data from',
+	filter_by_type: 'Filter by type',
+	all_types: 'All types'
 };

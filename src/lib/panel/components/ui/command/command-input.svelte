@@ -27,8 +27,8 @@
 		align-items: center;
 		border-top-left-radius: var(--rz-radius-md);
 		border-top-right-radius: var(--rz-radius-md);
-		@mixin px var(--rz-size-3);
-		@mixin py var(--rz-size-1);
+		padding-inline: var(--rz-size-3);
+		padding-block: var(--rz-size-1);
 
 		&:global([data-focused]) {
 			@mixin ring var(--rz-color-ring);

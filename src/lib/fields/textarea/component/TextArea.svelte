@@ -29,6 +29,7 @@
 </fieldset>
 
 <style type="postcss">
+	@import '../../../panel/style/mixins/index.css';
 	textarea {
 		field-sizing: content;
 		border: 1px solid var(--rz-input-border-color);
@@ -38,8 +39,8 @@
 		border-radius: var(--rz-radius-md);
 		line-height: 1.5em;
 		min-height: var(--rz-size-20);
-		@mixin px var(--rz-size-3);
-		@mixin py var(--rz-size-2);
+		padding-inline: var(--rz-size-3);
+		padding-block: var(--rz-size-2);
 
 		&:global([data-error]) {
 			outline: none;
