@@ -29,8 +29,8 @@
 >
 	<Field.Label {config} for={path || config.name} />
 	<div class="rz-email-field-wrapper">
-		<Mail class="rz-email-field__icon" size="12" />
 		<Input
+			icon={Mail}
 			id={path || config.name}
 			name={path || config.name}
 			autocomplete="off"
@@ -63,19 +63,11 @@
 		position: relative;
 		display: flex;
 		align-items: center;
-		--rz-input-padding-x: 2rem;
 
 		:global(.rz-button) {
 			position: absolute;
 			right: var(--rz-size-1-5);
 			top: var(--rz-size-1-5);
-		}
-
-		:global(.rz-email-field__icon) {
-			opacity: 0.37;
-			position: absolute;
-			left: 0.75rem;
-			top: calc(50% - 6px);
 		}
 	}
 </style>

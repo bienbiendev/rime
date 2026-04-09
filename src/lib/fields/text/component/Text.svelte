@@ -21,11 +21,9 @@
 >
 	<Field.Label {config} for={path || config.name} />
 	<div class="rz-text-field__input-wrapper">
-		{#if Icon}
-			<Icon size="12" />
-		{/if}
 		<Input
 			id={path || config.name}
+			icon={Icon}
 			autocomplete="off"
 			name={path || config.name}
 			placeholder={config.placeholder || capitalize(config.name)}
@@ -59,21 +57,10 @@
 			display: flex;
 			align-items: center;
 
-			:global(.rz-input) {
-				padding: 0 0 0 2rem;
-			}
-
 			:global(.rz-button) {
 				position: absolute;
 				right: var(--rz-size-1-5);
 				top: var(--rz-size-1-5);
-			}
-
-			:global(svg) {
-				opacity: 0.5;
-				position: absolute;
-				left: 0.75rem;
-				top: calc(50% - 6px);
 			}
 		}
 	}

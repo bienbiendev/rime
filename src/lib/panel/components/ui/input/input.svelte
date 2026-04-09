@@ -85,6 +85,7 @@
 
 	.rz-input-wrapper {
 		position: relative;
+		width: 100%;
 
 		.rz-input__icon {
 			position: absolute;
