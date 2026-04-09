@@ -6,10 +6,10 @@
 	import { getContext } from 'svelte';
 
 	const collection = getContext<CollectionContext>('rime.collectionList');
-	let filterValue = $state('');
+	let searchValue = $state('');
 
 	$effect(() => {
-		collection.filterBy(filterValue);
+		collection.filterBy(searchValue);
 	});
 </script>
 
@@ -21,7 +21,7 @@
 		class="rz-header-search-input__input"
 		placeholder={t__('common.search', `${collection.length} document(s)`)}
 		type="text"
-		bind:value={filterValue}
+		bind:value={searchValue}
 	/>
 </div>
 

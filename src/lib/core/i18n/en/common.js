@@ -35,7 +35,7 @@ export default {
 	leave_confirm_text: 'Change that you made will be lost',
 	live_in_sync: 'Establishing connection with container',
 	newPassword: 'New password',
-	no_document: 'No $1 yet',
+	no_document: 'No $1 found',
 	or: 'or',
 	passwordResetLinkSent: 'An email has been sent to $1 with instructions to reset the password',
 	publish: 'publish',

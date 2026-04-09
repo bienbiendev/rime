@@ -13,6 +13,7 @@
 	import { API_PROXY, getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
 	import { panelUrl } from '$lib/panel/util/url.js';
 	import { trycatchFetch } from '$lib/util/function.js';
+	import { Pencil, Trash2 } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { t__ } from '../../../../../../core/i18n/index.js';
 	import Folder from './Folder.svelte';
@@ -161,8 +162,12 @@
 			{/snippet}
 			<!--  -->
 			{#snippet content()}
-				<ContextMenuItem onclick={handleGetDeleteInfos}>Delete</ContextMenuItem>
-				<ContextMenuItem onclick={() => (editFolderDialogOpen = true)}>Edit</ContextMenuItem>
+				<ContextMenuItem onclick={handleGetDeleteInfos}>
+					<Trash2 size="12" /> Delete
+				</ContextMenuItem>
+				<ContextMenuItem onclick={() => (editFolderDialogOpen = true)}>
+					<Pencil size="12" /> Edit
+				</ContextMenuItem>
 			{/snippet}
 			<!--  -->
 		</ContextMenu>

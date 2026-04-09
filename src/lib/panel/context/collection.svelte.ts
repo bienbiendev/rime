@@ -53,8 +53,8 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
 		currentPath: incomingUpload?.currentPath || 'root',
 		parentDirectory: incomingUpload?.parentDirectory || null
 	});
-
-	let stamp = $state(Date.now()); // Add a timestamp to track changes
+	let isFiltered = $state(false);
+	let stamp = $state(Date.now()); // Timestamp to invalidate on changes
 	const hasVersions = $derived(!!config.versions);
 	const hasDraft = $derived(config.versions && config.versions.draft);
 
@@ -313,8 +313,8 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
 	}
 
 	function filterBy(inputValue: string) {
-		displayMode = DISPLAY_MODE.LIST;
 		if (inputValue !== '') {
+			isFiltered = true;
 			const scores: any[] = [];
 			for (const doc of initialDocs) {
 				const asTitle = getValueAtPath(config.asTitle, doc);
@@ -339,6 +339,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
 			});
 			docs = results.map((r) => r.doc);
 		} else {
+			isFiltered = false;
 			docs = [...initialDocs];
 		}
 	}
@@ -425,6 +426,10 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
 
 		get sortingBy() {
 			return sortingBy;
+		},
+
+		get isFiltered() {
+			return isFiltered;
 		},
 
 		toggleSelectOf,

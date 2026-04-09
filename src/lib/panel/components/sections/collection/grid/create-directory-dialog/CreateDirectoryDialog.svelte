@@ -12,14 +12,13 @@
 		setDocumentFormContext,
 		type FormSuccessData
 	} from '$lib/panel/context/documentForm.svelte.js';
-	import { FolderPlus } from '@lucide/svelte';
 
-	type Props = { collection: CollectionContext };
-	const { collection }: Props = $props();
+	type Props = { collection: CollectionContext; open: boolean };
+	let { collection, open = $bindable() }: Props = $props();
 
 	const configCtx = getConfigContext();
 	const directoriesConfig = configCtx.getCollection(withDirectoriesSuffix(collection.config.slug));
-	let open = $state(false);
+
 	setAPIProxyContext(API_PROXY.DOCUMENT);
 	let formElement = $state<HTMLFormElement>();
 
@@ -60,19 +59,6 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 <Dialog.Root bind:open>
-	<Dialog.Trigger>
-		{#snippet child(props)}
-			<Button
-				disabled={collection.selectMode}
-				onclick={() => (open = true)}
-				size="icon-sm"
-				variant="ghost"
-				{...props}
-			>
-				<FolderPlus size={17} />
-			</Button>
-		{/snippet}
-	</Dialog.Trigger>
 	<Dialog.Content class="rz-status-dialog">
 		{#snippet child({ props })}
 			<form use:form.enhance action={form.buildPanelActionUrl()} bind:this={formElement} {...props}>
