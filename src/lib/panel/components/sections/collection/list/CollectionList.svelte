@@ -48,7 +48,7 @@
 		{/each}
 	</div>
 {:else}
-	<Empty {collection} />
+	<Empty config={collection.config} />
 {/if}
 
 <style lang="postcss">

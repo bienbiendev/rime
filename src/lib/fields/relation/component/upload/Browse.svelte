@@ -3,6 +3,7 @@
 	import type { Directory } from '$lib/core/collections/upload/upload';
 	import { t__ } from '$lib/core/i18n/index.js';
 	import { withDirectoriesSuffix } from '$lib/core/naming.js';
+	import Empty from '$lib/panel/components/sections/collection/Empty.svelte';
 	import Folder from '$lib/panel/components/sections/collection/folder/Folder.svelte';
 	import Button from '$lib/panel/components/ui/button/button.svelte';
 	import CardDocument from '$lib/panel/components/ui/card-document/card-document.svelte';
@@ -119,47 +120,75 @@
 			</div>
 
 			<!-- Grid -->
-			<div class="rz-relation-browse__grid">
-				{#if parentPath}
-					<button class="rz-browse__folder" onclick={() => (path = parentPath)}>
-						<Folder>...</Folder>
-					</button>
-				{/if}
+			<div class="rz-relation-browse__grid-wrapper">
+				<div class="rz-relation-browse__grid">
+					{#if isFiltered && files.data?.docs.length === 0}
+						<Empty {config} />
+					{/if}
 
-				{#if !isFiltered}
-					{#if folders.data}
-						{#each folders.data.docs as doc (doc.id)}
-							<button class="rz-browse__folder" onclick={() => (path = doc.id)}>
-								<Folder>{doc.name}</Folder>
+					{#if parentPath}
+						<button class="rz-browse__folder" onclick={() => (path = parentPath)}>
+							<Folder>...</Folder>
+						</button>
+					{/if}
+
+					{#if !isFiltered}
+						{#if folders.data}
+							{#each folders.data.docs as doc (doc.id)}
+								<button class="rz-browse__folder" onclick={() => (path = doc.id)}>
+									<Folder>{doc.name}</Folder>
+								</button>
+							{/each}
+						{/if}
+					{/if}
+
+					{#if files.data}
+						{#each files.data.docs as doc (doc.id)}
+							<button onclick={() => addValue(doc.id)}>
+								<CardDocument {doc} />
 							</button>
 						{/each}
 					{/if}
-				{/if}
-
-				{#if files.data}
-					{#each files.data.docs as doc (doc.id)}
-						<button onclick={() => addValue(doc.id)}>
-							<CardDocument {doc} />
-						</button>
-					{/each}
-				{/if}
+				</div>
 			</div>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>
 
 <style lang="postcss">
+	.rz-relation-browse {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		min-height: 0;
+
+		:global {
+			.rz-no-document {
+				grid-column: 1 / -1;
+			}
+		}
+	}
+
 	.rz-relation-browse__header {
+		flex-shrink: 0;
 		display: flex;
 		align-items: center;
 		gap: var(--rz-size-4);
 		padding-bottom: var(--rz-size-4);
 		border-bottom: var(--rz-border);
-		margin-bottom: var(--rz-size-4);
+
+		padding-right: var(--rz-size-8);
+		position: sticky;
+		top: 0;
+		background-color: hsl(var(--rz-color-bg));
+		z-index: 10;
 
 		:global {
 			.rz-dropdown-item {
 				padding: var(--rz-size-3) var(--rz-size-3);
+			}
+			.rz-input-wrapper {
+				max-width: 50%;
 			}
 			.rz-input {
 				height: var(--rz-size-9);
@@ -167,12 +196,31 @@
 		}
 	}
 
+	.rz-relation-browse__grid-wrapper {
+		overflow-y: scroll;
+		flex: 1;
+		min-height: 0;
+	}
+
 	.rz-relation-browse__grid {
+		padding-top: var(--rz-size-4);
 		display: grid;
 		align-self: start;
 		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 		grid-auto-rows: auto;
 		gap: var(--rz-size-4);
+		width: 100%;
+
+		&::after {
+			content: '';
+			height: 5rem;
+			position: absolute;
+			left: 0;
+			bottom: 0;
+			right: 0;
+			z-index: 2;
+			background-image: linear-gradient(to top, hsl(var(--rz-color-bg)), transparent);
+		}
 	}
 
 	.rz-browse__folder {
