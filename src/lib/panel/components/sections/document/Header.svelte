@@ -20,7 +20,7 @@
 	};
 	const { form, onClose, config }: Props = $props();
 
-	const onCloseIsDefined = !!onClose;
+	const onCloseIsDefined = $derived(!!onClose);
 	const buttonLabel = $derived(form.values.id ? t__('common.save') : t__('common.create'));
 
 	function buildDocumentURL() {
