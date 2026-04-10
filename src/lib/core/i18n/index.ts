@@ -1,5 +1,5 @@
 export const languages = ['fr', 'en'] as const;
-export const namespaces = ['errors', 'fields', 'common'] as const;
+export const namespaces = ['errors', 'fields', 'common', 'mail'] as const;
 export const DEFAULT_LOCALE = 'en';
 
 export type PanelLanguage = (typeof languages)[number];

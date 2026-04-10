@@ -6,12 +6,14 @@ const translationModules = {
 	en: {
 		common: () => import('./en/common.js'),
 		errors: () => import('./en/errors.js'),
-		fields: () => import('./en/fields.js')
+		fields: () => import('./en/fields.js'),
+		mail: () => import('./en/mail.js')
 	},
 	fr: {
 		common: () => import('./fr/common.js'),
 		errors: () => import('./fr/errors.js'),
-		fields: () => import('./fr/fields.js')
+		fields: () => import('./fr/fields.js'),
+		mail: () => import('./fr/mail.js')
 	}
 };
 
@@ -28,7 +30,9 @@ export async function registerTranslation(locale: PanelLanguage) {
 				// Fallback to English if translation not found
 				const fallbackLocale = 'en';
 				if (translationModules[fallbackLocale]?.[namespace]) {
-					console.warn(`Translation not found for ${locale}/${namespace}, falling back to ${fallbackLocale}`);
+					console.warn(
+						`Translation not found for ${locale}/${namespace}, falling back to ${fallbackLocale}`
+					);
 					const fallbackModule = await translationModules[fallbackLocale][namespace]();
 					dictionaries[namespace] = fallbackModule.default;
 				} else {

@@ -1,5 +1,6 @@
 import { dev } from '$app/environment';
 import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
+import { t__ } from '$lib/core/i18n/index.js';
 import { Hooks } from '$lib/core/operations/hooks/index.server.js';
 import { access } from '$lib/util/access/index.js';
 import { cases } from '$lib/util/cases.js';
@@ -169,8 +170,8 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(async (args) => {
 			// Send api key by email to the user
 			await rime.mailer.sendMail({
 				to: event.locals.user!.email,
-				subject: 'Your API Key',
-				text: `Your ${args.data.name} apiKey : ${apiKey}, keep it safe, only server-side`
+				subject: t__(`mail.api_key_created_subject`, args.data.name),
+				text: t__(`mail.api_key_created_text`, args.data.name, apiKey.key)
 			});
 
 			return {
