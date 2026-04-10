@@ -1,7 +1,8 @@
 import type { GenericBlock } from '$lib/core/types/doc.js';
+import { normalizeFieldPath } from '$lib/util/doc.js';
+import { getValueAtPath } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import type { ConfigMap } from '../configMap/types.js';
-import { getValueAtPath } from '$lib/util/object.js';
 
 type ExtractBlocksArgs = {
 	data: Dic;
@@ -22,7 +23,7 @@ export function extractBlocks({ data, configMap }: ExtractBlocksArgs) {
 					if (block.type) {
 						const cleanBlock = {
 							...block,
-							path: block.path || path,
+							path: normalizeFieldPath(block.path || path),
 							position: block.position ?? index
 						};
 
