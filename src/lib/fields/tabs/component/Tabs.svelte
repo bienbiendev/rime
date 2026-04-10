@@ -1,96 +1,96 @@
 <script lang="ts">
-	import { dev } from '$app/environment';
 	import RichText from '$lib/fields/rich-text/component/RichText.svelte';
 	import { RichTextFieldBuilder } from '$lib/fields/rich-text/index.js';
 	import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
 	import * as Tabs from '$lib/panel/components/ui/tabs/index.js';
 	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-	import Cookies from 'js-cookie';
 	import type { TabBuilder, TabsField } from '../index.js';
 
 	type Props = { config: TabsField; path: string; form: DocumentFormContext };
 
 	const { config, path: initialPath, form }: Props = $props();
 
-	const cookieKey = `rime.Tabs:${form.values.id || 'create'}:${initialPath}:${config.tabs.map((t) => t.name).join('-')}`;
-	let activeTabName = $state(Cookies.get(cookieKey) || config.tabs[0].name);
-
-	// Prevent localStorage opened tab to open when tab.live is false
-	$effect(() => {
-		if (form.isLive) {
-			const currentActiveTab = config.tabs.find((tab) => tab.name === activeTabName);
-			if (!currentActiveTab || currentActiveTab.raw.live === false) {
-				activeTabName = config.tabs[0].name;
-			}
-		}
-	});
-
-	let tabErrors = $state<string[]>([]);
+	const storageActiveKey = $derived(`rime.Tabs:${form.values.id || 'create'}:${initialPath}`);
+	let errorTabs = $state<string[]>([]);
+	// Path to prepend to fields inside tabs
+	const prependPath = $derived(initialPath === '' ? '' : `${initialPath}.`);
+	// Generate unique IDs for each tab to use as data attributes for error handling.
 	const tabIds = $derived(
 		config.tabs.map((tab) => `${tab.name}-${new Date().getTime().toString()}`)
 	);
 
-	function onActiveTabChange(value: string | undefined): void {
-		value = value || config.tabs[0].name;
-		Cookies.set(cookieKey, value, {
-			sameSite: 'strict',
-			secure: !dev
-		});
+	// Retrieve active tab from localStorage, if not found use the first tab.
+	// If the stored active tab is not available in live mode, fallback to the first tab.
+	let activeTabName = $derived.by(() => {
+		let storedActiveTab = localStorage.getItem(storageActiveKey);
+		if (storedActiveTab && form.isLive) {
+			const activeTab = config.tabs.find((tab) => tab.name === storedActiveTab);
+			if (!activeTab || activeTab.raw.live === false) {
+				return config.tabs[0].name;
+			}
+		}
+		return storedActiveTab || config.tabs[0].name;
+	});
+
+	// On live mode only show tabs with live=true
+	function isTabVisible(tab: TabBuilder) {
+		return form.isLive ? tab.raw.live === true : true;
+	}
+
+	function onActiveTabChange(value: string): void {
+		localStorage.setItem(storageActiveKey, value);
 		activeTabName = value;
 	}
 
 	// Emphasize tabs that includes errors
 	$effect(() => {
 		if (form.errors.length) {
-			const errorsTabs = document.querySelectorAll<HTMLElement>(
-				'.rz-tabs-content:has(*[data-error])'
-			);
+			const selector = '.rz-tabs-content:has(*[data-error])';
+			const errorsTabs = document.querySelectorAll<HTMLElement>(selector);
 			if (errorsTabs) {
-				tabErrors = Array.from(errorsTabs)
-					.map((el: HTMLElement) => (el.dataset.tabId ? el.dataset.tabId : false))
-					.filter((entry) => typeof entry === 'string');
+				errorTabs = Array.from(errorsTabs)
+					.map((el) => el.dataset.tabId)
+					.filter((str) => typeof str === 'string');
 			}
 		} else {
-			tabErrors = [];
+			errorTabs = [];
 		}
 	});
-
-	const path = $derived(initialPath === '' ? '' : `${initialPath}.`);
-
-	function isTabVisible(tab: TabBuilder) {
-		return form.isLive ? tab.raw.live === true : true;
-	}
 </script>
 
 <div class="rz-tabs">
 	<Tabs.Root onValueChange={onActiveTabChange} value={activeTabName}>
 		<Tabs.List>
-			{#each config.tabs.filter(isTabVisible) as tab, index (index)}
-				<Tabs.Trigger
-					data-error={tabErrors.includes(tabIds[index]) ? 'true' : null}
-					value={tab.name}
-				>
-					{tab.raw.label || tab.name}
-				</Tabs.Trigger>
+			{#each config.tabs as tab, index (index)}
+				{#if isTabVisible(tab)}
+					<Tabs.Trigger
+						data-error={errorTabs.includes(tabIds[index]) ? 'true' : null}
+						value={tab.name}
+					>
+						{tab.raw.label || tab.name}
+					</Tabs.Trigger>
+				{/if}
 			{/each}
 		</Tabs.List>
 
-		{#each config.tabs.filter(isTabVisible) as tab, index (index)}
-			<Tabs.Content data-tab-id={tabIds[index]} value={tab.name}>
-				<!-- If the first field is a rich text field, render it directly -->
-				{#if tab.fields.length === 1 && tab.raw.fields[0].type === 'richText'}
-					{@const firstField = tab.raw.fields[0] as RichTextFieldBuilder}
-					<RichText
-						standAlone={true}
-						path="{path}{tab.name}.{firstField.name}"
-						config={firstField.raw}
-						{form}
-					/>
-				{:else}
-					<!-- Otherwise, render the fields -->
-					<RenderFields fields={tab.raw.fields} path="{path}{tab.name}" {form} />
-				{/if}
-			</Tabs.Content>
+		{#each config.tabs as tab, index (index)}
+			{#if isTabVisible(tab)}
+				<Tabs.Content data-tab-id={tabIds[index]} value={tab.name}>
+					<!-- If the first and only field is a rich text field, render it directly -->
+					{#if tab.fields.length === 1 && tab.raw.fields[0].type === 'richText'}
+						{@const firstField = tab.raw.fields[0] as RichTextFieldBuilder}
+						<RichText
+							standAlone={true}
+							path="{prependPath}{tab.name}.{firstField.name}"
+							config={firstField.raw}
+							{form}
+						/>
+					{:else}
+						<!-- Otherwise, render the fields -->
+						<RenderFields fields={tab.raw.fields} path="{prependPath}{tab.name}" {form} />
+					{/if}
+				</Tabs.Content>
+			{/if}
 		{/each}
 	</Tabs.Root>
 </div>
