@@ -83,9 +83,9 @@
 		--rz-nav-button-height: var(--rz-size-12);
 		--rz-nav-bg: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-0)));
 
-		--rz-nav-button-bg: light-dark(hsl(var(--rz-gray-19)), hsl(var(--rz-gray-3)));
-		--rz-nav-group-bg: light-dark(hsl(var(--rz-gray-17)), hsl(var(--rz-gray-2)));
-		--rz-nav-group-border-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));
+		--rz-nav-button-bg: light-dark(hsl(var(--rz-gray-19)), hsl(var(--rz-gray-2)));
+		--rz-nav-group-bg: light-dark(hsl(var(--rz-gray-17)), hsl(var(--rz-gray-1)));
+		--rz-nav-group-border-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-2)));
 	}
 
 	.rz-nav {
