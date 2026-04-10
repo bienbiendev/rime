@@ -46,12 +46,14 @@
 	}: Props = $props();
 
 	const { getDocumentConfig } = getConfigContext();
-	const config = getDocumentConfig({
-		prototype: initial._prototype,
-		slug: initial._type
-	});
 
 	const user = getUserContext();
+	const config = $derived(
+		getDocumentConfig({
+			prototype: initial._prototype,
+			slug: initial._type
+		})
+	);
 
 	let formElement = $state<HTMLFormElement>();
 	// This is used to intercept navigation when there are unsaved changes in the form
@@ -59,6 +61,12 @@
 	let interceptedLeave = $state<{ url: string } | null>(null);
 	// This is used to prevent the beforeNavigate from triggering when we programmatically navigate
 	let isRedirect = $state(false);
+	// Dialog for unsaved changes confirmation
+	const isConfirmLeaveOpen = $derived(!!interceptedLeave);
+	const locale = getLocaleContext();
+	const liveEditing = $derived(!!onDataChange);
+	// This is used to show the API key after creating a document in a collection with API key auth
+	let apiKey = $state<string | null>('');
 
 	// Intercept navigation when there are unsaved changes in the form
 	beforeNavigate(async ({ cancel, to }) => {
@@ -71,21 +79,19 @@
 		interceptedLeave = { url: to.url.href };
 	});
 
-	const form = setDocumentFormContext({
-		element: () => formElement,
-		initial,
-		config,
-		readOnly,
-		onNestedDocumentCreated,
-		onDataChange,
-		onFieldFocus,
-		key: `${initial._type}_${nestedLevel}`,
-		beforeRedirect: beforeRedirect
-	});
-
-	const isConfirmLeaveOpen = $derived(!!interceptedLeave);
-	const locale = getLocaleContext();
-	const liveEditing = !!onDataChange;
+	const form = $derived(
+		setDocumentFormContext({
+			element: () => formElement,
+			initial,
+			config,
+			readOnly,
+			onNestedDocumentCreated,
+			onDataChange,
+			onFieldFocus,
+			key: `${initial._type}_${nestedLevel}`,
+			beforeRedirect: beforeRedirect
+		})
+	);
 
 	function handleKeyDown(event: KeyboardEvent) {
 		if (!formElement) throw Error('formElement is not defined');
@@ -101,8 +107,6 @@
 			}
 		}
 	}
-
-	let apiKey = $state<string | null>('');
 
 	async function beforeRedirect(data?: FormSuccessData) {
 		const IS_API_AUTH = config.type === 'collection' && config.auth?.type === 'apiKey';
