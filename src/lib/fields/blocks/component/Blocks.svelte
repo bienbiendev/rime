@@ -31,7 +31,7 @@
 
 	const sortableOptions: Sortable.Options = {
 		handle: '.rz-block__grip',
-		group: path,
+		group: $state.snapshot(path),
 		animation: 150,
 		onStart: () => (sorting = true),
 		onUnchoose: () => (sorting = false),
