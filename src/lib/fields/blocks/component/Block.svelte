@@ -6,7 +6,6 @@
 	import { useOnce } from '$lib/panel/util/once.svelte.js';
 	import { capitalize } from '$lib/util/string.js';
 	import { GripVertical, ToyBrick } from '@lucide/svelte';
-	import { watch } from 'runed';
 	import BlockActions from './BlockActions.svelte';
 
 	type Props = {
@@ -20,9 +19,8 @@
 
 	const { config, path, deleteBlock, duplicateBlock, form, sorting = false }: Props = $props();
 
-	let currentPath = $state.raw(path);
 	let isOpen = $state(true);
-	const position = $derived(parseInt(currentPath.split('.').pop() || '0'));
+	const position = $derived(parseInt(path.split('.').pop() || '0'));
 	const blockValue = $derived(form.getValue<GenericBlock>(path));
 
 	const { once } = useOnce();
@@ -58,23 +56,12 @@
 	};
 
 	$effect(() => {
-		if (currentPath !== path) {
-			let pathArr = path.split('.');
-			form.setValue(`${path}.path`, pathArr.toSpliced(pathArr.length - 1, 1).join('.'));
-			currentPath = path;
+		if (blockValue) {
+			localStorage.setItem(`${blockValue.id}:open`, isOpen.toString());
 		}
 	});
 
-	watch(
-		() => isOpen,
-		() => {
-			if (blockValue) {
-				localStorage.setItem(`${blockValue.id}:open`, isOpen.toString());
-			}
-		}
-	);
-
-	const BlockIcon = config.icon || ToyBrick;
+	const BlockIcon = $derived(config.icon || ToyBrick);
 </script>
 
 <div data-sorting={sorting} class="rz-block">
@@ -105,6 +92,8 @@
 </div>
 
 <style type="postcss">
+	@import '../../../panel/style/mixins/index.css';
+
 	.rz-block {
 		--rz-fields-padding: var(--rz-size-5);
 		position: relative;
