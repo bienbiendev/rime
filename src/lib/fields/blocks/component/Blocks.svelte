@@ -29,9 +29,10 @@
 
 	const locale = getLocaleContext();
 
+	// svelte-ignore state_referenced_locally
 	const sortableOptions: Sortable.Options = {
 		handle: '.rz-block__grip',
-		group: $state.snapshot(path),
+		group: path,
 		animation: 150,
 		onStart: () => (sorting = true),
 		onUnchoose: () => (sorting = false),
@@ -131,6 +132,8 @@
 </fieldset>
 
 <style lang="postcss">
+	@import '../../../panel/style/mixins/index.css';
+
 	.rz-blocks__title {
 		@mixin font-medium;
 	}
