@@ -587,16 +587,14 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 				return applyAction({ type: 'redirect', location: redirect, status: 301 });
 			}
 
-			toast.success(message);
-
 			// Assign document
 			doc = (data?.document || doc) as T;
+			toast.success(message);
 
 			if (nestedLevel === 0) {
 				await invalidateAll();
 				initialDoc = doc;
 			} else {
-				toast.success(t__('common.doc_created'));
 				apiProxy.invalidateAll();
 				// Do not redirect on creation if it's a nested form
 				// the form will auto close and we are back to the parent
