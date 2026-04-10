@@ -1,4 +1,4 @@
-.rz-toaster__toast {
+.rz-toaster__toast[data-sonner-toast][data-sonner-toast][data-styled='true'] {
 	background-color: hsl(var(--rz-color-bg));
 	border: var(--rz-border);
 	color: var(--rz-gray-2);
