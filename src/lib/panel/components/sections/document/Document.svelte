@@ -54,10 +54,13 @@
 	const user = getUserContext();
 
 	let formElement = $state<HTMLFormElement>();
-
+	// This is used to intercept navigation when there are unsaved changes in the form
+	// It stores the URL the user is trying to navigate to, so we can redirect them there after they confirm they want to leave
 	let interceptedLeave = $state<{ url: string } | null>(null);
+	// This is used to prevent the beforeNavigate from triggering when we programmatically navigate
 	let isRedirect = $state(false);
 
+	// Intercept navigation when there are unsaved changes in the form
 	beforeNavigate(async ({ cancel, to }) => {
 		const hasCHanges = Object.keys(form.changes).length > 0;
 		if (!hasCHanges) return;
@@ -108,6 +111,7 @@
 			return new Promise<boolean>((resolve) => {
 				function checkAndResolve() {
 					if (!apiKey) {
+						isRedirect = !!data?.redirectUrl;
 						resolve(true);
 						clearInterval(intervalId);
 					}
@@ -150,7 +154,8 @@
 			<UploadHeader accept={config.upload.accept} create={operation === 'create'} {form} />
 		{/if}
 		<RenderFields fields={config.fields} {form} />
-		{#if config.type === 'collection' && isAuthConfig(config)}
+		<!--  -->
+		{#if config.type === 'collection' && isAuthConfig(config) && config.auth.type === 'password'}
 			<AuthFooter collection={config} {operation} {form} />
 		{/if}
 	</div>
@@ -192,13 +197,14 @@
 				{t__('common.leave_confirm_title')}
 			</Dialog.Header>
 			<p>{t__('common.leave_confirm_text')}</p>
+			<!--  -->
 			<Dialog.Footer --rz-justify-content="space-between">
-				<Button onclick={() => interceptedLeave && goto(interceptedLeave.url)}
-					>{t__('common.confirm')}</Button
-				>
-				<Button onclick={() => (interceptedLeave = null)} variant="secondary"
-					>{t__('common.cancel')}</Button
-				>
+				<Button onclick={() => interceptedLeave && goto(interceptedLeave.url)}>
+					{t__('common.confirm')}
+				</Button>
+				<Button onclick={() => (interceptedLeave = null)} variant="secondary">
+					{t__('common.cancel')}
+				</Button>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
