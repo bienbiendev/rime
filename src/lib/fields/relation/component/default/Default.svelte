@@ -106,8 +106,8 @@
 
 				{#if inputFocused}
 					<Command.List>
-						{#each availableItems as item (item.documentId)}
-							<Command.Item value={item.title} onSelect={() => onSelect(item)}>
+						{#each availableItems as item, index (item.documentId)}
+							<Command.Item value="{item.title}-{index}" onSelect={() => onSelect(item)}>
 								<span>{item.title}</span>
 							</Command.Item>
 						{/each}
@@ -156,6 +156,8 @@
 </div>
 
 <style type="postcss">
+	@import '../../../../panel/style/mixins/index.css';
+
 	.rz-relation {
 		position: relative;
 
