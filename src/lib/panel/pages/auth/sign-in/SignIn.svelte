@@ -20,6 +20,7 @@
 	};
 	const { data }: Props = $props();
 
+	// svelte-ignore state_referenced_locally
 	const context = setFormContext(data.form, 'login');
 
 	$effect(() => {
