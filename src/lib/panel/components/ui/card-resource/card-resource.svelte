@@ -18,9 +18,11 @@
 
 	const isUpload = $derived('mimeType' in resource);
 	const isImage = $derived(
-		resource._thumbnail || (isUpload && resource.mimeType!.includes('image'))
+		resource._thumbnail || (isUpload && resource.mimeType?.includes('image'))
 	);
-	const Icon = $derived(isUpload ? mimeTypeToIcon(resource.mimeType!) : FileIcon);
+	const Icon = $derived(
+		isUpload && resource.mimeType ? mimeTypeToIcon(resource.mimeType) : FileIcon
+	);
 </script>
 
 <div class="rz-card-resource">
@@ -52,6 +54,8 @@
 </div>
 
 <style lang="postcss">
+	@import '../../../style/mixins/index.css';
+
 	:root {
 		--rz-ressource-card-bg: light-dark(hsl(var(--rz-gray-18)), hsl(var(--rz-gray-4)));
 		--rz-ressource-card-thumbnail-bg: light-dark(hsl(var(--rz-gray-15)), hsl(var(--rz-gray-2)));
