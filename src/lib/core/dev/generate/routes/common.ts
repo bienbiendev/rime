@@ -47,8 +47,9 @@ const rootLayout = () => `
 	type Props = { children: Snippet; data: { translations: Dictionaries } };
 
 	const { children, data }: Props = $props();
+	
+	// svelte-ignore state_referenced_locally
 	i18n.init(data.translations);
-
 </script>
 
 <div class="rz-root">
