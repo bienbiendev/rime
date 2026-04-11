@@ -6,7 +6,7 @@
 	import * as Command from '$lib/panel/components/ui/command/index.js';
 	import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
 	import Input from '$lib/panel/components/ui/input/input.svelte';
-	import { API_PROXY, setAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+	import { API_PROXY, getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
 	import { X } from '@lucide/svelte';
 	import type { NodeViewProps } from '@tiptap/core';
 	import { onMount } from 'svelte';
@@ -51,18 +51,14 @@
 			}
 		} else {
 			selected = null;
-			isDialogOpen = true;
 		}
 	});
 
-	// Need to set a local APIProxy because the app one is not
-	// available from inside tiptap rendered components
-	// TODO try to pass it as a prop in a near future
-	const APIProxy = setAPIProxyContext(API_PROXY.TIPTAP);
+	const APIProxy = getAPIProxyContext(API_PROXY.DOCUMENT);
 
 	// svelte-ignore state_referenced_locally
 	const url = extension.options.query
-		? apiUrl(extension.options.slug, extension.options.query)
+		? apiUrl(extension.options.slug, `?${extension.options.query}`)
 		: apiUrl(extension.options.slug);
 
 	const ressource = APIProxy.getRessource<{ docs: UploadDoc[] }>(url);
@@ -128,9 +124,9 @@
 <NodeViewWrapper>
 	<div data-drag-handle class="rz-richtext-media" class:rz-richtext-media--selected={!!selected}>
 		{#if !selected}
-			<Button class="rz-richtext-media__add" variant="outline" onclick={handleClick}
-				>Add a media</Button
-			>
+			<Button class="rz-richtext-media__add" variant="outline" onclick={handleClick}>
+				Add a media
+			</Button>
 		{:else}
 			<div class="rz-richtext-media__actions">
 				<Button
@@ -181,7 +177,7 @@
 	</div>
 {/snippet}
 
-<Command.Dialog bind:open={isDialogOpen} onOpenChange={(val) => (isDialogOpen = val)}>
+<Command.Dialog bind:open={isDialogOpen}>
 	<Command.Input placeholder="Select an image" />
 
 	<Command.List>

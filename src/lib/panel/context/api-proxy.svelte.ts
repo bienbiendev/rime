@@ -1,19 +1,6 @@
 import { getContext, setContext } from 'svelte';
 
-// Define the Resource type explicitly to avoid circular references
-export type Resource<T = any> = {
-	data: T | null;
-	isLoading: boolean;
-	error: any;
-	// fetchData: () => void;
-	url: string;
-	refresh: () => void;
-};
-
-type GetResourcesOptions<T> = { transformData?: (input: any) => T };
-
 function createAPIProxy() {
-	// Use explicit type instead of ReturnType
 	const resources = $state<Map<string, Resource>>(new Map());
 
 	function getRessource<T>(url: string, options?: GetResourcesOptions<T>) {
@@ -23,7 +10,6 @@ function createAPIProxy() {
 			const resource = createResource<T>(url, options);
 			resources.set(url, resource);
 		}
-
 		return resources.get(url) as Resource<T>;
 	}
 
@@ -88,7 +74,10 @@ function createAPIProxy() {
 
 	return {
 		getRessource,
-		invalidateAll
+		invalidateAll,
+		get urls() {
+			return Array.from(resources.entries()).map(([url, resource]) => url);
+		}
 	};
 }
 
@@ -101,9 +90,18 @@ export function getAPIProxyContext(key = API_PROXY.ROOT) {
 	return getContext<ReturnType<typeof setAPIProxyContext>>(key);
 }
 
-// @TODO why multiple APIProxy ROOT everywhere should work
+// @TODO why multiple APIProxy... ROOT everywhere should work
 export const API_PROXY = {
 	DOCUMENT: Symbol('api-proxy.document'),
-	ROOT: Symbol('api-proxy.root'),
-	TIPTAP: Symbol('api-proxy.tiptap')
+	ROOT: Symbol('api-proxy.root')
 };
+
+export type Resource<T = any> = {
+	data: T | null;
+	isLoading: boolean;
+	error: any;
+	url: string;
+	refresh: () => void;
+};
+
+type GetResourcesOptions<T> = { transformData?: (input: any) => T };

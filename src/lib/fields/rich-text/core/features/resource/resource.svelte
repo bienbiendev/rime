@@ -4,7 +4,7 @@
 	import Button from '$lib/panel/components/ui/button/button.svelte';
 	import CardResource from '$lib/panel/components/ui/card-resource/card-resource.svelte';
 	import * as Command from '$lib/panel/components/ui/command/index.js';
-	import { API_PROXY, setAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+	import { API_PROXY, getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
 	import type { NodeViewProps } from '@tiptap/core';
 	import { onMount } from 'svelte';
 	import NodeViewWrapper from '../../svelte/node-view-wrapper.svelte';
@@ -37,14 +37,11 @@
 		}
 	});
 
-	// Need to set a local APIProxy because the app one is not
-	// available from inside tiptap rendered components
-	// TODO try to pass it as a prop somehow
-	const APIProxy = setAPIProxyContext(API_PROXY.TIPTAP);
+	const APIProxy = getAPIProxyContext(API_PROXY.DOCUMENT);
 
 	// svelte-ignore state_referenced_locally
 	const url = extension.options.query
-		? apiUrl(extension.options.slug, extension.options.query)
+		? apiUrl(extension.options.slug, `?${extension.options.query}`)
 		: apiUrl(extension.options.slug);
 
 	const ressource = APIProxy.getRessource<{ docs: GenericDoc[] }>(url);
@@ -114,7 +111,7 @@
 	</div>
 </NodeViewWrapper>
 
-<Command.Dialog bind:open={isDialogOpen} onOpenChange={(val) => (isDialogOpen = val)}>
+<Command.Dialog bind:open={isDialogOpen}>
 	<Command.Input placeholder="Select a resource" />
 
 	<Command.List>

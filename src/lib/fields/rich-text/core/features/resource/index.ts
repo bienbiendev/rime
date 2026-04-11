@@ -13,7 +13,10 @@ const resourceFeatureNode: RichTextFeatureNode = {
 	}
 };
 
-export const ResourceFeature = (args: { query?: string; slug: PrototypeSlug }): RichTextFeature => ({
+export const ResourceFeature = (args: {
+	query?: string;
+	slug: PrototypeSlug;
+}): RichTextFeature => ({
 	extension: Resource.configure(args),
 	nodes: [resourceFeatureNode]
 });

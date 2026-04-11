@@ -109,8 +109,7 @@
 				});
 			}
 		}
-
-		return url.pathname + url.search;
+		return url.href + url.search;
 	}
 
 	const ressourceURL = makeRessourceURL();
