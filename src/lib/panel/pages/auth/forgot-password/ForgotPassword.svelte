@@ -34,7 +34,6 @@
 		if (error && error.message) {
 			toast.error(error.message);
 		}
-		console.log(data);
 		if (data && data.status) {
 			success = data.status;
 		}
@@ -53,6 +52,8 @@
 </AuthForm>
 
 <style lang="postcss">
+	@import '../../../style/mixins/index.css';
+
 	p {
 		font-size: var(--rz-text-lg);
 		@mixin font-semibold;
