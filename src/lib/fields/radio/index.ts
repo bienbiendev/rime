@@ -20,6 +20,15 @@ export class RadioFieldBuilder extends PickOneFieldBuilder<RadioField> {
 		this.field.layout = value;
 		return this;
 	}
+
+	compile() {
+		super.compile();
+		if (!this.field.defaultValue) {
+			const defaultOption = this.field.options[0].value;
+			this.field.defaultValue = defaultOption;
+		}
+		return this.field;
+	}
 }
 
 export const radio = (name: string) => new RadioFieldBuilder(name);

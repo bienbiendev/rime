@@ -54,10 +54,6 @@ class PickFieldBuilder<T extends FieldWithOptions = FieldWithOptions> extends Fo
 		if (!this.field.options || !this.field.options.length) {
 			throw new Error(`${this.field.name} should at least have one option`);
 		}
-		if (!this.field.defaultValue) {
-			const defaultOption = this.field.options[0].value;
-			this.field.defaultValue = this.field.many ? [defaultOption] : defaultOption;
-		}
 		if (!this.field.isEmpty) {
 			if (this.field.many) {
 				this.field.isEmpty = (value) => Array.isArray(value) && value.length === 0;
@@ -69,14 +65,18 @@ class PickFieldBuilder<T extends FieldWithOptions = FieldWithOptions> extends Fo
 	}
 }
 
-export class PickOneFieldBuilder<T extends FieldWithOptions = FieldWithOptions> extends PickFieldBuilder<T> {
+export class PickOneFieldBuilder<
+	T extends FieldWithOptions = FieldWithOptions
+> extends PickFieldBuilder<T> {
 	defaultValue(value: string | DefaultValueFn<string>) {
 		this.field.defaultValue = value;
 		return this;
 	}
 }
 
-export class PickManyFieldBuilder<T extends FieldWithOptions = FieldWithOptions> extends PickFieldBuilder<T> {
+export class PickManyFieldBuilder<
+	T extends FieldWithOptions = FieldWithOptions
+> extends PickFieldBuilder<T> {
 	defaultValue(value: string[] | DefaultValueFn<string[]>) {
 		this.field.defaultValue = value;
 		return this;
