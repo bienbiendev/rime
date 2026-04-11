@@ -5,7 +5,6 @@
 	import Button from '$lib/panel/components/ui/button/button.svelte';
 	import { Input } from '$lib/panel/components/ui/input/index.js';
 	import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-	import { getValueAtPath } from '$lib/util/object.js';
 	import { slugify } from '$lib/util/string.js';
 	import { Hash } from '@lucide/svelte';
 	import type { SlugField } from '../index';
@@ -14,33 +13,24 @@
 	const { path, config, form }: Props = $props();
 
 	const field = $derived(form.useField(path, config));
+	let isFocused = false;
+	// svelte-ignore state_referenced_locally
 	const initialValue = form.getRawValue(path);
 	const initialEmpty = !initialValue;
-	let internalValue = $state(initialValue);
+	const slugifySource = $derived(config.slugify ? form.useField<string>(config.slugify) : null);
 
-	$effect(() => {
-		if (initialEmpty) {
-			generateFromField();
+	const slugifiedValue = $derived.by(() => {
+		if (slugifySource && slugifySource.value) {
+			return slugify(slugifySource.value);
 		}
+		return '';
 	});
 
 	$effect(() => {
-		if (internalValue !== field.value) {
-			field.value = internalValue;
+		if (!isFocused && initialEmpty && slugifiedValue && field.value !== slugifiedValue) {
+			field.value = slugifiedValue;
 		}
 	});
-
-	const generateFromField = () => {
-		if (config.slugify) {
-			const source = config.slugify in form.changes ? form.changes : form.values;
-			const fromValue = getValueAtPath<string>(config.slugify, source);
-			if (!fromValue) return;
-			const slugifiedValue = slugify(fromValue);
-			if (internalValue !== slugifiedValue) {
-				internalValue = slugifiedValue;
-			}
-		}
-	};
 
 	const onInput = (event: Event) => {
 		const inputElement = event.target as HTMLInputElement;
@@ -49,11 +39,11 @@
 		if (inputValue !== slugifiedValue) {
 			inputElement.value = slugifiedValue;
 		}
-		internalValue = inputElement.value;
+		field.value = inputElement.value;
 	};
 
-	const classNameCompact = config.layout === 'compact' ? 'rz-slug-field--compact' : '';
-	const classNames = `rz-slug-field ${classNameCompact || ''} ${config.className}`;
+	const classNameCompact = $derived(config.layout === 'compact' ? 'rz-slug-field--compact' : '');
+	const classNames = $derived(`rz-slug-field ${classNameCompact || ''} ${config.className}`);
 </script>
 
 <fieldset class={classNames} use:root={field}>
@@ -69,12 +59,14 @@
 			value={field.value}
 			name={path || config.name}
 			oninput={onInput}
+			onfocus={() => (isFocused = true)}
+			onblur={() => (isFocused = false)}
 		/>
 
 		{#if config.slugify}
 			<Button
 				disabled={!field.editable}
-				onclick={generateFromField}
+				onclick={() => (field.value = slugifiedValue)}
 				type="button"
 				size="sm"
 				variant="secondary"

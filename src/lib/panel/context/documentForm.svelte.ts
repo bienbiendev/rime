@@ -1,5 +1,4 @@
 import { applyAction, deserialize } from '$app/forms';
-import { invalidateAll } from '$app/navigation';
 import { page } from '$app/state';
 import { apiUrl } from '$lib/core/api/index.js';
 import { compileDocumentConfig } from '$lib/core/config/shared/compile.js';
@@ -587,18 +586,16 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 				return applyAction({ type: 'redirect', location: redirect, status: 301 });
 			}
 
-			// Assign document
+			// Assign documents returned from the server to the form state
 			doc = (data?.document || doc) as T;
+			initialDoc = doc;
+			// Invalidate all queries to ensure data consistency across the app
+			apiProxy.invalidateAll();
+
 			toast.success(message);
 
-			if (nestedLevel === 0) {
-				await invalidateAll();
-				initialDoc = doc;
-			} else {
-				apiProxy.invalidateAll();
-				// Do not redirect on creation if it's a nested form
-				// the form will auto close and we are back to the parent
-				// Form so no need to assign the returned doc
+			// Callbacks
+			if (nestedLevel !== 0) {
 				if (onNestedDocumentCreated) onNestedDocumentCreated(doc);
 			}
 			if (afterSuccess) afterSuccess(doc);

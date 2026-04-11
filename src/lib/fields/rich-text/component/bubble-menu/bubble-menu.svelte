@@ -60,7 +60,7 @@
 
 	const pluginKey = $derived(path);
 	const updateDelay = 250;
-	const richTextContext = getRichTextContext(path);
+	const richTextContext = $derived(getRichTextContext(path));
 
 	const shouldShow = ({ editor }: { editor: Editor }) => {
 		return (

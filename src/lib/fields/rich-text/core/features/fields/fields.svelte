@@ -23,6 +23,7 @@
 	let isSheetOpen = $state(false);
 
 	setLocaleContext(page.data.locale || 'en');
+	// svelte-ignore state_referenced_locally
 	const form = setFormContext(node.attrs.json || {}, 'fields');
 
 	onMount(() => {

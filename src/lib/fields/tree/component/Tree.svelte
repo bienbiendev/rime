@@ -117,7 +117,12 @@
 	{/key}
 
 	<div class="rz-tree__actions">
-		<AddItemButton addItem={add} class="rz-tree__add-button" size={nested ? 'sm' : 'default'} fields={config.fields}>
+		<AddItemButton
+			addItem={add}
+			class="rz-tree__add-button"
+			size={nested ? 'sm' : 'default'}
+			fields={config.fields}
+		>
 			{config.addItemLabel}
 		</AddItemButton>
 

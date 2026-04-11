@@ -59,9 +59,12 @@
 	// available from inside tiptap rendered components
 	// TODO try to pass it as a prop in a near future
 	const APIProxy = setAPIProxyContext(API_PROXY.TIPTAP);
+
+	// svelte-ignore state_referenced_locally
 	const url = extension.options.query
 		? apiUrl(extension.options.slug, extension.options.query)
 		: apiUrl(extension.options.slug);
+
 	const ressource = APIProxy.getRessource<{ docs: UploadDoc[] }>(url);
 	let docs = $state<UploadDoc[]>([]);
 
@@ -204,6 +207,8 @@
 </Dialog.Root>
 
 <style lang="postcss">
+	@import '../../../../../panel/style/mixins/index.css';
+
 	:global(.ProseMirror-selectednode .rz-richtext-media) {
 		.rz-richtext-media__media,
 		:global(button.rz-richtext-media__add) {

@@ -26,6 +26,7 @@
 	const locale = getLocaleContext();
 	const APIProxy = getAPIProxyContext(API_PROXY.DOCUMENT);
 	const field = $derived(form.useField(path, config));
+	// svelte-ignore state_referenced_locally
 	const relationConfig = getCollection(config.relationTo);
 	const relationCollectionCtx = getCollectionContext(relationConfig.slug);
 
@@ -33,7 +34,7 @@
 	// the fetched items
 	let initialItems: RelationFieldItem[] = $state([]);
 	// value from the form
-	let initialValue = form.getRawValue<Relation[]>(path) || [];
+	let initialValue = $derived(form.getRawValue<Relation[]>(path) || []);
 	// timestamp to force re-render
 	let stamp = $state(new Date().getTime().toString());
 

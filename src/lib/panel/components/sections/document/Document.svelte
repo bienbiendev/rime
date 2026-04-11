@@ -79,18 +79,17 @@
 		interceptedLeave = { url: to.url.href };
 	});
 
-	const form = $derived(
-		setDocumentFormContext({
-			initial,
-			config,
-			readOnly,
-			onNestedDocumentCreated,
-			onDataChange,
-			onFieldFocus,
-			key: `${initial._type}_${nestedLevel}`,
-			beforeRedirect: beforeRedirect
-		})
-	);
+	// svelte-ignore state_referenced_locally
+	const form = setDocumentFormContext({
+		initial,
+		config,
+		readOnly,
+		onNestedDocumentCreated,
+		onDataChange,
+		onFieldFocus,
+		key: `${initial._type}_${nestedLevel}`,
+		beforeRedirect: beforeRedirect
+	});
 
 	function handleKeyDown(event: KeyboardEvent) {
 		if (!formElement) throw Error('formElement is not defined');

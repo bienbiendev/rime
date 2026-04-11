@@ -16,13 +16,15 @@
 	const { path, config, form, standAlone, class: className }: RichTextFieldProps = $props();
 
 	let element: HTMLElement;
-	const key = `richtext-${path}`;
+	const key = $derived(`richtext-${path}`);
 
 	let editor = $state<Editor>();
 	let features = $state<RichTextFeature[]>([]);
 	const field = $derived(form.useField<JSONContent>(path, config));
 
-	setRichTextContext(path);
+	$effect(() => {
+		setRichTextContext(path);
+	});
 
 	const withSuggestion = $derived(hasSuggestion(config.features || []));
 
@@ -63,7 +65,11 @@
 	<Field.Error error={field.error} />
 
 	<div class="rz-rich-text__editor-wrapper">
-		<div bind:this={element} data-error={field.error ? 'true' : null} class="rz-rich-text__editor {className}"></div>
+		<div
+			bind:this={element}
+			data-error={field.error ? 'true' : null}
+			class="rz-rich-text__editor {className}"
+		></div>
 
 		{#if editor && editor.isEditable}
 			<DragHandler {editor} />

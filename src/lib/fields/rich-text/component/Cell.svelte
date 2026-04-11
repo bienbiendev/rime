@@ -3,7 +3,7 @@
 
 	let { value }: { value: string } = $props();
 
-	let textValue: string = richTextJSONToText(value);
+	let textValue: string = $derived(richTextJSONToText(value));
 </script>
 
 {#if textValue && textValue.length > 10}

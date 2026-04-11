@@ -14,7 +14,7 @@
 	};
 
 	const checkboxErrorClass = $derived(field.error ? 'rz-checkbox--error' : '');
-	const inputId = `${form.key}-${slugify(path)}`;
+	const inputId = $derived(`${form.key}-${slugify(path)}`);
 </script>
 
 <fieldset class="rz-checkbox-field {config.className || ''}" use:root={field}>

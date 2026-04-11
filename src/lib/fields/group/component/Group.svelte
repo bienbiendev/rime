@@ -20,11 +20,13 @@
 	const { config, path, form }: Props = $props();
 
 	let groupOpen = $state(true);
-	const key = `group-${config.fields
-		.map((f) => f.raw)
-		.filter(isFormField)
-		.map((f) => f.name)
-		.join('-')}`;
+	const key = $derived(
+		`group-${config.fields
+			.map((f) => f.raw)
+			.filter(isFormField)
+			.map((f) => f.name)
+			.join('-')}`
+	);
 
 	const field = $derived(form.useField(path));
 
@@ -89,6 +91,8 @@
 </div>
 
 <style lang="postcss">
+	@import '../../../panel/style/mixins/index.css';
+
 	:root {
 		--rz-group-trigger-bg: hsl(var(--rz-row-bg));
 		--rz-group-preview-bg: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));

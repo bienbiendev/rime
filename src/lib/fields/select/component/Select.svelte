@@ -11,12 +11,10 @@
 	const { path, config, form }: SelectFieldProps = $props();
 
 	let listHTMLElement: HTMLElement;
-	const validValues = config.options.map((o) => o.value);
 	let initialized = false;
-
+	let options = $derived(config.options);
+	const validValues = $derived(config.options.map((o) => o.value));
 	const field = $derived(form.useField<string | string[]>(path, config));
-
-	let options = $state(config.options);
 
 	let isFull = $derived.by(() => {
 		if (!field.value) return false;

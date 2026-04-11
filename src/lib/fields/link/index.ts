@@ -53,18 +53,20 @@ export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
 		return this;
 	}
 
-	static readonly sanitize = (link: unknown) => {
-		if (!link) return link;
+	static readonly sanitize = (link: unknown): Link | undefined => {
+		if (!link) return undefined;
+		// Sanitize only the value and url properties of the link, other properties are left as is
 		const isLinkValue = (v: any): v is Link =>
 			typeof link === 'object' && !Array.isArray(link) && 'value' in link;
-		if (typeof link === 'string') return sanitize(link);
-		if (isLinkValue(link) && link.value) {
+
+		if (isLinkValue(link)) {
 			return {
 				...link,
 				url: link.url ? sanitize(link.url) : undefined,
-				value: sanitize(link.value)
+				value: link.value ? sanitize(link.value) : null
 			};
 		}
+		return undefined;
 	};
 
 	compile() {

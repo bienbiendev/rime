@@ -2,7 +2,6 @@
 	import type { TreeBlock } from '$lib/core/types/doc.js';
 	import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
 	import { useOnce } from '$lib/panel/util/once.svelte.js';
-	import { snapshot } from '$lib/util/state.js';
 	import { GripVertical } from '@lucide/svelte';
 	import { extractFieldName } from '../util.js';
 	import TreeBlockComp from './TreeBlock.svelte';
@@ -11,7 +10,6 @@
 
 	const { config, treeKey, treeState, form, sorting = false, path }: TreeBlockProps = $props();
 
-	const initialPath = $state(snapshot(path));
 	const depth = $derived(
 		path
 			.replace(`${treeState.path}.`, '')
@@ -66,11 +64,12 @@
 		return `${position} - ${config.label || config.name}`;
 	};
 
-	$effect(() => {
-		if (initialPath !== path) {
-			form.setValue(path, itemValue);
-		}
-	});
+	// $effect(() => {
+	// 	if (initialPath !== path) {
+	// 		form.setValue(path, itemValue);
+	// 		initialPath = path;
+	// 	}
+	// });
 </script>
 
 <div
@@ -120,6 +119,8 @@
 </div>
 
 <style type="postcss">
+	@import '../../../panel/style/mixins/index.css';
+
 	.rz-tree-item {
 		position: relative;
 	}

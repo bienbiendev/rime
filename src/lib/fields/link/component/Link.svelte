@@ -32,22 +32,22 @@
 
 	const primitiveTypes = ['url', 'email', 'tel', 'anchor'];
 	const field = $derived(form.useField<Link>(path, config));
-	const linkTypes = config.types || ['url', 'email', 'tel', 'anchor'];
-	const initial = path ? form.getRawValue<Link>(path) : null;
+	const linkTypes = $derived(config.types || ['url', 'email', 'tel', 'anchor']);
+	const initial = $derived(path ? form.getRawValue<Link>(path) : null);
 
-	let initialLinkType = initial?.type || linkTypes[0];
-	let initialLinkValue = initial?.value || '';
-	let initialTargetBlank = (initial?.target && initial.target === '_blank') || false;
+	let initialLinkType = $derived(initial?.type || linkTypes[0]);
+	let initialLinkValue = $derived(initial?.value || '');
+	let initialTargetBlank = $derived((initial?.target && initial.target === '_blank') || false);
 
-	let inputValue = $state(initialLinkValue);
-	let linkType = $state(initialLinkType);
-	let linkValue = $state(initialLinkValue);
-	let targetBlank = $state(initialTargetBlank);
+	let inputValue = $derived(initialLinkValue);
+	let linkType = $derived(initialLinkType);
+	let linkValue = $derived(initialLinkValue);
+	let targetBlank = $derived(initialTargetBlank);
 
 	let isPrimitiveType = $derived(primitiveTypes.includes(linkType));
 	let Icon = $derived(icons[linkType] || Newspaper);
 	let placeholder = $derived(placeholders[linkType] || '');
-	let ressourceId = $state(!primitiveTypes.includes(initialLinkType) ? initialLinkValue : '');
+	let ressourceId = $derived(!primitiveTypes.includes(initialLinkType) ? initialLinkValue : '');
 	const hasTarget = $derived(!['anchor', 'email', 'tel'].includes(linkType));
 
 	let isLinkValueError = $state(false);
@@ -68,6 +68,7 @@
 		}
 	};
 
+	// For ressource links, whenever the ressourceId change, update the field value
 	$effect(() => {
 		if (!isPrimitiveType) {
 			if ((field.value && ressourceId !== field.value.value) || (!field.value && ressourceId)) {
@@ -163,12 +164,13 @@
 			<!-- Target -->
 			{#if hasTarget}
 				<div class="rz-link__target">
-					<Switch checked={targetBlank} onCheckedChange={onTargetChange} id="target" />
-					<Label for="target">{t__('fields.new_tab')}</Label>
+					<Switch checked={targetBlank} onCheckedChange={onTargetChange} id="{path}.target" />
+					<Label for="{path}.target">{t__('fields.new_tab')}</Label>
 				</div>
 			{/if}
 		</div>
 	</div>
+
 	<Field.Hint {config} />
 	<Field.Error error={field.error} />
 </fieldset>

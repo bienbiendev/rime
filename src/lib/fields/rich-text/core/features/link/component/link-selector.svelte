@@ -29,11 +29,13 @@
 	type LinkResource = { title: string; url: string };
 	let { options, editor, context, active }: Props = $props();
 
-	let value = $state((editor && editor.getAttributes('link').href) || '');
+	let value = $derived((editor && editor.getAttributes('link').href) || '');
 	let error = $state(false);
 	let open = $state(false);
 	let resourceDialogOpen = $state(false);
-	let isTargetBlank = $state((editor && editor.getAttributes('link').target === '_blank') || false);
+	let isTargetBlank = $derived(
+		(editor && editor.getAttributes('link').target === '_blank') || false
+	);
 
 	/**
 	 * Logic to get internal resources e.g., collections, areas

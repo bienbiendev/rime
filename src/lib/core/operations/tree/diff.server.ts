@@ -32,7 +32,8 @@ export function defineTreeBlocksDiff({
 }: DefineTreeBlocksDiffArgs): TreeBlocksDiff {
 	//
 	const configMap = context.configMap;
-	if (!configMap) throw new RimeError(RimeError.OPERATION_ERROR, 'missing configMap @defineBlocksDiff');
+	if (!configMap)
+		throw new RimeError(RimeError.OPERATION_ERROR, 'missing configMap @defineBlocksDiff');
 
 	// On fallback locale :
 	// - If a block is localized, it should not keep its id so a new one is created

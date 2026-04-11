@@ -7,7 +7,7 @@
 
 	const { path, config, form }: ToggleProps = $props();
 	const field = $derived(form.useField<boolean>(path, config));
-	const inputId = slugify(`${form.key}-${path}`);
+	const inputId = $derived(slugify(`${form.key}-${path}`));
 
 	const onCheckedChange = (bool: boolean) => {
 		field.value = bool;

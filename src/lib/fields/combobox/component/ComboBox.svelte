@@ -13,7 +13,7 @@
 	const { path, config, form }: ComboBoxProps = $props();
 
 	const field = $derived(form.useField(path, config));
-	const options = config.options;
+	const options = $derived(config.options);
 
 	let search = $state('');
 	let open = $state(false);
