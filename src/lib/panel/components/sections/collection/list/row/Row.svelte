@@ -1,10 +1,9 @@
 <script lang="ts">
 	import type { GenericDoc } from '$lib/core/types/doc.js';
 	import Checkbox from '$lib/panel/components/ui/checkbox/checkbox.svelte';
-	import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
+	import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
 	import { getLocaleContext } from '$lib/panel/context/locale.svelte';
 	import { getValueAtPath } from '$lib/util/object';
-	import { getContext } from 'svelte';
 	import StatusDot from '../../StatusDot.svelte';
 	import UploadThumbCell from '../../upload-thumb-cell/UploadThumbCell.svelte';
 
@@ -14,8 +13,8 @@
 	};
 
 	const { checked, doc }: Props = $props();
-	const collection = getContext<CollectionContext>('rime.collectionList');
 
+	const collection = getCollectionContext('list');
 	const locale = getLocaleContext();
 
 	let gridTemplateColumn = $state('grid-template-columns: 2fr repeat(1, minmax(0, 1fr));');
@@ -78,6 +77,8 @@
 </div>
 
 <style type="postcss">
+	@import '../../../../../style/mixins/index.css';
+
 	.rz-list-row {
 		display: grid;
 		height: var(--rz-row-height);

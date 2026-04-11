@@ -14,8 +14,6 @@ import { augmentStaffServer } from './augment-staff.server.js';
 
 export const buildConfig = <const C extends Config>(config: C) => {
 	const augmented = augmentConfig(config);
-	// Versions collection aliases
-	// create {slug}_versions collections
 	const output = makeVersionsCollectionsAliases(augmented);
 	return createRime(output as any as BuildConfig<C>);
 };

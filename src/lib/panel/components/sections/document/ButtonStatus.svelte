@@ -25,14 +25,14 @@
 			{
 				method: 'PATCH',
 				body: JSON.stringify({
-					status: internalValue
+					status: status
 				})
 			}
 		)
 			.then((r) => {
 				if (r.status === 200) {
 					toast.success(t__('common.doc_updated'));
-					form.setValue('status', internalValue);
+					form.setValue('status', status);
 					dialogOpen = false;
 					invalidateAll();
 				} else {
@@ -44,8 +44,7 @@
 			});
 	}
 
-	let initialValue = $state.snapshot(form.values.status);
-	let internalValue = $state(initialValue);
+	let status = $derived(form.values.status);
 </script>
 
 <Dialog.Root bind:open={dialogOpen}>
@@ -58,7 +57,7 @@
 		{/snippet}
 	</Dialog.Trigger>
 	<Dialog.Content class="rz-status-dialog">
-		<Radio.Root bind:value={internalValue}>
+		<Radio.Root bind:value={status}>
 			{#each statusList as status, index (index)}
 				<div class="rz-radio__option">
 					<Radio.Item id="document.{status}" value={status} />
@@ -77,6 +76,8 @@
 </Dialog.Root>
 
 <style lang="postcss">
+	@import '../../../style/mixins/index.css';
+
 	.rz-radio__option {
 		display: flex;
 		gap: var(--rz-size-3);

@@ -18,7 +18,7 @@
 	import { setCollectionContext } from '$lib/panel/context/collection.svelte.js';
 	import { getConfigContext } from '$lib/panel/context/config.svelte.js';
 	import { CopyPlus } from '@lucide/svelte';
-	import { getContext, setContext } from 'svelte';
+	import { getContext } from 'svelte';
 
 	type Props = {
 		slug: string;
@@ -36,18 +36,17 @@
 
 	const { data, slug }: Props = $props();
 	const config = getConfigContext();
-	const collectionConfig = config.getCollection(slug);
+	const collectionConfig = $derived(config.getCollection(slug));
 	let bulkDialogOpen = $state(false);
 
-	const collection = setCollectionContext({
-		initial: data.docs,
-		config: collectionConfig,
-		canCreate: data.canCreate,
-		upload: data.upload,
-		key: slug
-	});
-
-	setContext('rime.collectionList', collection);
+	const collection = $derived(
+		setCollectionContext('list', {
+			initial: data.docs,
+			config: collectionConfig,
+			canCreate: data.canCreate,
+			upload: data.upload
+		})
+	);
 
 	$effect(() => {
 		collection.upload = {
@@ -62,7 +61,10 @@
 	});
 
 	const titleContext = getContext<{ value: string }>('title');
-	titleContext.value = collection.config.label.plural;
+
+	$effect(() => {
+		titleContext.value = collection.config.label.plural;
+	});
 </script>
 
 {#if data.status === 200}

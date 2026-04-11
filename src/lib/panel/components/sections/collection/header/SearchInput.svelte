@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { t__ } from '$lib/core/i18n/index.js';
 	import Input from '$lib/panel/components/ui/input/input.svelte';
-	import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
+	import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
 	import { Search } from '@lucide/svelte';
-	import { getContext } from 'svelte';
 
-	const collection = getContext<CollectionContext>('rime.collectionList');
+	const collection = getCollectionContext('list');
 	let searchValue = $state('');
 
 	$effect(() => {

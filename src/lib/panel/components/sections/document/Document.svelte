@@ -81,7 +81,6 @@
 
 	const form = $derived(
 		setDocumentFormContext({
-			element: () => formElement,
 			initial,
 			config,
 			readOnly,
@@ -141,7 +140,6 @@
 	class="rz-document {className}"
 	bind:this={formElement}
 	use:form.enhance
-	action={form.buildPanelActionUrl()}
 	enctype="multipart/form-data"
 	method="post"
 >

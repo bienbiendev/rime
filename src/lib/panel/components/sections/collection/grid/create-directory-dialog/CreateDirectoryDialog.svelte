@@ -16,20 +16,13 @@
 	type Props = { collection: CollectionContext; open: boolean };
 	let { collection, open = $bindable() }: Props = $props();
 
-	const configCtx = getConfigContext();
-	const directoriesConfig = configCtx.getCollection(withDirectoriesSuffix(collection.config.slug));
-
 	setAPIProxyContext(API_PROXY.DOCUMENT);
 	let formElement = $state<HTMLFormElement>();
-
-	async function beforeRedirect(data?: FormSuccessData) {
-		open = false;
-		invalidateAll();
-		return false;
-	}
-
+	const configCtx = getConfigContext();
+	// svelte-ignore state_referenced_locally
+	const directoriesConfig = configCtx.getCollection(withDirectoriesSuffix(collection.config.slug));
+	// svelte-ignore state_referenced_locally
 	const form = setDocumentFormContext({
-		element: () => formElement,
 		initial: {
 			parent: collection.upload.currentPath
 		},
@@ -39,29 +32,18 @@
 		beforeRedirect: beforeRedirect
 	});
 
-	function handleKeyDown(event: KeyboardEvent) {
-		if (!open) return;
-		if (!formElement) throw Error('formElement is not defined');
-		if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-			event.preventDefault();
-			if (!form.canSubmit) return;
-			const saveButton = formElement.querySelector('button[data-submit]');
-			if (saveButton) {
-				formElement.requestSubmit(saveButton as HTMLButtonElement);
-			} else {
-				// Fallback to default submit if no specific button found
-				formElement.requestSubmit();
-			}
-		}
+	// Prevent redirection after directory creation
+	async function beforeRedirect(data?: FormSuccessData) {
+		open = false;
+		invalidateAll();
+		return false;
 	}
 </script>
-
-<svelte:window onkeydown={handleKeyDown} />
 
 <Dialog.Root bind:open>
 	<Dialog.Content class="rz-status-dialog">
 		{#snippet child({ props })}
-			<form use:form.enhance action={form.buildPanelActionUrl()} bind:this={formElement} {...props}>
+			<form use:form.enhance bind:this={formElement} {...props}>
 				<Dialog.Header>{t__('common.create_folder')}</Dialog.Header>
 				<RenderFields {form} fields={directoriesConfig.fields} />
 				<Dialog.Footer --rz-justify-content="space-between">

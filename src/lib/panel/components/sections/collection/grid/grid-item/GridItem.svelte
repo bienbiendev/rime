@@ -6,14 +6,13 @@
 	import type { GenericDoc } from '$lib/core/types/doc';
 	import CardDocument from '$lib/panel/components/ui/card-document/card-document.svelte';
 	import Checkbox from '$lib/panel/components/ui/checkbox/checkbox.svelte';
-	import { type CollectionContext } from '$lib/panel/context/collection.svelte.js';
+	import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
 	import { panelUrl } from '$lib/panel/util/url.js';
-	import { getContext } from 'svelte';
 
 	type Props = { checked: boolean; doc: GenericDoc; draggable?: 'true' };
 	const { checked, doc, draggable }: Props = $props();
 
-	const collection = getContext<CollectionContext>('rime.collectionList');
+	const collection = getCollectionContext('list');
 
 	const isUploadCollection = $derived(isUploadConfig(collection.config));
 

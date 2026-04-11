@@ -18,14 +18,14 @@
 	};
 	let { folder, collection, open = $bindable() }: Props = $props();
 
+	setAPIProxyContext(API_PROXY.DOCUMENT);
+	let formElement = $state<HTMLFormElement>();
 	const user = getUserContext();
 	const configCtx = getConfigContext();
+	// svelte-ignore state_referenced_locally
 	const config = configCtx.getCollection(withDirectoriesSuffix(collection.slug));
-	let formElement = $state<HTMLFormElement>();
-	setAPIProxyContext(API_PROXY.DOCUMENT);
-
+	// svelte-ignore state_referenced_locally
 	const form = setDocumentFormContext({
-		element: () => formElement,
 		initial: folder,
 		config,
 		readOnly: !config.access.update(user.attributes, { id: folder.id }),
@@ -55,7 +55,7 @@
 <Dialog.Root bind:open>
 	<Dialog.Content>
 		{#snippet child({ props })}
-			<form use:form.enhance action={form.buildPanelActionUrl()} bind:this={formElement} {...props}>
+			<form use:form.enhance bind:this={formElement} {...props}>
 				<RenderFields {form} fields={config.fields} />
 				<Dialog.Footer --rz-justify-content="space-between">
 					<Button data-submit disabled={!form.canSubmit} type="submit">{t__('common.save')}</Button>

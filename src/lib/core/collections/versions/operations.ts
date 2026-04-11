@@ -114,7 +114,7 @@ type Args = {
  *   config: documentConfig
  * });
  *
- * // Use with helper functions for clearer code
+ * // Use with helper functions for cleaner code
  * if (VersionOperations.isNewVersionCreation(versionOperation)) {
  *   // Handle new version creation logic
  * }

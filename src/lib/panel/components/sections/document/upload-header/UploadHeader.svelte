@@ -20,8 +20,8 @@
 	let file = $state<File | null>(null);
 	let isValidFile = $state(false);
 
-	const hasAccept = 'accept' in form.config;
-	const allowedMimeTypes = accept || [];
+	const hasAccept = $derived('accept' in form.config);
+	const allowedMimeTypes = $derived(accept || []);
 
 	const deleteFile = () => {
 		preview = null;

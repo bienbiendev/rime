@@ -3,14 +3,13 @@
 	import { PARAMS } from '$lib/core/constant.js';
 	import { t__ } from '$lib/core/i18n/index.js';
 	import Button from '$lib/panel/components/ui/button/button.svelte';
-	import { type CollectionContext } from '$lib/panel/context/collection.svelte.js';
+	import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
 	import { CirclePlus } from '@lucide/svelte';
-	import { getContext } from 'svelte';
 
 	type ButtonSize = 'sm' | 'default';
 	const { size = 'default' }: { size?: ButtonSize } = $props();
-	const collection = getContext<CollectionContext>('rime.collectionList');
 
+	const collection = getCollectionContext('list');
 	const isSmallSize = $derived(size === 'sm');
 	const buttonVariant = $derived(isSmallSize ? 'ghost' : 'default');
 	const buttonSize = $derived(isSmallSize ? 'icon-sm' : 'default');

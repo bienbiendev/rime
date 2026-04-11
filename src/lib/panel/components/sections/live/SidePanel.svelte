@@ -36,13 +36,14 @@
 	}
 
 	setAPIProxyContext(API_PROXY.DOCUMENT);
+	// svelte-ignore state_referenced_locally
 	setConfigContext(config);
+	// svelte-ignore state_referenced_locally
 	setUserContext(user);
 	createContext('title', '[untitled]');
-	const locale = setLocaleContext(initialeLocale);
 
 	$effect(() => {
-		locale.code = initialeLocale;
+		setLocaleContext(initialeLocale);
 	});
 </script>
 

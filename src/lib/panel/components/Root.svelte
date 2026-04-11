@@ -24,16 +24,14 @@
 	let isCollapsed = $state(false);
 	let localeCollapsed = $state<string | null>(null);
 
+	// svelte-ignore state_referenced_locally
 	setConfigContext(config);
+	// svelte-ignore state_referenced_locally
 	setUserContext(user);
 	createContext('title', '[untitled]');
 	setAPIProxyContext(API_PROXY.ROOT);
 
-	const locale = setLocaleContext(initialeLocale);
-
-	$effect(() => {
-		locale.code = initialeLocale;
-	});
+	const locale = $derived(setLocaleContext(initialeLocale));
 
 	function onResize() {
 		if (window.innerWidth < 1024) {

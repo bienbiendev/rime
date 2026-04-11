@@ -1,12 +1,10 @@
 <script lang="ts">
 	import { t__ } from '$lib/core/i18n/index.js';
 	import Button from '$lib/panel/components/ui/button/button.svelte';
-	import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
+	import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
 	import { ListChecks, SquareCheck, SquareMinus, Trash } from '@lucide/svelte';
-	import { getContext } from 'svelte';
 
-	const collection = getContext<CollectionContext>('rime.collectionList');
-
+	const collection = getCollectionContext('list');
 	const selectedCount = $derived(collection.selected.length);
 	const pluralSuffix = $derived(selectedCount > 1 ? 's' : '');
 	const activeListClass = $derived(collection.selectMode ? 'rz-header-select__icon--active' : '');

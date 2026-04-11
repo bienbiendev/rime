@@ -32,7 +32,6 @@ import { getUserContext } from './user.svelte.js';
 
 function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = GenericDoc>({
 	initial,
-	element,
 	config,
 	readOnly,
 	key,
@@ -46,11 +45,12 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 	//
 	let initialDoc = $state(initial);
 	let doc = $state<T>(initial);
+	let formElement = $state<HTMLFormElement>();
 	const documentConfig = compileDocumentConfig(config);
 	const changes = $derived<Partial<GenericDoc>>(diff(initialDoc, doc));
 	let isDisabled = $state(readOnly);
 	let processing = $state(false);
-	const operation = doc.id ? 'update' : 'create';
+	const operation = $derived(doc.id ? 'update' : 'create');
 	const user = getUserContext();
 	const errors = setErrorsContext(key);
 	const isCollection = documentConfig.type === 'collection';
@@ -628,7 +628,11 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 		processing = false;
 	};
 
-	const enhance = (formElement: HTMLFormElement) => {
+	const enhance = (node: HTMLFormElement) => {
+		// Assign form element
+		formElement = node;
+
+		// Set status field if submitter has a data-status attribute
 		const setStatus = (submitter: SubmitEvent['submitter']) => {
 			const status = !!submitter?.dataset.status;
 			if (status && documentConfig.versions && documentConfig.versions.draft) {
@@ -636,8 +640,9 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 			}
 		};
 
+		// Build full action URL with query params based on submitter attributes (draft, versionId)
 		const enhanceAction = (submitter: SubmitEvent['submitter']) => {
-			let action = formElement.action;
+			let action = buildPanelActionUrl();
 
 			const draft = !!submitter?.dataset.draft;
 			if (draft) {
@@ -657,11 +662,11 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 			submit(enhanceAction(event.submitter));
 		};
 
-		formElement.addEventListener('submit', listener);
+		node.addEventListener('submit', listener);
 
 		return {
 			destroy() {
-				formElement.removeEventListener('submit', listener);
+				node.removeEventListener('submit', listener);
 			}
 		};
 	};
@@ -737,9 +742,8 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 		},
 
 		get element() {
-			const htmlFormElement = element();
-			if (!htmlFormElement) throw new Error('form element is not defined');
-			return htmlFormElement;
+			if (!formElement) throw new Error('form element is not defined');
+			return formElement;
 		},
 
 		get canSubmit() {
@@ -815,7 +819,6 @@ type MoveBlock = (from: number, to: number) => void;
 export type FormSuccessData = { redirectUrl?: string; document?: GenericDoc; message?: string };
 
 type Args<T> = {
-	element: () => HTMLFormElement | undefined;
 	beforeSubmit?: (data: Dic) => Promise<Dic>;
 	beforeRedirect?: (data?: FormSuccessData) => Promise<boolean>;
 	afterSuccess?: (doc?: T) => void;

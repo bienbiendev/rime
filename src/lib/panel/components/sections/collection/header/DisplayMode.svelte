@@ -1,14 +1,18 @@
 <script lang="ts">
 	import Button from '$lib/panel/components/ui/button/button.svelte';
-	import { DISPLAY_MODE, type CollectionContext, type DisplayMode } from '$lib/panel/context/collection.svelte.js';
+	import {
+		DISPLAY_MODE,
+		getCollectionContext,
+		type DisplayMode
+	} from '$lib/panel/context/collection.svelte.js';
 	import { LayoutGrid, List, TextQuote } from '@lucide/svelte';
-	import { getContext } from 'svelte';
 
-	const collection = getContext<CollectionContext>('rime.collectionList');
-
+	const collection = getCollectionContext('list');
 	const listIconClass = $derived(collection.isList() ? 'rz-header-display-mode__icon--active' : '');
 	const gridIconClass = $derived(collection.isGrid() ? 'rz-header-display-mode__icon--active' : '');
-	const nestedIconClass = $derived(collection.isNested() ? 'rz-header-display-mode__icon--active' : '');
+	const nestedIconClass = $derived(
+		collection.isNested() ? 'rz-header-display-mode__icon--active' : ''
+	);
 
 	const setVariant = (mode: DisplayMode) => (mode === collection.display ? 'secondary' : 'ghost');
 	const isActive = (mode: DisplayMode) => mode === collection.display;

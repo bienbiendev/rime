@@ -500,9 +500,9 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
 
 const COLLECTION_KEY = 'rime.collection';
 
-export function setCollectionContext(args: Args) {
+export function setCollectionContext(key: string, args: Args) {
 	const store = createCollectionStore(args);
-	return setContext(`${COLLECTION_KEY}.${args.key || 'root'}`, store);
+	return setContext(`${COLLECTION_KEY}.${key}`, store);
 }
 
 export function getCollectionContext(key: string = 'root') {
@@ -520,5 +520,4 @@ type Args<T extends GenericDoc = GenericDoc> = {
 		currentPath?: `root${string}`;
 		parentDirectory?: Directory;
 	};
-	key?: string;
 };
