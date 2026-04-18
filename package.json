@@ -1,235 +1,235 @@
 {
-	"name": "rimecms",
-	"version": "0.26.8",
-	"homepage": "https://github.com/bienbiendev/rime",
-	"scripts": {
-		"dev": "vite dev",
-		"build": "bun ./src/lib/core/dev/cli/index.ts clear --force && vite build && npm run package && pnpm build:css",
-		"build:css": "postcss dist/**/*.css --replace --config ./postcss.config.cjs",
-		"rime:use": "bun ./src/scripts/useConfig.js",
-		"preview": "vite preview",
-		"package": "bun ./src/lib/core/dev/cli/index.ts clear --force && svelte-kit sync && svelte-package && publint",
-		"prepublishOnly": "rm -fr src/lib/site && npm run package && pnpm build:css",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"lint": "prettier --check . && eslint .",
-		"format": "prettier --write .",
-		"test:multilang": "playwright test -c ./tests/multilang/playwright.config.multilang.ts",
-		"test:basic": "playwright test -c ./tests/basic/playwright.config.basic.ts",
-		"test:empty": "playwright test -c ./tests/empty/playwright.config.empty.ts",
-		"test:versions": "playwright test -c ./tests/versions/playwright.config.versions.ts",
-		"test:versions-multilang": "playwright test -c ./tests/versions-multilang/playwright.config.versions.ts",
-		"test": "pnpm test:empty && pnpm test:multilang && pnpm test:versions && pnpm test:versions-multilang && pnpm test:basic",
-		"check:circular-deps": "pnpm dlx madge -c --extensions ts ./src/",
-		"local-pack": "npm run build && npm pack && echo \"Package created at: $(pwd)/$(npm pack | tail -1)\""
-	},
-	"license": "MIT",
-	"type": "module",
-	"bin": {
-		"rime": "dist/core/dev/cli/index.js"
-	},
-	"svelte": "./dist/index.js",
-	"types": "./dist/index.d.ts",
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"svelte": "./dist/index.js",
-			"import": "./dist/index.js"
-		},
-		"./api": {
-			"types": "./dist/core/api/index.server.d.ts",
-			"import": "./dist/core/api/index.server.js"
-		},
-		"./sqlite": {
-			"types": "./dist/adapter-sqlite/index.server.d.ts",
-			"import": "./dist/adapter-sqlite/index.server.js"
-		},
-		"./config/client": {
-			"types": "./dist/core/config/client/index.d.ts",
-			"import": "./dist/core/config/client/index.js"
-		},
-		"./config/server": {
-			"types": "./dist/core/config/server/index.server.d.ts",
-			"import": "./dist/core/config/server/index.server.js"
-		},
-		"./core/plugins/*.js": {
-			"types": "./dist/core/plugins/*.d.ts",
-			"import": "./dist/core/plugins/*.js"
-		},
-		"./core/plugins/*.svelte": {
-			"import": "./dist/core/plugins/*.svelte"
-		},
-		"./fields": {
-			"types": "./dist/fields/index.d.ts",
-			"import": "./dist/fields/index.js"
-		},
-		"./fields/*.svelte": {
-			"import": "./dist/fields/*.svelte"
-		},
-		"./fields/rich-text": {
-			"types": "./dist/fields/rich-text/client.d.ts",
-			"import": "./dist/fields/rich-text/client.js"
-		},
-		"./fields/relation": {
-			"types": "./dist/fields/relation/client.d.ts",
-			"import": "./dist/fields/relation/client.js"
-		},
-		"./i18n": {
-			"types": "./dist/core/i18n/index.d.ts",
-			"import": "./dist/core/i18n/index.js"
-		},
-		"./i18n/*.js": {
-			"types": "./dist/core/i18n/*.d.ts",
-			"import": "./dist/core/i18n/*.js"
-		},
-		"./live": {
-			"types": "./dist/live.d.ts",
-			"import": "./dist/live.js"
-		},
-		"./panel": {
-			"types": "./dist/panel/index.server.d.ts",
-			"import": "./dist/panel/index.server.js"
-		},
-		"./panel/auth": {
-			"types": "./dist/panel/pages/auth/index.server.d.ts",
-			"import": "./dist/panel/pages/auth/index.server.js"
-		},
-		"./panel/auth/client": {
-			"types": "./dist/panel/pages/auth/index.d.ts",
-			"import": "./dist/panel/pages/auth/index.js"
-		},
-		"./panel/client": {
-			"types": "./dist/panel/index.d.ts",
-			"import": "./dist/panel/index.js"
-		},
-		"./panel/style/index.css": {
-			"import": "./dist/panel/style/index.css"
-		},
-		"./panel/ui": {
-			"types": "./dist/panel/ui.d.ts",
-			"svelte": "./dist/panel/ui.js",
-			"import": "./dist/panel/ui.js"
-		},
-		"./types": {
-			"types": "./dist/types.d.ts"
-		},
-		"./upload": {
-			"types": "./dist/core/collections/upload/util/client.d.ts",
-			"import": "./dist/core/collections/upload/util/client.js"
-		},
-		"./util": {
-			"types": "./dist/util/index.d.ts",
-			"import": "./dist/util/index.js"
-		},
-		"./vite": {
-			"types": "./dist/core/dev/vite/index.d.ts",
-			"import": "./dist/core/dev/vite/index.js"
-		}
-	},
-	"files": [
-		"dist",
-		"!dist/**/*.test.*",
-		"!dist/**/*.spec.*"
-	],
-	"peerDependencies": {
-		"@sveltejs/kit": "^2.22.0",
-		"drizzle-kit": "^0.31.4",
-		"svelte": "^5.0.0",
-		"vite": "^8.0.8"
-	},
-	"devDependencies": {
-		"@eslint/compat": "^1.2.5",
-		"@eslint/js": "^9.18.0",
-		"@sveltejs/adapter-node": "^5.5.4",
-		"@sveltejs/kit": "^2.57.1",
-		"@sveltejs/package": "^2.3.10",
-		"@sveltejs/vite-plugin-svelte": "^7.0.0",
-		"@types/clone-deep": "^4.0.4",
-		"@types/eslint": "^9.6.1",
-		"@types/js-cookie": "^3.0.6",
-		"@types/node": "^22.14.0",
-		"@types/nodemailer": "^6.4.17",
-		"@types/postcss-mixins": "^9.0.6",
-		"@types/qs": "^6.9.18",
-		"@types/sanitize-html": "^2.16.0",
-		"@types/sortablejs": "^1.15.8",
-		"@types/to-snake-case": "^1.0.2",
-		"drizzle-kit": "^0.31.10",
-		"eslint": "^9.18.0",
-		"eslint-config-prettier": "^10.0.1",
-		"eslint-plugin-svelte": "^3.0.0",
-		"globals": "^15.15.0",
-		"postcss": "^8.5.3",
-		"postcss-cli": "^11.0.1",
-		"postcss-mixins": "^11.0.3",
-		"prettier": "^3.5.3",
-		"prettier-plugin-svelte": "^3.3.3",
-		"publint": "^0.2.12",
-		"svelte": "^5.55.2",
-		"svelte-check": "^4.4.6",
-		"typescript": "^5.8.3",
-		"typescript-eslint": "^8.20.0",
-		"vite": "^8.0.8",
-		"vitest": "^4.0.5"
-	},
-	"dependencies": {
-		"@babel/generator": "^7.28.3",
-		"@babel/types": "^7.28.4",
-		"@bienbien/css-reset": "^0.1.2",
-		"@floating-ui/dom": "^1.7.4",
-		"@internationalized/date": "^3.8.2",
-		"@libsql/client": "^0.15.15",
-		"@lucide/svelte": "^0.540.0",
-		"@playwright/test": "^1.52.0",
-		"@thednp/domparser": "^0.1.6",
-		"@tiptap/core": "3.21.0",
-		"@tiptap/extension-blockquote": "3.21.0",
-		"@tiptap/extension-bold": "^3.21.0",
-		"@tiptap/extension-bubble-menu": "^3.21.0",
-		"@tiptap/extension-document": "^3.21.0",
-		"@tiptap/extension-hard-break": "^3.21.0",
-		"@tiptap/extension-heading": "^3.21.0",
-		"@tiptap/extension-horizontal-rule": "^3.21.0",
-		"@tiptap/extension-italic": "^3.21.0",
-		"@tiptap/extension-link": "^3.21.0",
-		"@tiptap/extension-list": "^3.21.0",
-		"@tiptap/extension-node-range": "^3.21.0",
-		"@tiptap/extension-paragraph": "3.21.0",
-		"@tiptap/extension-text": "3.21.0",
-		"@tiptap/extension-typography": "3.21.0",
-		"@tiptap/extensions": "^3.21.0",
-		"@tiptap/pm": "^3.21.0",
-		"@tiptap/y-tiptap": "^3.0.2",
-		"ast-kit": "^2.1.2",
-		"autoprefixer": "^10.4.21",
-		"better-auth": "1.4.21",
-		"bits-ui": "2.8.0",
-		"camelcase": "^8.0.0",
-		"chalk": "^5.6.2",
-		"clone-deep": "^4.0.1",
-		"command-score": "^0.1.2",
-		"commander": "^12.1.0",
-		"dedent": "^1.5.3",
-		"deep-object-diff": "^1.1.9",
-		"deepmerge": "^4.3.1",
-		"dotenv": "^16.4.7",
-		"drizzle-orm": "^0.44.7",
-		"flat": "^6.0.1",
-		"js-cookie": "^3.0.5",
-		"magic-string-ast": "^1.0.2",
-		"nodemailer": "^8.0.5",
-		"paneforge": "^0.0.6",
-		"polka": "^0.5.2",
-		"qs": "^6.14.0",
-		"runed": "^0.37.1",
-		"sharp": "^0.34.0",
-		"sortablejs": "^1.15.6",
-		"svelte-sonner": "^1.0.5"
-	},
-	"pnpm": {
-		"onlyBuiltDependencies": [
-			"sharp",
-			"esbuild"
-		]
-	}
+  "name": "rimecms",
+  "version": "0.26.8",
+  "homepage": "https://github.com/bienbiendev/rime",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "bun ./src/lib/core/dev/cli/index.ts clear --force && vite build && npm run package && pnpm build:css",
+    "build:css": "postcss dist/**/*.css --replace --config ./postcss.config.cjs",
+    "rime:use": "bun ./src/scripts/useConfig.js",
+    "preview": "vite preview",
+    "package": "bun ./src/lib/core/dev/cli/index.ts clear --force && svelte-kit sync && svelte-package && publint",
+    "prepublishOnly": "rm -fr src/lib/site && npm run package && pnpm build:css",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "lint": "prettier --check . && eslint .",
+    "format": "prettier --write .",
+    "test:multilang": "playwright test -c ./tests/multilang/playwright.config.multilang.ts",
+    "test:basic": "playwright test -c ./tests/basic/playwright.config.basic.ts",
+    "test:empty": "playwright test -c ./tests/empty/playwright.config.empty.ts",
+    "test:versions": "playwright test -c ./tests/versions/playwright.config.versions.ts",
+    "test:versions-multilang": "playwright test -c ./tests/versions-multilang/playwright.config.versions.ts",
+    "test": "pnpm test:empty && pnpm test:multilang && pnpm test:versions && pnpm test:versions-multilang && pnpm test:basic",
+    "check:circular-deps": "pnpm dlx madge -c --extensions ts ./src/",
+    "local-pack": "npm run build && npm pack && echo \"Package created at: $(pwd)/$(npm pack | tail -1)\""
+  },
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "rime": "dist/core/dev/cli/index.js"
+  },
+  "svelte": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js",
+      "import": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/core/api/index.server.d.ts",
+      "import": "./dist/core/api/index.server.js"
+    },
+    "./sqlite": {
+      "types": "./dist/adapter-sqlite/index.server.d.ts",
+      "import": "./dist/adapter-sqlite/index.server.js"
+    },
+    "./config/client": {
+      "types": "./dist/core/config/client/index.d.ts",
+      "import": "./dist/core/config/client/index.js"
+    },
+    "./config/server": {
+      "types": "./dist/core/config/server/index.server.d.ts",
+      "import": "./dist/core/config/server/index.server.js"
+    },
+    "./core/plugins/*.js": {
+      "types": "./dist/core/plugins/*.d.ts",
+      "import": "./dist/core/plugins/*.js"
+    },
+    "./core/plugins/*.svelte": {
+      "import": "./dist/core/plugins/*.svelte"
+    },
+    "./fields": {
+      "types": "./dist/fields/index.d.ts",
+      "import": "./dist/fields/index.js"
+    },
+    "./fields/*.svelte": {
+      "import": "./dist/fields/*.svelte"
+    },
+    "./fields/rich-text": {
+      "types": "./dist/fields/rich-text/client.d.ts",
+      "import": "./dist/fields/rich-text/client.js"
+    },
+    "./fields/relation": {
+      "types": "./dist/fields/relation/client.d.ts",
+      "import": "./dist/fields/relation/client.js"
+    },
+    "./i18n": {
+      "types": "./dist/core/i18n/index.d.ts",
+      "import": "./dist/core/i18n/index.js"
+    },
+    "./i18n/*.js": {
+      "types": "./dist/core/i18n/*.d.ts",
+      "import": "./dist/core/i18n/*.js"
+    },
+    "./live": {
+      "types": "./dist/live.d.ts",
+      "import": "./dist/live.js"
+    },
+    "./panel": {
+      "types": "./dist/panel/index.server.d.ts",
+      "import": "./dist/panel/index.server.js"
+    },
+    "./panel/auth": {
+      "types": "./dist/panel/pages/auth/index.server.d.ts",
+      "import": "./dist/panel/pages/auth/index.server.js"
+    },
+    "./panel/auth/client": {
+      "types": "./dist/panel/pages/auth/index.d.ts",
+      "import": "./dist/panel/pages/auth/index.js"
+    },
+    "./panel/client": {
+      "types": "./dist/panel/index.d.ts",
+      "import": "./dist/panel/index.js"
+    },
+    "./panel/style/index.css": {
+      "import": "./dist/panel/style/index.css"
+    },
+    "./panel/ui": {
+      "types": "./dist/panel/ui.d.ts",
+      "svelte": "./dist/panel/ui.js",
+      "import": "./dist/panel/ui.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts"
+    },
+    "./upload": {
+      "types": "./dist/core/collections/upload/util/client.d.ts",
+      "import": "./dist/core/collections/upload/util/client.js"
+    },
+    "./util": {
+      "types": "./dist/util/index.d.ts",
+      "import": "./dist/util/index.js"
+    },
+    "./vite": {
+      "types": "./dist/core/dev/vite/index.d.ts",
+      "import": "./dist/core/dev/vite/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*",
+    "!dist/**/*.spec.*"
+  ],
+  "peerDependencies": {
+    "@sveltejs/kit": "^2.22.0",
+    "drizzle-kit": "^0.31.4",
+    "svelte": "^5.0.0",
+    "vite": "^8.0.8"
+  },
+  "devDependencies": {
+    "@eslint/compat": "^1.2.5",
+    "@eslint/js": "^9.18.0",
+    "@sveltejs/adapter-node": "^5.5.4",
+    "@sveltejs/kit": "^2.57.1",
+    "@sveltejs/package": "^2.3.10",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@types/clone-deep": "^4.0.4",
+    "@types/eslint": "^9.6.1",
+    "@types/js-cookie": "^3.0.6",
+    "@types/node": "^22.14.0",
+    "@types/nodemailer": "^6.4.17",
+    "@types/postcss-mixins": "^9.0.6",
+    "@types/qs": "^6.9.18",
+    "@types/sanitize-html": "^2.16.0",
+    "@types/sortablejs": "^1.15.8",
+    "@types/to-snake-case": "^1.0.2",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-svelte": "^3.0.0",
+    "globals": "^15.15.0",
+    "postcss": "^8.5.3",
+    "postcss-cli": "^11.0.1",
+    "postcss-mixins": "^11.0.3",
+    "prettier": "^3.5.3",
+    "prettier-plugin-svelte": "^3.3.3",
+    "publint": "^0.2.12",
+    "svelte": "^5.55.2",
+    "svelte-check": "^4.4.6",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.20.0",
+    "vite": "^8.0.8",
+    "vitest": "^4.0.5"
+  },
+  "dependencies": {
+    "@babel/generator": "^7.28.3",
+    "@babel/types": "^7.28.4",
+    "@bienbien/css-reset": "^0.1.2",
+    "@floating-ui/dom": "^1.7.4",
+    "@internationalized/date": "^3.8.2",
+    "@libsql/client": "^0.15.15",
+    "@lucide/svelte": "^0.540.0",
+    "@playwright/test": "^1.52.0",
+    "@thednp/domparser": "^0.1.6",
+    "@tiptap/core": "^3.22.3",
+    "@tiptap/extension-blockquote": "^3.22.3",
+    "@tiptap/extension-bold": "^3.22.3",
+    "@tiptap/extension-bubble-menu": "^3.22.3",
+    "@tiptap/extension-document": "^3.22.3",
+    "@tiptap/extension-hard-break": "^3.22.3",
+    "@tiptap/extension-heading": "^3.22.3",
+    "@tiptap/extension-horizontal-rule": "^3.22.3",
+    "@tiptap/extension-italic": "^3.22.3",
+    "@tiptap/extension-link": "^3.22.3",
+    "@tiptap/extension-list": "^3.22.3",
+    "@tiptap/extension-node-range": "^3.22.3",
+    "@tiptap/extension-paragraph": "^3.22.3",
+    "@tiptap/extension-text": "^3.22.3",
+    "@tiptap/extension-typography": "^3.22.3",
+    "@tiptap/extensions": "^3.22.3",
+    "@tiptap/pm": "^3.22.3",
+    "@tiptap/y-tiptap": "^3.0.3",
+    "ast-kit": "^2.1.2",
+    "autoprefixer": "^10.4.21",
+    "better-auth": "1.4.21",
+    "bits-ui": "2.8.0",
+    "camelcase": "^8.0.0",
+    "chalk": "^5.6.2",
+    "clone-deep": "^4.0.1",
+    "command-score": "^0.1.2",
+    "commander": "^12.1.0",
+    "dedent": "^1.5.3",
+    "deep-object-diff": "^1.1.9",
+    "deepmerge": "^4.3.1",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.44.7",
+    "flat": "^6.0.1",
+    "js-cookie": "^3.0.5",
+    "magic-string-ast": "^1.0.2",
+    "nodemailer": "^8.0.5",
+    "paneforge": "^0.0.6",
+    "polka": "^0.5.2",
+    "qs": "^6.14.0",
+    "runed": "^0.37.1",
+    "sharp": "^0.34.0",
+    "sortablejs": "^1.15.6",
+    "svelte-sonner": "^1.0.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp",
+      "esbuild"
+    ]
+  }
 }
