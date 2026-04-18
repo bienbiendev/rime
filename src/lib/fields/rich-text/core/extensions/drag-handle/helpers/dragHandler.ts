@@ -1,102 +1,102 @@
-import type { Editor } from '@tiptap/core'
-import { getSelectionRanges, NodeRangeSelection } from '@tiptap/extension-node-range'
-import type { SelectionRange } from '@tiptap/pm/state'
+import type { Editor } from '@tiptap/core';
+import { getSelectionRanges, NodeRangeSelection } from '@tiptap/extension-node-range';
+import type { SelectionRange } from '@tiptap/pm/state';
 
-import { cloneElement } from './cloneElement.js'
-import { findElementNextToCoords } from './findNextElementFromCursor.js'
-import { getInnerCoords } from './getInnerCoords.js'
-import { removeNode } from './removeNode.js'
+import { cloneElement } from './cloneElement.js';
+import { findElementNextToCoords } from './findNextElementFromCursor.js';
+import { getInnerCoords } from './getInnerCoords.js';
+import { removeNode } from './removeNode.js';
 
 function getDragHandleRanges(event: DragEvent, editor: Editor): SelectionRange[] {
-  const { doc } = editor.view.state
+  const { doc } = editor.view.state;
 
   const result = findElementNextToCoords({
     editor,
     x: event.clientX,
     y: event.clientY,
-    direction: 'right',
-  })
+    direction: 'right'
+  });
 
   if (!result.resultNode || result.pos === null) {
-    return []
+    return [];
   }
 
-  const x = event.clientX
+  const x = event.clientX;
 
   // @ts-ignore
-  const coords = getInnerCoords(editor.view, x, event.clientY)
-  const posAtCoords = editor.view.posAtCoords(coords)
+  const coords = getInnerCoords(editor.view, x, event.clientY);
+  const posAtCoords = editor.view.posAtCoords(coords);
 
   if (!posAtCoords) {
-    return []
+    return [];
   }
 
-  const { pos } = posAtCoords
-  const nodeAt = doc.resolve(pos).parent
+  const { pos } = posAtCoords;
+  const nodeAt = doc.resolve(pos).parent;
 
   if (!nodeAt) {
-    return []
+    return [];
   }
 
-  const $from = doc.resolve(result.pos)
-  const $to = doc.resolve(result.pos + 1)
+  const $from = doc.resolve(result.pos);
+  const $to = doc.resolve(result.pos + 1);
 
-  return getSelectionRanges($from, $to, 0)
+  return getSelectionRanges($from, $to, 0);
 }
 
 export function dragHandler(event: DragEvent, editor: Editor) {
-  const { view } = editor
+  const { view } = editor;
 
   if (!event.dataTransfer) {
-    return
+    return;
   }
 
-  const { empty, $from, $to } = view.state.selection
+  const { empty, $from, $to } = view.state.selection;
 
-  const dragHandleRanges = getDragHandleRanges(event, editor)
+  const dragHandleRanges = getDragHandleRanges(event, editor);
 
-  const selectionRanges = getSelectionRanges($from, $to, 0)
-  const isDragHandleWithinSelection = selectionRanges.some(range => {
-    return dragHandleRanges.find(dragHandleRange => {
-      return dragHandleRange.$from === range.$from && dragHandleRange.$to === range.$to
-    })
-  })
+  const selectionRanges = getSelectionRanges($from, $to, 0);
+  const isDragHandleWithinSelection = selectionRanges.some((range) => {
+    return dragHandleRanges.find((dragHandleRange) => {
+      return dragHandleRange.$from === range.$from && dragHandleRange.$to === range.$to;
+    });
+  });
 
-  const ranges = empty || !isDragHandleWithinSelection ? dragHandleRanges : selectionRanges
+  const ranges = empty || !isDragHandleWithinSelection ? dragHandleRanges : selectionRanges;
 
   if (!ranges.length) {
-    return
+    return;
   }
 
-  const { tr } = view.state
-  const wrapper = document.createElement('div')
-  const from = ranges[0].$from.pos
-  const to = ranges[ranges.length - 1].$to.pos
+  const { tr } = view.state;
+  const wrapper = document.createElement('div');
+  const from = ranges[0].$from.pos;
+  const to = ranges[ranges.length - 1].$to.pos;
 
-  const selection = NodeRangeSelection.create(view.state.doc, from, to)
-  const slice = selection.content()
+  const selection = NodeRangeSelection.create(view.state.doc, from, to);
+  const slice = selection.content();
 
-  ranges.forEach(range => {
-    const element = view.nodeDOM(range.$from.pos) as HTMLElement
-    const clonedElement = cloneElement(element)
+  ranges.forEach((range) => {
+    const element = view.nodeDOM(range.$from.pos) as HTMLElement;
+    const clonedElement = cloneElement(element);
 
-    wrapper.append(clonedElement)
-  })
+    wrapper.append(clonedElement);
+  });
 
-  wrapper.style.position = 'absolute'
-  wrapper.style.top = '-10000px'
-  document.body.append(wrapper)
+  wrapper.style.position = 'absolute';
+  wrapper.style.top = '-10000px';
+  document.body.append(wrapper);
 
-  event.dataTransfer.clearData()
-  event.dataTransfer.setDragImage(wrapper, 0, 0)
+  event.dataTransfer.clearData();
+  event.dataTransfer.setDragImage(wrapper, 0, 0);
 
   // tell ProseMirror the dragged content
-  view.dragging = { slice, move: true }
+  view.dragging = { slice, move: true };
 
-  tr.setSelection(selection)
+  tr.setSelection(selection);
 
-  view.dispatch(tr)
+  view.dispatch(tr);
 
   // clean up
-  document.addEventListener('drop', () => removeNode(wrapper), { once: true })
+  document.addEventListener('drop', () => removeNode(wrapper), { once: true });
 }

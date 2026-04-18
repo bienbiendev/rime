@@ -8,39 +8,39 @@ import './current-node.css';
  * on the currently edited node
  */
 export const CurrentNodeAttribute = Extension.create({
-	name: 'currentNodeAttribute',
+  name: 'currentNodeAttribute',
 
-	addProseMirrorPlugins() {
-		return [
-			new Plugin({
-				key: new PluginKey('current-node-attribute'),
-				state: {
-					init: () => DecorationSet.empty,
-					apply: (tr) => {
-						const { selection } = tr;
-						const { $from } = selection;
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('current-node-attribute'),
+        state: {
+          init: () => DecorationSet.empty,
+          apply: (tr) => {
+            const { selection } = tr;
+            const { $from } = selection;
 
-						if ($from.depth === 0) return;
+            if ($from.depth === 0) return;
 
-						// Get the position + node at selection
-						const pos = $from.before();
-						const node = $from.node();
-						if (!node) return DecorationSet.empty;
+            // Get the position + node at selection
+            const pos = $from.before();
+            const node = $from.node();
+            if (!node) return DecorationSet.empty;
 
-						// Create a node decoration with your custom attribute
-						const deco = Decoration.node(pos, pos + node.nodeSize, {
-							'data-current': ''
-						});
+            // Create a node decoration with your custom attribute
+            const deco = Decoration.node(pos, pos + node.nodeSize, {
+              'data-current': ''
+            });
 
-						return DecorationSet.create(tr.doc, [deco]);
-					}
-				},
-				props: {
-					decorations(state) {
-						return this.getState(state);
-					}
-				}
-			})
-		];
-	}
+            return DecorationSet.create(tr.doc, [deco]);
+          }
+        },
+        props: {
+          decorations(state) {
+            return this.getState(state);
+          }
+        }
+      })
+    ];
+  }
 });

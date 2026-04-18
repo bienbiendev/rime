@@ -1,6 +1,6 @@
 .rz-command-separator {
-	background-color: hsl(var(--rz-color-border));
-	margin-left: calc(-1 * var(--rz-size-1));
-	margin-right: calc(-1 * var(--rz-size-1));
-	height: 1px;
+  background-color: hsl(var(--rz-color-border));
+  margin-left: calc(-1 * var(--rz-size-1));
+  margin-right: calc(-1 * var(--rz-size-1));
+  height: 1px;
 }

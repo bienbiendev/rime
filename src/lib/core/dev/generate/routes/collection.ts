@@ -106,37 +106,37 @@ export const POST = api.collection.duplicate('${slug}')
  * Collection panel routes
  */
 export const collectionPanelRoutes: Routes = {
-	'(rime)/panel/{collection.kebab}/': {
-		pageServer: pageServer,
-		page: page
-	},
-	'(rime)/panel/{collection.kebab}/[id]': {
-		page: docPage,
-		pageServer: docPageServer
-	}
+  '(rime)/panel/{collection.kebab}/': {
+    pageServer: pageServer,
+    page: page
+  },
+  '(rime)/panel/{collection.kebab}/[id]': {
+    page: docPage,
+    pageServer: docPageServer
+  }
 };
 
 /**
  * Collection verions panel routes
  */
 export const collectionVersionsPanelRoutes: Routes = {
-	'(rime)/panel/{collection.kebab}/[id]/versions': {
-		page: docPageVersions,
-		pageServer: docPageServerVersions
-	}
+  '(rime)/panel/{collection.kebab}/[id]/versions': {
+    page: docPageVersions,
+    pageServer: docPageServerVersions
+  }
 };
 
 /**
  * Collection API routes
  */
 export const collectionAPIRoutes: Routes = {
-	'(rime)/api/{collection.kebab}/': {
-		server: apiCollectionServer
-	},
-	'(rime)/api/{collection.kebab}/[id]': {
-		server: apiCollectionDocServer
-	},
-	'(rime)/api/{collection.kebab}/[id]/duplicate': {
-		server: apiCollectionDocDuplicateServer
-	}
+  '(rime)/api/{collection.kebab}/': {
+    server: apiCollectionServer
+  },
+  '(rime)/api/{collection.kebab}/[id]': {
+    server: apiCollectionDocServer
+  },
+  '(rime)/api/{collection.kebab}/[id]/duplicate': {
+    server: apiCollectionDocDuplicateServer
+  }
 };

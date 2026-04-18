@@ -3,75 +3,75 @@
 /**************************************/
 
 .rz-sheet-content {
-	--ease: cubic-bezier(0.445, 0.05, 0.55, 0.95);
-	position: fixed;
-	z-index: 1010;
-	gap: var(--rz-size-4);
-	background-color: hsl(var(--rz-color-bg));
-	padding: var(--rz-size-6);
-	box-shadow: var(--rz-shadow-xl);
-	overflow-y: auto;
+  --ease: cubic-bezier(0.445, 0.05, 0.55, 0.95);
+  position: fixed;
+  z-index: 1010;
+  gap: var(--rz-size-4);
+  background-color: hsl(var(--rz-color-bg));
+  padding: var(--rz-size-6);
+  box-shadow: var(--rz-shadow-xl);
+  overflow-y: auto;
 
-	&[data-state='closed'] {
-		animation: exit 0.3s cubic-bezier(0.075, 0.82, 0.165, 1);
-	}
-	&[data-state='open'] {
-		animation: enter 0.3s cubic-bezier(0.075, 0.82, 0.165, 1);
-	}
+  &[data-state='closed'] {
+    animation: exit 0.3s cubic-bezier(0.075, 0.82, 0.165, 1);
+  }
+  &[data-state='open'] {
+    animation: enter 0.3s cubic-bezier(0.075, 0.82, 0.165, 1);
+  }
 
-	width: 100%;
-	padding: 0;
-	@media (min-width: 640px) {
-		width: 75%;
-	}
+  width: 100%;
+  padding: 0;
+  @media (min-width: 640px) {
+    width: 75%;
+  }
 
-	@media (min-width: 1024px) {
-		width: 50%;
-	}
+  @media (min-width: 1024px) {
+    width: 50%;
+  }
 }
 
 @keyframes exit {
-	from {
-		opacity: 1;
-		transform: translate3d(0%, 0, 0);
-	}
-	to {
-		opacity: 0;
-		transform: translate3d(100%, 0, 0);
-	}
+  from {
+    opacity: 1;
+    transform: translate3d(0%, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(100%, 0, 0);
+  }
 }
 
 @keyframes enter {
-	from {
-		opacity: 0;
-		transform: translate3d(100%, 0, 0);
-	}
-	to {
-		opacity: 1;
-		transform: translate3d(0%, 0, 0);
-	}
+  from {
+    opacity: 0;
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0%, 0, 0);
+  }
 }
 
 .rz-sheet-content__close {
-	position: absolute;
-	z-index: 1010;
-	right: var(--rz-size-4);
-	top: var(--rz-size-4);
+  position: absolute;
+  z-index: 1010;
+  right: var(--rz-size-4);
+  top: var(--rz-size-4);
 }
 
 .rz-sheet-content__close:focus-visible {
-	outline: none;
-	/* --rz-ring-offset: 2px; */
-	border-radius: var(--rz-radius-sm);
-	@mixin ring var(--rz-color-ring);
+  outline: none;
+  /* --rz-ring-offset: 2px; */
+  border-radius: var(--rz-radius-sm);
+  @mixin ring var(--rz-color-ring);
 }
 
 .rz-sheet-content--right {
-	height: 100%;
-	right: 0;
-	top: 0;
-	bottom: 0;
-	border-left: var(--rz-border);
+  height: 100%;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  border-left: var(--rz-border);
 }
 
 /**************************************/
@@ -79,8 +79,8 @@
 /**************************************/
 
 .rz-sheet-description {
-	@mixin color color-fg, 0.7;
-	font-size: var(--rz-text-sm);
+  @mixin color color-fg, 0.7;
+  font-size: var(--rz-text-sm);
 }
 
 /**************************************/
@@ -88,15 +88,15 @@
 /**************************************/
 
 .rz-sheet-footer {
-	display: flex;
-	flex-direction: column-reverse;
+  display: flex;
+  flex-direction: column-reverse;
 }
 @media (min-width: 640px) {
-	.rz-sheet-footer > * + * {
-		margin-left: var(--rz-size-2);
-		justify-content: end;
-		flex-direction: row;
-	}
+  .rz-sheet-footer > * + * {
+    margin-left: var(--rz-size-2);
+    justify-content: end;
+    flex-direction: row;
+  }
 }
 
 /**************************************/
@@ -104,17 +104,17 @@
 /**************************************/
 
 .rz-sheet-header {
-	display: flex;
-	flex-direction: column;
-	text-align: center;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
 }
 .rz-sheet-header > * + * {
-	margin-top: var(--rz-size-2);
+  margin-top: var(--rz-size-2);
 }
 @media (min-width: 640px) {
-	.rz-sheet-header {
-		text-align: left;
-	}
+  .rz-sheet-header {
+    text-align: left;
+  }
 }
 
 /**************************************/
@@ -122,11 +122,11 @@
 /**************************************/
 
 .rz-sheet-overlay {
-	background-color: var(--rz-overlay-color);
-	position: fixed;
-	inset: 0;
-	z-index: 100;
-	backdrop-filter: blur(var(--rz-overlay-blur));
+  background-color: var(--rz-overlay-color);
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  backdrop-filter: blur(var(--rz-overlay-blur));
 }
 
 /**************************************/
@@ -134,6 +134,6 @@
 /**************************************/
 
 .rz-sheet-title {
-	font-size: var(--rz-text-lg);
-	@mixin font-semibold;
+  font-size: var(--rz-text-lg);
+  @mixin font-semibold;
 }

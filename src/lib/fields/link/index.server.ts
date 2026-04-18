@@ -10,14 +10,14 @@ import type { LinkFieldBuilder } from './index.js';
 import type { Link } from './types.js';
 
 export const toSchema: ToSchema<LinkFieldBuilder> = (field, parentPath) => {
-	const { camel, snake } = getSchemaColumnNames({ name: field.name, parentPath });
-	const suffix = templateUniqueRequired(field.raw);
-	if (field._generateSchema) return field._generateSchema({ camel, snake, suffix });
-	return `${camel}: text('${snake}', { mode: 'json'})${suffix}`;
+  const { camel, snake } = getSchemaColumnNames({ name: field.name, parentPath });
+  const suffix = templateUniqueRequired(field.raw);
+  if (field._generateSchema) return field._generateSchema({ camel, snake, suffix });
+  return `${camel}: text('${snake}', { mode: 'json'})${suffix}`;
 };
 
 export const toType: ToType<LinkFieldBuilder> = (field: LinkFieldBuilder) => {
-	return `${field.name}${field.raw.required ? '' : '?'}: {
+  return `${field.name}${field.raw.required ? '' : '?'}: {
 		type: ${field.raw.types.map((t) => `'${t}'`).join(' | ')};
 		value: string | null;
 		target: '_self' | '_blank';
@@ -26,54 +26,54 @@ export const toType: ToType<LinkFieldBuilder> = (field: LinkFieldBuilder) => {
 };
 
 export const populateRessourceURL: FieldHook<LinkField> = async (
-	link: Link,
-	{ event, documentId, operation }
+  link: Link,
+  { event, documentId, operation }
 ) => {
-	if (!link) return link;
+  if (!link) return link;
 
-	// if not a resource return original value
-	if (['url', 'email', 'tel', 'anchor'].includes(link.type)) return link;
+  // if not a resource return original value
+  if (['url', 'email', 'tel', 'anchor'].includes(link.type)) return link;
 
-	// Compare with the current document beign processed to prevent infinite loop
-	if (link.value === documentId) return link;
+  // Compare with the current document beign processed to prevent infinite loop
+  if (link.value === documentId) return link;
 
-	// If falsy value return link
-	if (!link.value) return link;
+  // If falsy value return link
+  if (!link.value) return link;
 
-	//
-	if (!operation.params.depth || operation.params.depth === 0) {
-		return link;
-	}
+  //
+  if (!operation.params.depth || operation.params.depth === 0) {
+    return link;
+  }
 
-	const { rime, locale } = event.locals;
+  const { rime, locale } = event.locals;
 
-	async function getRessource(slug: PrototypeSlug) {
-		switch (true) {
-			case rime.config.isCollection(slug):
-				return await rime.collection(slug as CollectionSlug).findById({
-					id: link.value || '',
-					locale: locale,
-					select: ['url']
-				});
-			case rime.config.isArea(slug):
-				return await rime.area(slug as AreaSlug).find({
-					locale: locale,
-					select: ['url']
-				});
-		}
-	}
+  async function getRessource(slug: PrototypeSlug) {
+    switch (true) {
+      case rime.config.isCollection(slug):
+        return await rime.collection(slug as CollectionSlug).findById({
+          id: link.value || '',
+          locale: locale,
+          select: ['url']
+        });
+      case rime.config.isArea(slug):
+        return await rime.area(slug as AreaSlug).find({
+          locale: locale,
+          select: ['url']
+        });
+    }
+  }
 
-	const [error, doc] = await trycatch(getRessource(link.type as PrototypeSlug));
+  const [error, doc] = await trycatch(getRessource(link.type as PrototypeSlug));
 
-	if (doc && doc.url) {
-		link.url = doc.url;
-		return link;
-	}
+  if (doc && doc.url) {
+    link.url = doc.url;
+    return link;
+  }
 
-	if (error instanceof RimeError && error.code === RimeError.NOT_FOUND) {
-		logger.warn(`Link field : ${link.type} ${link.value || '?'} not found`);
-		return link;
-	}
+  if (error instanceof RimeError && error.code === RimeError.NOT_FOUND) {
+    logger.warn(`Link field : ${link.type} ${link.value || '?'} not found`);
+    return link;
+  }
 
-	return link;
+  return link;
 };

@@ -9,12 +9,12 @@ type Input = { fields?: Area<any>['fields'] };
  * to an Area
  */
 export const augmentMetas = <T extends Input>(config: T): T => {
-	const fields = [...(config.fields || [])];
-	fields.push(
-		//
-		text('editedBy').hidden(),
-		date('createdAt').hidden(),
-		date('updatedAt').hidden()
-	);
-	return { ...config, fields };
+  const fields = [...(config.fields || [])];
+  fields.push(
+    //
+    text('editedBy').hidden(),
+    date('createdAt').hidden(),
+    date('updatedAt').hidden()
+  );
+  return { ...config, fields };
 };

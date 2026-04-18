@@ -3,33 +3,33 @@ export type { User } from './core/collections/auth/types.js';
 
 // Config types
 export type {
-	AdditionalStaffConfig,
-	Area,
-	AreaHooks,
-	BuiltArea,
-	BuiltCollection,
-	BuiltConfig,
-	BuiltConfigClient,
-	Collection,
-	CollectionHooks,
-	Config,
-	CustomPanelRoute,
-	ImageSizesConfig,
-	LocaleConfig,
-	LocalizationConfig,
-	RouteConfig
+  AdditionalStaffConfig,
+  Area,
+  AreaHooks,
+  BuiltArea,
+  BuiltCollection,
+  BuiltConfig,
+  BuiltConfigClient,
+  Collection,
+  CollectionHooks,
+  Config,
+  CustomPanelRoute,
+  ImageSizesConfig,
+  LocaleConfig,
+  LocalizationConfig,
+  RouteConfig
 } from './core/config/types.js';
 
 // Doc types
 export type {
-	AreaSlug,
-	BaseDoc,
-	CollectionSlug,
-	GenericBlock,
-	GenericDoc,
-	Prototype,
-	PrototypeSlug,
-	UploadDoc
+  AreaSlug,
+  BaseDoc,
+  CollectionSlug,
+  GenericBlock,
+  GenericDoc,
+  Prototype,
+  PrototypeSlug,
+  UploadDoc
 } from './core/types/doc.js';
 
 // Fields types
@@ -37,11 +37,11 @@ export type { Field, FormField, Option, RelationValue } from '$lib/fields/types.
 
 // Panel types
 export type {
-	CollectionProps,
-	FieldPanelTableConfig,
-	FormErrors,
-	Navigation,
-	Route
+  CollectionProps,
+  FieldPanelTableConfig,
+  FormErrors,
+  Navigation,
+  Route
 } from './panel/types.js';
 
 export type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
@@ -57,7 +57,7 @@ export type { Plugin } from './core/plugins/index.js';
 export type { Rime, RimeContext } from './core/rime.server.js';
 export type { BlocksFieldBlockRenderTitle } from './fields/blocks/index.js';
 export type {
-	RichTextFeature,
-	RichTextFeatureMark,
-	RichTextFeatureNode
+  RichTextFeature,
+  RichTextFeatureMark,
+  RichTextFeatureNode
 } from './fields/rich-text/core/types.js';

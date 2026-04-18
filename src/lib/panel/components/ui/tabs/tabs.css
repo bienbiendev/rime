@@ -1,8 +1,6 @@
-
-
 .rz-tabs[data-tabs-root] {
-	margin-left: calc(-1 * var(--rz-fields-padding));
-	margin-right: calc(-1 * var(--rz-fields-padding));
+  margin-left: calc(-1 * var(--rz-fields-padding));
+  margin-right: calc(-1 * var(--rz-fields-padding));
 }
 
 /**************************************/
@@ -10,42 +8,42 @@
 /**************************************/
 
 .rz-tabs-trigger {
-	display: inline-flex;
-	height: 100%;
-	align-items: center;
-	justify-content: center;
-	white-space: nowrap;
-	text-transform: capitalize;
-	transition: all 0.2s ease;
-	border-bottom: 2px solid transparent;
-	--rz-ring-opacity: 0;
-	@mixin ring var(--rz-color-ring);
-	@mixin font-semibold;
+  display: inline-flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  text-transform: capitalize;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  --rz-ring-opacity: 0;
+  @mixin ring var(--rz-color-ring);
+  @mixin font-semibold;
 }
 
 .rz-tabs-trigger[data-state='active'] {
-	border-color: hsl(var(--rz-color-fg));
-	position: relative;
+  border-color: hsl(var(--rz-color-fg));
+  position: relative;
 }
 
 .rz-tabs-trigger[data-state='active']:not([data-error='true']) {
-	color: hsl(var(--rz-color-fg));
+  color: hsl(var(--rz-color-fg));
 }
 .rz-tabs-trigger[data-error='true'] {
-	@mixin color color-alert;
+  @mixin color color-alert;
 }
 .rz-tabs-trigger[data-state='inactive'] {
-	opacity: 0.8;
+  opacity: 0.8;
 }
 
 .rz-tabs-trigger:focus-visible {
-	--rz-ring-opacity: 1;
-	@mixin ring var(--rz-color-ring);
-	outline: none;
+  --rz-ring-opacity: 1;
+  @mixin ring var(--rz-color-ring);
+  outline: none;
 }
 .rz-tabs-trigger:disabled {
-	pointer-events: none;
-	opacity: 0.5;
+  pointer-events: none;
+  opacity: 0.5;
 }
 
 /**************************************/
@@ -53,14 +51,14 @@
 /**************************************/
 
 .rz-tabs-content {
-	margin-top: var(--rz-size-2);
+  margin-top: var(--rz-size-2);
 }
 .rz-tabs-content:focus-visible {
-	outline: none;
-	border-radius: var(--rz-radius-sm);
-	--rz-ring-offset: 8px;
-	--rz-ring-offset-bg: var(--rz-color-bg);
-	@mixin ring var(--rz-color-ring);
+  outline: none;
+  border-radius: var(--rz-radius-sm);
+  --rz-ring-offset: 8px;
+  --rz-ring-offset-bg: var(--rz-color-bg);
+  @mixin ring var(--rz-color-ring);
 }
 
 /**************************************/
@@ -68,15 +66,15 @@
 /**************************************/
 
 .rz-tabs-list {
-	overflow-x: auto;
-	overflow-y: visible;
-	background-color: hsl(var(--rz-color-bg));
-	@mixin color ground-2;
-	height: var(--rz-size-10);
-	width: 100%;
-	display: inline-flex;
-	align-items: center;
-	gap: var(--rz-size-6);
-	justify-content: flex-start;
-	/* border-bottom: 1px solid hsl(var(--rz-color-border)); */
+  overflow-x: auto;
+  overflow-y: visible;
+  background-color: hsl(var(--rz-color-bg));
+  @mixin color ground-2;
+  height: var(--rz-size-10);
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rz-size-6);
+  justify-content: flex-start;
+  /* border-bottom: 1px solid hsl(var(--rz-color-border)); */
 }

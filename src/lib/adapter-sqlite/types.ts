@@ -6,23 +6,23 @@ import type { PrototypeSlug } from '../types.js';
 
 // Basic types needed across multiple files
 export type GenericAdapteFacadeArgs = {
-	db: LibSQLDatabase<GetRegisterType<'Schema'>>;
-	tables: GenericTables;
+  db: LibSQLDatabase<GetRegisterType<'Schema'>>;
+  tables: GenericTables;
 };
 
 type GenericColumn = SQLiteColumn<
-	ColumnBaseConfig<ColumnDataType, string>,
-	Record<string, unknown>
+  ColumnBaseConfig<ColumnDataType, string>,
+  Record<string, unknown>
 >;
 type GenericColumns = {
-	[x: string]: GenericColumn;
+  [x: string]: GenericColumn;
 };
 
 export type GenericTable = SQLiteTableWithColumns<{
-	columns: GenericColumns;
-	dialect: string;
-	name: string;
-	schema: undefined;
+  columns: GenericColumns;
+  dialect: string;
+  name: string;
+  schema: undefined;
 }>;
 
 export type GenericTables = Record<string, GenericTable | SQLiteTableWithColumns<any>>;

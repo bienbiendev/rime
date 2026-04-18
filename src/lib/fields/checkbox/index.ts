@@ -3,12 +3,12 @@ import { BooleanFieldBuilder } from '../../core/fields/builders/boolean.js';
 import Checkbox from './component/Checkbox.svelte';
 
 export class CheckboxFieldBuilder extends BooleanFieldBuilder<CheckboxField> {
-	//
-	_metaUrl: string = import.meta.url;
+  //
+  _metaUrl: string = import.meta.url;
 
-	get component() {
-		return Checkbox;
-	}
+  get component() {
+    return Checkbox;
+  }
 }
 
 export const checkbox = (name: string) => new CheckboxFieldBuilder(name, 'checkbox');
@@ -17,6 +17,6 @@ export const checkbox = (name: string) => new CheckboxFieldBuilder(name, 'checkb
 /* Type
 /****************************************************/
 export type CheckboxField = FormField & {
-	type: 'checkbox';
-	defaultValue?: boolean;
+  type: 'checkbox';
+  defaultValue?: boolean;
 };

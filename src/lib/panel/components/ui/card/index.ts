@@ -6,19 +6,19 @@ import Header from './card-header.svelte';
 import Title from './card-title.svelte';
 
 export {
-	Root,
-	Content,
-	Description,
-	Footer,
-	Header,
-	Title,
-	//
-	Root as Card,
-	Content as CardContent,
-	Description as CardDescription,
-	Footer as CardFooter,
-	Header as CardHeader,
-	Title as CardTitle
+  Root,
+  Content,
+  Description,
+  Footer,
+  Header,
+  Title,
+  //
+  Root as Card,
+  Content as CardContent,
+  Description as CardDescription,
+  Footer as CardFooter,
+  Header as CardHeader,
+  Title as CardTitle
 };
 
 export type CardHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;

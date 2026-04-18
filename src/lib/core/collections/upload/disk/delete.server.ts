@@ -7,36 +7,36 @@ import path from 'path';
 import type { WithUpload } from '../util/config.js';
 
 export const cleanupStoredFiles = async <C extends Config>(args: {
-	config: WithUpload<BuiltCollection>;
-	rime: RimeContext<C>;
-	id: string;
+  config: WithUpload<BuiltCollection>;
+  rime: RimeContext<C>;
+  id: string;
 }): Promise<GenericDoc> => {
-	//
-	const { config, rime, id } = args;
-	const doc = await rime.collection<any>(config.slug).findById({ id, draft: true });
+  //
+  const { config, rime, id } = args;
+  const doc = await rime.collection<any>(config.slug).findById({ id, draft: true });
 
-	try {
-		const filePath = path.resolve(process.cwd(), `static/medias/${doc.filename}`);
+  try {
+    const filePath = path.resolve(process.cwd(), `static/medias/${doc.filename}`);
 
-		// Delete original
-		unlinkSync(filePath);
+    // Delete original
+    unlinkSync(filePath);
 
-		const unlinkPath = (sizePath: string) => {
-			if (existsSync(sizePath)) {
-				unlink(sizePath, () => {});
-			}
-		};
+    const unlinkPath = (sizePath: string) => {
+      if (existsSync(sizePath)) {
+        unlink(sizePath, () => {});
+      }
+    };
 
-		// Process all entries in doc.sizes
-		if (doc.sizes) {
-			Object.values(doc.sizes).forEach((path) => {
-				if (typeof path === 'string') {
-					unlinkPath(`static/${path}`);
-				}
-			});
-		}
-	} catch (err: any) {
-		logger.error(err);
-	}
-	return doc;
+    // Process all entries in doc.sizes
+    if (doc.sizes) {
+      Object.values(doc.sizes).forEach((path) => {
+        if (typeof path === 'string') {
+          unlinkPath(`static/${path}`);
+        }
+      });
+    }
+  } catch (err: any) {
+    logger.error(err);
+  }
+  return doc;
 };

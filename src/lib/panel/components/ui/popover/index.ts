@@ -6,15 +6,15 @@ const Close = PopoverPrimitive.Close;
 const Portal = PopoverPrimitive.Portal;
 
 export {
-	Root,
-	Content,
-	Portal,
-	Trigger,
-	Close,
-	//
-	Root as Popover,
-	Content as PopoverContent,
-	Portal as PopoverPortal,
-	Trigger as PopoverTrigger,
-	Close as PopoverClose
+  Root,
+  Content,
+  Portal,
+  Trigger,
+  Close,
+  //
+  Root as Popover,
+  Content as PopoverContent,
+  Portal as PopoverPortal,
+  Trigger as PopoverTrigger,
+  Close as PopoverClose
 };

@@ -1,25 +1,25 @@
 .rz-command-group {
-	color: hsl(var(--rz-color-fg));
-	overflow-x: hidden;
-	overflow-y: auto;
-	padding: var(--rz-size-1);
+  color: hsl(var(--rz-color-fg));
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--rz-size-1);
 }
 
 .rz-command-group [data-cmdk-group-heading] {
-	@mixin color color-fg, 0.7;
-	padding-left: var(--rz-size-2);
-	padding-right: var(--rz-size-2);
-	padding-top: var(--rz-size-1-5);
-	padding-bottom: var(--rz-size-1-5);
-	font-size: var(--rz-text-xs);
-	@mixin font-medium;
+  @mixin color color-fg, 0.7;
+  padding-left: var(--rz-size-2);
+  padding-right: var(--rz-size-2);
+  padding-top: var(--rz-size-1-5);
+  padding-bottom: var(--rz-size-1-5);
+  font-size: var(--rz-text-xs);
+  @mixin font-medium;
 }
 .rz-command-group__heading {
-	@mixin color color-fg, 0.7;
-	padding-left: var(--rz-size-2);
-	padding-right: var(--rz-size-2);
-	padding-top: var(--rz-size-1-5);
-	padding-bottom: var(--rz-size-1-5);
-	font-size: var(--rz-text-xs);
-	@mixin font-medium;
+  @mixin color color-fg, 0.7;
+  padding-left: var(--rz-size-2);
+  padding-right: var(--rz-size-2);
+  padding-top: var(--rz-size-1-5);
+  padding-bottom: var(--rz-size-1-5);
+  font-size: var(--rz-text-xs);
+  @mixin font-medium;
 }

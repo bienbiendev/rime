@@ -4,8 +4,8 @@ import Label from './Label.svelte';
 import LabelFor from './LabelFor.svelte';
 
 export const Field = {
-	Label,
-	Hint,
-	LabelFor,
-	Error
+  Label,
+  Hint,
+  LabelFor,
+  Error
 };

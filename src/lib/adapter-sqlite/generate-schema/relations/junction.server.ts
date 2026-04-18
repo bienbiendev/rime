@@ -21,29 +21,29 @@ import type { RelationFieldsMap } from './definition.server.js';
  * }
  */
 export function generateJunctionTableDefinition(args: Args): Return {
-	const { tableName, relationFieldsMap, hasLocale } = args;
-	let junctionTable = '';
-	const relationName = `rel_${tableName}Rels`;
-	const tablesRelationsTo = [...new Set(Object.values(relationFieldsMap).map((r) => r.to))];
-	if (tablesRelationsTo.length) {
-		junctionTable = [
-			templateRelationFieldsTable({ table: tableName, relations: tablesRelationsTo, hasLocale }),
-			templateRelationMany({ name: relationName, table: tableName, many: tablesRelationsTo })
-		].join('\n');
-	}
-	return {
-		junctionTable,
-		junctionTableName: `${tableName}Rels`
-	};
+  const { tableName, relationFieldsMap, hasLocale } = args;
+  let junctionTable = '';
+  const relationName = `rel_${tableName}Rels`;
+  const tablesRelationsTo = [...new Set(Object.values(relationFieldsMap).map((r) => r.to))];
+  if (tablesRelationsTo.length) {
+    junctionTable = [
+      templateRelationFieldsTable({ table: tableName, relations: tablesRelationsTo, hasLocale }),
+      templateRelationMany({ name: relationName, table: tableName, many: tablesRelationsTo })
+    ].join('\n');
+  }
+  return {
+    junctionTable,
+    junctionTableName: `${tableName}Rels`
+  };
 }
 
 type Args = {
-	tableName: string;
-	relationFieldsMap: RelationFieldsMap;
-	hasLocale: boolean;
+  tableName: string;
+  relationFieldsMap: RelationFieldsMap;
+  hasLocale: boolean;
 };
 
 type Return = {
-	junctionTable: string;
-	junctionTableName: string;
+  junctionTable: string;
+  junctionTableName: string;
 };

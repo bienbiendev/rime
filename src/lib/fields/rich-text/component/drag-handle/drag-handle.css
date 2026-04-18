@@ -1,18 +1,18 @@
 .rz-rich-text-drag-handle {
-	position: absolute;
-	left: -1000px;
-	display: none;
-	align-items: center;
-	border-radius: 0.25rem;
-	margin-top: 0.8rem;
-	cursor: grab;
-	display: flex;
-	height: 1.5rem;
-	justify-content: center;
-	width: 1.5rem;
+  position: absolute;
+  left: -1000px;
+  display: none;
+  align-items: center;
+  border-radius: 0.25rem;
+  margin-top: 0.8rem;
+  cursor: grab;
+  display: flex;
+  height: 1.5rem;
+  justify-content: center;
+  width: 1.5rem;
 }
 
 /** Show drag handle only when more than 1 node */
 .ProseMirror:not(:has(> *:nth-child(2))) + div > .rz-rich-text-drag-handle {
-	display: none !important;
+  display: none !important;
 }

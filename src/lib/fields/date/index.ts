@@ -6,45 +6,45 @@ import DateComponent from './component/Date.svelte';
 export const date = (name: string) => new DateFieldBuilder(name);
 
 const stringToDate = (value: string) => {
-	return new Date(value);
+  return new Date(value);
 };
 
 export class DateFieldBuilder extends FormFieldBuilder<DateField> {
-	//
-	_metaUrl: string = import.meta.url;
+  //
+  _metaUrl: string = import.meta.url;
 
-	constructor(name: string) {
-		super(name, 'date');
-		this.field.hooks = {
-			beforeValidate: [stringToDate]
-		};
-	}
+  constructor(name: string) {
+    super(name, 'date');
+    this.field.hooks = {
+      beforeValidate: [stringToDate]
+    };
+  }
 
-	get component() {
-		return DateComponent;
-	}
+  get component() {
+    return DateComponent;
+  }
 
-	get cell() {
-		return Cell;
-	}
+  get cell() {
+    return Cell;
+  }
 
-	defaultValue(value: Date | DefaultValueFn<Date>) {
-		this.field.defaultValue = value;
-		return this;
-	}
+  defaultValue(value: Date | DefaultValueFn<Date>) {
+    this.field.defaultValue = value;
+    return this;
+  }
 
-	isTitle() {
-		this.field.isTitle = true;
-		return this;
-	}
+  isTitle() {
+    this.field.isTitle = true;
+    return this;
+  }
 }
 
 /****************************************************/
 /* Type
 /****************************************************/
 export type DateField = FormField & {
-	type: 'date';
-	defaultValue?: Date | DefaultValueFn<Date>;
-	unique?: boolean;
-	isTitle?: true;
+  type: 'date';
+  defaultValue?: Date | DefaultValueFn<Date>;
+  unique?: boolean;
+  isTitle?: true;
 };

@@ -22,31 +22,31 @@ export type Routes = Record<string, RouteDefinition>;
  * // If the config has changed since last run, needsRegeneration will be true
  */
 export function shouldRegenerateRoutes<T extends Config>(config: T): boolean {
-	const versionsSuffix = (document: any) => (document.versions ? '.v' : '');
-	const authSuffix = (collection: BuiltCollection) =>
-		collection.auth ? `.${collection.auth.type}` : '';
+  const versionsSuffix = (document: any) => (document.versions ? '.v' : '');
+  const authSuffix = (collection: BuiltCollection) =>
+    collection.auth ? `.${collection.auth.type}` : '';
 
-	const memo = `
+  const memo = `
     areas:${(config.areas || []).map((area) => `${area.slug}${versionsSuffix(area)}`).join(',')}
     collections:${(config.collections || []).map((collection) => `${collection.slug}${authSuffix(collection)}${versionsSuffix(collection)}`).join(',')}
     custom:${
-			config.panel?.routes
-				? Object.entries(config.panel.routes)
-						.map(([k, v]) => `${k}-${slugify(v.component.toString())}`)
-						.join(',')
-				: ''
-		}
+      config.panel?.routes
+        ? Object.entries(config.panel.routes)
+            .map(([k, v]) => `${k}-${slugify(v.component.toString())}`)
+            .join(',')
+        : ''
+    }
     css:${config.panel?.css ? config.panel.css : 'none'}
   `;
 
-	const cachedMemo = cache.get('routes');
+  const cachedMemo = cache.get('routes');
 
-	if (cachedMemo && cachedMemo === memo) {
-		return false;
-	}
+  if (cachedMemo && cachedMemo === memo) {
+    return false;
+  }
 
-	cache.set('routes', memo);
-	return true;
+  cache.set('routes', memo);
+  return true;
 }
 
 /**
@@ -58,9 +58,9 @@ export function shouldRegenerateRoutes<T extends Config>(config: T): boolean {
  * // The directory will be created if it doesn't exist
  */
 export function ensureDir(dirPath: string): void {
-	if (!fs.existsSync(dirPath)) {
-		fs.mkdirSync(dirPath, { recursive: true });
-	}
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
 }
 
 /**
@@ -79,50 +79,50 @@ export function ensureDir(dirPath: string): void {
  * // Creates /path/to/src/routes/(rime)/panel/news/+page.svelte with the provided content
  */
 export function writeRouteFile(
-	basePath: string,
-	routePath: string,
-	fileType: string,
-	content: string
+  basePath: string,
+  routePath: string,
+  fileType: string,
+  content: string
 ): void {
-	const dir = path.join(basePath, routePath);
-	ensureDir(dir);
+  const dir = path.join(basePath, routePath);
+  ensureDir(dir);
 
-	let fileName: string;
-	let baseType = fileType;
-	let groupName = '';
+  let fileName: string;
+  let baseType = fileType;
+  let groupName = '';
 
-	// Check if fileType contains a group name after @
-	if (fileType.includes('@')) {
-		const parts = fileType.split('@');
-		baseType = parts[0];
-		groupName = parts[1];
-	}
+  // Check if fileType contains a group name after @
+  if (fileType.includes('@')) {
+    const parts = fileType.split('@');
+    baseType = parts[0];
+    groupName = parts[1];
+  }
 
-	if (baseType === 'layout') {
-		fileName = '+layout.svelte';
-	} else if (baseType === 'layoutServer') {
-		fileName = '+layout.server.ts';
-	} else if (baseType === 'page') {
-		fileName = '+page.svelte';
-	} else if (baseType === 'pageServer') {
-		fileName = '+page.server.ts';
-	} else if (baseType === 'error') {
-		fileName = '+error.svelte';
-	} else if (baseType === 'server') {
-		fileName = '+server.ts';
-	} else {
-		fileName = `+${baseType}.svelte`;
-	}
+  if (baseType === 'layout') {
+    fileName = '+layout.svelte';
+  } else if (baseType === 'layoutServer') {
+    fileName = '+layout.server.ts';
+  } else if (baseType === 'page') {
+    fileName = '+page.svelte';
+  } else if (baseType === 'pageServer') {
+    fileName = '+page.server.ts';
+  } else if (baseType === 'error') {
+    fileName = '+error.svelte';
+  } else if (baseType === 'server') {
+    fileName = '+server.ts';
+  } else {
+    fileName = `+${baseType}.svelte`;
+  }
 
-	// Insert group name before the first dot if a group name exists
-	if (groupName) {
-		const dotIndex = fileName.indexOf('.');
-		if (dotIndex !== -1) {
-			fileName = fileName.substring(0, dotIndex) + '@' + groupName + fileName.substring(dotIndex);
-		}
-	}
+  // Insert group name before the first dot if a group name exists
+  if (groupName) {
+    const dotIndex = fileName.indexOf('.');
+    if (dotIndex !== -1) {
+      fileName = fileName.substring(0, dotIndex) + '@' + groupName + fileName.substring(dotIndex);
+    }
+  }
 
-	fs.writeFileSync(path.join(dir, fileName), content);
+  fs.writeFileSync(path.join(dir, fileName), content);
 }
 
 /**
@@ -135,4 +135,4 @@ export function writeRouteFile(
  * export const GET = api.collection.get('pages_versions' as any)
  */
 export const TScastVersionSlug = (slug: string) =>
-	hasVersionsSuffix(slug) || hasDirectoriesSuffix(slug) ? `'${slug}' as any` : `'${slug}'`;
+  hasVersionsSuffix(slug) || hasDirectoriesSuffix(slug) ? `'${slug}' as any` : `'${slug}'`;

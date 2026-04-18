@@ -5,21 +5,21 @@ import type { RichTextFeature, RichTextFeatureMark } from '../types.js';
 
 // Create the bold extension
 const boldExtension = Bold.configure({
-	HTMLAttributes: { class: 'rz-rich-text-bold' }
+  HTMLAttributes: { class: 'rz-rich-text-bold' }
 });
 
 // Create bold feature item
 const boldItem: RichTextFeatureMark = {
-	label: 'Bold',
-	icon: BoldIcon,
-	isActive: ({ editor }) => editor.isActive('bold'),
-	bubbleMenu: {
-		command: ({ editor }) => editor.chain().focus().toggleBold().run()
-	}
+  label: 'Bold',
+  icon: BoldIcon,
+  isActive: ({ editor }) => editor.isActive('bold'),
+  bubbleMenu: {
+    command: ({ editor }) => editor.chain().focus().toggleBold().run()
+  }
 };
 
 // Export the bold feature
 export const BoldFeature: RichTextFeature = {
-	extension: boldExtension,
-	marks: [boldItem]
+  extension: boldExtension,
+  marks: [boldItem]
 };

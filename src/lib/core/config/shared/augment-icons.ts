@@ -4,19 +4,19 @@ import type { IconProps } from '@lucide/svelte';
 import type { Component } from 'svelte';
 
 export const augmentIcons = <
-	const T extends { collections?: BuiltCollection[]; areas?: BuiltArea[] }
+  const T extends { collections?: BuiltCollection[]; areas?: BuiltArea[] }
 >(
-	config: T
+  config: T
 ) => {
-	const icons: Dic<Component<IconProps>> = {};
+  const icons: Dic<Component<IconProps>> = {};
 
-	// Add icons
-	for (const collection of config.collections || []) {
-		icons[collection.slug] = collection.icon;
-	}
-	for (const area of config.areas || []) {
-		icons[area.slug] = area.icon;
-	}
+  // Add icons
+  for (const collection of config.collections || []) {
+    icons[collection.slug] = collection.icon;
+  }
+  for (const area of config.areas || []) {
+    icons[area.slug] = area.icon;
+  }
 
-	return { ...config, icons } as const;
+  return { ...config, icons } as const;
 };

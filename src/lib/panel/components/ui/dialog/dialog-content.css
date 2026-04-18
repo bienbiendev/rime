@@ -1,58 +1,58 @@
 .rz-dialog-content {
-	--gutter: var(--rz-size-4);
-	background-color: var(--rz-popover-bg);
-	position: fixed;
-	left: calc(50% - var(--gutter));
-	top: 40%;
-	z-index: 1010;
-	display: grid;
-	width: calc(100% - 2 * var(--gutter));
-	transform: translate(-50%, -50%);
-	gap: var(--rz-size-4);
-	border: var(--rz-border);
-	padding: var(--rz-size-3);
-	box-shadow: var(--rz-shadow-lg);
-	border-radius: var(--rz-radius-lg);
-	margin: 0 var(--gutter);
+  --gutter: var(--rz-size-4);
+  background-color: var(--rz-popover-bg);
+  position: fixed;
+  left: calc(50% - var(--gutter));
+  top: 40%;
+  z-index: 1010;
+  display: grid;
+  width: calc(100% - 2 * var(--gutter));
+  transform: translate(-50%, -50%);
+  gap: var(--rz-size-4);
+  border: var(--rz-border);
+  padding: var(--rz-size-3);
+  box-shadow: var(--rz-shadow-lg);
+  border-radius: var(--rz-radius-lg);
+  margin: 0 var(--gutter);
 
-	&.rz-dialog-content--xl {
-		height: calc(100vh - 4 * var(--gutter));
-		top: 50%;
-		grid-template-rows: 1fr;
-	}
+  &.rz-dialog-content--xl {
+    height: calc(100vh - 4 * var(--gutter));
+    top: 50%;
+    grid-template-rows: 1fr;
+  }
 }
 
 @media (min-width: 768px) {
-	.rz-dialog-content--sm {
-		width: var(--rz-size-xs);
-	}
-	.rz-dialog-content--default {
-		width: var(--rz-size-sm);
-	}
-	.rz-dialog-content--lg {
-		width: var(--rz-size-lg);
-	}
-	.rz-dialog-content--xl {
-		width: calc(100vw - 4 * var(--gutter));
-	}
+  .rz-dialog-content--sm {
+    width: var(--rz-size-xs);
+  }
+  .rz-dialog-content--default {
+    width: var(--rz-size-sm);
+  }
+  .rz-dialog-content--lg {
+    width: var(--rz-size-lg);
+  }
+  .rz-dialog-content--xl {
+    width: calc(100vw - 4 * var(--gutter));
+  }
 }
 
 [data-dialog-close] {
-	@mixin color color-fg, 0.7;
-	position: absolute;
-	right: var(--rz-size-4);
-	top: var(--rz-size-3);
-	border-radius: var(--rz-radius-sm);
-	opacity: 0.7;
-	transition: opacity 0.2s;
-	z-index: 20;
+  @mixin color color-fg, 0.7;
+  position: absolute;
+  right: var(--rz-size-4);
+  top: var(--rz-size-3);
+  border-radius: var(--rz-radius-sm);
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  z-index: 20;
 }
 
 [data-dialog-close]:focus {
-	outline: none;
-	@mixin ring var(--rz-color-ring);
+  outline: none;
+  @mixin ring var(--rz-color-ring);
 }
 
 [data-dialog-close]:disabled {
-	pointer-events: none;
+  pointer-events: none;
 }

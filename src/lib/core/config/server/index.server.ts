@@ -7,9 +7,9 @@ export type { BuildConfig } from './build-config.server.js';
 
 /** placeholder for types */
 const rimeClient = (config: SanitizedConfigClient): BuiltConfigClient => {
-	throw new Error("Don't use this function, this is a placeholder for types only");
-	// @ts-expect-error this is a placeholder function
-	return config;
+  throw new Error("Don't use this function, this is a placeholder for types only");
+  // @ts-expect-error this is a placeholder function
+  return config;
 };
 
 export { Area, Collection, Hooks, buildConfig as rime, rimeClient };

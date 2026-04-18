@@ -8,54 +8,54 @@ export type AtLeastOne<T, U = { [K in keyof T]: Pick<T, K> }> = Partial<T> & U[k
 export type InferReturn<T> = T extends (...args: any[]) => infer R ? R : never;
 export type Dic<T = any> = Record<string, T>;
 export type AsyncReturnType<T extends (...args: any) => Promise<any>> = T extends (
-	...args: any
+  ...args: any
 ) => Promise<infer R>
-	? R
-	: any;
+  ? R
+  : any;
 
 export type AnyFunction = (...args: any[]) => any;
 
 export type DeepPartial<T> = {
-	[P in keyof T]?: T[P] extends object ? DeepPartial<Required<T>[P]> : T[P];
+  [P in keyof T]?: T[P] extends object ? DeepPartial<Required<T>[P]> : T[P];
 };
 
 export type WithRelationPopulated<T> = {
-	[K in keyof T]: Required<T>[K] extends string // Check for primitive types first
-		? T[K]
-		: Required<T>[K] extends number
-			? T[K]
-			: Required<T>[K] extends boolean
-				? T[K]
-				: Required<T>[K] extends null
-					? T[K]
-					: T[K] extends undefined
-						? undefined
-						: // Then check for relation values
-							NonNullable<T[K]> extends RelationValue<infer U>
-							? T[K] extends undefined
-								? undefined
-								: U[]
-							: T[K] extends Array<infer E>
-								? Array<WithRelationPopulated<E>>
-								: T[K] extends object
-									? WithRelationPopulated<T[K]>
-									: T[K];
+  [K in keyof T]: Required<T>[K] extends string // Check for primitive types first
+    ? T[K]
+    : Required<T>[K] extends number
+      ? T[K]
+      : Required<T>[K] extends boolean
+        ? T[K]
+        : Required<T>[K] extends null
+          ? T[K]
+          : T[K] extends undefined
+            ? undefined
+            : // Then check for relation values
+              NonNullable<T[K]> extends RelationValue<infer U>
+              ? T[K] extends undefined
+                ? undefined
+                : U[]
+              : T[K] extends Array<infer E>
+                ? Array<WithRelationPopulated<E>>
+                : T[K] extends object
+                  ? WithRelationPopulated<T[K]>
+                  : T[K];
 };
 
 export type WithoutBuilders<T> =
-	T extends FieldBuilder<infer F>
-		? WithoutBuilders<F>
-		: T extends Array<infer U>
-			? U extends FieldBuilder<infer F>
-				? F[]
-				: U extends { compile(): infer R }
-					? R[]
-					: Array<WithoutBuilders<U>>
-			: T extends object
-				? T extends Function
-					? T
-					: { [K in keyof T]: WithoutBuilders<T[K]> }
-				: T;
+  T extends FieldBuilder<infer F>
+    ? WithoutBuilders<F>
+    : T extends Array<infer U>
+      ? U extends FieldBuilder<infer F>
+        ? F[]
+        : U extends { compile(): infer R }
+          ? R[]
+          : Array<WithoutBuilders<U>>
+      : T extends object
+        ? T extends Function
+          ? T
+          : { [K in keyof T]: WithoutBuilders<T[K]> }
+        : T;
 
 type Entry<K extends PropertyKey, V> = readonly [K, V];
 
@@ -64,11 +64,11 @@ type Entry<K extends PropertyKey, V> = readonly [K, V];
  * Keeps literal keys if the entries are const tuples.
  */
 export function fromEntriesTyped<const E extends readonly Entry<PropertyKey, unknown>[]>(
-	entries: E
+  entries: E
 ): { [P in E[number] as P[0]]: P[1] } {
-	return Object.fromEntries(entries as unknown as Iterable<readonly [PropertyKey, unknown]>) as {
-		[P in E[number] as P[0]]: P[1];
-	};
+  return Object.fromEntries(entries as unknown as Iterable<readonly [PropertyKey, unknown]>) as {
+    [P in E[number] as P[0]]: P[1];
+  };
 }
 // export type WithoutBuilders<T> =
 // 	T extends Array<infer U>

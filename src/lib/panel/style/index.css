@@ -7,104 +7,104 @@
 @import './util.css';
 
 :root {
-	color-scheme: light dark;
+  color-scheme: light dark;
 
-	--rz-border: 1px solid hsl(var(--rz-color-border));
+  --rz-border: 1px solid hsl(var(--rz-color-border));
 
-	/* Inputs */
-	--rz-input-height: var(--rz-size-11);
-	--rz-input-bg: var(--rz-gray-19);
+  /* Inputs */
+  --rz-input-height: var(--rz-size-11);
+  --rz-input-bg: var(--rz-gray-19);
 
-	/* Overlay */
-	--rz-overlay-color: hsl(var(--rz-gray-11) / 0.4);
-	--rz-overlay-blur: 6px;
+  /* Overlay */
+  --rz-overlay-color: hsl(var(--rz-gray-11) / 0.4);
+  --rz-overlay-blur: 6px;
 
-	/* Rows */
-	--rz-row-height: var(--rz-size-12);
-	--rz-row-bg: var(--rz-gray-18);
+  /* Rows */
+  --rz-row-height: var(--rz-size-12);
+  --rz-row-bg: var(--rz-gray-18);
 
-	/* Colors */
-	--rz-color-fg: var(--rz-gray-0);
-	--rz-color-bg: var(--rz-gray-17);
-	--rz-color-border: var(--rz-gray-15);
-	--rz-color-ring: var(--rz-color-spot);
+  /* Colors */
+  --rz-color-fg: var(--rz-gray-0);
+  --rz-color-bg: var(--rz-gray-17);
+  --rz-color-border: var(--rz-gray-15);
+  --rz-color-ring: var(--rz-color-spot);
 
-	/* Collapsible group, tree, blocks... */
-	--rz-collapse-fields-content-bg: light-dark(hsl(var(--rz-input-bg)), hsl(var(--rz-color-bg)));
+  /* Collapsible group, tree, blocks... */
+  --rz-collapse-fields-content-bg: light-dark(hsl(var(--rz-input-bg)), hsl(var(--rz-color-bg)));
 
-	/* Popovers dropdown, dialog,... */
-	--rz-popover-bg: hsl(var(--rz-color-bg));
-	--rz-popover-highlight-bg: hsl(var(--rz-gray-15));
+  /* Popovers dropdown, dialog,... */
+  --rz-popover-bg: hsl(var(--rz-color-bg));
+  --rz-popover-highlight-bg: hsl(var(--rz-gray-15));
 
-	@media (prefers-color-scheme: dark) {
-		--rz-overlay-color: hsl(var(--rz-gray-0) / 0.7);
-		--rz-color-fg: var(--rz-gray-17);
-		--rz-color-border: var(--rz-gray-4);
-		--rz-color-bg: var(--rz-gray-2);
-		--rz-input-bg: var(--rz-gray-4);
-		--rz-row-bg: var(--rz-gray-3);
-		--rz-popover-highlight-bg: hsl(var(--rz-gray-3));
-	}
+  @media (prefers-color-scheme: dark) {
+    --rz-overlay-color: hsl(var(--rz-gray-0) / 0.7);
+    --rz-color-fg: var(--rz-gray-17);
+    --rz-color-border: var(--rz-gray-4);
+    --rz-color-bg: var(--rz-gray-2);
+    --rz-input-bg: var(--rz-gray-4);
+    --rz-row-bg: var(--rz-gray-3);
+    --rz-popover-highlight-bg: hsl(var(--rz-gray-3));
+  }
 }
 
 body:has(.rz-root) {
-	min-height: 100vh;
-	overscroll-behavior-y: none;
+  min-height: 100vh;
+  overscroll-behavior-y: none;
 }
 
 .rz-root {
-	background-color: hsl(var(--rz-color-bg));
-	color: hsl(var(--rz-color-fg));
-	font-size: var(--rz-text-md);
-	min-height: 100vh;
-	::selection {
-		background-color: hsl(var(--rz-color-spot) / 0.5);
-		color: hsl(var(--rz-color-fg));
-	}
+  background-color: hsl(var(--rz-color-bg));
+  color: hsl(var(--rz-color-fg));
+  font-size: var(--rz-text-md);
+  min-height: 100vh;
+  ::selection {
+    background-color: hsl(var(--rz-color-spot) / 0.5);
+    color: hsl(var(--rz-color-fg));
+  }
 
-	hr {
-		border-color: hsl(var(--rz-color-border));
-		margin-top: var(--rz-size-4);
-		margin-bottom: var(--rz-size-4);
-	}
+  hr {
+    border-color: hsl(var(--rz-color-border));
+    margin-top: var(--rz-size-4);
+    margin-bottom: var(--rz-size-4);
+  }
 }
 
 .rz-sheet-content,
 .rz-dialog-content,
 [data-bits-floating-content-wrapper] {
-	hr {
-		border-color: hsl(var(--rz-color-border));
-		margin-top: var(--rz-size-4);
-		margin-bottom: var(--rz-size-4);
-	}
-	color: hsl(var(--rz-color-fg));
-	font-size: var(--rz-text-md);
+  hr {
+    border-color: hsl(var(--rz-color-border));
+    margin-top: var(--rz-size-4);
+    margin-bottom: var(--rz-size-4);
+  }
+  color: hsl(var(--rz-color-fg));
+  font-size: var(--rz-text-md);
 }
 
 .rz-sr-only {
-	position: absolute;
-	width: 1px;
-	height: 1px;
-	padding: 0;
-	margin: -1px;
-	overflow: hidden;
-	clip: rect(0, 0, 0, 0);
-	white-space: nowrap;
-	border-width: 0;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 .rz-field-label + .rz-field-hint {
-	margin-bottom: var(--rz-size-2);
-	margin-top: 0;
+  margin-bottom: var(--rz-size-2);
+  margin-top: 0;
 }
 
 .rz-field-root:has(.rz-label + .rz-field-hint) {
-	.rz-field-label {
-		margin-bottom: 0;
-	}
+  .rz-field-label {
+    margin-bottom: 0;
+  }
 }
 
 .rz-field-root[disabled] {
-	opacity: 0.5;
-	cursor: not-allowed;
+  opacity: 0.5;
+  cursor: not-allowed;
 }

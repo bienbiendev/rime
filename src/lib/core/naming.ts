@@ -11,7 +11,7 @@ import type { CollectionSlug } from '$lib/types.js';
  * withDirectoriesSuffix('pages_versions');
  */
 export const withDirectoriesSuffix = (slug: string) =>
-	`${slug.replace('_versions', '')}_directories` as CollectionSlug;
+  `${slug.replace('_versions', '')}_directories` as CollectionSlug;
 
 /**
  * Add a _versions suffix to a given name.

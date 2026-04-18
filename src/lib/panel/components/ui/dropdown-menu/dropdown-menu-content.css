@@ -1,12 +1,12 @@
 .rz-dropdown-content {
-	background-color: var(--rz-popover-bg);
-	z-index: 120;
-	min-width: var(--min-width, 8rem);
-	border-radius: var(--rz-radius-lg);
-	border: var(--rz-border);
-	padding: var(--rz-size-1);
-	box-shadow: var(--rz-shadow-xl);
+  background-color: var(--rz-popover-bg);
+  z-index: 120;
+  min-width: var(--min-width, 8rem);
+  border-radius: var(--rz-radius-lg);
+  border: var(--rz-border);
+  padding: var(--rz-size-1);
+  box-shadow: var(--rz-shadow-xl);
 }
 .rz-dropdown-content:focus {
-	outline: none;
+  outline: none;
 }

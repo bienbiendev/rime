@@ -9,10 +9,10 @@ import type { ContentUpdatePayload } from './types.js';
 const clients = new Set<WritableStreamDefaultWriter<string>>();
 
 export const registerWriter = (writer: WritableStreamDefaultWriter<string>): (() => void) => {
-	clients.add(writer);
-	return () => {
-		clients.delete(writer);
-	};
+  clients.add(writer);
+  return () => {
+    clients.delete(writer);
+  };
 };
 
 /**
@@ -26,10 +26,10 @@ export const registerWriter = (writer: WritableStreamDefaultWriter<string>): (()
  * });
  */
 export const broadcast = (data: ContentUpdatePayload): void => {
-	const frame = `event: rime:${data.operation}\ndata: ${JSON.stringify(data)}\n\n`;
-	for (const w of clients) {
-		void w.write(frame).catch(() => {
-			clients.delete(w);
-		});
-	}
+  const frame = `event: rime:${data.operation}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const w of clients) {
+    void w.write(frame).catch(() => {
+      clients.delete(w);
+    });
+  }
 };

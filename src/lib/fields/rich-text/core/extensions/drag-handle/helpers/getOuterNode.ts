@@ -1,34 +1,34 @@
-import type { Node } from '@tiptap/pm/model'
+import type { Node } from '@tiptap/pm/model';
 
 export const getOuterNodePos = (doc: Node, pos: number): number => {
-  const resolvedPos = doc.resolve(pos)
-  const { depth } = resolvedPos
+  const resolvedPos = doc.resolve(pos);
+  const { depth } = resolvedPos;
 
   if (depth === 0) {
-    return pos
+    return pos;
   }
 
-  const a = resolvedPos.pos - resolvedPos.parentOffset
+  const a = resolvedPos.pos - resolvedPos.parentOffset;
 
-  return a - 1
-}
+  return a - 1;
+};
 
 export const getOuterNode = (doc: Node, pos: number): Node | null => {
-  const node = doc.nodeAt(pos)
-  const resolvedPos = doc.resolve(pos)
+  const node = doc.nodeAt(pos);
+  const resolvedPos = doc.resolve(pos);
 
-  let { depth } = resolvedPos
-  let parent = node
+  let { depth } = resolvedPos;
+  let parent = node;
 
   while (depth > 0) {
-    const currentNode = resolvedPos.node(depth)
+    const currentNode = resolvedPos.node(depth);
 
-    depth -= 1
+    depth -= 1;
 
     if (depth === 0) {
-      parent = currentNode
+      parent = currentNode;
     }
   }
 
-  return parent
-}
+  return parent;
+};

@@ -1,24 +1,24 @@
 .rz-command-item {
-	position: relative;
-	display: flex;
-	cursor: pointer;
-	user-select: none;
-	min-height: var(--rz-input-height);
-	align-items: center;
-	gap: var(--rz-size-2);
-	padding-inline: var(--rz-size-2);
-	padding-block: var(--rz-size-1-5);
-	font-size: var(--rz-text-sm);
-	outline: none;
+  position: relative;
+  display: flex;
+  cursor: pointer;
+  user-select: none;
+  min-height: var(--rz-input-height);
+  align-items: center;
+  gap: var(--rz-size-2);
+  padding-inline: var(--rz-size-2);
+  padding-block: var(--rz-size-1-5);
+  font-size: var(--rz-text-sm);
+  outline: none;
 }
 
 .rz-command-item[aria-selected='true'] {
-	border-radius: var(--rz-radius-sm);
-	background-color: var(--rz-popover-highlight-bg);
-	color: hsl(var(--rz-color-fg));
+  border-radius: var(--rz-radius-sm);
+  background-color: var(--rz-popover-highlight-bg);
+  color: hsl(var(--rz-color-fg));
 }
 
 .rz-command-item[data-disabled] {
-	pointer-events: none;
-	opacity: 0.5;
+  pointer-events: none;
+  opacity: 0.5;
 }

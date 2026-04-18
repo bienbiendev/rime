@@ -6,13 +6,13 @@ import type { Config } from '../config/types.js';
 import type { Rime } from '../rime.server.js';
 
 export function createCMSHandler<const C extends Config>(rime: Rime<C>) {
-	//
-	const handleCMS: Handle = async ({ event, resolve }) => {
-		//
-		logger.info(`${event.request.method} ${event.url.pathname}`);
-		event.locals.rime = rime.createRimeContext(event) as any;
-		return svelteKitHandler({ event, resolve, auth: rime.auth, building });
-	};
+  //
+  const handleCMS: Handle = async ({ event, resolve }) => {
+    //
+    logger.info(`${event.request.method} ${event.url.pathname}`);
+    event.locals.rime = rime.createRimeContext(event) as any;
+    return svelteKitHandler({ event, resolve, auth: rime.auth, building });
+  };
 
-	return handleCMS;
+  return handleCMS;
 }

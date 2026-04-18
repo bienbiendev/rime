@@ -1,4 +1,4 @@
 .rz-dialog-title {
-	@mixin font-semibold;
-	margin-bottom: var(--rz-size-2);
+  @mixin font-semibold;
+  margin-bottom: var(--rz-size-2);
 }

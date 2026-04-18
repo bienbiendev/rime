@@ -6,5 +6,5 @@ import { env } from '$env/dynamic/public';
  * panelUrl('some-collection') // -> http://localhost:5713/panel/some-collection
  */
 export function panelUrl(...args: string[]) {
-	return `${env.PUBLIC_RIME_URL}/panel/${args.join('/')}`;
+  return `${env.PUBLIC_RIME_URL}/panel/${args.join('/')}`;
 }

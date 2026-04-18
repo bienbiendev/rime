@@ -8,62 +8,62 @@ export const tabs = (...tabs: TabBuilder[]) => new TabsBuilder(...tabs);
 export const tab = (name: string) => new TabBuilder(name);
 
 export class TabsBuilder extends FieldBuilder<TabsField> {
-	//
-	_metaUrl = import.meta.url;
+  //
+  _metaUrl = import.meta.url;
 
-	constructor(...tabs: TabBuilder[]) {
-		super('tabs');
-		this.field.tabs = tabs;
-	}
+  constructor(...tabs: TabBuilder[]) {
+    super('tabs');
+    this.field.tabs = tabs;
+  }
 
-	get component() {
-		return Tabs;
-	}
+  get component() {
+    return Tabs;
+  }
 
-	override compile() {
-		return {
-			...this.field,
-			tabs: this.field.tabs.map((tab) => tab.compile()),
-			component: this.component,
-			cell: this.cell || undefined
-		};
-	}
+  override compile() {
+    return {
+      ...this.field,
+      tabs: this.field.tabs.map((tab) => tab.compile()),
+      component: this.component,
+      cell: this.cell || undefined
+    };
+  }
 }
 
 export class TabBuilder {
-	#tab: TabsFieldTab;
+  #tab: TabsFieldTab;
 
-	constructor(name: string) {
-		if (!isCamelCase(name)) throw new Error('Tab name should be camelCase');
-		this.#tab = { name, label: name, fields: [], live: true };
-	}
+  constructor(name: string) {
+    if (!isCamelCase(name)) throw new Error('Tab name should be camelCase');
+    this.#tab = { name, label: name, fields: [], live: true };
+  }
 
-	label(label: string) {
-		this.#tab.label = label;
-		return this;
-	}
+  label(label: string) {
+    this.#tab.label = label;
+    return this;
+  }
 
-	get name() {
-		return this.#tab.name;
-	}
+  get name() {
+    return this.#tab.name;
+  }
 
-	fields(...fields: FieldBuilder<Field>[]) {
-		this.#tab.fields = fields;
-		return this;
-	}
+  fields(...fields: FieldBuilder<Field>[]) {
+    this.#tab.fields = fields;
+    return this;
+  }
 
-	get raw() {
-		return { ...this.#tab };
-	}
+  get raw() {
+    return { ...this.#tab };
+  }
 
-	compile(): WithoutBuilders<TabsFieldTab> {
-		return { ...this.#tab, fields: this.#tab.fields.map((f) => f.compile()) };
-	}
+  compile(): WithoutBuilders<TabsFieldTab> {
+    return { ...this.#tab, fields: this.#tab.fields.map((f) => f.compile()) };
+  }
 
-	live(bool: boolean) {
-		this.#tab.live = bool;
-		return this;
-	}
+  live(bool: boolean) {
+    this.#tab.live = bool;
+    return this;
+  }
 }
 
 /**
@@ -81,20 +81,20 @@ export const isTabsFieldRaw = (field: Field): field is TabsFieldRaw => field.typ
 /****************************************************/
 
 export type TabsField = Field & {
-	type: 'tabs';
-	tabs: TabBuilder[];
+  type: 'tabs';
+  tabs: TabBuilder[];
 };
 
 export type TabsFieldTab = {
-	name: string;
-	label?: string;
-	live: boolean;
-	fields: FieldBuilder<Field>[];
+  name: string;
+  label?: string;
+  live: boolean;
+  fields: FieldBuilder<Field>[];
 };
 
 export type TabsFieldRaw = Field & {
-	type: 'tabs';
-	name: string;
-	label?: string;
-	tabs: Array<Omit<TabsFieldTab, 'fields'> & { fields: Field[] }>;
+  type: 'tabs';
+  name: string;
+  label?: string;
+  tabs: Array<Omit<TabsFieldTab, 'fields'> & { fields: Field[] }>;
 };

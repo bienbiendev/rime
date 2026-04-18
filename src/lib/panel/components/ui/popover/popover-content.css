@@ -1,9 +1,9 @@
 .rz-popover {
-	z-index: 500000;
-	position: relative;
-	border-radius: var(--rz-radius-lg);
-	border: var(--rz-border);
-	box-shadow: var(--rz-shadow-md);
-	outline: none;
-	background-color: hsl(var(--rz-color-bg));
+  z-index: 500000;
+  position: relative;
+  border-radius: var(--rz-radius-lg);
+  border: var(--rz-border);
+  box-shadow: var(--rz-shadow-md);
+  outline: none;
+  background-color: hsl(var(--rz-color-bg));
 }

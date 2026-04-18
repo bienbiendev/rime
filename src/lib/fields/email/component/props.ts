@@ -4,8 +4,8 @@ import type { FormContext } from '$lib/panel/context/form.svelte.js';
 import type { EmailField } from '../index.js';
 
 export interface EmailFieldProps {
-	path?: string;
-	config: SimplerField<EmailField>;
-	type?: 'text' | 'password';
-	form: DocumentFormContext | FormContext;
+  path?: string;
+  config: SimplerField<EmailField>;
+  type?: 'text' | 'password';
+  form: DocumentFormContext | FormContext;
 }

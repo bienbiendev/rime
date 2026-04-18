@@ -1,15 +1,15 @@
 .rz-icon-button {
-	display: flex;
-	width: var(--rz-size-9);
-	height: var(--rz-size-9);
-	align-items: center;
-	justify-content: center;
-	border-radius: var(--rz-radius-lg);
-	/* padding: var(--rz-size-2); */
-	color: hsl(var(--rz-color-fg));
+  display: flex;
+  width: var(--rz-size-9);
+  height: var(--rz-size-9);
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--rz-radius-lg);
+  /* padding: var(--rz-size-2); */
+  color: hsl(var(--rz-color-fg));
 }
 
 .rz-icon-button__icon--active {
-	color: hsl(var(--rz-color-spot));
-	opacity: 1;
+  color: hsl(var(--rz-color-spot));
+  opacity: 1;
 }

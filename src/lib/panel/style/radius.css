@@ -1,9 +1,9 @@
-:root{
+:root {
   --rz-radius-none: 0;
-	--rz-base-radius: 0.165rem;
-	--rz-radius-sm: calc(var(--rz-base-radius) * 1);
-	--rz-radius-md: calc(var(--rz-base-radius) * 1.5);
-	--rz-radius-lg: calc(var(--rz-base-radius) * 2);
-	--rz-radius-xl: calc(var(--rz-base-radius) * 4);
-	--rz-radius-full: 999999px;
+  --rz-base-radius: 0.165rem;
+  --rz-radius-sm: calc(var(--rz-base-radius) * 1);
+  --rz-radius-md: calc(var(--rz-base-radius) * 1.5);
+  --rz-radius-lg: calc(var(--rz-base-radius) * 2);
+  --rz-radius-xl: calc(var(--rz-base-radius) * 4);
+  --rz-radius-full: 999999px;
 }

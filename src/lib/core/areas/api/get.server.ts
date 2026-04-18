@@ -6,37 +6,43 @@ import type { Dic } from '$lib/util/types.js';
 import { json, type RequestEvent } from '@sveltejs/kit';
 
 export default function (slug: AreaSlug) {
-	//
-	async function GET(event: RequestEvent) {
-		const { rime } = event.locals;
+  //
+  async function GET(event: RequestEvent) {
+    const { rime } = event.locals;
 
-		const params = event.url.searchParams;
-		const areaAPI = rime.area(slug);
+    const params = event.url.searchParams;
+    const areaAPI = rime.area(slug);
 
-		function buildSelect(params: typeof event.url.searchParams) {
-			const paramSelect = params.get(PARAMS.SELECT) ? params.get(PARAMS.SELECT)!.split(',') : undefined;
-			if (paramSelect && paramSelect.includes('title') && !paramSelect.includes(areaAPI.config.asTitle)) {
-				paramSelect.push(areaAPI.config.asTitle);
-			}
-			return paramSelect;
-		}
+    function buildSelect(params: typeof event.url.searchParams) {
+      const paramSelect = params.get(PARAMS.SELECT)
+        ? params.get(PARAMS.SELECT)!.split(',')
+        : undefined;
+      if (
+        paramSelect &&
+        paramSelect.includes('title') &&
+        !paramSelect.includes(areaAPI.config.asTitle)
+      ) {
+        paramSelect.push(areaAPI.config.asTitle);
+      }
+      return paramSelect;
+    }
 
-		const apiParams: Dic = {
-			locale: rime.getLocale(),
-			draft: params.get(PARAMS.DRAFT) ? params.get(PARAMS.DRAFT) === 'true' : undefined,
-			versionId: params.get(PARAMS.VERSION_ID) || undefined,
-			depth: params.get(PARAMS.DEPTH) ? parseInt(params.get(PARAMS.DEPTH)!) : 0,
-			select: buildSelect(params)
-		};
+    const apiParams: Dic = {
+      locale: rime.getLocale(),
+      draft: params.get(PARAMS.DRAFT) ? params.get(PARAMS.DRAFT) === 'true' : undefined,
+      versionId: params.get(PARAMS.VERSION_ID) || undefined,
+      depth: params.get(PARAMS.DEPTH) ? parseInt(params.get(PARAMS.DEPTH)!) : 0,
+      select: buildSelect(params)
+    };
 
-		const [error, doc] = await trycatch(() => rime.area(slug).find(apiParams));
+    const [error, doc] = await trycatch(() => rime.area(slug).find(apiParams));
 
-		if (error) {
-			return handleError(error, { context: 'api' });
-		}
+    if (error) {
+      return handleError(error, { context: 'api' });
+    }
 
-		return json({ doc });
-	}
+    return json({ doc });
+  }
 
-	return GET;
+  return GET;
 }

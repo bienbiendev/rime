@@ -4,26 +4,26 @@ import deepmerge from 'deepmerge';
 import { Hooks } from '../index.server.js';
 
 export const mergeWithBlankDocument = Hooks.beforeCreate(async (args) => {
-	const { config } = args;
-	const data = args.data;
+  const { config } = args;
+  const data = args.data;
 
-	let file;
-	if (config.type === 'collection' && isUploadConfig(config) && 'file' in data) {
-		file = data.file;
-		delete data.file;
-	}
+  let file;
+  if (config.type === 'collection' && isUploadConfig(config) && 'file' in data) {
+    file = data.file;
+    delete data.file;
+  }
 
-	const dataMergedWithBlankDocument = deepmerge(createBlankDocument(config, args.event), data, {
-		arrayMerge: (_, y) => y
-	});
+  const dataMergedWithBlankDocument = deepmerge(createBlankDocument(config, args.event), data, {
+    arrayMerge: (_, y) => y
+  });
 
-	// Add file after merge
-	if (file) {
-		(dataMergedWithBlankDocument as any).file = file;
-	}
+  // Add file after merge
+  if (file) {
+    (dataMergedWithBlankDocument as any).file = file;
+  }
 
-	return {
-		...args,
-		data: dataMergedWithBlankDocument
-	};
+  return {
+    ...args,
+    data: dataMergedWithBlankDocument
+  };
 });

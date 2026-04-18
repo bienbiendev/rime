@@ -4,11 +4,11 @@ import { PARAMS } from '$lib/core/constant';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';
 import type {
-	DefaultValueFn,
-	Field,
-	FieldHookShared,
-	FormField,
-	RelationValue
+  DefaultValueFn,
+  Field,
+  FieldHookShared,
+  FormField,
+  RelationValue
 } from '$lib/fields/types.js';
 import type { RegisterCollection } from '$lib/index.js';
 import { trycatchFetch } from '$lib/util/function';
@@ -19,100 +19,100 @@ import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
 
 export const ensureRelationExists: FieldHookShared = async (
-	value: RelationValue<any>,
-	{ config }
+  value: RelationValue<any>,
+  { config }
 ) => {
-	// Skip relation validation on panel as it will be done server-side
-	if (browser) return value;
+  // Skip relation validation on panel as it will be done server-side
+  if (browser) return value;
 
-	const getRequsetEvent = await import('$app/server').then((m) => m.getRequestEvent);
-	const output = [];
+  const getRequsetEvent = await import('$app/server').then((m) => m.getRequestEvent);
+  const output = [];
 
-	const retrieveRelation = async (id: string) => {
-		const [err, response] = await trycatchFetch(
-			`${env.PUBLIC_RIME_URL}/api/${toKebabCase(config.relationTo)}/${id}?${PARAMS.SELECT}=id`,
-			{
-				method: 'GET',
-				headers: getRequsetEvent().request.headers
-			}
-		);
-		if (err) return null;
-		const { doc } = await response.json();
-		return doc;
-	};
+  const retrieveRelation = async (id: string) => {
+    const [err, response] = await trycatchFetch(
+      `${env.PUBLIC_RIME_URL}/api/${toKebabCase(config.relationTo)}/${id}?${PARAMS.SELECT}=id`,
+      {
+        method: 'GET',
+        headers: getRequsetEvent().request.headers
+      }
+    );
+    if (err) return null;
+    const { doc } = await response.json();
+    return doc;
+  };
 
-	if (value && Array.isArray(value)) {
-		for (const relation of value) {
-			let documentId;
-			if (typeof relation === 'string') {
-				documentId = relation;
-			} else {
-				documentId = relation.documentId;
-			}
-			if (!documentId) {
-				continue;
-			}
-			const doc = await retrieveRelation(documentId);
-			if (doc) {
-				output.push(relation);
-			}
-		}
-	} else if (typeof value === 'string') {
-		const doc = await retrieveRelation(value);
-		if (doc) {
-			output.push(doc.id);
-		}
-	}
+  if (value && Array.isArray(value)) {
+    for (const relation of value) {
+      let documentId;
+      if (typeof relation === 'string') {
+        documentId = relation;
+      } else {
+        documentId = relation.documentId;
+      }
+      if (!documentId) {
+        continue;
+      }
+      const doc = await retrieveRelation(documentId);
+      if (doc) {
+        output.push(relation);
+      }
+    }
+  } else if (typeof value === 'string') {
+    const doc = await retrieveRelation(value);
+    if (doc) {
+      output.push(doc.id);
+    }
+  }
 
-	return output;
+  return output;
 };
 
 export class RelationFieldBuilder<Doc extends GenericDoc> extends FormFieldBuilder<
-	RelationField<Doc>
+  RelationField<Doc>
 > {
-	//
-	_metaUrl = import.meta.url;
+  //
+  _metaUrl = import.meta.url;
 
-	constructor(name: string) {
-		super(name, 'relation');
-		this.field.isEmpty = (value) => !value || (Array.isArray(value) && value.length === 0);
-		this.field.defaultValue = [];
-		this.field.hooks = {
-			beforeValidate: [ensureRelationExists]
-		};
-	}
+  constructor(name: string) {
+    super(name, 'relation');
+    this.field.isEmpty = (value) => !value || (Array.isArray(value) && value.length === 0);
+    this.field.defaultValue = [];
+    this.field.hooks = {
+      beforeValidate: [ensureRelationExists]
+    };
+  }
 
-	get component() {
-		return RelationComponent;
-	}
+  get component() {
+    return RelationComponent;
+  }
 
-	get cell() {
-		return Cell;
-	}
+  get cell() {
+    return Cell;
+  }
 
-	isThumbnail(bool = true) {
-		this.field.isThumbnail = bool;
-		return this;
-	}
+  isThumbnail(bool = true) {
+    this.field.isThumbnail = bool;
+    return this;
+  }
 
-	query(query: string | QueryResolver<Doc>) {
-		(this.field as RelationField<Doc>).query = query;
-		return this;
-	}
+  query(query: string | QueryResolver<Doc>) {
+    (this.field as RelationField<Doc>).query = query;
+    return this;
+  }
 
-	to<Slug extends CollectionSlug>(slug: Slug): RelationFieldBuilder<RegisterCollection[Slug]> {
-		this.field.relationTo = slug;
-		return this as unknown as RelationFieldBuilder<RegisterCollection[Slug]>;
-	}
+  to<Slug extends CollectionSlug>(slug: Slug): RelationFieldBuilder<RegisterCollection[Slug]> {
+    this.field.relationTo = slug;
+    return this as unknown as RelationFieldBuilder<RegisterCollection[Slug]>;
+  }
 
-	many() {
-		this.field.many = true;
-		return this;
-	}
-	defaultValue(value: string | string[] | DefaultValueFn<string | string[]>) {
-		this.field.defaultValue = value;
-		return this;
-	}
+  many() {
+    this.field.many = true;
+    return this;
+  }
+  defaultValue(value: string | string[] | DefaultValueFn<string | string[]>) {
+    this.field.defaultValue = value;
+    return this;
+  }
 }
 
 export const relation = (name: string) => new RelationFieldBuilder(name);
@@ -130,7 +130,7 @@ export const isRelationField = (field: Field): field is RelationField => field.t
  * isRelationResolved({ title: 'Home Page', _prototype: 'collection', _type: 'pages' });
  */
 export const isRelationResolved = <T>(value: any): value is T => {
-	return value && isObjectLiteral(value) && hasProps(['title', '_prototype', '_type'], value);
+  return value && isObjectLiteral(value) && hasProps(['title', '_prototype', '_type'], value);
 };
 
 /**
@@ -141,9 +141,9 @@ export const isRelationResolved = <T>(value: any): value is T => {
  * isRelationUnresolved({ relationTo: 'pages', documentId: '123' });
  */
 export const isRelationUnresolved = (
-	value: any
+  value: any
 ): value is Omit<Relation, 'path' | 'position' | 'ownerId'> => {
-	return value && isObjectLiteral(value) && hasProps(['relationTo', 'documentId'], value);
+  return value && isObjectLiteral(value) && hasProps(['relationTo', 'documentId'], value);
 };
 
 /**
@@ -155,12 +155,12 @@ export const isRelationUnresolved = (
  * const page = await resolveRelation({ relationTo: 'pages', documentId: '123' });
  */
 export const resolveRelation = async <T>(value: any): Promise<T> => {
-	if (isRelationResolved<T>(value)) {
-		return value;
-	}
-	return (await fetch(`api/${value.relationTo}/${value.documentId}`)
-		.then((r) => r.json())
-		.then((r) => r.doc)) as T;
+  if (isRelationResolved<T>(value)) {
+    return value;
+  }
+  return (await fetch(`api/${value.relationTo}/${value.documentId}`)
+    .then((r) => r.json())
+    .then((r) => r.doc)) as T;
 };
 
 /****************************************************/
@@ -168,24 +168,24 @@ export const resolveRelation = async <T>(value: any): Promise<T> => {
 /****************************************************/
 
 export type RelationField<Doc extends GenericDoc = GenericDoc> = FormField & {
-	type: 'relation';
-	relationTo: CollectionSlug;
-	layout?: 'tags' | 'list';
-	many?: boolean;
-	defaultValue?: string | string[] | DefaultValueFn<string | string[]>;
-	query?: string | ((doc: WithOptional<Doc, 'id'>) => string);
-	isThumbnail?: boolean;
+  type: 'relation';
+  relationTo: CollectionSlug;
+  layout?: 'tags' | 'list';
+  many?: boolean;
+  defaultValue?: string | string[] | DefaultValueFn<string | string[]>;
+  query?: string | ((doc: WithOptional<Doc, 'id'>) => string);
+  isThumbnail?: boolean;
 };
 
 export type Relation = {
-	id?: string;
-	ownerId: string;
-	path: string;
-	position: number;
-	relationTo: string;
-	documentId: string;
-	locale?: string;
-	livePreview?: GenericDoc;
+  id?: string;
+  ownerId: string;
+  path: string;
+  position: number;
+  relationTo: string;
+  documentId: string;
+  locale?: string;
+  livePreview?: GenericDoc;
 };
 
 type QueryResolver<Doc extends GenericDoc = GenericDoc> = (doc: WithOptional<Doc, 'id'>) => string;

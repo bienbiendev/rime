@@ -1,9 +1,9 @@
 .rz-dropdown-menu-group-heading {
-	padding: var(--rz-size-1-5) var(--rz-size-2);
-	font-size: var(--rz-text-sm);
-	@mixin font-semibold;
+  padding: var(--rz-size-1-5) var(--rz-size-2);
+  font-size: var(--rz-text-sm);
+  @mixin font-semibold;
 }
 
 .rz-dropdown-menu-group-heading--inset {
-	padding-left: var(--rz-size-8);
+  padding-left: var(--rz-size-8);
 }

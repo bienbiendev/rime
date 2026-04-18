@@ -27,11 +27,11 @@ import { populateSizes } from '../upload/hooks/populate-sizes.server.js';
 import { processFileUpload } from '../upload/hooks/process-file-upload.server.js';
 
 type PartialConfig = {
-	upload?: Collection<any>['upload'];
-	nested?: Collection<any>['nested'];
-	auth?: Collection<any>['auth'];
-	$hooks?: CollectionHooks<any>;
-	$url?: Collection<any>['$url'];
+  upload?: Collection<any>['upload'];
+  nested?: Collection<any>['nested'];
+  auth?: Collection<any>['auth'];
+  $hooks?: CollectionHooks<any>;
+  $url?: Collection<any>['$url'];
 };
 
 /**
@@ -39,79 +39,79 @@ type PartialConfig = {
  * upload, url, nesting, auth
  */
 export const augmentHooks = <T extends PartialConfig>(collection: T): T => {
-	const IS_API_AUTH =
-		collection.auth && typeof collection.auth !== 'boolean' && collection.auth.type === 'apiKey';
-	//
-	const hooks = {
-		//
-		beforeOperation: [authorize],
+  const IS_API_AUTH =
+    collection.auth && typeof collection.auth !== 'boolean' && collection.auth.type === 'apiKey';
+  //
+  const hooks = {
+    //
+    beforeOperation: [authorize],
 
-		beforeRead: [
-			processDocumentFields,
-			setDocumentTitle,
-			setDocumentLocale,
-			setDocumentType,
-			...(collection.upload ? [populateSizes] : []),
-			...(collection.$url ? [populateURL] : []),
-			...(collection.nested ? [addChildrenProperty] : []),
-			...(collection.auth ? [removePrivateFields] : []),
-			setDocumentThumbnail,
-			sortDocumentProps
-		],
+    beforeRead: [
+      processDocumentFields,
+      setDocumentTitle,
+      setDocumentLocale,
+      setDocumentType,
+      ...(collection.upload ? [populateSizes] : []),
+      ...(collection.$url ? [populateURL] : []),
+      ...(collection.nested ? [addChildrenProperty] : []),
+      ...(collection.auth ? [removePrivateFields] : []),
+      setDocumentThumbnail,
+      sortDocumentProps
+    ],
 
-		beforeUpdate: [
-			defineVersionOperation,
-			getOriginalDocument,
-			buildOriginalDocConfigMap,
-			handleNewVersion,
-			...(collection.auth
-				? [
-						//
-						augmentFieldsPassword,
-						authHooks.preventSuperAdminMutation,
-						authHooks.preventUserMutations,
-						authHooks.forwardRolesToBetterAuth
-					]
-				: []),
-			buildDataConfigMap,
-			setDefaultValues,
-			validateFields,
-			...(collection.upload ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
-		],
+    beforeUpdate: [
+      defineVersionOperation,
+      getOriginalDocument,
+      buildOriginalDocConfigMap,
+      handleNewVersion,
+      ...(collection.auth
+        ? [
+            //
+            augmentFieldsPassword,
+            authHooks.preventSuperAdminMutation,
+            authHooks.preventUserMutations,
+            authHooks.forwardRolesToBetterAuth
+          ]
+        : []),
+      buildDataConfigMap,
+      setDefaultValues,
+      validateFields,
+      ...(collection.upload ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
+    ],
 
-		afterUpdate: [],
+    afterUpdate: [],
 
-		beforeCreate: [
-			...(collection.auth ? [augmentFieldsPassword] : []),
-			mergeWithBlankDocument,
-			buildDataConfigMap,
-			setDefaultValues,
-			validateFields,
-			...(collection.auth ? [authHooks.createBetterAuthUser] : []),
-			...(collection.upload ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
-		],
+    beforeCreate: [
+      ...(collection.auth ? [augmentFieldsPassword] : []),
+      mergeWithBlankDocument,
+      buildDataConfigMap,
+      setDefaultValues,
+      validateFields,
+      ...(collection.auth ? [authHooks.createBetterAuthUser] : []),
+      ...(collection.upload ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
+    ],
 
-		afterCreate: [...(IS_API_AUTH ? [populateAPIKey] : [])],
+    afterCreate: [...(IS_API_AUTH ? [populateAPIKey] : [])],
 
-		beforeDelete: [
-			...(collection.auth ? [authHooks.preventSupperAdminDeletion] : []),
-			...(collection.upload ? [cleanUpFiles] : [])
-		],
+    beforeDelete: [
+      ...(collection.auth ? [authHooks.preventSupperAdminDeletion] : []),
+      ...(collection.upload ? [cleanUpFiles] : [])
+    ],
 
-		afterDelete: [...(collection.auth ? [authHooks.deleteBetterAuthUser] : [])]
-	};
+    afterDelete: [...(collection.auth ? [authHooks.deleteBetterAuthUser] : [])]
+  };
 
-	return {
-		...collection,
-		$hooks: {
-			beforeOperation: [...hooks.beforeOperation, ...(collection.$hooks?.beforeOperation || [])],
-			beforeCreate: [...hooks.beforeCreate, ...(collection.$hooks?.beforeCreate || [])],
-			afterCreate: [...hooks.afterCreate, ...(collection.$hooks?.afterCreate || [])],
-			beforeUpdate: [...hooks.beforeUpdate, ...(collection.$hooks?.beforeUpdate || [])],
-			afterUpdate: [...hooks.afterUpdate, ...(collection.$hooks?.afterUpdate || [])],
-			beforeDelete: [...hooks.beforeDelete, ...(collection.$hooks?.beforeDelete || [])],
-			afterDelete: [...hooks.afterDelete, ...(collection.$hooks?.afterDelete || [])],
-			beforeRead: [...hooks.beforeRead, ...(collection.$hooks?.beforeRead || [])]
-		}
-	};
+  return {
+    ...collection,
+    $hooks: {
+      beforeOperation: [...hooks.beforeOperation, ...(collection.$hooks?.beforeOperation || [])],
+      beforeCreate: [...hooks.beforeCreate, ...(collection.$hooks?.beforeCreate || [])],
+      afterCreate: [...hooks.afterCreate, ...(collection.$hooks?.afterCreate || [])],
+      beforeUpdate: [...hooks.beforeUpdate, ...(collection.$hooks?.beforeUpdate || [])],
+      afterUpdate: [...hooks.afterUpdate, ...(collection.$hooks?.afterUpdate || [])],
+      beforeDelete: [...hooks.beforeDelete, ...(collection.$hooks?.beforeDelete || [])],
+      afterDelete: [...hooks.afterDelete, ...(collection.$hooks?.afterDelete || [])],
+      beforeRead: [...hooks.beforeRead, ...(collection.$hooks?.beforeRead || [])]
+    }
+  };
 };

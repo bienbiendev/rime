@@ -11,23 +11,23 @@ import { ParagraphFeature } from './paragraph.js';
 export { BoldFeature, HeadingFeature, HorizontalRuleFeature, LinkFeature };
 
 export const predefinedFeatures = {
-	blockquote: BlockquoteFeature,
-	bold: BoldFeature,
-	italic: ItalicFeature,
-	ul: BulletListFeature,
-	heading: HeadingFeature,
-	hr: HorizontalRuleFeature,
-	ol: OrderedListFeature,
-	link: LinkFeature
+  blockquote: BlockquoteFeature,
+  bold: BoldFeature,
+  italic: ItalicFeature,
+  ul: BulletListFeature,
+  heading: HeadingFeature,
+  hr: HorizontalRuleFeature,
+  ol: OrderedListFeature,
+  link: LinkFeature
 };
 
 export const defaultFeatures = [
-	ParagraphFeature,
-	HeadingFeature(2, 3, 4),
-	BoldFeature,
-	LinkFeature(),
-	HorizontalRuleFeature,
-	BulletListFeature,
-	OrderedListFeature,
-	BlockquoteFeature
+  ParagraphFeature,
+  HeadingFeature(2, 3, 4),
+  BoldFeature,
+  LinkFeature(),
+  HorizontalRuleFeature,
+  BulletListFeature,
+  OrderedListFeature,
+  BlockquoteFeature
 ];

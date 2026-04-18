@@ -12,21 +12,21 @@ import { RimeFormError } from '$lib/core/errors/index.js';
  * password("weak"); // Returns RimeFormError.PASSWORD_MIN_8
  */
 export const password = (value: unknown) => {
-	if (typeof value !== 'string') {
-		return RimeFormError.NOT_A_STRING;
-	}
-	if (value.length < 8) {
-		return RimeFormError.PASSWORD_MIN_8;
-	} else if (!/[a-z]/.test(value)) {
-		return RimeFormError.PASSWORD_LOWERCASE_MISSING;
-	} else if (!/[A-Z]/.test(value)) {
-		return RimeFormError.PASSWORD_UPPERCASE_MISSING;
-	} else if (!/\d/.test(value)) {
-		return RimeFormError.PASSWORD_NUMBER_MISSING;
-	} else if (!/[#.?"'(§)_=!+:;@$%^&*-]/.test(value)) {
-		return RimeFormError.PASSWORD_SPECIAL_CHAR_MISSING;
-	}
-	return true;
+  if (typeof value !== 'string') {
+    return RimeFormError.NOT_A_STRING;
+  }
+  if (value.length < 8) {
+    return RimeFormError.PASSWORD_MIN_8;
+  } else if (!/[a-z]/.test(value)) {
+    return RimeFormError.PASSWORD_LOWERCASE_MISSING;
+  } else if (!/[A-Z]/.test(value)) {
+    return RimeFormError.PASSWORD_UPPERCASE_MISSING;
+  } else if (!/\d/.test(value)) {
+    return RimeFormError.PASSWORD_NUMBER_MISSING;
+  } else if (!/[#.?"'(§)_=!+:;@$%^&*-]/.test(value)) {
+    return RimeFormError.PASSWORD_SPECIAL_CHAR_MISSING;
+  }
+  return true;
 };
 
 /**
@@ -41,18 +41,18 @@ export const password = (value: unknown) => {
  * email("invalid-email"); // Returns RimeFormError.INVALID_EMAIL
  */
 export const email = (value: unknown) => {
-	if (typeof value !== 'string') {
-		return RimeFormError.NOT_A_STRING;
-	}
-	// This regex ensures:
-	// 1. Starts with letter/number
-	// 2. Can contain .-_ between letters/numbers
-	// 3. Can't have consecutive dots
-	// 4. Can't end with .-_ before @
-	if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?@[^\s@]+\.[^\s@]+$/.test(value)) {
-		return RimeFormError.INVALID_EMAIL;
-	}
-	return true;
+  if (typeof value !== 'string') {
+    return RimeFormError.NOT_A_STRING;
+  }
+  // This regex ensures:
+  // 1. Starts with letter/number
+  // 2. Can contain .-_ between letters/numbers
+  // 3. Can't have consecutive dots
+  // 4. Can't end with .-_ before @
+  if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?@[^\s@]+\.[^\s@]+$/.test(value)) {
+    return RimeFormError.INVALID_EMAIL;
+  }
+  return true;
 };
 
 /**
@@ -67,13 +67,13 @@ export const email = (value: unknown) => {
  * tel("abc123"); // Returns RimeFormError.INVALID_PHONE
  */
 export const tel = (value: unknown) => {
-	if (typeof value !== 'string') {
-		return RimeFormError.NOT_A_STRING;
-	}
-	if (!/^[+\d\s]+$/.test(value)) {
-		return RimeFormError.INVALID_PHONE;
-	}
-	return true;
+  if (typeof value !== 'string') {
+    return RimeFormError.NOT_A_STRING;
+  }
+  if (!/^[+\d\s]+$/.test(value)) {
+    return RimeFormError.INVALID_PHONE;
+  }
+  return true;
 };
 
 /**
@@ -88,20 +88,20 @@ export const tel = (value: unknown) => {
  * url("not-a-url"); // Returns RimeFormError.INVALID_URL
  */
 export const url = (value: unknown) => {
-	if (typeof value !== 'string') {
-		return RimeFormError.NOT_A_STRING;
-	}
+  if (typeof value !== 'string') {
+    return RimeFormError.NOT_A_STRING;
+  }
 
-	try {
-		const url = new URL(value);
-		// Only allow http and https protocols
-		if (!['http:', 'https:'].includes(url.protocol)) {
-			return RimeFormError.INVALID_URL;
-		}
-		return true;
-	} catch {
-		return RimeFormError.INVALID_URL;
-	}
+  try {
+    const url = new URL(value);
+    // Only allow http and https protocols
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      return RimeFormError.INVALID_URL;
+    }
+    return true;
+  } catch {
+    return RimeFormError.INVALID_URL;
+  }
 };
 
 /**
@@ -116,13 +116,13 @@ export const url = (value: unknown) => {
  * slug("Invalid Slug!"); // Returns RimeFormError.INVALID_SLUG
  */
 export const slug = (value: unknown) => {
-	if (typeof value !== 'string') {
-		return RimeFormError.NOT_A_STRING;
-	}
-	if (!/^[a-z0-9-]+$/.test(value)) {
-		return RimeFormError.INVALID_SLUG;
-	}
-	return true;
+  if (typeof value !== 'string') {
+    return RimeFormError.NOT_A_STRING;
+  }
+  if (!/^[a-z0-9-]+$/.test(value)) {
+    return RimeFormError.INVALID_SLUG;
+  }
+  return true;
 };
 
 /**
@@ -137,26 +137,26 @@ export const slug = (value: unknown) => {
  * link({ type: 'url', value: 'invalid-url' }); // Returns "url::INVALID_URL"
  */
 export const link = (link: any) => {
-	const { type, value } = link;
-	if (value === '') return true;
+  const { type, value } = link;
+  if (value === '') return true;
 
-	if (type === 'tel') {
-		const valid = validate.tel(value);
-		return typeof valid === 'string' ? `tel::${valid}` : true;
-	}
-	if (type === 'email') {
-		const valid = validate.email(value);
-		return typeof valid === 'string' ? `email::${valid}` : true;
-	}
-	if (type === 'url') {
-		const valid = validate.url(value);
-		return typeof valid === 'string' ? `url::${valid}` : true;
-	}
-	if (type === 'anchor') {
-		const valid = validate.slug(value);
-		return typeof valid === 'string' ? `anchor::${valid}` : true;
-	}
-	return true;
+  if (type === 'tel') {
+    const valid = validate.tel(value);
+    return typeof valid === 'string' ? `tel::${valid}` : true;
+  }
+  if (type === 'email') {
+    const valid = validate.email(value);
+    return typeof valid === 'string' ? `email::${valid}` : true;
+  }
+  if (type === 'url') {
+    const valid = validate.url(value);
+    return typeof valid === 'string' ? `url::${valid}` : true;
+  }
+  if (type === 'anchor') {
+    const valid = validate.slug(value);
+    return typeof valid === 'string' ? `anchor::${valid}` : true;
+  }
+  return true;
 };
 
 /**
@@ -164,12 +164,12 @@ export const link = (link: any) => {
  * Each function returns true if the value is valid, or an error code/message if invalid.
  */
 const validate = {
-	password,
-	email,
-	slug,
-	url,
-	tel,
-	link
+  password,
+  email,
+  slug,
+  url,
+  tel,
+  link
 };
 
 export default validate;

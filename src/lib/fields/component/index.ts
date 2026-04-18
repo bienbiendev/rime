@@ -6,27 +6,27 @@ import type { WithOptional } from '$lib/util/types.js';
 import type { Component } from 'svelte';
 
 type TypedComponent = Component<{
-	path: string;
-	config: ComponentField;
-	form: DocumentFormContext<WithOptional<GenericDoc, 'id'>>;
+  path: string;
+  config: ComponentField;
+  form: DocumentFormContext<WithOptional<GenericDoc, 'id'>>;
 }>;
 
 export const component = (component: TypedComponent) => new ComponentFieldBuilder(component);
 
 export class ComponentFieldBuilder extends FieldBuilder<ComponentField> {
-	//
-	constructor(component: TypedComponent) {
-		super('component');
-		this.field.component = component;
-	}
-	condition(func: (doc: any) => boolean) {
-		this.field.condition = func;
-		return this;
-	}
-	access(access: { create: FieldAccess; read: FieldAccess; update: FieldAccess }) {
-		this.field.access = access;
-		return this;
-	}
+  //
+  constructor(component: TypedComponent) {
+    super('component');
+    this.field.component = component;
+  }
+  condition(func: (doc: any) => boolean) {
+    this.field.condition = func;
+    return this;
+  }
+  access(access: { create: FieldAccess; read: FieldAccess; update: FieldAccess }) {
+    this.field.access = access;
+    return this;
+  }
 }
 
 /****************************************************/
@@ -34,6 +34,6 @@ export class ComponentFieldBuilder extends FieldBuilder<ComponentField> {
 /****************************************************/
 
 export type ComponentField = Field & {
-	type: 'component';
-	component: TypedComponent;
+  type: 'component';
+  component: TypedComponent;
 };

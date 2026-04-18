@@ -1,7 +1,7 @@
 .rz-command {
-	display: flex;
-	height: 100%;
-	width: 100%;
-	flex-direction: column;
-	border-radius: var(--rz-radius-md);
+  display: flex;
+  height: 100%;
+  width: 100%;
+  flex-direction: column;
+  border-radius: var(--rz-radius-md);
 }

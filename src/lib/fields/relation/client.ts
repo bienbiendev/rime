@@ -28,12 +28,12 @@ import type { RelationValue } from '../types';
  * ]);
  */
 export const isRelationPopulated = <T>(value: RelationValue<T>): value is T[] => {
-	if (Array.isArray(value)) {
-		if (value.length === 0) return false;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return false;
 
-		return value.every((v) => {
-			return isObjectLiteral(v) && !hasProps(['id', 'relationTo', 'documentId'], v);
-		});
-	}
-	return typeof value !== 'string';
+    return value.every((v) => {
+      return isObjectLiteral(v) && !hasProps(['id', 'relationTo', 'documentId'], v);
+    });
+  }
+  return typeof value !== 'string';
 };

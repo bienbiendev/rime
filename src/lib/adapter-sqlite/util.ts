@@ -13,25 +13,25 @@ import qs from 'qs';
  * Main function to generated primaryKeys
  */
 export const generatePK = (): string => {
-	return crypto.randomUUID();
+  return crypto.randomUUID();
 };
 
 /**
  * Updates a database table with the provided data and timestamp
  */
 export async function updateTableRecord(
-	db: any,
-	tables: any,
-	tableName: string,
-	options: {
-		recordId: string;
-		data: any;
-	}
+  db: any,
+  tables: any,
+  tableName: string,
+  options: {
+    recordId: string;
+    data: any;
+  }
 ) {
-	const { recordId, data } = options;
-	if (Object.keys(data).length) {
-		await db.update(tables[tableName]).set(data).where(eq(tables[tableName].id, recordId));
-	}
+  const { recordId, data } = options;
+  if (Object.keys(data).length) {
+    await db.update(tables[tableName]).set(data).where(eq(tables[tableName].id, recordId));
+  }
 }
 
 /**
@@ -39,55 +39,55 @@ export async function updateTableRecord(
  * @returns The ID of the inserted record
  */
 export async function insertTableRecord(
-	db: any,
-	tables: any,
-	tableName: string,
-	data: any
+  db: any,
+  tables: any,
+  tableName: string,
+  data: any
 ): Promise<string> {
-	const recordId = data.id || generatePK();
-	await db.insert(tables[tableName]).values({
-		...data,
-		id: recordId
-	});
-	return recordId;
+  const recordId = data.id || generatePK();
+  await db.insert(tables[tableName]).values({
+    ...data,
+    id: recordId
+  });
+  return recordId;
 }
 
 /**
  * Updates or inserts localized data for a record
  */
 export async function upsertLocalizedData(
-	db: any,
-	tables: any,
-	tableLocalesName: string,
-	options: {
-		ownerId: string;
-		data: any;
-		locale: string;
-	}
+  db: any,
+  tables: any,
+  tableLocalesName: string,
+  options: {
+    ownerId: string;
+    data: any;
+    locale: string;
+  }
 ) {
-	const { ownerId, data, locale } = options;
-	if (Object.keys(data).length) {
-		const tableLocales = tables[tableLocalesName];
-		const localizedRow = await db.query[tableLocalesName].findFirst({
-			where: and(eq(tableLocales.ownerId, ownerId), eq(tableLocales.locale, locale))
-		});
+  const { ownerId, data, locale } = options;
+  if (Object.keys(data).length) {
+    const tableLocales = tables[tableLocalesName];
+    const localizedRow = await db.query[tableLocalesName].findFirst({
+      where: and(eq(tableLocales.ownerId, ownerId), eq(tableLocales.locale, locale))
+    });
 
-		if (localizedRow) {
-			// Update existing localized data
-			await db
-				.update(tableLocales)
-				.set(data)
-				.where(and(eq(tableLocales.ownerId, ownerId), eq(tableLocales.locale, locale)));
-		} else {
-			// Insert new localized data
-			await db.insert(tableLocales).values({
-				id: generatePK(),
-				...data,
-				ownerId,
-				locale
-			});
-		}
-	}
+    if (localizedRow) {
+      // Update existing localized data
+      await db
+        .update(tableLocales)
+        .set(data)
+        .where(and(eq(tableLocales.ownerId, ownerId), eq(tableLocales.locale, locale)));
+    } else {
+      // Insert new localized data
+      await db.insert(tableLocales).values({
+        id: generatePK(),
+        ...data,
+        ownerId,
+        locale
+      });
+    }
+  }
 }
 
 /**
@@ -97,58 +97,58 @@ export async function upsertLocalizedData(
  * return an object with the data filtered and the rootData.
  */
 export function extractRootData(data: any) {
-	const rootData: { _parent?: string; _position?: number; _path?: string } = {};
-	// extract nested collection props
-	if ('_parent' in data) {
-		rootData._parent = data._parent;
-		delete data._parent;
-	}
-	if ('_position' in data) {
-		rootData._position = data._position;
-		delete data._position;
-	}
-	// extract upload directory props
-	if ('_path' in data) {
-		rootData._path = data._path;
-		delete data._path;
-	}
-	return { data, rootData };
+  const rootData: { _parent?: string; _position?: number; _path?: string } = {};
+  // extract nested collection props
+  if ('_parent' in data) {
+    rootData._parent = data._parent;
+    delete data._parent;
+  }
+  if ('_position' in data) {
+    rootData._position = data._position;
+    delete data._position;
+  }
+  // extract upload directory props
+  if ('_path' in data) {
+    rootData._path = data._path;
+    delete data._path;
+  }
+  return { data, rootData };
 }
 
 /**
  * Prepares data for database operations by transforming it according to table schemas
  */
 export function prepareSchemaData(
-	data: any,
-	options: {
-		mainTableName: string;
-		localesTableName: string;
-		locale?: string;
-		tables: any;
-		fillNotNull?: boolean;
-	}
+  data: any,
+  options: {
+    mainTableName: string;
+    localesTableName: string;
+    locale?: string;
+    tables: any;
+    fillNotNull?: boolean;
+  }
 ) {
-	const { mainTableName, localesTableName, locale, tables, fillNotNull } = options;
+  const { mainTableName, localesTableName, locale, tables, fillNotNull } = options;
 
-	if (locale && localesTableName in tables) {
-		// Handle localized fields
-		const unlocalizedColumns = getTableColumns(tables[mainTableName]);
-		const localizedColumns = getTableColumns(tables[localesTableName]);
+  if (locale && localesTableName in tables) {
+    // Handle localized fields
+    const unlocalizedColumns = getTableColumns(tables[mainTableName]);
+    const localizedColumns = getTableColumns(tables[localesTableName]);
 
-		return {
-			mainData: transformDataToSchema(data, unlocalizedColumns, { fillNotNull }),
-			localizedData: transformDataToSchema(data, localizedColumns, { fillNotNull }),
-			isLocalized: true
-		};
-	} else {
-		// Handle non-localized fields
-		const columns = getTableColumns(tables[mainTableName]);
-		return {
-			mainData: transformDataToSchema(data, columns, { fillNotNull }),
-			localizedData: {},
-			isLocalized: false
-		};
-	}
+    return {
+      mainData: transformDataToSchema(data, unlocalizedColumns, { fillNotNull }),
+      localizedData: transformDataToSchema(data, localizedColumns, { fillNotNull }),
+      isLocalized: true
+    };
+  } else {
+    // Handle non-localized fields
+    const columns = getTableColumns(tables[mainTableName]);
+    return {
+      mainData: transformDataToSchema(data, columns, { fillNotNull }),
+      localizedData: {},
+      isLocalized: false
+    };
+  }
 }
 
 /**
@@ -166,44 +166,44 @@ export function prepareSchemaData(
  * 5. Includes the versionId in the result
  */
 export function mergeRawDocumentWithVersion(
-	doc: RawDoc,
-	versionTableName: string,
-	select?: string[]
+  doc: RawDoc,
+  versionTableName: string,
+  select?: string[]
 ) {
-	// Check if we have version data
-	// Note: Versions data can be empty when a query returns no result
-	if (!doc[versionTableName] || doc[versionTableName].length === 0) {
-		throw new RimeError(RimeError.NOT_FOUND);
-	}
+  // Check if we have version data
+  // Note: Versions data can be empty when a query returns no result
+  if (!doc[versionTableName] || doc[versionTableName].length === 0) {
+    throw new RimeError(RimeError.NOT_FOUND);
+  }
 
-	const versionData = doc[versionTableName][0];
+  const versionData = doc[versionTableName][0];
 
-	if (select && Array.isArray(select) && select.length) {
-		const rootProps = ['createdAt', 'updatedAt', '_parent', '_position', 'id'] as const;
-		const hasRootSelectColumn = rootProps.some((column) => select.includes(column));
+  if (select && Array.isArray(select) && select.length) {
+    const rootProps = ['createdAt', 'updatedAt', '_parent', '_position', 'id'] as const;
+    const hasRootSelectColumn = rootProps.some((column) => select.includes(column));
 
-		// Pick "createdAt" and "updatedAt" on doc if they are in select, or only the "id"
-		const docFields = hasRootSelectColumn
-			? pick([...select.filter((field) => rootProps.includes(field as any)), 'id'], doc)
-			: pick(['id'], doc);
+    // Pick "createdAt" and "updatedAt" on doc if they are in select, or only the "id"
+    const docFields = hasRootSelectColumn
+      ? pick([...select.filter((field) => rootProps.includes(field as any)), 'id'], doc)
+      : pick(['id'], doc);
 
-		// Filter out root props as they should come from the doc,
-		// plus the ownerId wich is equals to doc.id
-		const versionFields = omit([...rootProps, 'ownerId'], versionData);
+    // Filter out root props as they should come from the doc,
+    // plus the ownerId wich is equals to doc.id
+    const versionFields = omit([...rootProps, 'ownerId'], versionData);
 
-		return {
-			...docFields,
-			...versionFields,
-			versionId: versionData.id
-		};
-	}
+    return {
+      ...docFields,
+      ...versionFields,
+      versionId: versionData.id
+    };
+  }
 
-	// Default case - return all fields
-	return {
-		...omit([versionTableName], doc),
-		...omit(['id', 'ownerId', 'createdAt', 'updatedAt'], versionData),
-		versionId: versionData.id
-	};
+  // Default case - return all fields
+  return {
+    ...omit([versionTableName], doc),
+    ...omit(['id', 'ownerId', 'createdAt', 'updatedAt'], versionData),
+    versionId: versionData.id
+  };
 }
 
 /**
@@ -211,21 +211,21 @@ export function mergeRawDocumentWithVersion(
  * or the published one if version.draft is enabled and draft is true
  */
 export function buildPublishedOrLatestVersionParams(args: {
-	draft?: boolean;
-	config: BuiltArea | BuiltCollection;
-	table: any;
+  draft?: boolean;
+  config: BuiltArea | BuiltCollection;
+  table: any;
 }) {
-	const { config, table, draft } = args;
-	const hasStatus = config.versions && config.versions.draft;
-	return hasStatus && !draft
-		? {
-				where: eq(table.status, 'published'),
-				limit: 1
-			}
-		: {
-				orderBy: [desc(table.updatedAt)],
-				limit: 1
-			};
+  const { config, table, draft } = args;
+  const hasStatus = config.versions && config.versions.draft;
+  return hasStatus && !draft
+    ? {
+        where: eq(table.status, 'published'),
+        limit: 1
+      }
+    : {
+        orderBy: [desc(table.updatedAt)],
+        limit: 1
+      };
 }
 
 /**
@@ -237,55 +237,55 @@ export function buildPublishedOrLatestVersionParams(args: {
  * { where: queryObject }
  */
 export function normalizeQuery(incomingQuery: OperationQuery): ParsedOperationQuery {
-	let query;
-	if (typeof incomingQuery === 'string') {
-		try {
-			query = qs.parse(incomingQuery);
-		} catch (err: any) {
-			throw new RimeError(
-				RimeError.INVALID_DATA,
-				'Unable to parse given string query ' + err.message
-			);
-		}
-	} else {
-		if (!isObjectLiteral(incomingQuery)) {
-			throw new RimeError(RimeError.INVALID_DATA, 'Query is not an object');
-		}
-		query = incomingQuery;
-	}
-	if (!query.where) {
-		throw new RimeError(RimeError.INVALID_DATA, 'Query must have a root where property');
-	}
-	return query as ParsedOperationQuery;
+  let query;
+  if (typeof incomingQuery === 'string') {
+    try {
+      query = qs.parse(incomingQuery);
+    } catch (err: any) {
+      throw new RimeError(
+        RimeError.INVALID_DATA,
+        'Unable to parse given string query ' + err.message
+      );
+    }
+  } else {
+    if (!isObjectLiteral(incomingQuery)) {
+      throw new RimeError(RimeError.INVALID_DATA, 'Query is not an object');
+    }
+    query = incomingQuery;
+  }
+  if (!query.where) {
+    throw new RimeError(RimeError.INVALID_DATA, 'Query must have a root where property');
+  }
+  return query as ParsedOperationQuery;
 }
 
 export function columnsParams({ table, select }: { table: Dic; select?: string[] }) {
-	// Create an object to hold the columns we want to select
-	const selectColumns: Dic = {};
-	// If select fields are specified, build the select columns object
-	if (select && select.length > 0) {
-		// Always include the ID column for the version
-		selectColumns.id = true;
-		// Process each requested field
-		for (const path of select) {
-			// Convert nested paths (dot notation) to SQL format (double underscore)
-			// Example: 'attributes.slug' becomes 'attributes__slug'
-			const sqlPath = path.replace(/\./g, '__');
-			// If this column exists on the versions table, add it to our select
-			if (sqlPath in table) {
-				selectColumns[sqlPath] = true;
-			}
-		}
-	}
-	return Object.keys(selectColumns).length ? selectColumns : undefined;
+  // Create an object to hold the columns we want to select
+  const selectColumns: Dic = {};
+  // If select fields are specified, build the select columns object
+  if (select && select.length > 0) {
+    // Always include the ID column for the version
+    selectColumns.id = true;
+    // Process each requested field
+    for (const path of select) {
+      // Convert nested paths (dot notation) to SQL format (double underscore)
+      // Example: 'attributes.slug' becomes 'attributes__slug'
+      const sqlPath = path.replace(/\./g, '__');
+      // If this column exists on the versions table, add it to our select
+      if (sqlPath in table) {
+        selectColumns[sqlPath] = true;
+      }
+    }
+  }
+  return Object.keys(selectColumns).length ? selectColumns : undefined;
 }
 
 /**
  * Get the primary key name given a table
  */
 export function getPrimaryKey(table: Table) {
-	const columnsPrimary = getTableConfig(table).columns.filter((c) => c.primary);
-	return columnsPrimary.length ? columnsPrimary[0].name : 'id';
+  const columnsPrimary = getTableConfig(table).columns.filter((c) => c.primary);
+  return columnsPrimary.length ? columnsPrimary[0].name : 'id';
 }
 
 /**
@@ -328,11 +328,11 @@ export const databaseColumnToPath = (path: string): string => path.replace(/__/g
  * transformDatabaseColumnsToPaths({ 'attributes__title': 'Home' });
  */
 export const transformDatabaseColumnsToPaths = (obj: Record<string, any>): Record<string, any> => {
-	const result: Record<string, any> = {};
-	for (const [key, value] of Object.entries(obj)) {
-		result[databaseColumnToPath(key)] = value;
-	}
-	return result;
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    result[databaseColumnToPath(key)] = value;
+  }
+  return result;
 };
 
 /**
@@ -363,65 +363,65 @@ export const transformDatabaseColumnsToPaths = (obj: Record<string, any>): Recor
  * ); // Returns { 'attributes__title': '' }
  */
 export const transformDataToSchema = (
-	data: Record<string, any>,
-	columns: Record<string, any>,
-	params: { fillNotNull?: boolean } = { fillNotNull: false }
+  data: Record<string, any>,
+  columns: Record<string, any>,
+  params: { fillNotNull?: boolean } = { fillNotNull: false }
 ): Record<string, any> => {
-	const result: Record<string, any> = {};
+  const result: Record<string, any> = {};
 
-	for (const column of Object.keys(columns)) {
-		const columnConfig = columns[column];
-		// Convert schema path (with __) to doc path (with .)
-		const docPath = databaseColumnToPath(column);
+  for (const column of Object.keys(columns)) {
+    const columnConfig = columns[column];
+    // Convert schema path (with __) to doc path (with .)
+    const docPath = databaseColumnToPath(column);
 
-		// Get value from nested path
-		const pathParts = docPath.split('.');
-		let value = data;
-		for (const part of pathParts) {
-			value = value?.[part];
-			if (value === undefined) break;
-		}
+    // Get value from nested path
+    const pathParts = docPath.split('.');
+    let value = data;
+    for (const part of pathParts) {
+      value = value?.[part];
+      if (value === undefined) break;
+    }
 
-		// Case 1: Value exists and is not null - always use it
-		if (value !== undefined && value !== null) {
-			result[column] = value;
-			continue;
-		}
+    // Case 1: Value exists and is not null - always use it
+    if (value !== undefined && value !== null) {
+      result[column] = value;
+      continue;
+    }
 
-		// Case 2: Value is null - use it unless we need to fill it
-		if (value === null && !params.fillNotNull) {
-			result[column] = null;
-			continue;
-		}
+    // Case 2: Value is null - use it unless we need to fill it
+    if (value === null && !params.fillNotNull) {
+      result[column] = null;
+      continue;
+    }
 
-		// Case 3: Add placeholders for missing or null values in not-null columns
-		if (params.fillNotNull && columnConfig.notNull) {
-			if (column === 'id') {
-				result[column] = randomId(32);
-				continue;
-			}
+    // Case 3: Add placeholders for missing or null values in not-null columns
+    if (params.fillNotNull && columnConfig.notNull) {
+      if (column === 'id') {
+        result[column] = randomId(32);
+        continue;
+      }
 
-			console.warn(`No default value provided for ${column}, setting it with a placeholder`);
-			// Add default values for not-null columns without defaults
-			switch (columnConfig.dataType) {
-				case 'string':
-					result[column] = '';
-					break;
-				case 'number':
-					result[column] = 0;
-					break;
-				case 'boolean':
-					result[column] = false;
-					break;
-				case 'json':
-					result[column] = {};
-					break;
-				case 'date':
-					result[column] = new Date();
-					break;
-			}
-		}
-	}
+      console.warn(`No default value provided for ${column}, setting it with a placeholder`);
+      // Add default values for not-null columns without defaults
+      switch (columnConfig.dataType) {
+        case 'string':
+          result[column] = '';
+          break;
+        case 'number':
+          result[column] = 0;
+          break;
+        case 'boolean':
+          result[column] = false;
+          break;
+        case 'json':
+          result[column] = {};
+          break;
+        case 'date':
+          result[column] = new Date();
+          break;
+      }
+    }
+  }
 
-	return result;
+  return result;
 };

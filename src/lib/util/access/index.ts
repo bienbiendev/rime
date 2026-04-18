@@ -33,7 +33,8 @@ export const isStaff = (user?: User) => !!user && !!user.isStaff;
  *   // Allow access to editing features
  * }
  */
-export const hasRoles = (user?: User, ...roles: string[]) => !!user && user.roles.some((role) => roles.includes(role));
+export const hasRoles = (user?: User, ...roles: string[]) =>
+  !!user && user.roles.some((role) => roles.includes(role));
 
 /**
  * Checks if a user is an admin or matches the specified ID.
@@ -46,7 +47,7 @@ export const hasRoles = (user?: User, ...roles: string[]) => !!user && user.role
  * }
  */
 export const isAdminOrMe = (user?: User, id?: string) => {
-	return isAdmin(user) || user?.id === id;
+  return isAdmin(user) || user?.id === id;
 };
 
 /**
@@ -60,7 +61,7 @@ export const isAdminOrMe = (user?: User, id?: string) => {
  * }
  */
 export const isMe = (user?: User, id?: string) => {
-	return !!(user && id === user.id);
+  return !!(user && id === user.id);
 };
 
 /**

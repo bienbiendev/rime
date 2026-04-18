@@ -1,16 +1,16 @@
 export function dataFocused(node: HTMLElement, condition: boolean) {
-	//
-	function update(value: boolean) {
-		if (value) {
-			node.setAttribute('data-focused', '');
-		} else {
-			node.removeAttribute('data-focused');
-		}
-	}
+  //
+  function update(value: boolean) {
+    if (value) {
+      node.setAttribute('data-focused', '');
+    } else {
+      node.removeAttribute('data-focused');
+    }
+  }
 
-	update(condition);
+  update(condition);
 
-	return {
-		update
-	};
+  return {
+    update
+  };
 }

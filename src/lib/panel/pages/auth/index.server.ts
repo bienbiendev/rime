@@ -4,11 +4,11 @@ import { signInLoad } from './sign-in/load.server.js';
 import { signInActions as signIn } from './sign-in/actions.server.js';
 
 export const authActions = {
-	signIn
+  signIn
 };
 
 export const authLoads = {
-	resetPassword,
-	forgotPassword,
-	signIn: signInLoad
+  resetPassword,
+  forgotPassword,
+  signIn: signInLoad
 };

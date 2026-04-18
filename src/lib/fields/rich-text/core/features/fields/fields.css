@@ -1,26 +1,26 @@
 .rz-rich-text-sheet {
-	padding: var(--rz-size-8);
+  padding: var(--rz-size-8);
 }
 
 .ProseMirror-focused .ProseMirror-selectednode .rz-fields-preview__trigger {
-	@mixin ring var(--rz-color-spot);
+  @mixin ring var(--rz-color-spot);
 }
 
 .rz-rich-text-sheet {
-	gap: var(--rz-size-6);
-	display: flex;
-	flex-direction: column;
+  gap: var(--rz-size-6);
+  display: flex;
+  flex-direction: column;
 }
 
 .rz-rich-text-fields-preview {
-	font-size: var(--rz-text-sm);
-	max-width: 420px;
-	border-radius: var(--rz-radius-lg);
+  font-size: var(--rz-text-sm);
+  max-width: 420px;
+  border-radius: var(--rz-radius-lg);
 
-	.rz-render-fields-preview__row:first-child .rz-render-fields-preview__name {
-		border-top-left-radius: var(--rz-radius-lg);
-	}
-	.rz-render-fields-preview__row:last-child .rz-render-fields-preview__name {
-		border-bottom-left-radius: var(--rz-radius-lg);
-	}
+  .rz-render-fields-preview__row:first-child .rz-render-fields-preview__name {
+    border-top-left-radius: var(--rz-radius-lg);
+  }
+  .rz-render-fields-preview__row:last-child .rz-render-fields-preview__name {
+    border-bottom-left-radius: var(--rz-radius-lg);
+  }
 }

@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { getLocaleContext } from '$lib/panel/context/locale.svelte';
+  import { getLocaleContext } from '$lib/panel/context/locale.svelte';
 
-	type Props = { value: Date | undefined };
-	const { value }: Props = $props();
+  type Props = { value: Date | undefined };
+  const { value }: Props = $props();
 
-	const locale = getLocaleContext();
+  const locale = getLocaleContext();
 </script>
 
 {#if value}
-	{locale.dateFormat(value)}
+  {locale.dateFormat(value)}
 {/if}

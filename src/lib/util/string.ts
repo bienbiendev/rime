@@ -36,11 +36,11 @@ export const toCamelCase = (str: string): string => camelCase(str);
  * toCamelCasePreserveTrailingUnderscoreSuffix("hello-world");
  */
 export const toCamelCasePreserveTrailingUnderscoreSuffix = (str: string): string => {
-	const suffixMatch = str.match(/(_[a-zA-Z]+)$/);
-	const suffix = suffixMatch ? suffixMatch[1] : '';
-	const baseString = suffix ? str.slice(0, -suffix.length) : str;
+  const suffixMatch = str.match(/(_[a-zA-Z]+)$/);
+  const suffix = suffixMatch ? suffixMatch[1] : '';
+  const baseString = suffix ? str.slice(0, -suffix.length) : str;
 
-	return camelCase(baseString) + suffix;
+  return camelCase(baseString) + suffix;
 };
 
 /**
@@ -62,18 +62,18 @@ const capital_plus_lower = /[A-ZÀ-Ý\u00C0-\u00D6\u00D9-\u00DD][a-zà-ÿ]/g;
 const capitals = /[A-ZÀ-Ý\u00C0-\u00D6\u00D9-\u00DD]+/g;
 
 export function toKebabCase(str: string) {
-	// replace word starts with space + lower case equivalent for later parsing
-	// 1) treat cap + lower as start of new word
-	str = str.replace(capital_plus_lower, function (match) {
-		// match is one caps followed by one non-cap
-		return ' ' + (match[0].toLowerCase() || match[0]) + match[1];
-	});
-	// 2) treat all remaining capitals as words
-	str = str.replace(capitals, function (match) {
-		// match is a series of caps
-		return ' ' + match.toLowerCase();
-	});
-	return str.trim().split(wordSeparators).join('-').replace(/^-/, '').replace(/-\s*$/, '');
+  // replace word starts with space + lower case equivalent for later parsing
+  // 1) treat cap + lower as start of new word
+  str = str.replace(capital_plus_lower, function (match) {
+    // match is one caps followed by one non-cap
+    return ' ' + (match[0].toLowerCase() || match[0]) + match[1];
+  });
+  // 2) treat all remaining capitals as words
+  str = str.replace(capitals, function (match) {
+    // match is a series of caps
+    return ' ' + match.toLowerCase();
+  });
+  return str.trim().split(wordSeparators).join('-').replace(/^-/, '').replace(/-\s*$/, '');
 }
 
 /**
@@ -99,28 +99,28 @@ export const toPascalCase = (str: string): string => camelCase(str, { pascalCase
  * toSnakeCase("_helloWorld");
  */
 export const toSnakeCase = (str: string): string => {
-	// Preserve leading underscore if present
-	const hasLeadingUnderscore = str.startsWith('_');
-	if (hasLeadingUnderscore) {
-		str = str.slice(1);
-	}
+  // Preserve leading underscore if present
+  const hasLeadingUnderscore = str.startsWith('_');
+  if (hasLeadingUnderscore) {
+    str = str.slice(1);
+  }
 
-	// First convert to space case (similar to to-space-case)
-	// Handle special characters and replace with spaces
-	let result = str
-		// Handle camel case
-		.replace(/([a-z\d])([A-Z])/g, '$1 $2')
-		// Handle special characters
-		.replace(/[^A-Za-z0-9]+/g, ' ')
-		// Remove leading and trailing spaces
-		.trim()
-		.toLowerCase();
+  // First convert to space case (similar to to-space-case)
+  // Handle special characters and replace with spaces
+  let result = str
+    // Handle camel case
+    .replace(/([a-z\d])([A-Z])/g, '$1 $2')
+    // Handle special characters
+    .replace(/[^A-Za-z0-9]+/g, ' ')
+    // Remove leading and trailing spaces
+    .trim()
+    .toLowerCase();
 
-	// Convert spaces to underscores (snake_case)
-	result = result.replace(/ /g, '_');
+  // Convert spaces to underscores (snake_case)
+  result = result.replace(/ /g, '_');
 
-	// Restore leading underscore if it was present
-	return hasLeadingUnderscore ? `_${result}` : result;
+  // Restore leading underscore if it was present
+  return hasLeadingUnderscore ? `_${result}` : result;
 };
 
 /**
@@ -135,14 +135,14 @@ export const toSnakeCase = (str: string): string => {
  * slugify("Accentué");
  */
 export const slugify = (text: string): string => {
-	return text
-		.toString() // Cast to string (optional)
-		.normalize('NFKD') // The normalize() using NFKD method returns the Unicode Normalization Form of a given string.
-		.toLowerCase() // Convert the string to lowercase letters
-		.trim() // Remove whitespace from both sides of a string (optional)
-		.replace(/\s+/g, '-') // Replace spaces with -
-		.replace(/[^\w-]+/g, '') // Remove all non-word chars
-		.replace(/--+/g, '-');
+  return text
+    .toString() // Cast to string (optional)
+    .normalize('NFKD') // The normalize() using NFKD method returns the Unicode Normalization Form of a given string.
+    .toLowerCase() // Convert the string to lowercase letters
+    .trim() // Remove whitespace from both sides of a string (optional)
+    .replace(/\s+/g, '-') // Replace spaces with -
+    .replace(/[^\w-]+/g, '') // Remove all non-word chars
+    .replace(/--+/g, '-');
 };
 
 /**
@@ -186,129 +186,129 @@ export const isValidSlug = (str: string): boolean => /^[a-zA-Z][a-zA-Z0-9_-]*$/.
  * allowed tags : ['strong', 'b', 'em', 'i', 'u', 'br', 'a']
  */
 export const sanitize = (value?: string): string => {
-	if (!value) return value || '';
-	if (!parser) parser = Parser();
+  if (!value) return value || '';
+  if (!parser) parser = Parser();
 
-	const WHITESPACE_MARKER = '\uE000';
-	const decode = (value: string) =>
-		value
-			.replace(/&amp;/g, '&')
-			.replace(/&quot;/g, '"')
-			.replace(/&lt;/g, '<')
-			.replace(/&gt;/g, '>')
-			.replace(/&#x27;/g, "'")
-			.replace(/&#39;/g, "'")
-			.replace(/&#38;/g, '&');
+  const WHITESPACE_MARKER = '\uE000';
+  const decode = (value: string) =>
+    value
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&#x27;/g, "'")
+      .replace(/&#39;/g, "'")
+      .replace(/&#38;/g, '&');
 
-	const encodeTextSpace = (html: string): string =>
-		html
-			.split(/(<[^>]*>)/g)
-			.map((segment) =>
-				segment.startsWith('<') && segment.endsWith('>')
-					? segment
-					: segment.replace(/ /g, WHITESPACE_MARKER)
-			)
-			.join('');
+  const encodeTextSpace = (html: string): string =>
+    html
+      .split(/(<[^>]*>)/g)
+      .map((segment) =>
+        segment.startsWith('<') && segment.endsWith('>')
+          ? segment
+          : segment.replace(/ /g, WHITESPACE_MARKER)
+      )
+      .join('');
 
-	const restoreWhitespace = (str: string) => str.replace(new RegExp(WHITESPACE_MARKER, 'g'), ' ');
+  const restoreWhitespace = (str: string) => str.replace(new RegExp(WHITESPACE_MARKER, 'g'), ' ');
 
-	// Decode multiple levels of encoding on input
-	let decodedValue = value;
-	while (decodedValue.match(/&amp;|&quot;|&lt;|&gt;|&#x27;|&#39;|&#38;/)) {
-		decodedValue = decode(decodedValue);
-	}
+  // Decode multiple levels of encoding on input
+  let decodedValue = value;
+  while (decodedValue.match(/&amp;|&quot;|&lt;|&gt;|&#x27;|&#39;|&#38;/)) {
+    decodedValue = decode(decodedValue);
+  }
 
-	const protectedInput = encodeTextSpace(decodedValue);
+  const protectedInput = encodeTextSpace(decodedValue);
 
-	const { root } = parser.parseFromString(protectedInput);
+  const { root } = parser.parseFromString(protectedInput);
 
-	const allowedTags = new Set(['strong', 'b', 'em', 'i', 'u', 'br', 'a']);
-	const dangerousTags = new Set(['script', 'style', 'iframe', 'object', 'embed', 'svg']);
-	const eventHandlers = /^on[a-z]+$/i;
-	const dangerousUrls = /^(javascript:|data:text\/html)/i;
+  const allowedTags = new Set(['strong', 'b', 'em', 'i', 'u', 'br', 'a']);
+  const dangerousTags = new Set(['script', 'style', 'iframe', 'object', 'embed', 'svg']);
+  const eventHandlers = /^on[a-z]+$/i;
+  const dangerousUrls = /^(javascript:|data:text\/html)/i;
 
-	const processNode = (node: any): string => {
-		if (!node) return '';
+  const processNode = (node: any): string => {
+    if (!node) return '';
 
-		// Handle text nodes
-		if (node.nodeName === '#text') {
-			return (node.nodeValue || '').replace(new RegExp(WHITESPACE_MARKER, 'g'), ' ');
-		}
+    // Handle text nodes
+    if (node.nodeName === '#text') {
+      return (node.nodeValue || '').replace(new RegExp(WHITESPACE_MARKER, 'g'), ' ');
+    }
 
-		// Handle comment nodes - remove them
-		if (node.nodeName === '#comment') {
-			return '';
-		}
+    // Handle comment nodes - remove them
+    if (node.nodeName === '#comment') {
+      return '';
+    }
 
-		// Handle element nodes
-		if (node.tagName) {
-			const tagName = node.tagName.toLowerCase();
+    // Handle element nodes
+    if (node.tagName) {
+      const tagName = node.tagName.toLowerCase();
 
-			// Remove dangerous tags entirely (including their content)
-			if (dangerousTags.has(tagName)) {
-				return '';
-			}
+      // Remove dangerous tags entirely (including their content)
+      if (dangerousTags.has(tagName)) {
+        return '';
+      }
 
-			// Process children first
-			const childContent = node.children ? node.children.map(processNode).join('') : '';
+      // Process children first
+      const childContent = node.children ? node.children.map(processNode).join('') : '';
 
-			// If not an allowed tag, return only the child content (strip the tag)
-			if (!allowedTags.has(tagName)) {
-				return childContent;
-			}
+      // If not an allowed tag, return only the child content (strip the tag)
+      if (!allowedTags.has(tagName)) {
+        return childContent;
+      }
 
-			// For allowed tags, filter attributes
-			const safeAttributes: string[] = [];
+      // For allowed tags, filter attributes
+      const safeAttributes: string[] = [];
 
-			if (node.attributes) {
-				for (const [key, value] of Object.entries(node.attributes)) {
-					const attrName = key.toLowerCase();
-					const attrValue = value as string;
+      if (node.attributes) {
+        for (const [key, value] of Object.entries(node.attributes)) {
+          const attrName = key.toLowerCase();
+          const attrValue = value as string;
 
-					// Remove event handlers
-					if (eventHandlers.test(attrName)) {
-						continue;
-					}
+          // Remove event handlers
+          if (eventHandlers.test(attrName)) {
+            continue;
+          }
 
-					// For 'a' tags, only allow specific attributes
-					if (tagName === 'a') {
-						if (attrName === 'href') {
-							// Remove dangerous URLs
-							if (dangerousUrls.test(attrValue)) {
-								continue;
-							}
-							safeAttributes.push(`${attrName}="${attrValue}"`);
-						} else if (attrName === '_target') {
-							safeAttributes.push(`${attrName}="${attrValue}"`);
-						}
-						// Skip all other attributes for 'a' tags
-						continue;
-					}
+          // For 'a' tags, only allow specific attributes
+          if (tagName === 'a') {
+            if (attrName === 'href') {
+              // Remove dangerous URLs
+              if (dangerousUrls.test(attrValue)) {
+                continue;
+              }
+              safeAttributes.push(`${attrName}="${attrValue}"`);
+            } else if (attrName === '_target') {
+              safeAttributes.push(`${attrName}="${attrValue}"`);
+            }
+            // Skip all other attributes for 'a' tags
+            continue;
+          }
 
-					// For other allowed tags, remove dangerous attributes
-					if (attrName === 'href' || attrName === 'src') {
-						if (dangerousUrls.test(attrValue)) {
-							continue;
-						}
-					}
-				}
-			}
+          // For other allowed tags, remove dangerous attributes
+          if (attrName === 'href' || attrName === 'src') {
+            if (dangerousUrls.test(attrValue)) {
+              continue;
+            }
+          }
+        }
+      }
 
-			// Build the tag
-			const attributeString = safeAttributes.length > 0 ? ' ' + safeAttributes.join(' ') : '';
+      // Build the tag
+      const attributeString = safeAttributes.length > 0 ? ' ' + safeAttributes.join(' ') : '';
 
-			// Handle self-closing tags
-			if (tagName === 'br') {
-				return `<${tagName}${attributeString}>`;
-			}
+      // Handle self-closing tags
+      if (tagName === 'br') {
+        return `<${tagName}${attributeString}>`;
+      }
 
-			return `<${tagName}${attributeString}>${childContent}</${tagName}>`;
-		}
+      return `<${tagName}${attributeString}>${childContent}</${tagName}>`;
+    }
 
-		return '';
-	};
+    return '';
+  };
 
-	const sanitized = root.children ? root.children.map(processNode).join('') : '';
+  const sanitized = root.children ? root.children.map(processNode).join('') : '';
 
-	return decode(restoreWhitespace(sanitized));
+  return decode(restoreWhitespace(sanitized));
 };

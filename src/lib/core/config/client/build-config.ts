@@ -6,10 +6,10 @@ import { augmentPlugins } from './augment-plugins.js';
 import { augmentStaff } from './augment-staff.js';
 
 export const buildConfigClient = <C extends SanitizedConfigClient>(config: C) => {
-	const withStaff = augmentStaff(config);
-	const withIcons = augmentIcons(withStaff);
-	const withPanel = augmentPanel(withIcons);
-	const withDirectories = augmentDirectories(withPanel);
-	const output = augmentPlugins(withDirectories);
-	return output;
+  const withStaff = augmentStaff(config);
+  const withIcons = augmentIcons(withStaff);
+  const withPanel = augmentPanel(withIcons);
+  const withDirectories = augmentDirectories(withPanel);
+  const output = augmentPlugins(withDirectories);
+  return output;
 };

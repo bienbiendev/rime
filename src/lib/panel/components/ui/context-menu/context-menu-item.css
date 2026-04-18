@@ -1,20 +1,20 @@
 .rz-context-menu-item {
-	position: relative;
-	display: flex;
-	cursor: pointer;
-	user-select: none;
-	align-items: center;
-	gap: var(--rz-size-2);
-	border-radius: var(--rz-radius-md);
-	outline: none;
-	color: hsl(var(--rz-color-fg));
-	padding-block: var(--rz-size-2);
-	padding-inline: var(--rz-size-3);
-	&[data-highlighted] {
-		background-color: var(--rz-popover-highlight-bg);
-	}
-	&[data-disabled] {
-		pointer-events: none;
-		opacity: 0.5;
-	}
+  position: relative;
+  display: flex;
+  cursor: pointer;
+  user-select: none;
+  align-items: center;
+  gap: var(--rz-size-2);
+  border-radius: var(--rz-radius-md);
+  outline: none;
+  color: hsl(var(--rz-color-fg));
+  padding-block: var(--rz-size-2);
+  padding-inline: var(--rz-size-3);
+  &[data-highlighted] {
+    background-color: var(--rz-popover-highlight-bg);
+  }
+  &[data-disabled] {
+    pointer-events: none;
+    opacity: 0.5;
+  }
 }

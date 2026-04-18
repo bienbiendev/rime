@@ -15,39 +15,39 @@ import { augmentLabel } from './augment-label.js';
 import { augmentThumbnail } from './augment-thumbnail.js';
 
 export const create = <S extends string>(
-	slug: S,
-	incomingConfig: CollectionWithoutSlug<S>
+  slug: S,
+  incomingConfig: CollectionWithoutSlug<S>
 ): BuiltCollection => {
-	//
-	const collection: Collection<S> = { ...incomingConfig, slug };
-	const initial = { ...collection };
-	const withLabel = augmentLabel(initial);
-	const withUpload = augmentUploadServer(withLabel);
-	const withNested = augmentNestedServer(withUpload);
-	const withVersions = augmentVersions(withNested);
-	const withUrl = augmentUrl(withVersions);
-	const withAuth = augmentAuthServer(withUrl);
-	const withMetas = augmentMetas(withAuth);
-	const withHooks = augmentHooks(withMetas);
-	const withTitle = augmentTitle(withHooks);
-	const augmented = augmentThumbnail(withTitle);
+  //
+  const collection: Collection<S> = { ...incomingConfig, slug };
+  const initial = { ...collection };
+  const withLabel = augmentLabel(initial);
+  const withUpload = augmentUploadServer(withLabel);
+  const withNested = augmentNestedServer(withUpload);
+  const withVersions = augmentVersions(withNested);
+  const withUrl = augmentUrl(withVersions);
+  const withAuth = augmentAuthServer(withUrl);
+  const withMetas = augmentMetas(withAuth);
+  const withHooks = augmentHooks(withMetas);
+  const withTitle = augmentTitle(withHooks);
+  const augmented = augmentThumbnail(withTitle);
 
-	return {
-		...augmented,
-		fields: augmented.fields || [],
-		$url: augmented.$url as BuiltCollection['$url'],
-		slug: augmented.slug as BuiltCollection['slug'],
-		kebab: toKebabCase(augmented.slug),
-		type: 'collection',
-		icon: augmented.icon || FileText,
-		access: {
-			create: (user) => !!user && !!user.isStaff,
-			read: (user) => !!user && !!user.isStaff,
-			update: (user) => !!user && !!user.isStaff,
-			delete: (user) => !!user && !!user.isStaff,
-			...augmented.access
-		}
-	} as const;
+  return {
+    ...augmented,
+    fields: augmented.fields || [],
+    $url: augmented.$url as BuiltCollection['$url'],
+    slug: augmented.slug as BuiltCollection['slug'],
+    kebab: toKebabCase(augmented.slug),
+    type: 'collection',
+    icon: augmented.icon || FileText,
+    access: {
+      create: (user) => !!user && !!user.isStaff,
+      read: (user) => !!user && !!user.isStaff,
+      update: (user) => !!user && !!user.isStaff,
+      delete: (user) => !!user && !!user.isStaff,
+      ...augmented.access
+    }
+  } as const;
 };
 
 export const hook = Hooks;

@@ -14,16 +14,16 @@
  * }
  */
 export const trycatch = async <T>(
-	promiseOrFn: Promise<T> | (() => Promise<T>)
+  promiseOrFn: Promise<T> | (() => Promise<T>)
 ): Promise<[Error, never] | [never, T]> => {
-	try {
-		// If it's a function, execute it inside the try/catch
-		const promise = typeof promiseOrFn === 'function' ? promiseOrFn() : promiseOrFn;
-		const result = await promise;
-		return [null, result] as [never, T];
-	} catch (error) {
-		return [error as Error, null] as [Error, never];
-	}
+  try {
+    // If it's a function, execute it inside the try/catch
+    const promise = typeof promiseOrFn === 'function' ? promiseOrFn() : promiseOrFn;
+    const result = await promise;
+    return [null, result] as [never, T];
+  } catch (error) {
+    return [error as Error, null] as [Error, never];
+  }
 };
 
 /**
@@ -42,12 +42,12 @@ export const trycatch = async <T>(
  * }
  */
 export const trycatchSync = <T>(fn: () => T): [Error, never] | [never, T] => {
-	try {
-		const result = fn();
-		return [null, result] as [never, T];
-	} catch (error) {
-		return [error as Error, null] as [Error, never];
-	}
+  try {
+    const result = fn();
+    return [null, result] as [never, T];
+  } catch (error) {
+    return [error as Error, null] as [Error, never];
+  }
 };
 
 /**
@@ -67,26 +67,26 @@ export const trycatchSync = <T>(fn: () => T): [Error, never] | [never, T] => {
  *
  */
 export const trycatchFetch = async (
-	input: string | URL | globalThis.Request,
-	init?: RequestInit
+  input: string | URL | globalThis.Request,
+  init?: RequestInit
 ): Promise<[Error, never] | [never, Response]> => {
-	try {
-		const response = await fetch(input, init);
+  try {
+    const response = await fetch(input, init);
 
-		if (!response.ok) {
-			// Try to get error details from response if possible
-			try {
-				const errorData = await response.json();
-				const errorMessage = errorData.message || `HTTP error! Status: ${response.status}`;
-				return [new Error(errorMessage), null] as [Error, never];
-			} catch {
-				// If we can't parse the response as JSON, use a generic error message
-				return [new Error(`HTTP error! Status: ${response.status}`), null] as [Error, never];
-			}
-		}
+    if (!response.ok) {
+      // Try to get error details from response if possible
+      try {
+        const errorData = await response.json();
+        const errorMessage = errorData.message || `HTTP error! Status: ${response.status}`;
+        return [new Error(errorMessage), null] as [Error, never];
+      } catch {
+        // If we can't parse the response as JSON, use a generic error message
+        return [new Error(`HTTP error! Status: ${response.status}`), null] as [Error, never];
+      }
+    }
 
-		return [null, response] as [never, Response];
-	} catch (error) {
-		return [error as Error, null] as [Error, never];
-	}
+    return [null, response] as [never, Response];
+  } catch (error) {
+    return [error as Error, null] as [Error, never];
+  }
 };

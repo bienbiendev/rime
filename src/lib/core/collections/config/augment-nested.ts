@@ -9,13 +9,13 @@ type IncomingConfig = { slug: string; nested?: boolean; fields?: Collection<any>
  * for nested collection
  */
 export const augmentNested = <T extends IncomingConfig>(config: T): T => {
-	const fields = [...(config.fields || [])];
+  const fields = [...(config.fields || [])];
 
-	if (config.nested) {
-		const _parentField = text('_parent').hidden()._root();
-		fields.push(_parentField);
-		fields.push(number('_position').defaultValue(0).hidden()._root());
-	}
+  if (config.nested) {
+    const _parentField = text('_parent').hidden()._root();
+    fields.push(_parentField);
+    fields.push(number('_position').defaultValue(0).hidden()._root());
+  }
 
-	return { ...config, fields };
+  return { ...config, fields };
 };

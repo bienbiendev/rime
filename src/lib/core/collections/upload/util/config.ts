@@ -1,7 +1,7 @@
 import type { UploadConfig } from '$lib/core/config/types.js';
 
 export type WithUpload<T extends { upload?: boolean | UploadConfig }> = T & {
-	upload: UploadConfig;
+  upload: UploadConfig;
 };
 
 /**
@@ -12,7 +12,7 @@ export type WithUpload<T extends { upload?: boolean | UploadConfig }> = T & {
  * }
  */
 export function isUploadConfig<C extends { upload?: UploadConfig }>(
-	config: C
+  config: C
 ): config is WithUpload<C> {
-	return Boolean('upload' in config && config.upload);
+  return Boolean('upload' in config && config.upload);
 }

@@ -24,7 +24,6 @@ type BuildWhereArgs = {
 };
 
 export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: BuildWhereArgs) => {
-  console.log('Building where param with query:', query);
   // Helper to get table by key with correct typing
   function getTable<T>(key: string) {
     return tables[key as keyof typeof tables] as T extends any ? GenericTable : T;
@@ -80,8 +79,6 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
       rawValue,
       value
     } = getConditionMembers(conditionObject);
-
-    console.log('Condition members:', { column, sqlColumn, operator, rawValue, value });
 
     // Handle hierarchy fields (_parent, _position) in versioned collections
     if (shouldHandleVersionedHierarchyFields(slug, sqlColumn)) {
@@ -376,7 +373,6 @@ const isOperator = (str: string) => Object.keys(operators).includes(str);
 
 // Format value based on operator and type
 const formatValue = ({ operator, value }: { operator: string; value: any }) => {
-  console.log('Formatting value:', { operator, value });
   switch (true) {
     case typeof value === 'string' &&
       /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?(Z|[+-]\d{2}:\d{2})?)?$/.test(value):

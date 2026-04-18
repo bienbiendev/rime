@@ -1,14 +1,14 @@
 .rz-node-selector__trigger {
-	display: flex;
-	height: 100%;
-	align-items: center;
-	gap: var(--rz-size-1);
-	white-space: nowrap;
-	border-radius: var(--rz-radius-lg);
-	padding: var(--rz-size-2);
-	font-size: var(--rz-text-sm);
-	font-variation-settings: 'wght' 500;
-	color: hsl(var(--rz-color-fg) / 0.6);
+  display: flex;
+  height: 100%;
+  align-items: center;
+  gap: var(--rz-size-1);
+  white-space: nowrap;
+  border-radius: var(--rz-radius-lg);
+  padding: var(--rz-size-2);
+  font-size: var(--rz-text-sm);
+  font-variation-settings: 'wght' 500;
+  color: hsl(var(--rz-color-fg) / 0.6);
 }
 
 /* .rz-node-selector__trigger:hover {
@@ -16,43 +16,43 @@
 } */
 
 .rz-node-selector__content {
-	/* background-color: hsl(var(--rz-gray-6)); */
-	margin-top: var(--rz-size-1-5);
-	margin-bottom: var(--rz-size-1);
-	display: flex;
-	max-height: 20rem;
-	width: 12rem;
-	flex-direction: column;
-	overflow: hidden;
-	overflow-y: auto;
-	transform: translateX(calc( -1 * var(--rz-size-1)));
-	/* border-radius: var(--rz-radius-xl); */
-	border: var(--rz-border);
-	padding: var(--rz-size-1);
-	box-shadow: var(--rz-shadow-xl);
+  /* background-color: hsl(var(--rz-gray-6)); */
+  margin-top: var(--rz-size-1-5);
+  margin-bottom: var(--rz-size-1);
+  display: flex;
+  max-height: 20rem;
+  width: 12rem;
+  flex-direction: column;
+  overflow: hidden;
+  overflow-y: auto;
+  transform: translateX(calc(-1 * var(--rz-size-1)));
+  /* border-radius: var(--rz-radius-xl); */
+  border: var(--rz-border);
+  padding: var(--rz-size-1);
+  box-shadow: var(--rz-shadow-xl);
 }
 
 .rz-node-selector__node {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	border-radius: var(--rz-radius-sm);
-	padding: var(--rz-size-1) var(--rz-size-2);
-	font-size: var(--rz-text-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--rz-radius-sm);
+  padding: var(--rz-size-1) var(--rz-size-2);
+  font-size: var(--rz-text-sm);
 }
 
 .rz-node-selector__node:hover {
-	background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));
+  background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));
 }
 
 .rz-node-selector__node-content {
-	display: flex;
-	align-items: center;
-	gap: var(--rz-size-2);
+  display: flex;
+  align-items: center;
+  gap: var(--rz-size-2);
 }
 
 .rz-node-selector__node-icon {
-	border-radius: var(--rz-radius-sm);
-	border: var(--rz-border);
-	padding: var(--rz-size-1);
+  border-radius: var(--rz-radius-sm);
+  border: var(--rz-border);
+  padding: var(--rz-size-1);
 }

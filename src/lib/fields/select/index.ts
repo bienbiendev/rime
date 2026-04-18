@@ -3,11 +3,11 @@ import { PickManyFieldBuilder } from '../../core/fields/builders/select.js';
 import Select from './component/Select.svelte';
 
 export class SelectFieldBuilder extends PickManyFieldBuilder<SelectField> {
-	_metaUrl = import.meta.url;
+  _metaUrl = import.meta.url;
 
-	get component() {
-		return Select;
-	}
+  get component() {
+    return Select;
+  }
 }
 
 export const select = (name: string) => new SelectFieldBuilder(name, 'select');
@@ -22,8 +22,8 @@ export const isSelectField = (field: Field): field is SelectField => field.type 
 /****************************************************/
 
 export type SelectField = FormField & {
-	type: 'select';
-	options: Option[];
-	defaultValue?: string[] | DefaultValueFn<string[]>;
-	many?: boolean;
+  type: 'select';
+  options: Option[];
+  defaultValue?: string[] | DefaultValueFn<string[]>;
+  many?: boolean;
 };

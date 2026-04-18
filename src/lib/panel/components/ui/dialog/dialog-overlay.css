@@ -1,7 +1,7 @@
 .rz-dialog-overlay {
-	background-color: var(--rz-overlay-color);
-	position: fixed;
-	inset: 0;
-	z-index: 1010;
-	backdrop-filter: blur(var(--rz-overlay-blur));
+  background-color: var(--rz-overlay-color);
+  position: fixed;
+  inset: 0;
+  z-index: 1010;
+  backdrop-filter: blur(var(--rz-overlay-blur));
 }

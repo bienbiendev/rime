@@ -3,9 +3,9 @@ import type { CollectionAuthConfig, UploadConfig } from '$lib/core/config/types.
 import type { Collection } from '../../../types.js';
 
 type Input = {
-	upload?: UploadConfig;
-	auth?: false | CollectionAuthConfig;
-	fields?: Collection<any>['fields'];
+  upload?: UploadConfig;
+  auth?: false | CollectionAuthConfig;
+  fields?: Collection<any>['fields'];
 };
 type WithAsTitle<T> = T & { asTitle: string };
 /**
@@ -13,26 +13,26 @@ type WithAsTitle<T> = T & { asTitle: string };
  * filename for upload, email for auth, or default to id
  */
 export const augmentTitle = <T extends Input>(config: T): WithAsTitle<T> => {
-	const addAsTitle = () => {
-		const titleField = findTitleField(config.fields);
+  const addAsTitle = () => {
+    const titleField = findTitleField(config.fields);
 
-		switch (true) {
-			case !!titleField:
-				return titleField.path;
-			case !!config.upload:
-				return 'filename';
-			case (typeof config.auth === 'boolean' && config.auth) ||
-				(typeof config.auth !== 'boolean' && config.auth?.type === 'password'):
-				return 'email';
-			case typeof config.auth !== 'boolean' && config.auth?.type === 'apiKey':
-				return 'name';
-			default:
-				return 'id';
-		}
-	};
+    switch (true) {
+      case !!titleField:
+        return titleField.path;
+      case !!config.upload:
+        return 'filename';
+      case (typeof config.auth === 'boolean' && config.auth) ||
+        (typeof config.auth !== 'boolean' && config.auth?.type === 'password'):
+        return 'email';
+      case typeof config.auth !== 'boolean' && config.auth?.type === 'apiKey':
+        return 'name';
+      default:
+        return 'id';
+    }
+  };
 
-	return {
-		...config,
-		asTitle: addAsTitle()
-	};
+  return {
+    ...config,
+    asTitle: addAsTitle()
+  };
 };

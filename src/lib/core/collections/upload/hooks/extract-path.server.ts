@@ -9,20 +9,20 @@ import { getSegments } from '../util/path.js';
  * Then extract parent, name from the given path.
  */
 export const exctractPath = Hooks.beforeUpsert<'directory'>(async (args) => {
-	let data = args.data;
+  let data = args.data;
 
-	if (data?.id) {
-		const [error, segments] = trycatchSync(() => getSegments(data.id));
-		if (error) {
-			throw new RimeError(RimeError.INVALID_DATA, error.message);
-		}
-		data = {
-			...data,
-			id: segments.path,
-			name: segments.name,
-			parent: segments.parent
-		};
-	}
+  if (data?.id) {
+    const [error, segments] = trycatchSync(() => getSegments(data.id));
+    if (error) {
+      throw new RimeError(RimeError.INVALID_DATA, error.message);
+    }
+    data = {
+      ...data,
+      id: segments.path,
+      name: segments.name,
+      parent: segments.parent
+    };
+  }
 
-	return { ...args, data };
+  return { ...args, data };
 });

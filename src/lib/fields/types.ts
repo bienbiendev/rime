@@ -28,15 +28,15 @@ export type { TimeField } from './time/index.js';
 export type { ToggleField } from './toggle/index.js';
 
 export type FieldValidationFunc<TConfig extends FormField, TData extends Dic = Dic> = (
-	value: unknown,
-	metas: {
-		data: Partial<TData>;
-		operation: 'create' | 'update' | undefined;
-		id: string | undefined;
-		user: User | undefined;
-		locale: string | undefined;
-		config: TConfig extends FormField ? TConfig : FormField;
-	}
+  value: unknown,
+  metas: {
+    data: Partial<TData>;
+    operation: 'create' | 'update' | undefined;
+    id: string | undefined;
+    user: User | undefined;
+    locale: string | undefined;
+    config: TConfig extends FormField ? TConfig : FormField;
+  }
 ) => true | string;
 
 type FieldAccessParams = { id?: string };
@@ -45,92 +45,92 @@ export type FieldWidth = '1/3' | '1/2' | '2/3';
 
 // Base type for all fields
 export type Field = {
-	type: string;
-	live?: boolean;
-	condition?: (doc: any, siblings: any) => boolean;
-	width?: FieldWidth;
-	className?: string;
-	component: Component<any>;
-	cell: Component<any> | undefined;
-	access: {
-		create: FieldAccess;
-		read: FieldAccess;
-		update: FieldAccess;
-	};
+  type: string;
+  live?: boolean;
+  condition?: (doc: any, siblings: any) => boolean;
+  width?: FieldWidth;
+  className?: string;
+  component: Component<any>;
+  cell: Component<any> | undefined;
+  access: {
+    create: FieldAccess;
+    read: FieldAccess;
+    update: FieldAccess;
+  };
 };
 
 // Base type for fields that store data
 export type FormField = Field & {
-	name: string;
-	hidden?: boolean;
-	validate?: FieldValidationFunc<any>;
-	required?: boolean;
-	localized?: boolean;
-	label?: string;
-	hint?: string;
-	table?: FieldPanelTableConfig;
-	hooks?: FieldHooks;
-	defaultValue?: DefaultValueFn<any> | unknown;
-	isEmpty: (value: unknown) => boolean;
+  name: string;
+  hidden?: boolean;
+  validate?: FieldValidationFunc<any>;
+  required?: boolean;
+  localized?: boolean;
+  label?: string;
+  hint?: string;
+  table?: FieldPanelTableConfig;
+  hooks?: FieldHooks;
+  defaultValue?: DefaultValueFn<any> | unknown;
+  isEmpty: (value: unknown) => boolean;
 };
 
 export type DefaultValueFn<T> = ({ event }: { event?: RequestEvent }) => T;
 
 export type FieldHookContext<T extends FormField = FormField> = {
-	event: RequestEvent;
-	/** The document Id being processed */
-	documentId?: string;
-	/** The full operation context */
-	operation: OperationContext;
-	/** The field config */
-	config: T;
+  event: RequestEvent;
+  /** The document Id being processed */
+  documentId?: string;
+  /** The full operation context */
+  operation: OperationContext;
+  /** The field config */
+  config: T;
 };
 
 export type FieldHookShared<T extends FormField = any> = (
-	value: any,
-	context: { config: T; data: Dic }
+  value: any,
+  context: { config: T; data: Dic }
 ) => any;
 
 export type FieldHookClient = (
-	value: any,
-	context: {
-		siblings: Record<string, any>;
-		useField: DocumentFormContext['useField'];
-		useBlocks: DocumentFormContext['useBlocks'];
-		useTree: DocumentFormContext['useTree'];
-	}
+  value: any,
+  context: {
+    siblings: Record<string, any>;
+    useField: DocumentFormContext['useField'];
+    useBlocks: DocumentFormContext['useBlocks'];
+    useTree: DocumentFormContext['useTree'];
+  }
 ) => any;
 
 export type FieldHook<T extends FormField = any> = (
-	value: any,
-	context: FieldHookContext<T>
+  value: any,
+  context: FieldHookContext<T>
 ) => any;
 
 type FieldHooks = {
-	beforeRead?: FieldHook[];
-	beforeSave?: FieldHook[];
-	beforeValidate?: FieldHookShared[];
-	onChange?: FieldHookClient[];
+  beforeRead?: FieldHook[];
+  beforeSave?: FieldHook[];
+  beforeValidate?: FieldHookShared[];
+  onChange?: FieldHookClient[];
 };
 
 export type Option = {
-	value: string;
-	label?: string;
+  value: string;
+  label?: string;
 };
 
 export type OptionWithIcon = {
-	value: string;
-	label?: string;
-	icon?: Component<IconProps>;
+  value: string;
+  label?: string;
+  icon?: Component<IconProps>;
 };
 
 export type RelationValue<T> =
-	| T[]
-	| { id?: string; relationTo: string; documentId: string }[]
-	| string[]
-	| string;
+  | T[]
+  | { id?: string; relationTo: string; documentId: string }[]
+  | string[]
+  | string;
 
 export type SimplerField<T extends FormField> = WithRequired<
-	Partial<T>,
-	'name' | 'isEmpty' | 'type'
+  Partial<T>,
+  'name' | 'isEmpty' | 'type'
 >;

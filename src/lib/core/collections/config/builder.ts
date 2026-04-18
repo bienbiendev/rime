@@ -14,43 +14,43 @@ import { augmentLabel } from './augment-label.js';
 import { augmentThumbnail } from './augment-thumbnail.js';
 
 export const create = <S extends string>(
-	slug: S,
-	incomingConfig: CollectionWithoutSlug<S>
+  slug: S,
+  incomingConfig: CollectionWithoutSlug<S>
 ): BuiltCollection => {
-	//
-	const collection: Collection<S> = { ...incomingConfig, slug };
-	const initial = { ...collection };
-	const withLabel = augmentLabel(initial);
-	const withUpload = augmentUpload(withLabel);
-	const withNested = augmentNested(withUpload);
-	const withVersions = augmentVersions(withNested);
-	const withUrl = augmentUrl(withVersions);
-	const withAuth = augmentAuth(withUrl);
-	const withMetas = augmentMetas(withAuth);
-	const withTitle = augmentTitle(withMetas);
-	const augmented = augmentThumbnail(withTitle);
+  //
+  const collection: Collection<S> = { ...incomingConfig, slug };
+  const initial = { ...collection };
+  const withLabel = augmentLabel(initial);
+  const withUpload = augmentUpload(withLabel);
+  const withNested = augmentNested(withUpload);
+  const withVersions = augmentVersions(withNested);
+  const withUrl = augmentUrl(withVersions);
+  const withAuth = augmentAuth(withUrl);
+  const withMetas = augmentMetas(withAuth);
+  const withTitle = augmentTitle(withMetas);
+  const augmented = augmentThumbnail(withTitle);
 
-	return {
-		type: 'collection',
-		slug: augmented.slug as BuiltCollection['slug'],
-		kebab: toKebabCase(augmented.slug),
-		label: augmented.label,
-		auth: augmented.auth,
-		nested: augmented.nested,
-		upload: augmented.upload,
-		fields: augmented.fields || [],
-		asTitle: augmented.asTitle,
-		asThumbnail: augmented.asThumbnail,
-		versions: augmented.versions,
-		icon: augmented.icon || FileText,
-		live: incomingConfig.live || false,
-		panel: incomingConfig.panel,
-		access: {
-			create: (user) => access.isStaff(user),
-			read: (user) => access.isStaff(user),
-			update: (user) => access.isStaff(user),
-			delete: (user) => access.isStaff(user),
-			...(incomingConfig.access || {})
-		}
-	};
+  return {
+    type: 'collection',
+    slug: augmented.slug as BuiltCollection['slug'],
+    kebab: toKebabCase(augmented.slug),
+    label: augmented.label,
+    auth: augmented.auth,
+    nested: augmented.nested,
+    upload: augmented.upload,
+    fields: augmented.fields || [],
+    asTitle: augmented.asTitle,
+    asThumbnail: augmented.asThumbnail,
+    versions: augmented.versions,
+    icon: augmented.icon || FileText,
+    live: incomingConfig.live || false,
+    panel: incomingConfig.panel,
+    access: {
+      create: (user) => access.isStaff(user),
+      read: (user) => access.isStaff(user),
+      update: (user) => access.isStaff(user),
+      delete: (user) => access.isStaff(user),
+      ...(incomingConfig.access || {})
+    }
+  };
 };

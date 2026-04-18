@@ -1,14 +1,14 @@
 export const useOnce = () => {
-	const once = (func: Function) => {
-		let done = $state(false);
+  const once = (func: Function) => {
+    let done = $state(false);
 
-		$effect(() => {
-			if (!done) {
-				func();
-				done = true;
-			}
-		});
-	};
+    $effect(() => {
+      if (!done) {
+        func();
+        done = true;
+      }
+    });
+  };
 
-	return { once };
+  return { once };
 };

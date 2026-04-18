@@ -6,33 +6,35 @@ import { json, type RequestEvent } from '@sveltejs/kit';
 import { isAuthConfig } from '../auth/util.js';
 
 export default function (slug: CollectionSlug) {
-	//
-	async function POST(event: RequestEvent) {
-		const { rime } = event.locals;
+  //
+  async function POST(event: RequestEvent) {
+    const { rime } = event.locals;
 
-		const collection = rime.collection(slug);
-		const [extractError, data] = await trycatch(() => extractData(event.request));
-		if (extractError) {
-			return handleError(extractError, { context: 'api' });
-		}
+    const collection = rime.collection(slug);
+    const [extractError, data] = await trycatch(() => extractData(event.request));
+    if (extractError) {
+      return handleError(extractError, { context: 'api' });
+    }
 
-		// Bypass confirm password for api auth collection creation calls
-		if (isAuthConfig(collection.config) && 'password' in data) {
-			data.confirmPassword = data.password;
-		}
+    // Bypass confirm password for api auth collection creation calls
+    if (isAuthConfig(collection.config) && 'password' in data) {
+      data.confirmPassword = data.password;
+    }
 
-		if (data.locale) {
-			rime.setLocale(data.locale);
-		}
+    if (data.locale) {
+      rime.setLocale(data.locale);
+    }
 
-		const [error, document] = await trycatch(() => collection.create({ data, locale: rime.getLocale() }));
+    const [error, document] = await trycatch(() =>
+      collection.create({ data, locale: rime.getLocale() })
+    );
 
-		if (error) {
-			return handleError(error, { context: 'api' });
-		}
+    if (error) {
+      return handleError(error, { context: 'api' });
+    }
 
-		return json({ doc: document });
-	}
+    return json({ doc: document });
+  }
 
-	return POST;
+  return POST;
 }

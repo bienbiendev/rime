@@ -7,11 +7,11 @@ import { preventUserMutations } from './before-update/prevent-user-mutations.ser
 import { augmentFieldsPassword } from './before-upsert/augment-fields-password.server.js';
 
 export {
-	augmentFieldsPassword,
-	createBetterAuthUser,
-	deleteBetterAuthUser,
-	forwardRolesToBetterAuth,
-	preventSuperAdminMutation,
-	preventSupperAdminDeletion,
-	preventUserMutations
+  augmentFieldsPassword,
+  createBetterAuthUser,
+  deleteBetterAuthUser,
+  forwardRolesToBetterAuth,
+  preventSuperAdminMutation,
+  preventSupperAdminDeletion,
+  preventUserMutations
 };

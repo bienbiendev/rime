@@ -9,39 +9,42 @@ import { redirect, type RequestEvent } from '@sveltejs/kit';
 import { t__ } from '../../../core/i18n/index.js';
 
 export default function (slug: AreaSlug) {
-	const actions = {
-		update: async (event: RequestEvent) => {
-			const { rime, locale } = event.locals;
+  const actions = {
+    update: async (event: RequestEvent) => {
+      const { rime, locale } = event.locals;
 
-			const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
-			const draft = event.url.searchParams.get(PARAMS.DRAFT) === 'true';
+      const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
+      const draft = event.url.searchParams.get(PARAMS.DRAFT) === 'true';
 
-			const data = await extractData(event.request);
+      const data = await extractData(event.request);
 
-			const [error, document] = await trycatch(() =>
-				rime.area(slug).update({
-					data,
-					versionId,
-					draft,
-					locale
-				})
-			);
+      const [error, document] = await trycatch(() =>
+        rime.area(slug).update({
+          data,
+          versionId,
+          draft,
+          locale
+        })
+      );
 
-			if (error) {
-				return handleError(error, { context: ERROR_CONTEXT.ACTION });
-			}
+      if (error) {
+        return handleError(error, { context: ERROR_CONTEXT.ACTION });
+      }
 
-			if (draft && 'versionId' in document) {
-				const referer = event.request.headers.get('referer');
-				if (referer && referer.includes('/versions')) {
-					return redirect(303, `${panelUrl(toKebabCase(slug))}/versions?versionId=${document.versionId}`);
-				} else {
-					return redirect(303, `${panelUrl(toKebabCase(slug))}?versionId=${document.versionId}`);
-				}
-			}
+      if (draft && 'versionId' in document) {
+        const referer = event.request.headers.get('referer');
+        if (referer && referer.includes('/versions')) {
+          return redirect(
+            303,
+            `${panelUrl(toKebabCase(slug))}/versions?versionId=${document.versionId}`
+          );
+        } else {
+          return redirect(303, `${panelUrl(toKebabCase(slug))}?versionId=${document.versionId}`);
+        }
+      }
 
-			return { document, message: t__('common.doc_updated') };
-		}
-	};
-	return actions;
+      return { document, message: t__('common.doc_updated') };
+    }
+  };
+  return actions;
 }

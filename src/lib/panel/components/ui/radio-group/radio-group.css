@@ -1,33 +1,33 @@
 .rz-radio-group {
-	display: grid;
-	gap: var(--rz-size-2);
+  display: grid;
+  gap: var(--rz-size-2);
 
-	&[data-disabled] {
-		opacity: 0.4;
-		cursor: not-allowed;
-		label,
-		button {
-			cursor: not-allowed;
-		}
-	}
+  &[data-disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+    label,
+    button {
+      cursor: not-allowed;
+    }
+  }
 }
 
 .rz-radio-group-item {
-	border: 1px solid var(--rz-input-border-color);
-	background-color: var(--rz-input-bg);
-	border-radius: var(--rz-radius-full);
-	transition: all 0.066s ease-in-out;
-	height: var(--rz-size-5);
-	width: var(--rz-size-5);
-	flex-shrink: 0;
-	cursor: pointer;
+  border: 1px solid var(--rz-input-border-color);
+  background-color: var(--rz-input-bg);
+  border-radius: var(--rz-radius-full);
+  transition: all 0.066s ease-in-out;
+  height: var(--rz-size-5);
+  width: var(--rz-size-5);
+  flex-shrink: 0;
+  cursor: pointer;
 }
 .rz-radio-group-item:hover {
-	--border-color: var(--rz-gray-2);
-	--border-opacity: 0.3;
-	border-width: 6px;
+  --border-color: var(--rz-gray-2);
+  --border-opacity: 0.3;
+  border-width: 6px;
 }
 .rz-radio-group-item[data-state='checked'] {
-	border: 6px solid hsl(var(--rz-color-spot));
-	background-color: hsl(var(--rz-gray-19));
+  border: 6px solid hsl(var(--rz-color-spot));
+  background-color: hsl(var(--rz-gray-19));
 }

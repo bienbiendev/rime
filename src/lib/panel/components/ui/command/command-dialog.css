@@ -1,46 +1,46 @@
 .rz-command-dialog-content {
-	overflow: hidden;
-	padding: 0;
-	background-color: var(--rz-popover-bg);
-	position: fixed;
-	left: calc(50% - var(--gutter));
-	top: 20%;
-	transform: translate(-50%, 0);
+  overflow: hidden;
+  padding: 0;
+  background-color: var(--rz-popover-bg);
+  position: fixed;
+  left: calc(50% - var(--gutter));
+  top: 20%;
+  transform: translate(-50%, 0);
 }
 
 .rz-command-dialog-content__command [data-cmdk-group-heading] {
-	@mixin color color-fg, 0.7;
-	padding-left: var(--rz-size-2);
-	padding-right: var(--rz-size-2);
-	@mixin font-medium;
+  @mixin color color-fg, 0.7;
+  padding-left: var(--rz-size-2);
+  padding-right: var(--rz-size-2);
+  @mixin font-medium;
 }
 
 .rz-command-dialog-content__command [data-cmdk-group]:not([hidden]) ~ [data-cmdk-group] {
-	padding-top: 0;
+  padding-top: 0;
 }
 
 .rz-command-dialog-content__command [data-cmdk-group] {
-	padding-left: var(--rz-size-2);
-	padding-right: var(--rz-size-2);
+  padding-left: var(--rz-size-2);
+  padding-right: var(--rz-size-2);
 }
 
 .rz-command-dialog-content__command [data-cmdk-input-wrapper] svg {
-	height: var(--rz-size-5);
-	width: var(--rz-size-5);
+  height: var(--rz-size-5);
+  width: var(--rz-size-5);
 }
 
 .rz-command-dialog-content__command [data-cmdk-input] {
-	height: var(--rz-size-12);
+  height: var(--rz-size-12);
 }
 
 .rz-command-dialog-content__command [data-cmdk-item] {
-	padding-left: var(--rz-size-2);
-	padding-right: var(--rz-size-2);
-	padding-top: var(--rz-size-3);
-	padding-bottom: var(--rz-size-3);
+  padding-left: var(--rz-size-2);
+  padding-right: var(--rz-size-2);
+  padding-top: var(--rz-size-3);
+  padding-bottom: var(--rz-size-3);
 }
 
 .rz-command-dialog-content__command [data-cmdk-item] svg {
-	height: var(--rz-size-5);
-	width: var(--rz-size-5);
+  height: var(--rz-size-5);
+  width: var(--rz-size-5);
 }

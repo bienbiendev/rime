@@ -6,40 +6,40 @@ import LinkSelector from './component/link-selector.svelte';
 
 // Create the link extension
 const linkExtension = import.meta.env.SSR
-	? undefined
-	: Link.extend({
-			// @ts-expect-error @tiptap error
-			addOptions() {
-				return {
-					...this.parent?.(),
-					types: []
-				};
-			},
-			openOnClick: false,
-			HTMLAttributes: { class: 'rz-rich-text-link' }
-		});
+  ? undefined
+  : Link.extend({
+      // @ts-expect-error @tiptap error
+      addOptions() {
+        return {
+          ...this.parent?.(),
+          types: []
+        };
+      },
+      openOnClick: false,
+      HTMLAttributes: { class: 'rz-rich-text-link' }
+    });
 
 // Create link feature item
 const linkItem: RichTextFeatureMark = {
-	label: 'Link',
-	icon: LinkIcon,
-	isActive: ({ editor }) => editor.isActive('link'),
-	bubbleMenu: {
-		component: LinkSelector
-	}
+  label: 'Link',
+  icon: LinkIcon,
+  isActive: ({ editor }) => editor.isActive('link'),
+  bubbleMenu: {
+    component: LinkSelector
+  }
 };
 
 export type LinkFeatureOptions = LinkOptions & {
-	resources?: Array<{ slug: PrototypeSlug; query?: string }>;
+  resources?: Array<{ slug: PrototypeSlug; query?: string }>;
 };
 export const LinkFeature = (options?: Partial<LinkFeatureOptions>): RichTextFeature => ({
-	extension: linkExtension
-		? linkExtension.configure({
-				openOnClick: false,
-				autolink: false,
-				protocols: ['mailto', 'tel', 'http', 'https'],
-				...options
-			})
-		: undefined,
-	marks: [linkItem]
+  extension: linkExtension
+    ? linkExtension.configure({
+        openOnClick: false,
+        autolink: false,
+        protocols: ['mailto', 'tel', 'http', 'https'],
+        ...options
+      })
+    : undefined,
+  marks: [linkItem]
 });

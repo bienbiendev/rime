@@ -13,72 +13,72 @@ export type Prototype = 'area' | 'collection';
 export type RawDoc = Dic & { id: string };
 
 export type BaseDoc = {
-	id: string;
-	title: string;
-	updatedAt?: Date;
-	createdAt?: Date;
-	locale?: string;
-	url?: string | null;
-	_prototype: Prototype;
-	_type: PrototypeSlug;
-	_live?: string;
+  id: string;
+  title: string;
+  updatedAt?: Date;
+  createdAt?: Date;
+  locale?: string;
+  url?: string | null;
+  _prototype: Prototype;
+  _type: PrototypeSlug;
+  _live?: string;
 };
 
 export type GenericDoc = BaseDoc & Dic;
 export type GenericNestedDoc = BaseDoc & {
-	_children: string[];
-	_parent: string | null;
-	_position: number;
+  _children: string[];
+  _parent: string | null;
+  _position: number;
 } & Dic;
 
 export type GenericAuthDoc = BaseDoc & {
-	apiKeyId?: string;
-	authUserId?: string;
-	roles?: string[];
+  apiKeyId?: string;
+  authUserId?: string;
+  roles?: string[];
 } & Dic;
 
 export type TreeBlock = {
-	id: string;
-	ownerId?: string;
-	path?: string;
-	position?: number;
-	_children: TreeBlock[];
+  id: string;
+  ownerId?: string;
+  path?: string;
+  position?: number;
+  _children: TreeBlock[];
 } & Dic;
 
 export type GenericBlock<T extends string = string> = {
-	id: string;
-	type: T;
-	ownerId?: string;
-	position?: number;
-	path?: string;
+  id: string;
+  type: T;
+  ownerId?: string;
+  position?: number;
+  path?: string;
 } & Dic;
 
 export type UploadDoc = BaseDoc & {
-	mimeType: string;
-	filesize: string;
-	filename: string;
-	url: string;
-	sizes: { [key: string]: string };
+  mimeType: string;
+  filesize: string;
+  filename: string;
+  url: string;
+  sizes: { [key: string]: string };
 } & Dic;
 
 export type VersionDoc = BaseDoc & {
-	status: VersionsStatus;
+  status: VersionsStatus;
 };
 
 export type Docs = {
-	raw: RawDoc;
-	generic: GenericDoc;
-	upload: UploadDoc;
-	version: VersionDoc;
-	auth: GenericAuthDoc;
-	directory: {
-		id: UploadPath;
-		parent: string | null;
-		name: string;
-		createdAt: Date;
-		updatedAt: Date;
-	};
+  raw: RawDoc;
+  generic: GenericDoc;
+  upload: UploadDoc;
+  version: VersionDoc;
+  auth: GenericAuthDoc;
+  directory: {
+    id: UploadPath;
+    parent: string | null;
+    name: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
 } & RegisterCollection &
-	RegisterArea;
+  RegisterArea;
 
 export type DocType = keyof Docs;

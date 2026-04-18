@@ -19,62 +19,62 @@ import { snapshot } from './state.js';
  * const blankPage = createBlankDocument(config.getCollection('pages'));
  */
 export const createBlankDocument = <
-	C extends BuiltCollection | BuiltArea,
-	T extends GenericDoc = GenericDoc
+  C extends BuiltCollection | BuiltArea,
+  T extends GenericDoc = GenericDoc
 >(
-	config: C,
-	event?: RequestEvent
+  config: C,
+  event?: RequestEvent
 ): T => {
-	/**
-	 * Recursively processes field definitions to create a blank document structure.
-	 * Handles special field types like tabs, blocks, relations, and nested fields.
-	 */
-	function reduceFieldsToBlankDocument(prev: Dic, curr: FieldBuilder<any>) {
-		try {
-			if (curr instanceof TabsBuilder) {
-				curr.raw.tabs.forEach((tab) => {
-					prev[tab.name] = tab.raw.fields.reduce(reduceFieldsToBlankDocument, {});
-				});
-			} else if (['blocks', 'relation', 'tree'].includes(curr.type)) {
-				prev[curr.raw.name] = [];
-			} else if ('fields' in curr.raw) {
-				prev[curr.raw.name] = curr.raw.fields.reduce(reduceFieldsToBlankDocument, {});
-			} else {
-				if (curr.raw.defaultValue !== undefined) {
-					if (typeof curr.raw.defaultValue === 'function') {
-						prev[curr.raw.name] = curr.raw.defaultValue({ event });
-					} else {
-						prev[curr.raw.name] = curr.raw.defaultValue;
-					}
-				} else {
-					prev[curr.raw.name] = null;
-				}
-			}
-		} catch (err) {
-			console.error(curr);
-			throw err;
-		}
-		return prev;
-	}
+  /**
+   * Recursively processes field definitions to create a blank document structure.
+   * Handles special field types like tabs, blocks, relations, and nested fields.
+   */
+  function reduceFieldsToBlankDocument(prev: Dic, curr: FieldBuilder<any>) {
+    try {
+      if (curr instanceof TabsBuilder) {
+        curr.raw.tabs.forEach((tab) => {
+          prev[tab.name] = tab.raw.fields.reduce(reduceFieldsToBlankDocument, {});
+        });
+      } else if (['blocks', 'relation', 'tree'].includes(curr.type)) {
+        prev[curr.raw.name] = [];
+      } else if ('fields' in curr.raw) {
+        prev[curr.raw.name] = curr.raw.fields.reduce(reduceFieldsToBlankDocument, {});
+      } else {
+        if (curr.raw.defaultValue !== undefined) {
+          if (typeof curr.raw.defaultValue === 'function') {
+            prev[curr.raw.name] = curr.raw.defaultValue({ event });
+          } else {
+            prev[curr.raw.name] = curr.raw.defaultValue;
+          }
+        } else {
+          prev[curr.raw.name] = null;
+        }
+      }
+    } catch (err) {
+      console.error(curr);
+      throw err;
+    }
+    return prev;
+  }
 
-	const fields: GenericDoc['fields'] = config.fields.reduce(reduceFieldsToBlankDocument, {});
+  const fields: GenericDoc['fields'] = config.fields.reduce(reduceFieldsToBlankDocument, {});
 
-	const empty = {
-		...fields,
-		_type: config.slug,
-		_prototype: config.type
-	};
+  const empty = {
+    ...fields,
+    _type: config.slug,
+    _prototype: config.type
+  };
 
-	if (
-		config.type === 'collection' &&
-		isUploadConfig(config) &&
-		'imageSizes' in config &&
-		config.imageSizes
-	) {
-		empty.sizes = {};
-	}
+  if (
+    config.type === 'collection' &&
+    isUploadConfig(config) &&
+    'imageSizes' in config &&
+    config.imageSizes
+  ) {
+    empty.sizes = {};
+  }
 
-	return empty as T;
+  return empty as T;
 };
 
 /**
@@ -94,49 +94,49 @@ export const createBlankDocument = <
  * based on _parent and _position fields
  */
 export const toNestedStructure = (documents: GenericDoc[]) => {
-	const incomingDocs = snapshot(documents);
+  const incomingDocs = snapshot(documents);
 
-	// Create a map for quick document lookup by ID
-	const docById = new Map<string, GenericDoc>();
-	incomingDocs.forEach((doc) => docById.set(doc.id, doc));
+  // Create a map for quick document lookup by ID
+  const docById = new Map<string, GenericDoc>();
+  incomingDocs.forEach((doc) => docById.set(doc.id, doc));
 
-	// Track processed documents to prevent infinite recursion
-	const processed = new Set<string>();
+  // Track processed documents to prevent infinite recursion
+  const processed = new Set<string>();
 
-	// Process documents recursively
-	const processDocument = (doc: GenericDoc): GenericDoc => {
-		if (!doc || processed.has(doc.id)) {
-			return doc;
-		}
+  // Process documents recursively
+  const processDocument = (doc: GenericDoc): GenericDoc => {
+    if (!doc || processed.has(doc.id)) {
+      return doc;
+    }
 
-		processed.add(doc.id);
-		const result = { ...doc };
+    processed.add(doc.id);
+    const result = { ...doc };
 
-		// Process children first (depth-first)
-		if (Array.isArray(result._children)) {
-			result._children = result._children
-				.map((id: string) => {
-					const childDoc = docById.get(id);
-					return childDoc ? processDocument(childDoc) : null;
-				})
-				.filter(Boolean);
-		}
+    // Process children first (depth-first)
+    if (Array.isArray(result._children)) {
+      result._children = result._children
+        .map((id: string) => {
+          const childDoc = docById.get(id);
+          return childDoc ? processDocument(childDoc) : null;
+        })
+        .filter(Boolean);
+    }
 
-		// Only set the parent ID, don't process it recursively
-		if (result._parent && typeof result._parent === 'string') {
-			result._parent = docById.get(result._parent)?.id || null;
-		}
+    // Only set the parent ID, don't process it recursively
+    if (result._parent && typeof result._parent === 'string') {
+      result._parent = docById.get(result._parent)?.id || null;
+    }
 
-		return result;
-	};
+    return result;
+  };
 
-	const output = incomingDocs
-		.filter((doc) => !doc._parent)
-		.map(processDocument)
-		.sort((a, b) => (a._position || 0) - (b._position || 0));
+  const output = incomingDocs
+    .filter((doc) => !doc._parent)
+    .map(processDocument)
+    .sort((a, b) => (a._position || 0) - (b._position || 0));
 
-	// Filter to get root documents and process them
-	return output;
+  // Filter to get root documents and process them
+  return output;
 };
 
 /**
@@ -147,8 +147,8 @@ export const toNestedStructure = (documents: GenericDoc[]) => {
  * // return foo.bar.0.baz
  */
 export const normalizeFieldPath = (path: string) => {
-	const regExpBlockType = /:[a-zA-Z0-9]+/g;
-	return path.replace(regExpBlockType, '');
+  const regExpBlockType = /:[a-zA-Z0-9]+/g;
+  return path.replace(regExpBlockType, '');
 };
 
 /**
@@ -161,6 +161,6 @@ export const normalizeFieldPath = (path: string) => {
  * ensurePathExists('bar', obj); // true
  */
 export const ensurePathExists = (path: string, obj: Dic): boolean => {
-	const value = getValueAtPath(path, obj);
-	return value !== undefined;
+  const value = getValueAtPath(path, obj);
+  return value !== undefined;
 };

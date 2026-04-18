@@ -9,21 +9,21 @@ type Row = Dic & { _children?: Row[] };
  * @returns Total number of rows
  */
 export function countRows(elements: Row[], skipLastChildren: boolean = true): number {
-	if (!elements || elements.length === 0) return 0;
+  if (!elements || elements.length === 0) return 0;
 
-	let totalRows = 0;
+  let totalRows = 0;
 
-	// Process all elements
-	elements.forEach((element, index) => {
-		// Count this row
-		totalRows++;
+  // Process all elements
+  elements.forEach((element, index) => {
+    // Count this row
+    totalRows++;
 
-		// Count children (skip for last element if skipLastChildren is true)
-		const isLastElement = index === elements.length - 1;
-		if (element._children && element._children.length > 0 && !(isLastElement && skipLastChildren)) {
-			totalRows += countRows(element._children, false);
-		}
-	});
+    // Count children (skip for last element if skipLastChildren is true)
+    const isLastElement = index === elements.length - 1;
+    if (element._children && element._children.length > 0 && !(isLastElement && skipLastChildren)) {
+      totalRows += countRows(element._children, false);
+    }
+  });
 
-	return totalRows;
+  return totalRows;
 }

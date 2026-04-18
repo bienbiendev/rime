@@ -11,50 +11,58 @@ import { toKebabCase } from '$lib/util/string.js';
 import type { ServerLoadEvent } from '@sveltejs/kit';
 
 export default function <V extends boolean = boolean>(slug: AreaSlug, withVersions?: V) {
-	//
-	const load = async ({ locals, url, fetch }: ServerLoadEvent) => {
-		const { rime, locale } = locals;
+  //
+  const load = async ({ locals, url, fetch }: ServerLoadEvent) => {
+    const { rime, locale } = locals;
 
-		const area = rime.area(slug);
-		const authorizedRead = area.config.access.read(locals.user, {});
-		const authorizedUpdate = area.config.access.update(locals.user, {});
+    const area = rime.area(slug);
+    const authorizedRead = area.config.access.read(locals.user, {});
+    const authorizedUpdate = area.config.access.update(locals.user, {});
 
-		const aria: Partial<Route>[] = [
-			{ title: 'Dashboard', icon: 'dashboard', url: panelUrl() },
-			{ title: area.config.label }
-		];
+    const aria: Partial<Route>[] = [
+      { title: 'Dashboard', icon: 'dashboard', url: panelUrl() },
+      { title: area.config.label }
+    ];
 
-		if (!authorizedRead) {
-			return { aria, doc: {}, operation: 'update', status: 401, readOnly: true } as AreaDocData<false>;
-		}
+    if (!authorizedRead) {
+      return {
+        aria,
+        doc: {},
+        operation: 'update',
+        status: 401,
+        readOnly: true
+      } as AreaDocData<false>;
+    }
 
-		const versionId = url.searchParams.get(PARAMS.VERSION_ID) || undefined;
-		const draft = url.searchParams.get(PARAMS.DRAFT) ? url.searchParams.get(PARAMS.DRAFT) === 'true' : undefined;
-		const doc = await area.find({ locale, versionId, draft });
+    const versionId = url.searchParams.get(PARAMS.VERSION_ID) || undefined;
+    const draft = url.searchParams.get(PARAMS.DRAFT)
+      ? url.searchParams.get(PARAMS.DRAFT) === 'true'
+      : undefined;
+    const doc = await area.find({ locale, versionId, draft });
 
-		if (!authorizedUpdate) {
-			return { aria, doc, operation: 'update', status: 200, readOnly: true } as AreaDocData<false>;
-		}
+    if (!authorizedUpdate) {
+      return { aria, doc, operation: 'update', status: 200, readOnly: true } as AreaDocData<false>;
+    }
 
-		let data: Partial<AreaDocData> = {
-			aria,
-			doc,
-			operation: 'update',
-			status: 200,
-			readOnly: false
-		};
+    let data: Partial<AreaDocData> = {
+      aria,
+      doc,
+      operation: 'update',
+      status: 200,
+      readOnly: false
+    };
 
-		if (withVersions) {
-			const url = `${apiUrl(withVersionsSuffix(toKebabCase(doc._type)))}?where[ownerId][equals]=${doc.id}&sort=-updatedAt&select=updatedAt,status`;
-			const promise = fetch(url).then((r) => r.json());
-			const [error, result] = await trycatch(promise);
-			if (error || !Array.isArray(result.docs)) {
-				throw new RimeError(RimeError.OPERATION_ERROR, 'while getting versions');
-			}
-			data = { ...data, versions: result.docs };
-		}
+    if (withVersions) {
+      const url = `${apiUrl(withVersionsSuffix(toKebabCase(doc._type)))}?where[ownerId][equals]=${doc.id}&sort=-updatedAt&select=updatedAt,status`;
+      const promise = fetch(url).then((r) => r.json());
+      const [error, result] = await trycatch(promise);
+      if (error || !Array.isArray(result.docs)) {
+        throw new RimeError(RimeError.OPERATION_ERROR, 'while getting versions');
+      }
+      data = { ...data, versions: result.docs };
+    }
 
-		return data as AreaDocData<V>;
-	};
-	return load;
+    return data as AreaDocData<V>;
+  };
+  return load;
 }

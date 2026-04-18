@@ -15,48 +15,48 @@ import { validateFields } from '$lib/core/operations/hooks/before-upsert/validat
 import type { Area, AreaHooks } from '../../../types.js';
 
 type PartialConfig = {
-	$hooks?: AreaHooks<any>;
-	$url?: Area<any>['$url'];
+  $hooks?: AreaHooks<any>;
+  $url?: Area<any>['$url'];
 };
 
 /**
  * Augment an area config with hooks
  */
 export const augmentHooks = <T extends PartialConfig>(area: T): T => {
-	const hooks = {
-		beforeOperation: [authorize],
+  const hooks = {
+    beforeOperation: [authorize],
 
-		beforeRead: [
-			//
-			processDocumentFields,
-			setDocumentTitle,
-			setDocumentLocale,
-			...(area.$url ? [populateURL] : []),
-			setDocumentType,
-			sortDocumentProps
-		],
+    beforeRead: [
+      //
+      processDocumentFields,
+      setDocumentTitle,
+      setDocumentLocale,
+      ...(area.$url ? [populateURL] : []),
+      setDocumentType,
+      sortDocumentProps
+    ],
 
-		beforeUpdate: [
-			//
-			defineVersionOperation,
-			getOriginalDocument,
-			buildOriginalDocConfigMap,
-			handleNewVersion,
-			buildDataConfigMap,
-			setDefaultValues,
-			validateFields
-		],
+    beforeUpdate: [
+      //
+      defineVersionOperation,
+      getOriginalDocument,
+      buildOriginalDocConfigMap,
+      handleNewVersion,
+      buildDataConfigMap,
+      setDefaultValues,
+      validateFields
+    ],
 
-		afterUpdate: []
-	};
+    afterUpdate: []
+  };
 
-	return {
-		...area,
-		$hooks: {
-			beforeOperation: [...hooks.beforeOperation, ...(area.$hooks?.beforeOperation || [])],
-			beforeUpdate: [...hooks.beforeUpdate, ...(area.$hooks?.beforeUpdate || [])],
-			afterUpdate: [...hooks.afterUpdate, ...(area.$hooks?.afterUpdate || [])],
-			beforeRead: [...hooks.beforeRead, ...(area.$hooks?.beforeRead || [])]
-		}
-	};
+  return {
+    ...area,
+    $hooks: {
+      beforeOperation: [...hooks.beforeOperation, ...(area.$hooks?.beforeOperation || [])],
+      beforeUpdate: [...hooks.beforeUpdate, ...(area.$hooks?.beforeUpdate || [])],
+      afterUpdate: [...hooks.afterUpdate, ...(area.$hooks?.afterUpdate || [])],
+      beforeRead: [...hooks.beforeRead, ...(area.$hooks?.beforeRead || [])]
+    }
+  };
 };

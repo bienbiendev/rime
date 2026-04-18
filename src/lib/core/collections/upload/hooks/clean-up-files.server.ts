@@ -13,8 +13,8 @@ import type { WithUpload } from '../util/config.js';
  *
  */
 export const cleanUpFiles = Hooks.beforeDelete(async (args) => {
-	const config = args.config as WithUpload<BuiltCollection>;
-	const id = args.context.params.id || '';
-	await cleanupStoredFiles({ config, rime: args.event.locals.rime, id });
-	return args;
+  const config = args.config as WithUpload<BuiltCollection>;
+  const id = args.context.params.id || '';
+  await cleanupStoredFiles({ config, rime: args.event.locals.rime, id });
+  return args;
 });

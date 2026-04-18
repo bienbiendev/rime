@@ -5,15 +5,15 @@ import { liveLoad as live } from './live/load.server.js';
 import { dashboardLoad as dashboard } from './dashboard/load.server.js';
 
 const collection = {
-	list: collectionLoad,
-	doc: docLoad
+  list: collectionLoad,
+  doc: docLoad
 };
 
 export { area, collection, dashboard, live };
 
 export default {
-	area,
-	collection,
-	dashboard,
-	live,
+  area,
+  collection,
+  dashboard,
+  live
 };

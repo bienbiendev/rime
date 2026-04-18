@@ -1,7 +1,11 @@
 <script lang="ts">
-	import { Calendar as CalendarPrimitive } from 'bits-ui';
+  import { Calendar as CalendarPrimitive } from 'bits-ui';
 
-	let { ref = $bindable(null), class: className, ...restProps }: CalendarPrimitive.CellProps = $props();
+  let {
+    ref = $bindable(null),
+    class: className,
+    ...restProps
+  }: CalendarPrimitive.CellProps = $props();
 </script>
 
 <CalendarPrimitive.Cell bind:ref class="rz-calendar-cell {className}" {...restProps} />

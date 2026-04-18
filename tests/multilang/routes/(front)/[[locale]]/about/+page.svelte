@@ -1,12 +1,12 @@
 <script lang="ts">
-	import LiveConsumer from '$lib/panel/components/sections/live/Consumer.svelte';
+  import LiveConsumer from '$lib/panel/components/sections/live/Consumer.svelte';
 
-	let { data } = $props();
+  let { data } = $props();
 </script>
 
 <LiveConsumer {data}>
-	{#snippet child(doc)}
-		{/* @ts-ignore */ null}
-		{doc.instagram}
-	{/snippet}
+  {#snippet child(doc)}
+    {/* @ts-ignore */ null}
+    {doc.instagram}
+  {/snippet}
 </LiveConsumer>

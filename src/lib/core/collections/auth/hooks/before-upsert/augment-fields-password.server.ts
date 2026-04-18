@@ -7,20 +7,20 @@ import { usersFields } from '../../fields.js';
  * to add validations
  */
 export const augmentFieldsPassword = Hooks.beforeUpsert<'auth'>(async (args) => {
-	let { config } = args;
+  let { config } = args;
 
-	const IS_PASSWORD_AUTH =
-		config.auth && typeof config.auth !== 'boolean' && config.auth.type === 'password';
+  const IS_PASSWORD_AUTH =
+    config.auth && typeof config.auth !== 'boolean' && config.auth.type === 'password';
 
-	if (IS_PASSWORD_AUTH) {
-		config = {
-			...config,
-			fields: [...config.fields, usersFields.password, usersFields.confirmPassword]
-		};
-	}
+  if (IS_PASSWORD_AUTH) {
+    config = {
+      ...config,
+      fields: [...config.fields, usersFields.password, usersFields.confirmPassword]
+    };
+  }
 
-	return {
-		...args,
-		config
-	};
+  return {
+    ...args,
+    config
+  };
 });

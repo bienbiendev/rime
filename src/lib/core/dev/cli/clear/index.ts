@@ -17,30 +17,30 @@ const clearMessage = `Are you sure you want to delete all related rime files (Y/
 `;
 
 export const clear = async (args: { force?: boolean }) => {
-	let shouldProceed = true;
+  let shouldProceed = true;
 
-	if (!args.force) {
-		const response = await prompt(`${clearMessage} (Y/n)`, 'n');
-		shouldProceed = response.trim().toLowerCase() === 'y';
-	}
+  if (!args.force) {
+    const response = await prompt(`${clearMessage} (Y/n)`, 'n');
+    shouldProceed = response.trim().toLowerCase() === 'y';
+  }
 
-	if (!shouldProceed) {
-		return logger.info('Operation cancelled. Great!');
-	}
+  if (!shouldProceed) {
+    return logger.info('Operation cancelled. Great!');
+  }
 
-	// Remove directories
-	rmSync(path.join('.rime'), { recursive: true, force: true });
-	rmSync(path.join('src', 'routes', '(rime)'), { recursive: true, force: true });
-	rmSync(path.join('src', 'lib', INPUT_DIR), { recursive: true, force: true });
-	rmSync(path.join('src', 'lib', OUTPUT_DIR), { recursive: true, force: true });
-	rmSync(path.join('db'), { recursive: true, force: true });
-	rmSync(path.join('static', 'medias'), { recursive: true, force: true });
+  // Remove directories
+  rmSync(path.join('.rime'), { recursive: true, force: true });
+  rmSync(path.join('src', 'routes', '(rime)'), { recursive: true, force: true });
+  rmSync(path.join('src', 'lib', INPUT_DIR), { recursive: true, force: true });
+  rmSync(path.join('src', 'lib', OUTPUT_DIR), { recursive: true, force: true });
+  rmSync(path.join('db'), { recursive: true, force: true });
+  rmSync(path.join('static', 'medias'), { recursive: true, force: true });
 
-	// Remove files
-	rmSync(path.join('src', 'hooks.server.ts'), { force: true });
-	rmSync(path.join('src', 'app.generated.d.ts'), { force: true });
-	rmSync(path.join('src', 'rime.generated.d.ts'), { force: true });
-	rmSync(path.join('drizzle.config.ts'), { force: true });
+  // Remove files
+  rmSync(path.join('src', 'hooks.server.ts'), { force: true });
+  rmSync(path.join('src', 'app.generated.d.ts'), { force: true });
+  rmSync(path.join('src', 'rime.generated.d.ts'), { force: true });
+  rmSync(path.join('drizzle.config.ts'), { force: true });
 
-	return logger.info('rime cleared');
+  return logger.info('rime cleared');
 };

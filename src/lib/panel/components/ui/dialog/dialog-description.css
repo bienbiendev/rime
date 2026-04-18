@@ -1,4 +1,4 @@
 .rz-dialog-description {
-	@mixin color color-fg, 0.7;
-	font-size: var(--rz-text-sm);
+  @mixin color color-fg, 0.7;
+  font-size: var(--rz-text-sm);
 }

@@ -8,5 +8,5 @@ import type { CollectionAuthConfig } from '$lib/core/config/types.js';
  * }
  */
 export const isAuthConfig = <T extends { auth?: boolean | CollectionAuthConfig }>(
-	config: T
+  config: T
 ): config is T & { auth: true | CollectionAuthConfig } => !!config.auth;

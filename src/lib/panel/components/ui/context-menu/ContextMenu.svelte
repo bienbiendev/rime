@@ -1,7 +1,12 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
-  import { ContextMenu, type ContextMenuContentProps, type ContextMenuRootProps, type WithoutChild } from "bits-ui";
-  import './context-menu.css'
+  import type { Snippet } from 'svelte';
+  import {
+    ContextMenu,
+    type ContextMenuContentProps,
+    type ContextMenuRootProps,
+    type WithoutChild
+  } from 'bits-ui';
+  import './context-menu.css';
 
   type Props = ContextMenuRootProps & {
     trigger: Snippet;
@@ -17,7 +22,7 @@
     ...restProps
   }: Props = $props();
 </script>
- 
+
 <ContextMenu.Root bind:open {...restProps}>
   <ContextMenu.Trigger>
     {@render trigger()}

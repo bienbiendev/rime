@@ -16,24 +16,24 @@ import { isFile } from '$lib/util/file.js';
  * @returns Updated args object with converted file data
  */
 export const castBase64ToFile = Hooks.beforeUpsert<'upload'>(async (args) => {
-	let data = args.data;
-	if (data?.file && !isFile(data.file)) {
-		try {
-			const { file, filename, filesize, mimeType } = jsonFileToFile(data.file);
-			data = {
-				...data,
-				file,
-				filename: data.filename || filename,
-				filesize: data.filesize || filesize,
-				mimeType: data.mimeType || mimeType
-			};
-		} catch (err: any) {
-			args.event.locals.rime.logger.error(
-				'Failed to convert base64 string to File object',
-				err.message
-			);
-			throw new RimeError(RimeError.UPLOAD, 'Unable to process file');
-		}
-	}
-	return { ...args, data };
+  let data = args.data;
+  if (data?.file && !isFile(data.file)) {
+    try {
+      const { file, filename, filesize, mimeType } = jsonFileToFile(data.file);
+      data = {
+        ...data,
+        file,
+        filename: data.filename || filename,
+        filesize: data.filesize || filesize,
+        mimeType: data.mimeType || mimeType
+      };
+    } catch (err: any) {
+      args.event.locals.rime.logger.error(
+        'Failed to convert base64 string to File object',
+        err.message
+      );
+      throw new RimeError(RimeError.UPLOAD, 'Unable to process file');
+    }
+  }
+  return { ...args, data };
 });

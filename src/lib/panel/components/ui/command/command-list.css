@@ -1,6 +1,6 @@
 .rz-command-list {
-	overflow-x: hidden;
-	background-color: var(--rz-popover-bg);
-	padding: var(--rz-size-1);
-	max-height: 19.75rem;
+  overflow-x: hidden;
+  background-color: var(--rz-popover-bg);
+  padding: var(--rz-size-1);
+  max-height: 19.75rem;
 }

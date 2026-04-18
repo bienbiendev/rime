@@ -1,20 +1,20 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import type { HTMLButtonAttributes } from 'svelte/elements';
+  import type { Snippet } from 'svelte';
+  import type { HTMLButtonAttributes } from 'svelte/elements';
 
-	type Props = { children: Snippet } & HTMLButtonAttributes;
-	const { children, class: className, ...rest }: Props = $props();
+  type Props = { children: Snippet } & HTMLButtonAttributes;
+  const { children, class: className, ...rest }: Props = $props();
 </script>
 
 <button class="rz-fields-preview__trigger {className || ''}" {...rest} type="button">
-	{@render children()}
+  {@render children()}
 </button>
 
 <style>
-	.rz-fields-preview__trigger {
-		display: block;
-		background-color: var(--rz-group-preview-bg);
-		width: 100%;
-		text-align: left;
-	}
+  .rz-fields-preview__trigger {
+    display: block;
+    background-color: var(--rz-group-preview-bg);
+    width: 100%;
+    text-align: left;
+  }
 </style>

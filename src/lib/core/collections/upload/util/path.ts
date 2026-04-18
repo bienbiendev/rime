@@ -32,43 +32,43 @@ type Aria = WithRequired<Partial<Route>, 'title'>;
  * getSegments("root") // { name: "root", parent: null, path: "root" }
  */
 export function getSegments(path?: UploadPath | null): {
-	name: string;
-	path: UploadPath;
-	parent: UploadPath | null;
+  name: string;
+  path: UploadPath;
+  parent: UploadPath | null;
 } {
-	// Use nullish coalescing to handle both undefined and null
-	const safePath = path ?? UPLOAD_PATH.ROOT_NAME;
+  // Use nullish coalescing to handle both undefined and null
+  const safePath = path ?? UPLOAD_PATH.ROOT_NAME;
 
-	// Validate and normalize the path
-	const isValid = validatePath(safePath);
-	if (typeof isValid === 'string') {
-		throw new RimeError(RimeError.BAD_REQUEST, isValid);
-	}
+  // Validate and normalize the path
+  const isValid = validatePath(safePath);
+  if (typeof isValid === 'string') {
+    throw new RimeError(RimeError.BAD_REQUEST, isValid);
+  }
 
-	const segments = safePath
-		.split(UPLOAD_PATH.SEPARATOR)
-		.filter((s) => s !== UPLOAD_PATH.SEPARATOR)
-		.filter((s) => !!s);
+  const segments = safePath
+    .split(UPLOAD_PATH.SEPARATOR)
+    .filter((s) => s !== UPLOAD_PATH.SEPARATOR)
+    .filter((s) => !!s);
 
-	if (segments.length <= 1) {
-		return {
-			name: UPLOAD_PATH.ROOT_NAME,
-			path: UPLOAD_PATH.ROOT_NAME,
-			parent: null
-		};
-	}
+  if (segments.length <= 1) {
+    return {
+      name: UPLOAD_PATH.ROOT_NAME,
+      path: UPLOAD_PATH.ROOT_NAME,
+      parent: null
+    };
+  }
 
-	const name = segments[segments.length - 1];
-	// Only create parent if we have more than one segment
-	const parent = segments.length > 1 ? segments.slice(0, -1).join(UPLOAD_PATH.SEPARATOR) : null;
-	// Reconstruct the normalized path from filtered segments
-	const normalizedPath = segments.join(UPLOAD_PATH.SEPARATOR) as UploadPath;
+  const name = segments[segments.length - 1];
+  // Only create parent if we have more than one segment
+  const parent = segments.length > 1 ? segments.slice(0, -1).join(UPLOAD_PATH.SEPARATOR) : null;
+  // Reconstruct the normalized path from filtered segments
+  const normalizedPath = segments.join(UPLOAD_PATH.SEPARATOR) as UploadPath;
 
-	return {
-		name,
-		parent: parent as UploadPath,
-		path: normalizedPath
-	};
+  return {
+    name,
+    parent: parent as UploadPath,
+    path: normalizedPath
+  };
 }
 
 /**
@@ -79,8 +79,8 @@ export function getSegments(path?: UploadPath | null): {
  * getParentPath('root:foo')
  */
 export function getParentPath(path: UploadPath) {
-	if (path === UPLOAD_PATH.ROOT_NAME) return null;
-	return path.split(UPLOAD_PATH.SEPARATOR).slice(0, -1).join(UPLOAD_PATH.SEPARATOR);
+  if (path === UPLOAD_PATH.ROOT_NAME) return null;
+  return path.split(UPLOAD_PATH.SEPARATOR).slice(0, -1).join(UPLOAD_PATH.SEPARATOR);
 }
 
 /**
@@ -93,32 +93,38 @@ export function getParentPath(path: UploadPath) {
  * buildUploadAria('root:foo:bar')
  * // return [{ title: 'foo', path: '/panel/{slug}?=root:foo' }, { title: 'bar' }]
  */
-export function buildUploadAria({ path, slug }: { path: UploadPath; slug: CollectionSlug }): Partial<Route>[] {
-	const segments = path.split(':');
-	const result: Aria[] = [];
-	let currentPath = '';
+export function buildUploadAria({
+  path,
+  slug
+}: {
+  path: UploadPath;
+  slug: CollectionSlug;
+}): Partial<Route>[] {
+  const segments = path.split(':');
+  const result: Aria[] = [];
+  let currentPath = '';
 
-	for (const segment of segments) {
-		if (!segment) continue;
-		currentPath = currentPath ? `${currentPath}:${segment}` : segment;
-		if (currentPath !== segments[0]) {
-			result.push({
-				title: segment,
-				url: `${panelUrl(toKebabCase(slug))}?${PARAMS.UPLOAD_PATH}=${currentPath}`
-			});
-		}
-	}
+  for (const segment of segments) {
+    if (!segment) continue;
+    currentPath = currentPath ? `${currentPath}:${segment}` : segment;
+    if (currentPath !== segments[0]) {
+      result.push({
+        title: segment,
+        url: `${panelUrl(toKebabCase(slug))}?${PARAMS.UPLOAD_PATH}=${currentPath}`
+      });
+    }
+  }
 
-	return result;
+  return result;
 }
 
 export function removePathFromLastAria(aria: Partial<Route>[]) {
-	return aria.map((route, index) => {
-		if (index === aria.length - 1) {
-			return { title: route.title };
-		}
-		return route;
-	});
+  return aria.map((route, index) => {
+    if (index === aria.length - 1) {
+      return { title: route.title };
+    }
+    return route;
+  });
 }
 
 /**
@@ -133,33 +139,39 @@ export function removePathFromLastAria(aria: Partial<Route>[]) {
  * validatePath("root:folder$") // invalid
  */
 export const validatePath = (value: unknown): string | true => {
-	if (typeof value !== 'string') {
-		return 'path should be a string';
-	}
+  if (typeof value !== 'string') {
+    return 'path should be a string';
+  }
 
-	// Check if path starts with ROOT_NAME
-	const STARTS_WITH_ROOT = value === UPLOAD_PATH.ROOT_NAME || value.startsWith(`${UPLOAD_PATH.ROOT_NAME}:`);
-	if (!STARTS_WITH_ROOT) {
-		return `Path must start with "${UPLOAD_PATH.ROOT_NAME}"`;
-	}
+  // Check if path starts with ROOT_NAME
+  const STARTS_WITH_ROOT =
+    value === UPLOAD_PATH.ROOT_NAME || value.startsWith(`${UPLOAD_PATH.ROOT_NAME}:`);
+  if (!STARTS_WITH_ROOT) {
+    return `Path must start with "${UPLOAD_PATH.ROOT_NAME}"`;
+  }
 
-	// Create a mutable copy for normalization
-	let normalizedPath = value;
+  // Create a mutable copy for normalization
+  let normalizedPath = value;
 
-	// Remove trailing separator if present
-	while (normalizedPath !== UPLOAD_PATH.ROOT_NAME && normalizedPath.endsWith(UPLOAD_PATH.SEPARATOR)) {
-		normalizedPath = normalizedPath.slice(0, -1);
-	}
+  // Remove trailing separator if present
+  while (
+    normalizedPath !== UPLOAD_PATH.ROOT_NAME &&
+    normalizedPath.endsWith(UPLOAD_PATH.SEPARATOR)
+  ) {
+    normalizedPath = normalizedPath.slice(0, -1);
+  }
 
-	// Only allow alphanumeric characters, hyphens, underscores, spaces, and the separator
-	// The regex ensures:
-	// 1. Starts with ROOT_NAME
-	// 2. Followed by zero or more segments (each segment starts with separator followed by valid chars)
-	const validPathRegex = new RegExp(`^${UPLOAD_PATH.ROOT_NAME}(${UPLOAD_PATH.SEPARATOR}[a-zA-Z0-9\\-_ ]+)*$`);
+  // Only allow alphanumeric characters, hyphens, underscores, spaces, and the separator
+  // The regex ensures:
+  // 1. Starts with ROOT_NAME
+  // 2. Followed by zero or more segments (each segment starts with separator followed by valid chars)
+  const validPathRegex = new RegExp(
+    `^${UPLOAD_PATH.ROOT_NAME}(${UPLOAD_PATH.SEPARATOR}[a-zA-Z0-9\\-_ ]+)*$`
+  );
 
-	if (!validPathRegex.test(normalizedPath)) {
-		return 'Path contains invalid characters. Only alphanumeric characters, hyphens, underscores, and spaces are allowed.';
-	}
+  if (!validPathRegex.test(normalizedPath)) {
+    return 'Path contains invalid characters. Only alphanumeric characters, hyphens, underscores, and spaces are allowed.';
+  }
 
-	return true;
+  return true;
 };

@@ -14,78 +14,78 @@ const Trigger = SheetPrimitive.Trigger;
 const Portal = SheetPrimitive.Portal;
 
 export {
-	Root,
-	Close,
-	Trigger,
-	Portal,
-	Overlay,
-	Content,
-	Header,
-	Footer,
-	Title,
-	Description,
-	//
-	Root as Sheet,
-	Close as SheetClose,
-	Trigger as SheetTrigger,
-	Portal as SheetPortal,
-	Overlay as SheetOverlay,
-	Content as SheetContent,
-	Header as SheetHeader,
-	Footer as SheetFooter,
-	Title as SheetTitle,
-	Description as SheetDescription
+  Root,
+  Close,
+  Trigger,
+  Portal,
+  Overlay,
+  Content,
+  Header,
+  Footer,
+  Title,
+  Description,
+  //
+  Root as Sheet,
+  Close as SheetClose,
+  Trigger as SheetTrigger,
+  Portal as SheetPortal,
+  Overlay as SheetOverlay,
+  Content as SheetContent,
+  Header as SheetHeader,
+  Footer as SheetFooter,
+  Title as SheetTitle,
+  Description as SheetDescription
 };
 
 export const sheetTransitions = {
-	top: {
-		in: {
-			y: '-100%',
-			duration: 500,
-			opacity: 1
-		},
-		out: {
-			y: '-100%',
-			duration: 300,
-			opacity: 1
-		}
-	},
-	bottom: {
-		in: {
-			y: '100%',
-			duration: 500,
-			opacity: 1
-		},
-		out: {
-			y: '100%',
-			duration: 300,
-			opacity: 1
-		}
-	},
-	left: {
-		in: {
-			x: '-100%',
-			duration: 500,
-			opacity: 1
-		},
-		out: {
-			x: '-100%',
-			duration: 300,
-			opacity: 1
-		}
-	},
-	right: {
-		in: {
-			x: '100%',
-			duration: 500,
-			opacity: 1
-		},
-		out: {
-			x: '100%',
-			duration: 300,
-			opacity: 1
-		}
-	}
+  top: {
+    in: {
+      y: '-100%',
+      duration: 500,
+      opacity: 1
+    },
+    out: {
+      y: '-100%',
+      duration: 300,
+      opacity: 1
+    }
+  },
+  bottom: {
+    in: {
+      y: '100%',
+      duration: 500,
+      opacity: 1
+    },
+    out: {
+      y: '100%',
+      duration: 300,
+      opacity: 1
+    }
+  },
+  left: {
+    in: {
+      x: '-100%',
+      duration: 500,
+      opacity: 1
+    },
+    out: {
+      x: '-100%',
+      duration: 300,
+      opacity: 1
+    }
+  },
+  right: {
+    in: {
+      x: '100%',
+      duration: 500,
+      opacity: 1
+    },
+    out: {
+      x: '100%',
+      duration: 300,
+      opacity: 1
+    }
+  }
 };
 
 export type Side = 'top' | 'left' | 'bottom' | 'right';

@@ -57,21 +57,21 @@ const pageVersions = () => `
  * Area routes dictionary defining route patterns and their corresponding templates
  */
 export const areaRoutes: Routes = {
-	'(rime)/panel/{area.kebab}/': {
-		page: pageTemplate,
-		pageServer: pageServerTemplate
-	}
+  '(rime)/panel/{area.kebab}/': {
+    page: pageTemplate,
+    pageServer: pageServerTemplate
+  }
 };
 
 export const areaVersionsPanelRoutes: Routes = {
-	'(rime)/panel/{area.kebab}/versions': {
-		page: pageVersions,
-		pageServer: pageServerTemplateVersions
-	}
+  '(rime)/panel/{area.kebab}/versions': {
+    page: pageVersions,
+    pageServer: pageServerTemplateVersions
+  }
 };
 
 export const areaAPIRoutes: Routes = {
-	'(rime)/api/{area.kebab}/': {
-		server: apiAreaServer
-	}
+  '(rime)/api/{area.kebab}/': {
+    server: apiAreaServer
+  }
 };

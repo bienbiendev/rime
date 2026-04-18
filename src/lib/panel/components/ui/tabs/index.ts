@@ -6,13 +6,13 @@ import Root from './tabs.svelte';
 // const Root = TabsPrimitive.Root;
 
 export {
-	Root,
-	Content,
-	List,
-	Trigger,
-	//
-	Root as Tabs,
-	Content as TabsContent,
-	List as TabsList,
-	Trigger as TabsTrigger
+  Root,
+  Content,
+  List,
+  Trigger,
+  //
+  Root as Tabs,
+  Content as TabsContent,
+  List as TabsList,
+  Trigger as TabsTrigger
 };

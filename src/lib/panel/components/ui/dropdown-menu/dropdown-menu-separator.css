@@ -1,5 +1,5 @@
 .rz-dropdown-separator {
-	background-color: hsl(var(--rz-color-border));
-	margin-block: var(--rz-size-1);
-	height: 1px;
+  background-color: hsl(var(--rz-color-border));
+  margin-block: var(--rz-size-1);
+  height: 1px;
 }

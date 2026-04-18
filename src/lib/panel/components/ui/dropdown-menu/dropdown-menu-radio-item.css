@@ -1,26 +1,26 @@
 .rz-dropdown-radio {
-	position: relative;
-	display: flex;
-	cursor: pointer;
-	user-select: none;
-	align-items: center;
-	border-radius: var(--rz-radius-md);
-	padding-left: var(--rz-size-8);
-	font-size: var(--rz-text-sm);
-	outline: none;
-	padding-block: var(--rz-size-1-5);
+  position: relative;
+  display: flex;
+  cursor: pointer;
+  user-select: none;
+  align-items: center;
+  border-radius: var(--rz-radius-md);
+  padding-left: var(--rz-size-8);
+  font-size: var(--rz-text-sm);
+  outline: none;
+  padding-block: var(--rz-size-1-5);
 }
 
 .rz-dropdown-radio[data-disabled] {
-	pointer-events: none;
-	opacity: 0.5;
+  pointer-events: none;
+  opacity: 0.5;
 }
 
 .rz-dropdown-radio[data-highlighted] {
-	background-color: var(--rz-popover-highlight-bg);
+  background-color: var(--rz-popover-highlight-bg);
 }
 
 .rz-dropdown-radio__indicator {
-	position: absolute;
-	left: var(--rz-size-2);
+  position: absolute;
+  left: var(--rz-size-2);
 }

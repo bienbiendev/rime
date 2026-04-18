@@ -3,9 +3,9 @@ import type { CollectionAuthConfig, UploadConfig } from '$lib/core/config/types.
 import type { Collection } from '../../../types.js';
 
 type Input = {
-	upload?: UploadConfig;
-	auth?: false | CollectionAuthConfig;
-	fields?: Collection<any>['fields'];
+  upload?: UploadConfig;
+  auth?: false | CollectionAuthConfig;
+  fields?: Collection<any>['fields'];
 };
 type WithAsThumbnail<T> = T & { asThumbnail: string | null };
 /**
@@ -13,13 +13,13 @@ type WithAsThumbnail<T> = T & { asThumbnail: string | null };
  * filename for upload, email for auth, or default to id
  */
 export const augmentThumbnail = <T extends Input>(config: T): WithAsThumbnail<T> => {
-	const addAsThumbnail = () => {
-		const thumbnailField = findThumbnailField(config.fields);
-		return thumbnailField?.path || null;
-	};
+  const addAsThumbnail = () => {
+    const thumbnailField = findThumbnailField(config.fields);
+    return thumbnailField?.path || null;
+  };
 
-	return {
-		...config,
-		asThumbnail: addAsThumbnail()
-	};
+  return {
+    ...config,
+    asThumbnail: addAsThumbnail()
+  };
 };

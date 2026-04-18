@@ -1,16 +1,16 @@
 .rz-bubble-menu {
-	z-index: 110;
-	display: flex;
-	width: fit-content;
-	gap: var(--rz-size-1);
-	border-radius: var(--rz-radius-lg);
-	border: var(--rz-border);
-	background-color: hsl(var(--rz-color-bg));
-	padding: var(--rz-size-1);
-	box-shadow: var(--rz-shadow-xl);
-	visibility: hidden;
-	position: absolute;
-	left: -9999px;
-	top: -9999px;
-	height: var(--rz-input-height);
+  z-index: 110;
+  display: flex;
+  width: fit-content;
+  gap: var(--rz-size-1);
+  border-radius: var(--rz-radius-lg);
+  border: var(--rz-border);
+  background-color: hsl(var(--rz-color-bg));
+  padding: var(--rz-size-1);
+  box-shadow: var(--rz-shadow-xl);
+  visibility: hidden;
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  height: var(--rz-input-height);
 }

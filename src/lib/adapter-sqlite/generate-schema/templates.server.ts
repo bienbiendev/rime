@@ -29,10 +29,10 @@ const pk = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
  * ```
  */
 export const templateTable = (table: string, content: string): string => {
-	if (!content.includes('id:')) {
-		content = `id: pk(),\n${content}`;
-	}
-	return `export const ${table} = sqliteTable( '${s(table)}', {
+  if (!content.includes('id:')) {
+    content = `id: pk(),\n${content}`;
+  }
+  return `export const ${table} = sqliteTable( '${s(table)}', {
 		${content}
 	})
 	`;
@@ -58,7 +58,7 @@ export const templateLocale = () => 'locale: text("locale"),';
  * ```
  */
 export const templateParent = (parent: string) => {
-	return `ownerId: text("owner_id").references(() => ${parent}.id, { onDelete: 'cascade' }),`;
+  return `ownerId: text("owner_id").references(() => ${parent}.id, { onDelete: 'cascade' }),`;
 };
 
 /**
@@ -71,7 +71,7 @@ export const templateParent = (parent: string) => {
  * ```
  */
 export const templateHasAuth = (slug: string) => {
-	return `authUserId: text("auth_user_id").references(() => authUsers.id, { onDelete: 'cascade' }).notNull(),
+  return `authUserId: text("auth_user_id").references(() => authUsers.id, { onDelete: 'cascade' }).notNull(),
 ${slug === 'staff' ? `isSuperAdmin: integer('is_super_admin', { mode: 'boolean' }),` : ''}
 `;
 };
@@ -93,8 +93,8 @@ ${slug === 'staff' ? `isSuperAdmin: integer('is_super_admin', { mode: 'boolean' 
  * ```
  */
 export const templateUniqueRequired = (field: { unique?: boolean; required?: boolean }) => {
-	const { unique, required } = field;
-	return `${unique ? '.unique()' : ''}${required ? '.notNull()' : ''}`;
+  const { unique, required } = field;
+  return `${unique ? '.unique()' : ''}${required ? '.notNull()' : ''}`;
 };
 
 /** Template rows Relation */
@@ -152,7 +152,7 @@ export const ${name} = relations(${table}, ({ many }) => ({
  * ```
  */
 export const templateFieldRelationColumn = (table: string) => {
-	return `${table}Id:  text('${s(table)}_id').references(() => ${table}.id, { onDelete: 'cascade' })`;
+  return `${table}Id:  text('${s(table)}_id').references(() => ${table}.id, { onDelete: 'cascade' })`;
 };
 
 /**
@@ -173,9 +173,9 @@ export const templateFieldRelationColumn = (table: string) => {
  * ```
  */
 export const templateRelationFieldsTable = ({
-	table,
-	relations,
-	hasLocale
+  table,
+  relations,
+  hasLocale
 }: FieldsRelationTableArgs) => `
 export const ${table}Rels = sqliteTable('${s(table)}_rels', {
   id: pk(),
@@ -199,13 +199,13 @@ export const ${table}Rels = sqliteTable('${s(table)}_rels', {
  * ```
  */
 export const templateExportRelationsFieldsToTable = (relationFieldsDic: Record<string, string>) => {
-	const content = [];
-	for (const [table, dic] of Object.entries(relationFieldsDic)) {
-		content.push(dedent`
+  const content = [];
+  for (const [table, dic] of Object.entries(relationFieldsDic)) {
+    content.push(dedent`
       ${table} : ${JSON.stringify(dic)}
     `);
-	}
-	return dedent`
+  }
+  return dedent`
     export const relationFieldsMap: Record<string, any> = {
       ${content.join(',\n      ')}
     }
@@ -393,18 +393,18 @@ export const ${withDirectoriesSuffix(slug)} = sqliteTable('${s(withDirectoriesSu
 `;
 
 type RelationOneArgs = {
-	name: string;
-	table: string;
-	parent: string;
+  name: string;
+  table: string;
+  parent: string;
 };
 type RelationManyArgs = {
-	name: string;
-	table: string;
-	many: string[];
+  name: string;
+  table: string;
+  many: string[];
 };
 type FieldsRelationTableArgs = {
-	table: string;
-	relations: string[];
-	hasLocale?: boolean;
+  table: string;
+  relations: string[];
+  hasLocale?: boolean;
 };
 type TemplateExportSchemaArgs = { enumTables: string[]; enumRelations: string[] };
