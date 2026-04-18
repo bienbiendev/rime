@@ -19,7 +19,7 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
 		this.field.isEmpty = (value) => !value || (Array.isArray(value) && value.length === 0);
 
 		this.field.fields = [text('path').hidden(), number('position').hidden()];
-		this.field.maxDepth = 50;
+		this.field.maxDepth = 8;
 		this.field.addItemLabel = 'Add an item';
 	}
 
@@ -67,7 +67,10 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
 		this.field.fields = this.field.fields.map((field) => {
 			// If it's a "position" or "path" field do not set as localized
 			// as it's a treeBlock property
-			if (field instanceof FormFieldBuilder && ['position', 'path', 'locale'].includes(field.raw.name)) {
+			if (
+				field instanceof FormFieldBuilder &&
+				['position', 'path', 'locale'].includes(field.raw.name)
+			) {
 				return field;
 			}
 			// For all others fields set as localized
