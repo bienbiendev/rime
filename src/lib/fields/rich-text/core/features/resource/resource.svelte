@@ -4,7 +4,7 @@
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import CardResource from '$lib/panel/components/ui/card-resource/card-resource.svelte';
   import * as Command from '$lib/panel/components/ui/command/index.js';
-  import { API_PROXY, getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import type { NodeViewProps } from '@tiptap/core';
   import { onMount } from 'svelte';
   import NodeViewWrapper from '../../svelte/node-view-wrapper.svelte';
@@ -37,7 +37,7 @@
     }
   });
 
-  const APIProxy = getAPIProxyContext(API_PROXY.DOCUMENT);
+  const APIProxy = getAPIProxyContext();
 
   // svelte-ignore state_referenced_locally
   const url = extension.options.query

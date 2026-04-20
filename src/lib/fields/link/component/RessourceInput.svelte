@@ -4,7 +4,7 @@
   import type { GenericDoc } from '$lib/core/types/doc.js';
   import * as Command from '$lib/panel/components/ui/command/index.js';
   import Tag from '$lib/panel/components/ui/tag/tag.svelte';
-  import { API_PROXY, getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import type { PrototypeSlug } from '$lib/types';
   import { toKebabCase } from '$lib/util/string';
 
@@ -28,7 +28,7 @@
   let resources = $state<Ressource[]>([]);
   let selected = $state<Ressource | null>();
 
-  const APIProxy = getAPIProxyContext(API_PROXY.DOCUMENT);
+  const APIProxy = getAPIProxyContext();
   let resource = $state<any>(null);
 
   function convertDocToResource(doc: GenericDoc) {

@@ -3,7 +3,7 @@
   import { apiUrl } from '$lib/core/api/index.js';
   import type { GenericDoc } from '$lib/core/types/doc.js';
   import UploadThumbCell from '$lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
-  import { API_PROXY, getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import { toKebabCase } from '$lib/util/string';
 
   type Props = {
@@ -17,7 +17,7 @@
   let { value }: Props = $props();
   let displayCount = $derived(value && value.length > 1);
 
-  const APIProxy = getAPIProxyContext(API_PROXY.ROOT);
+  const APIProxy = getAPIProxyContext();
 
   let APIUrl = $derived.by(() => {
     if (value && value.length && value[0].documentId) {

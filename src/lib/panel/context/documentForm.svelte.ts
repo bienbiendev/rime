@@ -23,7 +23,7 @@ import { t__ } from '../../core/i18n/index.js';
 import { moveItem } from '../../util/array.js';
 import { getValueAtPath, setValueAtPath } from '../../util/object.js';
 import { snapshot } from '../../util/state.js';
-import { API_PROXY, getAPIProxyContext } from './api-proxy.svelte.js';
+import { getAPIProxyContext } from './api-proxy.svelte.js';
 import { getCollectionContext } from './collection.svelte.js';
 import { setErrorsContext } from './errors.svelte.js';
 import { getLocaleContext } from './locale.svelte.js';
@@ -66,7 +66,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   const initialTitle = initTitle();
   let title = $state(initialTitle);
 
-  const apiProxy = getAPIProxyContext(API_PROXY.DOCUMENT);
+  const apiProxy = getAPIProxyContext();
 
   function initLevel() {
     const last = key.split('_').pop() as string;

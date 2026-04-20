@@ -10,7 +10,7 @@
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
   import Input from '$lib/panel/components/ui/input/input.svelte';
-  import { API_PROXY, getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import type { BuiltCollection, UploadDoc } from '$lib/types';
   import { ListFilter, Search } from '@lucide/svelte';
 
@@ -62,7 +62,7 @@
     return `${apiUrl(withDirectoriesSuffix(config.kebab))}?where[parent][equals]=${path}`;
   });
 
-  const APIProxy = getAPIProxyContext(API_PROXY.DOCUMENT);
+  const APIProxy = getAPIProxyContext();
   let files = $derived(APIProxy.getRessource<{ docs: UploadDoc[] }>(filesURL));
   let folders = $derived(APIProxy.getRessource<{ docs: Directory[] }>(foldersURL));
 

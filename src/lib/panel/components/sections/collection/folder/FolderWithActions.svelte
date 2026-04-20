@@ -10,7 +10,7 @@
   import ContextMenu from '$lib/panel/components/ui/context-menu/ContextMenu.svelte';
   import ContextMenuItem from '$lib/panel/components/ui/context-menu/ContextMenuItem.svelte';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-  import { API_PROXY, getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import { panelUrl } from '$lib/panel/util/url.js';
   import { trycatchFetch } from '$lib/util/function.js';
   import { Pencil, Trash2 } from '@lucide/svelte';
@@ -42,7 +42,7 @@
   let rootElement = $state<HTMLButtonElement>();
   let isDragging = $state(false);
   const isFolderUpperPath = $derived(folder.name === '...');
-  const APIProxy = getAPIProxyContext(API_PROXY.ROOT);
+  const APIProxy = getAPIProxyContext();
   const childFilesURL = $derived(
     `${apiUrl(collection.kebab)}?where[_path][equals]=${folder.id}&select=id`
   );

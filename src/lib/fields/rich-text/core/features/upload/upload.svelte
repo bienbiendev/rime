@@ -6,7 +6,7 @@
   import * as Command from '$lib/panel/components/ui/command/index.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import Input from '$lib/panel/components/ui/input/input.svelte';
-  import { API_PROXY, getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import { X } from '@lucide/svelte';
   import type { NodeViewProps } from '@tiptap/core';
   import { onMount } from 'svelte';
@@ -54,7 +54,7 @@
     }
   });
 
-  const APIProxy = getAPIProxyContext(API_PROXY.DOCUMENT);
+  const APIProxy = getAPIProxyContext();
 
   // svelte-ignore state_referenced_locally
   const url = extension.options.query

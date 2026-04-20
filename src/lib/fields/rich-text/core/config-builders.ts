@@ -81,10 +81,10 @@ export function buildEditorConfig(args: BuildEditorConfigArgs): RichTextEditorCo
         const originalAddOption = feature.extension.config.addOptions || (() => ({}));
         const contexts = new Map();
         const configContext = getConfigContext();
-        const apiProxyContext = getAPIProxyContext(API_PROXY.DOCUMENT);
+        const apiProxyContext = getAPIProxyContext();
         const userContext = getUserContext();
         contexts.set(CONFIG_CTX, configContext);
-        contexts.set(API_PROXY.DOCUMENT, apiProxyContext);
+        contexts.set(API_PROXY.ROOT, apiProxyContext);
         contexts.set(USER_CTX, userContext);
         feature.extension.config.addOptions = () => {
           // @ts-expect-error

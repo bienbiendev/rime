@@ -6,11 +6,7 @@
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import * as Command from '$lib/panel/components/ui/command/index.js';
   import Input from '$lib/panel/components/ui/input/input.svelte';
-  import {
-    API_PROXY,
-    getAPIProxyContext,
-    type Resource
-  } from '$lib/panel/context/api-proxy.svelte.js';
+  import { getAPIProxyContext, type Resource } from '$lib/panel/context/api-proxy.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import validate from '$lib/util/validate.js';
   import { CornerDownLeft, ExternalLink, Link2, Newspaper, Trash } from '@lucide/svelte';
@@ -40,7 +36,7 @@
   /**
    * Logic to get internal resources e.g., collections, areas
    */
-  const APIProxy = getAPIProxyContext(API_PROXY.DOCUMENT);
+  const APIProxy = getAPIProxyContext();
   const locale = getLocaleContext();
   let resources = $state<Resource<LinkResource[]>[]>([]);
   let resourcesFlatMap = $state<LinkResource[]>();

@@ -90,9 +90,7 @@ export function getAPIProxyContext(key = API_PROXY.ROOT) {
   return getContext<ReturnType<typeof setAPIProxyContext>>(key);
 }
 
-// @TODO why multiple APIProxy... ROOT everywhere should work
 export const API_PROXY = {
-  DOCUMENT: Symbol('api-proxy.document'),
   ROOT: Symbol('api-proxy.root')
 };
 

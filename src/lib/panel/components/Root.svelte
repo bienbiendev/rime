@@ -10,7 +10,7 @@
   import { setUserContext } from '$lib/panel/context/user.svelte.js';
   import type { Route } from '$lib/panel/types.js';
   import { onMount, type Snippet } from 'svelte';
-  import { API_PROXY, setAPIProxyContext } from '../context/api-proxy.svelte.js';
+  import { setAPIProxyContext } from '../context/api-proxy.svelte.js';
 
   type Props = {
     routes: Record<string, Route[]>;
@@ -29,7 +29,7 @@
   // svelte-ignore state_referenced_locally
   setUserContext(user);
   createContext('title', '[untitled]');
-  setAPIProxyContext(API_PROXY.ROOT);
+  setAPIProxyContext();
 
   const locale = $derived(setLocaleContext(initialeLocale));
 

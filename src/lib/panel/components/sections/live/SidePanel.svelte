@@ -3,7 +3,7 @@
   import type { User } from '$lib/core/collections/auth/types.js';
   import type { BuiltConfigClient } from '$lib/core/config/types.js';
   import { Toaster } from '$lib/panel/components/ui/sonner';
-  import { API_PROXY, setAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { setAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import { setConfigContext } from '$lib/panel/context/config.svelte.js';
   import createContext from '$lib/panel/context/createContext.svelte.js';
   import { setLocaleContext } from '$lib/panel/context/locale.svelte.js';
@@ -35,7 +35,7 @@
     return panelUri;
   }
 
-  setAPIProxyContext(API_PROXY.DOCUMENT);
+  setAPIProxyContext();
   // svelte-ignore state_referenced_locally
   setConfigContext(config);
   // svelte-ignore state_referenced_locally

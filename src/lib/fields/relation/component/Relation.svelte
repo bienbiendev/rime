@@ -11,7 +11,7 @@
   import { panelUrl } from '$lib/panel/util/url.js';
   import { moveItem } from '$lib/util/array.js';
   import { snapshot } from '$lib/util/state.js';
-  import { API_PROXY, getAPIProxyContext } from '../../../panel/context/api-proxy.svelte.js';
+  import { getAPIProxyContext } from '../../../panel/context/api-proxy.svelte.js';
   import type { Relation, RelationField } from '../index.js';
   import Default from './default/Default.svelte';
   import type { RelationFieldItem } from './types.js';
@@ -24,7 +24,7 @@
   // Context
   const { getCollection } = getConfigContext();
   const locale = getLocaleContext();
-  const APIProxy = getAPIProxyContext(API_PROXY.DOCUMENT);
+  const APIProxy = getAPIProxyContext();
   const field = $derived(form.useField(path, config));
   // svelte-ignore state_referenced_locally
   const relationConfig = getCollection(config.relationTo);

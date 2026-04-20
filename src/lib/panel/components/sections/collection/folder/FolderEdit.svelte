@@ -6,7 +6,6 @@
   import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-  import { API_PROXY, setAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import { setDocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
@@ -18,7 +17,6 @@
   };
   let { folder, collection, open = $bindable() }: Props = $props();
 
-  setAPIProxyContext(API_PROXY.DOCUMENT);
   let formElement = $state<HTMLFormElement>();
   const user = getUserContext();
   const configCtx = getConfigContext();
