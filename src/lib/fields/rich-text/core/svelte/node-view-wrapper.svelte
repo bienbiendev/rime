@@ -1,3 +1,4 @@
+<!-- based on https://github.com/sibiraj-s/svelte-tiptap/blob/master/src/lib/NodeViewWrapper.svelte -->
 <script lang="ts" generics="T extends keyof SvelteHTMLElements = 'div'">
   import { getContext, onMount, tick } from 'svelte';
   import type { SvelteHTMLElements } from 'svelte/elements';

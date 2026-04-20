@@ -1,6 +1,7 @@
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { Field, FormField } from '$lib/fields/types.js';
+import type { Field, FieldsPreviewProps, FormField } from '$lib/fields/types.js';
+import type { Component } from 'svelte';
 import Group from './component/Group.svelte';
 
 const isEmpty = (value: unknown) =>
@@ -45,6 +46,11 @@ export class GroupFieldBuilder extends FormFieldBuilder<GroupField> {
     return this;
   }
 
+  preview(component: Component<FieldsPreviewProps>) {
+    this.field.preview = component;
+    return this;
+  }
+
   compile() {
     return { ...this.field, fields: this.field.fields.map((f) => f.compile()) };
   }
@@ -71,6 +77,7 @@ export type GroupField = FormField & {
   name: string;
   label?: string;
   fields: FieldBuilder<Field>[];
+  preview?: Component<FieldsPreviewProps>;
 };
 
 export type GroupFieldRaw = FormField & {

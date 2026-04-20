@@ -23,4 +23,8 @@
   .rz-render-fields-preview__row:last-child .rz-render-fields-preview__name {
     border-bottom-left-radius: var(--rz-radius-lg);
   }
+
+  &.rz-rich-text-fields-preview--custom {
+    max-width: unset;
+  }
 }

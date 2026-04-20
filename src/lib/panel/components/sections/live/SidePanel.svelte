@@ -22,7 +22,7 @@
     user: User;
   };
 
-  const { doc, config, locale: initialeLocale, user, onDataChange, onFieldFocus }: Props = $props();
+  const { doc, config, locale: initialLocale, user, onDataChange, onFieldFocus }: Props = $props();
 
   function buildPanelURL() {
     // Start with the base URI for the panel
@@ -35,16 +35,14 @@
     return panelUri;
   }
 
+  // svelte-ignore state_referenced_locally
+  setLocaleContext(initialLocale);
   setAPIProxyContext();
   // svelte-ignore state_referenced_locally
   setConfigContext(config);
   // svelte-ignore state_referenced_locally
   setUserContext(user);
   createContext('title', '[untitled]');
-
-  $effect(() => {
-    setLocaleContext(initialeLocale);
-  });
 </script>
 
 <Toaster />

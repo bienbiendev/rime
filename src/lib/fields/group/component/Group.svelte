@@ -79,6 +79,7 @@
   {#if !groupOpen}
     <FieldsPreviewTrigger onclick={handleClick}>
       <FieldsPreview
+        preview={config.preview}
         fields={previewFields}
         getField={(field) => form.useField(basePath + field.name)}
       />

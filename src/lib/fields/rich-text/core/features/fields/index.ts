@@ -1,21 +1,27 @@
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
+import type { FieldsPreviewProps } from '$lib/fields/types.js';
 import { Sheet as SheetIcon } from '@lucide/svelte';
+import type { Component } from 'svelte';
 import type { RichTextFeature, RichTextFeatureNode } from '../../../../../types.js';
 import { FieldsExtension } from './extension.js';
 
-type Args = { name: string; label: string; fields: FieldBuilder[] };
+export interface FieldsFeatureOptions {
+  name: string;
+  label: string;
+  fields: FieldBuilder[];
+  preview?: Component<FieldsPreviewProps>;
+}
 
-const fieldsFeatureNode = (args: Args): RichTextFeatureNode => ({
+const fieldsFeatureNode = (args: FieldsFeatureOptions): RichTextFeatureNode => ({
   label: args.label || args.name,
   icon: SheetIcon,
   isActive: ({ editor }) => editor.isActive('richt-text-fields'),
   suggestion: {
-    //@ts-expect-error annoying
     command: ({ editor }) => editor.chain().focus().insertSheet().run()
   }
 });
 
-export const FieldsFeature = (args: Args): RichTextFeature => ({
-  extension: FieldsExtension.configure(args),
+export const FieldsFeature = (args: FieldsFeatureOptions): RichTextFeature => ({
+  extension: FieldsExtension.configure({ fields: args.fields, preview: args.preview }),
   nodes: [fieldsFeatureNode(args)]
 });

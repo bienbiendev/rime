@@ -1,20 +1,28 @@
+import type { CollectionSlug } from '$lib/types';
 import type { Dic } from '$lib/util/types.js';
 import { Node, mergeAttributes } from '@tiptap/core';
 import SvelteNodeViewRenderer from '../../svelte/node-view-renderer.svelte';
 import CounterComponent from './upload.svelte';
 
-export const Upload = Node.create({
+export interface UploadFeatureExtensionOptions {
+  query?: string;
+  slug: CollectionSlug;
+}
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    upload: {
+      insertUpload: (attributes?: Dic) => ReturnType;
+    };
+  }
+}
+
+export const Upload = Node.create<UploadFeatureExtensionOptions>({
   name: 'upload',
   group: 'block',
   atom: true,
-  draggable: true, // Optional: to make the node draggable
+  draggable: true,
   inline: false,
-
-  addOptions() {
-    return {
-      query: null
-    };
-  },
 
   addAttributes() {
     return ['id', 'title', 'sizes', 'mimeType', 'url', 'filename', 'legend'].reduce(
@@ -26,12 +34,10 @@ export const Upload = Node.create({
     );
   },
 
-  //@ts-expect-error annoying
   addCommands() {
     return {
-      insertMedia:
+      insertUpload:
         (attributes = {}) =>
-        //@ts-expect-error annoying
         ({ commands }) => {
           return commands.insertContent({
             type: this.name,

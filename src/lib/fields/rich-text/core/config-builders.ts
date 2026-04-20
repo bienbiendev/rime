@@ -8,6 +8,7 @@ import { ListItem } from '@tiptap/extension-list';
 import Text from '@tiptap/extension-text';
 import Typography from '@tiptap/extension-typography';
 import { Dropcursor, Gapcursor, Placeholder, UndoRedo } from '@tiptap/extensions';
+import { getLocaleContext, LOCALE_CTX } from 'rimecms/panel/context/locale.svelte.js';
 import { API_PROXY, getAPIProxyContext } from '../../../panel/context/api-proxy.svelte.js';
 import { CONFIG_CTX, getConfigContext } from '../../../panel/context/config.svelte.js';
 import { getUserContext, USER_CTX } from '../../../panel/context/user.svelte.js';
@@ -80,12 +81,14 @@ export function buildEditorConfig(args: BuildEditorConfigArgs): RichTextEditorCo
       if ('addNodeView' in feature.extension.config) {
         const originalAddOption = feature.extension.config.addOptions || (() => ({}));
         const contexts = new Map();
+        const localeContext = getLocaleContext();
         const configContext = getConfigContext();
         const apiProxyContext = getAPIProxyContext();
         const userContext = getUserContext();
         contexts.set(CONFIG_CTX, configContext);
         contexts.set(API_PROXY.ROOT, apiProxyContext);
         contexts.set(USER_CTX, userContext);
+        contexts.set(LOCALE_CTX, localeContext);
         feature.extension.config.addOptions = () => {
           // @ts-expect-error
           return { ...originalAddOption(), contexts };

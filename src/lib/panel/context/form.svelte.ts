@@ -37,7 +37,6 @@ function createFormStore(initial: Dic, key: string) {
    * // value will not update if doc.blocks.0.title update
    */
   function getRawValue<T>(path: string) {
-    console.log(path);
     return (snapshot(getValueAtPath(path, form)) as T) || null;
   }
 

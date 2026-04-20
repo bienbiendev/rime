@@ -1,5 +1,6 @@
-import { mount, unmount } from 'svelte';
+// Based on https://github.com/sibiraj-s/svelte-tiptap/blob/master/src/lib/SvelteRenderer.ts
 import type { NodeViewProps } from '@tiptap/core';
+import { mount, unmount } from 'svelte';
 
 interface RendererOptions {
   element: HTMLElement;

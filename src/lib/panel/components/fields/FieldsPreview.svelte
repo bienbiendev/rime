@@ -1,42 +1,49 @@
 <script lang="ts">
   import { FormFieldBuilder } from '$lib/core/fields/builders';
-  import type { FormField } from '$lib/fields/types.js';
+  import type { BaseUseFieldReturn, FieldsPreviewProps, FormField } from '$lib/fields/types.js';
   import { capitalize } from '$lib/util/string.js';
+  import type { Component } from 'svelte';
 
   type Props = {
     fields: FormFieldBuilder<FormField>[];
-    getField: (field: FormFieldBuilder<FormField>) => { visible: boolean; value: any | null };
+    getField: (field: FormFieldBuilder<FormField>) => BaseUseFieldReturn;
+    preview?: Component<FieldsPreviewProps>;
   };
 
-  const { fields, getField }: Props = $props();
-
-  //
+  const { fields, getField, preview }: Props = $props();
 </script>
 
 <div class="rz-render-fields-preview">
-  {#each fields as builder, index (index)}
-    {@const field = getField(builder)}
-    {#if !builder.raw.hidden && field.visible}
-      <div class="rz-render-fields-preview__row" data-visible={field.visible || null}>
-        <div class="rz-render-fields-preview__name">
-          <p>
-            {builder.raw.label || capitalize(builder.name)}
-          </p>
+  {#if preview}
+    {@const Preview = preview}
+    <div class="rz-render-fields-preview__custom" data-visible>
+      <Preview fields={Object.fromEntries(fields.map((field) => [field.name, getField(field)]))} />
+    </div>
+  {:else}
+    {#each fields as builder, index (index)}
+      {@const field = getField(builder)}
+      {#if !builder.raw.hidden && field.visible}
+        <div class="rz-render-fields-preview__row" data-visible={field.visible || null}>
+          <div class="rz-render-fields-preview__name">
+            <p>
+              {builder.raw.label || capitalize(builder.name)}
+            </p>
+          </div>
+          <div class="rz-render-fields-preview__value">
+            {#if builder.raw.table?.cell}
+              {@const ColumnTableCell = builder.raw.table.cell}
+              <span><ColumnTableCell value={field.value} /></span>
+            {:else if builder.cell}
+              {@const Cell = builder.cell}
+              <span><Cell value={field.value} /></span>
+            {:else}
+              <span>{field.value}</span>
+            {/if}
+          </div>
         </div>
-        <div class="rz-render-fields-preview__value">
-          {#if builder.raw.table?.cell}
-            {@const ColumnTableCell = builder.raw.table.cell}
-            <span><ColumnTableCell value={field.value} /></span>
-          {:else if builder.cell}
-            {@const Cell = builder.cell}
-            <span><Cell value={field.value} /></span>
-          {:else}
-            <span>{field.value}</span>
-          {/if}
-        </div>
-      </div>
-    {/if}
-  {/each}
+      {/if}
+    {/each}
+  {/if}
 </div>
 
 <style type="postcss">

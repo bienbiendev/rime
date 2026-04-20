@@ -8,8 +8,7 @@ const uploadFeatureNode: RichTextFeatureNode = {
   icon: Images,
   isActive: ({ editor }) => editor.isActive('richt-text-media'),
   suggestion: {
-    //@ts-expect-error insertMedia is defined by the extension
-    command: ({ editor }) => editor.chain().focus().insertMedia().run()
+    command: ({ editor }) => editor.chain().focus().insertUpload().run()
   }
 };
 

@@ -7,6 +7,7 @@
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import { Pane, PaneGroup, PaneResizer } from '$lib/panel/components/ui/pane/index.js';
   import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
+  import { snapshot } from '$lib/util/state';
   import { Laptop, Smartphone } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
@@ -30,7 +31,8 @@
   const onDataChange = (args: Partial<GenericDoc>) => {
     /** Send message to iframe */
     if (iframe?.contentWindow) {
-      iframe.contentWindow.postMessage(args);
+      // Use snapshot to ensure we're sending a plain object without reactive proxies
+      iframe.contentWindow.postMessage(snapshot(args));
     }
   };
 
@@ -169,8 +171,6 @@
 
   .rz-live-container iframe.mobile {
     width: 320px;
-    /*transform: translateX(-50%);
-		margin-left: 50%;*/
     aspect-ratio: 2 / 3.3;
     scale: 1.25;
   }

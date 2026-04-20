@@ -1,4 +1,7 @@
+import type { FieldBuilder } from '$lib/core/fields/builders/index.js';
 import type { Level } from '@tiptap/extension-heading';
+import type { Component } from 'svelte';
+import type { FieldsPreviewProps } from '../types.js';
 import { BlockquoteFeature } from './core/features/blockquote.js';
 import { BoldFeature } from './core/features/bold.js';
 import { BulletListFeature } from './core/features/bullet-list.js';
@@ -18,7 +21,13 @@ import NodeViewWrapper from './core/svelte/node-view-wrapper.svelte';
 import type { RichTextNodeRenderer, RichTextNodeRendererProps } from './core/types.js';
 import { richTextJSONToText } from './index.js';
 
-export const fields = (args: Parameters<typeof FieldsFeature>[0]) => FieldsFeature(args);
+export const fields = (args: {
+  name: string;
+  label: string;
+  fields: FieldBuilder[];
+  preview: Component<FieldsPreviewProps>;
+}) => FieldsFeature(args);
+
 export const bold = () => BoldFeature;
 export const bulletList = () => BulletListFeature;
 export const heading = (...levels: Level[]) => HeadingFeature(...levels);

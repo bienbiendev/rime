@@ -1,7 +1,7 @@
 import { getContext, setContext } from 'svelte';
 import { getConfigContext } from './config.svelte.js';
 
-const LOCALE_KEY = Symbol('rime.locale');
+export const LOCALE_CTX = Symbol('rime.locale');
 
 function createStore(initial?: string) {
   let code = $state<string>();
@@ -67,9 +67,9 @@ function createStore(initial?: string) {
 
 export function setLocaleContext(initial?: string) {
   const store = createStore(initial);
-  return setContext(LOCALE_KEY, store);
+  return setContext(LOCALE_CTX, store);
 }
 
 export function getLocaleContext() {
-  return getContext<ReturnType<typeof setLocaleContext>>(LOCALE_KEY);
+  return getContext<ReturnType<typeof setLocaleContext>>(LOCALE_CTX);
 }

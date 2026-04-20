@@ -810,7 +810,6 @@ export type DocumentFormContext<T extends WithOptional<GenericDoc, 'id'> = Gener
   typeof setDocumentFormContext<T>
 >;
 
-type InitialDoc = Partial<GenericDoc>;
 type AddBlock = (block: Omit<GenericBlock, 'id' | 'path'>) => void;
 type MoveBlock = (from: number, to: number) => void;
 export type FormSuccessData = { redirectUrl?: string; document?: GenericDoc; message?: string };

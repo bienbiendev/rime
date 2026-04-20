@@ -1,3 +1,4 @@
+// based on https://github.com/sibiraj-s/svelte-tiptap/blob/master/src/lib/SvelteNodeViewRenderer.svelte.ts
 import type {
   DecorationWithType,
   NodeViewProps,
@@ -105,12 +106,15 @@ class SvelteNodeView extends NodeView<
       this.editor.view.focus();
     });
 
-    const svelteComponent = mount(Component, { target, props, context });
-
-    this.renderer = new SvelteRenderer(svelteComponent, {
-      element: target,
-      props
-    });
+    try {
+      this.renderer = new SvelteRenderer(mount(Component, { target, props, context }), {
+        element: target,
+        props
+      });
+    } catch (e) {
+      console.error('Error mounting Svelte component in NodeView', e);
+      throw e;
+    }
 
     this.appendContendDom();
     this.updateElementAttributes();

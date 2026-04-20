@@ -134,3 +134,15 @@ export type SimplerField<T extends FormField> = WithRequired<
   Partial<T>,
   'name' | 'isEmpty' | 'type'
 >;
+
+export type BaseUseFieldReturn = {
+  path: string;
+  value: any;
+  readonly editable: boolean;
+  readonly visible: boolean;
+  readonly error: string | false;
+};
+
+export type FieldsPreviewProps = {
+  fields: Record<string, BaseUseFieldReturn>;
+};
