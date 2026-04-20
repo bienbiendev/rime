@@ -8,13 +8,14 @@
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { panelUrl } from '$lib/panel/util/url.js';
+  import type { GenericDoc } from '$lib/types.js';
   import { trycatchFetch } from '$lib/util/function.js';
   import { Copy, History, Import, Pickaxe, Settings, Trash2 } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
   import { t__ } from '../../../../core/i18n/index.js';
   import Button from '../../ui/button/button.svelte';
 
-  type Props = { form: DocumentFormContext };
+  type Props = { form: DocumentFormContext<GenericDoc> };
 
   const { form }: Props = $props();
 
@@ -84,7 +85,7 @@
     }
     const { id } = await success.json();
     toast.success(t__('common.duplicate_success'));
-    await goto(panelUrl(form.config.kebab, form.values.id));
+    await goto(panelUrl(form.config.kebab, id));
   }
 
   const shouldShowSettings = $derived.by(() => {

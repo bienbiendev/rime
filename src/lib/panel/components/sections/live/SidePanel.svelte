@@ -35,13 +35,13 @@
     return panelUri;
   }
 
-  // svelte-ignore state_referenced_locally
-  setLocaleContext(initialLocale);
   setAPIProxyContext();
   // svelte-ignore state_referenced_locally
   setConfigContext(config);
   // svelte-ignore state_referenced_locally
   setUserContext(user);
+  // svelte-ignore state_referenced_locally
+  setLocaleContext(initialLocale);
   createContext('title', '[untitled]');
 </script>
 

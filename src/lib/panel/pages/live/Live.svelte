@@ -91,12 +91,7 @@
     }
   });
 
-  const ZOOMS = [0.5, 0.66, 1] as const;
-
-  let currentZoom = $state(1);
   let currentDevice = $state<'mobile' | 'desktop'>('mobile');
-
-  const iframeScale = $derived(ZOOMS[currentZoom]);
 </script>
 
 <div class="rz-live-container">

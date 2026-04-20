@@ -65,6 +65,7 @@
     {/if}
 
     {#if form.values.id}
+      {/* @ts-ignore form doc is GenericDoc as form.values.id is defined */ null}
       <Settings {form} />
     {/if}
 

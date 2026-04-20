@@ -800,15 +800,15 @@ export function setDocumentFormContext<T extends WithOptional<GenericDoc, 'id'>>
   return setContext(`${FORM_KEY}.${args.key}`, store);
 }
 
-export function getDocumentFormContext<T extends WithOptional<GenericDoc, 'id'> = GenericDoc>(
-  key: string = 'root'
-) {
+export function getDocumentFormContext<
+  T extends WithOptional<GenericDoc, 'id'> = WithOptional<GenericDoc, 'id'>
+>(key: string = 'root') {
   return getContext<DocumentFormContext<T>>(`${FORM_KEY}.${key}`);
 }
 
-export type DocumentFormContext<T extends WithOptional<GenericDoc, 'id'> = GenericDoc> = ReturnType<
-  typeof setDocumentFormContext<T>
->;
+export type DocumentFormContext<
+  T extends WithOptional<GenericDoc, 'id'> = WithOptional<GenericDoc, 'id'>
+> = ReturnType<typeof setDocumentFormContext<T>>;
 
 type AddBlock = (block: Omit<GenericBlock, 'id' | 'path'>) => void;
 type MoveBlock = (from: number, to: number) => void;
