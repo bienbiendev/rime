@@ -19,8 +19,10 @@ function sortDocumentKeys<T extends Dic>(obj: T): T {
     '_prototype',
     '_live',
     '_children',
+    '_path',
     '_parent',
-    '_position'
+    '_position',
+    '_thumbnail'
   ];
 
   function sortObjectKeys(obj: Dic): Dic {
