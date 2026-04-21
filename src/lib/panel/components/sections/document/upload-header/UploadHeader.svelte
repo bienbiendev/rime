@@ -63,12 +63,6 @@
       form.setValue('file', file);
     }
   });
-
-  $effect(() => {
-    if (preview && form.values._thumbnail !== preview) {
-      form.setValue(`_thumbnail`, preview);
-    }
-  });
 </script>
 
 <div class="rz-doc-upload-header">
@@ -78,7 +72,7 @@
         {#if form.values.mimeType.includes('image')}
           <div class="rz-doc-upload-header__prewiew-grid">
             {#key form.values.title}
-              <img src={form.values.url || form.values._thumbnail} alt="preview" />
+              <img src={form.values.url || form.values._thumbnail || preview} alt="preview" />
             {/key}
           </div>
         {:else}
