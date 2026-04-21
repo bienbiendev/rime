@@ -3,12 +3,13 @@
 
 Headless CMS powered by SvelteKit.
 
-> [!NOTE]
-> Not ready for production
+![NPM Version](https://img.shields.io/npm/v/rimecms)
+![NPM Downloads](https://img.shields.io/npm/dm/rimecms)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bienbiendev/rime/blob/main/LICENSE)
 
 ![alt backend capture](https://github.com/bienbiendev/rime/blob/main/assets/preview.png?raw=true)
 
-[Documentation (in progress)](https://github.com/bienbiendev/rime-doc/tree/master/docs)
+[Documentation](https://github.com/bienbiendev/rime-doc/tree/master/docs)
 
 ## Features
 
@@ -85,7 +86,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { rime } from 'rimecms/vite';
 
 export default defineConfig({
-	plugins: [rime(), sveltekit()]
+  plugins: [rime(), sveltekit()]
 });
 ```
 
@@ -200,21 +201,21 @@ export default rime({
 
 ```ts
 export const load = async (event: LayoutServerLoadEvent) => {
-	const { rime } = event.locals;
-	// Get an Area document
-	const menu = await rime.area('menu').find();
-	// Get all pages documents
-	const pages = await rime.collection('pages').findAll({ locale: 'en' });
-	// Get a page byId
-	const home = await rime.collection('pages').findById({ locale: 'en', id: 'some-id' });
-	// Get a user with a query
-	const [user] = await rime.collection('users').find({
-		query: `where[email][equals]=some@email.com` // qs query or ParsedQsQuery
-	});
-	// Get some config values
-	const languages = rime.config.getLocalesCodes();
-	const collections = rime.config.collections;
-	//...
+  const { rime } = event.locals;
+  // Get an Area document
+  const menu = await rime.area('menu').find();
+  // Get all pages documents
+  const pages = await rime.collection('pages').findAll({ locale: 'en' });
+  // Get a page byId
+  const home = await rime.collection('pages').findById({ locale: 'en', id: 'some-id' });
+  // Get a user with a query
+  const [user] = await rime.collection('users').find({
+    query: `where[email][equals]=some@email.com` // qs query or ParsedQsQuery
+  });
+  // Get some config values
+  const languages = rime.config.getLocalesCodes();
+  const collections = rime.config.collections;
+  //...
 };
 ```
 
@@ -223,13 +224,13 @@ export const load = async (event: LayoutServerLoadEvent) => {
 ```ts
 const { docs } = await fetch('http://localhost:5173/api/pages').then((r) => r.json());
 const { docs } = await fetch('http://localhost:5173/api/pages?sort=title&limit=1').then((r) =>
-	r.json()
+  r.json()
 );
 const { docs } = await fetch(
-	'http://localhost:5173/api/pages?where[author][equals]=some-id&locale=en`;'
+  'http://localhost:5173/api/pages?where[author][equals]=some-id&locale=en`;'
 ).then((r) => r.json());
 const { docs } = await fetch(
-	'http://localhost:5173/api/pages?where[author.email][equals]=some@email.com&locale=en`;'
+  'http://localhost:5173/api/pages?where[author.email][equals]=some@email.com&locale=en`;'
 ).then((r) => r.json());
 ```
 
@@ -260,10 +261,11 @@ It's doing bascically `vite build` under the hood and create the polka server fi
 - [x] more better-auth integration
 - [x] Handle relation poperties in queries
 - [~] Documentation
-- [ ] Live Edit system in practice
+- [ ] configurable files storage adapter (local, s3, etc)
+- [ ] other storage adapter (postgress, turso, etc)
 - [ ] auto-saved draft
+- [ ] Live Edit system in practice
 - [ ] Put bin commands in a separate package ex: @rime/kit
-- [ ] configurable medias/config path
 
 ## Acknowledgments
 
