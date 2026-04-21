@@ -26,6 +26,7 @@
   const deleteFile = () => {
     preview = null;
     file = null;
+    form.setValue('url', null);
     form.setValue('file', null);
     form.setValue('filename', null);
     form.setValue('mimeType', null);
