@@ -34,8 +34,8 @@
 <style lang="postcss">
   /** */
   :root {
-    --rz-card-hover-bg: light-dark(hsl(var(--rz-gray-14)), hsl(var(--rz-gray-4)));
-    --rz-card-bg: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));
+    --rz-card-hover-bg: light-dark(hsl(var(--rz-gray-18)), hsl(var(--rz-gray-4)));
+    --rz-card-bg: light-dark(hsl(var(--rz-gray-17)), hsl(var(--rz-gray-3)));
   }
 
   .rz-document-card {
