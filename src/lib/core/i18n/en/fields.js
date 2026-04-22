@@ -9,5 +9,6 @@ export default {
   generate_from: 'Generate from $1',
   get_data_from: 'Get data from',
   filter_by_type: 'Filter by type',
-  all_types: 'All types'
+  all_types: 'All types',
+  select: 'Select'
 };
