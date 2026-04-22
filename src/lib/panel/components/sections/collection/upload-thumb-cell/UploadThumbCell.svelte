@@ -9,9 +9,10 @@
     class?: string;
   };
   const { url, class: className, mimeType }: Props = $props();
+
   const mimeTypeResolved = $derived.by(() => {
     if (mimeType) return mimeType;
-    if (url) return getMimeTypeFromExtension(url) || '';
+    if (url) return getMimeTypeFromExtension(url.split('.').pop() || '') || '';
     return '';
   });
 </script>
