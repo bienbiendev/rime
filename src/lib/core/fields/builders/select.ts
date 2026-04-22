@@ -39,6 +39,7 @@ class PickFieldBuilder<T extends FieldWithOptions = FieldWithOptions> extends Fo
         const hasNoLabel = !('label' in option);
         if (hasNoLabel) {
           return {
+            ...option,
             value: option.value,
             label: capitalize(option.value)
           };
