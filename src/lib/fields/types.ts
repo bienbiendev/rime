@@ -6,6 +6,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { Component } from 'svelte';
 import type { User } from '../core/collections/auth/types.js';
 import type { FieldPanelTableConfig } from '../panel/types.js';
+
 export type { BlocksField, BlocksFieldBlock } from './blocks/index.js';
 export type { CheckboxField } from './checkbox/index.js';
 export type { ComboBoxField } from './combobox/index.js';
@@ -86,11 +87,13 @@ export type FieldHookContext<T extends FormField = FormField> = {
   config: T;
 };
 
+/** Field hook for client/server operations */
 export type FieldHookShared<T extends FormField = any> = (
   value: any,
   context: { config: T; data: Dic }
 ) => any;
 
+/** Field hook for client-side operations */
 export type FieldHookClient = (
   value: any,
   context: {
@@ -101,6 +104,7 @@ export type FieldHookClient = (
   }
 ) => any;
 
+/** Field hook for server-side operations */
 export type FieldHook<T extends FormField = any> = (
   value: any,
   context: FieldHookContext<T>

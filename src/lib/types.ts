@@ -33,7 +33,7 @@ export type {
 } from './core/types/doc.js';
 
 // Fields types
-export type { Field, FormField, Option, RelationValue } from '$lib/fields/types.js';
+export type * from '$lib/fields/types.js';
 
 // Panel types
 export type {
