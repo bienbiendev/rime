@@ -18,7 +18,7 @@ export const setDocumentThumbnail = Hooks.beforeRead<'raw'>(async (args) => {
   ): c is BuiltCollection & {
     asThumbnail: string;
   } => {
-    return config.type === 'collection' && !!config.asThumbnail;
+    return c.type === 'collection' && !!c.asThumbnail;
   };
 
   const paramSelect = args.context.params.select;
@@ -30,7 +30,7 @@ export const setDocumentThumbnail = Hooks.beforeRead<'raw'>(async (args) => {
 
   if (shouldSetThumbnail) {
     const relationValue = getValueAtPath<RelationValue<UploadDoc>>(config.asThumbnail, doc);
-    if (!relationValue) return args;
+    if (!relationValue || (Array.isArray(relationValue) && relationValue.length === 0)) return args;
 
     const unwraped = Array.isArray(relationValue) ? relationValue[0] : relationValue;
     if (typeof unwraped === 'string') return args;
