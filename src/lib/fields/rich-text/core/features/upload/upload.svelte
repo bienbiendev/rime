@@ -20,11 +20,12 @@
     url: string | null;
     filename: string | null;
     legend: string;
+    _fresh: boolean;
   };
 
   let { node, updateAttributes, extension }: NodeViewProps = $props();
   let isDialogOpen = $state(false);
-  let selected = $state<Omit<NodeAttributes, 'legend'> | null>();
+  let selected = $state<Omit<NodeAttributes, 'legend' | '_fresh'> | null>();
   let legendElement = $state<HTMLParagraphElement>();
   let legend = $state('');
   let dialogLegendOpen = $state(false);
@@ -51,6 +52,10 @@
       }
     } else {
       selected = null;
+    }
+    if (node.attrs._fresh) {
+      // If the resource is fresh, we want to open the dialog to select a resource
+      isDialogOpen = true;
     }
   });
 
@@ -101,7 +106,8 @@
       sizes: null,
       mimeType: null,
       filename: null,
-      legend: null
+      legend: null,
+      _fresh: false
     });
   }
 
@@ -116,7 +122,8 @@
       sizes: selected.sizes,
       mimeType: selected.mimeType,
       filename: selected.filename,
-      legend
+      legend,
+      _fresh: false
     } as NodeAttributes);
   }
 </script>
@@ -167,7 +174,7 @@
   </div>
 {/snippet}
 
-{#snippet media(attributes: Omit<NodeAttributes, 'legend'>)}
+{#snippet media(attributes: Omit<NodeAttributes, 'legend' | '_fresh'>)}
   <div class="rz-richtext-media__media">
     {#if attributes.mimeType?.includes('image')}
       <img src={attributes.url} alt="rich text" />
@@ -177,7 +184,7 @@
   </div>
 {/snippet}
 
-<Command.Dialog bind:open={isDialogOpen}>
+<Command.Dialog bind:open={isDialogOpen} preventScroll={false}>
   <Command.Input placeholder="Select an image" />
 
   <Command.List>

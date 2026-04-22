@@ -25,10 +25,14 @@ export const Resource = Node.create<ResourceFeatureExtensionOptions>({
   inline: false,
 
   addAttributes() {
-    return ['id', 'title', '_type', '_thumbnail'].reduce((acc: Dic, key) => {
-      acc[key] = { default: null };
-      return acc;
-    }, {});
+    return ['id', 'title', '_type', '_thumbnail'].reduce(
+      (acc: Dic, key) => {
+        acc[key] = { default: null };
+        return acc;
+      },
+      // Fresh attributes allowing to show the dialog immediately after insertion
+      { _fresh: { default: true } }
+    );
   },
 
   addCommands() {

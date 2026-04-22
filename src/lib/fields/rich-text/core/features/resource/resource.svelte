@@ -35,6 +35,10 @@
     } else {
       selected = null;
     }
+    if (node.attrs._fresh) {
+      // If the resource is fresh, we want to open the dialog to select a resource
+      isDialogOpen = true;
+    }
   });
 
   const APIProxy = getAPIProxyContext();
@@ -50,7 +54,7 @@
   $effect(() => {
     if (ressource.data) {
       docs = ressource.data.docs;
-      // Update atttributes if document title has changed
+      // Update atttributes if document has changed
       if (node.attrs.id) {
         selected = docs.find((doc) => doc.id === node.attrs.id);
       }
@@ -58,27 +62,22 @@
   });
 
   // Handle dialog selection
-  function handleResourceSelection(doc: GenericDoc) {
-    // Close the dialog
+  function handleResourceSelection(doc: RequiredNodeAttributes) {
     isDialogOpen = false;
-
-    // Update the selected resource
     selected = doc;
-
-    // Update node attributes
     updateNodeAttributes();
   }
 
   // Handle removing resource
   function removeResource() {
     selected = null;
-
     // Update node attributes with empty values
     updateAttributes({
       id: null,
       title: null,
-      slug: null,
-      _thumbnail: null
+      _type: null,
+      _thumbnail: null,
+      _fresh: false
     });
   }
 
@@ -90,7 +89,8 @@
       id: selected.id,
       title: selected.title,
       _type: extension.options.slug,
-      _thumbnail: selected._thumbnail
+      _thumbnail: selected._thumbnail,
+      _fresh: false
     });
   }
 </script>
@@ -102,16 +102,16 @@
     class:rz-richtext-resource--selected={!!selected}
   >
     {#if !selected}
-      <Button class="rz-richtext-resource__add" variant="outline" size="sm" onclick={handleClick}
-        >Add a resource</Button
-      >
+      <Button class="rz-richtext-resource__add" variant="outline" size="sm" onclick={handleClick}>
+        Add a resource
+      </Button>
     {:else}
       <CardResource resource={selected as RequiredNodeAttributes} onCloseClick={removeResource} />
     {/if}
   </div>
 </NodeViewWrapper>
 
-<Command.Dialog bind:open={isDialogOpen}>
+<Command.Dialog bind:open={isDialogOpen} preventScroll={false}>
   <Command.Input placeholder="Select a resource" />
 
   <Command.List>

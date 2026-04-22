@@ -13,16 +13,18 @@
     open = $bindable(false),
     ref = $bindable(null),
     value = $bindable(''),
+    preventScroll = true,
     children,
     ...restProps
   }: WithoutChildrenOrChild<DialogPrimitive.RootProps> &
     WithoutChildrenOrChild<CommandPrimitive.RootProps> & {
       children: Snippet;
+      preventScroll?: boolean;
     } = $props();
 </script>
 
 <Dialog.Root bind:open {...restProps}>
-  <Dialog.Content class="rz-command-dialog-content">
+  <Dialog.Content class="rz-command-dialog-content" {preventScroll}>
     <Command
       class="rz-command-dialog-content__command"
       {...restProps}

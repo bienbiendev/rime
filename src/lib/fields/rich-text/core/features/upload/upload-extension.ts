@@ -30,7 +30,9 @@ export const Upload = Node.create<UploadFeatureExtensionOptions>({
         acc[key] = { default: null };
         return acc;
       },
-      {}
+      // We use this attribute to determine if the resource is fresh or not.
+      // If it's fresh, we want to open the dialog
+      { _fresh: { default: true } }
     );
   },
 
