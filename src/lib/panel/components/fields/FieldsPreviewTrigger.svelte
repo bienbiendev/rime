@@ -13,7 +13,7 @@
 <style>
   .rz-fields-preview__trigger {
     display: block;
-    background-color: var(--rz-group-preview-bg);
+    background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));
     width: 100%;
     text-align: left;
   }
