@@ -5,8 +5,8 @@
   import { Toaster } from '$lib/panel/components/ui/sonner';
   import { setAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import { setConfigContext } from '$lib/panel/context/config.svelte.js';
-  import createContext from '$lib/panel/context/createContext.svelte.js';
   import { setLocaleContext } from '$lib/panel/context/locale.svelte.js';
+  import { setTitleContext } from '$lib/panel/context/title';
   import { setUserContext } from '$lib/panel/context/user.svelte.js';
   import { toKebabCase } from '$lib/util/string';
   import ScrollArea from '../../ui/scroll-area/scroll-area.svelte';
@@ -42,7 +42,7 @@
   setUserContext(user);
   // svelte-ignore state_referenced_locally
   setLocaleContext(initialLocale);
-  createContext('title', '[untitled]');
+  setTitleContext('[untitled]');
 </script>
 
 <Toaster />

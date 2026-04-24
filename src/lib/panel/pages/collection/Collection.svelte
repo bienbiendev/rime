@@ -17,8 +17,8 @@
   import PageHeader from '$lib/panel/components/ui/page-header/PageHeader.svelte';
   import { setCollectionContext } from '$lib/panel/context/collection.svelte.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
+  import { getTitleContext } from '$lib/panel/context/title';
   import { CopyPlus } from '@lucide/svelte';
-  import { getContext } from 'svelte';
 
   type Props = {
     slug: string;
@@ -60,7 +60,7 @@
     collection.docs = data.docs;
   });
 
-  const titleContext = getContext<{ value: string }>('title');
+  const titleContext = getTitleContext();
 
   $effect(() => {
     titleContext.value = collection.config.label.plural;

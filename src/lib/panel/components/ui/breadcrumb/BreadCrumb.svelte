@@ -1,18 +1,18 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
+  import { getTitleContext } from '$lib/panel/context/title';
   import type { Route } from '$lib/types';
-  import { getContext } from 'svelte';
   import Button from '../button/button.svelte';
 
   const config = getConfigContext();
-  const titleContext = getContext<{ value: string }>('title');
+  const titleContext = getTitleContext();
 
   const aria = $derived<Route[]>(page.data.aria);
 </script>
 
 <div class="rz-aria">
-  {#each aria as route}
+  {#each aria as route, index (index)}
     {@const Icon = config.raw.icons[route.icon]}
     {#if route.url}
       <Button variant="text" icon={Icon} href={route.url}>
@@ -26,6 +26,8 @@
 </div>
 
 <style lang="postcss">
+  @import '../../../../panel/style/mixins/index.css';
+
   .rz-aria {
     display: flex;
     align-items: center;

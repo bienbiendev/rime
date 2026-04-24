@@ -27,6 +27,7 @@ import { getAPIProxyContext } from './api-proxy.svelte.js';
 import { getCollectionContext } from './collection.svelte.js';
 import { setErrorsContext } from './errors.svelte.js';
 import { getLocaleContext } from './locale.svelte.js';
+import { getTitleContext } from './title.js';
 import { getUserContext } from './user.svelte.js';
 
 function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = GenericDoc>({
@@ -62,7 +63,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   const nestedLevel = initLevel();
   const isLiveEdit = !!onDataChange;
   const locale = getLocaleContext();
-  const titleContext = getContext<{ value: string }>('title');
+  const titleContext = getTitleContext();
   const initialTitle = initTitle();
   let title = $state(initialTitle);
 

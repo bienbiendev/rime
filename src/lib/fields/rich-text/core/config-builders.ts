@@ -1,5 +1,6 @@
 import { t__ } from '$lib/core/i18n/index.js';
 import type { RichTextEditorConfig, RichTextFeature } from '$lib/fields/rich-text/core/types.js';
+import { getTitleContext, TITLE_CTX } from '$lib/panel/context/title.js';
 import type { WithRequired } from '$lib/util/types.js';
 import type { EditorOptions } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
@@ -85,6 +86,9 @@ export function buildEditorConfig(args: BuildEditorConfigArgs): RichTextEditorCo
         const configContext = getConfigContext();
         const apiProxyContext = getAPIProxyContext();
         const userContext = getUserContext();
+        const titleContext = getTitleContext();
+        contexts.set(TITLE_CTX, titleContext);
+        contexts.set(CONFIG_CTX, configContext);
         contexts.set(CONFIG_CTX, configContext);
         contexts.set(API_PROXY.ROOT, apiProxyContext);
         contexts.set(USER_CTX, userContext);

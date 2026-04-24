@@ -5,12 +5,12 @@
   import Nav from '$lib/panel/components/ui/nav/Nav.svelte';
   import { Toaster } from '$lib/panel/components/ui/sonner';
   import { setConfigContext } from '$lib/panel/context/config.svelte.js';
-  import createContext from '$lib/panel/context/createContext.svelte.js';
   import { setLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { setUserContext } from '$lib/panel/context/user.svelte.js';
   import type { Route } from '$lib/panel/types.js';
   import { onMount, type Snippet } from 'svelte';
   import { setAPIProxyContext } from '../context/api-proxy.svelte.js';
+  import { setTitleContext } from '../context/title.js';
 
   type Props = {
     routes: Record<string, Route[]>;
@@ -28,7 +28,7 @@
   setConfigContext(config);
   // svelte-ignore state_referenced_locally
   setUserContext(user);
-  createContext('title', '[untitled]');
+  setTitleContext('[untitled]');
   setAPIProxyContext();
 
   const locale = $derived(setLocaleContext(initialeLocale));
