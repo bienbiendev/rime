@@ -6,12 +6,14 @@ import { FieldsFeature, type FieldsFeatureOptions } from './core/features/fields
 import { HeadingFeature } from './core/features/heading.js';
 import { HorizontalRuleFeature } from './core/features/hr/hr.js';
 import { ItalicFeature } from './core/features/italic.js';
-import { LinkFeature } from './core/features/link/index.js';
+import { LinkFeature, type LinkFeatureOptions } from './core/features/link/index.js';
 import { OrderedListFeature } from './core/features/ordered-list.js';
 import { ParagraphFeature } from './core/features/paragraph.js';
 import { ResourceFeature } from './core/features/resource/index.js';
+import type { ResourceFeatureExtensionOptions } from './core/features/resource/resource-extension.js';
 import type { RichTextResource } from './core/features/resource/types.js';
 import { UploadFeature } from './core/features/upload/index.js';
+import type { UploadFeatureExtensionOptions } from './core/features/upload/upload-extension.js';
 import RenderRichText from './core/render-rich-text.svelte';
 import SvelteNodeViewRenderer from './core/svelte/node-view-renderer.svelte';
 import NodeViewWrapper from './core/svelte/node-view-wrapper.svelte';
@@ -23,13 +25,13 @@ export const bold = () => BoldFeature;
 export const bulletList = () => BulletListFeature;
 export const heading = (...levels: Level[]) => HeadingFeature(...levels);
 export const hr = () => HorizontalRuleFeature;
-export const link = (options?: Parameters<typeof LinkFeature>[0]) => LinkFeature(options);
+export const link = (options?: LinkFeatureOptions) => LinkFeature(options);
 export const paragraph = () => ParagraphFeature;
 export const orderedList = () => OrderedListFeature;
 export const blockquote = () => BlockquoteFeature;
 export const italic = () => ItalicFeature;
-export const upload = (args: Parameters<typeof UploadFeature>[0]) => UploadFeature(args);
-export const resource = (args: Parameters<typeof ResourceFeature>[0]) => ResourceFeature(args);
+export const upload = (args: UploadFeatureExtensionOptions) => UploadFeature(args);
+export const resource = (args: ResourceFeatureExtensionOptions) => ResourceFeature(args);
 
 export { NodeViewWrapper, RenderRichText, richTextJSONToText, SvelteNodeViewRenderer };
 //
