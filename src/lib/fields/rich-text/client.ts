@@ -25,7 +25,7 @@ export const bold = () => BoldFeature;
 export const bulletList = () => BulletListFeature;
 export const heading = (...levels: Level[]) => HeadingFeature(...levels);
 export const hr = () => HorizontalRuleFeature;
-export const link = (options?: LinkFeatureOptions) => LinkFeature(options);
+export const link = (options?: Partial<LinkFeatureOptions>) => LinkFeature(options);
 export const paragraph = () => ParagraphFeature;
 export const orderedList = () => OrderedListFeature;
 export const blockquote = () => BlockquoteFeature;
