@@ -7,6 +7,7 @@
   import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+  import type { FormContext } from '$lib/panel/context/form.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import { panelUrl } from '$lib/panel/util/url.js';
   import { moveItem } from '$lib/util/array.js';
@@ -18,7 +19,7 @@
   import Upload from './upload/Upload.svelte';
 
   // Props
-  type Props = { path: string; config: RelationField; form: DocumentFormContext };
+  type Props = { path: string; config: RelationField; form: DocumentFormContext | FormContext };
   const { path, config, form }: Props = $props();
 
   // Context
@@ -77,7 +78,7 @@
         item.url = doc._thumbnail;
       }
     }
-    if (form.isLive) {
+    if ('isLive' in form && form.isLive) {
       item.livePreview = doc;
     }
     return item;
@@ -88,7 +89,7 @@
     const url = new URL(apiUrl(relationConfig.kebab));
 
     // Add depth parameter if in live context
-    if (form.isLive) {
+    if ('isLive' in form && form.isLive) {
       url.searchParams.append('depth', '1');
     }
 
@@ -166,7 +167,7 @@
       if (config.localized) {
         relation.locale = locale.code;
       }
-      if (form.isLive) {
+      if ('isLive' in form && form.isLive) {
         if (item && item.livePreview) {
           relation.livePreview = snapshot(item.livePreview);
         }
@@ -181,17 +182,23 @@
   // So when user save the nested doc
   // it doesn't save this one
   const onRelationCreation = () => {
-    form.isDisabled = true;
+    if ('isDisabled' in form) {
+      form.isDisabled = true;
+    }
   };
 
   // Enable the form on cancel
   const onRelationCreationCanceled = () => {
-    form.isDisabled = false;
+    if ('isDisabled' in form) {
+      form.isDisabled = false;
+    }
   };
 
   const onRelationCreated = async (doc: GenericDoc) => {
     // Enabled the form
-    form.isDisabled = false;
+    if ('isDisabled' in form) {
+      form.isDisabled = false;
+    }
     // update resssource
     ressource.data?.docs.push(doc);
     // update collection if present
@@ -237,7 +244,7 @@
     {path}
     many={!!config.many}
     hasError={!!field.error}
-    formNestedLevel={form.nestedLevel}
+    formNestedLevel={'nestedLevel' in form ? form.nestedLevel : 0}
     readOnly={form.readOnly}
     {nothingToSelect}
     {onRelationCreated}

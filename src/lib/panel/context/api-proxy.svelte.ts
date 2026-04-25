@@ -72,11 +72,20 @@ function createAPIProxy() {
     });
   }
 
+  function invalidate(pattern: string | RegExp) {
+    resources.forEach((resource, url) => {
+      if (typeof pattern === 'string' ? url.includes(pattern) : pattern.test(url)) {
+        resource.refresh();
+      }
+    });
+  }
+
   return {
     getRessource,
     invalidateAll,
+    invalidate,
     get urls() {
-      return Array.from(resources.entries()).map(([url, resource]) => url);
+      return Array.from(resources.entries()).map(([url]) => url);
     }
   };
 }

@@ -577,6 +577,8 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     async function handleSuccess(data?: FormSuccessData) {
       const redirect = data?.redirectUrl || false;
       const message = data?.message || t__('common.generic_success');
+      // Invalidate all queries to ensure data consistency across the app
+      apiProxy.invalidate(documentConfig.slug);
 
       if (redirect) {
         if (beforeRedirect) {
@@ -590,9 +592,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       // Assign documents returned from the server to the form state
       doc = (data?.document || doc) as T;
       initialDoc = doc;
-      // Invalidate all queries to ensure data consistency across the app
-      apiProxy.invalidateAll();
-
       toast.success(message);
 
       // Callbacks
@@ -684,7 +683,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       actionSuffix = '?/update';
     }
     // Add a redirect parameter if we're in a nested form ex: relation creation
-    // to prevent reidrect after creation
+    // to prevent redirect after creation
     const redirectParam = nestedLevel > 0 ? `&${PARAMS.REDIRECT}=false` : '';
     // Combine all parts to form the final action URL
     return `${panelUri}${actionSuffix}${redirectParam}`;
