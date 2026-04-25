@@ -47,11 +47,11 @@ export const FieldsExtension = Node.create<FieldsFeatureExtensionOptions>({
   },
 
   parseHTML() {
-    return [{ tag: 'richt-text-fields' }];
+    return [{ tag: this.name }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['richt-text-fields', mergeAttributes(HTMLAttributes)];
+    return [this.name, mergeAttributes(HTMLAttributes)];
   },
 
   addNodeView() {

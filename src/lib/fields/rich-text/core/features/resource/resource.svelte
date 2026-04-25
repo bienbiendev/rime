@@ -44,9 +44,7 @@
   const APIProxy = getAPIProxyContext();
 
   // svelte-ignore state_referenced_locally
-  const url = extension.options.query
-    ? apiUrl(extension.options.slug, `?${extension.options.query}`)
-    : apiUrl(extension.options.slug);
+  const url = apiUrl(extension.options.source);
 
   const ressource = APIProxy.getRessource<{ docs: GenericDoc[] }>(url);
   let docs = $state<GenericDoc[]>([]);
@@ -88,7 +86,7 @@
     updateAttributes({
       id: selected.id,
       title: selected.title,
-      _type: extension.options.slug,
+      _type: extension.options.source,
       _thumbnail: selected._thumbnail,
       _fresh: false
     });

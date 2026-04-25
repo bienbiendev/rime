@@ -62,9 +62,7 @@
   const APIProxy = getAPIProxyContext();
 
   // svelte-ignore state_referenced_locally
-  const url = extension.options.query
-    ? apiUrl(extension.options.slug, `?${extension.options.query}`)
-    : apiUrl(extension.options.slug);
+  const url = apiUrl(extension.options.source);
 
   const ressource = APIProxy.getRessource<{ docs: UploadDoc[] }>(url);
   let docs = $state<UploadDoc[]>([]);

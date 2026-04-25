@@ -7,7 +7,7 @@ import { FieldsExtension } from './extension.js';
 
 export interface FieldsFeatureOptions {
   name: string;
-  label: string;
+  label?: string;
   fields: FieldBuilder[];
   preview?: Component<FieldsPreviewProps>;
 }
@@ -15,13 +15,15 @@ export interface FieldsFeatureOptions {
 const fieldsFeatureNode = (args: FieldsFeatureOptions): RichTextFeatureNode => ({
   label: args.label || args.name,
   icon: SheetIcon,
-  isActive: ({ editor }) => editor.isActive('richt-text-fields'),
+  isActive: ({ editor }) => editor.isActive('richt-text-fields-' + args.name),
   suggestion: {
     command: ({ editor }) => editor.chain().focus().insertSheet().run()
   }
 });
 
 export const FieldsFeature = (args: FieldsFeatureOptions): RichTextFeature => ({
-  extension: FieldsExtension.configure({ fields: args.fields, preview: args.preview }),
+  extension: FieldsExtension.configure({ fields: args.fields, preview: args.preview }).extend({
+    name: 'richt-text-fields-' + args.name
+  }),
   nodes: [fieldsFeatureNode(args)]
 });

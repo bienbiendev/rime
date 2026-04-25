@@ -40,14 +40,14 @@
   const locale = getLocaleContext();
   let resources = $state<Resource<LinkResource[]>[]>([]);
   let resourcesFlatMap = $state<LinkResource[]>();
+
   $effect(() => {
-    if (Array.isArray(options?.resources) && !resources.length) {
-      resources = options.resources.map((resourceOption) => {
-        let params = resourceOption.query
-          ? `?${resourceOption.query}&select=title,url`
-          : '?select=title,url';
+    if (Array.isArray(options?.sources) && !resources.length) {
+      resources = options.sources.map((source) => {
+        const [slug, query] = source.split('?');
+        let params = query || '' ? `?${query}&select=title,url` : '?select=title,url';
         params = locale.code ? `${params}&locale=${locale.code}` : params;
-        const url = `${apiUrl(resourceOption.slug)}${params}`;
+        const url = `${apiUrl(slug)}${params}`;
         return APIProxy.getRessource<LinkResource[]>(url, {
           transformData: (data) => {
             return 'docs' in data ? data.docs : 'doc' in data ? [data.doc] : data;
@@ -208,7 +208,7 @@
           />
           <Button size="icon-sm" variant="ghost" icon={Trash} onclick={onDelete} />
         {:else}
-          {#if options?.resources?.length}
+          {#if options?.sources?.length}
             <Button
               onclick={() => (resourceDialogOpen = true)}
               size="icon-sm"

@@ -5,8 +5,7 @@ import SvelteNodeViewRenderer from '../../svelte/node-view-renderer.svelte';
 import CounterComponent from './upload.svelte';
 
 export interface UploadFeatureExtensionOptions {
-  query?: string;
-  slug: CollectionSlug;
+  source: `${CollectionSlug}${string}`;
 }
 
 declare module '@tiptap/core' {

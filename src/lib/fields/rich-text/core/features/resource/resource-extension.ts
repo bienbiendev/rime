@@ -13,8 +13,8 @@ declare module '@tiptap/core' {
 }
 
 export interface ResourceFeatureExtensionOptions {
-  query?: string;
-  slug: PrototypeSlug;
+  label?: string;
+  source: `${PrototypeSlug}${string}`;
 }
 
 export const Resource = Node.create<ResourceFeatureExtensionOptions>({
@@ -49,11 +49,11 @@ export const Resource = Node.create<ResourceFeatureExtensionOptions>({
   },
 
   parseHTML() {
-    return [{ tag: 'richt-text-resource' }];
+    return [{ tag: this.name }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['richt-text-resource', mergeAttributes(HTMLAttributes)];
+    return [this.name, mergeAttributes(HTMLAttributes)];
   },
 
   addNodeView() {

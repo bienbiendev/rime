@@ -30,7 +30,7 @@ const linkItem: RichTextFeatureMark = {
 };
 
 export type LinkFeatureOptions = LinkOptions & {
-  resources?: Array<{ slug: PrototypeSlug; query?: string }>;
+  sources?: Array<`${PrototypeSlug}${string}`>;
 };
 export const LinkFeature = (options?: Partial<LinkFeatureOptions>): RichTextFeature => ({
   extension: linkExtension

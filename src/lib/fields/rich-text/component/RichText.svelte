@@ -3,7 +3,7 @@
   import { root } from '$lib/panel/components/fields/root.svelte.js';
   import { Editor, type JSONContent } from '@tiptap/core';
   import { onMount } from 'svelte';
-  import { buildEditorConfig } from '../core/config-builders.js';
+  import { buildEditorConfig } from '../core/build-editor-config.js';
   import type { RichTextFeature } from '../core/types';
   import { hasSuggestion } from '../util.js';
   import EditorBubbleMenu from './bubble-menu/bubble-menu.svelte';
