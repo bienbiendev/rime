@@ -18,8 +18,8 @@ const tabWriter = tab('writer').fields(
     bold(),
     italic(),
     LoremFeature,
-    resource({ slug: 'pages' }),
-    upload({ slug: 'medias', query: 'where[mimeType][like]=image' }),
+    resource({ source: 'pages' }),
+    upload({ source: 'medias?where[mimeType][like]=image' }),
     heading(2, 3),
     linkFeature()
   )

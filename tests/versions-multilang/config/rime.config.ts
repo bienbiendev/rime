@@ -44,7 +44,7 @@ const tabWriter = tab('writer').fields(
   richText('text').features(
     bold(),
     italic(),
-    upload({ slug: 'medias', query: 'where[mimeType][like]=image' }),
+    upload({ source: 'medias?where[mimeType][like]=image' }),
     heading(2, 3),
     linkFeature()
   )
