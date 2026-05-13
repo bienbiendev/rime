@@ -111,6 +111,17 @@ export class RichTextFieldBuilder extends FormFieldBuilder<RichTextField> {
 export const richText = (name: string) => new RichTextFieldBuilder(name);
 
 /**
+ * Type guard to check if a value is a JSONContent object.
+ *
+ * @example
+ * isJSONContent({ type: 'paragraph', content: [] }) // true
+ * isJSONContent('Just a string') // false
+ */
+export const isJSONContent = (value: any): value is JSONContent => {
+  return typeof value === 'object' && value !== null && 'content' in value;
+};
+
+/**
  * Converts rich text JSON content to plain text.
  * Extracts text content from a TipTap/ProseMirror JSON structure.
  *

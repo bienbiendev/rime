@@ -7,7 +7,7 @@ import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant.js';
 import { getFieldConfigByPath } from '$lib/core/fields/util.js';
 import { buildConfigMap } from '$lib/core/operations/configMap/index.js';
 import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '$lib/core/types/doc.js';
-import { richTextJSONToText } from '$lib/fields/rich-text/index.js';
+import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
 import type { FormField, SimplerField } from '$lib/fields/types.js';
 import { normalizeFieldPath } from '$lib/util/doc.js';
 import { random } from '$lib/util/index.js';
@@ -82,7 +82,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     } else {
       function computeTitleFromValue(value: unknown): string {
         // Handle rich text value
-        if (isObjectLiteral(value) && 'content' in value) {
+        if (isJSONContent(value)) {
           return richTextJSONToText(value as any);
         }
         if (typeof value === 'string') {

@@ -2,8 +2,9 @@ import type { BuiltCollection } from '$lib/core/config/types.js';
 import { VERSIONS_STATUS } from '$lib/core/constant.js';
 import { buildConfigMap } from '$lib/core/operations/configMap/index.js';
 import { isBlocksFieldRaw, type BlocksFieldRaw } from '$lib/fields/blocks/index.js';
+import { isJSONContent } from '$lib/fields/rich-text';
+import { richTextJSONToText } from '$lib/fields/rich-text/index.js';
 import { isTreeFieldRaw, type TreeFieldRaw } from '$lib/fields/tree/index.js';
-
 import {
   getValueAtPath,
   isObjectLiteral,
@@ -14,7 +15,7 @@ import {
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 
-type DeleteArgs = {
+type DuplicateArgs = {
   id: string;
   config: BuiltCollection;
   event: RequestEvent & { locals: App.Locals };
@@ -24,7 +25,7 @@ type DeleteArgs = {
 // If block is localized should not keep its id so it created a new one
 // If block is not localized than it should keep its id so block is updated
 
-export const duplicate = async (args: DeleteArgs): Promise<string> => {
+export const duplicate = async (args: DuplicateArgs): Promise<string> => {
   const { config, event, id } = args;
   const { rime } = event.locals;
 
@@ -33,8 +34,13 @@ export const duplicate = async (args: DeleteArgs): Promise<string> => {
    * on the given document
    */
   function setCopyTitle(doc: Dic) {
-    const title = getValueAtPath<string>(config.asTitle, doc);
-    const data = setValueAtPath<Dic>(config.asTitle, doc, title + ' (copy)');
+    const getTitle = () => {
+      const title = getValueAtPath<string>(config.asTitle, doc);
+      return isJSONContent(title)
+        ? richTextJSONToText(title as any) + ' (copy)'
+        : title + ' (copy)';
+    };
+    const data = setValueAtPath<Dic>(config.asTitle, doc, getTitle());
     return data;
   }
 

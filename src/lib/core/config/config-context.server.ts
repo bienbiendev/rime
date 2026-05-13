@@ -3,6 +3,16 @@ import { ensureMedias } from '../ensure.server.js';
 import { RimeError } from '../errors/index.js';
 import type { BuildConfig } from './server/build-config.server.js';
 
+/**
+ * Object passed to the locals.rime to access the configuration in the server context
+ * it is created once on server start and can be used in any server context (load, actions, hooks, etc) via `event.locals.rime.config`
+ *
+ * @example
+ * ```ts
+ * // In +page.server.ts
+ * const config = event.locals.rime.config.raw;
+ * ```
+ */
 export function createConfigContext<const C extends Config>(config: BuildConfig<C>) {
   //
   ensureMedias(config);
