@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, ChevronUp, type IconProps } from '@lucide/svelte';
+  import { ChevronUp, type IconProps } from '@lucide/svelte';
   import type { Component, Snippet } from 'svelte';
 
   type Props = {
@@ -35,18 +35,15 @@
         {/if}
         {name}
       </span>
-      {#if groupCollapsed}
-        <ChevronDown size="12" />
-      {:else}
-        <ChevronUp size="12" />
-      {/if}
+      <ChevronUp class="rz-nav-group__chevron" size="12" />
     </button>
   {/if}
-  {#if !groupCollapsed || navCollapsed}
-    <div class="rz-nav-group__content">
+
+  <div class="rz-nav-group__content">
+    <div class="rz-nav-group__content-inner">
       {@render children()}
     </div>
-  {/if}
+  </div>
 </div>
 
 <style type="postcss" global>
@@ -58,14 +55,27 @@
     margin-bottom: var(--rz-size-2);
     background-color: var(--rz-nav-button-bg);
     border-radius: var(--rz-radius-lg);
+
+    :global {
+      .rz-nav-group__chevron {
+        transition: transform 0.3s var(--ease-in-out-quart);
+      }
+    }
   }
 
   .rz-nav-group__content {
     display: grid;
+    grid-template-rows: 1fr;
     padding: 0 var(--rz-size-4);
     background-color: var(--rz-nav-group-bg);
     border-bottom-left-radius: var(--rz-radius-lg);
     border-bottom-right-radius: var(--rz-radius-lg);
+    transition: grid-template-rows 0.3s var(--ease-in-out-quart);
+  }
+
+  .rz-nav-group__content-inner {
+    overflow: hidden;
+    display: grid;
   }
 
   .rz-nav-group__trigger {
@@ -79,6 +89,7 @@
     justify-content: space-between;
     text-align: left;
     border-bottom: 1px solid var(--rz-nav-group-border-color);
+    transition: border-color 0.3s var(--ease-in-out-quart);
 
     span {
       display: flex;
@@ -87,17 +98,26 @@
     }
   }
 
-  .rz-nav-group--collapsed {
+  .rz-nav-group.rz-nav-group--collapsed:not(.rz-nav-group--nav-collapsed) {
     .rz-nav-group__trigger {
       border-color: transparent;
+    }
+
+    .rz-nav-group__content {
+      grid-template-rows: 0fr;
+    }
+    :global {
+      .rz-nav-group__chevron {
+        transform: rotate(180deg);
+      }
     }
   }
 
   .rz-nav-group--nav-collapsed {
-    /*padding-top: var(--rz-size-2);*/
+    background-color: transparent;
     .rz-nav-group__content {
       background-color: transparent;
-      padding: 0 var(--rz-size-5);
+      padding: 0 var(--rz-size-2);
     }
   }
 </style>

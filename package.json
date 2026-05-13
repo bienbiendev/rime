@@ -175,6 +175,7 @@
   "dependencies": {
     "@babel/generator": "^7.28.3",
     "@babel/types": "^7.28.4",
+    "@bienbien/css-easing": "^0.1.1",
     "@bienbien/css-reset": "^0.1.2",
     "@floating-ui/dom": "^1.7.4",
     "@internationalized/date": "^3.8.2",

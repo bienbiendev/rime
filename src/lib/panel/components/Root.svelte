@@ -86,6 +86,6 @@
   }
 
   .rz-panel-root__right--navCollapsed {
-    margin-left: var(--rz-size-20);
+    margin-left: var(--rz-size-14);
   }
 </style>

@@ -1,4 +1,5 @@
 @import '@bienbien/css-reset';
+@import '@bienbien/css-easing';
 @import './size.css';
 @import './font.css';
 @import './radius.css';

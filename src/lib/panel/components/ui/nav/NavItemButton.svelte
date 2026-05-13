@@ -26,6 +26,8 @@
 </a>
 
 <style type="postcss">
+  @import '../../../style/mixins/index.css';
+
   .rz-button-nav {
     position: relative;
     display: inline-flex;

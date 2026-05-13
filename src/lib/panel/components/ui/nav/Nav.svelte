@@ -119,7 +119,7 @@
     }
   }
   .rz-nav--collapsed {
-    width: var(--rz-size-20);
+    width: var(--rz-size-14);
     padding: var(--rz-size-3);
     :global(.rz-button-nav) {
       justify-content: start;
