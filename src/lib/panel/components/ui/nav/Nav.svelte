@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { page } from '$app/state';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import type { Route } from '$lib/panel/types';
   import { panelUrl } from '$lib/panel/util/url.js';
@@ -43,25 +42,23 @@
 
     <div class="rz-nav__body">
       <ScrollArea>
-        {#key page.url}
-          <nav class="rz-nav__nav">
-            {#each Object.entries(routesGroups) as [groupName, routes], index (index)}
-              {#if groupName !== 'none'}
-                {@const icon = getGroupIcon(groupName)}
-                <NavGroup name={groupName} {icon} navCollapsed={isCollapsed}>
-                  {#each routes as route (route.url)}
-                    <NavItem href={route.url} {isCollapsed} {route} />
-                  {/each}
-                </NavGroup>
-              {/if}
-            {/each}
-            {#each routesGroups.none as route (route.url)}
-              <div class="rz-nav__group-none">
-                <NavItem href={route.url} {isCollapsed} {route} />
-              </div>
-            {/each}
-          </nav>
-        {/key}
+        <nav class="rz-nav__nav">
+          {#each Object.entries(routesGroups) as [groupName, routes], index (index)}
+            {#if groupName !== 'none'}
+              {@const icon = getGroupIcon(groupName)}
+              <NavGroup name={groupName} {icon} navCollapsed={isCollapsed}>
+                {#each routes as route (route.url)}
+                  <NavItem href={route.url} {isCollapsed} {route} />
+                {/each}
+              </NavGroup>
+            {/if}
+          {/each}
+          {#each routesGroups.none as route (route.url)}
+            <div class="rz-nav__group-none">
+              <NavItem href={route.url} {isCollapsed} {route} />
+            </div>
+          {/each}
+        </nav>
       </ScrollArea>
 
       <div class="rz-nav__user">

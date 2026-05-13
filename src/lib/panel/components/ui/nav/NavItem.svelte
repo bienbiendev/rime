@@ -19,7 +19,7 @@
     typeof route.icon === 'function' ? route.icon : config.raw.icons[route.icon] || File
   );
 
-  let pathname = page.url.pathname;
+  let pathname = $derived(page.url.pathname);
 
   let active = $derived.by(() => {
     const routePathname = new URL(route.url).pathname;
