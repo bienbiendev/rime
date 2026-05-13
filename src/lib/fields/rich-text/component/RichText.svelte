@@ -4,6 +4,7 @@
   import { Editor, type JSONContent } from '@tiptap/core';
   import { onMount } from 'svelte';
   import { buildEditorConfig } from '../core/build-editor-config.js';
+  import { defaultFeatures } from '../core/features/index.js';
   import type { RichTextFeature } from '../core/types';
   import { hasSuggestion } from '../util.js';
   import EditorBubbleMenu from './bubble-menu/bubble-menu.svelte';
@@ -26,11 +27,13 @@
     setRichTextContext(path);
   });
 
-  const withSuggestion = $derived(hasSuggestion(config.features || []));
+  const withSuggestion = $derived(hasSuggestion(config.features || defaultFeatures));
 
   onMount(() => {
     // Build editor configuration
-    const richTextEditorConfig = buildEditorConfig({ features: config.features });
+    const richTextEditorConfig = buildEditorConfig({
+      features: config.features || defaultFeatures
+    });
 
     features = richTextEditorConfig.features;
     editor = new Editor({

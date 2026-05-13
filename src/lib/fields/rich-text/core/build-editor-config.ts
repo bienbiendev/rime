@@ -15,11 +15,10 @@ import { getLocaleContext, LOCALE_CTX } from '../../../panel/context/locale.svel
 import { getUserContext, USER_CTX } from '../../../panel/context/user.svelte.js';
 import { hasSuggestion } from '../util.js';
 import { CurrentNodeAttribute } from './extensions/current-node/current-node.js';
-import { defaultFeatures } from './features/index.js';
 import { ParagraphFeature } from './features/paragraph.js';
 
 type BuildEditorConfigArgs = {
-  features?: Array<RichTextFeature>;
+  features: Array<RichTextFeature>;
   standAlone?: boolean;
 };
 
@@ -27,10 +26,7 @@ type BuildEditorConfigArgs = {
  * Builds a rich text editor configuration based on the provided features
  */
 export function buildEditorConfig(args: BuildEditorConfigArgs): RichTextEditorConfig {
-  const { features: incommingFeatures = [] } = args;
-
-  const features: RichTextFeature[] =
-    incommingFeatures.length === 0 ? defaultFeatures : incommingFeatures;
+  const { features } = args;
 
   const withSuggestion = hasSuggestion(features);
 

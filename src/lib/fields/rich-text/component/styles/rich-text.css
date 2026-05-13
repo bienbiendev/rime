@@ -36,7 +36,7 @@
 /** All editor > node */
 .ProseMirror > *:not(.ProseMirror-gapcursor) {
   background-color: hsl(var(--rz-input-bg));
-  padding: var(--rz-size-4) var(--rz-size-3) var(--rz-size-4);
+  padding: var(--rz-size-3) var(--rz-size-3);
   margin-left: var(--left-spacing);
   width: calc(100% - var(--left-spacing));
   min-height: var(--rz-size-11);
