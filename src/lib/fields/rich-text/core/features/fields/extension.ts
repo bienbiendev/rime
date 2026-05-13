@@ -8,7 +8,7 @@ import FieldsComponent from './fields.svelte';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
-    'richt-text-fields': {
+    'rich-text-fields': {
       insertSheet: (attributes?: Dic) => ReturnType;
     };
   }
@@ -20,7 +20,7 @@ export interface FieldsFeatureExtensionOptions {
 }
 
 export const FieldsExtension = Node.create<FieldsFeatureExtensionOptions>({
-  name: 'richt-text-fields',
+  name: 'rich-text-fields',
   group: 'block',
   atom: true,
   draggable: true,

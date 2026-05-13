@@ -6,13 +6,13 @@ export const ResourceFeature = (args: ResourceFeatureExtensionOptions): RichText
   const slug = args.source.split('?')[0];
   return {
     extension: Resource.configure(args).extend({
-      name: 'richt-text-resource-' + slug
+      name: 'rich-text-resource-' + slug
     }),
     nodes: [
       {
         label: args.label || slug,
         icon: Images,
-        isActive: ({ editor }) => editor.isActive('richt-text-resource-' + slug),
+        isActive: ({ editor }) => editor.isActive('rich-text-resource-' + slug),
         suggestion: {
           command: ({ editor }) => editor.chain().focus().insertResource().run()
         }

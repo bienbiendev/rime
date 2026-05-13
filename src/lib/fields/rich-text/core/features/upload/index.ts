@@ -5,12 +5,12 @@ import { Upload, type UploadFeatureExtensionOptions } from './upload-extension.j
 export const UploadFeature = (args: UploadFeatureExtensionOptions): RichTextFeature => {
   const slug = args.source.split('?')[0];
   return {
-    extension: Upload.configure(args).extend({ name: 'richt-text-upload-' + slug }),
+    extension: Upload.configure(args).extend({ name: 'rich-text-upload-' + slug }),
     nodes: [
       {
         label: 'Media',
         icon: Images,
-        isActive: ({ editor }) => editor.isActive('richt-text-upload-' + slug),
+        isActive: ({ editor }) => editor.isActive('rich-text-upload-' + slug),
         suggestion: {
           command: ({ editor }) => editor.chain().focus().insertUpload().run()
         }

@@ -49,11 +49,11 @@ export const Upload = Node.create<UploadFeatureExtensionOptions>({
   },
 
   parseHTML() {
-    return [{ tag: 'richt-text-media' }];
+    return [{ tag: 'rich-text-media' }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['richt-text-media', mergeAttributes(HTMLAttributes)];
+    return ['rich-text-media', mergeAttributes(HTMLAttributes)];
   },
 
   addNodeView() {

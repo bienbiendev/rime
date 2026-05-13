@@ -15,7 +15,7 @@ export interface FieldsFeatureOptions {
 const fieldsFeatureNode = (args: FieldsFeatureOptions): RichTextFeatureNode => ({
   label: args.label || args.name,
   icon: SheetIcon,
-  isActive: ({ editor }) => editor.isActive('richt-text-fields-' + args.name),
+  isActive: ({ editor }) => editor.isActive('rich-text-fields-' + args.name),
   suggestion: {
     command: ({ editor }) => editor.chain().focus().insertSheet().run()
   }
@@ -23,7 +23,7 @@ const fieldsFeatureNode = (args: FieldsFeatureOptions): RichTextFeatureNode => (
 
 export const FieldsFeature = (args: FieldsFeatureOptions): RichTextFeature => ({
   extension: FieldsExtension.configure({ fields: args.fields, preview: args.preview }).extend({
-    name: 'richt-text-fields-' + args.name
+    name: 'rich-text-fields-' + args.name
   }),
   nodes: [fieldsFeatureNode(args)]
 });
