@@ -779,6 +779,10 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       return isLiveEdit;
     },
 
+    reset() {
+      doc = initialDoc;
+    },
+
     setFocusedField(path: string) {
       if (isLiveEdit && onFieldFocus) {
         onFieldFocus(path);

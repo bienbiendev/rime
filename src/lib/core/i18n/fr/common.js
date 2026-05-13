@@ -17,6 +17,7 @@ export default {
   delete_dialog_text:
     "Vous êtes sur le point de supprimer $1, appuyez sur supprimer pour confirmer l'opération.",
   duplicate: 'Dupliquer',
+  duplicate_success: 'Dupliqué avec succès',
   doc_deleted: 'Document supprimé',
   doc_created: 'Document enregistré',
   doc_updated: 'Document mis à jour',

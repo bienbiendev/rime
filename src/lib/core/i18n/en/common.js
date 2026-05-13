@@ -17,6 +17,7 @@ export default {
   delete_dialog_title: 'Delete $1',
   delete_dialog_text: 'You are about to delete $1, press delete to confirm the operation.',
   duplicate: 'Duplicate',
+  duplicate_success: 'Duplicated successfully',
   doc_deleted: 'Document deleted',
   doc_created: 'Document created',
   doc_updated: 'Document updated',

@@ -73,6 +73,7 @@
   }
 
   async function duplicate() {
+    form.reset();
     const url = `${apiUrl(form.config.kebab, form.values.id)}/duplicate`;
 
     const [error, success] = await trycatchFetch(url, {
