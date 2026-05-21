@@ -48,6 +48,7 @@
   }
 }
 
+html:has(.rz-root),
 body:has(.rz-root) {
   min-height: 100vh;
   overscroll-behavior-y: none;
