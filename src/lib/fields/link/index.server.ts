@@ -11,7 +11,10 @@ import type { Link } from './types.js';
 
 export const toSchema: ToSchema<LinkFieldBuilder> = (field, parentPath) => {
   const { camel, snake } = getSchemaColumnNames({ name: field.name, parentPath });
-  const suffix = templateUniqueRequired(field.raw);
+  const suffix = templateUniqueRequired(
+    field.raw,
+    typeof field.raw.defaultValue === 'object' ? field.raw.defaultValue : {}
+  );
   if (field._generateSchema) return field._generateSchema({ camel, snake, suffix });
   return `${camel}: text('${snake}', { mode: 'json'})${suffix}`;
 };

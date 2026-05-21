@@ -6,7 +6,7 @@ import type { RelationFieldBuilder } from './index.js';
 
 export const toSchema: ToSchema<RelationFieldBuilder<any>> = (field, parentPath) => {
   const { camel, snake } = getSchemaColumnNames({ name: field.name, parentPath });
-  const suffix = templateUniqueRequired(field.raw);
+  const suffix = templateUniqueRequired(field.raw, {});
   if (field._generateSchema) return field._generateSchema({ camel, snake, suffix });
   return `${camel}: text('${snake}', { mode: 'json' })${suffix}`;
 };

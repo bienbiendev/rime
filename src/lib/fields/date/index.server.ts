@@ -5,7 +5,10 @@ import type { DateFieldBuilder } from './index.ts';
 
 export const toSchema: ToSchema<DateFieldBuilder> = (field, parentPath?: string) => {
   const { camel, snake } = getSchemaColumnNames({ name: field.raw.name, parentPath });
-  const suffix = templateUniqueRequired(field.raw);
+  const suffix = templateUniqueRequired(
+    { ...field.raw },
+    field.raw.defaultValue instanceof Date ? field.raw.defaultValue.getTime() : 0
+  );
   if (field._generateSchema) return field._generateSchema({ camel, snake, suffix });
   return `${camel}: integer('${snake}', { mode : 'timestamp_ms' })${suffix}`;
 };

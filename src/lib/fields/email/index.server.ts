@@ -5,7 +5,10 @@ import type { EmailField } from './index.js';
 
 export function toSchema(field: FormFieldBuilder<EmailField>, parentPath?: string) {
   const { camel, snake } = getSchemaColumnNames({ name: field.name, parentPath });
-  const suffix = templateUniqueRequired({ unique: field.raw.unique, required: field.raw.required });
+  const suffix = templateUniqueRequired(
+    { unique: field.raw.unique, required: field.raw.required },
+    typeof field.raw.defaultValue === 'string' ? field.raw.defaultValue : ''
+  );
   if (field._generateSchema) return field._generateSchema({ camel, snake, suffix });
   return `${camel}: text('${snake}')${suffix}`;
 }

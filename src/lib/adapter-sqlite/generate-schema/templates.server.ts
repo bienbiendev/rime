@@ -92,9 +92,14 @@ ${slug === 'staff' ? `isSuperAdmin: integer('is_super_admin', { mode: 'boolean' 
  * .notNull()
  * ```
  */
-export const templateUniqueRequired = (field: { unique?: boolean; required?: boolean }) => {
+export const templateUniqueRequired = (
+  field: { unique?: boolean; required?: boolean },
+  defaultValue?: string | number | boolean | object | unknown[]
+) => {
   const { unique, required } = field;
-  return `${unique ? '.unique()' : ''}${required ? '.notNull()' : ''}`;
+  const defaultStr =
+    required && defaultValue !== undefined ? `.default(${JSON.stringify(defaultValue)})` : '';
+  return `${unique ? '.unique()' : ''}${required ? `.notNull()${defaultStr}` : ''}`;
 };
 
 /** Template rows Relation */

@@ -5,7 +5,10 @@ import type { NumberFieldBuilder } from './index.js';
 
 export const toSchema: ToSchema<NumberFieldBuilder> = (field, parentPath?: string) => {
   const { camel, snake } = getSchemaColumnNames({ name: field.name, parentPath });
-  const suffix = templateUniqueRequired(field.raw);
+  const suffix = templateUniqueRequired(
+    field.raw,
+    typeof field.raw.defaultValue === 'number' ? field.raw.defaultValue : 0
+  );
   if (field._generateSchema) return field._generateSchema({ camel, snake, suffix });
   return `${camel}: real('${snake}')${suffix}`;
 };

@@ -5,7 +5,10 @@ import type { ToggleFieldBuilder } from './index.js';
 
 export const toSchema: ToSchema<ToggleFieldBuilder> = (field, parentPath) => {
   const { camel, snake } = getSchemaColumnNames({ name: field.name, parentPath });
-  const suffix = templateUniqueRequired(field.raw);
+  const suffix = templateUniqueRequired(
+    field.raw,
+    typeof field.raw.defaultValue === 'boolean' ? field.raw.defaultValue : false
+  );
   if (field._generateSchema) return field._generateSchema({ camel, snake, suffix });
   return `${camel}: integer('${snake}', { mode: 'boolean' })${suffix}`;
 };

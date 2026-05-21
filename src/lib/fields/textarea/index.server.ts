@@ -5,7 +5,10 @@ import type { TextAreaFieldBuilder } from './index.js';
 
 export const toSchema: ToSchema<TextAreaFieldBuilder> = (field, parentPath) => {
   const { camel, snake } = getSchemaColumnNames({ name: field.name, parentPath });
-  const suffix = templateUniqueRequired({ unique: false, required: field.raw.required });
+  const suffix = templateUniqueRequired(
+    { unique: false, required: field.raw.required },
+    typeof field.raw.defaultValue === 'string' ? field.raw.defaultValue : ''
+  );
   if (field._generateSchema) return field._generateSchema({ camel, snake, suffix });
   return `${camel}: text('${snake}')${suffix}`;
 };
