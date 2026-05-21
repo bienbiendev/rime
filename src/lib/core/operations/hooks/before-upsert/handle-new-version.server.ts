@@ -98,12 +98,13 @@ async function prepareDataForNewVersion(args: {
     }
   }
 
-  // Use missing data from original version
+  // Use missing required data from original version
   data = await fallbackDataFromOriginal({
     data,
     original: originalDoc,
     configMap: originalConfigMap,
-    ignore: ['status']
+    ignore: ['status'],
+    mode: 'required'
   });
 
   // Set default status to "draft" if no data.status
@@ -111,7 +112,7 @@ async function prepareDataForNewVersion(args: {
     data.status = VERSIONS_STATUS.DRAFT;
   }
 
-  // Remove ownerId and id props from data
+  // Remove ownerId and id props from data this force new relation/blocks creations
   data = recursiveRemoveKeys('ownerId', 'id').from(data);
 
   data.ownerId = originalDoc.id;

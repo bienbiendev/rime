@@ -8,14 +8,20 @@ export const fallbackDataFromOriginal = async <T extends Dic>(args: {
   original: T;
   configMap: ConfigMap;
   ignore: string[];
+  mode?: 'required' | 'all';
 }) => {
   //
+  const mode = args.mode || 'all';
   const { original, configMap, ignore } = args;
   let output = { ...args.data };
 
   for (const [key, config] of Object.entries(configMap)) {
     // skip keys in ignore list
     if (ignore.includes(key)) continue;
+
+    // skip if not required and mode is 'required'
+    const shouldUpdate = (config.required && mode === 'required') || mode === 'all';
+    if (!shouldUpdate) continue;
 
     let value = getValueAtPath(key, output);
     let isEmpty;
