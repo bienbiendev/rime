@@ -22,16 +22,31 @@ export const load = async ({ locals, url }: ServerLoadEvent) => {
  */
 const error = (): string => `
 <script>
-	import { page } from '$app/state';
+  import { page } from '$app/state';
 </script>
 
-<div class="container">
-	<h1>Error {page.status}</h1>
-	|
-	<p>
-		{page.error?.message}
-	</p>
-</div>`;
+<div class="rz-error">
+  <h1>Error {page.status}</h1>
+  |
+  <p>
+    {page.error?.message}
+  </p>
+</div>
+
+<style>
+  .rz-error {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    h1 {
+      font-size: 1.5rem;
+      font-weight: semibold;
+    }
+  }
+</style>
+`;
 
 /**
  * Root layout template
