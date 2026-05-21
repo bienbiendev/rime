@@ -38,6 +38,7 @@ src/rime.generated.d.ts
 src/lib/+rime/*
 src/lib/+rime.generated
 src/routes/(rime)
+assets/src
 static/medias
 test-results
 pnpm-lock.yaml
