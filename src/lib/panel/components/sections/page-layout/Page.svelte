@@ -26,10 +26,6 @@
     --rz-page-gutter: var(--rz-size-20);
   }
 
-  /* aside {
-		margin-left: var(--rz-size-72);
-	} */
-
   .rz-page-with-aside {
     display: grid;
     grid-template-columns: 1fr var(--rz-size-xs);

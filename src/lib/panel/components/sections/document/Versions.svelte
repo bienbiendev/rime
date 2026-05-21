@@ -45,7 +45,7 @@
     </div>
 
     <div class="rz-document-versions__list">
-      {#each versions as version}
+      {#each versions as version (version.id)}
         <a
           class="rz-document-versions__list-item"
           class:rz-document-versions__list--active={doc.versionId === version.id}
@@ -97,7 +97,6 @@
     padding: var(--rz-size-5) var(--rz-size-5) 0 var(--rz-size-5);
     margin-left: calc(-1 * var(--rz-size-2));
     align-items: center;
-    /* justify-content: space-between; */
   }
   h2 {
     @mixin font-bold;

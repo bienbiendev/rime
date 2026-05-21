@@ -110,7 +110,7 @@
 
 <style lang="postcss">
   .rz-collection-sortable {
-    --gap: var(--rz-size-4);
+    --gap: var(--rz-size-2);
     --h: var(--rz-row-height);
     --half-h: calc(var(--rz-row-height) / 2);
 

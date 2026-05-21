@@ -80,23 +80,27 @@
   @import '../../../../../style/mixins/index.css';
 
   .rz-list-row {
+    --rz-upload-preview-cell-fit: cover;
+
     display: grid;
     height: var(--rz-row-height);
     align-items: center;
     border: var(--rz-border);
     border-radius: var(--rz-radius-md);
     background-color: hsl(var(--rz-row-bg));
+
     .rz-list-row__icon {
-      height: var(--rz-size-10);
-      width: var(--rz-size-10);
-      border-radius: var(--rz-radius-md);
+      height: var(--rz-size-9);
+      width: var(--rz-size-9);
+      border-radius: var(--rz-radius-sm);
       display: flex;
       flex-shrink: 0;
       flex-grow: 0;
       align-items: center;
       justify-content: center;
-      background-color: light-dark(hsl(var(--rz-gray-15)), hsl(var(--rz-gray-1)));
+      background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-1)));
     }
+
     :global {
       .rz-list-row__checkbox {
         margin-left: var(--rz-size-2);

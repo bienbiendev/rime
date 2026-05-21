@@ -218,7 +218,10 @@
     container: rz-document / inline-size;
     min-height: 100vh;
     position: relative;
+    background-image: var(--thumbnail);
+    background-size: cover;
   }
+
   .rz-document__fields {
     display: grid;
     gap: var(--rz-size-4);
