@@ -56,6 +56,7 @@ export default {
   signin: 'Sign In',
   unsaved_dialog_title: 'Changes unsaved',
   unsaved_dialog_text: 'There are unsaved modifications in the document.',
+  version_created: 'New version created',
   versions_history: 'Versions history',
   view_page: 'View page',
   view_site: 'View website',

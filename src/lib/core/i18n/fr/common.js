@@ -58,6 +58,7 @@ export default {
   signin: 'Se connecter',
   unsaved_dialog_title: 'Modification(s) non-enregistrée(s)',
   unsaved_dialog_text: 'Il y a des modifications non-enregistrées pour ce document.',
+  version_created: 'Nouvelle version créée',
   versions_history: 'Historique des versions',
   versions: 'Versions',
   view_page: 'Voir la page',
