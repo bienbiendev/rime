@@ -14,5 +14,6 @@ export const toSchema: ToSchema<ComboBoxFieldBuilder> = (field, parentPath?: str
 };
 
 export const toType: ToType<ComboBoxFieldBuilder> = (field) => {
-  return `${field.raw.name}${field.raw.required ? '' : '?'}: string`;
+  const optionsJoinedType = field.raw.options.map((o) => `'${o.value}'`).join(' | ');
+  return `${field.raw.name}${field.raw.required ? '' : '?'}: ${optionsJoinedType}`;
 };
