@@ -104,7 +104,7 @@ async function prepareDataForNewVersion(args: {
     original: originalDoc,
     configMap: originalConfigMap,
     ignore: ['status'],
-    mode: 'required'
+    mode: 'all'
   });
 
   // Set default status to "draft" if no data.status
