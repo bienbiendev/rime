@@ -3,7 +3,6 @@ import { saveFile } from '$lib/core/collections/upload/disk/save.server.js';
 import { Hooks } from '$lib/core/operations/hooks/index.server.js';
 import { omit } from '$lib/util/object.js';
 import { toCamelCase } from '$lib/util/string.js';
-import { logToFile } from '../../../../../log.js';
 import { isUploadConfig } from '../util/config.js';
 
 /**
@@ -39,8 +38,6 @@ export const processFileUpload = Hooks.beforeUpsert<'upload'>(async (args) => {
     if (operation === 'update' && args.context.originalDoc) {
       await cleanupStoredFiles({ config, rime, id: args.context.originalDoc.id });
     }
-
-    logToFile(data);
 
     const { filename, imageSizes } = await saveFile(data.file, sizesConfig!);
     data = {

@@ -2,12 +2,9 @@ import { filePathToBase64 } from '$lib/core/collections/upload/util/converter.js
 import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant';
 import test, { expect } from '@playwright/test';
 import path from 'path';
-import { clearLog, logToFile } from '../../src/log.js';
 import { API_BASE_URL, signIn } from '../util.js';
 
 const signInSuperAdmin = signIn('admin@bienoubien.studio', 'a&1Aa&1A');
-
-clearLog();
 
 test('Superadmin login should be successfull', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
@@ -59,21 +56,6 @@ test('Should update a Media (by creating a new version)', async ({ request }) =>
     headers: await signInSuperAdmin(request),
     data: {
       alt: 'alt-2'
-    }
-  });
-
-  logToFile('versions', 'Should update a Media (by creating a new version)', {
-    request: {
-      url: `${API_BASE_URL}/medias/${mediaId}`,
-      method: 'PATCH',
-      headers: await signInSuperAdmin(request),
-      data: {
-        alt: 'alt-2'
-      }
-    },
-    response: {
-      status: response.status(),
-      body: await response.json()
     }
   });
 
