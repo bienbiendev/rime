@@ -38,16 +38,16 @@
     <List size={17} class="rz-header-display-mode__icon {listIconClass}" />
   </Button>
 
-  {#if collection.config.upload}
-    <Button
-      size="icon-sm"
-      variant={setVariant(DISPLAY_MODE.GRID)}
-      inert={isActive(DISPLAY_MODE.GRID)}
-      onclick={handleGridClick}
-    >
-      <LayoutGrid size={17} class="rz-header-display-mode__icon {gridIconClass}" />
-    </Button>
-  {/if}
+  <!-- {#if collection.config.upload} -->
+  <Button
+    size="icon-sm"
+    variant={setVariant(DISPLAY_MODE.GRID)}
+    inert={isActive(DISPLAY_MODE.GRID)}
+    onclick={handleGridClick}
+  >
+    <LayoutGrid size={17} class="rz-header-display-mode__icon {gridIconClass}" />
+  </Button>
+  <!-- {/if} -->
   {#if collection.config.nested}
     <Button
       size="icon-sm"

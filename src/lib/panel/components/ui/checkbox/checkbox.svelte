@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Checkbox as CheckboxPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
   import { Check } from '@lucide/svelte';
+  import { Checkbox as CheckboxPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
   import './checkbox.css';
 
   let {

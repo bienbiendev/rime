@@ -8,5 +8,5 @@ export const augmentStaffServer = <
   config: T
 ) => {
   const staff = Collection.create('staff', getStaffCollection(config.staff));
-  return { ...config, collections: [staff, ...(config.collections || [])] } as const;
+  return { ...config, collections: [...(config.collections || []), staff] } as const;
 };

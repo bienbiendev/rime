@@ -50,7 +50,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   const changes = $derived<Partial<GenericDoc>>(diff(initialDoc, doc));
   let isDisabled = $state(readOnly);
   let processing = $state(false);
-  const operation = $derived(doc.id ? 'update' : 'create');
+  const operation = doc.id ? 'update' : 'create';
   const user = getUserContext();
   const errors = setErrorsContext(key);
   const isCollection = documentConfig.type === 'collection';
@@ -59,7 +59,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   const canSubmit = $derived(
     !isDisabled && !readOnly && Object.keys(changes).length > 0 && !hasError
   );
-
   const nestedLevel = initLevel();
   const isLiveEdit = !!onDataChange;
   const locale = getLocaleContext();
@@ -671,10 +670,12 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   const buildPanelActionUrl = () => {
     // Start with the base URI for the panel
     let panelUri = `/panel/${config.kebab}`;
+
     // Add the item ID to the URI if we're updating a collection doc
     if (operation === 'update' && initial._prototype === 'collection' && initial.id) {
       panelUri += `/${initial.id}`;
     }
+
     // Determine the appropriate action based on whether we're creating or updating
     let actionSuffix;
     if (operation === 'create') {
@@ -682,9 +683,11 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     } else {
       actionSuffix = '?/update';
     }
+
     // Add a redirect parameter if we're in a nested form ex: relation creation
     // to prevent redirect after creation
     const redirectParam = nestedLevel > 0 ? `&${PARAMS.REDIRECT}=false` : '';
+
     // Combine all parts to form the final action URL
     return `${panelUri}${actionSuffix}${redirectParam}`;
   };

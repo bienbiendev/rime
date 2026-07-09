@@ -61,6 +61,7 @@ export default {
   version_created: 'Nouvelle version créée',
   versions_history: 'Historique des versions',
   versions: 'Versions',
+  view_all: 'Voir tout',
   view_page: 'Voir la page',
   view_site: 'Voir le site',
   welcome: 'Bienvenue',

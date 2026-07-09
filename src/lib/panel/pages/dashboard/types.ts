@@ -4,10 +4,10 @@ export type DashboardEntry =
   | {
       slug: CollectionSlug;
       title: string;
-
       titleSingular: string;
       link: string;
       canCreate?: boolean;
+      layout?: 'rows' | 'grid';
       prototype: 'collection';
       description: string | null;
       lastEdited?: GenericDoc[];

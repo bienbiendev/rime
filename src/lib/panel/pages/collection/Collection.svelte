@@ -76,7 +76,9 @@
         {/snippet}
 
         {#snippet bottomLeft()}
-          <ButtonCreate size="sm" />
+          {#if collection.canCreate}
+            <ButtonCreate config={collection.config} size="sm" />
+          {/if}
           {#if collection.isUpload}
             <Separator />
             <Button

@@ -9,21 +9,38 @@ export const dashboardLoad = async (event: ServerLoadEvent) => {
 
   const entries: DashboardEntry[] = [];
 
-  const buildBaseEntry = (c: BuiltCollection): DashboardEntry => ({
-    prototype: 'collection',
-    description: c.panel && c.panel?.description ? c.panel.description : null,
-    slug: c.slug,
-    canCreate: user && c.access.create(user, {}),
-    link: panelUrl(c.kebab),
-    titleSingular: c.label.singular,
-    title: c.label.plural
-  });
+  const normalizedPanelConfig = (c: BuiltCollection) => {
+    const incomingConfig = c.panel || {};
+    const incomingDashboardConfig = incomingConfig.dashboard || {};
+    return {
+      ...incomingConfig,
+      dashboard: {
+        layout: incomingDashboardConfig.layout ? incomingDashboardConfig.layout : 'rows',
+        maxEntries: incomingDashboardConfig.maxEntries || 8
+      }
+    };
+  };
 
-  const getLastEdited = async (c: BuiltCollection) => {
+  const buildBaseEntry = (c: BuiltCollection): DashboardEntry => {
+    const panelConfig = normalizedPanelConfig(c);
+    return {
+      prototype: 'collection',
+      description: panelConfig.description || null,
+      slug: c.slug,
+      canCreate: user && c.access.create(user, {}),
+      link: panelUrl(c.kebab),
+      titleSingular: c.label.singular,
+      title: c.label.plural,
+      layout: panelConfig.dashboard.layout
+    };
+  };
+
+  const getLastEdited = async (c: BuiltCollection, limit: number = 8) => {
     try {
       return await rime.collection(c.slug).find({
-        limit: 6,
-        locale
+        limit,
+        locale,
+        draft: true
       });
     } catch (err: any) {
       console.error(`Error fetching documents for collection ${c.slug}:`);
@@ -34,10 +51,13 @@ export const dashboardLoad = async (event: ServerLoadEvent) => {
 
   const promiseEntries = rime.config.raw.collections
     .filter((collection) => user && collection.access.read(user, {}))
-    .filter((collection) => collection.panel !== false)
+    .filter((collection) => collection.panel !== false && collection.panel?.dashboard !== false)
     .map(async (collection) => {
       if (collection.panel) {
-        return getLastEdited(collection).then((docs) => ({
+        return getLastEdited(
+          collection,
+          normalizedPanelConfig(collection).dashboard?.maxEntries
+        ).then((docs) => ({
           ...buildBaseEntry(collection),
           lastEdited: docs
         }));

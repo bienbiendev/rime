@@ -15,9 +15,15 @@
     if (url) return getMimeTypeFromExtension(url.split('.').pop() || '') || '';
     return '';
   });
+
+  const mimeClass = $derived.by(() => {
+    if (!mimeTypeResolved) return '';
+    const [type, subType] = mimeTypeResolved.split('/');
+    return `rz-upload-preview-cell--${type}-${subType}`;
+  });
 </script>
 
-<div class="rz-upload-preview-cell {className}">
+<div class="rz-upload-preview-cell {mimeClass} {className}">
   <div>
     {#if url && mimeTypeResolved.includes('image')}
       <img class="rz-upload-preview-cell__image" src={url} alt="preview" />
@@ -60,6 +66,10 @@
       display: flex;
       place-content: center;
     }
+  }
+
+  .rz-upload-preview-cell--image-jpeg {
+    --rz-upload-preview-cell-fit: cover;
   }
 
   .rz-upload-preview-cell__image {

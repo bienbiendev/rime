@@ -173,13 +173,6 @@ export type CollectionLabel = {
 export type VersionsConfig = { draft?: boolean; autoSave?: boolean; maxVersions?: number };
 export type UrlDefinition<T extends BaseDoc = BaseDoc> = (document: T) => string;
 
-export type PrototypePanelConfig = {
-  /** Description for the collection/area, basically displayed on the dashboard */
-  description?: string;
-  /** Sidebar navigation group */
-  group?: string;
-};
-
 type PrototypeConfig<S extends string = string> = {
   slug: S;
   /** Document fields definition */
@@ -191,8 +184,6 @@ type PrototypeConfig<S extends string = string> = {
   access?: Access;
   /** If the document can be edited live, if enabled the url prop must be set also. */
   live?: boolean;
-  /** Panel configuration, set false to hide the area/collection from the panel */
-  panel?: false | PrototypePanelConfig;
 };
 
 export type UploadConfig = {
@@ -258,6 +249,22 @@ export type Collection<S> = {
   nested?: boolean;
   /** Whether the collection support file upload */
   upload?: boolean | UploadConfig;
+  /** Panel configuration, set false to hide the collection from the panel */
+  panel?:
+    | false
+    | {
+        /** Description for the collection/area, basically displayed on the dashboard */
+        description?: string;
+        /** Sidebar navigation group */
+        group?: string;
+        /** Dashboard settings */
+        dashboard?:
+          | {
+              layout?: 'rows' | 'grid';
+              maxEntries?: number;
+            }
+          | false;
+      };
 } & PrototypeConfig;
 
 export type Area<S> = PrototypeConfig & {
@@ -267,6 +274,15 @@ export type Area<S> = PrototypeConfig & {
   $hooks?: AreaHooks<S extends keyof RegisterArea ? S : any>;
   /** The area label */
   label?: string;
+  /** Panel configuration, set false to hide the area from the panel */
+  panel?:
+    | false
+    | {
+        /** Description for the collection/area, basically displayed on the dashboard */
+        description?: string;
+        /** Sidebar navigation group */
+        group?: string;
+      };
 };
 
 type NavigationConfig = { groups: Array<{ label: string; icon: Component<IconProps> }> };

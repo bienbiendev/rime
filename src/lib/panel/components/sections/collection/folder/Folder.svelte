@@ -33,8 +33,8 @@
   @import '../../../../style/mixins/index.css';
 
   :root {
-    --rz-folder-light: light-dark(hsl(var(--rz-gray-12)), hsl(var(--rz-gray-6)));
-    --rz-folder-dark: light-dark(hsl(var(--rz-gray-10)), hsl(var(--rz-gray-4)));
+    --rz-folder-light: light-dark(hsl(var(--rz-gray-14)), hsl(var(--rz-gray-6)));
+    --rz-folder-dark: light-dark(hsl(var(--rz-gray-12)), hsl(var(--rz-gray-4)));
   }
 
   h3 {

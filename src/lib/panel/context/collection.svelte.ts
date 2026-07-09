@@ -473,9 +473,6 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       upload = value;
     },
 
-    /****************************************************/
-    // Docs
-    /****************************************************/
     addDoc,
     updateDoc,
     deleteDoc,

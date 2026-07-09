@@ -7,18 +7,17 @@
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import {
-    setDocumentFormContext,
-    type FormSuccessData
-  } from '$lib/panel/context/documentForm.svelte.js';
+  import { setDocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 
   type Props = { collection: CollectionContext; open: boolean };
   let { collection, open = $bindable() }: Props = $props();
 
   let formElement = $state<HTMLFormElement>();
   const configCtx = getConfigContext();
+
   // svelte-ignore state_referenced_locally
   const directoriesConfig = configCtx.getCollection(withDirectoriesSuffix(collection.config.slug));
+
   // svelte-ignore state_referenced_locally
   const form = setDocumentFormContext({
     initial: {
@@ -31,7 +30,7 @@
   });
 
   // Prevent redirection after directory creation
-  async function beforeRedirect(data?: FormSuccessData) {
+  async function beforeRedirect() {
     open = false;
     invalidateAll();
     return false;

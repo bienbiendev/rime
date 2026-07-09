@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { GenericDoc } from '$lib/types';
+  import StatusDot from '../../sections/collection/StatusDot.svelte';
   import UploadThumbCell from '../../sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
 
   type Props = { doc: GenericDoc };
@@ -15,7 +16,7 @@
 
 <div class="rz-document-card">
   <div class="rz-document-card__preview">
-    <UploadThumbCell mimeType={doc.mimeType} url={thumbnailUrl} />
+    <UploadThumbCell mimeType={doc.mimeType} url={thumbnailUrl || doc._thumbnail} />
   </div>
 
   <div class="rz-document-card__body">
@@ -23,22 +24,30 @@
       {doc.title}
     </p>
 
-    <div class="rz-document-card__metadata">
-      {#each ['filesize', 'mimeType'] as key, index (index)}
-        <p>{doc[key]}</p>
-      {/each}
-    </div>
+    {#if doc.filesize || doc.mimeType}
+      <div class="rz-document-card__metadata">
+        {#each ['filesize', 'mimeType'] as key, index (index)}
+          <p>{doc[key]}</p>
+        {/each}
+      </div>
+    {/if}
+
+    {#if doc.status}
+      <StatusDot status={doc.status} />
+    {/if}
   </div>
 </div>
 
 <style lang="postcss">
-  /** */
+  @import '../../../style/mixins/index.css';
+
   :root {
-    --rz-card-hover-bg: light-dark(hsl(var(--rz-gray-18)), hsl(var(--rz-gray-4)));
-    --rz-card-bg: light-dark(hsl(var(--rz-gray-17)), hsl(var(--rz-gray-3)));
+    --rz-card-hover-bg: light-dark(hsl(var(--rz-gray-19)), hsl(var(--rz-gray-4)));
+    --rz-card-bg: light-dark(hsl(var(--rz-gray-18)), hsl(var(--rz-gray-3)));
   }
 
   .rz-document-card {
+    --rz-dot-size: var(--rz-size-2);
     border: var(--rz-border);
     background-color: var(--rz-card-bg);
     border-radius: var(--rz-radius-lg);
@@ -72,8 +81,8 @@
     overflow: hidden;
     word-break: break-all;
     text-align: left;
-    font-size: var(--rz-text-xs);
-    @mixin font-bold;
+
+    @mixin font-semibold;
   }
 
   .rz-document-card__body {

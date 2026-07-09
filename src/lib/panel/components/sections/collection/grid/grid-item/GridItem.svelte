@@ -6,51 +6,54 @@
   import type { GenericDoc } from '$lib/core/types/doc';
   import CardDocument from '$lib/panel/components/ui/card-document/card-document.svelte';
   import Checkbox from '$lib/panel/components/ui/checkbox/checkbox.svelte';
-  import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
   import { panelUrl } from '$lib/panel/util/url.js';
+  import type { BuiltCollection } from '$lib/types';
 
-  type Props = { checked: boolean; doc: GenericDoc; draggable?: 'true' };
-  const { checked, doc, draggable }: Props = $props();
+  type Props = {
+    checked: boolean;
+    doc: GenericDoc;
+    draggable?: 'true';
+    isSelectMode?: boolean;
+    config: BuiltCollection;
+    toggleSelectOf?: (id: string) => void;
+  };
 
-  const collection = getCollectionContext('list');
+  const { checked, doc, draggable, isSelectMode, config, toggleSelectOf }: Props = $props();
 
-  const isUploadCollection = $derived(isUploadConfig(collection.config));
+  const isUploadCollection = $derived(isUploadConfig(config));
 
   function handleEdit() {
     const uploadPath = isUploadCollection
       ? page.url.searchParams.get(PARAMS.UPLOAD_PATH) || UPLOAD_PATH.ROOT_NAME
       : null;
     const params = uploadPath ? `?${PARAMS.UPLOAD_PATH}=${uploadPath}` : '';
-    goto(`${panelUrl(collection.config.kebab, doc.id)}${params}`);
+    goto(`${panelUrl(config.kebab, doc.id)}${params}`);
   }
 
   function handleDragStart(e: DragEvent) {
     e.dataTransfer?.setData('text/plain', doc.id);
   }
+
+  function handleClick() {
+    if (isSelectMode) {
+      toggleSelectOf?.(doc.id);
+    } else {
+      handleEdit();
+    }
+  }
 </script>
 
-{#if collection.selectMode}
-  <div class="rz-grid-item">
-    <button
-      onclick={() => collection.toggleSelectOf(doc.id)}
-      type="button"
-      aria-label="select"
-      class="rz-grid-item__select-button"
-    >
-      <Checkbox {checked} />
-    </button>
-    <CardDocument {doc} />
-  </div>
-{:else}
-  <button
-    class="rz-grid-item"
-    onclick={handleEdit}
-    draggable={draggable || null}
-    ondragstart={draggable ? handleDragStart : null}
-  >
-    <CardDocument {doc} />
-  </button>
-{/if}
+<button
+  class="rz-grid-item"
+  onclick={handleClick}
+  draggable={draggable || null}
+  ondragstart={draggable ? handleDragStart : null}
+>
+  {#if isSelectMode}
+    <Checkbox {checked} />
+  {/if}
+  <CardDocument {doc} />
+</button>
 
 <style lang="postcss">
   button.rz-grid-item {
@@ -61,11 +64,16 @@
     --rz-card-color-bg: var(--rz-gray-10);
     display: block;
     position: relative;
-  }
 
-  .rz-grid-item__select-button {
-    position: absolute;
-    left: var(--rz-size-2);
-    top: var(--rz-size-2);
+    :global {
+      .rz-checkbox {
+        background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-0)));
+        border: var(--rz-border);
+        pointer-events: none;
+        position: absolute;
+        left: var(--rz-size-2);
+        top: var(--rz-size-2);
+      }
+    }
   }
 </style>

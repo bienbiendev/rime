@@ -18,6 +18,7 @@
   .rz-no-document {
     height: var(--rz-input-height);
     background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));
+    color: hsl(var(--rz-gray-10));
     display: flex;
     align-items: center;
     border-radius: var(--rz-radius-md);

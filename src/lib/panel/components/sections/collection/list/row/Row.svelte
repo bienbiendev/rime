@@ -1,7 +1,7 @@
 <script lang="ts">
+  import type { BuiltCollection } from '$lib/core/config/types.js';
   import type { GenericDoc } from '$lib/core/types/doc.js';
   import Checkbox from '$lib/panel/components/ui/checkbox/checkbox.svelte';
-  import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import { getValueAtPath } from '$lib/util/object';
   import StatusDot from '../../StatusDot.svelte';
@@ -10,57 +10,72 @@
   type Props = {
     checked: boolean;
     doc: GenericDoc;
+    isSelectMode?: boolean;
+    config: BuiltCollection;
+    toggleSelectOf?: (id: string) => void;
+    columns?: Array<{ path: string; cell?: any }>;
+    draggable?: 'true';
   };
 
-  const { checked, doc }: Props = $props();
+  const { checked, doc, config, isSelectMode, toggleSelectOf, columns, draggable }: Props =
+    $props();
 
-  const collection = getCollectionContext('list');
   const locale = getLocaleContext();
 
   let gridTemplateColumn = $state('grid-template-columns: 2fr repeat(1, minmax(0, 1fr));');
 
   $effect(() => {
-    const columnLength = collection.columns.length + 2;
+    const columnLength = (columns?.length ?? 0) + 2;
     gridTemplateColumn = `grid-template-columns: 2fr repeat(${columnLength - 1}, minmax(0, 1fr));`;
   });
 
   const formattedDate = $derived(
     doc.updatedAt ? locale.dateFormat(doc.updatedAt, { short: true }) : ''
   );
+
+  function handleDragStart(e: DragEvent) {
+    e.dataTransfer?.setData('text/plain', doc.id);
+  }
 </script>
 
-<div style={gridTemplateColumn} class="rz-list-row">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+  style={gridTemplateColumn}
+  class="rz-list-row"
+  draggable={draggable || null}
+  ondragstart={draggable ? handleDragStart : null}
+>
   <div class="rz-list-row__main">
-    {#if collection.selectMode}
+    {#if isSelectMode}
       <!-- On select mode show the checkbox  -->
       <Checkbox
         id="checkbox-{doc.id}"
         class="rz-list-row__checkbox"
         {checked}
-        onCheckedChange={() => collection.toggleSelectOf(doc.id)}
+        onCheckedChange={() => toggleSelectOf?.(doc.id)}
       />
       {#if doc._thumbnail}
         <UploadThumbCell url={doc._thumbnail} mimeType={doc.mimeType} />
       {/if}
       <label for="checkbox-{doc.id}" class="rz-list-row__title">{doc.title || '[untitled]'}</label>
     {:else}
-      <a class="rz-list-row__link" href="/panel/{collection.config.kebab}/{doc.id}">
+      <a class="rz-list-row__link" href="/panel/{config.kebab}/{doc.id}">
         {#if doc._thumbnail}
           <UploadThumbCell url={doc._thumbnail} mimeType={doc.mimeType} />
         {:else}
-          {@const Icon = collection.config.icon}
+          {@const Icon = config.icon}
           <div class="rz-list-row__icon"><Icon size="13" /></div>
         {/if}
 
         <span class="rz-list-row__title">{doc.title || '[untitled]'}</span>
-        {#if collection.hasDraft}
+        {#if config.versions && config.versions.draft}
           <StatusDot --rz-dot-size="0.28rem" status={doc.status} />
         {/if}
       </a>
     {/if}
   </div>
 
-  {#each collection.columns as column, index (index)}
+  {#each columns as column, index (index)}
     <div class="rz-list-row__cell">
       {#if column.cell}
         {@const ColumnTableCell = column.cell}
@@ -104,6 +119,8 @@
     :global {
       .rz-list-row__checkbox {
         margin-left: var(--rz-size-2);
+        background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-0)));
+        border: var(--rz-border);
       }
     }
   }

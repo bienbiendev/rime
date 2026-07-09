@@ -58,6 +58,7 @@ export default {
   unsaved_dialog_text: 'There are unsaved modifications in the document.',
   version_created: 'New version created',
   versions_history: 'Versions history',
+  view_all: 'View all',
   view_page: 'View page',
   view_site: 'View website',
   welcome: 'Welcome'

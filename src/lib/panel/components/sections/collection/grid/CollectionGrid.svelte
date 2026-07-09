@@ -11,10 +11,13 @@
 
   type Props = { collection: CollectionContext };
   const { collection }: Props = $props();
+
   let createDirectoryDialogOpen = $state(false);
 
   const currentPathDocuments = $derived(
-    collection.docs.filter((doc) => doc._path === collection.upload.currentPath)
+    collection.docs.filter((doc) =>
+      !collection.isUpload ? true : doc._path === collection.upload.currentPath
+    )
   );
 
   function onDeleteFolder(path: string) {
@@ -24,9 +27,10 @@
   const hasContentUnfiltered = $derived(
     !collection.isFiltered &&
       (collection.docs.length ||
-        collection.upload.directories.length ||
-        collection.upload.parentDirectory)
+        (collection.isUpload && collection.upload.directories.length) ||
+        (collection.isUpload && collection.upload.parentDirectory))
   );
+
   const hasDocsFiltered = $derived(collection.isFiltered && collection.docs.length);
 
   /**
@@ -44,7 +48,8 @@
   }
 
   const dragEnabled = $derived(
-    !!(collection.upload.directories.length || collection.upload.parentDirectory)
+    collection.isUpload &&
+      !!(collection.upload.directories.length || collection.upload.parentDirectory)
   );
 </script>
 
@@ -52,7 +57,7 @@
   <div class="rz-page-collection__grid">
     <div class="rz-page-collection__grid-inner">
       <!-- Parent directory -->
-      {#if collection.upload.parentDirectory && !collection.isFiltered}
+      {#if collection.isUpload && collection.upload.parentDirectory && !collection.isFiltered}
         <Folder
           {onDocumentDrop}
           folder={{ ...collection.upload.parentDirectory, name: '...' }}
@@ -61,7 +66,7 @@
       {/if}
 
       <!-- All children directories -->
-      {#if !collection.isFiltered}
+      {#if !collection.isFiltered && collection.isUpload}
         {#each collection.upload.directories as folder (folder.id)}
           <Folder
             draggable="true"
@@ -76,11 +81,14 @@
       <!-- All children docs -->
       {#each currentPathDocuments as doc (doc.id)}
         {@const checked = collection.selected.includes(doc.id)}
-        {#if dragEnabled}
-          <GridItem draggable="true" {doc} {checked} />
-        {:else}
-          <GridItem {doc} {checked} />
-        {/if}
+        <GridItem
+          config={collection.config}
+          toggleSelectOf={collection.toggleSelectOf}
+          isSelectMode={collection.selectMode}
+          draggable={dragEnabled ? 'true' : undefined}
+          {doc}
+          {checked}
+        />
       {/each}
 
       <ContextMenu>
@@ -95,7 +103,9 @@
         {/snippet}
       </ContextMenu>
 
-      <CreateDirectoryDialog {collection} bind:open={createDirectoryDialogOpen} />
+      {#if collection.isUpload}
+        <CreateDirectoryDialog {collection} bind:open={createDirectoryDialogOpen} />
+      {/if}
     </div>
   </div>
 {:else}

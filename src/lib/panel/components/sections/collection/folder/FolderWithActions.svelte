@@ -205,7 +205,7 @@
 
 <style lang="postcss">
   :root {
-    --rz-folder-hover-bg: light-dark(hsl(var(--rz-gray-14)), hsl(var(--rz-gray-1)));
+    --rz-folder-hover-bg: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-1)));
   }
 
   .rz-folder--dragging {
