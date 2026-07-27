@@ -58,7 +58,18 @@
     }
   }
 
-  const onIframeMessage = async (e: any) => {
+  const iframeOrigin = $derived.by(() => {
+    try {
+      return new URL(data.src).origin;
+    } catch {
+      return null;
+    }
+  });
+
+  const onIframeMessage = async (e: MessageEvent) => {
+    // Only accept messages from the expected iframe origin
+    if (!iframeOrigin || e.origin !== iframeOrigin) return;
+
     // Handle handshake response from iframe - process in next microtask
     if (e.data.handshake) {
       // Use Promise.resolve().then to defer state update to next microtask

@@ -22,7 +22,7 @@ const LIVE_KEY = Symbol('rime.live');
 type OnDataCallback = (args: { path: string; value: any }) => void;
 type LiveStore<T extends GenericDoc = GenericDoc> = ReturnType<typeof createStore<T>>;
 
-function createStore<T extends GenericDoc = GenericDoc>(href: string) {
+function createStore<T extends GenericDoc = GenericDoc>(href: string, origin: string) {
   let enabled = $state(false);
   let doc = $state<T>();
   const callbacks: OnDataCallback[] = [];
@@ -42,7 +42,9 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
   /**
    * Processes messages from parent window
    */
-  const onMessage = async (e: any) => {
+  const onMessage = async (e: MessageEvent) => {
+    // Only accept messages from the trusted panel origin
+    if (e.origin !== origin) return;
     // Handle handshake request
     if (e.data.handshake) {
       enabled = true;
@@ -205,8 +207,8 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
 /**
  * Creates and sets the live context for the current component
  */
-export function setLiveContext<T extends GenericDoc = GenericDoc>(href: string) {
-  const store = createStore<T>(href);
+export function setLiveContext<T extends GenericDoc = GenericDoc>(href: string, origin: string) {
+  const store = createStore<T>(href, origin);
   setContext(LIVE_KEY, store);
   return store;
 }

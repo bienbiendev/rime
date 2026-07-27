@@ -1,7 +1,8 @@
-import { error, redirect } from '@sveltejs/kit';
-import type { ServerLoadEvent } from '@sveltejs/kit';
-import type { PrototypeSlug } from '$lib/core/types/doc.js';
+import { env } from '$env/dynamic/public';
 import { PARAMS } from '$lib/core/constant.js';
+import type { PrototypeSlug } from '$lib/core/types/doc.js';
+import type { ServerLoadEvent } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 
 export async function liveLoad(event: ServerLoadEvent) {
   const { user, rime } = event.locals;
@@ -17,6 +18,19 @@ export async function liveLoad(event: ServerLoadEvent) {
   if (!user) {
     error(404, 'Not found');
   }
+
+  // Validate src is from the trusted frontend origin to prevent iframe injection
+  if (src) {
+    try {
+      const trustedOrigin = new URL(env.PUBLIC_RIME_URL).origin;
+      if (new URL(src).origin !== trustedOrigin) {
+        error(400, 'Invalid src');
+      }
+    } catch {
+      error(400, 'Invalid src');
+    }
+  }
+
   if (user && src && slug && id) {
     const output = { user, src: src, slug, locale };
 

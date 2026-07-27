@@ -1,10 +1,12 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import { setLiveContext } from '$lib/panel/context/live.svelte.js';
   import { beforeNavigate } from '$app/navigation';
+  import { page } from '$app/state';
+  import { env } from '$env/dynamic/public';
+  import { setLiveContext } from '$lib/panel/context/live.svelte.js';
   import { onMount } from 'svelte';
 
-  let live = setLiveContext(page.url.href);
+  const origin = new URL(env.PUBLIC_RIME_URL).origin;
+  let live = setLiveContext(page.url.href, origin);
   beforeNavigate(live.beforeNavigate);
 
   const { children } = $props();
