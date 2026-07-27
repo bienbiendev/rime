@@ -15,6 +15,7 @@ export default function (slug: CollectionSlug) {
     const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
     const draft = paramDraft ? paramDraft === 'true' : undefined;
     const depth = typeof paramDepth === 'string' ? parseInt(paramDepth) : 0;
+    const select = event.url.searchParams.get(PARAMS.SELECT)?.split(',') || undefined;
 
     const [error, document] = await trycatch(() =>
       rime.collection(slug).findById({
@@ -22,7 +23,8 @@ export default function (slug: CollectionSlug) {
         locale: rime.getLocale(),
         depth,
         draft,
-        versionId
+        versionId,
+        select
       })
     );
 

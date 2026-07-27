@@ -51,12 +51,15 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
     draft
   });
 
+  const hasSelect = select && Array.isArray(select) && select.length;
+
   let document = await event.locals.rime.adapter.transform.doc({
     doc: documentRaw,
     slug: config.slug,
     locale,
     event,
-    depth
+    depth,
+    withBlank: !hasSelect
   });
 
   for (const hook of config.$hooks?.beforeRead || []) {

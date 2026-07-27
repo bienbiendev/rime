@@ -215,7 +215,7 @@ class CollectionAPI<Doc extends RegisterCollection[CollectionSlug]> {
    * });
    */
   findById(args: APIMethodArgs<typeof findById>): Promise<Doc> {
-    const { id, versionId, locale, draft, depth = 0 } = args;
+    const { id, versionId, locale, select, draft, depth = 0 } = args;
 
     if (!id) {
       throw new RimeError(RimeError.NOT_FOUND);
@@ -228,6 +228,7 @@ class CollectionAPI<Doc extends RegisterCollection[CollectionSlug]> {
       event: this.#event,
       draft,
       depth,
+      select,
       isSystemOperation: this.isSystemOperation
     };
 
@@ -238,6 +239,7 @@ class CollectionAPI<Doc extends RegisterCollection[CollectionSlug]> {
         userRoles: this.#event.locals.user?.roles,
         id,
         versionId,
+        select,
         depth,
         draft,
         locale

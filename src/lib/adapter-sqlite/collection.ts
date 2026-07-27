@@ -36,16 +36,19 @@ const createCollectionFacade = <const C extends Config>(args: {
    * Retrieves a document by its ID from a collection. For versioned collections,
    * returns either a specific version (if versionId is provided) or the latest/published version.
    */
-  const findById: FindById = async ({ slug, id, versionId, locale, draft }) => {
+  const findById: FindById = async ({ slug, id, versionId, select, locale, draft }) => {
     const config = configCtx.collections[slug];
     const isVersioned = !!config.versions;
     const table = tables[slug];
 
     if (!isVersioned) {
       // Original implementation for non-versioned collections
-      const withParam = buildWithParam({ slug, locale, tables, config });
+      const withParam = buildWithParam({ slug, select, locale, tables, config });
+      const selectColumns = adapterUtil.columnsParams({ table: tables[slug], select });
+
       //@ts-expect-error slug is a table for sure
       const doc = await db.query[slug].findFirst({
+        columns: selectColumns,
         where: eq(table.id, id),
         with: withParam
       });
@@ -58,15 +61,22 @@ const createCollectionFacade = <const C extends Config>(args: {
     } else {
       // Implementation for versioned collections
       const versionsTable = withVersionsSuffix(slug);
-      const withParam = buildWithParam({ slug: versionsTable, locale, tables, config });
+      const withParam = buildWithParam({ slug: versionsTable, select, locale, tables, config });
+      const rootSelectColumns = adapterUtil.columnsParams({ table: tables[slug], select });
+      const versionSelectColumns = adapterUtil.columnsParams({
+        table: tables[versionsTable],
+        select
+      });
 
       // Build params based
       // if version Id get the specifi version
       // else get the published or the latest, depending on the draft param
       const params = {
+        columns: rootSelectColumns,
         where: eq(table.id, id),
         with: {
           [versionsTable]: {
+            columns: versionSelectColumns,
             with: withParam,
             ...(versionId
               ? {
@@ -90,7 +100,7 @@ const createCollectionFacade = <const C extends Config>(args: {
         throw new RimeError(RimeError.NOT_FOUND);
       }
 
-      return adapterUtil.mergeRawDocumentWithVersion(doc, versionsTable);
+      return adapterUtil.mergeRawDocumentWithVersion(doc, versionsTable, select);
     }
   };
 
