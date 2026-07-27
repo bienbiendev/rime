@@ -195,9 +195,9 @@
 
   .rz-live-container__devices {
     display: inline-flex;
-    gap: var(--rz-size-3);
-    padding: var(--rz-size-2);
-    border-radius: var(--rz-radius-md);
-    background-color: hsl(var(--rz-gray-2));
+    gap: var(--rz-size-2);
+    padding: var(--rz-size-1-5);
+    border-radius: var(--rz-radius-lg);
+    background-color: light-dark(hsl(var(--rz-gray-12)), hsl(var(--rz-gray-2)));
   }
 </style>
