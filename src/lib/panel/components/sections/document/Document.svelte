@@ -17,7 +17,6 @@
   import AuthApiKeyDialog from './AuthAPIKeyDialog.svelte';
   import AuthFooter from './AuthFooter.svelte';
   import CurrentlyEdited from './CurrentlyEdited.svelte';
-  import FloatingUI from './FloatingUI.svelte';
   import Header from './Header.svelte';
   import UploadHeader from './upload-header/UploadHeader.svelte';
 
@@ -25,7 +24,6 @@
     doc: GenericDoc;
     operation: 'update' | 'create';
     class?: string;
-    onDataChange?: any;
     onFieldFocus?: any;
     readOnly: boolean;
     onClose?: any;
@@ -40,7 +38,6 @@
     onClose,
     onNestedDocumentCreated,
     nestedLevel = 0,
-    onDataChange = null,
     onFieldFocus = null,
     class: className
   }: Props = $props();
@@ -64,7 +61,7 @@
   // Dialog for unsaved changes confirmation
   const isConfirmLeaveOpen = $derived(!!interceptedLeave);
   const locale = getLocaleContext();
-  const liveEditing = $derived(!!onDataChange);
+
   // This is used to show the API key after creating a document in a collection with API key auth
   let apiKey = $state<string | null>('');
 
@@ -85,7 +82,6 @@
     config,
     readOnly,
     onNestedDocumentCreated,
-    onDataChange,
     onFieldFocus,
     key: `${initial._type}_${nestedLevel}`,
     beforeRedirect: beforeRedirect
@@ -142,9 +138,7 @@
   enctype="multipart/form-data"
   method="post"
 >
-  {#if !liveEditing}
-    <Header {form} {config} {onClose}></Header>
-  {/if}
+  <Header {form} {config} {onClose}></Header>
 
   {#if form.values.editedBy && form.values.editedBy !== user.attributes.id}
     <CurrentlyEdited by={form.values.editedBy} doc={form.values} user={user.attributes} />
@@ -161,27 +155,23 @@
     {/if}
   </div>
 
-  {#if !form.isLive}
-    <div class="rz-document__infos">
-      {#if form.values.createdAt}
-        {@render meta(t__('common.created_at'), locale.dateFormat(form.values.createdAt))}
-      {/if}
-      {#if form.values.updatedAt}
-        {@render meta(t__('common.last_update'), locale.dateFormat(form.values.updatedAt))}
-      {/if}
-      {#if form.values.editedBy}
-        {@render meta(t__('common.edited_by'), locale.dateFormat(form.values.editedBy))}
-      {/if}
-      {#if form.values.id}
-        {@render meta('id', form.values.id)}
-      {/if}
-    </div>
-  {:else}
-    <FloatingUI {form} {onClose} />
-  {/if}
+  <div class="rz-document__infos">
+    {#if form.values.createdAt}
+      {@render meta(t__('common.created_at'), locale.dateFormat(form.values.createdAt))}
+    {/if}
+    {#if form.values.updatedAt}
+      {@render meta(t__('common.last_update'), locale.dateFormat(form.values.updatedAt))}
+    {/if}
+    {#if form.values.editedBy}
+      {@render meta(t__('common.edited_by'), locale.dateFormat(form.values.editedBy))}
+    {/if}
+    {#if form.values.id}
+      {@render meta('id', form.values.id)}
+    {/if}
+  </div>
 
   <!-- This shows the create API Key after creation, for apiKey auth type collection -->
-  {#if !form.isLive && apiKey}
+  {#if apiKey}
     <AuthApiKeyDialog bind:apiKey />
   {/if}
 

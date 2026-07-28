@@ -3,7 +3,7 @@ import type { GenericDoc } from '$lib/core/types/doc.js';
 import { toKebabCase } from '$lib/util/string.js';
 import type { BeforeNavigate } from '@sveltejs/kit';
 import { getContext, setContext } from 'svelte';
-import { isObjectLiteral, setValueAtPath } from '../../util/object.js';
+import { getValueAtPath, isObjectLiteral, setValueAtPath } from '../../util/object.js';
 
 const LIVE_KEY = Symbol('rime.live');
 
@@ -19,13 +19,13 @@ const LIVE_KEY = Symbol('rime.live');
  * 8. Live.svelte navigates to new location, maintaining live edit mode
  */
 
-type OnDataCallback = (args: { path: string; value: any }) => void;
 type LiveStore<T extends GenericDoc = GenericDoc> = ReturnType<typeof createStore<T>>;
 
 function createStore<T extends GenericDoc = GenericDoc>(href: string, origin: string) {
   let enabled = $state(false);
   let doc = $state<T>();
-  const callbacks: OnDataCallback[] = [];
+  const liveStore = $state<Record<string, any>>({});
+  let activePanelKey = $state<string | null>(null);
   let currentFocusedElement = $state<HTMLElement>();
 
   /**
@@ -53,7 +53,19 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string, origin: st
         window.top.postMessage({ handshake: href });
       }
     }
-    // Handle field updates
+    // Handle panel store updates (new protocol — has `update` key)
+    else if (
+      e.data.update !== undefined &&
+      e.data.path !== undefined &&
+      e.data.value !== undefined
+    ) {
+      await handlePanelUpdate(e.data);
+    }
+    // Handle active panel notification from parent
+    else if ('activePanel' in e.data) {
+      activePanelKey = e.data.activePanel ?? null;
+    }
+    // Handle field updates (legacy single-doc protocol)
     else if (e.data.path && e.data.value !== undefined) {
       await handleFieldUpdate(e.data);
     }
@@ -146,6 +158,20 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string, origin: st
   };
 
   /**
+   * Handles panel store updates (new multi-panel protocol)
+   */
+  const handlePanelUpdate = async (data: { update: string; path: string; value: any }) => {
+    const processedValue = await populate(data.value);
+    if (!data.path) {
+      // Empty path = full doc seed (sent on panel activation)
+      liveStore[data.update] = processedValue;
+      return;
+    }
+    const current = liveStore[data.update] ?? {};
+    liveStore[data.update] = setValueAtPath(data.path, current, processedValue);
+  };
+
+  /**
    * Handles field value updates
    */
   const handleFieldUpdate = async (data: { path: string; value: any }) => {
@@ -176,18 +202,20 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string, origin: st
     }
   };
 
-  /**
-   * Registers a callback for data changes
-   */
-  const onData = (callback: OnDataCallback) => {
-    callbacks.push(callback);
-  };
-
   // Return public facade
   return {
     beforeNavigate,
     onMessage,
-    onData,
+
+    getPanelValue: (update: string, path: string): any => {
+      const entry = liveStore[update];
+      if (!entry) return undefined;
+      return getValueAtPath(path, entry);
+    },
+
+    get activePanelKey() {
+      return activePanelKey;
+    },
 
     get data() {
       return { doc };

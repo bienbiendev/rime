@@ -1,10 +1,11 @@
 import type { GenericBlock } from '$lib/core/types/doc.js';
-import { isBlocksFieldRaw } from '$lib/fields/blocks/index.js';
-import { isGroupFieldRaw } from '$lib/fields/group/index.js';
-import { isTabsFieldRaw } from '$lib/fields/tabs/index.js';
+import { BlocksBuilder, isBlocksFieldRaw } from '$lib/fields/blocks/index.js';
+import { GroupFieldBuilder, isGroupFieldRaw } from '$lib/fields/group/index.js';
+import { isTabsFieldRaw, TabsBuilder } from '$lib/fields/tabs/index.js';
 import { isTreeFieldRaw } from '$lib/fields/tree/index.js';
 import type { Field, FormField, SeparatorField } from '$lib/fields/types.js';
 import type { Dic } from '$lib/util/types.js';
+import type { FieldBuilder } from './builders';
 
 /**
  * Checks if a field is a presentative field (currently only separator fields).
@@ -195,3 +196,60 @@ export const getFieldConfigByPath = (path: string, fields: Field[]) => {
 
   return findInFields(fields, parts);
 };
+
+/**
+ * Traverses a FieldBuilder[] tree and returns the subset of builders to pass to
+ * RenderFields, along with the path prefix those builders should be rendered at.
+ *
+ * Containers (tabs, groups) are treated as transparent navigation layers.
+ * Blocks are treated as endpoints — the blocks builder itself is returned
+ * regardless of any index:blockType suffix in the path.
+ */
+export function getFieldBuildersAtPath(
+  fieldPath: string,
+  builders: FieldBuilder[],
+  _prefix = ''
+): { fields: FieldBuilder[]; path: string } {
+  if (!fieldPath) return { fields: builders, path: _prefix };
+
+  const dotIndex = fieldPath.indexOf('.');
+  const head = dotIndex === -1 ? fieldPath : fieldPath.slice(0, dotIndex);
+  const tail = dotIndex === -1 ? '' : fieldPath.slice(dotIndex + 1);
+
+  for (const builder of builders) {
+    // ── Tabs container: navigate into the matching tab
+    if (builder instanceof TabsBuilder) {
+      const tab = builder.field.tabs.find((t: any) => t.name === head);
+      if (!tab) continue;
+      const prefix = _prefix ? `${_prefix}.${head}` : head;
+      if (!tail) {
+        // Path targets the tab → return all its inner fields
+        return { fields: tab.raw.fields, path: prefix };
+      }
+      return getFieldBuildersAtPath(tail, tab.raw.fields, prefix);
+    }
+
+    if (!('name' in builder.raw) || builder.raw.name !== head) continue;
+
+    const prefix = _prefix ? `${_prefix}.${head}` : head;
+
+    // ── Group field: navigate into children
+    if (builder instanceof GroupFieldBuilder) {
+      const children = (builder as any).field.fields as FieldBuilder[];
+      if (!tail) return { fields: children, path: prefix };
+      return getFieldBuildersAtPath(tail, children, prefix);
+    }
+
+    // ── Blocks field: endpoint — return the builder itself
+    // Ignore any index:type suffix (e.g. 'sections.2:paragraph' stops here)
+    if (builder instanceof BlocksBuilder) {
+      return { fields: [builder], path: _prefix };
+    }
+
+    // ── Single field
+    return { fields: [builder], path: _prefix };
+  }
+
+  console.warn(`[LiveEditPanel] fieldPath "${fieldPath}" not found in config fields`);
+  return { fields: builders, path: _prefix };
+}

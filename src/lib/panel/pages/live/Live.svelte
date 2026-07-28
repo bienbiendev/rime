@@ -1,19 +1,34 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import type { BuiltConfigClient } from '$lib/core/config/types';
   import { t__ } from '$lib/core/i18n';
-  import type { GenericDoc } from '$lib/core/types/doc';
-  import LiveSidePanel from '$lib/panel/components/sections/live/SidePanel.svelte';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
+  import LiveEditPanel from '$lib/panel/components/sections/live/LiveEditPanel.svelte';
+  import LiveFloatingUI from '$lib/panel/components/sections/live/LiveFloatingUI.svelte';
   import { Pane, PaneGroup, PaneResizer } from '$lib/panel/components/ui/pane/index.js';
+  import { Toaster } from '$lib/panel/components/ui/sonner';
   import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
+  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+  import { setLivePanelContext, type ActivePanel } from '$lib/panel/context/livePanel.svelte.js';
   import { snapshot } from '$lib/util/state';
-  import { Laptop, Smartphone } from '@lucide/svelte';
+  import { toKebabCase } from '$lib/util/string';
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
 
   type Props = { data: any; config: BuiltConfigClient };
   const { data, config }: Props = $props();
+
+  // One entry per unique `update` key — never removed once added
+  let panelContexts = $state<Record<string, { doc: any }>>({});
+  // Collected from LivePanelContext children after mount
+  let panelForms = $state<Record<string, DocumentFormContext>>({});
+
+  // Stack-based navigation: last entry is the active panel, Escape pops one level
+  let panelStack = $state<ActivePanel[]>([]);
+  const activePanel = $derived(panelStack.at(-1) ?? null);
+
+  let paneLeft: ReturnType<typeof Pane>;
+  const VALID_UPDATE = /^[a-z][a-z0-9-]*(?:\/[a-zA-Z0-9_-]+)?$/;
 
   let iframe: HTMLIFrameElement;
   let iframeSrc = $state('');
@@ -28,20 +43,29 @@
   // Compare URLs regardless of trailing slash
   let sync = $derived(normalizeUrl(iframeSrc) === normalizeUrl(data.src));
 
-  const onDataChange = (args: Partial<GenericDoc>) => {
-    /** Send message to iframe */
-    if (iframe?.contentWindow) {
-      // Use snapshot to ensure we're sending a plain object without reactive proxies
-      iframe.contentWindow.postMessage(snapshot(args));
-    }
-  };
+  function makePanelOnDataChange(update: string) {
+    return ({ path, value }: { path: string; value: any }) => {
+      if (!iframe?.contentWindow) return;
+      iframe.contentWindow.postMessage(snapshot({ update, path, value }));
+    };
+  }
 
-  const onFieldFocus = (path: string) => {
-    /** Send message to iframe */
-    if (iframe?.contentWindow) {
-      iframe.contentWindow.postMessage({ focus: path });
-    }
-  };
+  function makeAfterSuccess(update: string) {
+    return (savedDoc: any) => {
+      // Update the cached doc so future re-activations seed the correct base
+      if (panelContexts[update]) panelContexts[update] = { doc: savedDoc };
+      // Re-seed the iframe with server-confirmed data
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage(snapshot({ update, path: '', value: savedDoc }));
+      }
+    };
+  }
+
+  function parseUpdate(update: string): { slug: string; id?: string } | null {
+    if (!VALID_UPDATE.test(update)) return null;
+    const [slug, id] = update.split('/');
+    return { slug, id };
+  }
 
   // Wrapper tells the iframe it's live - using requestAnimationFrame for better performance
   function handshake() {
@@ -81,6 +105,41 @@
     if (e.data.location) {
       goto(e.data.location);
     }
+
+    // Handle custom panel activation
+    if (e.data.activatePanel) {
+      const { key, update, fieldPath, position } = e.data.activatePanel;
+      const parsed = parseUpdate(update);
+      if (!parsed) return;
+
+      if (!panelContexts[update]) {
+        const url = parsed.id ? `/api/${parsed.slug}/${parsed.id}` : `/api/${parsed.slug}`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        panelContexts[update] = { doc: (await res.json()).doc };
+
+        // Seed liveStore only on FIRST activation — never overwrite live edits on re-click
+        if (iframe?.contentWindow) {
+          iframe.contentWindow.postMessage(
+            snapshot({ update, path: '', value: panelContexts[update].doc })
+          );
+        }
+      }
+
+      // Push onto the stack — each nested LivePanel click adds a level
+      panelStack = [
+        ...panelStack.filter((item) => item.key !== key),
+        { key, update, fieldPath, position }
+      ];
+    }
+
+    if (e.data.deactivatePanel) {
+      // Pop the top level — Escape returns to the previous panel in the stack
+      const { key } = e.data.deactivatePanel;
+      if (panelStack.at(-1)?.key === key) {
+        panelStack = panelStack.slice(0, -1);
+      }
+    }
   };
 
   onMount(() => {
@@ -102,7 +161,56 @@
     }
   });
 
+  $effect(() => {
+    if (!paneLeft) return;
+    if (activePanel) {
+      paneLeft.expand();
+    } else {
+      paneLeft.collapse();
+    }
+  });
+
+  // Notify the iframe whenever the active panel changes so LivePanel knows its state
+  $effect(() => {
+    if (!iframe?.contentWindow) return;
+    iframe.contentWindow.postMessage({ activePanel: activePanel?.key ?? null });
+  });
+
   let currentDevice = $state<'mobile' | 'desktop'>('mobile');
+
+  // Expose active panel state to all child components (LiveEditPanel etc.)
+  setLivePanelContext({
+    get activePanel() {
+      return activePanel;
+    },
+    get panelStack() {
+      return panelStack;
+    }
+  });
+
+  function closeActivePanel() {
+    if (activePanel) {
+      panelStack = panelStack.slice(0, -1);
+    } else {
+      backToDocumentPanel();
+    }
+  }
+
+  function backToDocumentPanel() {
+    const slug = page.url.searchParams.get('slug');
+    const id = page.url.searchParams.get('id');
+
+    if (!slug) return;
+
+    // Start with the base URI for the panel
+    let panelUri = `/panel/${toKebabCase(slug)}`;
+
+    // Add the item ID to the URI if we're updating a collection doc
+    if (id) {
+      panelUri += `/${id}`;
+    }
+    return goto(panelUri);
+  }
 </script>
 
 <div class="rz-live-container">
@@ -111,37 +219,32 @@
       <div><SpinLoader /> {t__('common.live_in_sync')}</div>
     </div>
   {/if}
-  <PaneGroup autoSaveId="rz-live:panel-state" direction="horizontal">
-    <Pane defaultSize={40}>
-      <div class="rz-live-container__side-panel">
-        {#key data.src + data.doc.id + data.locale + data.slug}
-          <LiveSidePanel
+
+  <Toaster />
+
+  <LiveFloatingUI bind:currentDevice forms={panelForms} onClose={closeActivePanel} />
+
+  <PaneGroup direction="horizontal">
+    <Pane bind:this={paneLeft} collapsedSize={0} collapsible={true} defaultSize={30}>
+      {#if activePanel && panelContexts[activePanel.update]}
+        {#key activePanel.update}
+          <LiveEditPanel
             {config}
-            {onDataChange}
-            {onFieldFocus}
-            doc={data.doc}
+            doc={panelContexts[activePanel.update].doc}
+            onDataChange={makePanelOnDataChange(activePanel.update)}
+            afterSuccess={makeAfterSuccess(activePanel.update)}
+            onFormReady={(form) => {
+              panelForms[activePanel.update] = form;
+            }}
             user={data.user}
             locale={data.locale}
           />
         {/key}
-      </div>
+      {/if}
     </Pane>
+
     <PaneResizer />
     <Pane class="rz-live-container__pane-right" defaultSize={70}>
-      <div class="rz-live-container__devices">
-        <Button
-          onclick={() => (currentDevice = 'mobile')}
-          variant={currentDevice === 'mobile' ? 'secondary' : 'ghost'}
-          size="icon"
-          icon={Smartphone}
-        />
-        <Button
-          onclick={() => (currentDevice = 'desktop')}
-          variant={currentDevice === 'desktop' ? 'secondary' : 'ghost'}
-          size="icon"
-          icon={Laptop}
-        />
-      </div>
       <iframe class={currentDevice} bind:this={iframe} title="edit" src={data.src}></iframe>
     </Pane>
   </PaneGroup>
@@ -158,7 +261,6 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding: var(--rz-size-3);
     height: 100vh;
     background-color: hsl(var(--rz-gray-3));
   }
@@ -170,8 +272,11 @@
     border-right: var(--rz-border);
   }
 
+  :global(.rz-live-hidden) {
+    display: none;
+  }
+
   .rz-live-container iframe {
-    border: var(--rz-border);
     transform-origin: center 0;
   }
 
@@ -179,17 +284,24 @@
     width: 320px;
     aspect-ratio: 2 / 3.3;
     scale: 1.25;
+    transform: translateY(-6.25vh);
+  }
+
+  :global(.rz-live-container__pane-right):has(iframe.mobile) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 
   .rz-live-container iframe.desktop {
-    width: 133%;
-    aspect-ratio: 16 / 11;
-    scale: 0.75;
+    width: 100%;
+    height: 100%;
   }
 
   .rz-live-container__overlay {
     background-color: hsl(var(--rz-gray-10));
-    opacity: 0.8;
+    color: white;
+    opacity: 0.9;
     position: absolute;
     inset: 0;
     display: flex;
@@ -202,13 +314,5 @@
       gap: var(--rz-size-3);
       justify-content: center;
     }
-  }
-
-  .rz-live-container__devices {
-    display: inline-flex;
-    gap: var(--rz-size-2);
-    padding: var(--rz-size-1-5);
-    border-radius: var(--rz-radius-lg);
-    background-color: light-dark(hsl(var(--rz-gray-12)), hsl(var(--rz-gray-2)));
   }
 </style>

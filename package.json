@@ -219,7 +219,7 @@
     "js-cookie": "^3.0.5",
     "magic-string-ast": "^1.0.2",
     "nodemailer": "^8.0.5",
-    "paneforge": "^0.0.6",
+    "paneforge": "^1.0.2",
     "polka": "^0.5.2",
     "qs": "^6.14.0",
     "runed": "^0.37.1",

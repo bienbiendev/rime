@@ -1,0 +1,12 @@
+.rz-live-edit-panel {
+  --rz-page-gutter: var(--rz-size-4);
+  --rz-tabs-list-top: 0;
+  height: 100vh;
+  background-color: hsl(var(--rz-color-bg));
+}
+.rz-live-edit-panel__fields {
+  height: 100vh;
+  padding: var(--rz-size-4);
+  padding-bottom: var(--rz-size-20);
+  border-right: var(--rz-border);
+}
