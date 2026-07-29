@@ -52,8 +52,4 @@ export class FieldBuilder<T extends Field = Field> {
   get cell(): Component<{ value: any }> | null {
     return null;
   }
-
-  // get(key: keyof T) {
-  // 	return this.field[key];
-  // }
 }

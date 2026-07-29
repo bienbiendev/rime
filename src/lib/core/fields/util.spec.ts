@@ -1,7 +1,24 @@
+import {
+  block,
+  blocks,
+  date,
+  group,
+  radio,
+  relation,
+  richText,
+  slug,
+  tab,
+  tabs,
+  text,
+  toggle,
+  tree
+} from '$lib/fields/index.js';
+import { bold } from '$lib/fields/rich-text/client.js';
 import { normalizeFieldPath } from '$lib/util/doc.js';
+import { Images, Text } from '@lucide/svelte';
 import { expect, test } from 'vitest';
-import { getFieldConfigByPath } from './util.js';
-
+import { FormFieldBuilder } from './builders/form-field-builder.js';
+import { getFieldBuildersAtPath, getFieldConfigByPath, isFormField } from './util.js';
 const fields = [
   {
     type: 'tabs',
@@ -273,4 +290,176 @@ test('should not return field config inside blocks without param inBlockType', (
   //@ts-expect-error no need for field.access prop for testing this
   const field = getFieldConfigByPath('layout.components.0.legends.0.legend', fields);
   expect(field).toBe(undefined);
+});
+
+// Builders for testing getFieldBuildersAtPath
+
+const blockParagraph = block('paragraph')
+  .icon(Text)
+  .description('Simple paragraph')
+  .fields(richText('text').localized());
+
+const blockSlider = block('slider').icon(Images).description('Simple slider').fields(text('image'));
+const blockImage = block('image').fields(relation('image').to('medias'), text('legend'));
+
+const tabHero = tab('hero').fields(
+  radio('heroType').options('banner', 'text').defaultValue('banner'),
+  relation('image')
+    .to('medias')
+    .condition((doc) => {
+      return doc.heroType === 'banner';
+    }),
+  richText('intro').features(bold())
+);
+
+const tabAttributes = tab('attributes').fields(
+  text('title').isTitle().localized().required(),
+  toggle('isHome').table({ position: 2, sort: true }).live(false),
+  slug('slug')
+    .slugify('attributes.title')
+    .live(false)
+    .table({ position: 3, sort: true })
+    .localized()
+    .required(),
+
+  relation('related').to('pages').many(),
+  relation('author').to('staff'),
+  relation('contributors').to('staff').many(),
+  relation('ambassadors').to('staff').many().localized(),
+  date('published')
+);
+
+const tabContent = tab('layout').fields(
+  blocks('components', [blockParagraph, blockSlider, blockImage]).table().localized()
+);
+
+const tabSeo = tab('seo').fields(
+  text('metaTitle').localized(),
+  text('metaDescription').localized()
+);
+
+const tabFooter = tab('footer').fields(
+  tree('nav').fields(text('label'), text('link'), group('group').fields(text('metaTitle')))
+);
+
+const builders = tabs(tabHero, tabContent, tabAttributes, tabSeo, tabFooter);
+
+test('should return correct field builders at path inside blocks', () => {
+  const { fields: fieldList, path } = getFieldBuildersAtPath('layout.components.0:slider.image', [
+    builders
+  ]);
+  const builder = fieldList[0];
+  if (!(builder instanceof FormFieldBuilder))
+    throw Error('Expected builder to be an instance of FormFieldBuilder');
+  expect(fieldList).toBeDefined();
+  expect(fieldList.length).toBe(1);
+  expect(builder.field.name).toBeDefined();
+  expect(builder.field.name).toBe('image');
+  expect(path).toBe('layout.components.0');
+});
+
+test('should return the list of fields inside a block', () => {
+  const { fields: fieldList, path } = getFieldBuildersAtPath('layout.components.0:slider', [
+    builders
+  ]);
+  expect(fieldList).toBeDefined();
+  expect(fieldList.length).toBe(5); // [ 'image', 'type', 'path', 'position', 'locale' ]
+  const builder = fieldList[0];
+  if (!(builder instanceof FormFieldBuilder))
+    throw Error('Expected builder to be an instance of FormFieldBuilder');
+  expect(builder.field.name).toBeDefined();
+  expect(builder.field.name).toBe('image');
+  expect(path).toBe('layout.components.0');
+});
+
+test('should return the list of fields inside a tab', () => {
+  const { fields: fieldList, path } = getFieldBuildersAtPath('hero', [builders]);
+  expect(fieldList).toBeDefined();
+  expect(fieldList.length).toBe(3);
+  const builder1 = fieldList[0];
+  if (!(builder1 instanceof FormFieldBuilder))
+    throw Error('Expected builder to be an instance of FormFieldBuilder');
+  expect(builder1.field.name).toBeDefined();
+  expect(builder1.field.name).toBe('heroType');
+  expect(path).toBe('hero');
+  const builder2 = fieldList[1];
+  if (!(builder2 instanceof FormFieldBuilder))
+    throw Error('Expected builder to be an instance of FormFieldBuilder');
+  expect(builder2.field.name).toBeDefined();
+  expect(builder2.field.name).toBe('image');
+  const builder3 = fieldList[2];
+  if (!(builder3 instanceof FormFieldBuilder))
+    throw Error('Expected builder to be an instance of FormFieldBuilder');
+  expect(builder3.field.name).toBeDefined();
+  expect(builder3.field.name).toBe('intro');
+});
+
+test('should return the list of fields inside a tree', () => {
+  const { fields: fieldList, path } = getFieldBuildersAtPath('footer.nav', [builders]);
+  expect(fieldList).toBeDefined();
+  expect(fieldList.length).toBe(5); // [ 'path', 'position', 'label', 'link', 'group' ]
+  const filteredList = fieldList.filter(
+    (builder) => isFormField(builder.raw) && builder.raw.hidden !== true
+  );
+  const builder1 = filteredList[0];
+  if (!(builder1 instanceof FormFieldBuilder))
+    throw Error('Expected builder to be an instance of FormFieldBuilder');
+  expect(builder1.field.name).toBeDefined();
+  expect(builder1.field.name).toBe('label');
+  expect(path).toBe('footer.nav');
+  const builder2 = filteredList[1];
+  if (!(builder2 instanceof FormFieldBuilder))
+    throw Error('Expected builder to be an instance of FormFieldBuilder');
+  expect(builder2.field.name).toBeDefined();
+  expect(builder2.field.name).toBe('link');
+  const builder3 = filteredList[2];
+  if (!(builder3 instanceof FormFieldBuilder))
+    throw Error('Expected builder to be an instance of FormFieldBuilder');
+  expect(builder3.field.name).toBeDefined();
+  expect(builder3.field.name).toBe('group');
+});
+
+// const tabFooter = tab('footer').fields(
+//   tree('nav').fields(
+//     //
+//     text('label'),
+//     text('link'),
+//     tree('group').fields(text('metaTitle'))
+//   )
+// );
+
+test('should return the list of fields inside a group inside a tree', () => {
+  const { fields: fieldList, path } = getFieldBuildersAtPath('footer.nav.0.group', [builders]);
+  expect(fieldList).toBeDefined();
+  expect(fieldList.length).toBe(1);
+  const builder1 = fieldList[0];
+  if (!(builder1 instanceof FormFieldBuilder))
+    throw Error('Expected builder to be an instance of FormFieldBuilder');
+  expect(builder1.field.name).toBeDefined();
+  expect(builder1.field.name).toBe('metaTitle');
+  expect(path).toBe('footer.nav.0.group');
+});
+
+test('should return one field inside a tree', () => {
+  const { fields: fieldList, path } = getFieldBuildersAtPath('footer.nav.0.label', [builders]);
+  expect(fieldList).toBeDefined();
+  expect(fieldList.length).toBe(1);
+  const builder1 = fieldList[0];
+  if (!(builder1 instanceof FormFieldBuilder))
+    throw Error('Expected builder to be an instance of FormFieldBuilder');
+  expect(builder1.field.name).toBeDefined();
+  expect(builder1.field.name).toBe('label');
+  expect(path).toBe('footer.nav.0');
+});
+
+test('should return one field inside a tab', () => {
+  const { fields: fieldList, path } = getFieldBuildersAtPath('hero.heroType', [builders]);
+  expect(fieldList).toBeDefined();
+  expect(fieldList.length).toBe(1);
+  const builder1 = fieldList[0];
+  if (!(builder1 instanceof FormFieldBuilder))
+    throw Error('Expected builder to be an instance of FormFieldBuilder');
+  expect(builder1.field.name).toBeDefined();
+  expect(builder1.field.name).toBe('heroType');
+  expect(path).toBe('hero');
 });

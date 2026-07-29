@@ -47,6 +47,10 @@ export class TabBuilder {
     return this.#tab.name;
   }
 
+  get tab() {
+    return this.#tab;
+  }
+
   fields(...fields: FieldBuilder<Field>[]) {
     this.#tab.fields = fields;
     return this;

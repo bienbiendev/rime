@@ -2,8 +2,9 @@ import type { GenericBlock } from '$lib/core/types/doc.js';
 import { BlocksBuilder, isBlocksFieldRaw } from '$lib/fields/blocks/index.js';
 import { GroupFieldBuilder, isGroupFieldRaw } from '$lib/fields/group/index.js';
 import { isTabsFieldRaw, TabsBuilder } from '$lib/fields/tabs/index.js';
-import { isTreeFieldRaw } from '$lib/fields/tree/index.js';
+import { isTreeFieldRaw, TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field, FormField, SeparatorField } from '$lib/fields/types.js';
+import { normalizeFieldPath } from '$lib/util/doc.js';
 import type { Dic } from '$lib/util/types.js';
 import type { FieldBuilder } from './builders';
 
@@ -208,48 +209,83 @@ export const getFieldConfigByPath = (path: string, fields: Field[]) => {
 export function getFieldBuildersAtPath(
   fieldPath: string,
   builders: FieldBuilder[],
-  _prefix = ''
+  parentPath = ''
 ): { fields: FieldBuilder[]; path: string } {
-  if (!fieldPath) return { fields: builders, path: _prefix };
+  if (!fieldPath) return { fields: builders, path: parentPath };
 
   const dotIndex = fieldPath.indexOf('.');
   const head = dotIndex === -1 ? fieldPath : fieldPath.slice(0, dotIndex);
   const tail = dotIndex === -1 ? '' : fieldPath.slice(dotIndex + 1);
+  const isEndpoint = fieldPath.split('.').length === 1;
+
+  const nextParentPath = normalizeFieldPath(`${parentPath}${parentPath ? '.' : ''}${head}`);
 
   for (const builder of builders) {
     // ── Tabs container: navigate into the matching tab
     if (builder instanceof TabsBuilder) {
       const tab = builder.field.tabs.find((t: any) => t.name === head);
       if (!tab) continue;
-      const prefix = _prefix ? `${_prefix}.${head}` : head;
-      if (!tail) {
+
+      if (isEndpoint) {
         // Path targets the tab → return all its inner fields
-        return { fields: tab.raw.fields, path: prefix };
+        return { fields: tab.raw.fields, path: nextParentPath };
       }
-      return getFieldBuildersAtPath(tail, tab.raw.fields, prefix);
+      return getFieldBuildersAtPath(tail, tab.raw.fields, nextParentPath);
     }
 
-    if (!('name' in builder.raw) || builder.raw.name !== head) continue;
-
-    const prefix = _prefix ? `${_prefix}.${head}` : head;
+    if (!isFormField(builder.raw)) continue;
 
     // ── Group field: navigate into children
-    if (builder instanceof GroupFieldBuilder) {
-      const children = (builder as any).field.fields as FieldBuilder[];
-      if (!tail) return { fields: children, path: prefix };
-      return getFieldBuildersAtPath(tail, children, prefix);
+    if (builder instanceof GroupFieldBuilder && builder.raw.name === head) {
+      const children = builder.field.fields;
+
+      if (isEndpoint) return { fields: children, path: nextParentPath };
+      return getFieldBuildersAtPath(tail, children, nextParentPath);
     }
 
-    // ── Blocks field: endpoint — return the builder itself
-    // Ignore any index:type suffix (e.g. 'sections.2:paragraph' stops here)
-    if (builder instanceof BlocksBuilder) {
-      return { fields: [builder], path: _prefix };
+    // —— Blocks
+    if (builder instanceof BlocksBuilder && builder.raw.name === head) {
+      const blockType = tail.split('.')[0]?.split(':')[1];
+      const isInnerBlockLookup = tail.split('.').length > 1;
+      const nextParentPathWithBlockIndex = `${nextParentPath}.${tail.split('.')[0]}`;
+
+      if (blockType) {
+        const block = builder.raw.blocks.find((b) => b.name === blockType);
+        if (!isInnerBlockLookup && block?.raw.fields) {
+          return {
+            fields: block?.raw.fields,
+            path: normalizeFieldPath(nextParentPathWithBlockIndex)
+          };
+        }
+        if (block) {
+          return getFieldBuildersAtPath(
+            tail.split('.').slice(1).join('.'),
+            block?.raw.fields,
+            normalizeFieldPath(nextParentPathWithBlockIndex)
+          );
+        }
+      }
+      return { fields: [builder], path: parentPath };
     }
 
-    // ── Single field
-    return { fields: [builder], path: _prefix };
+    // Tree
+    if (builder instanceof TreeBuilder && builder.raw.name === head) {
+      const children = builder.raw.fields;
+      const nextParentPathWithIndex = `${nextParentPath}.${tail.split('.')[0]}`;
+      if (isEndpoint) return { fields: children, path: nextParentPath };
+      return getFieldBuildersAtPath(
+        tail.split('.').slice(1).join('.'),
+        children,
+        nextParentPathWithIndex
+      );
+    }
+
+    // Direct unique field match
+    if (isEndpoint && isFormField(builder.raw) && builder.raw.name === fieldPath) {
+      return { fields: [builder], path: parentPath };
+    }
   }
 
   console.warn(`[LiveEditPanel] fieldPath "${fieldPath}" not found in config fields`);
-  return { fields: builders, path: _prefix };
+  return { fields: builders, path: parentPath };
 }
