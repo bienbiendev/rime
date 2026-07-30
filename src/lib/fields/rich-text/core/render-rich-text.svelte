@@ -137,16 +137,18 @@
         <li {...node.attrs}><RenderRichText {components} json={node} /></li>
       {/if}
       <!--  -->
-    {:else if node.type === 'media'}
+    {:else if node.type?.startsWith('rich-text-upload-')}
       {#if components?.media}
         <components.media {components} {node}>
           <RenderRichText {components} json={node} />
         </components.media>
+      {:else if node.attrs?.url && node.attrs.mimeType?.startsWith('image/')}
+        <img alt={node.attrs?.alt || ''} style="width:100%;height:auto;" src={node.attrs?.url} />
       {:else}
         [Provide a media component to render this node]
       {/if}
       <!--  -->
-    {:else if node.type === 'resource'}
+    {:else if node.type?.startsWith('rich-text-resource-')}
       {#if components?.resource}
         <components.resource {components} {node}>
           <RenderRichText {components} json={node} />
@@ -154,7 +156,7 @@
       {:else}
         [Provide a resource component to render this node]
       {/if}
-    {:else if node.type === 'fields'}
+    {:else if node.type?.startsWith('rich-text-fields-')}
       {#if components?.fields}
         <components.fields {components} {node}>
           <RenderRichText {components} json={node} />

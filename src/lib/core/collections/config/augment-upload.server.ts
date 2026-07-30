@@ -5,6 +5,7 @@ import { augmentUpload, type WithNormalizedUpload } from './augment-upload.js';
 
 /**
  * Override _path field to add foreign key constraints
+ * @TODO why exactly
  */
 export const augmentUploadServer = <T extends Collection<any>>(
   config: T
