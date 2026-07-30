@@ -1,7 +1,8 @@
-import type { CollectionPanelConfig } from '$lib/core/config/types';
+import type { CollectionPanelConfig, UploadConfig } from '$lib/core/config/types';
 
 type Input = {
   panel?: CollectionPanelConfig;
+  upload?: UploadConfig;
 };
 type WithPanel<T> = T & { panel: CollectionPanelConfig };
 
@@ -10,13 +11,12 @@ type WithPanel<T> = T & { panel: CollectionPanelConfig };
  */
 export const augmentPanel = <T extends Input>(config: T): WithPanel<T> => {
   function addPanel(): CollectionPanelConfig {
-    if (config.panel) {
-      return config.panel;
-    }
     return {
+      ...(config.panel || {}),
       dashboard: {
         maxEntries: 8,
-        layout: 'rows'
+        layout: config.upload ? 'grid' : 'rows',
+        ...(config.panel && config.panel.dashboard ? config.panel.dashboard : {})
       }
     };
   }
