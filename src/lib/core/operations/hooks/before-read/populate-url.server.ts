@@ -1,5 +1,7 @@
+import { PARAMS } from '$lib/core/constant.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import { getValueAtPath } from '$lib/util/object.js';
+import validate from '$lib/util/validate.js';
 import { Hooks } from '../index.server.js';
 
 /**
@@ -29,6 +31,12 @@ export const populateURL = Hooks.beforeRead<'generic'>(async (args) => {
       logger.error(
         `Error while generating url of ${config.slug} with id: ${args.doc.id}, ${err.message}`
       );
+      return args;
+    }
+
+    const isValidURL = validate.url(url);
+    if (typeof isValidURL === 'string') {
+      logger.warn(`Invalid URL generated for ${config.slug} with id: ${args.doc.id}, url: ${url}`);
       return args;
     }
 
@@ -108,7 +116,8 @@ export const populateURL = Hooks.beforeRead<'generic'>(async (args) => {
     // Add the live url if needed
     if (config.live && event.locals.user && url) {
       args.doc._live = `${process.env.PUBLIC_RIME_URL}/live?src=${url}&slug=${config.slug}&id=${args.doc.id}`;
-      args.doc._live += locale ? `&locale=${locale}` : '';
+      args.doc._live += args.doc.versionId ? `&${PARAMS.VERSION_ID}=${args.doc.versionId}` : '';
+      args.doc._live += locale ? `&${PARAMS.LOCALE}=${locale}` : '';
     }
   }
 
