@@ -12,6 +12,7 @@ import { Hooks } from '$lib/core/operations/hooks/index.server.js';
 import { toKebabCase } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';
 import { augmentLabel } from './augment-label.js';
+import { augmentPanel } from './augment-panel.js';
 import { augmentThumbnail } from './augment-thumbnail.js';
 
 export const create = <S extends string>(
@@ -26,7 +27,8 @@ export const create = <S extends string>(
   const withNested = augmentNestedServer(withUpload);
   const withVersions = augmentVersions(withNested);
   const withUrl = augmentUrl(withVersions);
-  const withAuth = augmentAuthServer(withUrl);
+  const withPanel = augmentPanel(withUrl);
+  const withAuth = augmentAuthServer(withPanel);
   const withMetas = augmentMetas(withAuth);
   const withHooks = augmentHooks(withMetas);
   const withTitle = augmentTitle(withHooks);

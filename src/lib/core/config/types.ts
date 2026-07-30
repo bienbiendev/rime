@@ -235,6 +235,22 @@ export type CollectionAuthConfig = (
   roles?: (string | Option)[];
 };
 
+export type CollectionPanelConfig =
+  | false
+  | {
+      /** Description for the collection/area, basically displayed on the dashboard */
+      description?: string;
+      /** Sidebar navigation group */
+      group?: string;
+      /** Dashboard settings */
+      dashboard?:
+        | {
+            layout?: 'rows' | 'grid';
+            maxEntries?: number;
+          }
+        | false;
+    };
+
 export type Collection<S> = {
   slug: S;
   /** The collection label */
@@ -250,21 +266,7 @@ export type Collection<S> = {
   /** Whether the collection support file upload */
   upload?: boolean | UploadConfig;
   /** Panel configuration, set false to hide the collection from the panel */
-  panel?:
-    | false
-    | {
-        /** Description for the collection/area, basically displayed on the dashboard */
-        description?: string;
-        /** Sidebar navigation group */
-        group?: string;
-        /** Dashboard settings */
-        dashboard?:
-          | {
-              layout?: 'rows' | 'grid';
-              maxEntries?: number;
-            }
-          | false;
-      };
+  panel?: CollectionPanelConfig;
 } & PrototypeConfig;
 
 export type Area<S> = PrototypeConfig & {

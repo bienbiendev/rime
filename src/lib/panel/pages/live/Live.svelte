@@ -22,13 +22,13 @@
   let panelContexts = $state<Record<string, { doc: any }>>({});
   // Collected from LivePanelContext children after mount
   let panelForms = $state<Record<string, DocumentFormContext>>({});
-
   // Stack-based navigation: last entry is the active panel, Escape pops one level
   let panelStack = $state<ActivePanel[]>([]);
   const activePanel = $derived(panelStack.at(-1) ?? null);
+  let rootDocumentPanel = $state<ActivePanel>();
 
   let paneLeft: ReturnType<typeof Pane>;
-  const VALID_UPDATE = /^[a-z][a-z0-9-]*(?:\/[a-zA-Z0-9_-]+)?$/;
+  const VALID_UPDATE = /^\/[a-z][a-z0-9-]*(?:\/[a-zA-Z0-9_-]+)?(?:\?[a-zA-Z0-9_=&%.-]*)?$/;
 
   let iframe: HTMLIFrameElement;
   let iframeSrc = $state('');
@@ -63,7 +63,7 @@
 
   function parseUpdate(update: string): { slug: string; id?: string } | null {
     if (!VALID_UPDATE.test(update)) return null;
-    const [slug, id] = update.split('/');
+    const [, slug, id] = update.split('/');
     return { slug, id };
   }
 
@@ -90,6 +90,40 @@
     }
   });
 
+  async function activatePanel(
+    key: string,
+    update: string,
+    fieldPath: string,
+    position: 'sidebar' | 'floating'
+  ) {
+    const parsed = parseUpdate(update);
+    if (!parsed) return console.warn(`Invalid update key: ${update}`);
+
+    if (!panelContexts[update]) {
+      const url = parsed.id ? `/api/${parsed.slug}/${parsed.id}` : `/api/${parsed.slug}`;
+      const res = await fetch(url);
+      if (!res.ok) return;
+      panelContexts[update] = { doc: (await res.json()).doc };
+
+      // Seed liveStore only on FIRST activation — never overwrite live edits on re-click
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage(
+          snapshot({ update, path: '', value: panelContexts[update].doc })
+        );
+      }
+    }
+
+    if (!rootDocumentPanel && fieldPath === '') {
+      rootDocumentPanel = { key, update, fieldPath, position };
+    }
+
+    // Push onto the stack — each nested LivePanel click adds a level
+    panelStack = [
+      ...panelStack.filter((item) => item.key !== key),
+      { key, update, fieldPath, position }
+    ];
+  }
+
   const onIframeMessage = async (e: MessageEvent) => {
     // Only accept messages from the expected iframe origin
     if (!iframeOrigin || e.origin !== iframeOrigin) return;
@@ -109,28 +143,7 @@
     // Handle custom panel activation
     if (e.data.activatePanel) {
       const { key, update, fieldPath, position } = e.data.activatePanel;
-      const parsed = parseUpdate(update);
-      if (!parsed) return;
-
-      if (!panelContexts[update]) {
-        const url = parsed.id ? `/api/${parsed.slug}/${parsed.id}` : `/api/${parsed.slug}`;
-        const res = await fetch(url);
-        if (!res.ok) return;
-        panelContexts[update] = { doc: (await res.json()).doc };
-
-        // Seed liveStore only on FIRST activation — never overwrite live edits on re-click
-        if (iframe?.contentWindow) {
-          iframe.contentWindow.postMessage(
-            snapshot({ update, path: '', value: panelContexts[update].doc })
-          );
-        }
-      }
-
-      // Push onto the stack — each nested LivePanel click adds a level
-      panelStack = [
-        ...panelStack.filter((item) => item.key !== key),
-        { key, update, fieldPath, position }
-      ];
+      activatePanel(key, update, fieldPath, position);
     }
 
     if (e.data.deactivatePanel) {
@@ -211,6 +224,17 @@
     }
     return goto(panelUri);
   }
+
+  function activateRootPanel() {
+    if (rootDocumentPanel) {
+      activatePanel(
+        rootDocumentPanel.key,
+        rootDocumentPanel.update,
+        rootDocumentPanel.fieldPath,
+        rootDocumentPanel.position
+      );
+    }
+  }
 </script>
 
 <div class="rz-live-container">
@@ -222,7 +246,12 @@
 
   <Toaster />
 
-  <LiveFloatingUI bind:currentDevice forms={panelForms} onClose={closeActivePanel} />
+  <LiveFloatingUI
+    bind:currentDevice
+    forms={panelForms}
+    onClose={closeActivePanel}
+    showRootPanel={rootDocumentPanel ? activateRootPanel : null}
+  />
 
   <PaneGroup direction="horizontal">
     <Pane bind:this={paneLeft} collapsedSize={0} collapsible={true} defaultSize={30}>
@@ -296,6 +325,7 @@
   .rz-live-container iframe.desktop {
     width: 100%;
     height: 100%;
+    padding: var(--rz-size-6);
   }
 
   .rz-live-container__overlay {

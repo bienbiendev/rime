@@ -1,4 +1,7 @@
+import { page } from '$app/state';
+import { env } from '$env/dynamic/public';
 import { apiUrl } from '$lib/core/api/index.js';
+import { PARAMS } from '$lib/core/constant.js';
 import type { GenericDoc } from '$lib/core/types/doc.js';
 import { toKebabCase } from '$lib/util/string.js';
 import type { BeforeNavigate } from '@sveltejs/kit';
@@ -21,12 +24,12 @@ const LIVE_KEY = Symbol('rime.live');
 
 type LiveStore<T extends GenericDoc = GenericDoc> = ReturnType<typeof createStore<T>>;
 
-function createStore<T extends GenericDoc = GenericDoc>(href: string, origin: string) {
+function createStore<T extends GenericDoc = GenericDoc>(href: string) {
   let enabled = $state(false);
   let doc = $state<T>();
   const liveStore = $state<Record<string, any>>({});
   let activePanelKey = $state<string | null>(null);
-  let currentFocusedElement = $state<HTMLElement>();
+  const origin = new URL(env.PUBLIC_RIME_URL).origin;
 
   /**
    * Handles navigation within iframe to maintain live editing mode
@@ -68,10 +71,6 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string, origin: st
     // Handle field updates (legacy single-doc protocol)
     else if (e.data.path && e.data.value !== undefined) {
       await handleFieldUpdate(e.data);
-    }
-    // Handle focus requests
-    else if (e.data.focus && typeof e.data.focus === 'string' && typeof document !== 'undefined') {
-      handleFocusField(e.data.focus);
     }
   };
 
@@ -182,30 +181,19 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string, origin: st
     doc = setValueAtPath(data.path, doc, processedValue) as T;
   };
 
-  /**
-   * Handles focusing a specific field in the UI
-   */
-  const handleFocusField = (focusPath: string) => {
-    const element = document.querySelector<HTMLElement>(`[data-field="${focusPath}"]`);
-    if (element) {
-      const ringStyle = '0px 0px 0px 1px red';
-
-      // Scroll to the element
-      element.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
-
-      // Add highlight style
-      element.style.boxShadow = ringStyle;
-      if (currentFocusedElement) {
-        currentFocusedElement.style.boxShadow = '';
-      }
-      currentFocusedElement = element;
-    }
-  };
-
   // Return public facade
   return {
     beforeNavigate,
     onMessage,
+
+    get documentUpdateURI() {
+      const doc = page.data.doc;
+      if (!doc) throw new Error('live.doc has not been set before accessing documentAPIUpdateURL');
+      let uri = `/${doc._type}`;
+      if (doc._prototype === 'collection') uri += `/${doc.id}`;
+      if (doc.versionId) uri += `?${PARAMS.VERSION_ID}=${doc.versionId}`;
+      return uri;
+    },
 
     getPanelValue: (update: string, path: string): any => {
       const entry = liveStore[update];
@@ -220,12 +208,15 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string, origin: st
     get data() {
       return { doc };
     },
+
     get doc() {
       return doc;
     },
+
     set doc(value) {
       doc = value;
     },
+
     get enabled() {
       return enabled;
     }
@@ -235,8 +226,8 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string, origin: st
 /**
  * Creates and sets the live context for the current component
  */
-export function setLiveContext<T extends GenericDoc = GenericDoc>(href: string, origin: string) {
-  const store = createStore<T>(href, origin);
+export function setLiveContext<T extends GenericDoc = GenericDoc>(href: string) {
+  const store = createStore<T>(href);
   setContext(LIVE_KEY, store);
   return store;
 }

@@ -7,8 +7,8 @@
 
   type Props = {
     data: T;
-    path: string;
-    update: string;
+    path?: string;
+    update?: string;
     position?: 'sidebar' | 'floating';
     child: Snippet<[value: T, props: PanelProps]>;
   };
@@ -21,9 +21,20 @@
     'data-is-active'?: '' | null;
   };
 
-  const { data, path, update, position = 'sidebar', child }: Props = $props();
+  const { data, path = '', update: incomingUpdate, position = 'sidebar', child }: Props = $props();
 
   const live = getLiveContext();
+
+  // Fallback to doc api url if prop not present
+  const update = $derived(incomingUpdate ? incomingUpdate : live.documentUpdateURI);
+
+  $effect(() => {
+    if (path === '') {
+      window.top?.postMessage({
+        activatePanel: { key, path, update, fieldPath: path, position: position }
+      });
+    }
+  });
 
   // Unique key for this panel instance — discriminates panels with same update but different path
   const key = $derived(`${path}-${update}`);
@@ -47,7 +58,6 @@
 
   function activate() {
     if (!live?.enabled) return;
-
     window.top?.postMessage({
       activatePanel: { key, path, update, fieldPath: path, position: position }
     });

@@ -1,16 +1,17 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { ChevronLeft, Laptop, Save, Smartphone } from '@lucide/svelte';
+  import { ChevronLeft, Laptop, Newspaper, Save, Smartphone } from '@lucide/svelte';
   import Button from '../../ui/button/button.svelte';
   import SpinLoader from '../../ui/spin-loader/SpinLoader.svelte';
 
   type Props = {
     forms: Record<string, DocumentFormContext>;
     onClose: () => void;
+    showRootPanel: (() => void) | null;
     currentDevice: 'desktop' | 'mobile';
   };
-  let { forms, onClose, currentDevice = $bindable('desktop') }: Props = $props();
+  let { forms, onClose, showRootPanel, currentDevice = $bindable('desktop') }: Props = $props();
 
   const formsWithChanges = $derived(Object.values(forms).filter((form) => form.canSubmit));
   const isProcessing = $derived(Object.values(forms).some((form) => form.processing));
@@ -48,6 +49,10 @@
     size="icon"
     icon={Laptop}
   />
+
+  {#if showRootPanel}
+    <Button onclick={showRootPanel} variant="secondary" size="icon" icon={Newspaper} />
+  {/if}
 
   <Button
     onclick={saveAll}

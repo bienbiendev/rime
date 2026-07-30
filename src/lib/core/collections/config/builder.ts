@@ -11,6 +11,7 @@ import { access } from '$lib/util/index.js';
 import { toKebabCase } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';
 import { augmentLabel } from './augment-label.js';
+import { augmentPanel } from './augment-panel.js';
 import { augmentThumbnail } from './augment-thumbnail.js';
 
 export const create = <S extends string>(
@@ -28,7 +29,8 @@ export const create = <S extends string>(
   const withAuth = augmentAuth(withUrl);
   const withMetas = augmentMetas(withAuth);
   const withTitle = augmentTitle(withMetas);
-  const augmented = augmentThumbnail(withTitle);
+  const withPanel = augmentPanel(withTitle);
+  const augmented = augmentThumbnail(withPanel);
 
   return {
     type: 'collection',
