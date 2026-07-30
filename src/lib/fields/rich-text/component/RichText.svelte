@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Field } from '$lib/panel/components/fields/index.js';
   import { root } from '$lib/panel/components/fields/root.svelte.js';
+  import { random } from '$lib/util/index.js';
   import { Editor, type JSONContent } from '@tiptap/core';
   import { onMount } from 'svelte';
   import { buildEditorConfig } from '../core/build-editor-config.js';
@@ -22,10 +23,9 @@
   let editor = $state<Editor>();
   let features = $state<RichTextFeature[]>([]);
   const field = $derived(form.useField<JSONContent>(path, config));
+  const instanceId = random.randomId(8);
 
-  $effect(() => {
-    setRichTextContext(path);
-  });
+  const ctx = setRichTextContext(instanceId);
 
   const withSuggestion = $derived(hasSuggestion(config.features || defaultFeatures));
 
@@ -82,7 +82,7 @@
       {/if}
 
       {#key key}
-        <EditorBubbleMenu {features} {editor} {path} />
+        <EditorBubbleMenu {features} {editor} {path} context={ctx} />
       {/key}
     {/if}
   </div>

@@ -129,7 +129,7 @@ export const isJSONContent = (value: any): value is JSONContent => {
  * // Returns "Hello world"
  * richTextJSONToText('{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Hello world"}]}]}');
  */
-export const richTextJSONToText = (value: string | JSONContent): string => {
+export const richTextJSONToText = (value: string | JSONContent | undefined): string => {
   if (!value) return '';
   let textValue: string;
   const renderNodes = (nodes: { [k: string]: any }) => {

@@ -7,7 +7,7 @@
     RichTextFeatureMark,
     RichTextFeatureNode
   } from '../../core/types.js';
-  import { getRichTextContext } from '../context.svelte';
+  import type { RichTextContext } from '../context.svelte';
   import './bubble-menu.css';
   import IconButton from './icon-button/icon-button.svelte';
   import NodeSelector, { type NodeSelectorItem } from './node-selector/node-selector.svelte';
@@ -18,12 +18,13 @@
   };
 
   type Props = {
+    context: RichTextContext;
     editor: Editor;
     features: RichTextFeature[];
     path: string;
   };
 
-  const { editor, path, features = [] }: Props = $props();
+  const { editor, path, features = [], context }: Props = $props();
 
   let element: HTMLElement;
   let isOpen = $state(false);
@@ -60,7 +61,6 @@
 
   const pluginKey = $derived(path);
   const updateDelay = 250;
-  const richTextContext = $derived(getRichTextContext(path));
 
   const shouldShow = ({ editor }: { editor: Editor }) => {
     return (
@@ -87,11 +87,11 @@
       updateDelay,
       options: {
         onShow() {
-          richTextContext.bubbleOpen = true;
+          context.bubbleOpen = true;
           isOpen = true;
         },
         onHide() {
-          richTextContext.bubbleOpen = false;
+          context.bubbleOpen = false;
           isOpen = false;
         }
       }
@@ -128,7 +128,7 @@
           options={item.options}
           {editor}
           {path}
-          context={richTextContext}
+          {context}
         />
       {:else if item.bubbleMenu?.command}
         <IconButton
