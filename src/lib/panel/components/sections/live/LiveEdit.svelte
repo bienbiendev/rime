@@ -14,9 +14,9 @@
   };
 
   type PanelProps = {
-    onclick?: (e: MouseEvent) => void;
-    role?: 'button';
-    tabindex?: 0;
+    onclick?: null | ((e: MouseEvent) => void);
+    role?: 'button' | null;
+    tabindex?: 0 | null;
     'data-live-panel-trigger'?: '' | null;
     'data-is-active'?: '' | null;
   };
@@ -67,23 +67,27 @@
   onDestroy(() => {
     if (browser) window.removeEventListener('keydown', onKeyDown);
   });
+
+  function makeChildProps(): PanelProps {
+    if (!page.data.user || !live?.enabled) return {};
+
+    return {
+      onclick: !isActive
+        ? (e: MouseEvent) => {
+            e.stopPropagation();
+            e.preventDefault();
+            activate();
+          }
+        : null,
+      role: isActive ? null : 'button',
+      tabindex: isActive ? null : 0,
+      'data-live-panel-trigger': '',
+      'data-is-active': isActive ? '' : null
+    };
+  }
 </script>
 
-{@render child(
-  value,
-  !page.data.user
-    ? {}
-    : {
-        onclick: (e: MouseEvent) => {
-          e.stopPropagation();
-          if (!isActive) activate();
-        },
-        role: 'button',
-        tabindex: 0,
-        'data-live-panel-trigger': live?.enabled ? '' : null,
-        'data-is-active': live?.enabled && isActive ? '' : null
-      }
-)}
+{@render child(value, makeChildProps())}
 
 <style>
   :root {

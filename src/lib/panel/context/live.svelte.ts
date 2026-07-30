@@ -35,9 +35,10 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
    * Handles navigation within iframe to maintain live editing mode
    */
   const beforeNavigate = (params: BeforeNavigate) => {
-    if (window && window.top && params.to?.url.href && enabled) {
-      // Send navigation message to parent with live=1 param
-      window.top.postMessage({ location: params.to.url.href + '?live=1' });
+    if (params.type === 'leave') return;
+    const url = params.to?.url.href;
+    if (window && window.top && url && enabled) {
+      window.top.postMessage({ location: url + '?live=1' });
       params.cancel();
     }
   };
@@ -200,7 +201,6 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
     getPanelValue: (update: string, path: string): any => {
       const entry = liveStore[update];
       if (!entry) {
-        console.warn(`No entry found for update: ${update}`);
         return undefined;
       }
       return getValueAtPath(path, entry);

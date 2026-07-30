@@ -82,7 +82,7 @@
         }
         // Continue handshake attempts until synced
         // Use setTimeout outside to ensure we don't create a tight animation frame loop
-        setTimeout(handshake, 1000);
+        setTimeout(handshake, 300);
       });
     }
   }
@@ -140,6 +140,7 @@
         iframeSrc = e.data.handshake;
       });
     }
+
     // Handle navigation request from iframe
     if (e.data.location) {
       goto(e.data.location);
@@ -255,7 +256,7 @@
 
 <div class="rz-live-container">
   {#if !sync}
-    <div out:fade={{ duration: 350 }} class="rz-live-container__overlay">
+    <div out:fade={{ duration: 150 }} class="rz-live-container__overlay">
       <div><SpinLoader /> {t__('common.live_in_sync')}</div>
     </div>
   {/if}
@@ -351,9 +352,9 @@
   }
 
   .rz-live-container__overlay {
-    background-color: hsl(var(--rz-gray-10));
-    color: white;
-    opacity: 0.9;
+    background-color: light-dark(hsl(var(--rz-gray-18)), hsl(var(--rz-gray-2)));
+    color: light-dark(hsl(var(--rz-gray-2)), hsl(var(--rz-gray-18)));
+    opacity: 0.93;
     position: absolute;
     inset: 0;
     display: flex;
