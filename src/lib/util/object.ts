@@ -214,6 +214,7 @@ export const flattenWithGuard: FlattenWithGuard = (data, opts) => {
  * getValueAtPath('user.phone', { user: { address: { city: "New York" } } });
  */
 export const getValueAtPath = <T>(path: string, obj: Dic): T | undefined => {
+  if (path === '') return obj as T;
   path = normalizeFieldPath(path);
   const parts = path.split('.');
   let current = obj;
@@ -224,6 +225,7 @@ export const getValueAtPath = <T>(path: string, obj: Dic): T | undefined => {
       current = current[part];
     }
     if (current === undefined) {
+      console.warn(`getValueAtPath: Path "${path}" not found in object`, obj);
       return undefined;
     }
   }
