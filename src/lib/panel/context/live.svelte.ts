@@ -48,6 +48,7 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
   const onMessage = async (e: MessageEvent) => {
     // Only accept messages from the trusted panel origin
     if (e.origin !== origin) return;
+
     // Handle handshake request
     if (e.data.handshake) {
       enabled = true;
@@ -56,6 +57,7 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
         window.top.postMessage({ handshake: href });
       }
     }
+
     // Handle panel store updates (new protocol — has `update` key)
     else if (
       e.data.update !== undefined &&
@@ -197,7 +199,10 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
 
     getPanelValue: (update: string, path: string): any => {
       const entry = liveStore[update];
-      if (!entry) return undefined;
+      if (!entry) {
+        console.warn(`No entry found for update: ${update}`);
+        return undefined;
+      }
       return getValueAtPath(path, entry);
     },
 

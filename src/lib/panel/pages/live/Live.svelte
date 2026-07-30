@@ -10,6 +10,7 @@
   import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { setLivePanelContext, type ActivePanel } from '$lib/panel/context/livePanel.svelte.js';
+  import { trycatchFetch } from '$lib/util/function';
   import { snapshot } from '$lib/util/state';
   import { toKebabCase } from '$lib/util/string';
   import { onMount } from 'svelte';
@@ -24,12 +25,13 @@
   let panelForms = $state<Record<string, DocumentFormContext>>({});
   // Stack-based navigation: last entry is the active panel, Escape pops one level
   let panelStack = $state<ActivePanel[]>([]);
+  // The active panel is the last entry in the stack, or null if the stack is empty
   const activePanel = $derived(panelStack.at(-1) ?? null);
+  // The root document panel is the first panel activated with fieldPath === ''
   let rootDocumentPanel = $state<ActivePanel>();
 
   let paneLeft: ReturnType<typeof Pane>;
   const VALID_UPDATE = /^\/[a-z][a-z0-9-]*(?:\/[a-zA-Z0-9_-]+)?(?:\?[a-zA-Z0-9_=&%.-]*)?$/;
-
   let iframe: HTMLIFrameElement;
   let iframeSrc = $state('');
 
@@ -43,6 +45,7 @@
   // Compare URLs regardless of trailing slash
   let sync = $derived(normalizeUrl(iframeSrc) === normalizeUrl(data.src));
 
+  // Send a snapshot of the current state to the iframe
   function makePanelOnDataChange(update: string) {
     return ({ path, value }: { path: string; value: any }) => {
       if (!iframe?.contentWindow) return;
@@ -50,6 +53,7 @@
     };
   }
 
+  // Send a snapshot of the current state to the iframe after a successful save
   function makeAfterSuccess(update: string) {
     return (savedDoc: any) => {
       // Update the cached doc so future re-activations seed the correct base
@@ -61,6 +65,7 @@
     };
   }
 
+  // Validate the update URI format and extract slug and id
   function parseUpdate(update: string): { slug: string; id?: string } | null {
     if (!VALID_UPDATE.test(update)) return null;
     const [, slug, id] = update.split('/');
@@ -161,10 +166,17 @@
   });
 
   $effect(() => {
-    // Start handshake process when not synced
-    if (!sync) {
-      handshake();
-    }
+    // Check wether the iframe src has a 200 status code and is reachable
+    trycatchFetch(data.src, { method: 'HEAD' }).then(([error, response]) => {
+      if (error || !response?.ok) {
+        console.error(`Error loading iframe, check your routes for ${data.src}`);
+      } else {
+        // Start handshake process when not synced
+        if (!sync) {
+          handshake();
+        }
+      }
+    });
   });
 
   $effect(() => {
@@ -235,6 +247,10 @@
       );
     }
   }
+
+  function handleIFrameError() {
+    console.error('Error loading iframe:', data.src);
+  }
 </script>
 
 <div class="rz-live-container">
@@ -274,7 +290,13 @@
 
     <PaneResizer />
     <Pane class="rz-live-container__pane-right" defaultSize={70}>
-      <iframe class={currentDevice} bind:this={iframe} title="edit" src={data.src}></iframe>
+      <iframe
+        class={currentDevice}
+        bind:this={iframe}
+        title="edit"
+        src={data.src}
+        onerror={handleIFrameError}
+      ></iframe>
     </Pane>
   </PaneGroup>
 </div>
