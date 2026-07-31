@@ -128,11 +128,8 @@ export type OptionWithIcon = {
   icon?: Component<IconProps>;
 };
 
-export type RelationValue<T> =
-  | T[]
-  | { id?: string; relationTo: string; documentId: string }[]
-  | string[]
-  | string;
+export type RelationRef = { id?: string; relationTo: string; documentId: string };
+export type RelationValue<T> = T[] | RelationRef[] | string[] | string;
 
 export type SimplerField<T extends FormField> = WithRequired<
   Partial<T>,

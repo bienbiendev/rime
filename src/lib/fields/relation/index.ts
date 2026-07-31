@@ -8,6 +8,7 @@ import type {
   Field,
   FieldHookShared,
   FormField,
+  RelationRef,
   RelationValue
 } from '$lib/fields/types.js';
 import type { RegisterCollection } from '$lib/index.js';
@@ -134,6 +135,19 @@ export const isRelationResolved = <T>(value: any): value is T => {
 };
 
 /**
+ * Checks if a relation value is a reference (contains only the relationTo and documentId).
+ *
+ * @example
+ * // Returns true for a relation reference
+ * isRelationRef({ relationTo: 'pages', documentId: '123' });
+ */
+export const isRelationRef = (value: unknown): value is RelationRef =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as any).relationTo === 'string' &&
+  typeof (value as any).documentId === 'string';
+
+/**
  * Checks if a relation value is unresolved (contains only reference information).
  *
  * @example
@@ -147,21 +161,44 @@ export const isRelationUnresolved = (
 };
 
 /**
- * Resolves a relation by fetching the referenced document.
- * If the relation is already resolved, returns it as is.
+ * Resolves a relation reference to the actual document it points to.
  *
  * @example
- * // Resolves a relation to its full document
- * const page = await resolveRelation({ relationTo: 'pages', documentId: '123' });
+ * // Resolves a relation reference to the actual document
+ * const doc = await resolveRelationRef({ relationTo: 'pages', documentId: '123' });
  */
-export const resolveRelation = async <T>(value: any): Promise<T> => {
-  if (isRelationResolved<T>(value)) {
-    return value;
+export async function resolveRelationRef<T>(item: T | RelationRef | string): Promise<T> {
+  if (isRelationRef(item)) {
+    return fetch(`api/${item.relationTo}/${item.documentId}`)
+      .then((r) => r.json())
+      .then((r) => r.doc);
   }
-  return (await fetch(`api/${value.relationTo}/${value.documentId}`)
-    .then((r) => r.json())
-    .then((r) => r.doc)) as T;
-};
+  if (typeof item === 'string') {
+    throw new Error(
+      `Cannot resolve relation from a bare id ("${item}") — missing "relationTo". ` +
+        `resolveRelationRef only works on populated docs or { relationTo, documentId } objects.`
+    );
+  }
+  if (isRelationResolved<T>(item)) {
+    return item;
+  }
+  throw new Error(`Unrecognized relation shape: ${JSON.stringify(item)}`);
+}
+
+/**
+ * Resolves a relation field value to the actual documents it points to.
+ *
+ * @example
+ * // Resolves a relation value to the actual documents
+ * const docs = await resolveRelation([{ relationTo: 'pages', documentId: '123' }]);
+ */
+export async function resolveRelation<T>(
+  value: RelationValue<T> | null | undefined
+): Promise<T[] | null | undefined> {
+  if (value === null || value === undefined) return value;
+  const items = Array.isArray(value) ? value : [value];
+  return Promise.all(items.map((item) => resolveRelationRef<T>(item)));
+}
 
 /****************************************************/
 /* Type
