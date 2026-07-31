@@ -81,7 +81,8 @@ class AreaAPI<Doc extends GenericDoc = GenericDoc> {
    * // Get the latest version including draft
    * const doc = await rime.area('settings').find({ draft: true })
    */
-  find(args: APIMethodArgs<typeof find>): Promise<Doc> {
+  find(args?: APIMethodArgs<typeof find>): Promise<Doc> {
+    args = args || {};
     const { locale, select = [], depth = 0, versionId, draft } = args;
 
     const params = {
