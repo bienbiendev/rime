@@ -238,14 +238,18 @@
     return goto(panelUri);
   }
 
-  function activateRootPanel() {
+  function toggleRootPanel() {
     if (rootDocumentPanel) {
-      activatePanel(
-        rootDocumentPanel.key,
-        rootDocumentPanel.update,
-        rootDocumentPanel.fieldPath,
-        rootDocumentPanel.position
-      );
+      if (activePanel?.key === rootDocumentPanel.key) {
+        closeActivePanel();
+      } else {
+        activatePanel(
+          rootDocumentPanel.key,
+          rootDocumentPanel.update,
+          rootDocumentPanel.fieldPath,
+          rootDocumentPanel.position
+        );
+      }
     }
   }
 
@@ -267,7 +271,8 @@
     bind:currentDevice
     forms={panelForms}
     onClose={closeActivePanel}
-    showRootPanel={rootDocumentPanel ? activateRootPanel : null}
+    {activePanel}
+    toggleRootPanel={rootDocumentPanel ? toggleRootPanel : null}
   />
 
   <PaneGroup direction="horizontal">

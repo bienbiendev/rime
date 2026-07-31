@@ -1,17 +1,25 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { ChevronLeft, Laptop, Newspaper, Save, Smartphone } from '@lucide/svelte';
+  import type { ActivePanel } from '$lib/panel/context/livePanel.svelte';
+  import { ChevronLeft, Form, Laptop, Save, Smartphone, X } from '@lucide/svelte';
   import Button from '../../ui/button/button.svelte';
   import SpinLoader from '../../ui/spin-loader/SpinLoader.svelte';
 
   type Props = {
     forms: Record<string, DocumentFormContext>;
     onClose: () => void;
-    showRootPanel: (() => void) | null;
+    toggleRootPanel: (() => void) | null;
+    activePanel: ActivePanel | null;
     currentDevice: 'desktop' | 'mobile';
   };
-  let { forms, onClose, showRootPanel, currentDevice = $bindable('desktop') }: Props = $props();
+  let {
+    forms,
+    onClose,
+    toggleRootPanel,
+    activePanel,
+    currentDevice = $bindable('desktop')
+  }: Props = $props();
 
   const formsWithChanges = $derived(Object.values(forms).filter((form) => form.canSubmit));
   const isProcessing = $derived(Object.values(forms).some((form) => form.processing));
@@ -35,7 +43,16 @@
 </script>
 
 <div class="rz-live-floating-ui">
-  <Button icon={ChevronLeft} onclick={onClose} variant="secondary" size="icon" />
+  <Button icon={activePanel ? ChevronLeft : X} onclick={onClose} variant="secondary" size="icon" />
+
+  {#if toggleRootPanel}
+    <Button
+      onclick={toggleRootPanel}
+      variant={activePanel && activePanel.fieldPath === '' ? 'secondary' : 'ghost'}
+      size="icon"
+      icon={Form}
+    />
+  {/if}
 
   <Button
     onclick={() => (currentDevice = 'mobile')}
@@ -49,10 +66,6 @@
     size="icon"
     icon={Laptop}
   />
-
-  {#if showRootPanel}
-    <Button onclick={showRootPanel} variant="secondary" size="icon" icon={Newspaper} />
-  {/if}
 
   <Button
     onclick={saveAll}

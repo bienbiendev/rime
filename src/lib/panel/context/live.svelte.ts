@@ -194,7 +194,10 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
       if (!doc) throw new Error('live.doc has not been set before accessing documentAPIUpdateURL');
       let uri = `/${doc._type}`;
       if (doc._prototype === 'collection') uri += `/${doc.id}`;
-      if (doc.versionId) uri += `?${PARAMS.VERSION_ID}=${doc.versionId}`;
+      const params = [];
+      if (doc.versionId) params.push(`${PARAMS.VERSION_ID}=${doc.versionId}`);
+      if (doc.locale) params.push(`${PARAMS.LOCALE}=${doc.locale}`);
+      if (params.length) uri += `?${params.join('&')}`;
       return uri;
     },
 

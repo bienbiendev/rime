@@ -1,14 +1,7 @@
 <script lang="ts">
   import LiveEdit from '$lib/panel/components/sections/live/LiveEdit.svelte';
-  import { getLiveContext } from '$lib/panel/context/live.svelte';
 
   let { data }: { data: { doc: PagesDoc } } = $props();
-
-  const liveCtx = getLiveContext();
-
-  $effect(() => {
-    liveCtx.doc = data.doc;
-  });
 </script>
 
 <LiveEdit data={data.doc}>
