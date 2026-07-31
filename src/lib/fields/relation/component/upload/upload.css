@@ -28,7 +28,7 @@
 .rz-relation-upload__list:not(.rz-relation-upload__list[data-many]) {
   @container relation-upload-list (min-width: 285px) {
     .rz-card-resource {
-      width: min(400px, 100%);
+      width: min(310px, 100%);
       .rz-card-resource__info {
         display: block;
       }
