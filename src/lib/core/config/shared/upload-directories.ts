@@ -54,7 +54,7 @@ export function makeUploadDirectoriesCollectionClient<C extends WithUpload<Built
       plural: `${collection.slug} directories`
     },
     icon: collection.icon,
-    asTitle: 'path',
+    asTitle: 'name',
     asThumbnail: collection.asThumbnail,
     panel: false
   };
