@@ -180,7 +180,7 @@
     "@floating-ui/dom": "^1.7.4",
     "@internationalized/date": "^3.8.2",
     "@libsql/client": "^0.15.15",
-    "@lucide/svelte": "^0.540.0",
+    "@lucide/svelte": "^1.28.0",
     "@playwright/test": "^1.52.0",
     "@thednp/domparser": "^0.1.6",
     "@tiptap/core": "^3.22.3",
