@@ -3,14 +3,20 @@
   import { richTextJSONToText } from '$lib/fields/rich-text';
   import LiveEdit from '$lib/panel/components/sections/live/LiveEdit.svelte';
 
-  let { data }: { data: { doc: PagesDoc } } = $props();
+  let { data } = $props();
 </script>
 
-<LiveEdit data={data.doc}>
-  {#snippet child(doc)}
+<LiveEdit>
+  {#snippet child(doc: PagesDoc)}
     <LiveEdit path="attributes.title" data={doc.attributes.title}>
       {#snippet child(title, props)}
         <h1 {...props}>{title}</h1>
+      {/snippet}
+    </LiveEdit>
+
+    <LiveEdit path="maintenance" update="/settings" data={data.settings.maintenance}>
+      {#snippet child(maintenance, props)}
+        <p {...props}>{maintenance ? 'Enabled' : 'Disabled'}</p>
       {/snippet}
     </LiveEdit>
 

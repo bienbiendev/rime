@@ -6,7 +6,8 @@
   import { onDestroy, type Snippet } from 'svelte';
 
   type Props = {
-    data: T;
+    data?: T;
+    // Path from the root of the document to the field being edited, e.g. `attributes.title` or `layout.sections.2:paragraph.text`
     path?: string;
     update?: string;
     position?: 'sidebar' | 'floating';
@@ -21,8 +22,15 @@
     'data-is-active'?: '' | null;
   };
 
-  const { data, path = '', update: incomingUpdate, position = 'sidebar', child }: Props = $props();
+  const {
+    data: incomingData,
+    path = '',
+    update: incomingUpdate,
+    position = 'sidebar',
+    child
+  }: Props = $props();
 
+  const data = $derived(incomingData ?? page.data.doc);
   const live = getLiveContext();
 
   // Fallback to doc api url if prop not present

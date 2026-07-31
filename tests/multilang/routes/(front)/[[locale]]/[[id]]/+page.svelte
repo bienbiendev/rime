@@ -2,15 +2,8 @@
   import { resolveRelation } from '$lib/fields/relation';
   import { richTextJSONToText } from '$lib/fields/rich-text';
   import LiveEdit from '$lib/panel/components/sections/live/LiveEdit.svelte';
-  import { getLiveContext } from '$lib/panel/context/live.svelte.js';
 
-  let { data }: { data: { doc: PagesDoc } } = $props();
-
-  const liveCtx = getLiveContext();
-
-  $effect(() => {
-    liveCtx.doc = data.doc;
-  });
+  let { data } = $props();
 </script>
 
 <LiveEdit data={data.doc}>
