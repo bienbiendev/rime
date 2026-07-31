@@ -60,6 +60,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     !isDisabled && !readOnly && Object.keys(changes).length > 0 && !hasError
   );
   const nestedLevel = initLevel();
+  /** onDataChange is only used to trigger action on live-edit so determine if this is a live-edit form */
   const isLiveEdit = !!onDataChange;
   const locale = getLocaleContext();
   const titleContext = getTitleContext();

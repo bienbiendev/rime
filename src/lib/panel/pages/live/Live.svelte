@@ -1,6 +1,5 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { page } from '$app/state';
   import type { BuiltConfigClient } from '$lib/core/config/types';
   import { t__ } from '$lib/core/i18n';
   import LiveEditPanel from '$lib/panel/components/sections/live/LiveEditPanel.svelte';
@@ -8,16 +7,39 @@
   import { Pane, PaneGroup, PaneResizer } from '$lib/panel/components/ui/pane/index.js';
   import { Toaster } from '$lib/panel/components/ui/sonner';
   import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
+  import { setAPIProxyContext } from '$lib/panel/context/api-proxy.svelte';
+  import { setConfigContext } from '$lib/panel/context/config.svelte';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { setLivePanelContext, type ActivePanel } from '$lib/panel/context/livePanel.svelte.js';
+  import { setLocaleContext } from '$lib/panel/context/locale.svelte';
+  import { setTitleContext } from '$lib/panel/context/title';
+  import { setUserContext } from '$lib/panel/context/user.svelte';
+  import type { GenericDoc, User } from '$lib/types';
   import { trycatchFetch } from '$lib/util/function';
   import { snapshot } from '$lib/util/state';
   import { toKebabCase } from '$lib/util/string';
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
 
-  type Props = { data: any; config: BuiltConfigClient };
+  type Data = {
+    doc: GenericDoc;
+    user: User;
+    src: string;
+    slug: string;
+    locale: string | undefined;
+  };
+
+  type Props = { data: Data; config: BuiltConfigClient };
   const { data, config }: Props = $props();
+
+  setAPIProxyContext();
+  // svelte-ignore state_referenced_locally
+  setConfigContext(config);
+  // svelte-ignore state_referenced_locally
+  setUserContext(data.user);
+  // svelte-ignore state_referenced_locally
+  setLocaleContext(data.locale);
+  setTitleContext('[untitled]');
 
   // One entry per unique `update` key — never removed once added
   let panelContexts = $state<Record<string, { doc: any }>>({});
@@ -95,12 +117,7 @@
     }
   });
 
-  async function activatePanel(
-    key: string,
-    update: string,
-    fieldPath: string,
-    position: 'sidebar' | 'floating'
-  ) {
+  async function activatePanel(key: string, update: string, fieldPath: string) {
     const parsed = parseUpdate(update);
     if (!parsed) return console.warn(`Invalid update key: ${update}`);
 
@@ -119,14 +136,11 @@
     }
 
     if (!rootDocumentPanel && fieldPath === '') {
-      rootDocumentPanel = { key, update, fieldPath, position };
+      rootDocumentPanel = { key, update, fieldPath };
     }
 
     // Push onto the stack — each nested LivePanel click adds a level
-    panelStack = [
-      ...panelStack.filter((item) => item.key !== key),
-      { key, update, fieldPath, position }
-    ];
+    panelStack = [...panelStack.filter((item) => item.key !== key), { key, update, fieldPath }];
   }
 
   const onIframeMessage = async (e: MessageEvent) => {
@@ -148,8 +162,8 @@
 
     // Handle custom panel activation
     if (e.data.activatePanel) {
-      const { key, update, fieldPath, position } = e.data.activatePanel;
-      activatePanel(key, update, fieldPath, position);
+      const { key, update, fieldPath } = e.data.activatePanel;
+      activatePanel(key, update, fieldPath);
     }
 
     if (e.data.deactivatePanel) {
@@ -223,10 +237,8 @@
   }
 
   function backToDocumentPanel() {
-    const slug = page.url.searchParams.get('slug');
-    const id = page.url.searchParams.get('id');
-
-    if (!slug) return;
+    const slug = data.slug;
+    const id = data.doc.id;
 
     // Start with the base URI for the panel
     let panelUri = `/panel/${toKebabCase(slug)}`;
@@ -243,12 +255,7 @@
       if (activePanel?.key === rootDocumentPanel.key) {
         closeActivePanel();
       } else {
-        activatePanel(
-          rootDocumentPanel.key,
-          rootDocumentPanel.update,
-          rootDocumentPanel.fieldPath,
-          rootDocumentPanel.position
-        );
+        activatePanel(rootDocumentPanel.key, rootDocumentPanel.update, rootDocumentPanel.fieldPath);
       }
     }
   }
@@ -280,15 +287,12 @@
       {#if activePanel && panelContexts[activePanel.update]}
         {#key activePanel.update}
           <LiveEditPanel
-            {config}
             doc={panelContexts[activePanel.update].doc}
             onDataChange={makePanelOnDataChange(activePanel.update)}
             afterSuccess={makeAfterSuccess(activePanel.update)}
             onFormReady={(form) => {
               panelForms[activePanel.update] = form;
             }}
-            user={data.user}
-            locale={data.locale}
           />
         {/key}
       {/if}

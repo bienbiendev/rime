@@ -6,11 +6,12 @@
   import { onDestroy, type Snippet } from 'svelte';
 
   type Props = {
+    /** Initial value */
     data?: T;
-    // Path from the root of the document to the field being edited, e.g. `attributes.title` or `layout.sections.2:paragraph.text`
+    /** Full path to the field being edited from the root of the document, e.g. `attributes.title` or `layout.sections.2:paragraph.text` */
     path?: string;
+    /** Update URI of the API ex: `/pages/123` */
     update?: string;
-    position?: 'sidebar' | 'floating';
     child: Snippet<[value: T, props: PanelProps]>;
   };
 
@@ -22,13 +23,7 @@
     'data-is-active'?: '' | null;
   };
 
-  const {
-    data: incomingData,
-    path = '',
-    update: incomingUpdate,
-    position = 'sidebar',
-    child
-  }: Props = $props();
+  const { data: incomingData, path = '', update: incomingUpdate, child }: Props = $props();
 
   const data = $derived(incomingData ?? page.data.doc);
   const live = getLiveContext();
@@ -39,7 +34,7 @@
   $effect(() => {
     if (path === '') {
       window.top?.postMessage({
-        activatePanel: { key, path, update, fieldPath: path, position: position }
+        activatePanel: { key, path, update, fieldPath: path }
       });
     }
   });
@@ -67,7 +62,7 @@
   function activate() {
     if (!live?.enabled) return;
     window.top?.postMessage({
-      activatePanel: { key, path, update, fieldPath: path, position: position }
+      activatePanel: { key, path, update, fieldPath: path }
     });
     window.addEventListener('keydown', onKeyDown);
   }

@@ -6,7 +6,6 @@ export type ActivePanel = {
   key: string;
   update: string;
   fieldPath: string;
-  position: 'sidebar' | 'floating';
 };
 
 export type LivePanelStore = {
