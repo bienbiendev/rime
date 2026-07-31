@@ -115,7 +115,7 @@ export const populateURL = Hooks.beforeRead<'generic'>(async (args) => {
 
     // Add the live url if needed
     if (config.live && event.locals.user && url) {
-      args.doc._live = `${process.env.PUBLIC_RIME_URL}/live?src=${url}&slug=${config.slug}&id=${args.doc.id}`;
+      args.doc._live = `${process.env.PUBLIC_RIME_URL}/panel/live-edit?src=${url}&slug=${config.slug}&id=${args.doc.id}`;
       args.doc._live += args.doc.versionId ? `&${PARAMS.VERSION_ID}=${args.doc.versionId}` : '';
       args.doc._live += locale ? `&${PARAMS.LOCALE}=${locale}` : '';
     }

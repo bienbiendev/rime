@@ -215,7 +215,7 @@ const livePage = () => `
 <script lang="ts">
   import { Live } from '${PACKAGE_NAME}/panel/client';
 
-  import config from '../../../lib/${OUTPUT_DIR}/rime.config.js';
+  import config from '../../../../lib/${OUTPUT_DIR}/rime.config.js';
 
   const { data } = $props();
 </script>
@@ -298,7 +298,7 @@ export const commonRoutes: Routes = {
     page: panelPage,
     pageServer: panelPageServer
   },
-  '(rime)/live': {
+  '(rime)/panel/live-edit': {
     page: livePage,
     pageServer: livePageServer
   }

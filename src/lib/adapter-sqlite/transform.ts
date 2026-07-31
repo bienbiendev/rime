@@ -58,8 +58,7 @@ export const transformerFacade = <const C extends Config>(args: {
     const tableNameRelationFields = `${tableName}Rels`;
     const tableNameLocales = withLocalesSuffix(tableName);
 
-    const isLive = event.url.pathname.startsWith('/live');
-    const isPanel = event.url.pathname.startsWith('/panel') || isLive;
+    const isPanel = event.url.pathname.startsWith('/panel');
 
     let docAPI;
     if (configCtx.isCollection(slug)) {
