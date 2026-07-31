@@ -299,7 +299,7 @@ export const commonRoutes: Routes = {
     pageServer: panelPageServer
   },
   '(rime)/panel/live-edit': {
-    page: livePage,
+    'page@(rime)': livePage,
     pageServer: livePageServer
   }
 };
