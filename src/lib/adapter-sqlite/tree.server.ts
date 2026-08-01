@@ -1,28 +1,32 @@
-import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.js';
+import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
 import { withLocalesSuffix } from '$lib/core/naming.js';
-import type { GenericBlock } from '$lib/core/types/doc.js';
-import type { WithOptional } from '$lib/util/types.js';
+import type { TreeBlock } from '$lib/core/types/doc.js';
+import { extractFieldName } from '$lib/fields/tree/util.js';
+import type { WithRequired } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
 import { omit } from '../util/object.js';
 import { toPascalCase } from '../util/string.js';
-import { generatePK, transformDataToSchema } from './util.js';
+import { generatePK, transformDataToSchema } from './util.server.js';
 
-const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
-  const buildBlockTableName = (slug: string, blockName: string) =>
-    `${slug}Blocks${toPascalCase(blockName)}`;
+const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
+  //
+  const buildBlockTableName = (slug: string, blockPath: string) => {
+    const [fieldName] = extractFieldName(blockPath);
+    return `${slug}Tree${toPascalCase(fieldName)}`;
+  };
 
   const update: UpdateBlock = async ({ parentSlug, block, locale }) => {
-    const table = buildBlockTableName(parentSlug, block.type);
-    const columns = getTableColumns(tables[table]);
+    const tableName = buildBlockTableName(parentSlug, block.path);
+    const columns = getTableColumns(tables[tableName]);
     const values = transformDataToSchema(omit(['id'], block), columns);
 
     if (Object.keys(values).length) {
-      await db.update(tables[table]).set(values).where(eq(tables[table].id, block.id));
+      await db.update(tables[tableName]).set(values).where(eq(tables[tableName].id, block.id));
     }
 
-    const keyTableLocales = withLocalesSuffix(table);
-    if (locale && keyTableLocales in tables) {
-      const tableLocales = tables[keyTableLocales];
+    const tableLocalesName = withLocalesSuffix(tableName);
+    if (locale && tableLocalesName in tables) {
+      const tableLocales = tables[tableLocalesName];
       const localizedColumns = getTableColumns(tableLocales);
       const localizedValues = transformDataToSchema(
         omit(['ownerId', 'id'], block),
@@ -31,8 +35,8 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
 
       if (!Object.keys(localizedValues).length) return true;
 
-      //@ts-expect-error keyTableLocales is key of db.query
-      const localizedRow = await db.query[keyTableLocales].findFirst({
+      //@ts-expect-error tableLocalesName is key of db.query
+      const localizedRow = await db.query[tableLocalesName].findFirst({
         where: and(eq(tableLocales.ownerId, block.id), eq(tableLocales.locale, locale))
       });
 
@@ -54,41 +58,41 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 
   const deleteBlock: DeleteBlock = async ({ parentSlug, block }) => {
-    const table = buildBlockTableName(parentSlug, block.type);
+    const table = buildBlockTableName(parentSlug, block.path);
     await db.delete(tables[table]).where(eq(tables[table].id, block.id));
     return true;
   };
 
   const create: CreateBlock = async ({ parentSlug, block, ownerId, locale }) => {
-    const tableName = buildBlockTableName(parentSlug, block.type);
+    const table = buildBlockTableName(parentSlug, block.path);
     const blockId = generatePK();
-    const tableNameLocales = withLocalesSuffix(tableName);
+    const tableLocales = withLocalesSuffix(table);
 
-    if (locale && tableNameLocales in tables) {
-      const unlocalizedColumns = getTableColumns(tables[tableName]);
-      const localizedColumns = getTableColumns(tables[tableNameLocales]);
+    if (locale && tableLocales in tables) {
+      const unlocalizedColumns = getTableColumns(tables[table]);
+      const localizedColumns = getTableColumns(tables[tableLocales]);
 
       const unlocalizedData = transformDataToSchema(block, unlocalizedColumns);
       const localizedData = transformDataToSchema(block, localizedColumns);
 
-      await db.insert(tables[tableName]).values({
+      await db.insert(tables[table]).values({
         ...unlocalizedData,
         id: blockId,
         ownerId: ownerId,
         locale
       });
 
-      await db.insert(tables[tableNameLocales]).values({
+      await db.insert(tables[tableLocales]).values({
         ...localizedData,
         id: generatePK(),
         ownerId: blockId,
         locale
       });
     } else {
-      const columns = getTableColumns(tables[tableName]);
+      const columns = getTableColumns(tables[table]);
       const schemaData = transformDataToSchema(block, columns);
 
-      await db.insert(tables[tableName]).values({
+      await db.insert(tables[table]).values({
         ...schemaData,
         ownerId,
         id: generatePK()
@@ -98,9 +102,7 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 
   const getBlocksTableNames = (slug: string): string[] =>
-    Object.keys(tables).filter(
-      (key) => key.startsWith(`${slug}Blocks`) && !key.endsWith('Locales')
-    );
+    Object.keys(tables).filter((key) => key.startsWith(`${slug}Tree`) && !key.endsWith('Locales'));
 
   return {
     getBlocksTableNames,
@@ -110,7 +112,7 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 };
 
-export default createBlocksFacade;
+export default createTreeFacade;
 
 /****************************************************/
 /* Types
@@ -118,15 +120,18 @@ export default createBlocksFacade;
 
 type UpdateBlock = (args: {
   parentSlug: string;
-  block: GenericBlock;
+  block: WithRequired<TreeBlock, 'path'>;
   locale?: string;
 }) => Promise<boolean>;
 
 type CreateBlock = (args: {
   parentSlug: string;
-  block: WithOptional<GenericBlock, 'id'>;
+  block: WithRequired<TreeBlock, 'path'>;
   ownerId: string;
   locale?: string;
 }) => Promise<boolean>;
 
-type DeleteBlock = (args: { parentSlug: string; block: GenericBlock }) => Promise<boolean>;
+type DeleteBlock = (args: {
+  parentSlug: string;
+  block: WithRequired<TreeBlock, 'path'>;
+}) => Promise<boolean>;

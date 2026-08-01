@@ -1,4 +1,4 @@
-import { filePathToFile } from '$lib/core/collections/upload/util/converter.js';
+import { filePathToFile } from '$lib/core/collections/upload/util/converter.server.js';
 import { VersionOperations } from '$lib/core/collections/versions/operations.js';
 import { VERSIONS_STATUS } from '$lib/core/constant.js';
 import { RimeError } from '$lib/core/errors/index.js';

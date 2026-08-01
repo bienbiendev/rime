@@ -1,5 +1,5 @@
 import type { BuiltCollection, Config } from '$lib/core/config/types.js';
-import cache from '$lib/core/dev/cache/index.js';
+import cache from '$lib/core/dev/cache/index.server.js';
 import { hasDirectoriesSuffix, hasVersionsSuffix } from '$lib/core/naming.js';
 import { slugify } from '$lib/util/string.js';
 import fs from 'fs';

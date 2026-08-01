@@ -1,6 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
-import { rime } from './src/lib/core/dev/vite/index.js';
+import { rime } from './src/lib/core/dev/vite/index.server.js';
 
 export default defineConfig({
   plugins: [sveltekit(), rime()],

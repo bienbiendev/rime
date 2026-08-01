@@ -6,7 +6,7 @@ import { augmentIcons } from '../shared/augment-icons.js';
 import { augmentPrototypes } from '../shared/augment-prototypes.js';
 import { makeVersionsCollectionsAliases } from '../shared/versions-alias.server.js';
 import type { Config } from '../types.js';
-import { augmentCORS } from './augment-cors.js';
+import { augmentCORS } from './augment-cors.server.js';
 import { augmentDirectoriesServer } from './augment-directories.server.js';
 import { augmentPanelAccess } from './augment-panel-access.server.js';
 import { augmentPluginsServer } from './augment-plugins.server.js';

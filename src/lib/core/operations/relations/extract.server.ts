@@ -1,4 +1,4 @@
-import type { BeforeOperationRelation } from '$lib/adapter-sqlite/relations.js';
+import type { BeforeOperationRelation } from '$lib/adapter-sqlite/relations.server.js';
 import { isRelationField } from '$lib/fields/relation/index.js';
 import { getValueAtPath } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';

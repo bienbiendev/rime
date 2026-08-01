@@ -14,8 +14,8 @@ import { createBlankDocument } from '$lib/util/doc.js';
 import type { DeepPartial, Dic } from '$lib/util/types.js';
 import { eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import * as adapterUtil from './util.js';
-import { buildWithParam } from './with.js';
+import * as adapterUtil from './util.server.js';
+import { buildWithParam } from './with.server.js';
 
 /**
  * Creates an area facade for SQLite adapter operations with CRUD functionality.

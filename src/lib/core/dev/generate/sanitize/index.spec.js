@@ -1,5 +1,5 @@
-import { updateServerImports } from '.';
 import { expect, test } from 'vitest';
+import { updateServerImports } from './index.server.js';
 
 test('server imports handle directory imports', () => {
   const content = "import { Posts } from './directory';";

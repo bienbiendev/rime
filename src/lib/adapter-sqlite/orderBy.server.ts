@@ -4,7 +4,7 @@ import type { PrototypeSlug } from '$lib/core/types/doc.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import { asc, desc, getTableColumns, sql } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
-import { pathToDatabaseColumn } from './util.js';
+import { pathToDatabaseColumn } from './util.server.js';
 
 type Args = {
   slug: PrototypeSlug;

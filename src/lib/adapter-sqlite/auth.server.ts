@@ -5,7 +5,7 @@ import type { Dic } from '$lib/util/types.js';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import type { GenericTable } from './types.js';
+import type { GenericTable } from './types.server.js';
 // import { configureBetterAuth } from './better-auth.server.js';
 
 /**

@@ -1,7 +1,6 @@
-import { filePathToBase64 } from '$lib/core/collections/upload/util/converter.js';
+import { filePathToBase64 } from '$lib/core/collections/upload/util/converter.server.js';
 import test, { expect } from '@playwright/test';
 import path from 'path';
-import { clearLog, logToFile } from '../../src/log.js';
 import { API_BASE_URL, signIn } from '../util.js';
 
 const signInSuperAdmin = signIn('admin@bienoubien.studio', 'a&1Aa&1A');

@@ -1,6 +1,6 @@
 import type { Dic } from '$lib/util/types.js';
 import { flatten } from 'flat';
-import cache from '../../dev/cache/index.js';
+import cache from '../../dev/cache/index.server.js';
 
 const serializeValue = (value: any): string => {
   if (value === null) return 'null';

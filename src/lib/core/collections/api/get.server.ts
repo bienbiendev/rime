@@ -1,4 +1,4 @@
-import { normalizeQuery } from '$lib/adapter-sqlite/util.js';
+import { normalizeQuery } from '$lib/adapter-sqlite/util.server.js';
 import { PARAMS } from '$lib/core/constant.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
 import type { CollectionSlug } from '$lib/core/types/doc.js';

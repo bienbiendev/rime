@@ -11,7 +11,7 @@ import { and, eq, getTableColumns, inArray, or } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { ParsedQs } from 'qs';
 import type { PrototypeSlug } from '../types.js';
-import type { GenericTable } from './types.js';
+import type { GenericTable } from './types.server.js';
 
 type BuildWhereArgs = {
   query: ParsedQs;

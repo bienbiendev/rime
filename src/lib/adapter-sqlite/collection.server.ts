@@ -15,10 +15,10 @@ import type { DeepPartial, Dic } from '$lib/util/types.js';
 import { and, desc, eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { RimeError } from '../core/errors/index.js';
-import { buildOrderByParam } from './orderBy.js';
-import * as adapterUtil from './util.js';
-import { buildWhereParam } from './where.js';
-import { buildWithParam } from './with.js';
+import { buildOrderByParam } from './orderBy.server.js';
+import * as adapterUtil from './util.server.js';
+import { buildWhereParam } from './where.server.js';
+import { buildWithParam } from './with.server.js';
 type Schema = GetRegisterType<'Schema'>;
 
 /**

@@ -29,10 +29,6 @@
   border-bottom-left-radius: var(--rz-radius-$(size));
 }
 
-/**************************************/
-/* Font */
-/**************************************/
-
 @define-mixin font-light {
   font-variation-settings: 'wght' 300;
   font-weight: 300;

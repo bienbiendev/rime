@@ -1,6 +1,6 @@
 import { PACKAGE_NAME } from '$lib/core/constant.server.js';
 import { OUTPUT_DIR } from '../../constants.js';
-import type { Routes } from './util.js';
+import type { Routes } from './util.server.js';
 
 // Trick to prevent svelte-kit to replace $lib with resolved imports path
 // same thing for PACKAGE_NAME

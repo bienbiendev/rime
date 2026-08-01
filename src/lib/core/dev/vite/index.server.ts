@@ -5,7 +5,7 @@ import type { Plugin, UserConfig } from 'vite';
 import { ensureHasInit } from '../../ensure.server.js';
 import { logger } from '../../logger/index.server.js';
 import { INPUT_DIR, OUTPUT_DIR } from '../constants.js';
-import { sanitize } from '../generate/sanitize/index.js';
+import { sanitize } from '../generate/sanitize/index.server.js';
 
 dotenv.config({ override: true });
 const dev = process.env.NODE_ENV === 'development';

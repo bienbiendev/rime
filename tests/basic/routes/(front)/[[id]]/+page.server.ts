@@ -12,9 +12,11 @@ export const load = async (event: ServerLoadEvent) => {
     throw error(404, 'Not found');
   }
 
+  const settings = await rime.area('settings').find();
+
   if (user && docs[0]._live && event.url.searchParams.get('live') === '1') {
     return redirect(302, docs[0]._live);
   }
 
-  return { doc: docs[0] };
+  return { doc: docs[0], settings };
 };

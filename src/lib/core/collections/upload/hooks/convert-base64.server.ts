@@ -1,4 +1,4 @@
-import { jsonFileToFile } from '$lib/core/collections/upload/util/converter.js';
+import { jsonFileToFile } from '$lib/core/collections/upload/util/converter.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/operations/hooks/index.server.js';
 import { isFile } from '$lib/util/file.js';

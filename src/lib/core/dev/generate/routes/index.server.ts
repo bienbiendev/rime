@@ -3,15 +3,15 @@ import { withDirectoriesSuffix, withVersionsSuffix } from '$lib/core/naming.js';
 import type { Config } from '$lib/types.js';
 import fs from 'fs';
 import path from 'path';
-import { areaAPIRoutes, areaRoutes, areaVersionsPanelRoutes } from './area.js';
+import { areaAPIRoutes, areaRoutes, areaVersionsPanelRoutes } from './area.server.js';
 import {
   collectionAPIRoutes,
   collectionPanelRoutes,
   collectionVersionsPanelRoutes
-} from './collection.js';
-import { commonRoutes, customRoute } from './common.js';
-import { injectCustomCSS, removeCustomCSS } from './custom-css.js';
-import { ensureDir, shouldRegenerateRoutes, writeRouteFile, type Routes } from './util.js';
+} from './collection.server.js';
+import { commonRoutes, customRoute } from './common.server.js';
+import { injectCustomCSS, removeCustomCSS } from './custom-css.server.js';
+import { ensureDir, shouldRegenerateRoutes, writeRouteFile, type Routes } from './util.server.js';
 
 const projectRoot = process.cwd();
 

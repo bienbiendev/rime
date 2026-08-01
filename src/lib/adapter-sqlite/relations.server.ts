@@ -1,9 +1,9 @@
-import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.js';
+import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
 import type { Relation } from '$lib/fields/relation/index.js';
 import { omit } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import { and, eq, getTableColumns, inArray, isNull, or, type SQLWrapper } from 'drizzle-orm';
-import { transformDataToSchema } from './util.js';
+import { transformDataToSchema } from './util.server.js';
 
 const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   //

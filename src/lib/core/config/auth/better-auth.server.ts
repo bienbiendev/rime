@@ -5,7 +5,7 @@ import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { Config } from '$lib/types.js';
 import { admin as adminPlugin, apiKey } from 'better-auth/plugins';
 import type { BuildConfig } from '../server/index.server.js';
-import { betterAuthAfterHook, betterAuthBeforeHook } from './better-auth-hooks.js';
+import { betterAuthAfterHook, betterAuthBeforeHook } from './better-auth-hooks.server.js';
 import { accessControl, admin, staff, user } from './better-auth-permissions.js';
 
 export function getBaseAuthConfig<const C extends Config>(ctx: {

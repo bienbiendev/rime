@@ -1,6 +1,6 @@
 import { isAuthConfig } from '$lib/core/collections/auth/util.js';
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
-import cache from '$lib/core/dev/cache/index.js';
+import cache from '$lib/core/dev/cache/index.server.js';
 import { isFormField } from '$lib/core/fields/util.js';
 import type { PrototypeSlug } from '$lib/core/types/doc.js';
 import { isBlocksFieldRaw, type BlocksFieldRaw } from '$lib/fields/blocks/index.js';

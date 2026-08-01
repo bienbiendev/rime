@@ -1,15 +1,19 @@
 import { logger } from '$lib/core/logger/index.server.js';
 import { randomId } from '$lib/util/random.js';
 import { isValidSlug, slugify } from '$lib/util/string.js';
+import { generate as generateCode } from '@babel/generator';
+import * as t from '@babel/types';
+import { babelParse } from 'ast-kit';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { cp, mkdir } from 'fs/promises';
+import fs from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { INPUT_DIR } from '../../constants.js';
-import { generate } from '../generate/index.js';
+import { generate } from '../generate/index.server.js';
 import { prompt } from '../util.server.js';
-import { getPackageInfoByKey } from './getPackageName.js';
-import { installDependencies } from './packageManagerUtil.js';
+import { getPackageInfoByKey } from './get-package-info.server.js';
+import { installDependencies } from './package-manager-util.server.js';
 import * as templates from './templates.js';
 
 type Args = {
@@ -119,37 +123,109 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
     }
   }
 
-  function configureVite() {
+  function configureVite(): void {
     const configPath = path.resolve(root, 'vite.config.ts');
-    if (!existsSync(configPath)) {
+    if (!fs.existsSync(configPath)) {
       throw new Error("Can't find vite configuration file");
     }
-    const content = readFileSync(configPath, 'utf-8');
-    if (!content.includes('rime()')) {
-      // Add import
-      const newContent = content.replace(
-        /(import .* from .*;\n?)/,
-        `$1import { rime } from '${PACKAGE}/vite';\n`
-      );
 
-      // Add plugin to the list - ensure it's after sveltekit()
-      const updatedContent = newContent.replace(/plugins:\s*\[([\s\S]*?)\]/, (match, plugins) => {
-        // Check if sveltekit() is in the plugins list
-        if (plugins.includes('sveltekit()')) {
-          // Add rime() after sveltekit()
-          return plugins.includes('sveltekit()')
-            ? match.replace('sveltekit()', 'sveltekit(), rime()')
-            : `plugins: [${plugins}, rime()]`;
-        } else {
-          // If sveltekit() isn't found, add rime() at the end
-          return `plugins: [${plugins}, rime()]`;
-        }
-      });
-      writeFileSync(configPath, updatedContent);
-      logger.info('[✓] Vite plugin added');
-    } else {
-      logger.info('[✓] Vite plugin already present (skip)');
+    let content = fs.readFileSync(configPath, 'utf-8');
+    content = content.replace("from '@sveltejs/adapter-auto'", "from '@sveltejs/adapter-node'");
+    const program = babelParse(content, configPath); // t.Program
+    const programBody = program.body;
+
+    const configObject = findSvelteConfigObject(programBody);
+    if (!configObject) {
+      throw new Error(
+        "Couldn't find the Vite config object (defineConfig({...}) or export default {...})"
+      );
     }
+
+    const pluginsProp = configObject.properties.find(
+      (p): p is t.ObjectProperty =>
+        t.isObjectProperty(p) && t.isIdentifier(p.key) && p.key.name === 'plugins'
+    );
+
+    if (!pluginsProp || !t.isArrayExpression(pluginsProp.value)) {
+      throw new Error("Couldn't find a `plugins: [...]` array in the Vite config object");
+    }
+
+    const pluginsArray = pluginsProp.value;
+
+    const alreadyPresent = pluginsArray.elements.some(
+      (el): el is t.CallExpression =>
+        t.isCallExpression(el) && t.isIdentifier(el.callee) && el.callee.name === 'rime'
+    );
+
+    if (alreadyPresent) {
+      logger.info('[✓] Vite plugin already present (skip)');
+      return;
+    }
+
+    const hasImport = programBody.some(
+      (node): boolean =>
+        t.isImportDeclaration(node) &&
+        node.source.value === `${PACKAGE}/vite` &&
+        node.specifiers.some(
+          (s) => t.isImportSpecifier(s) && t.isIdentifier(s.imported) && s.imported.name === 'rime'
+        )
+    );
+
+    if (!hasImport) {
+      const importDecl = t.importDeclaration(
+        [t.importSpecifier(t.identifier('rime'), t.identifier('rime'))],
+        t.stringLiteral(`${PACKAGE}/vite`)
+      );
+      programBody.unshift(importDecl);
+    }
+
+    const rimeCall = t.callExpression(t.identifier('rime'), []);
+    const sveltekitIndex = pluginsArray.elements.findIndex(
+      (el): el is t.CallExpression =>
+        t.isCallExpression(el) && t.isIdentifier(el.callee) && el.callee.name === 'sveltekit'
+    );
+
+    if (sveltekitIndex !== -1) {
+      pluginsArray.elements.splice(sveltekitIndex + 1, 0, rimeCall);
+    } else {
+      pluginsArray.elements.push(rimeCall);
+    }
+
+    const file = t.file(program);
+    const { code } = generateCode(file, {}, content);
+    fs.writeFileSync(configPath, code);
+    logger.info('[✓] Vite plugin added');
+  }
+
+  function findSvelteConfigObject(body: t.Statement[]): t.ObjectExpression | null {
+    for (const node of body) {
+      if (
+        t.isExpressionStatement(node) &&
+        t.isCallExpression(node.expression) &&
+        t.isIdentifier(node.expression.callee) &&
+        node.expression.callee.name === 'defineConfig'
+      ) {
+        const arg = node.expression.arguments[0];
+        if (t.isObjectExpression(arg)) return arg;
+      }
+
+      if (t.isExportDefaultDeclaration(node)) {
+        const decl = node.declaration;
+        if (
+          t.isCallExpression(decl) &&
+          t.isIdentifier(decl.callee) &&
+          decl.callee.name === 'defineConfig'
+        ) {
+          const arg = decl.arguments[0];
+          if (t.isObjectExpression(arg)) return arg;
+        }
+        if (t.isObjectExpression(decl)) {
+          return decl;
+        }
+      }
+    }
+
+    return null;
   }
 
   function setHooks() {

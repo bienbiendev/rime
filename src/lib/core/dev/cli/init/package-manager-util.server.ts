@@ -24,23 +24,25 @@ type PMConfig = Record<
 
 const packageManagerConfigs: PMConfig = {
   yarn: {
-    command: 'yarn add -D drizzle-kit'
+    command: 'echo "yarn is not supported, please use pnpm or npm" && exit 1'
   },
   pnpm: {
-    command: 'pnpm add -D drizzle-kit && pnpm add drizzle-orm @lucide/svelte sharp',
+    command:
+      'pnpm add -D drizzle-kit && pnpm add -D @sveltejs/adapter-node && pnpm add drizzle-orm @lucide/svelte sharp',
     preInstall: updatePackageJsonForPnpm,
     postInstall: () => {
       execSync('pnpm rebuild');
     }
   },
   bun: {
-    command: 'bun add -D drizzle-kit'
+    command: 'bun add -D drizzle-kit && bun add -D @sveltejs/adapter-node && bun add drizzle-orm @lucide/svelte sharp'
   },
   npm: {
-    command: 'npm install -D drizzle-kit'
+    command:
+      'npm install -D drizzle-kit && npm install -D @sveltejs/adapter-node && npm install drizzle-orm @lucide/svelte sharp'
   },
   deno: {
-    command: 'deno install -D npm:drizzle-kit && deno install --allow-scripts=npm:sharp'
+    command: 'echo "deno is not supported, please use pnpm or npm" && exit 1'
   }
 };
 

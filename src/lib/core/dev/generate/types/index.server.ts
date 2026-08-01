@@ -6,7 +6,7 @@ import type {
   ImageSizesConfig
 } from '$lib/core/config/types.js';
 import { PACKAGE_NAME } from '$lib/core/constant.server.js';
-import cache from '$lib/core/dev/cache/index.js';
+import cache from '$lib/core/dev/cache/index.server.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { logger } from '$lib/core/logger/index.server.js';

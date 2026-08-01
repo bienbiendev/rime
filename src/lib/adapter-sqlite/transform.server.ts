@@ -24,7 +24,7 @@ import {
   makeBlockTableSlug,
   makeTreeTableSlug
 } from './generate-schema/util.js';
-import { transformDatabaseColumnsToPaths } from './util.js';
+import { transformDatabaseColumnsToPaths } from './util.server.js';
 
 /**
  * Facade responsible of converting raw database document

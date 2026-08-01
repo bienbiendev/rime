@@ -1,5 +1,5 @@
-import cache from '$lib/core/dev/cache/index.js';
-import { sanitize } from '$lib/core/dev/generate/sanitize/index.js';
+import cache from '$lib/core/dev/cache/index.server.js';
+import { sanitize } from '$lib/core/dev/generate/sanitize/index.server.js';
 import { ensureGeneratedConfig, ensureUserConfigExist } from '$lib/core/ensure.server.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import { trycatch } from '$lib/util/function.js';

@@ -5,7 +5,7 @@ import type { GetRegisterType } from '$lib/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import { and, eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import type { GenericTables } from './types.js';
+import type { GenericTables } from './types.server.js';
 
 type Params = {
   id: string;

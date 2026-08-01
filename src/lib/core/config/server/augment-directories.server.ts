@@ -1,9 +1,9 @@
-import { augmentHooks } from '$lib/core/collections/config/augment-hooks.server';
-import { exctractPath } from '$lib/core/collections/upload/hooks/extract-path.server';
+import { augmentHooks } from '$lib/core/collections/config/augment-hooks.server.js';
+import { exctractPath } from '$lib/core/collections/upload/hooks/extract-path.server.js';
 import {
   prepareDirectoryChildren,
   updateDirectoryChildren
-} from '$lib/core/collections/upload/hooks/update-directory-children.server';
+} from '$lib/core/collections/upload/hooks/update-directory-children.server.js';
 import { isUploadConfig, type WithUpload } from '$lib/core/collections/upload/util/config.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { makeUploadDirectoriesCollectionClient } from '../shared/upload-directories';

@@ -225,7 +225,7 @@ export const getValueAtPath = <T>(path: string, obj: Dic): T | undefined => {
       current = current[part];
     }
     if (current === undefined) {
-      console.warn(`getValueAtPath: Path "${path}" not found in object`, obj);
+      // console.warn(`getValueAtPath: Path "${path}" not found in object`, obj);
       return undefined;
     }
   }

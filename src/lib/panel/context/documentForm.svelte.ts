@@ -50,7 +50,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   const changes = $derived<Partial<GenericDoc>>(diff(initialDoc, doc));
   let isDisabled = $state(readOnly);
   let processing = $state(false);
-  const operation = doc.id ? 'update' : 'create';
+  const operation = $derived(doc.id ? 'update' : 'create');
   const user = getUserContext();
   const errors = setErrorsContext(key);
   const isCollection = documentConfig.type === 'collection';

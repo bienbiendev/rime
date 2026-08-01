@@ -1,5 +1,5 @@
-import cache from '$lib/core/dev/cache/index.js';
-import { getPackageManager } from '$lib/core/dev/cli/init/packageManagerUtil';
+import cache from '$lib/core/dev/cache/index.server.js';
+import { getPackageManager } from '$lib/core/dev/cli/init/package-manager-util.server.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import fs from 'fs';
 import { spawnSync } from 'node:child_process';

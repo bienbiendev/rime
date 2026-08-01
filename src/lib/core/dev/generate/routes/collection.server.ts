@@ -1,5 +1,5 @@
 import { PACKAGE_NAME } from '$lib/core/constant.server.js';
-import { TScastVersionSlug, type Routes } from './util.js';
+import { TScastVersionSlug, type Routes } from './util.server.js';
 
 /**
  * Layout server template for collection
