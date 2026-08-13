@@ -6,7 +6,7 @@ import { isTreeFieldRaw } from '$lib/fields/tree/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { asc, eq, getTableColumns, or, SQL } from 'drizzle-orm';
-import { getBlocksTableNames, getTreeTableNames } from './generate-schema/util.js';
+import { getBlocksTableNames, getTreeTableNames } from './generate-schema/util.server.js';
 
 export const buildWithParam = (args: {
   slug: string;

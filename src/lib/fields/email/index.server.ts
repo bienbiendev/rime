@@ -1,5 +1,5 @@
 import { templateUniqueRequired } from '$lib/adapter-sqlite/generate-schema/templates.server.js';
-import { getSchemaColumnNames } from '$lib/adapter-sqlite/generate-schema/util.js';
+import { getSchemaColumnNames } from '$lib/adapter-sqlite/generate-schema/util.server.js';
 import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { EmailField } from './index.js';
 

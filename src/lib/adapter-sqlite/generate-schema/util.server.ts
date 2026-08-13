@@ -43,8 +43,8 @@ export const makeBlockTableSlug = (slug: string, blockType: string): string =>
   `${slug}Blocks${toPascalCase(blockType)}`;
 
 /**
- * Generate the column's names for a given field name and its parent path
- * Snake case is used for sqlite column name and Camel case is user for the drizzle column property name
+ * Generate the column and property names for a field given its name and its parent path.
+ * Snake case is used for the sqlite column name and Camel case is used for the drizzle column property name.
  *
  * @example
  * // returns { camel : 'groupTitle', snake: 'group__title' }

@@ -1,5 +1,5 @@
 import { templateUniqueRequired } from '$lib/adapter-sqlite/generate-schema/templates.server.js';
-import { getSchemaColumnNames } from '$lib/adapter-sqlite/generate-schema/util.js';
+import { getSchemaColumnNames } from '$lib/adapter-sqlite/generate-schema/util.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import type { AreaSlug, CollectionSlug, PrototypeSlug } from '$lib/types.js';

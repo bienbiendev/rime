@@ -23,7 +23,7 @@ import {
   getTreeTableNames,
   makeBlockTableSlug,
   makeTreeTableSlug
-} from './generate-schema/util.js';
+} from './generate-schema/util.server.js';
 import { transformDatabaseColumnsToPaths } from './util.server.js';
 
 /**
