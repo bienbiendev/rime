@@ -1,5 +1,5 @@
 import type { FormField } from '$lib/fields/types.js';
-import { BooleanFieldBuilder } from '../../core/fields/builders/boolean.js';
+import { BooleanFieldBuilder } from '../../core/fields/builders/boolean-builder.js';
 import Checkbox from './component/Checkbox.svelte';
 
 export class CheckboxFieldBuilder extends BooleanFieldBuilder<CheckboxField> {

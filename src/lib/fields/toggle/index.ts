@@ -1,4 +1,4 @@
-import { BooleanFieldBuilder } from '$lib/core/fields/builders/boolean.js';
+import { BooleanFieldBuilder } from '$lib/core/fields/builders/boolean-builder.js';
 import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
 import Cell from './component/Cell.svelte';
 import Toggle from './component/Toggle.svelte';

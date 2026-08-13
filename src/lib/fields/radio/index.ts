@@ -1,5 +1,5 @@
 import type { DefaultValueFn, FormField, Option } from '$lib/fields/types.js';
-import { PickOneFieldBuilder } from '../../core/fields/builders/select.js';
+import { PickOneFieldBuilder } from '../../core/fields/builders/select-builder.js';
 import Radio from './component/Radio.svelte';
 
 export class RadioFieldBuilder extends PickOneFieldBuilder<RadioField> {

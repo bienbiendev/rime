@@ -1,6 +1,4 @@
 import handlers from '$lib/core/handlers/index.js';
-export { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-export { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 export { definePlugin } from '$lib/core/plugins/index.js';
 
 export { handlers };

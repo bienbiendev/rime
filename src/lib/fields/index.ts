@@ -19,3 +19,11 @@ export { textarea } from './textarea/index.js';
 export { time } from './time/index.js';
 export { toggle } from './toggle/index.js';
 export { tree } from './tree/index.js';
+
+export { BooleanFieldBuilder } from '$lib/core/fields/builders/boolean-builder.js';
+export { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
+export { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
+export {
+  PickManyFieldBuilder,
+  PickOneFieldBuilder
+} from '$lib/core/fields/builders/select-builder.js';

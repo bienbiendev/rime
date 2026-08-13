@@ -1,5 +1,5 @@
 import type { DefaultValueFn, FormField, OptionWithIcon } from '$lib/fields/types.js';
-import { PickOneFieldBuilder } from '../../core/fields/builders/select.js';
+import { PickOneFieldBuilder } from '../../core/fields/builders/select-builder.js';
 import Combobox from './component/ComboBox.svelte';
 
 export class ComboBoxFieldBuilder extends PickOneFieldBuilder<ComboBoxField> {

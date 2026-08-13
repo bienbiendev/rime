@@ -1,5 +1,5 @@
 import type { DefaultValueFn, Field, FormField, Option } from '$lib/fields/types.js';
-import { PickManyFieldBuilder } from '../../core/fields/builders/select.js';
+import { PickManyFieldBuilder } from '../../core/fields/builders/select-builder.js';
 import Select from './component/Select.svelte';
 
 export class SelectFieldBuilder extends PickManyFieldBuilder<SelectField> {
