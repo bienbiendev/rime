@@ -1,8 +1,9 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import { FormFieldBuilder, type RegisterCollection } from '$lib/index.js';
+import { type RegisterCollection } from '$lib/index.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { createBlankDocument } from '../../util/doc.js';
 import type { BuiltCollection } from '../config/types.js';
+import { FormFieldBuilder } from '../fields/builders/index.js';
 import type { CollectionSlug } from '../types/doc.js';
 import { PRIVATE_FIELDS } from './auth/constant.server.js';
 import { isAuthConfig } from './auth/util.js';
