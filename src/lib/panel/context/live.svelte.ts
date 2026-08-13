@@ -30,6 +30,7 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
   const liveStore = $state<Record<string, any>>({});
   let activePanelKey = $state<string | null>(null);
   const origin = new URL(env.PUBLIC_RIME_URL).origin;
+  const STYLE_TAG_ID = 'rime-rich-text-live-style';
 
   /**
    * Handles navigation within iframe to maintain live editing mode
@@ -74,6 +75,18 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
     // Handle field updates (legacy single-doc protocol)
     else if (e.data.path && e.data.value !== undefined) {
       await handleFieldUpdate(e.data);
+    }
+    // Panel-only styling needed by in-place rich text editing (bubble menu, drag handle...),
+    // sent by the panel itself so devs never have to ship any of the panel's CSS/tokens in
+    // their own build. `css` is pre-scoped (via @scope) by the sender.
+    else if (e.data.injectRichTextLiveStyle) {
+      const { css } = e.data.injectRichTextLiveStyle;
+      if (!document.getElementById(STYLE_TAG_ID)) {
+        const styleEl = document.createElement('style');
+        styleEl.id = STYLE_TAG_ID;
+        styleEl.textContent = css;
+        document.head.appendChild(styleEl);
+      }
     }
   };
 

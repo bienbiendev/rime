@@ -20,6 +20,14 @@
   import { toKebabCase } from '$lib/util/string';
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
+  // `?inline` (not `?raw`) so @imports — the css reset included — are actually resolved into
+  // flat text; `@scope` below then contains all of it, reset included, to the wrapper element.
+  import panelStyleCss from '$lib/panel/style/index.css?inline';
+  import buttonTokensCss from '$lib/panel/components/ui/button/button-tokens.css?inline';
+  import bubbleMenuCss from '$lib/fields/rich-text/component/bubble-menu/bubble-menu.css?inline';
+  import iconButtonCss from '$lib/fields/rich-text/component/bubble-menu/icon-button/icon-button.css?inline';
+  import nodeSelectorCss from '$lib/fields/rich-text/component/bubble-menu/node-selector/node-selector.css?inline';
+  import dragHandleCss from '$lib/fields/rich-text/component/drag-handle/drag-handle.css?inline';
 
   type Data = {
     doc: GenericDoc;
@@ -173,6 +181,16 @@
         panelStack = panelStack.slice(0, -1);
       }
     }
+
+    // Edit originated in the iframe (in-place rich text editing) — apply it to the real
+    // form for that document, same as if the user had typed it in the sidebar.
+    if (e.data.contentUpdate) {
+      const { update, path, value } = e.data.contentUpdate;
+      const field = panelForms[update]?.useField(path);
+      if (field) {
+        field.value = value;
+      }
+    }
   };
 
   onMount(() => {
@@ -194,10 +212,32 @@
     });
   });
 
+  // CSS for the small bit of interactive rich-text chrome (bubble menu, drag handle) that
+  // runs inside the iframe when a field is edited in place — scoped so it can never leak
+  // into the rest of the dev's page, and sent at runtime so none of it ships in their build.
+  const RICH_TEXT_LIVE_SCOPE = 'rz-rich-text-live';
+  // `to (...__content)`: stop the reset/chrome rules from ever reaching the actual ProseMirror
+  // content — that's the dev's own text, styled by their own site CSS, not ours. Custom
+  // properties still inherit down into it regardless (inheritance ignores @scope boundaries),
+  // only the reset/component rules' selectors are stopped at the boundary.
+  const RICH_TEXT_LIVE_CONTENT_BOUNDARY = 'rz-rich-text-editor-core__content';
+  // `:root` → `:scope`: within `@scope (...)`, `:root` never matches (the scope root here is
+  // `.rz-rich-text-live`, not `<html>`), so the token declarations would otherwise be dead.
+  // `:scope` is the correct equivalent — refers to the scope root itself.
+  const scopedTokens = panelStyleCss.replace(/:root/g, ':scope');
+  const scopedButtonTokens = buttonTokensCss.replace(/:root/g, ':scope');
+  const richTextLiveCss = `@scope (.${RICH_TEXT_LIVE_SCOPE}) to (.${RICH_TEXT_LIVE_CONTENT_BOUNDARY}) {\n${scopedTokens}\n${scopedButtonTokens}\n${bubbleMenuCss}\n${iconButtonCss}\n${nodeSelectorCss}\n${dragHandleCss}\n}`;
+
+  function sendRichTextLiveStyle() {
+    if (!iframe?.contentWindow) return;
+    iframe.contentWindow.postMessage({ injectRichTextLiveStyle: { css: richTextLiveCss } });
+  }
+
   $effect(() => {
     // Log when sync is established
     if (sync) {
       console.log('live:synced');
+      sendRichTextLiveStyle();
     }
   });
 

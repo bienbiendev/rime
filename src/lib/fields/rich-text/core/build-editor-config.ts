@@ -20,13 +20,21 @@ import { ParagraphFeature } from './features/paragraph.js';
 type BuildEditorConfigArgs = {
   features: Array<RichTextFeature>;
   standAlone?: boolean;
+  /**
+   * When true, features whose extension defines a NodeView (fields/resource/upload today)
+   * keep their schema (name/attrs/renderHTML) but lose their interactive NodeView, falling
+   * back to plain DOM rendering. Used by the live in-place editor, which supports flow content
+   * only — non-flow nodes must still parse/round-trip correctly, they just aren't editable there.
+   */
+  stripNonFlowNodeViews?: boolean;
 };
 
 /**
  * Builds a rich text editor configuration based on the provided features
  */
 export function buildEditorConfig(args: BuildEditorConfigArgs): RichTextEditorConfig {
-  const { features } = args;
+  const { features, stripNonFlowNodeViews = false } = args;
+  const strippedNodeTypeNames = new Set<string>();
 
   const withSuggestion = hasSuggestion(features);
 
@@ -74,25 +82,32 @@ export function buildEditorConfig(args: BuildEditorConfigArgs): RichTextEditorCo
 
   features.forEach((feature) => {
     if (hasExtension(feature) && !addedExtensions.has(feature.extension)) {
-      // Populate contexts
       if ('addNodeView' in feature.extension.config) {
-        const originalAddOption = feature.extension.config.addOptions || (() => ({}));
-        const contexts = new Map();
-        const localeContext = getLocaleContext();
-        const configContext = getConfigContext();
-        const apiProxyContext = getAPIProxyContext();
-        const userContext = getUserContext();
-        const titleContext = getTitleContext();
-        contexts.set(TITLE_CTX, titleContext);
-        contexts.set(CONFIG_CTX, configContext);
-        contexts.set(CONFIG_CTX, configContext);
-        contexts.set(API_PROXY.ROOT, apiProxyContext);
-        contexts.set(USER_CTX, userContext);
-        contexts.set(LOCALE_CTX, localeContext);
-        feature.extension.config.addOptions = () => {
-          // @ts-expect-error
-          return { ...originalAddOption(), contexts };
-        };
+        if (stripNonFlowNodeViews) {
+          // Keep name/attrs/renderHTML (schema stays complete so the doc still parses),
+          // drop the interactive NodeView so none of its dependencies need to run here.
+          strippedNodeTypeNames.add(feature.extension.name);
+          feature.extension = feature.extension.extend({ addNodeView: undefined });
+        } else {
+          // Populate contexts
+          const originalAddOption = feature.extension.config.addOptions || (() => ({}));
+          const contexts = new Map();
+          const localeContext = getLocaleContext();
+          const configContext = getConfigContext();
+          const apiProxyContext = getAPIProxyContext();
+          const userContext = getUserContext();
+          const titleContext = getTitleContext();
+          contexts.set(TITLE_CTX, titleContext);
+          contexts.set(CONFIG_CTX, configContext);
+          contexts.set(CONFIG_CTX, configContext);
+          contexts.set(API_PROXY.ROOT, apiProxyContext);
+          contexts.set(USER_CTX, userContext);
+          contexts.set(LOCALE_CTX, localeContext);
+          feature.extension.config.addOptions = () => {
+            // @ts-expect-error
+            return { ...originalAddOption(), contexts };
+          };
+        }
       }
       // Push extension
       baseEditorConfig.extensions?.push(feature.extension);
@@ -102,6 +117,7 @@ export function buildEditorConfig(args: BuildEditorConfigArgs): RichTextEditorCo
 
   return {
     tiptap: baseEditorConfig,
-    features: features
+    features: features,
+    strippedNodeTypeNames
   };
 }

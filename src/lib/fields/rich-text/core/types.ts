@@ -41,6 +41,8 @@ export type RichTextFeatureNode = {
 export type RichTextEditorConfig = {
   tiptap: Partial<EditorOptions>;
   features: RichTextFeature[];
+  /** Node type names whose NodeView was stripped (see `stripNonFlowNodeViews`). */
+  strippedNodeTypeNames: Set<string>;
 };
 
 export interface TiptapNodeViewContext {

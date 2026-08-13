@@ -15,6 +15,7 @@ import type { RichTextResource } from './core/features/resource/types.js';
 import { UploadFeature } from './core/features/upload/index.js';
 import type { UploadFeatureExtensionOptions } from './core/features/upload/upload-extension.js';
 import RenderRichText from './core/render-rich-text.svelte';
+import RenderRichTextLive from './core/render-rich-text-live.svelte';
 import SvelteNodeViewRenderer from './core/svelte/node-view-renderer.svelte';
 import NodeViewWrapper from './core/svelte/node-view-wrapper.svelte';
 import type { RichTextNodeRenderer, RichTextNodeRendererProps } from './core/types.js';
@@ -33,6 +34,6 @@ export const italic = () => ItalicFeature;
 export const upload = (args: UploadFeatureExtensionOptions) => UploadFeature(args);
 export const resource = (args: ResourceFeatureExtensionOptions) => ResourceFeature(args);
 
-export { NodeViewWrapper, RenderRichText, richTextJSONToText, SvelteNodeViewRenderer };
+export { NodeViewWrapper, RenderRichText, RenderRichTextLive, richTextJSONToText, SvelteNodeViewRenderer };
 //
 export type { RichTextNodeRenderer, RichTextNodeRendererProps, RichTextResource };

@@ -11,8 +11,15 @@
   import { onDestroy, onMount } from 'svelte';
   import './node-selector.css';
 
-  type Props = { editor: Editor; isMenuOpen: boolean; items: NodeSelectorItem[] };
-  let { editor, items, isMenuOpen }: Props = $props();
+  type Props = {
+    editor: Editor;
+    isMenuOpen: boolean;
+    items: NodeSelectorItem[];
+    /** Render the dropdown inline instead of portalling to document.body — needed in the
+     * live iframe, where portalled content escapes the scoped styles injected for it. */
+    disablePortal?: boolean;
+  };
+  let { editor, items, isMenuOpen, disablePortal = false }: Props = $props();
 
   let open = $state(false);
 
@@ -80,7 +87,7 @@
     {/snippet}
   </Popover.Trigger>
 
-  <Popover.Portal>
+  <Popover.Portal disabled={disablePortal}>
     <Popover.Content align="start" class="rz-node-selector__content">
       {#each items as item, index (index)}
         {@const ItemIcon = item.icon}

@@ -1,0 +1,53 @@
+:root {
+  --rz-button-tl-radius: var(--rz-radius-md);
+  --rz-button-tr-radius: var(--rz-radius-md);
+  --rz-button-br-radius: var(--rz-radius-md);
+  --rz-button-bl-radius: var(--rz-radius-md);
+
+  /* Default variant */
+  --rz-button-default-bg: light-dark(hsl(var(--rz-gray-0)), hsl(var(--rz-gray-15)));
+  --rz-button-default-bg-hover: light-dark(hsl(var(--rz-gray-2)), hsl(var(--rz-gray-19)));
+  --rz-button-default-bg-disabled: light-dark(hsl(var(--rz-gray-3)), hsl(var(--rz-gray-12)));
+  --rz-button-default-fg: light-dark(hsl(var(--rz-gray-13)), hsl(var(--rz-gray-2)));
+
+  /* Success variant */
+  --rz-button-success-bg: hsl(var(--rz-color-spot) / 1);
+  --rz-button-success-bg-hover: hsl(var(--rz-color-spot) / 0.6);
+  --rz-button-success-bg-disabled: hsl(var(--rz-color-spot) / 0.3);
+  --rz-button-success-fg: hsl(var(--rz-color-spot-fg) / 1);
+
+  /* Outline variant */
+  --rz-button-outline-bg: transparent;
+  --rz-button-outline-fg: light-dark(hsl(var(--rz-gray-4)), hsl(var(--rz-gray-12)));
+  --rz-button-outline-border: light-dark(hsl(var(--rz-gray-14)), hsl(var(--rz-gray-8)));
+  --rz-button-outline-bg-hover: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-4)));
+  /* border-width */
+  --rz-button-outline-border-left-width: 1px;
+  --rz-button-outline-border-top-width: 1px;
+  --rz-button-outline-border-right-width: 1px;
+  --rz-button-outline-border-bottom-width: 1px;
+
+  /* Ghost variant */
+  --rz-button-ghost-bg: transparent;
+  --rz-button-ghost-bg-hover: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-4)));
+  --rz-button-ghost-fg: hsl(var(--rz-color-fg));
+
+  /* Secondary variant */
+  --rz-button-secondary-bg: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));
+  --rz-button-secondary-bg-hover: light-dark(
+    hsl(var(--rz-gray-16)),
+    color-mix(in hsl, white 3%, hsl(var(--rz-gray-3)))
+  );
+  --rz-button-secondary-fg: hsl(var(--rz-color-fg));
+
+  /* Link variant */
+  --rz-button-link-bg: transparent;
+  --rz-button-link-bg-hover: transparent;
+  --rz-button-link-fg: hsl(var(--rz-color-fg));
+
+  /* Text variant */
+  --rz-button-text-bg: transparent;
+  --rz-button-text-fg: hsl(var(--rz-color-fg) / 0.6);
+  --rz-button-text-fg-hover: hsl(var(--rz-color-fg) / 1);
+  --rz-button-text-fg-disabled: hsl(var(--rz-color-fg) / 0.4);
+}

@@ -45,14 +45,12 @@
     onEnd: function (evt) {
       const { newIndex, to } = evt;
 
-      //@ts-expect-error annoying
-      const initialPath = evt.item.__attributes['data-path'];
-      //@ts-expect-error annoying
-      const targetListPath = to.__attributes['data-path'];
+      const initialPath = evt.item.dataset.path;
+      const targetListPath = to.dataset.path;
       const isTargetPathRoot = targetListPath === path;
       const targetPath = `${targetListPath}${!isTargetPathRoot ? '._children' : ''}.${newIndex}`;
 
-      if (initialPath !== targetPath) {
+      if (initialPath !== undefined && initialPath !== targetPath) {
         treeState.moveItem(initialPath.replace(`${path}.`, ''), targetPath.replace(`${path}.`, ''));
         resetSortable();
       }

@@ -22,9 +22,10 @@
     editor: Editor;
     features: RichTextFeature[];
     path: string;
+    disablePortals?: boolean;
   };
 
-  const { editor, path, features = [], context }: Props = $props();
+  const { editor, path, features = [], context, disablePortals = false }: Props = $props();
 
   let element: HTMLElement;
   let isOpen = $state(false);
@@ -116,7 +117,7 @@
   class="rz-bubble-menu {isOpen ? 'rz-bubble-menu--open' : ''}"
 >
   {#if nodeItems.length > 1}
-    <NodeSelector {editor} items={nodeItems} isMenuOpen={isOpen} />
+    <NodeSelector {editor} items={nodeItems} isMenuOpen={isOpen} disablePortal={disablePortals} />
   {/if}
 
   {#if bubbleMenuItems.length > 0}

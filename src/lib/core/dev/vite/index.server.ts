@@ -55,7 +55,7 @@ export function rime(): Plugin {
             // letting them become unhandled rejections that crash the dev server.
             await mod.default;
           } catch (error: any) {
-            logger.error('Failed to reload the config', error.message);
+            logger.error('Failed to reload the config:', error.message);
           }
         }
       });
