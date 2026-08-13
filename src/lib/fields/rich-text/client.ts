@@ -1,3 +1,4 @@
+import type { JSONContent } from '@tiptap/core';
 import type { Level } from '@tiptap/extension-heading';
 import { BlockquoteFeature } from './core/features/blockquote.js';
 import { BoldFeature } from './core/features/bold.js';
@@ -35,4 +36,4 @@ export const resource = (args: ResourceFeatureExtensionOptions) => ResourceFeatu
 
 export { NodeViewWrapper, RenderRichText, richTextJSONToText, SvelteNodeViewRenderer };
 //
-export type { RichTextNodeRenderer, RichTextNodeRendererProps, RichTextResource };
+export type { JSONContent, RichTextNodeRenderer, RichTextNodeRendererProps, RichTextResource };
