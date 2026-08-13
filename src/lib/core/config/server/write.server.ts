@@ -2,6 +2,11 @@ import type { Dic } from '$lib/util/types.js';
 import { flatten } from 'flat';
 import cache from '../../dev/cache/index.server.js';
 
+/**
+ * We actually need to serialize config values that will trigger
+ * types, routes, or schema generations, meaning that for now
+ * a basic serialization approach is sufficient.
+ */
 const serializeValue = (value: any): string => {
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
@@ -15,8 +20,16 @@ const serializeValue = (value: any): string => {
       return `func:${value.toString()}`;
 
     case 'object':
-      // Handle arrays and objects
       try {
+        // Builder instances (fields, tabs, blocks, ...) may hold their real state behind
+        // private class fields (e.g. TabBuilder's #tab), invisible to Object.keys()/
+        // JSON.stringify() — flatten() then treats them as leaf objects with zero own keys,
+        // silently serializing as `{}` regardless of actual content. compile() is the same
+        // method already calls to get a plain, fully-resolved representation, so
+        // reuse it here instead of reflecting blindly.
+        if (typeof value.compile === 'function') {
+          return serializeValue(value.compile());
+        }
         if (Array.isArray(value)) {
           return `array:${JSON.stringify(value)}`;
         }
