@@ -1,6 +1,7 @@
 // import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
 import { dev } from '$app/environment';
 import type { Config } from '$lib/core/config/types.js';
+import devCache from '$lib/core/dev/cache/index.server.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { betterAuth } from 'better-auth';
@@ -41,6 +42,16 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
 
   // Generate schema, types, routes
   if (dev) {
+    // A `rime generate` CLI run may be regenerating the same .rime cache
+    // concurrently (e.g. a running dev server picking up its file writes).
+    // Defer to it instead of racing on the shared config memo.
+    if (process.env.RIME_CLI !== 'true') {
+      let waited = 0;
+      while (devCache.get('.cli') && waited < 30_000) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        waited += 200;
+      }
+    }
     const changed = writeMemo(config);
     const valid = validate(config);
     if (!valid) {

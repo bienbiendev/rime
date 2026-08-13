@@ -1,3 +1,4 @@
+import cache from '$lib/core/dev/cache/index.server.js';
 import { sanitize } from '$lib/core/dev/generate/sanitize/index.server.js';
 import { ensureGeneratedConfig, ensureUserConfigExist } from '$lib/core/ensure.server.js';
 import { logger } from '$lib/core/logger/index.server.js';
@@ -63,21 +64,29 @@ export const generate = async (args: { force?: boolean }) => {
       clearConfigCache();
       clearRoutes();
     }
-    ensureUserConfigExist();
-    await sanitizeConfig();
-    const importPathJS = ensureGeneratedConfig();
-
-    logger.info('Starting vite server...');
-    const vite = await createServer();
+    // Mark that a CLI generation is in flight, so a concurrently running dev
+    // server doesn't race us on the shared .rime cache (see rime.server.ts).
+    process.env.RIME_CLI = 'true';
+    cache.set('.cli', new Date().toISOString());
     try {
-      const mod = await vite.ssrLoadModule(importPathJS);
-      // The generated config's default export is the createRime() promise;
-      // ssrLoadModule only awaits the module's synchronous evaluation, so we
-      // must await it directly to observe init failures (e.g. config validation).
-      await mod.default;
-      logger.info('[✓] Generation completed successfully');
+      ensureUserConfigExist();
+      await sanitizeConfig();
+      const importPathJS = ensureGeneratedConfig();
+
+      logger.info('Starting vite server...');
+      const vite = await createServer();
+      try {
+        const mod = await vite.ssrLoadModule(importPathJS);
+        // The generated config's default export is the createRime() promise;
+        // ssrLoadModule only awaits the module's synchronous evaluation, so we
+        // must await it directly to observe init failures (e.g. config validation).
+        await mod.default;
+        logger.info('[✓] Generation completed successfully');
+      } finally {
+        await vite.close();
+      }
     } finally {
-      await vite.close();
+      cache.delete('.cli');
     }
   }
 
