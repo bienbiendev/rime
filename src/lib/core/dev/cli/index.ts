@@ -36,9 +36,13 @@ program
   .option('-f, --force', 'Force generation, ignore cache, overwrite routes', false)
   .action(async (args) => {
     const generate = await import('./generate/index.server.js').then((m) => m.generate);
-    generate({
-      force: args.force
-    });
+    try {
+      await generate({
+        force: args.force
+      });
+    } catch {
+      process.exitCode = 1;
+    }
   });
 
 program.parse(process.argv);

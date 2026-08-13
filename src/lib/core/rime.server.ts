@@ -1,7 +1,6 @@
 // import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
 import { dev } from '$app/environment';
 import type { Config } from '$lib/core/config/types.js';
-import devCache from '$lib/core/dev/cache/index.server.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { betterAuth } from 'better-auth';
@@ -43,12 +42,17 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
   // Generate schema, types, routes
   if (dev) {
     const changed = writeMemo(config);
-    const valid = changed && validate(config);
-    if (changed && !valid) throw new RimeError('Config not valid');
-    devCache.set('.init', new Date().toISOString());
-    generateRoutes(config);
-    await generateSchema(config);
-    await generateTypes(config);
+    const valid = validate(config);
+    if (!valid) {
+      throw new RimeError('Config not valid');
+    }
+    if (changed) {
+      generateRoutes(config);
+      await generateSchema(config);
+      await generateTypes(config);
+    } else {
+      logger.debug('Nothing to generate');
+    }
   }
 
   // Create adapter, consume the generated schema
@@ -71,10 +75,6 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
   // Register dictionaries for panel Language
   const dictionnaries = await registerTranslation(config.panel.language);
   i18n.init(dictionnaries);
-
-  if (dev) {
-    devCache.delete('.init');
-  }
 
   /**
    * Function that define the locale to use in a request event

@@ -1,4 +1,3 @@
-import cache from '$lib/core/dev/cache/index.server.js';
 import { sanitize } from '$lib/core/dev/generate/sanitize/index.server.js';
 import { ensureGeneratedConfig, ensureUserConfigExist } from '$lib/core/ensure.server.js';
 import { logger } from '$lib/core/logger/index.server.js';
@@ -68,22 +67,24 @@ export const generate = async (args: { force?: boolean }) => {
     await sanitizeConfig();
     const importPathJS = ensureGeneratedConfig();
 
-    logger.info('Generate');
+    logger.info('Starting vite server...');
     const vite = await createServer();
-    await vite.ssrLoadModule(importPathJS);
-
-    while (cache.get('.init')) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
+    try {
+      const mod = await vite.ssrLoadModule(importPathJS);
+      // The generated config's default export is the createRime() promise;
+      // ssrLoadModule only awaits the module's synchronous evaluation, so we
+      // must await it directly to observe init failures (e.g. config validation).
+      await mod.default;
+      logger.info('[✓] Generation completed successfully');
+    } finally {
+      await vite.close();
     }
-
-    await vite.close();
-    logger.info('[✓] Generation completed successfully');
   }
 
   const [error] = await trycatch(run);
 
   if (error) {
-    logger.error('Error during generation:', error);
+    logger.error('[✗] Error during generation:', error);
     throw error;
   }
 };

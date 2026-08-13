@@ -2,13 +2,15 @@ import { isAuthConfig } from '$lib/core/collections/auth/util.js';
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
 import cache from '$lib/core/dev/cache/index.server.js';
 import { isFormField } from '$lib/core/fields/util.js';
+import { logger } from '$lib/core/logger/index.server';
 import type { PrototypeSlug } from '$lib/core/types/doc.js';
 import { isBlocksFieldRaw, type BlocksFieldRaw } from '$lib/fields/blocks/index.js';
 import { isGroupFieldRaw } from '$lib/fields/group/index.js';
+import { isRelationField, type RelationField } from '$lib/fields/relation';
 import { isSelectField } from '$lib/fields/select/index.js';
-import { isTabsFieldRaw } from '$lib/fields/tabs/index.js';
+import { isTabsFieldRaw, type TabsFieldRaw } from '$lib/fields/tabs';
 import { isTreeFieldRaw } from '$lib/fields/tree/index.js';
-import type { FormField } from '$lib/fields/types.js';
+import type { Field, FormField } from '$lib/fields/types.js';
 
 function hasDuplicates(arr: string[]): string[] {
   return [...new Set(arr.filter((e, i, a) => a.indexOf(e) !== i))];
@@ -54,11 +56,11 @@ function hasUsersSlug(config: Config) {
 const validateFields = (config: Config) => {
   let errors: string[] = [];
   for (const collection of config.collections || []) {
-    const collectionErrors = validateDocumentFields(collection);
+    const collectionErrors = validateDocumentFields(collection, config);
     errors = [...errors, ...collectionErrors];
   }
   for (const area of config.areas || []) {
-    const collectionErrors = validateDocumentFields(area);
+    const collectionErrors = validateDocumentFields(area, config);
     errors = [...errors, ...collectionErrors];
   }
   return errors;
@@ -67,13 +69,14 @@ const validateFields = (config: Config) => {
 /**
  *
  */
-const validateDocumentFields = (config: BuiltCollection | BuiltArea) => {
+const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, config: Config) => {
   const errors: string[] = [];
-  const isCollection = (config: any): config is BuiltCollection => config.type === 'collection';
-  const isAuth = isCollection(config) && isAuthConfig(config);
+  const isCollection = (documentConfig: any): documentConfig is BuiltCollection =>
+    documentConfig.type === 'collection';
+  const isAuth = isCollection(documentConfig) && isAuthConfig(documentConfig);
   const registeredBlocks: Record<string, BlocksFieldRaw['blocks'][number]> = {};
 
-  const fieldsCompiled = config.fields.map((f) => f.compile());
+  const fieldsCompiled = documentConfig.fields.map((f) => f.compile());
 
   if (isAuth) {
     const rolesField = fieldsCompiled
@@ -86,31 +89,47 @@ const validateDocumentFields = (config: BuiltCollection | BuiltArea) => {
       .filter(isFormField)
       .find((f: FormField) => f.name === 'email' && f.type === 'email');
 
-    if (!rolesField) errors.push(`Field roles is missing in collection ${config.slug}`);
-    if (!emailField && config.auth.type !== 'apiKey')
-      errors.push(`Field email is missing in collection ${config.slug}`);
-    if (!nameField) errors.push(`Field name is missing in collection ${config.slug}`);
+    if (!rolesField) errors.push(`Field roles is missing in collection ${documentConfig.slug}`);
+    if (!emailField && documentConfig.auth.type !== 'apiKey')
+      errors.push(`Field email is missing in collection ${documentConfig.slug}`);
+    if (!nameField) errors.push(`Field name is missing in collection ${documentConfig.slug}`);
     if (!rolesField.many)
       errors.push(
         `Field roles must have "many" enabled : select('roles').options(...).many(), even with a single option`
       );
   }
 
-  const validateBlockField = (fields: FormField[], blockType: string) => {
+  const validateBlockField = (fields: Field[], blockType: string) => {
     const reserved = ['path', 'type', 'ownerId', 'position', 'locale'];
     for (const key of reserved) {
-      if (fields.map((f) => f.name).filter((name) => name === key).length > 1) {
+      if (
+        fields
+          .filter(isFormField)
+          .map((f) => f.name)
+          .filter((name) => name === key).length > 1
+      ) {
         errors.push(`${key} is a reserved field in blocks (block ${blockType})`);
       }
     }
   };
 
-  const validateFormFields = (fields: FormField[]) => {
+  const validateRelationField = (field: RelationField) => {
+    const collectionsSlugs = (config.collections || []).map((c) => c.slug);
+    if (!collectionsSlugs.includes(field.relationTo)) {
+      errors.push(
+        `Relation field ${field.name} references unknown collection ${field.relationTo}, in ${documentConfig.type} ${documentConfig.slug}`
+      );
+    }
+  };
+
+  const validateFields = (fields: Field[]) => {
     // Check for field name duplication at this level
-    const duplicates = hasDuplicates(fields.map((f) => f.name));
+    const duplicates = hasDuplicates(fields.filter(isFormField).map((f) => f.name));
     if (duplicates.length) {
       for (const duplicate of duplicates) {
-        errors.push(`Duplicate field '${duplicate}' in ${config.type} '${config.slug}'`);
+        errors.push(
+          `Duplicate field '${duplicate}' in ${documentConfig.type} '${documentConfig.slug}'`
+        );
       }
     }
 
@@ -122,20 +141,42 @@ const validateDocumentFields = (config: BuiltCollection | BuiltArea) => {
       return pattern.test(name) && !name.includes('-') && !name.includes(' ');
     }
 
+    function validateTabs(field: TabsFieldRaw) {
+      const duplicates = hasDuplicates(field.tabs.map((t) => t.name));
+      if (duplicates.length) {
+        errors.push(`Dupplicate tab name ${duplicates} in ${documentConfig.slug}`);
+      }
+    }
+
     for (const field of fields) {
+      // Recursive check first into Tabs since tabs are not Formfields
+      if (isTabsFieldRaw(field)) {
+        validateTabs(field);
+        for (const tab of field.tabs) {
+          validateFields(tab.fields);
+        }
+      }
+
+      // If field is not a Formfield eg. Separator then continue
+      if (!isFormField(field)) {
+        continue;
+      }
+
       // Check that a field wich has field._root = true is not localized
       if ('_root' in field && field._root && field.localized) {
         errors.push(
-          `Field ${field.name} of ${config.type} ${config.slug} with _root = true, can't be localized`
+          `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with _root = true, can't be localized`
         );
       }
 
       // Check for malformed field.name
       if (!validateFieldName(field.name)) {
-        errors.push(`Field ${field.name} of ${config.type} ${config.slug} should be camelCase`);
+        errors.push(
+          `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} should be camelCase`
+        );
       }
 
-      // Recursive check into Blocks Groups and Tabs
+      // Recursive check into Blocks
       if (isBlocksFieldRaw(field)) {
         for (const block of field.blocks) {
           if (block.name in registeredBlocks) {
@@ -147,22 +188,23 @@ const validateDocumentFields = (config: BuiltCollection | BuiltArea) => {
           } else {
             registeredBlocks[block.name] = block;
           }
-          validateFormFields(block.fields.filter(isFormField));
+          validateFields(block.fields.filter(isFormField));
           validateBlockField(block.fields.filter(isFormField), block.name);
         }
+        // Recursive check into Tree
       } else if (isTreeFieldRaw(field)) {
-        validateFormFields(field.fields.filter(isFormField));
-      } else if (isTabsFieldRaw(field)) {
-        for (const tab of field.tabs) {
-          validateFormFields(tab.fields.filter(isFormField));
-        }
+        validateFields(field.fields.filter(isFormField));
+        // Recursive check into Tabs
       } else if (isGroupFieldRaw(field)) {
-        validateFormFields(field.fields.filter(isFormField));
+        validateFields(field.fields.filter(isFormField));
+        // Check relation field
+      } else if (isRelationField(field)) {
+        validateRelationField(field);
       }
     }
   };
 
-  validateFormFields(config.fields.map((f) => f.compile()).filter(isFormField));
+  validateFields(documentConfig.fields.map((f) => f.compile()));
 
   return errors;
 };
@@ -187,6 +229,7 @@ function validateAuthCollections<T extends Config>(config: T) {
 }
 
 function validate(config: Config): boolean {
+  logger.debug('Validating config...');
   const validateFunctions = [
     hasDuplicateSlug,
     hasUsersSlug,
@@ -199,10 +242,12 @@ function validate(config: Config): boolean {
     const errors: string[] = isValid(config);
     if (errors.length) {
       cache.clear();
-      throw new Error('Config error : ' + errors[0]);
+      errors.map((err) => logger.error(err));
+      return false;
     }
   }
 
+  logger.debug('Config is valid');
   return true;
 }
 

@@ -44,14 +44,18 @@ export function rime(): Plugin {
             await sanitize();
           } catch (error: any) {
             logger.error('Error while sanitizing config:', error.message);
-            throw error;
+            return;
           }
           // Trigger generation
           try {
-            await server.ssrLoadModule(`src/lib/${OUTPUT_DIR}/rime.config.server.ts`);
+            const mod = await server.ssrLoadModule(`src/lib/${OUTPUT_DIR}/rime.config.server.ts`);
+            // The config's default export is the createRime() promise; ssrLoadModule
+            // only awaits the module's synchronous evaluation, so we must await it
+            // directly to observe init errors (e.g. invalid config) here instead of
+            // letting them become unhandled rejections that crash the dev server.
+            await mod.default;
           } catch (error: any) {
             logger.error('Failed to reload the config', error.message);
-            throw error;
           }
         }
       });
