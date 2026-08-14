@@ -1,4 +1,3 @@
-import { apiUrl } from '$lib/core/api/index.js';
 import { buildUploadAria, type UploadPath } from '$lib/core/collections/upload/util/path.js';
 import { PARAMS, UPLOAD_PATH } from '$lib/core/constant.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
@@ -9,6 +8,7 @@ import type { CollectionDocData } from '$lib/panel/index.js';
 import type { Route } from '$lib/panel/types.js';
 import { panelUrl } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
+import { apiUrl } from '$lib/util/index.js';
 import { toKebabCase } from '$lib/util/string.js';
 import { error, type ServerLoadEvent } from '@sveltejs/kit';
 

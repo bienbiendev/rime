@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { apiUrl } from '$lib/core/api';
   import type { GenericDoc } from '$lib/core/types/doc.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import CardResource from '$lib/panel/components/ui/card-resource/card-resource.svelte';
   import * as Command from '$lib/panel/components/ui/command/index.js';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { apiUrl } from '$lib/util/index.js';
   import type { NodeViewProps } from '@tiptap/core';
   import { onMount } from 'svelte';
   import NodeViewWrapper from '../../svelte/node-view-wrapper.svelte';

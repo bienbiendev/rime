@@ -1,9 +1,9 @@
 <script lang="ts">
   import { env } from '$env/dynamic/public';
-  import { apiUrl } from '$lib/core/api/index.js';
   import type { GenericDoc } from '$lib/core/types/doc.js';
   import UploadThumbCell from '$lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { apiUrl } from '$lib/util/index.js';
   import { toKebabCase } from '$lib/util/string';
 
   type Props = {

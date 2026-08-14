@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { apiUrl } from '$lib/core/api/index.js';
   import { isUploadConfig } from '$lib/core/collections/upload/util/config.js';
   import type { GenericDoc } from '$lib/core/types/doc.js';
   import { Field } from '$lib/panel/components/fields/index.js';
@@ -11,6 +10,7 @@
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import { panelUrl } from '$lib/panel/util/url.js';
   import { moveItem } from '$lib/util/array.js';
+  import { apiUrl } from '$lib/util/index.js';
   import { snapshot } from '$lib/util/state.js';
   import { getAPIProxyContext } from '../../../panel/context/api-proxy.svelte.js';
   import type { Relation, RelationField } from '../index.js';

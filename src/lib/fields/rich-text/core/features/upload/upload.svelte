@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { apiUrl } from '$lib/core/api';
   import type { UploadDoc } from '$lib/core/types/doc.js';
   import UploadThumbCell from '$lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
@@ -7,6 +6,7 @@
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import Input from '$lib/panel/components/ui/input/input.svelte';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { apiUrl } from '$lib/util/index.js';
   import { X } from '@lucide/svelte';
   import type { NodeViewProps } from '@tiptap/core';
   import { onMount } from 'svelte';

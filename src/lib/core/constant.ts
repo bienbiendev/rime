@@ -47,7 +47,7 @@ export const PARAMS = {
   /** GET / UPDATE a specific version*/
   VERSION_ID: 'versionId',
 
-  /** Parameter for panel collection list to filter out documents from a specific uploadPath */
+  /** On fetch (upload) list operation filter out documents from a specific uploadPath */
   UPLOAD_PATH: 'uploadPath',
 
   /**

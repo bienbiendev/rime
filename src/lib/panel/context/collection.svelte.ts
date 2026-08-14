@@ -1,5 +1,4 @@
 import { invalidateAll } from '$app/navigation';
-import { apiUrl } from '$lib/core/api/index.js';
 import type { Directory } from '$lib/core/collections/upload/upload.js';
 import { isUploadConfig } from '$lib/core/collections/upload/util/config.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
@@ -15,6 +14,7 @@ import type { FieldPanelTableConfig } from '$lib/panel/types.js';
 import { panelUrl } from '$lib/panel/util/url.js';
 import { toNestedStructure } from '$lib/util/doc.js';
 import { trycatch, trycatchFetch } from '$lib/util/function.js';
+import { apiUrl } from '$lib/util/index.js';
 import { getValueAtPath, hasProp } from '$lib/util/object.js';
 import type { WithRequired } from '$lib/util/types.js';
 import { getContext, onMount, setContext, type Component } from 'svelte';

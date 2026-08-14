@@ -1,4 +1,3 @@
-import { apiUrl } from '$lib/core/api/index.js';
 import { PARAMS } from '$lib/core/constant.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
@@ -8,6 +7,7 @@ import type { AreaDocData } from '$lib/panel/index.js';
 import type { Route } from '$lib/panel/types.js';
 import { panelUrl } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
+import { apiUrl } from '$lib/util/index.js';
 import { toKebabCase } from '$lib/util/string.js';
 import type { ServerLoadEvent } from '@sveltejs/kit';
 

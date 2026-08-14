@@ -1,6 +1,5 @@
 <script lang="ts">
   import { env } from '$env/dynamic/public';
-  import { apiUrl } from '$lib/core/api';
   import { t__ } from '$lib/core/i18n/index.js';
   import IconButton from '$lib/fields/rich-text/component/bubble-menu/icon-button/icon-button.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
@@ -8,6 +7,7 @@
   import Input from '$lib/panel/components/ui/input/input.svelte';
   import { getAPIProxyContext, type Resource } from '$lib/panel/context/api-proxy.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
+  import { apiUrl } from '$lib/util/index.js';
   import validate from '$lib/util/validate.js';
   import { CornerDownLeft, ExternalLink, Link2, Newspaper, Trash } from '@lucide/svelte';
   import type { Editor } from '@tiptap/core';

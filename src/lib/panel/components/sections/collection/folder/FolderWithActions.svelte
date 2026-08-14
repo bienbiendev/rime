@@ -1,6 +1,5 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
-  import { apiUrl } from '$lib/core/api/index.js';
   import type { Directory } from '$lib/core/collections/upload/upload.js';
   import type { BuiltCollectionClient } from '$lib/core/config/types.js';
   import { PARAMS } from '$lib/core/constant.js';
@@ -13,6 +12,7 @@
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import { panelUrl } from '$lib/panel/util/url.js';
   import { trycatchFetch } from '$lib/util/function.js';
+  import { apiUrl } from '$lib/util/index.js';
   import { Pencil, Trash2 } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
   import { t__ } from '../../../../../core/i18n/index.js';

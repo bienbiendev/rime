@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { apiUrl } from '$lib/core/api/index.js';
   import type { Directory } from '$lib/core/collections/upload/upload';
   import { t__ } from '$lib/core/i18n/index.js';
   import { withDirectoriesSuffix } from '$lib/core/naming.js';
@@ -12,6 +11,7 @@
   import Input from '$lib/panel/components/ui/input/input.svelte';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import type { BuiltCollection, UploadDoc } from '$lib/types';
+  import { apiUrl } from '$lib/util/index.js';
   import { ListFilter, Search } from '@lucide/svelte';
 
   type Props = { open: boolean; addValue: (item: string) => void; config: BuiltCollection };

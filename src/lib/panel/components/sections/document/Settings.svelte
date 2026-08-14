@@ -1,7 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { apiUrl } from '$lib/core/api/index.js';
   import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
@@ -10,6 +9,7 @@
   import { panelUrl } from '$lib/panel/util/url.js';
   import type { GenericDoc } from '$lib/types.js';
   import { trycatchFetch } from '$lib/util/function.js';
+  import { apiUrl } from '$lib/util/index.js';
   import { Copy, History, Import, Pickaxe, Settings, Trash2 } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
   import { t__ } from '../../../../core/i18n/index.js';

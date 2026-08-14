@@ -1,6 +1,5 @@
 import { applyAction, deserialize } from '$app/forms';
 import { page } from '$app/state';
-import { apiUrl } from '$lib/core/api/index.js';
 import { compileDocumentConfig } from '$lib/core/config/shared/compile.js';
 import type { BuiltAreaClient, BuiltCollectionClient } from '$lib/core/config/types.js';
 import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant.js';
@@ -10,7 +9,7 @@ import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '$lib/core/ty
 import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
 import type { FormField, SimplerField } from '$lib/fields/types.js';
 import { normalizeFieldPath } from '$lib/util/doc.js';
-import { random } from '$lib/util/index.js';
+import { apiUrl, random } from '$lib/util/index.js';
 import { isObjectLiteral, omit } from '$lib/util/object.js';
 import type { Dic, WithOptional } from '$lib/util/types.js';
 import type { ActionResult } from '@sveltejs/kit';
