@@ -56,6 +56,22 @@ export function getPackageManager(): PackageManagerName {
   return 'npm';
 }
 
+/**
+ * Detects the package manager used to invoke the currently running command
+ * (e.g. `pnpm rime build` vs `npx rime build`), based on the user agent npm/pnpm/yarn/bun
+ * set on the child process. Falls back to npm, which is also what npx reports.
+ */
+export function getInvokingPackageManager(): PackageManagerName {
+  const userAgent = process.env.npm_config_user_agent;
+  if (!userAgent) return 'npm';
+
+  const name = userAgent.split('/')[0];
+  if (name === 'pnpm' || name === 'yarn' || name === 'bun' || name === 'npm' || name === 'deno') {
+    return name;
+  }
+  return 'npm';
+}
+
 export function installDependencies(): void {
   const pm = getPackageManager();
   if (pm === 'deno' || pm === 'yarn') {

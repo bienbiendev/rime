@@ -1,3 +1,29 @@
+import { randomId } from '$lib/util/random.js';
+
+export const envProduction = () => `# BETTER-AUTH
+BETTER_AUTH_SECRET=${randomId(32)}
+
+# RIME
+PUBLIC_RIME_URL=http://localhost:3000
+RIME_LOG_LEVEL=ERROR
+RIME_LOG_TO_FILE=true
+RIME_CACHE_ENABLED=true
+RIME_CACHE_STRATEGY=memory
+
+# RIME_SMTP_USER=user@host.org
+# RIME_SMTP_PASSWORD=somepassword
+# RIME_SMTP_HOST=smtp.host
+# RIME_SMTP_PORT=465
+
+# SVELTEKIT ADAPTER-NODE
+ORIGIN=http://localhost:3000
+PORT=3000
+HOST=localhost
+
+# MISC
+BODY_SIZE_LIMIT=10485760 # 10(MB) * 1024 * 1024 = 10485760 bytes
+`;
+
 export const polkaServer = `import polka from 'polka';
 import serveStatic from 'serve-static';
 import { handler } from './build/handler.js';

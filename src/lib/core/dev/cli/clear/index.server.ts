@@ -2,7 +2,7 @@ import { logger } from '$lib/core/logger/index.server.js';
 import { rmSync } from 'node:fs';
 import path from 'node:path';
 import { INPUT_DIR, OUTPUT_DIR } from '../../constants.js';
-import { prompt } from '../util.server.js';
+import { prompt } from '../util/prompt.server.js';
 
 const clearMessage = `Are you sure you want to delete all related rime files (Y/n):
 - ./static/medias

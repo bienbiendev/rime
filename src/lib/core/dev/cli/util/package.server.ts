@@ -1,6 +1,17 @@
 import path from 'path';
 import fs from 'fs';
 
+/**
+ * Vite (and every other rime command) resolves everything relative to cwd and
+ * fails when run from elsewhere (e.g. `vite build` from ./app errors with
+ * "Cannot resolve entry module index.html"). package.json alone isn't a
+ * reliable root marker since the build command copies one into ./app too;
+ * src/ is only ever present at the real project root.
+ */
+export function isProjectRoot(cwd: string = process.cwd()): boolean {
+  return fs.existsSync(path.join(cwd, 'package.json')) && fs.existsSync(path.join(cwd, 'src'));
+}
+
 export function getPackageInfoByKey(key: string): string {
   try {
     // Read the package.json file

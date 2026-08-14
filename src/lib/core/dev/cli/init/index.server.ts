@@ -11,9 +11,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { INPUT_DIR } from '../../constants.js';
 import { generate } from '../generate/index.server.js';
-import { prompt } from '../util.server.js';
-import { getPackageInfoByKey } from './get-package-info.server.js';
-import { installDependencies } from './package-manager-util.server.js';
+import { installDependencies } from '../util/package-manager.server.js';
+import { getPackageInfoByKey } from '../util/package.server.js';
+import { prompt } from '../util/prompt.server.js';
 import * as templates from './templates.js';
 
 type Args = {
