@@ -6,7 +6,7 @@ import { isTreeFieldRaw, TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field, FormField, SeparatorField } from '$lib/fields/types.js';
 import { normalizeFieldPath } from '$lib/util/doc.js';
 import type { Dic } from '$lib/util/types.js';
-import type { FieldBuilder } from './builders';
+import type { FieldBuilder } from './builders/index.js';
 
 /**
  * Checks if a field is a presentative field (currently only separator fields).

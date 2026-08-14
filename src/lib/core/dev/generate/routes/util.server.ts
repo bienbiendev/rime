@@ -1,6 +1,5 @@
-import type { BuiltCollection, Config } from '$lib/core/config/types.js';
+import type { Config } from '$lib/core/config/types.js';
 import cache from '$lib/core/dev/cache/index.server.js';
-import { hasDirectoriesSuffix, hasVersionsSuffix } from '$lib/core/naming.js';
 import { slugify } from '$lib/util/string.js';
 import fs from 'fs';
 import path from 'path';
@@ -13,22 +12,16 @@ export type RouteDefinition = Record<string, RouteTemplateFunction>;
 export type Routes = Record<string, RouteDefinition>;
 
 /**
- * Check if routes need to be regenerated based on config changes
+ * Check if routes need to be regenerated based on config changes.
+ * Panel/API routes are a fixed set of dynamic-segment files (file count never
+ * grows with schema size), but the [slug=collection]/[slug=area] param
+ * matchers under src/params/ bake in the actual slug lists, so adding,
+ * removing, or renaming a collection/area still needs a regen to keep those
+ * matchers in sync — same trigger as custom routes and panel CSS.
  * @returns true if routes should be regenerated, false otherwise
- * @example
- * // Check if routes need to be regenerated
- * const config = { areas: [], collections: [], panel: { css: 'styles.css' } };
- * const needsRegeneration = shouldRegenerateRoutes(config);
- * // If the config has changed since last run, needsRegeneration will be true
  */
 export function shouldRegenerateRoutes<T extends Config>(config: T): boolean {
-  const versionsSuffix = (document: any) => (document.versions ? '.v' : '');
-  const authSuffix = (collection: BuiltCollection) =>
-    collection.auth ? `.${collection.auth.type}` : '';
-
   const memo = `
-    areas:${(config.areas || []).map((area) => `${area.slug}${versionsSuffix(area)}`).join(',')}
-    collections:${(config.collections || []).map((collection) => `${collection.slug}${authSuffix(collection)}${versionsSuffix(collection)}`).join(',')}
     custom:${
       config.panel?.routes
         ? Object.entries(config.panel.routes)
@@ -37,6 +30,8 @@ export function shouldRegenerateRoutes<T extends Config>(config: T): boolean {
         : ''
     }
     css:${config.panel?.css ? config.panel.css : 'none'}
+    collections:${(config.collections || []).map((c) => c.slug).join(',')}
+    areas:${(config.areas || []).map((a) => a.slug).join(',')}
   `;
 
   const cachedMemo = cache.get('routes');
@@ -124,15 +119,3 @@ export function writeRouteFile(
 
   fs.writeFileSync(path.join(dir, fileName), content);
 }
-
-/**
- * Cast slug in generated templates for document with versions
- * in order to prevent TS error that slug_versions is not a collection/area
- *
- * @example
- * castVersionSlug('pages_versions')
- * // output : 'pages_versions' as any
- * export const GET = api.collection.get('pages_versions' as any)
- */
-export const TScastVersionSlug = (slug: string) =>
-  hasVersionsSuffix(slug) || hasDirectoriesSuffix(slug) ? `'${slug}' as any` : `'${slug}'`;

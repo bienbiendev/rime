@@ -1,7 +1,7 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import type { CollectionSlug } from '$lib/core/types/doc.js';
 import type { Config, User } from '$lib/types.js';
-import { error, redirect, type Handle } from '@sveltejs/kit';
+import { error, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
 import { BETTER_AUTH_ROLES } from '../collections/auth/constant.server.js';
 import { logger } from '../logger/index.server.js';
 import type { ConfigContext, RimeContext } from '../rime.server.js';
@@ -58,7 +58,7 @@ async function authenticateRequest(
 /**
  * Handles unauthenticated users based on route requirements
  */
-function handleUnauthenticated(event: any, resolve: any, routeInfo: RouteInfo): any {
+function handleUnauthenticated(event: RequestEvent, resolve: any, routeInfo: RouteInfo): any {
   if (routeInfo.isPanel) {
     throw redirect(303, '/panel/sign-in');
   }

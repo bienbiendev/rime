@@ -6,6 +6,7 @@ import * as object from './object.js';
 import * as random from './random.js';
 import * as state from './state.js';
 import * as string from './string.js';
+import * as upload from '../core/collections/upload/util/client.js';
 import * as validate from './validate.js';
 
-export { access, array, doc, file, object, random, state, string, validate };
+export { access, array, doc, file, object, random, state, string, upload, validate };

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
-import { isRelationPopulated } from './client';
-import type { RelationValue } from '../types';
+import { isRelationPopulated } from './client.js';
+import type { RelationValue } from '../types.js';
 
 const stringArrayRel = [
   '7674e91b-598a-4a72-a5cd-9594736a34dd',

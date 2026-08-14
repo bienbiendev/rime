@@ -21,7 +21,7 @@ RIME_LOG_TO_FILE_MAX_DAYS=1
 export const defaultConfig = (name: string) => `
 import { Collection, rime } from '$rime/config';
 import { text } from '${PACKAGE}/fields';
-import { adapterSqlite } from '${PACKAGE}/sqlite';
+import { adapterSqlite } from '${PACKAGE}/adapter-sqlite';
 
 const Pages = Collection.create('pages', {
 	fields: [text('title').isTitle()]
@@ -50,7 +50,7 @@ export default defineConfig(config);
 `;
 
 export const hooks = `import { sequence } from '@sveltejs/kit/hooks';
-import { handlers } from '${PACKAGE}';
+import { handlers } from '${PACKAGE}/server';
 import config from './lib/${OUTPUT_DIR}/rime.config.server.js';
 
 export const handle = sequence(...(await handlers(config)));

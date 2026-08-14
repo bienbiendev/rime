@@ -2,7 +2,7 @@ import type { BuiltCollection } from '$lib/core/config/types.js';
 import { VERSIONS_STATUS } from '$lib/core/constant.js';
 import { buildConfigMap } from '$lib/core/operations/configMap/index.js';
 import { isBlocksFieldRaw, type BlocksFieldRaw } from '$lib/fields/blocks/index.js';
-import { isJSONContent } from '$lib/fields/rich-text';
+import { isJSONContent } from '$lib/fields/rich-text/index.js';
 import { richTextJSONToText } from '$lib/fields/rich-text/index.js';
 import { isTreeFieldRaw, type TreeFieldRaw } from '$lib/fields/tree/index.js';
 import {
@@ -52,7 +52,7 @@ export const duplicate = async (args: DuplicateArgs): Promise<string> => {
    */
   function prepareDuplicate(doc: Dic, locale: string | undefined, keepIds: boolean) {
     let data = setCopyTitle(doc);
-    data.satus = data.satus ? VERSIONS_STATUS.DRAFT : undefined;
+    data.status = data.status ? VERSIONS_STATUS.DRAFT : undefined;
     data = normalizeProps(data, locale, keepIds);
     delete data.id;
     return data;
@@ -71,6 +71,7 @@ export const duplicate = async (args: DuplicateArgs): Promise<string> => {
   const document = await collection.findById({ id, locale: defaultLocale });
   // Prepare data
   const data = prepareDuplicate(document, defaultLocale, false);
+
   // Create document
   const newDocument = await collection.create({ data, locale: defaultLocale });
 

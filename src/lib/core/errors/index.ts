@@ -38,7 +38,6 @@ class RimeError extends Error {
 }
 
 class RimeFormError extends RimeError {
-  static INVALID_DATA = 'invalid_data';
   static INVALID_EMAIL = 'invalid_email';
   static INVALID_FIELD = 'invalid_field';
   static INVALID_PHONE = 'invalid_phone';

@@ -37,7 +37,6 @@ src/app.generated.d.ts
 src/rime.generated.d.ts
 src/lib/+rime/*
 src/lib/+rime.generated
-src/routes/(rime)
 assets/src
 static/medias
 test-results

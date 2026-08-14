@@ -7,8 +7,7 @@ import { RimeError, RimeFormError } from './index.js';
 export const ERROR_CONTEXT = {
   ACTION: 'action',
   API: 'api',
-  LOAD: 'load',
-  HANDLER: 'handler'
+  LOAD: 'load'
 } as const;
 
 export type ErrorContext = (typeof ERROR_CONTEXT)[keyof typeof ERROR_CONTEXT];
@@ -18,6 +17,28 @@ type ErrorHandlerOptions = {
   formData?: Record<string, any>; // For actions
 };
 
+/**
+ * Only called at the route boundary: +server.ts handlers, load functions,
+ * form actions. Everywhere else, just `throw new RimeError(...)` (centralizes
+ * error codes/messages) — it bubbles up and gets caught here, where `context`
+ * tells this function which SvelteKit primitive to translate it into:
+ * `error()` (api/load), `redirect()`, or `fail()` (action form errors).
+ *
+ * Always call it as `return handleError(...)`. Most branches throw internally
+ * (`error`/`redirect`), so `return` never runs — but the `fail()` branch (form
+ * errors in actions) is a real return value, so `return` is required there.
+ *
+ * @example +server.ts endpoint
+ * if (!id) return handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.API });
+ *
+ * @example load function
+ * const [err, doc] = await trycatch(() => getDoc(id));
+ * if (err) return handleError(err, { context: ERROR_CONTEXT.LOAD });
+ *
+ * @example form action
+ * const [err] = await trycatch(() => save(data));
+ * if (err) return handleError(err, { context: ERROR_CONTEXT.ACTION, formData: data });
+ */
 export function handleError(err: Error, options: ErrorHandlerOptions) {
   const { context, formData } = options;
 
@@ -27,6 +48,8 @@ export function handleError(err: Error, options: ErrorHandlerOptions) {
   if (err instanceof RimeFormError) {
     switch (context) {
       case ERROR_CONTEXT.ACTION:
+        // fail() returns an ActionFailure — lets SvelteKit re-render the form
+        // with `errors`/`form` instead of navigating to the error boundary.
         return fail(400, {
           form: formData || {},
           errors: err.errors

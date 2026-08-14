@@ -36,15 +36,15 @@
       "svelte": "./dist/index.js",
       "import": "./dist/index.js"
     },
-    "./api": {
-      "types": "./dist/core/api/index.server.d.ts",
-      "import": "./dist/core/api/index.server.js"
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
     },
-    "./sqlite": {
+    "./adapter-sqlite": {
       "types": "./dist/adapter-sqlite/index.server.d.ts",
       "import": "./dist/adapter-sqlite/index.server.js"
     },
-    "./config/client": {
+    "./config": {
       "types": "./dist/core/config/client/index.d.ts",
       "import": "./dist/core/config/client/index.js"
     },
@@ -52,19 +52,9 @@
       "types": "./dist/core/config/server/index.server.d.ts",
       "import": "./dist/core/config/server/index.server.js"
     },
-    "./core/plugins/*.js": {
-      "types": "./dist/core/plugins/*.d.ts",
-      "import": "./dist/core/plugins/*.js"
-    },
-    "./core/plugins/*.svelte": {
-      "import": "./dist/core/plugins/*.svelte"
-    },
     "./fields": {
       "types": "./dist/fields/index.d.ts",
       "import": "./dist/fields/index.js"
-    },
-    "./fields/*.svelte": {
-      "import": "./dist/fields/*.svelte"
     },
     "./fields/rich-text": {
       "types": "./dist/fields/rich-text/client.d.ts",
@@ -74,48 +64,15 @@
       "types": "./dist/fields/relation/client.d.ts",
       "import": "./dist/fields/relation/client.js"
     },
-    "./i18n": {
-      "types": "./dist/core/i18n/index.d.ts",
-      "import": "./dist/core/i18n/index.js"
-    },
-    "./i18n/*.js": {
-      "types": "./dist/core/i18n/*.d.ts",
-      "import": "./dist/core/i18n/*.js"
-    },
-    "./live": {
-      "types": "./dist/live.d.ts",
-      "import": "./dist/live.js"
-    },
     "./panel": {
-      "types": "./dist/panel/index.server.d.ts",
-      "import": "./dist/panel/index.server.js"
-    },
-    "./panel/auth": {
-      "types": "./dist/panel/pages/auth/index.server.d.ts",
-      "import": "./dist/panel/pages/auth/index.server.js"
-    },
-    "./panel/auth/client": {
-      "types": "./dist/panel/pages/auth/index.d.ts",
-      "import": "./dist/panel/pages/auth/index.js"
-    },
-    "./panel/client": {
       "types": "./dist/panel/index.d.ts",
       "import": "./dist/panel/index.js"
     },
     "./panel/style/index.css": {
       "import": "./dist/panel/style/index.css"
     },
-    "./panel/ui": {
-      "types": "./dist/panel/ui.d.ts",
-      "svelte": "./dist/panel/ui.js",
-      "import": "./dist/panel/ui.js"
-    },
     "./types": {
       "types": "./dist/types.d.ts"
-    },
-    "./upload": {
-      "types": "./dist/core/collections/upload/util/client.d.ts",
-      "import": "./dist/core/collections/upload/util/client.js"
     },
     "./util": {
       "types": "./dist/util/index.d.ts",

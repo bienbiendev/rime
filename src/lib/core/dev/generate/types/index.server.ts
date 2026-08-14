@@ -164,7 +164,7 @@ export async function generateTypesString<T extends Config>(config: T) {
   const treeBlocksTypes: string[] = [];
   const registeredBlocks: string[] = [];
   const registeredTreeBlocks: string[] = [];
-  let imports = new Set<string>(['BaseDoc', 'Navigation', 'User']);
+  let imports = new Set<string>(['BaseDoc', 'Navigation', 'RouteHandlers', 'User']);
 
   const addImport = (string: string) => {
     imports = new Set([...imports, string]);
@@ -324,8 +324,10 @@ export async function generateTypesString<T extends Config>(config: T) {
 			>;
       /** Flag enabled by the core plugin rime.cache when the API cache is ON */
       cacheEnabled: boolean;
-      /** Available in panel, routes for sidebar */
-      routes: Navigation;
+      /** Available in panel, nav routes for sidebar */
+      navigation: Navigation;
+      /** Dispatch facade backing the fixed /panel/[slug]/... and /api/[slug]/... routes */
+      routes: RouteHandlers;
 			/**
 			 * Current locale if applicable
 			 * set following this prioroty :

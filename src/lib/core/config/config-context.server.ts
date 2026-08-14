@@ -57,10 +57,10 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
     }
   };
 
-  const isCollection = (slug: string): slug is CollectionSlug =>
+  const isCollection = (slug?: string): slug is CollectionSlug =>
     !!mapCollectionsSlug.includes(slug as any);
 
-  const isArea = (slug: string): slug is AreaSlug => !!mapAreasSlug.includes(slug as any);
+  const isArea = (slug?: string): slug is AreaSlug => !!mapAreasSlug.includes(slug as any);
 
   return {
     /**

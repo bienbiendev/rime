@@ -1,7 +1,7 @@
 import { applyAction } from '$app/forms';
 import type { FormField, SimplerField } from '$lib/fields/types.js';
-import { getValueAtPath } from '$lib/util/object';
-import { snapshot } from '$lib/util/state';
+import { getValueAtPath } from '$lib/util/object.js';
+import { snapshot } from '$lib/util/state.js';
 import type { Dic } from '$lib/util/types.js';
 import type { SubmitFunction } from '@sveltejs/kit';
 import { diff } from 'deep-object-diff';

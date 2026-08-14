@@ -5,7 +5,7 @@ import type { JSONContent } from '@tiptap/core';
 import Cell from './component/Cell.svelte';
 import RichText from './component/RichText.svelte';
 import type { RichTextFeature } from './core/types.js';
-import { sanitizeJSONContent } from './sanitize';
+import { sanitizeJSONContent } from './sanitize.js';
 
 const isEmpty = (value: unknown) => {
   if (!value) return true;
@@ -70,7 +70,9 @@ export class RichTextFieldBuilder extends FormFieldBuilder<RichTextField> {
         return val;
       });
     } catch (err) {
-      console.log(err);
+      if (typeof window !== 'undefined') {
+        console.error('Error parsing rich text JSON:', err);
+      }
       if (typeof value === 'string') {
         return value;
       }

@@ -1,5 +1,5 @@
-import type { FieldBuilder } from '$lib/core/fields/builders';
-import type { FieldsPreviewProps } from '$lib/fields/types';
+import type { FieldBuilder } from '$lib/core/fields/builders/index.js';
+import type { FieldsPreviewProps } from '$lib/fields/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { Node, mergeAttributes } from '@tiptap/core';
 import type { Component } from 'svelte';

@@ -1,4 +1,4 @@
-import type { CollectionSlug } from '$lib/types';
+import type { CollectionSlug } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { Node, mergeAttributes } from '@tiptap/core';
 import SvelteNodeViewRenderer from '../../svelte/node-view-renderer.svelte';

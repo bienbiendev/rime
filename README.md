@@ -93,7 +93,7 @@ export default defineConfig({
 ```typescript
 // src/hooks.server.ts (should be created)
 import config from '$lib/+rime.generated/rime.config.server.js';
-import { handlers } from 'rimecms';
+import { handlers } from 'rimecms/server';
 import { sequence } from '@sveltejs/kit/hooks';
 
 export const handle = sequence(...(await handlers(config)));
@@ -131,7 +131,7 @@ curl -v POST http://localhost:5173/api/init \
 ```typescript
 // ./src/lib/+rime/rime.config.ts
 import { rime, Collection, Area } from '$rime/config';
-import { adapterSqlite } from 'rimecms/sqlite';
+import { adapterSqlite } from 'rimecms/adapter-sqlite';
 import { Settings2 } from '@lucide/svelte';
 import { relation, link, richText, text, toggle } from 'rimecms/fields';
 import { access } from "rimecms/util";
@@ -261,10 +261,10 @@ It's doing bascically `vite build` under the hood and create the polka server fi
 - [x] more better-auth integration
 - [x] Handle relation poperties in queries
 - [~] Documentation
+- [ ] Live Edit system in practice
 - [ ] configurable files storage adapter (local, s3, etc)
 - [ ] other storage adapter (postgress, turso, etc)
 - [ ] auto-saved draft
-- [ ] Live Edit system in practice
 - [ ] Put bin commands in a separate package ex: @rime/kit
 
 ## Acknowledgments

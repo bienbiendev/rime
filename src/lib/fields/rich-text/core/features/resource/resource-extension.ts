@@ -1,4 +1,4 @@
-import type { PrototypeSlug } from '$lib/core/types/doc';
+import type { PrototypeSlug } from '$lib/core/types/doc.js';
 import type { Dic } from '$lib/util/types.js';
 import { Node, mergeAttributes } from '@tiptap/core';
 import SvelteNodeViewRenderer from '../../svelte/node-view-renderer.svelte';

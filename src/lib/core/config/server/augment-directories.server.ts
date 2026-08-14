@@ -6,7 +6,7 @@ import {
 } from '$lib/core/collections/upload/hooks/update-directory-children.server.js';
 import { isUploadConfig, type WithUpload } from '$lib/core/collections/upload/util/config.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { makeUploadDirectoriesCollectionClient } from '../shared/upload-directories';
+import { makeUploadDirectoriesCollectionClient } from '../shared/upload-directories.js';
 
 export const augmentDirectoriesServer = <T extends { collections?: BuiltCollection[] }>(
   config: T

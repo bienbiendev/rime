@@ -1,5 +1,5 @@
 import { dev } from '$app/environment';
-import { handleError } from '$lib/core/errors/handler.server.js';
+import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
 import { extractData } from '$lib/core/operations/extract-data.server.js';
 import type { FormErrors } from '$lib/types.js';
@@ -14,15 +14,21 @@ export const apiInit = definePlugin(() => {
 
     const hasAuthUser = await event.locals.rime.adapter.auth.hasAuthUser();
     if (hasAuthUser || (!hasAuthUser && !dev)) {
-      throw handleError(new RimeError(RimeError.NOT_FOUND), { context: 'api' });
+      throw handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.API });
     }
 
-    const data = await extractData<Record<string, string>>(event.request);
+    const [extractError, data] = await trycatch(() => extractData(event.request));
+    if (extractError) {
+      throw handleError(new RimeError(RimeError.INVALID_DATA, extractError.message), {
+        context: ERROR_CONTEXT.API
+      });
+    }
+
     const [error] = trycatchSync(() => validateForm(data));
 
     if (error) {
-      throw handleError(error, {
-        context: 'action',
+      throw handleError(new RimeError(RimeError.INVALID_DATA, error.message), {
+        context: ERROR_CONTEXT.ACTION,
         formData: { email: data.email }
       });
     }

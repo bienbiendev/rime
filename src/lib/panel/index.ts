@@ -4,8 +4,14 @@ import type { Snippet } from 'svelte';
 import { Field } from './components/fields/index.js';
 import Panel from './components/Root.svelte';
 import Doc from './components/sections/document/Document.svelte';
+import Button from './components/ui/button/button.svelte';
+import Input from './components/ui/input/input.svelte';
+import SpinLoader from './components/ui/spin-loader/SpinLoader.svelte';
 import Area from './pages/area/Area.svelte';
 import AreaVersionsDoc from './pages/area/AreaVersionsDoc.svelte';
+import ForgotPassword from './pages/auth/forgot-password/ForgotPassword.svelte';
+import ResetPassword from './pages/auth/reset-password/ResetPassword.svelte';
+import SignIn from './pages/auth/sign-in/SignIn.svelte';
 import CollectionDoc from './pages/collection-document/CollectionDocument.svelte';
 import CollectionDocVersions from './pages/collection-document/CollectionDocVersions.svelte';
 import Collection from './pages/collection/Collection.svelte';
@@ -17,14 +23,20 @@ export {
   // Components
   Area,
   AreaVersionsDoc,
+  Button,
   Collection,
   CollectionDoc,
   CollectionDocVersions,
   Dashboard,
   Doc,
   Field,
+  ForgotPassword,
+  Input,
   Live,
-  Panel
+  Panel,
+  ResetPassword,
+  SignIn,
+  SpinLoader
 };
 
 // Types used in generated routes
@@ -65,3 +77,6 @@ export type CollectionDocData<V extends boolean = boolean> = DocVersions<V> &
   };
 export type AreaDocData<V extends boolean = boolean> = DocVersions<V> &
   BaseDocData & { operation: 'update' };
+
+export type CollectionDocumentDataWithVersions = CollectionDocData<true>;
+export type AreaDataWithVersions = AreaDocData<true>;

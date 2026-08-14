@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import { env } from '$env/dynamic/public';
-import { PARAMS } from '$lib/core/constant';
+import { PARAMS } from '$lib/core/constant.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';
 import type {
@@ -12,10 +12,10 @@ import type {
   RelationValue
 } from '$lib/fields/types.js';
 import type { RegisterCollection } from '$lib/index.js';
-import { trycatchFetch } from '$lib/util/function';
+import { trycatchFetch } from '$lib/util/function.js';
 import { hasProps, isObjectLiteral } from '$lib/util/object.js';
 import { toKebabCase } from '$lib/util/string.js';
-import type { WithOptional } from '$lib/util/types';
+import type { WithOptional } from '$lib/util/types.js';
 import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
 

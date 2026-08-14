@@ -33,9 +33,16 @@ function findMissingExtensions() {
   function scanFile(filePath) {
     const content = fs.readFileSync(filePath, 'utf-8');
     const relativePath = path.relative(process.cwd(), filePath);
+    const stringRanges = computeStringRanges(content);
     let match;
 
     while ((match = importRegex.exec(content)) !== null) {
+      // Skip matches that only appear inside a string/template literal
+      // (e.g. test fixtures like `const content = "import X from './a';"`)
+      if (isInsideStringRange(stringRanges, match.index)) {
+        continue;
+      }
+
       const importPath = match[1];
 
       // Ignore SvelteKit imports
@@ -76,6 +83,55 @@ function findMissingExtensions() {
 
   function getLineNumber(content, index) {
     return content.substring(0, index).split('\n').length;
+  }
+
+  // Finds [start, end) ranges of string/template literals and comments so
+  // that import-like text embedded in them (e.g. test fixtures) can be
+  // excluded from matches on real import statements.
+  function computeStringRanges(content) {
+    const ranges = [];
+    let i = 0;
+    const n = content.length;
+
+    while (i < n) {
+      const ch = content[i];
+
+      if (ch === "'" || ch === '"' || ch === '`') {
+        const quote = ch;
+        const start = i;
+        i++;
+        while (i < n) {
+          if (content[i] === '\\') {
+            i += 2;
+            continue;
+          }
+          if (content[i] === quote) {
+            i++;
+            break;
+          }
+          i++;
+        }
+        ranges.push([start, i]);
+      } else if (ch === '/' && content[i + 1] === '/') {
+        const start = i;
+        while (i < n && content[i] !== '\n') i++;
+        ranges.push([start, i]);
+      } else if (ch === '/' && content[i + 1] === '*') {
+        const start = i;
+        i += 2;
+        while (i < n && !(content[i] === '*' && content[i + 1] === '/')) i++;
+        i = Math.min(i + 2, n);
+        ranges.push([start, i]);
+      } else {
+        i++;
+      }
+    }
+
+    return ranges;
+  }
+
+  function isInsideStringRange(ranges, index) {
+    return ranges.some(([start, end]) => index > start && index < end);
   }
 
   function suggestReplacement(importPath, filePath) {
@@ -126,7 +182,7 @@ function findMissingExtensions() {
       }
     }
 
-    return importPath + ' (could not resolve)';
+    return null; // Could not resolve
   }
 
   console.log('🔍 Scanning for imports missing file extensions...\n');
@@ -141,7 +197,11 @@ function findMissingExtensions() {
     results.forEach(({ file, import: importPath, replacement, line }) => {
       console.log(`📄 ${file}:${line}`);
       console.log(`   Import: "${importPath}"`);
-      console.log(`   Suggested: "${replacement}"`);
+      if (replacement === null) {
+        console.log(`   Suggested: (could not resolve)`);
+      } else {
+        console.log(`   Suggested: "${replacement}"`);
+      }
       console.log('');
     });
 
@@ -182,7 +242,7 @@ function findMissingExtensions() {
 
       changes.forEach(({ importPath, replacement }) => {
         // Skip if couldn't resolve
-        if (replacement.includes('(could not resolve)')) {
+        if (!replacement || replacement.includes('(could not resolve)')) {
           return;
         }
 

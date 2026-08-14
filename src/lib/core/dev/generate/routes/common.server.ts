@@ -12,7 +12,7 @@ const DOLLAR_LIB = '$lib';
  */
 const mainLayout = (): string => `
 import type { ServerLoadEvent } from '@sveltejs/kit';
-export const load = async ({ locals, url }: ServerLoadEvent) => {
+export const load = async ({ locals }: ServerLoadEvent) => {
 	return { user: locals.user };
 };`;
 
@@ -55,8 +55,8 @@ const error = (): string => `
 const rootLayout = () => `
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { Dictionaries } from '${PACKAGE_NAME}/i18n';
-	import i18n from '${PACKAGE_NAME}/i18n';
+	import type { Dictionaries } from '${PACKAGE_NAME}';
+	import { i18n } from '${PACKAGE_NAME}';
 	import '${PACKAGE_NAME}/panel/style/index.css';
 
 	type Props = { children: Snippet; data: { translations: Dictionaries } };
@@ -77,7 +77,7 @@ const rootLayout = () => `
  */
 const rootLayoutServer = () => `
 import type { ServerLoadEvent } from '@sveltejs/kit';
-import { registerTranslation } from '${PACKAGE_NAME}/i18n/register.server.js';
+import { registerTranslation } from '${PACKAGE_NAME}/server';
 
 export const ssr = false;
 
@@ -92,8 +92,8 @@ export const load = async ({ locals }: ServerLoadEvent) => {
  * (rime)/panel/sign-in/+page.svelte
  */
 const signInPage = () => `
-<script lang="ts">
-  import { SignIn } from '${PACKAGE_NAME}/panel/auth/client';
+<script>
+  import { SignIn } from '${PACKAGE_NAME}/panel';
   const { data } = $props();
 </script>
 
@@ -104,10 +104,12 @@ const signInPage = () => `
  * (rime)/auth/sign-in/+page@(rime).server.ts
  */
 const signInPageServer = () => `
-import { authLoads, authActions } from '${PACKAGE_NAME}/panel/auth';
+import { type ServerLoadEvent, type RequestEvent } from '@sveltejs/kit';
 
-export const load = authLoads.signIn;
-export const actions = authActions.signIn;
+export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.signIn(event);
+export const actions = {
+  default: (event: RequestEvent) => event.locals.routes.panel.actions.signIn(event)
+};
 `;
 
 /**
@@ -116,7 +118,7 @@ export const actions = authActions.signIn;
  */
 const forgotPasswordPage = () => `
 <script>
-  import { ForgotPassword } from '${PACKAGE_NAME}/panel/auth/client'
+  import { ForgotPassword } from '${PACKAGE_NAME}/panel'
   const { data } = $props();
 </script>
 <ForgotPassword {data} />`;
@@ -126,9 +128,9 @@ const forgotPasswordPage = () => `
  * (rime)/forgot-password/+page.server.ts
  */
 const forgotPasswordPageServer = () => `
-import { authLoads } from '${PACKAGE_NAME}/panel/auth';
+import { type ServerLoadEvent } from '@sveltejs/kit';
 
-export const load = authLoads.forgotPassword;
+export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.forgotPassword(event);
 `;
 
 /**
@@ -136,8 +138,8 @@ export const load = authLoads.forgotPassword;
  * (rime)/reset-password/+page.svelte
  */
 const resetPasswordPage = () => `
-<script lang="ts">
-  import { ResetPassword } from '${PACKAGE_NAME}/panel/auth/client';
+<script>
+  import { ResetPassword } from '${PACKAGE_NAME}/panel';
   const { data } = $props();
 </script>
 
@@ -148,9 +150,9 @@ const resetPasswordPage = () => `
  * (rime)/reset-password/+page.server.ts
  */
 const resetPasswordPageServer = () => `
-import { authLoads } from '${PACKAGE_NAME}/panel/auth';
+import { type ServerLoadEvent } from '@sveltejs/kit';
 
-export const load = authLoads.resetPassword;
+export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.resetPassword(event);
 `;
 
 /**
@@ -159,7 +161,7 @@ export const load = authLoads.resetPassword;
  */
 const panelLayout = () => `
 <script>
-	import { Panel } from '${PACKAGE_NAME}/panel/client';
+  import { Panel } from '${PACKAGE_NAME}/panel';
 	import config from '${DOLLAR_LIB}/${OUTPUT_DIR}/rime.config.js';
 	
 	const { children, data } = $props();
@@ -182,8 +184,8 @@ const panelLayoutServer = () => `
 import { type ServerLoadEvent } from '@sveltejs/kit';
 
 export const load = async ({ locals }: ServerLoadEvent) => {
-  const { user, locale, routes } = locals;
-  return { user, locale, routes };
+  const { user, locale, navigation } = locals;
+  return { user, locale, routes: navigation };
 };`;
 
 /**
@@ -192,7 +194,7 @@ export const load = async ({ locals }: ServerLoadEvent) => {
  */
 const panelPage = () => `
 <script>
-  import { Dashboard } from '${PACKAGE_NAME}/panel/client';
+  import { Dashboard } from '${PACKAGE_NAME}/panel';
   const { data } = $props();
 </script>
 
@@ -203,19 +205,18 @@ const panelPage = () => `
  * (rime)/panel/+page.server.ts
  */
 const panelPageServer = () => `
-import { pagesLoad } from '${PACKAGE_NAME}/panel';
+import { type ServerLoadEvent } from '@sveltejs/kit';
 
-export const load = pagesLoad.dashboard;`;
+export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.dashboard(event);`;
 
 /**
  * Live page template
  * (rime)/live/+page.svelte
  */
 const livePage = () => `
-<script lang="ts">
-  import { Live } from '${PACKAGE_NAME}/panel/client';
-
-  import config from '../../../../lib/${OUTPUT_DIR}/rime.config.js';
+<script>
+  import { Live } from '${PACKAGE_NAME}/panel';
+  import config from '${DOLLAR_LIB}/${OUTPUT_DIR}/rime.config.js';
 
   const { data } = $props();
 </script>
@@ -228,9 +229,209 @@ const livePage = () => `
  * (rime)/live/+page.server.ts
  */
 const livePageServer = () => `
-import { pagesLoad } from '${PACKAGE_NAME}/panel';
+import { type ServerLoadEvent } from '@sveltejs/kit';
 
-export const load = pagesLoad.live;`;
+export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.live(event);`;
+
+/****************************************************/
+/* Panel /[slug=collection|area]/... and API /api/[slug=collection|area]/...
+/* — fixed, generic, matcher-disambiguated routes shared by every
+/* collection/area, generated once regardless of how many are configured.
+/* The [slug=collection]/[slug=area] param matchers (src/params/, see
+/* collectionMatcher/areaMatcher below) route each slug to the right folder
+/* at the SvelteKit router level, so collection and area pages/endpoints are
+/* genuinely separate routes — no runtime kind-branching inside a shared
+/* component, no unauthenticated-branch union fighting the component's data
+/* prop type. Each reads slug/id off event.params (a real dynamic route
+/* param) via event.locals.routes, so none of these import anything from
+/* rimecms besides the panel components.
+/****************************************************/
+
+/**
+ * Collection list page
+ * (rime)/panel/[slug=collection]/+page.svelte
+ */
+const collectionListPage = () => `
+<script>
+  import { Collection } from '${PACKAGE_NAME}/panel';
+  const { data } = $props();
+</script>
+
+<Collection {data} slug={data.slug} />`;
+
+/**
+ * (rime)/panel/[slug=collection]/+page.server.ts
+ */
+const collectionListPageServer = () => `
+import { type ServerLoadEvent } from '@sveltejs/kit';
+
+export const load = async (event: ServerLoadEvent) => {
+  const data = await event.locals.routes.panel.load.collection(event);
+  return { ...data, slug: event.params.slug || '' };
+};`;
+
+/**
+ * Area document page
+ * (rime)/panel/[slug=area]/+page.svelte
+ */
+const areaDocPage = () => `
+<script>
+  import { Area } from '${PACKAGE_NAME}/panel';
+  const { data } = $props();
+</script>
+
+<Area {data} />`;
+
+/**
+ * (rime)/panel/[slug=area]/+page.server.ts
+ */
+const areaDocPageServer = () => `
+import type { RequestEvent, ServerLoadEvent } from '@sveltejs/kit';
+
+export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.area(event);
+
+export const actions = {
+  update: (event: RequestEvent) => event.locals.routes.panel.actions.area.update(event)
+};`;
+
+/**
+ * Collection document page
+ * (rime)/panel/[slug=collection]/[id]/+page.svelte
+ */
+const collectionDocPage = () => `
+<script>
+  import { CollectionDoc } from '${PACKAGE_NAME}/panel';
+  const { data } = $props();
+</script>
+
+<CollectionDoc {data} />`;
+
+/**
+ * (rime)/panel/[slug=collection]/[id]/+page.server.ts
+ */
+const collectionDocPageServer = () => `
+import type { RequestEvent, ServerLoadEvent } from '@sveltejs/kit';
+
+export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.document(event);
+
+export const actions = {
+  create: (event: RequestEvent) => event.locals.routes.panel.actions.document.create(event),
+  update: (event: RequestEvent) => event.locals.routes.panel.actions.document.update(event)
+};`;
+
+/**
+ * Collection document versions page
+ * (rime)/panel/[slug=collection]/[id]/versions/+page.svelte
+ */
+const collectionDocVersionsPage = () => `
+<script>
+  import { CollectionDocVersions } from '${PACKAGE_NAME}/panel';
+  const { data } = $props();
+</script>
+
+<CollectionDocVersions data={data} />`;
+
+/**
+ * (rime)/panel/[slug=collection]/[id]/versions/+page.server.ts
+ */
+const collectionDocVersionsPageServer = () => `
+import { type ServerLoadEvent } from '@sveltejs/kit';
+
+export const load = (event: ServerLoadEvent) =>
+  event.locals.routes.panel.load.documentVersions(event);`;
+
+/**
+ * Area document versions page
+ * (rime)/panel/[slug=area]/versions/+page.svelte
+ */
+const areaVersionsPage = () => `
+<script>
+  import { AreaVersionsDoc } from '${PACKAGE_NAME}/panel';
+  const { data } = $props();
+</script>
+
+<AreaVersionsDoc data={data} />`;
+
+/**
+ * (rime)/panel/[slug=area]/versions/+page.server.ts
+ */
+const areaVersionsPageServer = () => `
+import { type ServerLoadEvent } from '@sveltejs/kit';
+
+export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.areaVersions(event);`;
+
+/**
+ * Collection REST endpoint (list-level)
+ * (rime)/api/[slug=collection]/+server.ts
+ */
+const collectionApiServer = () => `
+import { type RequestEvent } from '@sveltejs/kit';
+
+export const GET = (event: RequestEvent) => event.locals.routes.rest.collection.get(event);
+export const POST = (event: RequestEvent) => event.locals.routes.rest.collection.create(event);
+export const DELETE = (event: RequestEvent) => event.locals.routes.rest.collection.delete(event);`;
+
+/**
+ * Area REST endpoint — singleton, no [id] tier: GET reads it, PATCH updates
+ * it, no create/delete (areas are config-defined, not created/removed via API).
+ * (rime)/api/[slug=area]/+server.ts
+ */
+const areaApiServer = () => `
+import { type RequestEvent } from '@sveltejs/kit';
+
+export const GET = (event: RequestEvent) => event.locals.routes.rest.area.get(event);
+export const PATCH = (event: RequestEvent) => event.locals.routes.rest.area.update(event);`;
+
+/**
+ * Collection REST endpoint (id-level)
+ * (rime)/api/[slug=collection]/[id]/+server.ts
+ */
+const collectionIdApiServer = () => `
+import { type RequestEvent } from '@sveltejs/kit';
+
+export const GET = (event: RequestEvent) => event.locals.routes.rest.collection.getById(event);
+export const PATCH = (event: RequestEvent) => event.locals.routes.rest.collection.updateById(event);
+export const DELETE = (event: RequestEvent) => event.locals.routes.rest.collection.deleteById(event);`;
+
+/**
+ * Collection duplicate action
+ * (rime)/api/[slug=collection]/[id]/duplicate/+server.ts
+ */
+const collectionDuplicateApiServer = () => `
+import { type RequestEvent } from '@sveltejs/kit';
+
+export const POST = (event: RequestEvent) => event.locals.routes.rest.collection.duplicate(event);`;
+
+/**
+ * Param matchers backing [slug=collection]/[slug=area] — bake in the actual
+ * configured slug list at generation time so they stay isomorphic (no
+ * server-only config import; SvelteKit resolves matchers on the client too
+ * for client-side navigation), same approach as this repo's own hand-written
+ * src/params/news.ts, lang.ts.
+ * src/params/collection.ts, src/params/area.ts
+ */
+const paramMatcher = (slugs: string[]) => `
+import type { ParamMatcher } from '@sveltejs/kit';
+
+const slugs = ${JSON.stringify(slugs)} as const;
+
+export const match: ParamMatcher = (param): param is (typeof slugs)[number] =>
+  (slugs as readonly string[]).includes(param);`;
+
+/**
+ * Catch-all so /api/* stays a literal, static-prefixed SvelteKit route —
+ * without it, an unmatched /api/* request (unknown slug, wrong shape) would
+ * fall through to the next candidate in the manifest, e.g. the public site's
+ * (front)/[[locale]]/[[id]] route, silently binding garbage params instead
+ * of 404ing.
+ * (rime)/api/[...rest]/+server.ts
+ */
+const apiCatchAllServer = () => `
+import { error } from '@sveltejs/kit';
+
+export const fallback = async () => {
+  throw error(404);
+};`;
 
 /**
  * Custom route template generator
@@ -301,7 +502,42 @@ export const commonRoutes: Routes = {
   '(rime)/panel/live-edit': {
     'page@(rime)': livePage,
     pageServer: livePageServer
+  },
+  '(rime)/panel/[slug=collection]': {
+    page: collectionListPage,
+    pageServer: collectionListPageServer
+  },
+  '(rime)/panel/[slug=collection]/[id]': {
+    page: collectionDocPage,
+    pageServer: collectionDocPageServer
+  },
+  '(rime)/panel/[slug=collection]/[id]/versions': {
+    page: collectionDocVersionsPage,
+    pageServer: collectionDocVersionsPageServer
+  },
+  '(rime)/panel/[slug=area]': {
+    page: areaDocPage,
+    pageServer: areaDocPageServer
+  },
+  '(rime)/panel/[slug=area]/versions': {
+    page: areaVersionsPage,
+    pageServer: areaVersionsPageServer
+  },
+  '(rime)/api/[slug=collection]': {
+    server: collectionApiServer
+  },
+  '(rime)/api/[slug=collection]/[id]': {
+    server: collectionIdApiServer
+  },
+  '(rime)/api/[slug=collection]/[id]/duplicate': {
+    server: collectionDuplicateApiServer
+  },
+  '(rime)/api/[slug=area]': {
+    server: areaApiServer
+  },
+  '(rime)/api/[...rest]': {
+    server: apiCatchAllServer
   }
 };
 
-export { customRoute };
+export { customRoute, paramMatcher };

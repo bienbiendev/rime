@@ -1,7 +1,7 @@
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { isGroupField } from '$lib/fields/group/index.js';
-import { RelationFieldBuilder } from '$lib/fields/relation';
+import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import type { Field, FormField } from '$lib/fields/types.js';
 

@@ -1,7 +1,7 @@
 import { apiUrl } from '$lib/core/api/index.js';
 import { buildUploadAria, type UploadPath } from '$lib/core/collections/upload/util/path.js';
 import { PARAMS, UPLOAD_PATH } from '$lib/core/constant.js';
-import { handleError } from '$lib/core/errors/handler.server.js';
+import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { withVersionsSuffix } from '$lib/core/naming.js';
 import type { GenericDoc } from '$lib/core/types/doc.js';
@@ -12,104 +12,104 @@ import { trycatch } from '$lib/util/function.js';
 import { toKebabCase } from '$lib/util/string.js';
 import { error, type ServerLoadEvent } from '@sveltejs/kit';
 
-/****************************************************/
-/* Document Load
-/****************************************************/
-export function docLoad(slug: string, withVersion?: boolean) {
+/**
+ * Load function for the collection document page in the panel.
+ */
+export async function documentLoad<V extends boolean = boolean>(
+  event: ServerLoadEvent,
+  withVersion?: V
+) {
   //
-  const load = async <V extends boolean = boolean>(event: ServerLoadEvent) => {
-    const { locale, user, rime } = event.locals;
-    const { id } = event.params;
+  const { locale, user, rime } = event.locals;
+  const { id } = event.params;
+  const slug = event.params.slug || '';
 
-    if (!id) throw error(404, 'Not found');
+  if (!id) throw error(404, 'Not found');
 
-    let doc: GenericDoc;
-    let readOnly = false;
+  let doc: GenericDoc;
+  let readOnly = false;
 
-    if (!rime.config.isCollection(slug)) {
-      throw handleError(new RimeError(RimeError.NOT_FOUND), { context: 'load' });
+  if (!rime.config.isCollection(slug)) {
+    throw handleError(new RimeError(RimeError.NOT_FOUND), { context: 'load' });
+  }
+
+  const collection = rime.collection(slug);
+  const operation = id === 'create' ? 'create' : 'update';
+
+  if (id === 'create') {
+    /** Check for authorizations */
+    const authorized = collection.config.access.create(user, {});
+    if (!authorized) {
+      throw handleError(new RimeError(RimeError.UNAUTHORIZED), { context: ERROR_CONTEXT.LOAD });
+    }
+    doc = collection.blank();
+  } else {
+    /** Check for authorizations */
+    const authorizedRead = collection.config.access.read(user, { id });
+    const authorizedUpdate = collection.config.access.update(user, { id });
+    if (!authorizedRead && !authorizedUpdate) {
+      throw handleError(new RimeError(RimeError.UNAUTHORIZED), { context: ERROR_CONTEXT.LOAD });
     }
 
-    const collection = rime.collection(slug);
-    const operation = id === 'create' ? 'create' : 'update';
+    const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
 
-    if (id === 'create') {
-      /** Check for authorizations */
-      const authorized = collection.config.access.create(user, {});
-      if (!authorized) {
-        return { doc: {}, operation, status: 401, readOnly: true } as CollectionDocData<false>;
-      }
-      doc = collection.blank();
-    } else {
-      /** Check for authorizations */
-      const authorizedRead = collection.config.access.read(user, { id });
-      const authorizedUpdate = collection.config.access.update(user, { id });
-      if (!authorizedRead && !authorizedUpdate) {
-        return { doc: {}, operation, status: 401, readOnly: true } as CollectionDocData<false>;
-      }
+    /** Get doc */
+    const [error, document] = await trycatch(() =>
+      collection.findById({ id, locale, versionId, draft: true })
+    );
+    doc = document;
 
-      const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
-
-      /** Get doc */
-      const [error, document] = await trycatch(() =>
-        collection.findById({ id, locale, versionId, draft: true })
-      );
-      doc = document;
-
-      if (error) {
-        throw handleError(error, { context: 'load' });
-      }
-
-      /** If update not allowed set doc as readOnly  */
-      if (authorizedRead && !authorizedUpdate) {
-        readOnly = true;
-      }
+    if (error) {
+      throw handleError(error, { context: 'load' });
     }
 
-    let aria: Partial<Route>[];
-
-    const collectionAria = {
-      title: collection.config.label.plural,
-      url: panelUrl(collection.config.kebab)
-    };
-    if (collection.config.upload) {
-      const paramUploadPath = event.url.searchParams.get('uploadPath') as UploadPath | null;
-      const currentDirectoryPath = paramUploadPath || UPLOAD_PATH.ROOT_NAME;
-      aria = [
-        { title: 'Dashboard', icon: 'dashboard', url: panelUrl() },
-        collectionAria,
-        ...buildUploadAria({ path: currentDirectoryPath, slug }),
-        { title: undefined } // Will be populated by title context
-      ];
-    } else {
-      aria = [
-        { title: 'Dashboard', icon: 'dashboard', url: panelUrl() },
-        { title: collection.config.label.plural, url: panelUrl(collection.config.kebab) },
-        { title: undefined } // Will be populated by title context
-      ];
+    /** If update not allowed set doc as readOnly  */
+    if (authorizedRead && !authorizedUpdate) {
+      readOnly = true;
     }
+  }
 
-    let data: Partial<CollectionDocData> = {
-      aria,
-      doc,
-      operation,
-      status: 200,
-      hasMailer: 'mailer' in rime,
-      readOnly
-    };
+  let aria: Partial<Route>[];
 
-    if (withVersion) {
-      const url = `${apiUrl(withVersionsSuffix(toKebabCase(doc._type)))}?where[ownerId][equals]=${doc.id}&sort=-updatedAt&select=updatedAt,status`;
-      const promise = event.fetch(url).then((r) => r.json());
-      const [error, result] = await trycatch(() => promise);
-      if (error || !Array.isArray(result.docs)) {
-        throw new RimeError(RimeError.OPERATION_ERROR, 'while getting versions');
-      }
-      data = { ...data, versions: result.docs };
-    }
+  const collectionAria = {
+    title: collection.config.label.plural,
+    url: panelUrl(collection.config.kebab)
+  };
+  if (collection.config.upload) {
+    const paramUploadPath = event.url.searchParams.get('uploadPath') as UploadPath | null;
+    const currentDirectoryPath = paramUploadPath || UPLOAD_PATH.ROOT_NAME;
+    aria = [
+      { title: 'Dashboard', icon: 'dashboard', url: panelUrl() },
+      collectionAria,
+      ...buildUploadAria({ path: currentDirectoryPath, slug }),
+      { title: undefined } // Will be populated by title context
+    ];
+  } else {
+    aria = [
+      { title: 'Dashboard', icon: 'dashboard', url: panelUrl() },
+      { title: collection.config.label.plural, url: panelUrl(collection.config.kebab) },
+      { title: undefined } // Will be populated by title context
+    ];
+  }
 
-    return data as CollectionDocData<V>;
+  let data: Partial<CollectionDocData> = {
+    aria,
+    doc,
+    operation,
+    status: 200,
+    hasMailer: 'mailer' in rime,
+    readOnly
   };
 
-  return load;
+  if (withVersion) {
+    const url = `${apiUrl(withVersionsSuffix(toKebabCase(doc._type)))}?where[ownerId][equals]=${doc.id}&sort=-updatedAt&select=updatedAt,status`;
+    const promise = event.fetch(url).then((r) => r.json());
+    const [error, result] = await trycatch(() => promise);
+    if (error || !Array.isArray(result.docs)) {
+      throw new RimeError(RimeError.OPERATION_ERROR, 'while getting versions');
+    }
+    data = { ...data, versions: result.docs };
+  }
+
+  return data as CollectionDocData<V>;
 }

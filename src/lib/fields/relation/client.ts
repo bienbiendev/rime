@@ -1,5 +1,5 @@
-import { hasProps, isObjectLiteral } from '$lib/util/object';
-import type { RelationValue } from '../types';
+import { hasProps, isObjectLiteral } from '$lib/util/object.js';
+import type { RelationValue } from '../types.js';
 
 /**
  * Checks if a relation field's value is populated with full documents.

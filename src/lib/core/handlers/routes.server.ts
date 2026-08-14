@@ -1,5 +1,61 @@
 import buildNavigation from '$lib/panel/navigation.js';
-import { type Handle } from '@sveltejs/kit';
+import { areaFormActions } from '$lib/panel/pages/area/actions.server.js';
+import { areaLoad } from '$lib/panel/pages/area/load.server.js';
+import { forgotPasswordLoad } from '$lib/panel/pages/auth/forgot-password/load.server.js';
+import { resetPasswordLoad } from '$lib/panel/pages/auth/reset-password/load.server.js';
+import { signInActions } from '$lib/panel/pages/auth/sign-in/actions.server.js';
+import { signInLoad } from '$lib/panel/pages/auth/sign-in/load.server.js';
+import { collectionFormActions } from '$lib/panel/pages/collection-document/actions.server.js';
+import { documentLoad } from '$lib/panel/pages/collection-document/load.server.js';
+import { collectionLoad } from '$lib/panel/pages/collection/load.server.js';
+import { dashboardLoad } from '$lib/panel/pages/dashboard/load.server.js';
+import { liveLoad } from '$lib/panel/pages/live/load.server.js';
+import { checkLiveRedirect } from '$lib/panel/util/live.server.js';
+import { type Handle, type RequestEvent, type ServerLoadEvent } from '@sveltejs/kit';
+import { rest as areaRest } from '../areas/rest/index.server.js';
+import { rest as collectionRest } from '../collections/rest/index.server.js';
+
+/**
+ * Backs the fixed set of generated /panel/[slug=collection|area]/... and
+ * /api/[slug=collection|area]/... routes — each of these reads slug/id off
+ * event.params itself (a real dynamic route param), so the generated file
+ * just passes event straight through, no import needed. The param matchers
+ * (src/params/collection.ts, area.ts) already disambiguate collection vs
+ * area at the router level, so rest.collection/rest.area need no runtime
+ * isArea/id branching — each generated route calls the one method that
+ * matches its own folder. Deliberately lives outside rime.server.ts: app
+ * authors never touch this, and importing these panel/api wrappers there
+ * would make RimeContext's inferred type depend on functions that read
+ * event.locals.rime — i.e. on itself.
+ */
+export const routeHandlers = {
+  checkLiveRedirect,
+
+  panel: {
+    load: {
+      collection: collectionLoad,
+      document: documentLoad,
+      documentVersions: (event: ServerLoadEvent) => documentLoad(event, true),
+      area: areaLoad,
+      areaVersions: (event: ServerLoadEvent) => areaLoad(event, true),
+      dashboard: dashboardLoad,
+      live: liveLoad,
+      signIn: signInLoad,
+      forgotPassword: forgotPasswordLoad,
+      resetPassword: resetPasswordLoad
+    },
+    actions: {
+      document: collectionFormActions,
+      area: areaFormActions,
+      signIn: signInActions.default as (event: RequestEvent) => any
+    }
+  },
+
+  rest: {
+    collection: collectionRest,
+    area: areaRest
+  }
+};
 
 export const handleRoutes: Handle = async ({ event, resolve }) => {
   const { rime, user } = event.locals;
@@ -9,8 +65,10 @@ export const handleRoutes: Handle = async ({ event, resolve }) => {
 
   // build panel navigation
   if (isPanelRoute && event.request.method === 'GET') {
-    event.locals.routes = buildNavigation(rime.config.raw, user);
+    event.locals.navigation = buildNavigation(rime.config.raw, user);
   }
+
+  event.locals.routes = routeHandlers;
 
   // Handle custom routes from config and plugins
   const routes =
@@ -27,3 +85,5 @@ export const handleRoutes: Handle = async ({ event, resolve }) => {
 
   return resolve(event);
 };
+
+export type RouteHandlers = typeof routeHandlers;
