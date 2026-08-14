@@ -97,8 +97,13 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
   function defineLocale(event: RequestEvent) {
     // locale present inside the url params ex : /en/foo
     const params = event.params;
+
     const paramLocale =
-      'locale' in params && typeof params.locale === 'string' ? params.locale : null;
+      'locale' in params &&
+      typeof params.locale === 'string' &&
+      configCtx.getLocalesCodes().includes(params.locale)
+        ? params.locale
+        : null;
 
     // locale present as a search param ex : ?locale=en
     const searchParams = event.url.searchParams;
