@@ -1,8 +1,10 @@
+// @ts-nocheck
 import {
   block,
   blocks,
   date,
   group,
+  link,
   radio,
   relation,
   richText,
@@ -18,181 +20,42 @@ import { normalizeFieldPath } from '$lib/util/doc.js';
 import { Images, Text } from '@lucide/svelte';
 import { expect, test } from 'vitest';
 import { FormFieldBuilder } from './builders/form-field-builder.js';
-import { getFieldBuildersAtPath, getFieldConfigByPath, isFormField } from './util.js';
-const fields = [
-  {
-    type: 'tabs',
-    live: true,
-    tabs: [
-      {
-        name: 'hero',
-        label: 'hero',
-        fields: [
-          {
-            type: 'radio',
-            live: true,
-            name: 'heroType',
-            defaultValue: 'banner',
-            options: [
-              { label: 'Banner', value: 'banner' },
-              { label: 'Text', value: 'text' }
-            ]
-          },
-          {
-            type: 'relation',
-            live: true,
-            name: 'image',
-            defaultValue: [],
-            hooks: {},
-            relationTo: 'medias'
-          },
-          {
-            type: 'richText',
-            live: true,
-            name: 'intro',
-            defaultValue: null,
-            marks: ['bold'],
-            nodes: [],
-            hooks: {}
-          }
-        ]
-      },
-      {
-        name: 'layout',
-        label: 'layout',
-        fields: [
-          {
-            type: 'blocks',
-            live: true,
-            name: 'components',
-            defaultValue: [],
-            blocks: [
-              {
-                name: 'paragraph',
-                fields: [
-                  {
-                    type: 'richText',
-                    live: true,
-                    name: 'text',
-                    defaultValue: null,
-                    marks: ['bold', 'italic', 'strike', 'underline'],
-                    nodes: ['p', 'h2', 'h3', 'ol', 'ul', 'blockquote', 'a'],
-                    hooks: {},
-                    localized: true
-                  },
-                  {
-                    type: 'text',
-                    live: true,
-                    name: 'type',
-                    defaultValue: null,
-                    hidden: true,
-                    placeholder: 'Type'
-                  }
-                ],
-                description: 'Simple paragraph'
-              },
-              {
-                name: 'slider',
-                fields: [
-                  {
-                    type: 'text',
-                    live: true,
-                    name: 'image',
-                    defaultValue: null,
-                    placeholder: 'Image'
-                  },
-                  {
-                    type: 'text',
-                    live: true,
-                    name: 'type',
-                    defaultValue: null,
-                    hidden: true,
-                    placeholder: 'Type'
-                  },
-                  {
-                    type: 'tree',
-                    name: 'legends',
-                    fields: [{ type: 'text', name: 'legend' }]
-                  }
-                ],
-                description: 'Simple slider'
-              }
-            ],
-            table: { position: 99 }
-          }
-        ]
-      },
-      {
-        name: 'attributes',
-        label: 'attributes',
-        fields: [
-          {
-            type: 'text',
-            live: true,
-            name: 'title',
-            defaultValue: null,
-            isTitle: true,
-            localized: true,
-            required: true,
-            placeholder: 'Title'
-          },
-          {
-            type: 'group',
-            name: 'group',
-            fields: [
-              { type: 'relation', name: 'image', relationTo: 'medias' },
-              { type: 'toggle', name: 'ok' }
-            ]
-          }
-        ]
-      },
-      {
-        name: 'footer',
-        label: 'footer',
-        fields: [
-          {
-            type: 'tree',
-            name: 'nav',
-            fields: [
-              { name: 'label', type: 'text' },
-              { name: 'link', type: 'link' },
-              { name: 'group', type: 'group', fields: [{ name: 'metaTitle', type: 'text' }] }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    type: 'text',
-    live: true,
-    name: 'status',
-    defaultValue: 'draft',
-    hidden: true,
-    placeholder: 'Status'
-  },
-  {
-    type: 'text',
-    live: true,
-    name: 'editedBy',
-    defaultValue: null,
-    hidden: true,
-    placeholder: 'EditedBy'
-  },
-  {
-    type: 'date',
-    live: true,
-    name: 'createdAt',
-    hooks: {},
-    hidden: true
-  },
-  {
-    type: 'date',
-    live: true,
-    name: 'updatedAt',
-    hooks: {},
-    hidden: true
-  }
+import { getFieldAtPath, getFieldListAtPath, isFormField } from './util.js';
+
+// Builder-equivalent of the old raw-data fixture — getFieldAtPath now
+// operates on FieldBuilder[] like getFieldListAtPath does, not plain Field[].
+// Kept separate from the `builders` tree below (used by getFieldListAtPath
+// tests) since that one's field counts are asserted exactly and don't
+// include this fixture's group-inside-attributes / tree-inside-slider-block.
+const configByPathFields = [
+  tabs(
+    tab('hero').fields(
+      radio('heroType').options('banner', 'text').defaultValue('banner'),
+      relation('image').to('medias'),
+      richText('intro')
+    ),
+    tab('layout').fields(
+      blocks('components', [
+        block('paragraph')
+          .description('Simple paragraph')
+          .fields(richText('text').localized(), text('type').hidden()),
+        block('slider')
+          .description('Simple slider')
+          .fields(text('image'), text('type').hidden(), tree('legends').fields(text('legend')))
+      ]).table()
+    ),
+    tab('attributes').fields(
+      text('title').isTitle().localized().required(),
+      group('group').fields(relation('image').to('medias'), toggle('ok'))
+    ),
+    tab('footer').fields(
+      tree('nav').fields(text('label'), link('link'), group('group').fields(text('metaTitle')))
+    )
+  ),
+  text('status').defaultValue('draft').hidden(),
+  text('editedBy').hidden(),
+  date('createdAt').hidden(),
+  date('updatedAt').hidden()
 ];
 
 test('should return bar.0.foo', () => {
@@ -216,16 +79,14 @@ test('should return bar.0.Foo12.4.baz', () => {
 });
 
 test('should return correct config', () => {
-  //@ts-expect-error no need for field.access prop for testing this
-  const field = getFieldConfigByPath('hero.heroType', fields);
+  const field = getFieldAtPath('hero.heroType', configByPathFields);
   expect(field).toBeDefined();
   expect(field?.name).toBeDefined();
   expect(field?.name).toBe('heroType');
 });
 
 test('should return correct block field config', () => {
-  //@ts-expect-error no need for field.access prop for testing this
-  const field = getFieldConfigByPath('layout.components.0:paragraph.text', fields);
+  const field = getFieldAtPath('layout.components.0:paragraph.text', configByPathFields);
   expect(field).toBeDefined();
   expect(field?.name).toBeDefined();
   expect(field?.name).toBe('text');
@@ -233,8 +94,7 @@ test('should return correct block field config', () => {
 });
 
 test('should return correct title field config', () => {
-  //@ts-expect-error no need for field.access prop for testing this
-  const field = getFieldConfigByPath('attributes.title', fields);
+  const field = getFieldAtPath('attributes.title', configByPathFields);
   expect(field).toBeDefined();
   expect(field?.name).toBeDefined();
   expect(field?.name).toBe('title');
@@ -242,8 +102,7 @@ test('should return correct title field config', () => {
 });
 
 test('should return correct field config inside group', () => {
-  //@ts-expect-error no need for field.access prop for testing this
-  const field = getFieldConfigByPath('attributes.group.ok', fields);
+  const field = getFieldAtPath('attributes.group.ok', configByPathFields);
   expect(field).toBeDefined();
   expect(field?.name).toBeDefined();
   expect(field?.name).toBe('ok');
@@ -251,8 +110,7 @@ test('should return correct field config inside group', () => {
 });
 
 test('should return correct field config inside tree', () => {
-  //@ts-expect-error no need for field.access prop for testing this
-  const field = getFieldConfigByPath('footer.nav.0.label', fields);
+  const field = getFieldAtPath('footer.nav.0.label', configByPathFields);
   expect(field).toBeDefined();
   expect(field?.name).toBeDefined();
   expect(field?.name).toBe('label');
@@ -260,8 +118,7 @@ test('should return correct field config inside tree', () => {
 });
 
 test('should return correct field config inside tree 2', () => {
-  //@ts-expect-error no need for field.access prop for testing this
-  const field = getFieldConfigByPath('footer.nav.0.link', fields);
+  const field = getFieldAtPath('footer.nav.0.link', configByPathFields);
   expect(field).toBeDefined();
   expect(field?.name).toBeDefined();
   expect(field?.name).toBe('link');
@@ -269,8 +126,7 @@ test('should return correct field config inside tree 2', () => {
 });
 
 test('should return correct field config inside tree inside group', () => {
-  //@ts-expect-error no need for field.access prop for testing this
-  const field = getFieldConfigByPath('footer.nav.0.group.metaTitle', fields);
+  const field = getFieldAtPath('footer.nav.0.group.metaTitle', configByPathFields);
   expect(field).toBeDefined();
   expect(field?.name).toBeDefined();
   expect(field?.name).toBe('metaTitle');
@@ -278,8 +134,7 @@ test('should return correct field config inside tree inside group', () => {
 });
 
 test('should return correct field config inside blocks inside tree', () => {
-  //@ts-expect-error no need for field.access prop for testing this
-  const field = getFieldConfigByPath('layout.components.0:slider.legends.0.legend', fields);
+  const field = getFieldAtPath('layout.components.0:slider.legends.0.legend', configByPathFields);
   expect(field).toBeDefined();
   expect(field?.name).toBeDefined();
   expect(field?.name).toBe('legend');
@@ -287,12 +142,11 @@ test('should return correct field config inside blocks inside tree', () => {
 });
 
 test('should not return field config inside blocks without param inBlockType', () => {
-  //@ts-expect-error no need for field.access prop for testing this
-  const field = getFieldConfigByPath('layout.components.0.legends.0.legend', fields);
+  const field = getFieldAtPath('layout.components.0.legends.0.legend', configByPathFields);
   expect(field).toBe(undefined);
 });
 
-// Builders for testing getFieldBuildersAtPath
+// Builders for testing getFieldListAtPath
 
 const blockParagraph = block('paragraph')
   .icon(Text)
@@ -345,7 +199,7 @@ const tabFooter = tab('footer').fields(
 const builders = tabs(tabHero, tabContent, tabAttributes, tabSeo, tabFooter);
 
 test('should return correct field builders at path inside blocks', () => {
-  const { fields: fieldList, path } = getFieldBuildersAtPath('layout.components.0:slider.image', [
+  const { fields: fieldList, path } = getFieldListAtPath('layout.components.0:slider.image', [
     builders
   ]);
   const builder = fieldList[0];
@@ -359,9 +213,7 @@ test('should return correct field builders at path inside blocks', () => {
 });
 
 test('should return the list of fields inside a block', () => {
-  const { fields: fieldList, path } = getFieldBuildersAtPath('layout.components.0:slider', [
-    builders
-  ]);
+  const { fields: fieldList, path } = getFieldListAtPath('layout.components.0:slider', [builders]);
   expect(fieldList).toBeDefined();
   expect(fieldList.length).toBe(5); // [ 'image', 'type', 'path', 'position', 'locale' ]
   const builder = fieldList[0];
@@ -373,7 +225,7 @@ test('should return the list of fields inside a block', () => {
 });
 
 test('should return the list of fields inside a tab', () => {
-  const { fields: fieldList, path } = getFieldBuildersAtPath('hero', [builders]);
+  const { fields: fieldList, path } = getFieldListAtPath('hero', [builders]);
   expect(fieldList).toBeDefined();
   expect(fieldList.length).toBe(3);
   const builder1 = fieldList[0];
@@ -395,11 +247,11 @@ test('should return the list of fields inside a tab', () => {
 });
 
 test('should return the list of fields inside a tree', () => {
-  const { fields: fieldList, path } = getFieldBuildersAtPath('footer.nav', [builders]);
+  const { fields: fieldList, path } = getFieldListAtPath('footer.nav', [builders]);
   expect(fieldList).toBeDefined();
   expect(fieldList.length).toBe(5); // [ 'path', 'position', 'label', 'link', 'group' ]
   const filteredList = fieldList.filter(
-    (builder) => isFormField(builder.raw) && builder.raw.hidden !== true
+    (builder) => isFormField(builder) && builder.raw.hidden !== true
   );
   const builder1 = filteredList[0];
   if (!(builder1 instanceof FormFieldBuilder))
@@ -429,7 +281,7 @@ test('should return the list of fields inside a tree', () => {
 // );
 
 test('should return the list of fields inside a group inside a tree', () => {
-  const { fields: fieldList, path } = getFieldBuildersAtPath('footer.nav.0.group', [builders]);
+  const { fields: fieldList, path } = getFieldListAtPath('footer.nav.0.group', [builders]);
   expect(fieldList).toBeDefined();
   expect(fieldList.length).toBe(1);
   const builder1 = fieldList[0];
@@ -441,7 +293,7 @@ test('should return the list of fields inside a group inside a tree', () => {
 });
 
 test('should return one field inside a tree', () => {
-  const { fields: fieldList, path } = getFieldBuildersAtPath('footer.nav.0.label', [builders]);
+  const { fields: fieldList, path } = getFieldListAtPath('footer.nav.0.label', [builders]);
   expect(fieldList).toBeDefined();
   expect(fieldList.length).toBe(1);
   const builder1 = fieldList[0];
@@ -453,7 +305,7 @@ test('should return one field inside a tree', () => {
 });
 
 test('should return one field inside a tab', () => {
-  const { fields: fieldList, path } = getFieldBuildersAtPath('hero.heroType', [builders]);
+  const { fields: fieldList, path } = getFieldListAtPath('hero.heroType', [builders]);
   expect(fieldList).toBeDefined();
   expect(fieldList.length).toBe(1);
   const builder1 = fieldList[0];

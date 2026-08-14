@@ -24,6 +24,7 @@ type FieldWithOptions = FormField & {
   options: Option[];
   defaultValue?: (string | DefaultValueFn<string>) | (string[] | DefaultValueFn<string[]>);
   many?: boolean;
+  validate?: FieldValidationFunc<FieldWithOptions>;
 };
 
 class PickFieldBuilder<T extends FieldWithOptions = FieldWithOptions> extends FormFieldBuilder<T> {
@@ -91,5 +92,9 @@ export class PickManyFieldBuilder<
   many() {
     this.field.many = true;
     return this;
+  }
+
+  get __many(): boolean {
+    return !!this.field.many;
   }
 }

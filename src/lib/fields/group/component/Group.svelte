@@ -22,7 +22,6 @@
   let groupOpen = $state(true);
   const key = $derived(
     `group-${config.fields
-      .map((f) => f.raw)
       .filter(isFormField)
       .map((f) => f.name)
       .join('-')}`
@@ -46,12 +45,7 @@
       .filter((field) => !(field instanceof TabsBuilder))
       .filter((field) => field instanceof FormFieldBuilder)
       .filter((field) => !form.isLive || (form.isLive && field.raw.live))
-      .filter((field) => {
-        if (field.raw.access && field.raw.access.read) {
-          return field.raw.access.read(user.attributes, { id: form.values.id });
-        }
-        return true;
-      });
+      .filter((field) => field.__canRead(user.attributes, { id: form.values.id }));
   });
 
   const basePath = $derived(path ? `${path}.` : '');

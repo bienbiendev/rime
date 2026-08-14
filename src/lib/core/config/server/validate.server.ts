@@ -1,16 +1,16 @@
 import { isAuthConfig } from '$lib/core/collections/auth/util.js';
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
 import cache from '$lib/core/dev/cache/index.server.js';
+import type { FieldBuilder } from '$lib/core/fields/builders/field-builder';
 import { isFormField } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import type { PrototypeSlug } from '$lib/core/types/doc.js';
-import { isBlocksFieldRaw, type BlocksFieldRaw } from '$lib/fields/blocks/index.js';
-import { isGroupFieldRaw } from '$lib/fields/group/index.js';
-import { isRelationField, type RelationField } from '$lib/fields/relation/index.js';
-import { isSelectField } from '$lib/fields/select/index.js';
-import { isTabsFieldRaw, type TabsFieldRaw } from '$lib/fields/tabs/index.js';
-import { isTreeFieldRaw } from '$lib/fields/tree/index.js';
-import type { Field, FormField } from '$lib/fields/types.js';
+import { BlocksBuilder, type BlocksField } from '$lib/fields/blocks/index.js';
+import { GroupFieldBuilder } from '$lib/fields/group/index.js';
+import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
+import { SelectFieldBuilder } from '$lib/fields/select/index.js';
+import { TabsBuilder } from '$lib/fields/tabs/index.js';
+import { TreeBuilder } from '$lib/fields/tree/index.js';
 
 function hasDuplicates(arr: string[]): string[] {
   return [...new Set(arr.filter((e, i, a) => a.indexOf(e) !== i))];
@@ -74,32 +74,32 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
   const isCollection = (documentConfig: any): documentConfig is BuiltCollection =>
     documentConfig.type === 'collection';
   const isAuth = isCollection(documentConfig) && isAuthConfig(documentConfig);
-  const registeredBlocks: Record<string, BlocksFieldRaw['blocks'][number]> = {};
+  const registeredBlocks: Record<string, BlocksField['blocks'][number]> = {};
 
-  const fieldsCompiled = documentConfig.fields.map((f) => f.compile());
+  // const fieldsCompiled = documentConfig.fields.map((f) => f.compile());
 
   if (isAuth) {
-    const rolesField = fieldsCompiled
+    const rolesField = documentConfig.fields
       .filter(isFormField)
       .filter((f) => f.name === 'roles')
-      .filter((f) => isSelectField(f))[0];
+      .filter((f) => f instanceof SelectFieldBuilder)[0];
 
-    const nameField = fieldsCompiled.filter(isFormField).filter((f) => f.name === 'name')[0];
-    const emailField = fieldsCompiled
+    const nameField = documentConfig.fields.filter(isFormField).filter((f) => f.name === 'name')[0];
+    const emailField = documentConfig.fields
       .filter(isFormField)
-      .find((f: FormField) => f.name === 'email' && f.type === 'email');
+      .find((f) => f.name === 'email' && f.type === 'email');
 
     if (!rolesField) errors.push(`Field roles is missing in collection ${documentConfig.slug}`);
     if (!emailField && documentConfig.auth.type !== 'apiKey')
       errors.push(`Field email is missing in collection ${documentConfig.slug}`);
     if (!nameField) errors.push(`Field name is missing in collection ${documentConfig.slug}`);
-    if (!rolesField.many)
+    if (!rolesField.__many)
       errors.push(
         `Field roles must have "many" enabled : select('roles').options(...).many(), even with a single option`
       );
   }
 
-  const validateBlockField = (fields: Field[], blockType: string) => {
+  const validateBlockField = (fields: FieldBuilder[], blockType: string) => {
     const reserved = ['path', 'type', 'ownerId', 'position', 'locale'];
     for (const key of reserved) {
       if (
@@ -113,16 +113,16 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
     }
   };
 
-  const validateRelationField = (field: RelationField) => {
+  const validateRelationField = (field: RelationFieldBuilder) => {
     const collectionsSlugs = (config.collections || []).map((c) => c.slug);
-    if (!collectionsSlugs.includes(field.relationTo)) {
+    if (!collectionsSlugs.includes(field.__relationTo)) {
       errors.push(
-        `Relation field ${field.name} references unknown collection ${field.relationTo}, in ${documentConfig.type} ${documentConfig.slug}`
+        `Relation field ${field.name} references unknown collection ${field.__relationTo}, in ${documentConfig.type} ${documentConfig.slug}`
       );
     }
   };
 
-  const validateFields = (fields: Field[]) => {
+  const validateFields = (fields: FieldBuilder[]) => {
     // Check for field name duplication at this level
     const duplicates = hasDuplicates(fields.filter(isFormField).map((f) => f.name));
     if (duplicates.length) {
@@ -141,8 +141,8 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
       return pattern.test(name) && !name.includes('-') && !name.includes(' ');
     }
 
-    function validateTabs(field: TabsFieldRaw) {
-      const duplicates = hasDuplicates(field.tabs.map((t) => t.name));
+    function validateTabs(field: TabsBuilder) {
+      const duplicates = hasDuplicates(field.__tabs.map((t) => t.name));
       if (duplicates.length) {
         errors.push(`Dupplicate tab name ${duplicates} in ${documentConfig.slug}`);
       }
@@ -150,10 +150,10 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
 
     for (const field of fields) {
       // Recursive check first into Tabs since tabs are not Formfields
-      if (isTabsFieldRaw(field)) {
+      if (field instanceof TabsBuilder) {
         validateTabs(field);
-        for (const tab of field.tabs) {
-          validateFields(tab.fields);
+        for (const tab of field.__tabs) {
+          validateFields(tab.__fields);
         }
       }
 
@@ -163,7 +163,7 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
       }
 
       // Check that a field wich has field._root = true is not localized
-      if ('_root' in field && field._root && field.localized) {
+      if (field.__root && field.__localized) {
         errors.push(
           `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with _root = true, can't be localized`
         );
@@ -177,8 +177,8 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
       }
 
       // Recursive check into Blocks
-      if (isBlocksFieldRaw(field)) {
-        for (const block of field.blocks) {
+      if (field instanceof BlocksBuilder) {
+        for (const block of field.__blocks) {
           if (block.name in registeredBlocks) {
             const blockDefinedButDiffer =
               JSON.stringify(registeredBlocks[block.name]) !== JSON.stringify(block);
@@ -188,23 +188,23 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
           } else {
             registeredBlocks[block.name] = block;
           }
-          validateFields(block.fields.filter(isFormField));
-          validateBlockField(block.fields.filter(isFormField), block.name);
+          validateFields(block.__fields.filter(isFormField));
+          validateBlockField(block.__fields.filter(isFormField), block.name);
         }
         // Recursive check into Tree
-      } else if (isTreeFieldRaw(field)) {
-        validateFields(field.fields.filter(isFormField));
+      } else if (field instanceof TreeBuilder) {
+        validateFields(field.__fields.filter(isFormField));
         // Recursive check into Tabs
-      } else if (isGroupFieldRaw(field)) {
-        validateFields(field.fields.filter(isFormField));
+      } else if (field instanceof GroupFieldBuilder) {
+        validateFields(field.__fields.filter(isFormField));
         // Check relation field
-      } else if (isRelationField(field)) {
+      } else if (field instanceof RelationFieldBuilder) {
         validateRelationField(field);
       }
     }
   };
 
-  validateFields(documentConfig.fields.map((f) => f.compile()));
+  validateFields(documentConfig.fields);
 
   return errors;
 };
@@ -229,7 +229,6 @@ function validateAuthCollections<T extends Config>(config: T) {
 }
 
 function validate(config: Config): boolean {
-  logger.debug('Validating config...');
   const validateFunctions = [
     hasDuplicateSlug,
     hasUsersSlug,

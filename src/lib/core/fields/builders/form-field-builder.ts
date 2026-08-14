@@ -5,6 +5,7 @@ import type {
   FieldAccess,
   FieldHook,
   FieldHookClient,
+  FieldHookContext,
   FieldHookShared,
   FieldValidationFunc,
   FieldWidth,
@@ -27,7 +28,7 @@ export type FieldReferenceOptions = {
 
 export type FieldReference = FieldReferenceOptions & { table: string };
 
-export class FormFieldBuilder<T extends FormField> extends FieldBuilder<T> {
+export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuilder<T> {
   /** Every concrete leaf field builder is expected to implement a
    *  `get dataType(): DataType` accessor (see e.g. `$lib/fields/text/index.ts`).
    *  Not declared here — TS doesn't allow `declare` on accessors in this
@@ -53,10 +54,6 @@ export class FormFieldBuilder<T extends FormField> extends FieldBuilder<T> {
     return this;
   }
 
-  get name() {
-    return this.field.name;
-  }
-
   label(label: string) {
     this.field.label = label;
     return this;
@@ -72,9 +69,20 @@ export class FormFieldBuilder<T extends FormField> extends FieldBuilder<T> {
     return this;
   }
 
+  override get __localized(): boolean {
+    return !!this.field.localized;
+  }
+
   validate(validateFunction: FieldValidationFunc<T>) {
-    this.field.validate = validateFunction as FieldValidationFunc<FormField>;
+    this.field.validate = validateFunction as FieldValidationFunc<T>;
     return this;
+  }
+
+  __validate(value: unknown, context: Parameters<FieldValidationFunc<T>>[1]): true | string {
+    if (this.field.validate) {
+      return this.field.validate(value, { ...context, config: this.field });
+    }
+    return true;
   }
 
   condition(conditionFunction: (doc: Dic, siblings: Dic) => boolean) {
@@ -103,15 +111,65 @@ export class FormFieldBuilder<T extends FormField> extends FieldBuilder<T> {
     return this;
   }
 
+  get __required(): boolean {
+    return !!this.field.required;
+  }
+
+  get __defaultValue() {
+    return this.field.defaultValue;
+  }
+
+  /** `isEmpty` is a per-field-type predicate *function* stored as plain data
+   *  (set in this constructor, overridden by some leaf fields), not a fluent
+   *  setter — there's no name collision here, just no method wrapping it
+   *  yet. Exposed as a method for the same reason as __root/__localized:
+   *  callers shouldn't need `.raw.isEmpty(value)` to invoke it. */
+  __isEmpty(value: unknown): boolean {
+    return this.field.isEmpty(value);
+  }
+
+  /**
+   * Force the field to be on the root table — usefull for fields that
+   * should not be versioned (ex: _parent for nested structures should
+   * always be on the root table to prevent different versions from having
+   * different parents).
+   */
+  _root() {
+    this.field._root = true;
+    return this;
+  }
+
+  override get __root(): boolean {
+    return !!this.field._root;
+  }
+
   access(access: { create?: FieldAccess; read?: FieldAccess; update?: FieldAccess }) {
     this.field.access = { ...this.field.access, ...access };
     return this;
+  }
+
+  __canRead(...args: Parameters<FieldAccess>): boolean {
+    return !!this.field.access?.read?.(...args);
+  }
+
+  __canCreate(...args: Parameters<FieldAccess>): boolean {
+    return !!this.field.access?.create?.(...args);
+  }
+
+  __canUpdate(...args: Parameters<FieldAccess>): boolean {
+    return !!this.field.access?.update?.(...args);
   }
 
   onChange(hook: FieldHookClient) {
     this.field.hooks!.onChange ??= [];
     this.field.hooks!.onChange.push(hook);
     return this;
+  }
+
+  __onChange(value: unknown, context: Parameters<FieldHookClient>[1]): void {
+    for (const hook of this.field.hooks?.onChange ?? []) {
+      hook(value, context);
+    }
   }
 
   hint(hint: string) {
@@ -147,15 +205,42 @@ export class FormFieldBuilder<T extends FormField> extends FieldBuilder<T> {
     return this;
   }
 
+  async __beforeRead(
+    value: unknown,
+    context: Omit<FieldHookContext<T>, 'config'>
+  ): Promise<any> {
+    let result = value;
+    for (const hook of this.field.hooks?.beforeRead ?? []) {
+      result = await hook(result, { ...context, config: this.field });
+    }
+    return result;
+  }
+
   $beforeSave(hook: FieldHook<T>) {
     this.field.hooks!.beforeSave ??= [];
     this.field.hooks!.beforeSave.push(hook);
     return this;
   }
 
+  async __beforeSave(value: unknown, context: FieldHookContext<T>): Promise<any> {
+    let result = value;
+    for (const hook of this.field.hooks?.beforeSave ?? []) {
+      result = await hook(result, { ...context, config: this.field });
+    }
+    return result;
+  }
+
   beforeValidate(hook: FieldHookShared) {
     this.field.hooks!.beforeValidate ??= [];
     this.field.hooks!.beforeValidate.push(hook);
     return this;
+  }
+
+  async __beforeValidate(value: unknown, context: Parameters<FieldHookShared>[1]): Promise<any> {
+    let result = value;
+    for (const hook of this.field.hooks?.beforeValidate ?? []) {
+      result = await hook(result, { ...context, config: this.field });
+    }
+    return result;
   }
 }

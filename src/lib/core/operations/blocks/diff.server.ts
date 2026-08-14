@@ -32,7 +32,7 @@ export function defineBlocksDiff({
   // - If a block is not localized than it should keep its id so block is updated
   if (context.isFallbackLocale) {
     incomingBlocks = incomingBlocks.map((block) => {
-      const isLocalized: boolean = configMap[block.path]?.localized || false;
+      const isLocalized: boolean = configMap[block.path]?.__localized || false;
       if (isLocalized) {
         delete block.id;
         block.locale = context.isFallbackLocale;

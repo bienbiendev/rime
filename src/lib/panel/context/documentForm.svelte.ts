@@ -1,9 +1,8 @@
 import { applyAction, deserialize } from '$app/forms';
 import { page } from '$app/state';
-import { compileDocumentConfig } from '$lib/core/config/shared/compile.js';
 import type { BuiltAreaClient, BuiltCollectionClient } from '$lib/core/config/types.js';
 import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant.js';
-import { getFieldConfigByPath } from '$lib/core/fields/util.js';
+import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { buildConfigMap } from '$lib/core/operations/configMap/index.js';
 import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '$lib/core/types/doc.js';
 import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
@@ -45,7 +44,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   let initialDoc = $state(initial);
   let doc = $state<T>(initial);
   let formElement = $state<HTMLFormElement>();
-  const documentConfig = compileDocumentConfig(config);
+  const documentConfig = config;
   const changes = $derived<Partial<GenericDoc>>(diff(initialDoc, doc));
   let isDisabled = $state(readOnly);
   let processing = $state(false);
@@ -395,10 +394,23 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     return data;
   };
 
+  /**
+   * `config` is the raw compiled field data, same as every field component
+   * (Text.svelte, Group.svelte, ...) already works with — this mirrors
+   * `form.svelte.ts`'s `useField` on purpose, since both read plain field
+   * data (`.required`, `.isEmpty(value)`, `.validate(...)`, `.access.read`,
+   * `.condition(...)`), never builder methods. `config` is only omitted by
+   * callers with just a path in hand (e.g. `Group.svelte`'s `getField`), in
+   * which case it's resolved from `documentConfig.fields` and unwrapped via
+   * `.raw` — the field must exist in the document's own field tree for that
+   * to work, which doesn't hold for standalone fields like the panel's
+   * password inputs (see AuthFooter.svelte), so those always pass `config`.
+   */
   function useField<TValue>(path: string, config?: SimplerField<FormField>) {
     if (!config) {
-      config = getFieldConfigByPath(path, documentConfig.fields);
-      if (!config) throw new Error(`can't find config for field : ${path}`);
+      const resolved = getFieldAtPath(path, documentConfig.fields);
+      if (!resolved) throw new Error(`can't find config for field : ${path}`);
+      config = resolved.raw;
     }
 
     path = path ? normalizeFieldPath(path) : config.name;
@@ -468,21 +480,19 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
     const setFieldValue = (value: any) => {
       const valid = validate(value);
-      if (!config.access?.update) return;
-      if (operation === 'update' && !config.access.update(user.attributes)) {
+
+      if (operation === 'update' && !config.access?.update?.(user.attributes)) {
         return;
       }
       if (valid) {
         setValue(path, value);
-        if (Array.isArray(config.hooks?.onChange)) {
-          for (const hook of config.hooks?.onChange || []) {
-            hook(value, {
-              siblings: getSiblings(),
-              useField,
-              useBlocks,
-              useTree
-            });
-          }
+        for (const hook of config.hooks?.onChange ?? []) {
+          hook(value, {
+            siblings: getSiblings(),
+            useField,
+            useBlocks,
+            useTree
+          });
         }
       }
     };
@@ -501,16 +511,15 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
       get editable() {
         if (readOnly) return false;
-        if (!config.access) return false;
         if (operation === 'create') {
-          return config.access.create(user.attributes);
+          return !!config.access?.create?.(user.attributes);
         } else {
-          return config.access.update(user.attributes);
+          return !!config.access?.update?.(user.attributes);
         }
       },
 
       get visible() {
-        if (config.access?.read && !config.access?.read(user.attributes)) {
+        if (config.access?.read && !config.access.read(user.attributes)) {
           return false;
         }
         let visible = true;
@@ -709,7 +718,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       let data = { ...defaultLocaleDoc, locale: locale.code };
       const configMap = buildConfigMap(defaultLocaleDoc, documentConfig.fields);
       for (const [key, field] of Object.entries(configMap)) {
-        if (field.localized) {
+        if (field.__localized) {
           let value = getValueAtPath<Dic[]>(key, data);
           value = removeIds(value);
           data = setValueAtPath(key, data, value);

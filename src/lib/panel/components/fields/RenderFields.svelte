@@ -20,12 +20,7 @@
   const user = getUserContext();
 
   const authorizedFields = $derived(
-    fields.filter((field) => {
-      if (field.raw.access && field.raw.access.read) {
-        return field.raw.access.read(user.attributes, { id: form.values.id });
-      }
-      return true;
-    })
+    fields.filter((field) => field.__canRead(user.attributes, { id: form.values.id }))
   );
 
   const path = $derived(initialPath === '' ? '' : `${initialPath}.`);
@@ -54,7 +49,7 @@
         <div data-type="tabs" class="rz-render-fields__field rz-render-fields__field--full">
           <Tabs config={field.raw} {path} {form} />
         </div>
-      {:else if isFormField(field.raw) && isNotHidden(field.raw)}
+      {:else if isFormField(field) && isNotHidden(field.raw)}
         {@const isCompact = 'layout' in field && field.layout === 'compact'}
         {@const FieldComponent = field.component}
         <div
@@ -62,7 +57,7 @@
           data-type={field.type}
           data-compact={isCompact ? '' : null}
         >
-          <FieldComponent path={path + field.raw.name} config={field.raw} {form} />
+          <FieldComponent path={path + field.name} config={field.raw} {form} />
         </div>
       {/if}
     {/if}

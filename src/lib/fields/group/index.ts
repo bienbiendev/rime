@@ -35,6 +35,10 @@ export class GroupFieldBuilder extends FormFieldBuilder<GroupField> {
     return this;
   }
 
+  get __fields(): FieldBuilder<Field>[] {
+    return this.field.fields;
+  }
+
   localized() {
     this.field.localized = true;
     this.field.fields = this.field.fields.map((field) => {

@@ -84,12 +84,12 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     for (const field of fields) {
       if (field instanceof GroupFieldBuilder) {
         // For group fields, pass the current group name as parent path for nested fields
-        const groupPath = parentPath ? `${parentPath}.${field.raw.name}` : field.raw.name;
-        columns = [...columns, ...buildFieldColumns(field.raw.fields, groupPath)];
+        const groupPath = parentPath ? `${parentPath}.${field.name}` : field.name;
+        columns = [...columns, ...buildFieldColumns(field.__fields, groupPath)];
       }
-      if (isFormField(field.raw) && hasProp('table', field.raw)) {
+      if (isFormField(field) && hasProp('table', field.raw)) {
         // Create current field path
-        const path = parentPath ? `${parentPath}.${field.raw.name}` : field.raw.name;
+        const path = parentPath ? `${parentPath}.${field.name}` : field.name;
         // Create column
         const column = {
           type: field.type,
@@ -99,10 +99,10 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
         };
         columns.push(column);
       } else if (field instanceof TabsBuilder) {
-        for (const tab of field.raw.tabs) {
+        for (const tab of field.__tabs) {
           // For tab fields, create a path with the tab name
-          const path = parentPath ? `${parentPath}.${tab.raw.name}` : tab.raw.name;
-          columns = [...columns, ...buildFieldColumns(tab.raw.fields, path)];
+          const path = parentPath ? `${parentPath}.${tab.name}` : tab.name;
+          columns = [...columns, ...buildFieldColumns(tab.__fields, path)];
         }
       }
     }

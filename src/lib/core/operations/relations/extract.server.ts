@@ -1,5 +1,5 @@
 import type { BeforeOperationRelation } from '$lib/adapter-sqlite/relations.server.js';
-import { isRelationField } from '$lib/fields/relation/index.js';
+import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { getValueAtPath } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import type { ConfigMap } from '../configMap/types.js';
@@ -15,17 +15,17 @@ export const extractRelations = ({ ownerId, data, configMap, locale }: Args) => 
   const relations: BeforeOperationRelation[] = [];
 
   for (const [path, config] of Object.entries(configMap)) {
-    if (isRelationField(config)) {
+    if (config instanceof RelationFieldBuilder) {
       const value = getValueAtPath<BeforeOperationRelation[] | string | string[]>(path, data);
 
-      const localized = config.localized;
+      const localized = config.__localized;
       const relationRawValue = value;
       let output: BeforeOperationRelation[] = [];
 
       const relationFromString = ({ value, position = 0 }: RelationFromStringArgs) => {
         const result: BeforeOperationRelation = {
           position,
-          relationTo: config.relationTo,
+          relationTo: config.__relationTo,
           documentId: value,
           ownerId,
           path
@@ -40,7 +40,7 @@ export const extractRelations = ({ ownerId, data, configMap, locale }: Args) => 
         const result: BeforeOperationRelation = {
           id: value.id || undefined,
           position,
-          relationTo: config.relationTo,
+          relationTo: config.__relationTo,
           documentId: value.documentId,
           ownerId,
           path

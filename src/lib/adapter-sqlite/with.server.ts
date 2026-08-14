@@ -1,8 +1,8 @@
-import { getFieldConfigByPath } from '$lib/core/fields/util.js';
+import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { withLocalesSuffix } from '$lib/core/naming.js';
-import { isBlocksFieldRaw } from '$lib/fields/blocks/index.js';
-import { isRelationField } from '$lib/fields/relation/index.js';
-import { isTreeFieldRaw } from '$lib/fields/tree/index.js';
+import { BlocksBuilder } from '$lib/fields/blocks/index.js';
+import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
+import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { asc, eq, getTableColumns, or, SQL } from 'drizzle-orm';
@@ -35,15 +35,12 @@ export const buildWithParam = (args: {
     // Convert dot notation to double underscore notation for SQLite queries
     const sqlPath = path.replace(/\./g, '__');
 
-    const fieldConfig = getFieldConfigByPath(
-      path,
-      documentConfig.fields.map((f) => f.compile())
-    );
+    const fieldConfig = getFieldAtPath(path, documentConfig.fields);
 
-    if (fieldConfig && isRelationField(fieldConfig)) {
+    if (fieldConfig instanceof RelationFieldBuilder) {
       // Handle relation fields
       directRelationPaths.push(path);
-    } else if (fieldConfig && isBlocksFieldRaw(fieldConfig)) {
+    } else if (fieldConfig instanceof BlocksBuilder) {
       // Handle blocks fields
       blockPaths.push(path);
       const blocksTables = getBlocksTableNames(slug, tables);
@@ -74,7 +71,7 @@ export const buildWithParam = (args: {
           }
         }
       }
-    } else if (fieldConfig && isTreeFieldRaw(fieldConfig)) {
+    } else if (fieldConfig instanceof TreeBuilder) {
       // Handle tree fields
       treePaths.push(path);
       const treeTables = getTreeTableNames(slug, tables);
@@ -107,7 +104,7 @@ export const buildWithParam = (args: {
       }
     } else if (fieldConfig) {
       // Handle regular fields
-      if (fieldConfig.localized && locale) {
+      if (fieldConfig.__localized && locale) {
         const localesTableName = withLocalesSuffix(slug);
         if (localesTableName in tables) {
           const tableLocales = tables[localesTableName];

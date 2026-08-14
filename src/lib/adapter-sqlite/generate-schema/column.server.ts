@@ -11,34 +11,49 @@ const COLUMN_EXPR: Record<DataType, (snake: string) => string> = {
   json: (snake) => `text('${snake}', { mode: 'json' })`
 };
 
+// Single-call type guards for RESOLVE_DEFAULT below — calling
+// f.__defaultValue itself has no reason to run twice per branch.
+// `ensureObject` intentionally matches `typeof v === 'object'` including
+// `null` (not `v !== null`), since that's what the pre-refactor per-field
+// toSchema checks did — a field with no explicit default (constructor sets
+// `defaultValue = null`) will keep `null`, not fall back to `{}`. Not
+// touching that here, even though it looks like a latent bug.
+const ensureString = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
+const ensureNumber = (v: unknown): number | undefined => (typeof v === 'number' ? v : undefined);
+const ensureBoolean = (v: unknown): boolean | undefined => (typeof v === 'boolean' ? v : undefined);
+const ensureDate = (v: unknown): Date | undefined => (v instanceof Date ? v : undefined);
+const ensureObject = (v: unknown): object | undefined =>
+  typeof v === 'object' ? (v as object) : undefined;
+
 /**
  * Resolves the `.default(...)` fallback used when a field is required but has
  * no usable value in `field.defaultValue` — SQLite needs a type-correct
  * DEFAULT to add a NOT NULL column via drizzle-kit migration on a table with
  * existing rows. Keyed by field type (not dataType) and reading
- * `field.raw.defaultValue` directly, exactly mirroring what each field's own
+ * `field.__defaultValue` directly, exactly mirroring what each field's own
  * `toSchema` did before this refactor — kept here, not on the field builders,
  * since it's schema-generation-only and not part of a field's public API.
  */
 const RESOLVE_DEFAULT: Record<string, (field: FormFieldBuilder<FormField>) => unknown> = {
-  text: (f) => (typeof f.raw.defaultValue === 'string' ? f.raw.defaultValue : ''),
-  email: (f) => (typeof f.raw.defaultValue === 'string' ? f.raw.defaultValue : ''),
-  slug: (f) => (typeof f.raw.defaultValue === 'string' ? f.raw.defaultValue : ''),
-  combobox: (f) => (typeof f.raw.defaultValue === 'string' ? f.raw.defaultValue : ''),
-  radio: (f) => (typeof f.raw.defaultValue === 'string' ? f.raw.defaultValue : ''),
-  textarea: (f) => (typeof f.raw.defaultValue === 'string' ? f.raw.defaultValue : ''),
-  time: (f) => (typeof f.raw.defaultValue === 'string' ? f.raw.defaultValue : '00:00'),
-  checkbox: (f) => (f.raw as { defaultValue?: unknown }).defaultValue ?? false,
-  toggle: (f) => (typeof f.raw.defaultValue === 'boolean' ? f.raw.defaultValue : false),
-  number: (f) => (typeof f.raw.defaultValue === 'number' ? f.raw.defaultValue : 0),
-  date: (f) => (f.raw.defaultValue instanceof Date ? f.raw.defaultValue.getTime() : 0),
-  link: (f) => (typeof f.raw.defaultValue === 'object' ? f.raw.defaultValue : {}),
-  richText: (f) => (typeof f.raw.defaultValue === 'object' ? f.raw.defaultValue : {}),
+  text: (f) => ensureString(f.__defaultValue) ?? '',
+  email: (f) => ensureString(f.__defaultValue) ?? '',
+  slug: (f) => ensureString(f.__defaultValue) ?? '',
+  combobox: (f) => ensureString(f.__defaultValue) ?? '',
+  radio: (f) => ensureString(f.__defaultValue) ?? '',
+  textarea: (f) => ensureString(f.__defaultValue) ?? '',
+  time: (f) => ensureString(f.__defaultValue) ?? '00:00',
+  checkbox: (f) => f.__defaultValue ?? false,
+  toggle: (f) => ensureBoolean(f.__defaultValue) ?? false,
+  number: (f) => ensureNumber(f.__defaultValue) ?? 0,
+  date: (f) => ensureDate(f.__defaultValue)?.getTime() ?? 0,
+  link: (f) => ensureObject(f.__defaultValue) ?? {},
+  richText: (f) => ensureObject(f.__defaultValue) ?? {},
   relation: () => ({}),
   select: (f) => {
     const many = (f.raw as { many?: boolean }).many;
     const empty = many ? [] : '';
-    return typeof f.raw.defaultValue === 'undefined' ? empty : f.raw.defaultValue;
+    const value = f.__defaultValue;
+    return typeof value === 'undefined' ? empty : value;
   }
 };
 

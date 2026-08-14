@@ -1,9 +1,9 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import { getFieldConfigByPath } from '$lib/core/fields/util.js';
+import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import { hasVersionsSuffix, withLocalesSuffix } from '$lib/core/naming.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
-import { isRelationField } from '$lib/fields/relation/index.js';
+import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { type GetRegisterType } from '$lib/index.js';
 import type { Dic } from '$lib/util/types.js';
 import * as drizzleORM from 'drizzle-orm';
@@ -111,9 +111,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
     // Look for a relation field
     // Get document config
     const documentConfig = configCtx.getBySlug(slug);
-    // Get the compiled fields for lookups
-    const compiledFields = documentConfig.fields.map((f) => f.compile());
-    let fieldConfig = getFieldConfigByPath(column, compiledFields);
+    let fieldConfig = getFieldAtPath(column, documentConfig.fields);
     // Track relation-property detection (e.g. attributes.author.name)
     let matchedPrefix = column;
     let relationPropertyPath: string | null = null;
@@ -124,7 +122,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
       const parts = column.split('.');
       for (let i = parts.length - 1; i > 0; i--) {
         const prefix = parts.slice(0, i).join('.');
-        const candidate = getFieldConfigByPath(prefix, compiledFields);
+        const candidate = getFieldAtPath(prefix, documentConfig.fields);
         if (candidate) {
           fieldConfig = candidate;
           // If prefix shorter than original column, record the property suffix
@@ -139,7 +137,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
     }
 
     // If still not found or not a relation field, log warning and return false condition
-    if (!fieldConfig || !isRelationField(fieldConfig)) {
+    if (!(fieldConfig instanceof RelationFieldBuilder)) {
       const message = `the query contains the field "${column}", not found for ${documentConfig.slug} document`;
       logger.warn(message);
       // Return a condition that will always be false instead of returning false
@@ -161,7 +159,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
     // Handle relation property queries (e.g., attributes.author.name)
     // by building a subquery on the related collection
     const buildRelationPropertyCondition = () => {
-      const relatedSlug = fieldConfig.relationTo;
+      const relatedSlug = fieldConfig.__relationTo;
       const relatedTable = getTable(relatedSlug as any);
 
       // Build a where clause for the related collection using the same operator/value
@@ -196,7 +194,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
           and(
             inArray(relsTable[`${relatedSlug}Id`], matchingRelatedIds),
             eq(relsTable.path, matchedPrefix),
-            ...(fieldConfig.localized ? [eq(relsTable.locale, locale)] : [])
+            ...(fieldConfig.__localized ? [eq(relsTable.locale, locale)] : [])
           )
         );
 
@@ -210,12 +208,12 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 
     // Handle direct relation field queries (e.g., attributes.author)
     // only support a subset of operators for multi-valued relations
-    // Unsupported operator for multi-valued relations :
     const supportedRelationManyOperators = ['equals', 'not_equals', 'in_array', 'not_in_array'];
+
     // Only enforce the restriction for direct relation field queries.
     // If this is a relation property query (e.g. attributes.author.name) we allow
     // any operator because those will be applied to the related collection.
-    if (fieldConfig.many && !supportedRelationManyOperators.includes(operator)) {
+    if (fieldConfig.__many && !supportedRelationManyOperators.includes(operator)) {
       const unsupportedMessage = `the operator "${operator}" is not supported for multi-valued relation field "${column}" in ${documentConfig.slug} document`;
       logger.warn(unsupportedMessage);
       // Return a condition that will always be false
@@ -223,7 +221,11 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
     }
 
     // Build relation condition
-    const [to, localized] = [fieldConfig.relationTo, fieldConfig.localized];
+    const [to, localized, many] = [
+      fieldConfig.__relationTo,
+      fieldConfig.__localized,
+      fieldConfig.__many
+    ];
     const relsTableName = `${slug}Rels`;
     const relsTable = getTable(relsTableName);
 
@@ -281,7 +283,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 
     // Handle multi-valued relations specially when operator is `equals` to provide
     // strict equality semantics (the relation set must equal the provided value(s)).
-    if (fieldConfig.many && operator === 'equals') {
+    if (many && operator === 'equals') {
       // Accept various input forms and normalize to a unique array
       const values = normalizeValues(rawValue, value);
       // Owners with total relation count equal to values.length
@@ -296,7 +298,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 
     // For multi-valued relations, allow `in_array` to act as a subset check:
     // The provided values must contain ALL relation values of the document.
-    if (fieldConfig.many && operator === 'in_array') {
+    if (many && operator === 'in_array') {
       // Accept various input forms and normalize to a unique array
       const values = normalizeValues(rawValue, value);
       // Owners that have at least one relation row not included in the provided set
@@ -312,7 +314,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 
     // For multi-valued relations, `not_in_array` should match documents where the provided
     // set does NOT contain all of the document's relation values (inverse of `in_array`).
-    if (fieldConfig.many && operator === 'not_in_array') {
+    if (many && operator === 'not_in_array') {
       // Accept various input forms and normalize to a unique array
       const values = normalizeValues(rawValue, value);
       const ownersWithNonMatching = buildOwnersWithNonMatching(values);
@@ -320,7 +322,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
     }
 
     // For multi-valued relations, `not_equals` is the inverse of `equals` (exact-set inequality)
-    if (fieldConfig.many && operator === 'not_equals') {
+    if (many && operator === 'not_equals') {
       // Accept various input forms and normalize to a unique array
       const values = normalizeValues(rawValue, value);
       const ownersWithTotalCount = buildOwnersWithTotalCount(values.length);

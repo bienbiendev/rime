@@ -17,7 +17,7 @@ export function makeUploadDirectoriesCollectionClient<C extends WithUpload<Built
   const directoriesConfig = collection.upload.directories;
 
   // else create the directory collection
-  let directoriesCollection: BuiltCollection = {
+  const directoriesCollection: BuiltCollection = {
     slug: slug as CollectionSlug,
     kebab: withDirectoriesSuffix(collection.kebab),
     versions: undefined,

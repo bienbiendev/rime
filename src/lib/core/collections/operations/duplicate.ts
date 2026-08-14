@@ -1,10 +1,9 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { VERSIONS_STATUS } from '$lib/core/constant.js';
 import { buildConfigMap } from '$lib/core/operations/configMap/index.js';
-import { isBlocksFieldRaw, type BlocksFieldRaw } from '$lib/fields/blocks/index.js';
-import { isJSONContent } from '$lib/fields/rich-text/index.js';
-import { richTextJSONToText } from '$lib/fields/rich-text/index.js';
-import { isTreeFieldRaw, type TreeFieldRaw } from '$lib/fields/tree/index.js';
+import { BlocksBuilder } from '$lib/fields/blocks/index.js';
+import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
+import { TreeBuilder } from '$lib/fields/tree/index.js';
 import {
   getValueAtPath,
   isObjectLiteral,
@@ -86,15 +85,12 @@ export const duplicate = async (args: DuplicateArgs): Promise<string> => {
 
     // Get localized document
     let source = await collection.findById({ id, locale, draft: true });
-    const configMap = buildConfigMap(
-      source,
-      config.fields.map((f) => f.compile())
-    );
+    const configMap = buildConfigMap(source, config.fields);
 
     // Id mapping
     for (const [key, field] of Object.entries(configMap)) {
       // Process only tree and blocks
-      if (!isBlocksFieldRaw(field) && !isTreeFieldRaw(field)) continue;
+      if (!(field instanceof BlocksBuilder) && !(field instanceof TreeBuilder)) continue;
 
       const handleField = {
         // For localized blocks just remove the id so a new one will be created
@@ -107,7 +103,7 @@ export const duplicate = async (args: DuplicateArgs): Promise<string> => {
         // For non localized blocks map original ids in oreder to update incoming blocks
         unlocalized: () => {
           // Function to check block type matching
-          const matchBlockType = (a: Dic, b: Dic, f: BlocksFieldRaw | TreeFieldRaw) =>
+          const matchBlockType = (a: Dic, b: Dic, f: BlocksBuilder | TreeBuilder) =>
             f.type === 'tree' ? true : a.type === b.type;
 
           // Get original version blocks
@@ -130,7 +126,7 @@ export const duplicate = async (args: DuplicateArgs): Promise<string> => {
         }
       };
 
-      handleField[field.localized ? 'localized' : 'unlocalized']();
+      handleField[field.__localized ? 'localized' : 'unlocalized']();
     }
 
     // Prepare data

@@ -43,12 +43,6 @@ export async function generateSchemaString<T extends Config>(config: T) {
 
     schema.push(templateHead(collectionSlug));
 
-    // utility function to filter out fields
-    const isRootField = (field: (typeof collection.fields)[number]) =>
-      '_root' in field.raw && field.raw._root;
-    const isNotRootField = (field: (typeof collection.fields)[number]) =>
-      !('_root' in field.raw) || !field.raw._root;
-
     if (collection.versions) {
       // Collection that have versions may need some fields forced on the root table and not root_versions
       // process the root table with these fields first then, handle versions related tables creation
@@ -59,7 +53,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
       const baseRootFields = [date('createdAt').hidden(), date('updatedAt').hidden()];
 
       // Split fields that should be used on the root table
-      const rootFieldsFromConfig = [...collection.fields].filter(isRootField);
+      const rootFieldsFromConfig = [...collection.fields].filter((f) => f.__root);
       const rootFields = [...rootFieldsFromConfig, ...baseRootFields];
 
       // Build the main root buildRootTable with only _root fields and created/updatedAt
@@ -113,7 +107,9 @@ export async function generateSchemaString<T extends Config>(config: T) {
       relationFieldsHasLocale
     } = await buildRootTable({
       blocksRegister,
-      fields: collection.versions ? collection.fields.filter(isNotRootField) : collection.fields,
+      fields: collection.versions
+        ? collection.fields.filter((f) => !f.__root)
+        : collection.fields,
       rootName: rootTableName,
       locales: config.localization?.locales || [],
       hasAuth: !!collection.auth,

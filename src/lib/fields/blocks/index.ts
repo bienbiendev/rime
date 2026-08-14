@@ -44,7 +44,7 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
       // Add a locale prop in each block
       const hasAlreadyLocale = !!blockBuilder.block.fields
         .filter((field) => field instanceof FormFieldBuilder)
-        .find((field) => field.raw.name === 'locale');
+        .find((field) => field.name === 'locale');
       if (!hasAlreadyLocale) {
         blockBuilder.block.fields.push(text('locale').hidden());
       }
@@ -54,7 +54,7 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
         // as it's a block property
         if (
           field instanceof FormFieldBuilder &&
-          ['position', 'type', 'path', 'locale'].includes(field.raw.name)
+          ['position', 'type', 'path', 'locale'].includes(field.name)
         ) {
           return field;
         }
@@ -72,6 +72,10 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
     });
 
     return this;
+  }
+
+  get __blocks(): BlockBuilder[] {
+    return this.field.blocks;
   }
 
   override compile() {
@@ -134,6 +138,10 @@ class BlockBuilder {
   fields(...fields: FieldBuilder<Field>[]) {
     this.block.fields = [...fields, ...this.block.fields];
     return this;
+  }
+
+  get __fields(): FieldBuilder<Field>[] {
+    return this.block.fields;
   }
 
   get raw() {

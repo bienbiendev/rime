@@ -1,6 +1,6 @@
 import { logger } from '$lib/core/logger/index.server.js';
 import type { GenericBlock } from '$lib/core/types/doc.js';
-import { deleteValueAtPath, getValueAtPath, hasProp, setValueAtPath } from '$lib/util/object.js';
+import { deleteValueAtPath, getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 import { buildConfigMap } from '../../configMap/index.js';
 import { getDefaultValue } from '../before-upsert/set-default-values.server.js';
 import { Hooks } from '../index.server.js';
@@ -9,40 +9,30 @@ export const processDocumentFields = Hooks.beforeRead(async (args) => {
   const { event } = args;
   let doc = args.doc;
 
-  const configMap = buildConfigMap(
-    doc,
-    args.config.fields.map((f) => f.compile())
-  );
+  const configMap = buildConfigMap(doc, args.config.fields);
 
   for (const [key, config] of Object.entries(configMap)) {
     let value = getValueAtPath(key, doc);
     let isEmpty;
 
-    if (config.access && config.access.read) {
-      const authorized = config.access.read(event.locals.user);
-      if (!authorized) {
-        doc = deleteValueAtPath(doc, key);
-        continue;
-      }
+    if (!config.__canRead(event.locals.user)) {
+      doc = deleteValueAtPath(doc, key);
+      continue;
     }
 
-    if (config.hooks?.beforeRead) {
-      if (value) {
-        for (const hook of config.hooks.beforeRead) {
-          value = await hook(value, { event, config, operation: args.context, documentId: doc.id });
-          doc = setValueAtPath(key, doc, value);
-        }
-      }
+    if (value) {
+      value = await config.__beforeRead(value, { event, operation: args.context, documentId: doc.id });
+      doc = setValueAtPath(key, doc, value);
     }
 
     try {
-      isEmpty = config.isEmpty(value);
+      isEmpty = config.__isEmpty(value);
     } catch {
       isEmpty = false;
       logger.warn(`Error in config.isEmpty for field ${key}`);
     }
 
-    if (isEmpty && hasProp('defaultValue', config)) {
+    if (isEmpty && config.__defaultValue !== undefined) {
       value = await getDefaultValue({ key, config, adapter: args.event.locals.rime.adapter });
       doc = setValueAtPath(key, doc, value);
     }

@@ -2,5 +2,5 @@ import type { ToType } from '../index.server.js';
 import type { TextFieldBuilder } from './index.js';
 
 export const toType: ToType<TextFieldBuilder> = (field) => {
-  return `${field.name}${field.raw.required ? '' : '?'}: string`;
+  return `${field.name}${field.__required ? '' : '?'}: string`;
 };

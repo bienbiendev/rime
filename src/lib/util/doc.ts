@@ -1,6 +1,7 @@
 import { isUploadConfig } from '$lib/core/collections/upload/util/config.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import type { GenericDoc } from '$lib/core/types/doc.js';
+import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
@@ -32,22 +33,22 @@ export const createBlankDocument = <
   function reduceFieldsToBlankDocument(prev: Dic, curr: FieldBuilder<any>) {
     try {
       if (curr instanceof TabsBuilder) {
-        curr.raw.tabs.forEach((tab) => {
-          prev[tab.name] = tab.raw.fields.reduce(reduceFieldsToBlankDocument, {});
+        curr.__tabs.forEach((tab) => {
+          prev[tab.name] = tab.__fields.reduce(reduceFieldsToBlankDocument, {});
         });
       } else if (['blocks', 'relation', 'tree'].includes(curr.type)) {
-        prev[curr.raw.name] = [];
-      } else if ('fields' in curr.raw) {
-        prev[curr.raw.name] = curr.raw.fields.reduce(reduceFieldsToBlankDocument, {});
+        prev[curr.name] = [];
+      } else if (curr instanceof GroupFieldBuilder) {
+        prev[curr.name] = curr.__fields.reduce(reduceFieldsToBlankDocument, {});
       } else {
         if (curr.raw.defaultValue !== undefined) {
           if (typeof curr.raw.defaultValue === 'function') {
-            prev[curr.raw.name] = curr.raw.defaultValue({ event });
+            prev[curr.name] = curr.raw.defaultValue({ event });
           } else {
-            prev[curr.raw.name] = curr.raw.defaultValue;
+            prev[curr.name] = curr.raw.defaultValue;
           }
         } else {
-          prev[curr.raw.name] = null;
+          prev[curr.name] = null;
         }
       }
     } catch (err) {

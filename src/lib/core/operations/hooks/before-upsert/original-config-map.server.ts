@@ -8,10 +8,7 @@ export const buildOriginalDocConfigMap = Hooks.beforeUpsert(async (args) => {
   if (!originalDoc)
     throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @buildDataConfigMap');
 
-  const originalConfigMap = buildConfigMap(
-    originalDoc,
-    args.config.fields.map((f) => f.compile())
-  );
+  const originalConfigMap = buildConfigMap(originalDoc, args.config.fields);
 
   return {
     ...args,

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getFieldBuildersAtPath } from '$lib/core/fields/util.js';
+  import { getFieldListAtPath } from '$lib/core/fields/util.js';
   import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import { setDocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
@@ -41,7 +41,7 @@
   onMount(() => onFormReady(form));
 
   // Reactive: re-derives when fieldPath changes (no remount needed)
-  const { fields, path } = $derived(getFieldBuildersAtPath(fieldPath, docConfig.fields));
+  const { fields, path } = $derived(getFieldListAtPath(fieldPath, docConfig.fields));
 </script>
 
 <form class="rz-live-edit-panel" use:form.enhance enctype="multipart/form-data" method="post">

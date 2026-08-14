@@ -2,5 +2,5 @@ import type { ToType } from '../index.server.js';
 import type { TimeFieldBuilder } from './index.js';
 
 export const toType: ToType<TimeFieldBuilder> = (field) => {
-  return `${field.name}${!field.raw.required ? '?' : ''}: string`;
+  return `${field.name}${!field.__required ? '?' : ''}: string`;
 };

@@ -1,27 +1,31 @@
+import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { isFormField } from '$lib/core/fields/util.js';
 import type { GenericDoc } from '$lib/core/types/doc.js';
-import { isBlocksFieldRaw } from '$lib/fields/blocks/index.js';
-import { isGroupFieldRaw } from '$lib/fields/group/index.js';
-import { isTabsFieldRaw } from '$lib/fields/tabs/index.js';
-import { isTreeFieldRaw } from '$lib/fields/tree/index.js';
+import { BlocksBuilder } from '$lib/fields/blocks/index.js';
+import { GroupFieldBuilder } from '$lib/fields/group/index.js';
+import { TabsBuilder } from '$lib/fields/tabs/index.js';
+import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field } from '$lib/fields/types.js';
 import type { DeepPartial, Dic } from '$lib/util/types.js';
 import { buildTreeFieldsMap } from './buildTreeMap.js';
 import type { ConfigMap } from './types.js';
 
-export const buildConfigMap = (data: DeepPartial<GenericDoc>, incomingFields: Field[]) => {
+export const buildConfigMap = (
+  data: DeepPartial<GenericDoc>,
+  incomingFields: FieldBuilder<Field>[]
+) => {
   let map: ConfigMap = {};
 
-  const traverseData = (data: Dic | undefined, fields: Field[], basePath: string) => {
+  const traverseData = (data: Dic | undefined, fields: FieldBuilder<Field>[], basePath: string) => {
     if (!data) return;
 
     basePath = basePath === '' ? basePath : `${basePath}.`;
 
     for (const field of fields) {
-      if (isTabsFieldRaw(field)) {
-        for (const tab of field.tabs) {
+      if (field instanceof TabsBuilder) {
+        for (const tab of field.__tabs) {
           if (tab.name in data) {
-            traverseData(data[tab.name], tab.fields, tab.name);
+            traverseData(data[tab.name], tab.__fields, tab.name);
           }
         }
         continue;
@@ -35,13 +39,13 @@ export const buildConfigMap = (data: DeepPartial<GenericDoc>, incomingFields: Fi
 
       map[path] = field;
 
-      if (isBlocksFieldRaw(field) && value && Array.isArray(value)) {
+      if (field instanceof BlocksBuilder && value && Array.isArray(value)) {
         const blocks = value;
         for (const [index, block] of blocks.entries()) {
           try {
-            const blockConfig = field.blocks.find((b) => b.name === block.type);
+            const blockConfig = field.__blocks.find((b) => b.name === block.type);
             if (blockConfig) {
-              traverseData(block, blockConfig.fields, `${path}.${index}`);
+              traverseData(block, blockConfig.__fields, `${path}.${index}`);
             }
           } catch {
             console.warn(
@@ -49,11 +53,11 @@ export const buildConfigMap = (data: DeepPartial<GenericDoc>, incomingFields: Fi
             );
           }
         }
-      } else if (isTreeFieldRaw(field) && value && Array.isArray(value)) {
+      } else if (field instanceof TreeBuilder && value && Array.isArray(value)) {
         const treeMap = buildTreeFieldsMap(field, value, path);
         map = { ...map, ...treeMap };
-      } else if (isGroupFieldRaw(field)) {
-        traverseData(value, field.fields, path);
+      } else if (field instanceof GroupFieldBuilder) {
+        traverseData(value, field.__fields, path);
       }
     }
   };

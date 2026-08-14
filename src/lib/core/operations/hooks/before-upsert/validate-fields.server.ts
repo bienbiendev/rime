@@ -38,7 +38,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
 
     // Unique
     /** @TODO better unique check like relations, locale,... */
-    if ('unique' in config && config.unique && isCollection && !skipUnique) {
+    if ('unique' in config.raw && config.raw.unique && isCollection && !skipUnique) {
       let query;
       switch (operation) {
         case 'create':
@@ -64,34 +64,31 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /* Field hook before validate
     /****************************************************/
 
-    if (config.hooks?.beforeValidate) {
-      if (value) {
-        for (const hook of config.hooks.beforeValidate) {
-          value = await hook(value, { config, data: args.data });
-          output = setValueAtPath(key, output, value);
-        }
-      }
+    if (value) {
+      value = await config.__beforeValidate(value, { config, data: args.data });
+      output = setValueAtPath(key, output, value);
     }
 
     /****************************************************/
     /* Validate
     /****************************************************/
 
-    if (config.validate && value && !skipValidate) {
+    if (config.raw.validate && value && !skipValidate) {
       try {
-        const valid = config.validate(value, {
+        const valid = config.__validate(value, {
           data: output as Partial<GenericDoc>,
           operation,
           id: operation === 'update' ? args.context.originalDoc?.id : undefined,
           user: user,
           locale,
-          config
+          config: config.raw
         });
         if (valid !== true) {
           errors[key] = valid;
         }
-      } catch {
+      } catch (err) {
         logger.warn(`Error while validating field ${key}`);
+        console.debug(`[validateFields] field "${key}" threw:`, err);
         errors[key] = RimeFormError.VALIDATION_ERROR;
       }
     }
@@ -100,21 +97,25 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /* Field hook before Save
     /****************************************************/
 
-    if (config.hooks?.beforeSave) {
-      if (value) {
-        for (const hook of config.hooks.beforeSave) {
-          value = await hook(value, { config, event, operation: args.context });
-          output = setValueAtPath(key, output, value);
-        }
-      }
+    if (value) {
+      value = await config.__beforeSave(value, {
+        config: config.raw,
+        event,
+        operation: args.context
+      });
+      output = setValueAtPath(key, output, value);
+      // for (const hook of config.__beforeSave()) {
+      //   value = await hook(value, { config, event, operation: args.context });
+      //   output = setValueAtPath(key, output, value);
+      // }
     }
 
     /****************************************************/
     /* Access
     /****************************************************/
 
-    if (config.access && config.access.update && operation === 'update' && !skipAccess) {
-      const authorizedFieldUpdate = config.access.update(user, {
+    if (operation === 'update' && !skipAccess) {
+      const authorizedFieldUpdate = config.__canUpdate(user, {
         id: args.context.originalDoc?.id
       });
       if (!authorizedFieldUpdate) {
@@ -123,8 +124,8 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
       }
     }
 
-    if (config.access && config.access.create && operation === 'create' && !skipAccess) {
-      const authorizedFieldCreate = config.access.create(user, {
+    if (operation === 'create' && !skipAccess) {
+      const authorizedFieldCreate = config.__canCreate(user, {
         id: undefined
       });
       if (!authorizedFieldCreate) {
@@ -134,7 +135,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     }
 
     // Required
-    if (config.required && config.isEmpty(value)) {
+    if (config.__required && config.__isEmpty(value)) {
       if (skipRequired) {
         output = setValueAtPath(key, output, '');
       } else {

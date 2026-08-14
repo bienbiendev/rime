@@ -77,8 +77,8 @@
       {#if isTabVisible(tab)}
         <Tabs.Content data-tab-id={tabIds[index]} value={tab.name}>
           <!-- If the first and only field is a rich text field, render it directly -->
-          {#if tab.fields.length === 1 && tab.raw.fields[0].type === 'richText'}
-            {@const firstField = tab.raw.fields[0] as RichTextFieldBuilder}
+          {#if tab.__fields.length === 1 && tab.__fields[0].type === 'richText'}
+            {@const firstField = tab.__fields[0] as RichTextFieldBuilder}
             <RichText
               standAlone={true}
               path="{prependPath}{tab.name}.{firstField.name}"
@@ -87,7 +87,7 @@
             />
           {:else}
             <!-- Otherwise, render the fields -->
-            <RenderFields fields={tab.raw.fields} path="{prependPath}{tab.name}" {form} />
+            <RenderFields fields={tab.__fields} path="{prependPath}{tab.name}" {form} />
           {/if}
         </Tabs.Content>
       {/if}

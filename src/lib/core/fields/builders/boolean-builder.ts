@@ -9,7 +9,9 @@ type BooleanField = FormField & {
   validate?: FieldValidationFunc<BooleanField>;
 };
 
-export class BooleanFieldBuilder<T extends BooleanField> extends FormFieldBuilder<T> {
+export class BooleanFieldBuilder<
+  T extends BooleanField = BooleanField
+> extends FormFieldBuilder<T> {
   constructor(name: string, type: string) {
     super(name, type);
     this.field.defaultValue = false;

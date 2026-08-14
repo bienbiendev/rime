@@ -62,12 +62,12 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
     // Add validation if accept is defined
     if ('accept' in upload && Array.isArray(upload.accept)) {
       const allowedMimeTypes = upload.accept;
-      mimeType.raw.validate = (value) => {
+      mimeType.validate((value) => {
         return (
           (typeof value === 'string' && allowedMimeTypes.includes(value)) ||
           `File should be the type of ${allowedMimeTypes.toString()}`
         );
-      };
+      });
     }
 
     const _pathField = text('_path')._root().hidden().validate(validatePath);

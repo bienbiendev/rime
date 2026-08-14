@@ -35,6 +35,10 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
     return this;
   }
 
+  get __fields(): FieldBuilder<Field>[] {
+    return this.field.fields;
+  }
+
   addItemLabel(label: string) {
     this.field.addItemLabel = label;
     return this;
@@ -59,7 +63,7 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
     // Add a locale prop in its fields
     const hasAlreadyLocale = !!this.field.fields
       .filter((field) => field instanceof FormFieldBuilder)
-      .find((field) => field.raw.name === 'locale');
+      .find((field) => field.name === 'locale');
     if (!hasAlreadyLocale) {
       this.field.fields.push(text('locale').hidden());
     }
@@ -69,7 +73,7 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
       // as it's a treeBlock property
       if (
         field instanceof FormFieldBuilder &&
-        ['position', 'path', 'locale'].includes(field.raw.name)
+        ['position', 'path', 'locale'].includes(field.name)
       ) {
         return field;
       }

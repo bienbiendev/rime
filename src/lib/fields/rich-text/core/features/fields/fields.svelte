@@ -65,7 +65,7 @@
   <Sheet.Content preventScroll={false} side="right" class="rz-rich-text-sheet">
     {#each previewFields || [] as field, index (index)}
       {@const FieldComponent = field.component}
-      <FieldComponent path={field.raw.name} config={field.raw} {form} />
+      <FieldComponent path={field.name} config={field.raw} {form} />
     {/each}
   </Sheet.Content>
 </Sheet.Root>

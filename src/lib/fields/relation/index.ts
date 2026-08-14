@@ -69,7 +69,7 @@ export const ensureRelationExists: FieldHookShared = async (
   return output;
 };
 
-export class RelationFieldBuilder<Doc extends GenericDoc> extends FormFieldBuilder<
+export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends FormFieldBuilder<
   RelationField<Doc>
 > {
   //
@@ -111,6 +111,15 @@ export class RelationFieldBuilder<Doc extends GenericDoc> extends FormFieldBuild
     this.field.many = true;
     return this;
   }
+
+  get __many(): boolean {
+    return !!this.field.many;
+  }
+
+  get __relationTo(): CollectionSlug {
+    return this.field.relationTo;
+  }
+
   defaultValue(value: string | string[] | DefaultValueFn<string | string[]>) {
     this.field.defaultValue = value;
     return this;

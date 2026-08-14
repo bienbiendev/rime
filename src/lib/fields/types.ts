@@ -28,7 +28,7 @@ export type { TextAreaField } from './textarea/index.js';
 export type { TimeField } from './time/index.js';
 export type { ToggleField } from './toggle/index.js';
 
-export type FieldValidationFunc<TConfig extends FormField, TData extends Dic = Dic> = (
+export type FieldValidationFunc<TConfig extends FormField = FormField, TData extends Dic = Dic> = (
   value: unknown,
   metas: {
     data: Partial<TData>;
@@ -36,7 +36,7 @@ export type FieldValidationFunc<TConfig extends FormField, TData extends Dic = D
     id: string | undefined;
     user: User | undefined;
     locale: string | undefined;
-    config: TConfig extends FormField ? TConfig : FormField;
+    config: TConfig;
   }
 ) => true | string;
 
@@ -46,6 +46,7 @@ export type FieldWidth = '1/3' | '1/2' | '2/3';
 
 // Base type for all fields
 export type Field = {
+  name: string;
   type: string;
   live?: boolean;
   condition?: (doc: any, siblings: any) => boolean;
@@ -62,7 +63,6 @@ export type Field = {
 
 // Base type for fields that store data
 export type FormField = Field & {
-  name: string;
   hidden?: boolean;
   validate?: FieldValidationFunc<any>;
   required?: boolean;
@@ -73,6 +73,13 @@ export type FormField = Field & {
   hooks?: FieldHooks;
   defaultValue?: DefaultValueFn<any> | unknown;
   isEmpty: (value: unknown) => boolean;
+  /**
+   * Force the field to be on the root table
+   * usefull for fields that should not be versioned
+   * ex: _parent for nested structures should always be on the root table to prevent
+   * different versions to have different parents
+   */
+  _root?: boolean;
 };
 
 export type DefaultValueFn<T> = ({ event }: { event?: RequestEvent }) => T;

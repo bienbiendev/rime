@@ -22,7 +22,7 @@
   const add = (block: BlocksFieldBlock) => {
     open = false;
     const empty = {
-      ...emptyValuesFromFieldConfig(block.fields.map((f) => f.compile()).filter(isFormField)),
+      ...emptyValuesFromFieldConfig(block.fields.filter(isFormField)),
       type: block.name
     };
     addBlock(empty);

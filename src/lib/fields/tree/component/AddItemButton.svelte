@@ -19,7 +19,7 @@
   const { class: className, fields, addItem, size, children }: Props = $props();
 
   const add = () => {
-    const empty = emptyValuesFromFieldConfig(fields.map((f) => f.raw).filter(isFormField));
+    const empty = emptyValuesFromFieldConfig(fields.filter(isFormField));
     addItem(empty);
   };
 </script>
