@@ -5,6 +5,7 @@
   import Text from '$lib/fields/text/component/Text.svelte';
   import AuthForm from '$lib/panel/components/sections/auth/AuthForm.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
+  import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
   import { setFormContext } from '$lib/panel/context/form.svelte';
   import { emailField, passwordField } from '$lib/panel/pages/auth/fields.js';
   import type { FormErrors } from '$lib/types.js';
@@ -36,7 +37,12 @@
     <form method="POST" action="/panel/sign-in" use:enhance={context.enhance}>
       <Email config={emailField} form={context} />
       <Text type="password" icon={KeyRound} config={passwordField} form={context} />
-      <Button size="xl" disabled={!context.canSubmit} type="submit">Login</Button>
+      <Button size="xl" disabled={!context.canSubmit} type="submit">
+        {t__('common.signin')}
+        {#if context.pending}
+          <SpinLoader />
+        {/if}
+      </Button>
 
       {#if data.forgotPasswordEnabled}
         <Button variant="link" href="/forgot-password">

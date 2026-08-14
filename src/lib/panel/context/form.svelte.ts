@@ -17,6 +17,7 @@ function createFormStore(initial: Dic, key: string) {
   const hasError = $derived(errors.length);
   const canSubmit = $derived(Object.keys(changes).length > 0 && !hasError);
   let status = $state<number>();
+  let pending = $state(false);
 
   $effect(() => {
     if (Object.keys(changes).length) {
@@ -113,12 +114,15 @@ function createFormStore(initial: Dic, key: string) {
   }
 
   const enhance: SubmitFunction = async ({ formData }) => {
+    pending = true;
+
     for (const key of Object.keys(form)) {
       formData.set(key, form[key]);
     }
 
     return async ({ result }) => {
       status = result.status;
+      pending = false;
 
       switch (result.type) {
         case 'failure':
@@ -144,6 +148,11 @@ function createFormStore(initial: Dic, key: string) {
     readOnly: false,
     enhance,
     getRawValue,
+
+    get pending() {
+      return pending;
+    },
+
     get canSubmit() {
       return canSubmit;
     },
