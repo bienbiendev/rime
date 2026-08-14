@@ -1,3 +1,4 @@
+import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
 import { sanitize } from '$lib/util/string.js';
@@ -33,6 +34,11 @@ class EmailFieldBuilder extends FormFieldBuilder<EmailField> {
     this.field.defaultValue = value;
     return this;
   }
+
+  get dataType(): DataType {
+    return 'text';
+  }
+
   isTitle() {
     this.field.isTitle = true;
     return this;

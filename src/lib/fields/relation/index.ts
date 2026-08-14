@@ -1,6 +1,7 @@
 import { browser } from '$app/environment';
 import { env } from '$env/dynamic/public';
 import { PARAMS } from '$lib/core/constant.js';
+import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';
 import type {
@@ -113,6 +114,12 @@ export class RelationFieldBuilder<Doc extends GenericDoc> extends FormFieldBuild
   defaultValue(value: string | string[] | DefaultValueFn<string | string[]>) {
     this.field.defaultValue = value;
     return this;
+  }
+
+  /** Documentation only — relation fields are diverted into relationFieldsMap/junction
+   *  tables before reaching the adapter's generic column renderer (see root.server.ts). */
+  get dataType(): DataType {
+    return 'json';
   }
 }
 

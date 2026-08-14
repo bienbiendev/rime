@@ -1,3 +1,4 @@
+import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
 import { validate } from '$lib/util/index.js';
@@ -51,6 +52,10 @@ export class SlugFieldBuilder extends FormFieldBuilder<SlugField> {
   unique(bool?: boolean) {
     this.field.unique = typeof bool === 'boolean' ? bool : true;
     return this;
+  }
+
+  get dataType(): DataType {
+    return 'text';
   }
 
   isTitle() {

@@ -1,23 +1,11 @@
-import { templateUniqueRequired } from '$lib/adapter-sqlite/generate-schema/templates.server.js';
-import { getSchemaColumnNames } from '$lib/adapter-sqlite/generate-schema/util.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import type { AreaSlug, CollectionSlug, PrototypeSlug } from '$lib/types.js';
 import { trycatch } from '$lib/util/function.js';
-import type { ToSchema, ToType } from '../index.server.js';
+import type { ToType } from '../index.server.js';
 import type { FieldHook, LinkField } from '../types.js';
 import type { LinkFieldBuilder } from './index.js';
 import type { Link } from './types.js';
-
-export const toSchema: ToSchema<LinkFieldBuilder> = (field, parentPath) => {
-  const { camel, snake } = getSchemaColumnNames({ name: field.name, parentPath });
-  const suffix = templateUniqueRequired(
-    field.raw,
-    typeof field.raw.defaultValue === 'object' ? field.raw.defaultValue : {}
-  );
-  if (field._generateSchema) return field._generateSchema({ camel, snake, suffix });
-  return `${camel}: text('${snake}', { mode: 'json'})${suffix}`;
-};
 
 export const toType: ToType<LinkFieldBuilder> = (field: LinkFieldBuilder) => {
   return `${field.name}${field.raw.required ? '' : '?'}: {

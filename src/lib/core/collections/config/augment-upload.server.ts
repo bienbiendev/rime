@@ -13,10 +13,10 @@ export const augmentUploadServer = <T extends Collection<any>>(
   const collection = augmentUpload(config);
   (collection.fields || []).forEach((field) => {
     if (field instanceof FormFieldBuilder && field.name === '_path') {
-      field = field.$generateSchema(
-        () =>
-          `_path: text('_path').references(() => ${withDirectoriesSuffix(config.slug)}.id, {onDelete: 'cascade', onUpdate: 'cascade'})`
-      );
+      field.$references(withDirectoriesSuffix(config.slug), {
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
+      });
     }
   });
   return collection;

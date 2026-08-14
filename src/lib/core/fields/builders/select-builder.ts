@@ -1,3 +1,4 @@
+import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FieldValidationFunc, FormField, Option } from '$lib/fields/types.js';
 import { capitalize } from '$lib/util/string.js';
@@ -72,6 +73,10 @@ export class PickOneFieldBuilder<
   defaultValue(value: string | DefaultValueFn<string>) {
     this.field.defaultValue = value;
     return this;
+  }
+
+  get dataType(): DataType {
+    return 'text';
   }
 }
 

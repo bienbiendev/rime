@@ -1,3 +1,4 @@
+import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
 import Cell from './component/Cell.svelte';
@@ -31,6 +32,10 @@ export class DateFieldBuilder extends FormFieldBuilder<DateField> {
   defaultValue(value: Date | DefaultValueFn<Date>) {
     this.field.defaultValue = value;
     return this;
+  }
+
+  get dataType(): DataType {
+    return 'timestamp';
   }
 
   isTitle() {

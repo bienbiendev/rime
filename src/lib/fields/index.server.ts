@@ -6,10 +6,6 @@ import { extname } from 'path';
 export type ToType<T extends FieldBuilder<any> = FieldBuilder<any>> = (
   field: T
 ) => Promise<string> | string;
-export type ToSchema<T extends FieldBuilder<any> = FieldBuilder<any>> = (
-  field: T,
-  parentPath?: string
-) => string;
 
 /**
  * Converts a file URL to its corresponding server module path and checks if the file exists
@@ -49,13 +45,12 @@ function convertToServerModulePath(metaUrl: string): string | null {
  * @example
  * const serverModule = await getFieldPrivateModule(fieldBuilder);
  * if (serverModule) {
- *   serverModule.toSchema({ name: 'title' })
- *   serverModule.toSchema({ name: 'title' })
+ *   serverModule.toType(fieldBuilder)
  * }
  */
 export async function getFieldPrivateModule(
   field: FieldBuilder<any>
-): Promise<{ toType: ToType; toSchema: ToSchema } | null> {
+): Promise<{ toType: ToType } | null> {
   if (field._metaUrl) {
     const serverModulePath = convertToServerModulePath(field._metaUrl);
 

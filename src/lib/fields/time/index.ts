@@ -1,3 +1,4 @@
+import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
 import TimeComponent from './component/Time.svelte';
@@ -26,6 +27,10 @@ export class TimeFieldBuilder extends FormFieldBuilder<TimeField> {
   defaultValue(value: string | DefaultValueFn<string>) {
     this.field.defaultValue = value;
     return this;
+  }
+
+  get dataType(): DataType {
+    return 'text';
   }
 }
 

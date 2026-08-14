@@ -1,17 +1,5 @@
-import { templateUniqueRequired } from '$lib/adapter-sqlite/generate-schema/templates.server.js';
-import { getSchemaColumnNames } from '$lib/adapter-sqlite/generate-schema/util.server.js';
-import type { ToSchema, ToType } from '../index.server.js';
+import type { ToType } from '../index.server.js';
 import type { ComboBoxFieldBuilder } from './index.js';
-
-export const toSchema: ToSchema<ComboBoxFieldBuilder> = (field, parentPath?: string) => {
-  const { camel, snake } = getSchemaColumnNames({ name: field.raw.name, parentPath });
-  const suffix = templateUniqueRequired(
-    { ...field.raw },
-    typeof field.raw.defaultValue === 'string' ? field.raw.defaultValue : ''
-  );
-  if (field._generateSchema) return field._generateSchema({ camel, snake, suffix });
-  return `${camel}: text('${snake}')${suffix}`;
-};
 
 export const toType: ToType<ComboBoxFieldBuilder> = (field) => {
   const optionsJoinedType = field.raw.options.map((o) => `'${o.value}'`).join(' | ');

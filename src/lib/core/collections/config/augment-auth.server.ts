@@ -15,9 +15,7 @@ export const augmentAuthServer = <T extends Collection<any>>(config: T): WithNor
   function addSchemaStaffReferenceForAPIKeys() {
     (collection.fields || []).forEach((field) => {
       if (field instanceof FormFieldBuilder && field.name === 'ownerId') {
-        field = field.$generateSchema(
-          () => `ownerId: text('onwer_id').references(() => staff.id, {onDelete: 'cascade'})`
-        );
+        field.$references('staff', { onDelete: 'cascade' });
       }
     });
     return collection;

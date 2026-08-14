@@ -5,9 +5,6 @@ import fs from 'fs';
 import path from 'path';
 
 const cachePath = path.resolve(process.cwd(), '.cache');
-if (!fs.existsSync(cachePath)) {
-  fs.mkdirSync(cachePath);
-}
 
 const IS_ENV_CACHE_ENABLED = process.env.RIME_CACHE_ENABLED === 'true';
 
@@ -82,6 +79,9 @@ export class Cache {
   }
 
   private static async setToDisk(key: string, value: string) {
+    if (!fs.existsSync(cachePath)) {
+      fs.mkdirSync(cachePath);
+    }
     const keyPath = path.join(cachePath, key + '.txt');
     await fs.promises.writeFile(keyPath, value);
   }

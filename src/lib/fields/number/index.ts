@@ -1,3 +1,4 @@
+import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FieldValidationFunc, FormField } from '$lib/fields/types.js';
 import Number from './component/Number.svelte';
@@ -44,6 +45,10 @@ export class NumberFieldBuilder extends FormFieldBuilder<NumberField> {
   max(value: number) {
     this.field.max = value;
     return this;
+  }
+
+  get dataType(): DataType {
+    return 'number';
   }
 
   compile() {

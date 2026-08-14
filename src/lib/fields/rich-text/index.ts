@@ -1,3 +1,4 @@
+import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
 import { sanitize } from '$lib/util/string.js';
@@ -107,6 +108,10 @@ export class RichTextFieldBuilder extends FormFieldBuilder<RichTextField> {
   defaultValue(value: RichTextContent | DefaultValueFn<RichTextContent>) {
     this.field.defaultValue = value;
     return this;
+  }
+
+  get dataType(): DataType {
+    return 'json';
   }
 }
 

@@ -1,8 +1,6 @@
 import type { Config } from '$lib/core/config/types.js';
-import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { withVersionsSuffix } from '$lib/core/naming.js';
 import { date } from '$lib/fields/date/index.js';
-import { getFieldPrivateModule } from '$lib/fields/index.server.js';
 import {
   toCamelCase,
   toCamelCasePreserveTrailingUnderscoreSuffix,
@@ -10,6 +8,7 @@ import {
   toSnakeCase
 } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
+import { toSchemaColumn } from './column.server.js';
 import { generateRelationshipDefinitions } from './relations/definition.server.js';
 import { generateJunctionTableDefinition } from './relations/junction.server.js';
 import buildRootTable from './root.server.js';
@@ -180,13 +179,8 @@ export async function generateSchemaString<T extends Config>(config: T) {
 
       const baseRootFields = [date('createdAt').hidden(), date('updatedAt').hidden()];
 
-      async function fieldToSchema(field: FormFieldBuilder<any>): Promise<string | null> {
-        const serverField = await getFieldPrivateModule(field);
-        return serverField && serverField.toSchema(field);
-      }
-
-      const schemaResults = await Promise.all(baseRootFields.map(fieldToSchema));
-      schema.push(templateTable(areaSlug, schemaResults.filter(Boolean).join(',\n')));
+      const schemaResults = baseRootFields.map((field) => toSchemaColumn(field));
+      schema.push(templateTable(areaSlug, schemaResults.join(',\n')));
 
       versionsRelationsDefinitions = [
         templateRelationOne({

@@ -1,14 +1,15 @@
+import { RIME_DEV_CACHE_DIR } from '$lib/core/constant.server';
 import fs from 'fs';
 import path from 'path';
 
 const dev = process.env.NODE_ENV === 'development';
-const cachePath = path.resolve(process.cwd(), '.rime');
-if (!fs.existsSync(cachePath) && dev) {
-  fs.mkdirSync(cachePath);
+
+if (!fs.existsSync(RIME_DEV_CACHE_DIR) && dev) {
+  fs.mkdirSync(RIME_DEV_CACHE_DIR);
 }
 
 function get(key: string): string | false {
-  const keyPath = path.join(cachePath, key + '.txt');
+  const keyPath = path.join(RIME_DEV_CACHE_DIR, key + '.txt');
   const exist = fs.existsSync(keyPath);
   if (exist) {
     return fs.readFileSync(keyPath).toString();
@@ -17,22 +18,22 @@ function get(key: string): string | false {
 }
 
 function set(key: string, value: string) {
-  if (!fs.existsSync(cachePath)) {
-    fs.mkdirSync(cachePath);
+  if (!fs.existsSync(RIME_DEV_CACHE_DIR)) {
+    fs.mkdirSync(RIME_DEV_CACHE_DIR);
   }
-  const keyPath = path.join(cachePath, key + '.txt');
+  const keyPath = path.join(RIME_DEV_CACHE_DIR, key + '.txt');
   fs.writeFileSync(keyPath, value);
 }
 
 function del(key: string) {
-  const keyPath = path.join(cachePath, key + '.txt');
+  const keyPath = path.join(RIME_DEV_CACHE_DIR, key + '.txt');
   if (fs.existsSync(keyPath)) {
     fs.rmSync(keyPath, { force: true });
   }
 }
 
 function clear() {
-  fs.rmSync(cachePath, { recursive: true });
+  fs.rmSync(RIME_DEV_CACHE_DIR, { recursive: true });
 }
 
 export default {

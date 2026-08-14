@@ -1,3 +1,4 @@
+import type { FieldReference } from '$lib/core/fields/builders/form-field-builder.js';
 import { withDirectoriesSuffix } from '$lib/core/naming.js';
 import { toSnakeCase } from '$lib/util/string.js';
 import dedent from 'dedent';
@@ -59,6 +60,31 @@ export const templateLocale = () => 'locale: text("locale"),';
  */
 export const templateParent = (parent: string) => {
   return `ownerId: text("owner_id").references(() => ${parent}.id, { onDelete: 'cascade' }),`;
+};
+
+/**
+ * Generates a `.references(...)` suffix for a field-level foreign key,
+ * used by column.server.ts's toSchemaColumn for fields configured via
+ * FormFieldBuilder#$references(...).
+ *
+ * @example
+ * ```typescript
+ * .references(() => staff.id, { onDelete: 'cascade' })
+ * ```
+ */
+export const templateReferences = ({
+  table,
+  onDelete,
+  onUpdate,
+  selfReferencing
+}: FieldReference) => {
+  const arrow = selfReferencing ? '(): any =>' : '() =>';
+  const opts = [
+    onDelete ? `onDelete: '${onDelete}'` : '',
+    onUpdate ? `onUpdate: '${onUpdate}'` : ''
+  ].filter(Boolean);
+  const optsStr = opts.length ? `, { ${opts.join(', ')} }` : '';
+  return `.references(${arrow} ${table}.id${optsStr})`;
 };
 
 /**

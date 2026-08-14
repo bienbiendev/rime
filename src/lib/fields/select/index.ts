@@ -1,3 +1,4 @@
+import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, Field, FormField, Option } from '$lib/fields/types.js';
 import { PickManyFieldBuilder } from '../../core/fields/builders/select-builder.js';
 import Select from './component/Select.svelte';
@@ -7,6 +8,10 @@ export class SelectFieldBuilder extends PickManyFieldBuilder<SelectField> {
 
   get component() {
     return Select;
+  }
+
+  get dataType(): DataType {
+    return this.field.many ? 'json' : 'text';
   }
 }
 

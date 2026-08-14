@@ -1,3 +1,4 @@
+import { RIME_DEV_CACHE_DIR } from '$lib/core/constant.server';
 import cache from '$lib/core/dev/cache/index.server.js';
 import { sanitize } from '$lib/core/dev/generate/sanitize/index.server.js';
 import { ensureGeneratedConfig, ensureUserConfigExist } from '$lib/core/ensure.server.js';
@@ -14,8 +15,8 @@ export const generate = async (args: { force?: boolean }) => {
    */
   function clearConfigCache() {
     try {
-      rmSync(path.join(process.cwd(), '.rime'), { recursive: true, force: true });
-      mkdirSync(path.join(process.cwd(), '.rime'));
+      rmSync(RIME_DEV_CACHE_DIR, { recursive: true, force: true });
+      mkdirSync(RIME_DEV_CACHE_DIR);
     } catch (err: any) {
       logger.error(err.message);
     }

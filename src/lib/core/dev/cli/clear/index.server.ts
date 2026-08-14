@@ -1,3 +1,4 @@
+import { RIME_DEV_CACHE_DIR } from '$lib/core/constant.server.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import { rmSync } from 'node:fs';
 import path from 'node:path';
@@ -29,7 +30,7 @@ export const clear = async (args: { force?: boolean }) => {
   }
 
   // Remove directories
-  rmSync(path.join('.rime'), { recursive: true, force: true });
+  rmSync(RIME_DEV_CACHE_DIR, { recursive: true, force: true });
   rmSync(path.join('src', 'routes', '(rime)'), { recursive: true, force: true });
   rmSync(path.join('src', 'lib', INPUT_DIR), { recursive: true, force: true });
   rmSync(path.join('src', 'lib', OUTPUT_DIR), { recursive: true, force: true });

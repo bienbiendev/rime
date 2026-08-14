@@ -17,9 +17,6 @@ import type { GenericTable } from './types.server.js';
 import { updateDocumentUrl } from './url.server.js';
 import { updateTableRecord } from './util.server.js';
 
-export * as templates from './generate-schema/templates.server.js';
-export * as util from './generate-schema/util.server.js';
-
 type Schema = GetRegisterType<'Schema'>;
 type Tables = GetRegisterType<'Tables'>;
 

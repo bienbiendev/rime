@@ -12,10 +12,32 @@ import type {
 } from '../../../fields/types.js';
 import { FieldBuilder } from './field-builder.js';
 
-type GenerateSchemaFn = (args: { camel: string; snake: string; suffix: string }) => string;
+/** Adapter-agnostic storage primitive — column syntax only, not default-value semantics. */
+export type DataType = 'text' | 'boolean' | 'number' | 'timestamp' | 'json';
+
+export type ReferentialAction = 'cascade' | 'set null' | 'restrict' | 'no action';
+
+export type FieldReferenceOptions = {
+  onDelete?: ReferentialAction;
+  onUpdate?: ReferentialAction;
+  /** Referenced table is this field's own table (self-FK); adapters need this
+   *  to emit a `(): any =>` accessor and avoid a TS circular-declaration error. */
+  selfReferencing?: boolean;
+};
+
+export type FieldReference = FieldReferenceOptions & { table: string };
 
 export class FormFieldBuilder<T extends FormField> extends FieldBuilder<T> {
-  _generateSchema: null | GenerateSchemaFn = null;
+  /** Every concrete leaf field builder is expected to implement a
+   *  `get dataType(): DataType` accessor (see e.g. `$lib/fields/text/index.ts`).
+   *  Not declared here — TS doesn't allow `declare` on accessors in this
+   *  project's config, and a plain base field would conflict with subclasses
+   *  that need a computed getter (e.g. `select`, whose dataType depends on
+   *  `many`). Container builders (Group/Tabs/Blocks/Tree) never get asked,
+   *  since the adapter's tree-walker special-cases them before reaching the
+   *  generic column-rendering branch; `column.server.ts` reads `.dataType`
+   *  via a narrow cast for the same reason it already casts `unique`. */
+  _references: FieldReference | null = null;
 
   constructor(name: string, type: string) {
     super(type);
@@ -113,8 +135,9 @@ export class FormFieldBuilder<T extends FormField> extends FieldBuilder<T> {
     return clone;
   }
 
-  $generateSchema(fn: GenerateSchemaFn) {
-    this._generateSchema = fn;
+  /** Server-side schema concern, same family as $beforeRead/$beforeSave. */
+  $references(table: string, options?: FieldReferenceOptions) {
+    this._references = { table, ...options };
     return this;
   }
 

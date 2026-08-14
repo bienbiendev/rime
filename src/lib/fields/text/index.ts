@@ -1,3 +1,4 @@
+import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
 import { capitalize, sanitize } from '$lib/util/string.js';
@@ -31,6 +32,10 @@ export class TextFieldBuilder extends FormFieldBuilder<TextField> {
   defaultValue(value: string | DefaultValueFn<string>) {
     this.field.defaultValue = value;
     return this;
+  }
+
+  get dataType(): DataType {
+    return 'text';
   }
 
   isTitle() {

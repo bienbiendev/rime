@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import type { Plugin, UserConfig } from 'vite';
+import { RIME_DEV_CACHE_DIR } from '../../constant.server.js';
 import { ensureHasInit } from '../../ensure.server.js';
 import { logger } from '../../logger/index.server.js';
 import { INPUT_DIR, OUTPUT_DIR } from '../constants.js';
@@ -25,10 +26,10 @@ export function rime(): Plugin {
         dev && ensureHasInit();
         // Check if we need to rebuild
         const shouldRebuild = process.argv.includes('--rebuild');
-        const rimeDevCacheDir = path.resolve(process.cwd(), '.rime');
-        if (shouldRebuild && existsSync(rimeDevCacheDir)) {
-          rmSync(rimeDevCacheDir, { recursive: true, force: true });
-          logger.info('--rebuild : .rime folder deleted');
+
+        if (shouldRebuild && existsSync(RIME_DEV_CACHE_DIR)) {
+          rmSync(RIME_DEV_CACHE_DIR, { recursive: true, force: true });
+          logger.info('--rebuild : node_modules/.rime folder deleted');
         }
       });
 

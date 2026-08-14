@@ -13,10 +13,7 @@ export const augmentNestedServer = <T extends IncomingConfig>(config: T): T => {
 
   if (config.nested) {
     const _parentField = text('_parent')
-      .$generateSchema(
-        () =>
-          `_parent: text('_parent').references((): any => ${config.slug}.id, {onDelete: 'set null'})`
-      )
+      .$references(config.slug, { onDelete: 'set null', selfReferencing: true })
       .hidden()
       ._root();
 

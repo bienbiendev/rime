@@ -5,12 +5,12 @@ import { isFormField } from '$lib/core/fields/util.js';
 import { withLocalesSuffix } from '$lib/core/naming.js';
 import { isBlocksField } from '$lib/fields/blocks/index.js';
 import { GroupFieldBuilder, isGroupField } from '$lib/fields/group/index.js';
-import { getFieldPrivateModule } from '$lib/fields/index.server.js';
 import { isRelationField } from '$lib/fields/relation/index.js';
 import { isTabsField } from '$lib/fields/tabs/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field, FormField } from '$lib/fields/types.js';
 import { toPascalCase } from '$lib/util/string.js';
+import { toSchemaColumn } from './column.server.js';
 import type { RelationFieldsMap } from './relations/definition.server.js';
 import {
   templateHasAuth,
@@ -164,10 +164,7 @@ const buildRootTable = async ({
         }
       } else if (field instanceof FormFieldBuilder) {
         if (checkLocalized(field)) {
-          const serverField = await getFieldPrivateModule(field);
-          if (serverField) {
-            templates.push(serverField.toSchema(field, parentPath) + ',');
-          }
+          templates.push(toSchemaColumn(field, parentPath) + ',');
         }
       }
     }

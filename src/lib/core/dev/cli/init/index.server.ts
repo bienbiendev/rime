@@ -100,7 +100,7 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
 
     let gitignoreContent = readFileSync(gitignorePath, 'utf-8');
 
-    const updates = ['\\.rime', '\\.cache', '/logs', '/db', '\\+rime.generated'];
+    const updates = ['\\.cache', '/logs', '/db', '\\+rime.generated'];
     if (!gitignoreContent.includes('# rime')) gitignoreContent += '\n# rime';
     for (const line of updates) {
       const exists = gitignoreContent.match(new RegExp(`^${line}`, 'm'));
