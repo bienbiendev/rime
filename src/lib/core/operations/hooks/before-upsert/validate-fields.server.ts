@@ -64,7 +64,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /* Field hook before validate
     /****************************************************/
 
-    if (value) {
+    if (value !== undefined && value !== null) {
       value = await config.__beforeValidate(value, { config, data: args.data });
       output = setValueAtPath(key, output, value);
     }
@@ -73,7 +73,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /* Validate
     /****************************************************/
 
-    if (config.raw.validate && value && !skipValidate) {
+    if (config.raw.validate && value !== undefined && value !== null && !skipValidate) {
       try {
         const valid = config.__validate(value, {
           data: output as Partial<GenericDoc>,
@@ -97,7 +97,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /* Field hook before Save
     */
 
-    if (value) {
+    if (value !== undefined && value !== null) {
       value = await config.$__beforeSave(value, {
         config: config.raw,
         event,

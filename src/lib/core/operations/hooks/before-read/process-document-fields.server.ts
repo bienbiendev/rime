@@ -20,7 +20,7 @@ export const processDocumentFields = Hooks.beforeRead(async (args) => {
       continue;
     }
 
-    if (value) {
+    if (value !== undefined && value !== null) {
       value = await config.$__beforeRead(value, {
         event,
         operation: args.context,
