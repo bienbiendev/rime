@@ -183,10 +183,8 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     // Get constructor parameters from the current instance
     const name = this.field.name;
     const type = this.field.type;
-
     // Create a new instance
     const clone = new Constructor(name, type);
-
     // Deep clone the field object to avoid reference issues
     clone.field = cloneDeep(this.field);
 
@@ -205,10 +203,7 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
-  async __beforeRead(
-    value: unknown,
-    context: Omit<FieldHookContext<T>, 'config'>
-  ): Promise<any> {
+  async $__beforeRead(value: unknown, context: Omit<FieldHookContext<T>, 'config'>): Promise<any> {
     let result = value;
     for (const hook of this.field.hooks?.beforeRead ?? []) {
       result = await hook(result, { ...context, config: this.field });
@@ -222,7 +217,7 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
-  async __beforeSave(value: unknown, context: FieldHookContext<T>): Promise<any> {
+  async $__beforeSave(value: unknown, context: FieldHookContext<T>): Promise<any> {
     let result = value;
     for (const hook of this.field.hooks?.beforeSave ?? []) {
       result = await hook(result, { ...context, config: this.field });

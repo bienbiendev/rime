@@ -1,34 +1,39 @@
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'node:url';
-import { extname } from 'path';
+import { dirname, extname, join } from 'path';
 
 export type ToType<T extends FieldBuilder<any> = FieldBuilder<any>> = (
   field: T
 ) => Promise<string> | string;
 
 /**
- * Converts a file URL to its corresponding server module path and checks if the file exists
- * Tries both .ts and .js extensions to find the server module
+ * Converts a file URL to its corresponding server module path and checks if the file exists.
+ * Prefers a sibling `runtime.server.ts` (the generic per-field server-only file, also used to
+ * resolve `$rime/runtime` — see relation/ for the first user), falling back to the older
+ * `<basename>.server.ts` convention most fields still use. Tries both .ts and .js extensions
+ * either way.
  * @example
- * convertToServerModulePath('file:///path/to/field.ts') // returns '/path/to/field.server.ts' if exists
+ * convertToServerModulePath('file:///path/to/relation/index.ts') // '/path/to/relation/runtime.server.ts'
+ * convertToServerModulePath('file:///path/to/text/index.ts') // '/path/to/text/index.server.ts'
  */
 function convertToServerModulePath(metaUrl: string): string | null {
   try {
     // Convert file:// URL to file path
     const filePath = fileURLToPath(metaUrl);
+    const dir = dirname(filePath);
 
     // Get the filename without extension
     const baseName = filePath.replace(extname(filePath), '');
 
-    // Create the server module path
-    const serverModulePath = `${baseName}.server`;
+    const candidates = [join(dir, 'runtime.server'), `${baseName}.server`];
 
-    // Try .ts first, then .js
-    for (const ext of ['.ts', '.js']) {
-      const fullPath = `${serverModulePath}${ext}`;
-      if (existsSync(fullPath)) {
-        return fullPath;
+    for (const candidate of candidates) {
+      for (const ext of ['.ts', '.js']) {
+        const fullPath = `${candidate}${ext}`;
+        if (existsSync(fullPath)) {
+          return fullPath;
+        }
       }
     }
 

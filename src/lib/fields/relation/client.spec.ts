@@ -1,6 +1,5 @@
 import { expect, test } from 'vitest';
 import { isRelationPopulated } from './client.js';
-import type { RelationValue } from '../types.js';
 
 const stringArrayRel = [
   '7674e91b-598a-4a72-a5cd-9594736a34dd',
@@ -33,6 +32,10 @@ test('should return false for empty array', () => {
 
 test('should return false for relation object', () => {
   expect(isRelationPopulated(relation)).toBe(false);
+});
+
+test('should return false for strings array object', () => {
+  expect(isRelationPopulated(stringArrayRel)).toBe(false);
 });
 
 test('should return true', () => {

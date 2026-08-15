@@ -14,6 +14,13 @@ const dev = process.env.NODE_ENV === 'development';
 export function rime(): Plugin {
   const VCoreId = '$rime/config';
   const VSchemaId = '$rime/schema';
+  /** General-purpose server/browser split, usable anywhere in the app (not just rime's own
+   *  field code — see relation/index.ts for the first user). `import { x } from '$rime/runtime'`
+   *  resolves to a sibling `server.ts` (server builds) or `browser.ts` (browser builds) next
+   *  to whichever file does the importing — the importer's path travels encoded in the
+   *  resolved id since `load()` only receives the id, not the importer. */
+  const VRuntimeId = '$rime/runtime';
+  const VRuntimeMarker = `\0${VRuntimeId}::`;
 
   const resolvedVModule = (name: string) => '\0' + name;
 
@@ -97,12 +104,15 @@ export function rime(): Plugin {
       }
     },
 
-    resolveId(id) {
+    resolveId(id, importer) {
       if (id === VCoreId) {
         return resolvedVModule(id);
       }
       if (id === VSchemaId) {
         return resolvedVModule(id);
+      }
+      if (id === VRuntimeId && importer) {
+        return `${VRuntimeMarker}${importer}`;
       }
 
       return null;
@@ -122,6 +132,13 @@ export function rime(): Plugin {
           const modulePath = schemaPath.replace('.ts', '.js');
           return `export * from '${modulePath}'; export { default } from '${modulePath}';`;
         }
+      }
+
+      if (id.startsWith(VRuntimeMarker)) {
+        const importer = id.slice(VRuntimeMarker.length);
+        const dir = path.dirname(importer);
+        const target = path.join(dir, isServer ? 'runtime.server.ts' : 'runtime.ts');
+        return `export * from '${target.replace(/\.ts$/, '.js')}';`;
       }
 
       return null;

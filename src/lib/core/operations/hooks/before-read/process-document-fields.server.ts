@@ -21,7 +21,11 @@ export const processDocumentFields = Hooks.beforeRead(async (args) => {
     }
 
     if (value) {
-      value = await config.__beforeRead(value, { event, operation: args.context, documentId: doc.id });
+      value = await config.$__beforeRead(value, {
+        event,
+        operation: args.context,
+        documentId: doc.id
+      });
       doc = setValueAtPath(key, doc, value);
     }
 

@@ -478,7 +478,10 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       }
     };
 
-    const setFieldValue = (value: any) => {
+    const setFieldValue = async (value: any) => {
+      for (const hook of config.hooks?.beforeValidate ?? []) {
+        value = await hook(value, { config, data: doc });
+      }
       const valid = validate(value);
 
       if (operation === 'update' && !config.access?.update?.(user.attributes)) {

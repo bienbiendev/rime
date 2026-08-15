@@ -93,21 +93,17 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
       }
     }
 
-    /****************************************************/
+    /*
     /* Field hook before Save
-    /****************************************************/
+    */
 
     if (value) {
-      value = await config.__beforeSave(value, {
+      value = await config.$__beforeSave(value, {
         config: config.raw,
         event,
         operation: args.context
       });
       output = setValueAtPath(key, output, value);
-      // for (const hook of config.__beforeSave()) {
-      //   value = await hook(value, { config, event, operation: args.context });
-      //   output = setValueAtPath(key, output, value);
-      // }
     }
 
     /****************************************************/

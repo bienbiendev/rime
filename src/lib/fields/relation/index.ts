@@ -1,73 +1,21 @@
-import { browser } from '$app/environment';
-import { env } from '$env/dynamic/public';
-import { PARAMS } from '$lib/core/constant.js';
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';
 import type {
   DefaultValueFn,
   Field,
-  FieldHookShared,
   FormField,
   RelationRef,
   RelationValue
 } from '$lib/fields/types.js';
 import type { RegisterCollection } from '$lib/index.js';
-import { trycatchFetch } from '$lib/util/function.js';
 import { hasProps, isObjectLiteral } from '$lib/util/object.js';
-import { toKebabCase } from '$lib/util/string.js';
 import type { WithOptional } from '$lib/util/types.js';
+// @ts-expect-error — resolved at build time by the rime Vite plugin to either
+// relation/runtime.server.ts (real check) or relation/runtime.ts (client no-op)
+import { ensureRelationExists } from '$rime/runtime';
 import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
-
-export const ensureRelationExists: FieldHookShared = async (
-  value: RelationValue<any>,
-  { config }
-) => {
-  // Skip relation validation on panel as it will be done server-side
-  if (browser) return value;
-
-  const getRequsetEvent = await import('$app/server').then((m) => m.getRequestEvent);
-  const output = [];
-
-  const retrieveRelation = async (id: string) => {
-    const [err, response] = await trycatchFetch(
-      `${env.PUBLIC_RIME_URL}/api/${toKebabCase(config.relationTo)}/${id}?${PARAMS.SELECT}=id`,
-      {
-        method: 'GET',
-        headers: getRequsetEvent().request.headers
-      }
-    );
-    if (err) return null;
-    const { doc } = await response.json();
-    return doc;
-  };
-
-  if (value && Array.isArray(value)) {
-    for (const relation of value) {
-      let documentId;
-      if (typeof relation === 'string') {
-        documentId = relation;
-      } else {
-        documentId = relation.documentId;
-      }
-      if (!documentId) {
-        continue;
-      }
-      const doc = await retrieveRelation(documentId);
-      if (doc) {
-        output.push(relation);
-      }
-    }
-  } else if (typeof value === 'string') {
-    const doc = await retrieveRelation(value);
-    if (doc) {
-      output.push(doc.id);
-    }
-  }
-
-  return output;
-};
 
 export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends FormFieldBuilder<
   RelationField<Doc>
