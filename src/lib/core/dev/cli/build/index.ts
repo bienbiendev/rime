@@ -26,7 +26,6 @@ export const build = (args: { withDatabase?: boolean; withEnv?: boolean }) => {
   }
 
   // Build
-  mkdirSync('./build', { recursive: true });
   spawnSync('./node_modules/.bin/vite', ['build'], { stdio: 'inherit' });
   console.log('');
 
