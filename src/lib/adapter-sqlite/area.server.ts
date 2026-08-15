@@ -39,6 +39,11 @@ const createAreaFacade = <const C extends Config>(args: {
       throw new RimeError(RimeError.INIT, slug + ' is not an area, should never happen');
     }
 
+    // `db.query[slug]` can't be typed precisely: with a single registered area,
+    // AreaSlug collapses to one string literal and Drizzle infers an overly
+    // precise (and here incorrect) per-table shape instead of the general one.
+    const queryTable = (db.query as Record<string, any>)[slug];
+
     const hasVersions = !!areaConfig.versions;
 
     if (!hasVersions) {
@@ -47,13 +52,11 @@ const createAreaFacade = <const C extends Config>(args: {
         with: buildWithParam({ slug, select, locale, tables, config: areaConfig }) || undefined
       };
 
-      // @ts-expect-error slug is a tableName
-      let doc = await db.query[slug].findFirst(params);
+      let doc: RawDoc | undefined = await queryTable.findFirst(params);
 
       if (!doc) {
         await createArea(slug, createBlankDocument(areaConfig, getRequestEvent()), locale);
-        // @ts-expect-error slug is a tableName
-        doc = await db.query[slug].findFirst(params);
+        doc = await queryTable.findFirst(params);
       }
       if (!doc) {
         throw new Error('Database error');
@@ -61,8 +64,7 @@ const createAreaFacade = <const C extends Config>(args: {
       return doc;
     } else {
       // First check for record presence
-      // @ts-expect-error slug is a tableName
-      const area = await db.query[slug].findFirst({ id: true });
+      const area = await queryTable.findFirst({ id: true });
 
       // If no area exists yet, create it
       if (!area) {
@@ -121,8 +123,7 @@ const createAreaFacade = <const C extends Config>(args: {
         };
       }
 
-      // @ts-expect-error slug is a tableName
-      const doc = await db.query[slug].findFirst(params);
+      const doc: RawDoc | undefined = await queryTable.findFirst(params);
 
       if (!doc) {
         throw new RimeError(RimeError.OPERATION_ERROR);

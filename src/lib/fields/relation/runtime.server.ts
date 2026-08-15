@@ -20,8 +20,6 @@ export const ensureRelationExists: FieldHookShared = async (
 ) => {
   const output = [];
 
-  console.log('[server] ensureRelationExists', value, config);
-
   const retrieveRelation = async (id: string) => {
     const [err, response] = await trycatchFetch(
       `${env.PUBLIC_RIME_URL}/api/${toKebabCase(config.relationTo)}/${id}?${PARAMS.SELECT}=id`,

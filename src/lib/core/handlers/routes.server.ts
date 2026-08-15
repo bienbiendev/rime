@@ -1,3 +1,4 @@
+import { prototypeKebabToSlug } from '$lib/core/naming.js';
 import buildNavigation from '$lib/panel/navigation.js';
 import { areaFormActions } from '$lib/panel/pages/area/actions.server.js';
 import { areaLoad } from '$lib/panel/pages/area/load.server.js';
@@ -60,11 +61,25 @@ export const routeHandlers = {
 export const handleRoutes: Handle = async ({ event, resolve }) => {
   const { rime, user } = event.locals;
 
-  const isSignInRoute = event.url.pathname === '/panel/sign-in';
-  const isPanelRoute = event.url.pathname.startsWith('/panel') && !isSignInRoute;
+  const IS_SIGN_IN_ROUTE = event.url.pathname === '/panel/sign-in';
+  const IS_API_ROUTE = event.url.pathname.startsWith('/api');
+  const IS_PANEL_ROUTE = event.url.pathname.startsWith('/panel') && !IS_SIGN_IN_ROUTE;
+
+  // event.params.slug comes straight from the URL, always kebab-case (see
+  // src/params/collection.ts, area.ts). Collection/area slugs themselves are
+  // camelCase, so rewrite once here — every downstream handler (panel
+  // load/actions, REST) can then keep comparing event.params.slug directly
+  // against the config's `slug`. Scoped to routes actually matched via our
+  // own [slug=collection]/[slug=area] param matchers (route.id carries the
+  // matcher name) — a consumer's own app route can also use a `slug` param
+  // (e.g. (front)/pages/[slug]) and must be left untouched.
+
+  if ((IS_API_ROUTE || IS_PANEL_ROUTE) && event.params.slug) {
+    event.params.slug = prototypeKebabToSlug(event.params.slug);
+  }
 
   // build panel navigation
-  if (isPanelRoute && event.request.method === 'GET') {
+  if (IS_PANEL_ROUTE && event.request.method === 'GET') {
     event.locals.navigation = buildNavigation(rime.config.raw, user);
   }
 

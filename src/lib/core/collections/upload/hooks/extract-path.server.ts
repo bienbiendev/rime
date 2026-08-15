@@ -5,7 +5,7 @@ import { getSegments } from '../util/path.js';
 
 /**
  * Hook executed before save/update operations on {uploadSlug}_directories collections
- * the function nomalize and validate path ({slug}_directories.id).
+ * the function normalize and validate path ({slug}_directories.id).
  * Then extract parent, name from the given path.
  */
 export const exctractPath = Hooks.beforeUpsert<'directory'>(async (args) => {

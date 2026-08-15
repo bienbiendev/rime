@@ -48,11 +48,11 @@ function generateRoutes<T extends Config>(config: T): void {
   // 4. Write the [slug=collection]/[slug=area] param matchers
   fs.writeFileSync(
     path.join(paramsDir, 'collection.ts'),
-    paramMatcher((config.collections || []).map((c) => c.slug))
+    paramMatcher((config.collections || []).map((c) => c.kebab))
   );
   fs.writeFileSync(
     path.join(paramsDir, 'area.ts'),
-    paramMatcher((config.areas || []).map((a) => a.slug))
+    paramMatcher((config.areas || []).map((a) => a.kebab))
   );
 
   // 5. Handle custom routes from config

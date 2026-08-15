@@ -14,6 +14,19 @@ export const withDirectoriesSuffix = (slug: string) =>
   `${slug.replace('_versions', '')}_directories` as CollectionSlug;
 
 /**
+ * Remove a _directories suffix to a given name.
+ * Used for uploads path slug and tables.
+ * Prevent a version table name from being used, force the use of the main one.
+ *
+ * @example
+ * // Returns 'pages'
+ * withoutDirectoriesSuffix('pages_directories');
+ * withoutDirectoriesSuffix('pages_versions_directories');
+ */
+export const withoutDirectoriesSuffix = (slug: string) =>
+  slug.replace('_directories', '') as CollectionSlug;
+
+/**
  * Add a _versions suffix to a given name.
  * Used for document versioning slug and tables.
  *
@@ -22,6 +35,17 @@ export const withDirectoriesSuffix = (slug: string) =>
  * withVersionsSuffix('pages');
  */
 export const withVersionsSuffix = (name: string) => `${name}_versions` as CollectionSlug;
+
+/**
+ * Remove a _versions suffix from a given name.
+ * Used for document versioning slug and tables.
+ *
+ * @example
+ * // Returns 'pages'
+ * withoutVersionsSuffix('pages_versions');
+ */
+export const withoutVersionsSuffix = (name: string) =>
+  name.replace('_versions', '') as CollectionSlug;
 
 /**
  * Check if a slug is a verioned collection slug
@@ -52,3 +76,24 @@ export const hasDirectoriesSuffix = (slug: string) => slug.endsWith('_directorie
  * withLocalesSuffix('pages_versions');
  */
 export const withLocalesSuffix = (name: string) => `${name}Locales`;
+
+/**
+ * Convert a kebab-case prototype slug.
+ * Basically used to convert param matchers slug into a collection/area slug.
+ * Only a literal trailing `_directories`/`_versions` suffix is preserved as a
+ * suffix — everything else, including a plain `-versions`/`-directories`
+ * word, is camelCased like any other segment.
+ *
+ * @example
+ * prototypeKebabToSlug('my-collection') // returns 'myCollection'
+ * prototypeKebabToSlug('my-collection_directories') // returns 'myCollection_directories'
+ * prototypeKebabToSlug('my-collection_versions') // returns 'myCollection_versions'
+ * prototypeKebabToSlug('my-collection-versions') // returns 'myCollectionVersions'
+ */
+export const prototypeKebabToSlug = (kebab: string) => {
+  const suffixMatch = kebab.match(/(_(?:directories|versions))$/);
+  const suffix = suffixMatch ? suffixMatch[1] : '';
+  const base = suffix ? kebab.slice(0, -suffix.length) : kebab;
+
+  return base.replace(/-([a-z])/g, (_, char) => char.toUpperCase()) + suffix;
+};

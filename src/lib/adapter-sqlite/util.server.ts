@@ -169,7 +169,7 @@ export function mergeRawDocumentWithVersion(
   doc: RawDoc,
   versionTableName: string,
   select?: string[]
-) {
+): RawDoc {
   // Check if we have version data
   // Note: Versions data can be empty when a query returns no result
   if (!doc[versionTableName] || doc[versionTableName].length === 0) {
@@ -191,19 +191,25 @@ export function mergeRawDocumentWithVersion(
     // plus the ownerId wich is equals to doc.id
     const versionFields = omit([...rootProps, 'ownerId'], versionData);
 
+    // `pick`/`omit` return generic Dic types, so TS can't statically confirm
+    // `id` survived — it always does, since we explicitly pick it above.
     return {
       ...docFields,
       ...versionFields,
       versionId: versionData.id
-    };
+    } as RawDoc;
   }
 
   // Default case - return all fields
+  // `versionTableName` is a plain `string`, not a literal, so `Omit<T, string>`
+  // widens to `Omit<T, keyof T>` and TS loses track of every spread key
+  // (including `id`) — the object is correct at runtime, only its inferred
+  // type collapses, hence the double cast through `unknown`.
   return {
     ...omit([versionTableName], doc),
     ...omit(['id', 'ownerId', 'createdAt', 'updatedAt'], versionData),
     versionId: versionData.id
-  };
+  } as unknown as RawDoc;
 }
 
 /**

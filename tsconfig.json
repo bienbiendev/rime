@@ -11,5 +11,9 @@
 		"strict": true,
 		"strictNullChecks": true,
 		"moduleResolution": "bundler"
-	}
+	},
+	"exclude": [
+		"./tests/**/routes/**",
+		"./tests/**/config/**",
+	]
 }

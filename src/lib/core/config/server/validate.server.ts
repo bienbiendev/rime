@@ -4,6 +4,7 @@ import cache from '$lib/core/dev/cache/index.server.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder';
 import { isFormField } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger/index.server.js';
+import { withoutDirectoriesSuffix, withoutVersionsSuffix } from '$lib/core/naming.js';
 import type { PrototypeSlug } from '$lib/core/types/doc.js';
 import { BlocksBuilder, type BlocksField } from '$lib/fields/blocks/index.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
@@ -11,6 +12,7 @@ import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { SelectFieldBuilder } from '$lib/fields/select/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
+import { isCamelCase } from '$lib/util/string.js';
 
 function hasDuplicates(arr: string[]): string[] {
   return [...new Set(arr.filter((e, i, a) => a.indexOf(e) !== i))];
@@ -34,6 +36,27 @@ function hasDuplicateSlug(config: Config) {
     return ['Duplicated collection/area slugs :' + duplicates.join(', ')];
   }
   return [];
+}
+
+/**
+ * Check that all area/collection slugs are camelCase
+ */
+function validateSlugs(config: Config) {
+  const errors: string[] = [];
+  const slugs: string[] = [
+    ...(config.collections || []).map((c) => c.slug),
+    ...(config.areas || []).map((a) => a.slug)
+  ]
+    .map(withoutVersionsSuffix)
+    .map(withoutDirectoriesSuffix);
+
+  for (const slug of slugs) {
+    if (!isCamelCase(slug)) {
+      errors.push(`Slug ${slug} is not a valid prototype slug`);
+    }
+  }
+
+  return errors;
 }
 
 /**
@@ -231,6 +254,7 @@ function validateAuthCollections<T extends Config>(config: T) {
 function validate(config: Config): boolean {
   const validateFunctions = [
     hasDuplicateSlug,
+    validateSlugs,
     hasUsersSlug,
     validateFields,
     hasDatabase,
