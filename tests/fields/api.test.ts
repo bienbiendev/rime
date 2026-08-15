@@ -46,7 +46,9 @@ test('Should create relation targets', async ({ request }) => {
 test('Should create the hooks-test document', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/hooks-test`, {
     headers: await signInSuperAdmin(request),
-    data: { title: 'Doc' }
+    // agree has no valid default on purpose (a "must accept terms" checkbox
+    // can't default to already-accepted) — every create must supply it.
+    data: { title: 'Doc', agree: true }
   });
   expect(response.status()).toBe(200);
   docId = (await response.json()).doc.id;
@@ -57,7 +59,7 @@ test('Should create the hooks-test document', async ({ request }) => {
 test('Should coerce magicText to foo on create', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/hooks-test`, {
     headers: await signInSuperAdmin(request),
-    data: { title: 'Magic', magicText: 'anything' }
+    data: { title: 'Magic', magicText: 'anything', agree: true }
   });
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
@@ -284,4 +286,207 @@ test('Should let a super admin update adminOnly', async ({ request }) => {
   const response = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, { headers });
   const { doc } = await response.json();
   expect(doc.adminOnly).toBe('updated');
+});
+
+/** ---------------- CUSTOM VALIDATE, CHECKBOX ---------------- */
+
+test('Should reject agree when false', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { agree: false }
+  });
+  expect(response.status()).toBe(400);
+});
+
+test('Should accept agree when true', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { agree: true }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.agree).toBe(true);
+});
+
+/** ---------------- $BEFORESAVE (server-only), PRIMITIVE BOOLEAN ---------------- */
+
+test('Should invert featured via $beforeSave', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { featured: true }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.featured).toBe(false);
+});
+
+/** ---------------- BEFOREVALIDATE CLAMPING, NUMBER ---------------- */
+
+test('Should clamp score above max down to 100', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { score: 150 }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.score).toBe(100);
+});
+
+test('Should clamp score below min up to 0', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { score: -10 }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.score).toBe(0);
+});
+
+/** ---------------- BEFOREVALIDATE APPENDS TO THE BUILT-IN ONE, DATE ---------------- */
+
+test('Should pin publishedAt year to 2030 after the built-in string-to-Date hook', async ({
+  request
+}) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { publishedAt: '2020-01-15T00:00:00.000Z' }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(new Date(doc.publishedAt).getUTCFullYear()).toBe(2030);
+});
+
+/** ---------------- BEFOREVALIDATE -> VALIDATE ("09:00"), TIME ---------------- */
+
+test('Should coerce openAt to 09:00, keeping the built-in format validator satisfied', async ({
+  request
+}) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { openAt: '23:59' }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.openAt).toBe('09:00');
+});
+
+/** ---------------- $BEFORESAVE (server-only) AFTER BUILT-IN SANITIZE, EMAIL ---------------- */
+
+test('Should lowercase contact via $beforeSave', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { contact: 'Foo@EXAMPLE.com' }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.contact).toBe('foo@example.com');
+});
+
+test('Should reject a malformed contact email', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { contact: 'not-an-email' }
+  });
+  expect(response.status()).toBe(400);
+});
+
+/** ---------------- BEFOREVALIDATE BEFORE THE BUILT-IN FORMAT VALIDATOR, SLUG ---------------- */
+
+test('Should lowercase slugField before the built-in slug format validator runs', async ({
+  request
+}) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { slugField: 'My-Slug' }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.slugField).toBe('my-slug');
+});
+
+test('Should reject slugField that is still invalid after lowercasing', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { slugField: 'Invalid Slug!' }
+  });
+  expect(response.status()).toBe(400);
+});
+
+/** ---------------- $BEFORESAVE (server-only), TEXTAREA ---------------- */
+
+test('Should trim notes via $beforeSave', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { notes: '  hello world  ' }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.notes).toBe('hello world');
+});
+
+/** ---------------- BEFOREVALIDATE REMAP THEN BUILT-IN VALIDATOR, RADIO ---------------- */
+
+test('Should remap priority urgent to high, then pass the built-in option validator', async ({
+  request
+}) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { priority: 'urgent' }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.priority).toBe('high');
+});
+
+test('Should accept a priority option unchanged', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { priority: 'medium' }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.priority).toBe('medium');
+});
+
+test('Should still reject a priority option the remap does not cover', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { priority: 'bogus' }
+  });
+  expect(response.status()).toBe(400);
+});
+
+/** ---------------- $BEFORESAVE (server-only) SUBSTITUTION, COMBOBOX ---------------- */
+
+test('Should substitute framework react for svelte via $beforeSave', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { framework: 'react' }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.framework).toBe('svelte');
+});
+
+test('Should leave an unaffected framework option unchanged', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { framework: 'vue' }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.framework).toBe('vue');
+});
+
+/** ---------------- BEFOREVALIDATE ON AN OBJECT VALUE, LINK (also via $rime/runtime) ---------------- */
+
+test('Should force resourceLink target to _blank via beforeValidate', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { resourceLink: { type: 'url', value: 'https://example.com', target: '_self' } }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.resourceLink.target).toBe('_blank');
+  expect(doc.resourceLink.value).toBe('https://example.com');
 });
