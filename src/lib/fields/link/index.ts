@@ -6,6 +6,9 @@ import validate from '$lib/util/validate.js';
 import Cell from './component/Cell.svelte';
 import LinkComp from './component/Link.svelte';
 import type { Link, LinkType } from './types.js';
+// @ts-expect-error — resolved at build time by the rime Vite plugin to either
+// relation/runtime.server.ts (real check) or relation/runtime.ts (client no-op)
+import { populateRessourceURL } from '$rime/runtime';
 
 export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
   //
@@ -19,16 +22,9 @@ export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
     this.field.layout = 'default';
     this.field.types = ['url'];
     this.field.hooks = {
-      beforeSave: [LinkFieldBuilder.sanitize]
+      beforeSave: [LinkFieldBuilder.sanitize],
+      beforeRead: [populateRessourceURL]
     };
-    if (import.meta.env.SSR && import.meta.url) {
-      import('./index.server.js').then((module) => {
-        this.field.hooks = {
-          ...this.field.hooks,
-          beforeRead: [module.populateRessourceURL]
-        };
-      });
-    }
   }
 
   get component() {
@@ -62,7 +58,7 @@ export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
     if (!link) return undefined;
     // Sanitize only the value and url properties of the link, other properties are left as is
     const isLinkValue = (v: any): v is Link =>
-      typeof link === 'object' && !Array.isArray(link) && 'value' in link;
+      typeof v === 'object' && !Array.isArray(v) && 'value' in v;
 
     if (isLinkValue(link)) {
       return {
