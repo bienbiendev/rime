@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { logger } from '$lib/core/logger/index.server.js';
 import chalk from 'chalk';
+import { spawnSync } from 'child_process';
 import { copyFileSync, cpSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'fs';
 import { getInvokingPackageManager } from '../util/package-manager.server.js';
 import { envProduction, polkaServer } from './templates.js';
@@ -26,7 +27,7 @@ export const build = (args: { withDatabase?: boolean; withEnv?: boolean }) => {
 
   // Build
   mkdirSync('./build', { recursive: true });
-  // spawnSync('./node_modules/.bin/vite', ['build'], { stdio: 'inherit' });
+  spawnSync('./node_modules/.bin/vite', ['build'], { stdio: 'inherit' });
   console.log('');
 
   // Create app directory
