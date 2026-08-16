@@ -2,7 +2,7 @@
   import { FormFieldBuilder } from '$lib/core/fields/builders';
   import { isFormField } from '$lib/core/fields/util.js';
   import type { GenericDoc } from '$lib/core/types/doc.js';
-  import type { GroupField } from '$lib/fields/group/index.js';
+  import type { GroupFieldBuilder } from '$lib/fields/group/index.js';
   import { TabsBuilder } from '$lib/fields/tabs';
   import FieldsPreview from '$lib/panel/components/fields/FieldsPreview.svelte';
   import FieldsPreviewTrigger from '$lib/panel/components/fields/FieldsPreviewTrigger.svelte';
@@ -14,14 +14,14 @@
 
   type Props = {
     path: string;
-    config: GroupField;
+    config: GroupFieldBuilder;
     form: DocumentFormContext<GenericDoc>;
   };
   const { config, path, form }: Props = $props();
 
   let groupOpen = $state(true);
   const key = $derived(
-    `group-${config.fields
+    `group-${config.__fields
       .filter(isFormField)
       .map((f) => f.name)
       .join('-')}`
@@ -41,7 +41,7 @@
   const user = getUserContext() || undefined;
 
   const previewFields = $derived.by(() => {
-    return config.fields
+    return config.__fields
       .filter((field) => !(field instanceof TabsBuilder))
       .filter((field) => field instanceof FormFieldBuilder)
       .filter((field) => !form.isLive || (form.isLive && field.raw.live))
@@ -73,14 +73,14 @@
   {#if !groupOpen}
     <FieldsPreviewTrigger onclick={handleClick}>
       <FieldsPreview
-        preview={config.preview}
+        preview={config.raw.preview}
         fields={previewFields}
         getField={(field) => form.useField(basePath + field.name)}
       />
     </FieldsPreviewTrigger>
   {:else}
     <div class="rz-group-field__content">
-      <RenderFields {path} fields={config.fields} {form} />
+      <RenderFields {path} fields={config.__fields} {form} />
     </div>
   {/if}
 </div>

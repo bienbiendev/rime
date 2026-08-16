@@ -1,7 +1,7 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import * as Command from '$lib/panel/components/ui/command/index.js';
   import Tag from '$lib/panel/components/ui/tag/tag.svelte';
   import { useSortable } from '$lib/panel/util/Sortable.js';
@@ -12,14 +12,14 @@
 
   let listHTMLElement: HTMLElement;
   let initialized = false;
-  let options = $derived(config.options);
-  const validValues = $derived(config.options.map((o) => o.value));
+  let options = $derived(config.__options);
+  const validValues = $derived(config.__options.map((o) => o.value));
   const field = $derived(form.useField<string | string[]>(path, config));
 
   let isFull = $derived.by(() => {
     if (!field.value) return false;
-    const notManyAndOneSelected = !config.many && typeof field.value === 'string';
-    const manyAndAllSelected = config.many && field.value.length === config.options.length;
+    const notManyAndOneSelected = !config.__many && typeof field.value === 'string';
+    const manyAndAllSelected = config.__many && field.value.length === config.__options.length;
     return notManyAndOneSelected || manyAndAllSelected;
   });
 
@@ -37,13 +37,13 @@
   });
 
   $effect(() => {
-    if (config.many) {
+    if (config.__many) {
       sortable(listHTMLElement);
     }
   });
 
   $effect(() => {
-    if (config.many) {
+    if (config.__many) {
       if (field.value && Array.isArray(field.value) && !initialized) {
         field.value = field.value.filter((val: string) => validValues.includes(val));
       }
@@ -56,12 +56,12 @@
   });
 
   $effect(() => {
-    if (config.many) {
+    if (config.__many) {
       const currentValue = $state.snapshot(field.value);
       if (!currentValue) {
-        options = config.options;
+        options = config.__options;
       } else {
-        options = config.options.filter((option) => !currentValue.includes(option.value));
+        options = config.__options.filter((option) => !currentValue.includes(option.value));
       }
     }
   });
@@ -73,7 +73,7 @@
 
   const addValue = (val: string) => {
     if (isFull) return;
-    if (config.many) {
+    if (config.__many) {
       field.value = [...(field.value || []), val];
     } else {
       field.value = val;
@@ -81,7 +81,7 @@
   };
 
   const removeValue = (val?: string) => {
-    if (config.many) {
+    if (config.__many) {
       field.value = [...(field.value || [])].filter((v) => v !== val);
     } else {
       field.value = null;
@@ -89,7 +89,7 @@
   };
 </script>
 
-<fieldset class="rz-field-select {config.className || ''}" use:root={field}>
+<fieldset class="rz-field-select {config.raw.className || ''}" use:fieldset={field}>
   <Field.Label for={path || config.name} {config} />
   <Field.Error error={field.error} />
 
@@ -102,9 +102,9 @@
         data-focused={inputFocused ? '' : null}
         data-error={field.error ? '' : null}
       >
-        {#if config.many}
+        {#if config.__many}
           {#each field.value || [] as val (val)}
-            {@const option = config.options.find((o) => o.value === val)}
+            {@const option = config.__options.find((o) => o.value === val)}
             {#if option}
               <Tag onRemove={() => removeValue(option.value)} readOnly={form.readOnly}>
                 {option.label}
@@ -112,7 +112,7 @@
             {/if}
           {/each}
         {:else if field.value}
-          {@const option = config.options.filter((o) => o.value === field.value)[0]}
+          {@const option = config.__options.filter((o) => o.value === field.value)[0]}
           {#if option}
             <Tag onRemove={() => removeValue()} readOnly={form.readOnly}>
               {option.label}

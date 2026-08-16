@@ -1,8 +1,8 @@
 import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-import type { BlocksField } from '../index.js';
+import type { BlocksBuilder } from '../index.js';
 
 export type BlocksProps = {
   path: string;
-  config: BlocksField;
+  config: BlocksBuilder;
   form: DocumentFormContext;
 };

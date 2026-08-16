@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import { dataError } from '$lib/panel/util/dataError.js';
   import type { TextAreaFieldProps } from './props.js';
 
@@ -14,13 +14,13 @@
   };
 </script>
 
-<fieldset use:root={field} class="rz-textarea-field {config.className || ''}">
+<fieldset use:fieldset={field} class="rz-textarea-field {config.raw.className || ''}">
   <Field.Label {config} for={path || config.name} />
   <textarea
     use:dataError={!!field.error}
     id={path || config.name}
     name={path || config.name}
-    placeholder={config.placeholder}
+    placeholder={config.raw.placeholder}
     value={field.value}
     oninput={onInput}
   ></textarea>

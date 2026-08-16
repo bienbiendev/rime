@@ -5,7 +5,7 @@ import { sanitize } from '$lib/util/string.js';
 import validate from '$lib/util/validate.js';
 import EmailComp from './component/Email.svelte';
 
-class EmailFieldBuilder extends FormFieldBuilder<EmailField> {
+export class EmailFieldBuilder extends FormFieldBuilder<EmailField> {
   //
   _metaUrl: string = import.meta.url;
 

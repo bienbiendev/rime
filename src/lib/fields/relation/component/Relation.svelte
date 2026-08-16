@@ -1,8 +1,8 @@
 <script lang="ts">
   import { isUploadConfig } from '$lib/core/collections/upload/util/config.js';
   import type { GenericDoc } from '$lib/core/types/doc.js';
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
@@ -13,13 +13,17 @@
   import { apiUrl } from '$lib/util/index.js';
   import { snapshot } from '$lib/util/state.js';
   import { getAPIProxyContext } from '../../../panel/context/api-proxy.svelte.js';
-  import type { Relation, RelationField } from '../index.js';
+  import type { Relation, RelationFieldBuilder } from '../index.js';
   import Default from './default/Default.svelte';
   import type { RelationFieldItem } from './types.js';
   import Upload from './upload/Upload.svelte';
 
   // Props
-  type Props = { path: string; config: RelationField; form: DocumentFormContext | FormContext };
+  type Props = {
+    path: string;
+    config: RelationFieldBuilder;
+    form: DocumentFormContext | FormContext;
+  };
   const { path, config, form }: Props = $props();
 
   // Context
@@ -28,7 +32,7 @@
   const APIProxy = getAPIProxyContext();
   const field = $derived(form.useField(path, config));
   // svelte-ignore state_referenced_locally
-  const relationConfig = getCollection(config.relationTo);
+  const relationConfig = getCollection(config.__relationTo);
   const relationCollectionCtx = getCollectionContext(relationConfig.slug);
 
   let initialized = $state(false);
@@ -45,7 +49,7 @@
   const nothingToSelect = $derived(initialItems.length === 0);
 
   let isFull = $derived.by(() => {
-    if (!config.many) {
+    if (!config.__many) {
       if (selectedItems.length === 1) return true;
     } else {
       if (availableItems.length === 0 && selectedItems.length > 0) {
@@ -94,16 +98,16 @@
     }
 
     // Add custom query parameters if provided
-    if (config.query) {
-      if (typeof config.query === 'string') {
+    if (config.__query) {
+      if (typeof config.__query === 'string') {
         // Parse the query string and add each parameter
-        const queryParams = new URLSearchParams(config.query);
+        const queryParams = new URLSearchParams(config.__query);
         queryParams.forEach((value, key) => {
           url.searchParams.append(key, value);
         });
-      } else if (typeof config.query === 'function') {
+      } else if (typeof config.__query === 'function') {
         // Parse the function result and add each parameter
-        const queryString = config.query(form.values);
+        const queryString = config.__query(form.values);
         const queryParams = new URLSearchParams(queryString);
         queryParams.forEach((value, key) => {
           url.searchParams.append(key, value);
@@ -159,12 +163,12 @@
     const relations = selectedItems.map((item, index) => {
       let relation: Omit<Relation, 'ownerId'> = {
         id: item.id,
-        relationTo: config.relationTo,
+        relationTo: config.__relationTo,
         path,
         position: index,
         documentId: item.documentId
       };
-      if (config.localized) {
+      if (config.__localized) {
         relation.locale = locale.code;
       }
       if ('isLive' in form && form.isLive) {
@@ -236,7 +240,7 @@
   const RelationComponent = isRelationToUpload ? Upload : Default;
 </script>
 
-<fieldset class="rz-field-relation {config.className || ''}" use:root={field}>
+<fieldset class="rz-field-relation {config.className || ''}" use:fieldset={field}>
   <Field.Label {config} for={path || config.name} />
   <Field.Hint {config} />
 

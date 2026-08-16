@@ -1,13 +1,14 @@
 <script lang="ts">
-  import type { FormField, SimplerField } from '$lib/fields/types.js';
+  import type { FormFieldBuilder } from '$lib/fields';
+  import type { FormField } from '$lib/fields/types.js';
 
-  type Props = { config: SimplerField<FormField> };
+  type Props = { config: FormFieldBuilder<FormField> };
   const { config }: Props = $props();
 </script>
 
-{#if config.hint}
+{#if config.raw.hint}
   <p class="rz-field-hint">
-    {config.hint}
+    {config.raw.hint}
   </p>
 {/if}
 

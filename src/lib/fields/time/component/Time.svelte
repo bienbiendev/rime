@@ -1,9 +1,9 @@
 <script lang="ts">
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import { Input } from '$lib/panel/components/ui/input/index.js';
   import { Clock } from '@lucide/svelte';
-  import type { TimeFieldProps } from './props';
+  import type { TimeFieldProps } from './props.js';
 
   const { path, config, form }: TimeFieldProps = $props();
   const field = $derived(form.useField(path || config.name, config));
@@ -13,13 +13,13 @@
   };
 </script>
 
-<fieldset class="rz-time-field {config.className || ''}" use:root={field}>
+<fieldset class="rz-time-field {config.raw.className || ''}" use:fieldset={field}>
   <Field.Label {config} for={path || config.name} />
   <div class="rz-time-field__input-wrapper">
     <Input
       type="time"
-      id={path}
-      name={path}
+      id={path || config.name}
+      name={path || config.name}
       data-error={field.error ? '' : null}
       value={field.value}
       oninput={onInput}

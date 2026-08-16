@@ -50,6 +50,10 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
     return this;
   }
 
+  get __query(): string | QueryResolver<Doc> | undefined {
+    return this.field.query;
+  }
+
   to<Slug extends CollectionSlug>(slug: Slug): RelationFieldBuilder<RegisterCollection[Slug]> {
     this.field.relationTo = slug;
     return this as unknown as RelationFieldBuilder<RegisterCollection[Slug]>;

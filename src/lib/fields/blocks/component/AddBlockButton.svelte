@@ -7,11 +7,11 @@
   import * as Command from '$lib/panel/components/ui/command/index.js';
   import { capitalize } from '$lib/util/string.js';
   import { CirclePlus, ToyBrick } from '@lucide/svelte';
-  import type { BlocksField, BlocksFieldBlock } from '../index.js';
+  import type { BlocksBuilder, BlocksFieldBlock } from '../index.js';
 
   type AddBlock = (options: Omit<GenericBlock, 'id' | 'path'>) => void;
   type Props = {
-    config: BlocksField;
+    config: BlocksBuilder;
     addBlock: AddBlock;
   };
   const { config, addBlock }: Props = $props();
@@ -29,9 +29,9 @@
   };
 </script>
 
-{#if config.blocks.length === 1}
+{#if config.__blocks.length === 1}
   <Button
-    onclick={() => add(config.blocks[0].block)}
+    onclick={() => add(config.__blocks[0].block)}
     variant="ghost"
     icon={CirclePlus}
     size="icon"
@@ -51,7 +51,7 @@
       <Command.List class="rz-add-block-button__list">
         <Command.Empty>No results found.</Command.Empty>
         <Command.Group heading="Component">
-          {#each config.blocks as blockBuilder, index (index)}
+          {#each config.__blocks as blockBuilder, index (index)}
             {@const blockConfig = blockBuilder.block}
             {@const BlockIcon = blockConfig.icon || ToyBrick}
             <Command.Item
@@ -82,7 +82,7 @@
       </Command.List>
 
       <div class="rz-add-block-button__preview-wrap">
-        {#each config.blocks as blockFieldBuilder, index (index)}
+        {#each config.__blocks as blockFieldBuilder, index (index)}
           <div
             class:rz-add-block-button__preview--active={ariaSelected === blockFieldBuilder.name}
             class="rz-add-block-button__preview"

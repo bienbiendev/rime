@@ -6,7 +6,7 @@ type FieldState = {
   readonly error: string | false;
 };
 
-export function root(node: HTMLElement, field: FieldState) {
+export function fieldset(node: HTMLElement, field: FieldState) {
   node.classList.add('rz-field-root');
   node.setAttribute('style', 'position: relative; container: rz-field-root / inline-size');
   node.setAttribute('data-path', field.path);

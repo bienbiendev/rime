@@ -1,4 +1,8 @@
 import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-import type { RadioField } from '../index.js';
+import type { RadioFieldBuilder } from '../index.js';
 
-export type RadioFieldProps = { path: string; config: RadioField; form: DocumentFormContext };
+export type RadioFieldProps = {
+  path: string;
+  config: RadioFieldBuilder;
+  form: DocumentFormContext;
+};

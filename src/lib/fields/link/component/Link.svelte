@@ -1,7 +1,7 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
   import { Input } from '$lib/panel/components/ui/input/index.js';
@@ -32,7 +32,7 @@
 
   const primitiveTypes = ['url', 'email', 'tel', 'anchor'];
   const field = $derived(form.useField<Link>(path, config));
-  const linkTypes = $derived(config.types || ['url', 'email', 'tel', 'anchor']);
+  const linkTypes = $derived(config.__types);
   const initial = $derived(path ? form.getRawValue<Link>(path) : null);
 
   let initialLinkType = $derived(initial?.type || linkTypes[0]);
@@ -100,8 +100,8 @@
 
 <fieldset
   class="rz-link-field {config.className}"
-  data-compact={config.layout === 'compact' ? '' : null}
-  use:root={field}
+  data-compact={config.raw.layout === 'compact' ? '' : null}
+  use:fieldset={field}
 >
   <Field.Label {config} for={path || config.name} />
 

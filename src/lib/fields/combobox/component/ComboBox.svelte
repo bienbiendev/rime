@@ -2,7 +2,7 @@
   import { t__ } from '$lib/core/i18n/index.js';
   import type { OptionWithIcon } from '$lib/fields/types.js';
   import { Field } from '$lib/panel';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Button } from '$lib/panel/components/ui/button/index.js';
   import * as Command from '$lib/panel/components/ui/command/index.js';
   import * as Popover from '$lib/panel/components/ui/popover/index.js';
@@ -13,7 +13,7 @@
   const { path, config, form }: ComboBoxProps = $props();
 
   const field = $derived(form.useField(path, config));
-  const options = $derived(config.options);
+  const options = $derived(config.__options);
 
   let search = $state('');
   let open = $state(false);
@@ -30,7 +30,7 @@
   </span>
 {/snippet}
 
-<fieldset class="rz-combobox-field {config.className || ''}" use:root={field}>
+<fieldset class="rz-combobox-field {config.raw.className || ''}" use:fieldset={field}>
   <Field.Label {config} for={path || config.name} />
 
   <Popover.Root bind:open>

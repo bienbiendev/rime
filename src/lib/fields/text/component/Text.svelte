@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import { Input } from '$lib/panel/components/ui/input/index.js';
   import { capitalize } from '$lib/util/string.js';
   import type { TextFieldProps } from './props.js';
@@ -14,10 +14,10 @@
 </script>
 
 <fieldset
-  class="rz-text-field {config.className || ''}"
+  class="rz-text-field {config.raw.className || ''}"
   class:rz-text-field--with-icon={!!Icon}
-  data-compact={config.layout === 'compact' ? '' : null}
-  use:root={field}
+  data-compact={config.raw.layout === 'compact' ? '' : null}
+  use:fieldset={field}
 >
   <Field.Label {config} for={path || config.name} />
   <div class="rz-text-field__input-wrapper">
@@ -26,7 +26,7 @@
       icon={Icon}
       autocomplete="off"
       name={path || config.name}
-      placeholder={config.placeholder || capitalize(config.name)}
+      placeholder={config.raw.placeholder || capitalize(config.raw.name)}
       data-error={field.error ? '' : null}
       {type}
       value={field.value}

@@ -1,8 +1,8 @@
 import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-import type { LinkField } from '../index.js';
+import type { LinkFieldBuilder } from '../index.js';
 
 export type LinkFieldProps = {
   path: string;
-  config: LinkField;
+  config: LinkFieldBuilder;
   form: DocumentFormContext;
 };

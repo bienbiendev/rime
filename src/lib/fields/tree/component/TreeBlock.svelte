@@ -53,23 +53,16 @@
   };
 
   const renderBlockTitle = (position: string) => {
-    if (config.renderTitle) {
+    if (config.raw.renderTitle) {
       try {
-        const title = config.renderTitle({ position, values: itemValue || {} });
+        const title = config.raw.renderTitle({ position, values: itemValue || {} });
         if (title) return title;
       } catch (err) {
         console.error(`Can't render title in treeBlock`, err);
       }
     }
-    return `${position} - ${config.label || config.name}`;
+    return `${position} - ${config.__label}`;
   };
-
-  // $effect(() => {
-  // 	if (initialPath !== path) {
-  // 		form.setValue(path, itemValue);
-  // 		initialPath = path;
-  // 	}
-  // });
 </script>
 
 <div
@@ -94,11 +87,11 @@
     </header>
 
     <div class="rz-tree-item__fields" class:rz-tree-item__fields--hidden={!isOpen}>
-      <RenderFields fields={config.fields} {path} {form} />
+      <RenderFields fields={config.__fields} {path} {form} />
     </div>
   </div>
 
-  {#if depth <= config.maxDepth}
+  {#if depth <= config.raw.maxDepth}
     <div data-path={path} data-tree-depth={depth} data-tree-key={treeKey} class="rz-tree__list">
       {#if itemValue && itemValue._children && itemValue._children.length}
         {#each itemValue._children as child, index (child.id)}

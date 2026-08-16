@@ -1,8 +1,7 @@
 <script lang="ts">
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import { Input } from '$lib/panel/components/ui/input/index.js';
-  import { capitalize } from '$lib/util/string.js';
   import { Mail } from '@lucide/svelte';
   import type { EmailFieldProps } from './props';
 
@@ -23,9 +22,9 @@
 </script>
 
 <fieldset
-  data-compact={config.layout === 'compact' ? '' : null}
+  data-compact={config.raw.layout === 'compact' ? '' : null}
   class="{config.className} rz-email-field"
-  use:root={field}
+  use:fieldset={field}
 >
   <Field.Label {config} for={path || config.name} />
   <div class="rz-email-field-wrapper">
@@ -34,7 +33,7 @@
       id={path || config.name}
       name={path || config.name}
       autocomplete="off"
-      placeholder={config.placeholder || capitalize(config.label || config.name)}
+      placeholder={config.raw.placeholder || config.__label}
       data-error={showError && field.error ? '' : null}
       value={field.value}
       onblur={onBlur}

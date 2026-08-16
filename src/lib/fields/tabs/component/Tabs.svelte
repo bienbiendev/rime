@@ -4,9 +4,9 @@
   import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
   import * as Tabs from '$lib/panel/components/ui/tabs/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import type { TabBuilder, TabsField } from '../index.js';
+  import type { TabBuilder, TabsBuilder } from '../index.js';
 
-  type Props = { config: TabsField; path: string; form: DocumentFormContext };
+  type Props = { config: TabsBuilder; path: string; form: DocumentFormContext };
 
   const { config, path: initialPath, form }: Props = $props();
 
@@ -16,7 +16,7 @@
   const prependPath = $derived(initialPath === '' ? '' : `${initialPath}.`);
   // Generate unique IDs for each tab to use as data attributes for error handling.
   const tabIds = $derived(
-    config.tabs.map((tab) => `${tab.name}-${new Date().getTime().toString()}`)
+    config.__tabs.map((tab) => `${tab.name}-${new Date().getTime().toString()}`)
   );
 
   // Retrieve active tab from localStorage, if not found use the first tab.
@@ -24,12 +24,12 @@
   let activeTabName = $derived.by(() => {
     let storedActiveTab = localStorage.getItem(storageActiveKey);
     if (storedActiveTab && form.isLive) {
-      const activeTab = config.tabs.find((tab) => tab.name === storedActiveTab);
+      const activeTab = config.__tabs.find((tab) => tab.name === storedActiveTab);
       if (!activeTab || activeTab.raw.live === false) {
-        return config.tabs[0].name;
+        return config.__tabs[0].name;
       }
     }
-    return storedActiveTab || config.tabs[0].name;
+    return storedActiveTab || config.__tabs[0].name;
   });
 
   // On live mode only show tabs with live=true
@@ -61,7 +61,7 @@
 <div class="rz-tabs">
   <Tabs.Root onValueChange={onActiveTabChange} value={activeTabName}>
     <Tabs.List>
-      {#each config.tabs as tab, index (index)}
+      {#each config.__tabs as tab, index (index)}
         {#if isTabVisible(tab)}
           <Tabs.Trigger
             data-error={errorTabs.includes(tabIds[index]) ? 'true' : null}
@@ -73,7 +73,7 @@
       {/each}
     </Tabs.List>
 
-    {#each config.tabs as tab, index (index)}
+    {#each config.__tabs as tab, index (index)}
       {#if isTabVisible(tab)}
         <Tabs.Content data-tab-id={tabIds[index]} value={tab.name}>
           <!-- If the first and only field is a rich text field, render it directly -->
@@ -82,7 +82,7 @@
             <RichText
               standAlone={true}
               path="{prependPath}{tab.name}.{firstField.name}"
-              config={firstField.raw}
+              config={firstField}
               {form}
             />
           {:else}

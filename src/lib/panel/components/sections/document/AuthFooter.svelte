@@ -61,13 +61,8 @@
   <div class="rz-document-auth">
     {#if operation === 'create'}
       {#if isAuthConfig(collection) && collection.auth.type === 'password'}
-        <Text {form} type="password" config={passwordConfig.compile()} path="password" />
-        <Text
-          {form}
-          type="password"
-          config={confirmPasswordConfig.compile()}
-          path="confirmPassword"
-        />
+        <Text {form} type="password" config={passwordConfig} path="password" />
+        <Text {form} type="password" config={confirmPasswordConfig} path="confirmPassword" />
       {/if}
     {:else if user.attributes.isStaff && page.data?.hasMailer}
       {#if isAuthConfig(collection) && collection.auth.type === 'password'}

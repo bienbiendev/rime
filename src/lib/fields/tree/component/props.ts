@@ -1,11 +1,11 @@
 import type { TreeBlock } from '$lib/core/types/doc.js';
 import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 import type { Dic } from '$lib/util/types.js';
-import type { TreeField } from '../index.js';
+import type { TreeBuilder } from '../index.js';
 
 export type TreeProps = {
   path: string;
-  config: TreeField;
+  config: TreeBuilder;
   form: DocumentFormContext;
 };
 
@@ -21,6 +21,6 @@ export type TreeBlockProps = {
     readonly items: TreeBlock[];
   };
   form: DocumentFormContext;
-  config: TreeField;
+  config: TreeBuilder;
   treeKey: string;
 };

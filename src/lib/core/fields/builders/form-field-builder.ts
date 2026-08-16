@@ -1,4 +1,5 @@
 import type { FieldPanelTableConfig } from '$lib/types.js';
+import { capitalize } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import cloneDeep from 'clone-deep';
 import type {
@@ -59,6 +60,10 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
+  get __label(): string {
+    return this.field.label || capitalize(this.field.name);
+  }
+
   hidden() {
     this.field.hidden = true;
     return this;
@@ -88,6 +93,18 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
   condition(conditionFunction: (doc: Dic, siblings: Dic) => boolean) {
     this.field.condition = conditionFunction;
     return this;
+  }
+
+  __condition(doc: Dic, siblings: Dic): boolean {
+    if (this.field.condition) {
+      try {
+        return this.field.condition(doc, siblings);
+      } catch (err: any) {
+        console.error(err.message);
+        return false;
+      }
+    }
+    return true;
   }
 
   table(params?: FieldPanelTableConfig | number) {

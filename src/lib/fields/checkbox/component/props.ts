@@ -1,4 +1,8 @@
 import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-import type { CheckboxField } from '../index.js';
+import type { CheckboxFieldBuilder } from '../index.js';
 
-export type CheckboxProps = { path: string; config: CheckboxField; form: DocumentFormContext };
+export type CheckboxProps = {
+  path: string;
+  config: CheckboxFieldBuilder;
+  form: DocumentFormContext;
+};

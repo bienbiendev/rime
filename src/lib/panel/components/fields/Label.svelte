@@ -1,25 +1,21 @@
 <script lang="ts">
-  import type { FormField, SimplerField } from '$lib/fields/types.js';
+  import type { FormFieldBuilder } from '$lib/fields/index.js';
+  import type { FormField } from '$lib/fields/types.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import { capitalize } from '$lib/util/string.js';
   import type { Snippet } from 'svelte';
   import { Label } from '../ui/label/index.js';
 
-  type Props = { config?: SimplerField<FormField>; children?: Snippet; for?: string };
+  type Props = { config: FormFieldBuilder<FormField>; children?: Snippet; for?: string };
   const { config, children, for: forAttribute, ...rest }: Props = $props();
 
   const locale = getLocaleContext();
 </script>
 
-<Label
-  class="rz-field-label"
-  title={config?.label ? config.name : null}
-  for={forAttribute || null}
-  {...rest}
->
+<Label class="rz-field-label" title={config.__label} for={forAttribute || null} {...rest}>
   {#if config}
-    {config.label || capitalize(config.name)}
-    {#if config.localized}
+    {config.__label || capitalize(config.name)}
+    {#if config.__localized}
       <sup>{locale.code}</sup>
     {/if}
   {/if}

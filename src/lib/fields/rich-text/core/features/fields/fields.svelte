@@ -55,7 +55,7 @@
   >
     <FieldsPreview
       fields={previewFields}
-      getField={(field) => form.useField(field.name, field.raw)}
+      getField={(field) => form.useField(field.name, field)}
       preview={extension.options.preview}
     />
   </FieldsPreviewTrigger>
@@ -65,7 +65,7 @@
   <Sheet.Content preventScroll={false} side="right" class="rz-rich-text-sheet">
     {#each previewFields || [] as field, index (index)}
       {@const FieldComponent = field.component}
-      <FieldComponent path={field.name} config={field.raw} {form} />
+      <FieldComponent path={field.name} config={field} {form} />
     {/each}
   </Sheet.Content>
 </Sheet.Root>

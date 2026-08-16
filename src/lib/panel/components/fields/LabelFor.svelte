@@ -1,18 +1,18 @@
 <script lang="ts">
+  import type { FormFieldBuilder } from '$lib/fields/index.js';
   import type { FormField } from '$lib/fields/types.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { capitalize } from '$lib/util/string.js';
   import { Label } from '../ui/label/index.js';
 
-  type Props = { config: FormField; for: string };
+  type Props = { config: FormFieldBuilder<FormField>; for: string };
   const { config, for: labelFor }: Props = $props();
 
   const locale = getLocaleContext();
 </script>
 
 <Label class="rz-field-label-for" for={labelFor}>
-  {config.label || capitalize(config.name)}
-  {#if config.localized}
+  {config.__label}
+  {#if config.__localized}
     <sup>{locale.code}</sup>
   {/if}
 </Label>

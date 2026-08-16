@@ -79,11 +79,6 @@ export class TabBuilder {
  */
 export const isTabsField = (field: Field): field is TabsField => field.type === 'tabs';
 
-/**
- * Checks if a field is a tabs field (raw type).
- */
-export const isTabsFieldRaw = (field: Field): field is TabsFieldRaw => field.type === 'tabs';
-
 /****************************************************/
 /* Types
 /****************************************************/
@@ -98,11 +93,4 @@ export type TabsFieldTab = {
   label?: string;
   live: boolean;
   fields: FieldBuilder<Field>[];
-};
-
-export type TabsFieldRaw = Field & {
-  type: 'tabs';
-  name: string;
-  label?: string;
-  tabs: Array<Omit<TabsFieldTab, 'fields'> & { fields: Field[] }>;
 };

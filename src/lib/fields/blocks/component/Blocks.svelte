@@ -2,12 +2,11 @@
   import { t__ } from '$lib/core/i18n/index.js';
   import type { GenericBlock } from '$lib/core/types/doc.js';
   import type { BlocksFieldBlock } from '$lib/fields/types';
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import { useSortable } from '$lib/panel/util/Sortable.js';
-  import { capitalize } from '$lib/util/string.js';
   import { Download } from '@lucide/svelte';
   import Sortable from 'sortablejs';
   import { onDestroy } from 'svelte';
@@ -63,7 +62,7 @@
   });
 
   function getConfigByBlockType(type: string): BlocksFieldBlock {
-    const blockConfig = config.blocks.find((b) => type === b.name);
+    const blockConfig = config.__blocks.find((b) => type === b.name);
     if (!blockConfig) {
       throw new Error(`Block configuration not found for type: ${type}`);
     }
@@ -82,14 +81,14 @@
   });
 </script>
 
-<fieldset class="rz-field-blocks {config.className || ''}" use:root={field}>
+<fieldset class="rz-field-blocks {config.raw.className || ''}" use:fieldset={field}>
   <Field.Error error={field.error} />
 
   <header class="rz-blocks__header">
     <div>
       <h3 class="rz-blocks__title">
-        {config.label ? config.label : capitalize(config.name)}
-        {#if config.localized}
+        {config.__label}
+        {#if config.__localized}
           <sup>{locale.code}</sup>
         {/if}
       </h3>
@@ -122,7 +121,7 @@
   <div class="rz-blocks__actions-bottom">
     <AddBlockButton addBlock={add} {config} />
 
-    {#if locale && locale.code !== locale.defaultCode && config.localized}
+    {#if locale && locale.code !== locale.defaultCode && config.__localized}
       <Button icon={Download} size="sm" onclick={field.setValueFromDefaultLocale} variant="text">
         {t__('fields.get_data_from')}
         {locale.defaultCode}

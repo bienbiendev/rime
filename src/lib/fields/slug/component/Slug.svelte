@@ -1,15 +1,15 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import { Input } from '$lib/panel/components/ui/input/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { slugify } from '$lib/util/string.js';
   import { Hash } from '@lucide/svelte';
-  import type { SlugField } from '../index';
+  import type { SlugFieldBuilder } from '../index.js';
 
-  type Props = { path: string; config: SlugField; form: DocumentFormContext };
+  type Props = { path: string; config: SlugFieldBuilder; form: DocumentFormContext };
   const { path, config, form }: Props = $props();
 
   const field = $derived(form.useField(path, config));
@@ -17,7 +17,7 @@
   // svelte-ignore state_referenced_locally
   const initialValue = form.getRawValue(path);
   const initialEmpty = !initialValue;
-  const slugifySource = $derived(config.slugify ? form.useField<string>(config.slugify) : null);
+  const slugifySource = $derived(config.__slugify ? form.useField<string>(config.__slugify) : null);
 
   const slugifiedValue = $derived.by(() => {
     if (slugifySource && slugifySource.value) {
@@ -42,17 +42,19 @@
     field.value = inputElement.value;
   };
 
-  const classNameCompact = $derived(config.layout === 'compact' ? 'rz-slug-field--compact' : '');
-  const classNames = $derived(`rz-slug-field ${classNameCompact || ''} ${config.className}`);
+  const classNameCompact = $derived(
+    config.raw.layout === 'compact' ? 'rz-slug-field--compact' : ''
+  );
+  const classNames = $derived(`rz-slug-field ${classNameCompact || ''} ${config.raw.className}`);
 </script>
 
-<fieldset class={classNames} use:root={field}>
+<fieldset class={classNames} use:fieldset={field}>
   <Field.Label {config} for={path || config.name} />
 
   <div class="rz-slug">
     <Input
       id={path || config.name}
-      placeholder={config.placeholder}
+      placeholder={config.raw.placeholder}
       data-error={field.error ? '' : null}
       type="text"
       icon={Hash}
@@ -63,7 +65,7 @@
       onblur={() => (isFocused = false)}
     />
 
-    {#if config.slugify}
+    {#if config.__slugify}
       <Button
         disabled={!field.editable}
         onclick={() => (field.value = slugifiedValue)}
@@ -71,7 +73,7 @@
         size="sm"
         variant="secondary"
       >
-        {t__('fields.generate_from', config.slugify)}
+        {t__('fields.generate_from', config.__slugify)}
       </Button>
     {/if}
   </div>

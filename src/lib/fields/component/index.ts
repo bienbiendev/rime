@@ -7,7 +7,7 @@ import type { Component } from 'svelte';
 
 type TypedComponent = Component<{
   path: string;
-  config: ComponentField;
+  config: ComponentFieldBuilder;
   form: DocumentFormContext<WithOptional<GenericDoc, 'id'>>;
 }>;
 

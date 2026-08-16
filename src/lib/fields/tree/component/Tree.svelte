@@ -1,7 +1,7 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import type { Dic } from '$lib/util/types.js';
@@ -37,7 +37,7 @@
         if (!el.classList.contains('rz-tree-item')) return false;
         const targetDepth = parseInt(to.el.dataset.treeDepth || '0');
         const childrenCount = parseInt(el.dataset.treeChildren || '0');
-        return targetDepth + childrenCount <= config.maxDepth;
+        return targetDepth + childrenCount <= config.raw.maxDepth;
       }
     },
     onStart: () => (sorting = true),
@@ -93,7 +93,7 @@
   });
 </script>
 
-<fieldset class="rz-field-tree {config.className}" use:root={field}>
+<fieldset class="rz-field-tree {config.raw.className}" use:fieldset={field}>
   <Field.Error error={field.error} />
 
   <Field.Label {config} />
@@ -119,12 +119,12 @@
       addItem={add}
       class="rz-tree__add-button"
       size={nested ? 'sm' : 'default'}
-      fields={config.fields}
+      fields={config.__fields}
     >
-      {config.addItemLabel}
+      {config.raw.addItemLabel}
     </AddItemButton>
 
-    {#if locale && locale.code !== locale.defaultCode && config.localized}
+    {#if locale && locale.code !== locale.defaultCode && config.__localized}
       <Button size="sm" onclick={field.setValueFromDefaultLocale} variant="secondary">
         {t__('fields.get_data_from')}
         {locale.defaultCode}

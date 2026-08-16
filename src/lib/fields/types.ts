@@ -1,6 +1,6 @@
 import type { OperationContext } from '$lib/core/operations/hooks/index.server.js';
 import type { DocumentFormContext } from '$lib/panel/index.js';
-import type { Dic, WithRequired } from '$lib/util/types.js';
+import type { Dic } from '$lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Component } from 'svelte';
@@ -137,11 +137,6 @@ export type OptionWithIcon = {
 
 export type RelationRef = { id?: string; relationTo: string; documentId: string };
 export type RelationValue<T> = T[] | RelationRef[] | string[] | string;
-
-export type SimplerField<T extends FormField> = WithRequired<
-  Partial<T>,
-  'name' | 'isEmpty' | 'type'
->;
 
 export type BaseUseFieldReturn = {
   path: string;

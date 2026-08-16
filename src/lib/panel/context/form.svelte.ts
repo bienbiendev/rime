@@ -1,5 +1,6 @@
 import { applyAction } from '$app/forms';
-import type { FormField, SimplerField } from '$lib/fields/types.js';
+import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder';
+import type { FormField } from '$lib/fields/types.js';
 import { getValueAtPath } from '$lib/util/object.js';
 import { snapshot } from '$lib/util/state.js';
 import type { Dic } from '$lib/util/types.js';
@@ -46,37 +47,36 @@ function createFormStore(initial: Dic, key: string) {
     form = { ...form, [path]: value };
   }
 
-  function useField(path: string | undefined, config: SimplerField<FormField>) {
+  function useField(path: string | undefined, config: FormFieldBuilder<FormField>) {
     path = path || config.name;
     //
     const validate = (value: any) => {
       let isEmpty;
       try {
-        isEmpty = config.isEmpty(value);
+        isEmpty = config.__isEmpty(value);
       } catch (err: any) {
         console.error(err.message);
         throw new Error(config.type + ' ' + err.message);
       }
-      if (config.required && isEmpty) {
+      if (config.__required && isEmpty) {
         errors.value[path] = 'required::required_field';
         return false;
       }
 
-      if (config.validate) {
-        const validated = config.validate(value, {
-          data: form,
-          id: undefined,
-          operation: undefined,
-          user: undefined,
-          locale: undefined,
-          config
-        });
+      const validated = config.__validate(value, {
+        data: form,
+        id: undefined,
+        operation: undefined,
+        user: undefined,
+        locale: undefined,
+        config: config.raw
+      });
 
-        if (validated !== true) {
-          errors.value[path] = validated;
-          return false;
-        }
+      if (validated !== true) {
+        errors.value[path] = validated;
+        return false;
       }
+
       if (errors.has(path)) {
         errors.delete(path);
       }
@@ -104,7 +104,7 @@ function createFormStore(initial: Dic, key: string) {
       },
 
       get visible() {
-        return config.condition ? config.condition(form, {}) : true;
+        return config.__condition(form, {});
       },
 
       get error() {

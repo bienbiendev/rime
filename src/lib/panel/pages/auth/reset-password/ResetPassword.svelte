@@ -4,7 +4,7 @@
   import AuthForm from '$lib/panel/components/sections/auth/AuthForm.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import { setFormContext } from '$lib/panel/context/form.svelte';
-  import { passwordField } from '$lib/panel/pages/auth/fields.js';
+  import { confirmPasswordField, passwordField } from '$lib/panel/pages/auth/fields.js';
   import { authClient } from '$lib/panel/util/auth';
   import { toast } from 'svelte-sonner';
 
@@ -19,15 +19,8 @@
   };
   const { data }: Props = $props();
 
-  const passwordConfig = {
-    ...passwordField,
-    placeholder: t__('common.newPassword')
-  };
-  const confirmPasswordConfig = {
-    ...passwordField,
-    name: 'confirmPassword',
-    placeholder: t__('common.confirmPassword')
-  };
+  const passwordConfig = passwordField.placeholder(t__('common.newPassword'));
+  const confirmPasswordConfig = confirmPasswordField.placeholder(t__('common.confirmPassword'));
 
   async function resetPassword() {
     const token = new URLSearchParams(window.location.search).get('token');

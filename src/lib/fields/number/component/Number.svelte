@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import { ChevronDown, ChevronUp } from '@lucide/svelte';
   import './number.css';
   import type { NumberFieldProps } from './props';
@@ -10,12 +10,12 @@
   const field = $derived(form.useField<number>(path, config));
 
   const decrease = () => {
-    const minValue = config.min ?? -Infinity;
+    const minValue = config.raw.min ?? -Infinity;
     field.value = Math.max((field.value || 0) - 1, minValue);
   };
 
   const increase = () => {
-    const maxValue = config.max ?? Infinity;
+    const maxValue = config.raw.max ?? Infinity;
     field.value = Math.min((field.value || 0) + 1, maxValue);
   };
 </script>
@@ -26,13 +26,13 @@
   </button>
 {/snippet}
 
-<fieldset class="rz-number-field {config.className || ''}" use:root={field}>
+<fieldset class="rz-number-field {config.raw.className || ''}" use:fieldset={field}>
   <Field.Label {config} for={path || config.name} />
   <div class="rz-number-field__input-wrapper">
     <input
       class="rz-number-field__input"
-      min={config.min ?? undefined}
-      max={config.max ?? undefined}
+      min={config.raw.min ?? undefined}
+      max={config.raw.max ?? undefined}
       bind:value={field.value}
       type="number"
     />

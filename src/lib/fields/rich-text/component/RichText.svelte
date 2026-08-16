@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import { random } from '$lib/util/index.js';
   import { Editor, type JSONContent } from '@tiptap/core';
   import { onMount } from 'svelte';
@@ -27,12 +27,12 @@
 
   const ctx = setRichTextContext(instanceId);
 
-  const withSuggestion = $derived(hasSuggestion(config.features || defaultFeatures));
+  const withSuggestion = $derived(hasSuggestion(config.raw.features || defaultFeatures));
 
   onMount(() => {
     // Build editor configuration
     const richTextEditorConfig = buildEditorConfig({
-      features: config.features || defaultFeatures
+      features: config.raw.features || defaultFeatures
     });
 
     features = richTextEditorConfig.features;
@@ -60,8 +60,8 @@
 
 <fieldset
   class:rz-field-rich-text--standalone={standAlone}
-  class="rz-field-rich-text {config.className || ''}"
-  use:root={field}
+  class="rz-field-rich-text {config.raw.className || ''}"
+  use:fieldset={field}
 >
   <Field.Label {config} for={path || config.name} />
 

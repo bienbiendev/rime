@@ -1,9 +1,9 @@
 <script lang="ts">
+  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { root } from '$lib/panel/components/fields/root.svelte.js';
   import { Switch } from '$lib/panel/components/ui/switch/index.js';
   import { slugify } from '$lib/util/string.js';
-  import type { ToggleProps } from './props';
+  import type { ToggleProps } from './props.js';
 
   const { path, config, form }: ToggleProps = $props();
   const field = $derived(form.useField<boolean>(path, config));
@@ -14,7 +14,7 @@
   };
 </script>
 
-<fieldset class="rz-toggle-field {config.className || ''}" use:root={field}>
+<fieldset class="rz-toggle-field {config.raw.className || ''}" use:fieldset={field}>
   <div class="rz-toggle-field-wrap">
     <Switch
       data-error={field.error ? '' : null}

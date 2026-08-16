@@ -2,11 +2,12 @@ import { applyAction, deserialize } from '$app/forms';
 import { page } from '$app/state';
 import type { BuiltAreaClient, BuiltCollectionClient } from '$lib/core/config/types.js';
 import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant.js';
+import type { FormFieldBuilder } from '$lib/core/fields/builders/index.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { buildConfigMap } from '$lib/core/operations/configMap/index.js';
 import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '$lib/core/types/doc.js';
 import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
-import type { FormField, SimplerField } from '$lib/fields/types.js';
+import type { FormField } from '$lib/types.js';
 import { normalizeFieldPath } from '$lib/util/doc.js';
 import { apiUrl, random } from '$lib/util/index.js';
 import { isObjectLiteral, omit } from '$lib/util/object.js';
@@ -406,11 +407,11 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
    * to work, which doesn't hold for standalone fields like the panel's
    * password inputs (see AuthFooter.svelte), so those always pass `config`.
    */
-  function useField<TValue>(path: string, config?: SimplerField<FormField>) {
+  function useField<TValue>(path: string, config?: FormFieldBuilder<FormField>) {
     if (!config) {
       const resolved = getFieldAtPath(path, documentConfig.fields);
       if (!resolved) throw new Error(`can't find config for field : ${path}`);
-      config = resolved.raw;
+      config = resolved;
     }
 
     path = path ? normalizeFieldPath(path) : config.name;
@@ -418,24 +419,23 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     const parts = $derived(path.split('.'));
 
     const validate = (value: any) => {
-      if (config.required && config.isEmpty(value)) {
+      if (config.__required && config.__isEmpty(value)) {
         errors.set(path, 'required::required_field');
         return 'required';
       }
 
-      if (config.validate) {
-        const validated = config.validate(value, {
-          data: doc,
-          locale: locale.code,
-          id: doc.id ?? undefined,
-          operation: doc.id ? 'update' : 'create',
-          user: user.attributes,
-          config
-        });
-        if (validated !== true) {
-          errors.set(path, validated);
-          return false;
-        }
+      const validated = config.__validate(value, {
+        data: doc,
+        locale: locale.code,
+        id: doc.id ?? undefined,
+        operation: doc.id ? 'update' : 'create',
+        user: user.attributes,
+        config: config.raw
+      });
+
+      if (validated !== true) {
+        errors.set(path, validated);
+        return false;
       }
 
       if (errors.has(path)) {
@@ -479,24 +479,21 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     };
 
     const setFieldValue = async (value: any) => {
-      for (const hook of config.hooks?.beforeValidate ?? []) {
-        value = await hook(value, { config, data: doc });
-      }
+      value = await config.__beforeValidate(value, { config, data: doc });
       const valid = validate(value);
 
-      if (operation === 'update' && !config.access?.update?.(user.attributes)) {
+      if (operation === 'update' && !config.__canUpdate(user.attributes)) {
         return;
       }
+
       if (valid) {
         setValue(path, value);
-        for (const hook of config.hooks?.onChange ?? []) {
-          hook(value, {
-            siblings: getSiblings(),
-            useField,
-            useBlocks,
-            useTree
-          });
-        }
+        config.__onChange?.(value, {
+          siblings: getSiblings(),
+          useField,
+          useBlocks,
+          useTree
+        });
       }
     };
 
@@ -515,25 +512,17 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       get editable() {
         if (readOnly) return false;
         if (operation === 'create') {
-          return !!config.access?.create?.(user.attributes);
+          return !!config.__canCreate?.(user.attributes);
         } else {
-          return !!config.access?.update?.(user.attributes);
+          return !!config.__canUpdate?.(user.attributes);
         }
       },
 
       get visible() {
-        if (config.access?.read && !config.access.read(user.attributes)) {
+        if (!config.__canRead(user.attributes)) {
           return false;
         }
-        let visible = true;
-        if (config.condition) {
-          try {
-            visible = config.condition(doc, getSiblings());
-          } catch (err: any) {
-            console.error(err.message);
-          }
-        }
-        return visible;
+        return config.__condition(doc, getSiblings());
       },
 
       get error() {
@@ -541,7 +530,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       },
 
       get isEmpty() {
-        return !!config.isEmpty && config.isEmpty(getValueAtPath(path, doc));
+        return config.__isEmpty(getValueAtPath(path, doc));
       }
     };
   }

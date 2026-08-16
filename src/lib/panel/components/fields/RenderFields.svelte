@@ -37,7 +37,7 @@
       {#if field instanceof ComponentFieldBuilder}
         {@const FieldComponent = field.raw.component}
         <div data-type={field.type} class="rz-render-fields__field rz-render-fields__field--full">
-          <FieldComponent {path} config={field.raw} {form} />
+          <FieldComponent {path} config={field} {form} />
         </div>
       {:else if isPresentative(field.raw)}
         {@const Separator = field.component}
@@ -47,7 +47,7 @@
       {:else if isTabsField(field.raw)}
         {@const Tabs = field.component}
         <div data-type="tabs" class="rz-render-fields__field rz-render-fields__field--full">
-          <Tabs config={field.raw} {path} {form} />
+          <Tabs config={field} {path} {form} />
         </div>
       {:else if isFormField(field) && isNotHidden(field.raw)}
         {@const isCompact = 'layout' in field && field.layout === 'compact'}
@@ -57,7 +57,7 @@
           data-type={field.type}
           data-compact={isCompact ? '' : null}
         >
-          <FieldComponent path={path + field.name} config={field.raw} {form} />
+          <FieldComponent path={path + field.name} config={field} {form} />
         </div>
       {/if}
     {/if}

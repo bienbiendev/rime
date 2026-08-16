@@ -53,6 +53,10 @@ class PickFieldBuilder<T extends FieldWithOptions = FieldWithOptions> extends Fo
     return this;
   }
 
+  get __options(): Option[] {
+    return this.field.options;
+  }
+
   compile() {
     if (!this.field.options || !this.field.options.length) {
       throw new Error(`${this.field.name} should at least have one option`);
