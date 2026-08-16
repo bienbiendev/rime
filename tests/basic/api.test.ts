@@ -300,6 +300,55 @@ test('Should get correct offset / limit', async ({ request }) => {
 });
 
 /****************************************************/
+/* Duplicate
+/****************************************************/
+
+test('Should duplicate a page with a new id and identical field values', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const original = await request
+    .post(`${API_BASE_URL}/pages`, {
+      headers,
+      data: {
+        attributes: {
+          title: 'Duplicate source',
+          slug: 'duplicate-source',
+          template: 'basic'
+        }
+      }
+    })
+    .then((r) => r.json())
+    .then((r) => r.doc);
+
+  const response = await request.post(`${API_BASE_URL}/pages/${original.id}/duplicate`, {
+    headers
+  });
+  expect(response.status()).toBe(200);
+  const { id: duplicateId } = await response.json();
+  expect(duplicateId).toBeDefined();
+  expect(duplicateId).not.toBe(original.id);
+
+  const duplicate = await request
+    .get(`${API_BASE_URL}/pages/${duplicateId}`, { headers })
+    .then((r) => r.json())
+    .then((r) => r.doc);
+
+  expect(duplicate.attributes.title).toBe('Duplicate source (copy)');
+  expect(duplicate.attributes.template).toBe('basic');
+
+  // The original must survive untouched — duplicating is not a move.
+  const originalAfter = await request
+    .get(`${API_BASE_URL}/pages/${original.id}`, { headers })
+    .then((r) => r.json())
+    .then((r) => r.doc);
+  expect(originalAfter.attributes.title).toBe('Duplicate source');
+  expect(originalAfter.id).toBe(original.id);
+
+  await request.delete(`${API_BASE_URL}/pages/${original.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/pages/${duplicateId}`, { headers });
+});
+
+/****************************************************/
 /* Upload Collection
 /****************************************************/
 
@@ -720,6 +769,15 @@ test('Editor should not create a page', async ({ request }) => {
   expect(response.status()).toBe(403);
 });
 
+test('Editor should not duplicate a page (duplicate requires create access)', async ({
+  request
+}) => {
+  const response = await request.post(`${API_BASE_URL}/pages/${homeId}/duplicate`, {
+    headers: await signInEditor(request)
+  });
+  expect(response.status()).toBe(403);
+});
+
 test('Editor should update home', async ({ request }) => {
   const response = await request.patch(`${API_BASE_URL}/pages/${homeId}`, {
     headers: await signInEditor(request),
@@ -1039,4 +1097,142 @@ test('Should not public sign-up as staff', async ({ request }) => {
     }
   });
   expect(response.status()).toBe(401);
+});
+
+/****************************************************/
+/* Duplicate — deeply nested structure (relation
+/* inside a group, a block, a tree inside a block, and
+/* a blocks field nested inside another block), checking
+/* every relation and nested item survives the copy
+/* with its own id (relation targets untouched)
+/****************************************************/
+
+test('Should duplicate a page with nested relations, blocks, and a tree inside a block', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+
+  const mediaA = await request
+    .post(`${API_BASE_URL}/medias`, {
+      headers,
+      data: {
+        file: {
+          base64: await filePathToBase64(path.resolve(process.cwd(), 'tests/basic/landscape.jpg')),
+          filename: 'dup-nested-a.jpg'
+        },
+        alt: 'Media A'
+      }
+    })
+    .then((r) => r.json())
+    .then((r) => r.doc);
+
+  const mediaB = await request
+    .post(`${API_BASE_URL}/medias`, {
+      headers,
+      data: {
+        file: {
+          base64: await filePathToBase64(path.resolve(process.cwd(), 'tests/basic/landscape.jpg')),
+          filename: 'dup-nested-b.jpg'
+        },
+        alt: 'Media B'
+      }
+    })
+    .then((r) => r.json())
+    .then((r) => r.doc);
+
+  const original = await request
+    .post(`${API_BASE_URL}/pages`, {
+      headers,
+      data: {
+        attributes: {
+          title: 'Nested source',
+          slug: 'nested-source',
+          summary: { thumbnail: mediaA.id }
+        },
+        layout: {
+          hero: { title: 'Hero', image: mediaB.id },
+          sections: [
+            { type: 'image', image: mediaA.id },
+            {
+              type: 'keyFacts',
+              facts: [
+                { title: 'Fact one', icon: 'one', image: mediaA.id },
+                { title: 'Fact two', icon: 'two', image: mediaB.id }
+              ]
+            },
+            { type: 'black', title: 'Black section', text: [{ type: 'image', image: mediaB.id }] }
+          ]
+        }
+      }
+    })
+    .then((r) => r.json())
+    .then((r) => r.doc);
+
+  expect(original.layout.sections).toHaveLength(3);
+
+  const dupResponse = await request.post(`${API_BASE_URL}/pages/${original.id}/duplicate`, {
+    headers
+  });
+  expect(dupResponse.status()).toBe(200);
+  const { id: duplicateId } = await dupResponse.json();
+  expect(duplicateId).not.toBe(original.id);
+
+  const duplicate = await request
+    .get(`${API_BASE_URL}/pages/${duplicateId}`, { headers })
+    .then((r) => r.json())
+    .then((r) => r.doc);
+
+  // Relation nested inside a group — same target, untouched.
+  expect(duplicate.attributes.summary.thumbnail.map((ref: any) => ref.documentId)).toContain(
+    mediaA.id
+  );
+  // Relation directly on a group field.
+  expect(duplicate.layout.hero.image.map((ref: any) => ref.documentId)).toContain(mediaB.id);
+
+  expect(duplicate.layout.sections).toHaveLength(3);
+
+  // Relation on a plain block.
+  expect(duplicate.layout.sections[0].type).toBe('image');
+  expect(duplicate.layout.sections[0].image.map((ref: any) => ref.documentId)).toContain(mediaA.id);
+  expect(duplicate.layout.sections[0].id).not.toBe(original.layout.sections[0].id);
+
+  // Tree nested inside a block, three levels deep (sections.N.facts.M.image)
+  // — each fact's own relation must follow it, and every level gets a fresh id.
+  const dupKeyFacts = duplicate.layout.sections[1];
+  const origKeyFacts = original.layout.sections[1];
+  expect(dupKeyFacts.type).toBe('keyFacts');
+  expect(dupKeyFacts.id).not.toBe(origKeyFacts.id);
+  expect(dupKeyFacts.facts).toHaveLength(2);
+  expect(dupKeyFacts.facts[0].title).toBe('Fact one');
+  expect(dupKeyFacts.facts[0].image.map((ref: any) => ref.documentId)).toContain(mediaA.id);
+  expect(dupKeyFacts.facts[0].id).not.toBe(origKeyFacts.facts[0].id);
+  expect(dupKeyFacts.facts[1].title).toBe('Fact two');
+  expect(dupKeyFacts.facts[1].image.map((ref: any) => ref.documentId)).toContain(mediaB.id);
+  expect(dupKeyFacts.facts[1].id).not.toBe(origKeyFacts.facts[1].id);
+
+  // A blocks field nested inside another block — its own relation must
+  // survive too, and its id must be fresh, same as any other block.
+  const dupBlack = duplicate.layout.sections[2];
+  const origBlack = original.layout.sections[2];
+  expect(dupBlack.type).toBe('black');
+  expect(dupBlack.id).not.toBe(origBlack.id);
+  expect(dupBlack.text).toHaveLength(1);
+  expect(dupBlack.text[0].type).toBe('image');
+  expect(dupBlack.text[0].image.map((ref: any) => ref.documentId)).toContain(mediaB.id);
+  expect(dupBlack.text[0].id).not.toBe(origBlack.text[0].id);
+
+  // The original must be entirely untouched — same ids throughout.
+  const originalAfter = await request
+    .get(`${API_BASE_URL}/pages/${original.id}`, { headers })
+    .then((r) => r.json())
+    .then((r) => r.doc);
+  expect(originalAfter.layout.sections[1].facts[0].id).toBe(origKeyFacts.facts[0].id);
+  expect(
+    originalAfter.layout.sections[1].facts[0].image.map((ref: any) => ref.documentId)
+  ).toContain(mediaA.id);
+
+  await request.delete(`${API_BASE_URL}/pages/${original.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/pages/${duplicateId}`, { headers });
+  await request.delete(`${API_BASE_URL}/medias/${mediaA.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/medias/${mediaB.id}`, { headers });
 });

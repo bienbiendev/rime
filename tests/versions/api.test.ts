@@ -635,3 +635,345 @@ test('Should return one news (collection query)', async ({ request }) => {
   expect(docs[0].attributes.title).toBe('News 1.2 now published');
   expect(docs[0].versionId).toBe(secondNewsVersionId);
 });
+
+/*********************************************************
+/* Nested + versioned collection (never exercised before —
+/* Pages combines nested: true with versions: { draft: true })
+/*********************************************************/
+
+let parentPageId: string;
+let childPageId: string;
+let childPageVersionId: string;
+
+test('Should create a nested Page and publish it', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      attributes: { title: 'Parent page', slug: 'parent-page' },
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.attributes.title).toBe('Parent page');
+  expect(doc.status).toBe(VERSIONS_STATUS.PUBLISHED);
+  parentPageId = doc.id;
+});
+
+test('Should create a child Page as a draft under the parent', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      attributes: { title: 'Child page', slug: 'child-page' },
+      _parent: parentPageId
+    }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.attributes.title).toBe('Child page');
+  expect(doc._parent).toBe(parentPageId);
+  // No status supplied on create -> defaults to draft (see
+  // handle-new-version.server.ts's prepareDataForNewVersion).
+  expect(doc.status).toBe(VERSIONS_STATUS.DRAFT);
+  expect(doc.versionId).toBeDefined();
+  childPageId = doc.id;
+  childPageVersionId = doc.versionId;
+});
+
+test('Should not return the unpublished child in the public collection query', async ({
+  request
+}) => {
+  const response = await request.get(
+    `${API_BASE_URL}/pages?where[attributes.slug][equals]=child-page`
+  );
+  expect(response.status()).toBe(200);
+  const { docs } = await response.json();
+  expect(docs).toHaveLength(0);
+});
+
+test('Should publish the child page and then find it by parent', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  // A bare PATCH with no versionId targets "the published version", which
+  // doesn't exist yet for a doc that was only ever created as a draft —
+  // publishing an existing draft needs to target it explicitly, same
+  // pattern the News tests above use.
+  const publishResponse = await request.patch(
+    `${API_BASE_URL}/pages/${childPageId}?${PARAMS.VERSION_ID}=${childPageVersionId}`,
+    {
+      headers,
+      data: { status: VERSIONS_STATUS.PUBLISHED }
+    }
+  );
+  expect(publishResponse.status()).toBe(200);
+  const { doc: publishedDoc } = await publishResponse.json();
+  expect(publishedDoc.status).toBe(VERSIONS_STATUS.PUBLISHED);
+  expect(publishedDoc.versionId).toBe(childPageVersionId);
+
+  const response = await request.get(
+    `${API_BASE_URL}/pages?where[_parent][equals]=${parentPageId}`
+  );
+  expect(response.status()).toBe(200);
+  const { docs } = await response.json();
+  expect(docs).toHaveLength(1);
+  expect(docs[0].attributes.title).toBe('Child page');
+});
+
+/*********************************************************
+/* Duplicating a versioned document
+/*********************************************************/
+
+test('Should duplicate a published News as a draft copy with a new id', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const response = await request.post(`${API_BASE_URL}/news/${newsId}/duplicate`, { headers });
+  expect(response.status()).toBe(200);
+  const { id: duplicateId } = await response.json();
+  expect(duplicateId).toBeDefined();
+  expect(duplicateId).not.toBe(newsId);
+
+  // Draft, not published — duplicating a published doc must not
+  // auto-publish the copy (see duplicate.ts's prepareDuplicate).
+  const draftResponse = await request.get(
+    `${API_BASE_URL}/news/${duplicateId}?${PARAMS.DRAFT}=true`,
+    { headers }
+  );
+  expect(draftResponse.status()).toBe(200);
+  const { doc: draftDoc } = await draftResponse.json();
+  expect(draftDoc.status).toBe(VERSIONS_STATUS.DRAFT);
+  expect(draftDoc.attributes.title).toBe('News 1.2 now published (copy)');
+
+  // Unpublished, so the public/published read must 404.
+  const publishedResponse = await request.get(`${API_BASE_URL}/news/${duplicateId}`, { headers });
+  expect(publishedResponse.status()).toBe(404);
+
+  // The original must be untouched.
+  const originalResponse = await request.get(`${API_BASE_URL}/news/${newsId}`, { headers });
+  const { doc: originalDoc } = await originalResponse.json();
+  expect(originalDoc.attributes.title).toBe('News 1.2 now published');
+  expect(originalDoc.status).toBe(VERSIONS_STATUS.PUBLISHED);
+});
+
+test('Should require create access to duplicate (no credentials)', async ({ request }) => {
+  // News.access.create is admin-only — duplicate internally does a create,
+  // so it must be gated the same way (see restDuplicate's error handling).
+  const response = await request.post(`${API_BASE_URL}/news/${newsId}/duplicate`);
+  expect(response.status()).toBe(403);
+});
+
+test('Should duplicate a News that was never published (draft-only source)', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+
+  // No status supplied -> created as a draft with no published version at
+  // all. duplicate.ts's initial fetch must pass draft: true or it 404s
+  // trying to read a published version that doesn't exist.
+  const createResponse = await request.post(`${API_BASE_URL}/news`, {
+    headers,
+    data: { attributes: { title: 'Never published', slug: 'never-published' } }
+  });
+  expect(createResponse.status()).toBe(200);
+  const { doc: source } = await createResponse.json();
+  expect(source.status).toBe(VERSIONS_STATUS.DRAFT);
+
+  const dupResponse = await request.post(`${API_BASE_URL}/news/${source.id}/duplicate`, {
+    headers
+  });
+  expect(dupResponse.status()).toBe(200);
+  const { id: duplicateId } = await dupResponse.json();
+  expect(duplicateId).not.toBe(source.id);
+
+  const draftResponse = await request.get(
+    `${API_BASE_URL}/news/${duplicateId}?${PARAMS.DRAFT}=true`,
+    { headers }
+  );
+  expect(draftResponse.status()).toBe(200);
+  const { doc: draftDoc } = await draftResponse.json();
+  expect(draftDoc.status).toBe(VERSIONS_STATUS.DRAFT);
+  expect(draftDoc.attributes.title).toBe('Never published (copy)');
+
+  const sourceAfter = await request.get(`${API_BASE_URL}/news/${source.id}?${PARAMS.DRAFT}=true`, {
+    headers
+  });
+  const { doc: sourceAfterDoc } = await sourceAfter.json();
+  expect(sourceAfterDoc.attributes.title).toBe('Never published');
+});
+
+test('Should duplicate a nested child Page, keeping it under the same parent', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+
+  const dupResponse = await request.post(`${API_BASE_URL}/pages/${childPageId}/duplicate`, {
+    headers
+  });
+  expect(dupResponse.status()).toBe(200);
+  const { id: duplicateId } = await dupResponse.json();
+  expect(duplicateId).not.toBe(childPageId);
+
+  const draftResponse = await request.get(
+    `${API_BASE_URL}/pages/${duplicateId}?${PARAMS.DRAFT}=true`,
+    { headers }
+  );
+  expect(draftResponse.status()).toBe(200);
+  const { doc: draftDoc } = await draftResponse.json();
+  // _parent is preserved as-is by normalizeProps — a duplicated child stays
+  // a child of the same parent, as a sibling of the page it was copied from.
+  expect(draftDoc._parent).toBe(parentPageId);
+  expect(draftDoc.attributes.title).toBe('Child page (copy)');
+  expect(draftDoc.status).toBe(VERSIONS_STATUS.DRAFT);
+
+  // Still just the one published child — the copy is a draft, so it must
+  // not show up in the public parent query.
+  const response = await request.get(
+    `${API_BASE_URL}/pages?where[_parent][equals]=${parentPageId}`
+  );
+  const { docs } = await response.json();
+  expect(docs).toHaveLength(1);
+});
+
+test('Should duplicate a Pdf, and the copy must survive deleting the original', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const base64 = await filePathToBase64(
+    path.resolve(process.cwd(), 'tests/versions/landscape.jpg')
+  );
+
+  const createResponse = await request.post(`${API_BASE_URL}/pdf`, {
+    headers,
+    data: {
+      file: { base64, filename: 'landscape.jpg' },
+      alt: 'duplicate source pdf',
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(createResponse.status()).toBe(200);
+  const { doc: source } = await createResponse.json();
+
+  const dupResponse = await request.post(`${API_BASE_URL}/pdf/${source.id}/duplicate`, {
+    headers
+  });
+  expect(dupResponse.status()).toBe(200);
+  const { id: duplicateId } = await dupResponse.json();
+  expect(duplicateId).not.toBe(source.id);
+
+  const draftResponse = await request.get(
+    `${API_BASE_URL}/pdf/${duplicateId}?${PARAMS.DRAFT}=true`,
+    { headers }
+  );
+  expect(draftResponse.status()).toBe(200);
+  const { doc: duplicateDoc } = await draftResponse.json();
+  // filename isn't the title field here, so it's carried over unchanged —
+  // both documents share the same underlying file on disk (dedup in
+  // saveFile), which is exactly the scenario cleanUpDocumentFile's
+  // cross-document reference check exists to protect.
+  expect(duplicateDoc.filename).toBe('landscape.jpg');
+  expect(duplicateDoc.alt).toBe('duplicate source pdf');
+
+  const deleteResponse = await request.delete(`${API_BASE_URL}/pdf/${source.id}`, { headers });
+  expect(deleteResponse.status()).toBe(200);
+
+  // The duplicate — a wholly separate document — must still be intact,
+  // filename and all, after the original it shared a file with is gone.
+  const afterDeleteResponse = await request.get(
+    `${API_BASE_URL}/pdf/${duplicateId}?${PARAMS.DRAFT}=true`,
+    { headers }
+  );
+  expect(afterDeleteResponse.status()).toBe(200);
+  const { doc: survivingDoc } = await afterDeleteResponse.json();
+  expect(survivingDoc.filename).toBe('landscape.jpg');
+  expect(survivingDoc.alt).toBe('duplicate source pdf');
+
+  await request.delete(`${API_BASE_URL}/pdf/${duplicateId}`, { headers });
+});
+
+/*********************************************************
+/* maxVersions pruning (Pdf configured with maxVersions: 3)
+/*********************************************************/
+
+let pdfId: string;
+
+test('Should create a Pdf and exceed maxVersions with draft updates', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  // The pdf collection has no imageSizes/mimetype restriction — reusing the
+  // existing jpg fixture is fine, only alt is under test here.
+  const base64 = await filePathToBase64(
+    path.resolve(process.cwd(), 'tests/versions/landscape.jpg')
+  );
+
+  // Published from the start — ?draft=true means "branch a new draft from
+  // the currently published version" (see defineVersionUpdateOperation /
+  // NEW_DRAFT_FROM_PUBLISHED, which fetches with draft: false), so it 404s
+  // with nothing to branch from unless a published version already exists.
+  const createResponse = await request.post(`${API_BASE_URL}/pdf`, {
+    headers,
+    data: {
+      file: { base64, filename: 'landscape.jpg' },
+      alt: 'v0',
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(createResponse.status()).toBe(200);
+  const { doc } = await createResponse.json();
+  pdfId = doc.id;
+
+  // maxVersions is 3 — branch 5 draft versions off the published one, so
+  // pruning (which only ever touches non-published rows) has something to
+  // prune down to 3. No file in the patch body on purpose: this exercises
+  // prepareDataForNewVersion's copy-from-original-path fallback on every
+  // branch, including branches created after earlier drafts have already
+  // been pruned — a regression guard for cleanUpDocumentFile deleting a
+  // still-shared file (dedup means every version points at the same
+  // landscape.jpg) out from under the versions that still reference it.
+  for (let i = 1; i <= 5; i++) {
+    const response = await request.patch(`${API_BASE_URL}/pdf/${pdfId}?${PARAMS.DRAFT}=true`, {
+      headers,
+      data: { alt: `v${i}` }
+    });
+    expect(response.status()).toBe(200);
+  }
+
+  const versionsResponse = await request.get(
+    `${API_BASE_URL}/pdf_versions?where[and][0][ownerId][equals]=${pdfId}&where[and][1][status][not_equals]=published&sort=-updatedAt`,
+    { headers }
+  );
+  expect(versionsResponse.status()).toBe(200);
+  const { docs } = await versionsResponse.json();
+  // Only the newest maxVersions (3) unpublished versions survive.
+  expect(docs).toHaveLength(3);
+  expect(docs[0].alt).toBe('v5');
+  expect(docs[1].alt).toBe('v4');
+  expect(docs[2].alt).toBe('v3');
+
+  // The published version is never a pruning candidate — it must survive
+  // untouched regardless of maxVersions.
+  const publishedResponse = await request.get(`${API_BASE_URL}/pdf/${pdfId}`, { headers });
+  const { doc: publishedDoc } = await publishedResponse.json();
+  expect(publishedDoc.alt).toBe('v0');
+  expect(publishedDoc.status).toBe(VERSIONS_STATUS.PUBLISHED);
+});
+
+/*********************************************************
+/* Delete cascades to _versions
+/*********************************************************/
+
+test('Should remove all versions when the owning document is deleted', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const deleteResponse = await request.delete(`${API_BASE_URL}/pdf/${pdfId}`, { headers });
+  expect(deleteResponse.status()).toBe(200);
+
+  const versionsResponse = await request.get(
+    `${API_BASE_URL}/pdf_versions?where[ownerId][equals]=${pdfId}`,
+    { headers }
+  );
+  expect(versionsResponse.status()).toBe(200);
+  const { docs } = await versionsResponse.json();
+  expect(docs).toHaveLength(0);
+
+  const getResponse = await request.get(`${API_BASE_URL}/pdf/${pdfId}?${PARAMS.DRAFT}=true`, {
+    headers
+  });
+  expect(getResponse.status()).toBe(404);
+});

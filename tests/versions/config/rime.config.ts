@@ -103,7 +103,10 @@ const Pdf = Collection.create('pdf', {
   access: {
     read: () => true
   },
-  versions: { draft: true }
+  // Low maxVersions on purpose — makes the pruning test (create N drafts,
+  // confirm only the newest maxVersions unpublished ones survive) fast and
+  // deterministic instead of needing 12+ requests to exceed the default.
+  versions: { draft: true, maxVersions: 3 }
 });
 
 const Pages = Collection.create('pages', {

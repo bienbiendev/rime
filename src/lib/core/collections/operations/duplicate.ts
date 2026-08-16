@@ -33,6 +33,13 @@ export const duplicate = async (args: DuplicateArgs): Promise<string> => {
    * on the given document
    */
   function setCopyTitle(doc: Dic) {
+    // For upload collections with no real title field, asTitle falls back to
+    // 'filename' (see augmentTitle) — that's a display fallback, not a
+    // mutable title. filename must keep matching the actual file on disk
+    // (saveFile dedupes by content), so leave it alone rather than
+    // corrupting the reference with a suffix no file on disk has.
+    if (config.upload && config.asTitle === 'filename') return doc;
+
     const getTitle = () => {
       const title = getValueAtPath<string>(config.asTitle, doc);
       return isJSONContent(title)
@@ -66,8 +73,11 @@ export const duplicate = async (args: DuplicateArgs): Promise<string> => {
   // Set locale to the default one
   if (defaultLocale) rime.setLocale(defaultLocale);
 
-  // Fetch document to copy
-  const document = await collection.findById({ id, locale: defaultLocale });
+  // Fetch document to copy — draft: true, since the source document may
+  // never have been published (buildPublishedOrLatestVersionParams treats a
+  // missing draft flag as "published only" for versioned-with-draft
+  // collections, which would 404 on a draft-only source).
+  const document = await collection.findById({ id, locale: defaultLocale, draft: true });
   // Prepare data
   const data = prepareDuplicate(document, defaultLocale, false);
 
@@ -132,8 +142,18 @@ export const duplicate = async (args: DuplicateArgs): Promise<string> => {
     // Prepare data
     const data = prepareDuplicate(source, locale, true);
 
-    // Update document for this locale
-    await collection.updateById({ id: newDocument.id, data, locale });
+    // Update document for this locale — target newDocument's own version
+    // directly (versionId, not draft: true). draft: true with no versionId
+    // resolves to NEW_DRAFT_FROM_PUBLISHED, which still fetches the
+    // *published* original to branch from; newDocument was just created as
+    // a draft copy with no published version yet, so that 404s the same way
+    // an unqualified update would.
+    await collection.updateById({
+      id: newDocument.id,
+      data,
+      locale,
+      versionId: newDocument.versionId as string | undefined
+    });
   }
   // Reset event locale
   rime.setLocale(currentLocale);

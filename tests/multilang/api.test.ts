@@ -497,6 +497,44 @@ test('Should return 2 pages with only attributes slug, title and id prop', async
 });
 
 /****************************************************
+/* LOCALE-FALLBACK HOOK PROPAGATION (createMarker regression)
+/****************************************************/
+
+test('Should not double-apply a non-idempotent $beforeSave hook when propagating to other locales', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+
+  // Default locale is 'fr' — creating without a locale param writes 'fr'
+  // and then propagates the already-processed document into every other
+  // configured locale (just 'en' here).
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: {
+      attributes: {
+        title: 'Fallback hook test',
+        slug: 'fallback-hook-test',
+        createMarker: 'seed'
+      }
+    }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.locale).toBe('fr');
+  // $beforeSave ran exactly once on the primary locale's write.
+  expect(doc.attributes.createMarker).toBe('seed-created');
+
+  const enResponse = await request.get(`${API_BASE_URL}/pages/${doc.id}?locale=en`, { headers });
+  const { doc: enDoc } = await enResponse.json();
+  // createMarker isn't .localized() — same underlying column as 'fr'. If the
+  // fallback-locale propagation re-ran $beforeSave on the already-tagged
+  // value, this would read 'seed-created-created' instead.
+  expect(enDoc.attributes.createMarker).toBe('seed-created');
+
+  await request.delete(`${API_BASE_URL}/pages/${doc.id}`, { headers });
+});
+
+/****************************************************
 /* BLOCKS Localized
 /****************************************************/
 
@@ -733,6 +771,176 @@ test('Should not create a page', async ({ request }) => {
     }
   });
   expect(response.status()).toBe(403);
+});
+
+/****************************************************
+/* Duplicate — Pages here is localized but NOT versioned,
+/* the one combination not exercised by the versions/
+/* versions-multilang suites' duplicate tests
+/****************************************************/
+
+test('Should require create access to duplicate a page (no credentials)', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/pages/${homeId}/duplicate`);
+  expect(response.status()).toBe(403);
+});
+
+test('Editor should not duplicate a page (duplicate requires create access)', async ({
+  request
+}) => {
+  const response = await request.post(`${API_BASE_URL}/pages/${homeId}/duplicate`, {
+    headers: await signInEditor(request)
+  });
+  expect(response.status()).toBe(403);
+});
+
+test('Should duplicate a page keeping each locale’s own title', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const createResponse = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { attributes: { title: 'Dup FR', slug: 'dup-source' } }
+  });
+  const { doc: original } = await createResponse.json();
+  expect(original.locale).toBe('fr');
+
+  await request.patch(`${API_BASE_URL}/pages/${original.id}?locale=en`, {
+    headers,
+    data: { attributes: { title: 'Dup EN' } }
+  });
+
+  const dupResponse = await request.post(`${API_BASE_URL}/pages/${original.id}/duplicate`, {
+    headers
+  });
+  expect(dupResponse.status()).toBe(200);
+  const { id: duplicateId } = await dupResponse.json();
+  expect(duplicateId).not.toBe(original.id);
+
+  const frResponse = await request.get(`${API_BASE_URL}/pages/${duplicateId}?locale=fr`, {
+    headers
+  });
+  const { doc: frDoc } = await frResponse.json();
+  expect(frDoc.attributes.title).toBe('Dup FR (copy)');
+
+  const enResponse = await request.get(`${API_BASE_URL}/pages/${duplicateId}?locale=en`, {
+    headers
+  });
+  const { doc: enDoc } = await enResponse.json();
+  expect(enDoc.attributes.title).toBe('Dup EN (copy)');
+
+  // Non-versioned collections have no draft/published split — the copy is
+  // immediately live, and the original must be untouched by the duplicate.
+  const originalAfter = await request.get(`${API_BASE_URL}/pages/${original.id}?locale=fr`, {
+    headers
+  });
+  const { doc: originalAfterDoc } = await originalAfter.json();
+  expect(originalAfterDoc.attributes.title).toBe('Dup FR');
+
+  await request.delete(`${API_BASE_URL}/pages/${original.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/pages/${duplicateId}`, { headers });
+});
+
+test('Should duplicate a page with localized blocks, each locale keeping its own content and relation', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+
+  const mediaFr = await request
+    .post(`${API_BASE_URL}/medias`, {
+      headers,
+      data: {
+        file: {
+          base64: await filePathToBase64(
+            path.resolve(process.cwd(), 'tests/multilang/landscape.jpg')
+          ),
+          filename: 'dup-blocks-fr.jpg'
+        },
+        alt: 'FR media'
+      }
+    })
+    .then((r) => r.json())
+    .then((r) => r.doc);
+
+  const mediaEn = await request
+    .post(`${API_BASE_URL}/medias`, {
+      headers,
+      data: {
+        file: {
+          base64: await filePathToBase64(
+            path.resolve(process.cwd(), 'tests/multilang/landscape.jpg')
+          ),
+          filename: 'dup-blocks-en.jpg'
+        },
+        alt: 'EN media'
+      }
+    })
+    .then((r) => r.json())
+    .then((r) => r.doc);
+
+  // layout.components is .localized() — created (fr) with one block, then
+  // patched (en) with a *different* block, to prove the locale loop's
+  // id-remapping doesn't cross-contaminate content between locales.
+  const createResponse = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: {
+      attributes: { title: 'Blocks FR', slug: 'dup-blocks-source' },
+      layout: { components: [{ type: 'image', image: mediaFr.id, legend: 'FR legend' }] }
+    }
+  });
+  const { doc: original } = await createResponse.json();
+  expect(original.layout.components).toHaveLength(1);
+  const originalFrBlockId = original.layout.components[0].id;
+
+  const patchEnResponse = await request.patch(`${API_BASE_URL}/pages/${original.id}?locale=en`, {
+    headers,
+    data: {
+      layout: { components: [{ type: 'image', image: mediaEn.id, legend: 'EN legend' }] }
+    }
+  });
+  const { doc: originalEn } = await patchEnResponse.json();
+  const originalEnBlockId = originalEn.layout.components[0].id;
+
+  const dupResponse = await request.post(`${API_BASE_URL}/pages/${original.id}/duplicate`, {
+    headers
+  });
+  expect(dupResponse.status()).toBe(200);
+  const { id: duplicateId } = await dupResponse.json();
+
+  const frResponse = await request.get(`${API_BASE_URL}/pages/${duplicateId}?locale=fr&depth=1`, {
+    headers
+  });
+  const { doc: frDoc } = await frResponse.json();
+  expect(frDoc.layout.components).toHaveLength(1);
+  expect(frDoc.layout.components[0].legend).toBe('FR legend');
+  // Relation fields are always array-wrapped, even single (non-many) ones
+  // at depth > 0 — see transform.server.ts's flatDoc[relationPath] push.
+  expect(frDoc.layout.components[0].image.at(0).id).toBe(mediaFr.id);
+  // Localized blocks get a fresh id per locale, not reused from the source.
+  expect(frDoc.layout.components[0].id).not.toBe(originalFrBlockId);
+
+  const enResponse = await request.get(`${API_BASE_URL}/pages/${duplicateId}?locale=en&depth=1`, {
+    headers
+  });
+  const { doc: enDoc } = await enResponse.json();
+  expect(enDoc.layout.components).toHaveLength(1);
+  expect(enDoc.layout.components[0].legend).toBe('EN legend');
+  expect(enDoc.layout.components[0].image.at(0).id).toBe(mediaEn.id);
+  expect(enDoc.layout.components[0].id).not.toBe(originalEnBlockId);
+  // The two locales' copied blocks must not share an id with each other either.
+  expect(enDoc.layout.components[0].id).not.toBe(frDoc.layout.components[0].id);
+
+  // Original untouched, in both locales.
+  const originalFrAfter = await request.get(
+    `${API_BASE_URL}/pages/${original.id}?locale=fr&depth=1`,
+    { headers }
+  );
+  const { doc: originalFrAfterDoc } = await originalFrAfter.json();
+  expect(originalFrAfterDoc.layout.components[0].id).toBe(originalFrBlockId);
+  expect(originalFrAfterDoc.layout.components[0].legend).toBe('FR legend');
+
+  await request.delete(`${API_BASE_URL}/pages/${original.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/pages/${duplicateId}`, { headers });
+  await request.delete(`${API_BASE_URL}/medias/${mediaFr.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/medias/${mediaEn.id}`, { headers });
 });
 
 /****************************************************

@@ -1,4 +1,4 @@
-import { cleanupStoredFiles } from '$lib/core/collections/upload/disk/delete.server.js';
+import { cleanUpDocumentFile } from '$lib/core/collections/upload/disk/delete.server.js';
 import { saveFile } from '$lib/core/collections/upload/disk/save.server.js';
 import { Hooks } from '$lib/core/operations/hooks/index.server.js';
 import { omit } from '$lib/util/object.js';
@@ -36,7 +36,7 @@ export const processFileUpload = Hooks.beforeUpsert<'upload'>(async (args) => {
 
   if (data.file) {
     if (operation === 'update' && args.context.originalDoc) {
-      await cleanupStoredFiles({ config, rime, id: args.context.originalDoc.id });
+      await cleanUpDocumentFile({ config, rime, id: args.context.originalDoc.id });
     }
 
     const { filename, imageSizes } = await saveFile(data.file, sizesConfig!);
@@ -51,7 +51,7 @@ export const processFileUpload = Hooks.beforeUpsert<'upload'>(async (args) => {
   if (data.file === null) {
     // delete files
     if (operation === 'update' && args.context.originalDoc) {
-      await cleanupStoredFiles({ config, rime, id: args.context.originalDoc.id });
+      await cleanUpDocumentFile({ config, rime, id: args.context.originalDoc.id });
     }
     // update data for DB update
     for (const size of sizesConfig!) {

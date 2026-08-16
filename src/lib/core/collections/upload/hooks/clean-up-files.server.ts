@@ -1,4 +1,4 @@
-import { cleanupStoredFiles } from '$lib/core/collections/upload/disk/delete.server.js';
+import { cleanUpDocumentFile } from '$lib/core/collections/upload/disk/delete.server.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { Hooks } from '$lib/core/operations/hooks/index.server.js';
 import type { WithUpload } from '../util/config.js';
@@ -15,6 +15,6 @@ import type { WithUpload } from '../util/config.js';
 export const cleanUpFiles = Hooks.beforeDelete(async (args) => {
   const config = args.config as WithUpload<BuiltCollection>;
   const id = args.context.params.id || '';
-  await cleanupStoredFiles({ config, rime: args.event.locals.rime, id });
+  await cleanUpDocumentFile({ config, rime: args.event.locals.rime, id });
   return args;
 });

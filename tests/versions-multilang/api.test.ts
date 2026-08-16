@@ -892,3 +892,230 @@ test('Should return one news (collection query)', async ({ request }) => {
   expect(docs[0].attributes.title).toBe('News 1.2 now published');
   expect(docs[0].versionId).toBe(secondNewsVersionId);
 });
+
+/*********************************************************
+/* Duplicating a versioned + localized document — the
+/* locale-looping branch in duplicate.ts (id-mapping,
+/* per-locale title/status) is exercised nowhere else
+/*********************************************************/
+
+test('Should duplicate a News keeping each locale’s own title, as drafts', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const createResponse = await request.post(`${API_BASE_URL}/news`, {
+    headers,
+    data: {
+      attributes: { title: 'Multi EN', slug: 'multi-locale-dup' },
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  const { doc: original } = await createResponse.json();
+
+  await request.patch(`${API_BASE_URL}/news/${original.id}?locale=fr`, {
+    headers,
+    data: { attributes: { title: 'Multi FR' }, status: VERSIONS_STATUS.PUBLISHED }
+  });
+  await request.patch(`${API_BASE_URL}/news/${original.id}?locale=de`, {
+    headers,
+    data: { attributes: { title: 'Multi DE' }, status: VERSIONS_STATUS.PUBLISHED }
+  });
+
+  const dupResponse = await request.post(`${API_BASE_URL}/news/${original.id}/duplicate`, {
+    headers
+  });
+  expect(dupResponse.status()).toBe(200);
+  const { id: duplicateId } = await dupResponse.json();
+  expect(duplicateId).not.toBe(original.id);
+
+  const expectedTitles: [string, string][] = [
+    ['en', 'Multi EN (copy)'],
+    ['fr', 'Multi FR (copy)'],
+    ['de', 'Multi DE (copy)']
+  ];
+  for (const [locale, expectedTitle] of expectedTitles) {
+    const draftResponse = await request.get(
+      `${API_BASE_URL}/news/${duplicateId}?locale=${locale}&${PARAMS.DRAFT}=true`,
+      { headers }
+    );
+    expect(draftResponse.status()).toBe(200);
+    const { doc } = await draftResponse.json();
+    // Duplicating a published doc must not auto-publish the copy, in every
+    // locale, not just the default one (see duplicate.ts's prepareDuplicate).
+    expect(doc.status).toBe(VERSIONS_STATUS.DRAFT);
+    expect(doc.attributes.title).toBe(expectedTitle);
+  }
+
+  await request.delete(`${API_BASE_URL}/news/${original.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/news/${duplicateId}`, { headers });
+});
+
+test('Should require create access to duplicate (no credentials)', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/news/${newsId}/duplicate`);
+  expect(response.status()).toBe(403);
+});
+
+test('Should duplicate a never-published News across every locale', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  // No status supplied -> draft-only, no published version at all, in any
+  // locale. Combines both duplicate.ts gaps: the initial default-locale
+  // fetch needs draft: true (no published row to fall back to), and the
+  // per-locale loop needs newDocument's own versionId (no published row to
+  // update either).
+  const createResponse = await request.post(`${API_BASE_URL}/news`, {
+    headers,
+    data: { attributes: { title: 'Never EN', slug: 'never-published-multi' } }
+  });
+  const { doc: original } = await createResponse.json();
+  expect(original.status).toBe(VERSIONS_STATUS.DRAFT);
+  expect(original.versionId).toBeDefined();
+
+  // ?draft=true means "branch a new draft from the published version" —
+  // there isn't one here (draft-only from create), so it would 404. Target
+  // the existing draft version directly instead, same pattern as the
+  // maxVersions test above.
+  const frPatch = await request.patch(
+    `${API_BASE_URL}/news/${original.id}?locale=fr&${PARAMS.VERSION_ID}=${original.versionId}`,
+    {
+      headers,
+      data: { attributes: { title: 'Never FR' } }
+    }
+  );
+  expect(frPatch.status()).toBe(200);
+
+  const dePatch = await request.patch(
+    `${API_BASE_URL}/news/${original.id}?locale=de&${PARAMS.VERSION_ID}=${original.versionId}`,
+    {
+      headers,
+      data: { attributes: { title: 'Never DE' } }
+    }
+  );
+  expect(dePatch.status()).toBe(200);
+
+  const dupResponse = await request.post(`${API_BASE_URL}/news/${original.id}/duplicate`, {
+    headers
+  });
+  expect(dupResponse.status()).toBe(200);
+  const { id: duplicateId } = await dupResponse.json();
+  expect(duplicateId).not.toBe(original.id);
+
+  const expectedTitles: [string, string][] = [
+    ['en', 'Never EN (copy)'],
+    ['fr', 'Never FR (copy)'],
+    ['de', 'Never DE (copy)']
+  ];
+  for (const [locale, expectedTitle] of expectedTitles) {
+    const draftResponse = await request.get(
+      `${API_BASE_URL}/news/${duplicateId}?locale=${locale}&${PARAMS.DRAFT}=true`,
+      { headers }
+    );
+    expect(draftResponse.status()).toBe(200);
+    const { doc } = await draftResponse.json();
+    expect(doc.status).toBe(VERSIONS_STATUS.DRAFT);
+    expect(doc.attributes.title).toBe(expectedTitle);
+  }
+
+  await request.delete(`${API_BASE_URL}/news/${original.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/news/${duplicateId}`, { headers });
+});
+
+/*********************************************************
+/* Duplicating a nested + versioned Page in a localized app
+/* (the collection's own fields aren't .localized() here — this
+/* exercises the locale loop running over a document whose data
+/* doesn't actually vary by locale)
+/*********************************************************/
+
+test('Should duplicate a nested child Page, keeping it under the same parent', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+
+  const parentResponse = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: {
+      attributes: { title: 'ML Parent page', slug: 'ml-parent-page' },
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  const { doc: parent } = await parentResponse.json();
+
+  const childResponse = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: {
+      attributes: { title: 'ML Child page', slug: 'ml-child-page' },
+      _parent: parent.id,
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  const { doc: child } = await childResponse.json();
+  expect(child._parent).toBe(parent.id);
+
+  const dupResponse = await request.post(`${API_BASE_URL}/pages/${child.id}/duplicate`, {
+    headers
+  });
+  expect(dupResponse.status()).toBe(200);
+  const { id: duplicateId } = await dupResponse.json();
+
+  const draftResponse = await request.get(
+    `${API_BASE_URL}/pages/${duplicateId}?${PARAMS.DRAFT}=true`,
+    { headers }
+  );
+  expect(draftResponse.status()).toBe(200);
+  const { doc: draftDoc } = await draftResponse.json();
+  expect(draftDoc._parent).toBe(parent.id);
+  expect(draftDoc.attributes.title).toBe('ML Child page (copy)');
+  expect(draftDoc.status).toBe(VERSIONS_STATUS.DRAFT);
+
+  // The copy is a draft, so the public parent query must still see only
+  // the one originally-published child.
+  const response = await request.get(`${API_BASE_URL}/pages?where[_parent][equals]=${parent.id}`);
+  const { docs } = await response.json();
+  expect(docs).toHaveLength(1);
+
+  await request.delete(`${API_BASE_URL}/pages/${child.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/pages/${parent.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/pages/${duplicateId}`, { headers });
+});
+
+/*********************************************************
+/* Draft/published status is tracked per locale, not globally
+/*********************************************************/
+
+test('Should keep draft/published status independent per locale', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const createResponse = await request.post(`${API_BASE_URL}/news`, {
+    headers,
+    data: {
+      attributes: { title: 'Independence EN', slug: 'independence-test' },
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  const { doc } = await createResponse.json();
+
+  await request.patch(`${API_BASE_URL}/news/${doc.id}?locale=fr`, {
+    headers,
+    data: { attributes: { title: 'Independence FR' }, status: VERSIONS_STATUS.PUBLISHED }
+  });
+
+  // A new EN draft (not published) must not touch FR at all.
+  await request.patch(`${API_BASE_URL}/news/${doc.id}?locale=en&${PARAMS.DRAFT}=true`, {
+    headers,
+    data: { attributes: { title: 'Independence EN draft' } }
+  });
+
+  const enPublished = await request
+    .get(`${API_BASE_URL}/news/${doc.id}?locale=en`, { headers })
+    .then((r) => r.json());
+  expect(enPublished.doc.attributes.title).toBe('Independence EN');
+  expect(enPublished.doc.status).toBe(VERSIONS_STATUS.PUBLISHED);
+
+  const frPublished = await request
+    .get(`${API_BASE_URL}/news/${doc.id}?locale=fr`, { headers })
+    .then((r) => r.json());
+  expect(frPublished.doc.attributes.title).toBe('Independence FR');
+  expect(frPublished.doc.status).toBe(VERSIONS_STATUS.PUBLISHED);
+
+  await request.delete(`${API_BASE_URL}/news/${doc.id}`, { headers });
+});

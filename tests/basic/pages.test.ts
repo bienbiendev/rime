@@ -181,6 +181,69 @@ test.describe('Admin panel', () => {
   });
 });
 
+test.describe('Layout tab: group + separator + blocks persistence', () => {
+  // tab-layout.ts's exact shape — group('hero').fields(...), separator(),
+  // blocks('sections', [...]) — is the real-world config that surfaced the
+  // empty-name-key bug (separator() fields never got a name, so
+  // reduceFieldsToBlankDocument stamped prev[''] = null next to hero/sections,
+  // which corrupted the whole tab's data into looking array-like once
+  // flattened/unflattened through a real form submission — see util/doc.ts).
+  // This is a direct regression guard for that exact config shape, not the
+  // synthetic one in tests/fields.
+  test('Should persist hero group fields across the separator+blocks tab after save and reload', async ({
+    page
+  }) => {
+    await page.goto(panelUrl('sign-in'));
+    await page.locator('input[name="email"]').pressSequentially('admin@bienoubien.studio', {
+      delay: 30
+    });
+    await page.locator('input[name="password"]').pressSequentially('a&1Aa&1A', { delay: 30 });
+    await page.locator('button[type="submit"]').click();
+    await page.waitForURL(panelUrl());
+
+    await page.goto(panelUrl('pages', 'create'));
+    await page.waitForLoadState('networkidle');
+
+    await page.locator('.rz-tabs-trigger[data-value="attributes"]').click();
+    await page
+      .locator('input[name="attributes.title"]')
+      .pressSequentially('Layout persistence test', { delay: 30 });
+
+    await page.locator('.rz-tabs-trigger[data-value="layout"]').click();
+
+    const heroTrigger = page.locator('.rz-group-field__trigger').filter({ hasText: 'Hero' });
+    if ((await page.locator('input[name="layout.hero.title"]').count()) === 0) {
+      await heroTrigger.click();
+    }
+    await page
+      .locator('input[name="layout.hero.title"]')
+      .pressSequentially('Hero title', { delay: 30 });
+    await page
+      .locator('input[name="layout.hero.intro"]')
+      .pressSequentially('Hero intro', { delay: 30 });
+
+    const saveButton = page.locator('.rz-page-header__row button[type="submit"]');
+    await saveButton.click();
+    // Not just [^/]+$ — that also matches the create route itself.
+    await page.waitForURL(/\/panel\/pages\/(?!create$)[^/]+$/);
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    await page.locator('.rz-tabs-trigger[data-value="attributes"]').click();
+    await expect(page.locator('input[name="attributes.title"]')).toHaveValue(
+      'Layout persistence test'
+    );
+
+    await page.locator('.rz-tabs-trigger[data-value="layout"]').click();
+    if ((await page.locator('input[name="layout.hero.title"]').count()) === 0) {
+      await page.locator('.rz-group-field__trigger').filter({ hasText: 'Hero' }).click();
+    }
+    await expect(page.locator('input[name="layout.hero.title"]')).toHaveValue('Hero title');
+    await expect(page.locator('input[name="layout.hero.intro"]')).toHaveValue('Hero intro');
+  });
+});
+
 test.describe('Live Edit', () => {
   test('Should go to Live Panel', async ({ page }) => {
     // Navigate to the login page
