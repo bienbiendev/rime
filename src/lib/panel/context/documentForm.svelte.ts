@@ -403,7 +403,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
    * `.condition(...)`), never builder methods. `config` is only omitted by
    * callers with just a path in hand (e.g. `Group.svelte`'s `getField`), in
    * which case it's resolved from `documentConfig.fields` and unwrapped via
-   * `.raw` — the field must exist in the document's own field tree for that
+   * `.get` — the field must exist in the document's own field tree for that
    * to work, which doesn't hold for standalone fields like the panel's
    * password inputs (see AuthFooter.svelte), so those always pass `config`.
    */
@@ -419,18 +419,18 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     const parts = $derived(path.split('.'));
 
     const validate = (value: any) => {
-      if (config.__required && config.__isEmpty(value)) {
+      if (config.get.required && config.run.isEmpty(value)) {
         errors.set(path, 'required::required_field');
         return 'required';
       }
 
-      const validated = config.__validate(value, {
+      const validated = config.run.validate(value, {
         data: doc,
         locale: locale.code,
         id: doc.id ?? undefined,
         operation: doc.id ? 'update' : 'create',
         user: user.attributes,
-        config: config.raw
+        config: config.get
       });
 
       if (validated !== true) {
@@ -479,16 +479,16 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     };
 
     const setFieldValue = async (value: any) => {
-      value = await config.__beforeValidate(value, { config, data: doc });
+      value = await config.run.beforeValidate(value, { config, data: doc });
       const valid = validate(value);
 
-      if (operation === 'update' && !config.__canUpdate(user.attributes)) {
+      if (operation === 'update' && !config.run.canUpdate(user.attributes)) {
         return;
       }
 
       if (valid) {
         setValue(path, value);
-        config.__onChange?.(value, {
+        config.run.onChange?.(value, {
           siblings: getSiblings(),
           useField,
           useBlocks,
@@ -512,17 +512,17 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       get editable() {
         if (readOnly) return false;
         if (operation === 'create') {
-          return !!config.__canCreate?.(user.attributes);
+          return !!config.run.canCreate?.(user.attributes);
         } else {
-          return !!config.__canUpdate?.(user.attributes);
+          return !!config.run.canUpdate?.(user.attributes);
         }
       },
 
       get visible() {
-        if (!config.__canRead(user.attributes)) {
+        if (!config.run.canRead(user.attributes)) {
           return false;
         }
-        return config.__condition(doc, getSiblings());
+        return config.run.condition(doc, getSiblings());
       },
 
       get error() {
@@ -530,7 +530,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       },
 
       get isEmpty() {
-        return config.__isEmpty(getValueAtPath(path, doc));
+        return config.run.isEmpty(getValueAtPath(path, doc));
       }
     };
   }
@@ -710,7 +710,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       let data = { ...defaultLocaleDoc, locale: locale.code };
       const configMap = buildConfigMap(defaultLocaleDoc, documentConfig.fields);
       for (const [key, field] of Object.entries(configMap)) {
-        if (field.__localized) {
+        if (field.get.localized) {
           let value = getValueAtPath<Dic[]>(key, data);
           value = removeIds(value);
           data = setValueAtPath(key, data, value);

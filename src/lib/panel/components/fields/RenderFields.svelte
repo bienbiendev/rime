@@ -20,7 +20,7 @@
   const user = getUserContext();
 
   const authorizedFields = $derived(
-    fields.filter((field) => field.__canRead(user.attributes, { id: form.values.id }))
+    fields.filter((field) => field.run.canRead(user.attributes, { id: form.values.id }))
   );
 
   const path = $derived(initialPath === '' ? '' : `${initialPath}.`);
@@ -33,27 +33,27 @@
 
 <div class="rz-render-fields">
   {#each authorizedFields as field, index (index)}
-    {#if !form.isLive || (form.isLive && isLiveField(field.raw))}
+    {#if !form.isLive || (form.isLive && isLiveField(field.get))}
       {#if field instanceof ComponentFieldBuilder}
-        {@const FieldComponent = field.raw.component}
+        {@const FieldComponent = field.get.component}
         <div data-type={field.type} class="rz-render-fields__field rz-render-fields__field--full">
           <FieldComponent {path} config={field} {form} />
         </div>
-      {:else if isPresentative(field.raw)}
+      {:else if isPresentative(field.get)}
         {@const Separator = field.component}
         <div data-type={field.type} class="rz-render-fields__field rz-render-fields__field--full">
           <Separator />
         </div>
-      {:else if isTabsField(field.raw)}
+      {:else if isTabsField(field.get)}
         {@const Tabs = field.component}
         <div data-type="tabs" class="rz-render-fields__field rz-render-fields__field--full">
           <Tabs config={field} {path} {form} />
         </div>
-      {:else if isFormField(field) && isNotHidden(field.raw)}
-        {@const isCompact = 'layout' in field && field.layout === 'compact'}
+      {:else if isFormField(field) && isNotHidden(field)}
+        {@const isCompact = 'layout' in field.get && field.get.layout === 'compact'}
         {@const FieldComponent = field.component}
         <div
-          class="rz-render-fields__field {widthClassModifier(field.raw)}"
+          class="rz-render-fields__field {widthClassModifier(field.get)}"
           data-type={field.type}
           data-compact={isCompact ? '' : null}
         >

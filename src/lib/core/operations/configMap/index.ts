@@ -23,9 +23,9 @@ export const buildConfigMap = (
 
     for (const field of fields) {
       if (field instanceof TabsBuilder) {
-        for (const tab of field.__tabs) {
+        for (const tab of field.get.tabs) {
           if (tab.name in data) {
-            traverseData(data[tab.name], tab.__fields, tab.name);
+            traverseData(data[tab.name], tab.get.fields, tab.name);
           }
         }
         continue;
@@ -43,9 +43,9 @@ export const buildConfigMap = (
         const blocks = value;
         for (const [index, block] of blocks.entries()) {
           try {
-            const blockConfig = field.__blocks.find((b) => b.name === block.type);
+            const blockConfig = field.get.blocks.find((b) => b.name === block.type);
             if (blockConfig) {
-              traverseData(block, blockConfig.__fields, `${path}.${index}`);
+              traverseData(block, blockConfig.get.fields, `${path}.${index}`);
             }
           } catch {
             console.warn(
@@ -57,7 +57,7 @@ export const buildConfigMap = (
         const treeMap = buildTreeFieldsMap(field, value, path);
         map = { ...map, ...treeMap };
       } else if (field instanceof GroupFieldBuilder) {
-        traverseData(value, field.__fields, path);
+        traverseData(value, field.get.fields, path);
       }
     }
   };

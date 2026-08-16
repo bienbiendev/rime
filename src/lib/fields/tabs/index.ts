@@ -28,10 +28,6 @@ export class TabsBuilder extends FieldBuilder<TabsField> {
       cell: this.cell || undefined
     };
   }
-
-  get __tabs(): TabBuilder[] {
-    return this.field.tabs;
-  }
 }
 
 export class TabBuilder {
@@ -56,11 +52,7 @@ export class TabBuilder {
     return this;
   }
 
-  get __fields(): FieldBuilder<Field>[] {
-    return this.#tab.fields;
-  }
-
-  get raw() {
+  get get() {
     return { ...this.#tab };
   }
 

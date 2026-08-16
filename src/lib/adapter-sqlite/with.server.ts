@@ -104,7 +104,7 @@ export const buildWithParam = (args: {
       }
     } else if (fieldConfig) {
       // Handle regular fields
-      if (fieldConfig.__localized && locale) {
+      if (fieldConfig.get.localized && locale) {
         const localesTableName = withLocalesSuffix(slug);
         if (localesTableName in tables) {
           const tableLocales = tables[localesTableName];

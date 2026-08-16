@@ -14,14 +14,14 @@
 </script>
 
 <fieldset
-  class="rz-field-radio rz-field-radio--{config.raw.layout} {config.raw.className || ''}"
+  class="rz-field-radio rz-field-radio--{config.get.layout} {config.get.className || ''}"
   use:fieldset={field}
 >
   <Field.Label {config} for={path || config.name} />
 
-  {#if config.raw.layout === 'row'}
+  {#if config.get.layout === 'row'}
     <RadioRowGroup.Root bind:value={field.value} disabled={!field.editable}>
-      {#each config.__options as option, index (index)}
+      {#each config.get.options as option, index (index)}
         <div class="rz-radio__option">
           <RadioRowGroup.Item value={option.value} id="{fieldId}-{index}" class="rz-radio__input">
             {option.label || capitalize(option.value)}
@@ -31,7 +31,7 @@
     </RadioRowGroup.Root>
   {:else}
     <RadioGroup.Root bind:value={field.value} class="rz-radio" disabled={!field.editable}>
-      {#each config.__options as option, index (index)}
+      {#each config.get.options as option, index (index)}
         <div class="rz-radio__option">
           <RadioGroup.Item value={option.value} id="{fieldId}-{index}" class="rz-radio__input" />
           <Label class="rz-radio__label" for="{fieldId}-{index}">

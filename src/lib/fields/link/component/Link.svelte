@@ -32,7 +32,7 @@
 
   const primitiveTypes = ['url', 'email', 'tel', 'anchor'];
   const field = $derived(form.useField<Link>(path, config));
-  const linkTypes = $derived(config.__types);
+  const linkTypes = $derived(config.get.types);
   const initial = $derived(path ? form.getRawValue<Link>(path) : null);
 
   let initialLinkType = $derived(initial?.type || linkTypes[0]);
@@ -99,8 +99,8 @@
 </script>
 
 <fieldset
-  class="rz-link-field {config.className}"
-  data-compact={config.raw.layout === 'compact' ? '' : null}
+  class="rz-link-field {config.get.className}"
+  data-compact={config.get.layout === 'compact' ? '' : null}
   use:fieldset={field}
 >
   <Field.Label {config} for={path || config.name} />

@@ -159,7 +159,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
     // Handle relation property queries (e.g., attributes.author.name)
     // by building a subquery on the related collection
     const buildRelationPropertyCondition = () => {
-      const relatedSlug = fieldConfig.__relationTo;
+      const relatedSlug = fieldConfig.get.relationTo;
       const relatedTable = getTable(relatedSlug as any);
 
       // Build a where clause for the related collection using the same operator/value
@@ -194,7 +194,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
           and(
             inArray(relsTable[`${relatedSlug}Id`], matchingRelatedIds),
             eq(relsTable.path, matchedPrefix),
-            ...(fieldConfig.__localized ? [eq(relsTable.locale, locale)] : [])
+            ...(fieldConfig.get.localized ? [eq(relsTable.locale, locale)] : [])
           )
         );
 
@@ -213,7 +213,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
     // Only enforce the restriction for direct relation field queries.
     // If this is a relation property query (e.g. attributes.author.name) we allow
     // any operator because those will be applied to the related collection.
-    if (fieldConfig.__many && !supportedRelationManyOperators.includes(operator)) {
+    if (fieldConfig.get.many && !supportedRelationManyOperators.includes(operator)) {
       const unsupportedMessage = `the operator "${operator}" is not supported for multi-valued relation field "${column}" in ${documentConfig.slug} document`;
       logger.warn(unsupportedMessage);
       // Return a condition that will always be false
@@ -222,9 +222,9 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 
     // Build relation condition
     const [to, localized, many] = [
-      fieldConfig.__relationTo,
-      fieldConfig.__localized,
-      fieldConfig.__many
+      fieldConfig.get.relationTo,
+      fieldConfig.get.localized,
+      fieldConfig.get.many
     ];
     const relsTableName = `${slug}Rels`;
     const relsTable = getTable(relsTableName);

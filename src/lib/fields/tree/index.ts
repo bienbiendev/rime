@@ -35,10 +35,6 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
     return this;
   }
 
-  get __fields(): FieldBuilder<Field>[] {
-    return this.field.fields;
-  }
-
   addItemLabel(label: string) {
     this.field.addItemLabel = label;
     return this;

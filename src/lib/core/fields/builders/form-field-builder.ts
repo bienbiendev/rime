@@ -1,8 +1,10 @@
 import type { FieldPanelTableConfig } from '$lib/types.js';
 import { capitalize } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
+import type { RequestEvent } from '@sveltejs/kit';
 import cloneDeep from 'clone-deep';
 import type {
+  DefaultValueFn,
   FieldAccess,
   FieldHook,
   FieldHookClient,
@@ -12,10 +14,30 @@ import type {
   FieldWidth,
   FormField
 } from '../../../fields/types.js';
-import { FieldBuilder } from './field-builder.js';
+import { FieldBuilder, type FieldRun } from './field-builder.js';
 
 /** Adapter-agnostic storage primitive — column syntax only, not default-value semantics. */
 export type DataType = 'text' | 'boolean' | 'number' | 'timestamp' | 'json';
+
+/** Method-syntax, same reasoning as `FieldRun` — keeps `run`'s params
+ *  bivariant across concrete field types so e.g. `SlugFieldBuilder` still
+ *  satisfies a prop typed `FormFieldBuilder<FormField>`. */
+export type FormFieldRun<T extends FormField> = FieldRun & {
+  isEmpty(value: unknown): boolean;
+  validate(value: unknown, context: Parameters<FieldValidationFunc<T>>[1]): true | string;
+  condition(doc: Dic, siblings: Dic): boolean;
+  onChange(value: unknown, context: Parameters<FieldHookClient>[1]): void;
+  beforeRead(value: unknown, context: Omit<FieldHookContext<T>, 'config'>): Promise<any>;
+  beforeSave(value: unknown, context: FieldHookContext<T>): Promise<any>;
+  beforeValidate(value: unknown, context: Parameters<FieldHookShared>[1]): Promise<any>;
+  /** Resolves `field.defaultValue` — calling it if it's a `DefaultValueFn`,
+   *  returning it as-is otherwise. Every field type stores `defaultValue` as
+   *  plain data (never a fluent-setter name collision on `.field` itself),
+   *  but several concrete builders (Select, Link, Slug, Relation) *do* expose
+   *  a `.defaultValue(...)` fluent setter — bare `config.defaultValue` on
+   *  those would silently return that setter, not the stored value. */
+  defaultValue(context?: { event?: RequestEvent }): unknown;
+};
 
 export type ReferentialAction = 'cascade' | 'set null' | 'restrict' | 'no action';
 
@@ -60,10 +82,6 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
-  get __label(): string {
-    return this.field.label || capitalize(this.field.name);
-  }
-
   hidden() {
     this.field.hidden = true;
     return this;
@@ -74,37 +92,14 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
-  override get __localized(): boolean {
-    return !!this.field.localized;
-  }
-
   validate(validateFunction: FieldValidationFunc<T>) {
     this.field.validate = validateFunction as FieldValidationFunc<T>;
     return this;
   }
 
-  __validate(value: unknown, context: Parameters<FieldValidationFunc<T>>[1]): true | string {
-    if (this.field.validate) {
-      return this.field.validate(value, { ...context, config: this.field });
-    }
-    return true;
-  }
-
   condition(conditionFunction: (doc: Dic, siblings: Dic) => boolean) {
     this.field.condition = conditionFunction;
     return this;
-  }
-
-  __condition(doc: Dic, siblings: Dic): boolean {
-    if (this.field.condition) {
-      try {
-        return this.field.condition(doc, siblings);
-      } catch (err: any) {
-        console.error(err.message);
-        return false;
-      }
-    }
-    return true;
   }
 
   table(params?: FieldPanelTableConfig | number) {
@@ -128,23 +123,6 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
-  get __required(): boolean {
-    return !!this.field.required;
-  }
-
-  get __defaultValue() {
-    return this.field.defaultValue;
-  }
-
-  /** `isEmpty` is a per-field-type predicate *function* stored as plain data
-   *  (set in this constructor, overridden by some leaf fields), not a fluent
-   *  setter — there's no name collision here, just no method wrapping it
-   *  yet. Exposed as a method for the same reason as __root/__localized:
-   *  callers shouldn't need `.raw.isEmpty(value)` to invoke it. */
-  __isEmpty(value: unknown): boolean {
-    return this.field.isEmpty(value);
-  }
-
   /**
    * Force the field to be on the root table — usefull for fields that
    * should not be versioned (ex: _parent for nested structures should
@@ -156,25 +134,29 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
-  override get __root(): boolean {
-    return !!this.field._root;
+  /** `label`/`localized`/`root`/`required` are the only properties that need
+   *  anything beyond a plain `this.field` read (a fallback default, or a
+   *  boolean coercion) — everything else a concrete field type adds
+   *  (Group's `fields`, Relation's `relationTo`, Select's `options`, ...)
+   *  comes through unchanged via the spread, no per-subclass override needed. */
+  override get get(): T & {
+    localized: boolean;
+    root: boolean;
+    label: string;
+    required: boolean;
+  } {
+    return {
+      ...this.field,
+      localized: !!this.field.localized,
+      root: !!this.field._root,
+      label: this.field.label || capitalize(this.field.name),
+      required: !!this.field.required
+    } as T & { localized: boolean; root: boolean; label: string; required: boolean };
   }
 
   access(access: { create?: FieldAccess; read?: FieldAccess; update?: FieldAccess }) {
     this.field.access = { ...this.field.access, ...access };
     return this;
-  }
-
-  __canRead(...args: Parameters<FieldAccess>): boolean {
-    return !!this.field.access?.read?.(...args);
-  }
-
-  __canCreate(...args: Parameters<FieldAccess>): boolean {
-    return !!this.field.access?.create?.(...args);
-  }
-
-  __canUpdate(...args: Parameters<FieldAccess>): boolean {
-    return !!this.field.access?.update?.(...args);
   }
 
   onChange(hook: FieldHookClient) {
@@ -183,10 +165,70 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
-  __onChange(value: unknown, context: Parameters<FieldHookClient>[1]): void {
-    for (const hook of this.field.hooks?.onChange ?? []) {
-      hook(value, context);
-    }
+  /** Behavior the builder runs on your behalf — invoking a stored function or
+   *  hook list, not a data read (see `.get` for that). */
+  override get run(): FormFieldRun<T> {
+    return {
+      isEmpty: (value: unknown): boolean => this.field.isEmpty(value),
+      validate: (value: unknown, context: Parameters<FieldValidationFunc<T>>[1]): true | string => {
+        if (this.field.validate) {
+          return this.field.validate(value, { ...context, config: this.field });
+        }
+        return true;
+      },
+      condition: (doc: Dic, siblings: Dic): boolean => {
+        if (this.field.condition) {
+          try {
+            return this.field.condition(doc, siblings);
+          } catch (err: any) {
+            console.error(err.message);
+            return false;
+          }
+        }
+        return true;
+      },
+      canRead: (...args: Parameters<FieldAccess>): boolean => !!this.field.access?.read?.(...args),
+      canCreate: (...args: Parameters<FieldAccess>): boolean =>
+        !!this.field.access?.create?.(...args),
+      canUpdate: (...args: Parameters<FieldAccess>): boolean =>
+        !!this.field.access?.update?.(...args),
+      onChange: (value: unknown, context: Parameters<FieldHookClient>[1]): void => {
+        for (const hook of this.field.hooks?.onChange ?? []) {
+          hook(value, context);
+        }
+      },
+      beforeRead: async (
+        value: unknown,
+        context: Omit<FieldHookContext<T>, 'config'>
+      ): Promise<any> => {
+        let result = value;
+        for (const hook of this.field.hooks?.beforeRead ?? []) {
+          result = await hook(result, { ...context, config: this.field });
+        }
+        return result;
+      },
+      beforeSave: async (value: unknown, context: FieldHookContext<T>): Promise<any> => {
+        let result = value;
+        for (const hook of this.field.hooks?.beforeSave ?? []) {
+          result = await hook(result, { ...context, config: this.field });
+        }
+        return result;
+      },
+      beforeValidate: async (
+        value: unknown,
+        context: Parameters<FieldHookShared>[1]
+      ): Promise<any> => {
+        let result = value;
+        for (const hook of this.field.hooks?.beforeValidate ?? []) {
+          result = await hook(result, { ...context, config: this.field });
+        }
+        return result;
+      },
+      defaultValue: (context: { event?: RequestEvent } = {}): unknown => {
+        const value = this.field.defaultValue;
+        return typeof value === 'function' ? (value as DefaultValueFn<unknown>)(context) : value;
+      }
+    };
   }
 
   hint(hint: string) {
@@ -220,39 +262,15 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
-  async $__beforeRead(value: unknown, context: Omit<FieldHookContext<T>, 'config'>): Promise<any> {
-    let result = value;
-    for (const hook of this.field.hooks?.beforeRead ?? []) {
-      result = await hook(result, { ...context, config: this.field });
-    }
-    return result;
-  }
-
   $beforeSave(hook: FieldHook<T>) {
     this.field.hooks!.beforeSave ??= [];
     this.field.hooks!.beforeSave.push(hook);
     return this;
   }
 
-  async $__beforeSave(value: unknown, context: FieldHookContext<T>): Promise<any> {
-    let result = value;
-    for (const hook of this.field.hooks?.beforeSave ?? []) {
-      result = await hook(result, { ...context, config: this.field });
-    }
-    return result;
-  }
-
   beforeValidate(hook: FieldHookShared) {
     this.field.hooks!.beforeValidate ??= [];
     this.field.hooks!.beforeValidate.push(hook);
     return this;
-  }
-
-  async __beforeValidate(value: unknown, context: Parameters<FieldHookShared>[1]): Promise<any> {
-    let result = value;
-    for (const hook of this.field.hooks?.beforeValidate ?? []) {
-      result = await hook(result, { ...context, config: this.field });
-    }
-    return result;
   }
 }

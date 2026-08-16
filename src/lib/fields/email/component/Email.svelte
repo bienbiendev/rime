@@ -22,8 +22,8 @@
 </script>
 
 <fieldset
-  data-compact={config.raw.layout === 'compact' ? '' : null}
-  class="{config.className} rz-email-field"
+  data-compact={config.get.layout === 'compact' ? '' : null}
+  class="{config.get.className} rz-email-field"
   use:fieldset={field}
 >
   <Field.Label {config} for={path || config.name} />
@@ -33,7 +33,7 @@
       id={path || config.name}
       name={path || config.name}
       autocomplete="off"
-      placeholder={config.raw.placeholder || config.__label}
+      placeholder={config.get.placeholder || config.get.label}
       data-error={showError && field.error ? '' : null}
       value={field.value}
       onblur={onBlur}

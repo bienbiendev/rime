@@ -116,7 +116,7 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
     if (!emailField && documentConfig.auth.type !== 'apiKey')
       errors.push(`Field email is missing in collection ${documentConfig.slug}`);
     if (!nameField) errors.push(`Field name is missing in collection ${documentConfig.slug}`);
-    if (!rolesField.__many)
+    if (!rolesField.get.many)
       errors.push(
         `Field roles must have "many" enabled : select('roles').options(...).many(), even with a single option`
       );
@@ -138,9 +138,9 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
 
   const validateRelationField = (field: RelationFieldBuilder) => {
     const collectionsSlugs = (config.collections || []).map((c) => c.slug);
-    if (!collectionsSlugs.includes(field.__relationTo)) {
+    if (!collectionsSlugs.includes(field.get.relationTo)) {
       errors.push(
-        `Relation field ${field.name} references unknown collection ${field.__relationTo}, in ${documentConfig.type} ${documentConfig.slug}`
+        `Relation field ${field.name} references unknown collection ${field.get.relationTo}, in ${documentConfig.type} ${documentConfig.slug}`
       );
     }
   };
@@ -165,7 +165,7 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
     }
 
     function validateTabs(field: TabsBuilder) {
-      const duplicates = hasDuplicates(field.__tabs.map((t) => t.name));
+      const duplicates = hasDuplicates(field.get.tabs.map((t) => t.name));
       if (duplicates.length) {
         errors.push(`Dupplicate tab name ${duplicates} in ${documentConfig.slug}`);
       }
@@ -175,8 +175,8 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
       // Recursive check first into Tabs since tabs are not Formfields
       if (field instanceof TabsBuilder) {
         validateTabs(field);
-        for (const tab of field.__tabs) {
-          validateFields(tab.__fields);
+        for (const tab of field.get.tabs) {
+          validateFields(tab.get.fields);
         }
       }
 
@@ -186,7 +186,7 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
       }
 
       // Check that a field wich has field._root = true is not localized
-      if (field.__root && field.__localized) {
+      if (field.get.root && field.get.localized) {
         errors.push(
           `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with _root = true, can't be localized`
         );
@@ -201,7 +201,7 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
 
       // Recursive check into Blocks
       if (field instanceof BlocksBuilder) {
-        for (const block of field.__blocks) {
+        for (const block of field.get.blocks) {
           if (block.name in registeredBlocks) {
             const blockDefinedButDiffer =
               JSON.stringify(registeredBlocks[block.name]) !== JSON.stringify(block);
@@ -211,15 +211,15 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
           } else {
             registeredBlocks[block.name] = block;
           }
-          validateFields(block.__fields.filter(isFormField));
-          validateBlockField(block.__fields.filter(isFormField), block.name);
+          validateFields(block.get.fields.filter(isFormField));
+          validateBlockField(block.get.fields.filter(isFormField), block.name);
         }
         // Recursive check into Tree
       } else if (field instanceof TreeBuilder) {
-        validateFields(field.__fields.filter(isFormField));
+        validateFields(field.get.fields.filter(isFormField));
         // Recursive check into Tabs
       } else if (field instanceof GroupFieldBuilder) {
-        validateFields(field.__fields.filter(isFormField));
+        validateFields(field.get.fields.filter(isFormField));
         // Check relation field
       } else if (field instanceof RelationFieldBuilder) {
         validateRelationField(field);

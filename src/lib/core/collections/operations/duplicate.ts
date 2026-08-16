@@ -126,7 +126,7 @@ export const duplicate = async (args: DuplicateArgs): Promise<string> => {
         }
       };
 
-      handleField[field.__localized ? 'localized' : 'unlocalized']();
+      handleField[field.get.localized ? 'localized' : 'unlocalized']();
     }
 
     // Prepare data

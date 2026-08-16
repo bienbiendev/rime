@@ -53,7 +53,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
       const baseRootFields = [date('createdAt').hidden(), date('updatedAt').hidden()];
 
       // Split fields that should be used on the root table
-      const rootFieldsFromConfig = [...collection.fields].filter((f) => f.__root);
+      const rootFieldsFromConfig = [...collection.fields].filter((f) => f.get.root);
       const rootFields = [...rootFieldsFromConfig, ...baseRootFields];
 
       // Build the main root buildRootTable with only _root fields and created/updatedAt
@@ -108,7 +108,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
     } = await buildRootTable({
       blocksRegister,
       fields: collection.versions
-        ? collection.fields.filter((f) => !f.__root)
+        ? collection.fields.filter((f) => !f.get.root)
         : collection.fields,
       rootName: rootTableName,
       locales: config.localization?.locales || [],

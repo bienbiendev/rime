@@ -37,7 +37,7 @@
         if (!el.classList.contains('rz-tree-item')) return false;
         const targetDepth = parseInt(to.el.dataset.treeDepth || '0');
         const childrenCount = parseInt(el.dataset.treeChildren || '0');
-        return targetDepth + childrenCount <= config.raw.maxDepth;
+        return targetDepth + childrenCount <= config.get.maxDepth;
       }
     },
     onStart: () => (sorting = true),
@@ -93,7 +93,7 @@
   });
 </script>
 
-<fieldset class="rz-field-tree {config.raw.className}" use:fieldset={field}>
+<fieldset class="rz-field-tree {config.get.className}" use:fieldset={field}>
   <Field.Error error={field.error} />
 
   <Field.Label {config} />
@@ -119,12 +119,12 @@
       addItem={add}
       class="rz-tree__add-button"
       size={nested ? 'sm' : 'default'}
-      fields={config.__fields}
+      fields={config.get.fields}
     >
-      {config.raw.addItemLabel}
+      {config.get.addItemLabel}
     </AddItemButton>
 
-    {#if locale && locale.code !== locale.defaultCode && config.__localized}
+    {#if locale && locale.code !== locale.defaultCode && config.get.localized}
       <Button size="sm" onclick={field.setValueFromDefaultLocale} variant="secondary">
         {t__('fields.get_data_from')}
         {locale.defaultCode}

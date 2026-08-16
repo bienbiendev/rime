@@ -74,10 +74,6 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
     return this;
   }
 
-  get __blocks(): BlockBuilder[] {
-    return this.field.blocks;
-  }
-
   override compile() {
     return {
       ...this.field,
@@ -140,11 +136,7 @@ class BlockBuilder {
     return this;
   }
 
-  get __fields(): FieldBuilder<Field>[] {
-    return this.block.fields;
-  }
-
-  get raw() {
+  get get() {
     return { ...this.block };
   }
 

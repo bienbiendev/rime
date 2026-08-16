@@ -16,7 +16,7 @@ export function extractBlocks({ data, configMap }: ExtractBlocksArgs) {
     if (config.type === 'blocks') {
       const value = getValueAtPath<GenericBlock[]>(path, data);
 
-      const isEmptyValue = config.__isEmpty(value);
+      const isEmptyValue = config.run.isEmpty(value);
 
       if (value && !isEmptyValue) {
         value.forEach((block: Partial<GenericBlock>, index: number) => {

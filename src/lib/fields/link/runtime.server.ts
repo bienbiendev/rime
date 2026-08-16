@@ -8,8 +8,8 @@ import type { LinkFieldBuilder } from './index.js';
 import type { Link } from './types.js';
 
 export const toType: ToType<LinkFieldBuilder> = (field: LinkFieldBuilder) => {
-  return `${field.name}${field.__required ? '' : '?'}: {
-		type: ${field.raw.types.map((t) => `'${t}'`).join(' | ')};
+  return `${field.name}${field.get.required ? '' : '?'}: {
+		type: ${field.get.types.map((t) => `'${t}'`).join(' | ')};
 		value: string | null;
 		target: '_self' | '_blank';
 		url?: string;

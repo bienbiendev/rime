@@ -23,15 +23,15 @@ export const setDefaultValues = Hooks.beforeUpsert(async (args) => {
 
     let isEmpty;
     const shouldAddDefault =
-      operation === 'create' || (operation === 'update' && config.__required);
+      operation === 'create' || (operation === 'update' && config.get.required);
 
     try {
-      isEmpty = config.__isEmpty(value);
+      isEmpty = config.run.isEmpty(value);
     } catch {
       isEmpty = false;
       logger.warn(`Error in config.isEmpty for field ${key}`);
     }
-    if (shouldAddDefault && isEmpty && config.__defaultValue !== undefined) {
+    if (shouldAddDefault && isEmpty && config.get.defaultValue !== undefined) {
       value = await getDefaultValue({ key, config, adapter: rime.adapter });
       output = setValueAtPath(key, output, value);
     }
@@ -61,7 +61,7 @@ const defaultRelationValue = async (
   const buildRelation = async (defaultValue: any) => {
     let condition;
     //@TODO encapsulate this into adapter.relation.something
-    const relationTable = adapter.tables[config.__relationTo];
+    const relationTable = adapter.tables[config.get.relationTo];
     if (typeof defaultValue === 'string') {
       condition = eq(relationTable.id, defaultValue);
     } else if (Array.isArray(defaultValue)) {
@@ -74,24 +74,19 @@ const defaultRelationValue = async (
 
     return existing.map(({ documentId }, index) => ({
       id: null,
-      relationTo: config.__relationTo,
+      relationTo: config.get.relationTo,
       path: key,
       position: index,
       documentId: documentId
     }));
   };
 
-  return await buildRelation(config.__defaultValue);
+  return await buildRelation(config.run.defaultValue({ event: getRequestEvent() }));
 };
 
 export const getDefaultValue: GetDefaultValue = async ({ key, config, adapter }) => {
   if (config instanceof RelationFieldBuilder) {
     return await defaultRelationValue(config, key, adapter);
-  } else {
-    const defaultValue = config.__defaultValue;
-    if (typeof defaultValue === 'function') {
-      return defaultValue({ event: getRequestEvent() });
-    }
-    return defaultValue;
   }
+  return config.run.defaultValue({ event: getRequestEvent() });
 };

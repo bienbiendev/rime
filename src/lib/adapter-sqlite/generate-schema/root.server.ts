@@ -68,8 +68,8 @@ const buildRootTable = async ({
 
     const checkLocalized = (field: FormFieldBuilder<FormField>) => {
       return (
-        (withLocalized && field.__localized) ||
-        (!withLocalized && !field.__localized) ||
+        (withLocalized && field.get.localized) ||
+        (!withLocalized && !field.get.localized) ||
         withLocalized === undefined
       );
     };
@@ -77,27 +77,31 @@ const buildRootTable = async ({
     for (const field of fields) {
       if (field instanceof GroupFieldBuilder) {
         const groupPath = parentPath ? `${parentPath}__${field.name}` : field.name;
-        const groupFields = await generateFieldsTemplates(field.__fields, withLocalized, groupPath);
+        const groupFields = await generateFieldsTemplates(
+          field.get.fields,
+          withLocalized,
+          groupPath
+        );
         templates = [...templates, ...groupFields];
       } else if (field instanceof TabsBuilder) {
-        for (const tab of field.__tabs) {
+        for (const tab of field.get.tabs) {
           const tabPath = parentPath ? `${parentPath}__${tab.name}` : tab.name;
-          const tabFields = await generateFieldsTemplates(tab.__fields, withLocalized, tabPath);
+          const tabFields = await generateFieldsTemplates(tab.get.fields, withLocalized, tabPath);
           templates = [...templates, ...tabFields];
         }
       } else if (field instanceof RelationFieldBuilder) {
-        if (field.__localized) {
+        if (field.get.localized) {
           relationFieldsHasLocale = true;
         }
         relationFieldsMap = {
           ...relationFieldsMap,
           [field.name]: {
-            to: field.__relationTo,
-            localized: field.__localized
+            to: field.get.relationTo,
+            localized: field.get.localized
           }
         };
       } else if (field instanceof BlocksBuilder) {
-        for (const block of field.__blocks) {
+        for (const block of field.get.blocks) {
           const blockTableName = `${rootName}Blocks${p(block.name)}`;
           if (!blocksRegister.includes(blockTableName)) {
             // Add the blocks as a relation of the root collection
@@ -113,7 +117,7 @@ const buildRootTable = async ({
               relationFieldsHasLocale: nestedRelationFieldsHasLocale
             } = await buildRootTable({
               blocksRegister,
-              fields: block.__fields,
+              fields: block.get.fields,
               tableName: blockTableName,
               hasParent: true,
               relationsDic,
@@ -143,7 +147,7 @@ const buildRootTable = async ({
             relationFieldsHasLocale: nestedRelationFieldsHasLocale
           } = await buildRootTable({
             blocksRegister,
-            fields: field.__fields,
+            fields: field.get.fields,
             tableName: treeTableName,
             hasParent: true,
             relationsDic,
@@ -214,15 +218,15 @@ function hasLocalizedField(fields: FieldBuilder<Field>[]): boolean {
   for (const field of fields) {
     // Case 1: If it's a group field, check all fields within the group
     if (field instanceof GroupFieldBuilder) {
-      if (hasLocalizedField(field.__fields)) {
+      if (hasLocalizedField(field.get.fields)) {
         return true;
       }
     }
 
     // Case 2: If it's a tabs field, check all fields within each tab
     else if (field instanceof TabsBuilder) {
-      for (const tab of field.__tabs) {
-        if (hasLocalizedField(tab.__fields)) {
+      for (const tab of field.get.tabs) {
+        if (hasLocalizedField(tab.get.fields)) {
           return true;
         }
       }
@@ -230,9 +234,9 @@ function hasLocalizedField(fields: FieldBuilder<Field>[]): boolean {
 
     // Case 3: If it's a blocks field, check all fields within each block
     else if (field instanceof BlocksBuilder) {
-      if (field.__localized) return true;
-      for (const block of field.__blocks) {
-        if (hasLocalizedField(block.__fields)) {
+      if (field.get.localized) return true;
+      for (const block of field.get.blocks) {
+        if (hasLocalizedField(block.get.fields)) {
           return true;
         }
       }
@@ -240,14 +244,14 @@ function hasLocalizedField(fields: FieldBuilder<Field>[]): boolean {
 
     // Case 3: If it's a tree field, check all fields
     else if (field instanceof TreeBuilder) {
-      if (field.__localized) return true;
-      if (hasLocalizedField(field.__fields)) {
+      if (field.get.localized) return true;
+      if (hasLocalizedField(field.get.fields)) {
         return true;
       }
     }
 
     // Case 4: For regular form fields, check if it's marked as localized
-    else if (field instanceof FormFieldBuilder && field.__localized) {
+    else if (field instanceof FormFieldBuilder && field.get.localized) {
       return true;
     }
   }

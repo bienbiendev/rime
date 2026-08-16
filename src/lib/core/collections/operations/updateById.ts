@@ -68,15 +68,13 @@ export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T
   }
 
   const makeMessage = (name: string) => `missing ${name} @uppdateById`;
-  if (!context.configMap) throw new RimeError(RimeError.OPERATION_ERROR, makeMessage('configMap'));
-  if (!context.originalConfigMap)
-    throw new RimeError(RimeError.OPERATION_ERROR, makeMessage('originalConfigMap'));
-  if (!context.originalDoc)
-    throw new RimeError(RimeError.OPERATION_ERROR, makeMessage('originalDoc'));
-  if (!context.versionOperation)
-    throw new RimeError(RimeError.OPERATION_ERROR, makeMessage('versionOperation'));
-  if (!context.params.versionId)
-    throw new RimeError(RimeError.OPERATION_ERROR, makeMessage('versionId'));
+  const makeError = (name: string) => new RimeError(RimeError.OPERATION_ERROR, makeMessage(name));
+
+  if (!context.configMap) throw makeError('configMap');
+  if (!context.originalConfigMap) throw makeError('originalConfigMap');
+  if (!context.originalDoc) throw makeError('originalDoc');
+  if (!context.versionOperation) throw makeError('versionOperation');
+  if (!context.params.versionId) throw makeError('versionId');
 
   const incomingPaths = Object.keys(context.configMap);
 

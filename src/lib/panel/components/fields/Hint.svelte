@@ -6,9 +6,9 @@
   const { config }: Props = $props();
 </script>
 
-{#if config.raw.hint}
+{#if config.get.hint}
   <p class="rz-field-hint">
-    {config.raw.hint}
+    {config.get.hint}
   </p>
 {/if}
 

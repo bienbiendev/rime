@@ -8,7 +8,7 @@ import type { ToType } from '../index.server.js';
 import type { RelationFieldBuilder } from './index.js';
 
 export const toType: ToType<RelationFieldBuilder<any>> = (field) => {
-  return `${field.name}${field.__required ? '' : '?'}: RelationValue<${capitalize(field.__relationTo)}Doc>`;
+  return `${field.name}${field.get.required ? '' : '?'}: RelationValue<${capitalize(field.get.relationTo)}Doc>`;
 };
 
 /** Real implementation — resolved server-side via `$rime/runtime` (see relation/index.ts,

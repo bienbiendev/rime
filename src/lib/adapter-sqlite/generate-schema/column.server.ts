@@ -12,7 +12,7 @@ const COLUMN_EXPR: Record<DataType, (snake: string) => string> = {
 };
 
 // Single-call type guards for RESOLVE_DEFAULT below — calling
-// f.__defaultValue itself has no reason to run twice per branch.
+// f.get.defaultValue itself has no reason to run twice per branch.
 // `ensureObject` intentionally matches `typeof v === 'object'` including
 // `null` (not `v !== null`), since that's what the pre-refactor per-field
 // toSchema checks did — a field with no explicit default (constructor sets
@@ -30,29 +30,29 @@ const ensureObject = (v: unknown): object | undefined =>
  * no usable value in `field.defaultValue` — SQLite needs a type-correct
  * DEFAULT to add a NOT NULL column via drizzle-kit migration on a table with
  * existing rows. Keyed by field type (not dataType) and reading
- * `field.__defaultValue` directly, exactly mirroring what each field's own
+ * `field.get.defaultValue` directly, exactly mirroring what each field's own
  * `toSchema` did before this refactor — kept here, not on the field builders,
  * since it's schema-generation-only and not part of a field's public API.
  */
 const RESOLVE_DEFAULT: Record<string, (field: FormFieldBuilder<FormField>) => unknown> = {
-  text: (f) => ensureString(f.__defaultValue) ?? '',
-  email: (f) => ensureString(f.__defaultValue) ?? '',
-  slug: (f) => ensureString(f.__defaultValue) ?? '',
-  combobox: (f) => ensureString(f.__defaultValue) ?? '',
-  radio: (f) => ensureString(f.__defaultValue) ?? '',
-  textarea: (f) => ensureString(f.__defaultValue) ?? '',
-  time: (f) => ensureString(f.__defaultValue) ?? '00:00',
-  checkbox: (f) => f.__defaultValue ?? false,
-  toggle: (f) => ensureBoolean(f.__defaultValue) ?? false,
-  number: (f) => ensureNumber(f.__defaultValue) ?? 0,
-  date: (f) => ensureDate(f.__defaultValue)?.getTime() ?? 0,
-  link: (f) => ensureObject(f.__defaultValue) ?? {},
-  richText: (f) => ensureObject(f.__defaultValue) ?? {},
+  text: (f) => ensureString(f.get.defaultValue) ?? '',
+  email: (f) => ensureString(f.get.defaultValue) ?? '',
+  slug: (f) => ensureString(f.get.defaultValue) ?? '',
+  combobox: (f) => ensureString(f.get.defaultValue) ?? '',
+  radio: (f) => ensureString(f.get.defaultValue) ?? '',
+  textarea: (f) => ensureString(f.get.defaultValue) ?? '',
+  time: (f) => ensureString(f.get.defaultValue) ?? '00:00',
+  checkbox: (f) => f.get.defaultValue ?? false,
+  toggle: (f) => ensureBoolean(f.get.defaultValue) ?? false,
+  number: (f) => ensureNumber(f.get.defaultValue) ?? 0,
+  date: (f) => ensureDate(f.get.defaultValue)?.getTime() ?? 0,
+  link: (f) => ensureObject(f.get.defaultValue) ?? {},
+  richText: (f) => ensureObject(f.get.defaultValue) ?? {},
   relation: () => ({}),
   select: (f) => {
-    const many = (f.raw as { many?: boolean }).many;
+    const many = (f.get as { many?: boolean }).many;
     const empty = many ? [] : '';
-    const value = f.__defaultValue;
+    const value = f.get.defaultValue;
     return typeof value === 'undefined' ? empty : value;
   }
 };
@@ -72,7 +72,7 @@ export function toSchemaColumn(field: FormFieldBuilder<FormField>, parentPath?: 
   // `unique` only exists on the field types that support it (text/email/slug);
   // reading it off the generic FormField base needs a narrow cast, same as
   // each field's own toSchema did today by typing against its concrete field.
-  const { unique, required } = field.raw as { unique?: boolean; required?: boolean };
+  const { unique, required } = field.get as { unique?: boolean; required?: boolean };
   // `dataType` is implemented by every leaf field builder but isn't declared
   // on the FormFieldBuilder base (see the comment there) — narrow cast here.
   const dataType = (field as unknown as { dataType: DataType }).dataType;

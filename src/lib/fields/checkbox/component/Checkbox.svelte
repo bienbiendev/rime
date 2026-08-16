@@ -17,7 +17,7 @@
   const inputId = $derived(`${form.key}-${slugify(path)}`);
 </script>
 
-<fieldset class="rz-checkbox-field {config.raw.className || ''}" use:fieldset={field}>
+<fieldset class="rz-checkbox-field {config.get.className || ''}" use:fieldset={field}>
   <div>
     <Checkbox
       class="rz-checkbox-field__input {checkboxErrorClass}"

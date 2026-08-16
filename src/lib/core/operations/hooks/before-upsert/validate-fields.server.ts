@@ -38,7 +38,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
 
     // Unique
     /** @TODO better unique check like relations, locale,... */
-    if ('unique' in config.raw && config.raw.unique && isCollection && !skipUnique) {
+    if ('unique' in config.get && config.get.unique && isCollection && !skipUnique) {
       let query;
       switch (operation) {
         case 'create':
@@ -65,7 +65,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /****************************************************/
 
     if (value !== undefined && value !== null) {
-      value = await config.__beforeValidate(value, { config, data: args.data });
+      value = await config.run.beforeValidate(value, { config, data: args.data });
       output = setValueAtPath(key, output, value);
     }
 
@@ -73,15 +73,15 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /* Validate
     /****************************************************/
 
-    if (config.raw.validate && value !== undefined && value !== null && !skipValidate) {
+    if (config.get.validate && value !== undefined && value !== null && !skipValidate) {
       try {
-        const valid = config.__validate(value, {
+        const valid = config.run.validate(value, {
           data: output as Partial<GenericDoc>,
           operation,
           id: operation === 'update' ? args.context.originalDoc?.id : undefined,
           user: user,
           locale,
-          config: config.raw
+          config: config.get
         });
         if (valid !== true) {
           errors[key] = valid;
@@ -98,8 +98,8 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     */
 
     if (value !== undefined && value !== null) {
-      value = await config.$__beforeSave(value, {
-        config: config.raw,
+      value = await config.run.beforeSave(value, {
+        config: config.get,
         event,
         operation: args.context
       });
@@ -111,7 +111,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /****************************************************/
 
     if (operation === 'update' && !skipAccess) {
-      const authorizedFieldUpdate = config.__canUpdate(user, {
+      const authorizedFieldUpdate = config.run.canUpdate(user, {
         id: args.context.originalDoc?.id
       });
       if (!authorizedFieldUpdate) {
@@ -121,7 +121,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     }
 
     if (operation === 'create' && !skipAccess) {
-      const authorizedFieldCreate = config.__canCreate(user, {
+      const authorizedFieldCreate = config.run.canCreate(user, {
         id: undefined
       });
       if (!authorizedFieldCreate) {
@@ -131,7 +131,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     }
 
     // Required
-    if (config.__required && config.__isEmpty(value)) {
+    if (config.get.required && config.run.isEmpty(value)) {
       if (skipRequired) {
         output = setValueAtPath(key, output, '');
       } else {

@@ -12,7 +12,7 @@ export function buildTreeFieldsMap(
 
   // Helper to add field configs for a specific path
   const addFieldConfigs = (path: string) => {
-    for (const field of treeConfig.__fields) {
+    for (const field of treeConfig.get.fields) {
       if (isFormField(field)) {
         treeMap[`${path}.${field.name}`] = field;
       }

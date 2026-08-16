@@ -62,7 +62,7 @@
   });
 
   function getConfigByBlockType(type: string): BlocksFieldBlock {
-    const blockConfig = config.__blocks.find((b) => type === b.name);
+    const blockConfig = config.get.blocks.find((b) => type === b.name);
     if (!blockConfig) {
       throw new Error(`Block configuration not found for type: ${type}`);
     }
@@ -81,14 +81,14 @@
   });
 </script>
 
-<fieldset class="rz-field-blocks {config.raw.className || ''}" use:fieldset={field}>
+<fieldset class="rz-field-blocks {config.get.className || ''}" use:fieldset={field}>
   <Field.Error error={field.error} />
 
   <header class="rz-blocks__header">
     <div>
       <h3 class="rz-blocks__title">
-        {config.__label}
-        {#if config.__localized}
+        {config.get.label}
+        {#if config.get.localized}
           <sup>{locale.code}</sup>
         {/if}
       </h3>
@@ -121,7 +121,7 @@
   <div class="rz-blocks__actions-bottom">
     <AddBlockButton addBlock={add} {config} />
 
-    {#if locale && locale.code !== locale.defaultCode && config.__localized}
+    {#if locale && locale.code !== locale.defaultCode && config.get.localized}
       <Button icon={Download} size="sm" onclick={field.setValueFromDefaultLocale} variant="text">
         {t__('fields.get_data_from')}
         {locale.defaultCode}

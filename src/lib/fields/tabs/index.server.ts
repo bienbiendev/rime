@@ -3,9 +3,9 @@ import type { TabsBuilder } from './index.js';
 
 export const toType: ToType<TabsBuilder> = async (field) => {
   const types: string[] = [];
-  for (const tab of field.__tabs) {
+  for (const tab of field.get.tabs) {
     const fieldsTypes: string[] = [];
-    for (const field of tab.__fields) {
+    for (const field of tab.get.fields) {
       const fieldServerMethods = await getFieldPrivateModule(field);
       if (fieldServerMethods) {
         const result = await Promise.resolve(fieldServerMethods.toType(field));

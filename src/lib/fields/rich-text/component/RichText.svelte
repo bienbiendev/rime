@@ -27,12 +27,12 @@
 
   const ctx = setRichTextContext(instanceId);
 
-  const withSuggestion = $derived(hasSuggestion(config.raw.features || defaultFeatures));
+  const withSuggestion = $derived(hasSuggestion(config.get.features || defaultFeatures));
 
   onMount(() => {
     // Build editor configuration
     const richTextEditorConfig = buildEditorConfig({
-      features: config.raw.features || defaultFeatures
+      features: config.get.features || defaultFeatures
     });
 
     features = richTextEditorConfig.features;
@@ -60,7 +60,7 @@
 
 <fieldset
   class:rz-field-rich-text--standalone={standAlone}
-  class="rz-field-rich-text {config.raw.className || ''}"
+  class="rz-field-rich-text {config.get.className || ''}"
   use:fieldset={field}
 >
   <Field.Label {config} for={path || config.name} />

@@ -251,7 +251,7 @@ test('should return the list of fields inside a tree', () => {
   expect(fieldList).toBeDefined();
   expect(fieldList.length).toBe(5); // [ 'path', 'position', 'label', 'link', 'group' ]
   const filteredList = fieldList.filter(
-    (builder) => isFormField(builder) && builder.raw.hidden !== true
+    (builder) => isFormField(builder) && builder.get.hidden !== true
   );
   const builder1 = filteredList[0];
   if (!(builder1 instanceof FormFieldBuilder))

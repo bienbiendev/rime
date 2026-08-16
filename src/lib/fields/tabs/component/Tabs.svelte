@@ -16,7 +16,7 @@
   const prependPath = $derived(initialPath === '' ? '' : `${initialPath}.`);
   // Generate unique IDs for each tab to use as data attributes for error handling.
   const tabIds = $derived(
-    config.__tabs.map((tab) => `${tab.name}-${new Date().getTime().toString()}`)
+    config.get.tabs.map((tab) => `${tab.name}-${new Date().getTime().toString()}`)
   );
 
   // Retrieve active tab from localStorage, if not found use the first tab.
@@ -24,17 +24,17 @@
   let activeTabName = $derived.by(() => {
     let storedActiveTab = localStorage.getItem(storageActiveKey);
     if (storedActiveTab && form.isLive) {
-      const activeTab = config.__tabs.find((tab) => tab.name === storedActiveTab);
-      if (!activeTab || activeTab.raw.live === false) {
-        return config.__tabs[0].name;
+      const activeTab = config.get.tabs.find((tab) => tab.name === storedActiveTab);
+      if (!activeTab || activeTab.get.live === false) {
+        return config.get.tabs[0].name;
       }
     }
-    return storedActiveTab || config.__tabs[0].name;
+    return storedActiveTab || config.get.tabs[0].name;
   });
 
   // On live mode only show tabs with live=true
   function isTabVisible(tab: TabBuilder) {
-    return form.isLive ? tab.raw.live === true : true;
+    return form.isLive ? tab.get.live === true : true;
   }
 
   function onActiveTabChange(value: string): void {
@@ -61,24 +61,24 @@
 <div class="rz-tabs">
   <Tabs.Root onValueChange={onActiveTabChange} value={activeTabName}>
     <Tabs.List>
-      {#each config.__tabs as tab, index (index)}
+      {#each config.get.tabs as tab, index (index)}
         {#if isTabVisible(tab)}
           <Tabs.Trigger
             data-error={errorTabs.includes(tabIds[index]) ? 'true' : null}
             value={tab.name}
           >
-            {tab.raw.label || tab.name}
+            {tab.get.label || tab.name}
           </Tabs.Trigger>
         {/if}
       {/each}
     </Tabs.List>
 
-    {#each config.__tabs as tab, index (index)}
+    {#each config.get.tabs as tab, index (index)}
       {#if isTabVisible(tab)}
         <Tabs.Content data-tab-id={tabIds[index]} value={tab.name}>
           <!-- If the first and only field is a rich text field, render it directly -->
-          {#if tab.__fields.length === 1 && tab.__fields[0].type === 'richText'}
-            {@const firstField = tab.__fields[0] as RichTextFieldBuilder}
+          {#if tab.get.fields.length === 1 && tab.get.fields[0].type === 'richText'}
+            {@const firstField = tab.get.fields[0] as RichTextFieldBuilder}
             <RichText
               standAlone={true}
               path="{prependPath}{tab.name}.{firstField.name}"
@@ -87,7 +87,7 @@
             />
           {:else}
             <!-- Otherwise, render the fields -->
-            <RenderFields fields={tab.__fields} path="{prependPath}{tab.name}" {form} />
+            <RenderFields fields={tab.get.fields} path="{prependPath}{tab.name}" {form} />
           {/if}
         </Tabs.Content>
       {/if}

@@ -17,7 +17,9 @@
   // svelte-ignore state_referenced_locally
   const initialValue = form.getRawValue(path);
   const initialEmpty = !initialValue;
-  const slugifySource = $derived(config.__slugify ? form.useField<string>(config.__slugify) : null);
+  const slugifySource = $derived(
+    config.get.slugify ? form.useField<string>(config.get.slugify) : null
+  );
 
   const slugifiedValue = $derived.by(() => {
     if (slugifySource && slugifySource.value) {
@@ -43,9 +45,9 @@
   };
 
   const classNameCompact = $derived(
-    config.raw.layout === 'compact' ? 'rz-slug-field--compact' : ''
+    config.get.layout === 'compact' ? 'rz-slug-field--compact' : ''
   );
-  const classNames = $derived(`rz-slug-field ${classNameCompact || ''} ${config.raw.className}`);
+  const classNames = $derived(`rz-slug-field ${classNameCompact || ''} ${config.get.className}`);
 </script>
 
 <fieldset class={classNames} use:fieldset={field}>
@@ -54,7 +56,7 @@
   <div class="rz-slug">
     <Input
       id={path || config.name}
-      placeholder={config.raw.placeholder}
+      placeholder={config.get.placeholder}
       data-error={field.error ? '' : null}
       type="text"
       icon={Hash}
@@ -65,7 +67,7 @@
       onblur={() => (isFocused = false)}
     />
 
-    {#if config.__slugify}
+    {#if config.get.slugify}
       <Button
         disabled={!field.editable}
         onclick={() => (field.value = slugifiedValue)}
@@ -73,7 +75,7 @@
         size="sm"
         variant="secondary"
       >
-        {t__('fields.generate_from', config.__slugify)}
+        {t__('fields.generate_from', config.get.slugify)}
       </Button>
     {/if}
   </div>

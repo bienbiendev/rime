@@ -18,14 +18,14 @@ export const extractRelations = ({ ownerId, data, configMap, locale }: Args) => 
     if (config instanceof RelationFieldBuilder) {
       const value = getValueAtPath<BeforeOperationRelation[] | string | string[]>(path, data);
 
-      const localized = config.__localized;
+      const localized = config.get.localized;
       const relationRawValue = value;
       let output: BeforeOperationRelation[] = [];
 
       const relationFromString = ({ value, position = 0 }: RelationFromStringArgs) => {
         const result: BeforeOperationRelation = {
           position,
-          relationTo: config.__relationTo,
+          relationTo: config.get.relationTo,
           documentId: value,
           ownerId,
           path
@@ -40,7 +40,7 @@ export const extractRelations = ({ ownerId, data, configMap, locale }: Args) => 
         const result: BeforeOperationRelation = {
           id: value.id || undefined,
           position,
-          relationTo: config.__relationTo,
+          relationTo: config.get.relationTo,
           documentId: value.documentId,
           ownerId,
           path

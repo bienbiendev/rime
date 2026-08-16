@@ -13,7 +13,7 @@
   const { path, config, form }: ComboBoxProps = $props();
 
   const field = $derived(form.useField(path, config));
-  const options = $derived(config.__options);
+  const options = $derived(config.get.options);
 
   let search = $state('');
   let open = $state(false);
@@ -30,7 +30,7 @@
   </span>
 {/snippet}
 
-<fieldset class="rz-combobox-field {config.raw.className || ''}" use:fieldset={field}>
+<fieldset class="rz-combobox-field {config.get.className || ''}" use:fieldset={field}>
   <Field.Label {config} for={path || config.name} />
 
   <Popover.Root bind:open>

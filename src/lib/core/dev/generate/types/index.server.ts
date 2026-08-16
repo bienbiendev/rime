@@ -193,27 +193,27 @@ export async function generateTypesString<T extends Config>(config: T) {
     for (const field of fields) {
       if (field instanceof BlocksBuilder) {
         {
-          for (const block of field.__blocks) {
+          for (const block of field.get.blocks) {
             if (!registeredBlocks.includes(block.name)) {
               const templates = await buildFieldsTypes(
-                block.__fields
+                block.get.fields
                   .filter((field) => field instanceof FormFieldBuilder)
                   .filter((field) => field.name !== 'type')
               );
               blocksTypes.push(makeBlockType(block.name, templates.join('\n\t')));
               registeredBlocks.push(block.name);
-              buildblocksTypes(block.__fields);
+              buildblocksTypes(block.get.fields);
             }
           }
         }
       } else if (field instanceof TabsBuilder) {
-        for (const tab of field.__tabs) {
-          await buildblocksTypes(tab.__fields);
+        for (const tab of field.get.tabs) {
+          await buildblocksTypes(tab.get.fields);
         }
       } else if (field instanceof GroupFieldBuilder) {
-        await buildblocksTypes(field.__fields);
+        await buildblocksTypes(field.get.fields);
       } else if (field instanceof TreeBuilder) {
-        await buildblocksTypes(field.__fields);
+        await buildblocksTypes(field.get.fields);
       }
     }
   };
@@ -221,20 +221,20 @@ export async function generateTypesString<T extends Config>(config: T) {
   const buildTreeBlockTypes = async (fields: FieldBuilder<Field>[]) => {
     for (const field of fields) {
       if (field instanceof BlocksBuilder) {
-        for (const block of field.__blocks) {
-          await buildTreeBlockTypes(block.__fields);
+        for (const block of field.get.blocks) {
+          await buildTreeBlockTypes(block.get.fields);
         }
       } else if (field instanceof TabsBuilder) {
-        for (const tab of field.__tabs) {
-          await buildTreeBlockTypes(tab.__fields);
+        for (const tab of field.get.tabs) {
+          await buildTreeBlockTypes(tab.get.fields);
         }
       } else if (field instanceof GroupFieldBuilder) {
-        await buildTreeBlockTypes(field.__fields);
+        await buildTreeBlockTypes(field.get.fields);
       } else if (field instanceof TreeBuilder) {
         const treeBlockTypeName = `Tree${toPascalCase(field.name)}`;
         if (!registeredTreeBlocks.includes(treeBlockTypeName)) {
           const treeFieldsTypes = await buildFieldsTypes(
-            field.__fields.filter((field) => field instanceof FormFieldBuilder)
+            field.get.fields.filter((field) => field instanceof FormFieldBuilder)
           );
           const treeBlockType = makeTreeBlockType(treeBlockTypeName, treeFieldsTypes.join('\n'));
           treeBlocksTypes.push(treeBlockType);

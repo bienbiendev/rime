@@ -2,7 +2,6 @@
   import type { FormFieldBuilder } from '$lib/fields/index.js';
   import type { FormField } from '$lib/fields/types.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
-  import { capitalize } from '$lib/util/string.js';
   import type { Snippet } from 'svelte';
   import { Label } from '../ui/label/index.js';
 
@@ -12,10 +11,10 @@
   const locale = getLocaleContext();
 </script>
 
-<Label class="rz-field-label" title={config.__label} for={forAttribute || null} {...rest}>
+<Label class="rz-field-label" title={config.get.label} for={forAttribute || null} {...rest}>
   {#if config}
-    {config.__label || capitalize(config.name)}
-    {#if config.__localized}
+    {config.get.label}
+    {#if config.get.localized}
       <sup>{locale.code}</sup>
     {/if}
   {/if}

@@ -29,9 +29,9 @@
   };
 </script>
 
-{#if config.__blocks.length === 1}
+{#if config.get.blocks.length === 1}
   <Button
-    onclick={() => add(config.__blocks[0].block)}
+    onclick={() => add(config.get.blocks[0].block)}
     variant="ghost"
     icon={CirclePlus}
     size="icon"
@@ -51,7 +51,7 @@
       <Command.List class="rz-add-block-button__list">
         <Command.Empty>No results found.</Command.Empty>
         <Command.Group heading="Component">
-          {#each config.__blocks as blockBuilder, index (index)}
+          {#each config.get.blocks as blockBuilder, index (index)}
             {@const blockConfig = blockBuilder.block}
             {@const BlockIcon = blockConfig.icon || ToyBrick}
             <Command.Item
@@ -82,7 +82,7 @@
       </Command.List>
 
       <div class="rz-add-block-button__preview-wrap">
-        {#each config.__blocks as blockFieldBuilder, index (index)}
+        {#each config.get.blocks as blockFieldBuilder, index (index)}
           <div
             class:rz-add-block-button__preview--active={ariaSelected === blockFieldBuilder.name}
             class="rz-add-block-button__preview"

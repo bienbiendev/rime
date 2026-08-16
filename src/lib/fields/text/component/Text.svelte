@@ -14,9 +14,9 @@
 </script>
 
 <fieldset
-  class="rz-text-field {config.raw.className || ''}"
+  class="rz-text-field {config.get.className || ''}"
   class:rz-text-field--with-icon={!!Icon}
-  data-compact={config.raw.layout === 'compact' ? '' : null}
+  data-compact={config.get.layout === 'compact' ? '' : null}
   use:fieldset={field}
 >
   <Field.Label {config} for={path || config.name} />
@@ -26,7 +26,7 @@
       icon={Icon}
       autocomplete="off"
       name={path || config.name}
-      placeholder={config.raw.placeholder || capitalize(config.raw.name)}
+      placeholder={config.get.placeholder || capitalize(config.get.name)}
       data-error={field.error ? '' : null}
       {type}
       value={field.value}

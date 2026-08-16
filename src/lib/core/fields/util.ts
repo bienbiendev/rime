@@ -26,7 +26,7 @@ export const isFormField = <T extends Field>(
 /**
  * Checks if a form field is not hidden.
  */
-export const isNotHidden = (field: FormField) => !field.hidden;
+export const isNotHidden = <T extends FormField>(field: FormFieldBuilder<T>) => !field.get.hidden;
 
 /**
  * Checks if a field has live updates enabled.
@@ -55,23 +55,22 @@ export const emptyValuesFromFieldConfig = <T extends FormFieldBuilder>(arr: T[])
 
       // Handle group fields - create nested object structure
       if (config instanceof GroupFieldBuilder) {
-        emptyValue = emptyValuesFromFieldConfig(config.__fields.filter(isFormField));
+        emptyValue = emptyValuesFromFieldConfig(config.get.fields.filter(isFormField));
       }
       // Handle tabs fields - create nested object structure for each tab
       else if (config instanceof TabsBuilder) {
         const tabsValue: Dic = {};
-        const tabs = config.__tabs;
+        const tabs = config.get.tabs;
         for (const tab of tabs) {
           if ('fields' in tab) {
-            tabsValue[tab.name] = emptyValuesFromFieldConfig(tab.__fields.filter(isFormField));
+            tabsValue[tab.name] = emptyValuesFromFieldConfig(tab.get.fields.filter(isFormField));
           }
         }
         emptyValue = tabsValue;
       }
       // Handle default values
-      else if ('defaultValue' in config) {
-        emptyValue =
-          typeof config.defaultValue === 'function' ? config.defaultValue() : config.defaultValue;
+      else {
+        emptyValue = config.run.defaultValue();
       }
 
       return [config.name, emptyValue];
@@ -125,9 +124,9 @@ export const getFieldAtPath = (path: string, fields: FieldBuilder[]) => {
     for (const field of currentFields) {
       // Handle tabs
       if (field instanceof TabsBuilder) {
-        const tab = field.__tabs.find((t) => t.name === currentPart);
+        const tab = field.get.tabs.find((t) => t.name === currentPart);
         if (tab) {
-          return findInFields(tab.__fields, remainingParts.slice(1));
+          return findInFields(tab.get.fields, remainingParts.slice(1));
         }
         continue;
       }
@@ -140,7 +139,7 @@ export const getFieldAtPath = (path: string, fields: FieldBuilder[]) => {
           }
 
           if (field instanceof GroupFieldBuilder) {
-            return findInFields(field.__fields, remainingParts.slice(1));
+            return findInFields(field.get.fields, remainingParts.slice(1));
           }
 
           // Handle blocks
@@ -149,15 +148,15 @@ export const getFieldAtPath = (path: string, fields: FieldBuilder[]) => {
             const blockType = remainingParts[1].split(':')[1];
 
             if (blockType) {
-              const block = field.__blocks.find((b) => b.name === blockType);
+              const block = field.get.blocks.find((b) => b.name === blockType);
               if (block) {
-                return findInFields(block.__fields, remainingParts.slice(2));
+                return findInFields(block.get.fields, remainingParts.slice(2));
               }
             }
           }
 
           if (field instanceof TreeBuilder) {
-            return findInFields(field.__fields, remainingParts.slice(2));
+            return findInFields(field.get.fields, remainingParts.slice(2));
           }
         }
       }
@@ -199,16 +198,16 @@ export function getFieldListAtPath(
 
       if (isEndpoint) {
         // Path targets the tab → return all its inner fields
-        return { fields: tab.__fields, path: nextParentPath };
+        return { fields: tab.get.fields, path: nextParentPath };
       }
-      return getFieldListAtPath(tail, tab.__fields, nextParentPath);
+      return getFieldListAtPath(tail, tab.get.fields, nextParentPath);
     }
 
     if (!isFormField(field)) continue;
 
     // ── Group field: navigate into children
     if (field instanceof GroupFieldBuilder && field.name === head) {
-      const children = field.__fields;
+      const children = field.get.fields;
 
       if (isEndpoint) return { fields: children, path: nextParentPath };
       return getFieldListAtPath(tail, children, nextParentPath);
@@ -221,17 +220,17 @@ export function getFieldListAtPath(
       const nextParentPathWithBlockIndex = `${nextParentPath}.${tail.split('.')[0]}`;
 
       if (blockType) {
-        const block = field.__blocks.find((b) => b.name === blockType);
-        if (!isInnerBlockLookup && block?.__fields) {
+        const block = field.get.blocks.find((b) => b.name === blockType);
+        if (!isInnerBlockLookup && block?.get.fields) {
           return {
-            fields: block.__fields,
+            fields: block.get.fields,
             path: normalizeFieldPath(nextParentPathWithBlockIndex)
           };
         }
         if (block) {
           return getFieldListAtPath(
             tail.split('.').slice(1).join('.'),
-            block.__fields,
+            block.get.fields,
             normalizeFieldPath(nextParentPathWithBlockIndex)
           );
         }
@@ -241,7 +240,7 @@ export function getFieldListAtPath(
 
     // Tree
     if (field instanceof TreeBuilder && field.name === head) {
-      const children = field.__fields;
+      const children = field.get.fields;
       const nextParentPathWithIndex = `${nextParentPath}.${tail.split('.')[0]}`;
       if (isEndpoint) return { fields: children, path: nextParentPath };
       return getFieldListAtPath(

@@ -20,14 +20,14 @@ export const fallbackDataFromOriginal = async <T extends Dic>(args: {
     if (ignore.includes(key)) continue;
 
     // skip if not required and mode is 'required'
-    const shouldUpdate = (config.__required && mode === 'required') || mode === 'all';
+    const shouldUpdate = (config.get.required && mode === 'required') || mode === 'all';
     if (!shouldUpdate) continue;
 
     let value = getValueAtPath(key, output);
     let isEmpty;
 
     try {
-      isEmpty = config.__isEmpty(value);
+      isEmpty = config.run.isEmpty(value);
     } catch {
       isEmpty = false;
       logger.warn(`Error while checking if field ${key} is empty`);

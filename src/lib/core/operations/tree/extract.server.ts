@@ -42,7 +42,7 @@ export function extractTreeBlocks({ data, configMap }: ExtractTreesArgs) {
   Object.entries(configMap).forEach(([path, config]) => {
     if (config.type === 'tree') {
       const value = getValueAtPath<TreeBlock[]>(path, data);
-      const isEmptyValue = config.__isEmpty(value);
+      const isEmptyValue = config.run.isEmpty(value);
 
       if (value && !isEmptyValue) {
         value.forEach((item: TreeBlock, index: number) => {

@@ -13,7 +13,7 @@
   };
 </script>
 
-<fieldset class="rz-time-field {config.raw.className || ''}" use:fieldset={field}>
+<fieldset class="rz-time-field {config.get.className || ''}" use:fieldset={field}>
   <Field.Label {config} for={path || config.name} />
   <div class="rz-time-field__input-wrapper">
     <Input

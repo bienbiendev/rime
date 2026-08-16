@@ -47,7 +47,7 @@
   const dateLabel = $derived(date ? locale.dateFormat(date) : 'Select a date');
 </script>
 
-<fieldset class="rz-date-field {config.raw.className || ''}" use:fieldset={field}>
+<fieldset class="rz-date-field {config.get.className || ''}" use:fieldset={field}>
   <Field.Label {config} for={path || config.name} />
 
   <Button

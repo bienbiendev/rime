@@ -26,27 +26,27 @@ export function findTitleField(
     // Direct check for isTitle
     if (
       field instanceof FormFieldBuilder &&
-      hasMaybeTitle(field.raw) &&
-      'isTitle' in field.raw &&
-      field.raw.isTitle === true
+      hasMaybeTitle(field.get) &&
+      'isTitle' in field.get &&
+      field.get.isTitle === true
     ) {
       const path = basePath ? `${basePath}.${field.name}` : field.name;
       return { field, path };
     }
 
     // Check in group
-    if (field instanceof GroupFieldBuilder && field.__fields) {
+    if (field instanceof GroupFieldBuilder && field.get.fields) {
       const groupPath = basePath ? `${basePath}.${field.name}` : field.name;
-      const found = findTitleField(field.__fields, groupPath);
+      const found = findTitleField(field.get.fields, groupPath);
       if (found) return found;
     }
 
     // Check in tabs
-    if (field instanceof TabsBuilder && field.__tabs) {
-      for (const tab of field.__tabs) {
-        if (tab.__fields) {
+    if (field instanceof TabsBuilder && field.get.tabs) {
+      for (const tab of field.get.tabs) {
+        if (tab.get.fields) {
           const tabPath = basePath ? `${basePath}.${tab.name}` : tab.name;
-          const found = findTitleField(tab.__fields, tabPath);
+          const found = findTitleField(tab.get.fields, tabPath);
           if (found) return found;
         }
       }

@@ -50,10 +50,6 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
     return this;
   }
 
-  get __query(): string | QueryResolver<Doc> | undefined {
-    return this.field.query;
-  }
-
   to<Slug extends CollectionSlug>(slug: Slug): RelationFieldBuilder<RegisterCollection[Slug]> {
     this.field.relationTo = slug;
     return this as unknown as RelationFieldBuilder<RegisterCollection[Slug]>;
@@ -62,14 +58,6 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
   many() {
     this.field.many = true;
     return this;
-  }
-
-  get __many(): boolean {
-    return !!this.field.many;
-  }
-
-  get __relationTo(): CollectionSlug {
-    return this.field.relationTo;
   }
 
   defaultValue(value: string | string[] | DefaultValueFn<string | string[]>) {

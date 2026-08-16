@@ -54,10 +54,6 @@ export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
     return this;
   }
 
-  get __types(): LinkType[] {
-    return this.field.types;
-  }
-
   static readonly sanitize = (link: unknown): Link | undefined => {
     if (!link) return undefined;
     // Sanitize only the value and url properties of the link, other properties are left as is

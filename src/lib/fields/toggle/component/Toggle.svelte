@@ -14,7 +14,7 @@
   };
 </script>
 
-<fieldset class="rz-toggle-field {config.raw.className || ''}" use:fieldset={field}>
+<fieldset class="rz-toggle-field {config.get.className || ''}" use:fieldset={field}>
   <div class="rz-toggle-field-wrap">
     <Switch
       data-error={field.error ? '' : null}

@@ -14,13 +14,13 @@
   };
 </script>
 
-<fieldset use:fieldset={field} class="rz-textarea-field {config.raw.className || ''}">
+<fieldset use:fieldset={field} class="rz-textarea-field {config.get.className || ''}">
   <Field.Label {config} for={path || config.name} />
   <textarea
     use:dataError={!!field.error}
     id={path || config.name}
     name={path || config.name}
-    placeholder={config.raw.placeholder}
+    placeholder={config.get.placeholder}
     value={field.value}
     oninput={onInput}
   ></textarea>

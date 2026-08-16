@@ -15,13 +15,13 @@ export const processDocumentFields = Hooks.beforeRead(async (args) => {
     let value = getValueAtPath(key, doc);
     let isEmpty;
 
-    if (!config.__canRead(event.locals.user)) {
+    if (!config.run.canRead(event.locals.user)) {
       doc = deleteValueAtPath(doc, key);
       continue;
     }
 
     if (value !== undefined && value !== null) {
-      value = await config.$__beforeRead(value, {
+      value = await config.run.beforeRead(value, {
         event,
         operation: args.context,
         documentId: doc.id
@@ -30,13 +30,13 @@ export const processDocumentFields = Hooks.beforeRead(async (args) => {
     }
 
     try {
-      isEmpty = config.__isEmpty(value);
+      isEmpty = config.run.isEmpty(value);
     } catch {
       isEmpty = false;
       logger.warn(`Error in config.isEmpty for field ${key}`);
     }
 
-    if (isEmpty && config.__defaultValue !== undefined) {
+    if (isEmpty && config.get.defaultValue !== undefined) {
       value = await getDefaultValue({ key, config, adapter: args.event.locals.rime.adapter });
       doc = setValueAtPath(key, doc, value);
     }

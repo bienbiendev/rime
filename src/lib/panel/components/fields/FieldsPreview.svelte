@@ -1,7 +1,6 @@
 <script lang="ts">
   import { FormFieldBuilder } from '$lib/core/fields/builders';
   import type { BaseUseFieldReturn, FieldsPreviewProps, FormField } from '$lib/fields/types.js';
-  import { capitalize } from '$lib/util/string.js';
   import type { Component } from 'svelte';
 
   type Props = {
@@ -22,16 +21,16 @@
   {:else}
     {#each fields as builder, index (index)}
       {@const field = getField(builder)}
-      {#if !builder.raw.hidden && field.visible}
+      {#if !builder.get.hidden && field.visible}
         <div class="rz-render-fields-preview__row" data-visible={field.visible || null}>
           <div class="rz-render-fields-preview__name">
             <p>
-              {builder.raw.label || capitalize(builder.name)}
+              {builder.get.label}
             </p>
           </div>
           <div class="rz-render-fields-preview__value">
-            {#if builder.raw.table?.cell}
-              {@const ColumnTableCell = builder.raw.table.cell}
+            {#if builder.get.table?.cell}
+              {@const ColumnTableCell = builder.get.table.cell}
               <span><ColumnTableCell value={field.value} /></span>
             {:else if builder.cell}
               {@const Cell = builder.cell}

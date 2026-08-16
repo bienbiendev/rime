@@ -1,5 +1,6 @@
 import { isUploadConfig } from '$lib/core/collections/upload/util/config.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
+import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { GenericDoc } from '$lib/core/types/doc.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
@@ -33,23 +34,21 @@ export const createBlankDocument = <
   function reduceFieldsToBlankDocument(prev: Dic, curr: FieldBuilder<any>) {
     try {
       if (curr instanceof TabsBuilder) {
-        curr.__tabs.forEach((tab) => {
-          prev[tab.name] = tab.__fields.reduce(reduceFieldsToBlankDocument, {});
+        curr.get.tabs.forEach((tab) => {
+          prev[tab.name] = tab.get.fields.reduce(reduceFieldsToBlankDocument, {});
         });
       } else if (['blocks', 'relation', 'tree'].includes(curr.type)) {
         prev[curr.name] = [];
       } else if (curr instanceof GroupFieldBuilder) {
-        prev[curr.name] = curr.__fields.reduce(reduceFieldsToBlankDocument, {});
-      } else {
-        if (curr.raw.defaultValue !== undefined) {
-          if (typeof curr.raw.defaultValue === 'function') {
-            prev[curr.name] = curr.raw.defaultValue({ event });
-          } else {
-            prev[curr.name] = curr.raw.defaultValue;
-          }
-        } else {
-          prev[curr.name] = null;
-        }
+        prev[curr.name] = curr.get.fields.reduce(reduceFieldsToBlankDocument, {});
+      } else if (curr instanceof FormFieldBuilder) {
+        // Presentational fields (separator, bare component()) are plain
+        // FieldBuilder, never FormFieldBuilder, and get skipped here rather
+        // than assigned `prev['']` (they never got a real name) — that used
+        // to corrupt the parent object into looking array-like once
+        // flattened/unflattened.
+        const defaultValue = curr.run.defaultValue({ event });
+        prev[curr.name] = defaultValue !== undefined ? defaultValue : null;
       }
     } catch (err) {
       console.error(curr);

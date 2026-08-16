@@ -11,8 +11,8 @@
 </script>
 
 <Label class="rz-field-label-for" for={labelFor}>
-  {config.__label}
-  {#if config.__localized}
+  {config.get.label}
+  {#if config.get.localized}
     <sup>{locale.code}</sup>
   {/if}
 </Label>

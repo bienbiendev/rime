@@ -21,7 +21,7 @@
 
   let groupOpen = $state(true);
   const key = $derived(
-    `group-${config.__fields
+    `group-${config.get.fields
       .filter(isFormField)
       .map((f) => f.name)
       .join('-')}`
@@ -41,11 +41,11 @@
   const user = getUserContext() || undefined;
 
   const previewFields = $derived.by(() => {
-    return config.__fields
+    return config.get.fields
       .filter((field) => !(field instanceof TabsBuilder))
       .filter((field) => field instanceof FormFieldBuilder)
-      .filter((field) => !form.isLive || (form.isLive && field.raw.live))
-      .filter((field) => field.__canRead(user.attributes, { id: form.values.id }));
+      .filter((field) => !form.isLive || (form.isLive && field.get.live))
+      .filter((field) => field.run.canRead(user.attributes, { id: form.values.id }));
   });
 
   const basePath = $derived(path ? `${path}.` : '');
@@ -65,7 +65,7 @@
       {:else}
         <FolderClosed size="12" />
       {/if}
-      {config.label || config.name || 'Group'}
+      {config.get.label || config.name || 'Group'}
     </span>
     <ChevronDown size="14" />
   </button>
@@ -73,14 +73,14 @@
   {#if !groupOpen}
     <FieldsPreviewTrigger onclick={handleClick}>
       <FieldsPreview
-        preview={config.raw.preview}
+        preview={config.get.preview}
         fields={previewFields}
         getField={(field) => form.useField(basePath + field.name)}
       />
     </FieldsPreviewTrigger>
   {:else}
     <div class="rz-group-field__content">
-      <RenderFields {path} fields={config.__fields} {form} />
+      <RenderFields {path} fields={config.get.fields} {form} />
     </div>
   {/if}
 </div>

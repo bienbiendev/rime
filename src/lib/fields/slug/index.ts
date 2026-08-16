@@ -39,10 +39,6 @@ export class SlugFieldBuilder extends FormFieldBuilder<SlugField> {
     return this;
   }
 
-  get __slugify(): string | undefined {
-    return this.field.slugify;
-  }
-
   layout(layout: 'compact' | 'default') {
     this.field.layout = layout;
     return this;

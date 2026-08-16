@@ -32,7 +32,7 @@
   const APIProxy = getAPIProxyContext();
   const field = $derived(form.useField(path, config));
   // svelte-ignore state_referenced_locally
-  const relationConfig = getCollection(config.__relationTo);
+  const relationConfig = getCollection(config.get.relationTo);
   const relationCollectionCtx = getCollectionContext(relationConfig.slug);
 
   let initialized = $state(false);
@@ -49,7 +49,7 @@
   const nothingToSelect = $derived(initialItems.length === 0);
 
   let isFull = $derived.by(() => {
-    if (!config.__many) {
+    if (!config.get.many) {
       if (selectedItems.length === 1) return true;
     } else {
       if (availableItems.length === 0 && selectedItems.length > 0) {
@@ -98,16 +98,16 @@
     }
 
     // Add custom query parameters if provided
-    if (config.__query) {
-      if (typeof config.__query === 'string') {
+    if (config.get.query) {
+      if (typeof config.get.query === 'string') {
         // Parse the query string and add each parameter
-        const queryParams = new URLSearchParams(config.__query);
+        const queryParams = new URLSearchParams(config.get.query);
         queryParams.forEach((value, key) => {
           url.searchParams.append(key, value);
         });
-      } else if (typeof config.__query === 'function') {
+      } else if (typeof config.get.query === 'function') {
         // Parse the function result and add each parameter
-        const queryString = config.__query(form.values);
+        const queryString = config.get.query(form.values);
         const queryParams = new URLSearchParams(queryString);
         queryParams.forEach((value, key) => {
           url.searchParams.append(key, value);
@@ -163,12 +163,12 @@
     const relations = selectedItems.map((item, index) => {
       let relation: Omit<Relation, 'ownerId'> = {
         id: item.id,
-        relationTo: config.__relationTo,
+        relationTo: config.get.relationTo,
         path,
         position: index,
         documentId: item.documentId
       };
-      if (config.__localized) {
+      if (config.get.localized) {
         relation.locale = locale.code;
       }
       if ('isLive' in form && form.isLive) {
@@ -240,13 +240,13 @@
   const RelationComponent = isRelationToUpload ? Upload : Default;
 </script>
 
-<fieldset class="rz-field-relation {config.className || ''}" use:fieldset={field}>
+<fieldset class="rz-field-relation {config.get.className || ''}" use:fieldset={field}>
   <Field.Label {config} for={path || config.name} />
   <Field.Hint {config} />
 
   <RelationComponent
     {path}
-    many={!!config.many}
+    many={!!config.get.many}
     hasError={!!field.error}
     formNestedLevel={'nestedLevel' in form ? form.nestedLevel : 0}
     readOnly={form.readOnly}

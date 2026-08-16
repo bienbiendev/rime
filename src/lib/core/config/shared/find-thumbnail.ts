@@ -18,26 +18,26 @@ export function findThumbnailField(
     // Direct check for isThumbnail
     if (
       field instanceof RelationFieldBuilder &&
-      'isThumbnail' in field.raw &&
-      field.raw.isThumbnail === true
+      'isThumbnail' in field.get &&
+      field.get.isThumbnail === true
     ) {
       const path = basePath ? `${basePath}.${field.name}` : field.name;
       return { field, path };
     }
 
     // Check in group
-    if (field instanceof GroupFieldBuilder && field.__fields) {
+    if (field instanceof GroupFieldBuilder && field.get.fields) {
       const groupPath = basePath ? `${basePath}.${field.name}` : field.name;
-      const found = findThumbnailField(field.__fields, groupPath);
+      const found = findThumbnailField(field.get.fields, groupPath);
       if (found) return found;
     }
 
     // Check in tabs
-    if (field instanceof TabsBuilder && field.__tabs) {
-      for (const tab of field.__tabs) {
-        if (tab.__fields) {
+    if (field instanceof TabsBuilder && field.get.tabs) {
+      for (const tab of field.get.tabs) {
+        if (tab.get.fields) {
           const tabPath = basePath ? `${basePath}.${tab.name}` : tab.name;
-          const found = findThumbnailField(tab.__fields, tabPath);
+          const found = findThumbnailField(tab.get.fields, tabPath);
           if (found) return found;
         }
       }

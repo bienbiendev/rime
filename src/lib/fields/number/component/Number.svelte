@@ -10,12 +10,12 @@
   const field = $derived(form.useField<number>(path, config));
 
   const decrease = () => {
-    const minValue = config.raw.min ?? -Infinity;
+    const minValue = config.get.min ?? -Infinity;
     field.value = Math.max((field.value || 0) - 1, minValue);
   };
 
   const increase = () => {
-    const maxValue = config.raw.max ?? Infinity;
+    const maxValue = config.get.max ?? Infinity;
     field.value = Math.min((field.value || 0) + 1, maxValue);
   };
 </script>
@@ -26,13 +26,13 @@
   </button>
 {/snippet}
 
-<fieldset class="rz-number-field {config.raw.className || ''}" use:fieldset={field}>
+<fieldset class="rz-number-field {config.get.className || ''}" use:fieldset={field}>
   <Field.Label {config} for={path || config.name} />
   <div class="rz-number-field__input-wrapper">
     <input
       class="rz-number-field__input"
-      min={config.raw.min ?? undefined}
-      max={config.raw.max ?? undefined}
+      min={config.get.min ?? undefined}
+      max={config.get.max ?? undefined}
       bind:value={field.value}
       type="number"
     />

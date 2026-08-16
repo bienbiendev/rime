@@ -53,23 +53,23 @@ function createFormStore(initial: Dic, key: string) {
     const validate = (value: any) => {
       let isEmpty;
       try {
-        isEmpty = config.__isEmpty(value);
+        isEmpty = config.run.isEmpty(value);
       } catch (err: any) {
         console.error(err.message);
         throw new Error(config.type + ' ' + err.message);
       }
-      if (config.__required && isEmpty) {
+      if (config.get.required && isEmpty) {
         errors.value[path] = 'required::required_field';
         return false;
       }
 
-      const validated = config.__validate(value, {
+      const validated = config.run.validate(value, {
         data: form,
         id: undefined,
         operation: undefined,
         user: undefined,
         locale: undefined,
-        config: config.raw
+        config: config.get
       });
 
       if (validated !== true) {
@@ -104,7 +104,7 @@ function createFormStore(initial: Dic, key: string) {
       },
 
       get visible() {
-        return config.__condition(form, {});
+        return config.run.condition(form, {});
       },
 
       get error() {
