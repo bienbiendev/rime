@@ -1,4 +1,4 @@
-import { RIME_DEV_CACHE_DIR } from '$lib/core/constant.server';
+import { RIME_DEV_CACHE_DIR } from '$lib/core/constant.server.js';
 import cache from '$lib/core/dev/cache/index.server.js';
 import { sanitize } from '$lib/core/dev/generate/sanitize/index.server.js';
 import { ensureGeneratedConfig, ensureUserConfigExist } from '$lib/core/ensure.server.js';

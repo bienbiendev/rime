@@ -1,4 +1,4 @@
-import { RIME_DEV_CACHE_DIR } from '$lib/core/constant.server';
+import { RIME_DEV_CACHE_DIR } from '$lib/core/constant.server.js';
 import fs from 'fs';
 import path from 'path';
 

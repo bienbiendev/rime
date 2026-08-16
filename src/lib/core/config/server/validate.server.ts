@@ -1,7 +1,7 @@
 import { isAuthConfig } from '$lib/core/collections/auth/util.js';
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
 import cache from '$lib/core/dev/cache/index.server.js';
-import type { FieldBuilder } from '$lib/core/fields/builders/field-builder';
+import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { isFormField } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import { withoutDirectoriesSuffix, withoutVersionsSuffix } from '$lib/core/naming.js';

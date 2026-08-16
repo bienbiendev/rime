@@ -1,5 +1,5 @@
 import { applyAction } from '$app/forms';
-import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder';
+import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { FormField } from '$lib/fields/types.js';
 import { getValueAtPath } from '$lib/util/object.js';
 import { snapshot } from '$lib/util/state.js';
