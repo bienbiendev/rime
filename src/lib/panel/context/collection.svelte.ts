@@ -59,9 +59,11 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
   const hasDraft = $derived(config.versions && config.versions.draft);
 
   onMount(() => {
+    const storedDisplay = localStorage.getItem(`collection.${config.slug}.display`) as DisplayMode;
     displayMode =
-      (localStorage.getItem(`collection.${config.slug}.display`) as DisplayMode) ||
-      DISPLAY_MODE.LIST;
+      storedDisplay && (storedDisplay !== DISPLAY_MODE.NESTED || config.nested)
+        ? storedDisplay
+        : DISPLAY_MODE.LIST;
     const localSortBy = localStorage.getItem(`collection.${config.slug}.sortBy`);
     sortingBy = localSortBy || 'updatedAt';
     const localSortOrder = localStorage.getItem(`collection.${config.slug}.sortOrder`) as SortMode;
@@ -288,7 +290,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     return displayMode === DISPLAY_MODE.GRID;
   }
   function isNested() {
-    return displayMode === DISPLAY_MODE.NESTED;
+    return displayMode === DISPLAY_MODE.NESTED && !!config.nested;
   }
 
   function toggleSelectOf(docId: string) {
