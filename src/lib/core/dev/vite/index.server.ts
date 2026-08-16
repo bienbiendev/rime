@@ -75,7 +75,12 @@ export function rime(): Plugin {
           external: ['sharp']
         },
         optimizeDeps: {
-          exclude: ['sharp'],
+          // rimecms/fields and rimecms/panel must not be pre-bundled: esbuild flattens
+          // their source files into one chunk, which erases the per-file identity that
+          // the $rime/runtime virtual module (see resolveId/load below) relies on to find
+          // each field's sibling runtime.ts/runtime.server.ts — pre-bundling makes the
+          // "importer" resolve to the chunk itself instead of the real source file.
+          exclude: ['sharp', 'rimecms', 'rimecms/fields', 'rimecms/panel'],
           include: ['@lucide/svelte']
         },
         build: {
