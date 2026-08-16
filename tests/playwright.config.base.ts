@@ -35,8 +35,6 @@ export function createPlaywrightConfig({ name }: Args): PlaywrightTestConfig {
         dependencies: ['setup'],
         testDir: path.join(process.cwd(), `./tests/${name}`),
         testMatch: /^.*\.test\.ts$/
-
-        // testMatch: /pages\.test\.ts/
       }
     ]
   });

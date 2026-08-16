@@ -288,6 +288,260 @@ test('Should let a super admin update adminOnly', async ({ request }) => {
   expect(doc.adminOnly).toBe('updated');
 });
 
+/** ---------------- FIELD-LEVEL ACCESS, ACROSS MORE FIELD TYPES ---------------- */
+
+/**
+ * Same {read, create, update} shape as adminOnly, run once per field type —
+ * set as admin, confirm an editor can neither read nor write it, confirm
+ * the editor's write was silently dropped rather than applied, then confirm
+ * the admin can still update it afterwards.
+ */
+async function expectFieldLevelAccess({
+  request,
+  field,
+  adminValue,
+  editorValue,
+  updatedValue
+}: {
+  request: import('@playwright/test').APIRequestContext;
+  field: string;
+  adminValue: unknown;
+  editorValue: unknown;
+  updatedValue: unknown;
+}) {
+  const superAdminHeaders = await signInSuperAdmin(request);
+  const editorHeaders = await signInEditor(request);
+
+  const setResponse = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: superAdminHeaders,
+    data: { [field]: adminValue }
+  });
+  expect(setResponse.status()).toBe(200);
+
+  const editorReadResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: editorHeaders
+  });
+  const { doc: editorDoc } = await editorReadResponse.json();
+  expect(field in editorDoc).toBe(false);
+
+  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: editorHeaders,
+    data: { [field]: editorValue }
+  });
+  const unchangedResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: superAdminHeaders
+  });
+  const { doc: unchangedDoc } = await unchangedResponse.json();
+  expect(unchangedDoc[field]).toEqual(adminValue);
+
+  const updateResponse = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: superAdminHeaders,
+    data: { [field]: updatedValue }
+  });
+  const { doc: updatedDoc } = await updateResponse.json();
+  expect(updatedDoc[field]).toEqual(updatedValue);
+}
+
+test('Should enforce read/create/update access on adminOnlyCheckbox', async ({ request }) => {
+  await expectFieldLevelAccess({
+    request,
+    field: 'adminOnlyCheckbox',
+    adminValue: true,
+    editorValue: false,
+    updatedValue: false
+  });
+});
+
+test('Should enforce read/create/update access on adminOnlyToggle', async ({ request }) => {
+  await expectFieldLevelAccess({
+    request,
+    field: 'adminOnlyToggle',
+    adminValue: true,
+    editorValue: false,
+    updatedValue: false
+  });
+});
+
+test('Should enforce read/create/update access on adminOnlySelect', async ({ request }) => {
+  await expectFieldLevelAccess({
+    request,
+    field: 'adminOnlySelect',
+    adminValue: 'a',
+    editorValue: 'b',
+    updatedValue: 'b'
+  });
+});
+
+test('Should enforce read/create/update access on adminOnlyNumber', async ({ request }) => {
+  await expectFieldLevelAccess({
+    request,
+    field: 'adminOnlyNumber',
+    adminValue: 5,
+    editorValue: 9,
+    updatedValue: 9
+  });
+});
+
+test('Should enforce read/create/update access on adminOnlyDate', async ({ request }) => {
+  await expectFieldLevelAccess({
+    request,
+    field: 'adminOnlyDate',
+    adminValue: '2024-01-01T00:00:00.000Z',
+    editorValue: '2030-01-01T00:00:00.000Z',
+    updatedValue: '2030-01-01T00:00:00.000Z'
+  });
+});
+
+test('Should enforce read/create/update access on adminOnlyRelation', async ({ request }) => {
+  const superAdminHeaders = await signInSuperAdmin(request);
+  const editorHeaders = await signInEditor(request);
+
+  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: superAdminHeaders,
+    data: { adminOnlyRelation: targetAId }
+  });
+
+  const editorReadResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: editorHeaders
+  });
+  const { doc: editorDoc } = await editorReadResponse.json();
+  expect('adminOnlyRelation' in editorDoc).toBe(false);
+
+  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: editorHeaders,
+    data: { adminOnlyRelation: targetBId }
+  });
+  const unchangedResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: superAdminHeaders
+  });
+  const { doc: unchangedDoc } = await unchangedResponse.json();
+  expect(unchangedDoc.adminOnlyRelation.map((ref: any) => ref.documentId)).toContain(targetAId);
+
+  const updateResponse = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: superAdminHeaders,
+    data: { adminOnlyRelation: targetBId }
+  });
+  const { doc: updatedDoc } = await updateResponse.json();
+  expect(updatedDoc.adminOnlyRelation.map((ref: any) => ref.documentId)).toContain(targetBId);
+});
+
+/** ---------------- FIELD-LEVEL ACCESS, SECOND TIER: READABLE, WRITE-RESTRICTED ---------------- */
+
+/**
+ * Second access shape — read: () => true, create/update: isAdmin — an
+ * editor can see the value but their write is silently dropped, unlike
+ * adminOnly* above where the field is invisible to them entirely.
+ */
+async function expectWriteRestrictedAccess({
+  request,
+  field,
+  adminValue,
+  editorValue
+}: {
+  request: import('@playwright/test').APIRequestContext;
+  field: string;
+  adminValue: unknown;
+  editorValue: unknown;
+}) {
+  const superAdminHeaders = await signInSuperAdmin(request);
+  const editorHeaders = await signInEditor(request);
+
+  const setResponse = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: superAdminHeaders,
+    data: { [field]: adminValue }
+  });
+  expect(setResponse.status()).toBe(200);
+
+  const editorReadResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: editorHeaders
+  });
+  const { doc: editorDoc } = await editorReadResponse.json();
+  expect(field in editorDoc).toBe(true);
+  expect(editorDoc[field]).toEqual(adminValue);
+
+  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: editorHeaders,
+    data: { [field]: editorValue }
+  });
+  const unchangedResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: superAdminHeaders
+  });
+  const { doc: unchangedDoc } = await unchangedResponse.json();
+  expect(unchangedDoc[field]).toEqual(adminValue);
+}
+
+test('Should let an editor read but not write restrictedCheckbox', async ({ request }) => {
+  await expectWriteRestrictedAccess({
+    request,
+    field: 'restrictedCheckbox',
+    adminValue: true,
+    editorValue: false
+  });
+});
+
+test('Should let an editor read but not write restrictedToggle', async ({ request }) => {
+  await expectWriteRestrictedAccess({
+    request,
+    field: 'restrictedToggle',
+    adminValue: true,
+    editorValue: false
+  });
+});
+
+test('Should let an editor read but not write restrictedSelect', async ({ request }) => {
+  await expectWriteRestrictedAccess({
+    request,
+    field: 'restrictedSelect',
+    adminValue: 'a',
+    editorValue: 'b'
+  });
+});
+
+test('Should let an editor read but not write restrictedNumber', async ({ request }) => {
+  await expectWriteRestrictedAccess({
+    request,
+    field: 'restrictedNumber',
+    adminValue: 5,
+    editorValue: 9
+  });
+});
+
+test('Should let an editor read but not write restrictedDate', async ({ request }) => {
+  await expectWriteRestrictedAccess({
+    request,
+    field: 'restrictedDate',
+    adminValue: '2024-01-01T00:00:00.000Z',
+    editorValue: '2030-01-01T00:00:00.000Z'
+  });
+});
+
+test('Should let an editor read but not write restrictedRelation', async ({ request }) => {
+  const superAdminHeaders = await signInSuperAdmin(request);
+  const editorHeaders = await signInEditor(request);
+
+  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: superAdminHeaders,
+    data: { restrictedRelation: targetAId }
+  });
+
+  const editorReadResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: editorHeaders
+  });
+  const { doc: editorDoc } = await editorReadResponse.json();
+  expect('restrictedRelation' in editorDoc).toBe(true);
+  expect(editorDoc.restrictedRelation.map((ref: any) => ref.documentId)).toContain(targetAId);
+
+  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: editorHeaders,
+    data: { restrictedRelation: targetBId }
+  });
+  const unchangedResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: superAdminHeaders
+  });
+  const { doc: unchangedDoc } = await unchangedResponse.json();
+  expect(unchangedDoc.restrictedRelation.map((ref: any) => ref.documentId)).toContain(targetAId);
+});
+
 /** ---------------- CUSTOM VALIDATE, CHECKBOX ---------------- */
 
 test('Should reject agree when false', async ({ request }) => {
@@ -489,4 +743,73 @@ test('Should force resourceLink target to _blank via beforeValidate', async ({ r
   const { doc } = await response.json();
   expect(doc.resourceLink.target).toBe('_blank');
   expect(doc.resourceLink.value).toBe('https://example.com');
+});
+
+/** ---------------- HOOKS ON FIELDS NESTED INSIDE A GROUP ---------------- */
+
+test('Should coerce nested.nestedMagicText to foo, same as the top-level field', async ({
+  request
+}) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { nested: { nestedMagicText: 'anything' } }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.nested.nestedMagicText).toBe('foo');
+});
+
+test('Should append -tagged to nested.nestedTaggedText via $beforeSave', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { nested: { nestedTaggedText: 'hello' } }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.nested.nestedTaggedText).toBe('hello-tagged');
+});
+
+test('Should clamp nested.nestedScore above max down to 100', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { nested: { nestedScore: 150 } }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.nested.nestedScore).toBe(100);
+});
+
+test('Should keep sibling group fields untouched when updating only one nested field', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+
+  // Set all three nested fields to known values first.
+  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers,
+    data: {
+      nested: {
+        nestedMagicText: 'seed',
+        nestedTaggedText: 'seed-tag',
+        nestedScore: 42
+      }
+    }
+  });
+
+  // Update only nestedScore — nestedMagicText/nestedTaggedText are omitted
+  // from the payload entirely, the same partial-update shape a real panel
+  // edit produces when only one field in a group changed.
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers,
+    data: { nested: { nestedScore: 10 } }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+
+  expect(doc.nested.nestedScore).toBe(10);
+  // Neither sibling is present in this request's payload, so their hooks
+  // don't run again — this asserts the values written by the *first* patch
+  // survive untouched rather than being wiped or reset to defaults.
+  expect(doc.nested.nestedMagicText).toBe('foo');
+  expect(doc.nested.nestedTaggedText).toBe('seed-tag-tagged');
 });

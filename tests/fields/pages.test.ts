@@ -80,6 +80,143 @@ test('Should hide slug once isHome is toggled on', async ({ page }) => {
   await expect(slugField).toBeHidden();
 });
 
+/** ---------------- ONCHANGE SYNC, NON-TEXT FIELD TYPES ---------------- */
+
+test('Should sync categoryLabel from category via onChange (select)', async ({ page }) => {
+  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await page.goto(panelUrl('pages', 'create'));
+  await page.waitForLoadState('networkidle');
+
+  await page.locator('fieldset[data-path="category"] input').click();
+  await page.getByText('News', { exact: true }).click();
+
+  await expect(page.locator('input[name="categoryLabel"]')).toHaveValue('Selected: news');
+});
+
+test('Should sync featuredLabel from featured via onChange (checkbox)', async ({ page }) => {
+  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await page.goto(panelUrl('pages', 'create'));
+  await page.waitForLoadState('networkidle');
+
+  await page.locator('fieldset[data-path="featured"] .rz-checkbox-field__input').click();
+
+  await expect(page.locator('input[name="featuredLabel"]')).toHaveValue('Yes');
+});
+
+test('Should sync publishedLabel from published via onChange (toggle)', async ({ page }) => {
+  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await page.goto(panelUrl('pages', 'create'));
+  await page.waitForLoadState('networkidle');
+
+  await page.locator('fieldset[data-path="published"] .rz-switch').click();
+
+  await expect(page.locator('input[name="publishedLabel"]')).toHaveValue('Live');
+});
+
+test('Should sync priorityLabel from priority via onChange (number)', async ({ page }) => {
+  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await page.goto(panelUrl('pages', 'create'));
+  await page.waitForLoadState('networkidle');
+
+  await page.locator('fieldset[data-path="priority"] input[type="number"]').fill('7');
+  await page.locator('fieldset[data-path="priority"] input[type="number"]').blur();
+
+  await expect(page.locator('input[name="priorityLabel"]')).toHaveValue('Priority 7');
+});
+
+/** ---------------- GROUP WITH MANY FIELDS: SAVE + RELOAD ---------------- */
+
+test('Should persist every field in the meta group after save and reload', async ({ page }) => {
+  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await page.goto(panelUrl('pages', 'create'));
+  await page.waitForLoadState('networkidle');
+
+  await page.locator('input[name="title"]').pressSequentially('Group save test', { delay: 30 });
+
+  // The group starts collapsed (localStorage-remembered open state defaults
+  // to closed on first visit) — expand it before touching its fields.
+  const groupTrigger = page.locator('.rz-group-field__trigger').filter({ hasText: 'Meta' });
+  await groupTrigger.click();
+
+  await page
+    .locator('input[name="meta.metaTitle"]')
+    .pressSequentially('Nested title', { delay: 30 });
+  await page
+    .locator('textarea[name="meta.metaDescription"]')
+    .pressSequentially('Nested description', { delay: 30 });
+  await page.locator('fieldset[data-path="meta.metaFeatured"] .rz-checkbox-field__input').click();
+  await page.locator('fieldset[data-path="meta.metaPublished"] .rz-switch').click();
+  await page.locator('fieldset[data-path="meta.metaCategory"] input').click();
+  await page.getByText('Blog', { exact: true }).click();
+  await page.locator('fieldset[data-path="meta.metaPriority"] input[type="number"]').fill('4');
+
+  await page.locator('button[type="submit"]').click();
+  // Not just [^/]+$ — that also matches the create route itself
+  // ("create" satisfies [^/]+), which resolved this instantly before the
+  // real redirect happened and made the follow-up reload() just reload the
+  // still-blank create form.
+  await page.waitForURL(/\/panel\/pages\/(?!create$)[^/]+$/);
+
+  // Reload from the server — this is the part that would have silently
+  // dropped everything except the first field if the group's container had
+  // been corrupted into an array (the separator-empty-name-key bug).
+  await page.reload();
+  await page.waitForLoadState('networkidle');
+
+  await expect(page.locator('input[name="title"]')).toHaveValue('Group save test');
+
+  // The group's collapse state is remembered in localStorage keyed by the
+  // group's own field-name signature (not the document id), and localStorage
+  // survives reload() — so it's already expanded from the click above.
+  // Don't assume either state; only click if it's still collapsed.
+  if ((await page.locator('input[name="meta.metaTitle"]').count()) === 0) {
+    await page.locator('.rz-group-field__trigger').filter({ hasText: 'Meta' }).click();
+  }
+
+  await expect(page.locator('input[name="meta.metaTitle"]')).toHaveValue('Nested title');
+  await expect(page.locator('textarea[name="meta.metaDescription"]')).toHaveValue(
+    'Nested description'
+  );
+  await expect(
+    page.locator('fieldset[data-path="meta.metaFeatured"] .rz-checkbox-field__input')
+  ).toHaveAttribute('data-state', 'checked');
+  await expect(page.locator('fieldset[data-path="meta.metaPublished"] .rz-switch')).toHaveAttribute(
+    'data-state',
+    'checked'
+  );
+  await expect(page.locator('fieldset[data-path="meta.metaCategory"]')).toContainText('Blog');
+  await expect(
+    page.locator('fieldset[data-path="meta.metaPriority"] input[type="number"]')
+  ).toHaveValue('4');
+});
+
+/** ---------------- GROUP PREVIEW WHEN COLLAPSED ---------------- */
+
+test('Should show field labels and values in the group preview when collapsed', async ({
+  page
+}) => {
+  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await page.goto(panelUrl('pages', 'create'));
+  await page.waitForLoadState('networkidle');
+
+  const groupTrigger = page.locator('.rz-group-field__trigger').filter({ hasText: 'Meta' });
+  await groupTrigger.click();
+  await page
+    .locator('input[name="meta.metaTitle"]')
+    .pressSequentially('Preview title', { delay: 30 });
+
+  // Collapse it again — this switches to FieldsPreview.svelte's read-only summary.
+  await groupTrigger.click();
+
+  // capitalize() only uppercases the first letter (no camelCase word
+  // splitting), so metaTitle's fallback label is "MetaTitle", not "Meta title".
+  const previewRow = page.locator('.rz-render-fields-preview__row', { hasText: 'MetaTitle' });
+  await expect(previewRow).toBeVisible();
+  await expect(previewRow.locator('.rz-render-fields-preview__value')).toContainText(
+    'Preview title'
+  );
+});
+
 /** ---------------- FIELD DISABLED VIA .access() ---------------- */
 
 test('Should disable restrictedField for a non-admin editor, enable it for the super admin', async ({

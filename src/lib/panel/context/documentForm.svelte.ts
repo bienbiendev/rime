@@ -801,8 +801,7 @@ export function setDocumentFormContext<T extends WithOptional<GenericDoc, 'id'>>
   const initial = {
     ...args.initial,
     _type: args.initial._type || args.config.type,
-    _prototype: args.initial._prototype || args.config.slug,
-    title: args.initial.title || '[untitled]'
+    _prototype: args.initial._prototype || args.config.slug
   };
   const store = createDocumentFormState({ ...args, initial });
   return setContext(`${FORM_KEY}.${args.key}`, store);

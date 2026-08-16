@@ -10,7 +10,13 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
   const errors: FormErrors = {};
   const { event, operation } = args;
   const { rime, user } = event.locals;
-  const configMap = args.context.configMap;
+  // Own copy — an access-denied field gets deleted from here too, not just
+  // from `output`. `updateById` turns this map's keys into `incomingPaths`,
+  // which saveRelations/saveBlocks/saveTreeBlocks use to decide which
+  // existing rows are even in scope for this request; leaving a denied
+  // field's path in there made its silently-dropped write look like an
+  // explicit "no relations/blocks here anymore" and delete the existing data.
+  const configMap = { ...args.context.configMap };
   const locale = args.context.params.locale || args.event.locals.locale;
   const slug = args.config.slug;
   const isCollection = rime.config.isCollection(slug);
@@ -23,9 +29,15 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
   // Get the skip parameter from the url
   const paramSkip = event.url.searchParams.get(PARAMS.SKIP_VALIDATION) === 'true' || false;
 
-  // Skip validation on locale fallback as the validation has already been done on creation
+  // Skip validation/hooks on locale fallback — this data is `omitId(document)`
+  // read back from the just-created document (see create.ts's other-locales
+  // loop), already fully processed once. skipHooks gates validate() as well
+  // as beforeValidate/beforeSave: a non-idempotent hook (e.g. appending a
+  // suffix) would otherwise re-apply itself on every other locale and
+  // corrupt non-localized fields, which share the same underlying storage
+  // across locales.
   const skipUnique = args.context.isFallbackLocale || paramSkip;
-  const skipValidate = args.context.isFallbackLocale || paramSkip;
+  const skipHooks = args.context.isFallbackLocale || paramSkip;
   const skipRequired = args.context.isFallbackLocale || paramSkip;
   const skipAccess = args.context.isFallbackLocale || args.context.isSystemOperation;
 
@@ -64,7 +76,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /* Field hook before validate
     /****************************************************/
 
-    if (value !== undefined && value !== null) {
+    if (value !== undefined && value !== null && !skipHooks) {
       value = await config.run.beforeValidate(value, { config, data: args.data });
       output = setValueAtPath(key, output, value);
     }
@@ -73,7 +85,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /* Validate
     /****************************************************/
 
-    if (config.get.validate && value !== undefined && value !== null && !skipValidate) {
+    if (config.get.validate && value !== undefined && value !== null && !skipHooks) {
       try {
         const valid = config.run.validate(value, {
           data: output as Partial<GenericDoc>,
@@ -97,7 +109,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /* Field hook before Save
     */
 
-    if (value !== undefined && value !== null) {
+    if (value !== undefined && value !== null && !skipHooks) {
       value = await config.run.beforeSave(value, {
         config: config.get,
         event,
@@ -116,6 +128,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
       });
       if (!authorizedFieldUpdate) {
         output = deleteValueAtPath(output, key);
+        delete configMap[key];
         value = undefined;
       }
     }
@@ -126,6 +139,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
       });
       if (!authorizedFieldCreate) {
         output = deleteValueAtPath(output, key);
+        delete configMap[key];
         value = undefined;
       }
     }
@@ -133,7 +147,10 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     // Required
     if (config.get.required && config.run.isEmpty(value)) {
       if (skipRequired) {
-        output = setValueAtPath(key, output, '');
+        // The field's own type-correct default (falling back to '' only
+        // when none is set) — a hardcoded '' here was wrong for every
+        // non-string required field (number, checkbox, date, ...).
+        output = setValueAtPath(key, output, config.run.defaultValue({ event }) ?? '');
       } else {
         errors[key] = RimeFormError.REQUIRED_FIELD;
       }
@@ -146,6 +163,10 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
 
   return {
     ...args,
-    data: output
+    data: output,
+    context: {
+      ...args.context,
+      configMap
+    }
   };
 });

@@ -14,8 +14,13 @@ const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
     const table = tables[relationTableName];
     if (!table) return true;
 
+    // Only some relation tables have a `locale` column at all — it's added
+    // only when the collection has at least one .localized() relation field
+    // (see getAll's identical guard below). Without this check, eq(undefined,
+    // locale) produces SQL with a missing column reference.
+    const columns = Object.keys(getTableColumns(table));
     const conditions: SQLWrapper[] = [eq(table.ownerId, ownerId)];
-    if (locale) {
+    if (locale && columns.includes('locale')) {
       conditions.push(eq(table.locale, locale));
     }
     const existingRelations = await db

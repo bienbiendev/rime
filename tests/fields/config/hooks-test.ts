@@ -3,6 +3,7 @@ import {
   combobox,
   date,
   email,
+  group,
   link,
   number,
   radio,
@@ -39,9 +40,87 @@ export const HooksTest = Collection.create('hooksTest', {
     // server-only beforeRead
     text('shoutedText').$beforeRead((value) => (value ? String(value).toUpperCase() : value)),
 
-    // field-level access
+    // field-level access — same {read, create, update} shape checked across
+    // a spread of structurally different field types (plain scalar,
+    // boolean x2, options-based, numeric, relational, temporal), since the
+    // access mechanism lives once on FormFieldBuilder but every leaf field
+    // component reads it independently.
     text('adminOnly').access({
       read: (user) => access.isAdmin(user),
+      create: (user) => access.isAdmin(user),
+      update: (user) => access.isAdmin(user)
+    }),
+    checkbox('adminOnlyCheckbox').access({
+      read: (user) => access.isAdmin(user),
+      create: (user) => access.isAdmin(user),
+      update: (user) => access.isAdmin(user)
+    }),
+    toggle('adminOnlyToggle').access({
+      read: (user) => access.isAdmin(user),
+      create: (user) => access.isAdmin(user),
+      update: (user) => access.isAdmin(user)
+    }),
+    select('adminOnlySelect')
+      .options('a', 'b')
+      .access({
+        read: (user) => access.isAdmin(user),
+        create: (user) => access.isAdmin(user),
+        update: (user) => access.isAdmin(user)
+      }),
+    number('adminOnlyNumber').access({
+      read: (user) => access.isAdmin(user),
+      create: (user) => access.isAdmin(user),
+      update: (user) => access.isAdmin(user)
+    }),
+    relation('adminOnlyRelation')
+      .to('targets')
+      .access({
+        read: (user) => access.isAdmin(user),
+        create: (user) => access.isAdmin(user),
+        update: (user) => access.isAdmin(user)
+      }),
+    date('adminOnlyDate').access({
+      read: (user) => access.isAdmin(user),
+      create: (user) => access.isAdmin(user),
+      update: (user) => access.isAdmin(user)
+    }),
+
+    // Second access tier: readable by anyone (so RenderFields.svelte's
+    // authorizedFields filter still renders it — that filter runs on
+    // canRead alone), but only an admin can create/update it. Distinct from
+    // adminOnly* above: an editor sees these fields disabled rather than
+    // not seeing them at all. Same spread of field types.
+    checkbox('restrictedCheckbox').access({
+      read: () => true,
+      create: (user) => access.isAdmin(user),
+      update: (user) => access.isAdmin(user)
+    }),
+    toggle('restrictedToggle').access({
+      read: () => true,
+      create: (user) => access.isAdmin(user),
+      update: (user) => access.isAdmin(user)
+    }),
+    select('restrictedSelect')
+      .options('a', 'b')
+      .access({
+        read: () => true,
+        create: (user) => access.isAdmin(user),
+        update: (user) => access.isAdmin(user)
+      }),
+    number('restrictedNumber').access({
+      read: () => true,
+      create: (user) => access.isAdmin(user),
+      update: (user) => access.isAdmin(user)
+    }),
+    relation('restrictedRelation')
+      .to('targets')
+      .access({
+        read: () => true,
+        create: (user) => access.isAdmin(user),
+        update: (user) => access.isAdmin(user)
+      }),
+    date('restrictedDate').access({
+      read: () => true,
       create: (user) => access.isAdmin(user),
       update: (user) => access.isAdmin(user)
     }),
@@ -123,6 +202,24 @@ export const HooksTest = Collection.create('hooksTest', {
       .types('url')
       .beforeValidate((value) =>
         value && typeof value === 'object' ? { ...value, target: '_blank' } : value
-      )
+      ),
+
+    // Hooks nested inside a group — same three hook shapes as their
+    // top-level counterparts (beforeValidate -> validate coercion,
+    // server-only $beforeSave, beforeValidate clamp), proving the hook
+    // pipeline threads correctly through group-prefixed configMap paths
+    // (e.g. "nested.nestedMagicText") rather than just bare field names.
+    group('nested').fields(
+      text('nestedMagicText')
+        .beforeValidate((value) => 'foo')
+        .validate((value) => (value === 'foo' ? true : 'expected foo')),
+      text('nestedTaggedText').$beforeSave((value) => (value ? `${value}-tagged` : value)),
+      number('nestedScore')
+        .min(0)
+        .max(100)
+        .beforeValidate((value) =>
+          typeof value === 'number' ? Math.min(100, Math.max(0, value)) : value
+        )
+    )
   ]
 });
