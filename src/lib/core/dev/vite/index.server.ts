@@ -80,7 +80,7 @@ export function rime(): Plugin {
           // the $rime/runtime virtual module (see resolveId/load below) relies on to find
           // each field's sibling runtime.ts/runtime.server.ts — pre-bundling makes the
           // "importer" resolve to the chunk itself instead of the real source file.
-          exclude: ['sharp', 'rimecms', 'rimecms/fields', 'rimecms/panel'],
+          exclude: ['sharp'],
           include: ['@lucide/svelte']
         },
         build: {
