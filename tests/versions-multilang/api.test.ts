@@ -4,13 +4,16 @@ import test, { expect } from '@playwright/test';
 import path from 'path';
 import { API_BASE_URL, signIn } from '../util.js';
 
-const signInSuperAdmin = signIn('admin@bienoubien.studio', 'a&1Aa&1A');
+const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
+const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
+
+const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
 test('Superadmin login should be successfull', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
     data: {
-      email: 'admin@bienoubien.studio',
-      password: 'a&1Aa&1A'
+      email: ADMIN_EMAIL,
+      password: PASSWORD
     }
   });
   const json = await response.json();

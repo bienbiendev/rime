@@ -7,9 +7,9 @@ execSync('rm -fr ./logs');
 test('First init should work', async ({ request }) => {
   const response = await request.post(`${process.env.PUBLIC_RIME_URL}/api/init`, {
     data: {
-      email: 'admin@bienoubien.studio',
+      email: process.env.TESTS_ADMIN_EMAIL || 'admin@email.com',
       name: 'Admin',
-      password: 'a&1Aa&1A'
+      password: process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A'
     }
   });
   expect(response.status()).toBe(200);

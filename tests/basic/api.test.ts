@@ -4,10 +4,13 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import { API_BASE_URL, signIn } from '../util.js';
 
-const signInSuperAdmin = signIn('admin@bienoubien.studio', 'a&1Aa&1A');
-const signInAdmin = signIn('admin2@bienoubien.com', 'a&1Aa&1A');
-const signInEditor = signIn('editor@bienoubien.com', 'a&1Aa&1A');
-const signInRegular = signIn('anonym@gmail.com', 'zé2Zzé2Z');
+const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
+const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
+
+const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
+const signInAdmin = signIn('admin2@email.com', PASSWORD);
+const signInEditor = signIn('editor@email.com', PASSWORD);
+const signInRegular = signIn('anonym@gmail.com', PASSWORD);
 
 let superAdminId: string;
 let editorId: string;
@@ -23,9 +26,9 @@ let admin2Id: string;
 test('Second init should return 404', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/init`, {
     data: {
-      email: 'admin@bienoubien.studio',
+      email: ADMIN_EMAIL,
       name: 'Admin',
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(404);
@@ -38,7 +41,7 @@ test('Second init should return 404', async ({ request }) => {
 test('Login should not be successfull', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
     data: {
-      email: 'admin@bienoubien.studio',
+      email: ADMIN_EMAIL,
       password: '12345678'
     }
   });
@@ -48,8 +51,8 @@ test('Login should not be successfull', async ({ request }) => {
 test('Superadmin login should be successfull', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
     data: {
-      email: 'admin@bienoubien.studio',
-      password: 'a&1Aa&1A'
+      email: ADMIN_EMAIL,
+      password: PASSWORD
     }
   });
   const json = await response.json();
@@ -436,10 +439,10 @@ test('Should create a user editor', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/staff`, {
     headers: await signInSuperAdmin(request),
     data: {
-      email: 'editor@bienoubien.com',
+      email: 'editor@email.com',
       name: 'Chesster',
       roles: ['editor'],
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(200);
@@ -453,10 +456,10 @@ test('Should create a 2nd user editor', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/staff`, {
     headers: await signInSuperAdmin(request),
     data: {
-      email: 'editor2@bienoubien.com',
+      email: 'editor2@email.com',
       name: 'Chesster',
       roles: ['editor'],
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(200);
@@ -470,10 +473,10 @@ test('Should create another admin', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/staff`, {
     headers: await signInSuperAdmin(request),
     data: {
-      email: 'admin2@bienoubien.com',
+      email: 'admin2@email.com',
       name: 'Admin2',
       roles: ['admin'],
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(200);
@@ -487,10 +490,10 @@ test('Should create another admin (again)', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/staff`, {
     headers: await signInSuperAdmin(request),
     data: {
-      email: 'admin3@bienoubien.com',
+      email: 'admin3@email.com',
       name: 'Admin3',
       roles: ['admin'],
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(200);
@@ -569,8 +572,8 @@ test('Should not update area', async ({ request }) => {
 test('Admin login should be successfull', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
     data: {
-      email: 'admin2@bienoubien.com',
-      password: 'a&1Aa&1A'
+      email: 'admin2@email.com',
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(200);
@@ -710,15 +713,15 @@ test('Should not logout admin user', async ({ request }) => {
   expect(response.status()).toBe(200);
   const data = await response.json();
   expect(data.user).toBeDefined();
-  expect(data.user.email).toBe('admin@bienoubien.studio');
+  expect(data.user.email).toBe(ADMIN_EMAIL);
   expect(data.session).toBeDefined();
 });
 
 test('Should login editor', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
     data: {
-      email: 'editor@bienoubien.com',
-      password: 'a&1Aa&1A'
+      email: 'editor@email.com',
+      password: PASSWORD
     }
   });
 
@@ -747,10 +750,10 @@ test('Editor should not create a user', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/staff`, {
     headers: await signInEditor(request),
     data: {
-      email: 'admin-by-editor@bienoubien.com',
+      email: 'admin-by-editor@email.com',
       name: 'Admin',
       roles: ['admin'],
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(403);
@@ -867,7 +870,7 @@ test('Should not create a user', async ({ request }) => {
     data: {
       name: 'Regular',
       email: 'anonym@gmail.com',
-      password: 'zé2Zzé2Z'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(403);
@@ -879,7 +882,7 @@ test('Should create a user', async ({ request }) => {
     data: {
       name: 'Regular',
       email: 'anonym@gmail.com',
-      password: 'zé2Zzé2Z'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(200);
@@ -890,7 +893,7 @@ test('Should login user', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
     data: {
       email: 'anonym@gmail.com',
-      password: 'zé2Zzé2Z'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(200);
@@ -995,7 +998,7 @@ test('Regular should not create a staff user', async ({ request }) => {
     data: {
       eamil: 'admin@regular.com',
       name: 'Regular',
-      password: 'zé2Zzé2Z'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(403);

@@ -1,6 +1,9 @@
 import test, { expect } from '@playwright/test';
 import { API_BASE_URL } from '../util.js';
 
+const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
+const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
+
 /****************************************************
 /* Init
 /****************************************************/
@@ -8,9 +11,9 @@ import { API_BASE_URL } from '../util.js';
 test('Second init should return 404', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/init`, {
     data: {
-      email: 'admin@bienoubien.studio',
+      email: ADMIN_EMAIL,
       name: 'Admin',
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(404);
@@ -23,8 +26,8 @@ test('Second init should return 404', async ({ request }) => {
 test('Login should be successfull', async ({ page, request }) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
     data: {
-      email: 'admin@bienoubien.studio',
-      password: 'a&1Aa&1A'
+      email: ADMIN_EMAIL,
+      password: PASSWORD
     }
   });
 

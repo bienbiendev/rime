@@ -3,8 +3,11 @@ import test, { expect } from '@playwright/test';
 import path from 'path';
 import { API_BASE_URL, signIn } from '../util.js';
 
-const signInSuperAdmin = signIn('admin@bienoubien.studio', 'a&1Aa&1A');
-const signInEditor = signIn('editor@bienoubien.com', 'a&1Aa&1A');
+const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
+const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
+
+const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
+const signInEditor = signIn('editor@email.com', PASSWORD);
 
 /****************************************************
 /* Init
@@ -13,9 +16,9 @@ const signInEditor = signIn('editor@bienoubien.com', 'a&1Aa&1A');
 test('Second init should return 404', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/init`, {
     data: {
-      email: 'admin@bienoubien.studio',
+      email: ADMIN_EMAIL,
       name: 'Admin',
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(404);
@@ -30,7 +33,7 @@ let adminUserId: string;
 test('Login should not be successfull', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
     data: {
-      email: 'admin@bienoubien.studio',
+      email: ADMIN_EMAIL,
       password: '12345678'
     }
   });
@@ -40,8 +43,8 @@ test('Login should not be successfull', async ({ request }) => {
 test('Login should be successfull', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
     data: {
-      email: 'admin@bienoubien.studio',
-      password: 'a&1Aa&1A'
+      email: ADMIN_EMAIL,
+      password: PASSWORD
     }
   });
   const json = await response.json();
@@ -731,10 +734,10 @@ test('Should create a staff editor', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/staff`, {
     headers: await signInSuperAdmin(request),
     data: {
-      email: 'editor@bienoubien.com',
+      email: 'editor@email.com',
       name: 'Chesster',
       roles: ['editor'],
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   const data = await response.json();
@@ -1062,10 +1065,10 @@ test('Should create editor user for testing', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/staff`, {
     headers: await signInSuperAdmin(request),
     data: {
-      email: 'editor2@bienoubien.com',
+      email: 'editor2@email.com',
       name: 'Editor2',
       roles: ['editor'],
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   const { doc } = await response.json();
@@ -1409,8 +1412,8 @@ test('Should logout admin user', async ({ request }) => {
 test('Should login editor', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
     data: {
-      email: 'editor@bienoubien.com',
-      password: 'a&1Aa&1A'
+      email: 'editor@email.com',
+      password: PASSWORD
     }
   });
 
@@ -1422,7 +1425,7 @@ test('Editor should not update admin password', async ({ request }) => {
   const response = await request.patch(`${API_BASE_URL}/staff/${adminUserId}`, {
     headers: await signInEditor(request),
     data: {
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(403);

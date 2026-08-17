@@ -1,6 +1,9 @@
 import test, { expect, type Page } from '@playwright/test';
 import { API_BASE_URL, signIn } from '../util.js';
 
+const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
+const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
+
 /**
  * UI-driven counterparts to a subset of api.test.ts's hook coverage.
  *
@@ -30,7 +33,7 @@ async function loginAs(page: Page, email: string, password: string) {
 }
 
 async function createHooksTestDoc(page: Page) {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('hooks-test', 'create'));
   await page.waitForLoadState('networkidle');
   await page.locator('input[name="title"]').pressSequentially('UI hooks doc', { delay: 30 });
@@ -124,7 +127,7 @@ test('Should substitute framework react for svelte through a real form submit', 
 /** ---------------- CUSTOM VALIDATE, CHECKBOX ---------------- */
 
 test('Should block the create form when agree is left unchecked', async ({ page }) => {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('hooks-test', 'create'));
   await page.waitForLoadState('networkidle');
   await page.locator('input[name="title"]').pressSequentially('Should not save', { delay: 30 });
@@ -137,16 +140,16 @@ test('Should block the create form when agree is left unchecked', async ({ page 
 
 /** ---------------- FIELD-LEVEL ACCESS, ACROSS FIELD TYPES (UI) ---------------- */
 
-const signInSuperAdmin = signIn('admin@bienoubien.studio', 'a&1Aa&1A');
+const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
 test('Should create a hooks-ui-editor staff account', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/staff`, {
     headers: await signInSuperAdmin(request),
     data: {
-      email: 'hooks-ui-editor@bienoubien.com',
+      email: 'hooks-ui-editor@email.com',
       name: 'Hooks UI Editor',
       roles: ['editor'],
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(200);
@@ -190,7 +193,7 @@ const restrictedFieldLocators = [
 ];
 
 test('Should not render read-restricted fields at all for a non-admin editor', async ({ page }) => {
-  await loginAs(page, 'hooks-ui-editor@bienoubien.com', 'a&1Aa&1A');
+  await loginAs(page, 'hooks-ui-editor@email.com', PASSWORD);
   await page.goto(panelUrl('hooks-test', 'create'));
   await page.waitForLoadState('networkidle');
 
@@ -200,7 +203,7 @@ test('Should not render read-restricted fields at all for a non-admin editor', a
 });
 
 test('Should render read-restricted fields, enabled, for the super admin', async ({ page }) => {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('hooks-test', 'create'));
   await page.waitForLoadState('networkidle');
 
@@ -210,7 +213,7 @@ test('Should render read-restricted fields, enabled, for the super admin', async
 });
 
 test('Should show but disable write-restricted fields for a non-admin editor', async ({ page }) => {
-  await loginAs(page, 'hooks-ui-editor@bienoubien.com', 'a&1Aa&1A');
+  await loginAs(page, 'hooks-ui-editor@email.com', PASSWORD);
   await page.goto(panelUrl('hooks-test', 'create'));
   await page.waitForLoadState('networkidle');
 
@@ -221,7 +224,7 @@ test('Should show but disable write-restricted fields for a non-admin editor', a
 });
 
 test('Should show and enable write-restricted fields for the super admin', async ({ page }) => {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('hooks-test', 'create'));
   await page.waitForLoadState('networkidle');
 

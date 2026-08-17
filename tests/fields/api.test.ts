@@ -1,8 +1,11 @@
 import test, { expect } from '@playwright/test';
 import { API_BASE_URL, signIn } from '../util.js';
 
-const signInSuperAdmin = signIn('admin@bienoubien.studio', 'a&1Aa&1A');
-const signInEditor = signIn('editor@bienoubien.com', 'a&1Aa&1A');
+const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
+const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
+
+const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
+const signInEditor = signIn('editor@email.com', PASSWORD);
 
 let docId: string;
 let targetAId: string;
@@ -16,10 +19,10 @@ test('Should create an editor staff account', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/staff`, {
     headers: await signInSuperAdmin(request),
     data: {
-      email: 'editor@bienoubien.com',
+      email: 'editor@email.com',
       name: 'Editor',
       roles: ['editor'],
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
   expect(response.status()).toBe(200);

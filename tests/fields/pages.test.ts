@@ -1,6 +1,9 @@
 import test, { expect, type Page } from '@playwright/test';
 import { API_BASE_URL, signIn } from '../util.js';
 
+const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
+const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
+
 function panelUrl(...args: string[]) {
   if (!args.length) return `${process.env.PUBLIC_RIME_URL}/panel`;
   return `${process.env.PUBLIC_RIME_URL}/panel/${args.join('/')}`;
@@ -27,7 +30,7 @@ test('Should load the pages create page without console errors', async ({ page }
   });
   page.on('pageerror', (err) => errors.push(err.message));
 
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
 
   const response = await page.goto(panelUrl('pages', 'create'));
   expect(response?.status()).toBe(200);
@@ -39,7 +42,7 @@ test('Should load the pages create page without console errors', async ({ page }
 /** ---------------- ONCHANGE SYNC BETWEEN FIELDS ---------------- */
 
 test('Should sync fullName from firstName + lastName via onChange', async ({ page }) => {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', 'create'));
   await page.waitForLoadState('networkidle');
 
@@ -52,7 +55,7 @@ test('Should sync fullName from firstName + lastName via onChange', async ({ pag
 /** ---------------- VALIDATION ERROR STATE ---------------- */
 
 test('Should mark title with a validation error when cleared', async ({ page }) => {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', 'create'));
   await page.waitForLoadState('networkidle');
 
@@ -68,7 +71,7 @@ test('Should mark title with a validation error when cleared', async ({ page }) 
 /** ---------------- FIELD VISIBILITY VIA .condition() ---------------- */
 
 test('Should hide slug once isHome is toggled on', async ({ page }) => {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', 'create'));
   await page.waitForLoadState('networkidle');
 
@@ -83,7 +86,7 @@ test('Should hide slug once isHome is toggled on', async ({ page }) => {
 /** ---------------- ONCHANGE SYNC, NON-TEXT FIELD TYPES ---------------- */
 
 test('Should sync categoryLabel from category via onChange (select)', async ({ page }) => {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', 'create'));
   await page.waitForLoadState('networkidle');
 
@@ -94,7 +97,7 @@ test('Should sync categoryLabel from category via onChange (select)', async ({ p
 });
 
 test('Should sync featuredLabel from featured via onChange (checkbox)', async ({ page }) => {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', 'create'));
   await page.waitForLoadState('networkidle');
 
@@ -104,7 +107,7 @@ test('Should sync featuredLabel from featured via onChange (checkbox)', async ({
 });
 
 test('Should sync publishedLabel from published via onChange (toggle)', async ({ page }) => {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', 'create'));
   await page.waitForLoadState('networkidle');
 
@@ -114,7 +117,7 @@ test('Should sync publishedLabel from published via onChange (toggle)', async ({
 });
 
 test('Should sync priorityLabel from priority via onChange (number)', async ({ page }) => {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', 'create'));
   await page.waitForLoadState('networkidle');
 
@@ -127,7 +130,7 @@ test('Should sync priorityLabel from priority via onChange (number)', async ({ p
 /** ---------------- GROUP WITH MANY FIELDS: SAVE + RELOAD ---------------- */
 
 test('Should persist every field in the meta group after save and reload', async ({ page }) => {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', 'create'));
   await page.waitForLoadState('networkidle');
 
@@ -195,7 +198,7 @@ test('Should persist every field in the meta group after save and reload', async
 test('Should show field labels and values in the group preview when collapsed', async ({
   page
 }) => {
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', 'create'));
   await page.waitForLoadState('networkidle');
 
@@ -223,18 +226,18 @@ test('Should disable restrictedField for a non-admin editor, enable it for the s
   page,
   request
 }) => {
-  const superAdminHeaders = await signIn('admin@bienoubien.studio', 'a&1Aa&1A')(request);
+  const superAdminHeaders = await signIn(ADMIN_EMAIL, PASSWORD)(request);
   await request.post(`${API_BASE_URL}/staff`, {
     headers: superAdminHeaders,
     data: {
-      email: 'ui-editor@bienoubien.com',
+      email: 'ui-editor@email.com',
       name: 'UI Editor',
       roles: ['editor'],
-      password: 'a&1Aa&1A'
+      password: PASSWORD
     }
   });
 
-  await loginAs(page, 'ui-editor@bienoubien.com', 'a&1Aa&1A');
+  await loginAs(page, 'ui-editor@email.com', PASSWORD);
   await page.goto(panelUrl('pages', 'create'));
   await page.waitForLoadState('networkidle');
   // Playwright's toBeDisabled()/isDisabled() doesn't recognize <fieldset> as
@@ -243,7 +246,7 @@ test('Should disable restrictedField for a non-admin editor, enable it for the s
   // disables its descendants — so assert on the inner control, not the wrapper.
   await expect(page.locator('fieldset[data-path="restrictedField"] input')).toBeDisabled();
 
-  await loginAs(page, 'admin@bienoubien.studio', 'a&1Aa&1A');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', 'create'));
   await page.waitForLoadState('networkidle');
   await expect(page.locator('fieldset[data-path="restrictedField"] input')).toBeEnabled();

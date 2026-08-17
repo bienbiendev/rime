@@ -1,6 +1,9 @@
 import { toKebabCase } from '$lib/util/string';
 import test, { expect } from '@playwright/test';
 
+const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
+const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
+
 function panelUrl(...args: string[]) {
   if (!args.length) return `${process.env.PUBLIC_RIME_URL}/panel`;
   return `${process.env.PUBLIC_RIME_URL}/panel/${args.join('/')}`;
@@ -19,8 +22,8 @@ test.describe('Login form', () => {
     const emailInput = page.locator('input[name="email"]');
     const passwordInput = page.locator('input[name="password"]');
 
-    await emailInput.pressSequentially('admin@bienoubien.studio', { delay: 100 });
-    await passwordInput.pressSequentially('a&1Aa&1A', { delay: 100 });
+    await emailInput.pressSequentially(ADMIN_EMAIL, { delay: 100 });
+    await passwordInput.pressSequentially(PASSWORD, { delay: 100 });
 
     await expect(submitButton).toBeEnabled();
 
@@ -73,8 +76,8 @@ test.describe('Admin panel', () => {
     // Fill in the credentials
     const emailInput = page.locator('input[name="email"]');
     const passwordInput = page.locator('input[name="password"]');
-    await emailInput.pressSequentially('admin@bienoubien.studio', { delay: 100 });
-    await passwordInput.pressSequentially('a&1Aa&1A', { delay: 100 });
+    await emailInput.pressSequentially(ADMIN_EMAIL, { delay: 100 });
+    await passwordInput.pressSequentially(PASSWORD, { delay: 100 });
     // Submit the form
     await submitButton.click();
     // Wait for navigation after login
@@ -123,17 +126,17 @@ test.describe('Admin panel', () => {
         const inputConfirmPassword = page.locator(`input.rz-input[name="confirmPassword"]`);
         const inputName = page.locator(`input.rz-input[name="name"]`);
 
-        await inputTitle.pressSequentially('user@bienoubien.studio', { delay: 100 });
+        await inputTitle.pressSequentially('user@email.com', { delay: 100 });
         await inputName.pressSequentially('User', { delay: 100 });
-        await inputPassword.pressSequentially('a&1Aa&1A', { delay: 100 });
-        await inputConfirmPassword.pressSequentially('a&1Aa&1A', { delay: 100 });
+        await inputPassword.pressSequentially(PASSWORD, { delay: 100 });
+        await inputConfirmPassword.pressSequentially(PASSWORD, { delay: 100 });
 
         await expect(saveButton).toBeEnabled();
         await saveButton.click();
         await page.waitForLoadState('networkidle');
 
         const h1 = page.locator('.rz-page-header__row h1');
-        expect(await h1.innerText()).toBe('user@bienoubien.studio');
+        expect(await h1.innerText()).toBe('user@email.com');
       }
     }
   });
@@ -144,8 +147,8 @@ test.describe('Admin panel', () => {
     // Fill in the credentials
     const emailInput = page.locator('input[name="email"]');
     const passwordInput = page.locator('input[name="password"]');
-    await emailInput.pressSequentially('admin@bienoubien.studio', { delay: 100 });
-    await passwordInput.pressSequentially('a&1Aa&1A', { delay: 100 });
+    await emailInput.pressSequentially(ADMIN_EMAIL, { delay: 100 });
+    await passwordInput.pressSequentially(PASSWORD, { delay: 100 });
     // Submit the form
     await submitButton.click();
     await page.waitForNavigation();
@@ -194,10 +197,10 @@ test.describe('Layout tab: group + separator + blocks persistence', () => {
     page
   }) => {
     await page.goto(panelUrl('sign-in'));
-    await page.locator('input[name="email"]').pressSequentially('admin@bienoubien.studio', {
+    await page.locator('input[name="email"]').pressSequentially(ADMIN_EMAIL, {
       delay: 30
     });
-    await page.locator('input[name="password"]').pressSequentially('a&1Aa&1A', { delay: 30 });
+    await page.locator('input[name="password"]').pressSequentially(PASSWORD, { delay: 30 });
     await page.locator('button[type="submit"]').click();
     await page.waitForURL(panelUrl());
 
@@ -256,8 +259,8 @@ test.describe('Live Edit', () => {
     const emailInput = page.locator('input[name="email"]');
     const passwordInput = page.locator('input[name="password"]');
 
-    await emailInput.pressSequentially('admin@bienoubien.studio', { delay: 100 });
-    await passwordInput.pressSequentially('a&1Aa&1A', { delay: 100 });
+    await emailInput.pressSequentially(ADMIN_EMAIL, { delay: 100 });
+    await passwordInput.pressSequentially(PASSWORD, { delay: 100 });
 
     await expect(submitButton).toBeEnabled();
 

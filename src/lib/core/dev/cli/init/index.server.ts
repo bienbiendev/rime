@@ -75,7 +75,7 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
         mkdirSync(configDirPath);
       }
       writeFileSync(configPath, templates.defaultConfig(name.toString()));
-      logger.info('[✓] Config created src/lib/config/rime.config.ts');
+      logger.info(`[✓] Config created at ${configDirPath}/rime.config.ts`);
     } else {
       logger.info('[✓] Config already exists (skip)');
     }
