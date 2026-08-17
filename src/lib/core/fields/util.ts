@@ -70,7 +70,7 @@ export const emptyValuesFromFieldConfig = <T extends FormFieldBuilder>(arr: T[])
       }
       // Handle default values
       else {
-        emptyValue = config.run.defaultValue();
+        emptyValue = config.use.defaultValue();
       }
 
       return [config.name, emptyValue];

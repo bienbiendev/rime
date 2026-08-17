@@ -26,7 +26,7 @@ export const setDefaultValues = Hooks.beforeUpsert(async (args) => {
       operation === 'create' || (operation === 'update' && config.get.required);
 
     try {
-      isEmpty = config.run.isEmpty(value);
+      isEmpty = config.use.isEmpty(value);
     } catch {
       isEmpty = false;
       logger.warn(`Error in config.isEmpty for field ${key}`);
@@ -81,12 +81,12 @@ const defaultRelationValue = async (
     }));
   };
 
-  return await buildRelation(config.run.defaultValue({ event: getRequestEvent() }));
+  return await buildRelation(config.use.defaultValue({ event: getRequestEvent() }));
 };
 
 export const getDefaultValue: GetDefaultValue = async ({ key, config, adapter }) => {
   if (config instanceof RelationFieldBuilder) {
     return await defaultRelationValue(config, key, adapter);
   }
-  return config.run.defaultValue({ event: getRequestEvent() });
+  return config.use.defaultValue({ event: getRequestEvent() });
 };

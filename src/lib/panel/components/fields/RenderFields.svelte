@@ -20,7 +20,7 @@
   const user = getUserContext();
 
   const authorizedFields = $derived(
-    fields.filter((field) => field.run.canRead(user.attributes, { id: form.values.id }))
+    fields.filter((field) => field.use.accessRead(user.attributes, { id: form.values.id }))
   );
 
   const path = $derived(initialPath === '' ? '' : `${initialPath}.`);

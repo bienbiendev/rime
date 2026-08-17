@@ -419,12 +419,12 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     const parts = $derived(path.split('.'));
 
     const validate = (value: any) => {
-      if (config.get.required && config.run.isEmpty(value)) {
+      if (config.get.required && config.use.isEmpty(value)) {
         errors.set(path, 'required::required_field');
         return 'required';
       }
 
-      const validated = config.run.validate(value, {
+      const validated = config.use.validate(value, {
         data: doc,
         locale: locale.code,
         id: doc.id ?? undefined,
@@ -479,16 +479,16 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     };
 
     const setFieldValue = async (value: any) => {
-      value = await config.run.beforeValidate(value, { config, data: doc });
+      value = await config.use.beforeValidate(value, { config, data: doc });
       const valid = validate(value);
 
-      if (operation === 'update' && !config.run.canUpdate(user.attributes)) {
+      if (operation === 'update' && !config.use.accessUpdate(user.attributes)) {
         return;
       }
 
       if (valid) {
         setValue(path, value);
-        config.run.onChange?.(value, {
+        config.use.onChange?.(value, {
           siblings: getSiblings(),
           useField,
           useBlocks,
@@ -512,17 +512,17 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       get editable() {
         if (readOnly) return false;
         if (operation === 'create') {
-          return !!config.run.canCreate?.(user.attributes);
+          return !!config.use.accessCreate?.(user.attributes);
         } else {
-          return !!config.run.canUpdate?.(user.attributes);
+          return !!config.use.accessUpdate?.(user.attributes);
         }
       },
 
       get visible() {
-        if (!config.run.canRead(user.attributes)) {
+        if (!config.use.accessRead(user.attributes)) {
           return false;
         }
-        return config.run.condition(doc, getSiblings());
+        return config.use.isVisible(doc, getSiblings());
       },
 
       get error() {
@@ -530,11 +530,17 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       },
 
       get isEmpty() {
-        return config.run.isEmpty(getValueAtPath(path, doc));
+        return config.use.isEmpty(getValueAtPath(path, doc));
       }
     };
   }
 
+  /**
+   * Prepare the form data for submission.
+   * This function collects the changed fields from the document,
+   * applies any beforeSubmit hooks, and constructs a FormData object
+   * to be sent in the request body.
+   */
   const prepareData = async () => {
     let data: Dic = {};
     for (const key of Object.keys(changes)) {
@@ -565,6 +571,9 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     return formData;
   };
 
+  /**
+   * Submit the form data to the server.
+   */
   const submit = async (action: string) => {
     if (processing) return;
     processing = true;
@@ -625,32 +634,36 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     processing = false;
   };
 
+  /**
+   * Enhance the form element to handle submission.
+   * This function attaches a submit event listener to the form element,
+   * which prevents the default submission behavior, sets the status field
+   * if applicable, and calls the submit function with the appropriate action URL.
+   */
   const enhance = (node: HTMLFormElement) => {
     // Assign form element
     formElement = node;
-
     // Set status field if submitter has a data-status attribute
     const setStatus = (submitter: SubmitEvent['submitter']) => {
-      const status = !!submitter?.dataset.status;
-      if (status && documentConfig.versions && documentConfig.versions.draft) {
+      const SUBMITER_HAS_DATA_STATUS = !!submitter?.dataset.status;
+      if (SUBMITER_HAS_DATA_STATUS && documentConfig.versions && documentConfig.versions.draft) {
         setValue('status', submitter?.dataset.status);
       }
     };
-
     // Build full action URL with query params based on submitter attributes (draft, versionId)
     const enhanceAction = (submitter: SubmitEvent['submitter']) => {
-      let action = buildPanelActionUrl();
+      let actionUrl = buildPanelActionUrl();
+      const SUBMITER_HAS_DATA_DRAFT = !!submitter?.dataset.draft;
+      const DOC_HAS_VERSION = documentConfig.versions && !!doc.versionId;
+      const { DRAFT, VERSION_ID } = PARAMS;
 
-      const draft = !!submitter?.dataset.draft;
-      if (draft) {
-        action += `&draft=true`;
+      if (SUBMITER_HAS_DATA_DRAFT) {
+        actionUrl += `&${DRAFT}=true`;
+      } else if (DOC_HAS_VERSION) {
+        actionUrl += `&${VERSION_ID}=${doc.versionId}`;
       }
-      if (documentConfig.versions) {
-        if (!draft) {
-          action += `&versionId=${doc.versionId}`;
-        }
-      }
-      return action;
+
+      return actionUrl;
     };
 
     const listener = async (event: SubmitEvent) => {
@@ -668,31 +681,32 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     };
   };
 
+  /**
+   * Build the action URL for the form submission based on the current operation (create or update),
+   * the document type (collection or area), and any nested form levels.
+   * This function constructs the appropriate URL to which the form data will be submitted.
+   */
   const buildPanelActionUrl = () => {
     // Start with the base URI for the panel
     let panelUri = `/panel/${config.kebab}`;
-
     // Add the item ID to the URI if we're updating a collection doc
     if (operation === 'update' && initial._prototype === 'collection' && initial.id) {
       panelUri += `/${initial.id}`;
     }
-
     // Determine the appropriate action based on whether we're creating or updating
-    let actionSuffix;
-    if (operation === 'create') {
-      actionSuffix = '/create?/create';
-    } else {
-      actionSuffix = '?/update';
-    }
-
+    const actionSuffix = operation === 'create' ? '/create?/create' : '?/update';
     // Add a redirect parameter if we're in a nested form ex: relation creation
     // to prevent redirect after creation
     const redirectParam = nestedLevel > 0 ? `&${PARAMS.REDIRECT}=false` : '';
-
     // Combine all parts to form the final action URL
     return `${panelUri}${actionSuffix}${redirectParam}`;
   };
 
+  /**
+   * Import data from the default locale for the current document.
+   * This function fetches the document data from the default locale and updates the current document state.
+   * It processes localized fields to ensure they are correctly set for the current locale.
+   */
   const importDataFromDefaultLocale = async () => {
     const BASE_API_URL = `${apiUrl(documentConfig.kebab)}`;
     let fetchURL: string = BASE_API_URL;

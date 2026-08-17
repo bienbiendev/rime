@@ -73,10 +73,7 @@ export function toSchemaColumn(field: FormFieldBuilder<FormField>, parentPath?: 
   // reading it off the generic FormField base needs a narrow cast, same as
   // each field's own toSchema did today by typing against its concrete field.
   const { unique, required } = field.get as { unique?: boolean; required?: boolean };
-  // `dataType` is implemented by every leaf field builder but isn't declared
-  // on the FormFieldBuilder base (see the comment there) — narrow cast here.
-  const dataType = (field as unknown as { dataType: DataType }).dataType;
-  const columnExpr = COLUMN_EXPR[dataType](snake);
+  const columnExpr = COLUMN_EXPR[field.dataType](snake);
   const referencesStr = field._references ? templateReferences(field._references) : '';
   const defaultValue = RESOLVE_DEFAULT[field.type]?.(field);
   const suffix = templateUniqueRequired({ unique, required }, defaultValue as any);

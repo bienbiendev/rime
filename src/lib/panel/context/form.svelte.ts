@@ -53,7 +53,7 @@ function createFormStore(initial: Dic, key: string) {
     const validate = (value: any) => {
       let isEmpty;
       try {
-        isEmpty = config.run.isEmpty(value);
+        isEmpty = config.use.isEmpty(value);
       } catch (err: any) {
         console.error(err.message);
         throw new Error(config.type + ' ' + err.message);
@@ -63,7 +63,7 @@ function createFormStore(initial: Dic, key: string) {
         return false;
       }
 
-      const validated = config.run.validate(value, {
+      const validated = config.use.validate(value, {
         data: form,
         id: undefined,
         operation: undefined,
@@ -104,7 +104,7 @@ function createFormStore(initial: Dic, key: string) {
       },
 
       get visible() {
-        return config.run.condition(form, {});
+        return config.use.isVisible(form, {});
       },
 
       get error() {

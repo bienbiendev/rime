@@ -1,5 +1,4 @@
 import type { DefaultValueFn, FieldValidationFunc, FormField } from '$lib/fields/types.js';
-import type { DataType } from './form-field-builder.js';
 import { FormFieldBuilder } from './form-field-builder.js';
 
 type BooleanField = FormField & {
@@ -22,7 +21,7 @@ export class BooleanFieldBuilder<
     return this;
   }
 
-  get dataType(): DataType {
+  get dataType(): 'boolean' {
     return 'boolean';
   }
 

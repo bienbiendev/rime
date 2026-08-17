@@ -27,7 +27,7 @@ export const fallbackDataFromOriginal = async <T extends Dic>(args: {
     let isEmpty;
 
     try {
-      isEmpty = config.run.isEmpty(value);
+      isEmpty = config.use.isEmpty(value);
     } catch {
       isEmpty = false;
       logger.warn(`Error while checking if field ${key} is empty`);

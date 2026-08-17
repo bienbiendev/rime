@@ -47,7 +47,7 @@ export const createBlankDocument = <
         // than assigned `prev['']` (they never got a real name) — that used
         // to corrupt the parent object into looking array-like once
         // flattened/unflattened.
-        const defaultValue = curr.run.defaultValue({ event });
+        const defaultValue = curr.use.defaultValue({ event });
         prev[curr.name] = defaultValue !== undefined ? defaultValue : null;
       }
     } catch (err) {

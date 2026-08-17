@@ -45,7 +45,7 @@
       .filter((field) => !(field instanceof TabsBuilder))
       .filter((field) => field instanceof FormFieldBuilder)
       .filter((field) => !form.isLive || (form.isLive && field.get.live))
-      .filter((field) => field.run.canRead(user.attributes, { id: form.values.id }));
+      .filter((field) => field.use.accessRead(user.attributes, { id: form.values.id }));
   });
 
   const basePath = $derived(path ? `${path}.` : '');

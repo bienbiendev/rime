@@ -8,10 +8,10 @@ import type { Field, FieldAccess } from '../../../fields/types.js';
  *  generically-typed prop — stay bivariant on their params, exactly like the
  *  class methods this replaced. Property syntax would make TS check those
  *  params strictly/contravariantly and break that assignability. */
-export type FieldRun = {
-  canRead(...args: Parameters<FieldAccess>): boolean;
-  canCreate(...args: Parameters<FieldAccess>): boolean;
-  canUpdate(...args: Parameters<FieldAccess>): boolean;
+export type FieldUse = {
+  accessRead(...args: Parameters<FieldAccess>): boolean;
+  accessCreate(...args: Parameters<FieldAccess>): boolean;
+  accessUpdate(...args: Parameters<FieldAccess>): boolean;
 };
 
 export class FieldBuilder<T extends Field = Field> {
@@ -82,14 +82,14 @@ export class FieldBuilder<T extends Field = Field> {
    *  (`T extends FieldBuilder<any>`) strictly, not with the bivariant
    *  leniency normal overrides get, so a param-less base signature breaks
    *  assignability everywhere. */
-  get run(): FieldRun {
+  get use(): FieldUse {
     return {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      canRead: (..._args: Parameters<FieldAccess>): boolean => true,
+      accessRead: (..._args: Parameters<FieldAccess>): boolean => true,
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      canCreate: (..._args: Parameters<FieldAccess>): boolean => true,
+      accessCreate: (..._args: Parameters<FieldAccess>): boolean => true,
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      canUpdate: (..._args: Parameters<FieldAccess>): boolean => true
+      accessUpdate: (..._args: Parameters<FieldAccess>): boolean => true
     };
   }
 

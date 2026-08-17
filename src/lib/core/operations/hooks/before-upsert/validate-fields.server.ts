@@ -77,7 +77,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /****************************************************/
 
     if (value !== undefined && value !== null && !skipHooks) {
-      value = await config.run.beforeValidate(value, { config, data: args.data });
+      value = await config.use.beforeValidate(value, { config, data: args.data });
       output = setValueAtPath(key, output, value);
     }
 
@@ -87,7 +87,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
 
     if (config.get.validate && value !== undefined && value !== null && !skipHooks) {
       try {
-        const valid = config.run.validate(value, {
+        const valid = config.use.validate(value, {
           data: output as Partial<GenericDoc>,
           operation,
           id: operation === 'update' ? args.context.originalDoc?.id : undefined,
@@ -110,7 +110,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     */
 
     if (value !== undefined && value !== null && !skipHooks) {
-      value = await config.run.beforeSave(value, {
+      value = await config.use.beforeSave(value, {
         config: config.get,
         event,
         operation: args.context
@@ -123,7 +123,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /****************************************************/
 
     if (operation === 'update' && !skipAccess) {
-      const authorizedFieldUpdate = config.run.canUpdate(user, {
+      const authorizedFieldUpdate = config.use.accessUpdate(user, {
         id: args.context.originalDoc?.id
       });
       if (!authorizedFieldUpdate) {
@@ -134,7 +134,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     }
 
     if (operation === 'create' && !skipAccess) {
-      const authorizedFieldCreate = config.run.canCreate(user, {
+      const authorizedFieldCreate = config.use.accessCreate(user, {
         id: undefined
       });
       if (!authorizedFieldCreate) {
@@ -145,12 +145,12 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     }
 
     // Required
-    if (config.get.required && config.run.isEmpty(value)) {
+    if (config.get.required && config.use.isEmpty(value)) {
       if (skipRequired) {
         // The field's own type-correct default (falling back to '' only
         // when none is set) — a hardcoded '' here was wrong for every
         // non-string required field (number, checkbox, date, ...).
-        output = setValueAtPath(key, output, config.run.defaultValue({ event }) ?? '');
+        output = setValueAtPath(key, output, config.use.defaultValue({ event }) ?? '');
       } else {
         errors[key] = RimeFormError.REQUIRED_FIELD;
       }

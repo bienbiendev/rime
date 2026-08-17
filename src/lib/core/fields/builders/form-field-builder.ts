@@ -14,18 +14,18 @@ import type {
   FieldWidth,
   FormField
 } from '../../../fields/types.js';
-import { FieldBuilder, type FieldRun } from './field-builder.js';
+import { FieldBuilder, type FieldUse } from './field-builder.js';
 
 /** Adapter-agnostic storage primitive — column syntax only, not default-value semantics. */
 export type DataType = 'text' | 'boolean' | 'number' | 'timestamp' | 'json';
 
-/** Method-syntax, same reasoning as `FieldRun` — keeps `run`'s params
+/** Method-syntax, same reasoning as `FieldUse` — keeps `run`'s params
  *  bivariant across concrete field types so e.g. `SlugFieldBuilder` still
  *  satisfies a prop typed `FormFieldBuilder<FormField>`. */
-export type FormFieldRun<T extends FormField> = FieldRun & {
+export type FormFieldUse<T extends FormField> = FieldUse & {
   isEmpty(value: unknown): boolean;
   validate(value: unknown, context: Parameters<FieldValidationFunc<T>>[1]): true | string;
-  condition(doc: Dic, siblings: Dic): boolean;
+  isVisible(doc: Dic, siblings: Dic): boolean;
   onChange(value: unknown, context: Parameters<FieldHookClient>[1]): void;
   beforeRead(value: unknown, context: Omit<FieldHookContext<T>, 'config'>): Promise<any>;
   beforeSave(value: unknown, context: FieldHookContext<T>): Promise<any>;
@@ -52,15 +52,12 @@ export type FieldReferenceOptions = {
 export type FieldReference = FieldReferenceOptions & { table: string };
 
 export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuilder<T> {
-  /** Every concrete leaf field builder is expected to implement a
-   *  `get dataType(): DataType` accessor (see e.g. `$lib/fields/text/index.ts`).
-   *  Not declared here — TS doesn't allow `declare` on accessors in this
-   *  project's config, and a plain base field would conflict with subclasses
-   *  that need a computed getter (e.g. `select`, whose dataType depends on
-   *  `many`). Container builders (Group/Tabs/Blocks/Tree) never get asked,
-   *  since the adapter's tree-walker special-cases them before reaching the
-   *  generic column-rendering branch; `column.server.ts` reads `.dataType`
-   *  via a narrow cast for the same reason it already casts `unique`. */
+  /** Column storage type, used to generate the DB schema. Every field
+   *  builder that stores data must define its own. */
+  get dataType(): DataType {
+    throw new Error(`${this.constructor.name} does not implement dataType`);
+  }
+
   _references: FieldReference | null = null;
 
   constructor(name: string, type: string) {
@@ -167,7 +164,7 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
 
   /** Behavior the builder runs on your behalf — invoking a stored function or
    *  hook list, not a data read (see `.get` for that). */
-  override get run(): FormFieldRun<T> {
+  override get use(): FormFieldUse<T> {
     return {
       isEmpty: (value: unknown): boolean => this.field.isEmpty(value),
       validate: (value: unknown, context: Parameters<FieldValidationFunc<T>>[1]): true | string => {
@@ -176,7 +173,7 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
         }
         return true;
       },
-      condition: (doc: Dic, siblings: Dic): boolean => {
+      isVisible: (doc: Dic, siblings: Dic): boolean => {
         if (this.field.condition) {
           try {
             return this.field.condition(doc, siblings);
@@ -187,10 +184,11 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
         }
         return true;
       },
-      canRead: (...args: Parameters<FieldAccess>): boolean => !!this.field.access?.read?.(...args),
-      canCreate: (...args: Parameters<FieldAccess>): boolean =>
+      accessRead: (...args: Parameters<FieldAccess>): boolean =>
+        !!this.field.access?.read?.(...args),
+      accessCreate: (...args: Parameters<FieldAccess>): boolean =>
         !!this.field.access?.create?.(...args),
-      canUpdate: (...args: Parameters<FieldAccess>): boolean =>
+      accessUpdate: (...args: Parameters<FieldAccess>): boolean =>
         !!this.field.access?.update?.(...args),
       onChange: (value: unknown, context: Parameters<FieldHookClient>[1]): void => {
         for (const hook of this.field.hooks?.onChange ?? []) {
