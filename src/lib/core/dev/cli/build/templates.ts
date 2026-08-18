@@ -32,11 +32,12 @@ const serve = serveStatic('./static');
 
 const port = process.env.PORT || 3000;
 const host = process.env.HOST || '127.0.0.1';
+const protocol = process.env.ORIGIN?.startsWith('https') ? 'https' : 'http';
 
 polka()
 	.use(serve)
 	.use(handler)
 	.listen(port, host, () => {
-		console.log(\`server running on \${host}:\${port}\`);
+		console.log(\`server running on \${protocol}://\${host}:\${port}\`);
 	});
 `;
