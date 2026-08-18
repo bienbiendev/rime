@@ -5,7 +5,8 @@ import type { Plugin, UserConfig } from 'vite';
 import { RIME_DEV_CACHE_DIR } from '../../constant.server.js';
 import { ensureHasInit } from '../../ensure.server.js';
 import { logger } from '../../logger/index.server.js';
-import { INPUT_DIR, OUTPUT_DIR } from '../constants.js';
+import { INPUT_DIR, isInstalledDependency, OUTPUT_DIR } from '../constants.js';
+import { buildRuntimeRegistry, type RuntimeRegistry } from '../generate/runtime/index.server.js';
 import { sanitize } from '../generate/sanitize/index.server.js';
 
 dotenv.config({ override: true });
@@ -14,15 +15,21 @@ const dev = process.env.NODE_ENV === 'development';
 export function rime(): Plugin {
   const VCoreId = '$rime/config';
   const VSchemaId = '$rime/schema';
-  /** General-purpose server/browser split, usable anywhere in the app (not just rime's own
-   *  field code — see relation/index.ts for the first user). `import { x } from '$rime/runtime'`
-   *  resolves to a sibling `server.ts` (server builds) or `browser.ts` (browser builds) next
-   *  to whichever file does the importing — the importer's path travels encoded in the
-   *  resolved id since `load()` only receives the id, not the importer. */
-  const VRuntimeId = '$rime/runtime';
-  const VRuntimeMarker = `\0${VRuntimeId}::`;
+  /** Any field's client/server split: rime's own (relation/index.ts, link/index.ts) and a
+   *  consumer app's own local fields alike. `import { x } from '$rime/<name>'` resolves `<name>`
+   *  against a registry built once (see generate/runtime/index.server.ts's buildRuntimeRegistry,
+   *  which scans for `<name>/module.ts` + `module.server.ts` pairs) to either `module.server.ts`
+   *  (server builds) or `module.ts` (browser builds). The specifier is a static string baked into
+   *  the source, so it survives esbuild's dep-optimizer flattening — unlike an importer-relative
+   *  lookup, which breaks the moment the importing file gets pre-bundled (importer becomes the
+   *  flattened chunk, not the real source file). `config` and `schema` are reserved names (see
+   *  VCoreId/VSchemaId below, checked first) — a field can't be registered under either. */
+  const VPrefix = '$rime/';
 
   const resolvedVModule = (name: string) => '\0' + name;
+
+  let runtimeRegistry: RuntimeRegistry | null = null;
+  const getRuntimeRegistry = () => (runtimeRegistry ??= buildRuntimeRegistry());
 
   return {
     name: 'virtual-rime',
@@ -75,11 +82,6 @@ export function rime(): Plugin {
           external: ['sharp']
         },
         optimizeDeps: {
-          // rimecms/fields and rimecms/panel must not be pre-bundled: esbuild flattens
-          // their source files into one chunk, which erases the per-file identity that
-          // the $rime/runtime virtual module (see resolveId/load below) relies on to find
-          // each field's sibling runtime.ts/runtime.server.ts — pre-bundling makes the
-          // "importer" resolve to the chunk itself instead of the real source file.
           exclude: ['sharp'],
           include: ['@lucide/svelte']
         },
@@ -88,6 +90,14 @@ export function rime(): Plugin {
             external: ['sharp']
           },
           target: 'es2022'
+        },
+        server: {
+          watch: {
+            // db/*.sqlite (+ its -wal/-shm sidecars) and logs/ are runtime data, not source —
+            // every write (e.g. saving a document) touches them, and without this Vite's default
+            // whole-project-root watch treats that churn as a source change and force-reloads.
+            ignored: ['**/db/**', '**/logs/**']
+          }
         }
       };
     },
@@ -102,22 +112,26 @@ export function rime(): Plugin {
         return null;
       }
 
-      if (process.env.IS_PACKAGE_DEV && file.includes('src/lib/core/config')) {
+      if (!isInstalledDependency(import.meta.url) && file.includes('src/lib/core/config')) {
         logger.info('reload core config');
         const module = invalidateVModule(VCoreId);
         if (module) return [module];
       }
     },
 
-    resolveId(id, importer) {
+    resolveId(id) {
       if (id === VCoreId) {
         return resolvedVModule(id);
       }
       if (id === VSchemaId) {
         return resolvedVModule(id);
       }
-      if (id === VRuntimeId && importer) {
-        return `${VRuntimeMarker}${importer}`;
+      if (id.startsWith(VPrefix)) {
+        const name = id.slice(VPrefix.length);
+        // Unregistered name: return null so it surfaces as a normal "failed to resolve
+        // import" error instead of a silent virtual-module 404.
+        if (!getRuntimeRegistry().has(name)) return null;
+        return resolvedVModule(id);
       }
 
       return null;
@@ -139,11 +153,13 @@ export function rime(): Plugin {
         }
       }
 
-      if (id.startsWith(VRuntimeMarker)) {
-        const importer = id.slice(VRuntimeMarker.length);
-        const dir = path.dirname(importer);
-        const target = path.join(dir, isServer ? 'runtime.server.ts' : 'runtime.ts');
-        return `export * from '${target.replace(/\.ts$/, '.js')}';`;
+      if (id.startsWith(resolvedVModule(VPrefix))) {
+        const name = id.slice(resolvedVModule(VPrefix).length);
+        const entry = getRuntimeRegistry().get(name);
+        if (entry) {
+          const target = (isServer ? entry.server : entry.client).replace(/\.ts$/, '.js');
+          return `export * from '${target}';`;
+        }
       }
 
       return null;

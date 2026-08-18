@@ -9,12 +9,14 @@ export type ToType<T extends FieldBuilder<any> = FieldBuilder<any>> = (
 
 /**
  * Converts a file URL to its corresponding server module path and checks if the file exists.
- * Prefers a sibling `runtime.server.ts` (the generic per-field server-only file, also used to
- * resolve `$rime/runtime` — see relation/ for the first user), falling back to the older
- * `<basename>.server.ts` convention most fields still use. Tries both .ts and .js extensions
+ * Prefers a sibling `module.server.ts` — the one canonical location for a field's server-only
+ * surface (toType + its `$rime/<name>` hook, see relation/ for the reference shape) — falling
+ * back to the older `<basename>.server.ts` convention fields not yet migrated still use (e.g.
+ * number/index.server.ts). New fields should only ever use module.server.ts; the fallback exists
+ * for backward compatibility, not as a second valid option. Tries both .ts and .js extensions
  * either way.
  * @example
- * convertToServerModulePath('file:///path/to/relation/index.ts') // '/path/to/relation/runtime.server.ts'
+ * convertToServerModulePath('file:///path/to/relation/index.ts') // '/path/to/relation/module.server.ts'
  * convertToServerModulePath('file:///path/to/text/index.ts') // '/path/to/text/index.server.ts'
  */
 function convertToServerModulePath(metaUrl: string): string | null {
@@ -26,7 +28,7 @@ function convertToServerModulePath(metaUrl: string): string | null {
     // Get the filename without extension
     const baseName = filePath.replace(extname(filePath), '');
 
-    const candidates = [join(dir, 'runtime.server'), `${baseName}.server`];
+    const candidates = [join(dir, 'module.server'), `${baseName}.server`];
 
     for (const candidate of candidates) {
       for (const ext of ['.ts', '.js']) {

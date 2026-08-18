@@ -21,9 +21,10 @@ import { trycatchSync } from '$lib/util/function.js';
 import { capitalize, toPascalCase } from '$lib/util/string.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { OUTPUT_DIR } from '../../constants.js';
+import { isInstalledDependency, OUTPUT_DIR } from '../../constants.js';
+import { buildRuntimeRegistry } from '../runtime/index.server.js';
 
-const IS_PACKAGE_DEV = process.env.IS_PACKAGE_DEV === 'true';
+const IS_RIME_REPO = !isInstalledDependency(import.meta.url);
 
 // Relation  type
 const relationValueType = `
@@ -127,13 +128,53 @@ const templateRegister = <T extends Config>(config: T): string => {
 const templateDeclareVirtualModule = () =>
   [
     `declare module '$rime/config' {`,
-    ...(IS_PACKAGE_DEV ? ['\t// eslint-disable-next-line no-restricted-imports'] : []),
+    ...(IS_RIME_REPO ? ['\t// eslint-disable-next-line no-restricted-imports'] : []),
     `\texport * from '${PACKAGE_NAME}/config/server';`,
     `}`,
     `declare module '$rime/schema' {`,
     `\texport * from '$lib/+rime.generated/schema.server.js';`,
-    `}`
+    `}`,
+    ...templateDeclareFieldModules()
   ].join('\n');
+
+/**
+ * One `declare module '$rime/<name>'` per registered field module.ts + module.server.ts pair
+ * (rime-native and consumer-local alike — see buildRuntimeRegistry), always sourced from the
+ * `.server.ts` side — that's the superset shape (relation/link's module.server.ts both export
+ * `toType` in addition to the real hook; the client module.ts only has the no-op hook). Note
+ * `toType` isn't actually reachable through this import path in practice — it's consumed
+ * exclusively via getFieldPrivateModule ($lib/fields/index.server.ts), a separate mechanism
+ * that dynamically imports the same module.server.ts file directly. Declaring against the
+ * superset here is just future-proofing (whatever else a field adds to its server file stays
+ * visible), not something this specific export needs. Runtime resolution (the Vite plugin's
+ * `load()`) is unaffected either way — it still picks the real client-vs-server module
+ * dynamically based on build context.
+ */
+const templateDeclareFieldModules = () => {
+  const registry = buildRuntimeRegistry();
+  return Array.from(registry.entries()).map(([name, entry]) => {
+    const modulePath = toModuleSpecifier(entry.server);
+    return `declare module '$rime/${name}' {\n\texport * from '${modulePath}';\n}`;
+  });
+};
+
+/**
+ * `$lib/...` when the file is inside this app's own src/lib (true for a consumer's own custom
+ * field, and for rime's own fields when developing rime itself, since they live inside src/lib
+ * in that case too) — matches the `$rime/schema` declaration above, and stays readable/portable
+ * instead of an absolute path. Falls back to an absolute path only when there's genuinely no
+ * alias for it: rime's own fields when installed as a real dependency, living in
+ * node_modules/rimecms/dist/, outside this app's src/lib entirely.
+ */
+function toModuleSpecifier(serverPath: string): string {
+  const libRoot = path.resolve(process.cwd(), 'src/lib');
+  const jsPath = serverPath.replace(/\.ts$/, '.js');
+  const relative = path.relative(libRoot, jsPath);
+  if (!relative.startsWith('..')) {
+    return `$lib/${relative.split(path.sep).join('/')}`;
+  }
+  return jsPath;
+}
 
 /**
  * Generates type definitions for image sizes
@@ -340,10 +381,10 @@ export async function generateTypesString<T extends Config>(config: T) {
 }`;
 
   const content = [
-    ...(IS_PACKAGE_DEV ? ['// eslint-disable-next-line no-restricted-imports'] : []),
+    ...(IS_RIME_REPO ? ['// eslint-disable-next-line no-restricted-imports'] : []),
     `import '${PACKAGE_NAME}';`,
     `import type { Session } from 'better-auth';`,
-    ...(IS_PACKAGE_DEV ? ['// eslint-disable-next-line no-restricted-imports'] : []),
+    ...(IS_RIME_REPO ? ['// eslint-disable-next-line no-restricted-imports'] : []),
     typeImports,
     '',
     relationValueType,

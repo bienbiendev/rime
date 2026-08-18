@@ -11,8 +11,8 @@ export const toType: ToType<RelationFieldBuilder<any>> = (field) => {
   return `${field.name}${field.get.required ? '' : '?'}: RelationValue<${capitalize(field.get.relationTo)}Doc>`;
 };
 
-/** Real implementation — resolved server-side via `$rime/runtime` (see relation/index.ts,
- *  relation/runtime.ts for the client-side no-op counterpart). Uses a plain static import of
+/** Real implementation — resolved server-side via `$rime/fields/relation` (see relation/index.ts,
+ *  relation/module.ts for the client-side no-op counterpart). Uses a plain static import of
  *  `$app/server`, which SvelteKit's build blocks from ever reaching client code. */
 export const ensureRelationExists: FieldHookShared = async (
   value: RelationValue<any>,

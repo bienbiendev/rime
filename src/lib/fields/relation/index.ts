@@ -11,9 +11,7 @@ import type {
 import type { RegisterCollection } from '$lib/index.js';
 import { hasProps, isObjectLiteral } from '$lib/util/object.js';
 import type { WithOptional } from '$lib/util/types.js';
-// @ts-expect-error — resolved at build time by the rime Vite plugin to either
-// relation/runtime.server.ts (real check) or relation/runtime.ts (client no-op)
-import { ensureRelationExists } from '$rime/runtime';
+import { ensureRelationExists } from '$rime/fields/relation';
 import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
 

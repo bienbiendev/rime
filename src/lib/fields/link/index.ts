@@ -6,9 +6,7 @@ import validate from '$lib/util/validate.js';
 import Cell from './component/Cell.svelte';
 import LinkComp from './component/Link.svelte';
 import type { Link, LinkType } from './types.js';
-// @ts-expect-error — resolved at build time by the rime Vite plugin to either
-// relation/runtime.server.ts (real check) or relation/runtime.ts (client no-op)
-import { populateRessourceURL } from '$rime/runtime';
+import { populateRessourceURL } from '$rime/fields/link';
 
 export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
   //
