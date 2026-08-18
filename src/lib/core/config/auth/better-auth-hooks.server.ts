@@ -94,7 +94,7 @@ const handleUserCreation = async (ctx: CTX) => {
   /**
    * Create the collection document
    */
-  const [error] = await trycatch(() =>
+  const [error, userData] = await trycatch(() =>
     event.locals.rime
       .collection(ctx.body.type)
       .system(event.locals.isInit)
@@ -112,8 +112,7 @@ const handleUserCreation = async (ctx: CTX) => {
   );
 
   // If error clean up session/account/user created
-  // Would be great to do it with the admin plugin,
-
+  // note: would be cleaner to do it with the admin plugin, not possible at the moment
   if (error) {
     console.log(error);
     logger.error(error.message);
@@ -129,6 +128,9 @@ const handleUserCreation = async (ctx: CTX) => {
     await rime.adapter.db.delete(authUsersTable).where(eq(authUsersTable.id, user.id));
     throw new APIError('BAD_REQUEST');
   }
+
+  // Return rime user data
+  return userData;
 };
 
 /****************************************************/
@@ -161,6 +163,7 @@ export const betterAuthAfterHook: AuthMiddleware = createAuthMiddleware(async (c
 
   // Handle sign-up
   if (ctx.path.startsWith('/sign-up')) {
-    return await handleUserCreation(ctx);
+    await handleUserCreation(ctx);
+    return await getUserAttributes(ctx);
   }
 });

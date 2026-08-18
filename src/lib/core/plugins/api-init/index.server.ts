@@ -35,7 +35,7 @@ export const apiInit = definePlugin(() => {
 
     event.locals.isInit = true;
 
-    const [signUpError] = await trycatch(() =>
+    const [signUpError, response] = await trycatch(() =>
       event.locals.rime.auth.api.signUpEmail({
         body: {
           email: data.email,
@@ -53,7 +53,7 @@ export const apiInit = definePlugin(() => {
       });
     }
 
-    return json({ initialized: true });
+    return json({ initialized: true, user: response.user });
   };
 
   return {
