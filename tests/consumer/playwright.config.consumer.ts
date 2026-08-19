@@ -1,26 +1,35 @@
 import { defineConfig } from '@playwright/test';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-// process.cwd() isn't reliable here: .auto/@test-local-pack.sh invokes this
-// config while cwd is the scaffolded consumer app, not the repo root.
-const testDir = path.dirname(fileURLToPath(import.meta.url));
+/**
+ * Test config for consumer-apps that install rimecms.
+ * These tests just cover pages/staff creation and sign-in/up on a basic configuration.
+ * see: src/scripts/local-pack-test.sh
+ */
 
-// No `webServer` here: .auto/@test-local-pack.sh starts/stops the target
-// server itself (dev on :5173, then the production build on :3000) and
-// points us at it via PUBLIC_RIME_URL for each pass.
+const PORT = Number(process.env.CONSUMER_SERVER_PORT || '5173');
+const PUBLIC_URL = process.env.PUBLIC_RIME_URL || `http://localhost:${PORT}`;
+
 export default defineConfig({
   workers: 1,
   reporter: 'line',
-  testDir,
+  testDir: path.join(process.cwd(), './tests/consumer'),
   testMatch: /consumer\.test\.ts/,
   expect: {
     timeout: 30000
   },
+  webServer: {
+    command: process.env.CONSUMER_SERVER_COMMAND!,
+    cwd: process.env.CONSUMER_SERVER_CWD,
+    port: PORT,
+    reuseExistingServer: false,
+    stdout: 'pipe',
+    stderr: 'pipe'
+  },
   use: {
-    baseURL: process.env.PUBLIC_RIME_URL || 'http://localhost:5173',
+    baseURL: PUBLIC_URL,
     extraHTTPHeaders: {
-      origin: process.env.PUBLIC_RIME_URL || 'http://localhost:5173'
+      origin: PUBLIC_URL
     }
   }
 });

@@ -3,7 +3,7 @@ import { randomId } from '$lib/util/random.js';
 import { isValidSlug, slugify } from '$lib/util/string.js';
 import { generate as generateCode } from '@babel/generator';
 import * as t from '@babel/types';
-import { babelParse } from 'ast-kit';
+import { babelParse, getLang } from 'ast-kit';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { cp, mkdir } from 'fs/promises';
 import fs from 'node:fs';
@@ -131,7 +131,7 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
 
     let content = fs.readFileSync(configPath, 'utf-8');
     content = content.replace("from '@sveltejs/adapter-auto'", "from '@sveltejs/adapter-node'");
-    const program = babelParse(content, configPath); // t.Program
+    const program = babelParse(content, getLang(configPath));
     const programBody = program.body;
 
     const configObject = findSvelteConfigObject(programBody);

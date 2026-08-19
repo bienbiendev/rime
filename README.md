@@ -245,7 +245,7 @@ npx rime build
 npx rime build -d # to copy the database directory
 ```
 
-It's doing bascically `vite build` under the hood and create the polka server file inside an app directory, plus giving some info on how to run it.
+It's doing bascically `vite build` under the hood and create the server file inside an app directory, plus giving some info on how to run it.
 
 ## ROADMAP
 

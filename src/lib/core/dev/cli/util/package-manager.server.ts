@@ -1,6 +1,6 @@
 import { logger } from '$lib/core/logger/index.server.js';
 import { execSync } from 'child_process';
-import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync } from 'fs';
 import path from 'path';
 
 export type PackageManagerName = 'yarn' | 'pnpm' | 'bun' | 'npm' | 'deno';
@@ -28,18 +28,19 @@ const packageManagerConfigs: PMConfig = {
   },
   pnpm: {
     command:
-      'pnpm add -D drizzle-kit && pnpm add -D @sveltejs/adapter-node && pnpm add drizzle-orm @lucide/svelte sharp',
-    preInstall: updatePackageJsonForPnpm,
+      'pnpm add -D drizzle-kit && pnpm add -D @sveltejs/adapter-node && pnpm add drizzle-orm @libsql/client @lucide/svelte sharp',
+    preInstall: configurePnpm,
     postInstall: () => {
       execSync('pnpm rebuild');
     }
   },
   bun: {
-    command: 'bun add -D drizzle-kit && bun add -D @sveltejs/adapter-node && bun add drizzle-orm @lucide/svelte sharp'
+    command:
+      'bun add -D drizzle-kit && bun add -D @sveltejs/adapter-node && bun add drizzle-orm @libsql/client @lucide/svelte sharp'
   },
   npm: {
     command:
-      'npm install -D drizzle-kit && npm install -D @sveltejs/adapter-node && npm install drizzle-orm @lucide/svelte sharp'
+      'npm install -D drizzle-kit && npm install -D @sveltejs/adapter-node && npm install drizzle-orm @libsql/client @lucide/svelte sharp'
   },
   deno: {
     command: 'echo "deno is not supported, please use pnpm or npm" && exit 1'
@@ -72,8 +73,9 @@ export function getInvokingPackageManager(): PackageManagerName {
   return 'npm';
 }
 
-export function installDependencies(): void {
-  const pm = getPackageManager();
+export function installDependencies() {
+  const pm = getInvokingPackageManager();
+
   if (pm === 'deno' || pm === 'yarn') {
     throw new Error('Unsupported package manager ' + pm);
   }
@@ -91,33 +93,30 @@ export function installDependencies(): void {
   config.postInstall?.();
 }
 
-function updatePackageJsonForPnpm(): void {
-  const packageJsonPath = path.resolve(process.cwd(), 'package.json');
-
-  if (!existsSync(packageJsonPath)) {
-    logger.warn('package.json not found, skipping pnpm configuration');
-    return;
-  }
-
+/**
+ * pnpm 11 no longer reads the "pnpm" field in package.json (onlyBuiltDependencies
+ * included) - every pnpm-specific setting moved to pnpm-workspace.yaml, and
+ * onlyBuiltDependencies itself was replaced by allowBuilds (a name -> boolean map).
+ * `pnpm config set --location=project` writes there directly (creating the file if
+ * it doesn't exist yet, even for a non-monorepo single package).
+ *
+ * strictDepBuilds is also now on by default: any dependency (however deep) with a
+ * build script that isn't in allowBuilds hard-fails the whole install with
+ * ERR_PNPM_IGNORED_BUILDS instead of just skipping that one script. allowBuilds only
+ * covers esbuild/sharp; the rest of this command's tree (drizzle-kit, adapter-node,
+ * ...) will always have *something* pnpm hasn't seen before, and pinning every one of
+ * them here would just break again on their next update - so strict-dep-builds is
+ * turned off the same way.
+ */
+function configurePnpm(): void {
+  const allowBuilds = JSON.stringify({ esbuild: false, sharp: true, 'better-sqlite3': false });
   try {
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-
-    // Initialize pnpm configuration if it doesn't exist
-    if (!packageJson.pnpm) {
-      packageJson.pnpm = {};
-    }
-
-    // Update onlyBuiltDependencies
-    const existingBuiltDeps = packageJson.pnpm.onlyBuiltDependencies || [];
-    const newBuiltDeps = ['esbuild', 'sharp'];
-
-    // Merge and deduplicate
-    const mergedBuiltDeps = [...new Set([...existingBuiltDeps, ...newBuiltDeps])];
-    packageJson.pnpm.onlyBuiltDependencies = mergedBuiltDeps;
-
-    writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, '\t'), 'utf-8');
-    logger.info('[✓] Updated package.json with pnpm configuration');
+    execSync(`pnpm config set --location=project --json allowBuilds '${allowBuilds}'`);
+    execSync('pnpm config set --location=project strict-dep-builds false');
+    logger.info(
+      '[✓] Configured pnpm-workspace.yaml: allowBuilds (sharp) and strict-dep-builds (false)'
+    );
   } catch (error) {
-    logger.error('Failed to update package.json for pnpm:', error);
+    logger.error('Failed to configure pnpm:', error);
   }
 }

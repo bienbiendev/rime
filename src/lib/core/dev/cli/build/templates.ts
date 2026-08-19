@@ -24,7 +24,7 @@ HOST=localhost
 BODY_SIZE_LIMIT=10485760 # 10(MB) * 1024 * 1024 = 10485760 bytes
 `;
 
-export const polkaServer = `import polka from 'polka';
+export const nodeServer = `import { createServer } from 'node:http';
 import serveStatic from 'serve-static';
 import { handler } from './build/handler.js';
 
@@ -34,10 +34,12 @@ const port = process.env.PORT || 3000;
 const host = process.env.HOST || '127.0.0.1';
 const protocol = process.env.ORIGIN?.startsWith('https') ? 'https' : 'http';
 
-polka()
-	.use(serve)
-	.use(handler)
-	.listen(port, host, () => {
-		console.log(\`server running on \${protocol}://\${host}:\${port}\`);
-	});
+createServer((req, res) => {
+	serve(req, res, () => handler(req, res, () => {
+		res.statusCode = 404;
+		res.end();
+	}));
+}).listen(port, host, () => {
+	console.log(\`server running on \${protocol}://\${host}:\${port}\`);
+});
 `;

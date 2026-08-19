@@ -27,9 +27,16 @@ const Pages = Collection.create('pages', {
 	fields: [text('title').isTitle()]
 });
 
+const Medias = Collection.create('medias', {
+  upload: true,
+	fields: [
+    text('alt').required(),
+  ]
+});
+
 export default rime({
   $adapter: adapterSqlite('${name}.sqlite'),
-  collections: [Pages]
+  collections: [Pages, Medias]
 });
 `;
 

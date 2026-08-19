@@ -2,9 +2,20 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
 import { rime } from './src/lib/core/dev/vite/index.server.js';
 
+function extractHostFromURL(url?: string) {
+  if (!url) return 'localhost';
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname;
+  } catch (error) {
+    console.error('Invalid URL:', error);
+    return 'localhost';
+  }
+}
+
 export default defineConfig({
   plugins: [sveltekit(), rime()],
-  server: { host: process.env.DEV_HOST || 'localhost' },
+  server: { host: extractHostFromURL(process.env.PUBLIC_RIME_URL) },
   optimizeDeps: {
     exclude: ['sharp'],
     include: ['@lucide/svelte']

@@ -4,22 +4,26 @@ import chalk from 'chalk';
 import { spawnSync } from 'child_process';
 import { copyFileSync, cpSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'fs';
 import { getInvokingPackageManager } from '../util/package-manager.server.js';
-import { envProduction, polkaServer } from './templates.js';
+import { envProduction, nodeServer } from './templates.js';
 
 const installCommands = {
   pnpm: {
-    addDeps: 'pnpm install polka sharp serve-static',
+    addDeps: 'pnpm install sharp serve-static',
     prodInstall: 'pnpm install --prod',
     runEnv: 'pnpm rime env'
   },
   npm: {
-    addDeps: 'npm install polka sharp serve-static',
+    addDeps: 'npm install sharp serve-static',
     prodInstall: 'npm install --omit=dev',
     runEnv: 'npx rime env'
   }
 } as const;
 
-export const build = (args: { withDatabase?: boolean; withEnv?: boolean }) => {
+export const build = (args: {
+  withDatabase?: boolean;
+  withEnv?: boolean;
+  withStatic?: boolean;
+}) => {
   // Delete app folder if it exists
   if (existsSync('./app')) {
     rmSync('./app', { recursive: true, force: true });
@@ -46,9 +50,15 @@ export const build = (args: { withDatabase?: boolean; withEnv?: boolean }) => {
     logger.info('[✓] database copied');
   }
 
+  // Copy static folder if flag is set
+  if (args.withStatic) {
+    cpSync('./static', './app/static', { recursive: true });
+    logger.info('[✓] static directory copied');
+  }
+
   // Create main entry server file
-  writeFileSync('./app/index.js', polkaServer);
-  logger.info('[✓] polka server created at app/index.js');
+  writeFileSync('./app/index.js', nodeServer);
+  logger.info('[✓] server created at app/index.js');
 
   // Create .env file if flag is set
   const envContent = envProduction();

@@ -22,6 +22,7 @@ program
   .command('build')
   .option('-d, --with-database', 'Include database', false)
   .option('-e, --with-env', 'Create the /app/.env file from the production template', false)
+  .option('-s, --with-static', 'Copy the current static directory', false)
   .action(async (args) => {
     const build = await import('./build/index.js').then((m) => m.build);
     build(args);

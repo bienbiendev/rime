@@ -179,18 +179,11 @@
     "magic-string-ast": "^1.0.2",
     "nodemailer": "^8.0.5",
     "paneforge": "^1.0.2",
-    "polka": "^0.5.2",
     "postcss-import": "^16.1.1",
     "qs": "^6.14.0",
     "runed": "^0.37.1",
     "sharp": "^0.35.3",
     "sortablejs": "^1.15.6",
     "svelte-sonner": "^1.0.5"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "sharp",
-      "esbuild"
-    ]
   }
 }

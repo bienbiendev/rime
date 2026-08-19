@@ -10,7 +10,8 @@ export function createPlaywrightConfig({ name }: Args): PlaywrightTestConfig {
     workers: 1,
     reporter: 'line',
     webServer: {
-      command: `pnpm rime:use ${name} && pnpm vite dev`,
+      command: `pnpm rime:use ${name} && pnpm exec vite dev`,
+      cwd: process.cwd(),
       port: 5173,
       stdout: 'pipe',
       stderr: 'pipe'

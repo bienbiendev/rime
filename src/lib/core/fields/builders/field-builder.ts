@@ -12,11 +12,11 @@ export type FieldUse = {
   accessRead(...args: Parameters<FieldAccess>): boolean;
   accessCreate(...args: Parameters<FieldAccess>): boolean;
   accessUpdate(...args: Parameters<FieldAccess>): boolean;
+  generateType(): string;
 };
 
 export class FieldBuilder<T extends Field = Field> {
   field: T;
-  _metaUrl?: string;
 
   constructor(type: string) {
     this.field = {
@@ -89,7 +89,8 @@ export class FieldBuilder<T extends Field = Field> {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       accessCreate: (..._args: Parameters<FieldAccess>): boolean => true,
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      accessUpdate: (..._args: Parameters<FieldAccess>): boolean => true
+      accessUpdate: (..._args: Parameters<FieldAccess>): boolean => true,
+      generateType: (): string => this.generateType()
     };
   }
 
@@ -99,5 +100,13 @@ export class FieldBuilder<T extends Field = Field> {
 
   get cell(): Component<{ value: any }> | null {
     return null;
+  }
+
+  /** The type-generation script's only entry point (via `.use.generateType()`) — `protected`
+   *  so it never surfaces on the fluent chain (`text('title').generateType()` would be a
+   *  compile error), while staying a real overridable method so every concrete field can
+   *  provide its own, unlike a private `#field` which can't be polymorphically overridden. */
+  protected generateType(): string {
+    return '';
   }
 }

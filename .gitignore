@@ -43,6 +43,7 @@ test-results
 pnpm-lock.yaml
 
 .auto
+/consumer-app-test
 src/params
 src/lib/site
 /.zed
