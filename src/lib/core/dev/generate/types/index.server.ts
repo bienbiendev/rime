@@ -13,7 +13,6 @@ import { logger } from '$lib/core/logger/index.server.js';
 import { withVersionsSuffix } from '$lib/core/naming.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
-import { getFieldPrivateModule } from '$lib/fields/index.server.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field } from '$lib/fields/types.js';
@@ -139,16 +138,12 @@ const templateDeclareVirtualModule = () =>
 
 /**
  * One `declare module '$rime/<name>'` per registered field module.ts + module.server.ts pair
- * (rime-native and consumer-local alike — see buildRuntimeRegistry), always sourced from the
- * `.server.ts` side — that's the superset shape (relation/link's module.server.ts both export
- * `toType` in addition to the real hook; the client module.ts only has the no-op hook). Note
- * `toType` isn't actually reachable through this import path in practice — it's consumed
- * exclusively via getFieldPrivateModule ($lib/fields/index.server.ts), a separate mechanism
- * that dynamically imports the same module.server.ts file directly. Declaring against the
- * superset here is just future-proofing (whatever else a field adds to its server file stays
- * visible), not something this specific export needs. Runtime resolution (the Vite plugin's
- * `load()`) is unaffected either way — it still picks the real client-vs-server module
- * dynamically based on build context.
+ * (rime-native and consumer-local alike — see buildRuntimeRegistry), sourced from the
+ * `.server.ts` side (the real, server-only implementation of the shared hook; the client
+ * module.ts only has the no-op). Unrelated to type generation itself — that goes through
+ * `field.use.generateType()` on the builder instance directly, not through this registry.
+ * Runtime resolution (the Vite plugin's `load()`) is unaffected either way — it still picks
+ * the real client-vs-server module dynamically based on build context.
  */
 const templateDeclareFieldModules = () => {
   const registry = buildRuntimeRegistry();
@@ -216,18 +211,7 @@ export async function generateTypesString<T extends Config>(config: T) {
    * @returns An array of string containing fields type definitions
    */
   const buildFieldsTypes = async (fields: FieldBuilder<Field>[]): Promise<string[]> => {
-    const strFields: string[] = [];
-
-    for (const field of fields) {
-      if (field instanceof FormFieldBuilder || field instanceof TabsBuilder) {
-        const fieldServerMethods = await getFieldPrivateModule(field);
-        if (fieldServerMethods) {
-          const result = await Promise.resolve(fieldServerMethods.toType(field));
-          strFields.push(result);
-        }
-      }
-    }
-    return strFields;
+    return fields.map((field) => field.use.generateType()).filter(Boolean);
   };
 
   const buildblocksTypes = async (fields: FieldBuilder<Field>[]) => {

@@ -6,9 +6,6 @@ import validate from '$lib/util/validate.js';
 import EmailComp from './component/Email.svelte';
 
 export class EmailFieldBuilder extends FormFieldBuilder<EmailField> {
-  //
-  _metaUrl: string = import.meta.url;
-
   constructor(name: string) {
     super(name, 'email');
     this.field.validate = validate.email;
@@ -17,31 +14,36 @@ export class EmailFieldBuilder extends FormFieldBuilder<EmailField> {
     };
   }
 
-  layout(layout: 'compact' | 'default') {
-    this.field.layout = layout;
-    return this;
+  get dataType(): DataType {
+    return 'text';
   }
 
   get component() {
     return EmailComp;
   }
 
+  layout(layout: 'compact' | 'default') {
+    this.field.layout = layout;
+    return this;
+  }
+
   unique(bool?: boolean) {
     this.field.unique = typeof bool === 'boolean' ? bool : true;
     return this;
   }
+
   defaultValue(value: string | DefaultValueFn<string>) {
     this.field.defaultValue = value;
     return this;
   }
 
-  get dataType(): DataType {
-    return 'text';
-  }
-
   isTitle() {
     this.field.isTitle = true;
     return this;
+  }
+
+  protected override generateType(): string {
+    return `${this.name}${this.get.required ? '' : '?'}: string`;
   }
 }
 

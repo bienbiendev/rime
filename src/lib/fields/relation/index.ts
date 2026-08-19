@@ -1,15 +1,10 @@
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';
-import type {
-  DefaultValueFn,
-  Field,
-  FormField,
-  RelationRef,
-  RelationValue
-} from '$lib/fields/types.js';
+import type { DefaultValueFn, FormField, RelationRef, RelationValue } from '$lib/fields/types.js';
 import type { RegisterCollection } from '$lib/index.js';
 import { hasProps, isObjectLiteral } from '$lib/util/object.js';
+import { capitalize } from '$lib/util/string.js';
 import type { WithOptional } from '$lib/util/types.js';
 import { ensureRelationExists } from '$rime/fields/relation';
 import Cell from './component/Cell.svelte';
@@ -18,9 +13,6 @@ import RelationComponent from './component/Relation.svelte';
 export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends FormFieldBuilder<
   RelationField<Doc>
 > {
-  //
-  _metaUrl = import.meta.url;
-
   constructor(name: string) {
     super(name, 'relation');
     this.field.isEmpty = (value) => !value || (Array.isArray(value) && value.length === 0);
@@ -68,14 +60,13 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
   get dataType(): DataType {
     return 'json';
   }
+
+  protected override generateType(): string {
+    return `${this.name}${this.get.required ? '' : '?'}: RelationValue<${capitalize(this.get.relationTo)}Doc>`;
+  }
 }
 
 export const relation = (name: string) => new RelationFieldBuilder(name);
-
-/**
- * Checks if a field is a relation field.
- */
-export const isRelationField = (field: Field): field is RelationField => field.type === 'relation';
 
 /**
  * Checks if a relation value is resolved (contains the actual referenced document).

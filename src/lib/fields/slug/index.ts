@@ -9,9 +9,6 @@ import Slug from './component/Slug.svelte';
 export const slug = (name: string) => new SlugFieldBuilder(name);
 
 export class SlugFieldBuilder extends FormFieldBuilder<SlugField> {
-  //
-  _metaUrl = import.meta.url;
-
   constructor(name: string) {
     super(name, 'slug');
     this.field.validate = validate.slug;
@@ -68,6 +65,10 @@ export class SlugFieldBuilder extends FormFieldBuilder<SlugField> {
       this.field.placeholder = slugify(this.field.label || this.field.name);
     }
     return super.compile();
+  }
+
+  protected override generateType(): string {
+    return `${this.name}${this.get.required ? '' : '?'}: string`;
   }
 }
 

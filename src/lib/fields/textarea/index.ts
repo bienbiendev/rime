@@ -7,9 +7,6 @@ import TextArea from './component/TextArea.svelte';
 export const textarea = (name: string) => new TextAreaFieldBuilder(name);
 
 export class TextAreaFieldBuilder extends FormFieldBuilder<TextAreaField> {
-  //
-  _metaUrl: string = import.meta.url;
-
   constructor(name: string) {
     super(name, 'textarea');
     this.field.hooks = {
@@ -56,6 +53,10 @@ export class TextAreaFieldBuilder extends FormFieldBuilder<TextAreaField> {
     }
 
     return super.compile();
+  }
+
+  protected override generateType(): string {
+    return `${this.name}${this.get.required ? '' : '?'}: string`;
   }
 }
 

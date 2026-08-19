@@ -225,7 +225,8 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
       defaultValue: (context: { event?: RequestEvent } = {}): unknown => {
         const value = this.field.defaultValue;
         return typeof value === 'function' ? (value as DefaultValueFn<unknown>)(context) : value;
-      }
+      },
+      generateType: (): string => this.generateType()
     };
   }
 
@@ -270,5 +271,11 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     this.field.hooks!.beforeValidate ??= [];
     this.field.hooks!.beforeValidate.push(hook);
     return this;
+  }
+
+  /** Fallback for a data-bearing field that doesn't override this: still shows up in the
+   *  generated document type (as `any`) instead of silently vanishing from it. */
+  protected override generateType(): string {
+    return `${this.field.name}${this.get.required ? '' : '?'}: any`;
   }
 }

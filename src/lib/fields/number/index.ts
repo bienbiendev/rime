@@ -19,9 +19,6 @@ const validateNumber: FieldValidationFunc<NumberField> = (value, { config }) => 
 };
 
 export class NumberFieldBuilder extends FormFieldBuilder<NumberField> {
-  //
-  _metaUrl = import.meta.url;
-
   constructor(name: string) {
     super(name, 'number');
     this.field.validate = validateNumber;
@@ -56,6 +53,10 @@ export class NumberFieldBuilder extends FormFieldBuilder<NumberField> {
       this.field.defaultValue = this.field.min || 0;
     }
     return super.compile();
+  }
+
+  protected override generateType(): string {
+    return `${this.name}${this.get.required ? '' : '?'}: number`;
   }
 }
 

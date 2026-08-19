@@ -20,9 +20,6 @@ const isEmpty = (value: unknown) => {
 };
 
 export class RichTextFieldBuilder extends FormFieldBuilder<RichTextField> {
-  //
-  _metaUrl = import.meta.url;
-
   constructor(name: string) {
     super(name, 'richText');
     this.field.isEmpty = isEmpty;
@@ -112,6 +109,10 @@ export class RichTextFieldBuilder extends FormFieldBuilder<RichTextField> {
 
   get dataType(): DataType {
     return 'json';
+  }
+
+  protected override generateType(): string {
+    return `${this.name}${this.get.required ? '' : '?'}: import('@tiptap/core').JSONContent`;
   }
 }
 

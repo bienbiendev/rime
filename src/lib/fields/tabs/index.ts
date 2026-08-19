@@ -8,9 +8,6 @@ export const tabs = (...tabs: TabBuilder[]) => new TabsBuilder(...tabs);
 export const tab = (name: string) => new TabBuilder(name);
 
 export class TabsBuilder extends FieldBuilder<TabsField> {
-  //
-  _metaUrl = import.meta.url;
-
   constructor(...tabs: TabBuilder[]) {
     super('tabs');
     this.field.tabs = tabs;
@@ -27,6 +24,17 @@ export class TabsBuilder extends FieldBuilder<TabsField> {
       component: this.component,
       cell: this.cell || undefined
     };
+  }
+
+  protected override generateType(): string {
+    const types: string[] = [];
+    for (const tab of this.field.tabs) {
+      const fieldsTypes = tab.get.fields.map((field) => field.use.generateType()).filter(Boolean);
+      if (fieldsTypes.length) {
+        types.push(`${tab.name}: {${fieldsTypes.join(',\n\t\t')}}`);
+      }
+    }
+    return types.length ? types.join(',\n\t').replaceAll(',,', ',') : '';
   }
 }
 

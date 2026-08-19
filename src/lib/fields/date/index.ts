@@ -11,14 +11,16 @@ const stringToDate = (value: string) => {
 };
 
 export class DateFieldBuilder extends FormFieldBuilder<DateField> {
-  //
-  _metaUrl: string = import.meta.url;
-
   constructor(name: string) {
     super(name, 'date');
+    this.field.defaultValue = () => new Date();
     this.field.hooks = {
       beforeValidate: [stringToDate]
     };
+  }
+
+  get dataType(): DataType {
+    return 'timestamp';
   }
 
   get component() {
@@ -34,13 +36,13 @@ export class DateFieldBuilder extends FormFieldBuilder<DateField> {
     return this;
   }
 
-  get dataType(): DataType {
-    return 'timestamp';
-  }
-
   isTitle() {
     this.field.isTitle = true;
     return this;
+  }
+
+  protected override generateType(): string {
+    return `${this.name}${this.get.required ? '' : '?'}: Date`;
   }
 }
 

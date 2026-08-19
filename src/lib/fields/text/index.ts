@@ -6,9 +6,6 @@ import Text from './component/Text.svelte';
 
 /****************************************************/
 export class TextFieldBuilder extends FormFieldBuilder<TextField> {
-  //
-  _metaUrl: string = import.meta.url;
-
   constructor(name: string) {
     super(name, 'text');
     this.field.hooks = {
@@ -65,6 +62,10 @@ export class TextFieldBuilder extends FormFieldBuilder<TextField> {
     }
 
     return super.compile();
+  }
+
+  protected override generateType(): string {
+    return `${this.name}${this.get.required ? '' : '?'}: string`;
   }
 }
 

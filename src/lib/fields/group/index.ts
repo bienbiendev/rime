@@ -13,9 +13,6 @@ const isEmpty = (value: unknown) =>
     Object.keys(value).length === 0);
 
 export class GroupFieldBuilder extends FormFieldBuilder<GroupField> {
-  //
-  _metaUrl = import.meta.url;
-
   constructor(name: string) {
     super(name, 'group');
     this.field.isEmpty = isEmpty;
@@ -53,6 +50,11 @@ export class GroupFieldBuilder extends FormFieldBuilder<GroupField> {
 
   compile() {
     return { ...this.field, fields: this.field.fields.map((f) => f.compile()) };
+  }
+
+  protected override generateType(): string {
+    const fieldsTypes = this.field.fields.map((field) => field.use.generateType()).filter(Boolean);
+    return this.field.fields.length ? `${this.name}: {${fieldsTypes.join(',\n\t')}}` : '';
   }
 }
 

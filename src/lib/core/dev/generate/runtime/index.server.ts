@@ -24,8 +24,7 @@ function findDistRoot(startDir: string): string {
   return path.join(dir, 'dist');
 }
 
-/** `module.ts` when scanning TS source, `module.js` when scanning a built `dist/` — same helper
- *  `convertToServerModulePath` (fields/index.server.ts) uses for the same reason. */
+/** `module.ts` when scanning TS source, `module.js` when scanning a built `dist/`. */
 function findModuleFile(dir: string, baseName: string): string | null {
   for (const ext of ['.ts', '.js']) {
     const candidate = path.join(dir, `${baseName}${ext}`);
@@ -39,10 +38,9 @@ function findModuleFile(dir: string, baseName: string): string | null {
  * containing folder's path relative to `root` — `$rime/<key>` mirrors the real path, e.g.
  * `fields/relation/module.ts` under a `lib`-rooted scan registers as `fields/relation`.
  *
- * Both files are required to register a `$rime/<key>` entry — a `module.server` on its own
- * (the common case: a field with only `toType`, no request-time hook needing a client/server
- * split) is valid and expected, just doesn't need a `$rime/<key>` entry at all, since nothing
- * would import it that way; `getFieldPrivateModule` finds `toType` independently of this scan.
+ * Both files are required to register a `$rime/<key>` entry: this pair only exists for a field
+ * whose hook needs different server/client behavior (relation, link) — a field with nothing to
+ * split just overrides `generateType()` on its builder directly and never needs either file.
  * `+rime.generated/` is skipped since it's sanitize's own output, unrelated to this.
  */
 function scanModulePairs(root: string): RuntimeRegistry {

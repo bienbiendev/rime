@@ -3,11 +3,12 @@ import { BooleanFieldBuilder } from '../../core/fields/builders/boolean-builder.
 import Checkbox from './component/Checkbox.svelte';
 
 export class CheckboxFieldBuilder extends BooleanFieldBuilder<CheckboxField> {
-  //
-  _metaUrl: string = import.meta.url;
-
   get component() {
     return Checkbox;
+  }
+
+  protected override generateType(): string {
+    return `${this.name}: boolean`;
   }
 }
 

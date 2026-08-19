@@ -9,9 +9,6 @@ import type { Link, LinkType } from './types.js';
 import { populateRessourceURL } from '$rime/fields/link';
 
 export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
-  //
-  _metaUrl = import.meta.url;
-
   constructor(name: string) {
     super(name, 'link');
     this.field.isEmpty = (link: unknown) =>
@@ -73,6 +70,15 @@ export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
       this.field.defaultValue = { value: '', target: '_self', type: this.field.types![0] };
     }
     return super.compile();
+  }
+
+  protected override generateType(): string {
+    return `${this.name}${this.get.required ? '' : '?'}: {
+    type: ${this.get.types.map((t) => `'${t}'`).join(' | ')};
+    value: string | null;
+    target: '_self' | '_blank';
+    url?: string;
+}`;
   }
 }
 

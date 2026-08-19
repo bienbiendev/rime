@@ -4,13 +4,9 @@ import Cell from './component/Cell.svelte';
 import Toggle from './component/Toggle.svelte';
 
 export class ToggleFieldBuilder extends BooleanFieldBuilder<ToggleField> {
-  //
-  _metaUrl = import.meta.url;
-
   constructor(name: string) {
     super(name, 'toggle');
     this.field.isEmpty = (value) => typeof value !== 'boolean';
-    this.field.defaultValue = false;
   }
 
   get component() {
@@ -33,6 +29,10 @@ export class ToggleFieldBuilder extends BooleanFieldBuilder<ToggleField> {
       };
     }
     return super.compile();
+  }
+
+  protected override generateType(): string {
+    return `${this.name}${this.get.required ? '' : '?'}: boolean`;
   }
 }
 

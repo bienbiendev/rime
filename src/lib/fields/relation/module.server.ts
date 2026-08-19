@@ -3,13 +3,7 @@ import { env } from '$env/dynamic/public';
 import { PARAMS } from '$lib/core/constant.js';
 import type { FieldHookShared, RelationValue } from '$lib/fields/types.js';
 import { trycatchFetch } from '$lib/util/function.js';
-import { capitalize, toKebabCase } from '$lib/util/string.js';
-import type { ToType } from '../index.server.js';
-import type { RelationFieldBuilder } from './index.js';
-
-export const toType: ToType<RelationFieldBuilder<any>> = (field) => {
-  return `${field.name}${field.get.required ? '' : '?'}: RelationValue<${capitalize(field.get.relationTo)}Doc>`;
-};
+import { toKebabCase } from '$lib/util/string.js';
 
 /** Real implementation — resolved server-side via `$rime/fields/relation` (see relation/index.ts,
  *  relation/module.ts for the client-side no-op counterpart). Uses a plain static import of

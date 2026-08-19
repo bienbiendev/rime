@@ -4,14 +4,17 @@ import { PickManyFieldBuilder } from '../../core/fields/builders/select-builder.
 import Select from './component/Select.svelte';
 
 export class SelectFieldBuilder extends PickManyFieldBuilder<SelectField> {
-  _metaUrl = import.meta.url;
-
   get component() {
     return Select;
   }
 
   get dataType(): DataType {
     return this.field.many ? 'json' : 'text';
+  }
+
+  protected override generateType(): string {
+    const optionsJoinedType = this.get.options.map((o) => `'${o.value}'`).join(' | ');
+    return `${this.name}${this.get.required ? '' : '?'}: (${optionsJoinedType})${this.get.many ? '[]' : ''}`;
   }
 }
 

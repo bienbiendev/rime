@@ -2,6 +2,7 @@ import { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { Field, FormField } from '$lib/fields/types.js';
 import type { Dic } from '$lib/util/types.js';
+import { toPascalCase } from '$lib/util/string.js';
 import { number } from '../number/index.js';
 import { text } from '../text/index.js';
 import Cell from './component/Cell.svelte';
@@ -10,9 +11,6 @@ import Tree from './component/Tree.svelte';
 export const tree = (name: string) => new TreeBuilder(name);
 
 export class TreeBuilder extends FormFieldBuilder<TreeField> {
-  //
-  _metaUrl = import.meta.url;
-
   constructor(name: string) {
     super(name, 'tree');
     this.field.defaultValue = [];
@@ -90,6 +88,10 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
       ...this.field,
       fields: this.field.fields.map((f) => f.compile())
     };
+  }
+
+  protected override generateType(): string {
+    return `${this.name}: Array<Tree${toPascalCase(this.name)}>,`;
   }
 }
 

@@ -6,9 +6,6 @@ import TimeComponent from './component/Time.svelte';
 export const time = (name: string) => new TimeFieldBuilder(name);
 
 export class TimeFieldBuilder extends FormFieldBuilder<TimeField> {
-  //
-  _metaUrl: string = import.meta.url;
-
   constructor(name: string) {
     super(name, 'time');
     this.field.defaultValue = '08:00';
@@ -31,6 +28,10 @@ export class TimeFieldBuilder extends FormFieldBuilder<TimeField> {
 
   get dataType(): DataType {
     return 'text';
+  }
+
+  protected override generateType(): string {
+    return `${this.name}${!this.get.required ? '?' : ''}: string`;
   }
 }
 

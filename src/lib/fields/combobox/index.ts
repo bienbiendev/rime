@@ -3,9 +3,6 @@ import { PickOneFieldBuilder } from '../../core/fields/builders/select-builder.j
 import Combobox from './component/ComboBox.svelte';
 
 export class ComboBoxFieldBuilder extends PickOneFieldBuilder<ComboBoxField> {
-  //
-  _metaUrl: string = import.meta.url;
-
   get component() {
     return Combobox;
   }
@@ -17,6 +14,11 @@ export class ComboBoxFieldBuilder extends PickOneFieldBuilder<ComboBoxField> {
   defaultValue(value: string | DefaultValueFn<string>) {
     this.field.defaultValue = value;
     return this;
+  }
+
+  protected override generateType(): string {
+    const optionsJoinedType = this.get.options.map((o) => `'${o.value}'`).join(' | ');
+    return `${this.name}${this.get.required ? '' : '?'}: ${optionsJoinedType}`;
   }
 }
 

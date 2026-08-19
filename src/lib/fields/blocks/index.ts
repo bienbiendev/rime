@@ -2,6 +2,7 @@ import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { Field, FormField } from '$lib/fields/types.js';
 import type { Dic, WithoutBuilders } from '$lib/util/types.js';
+import { toPascalCase } from '$lib/util/string.js';
 import type { IconProps } from '@lucide/svelte';
 import type { Component } from 'svelte';
 import { number } from '../number/index.js';
@@ -14,9 +15,6 @@ export const blocks = (name: string, blocks: BlockBuilder[]) => new BlocksBuilde
 export const block = (name: string) => new BlockBuilder(name);
 
 export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
-  //
-  _metaUrl: string = import.meta.url;
-
   constructor(name: string, blocks: BlockBuilder[]) {
     super(name, 'blocks');
     this.field.blocks = blocks;
@@ -83,6 +81,11 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
       component: this.component,
       cell: this.cell || undefined
     } as any;
+  }
+
+  protected override generateType(): string {
+    const blockNames = this.field.blocks.map((block) => `Block${toPascalCase(block.name)}`);
+    return `${this.name}: Array<${blockNames.join(' | ')}>,`;
   }
 }
 

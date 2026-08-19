@@ -3,9 +3,6 @@ import { PickOneFieldBuilder } from '../../core/fields/builders/select-builder.j
 import Radio from './component/Radio.svelte';
 
 export class RadioFieldBuilder extends PickOneFieldBuilder<RadioField> {
-  //
-  _metaUrl = import.meta.url;
-
   constructor(name: string) {
     super(name, 'radio');
     this.field.many = false;
@@ -28,6 +25,11 @@ export class RadioFieldBuilder extends PickOneFieldBuilder<RadioField> {
       this.field.defaultValue = defaultOption;
     }
     return this.field;
+  }
+
+  protected override generateType(): string {
+    const optionsString = this.get.options.map((option) => `'${option.value}'`).join(' | ');
+    return `${this.name}${this.get.required ? '' : '?'}: ${optionsString}`;
   }
 }
 
