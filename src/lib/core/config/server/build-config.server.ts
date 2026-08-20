@@ -1,5 +1,5 @@
 import type { SMTPConfig } from '$lib/core/plugins/mailer/index.server.js';
-import { createRime } from '../../rime.server.js';
+import { createRime, type Rime } from '../../rime.server.js';
 import { augmentPanel } from '../client/augment-panel.js';
 import { augmentPlugins } from '../client/augment-plugins.js';
 import { augmentIcons } from '../shared/augment-icons.js';
@@ -12,7 +12,7 @@ import { augmentPanelAccess } from './augment-panel-access.server.js';
 import { augmentPluginsServer } from './augment-plugins.server.js';
 import { augmentStaffServer } from './augment-staff.server.js';
 
-export const buildConfig = <const C extends Config>(config: C) => {
+export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>> => {
   const augmented = augmentConfig(config);
   const output = makeVersionsCollectionsAliases(augmented);
   return createRime(output as any as BuildConfig<C>);
