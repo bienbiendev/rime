@@ -191,7 +191,10 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
 
     get documentUpdateURI() {
       const doc = page.data.doc;
-      if (!doc) throw new Error('live.doc has not been set before accessing documentAPIUpdateURL');
+      if (!doc)
+        throw new Error(
+          'live.doc has not been set before accessing documentAPIUpdateURL, be sure to provide a "doc" property in the page data, or provide an update property to the LiveEdit component.'
+        );
       let uri = `/${doc._type}`;
       if (doc._prototype === 'collection') uri += `/${doc.id}`;
       const params = [];
