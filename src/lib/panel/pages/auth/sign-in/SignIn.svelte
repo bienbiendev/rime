@@ -36,7 +36,12 @@
   {#if context.status !== 429}
     <form method="POST" action="/panel/sign-in" use:enhance={context.enhance}>
       <Email config={emailField} form={context} />
-      <Text type="password" icon={KeyRound} config={passwordField} form={context} />
+      <Text
+        type="password"
+        icon={KeyRound}
+        config={passwordField.clone().layout('compact')}
+        form={context}
+      />
       <Button size="xl" disabled={!context.canSubmit} type="submit">
         {t__('common.signin')}
         {#if context.pending}
