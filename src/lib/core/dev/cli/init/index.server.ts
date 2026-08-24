@@ -69,8 +69,13 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
   function setConfig(name: string) {
     const configDirPath = path.resolve(root, 'src/lib', INPUT_DIR);
     const configPath = path.join(configDirPath, 'rime.config.ts');
+    // A standalone config (e.g. copied in by useConfig.js from a test fixture) counts as
+    // already existing too — only scaffold the folder-mode default when truly nothing's there.
+    const standaloneConfigPath = path.resolve(root, 'src/lib', 'rime.config.server.ts');
 
-    if (!existsSync(configPath)) {
+    if (existsSync(standaloneConfigPath)) {
+      logger.info('[✓] Config already exists (standalone, skip)');
+    } else if (!existsSync(configPath)) {
       if (!existsSync(configDirPath)) {
         mkdirSync(configDirPath);
       }
@@ -100,7 +105,15 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
 
     let gitignoreContent = readFileSync(gitignorePath, 'utf-8');
 
-    const updates = ['\\.cache', '/logs', '/db', '\\+rime.generated'];
+    const updates = [
+      '\\.cache',
+      '/logs',
+      '/db',
+      '\\+rime.generated',
+      'src/app.generated.d.ts',
+      'src/rime.generated.d.ts',
+      'src/lib/rime.schema.server.ts'
+    ];
     if (!gitignoreContent.includes('# rime')) gitignoreContent += '\n# rime';
     for (const line of updates) {
       const exists = gitignoreContent.match(new RegExp(`^${line}`, 'm'));
@@ -239,7 +252,7 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
         mkdirSync(srcDir, { recursive: true });
       }
       // Create hooks.server.ts with template content
-      writeFileSync(hooksPath, templates.hooks, 'utf-8');
+      writeFileSync(hooksPath, templates.hooks(), 'utf-8');
       logger.info('[✓] hooks.server.ts created');
     } else {
       logger.info('[✓] hooks.server.ts already exists (skip)');

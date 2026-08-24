@@ -1,8 +1,8 @@
 import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
 import type { PanelLanguage } from '$lib/core/i18n/index.js';
 import type { Hook, HookBeforeOperation } from '$lib/core/operations/hooks/index.server.js';
-import type { Plugin, PluginClient } from '$lib/core/plugins/index.js';
-import type { SMTPConfig } from '$lib/core/plugins/mailer/index.server.js';
+import type { Plugin } from '$lib/core/plugins/index.js';
+import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
 import type { Field, Option } from '$lib/fields/types.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
 import type { DashboardEntry } from '$lib/panel/pages/dashboard/types.js';
@@ -82,10 +82,9 @@ export interface Config {
    * }
    */
   $routes?: Record<string, RouteConfig>;
-  /** List of client plugins */
-  plugins?: PluginClient[];
-  /** List of server plugins */
-  $plugins?: Plugin[];
+  /** List of plugins — safety for anything server-only inside one comes from the
+   * $rime/.../module convention, not from a $-prefix on this key */
+  plugins?: Plugin[];
   /** Custom object for server-only config additional values  */
   $custom?: Record<string, any>;
   /** Custom object for both client and server config additional values  */
@@ -327,7 +326,14 @@ export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'up
   _generateRoutes?: false;
 };
 
-export type BuiltAreaClient = Omit<BuiltArea, '$url' | '$hooks'>;
+// Same shape as BuiltArea, not a narrower Omit — $url/$hooks are already optional on Area<S>,
+// and nothing client-side ever reads them (they're genuinely absent at runtime there, since
+// Area.create's client build never receives them — see core/areas/config/builder.ts). Kept
+// as a distinct alias, not merged away entirely, purely so Plugin['configure'] has one
+// uniform collections/areas shape to write against regardless of which build called it —
+// narrowing collections/areas separately from the config-level secrets (see
+// SanitizedConfigClient) bought type-safety nothing since no code ever depended on it.
+export type BuiltAreaClient = BuiltArea;
 
 export type BuiltArea = Omit<Area<string>, 'versions'> & {
   slug: AreaSlug;
@@ -345,7 +351,8 @@ export type BuiltArea = Omit<Area<string>, 'versions'> & {
   _generateSchema?: false;
   _generateRoutes?: false;
 };
-export type BuiltCollectionClient = Omit<BuiltCollection, '$url' | '$hooks'>;
+// See BuiltAreaClient just above for why this isn't a narrowing Omit.
+export type BuiltCollectionClient = BuiltCollection;
 
 // export type Config = Omit<Config, 'collections' | 'areas'> & {
 // 	collections?: BuiltCollection[];
@@ -366,8 +373,10 @@ export type BuiltConfig = {
   icons: Record<string, any>;
   $trustedOrigins: string[];
   $routes?: Record<string, RouteConfig>;
+  /** Fully-resolved plugin list, computed by augmentPluginsServer — internal, not the
+   * consumer-facing config key (that's just `plugins`) */
   $plugins?: Plugin[];
-  plugins?: PluginClient[];
+  plugins?: Plugin[];
   panel: {
     routes: Record<string, CustomPanelRoute>;
     navigation: NavigationConfig;
@@ -396,7 +405,6 @@ export type ServerConfigProps =
   | '$routes'
   | '$smtp'
   | '$custom'
-  | '$plugins'
   | '$auth';
 
 export type SanitizedConfigClient = Omit<Config, ServerConfigProps | 'collections' | 'areas'> & {
@@ -405,7 +413,7 @@ export type SanitizedConfigClient = Omit<Config, ServerConfigProps | 'collection
 };
 export type BuiltConfigClient = Omit<
   BuiltConfig,
-  ServerConfigProps | 'panel' | 'collections' | 'areas'
+  ServerConfigProps | '$plugins' | 'panel' | 'collections' | 'areas'
 > & {
   collections: BuiltCollectionClient[];
   areas: BuiltAreaClient[];

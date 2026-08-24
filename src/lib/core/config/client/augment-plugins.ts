@@ -1,8 +1,8 @@
-import { cacheClient } from '$lib/core/plugins/cache/index.js';
+import { cache } from '$lib/core/plugins/cache/index.js';
 import type { SanitizedConfigClient } from '../types.js';
 
 export const augmentPlugins = <const T extends SanitizedConfigClient>(config: T) => {
-  const plugins = [cacheClient(), ...(config.plugins || [])];
+  const plugins = [cache(), ...(config.plugins || [])];
 
   for (const plugin of plugins) {
     if ('configure' in plugin && typeof plugin.configure === 'function') {
@@ -12,6 +12,6 @@ export const augmentPlugins = <const T extends SanitizedConfigClient>(config: T)
 
   return {
     ...config,
-    plugins: plugins.filter((p) => p.type === 'client')
+    plugins
   } as const;
 };

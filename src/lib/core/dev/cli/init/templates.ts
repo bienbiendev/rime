@@ -1,5 +1,5 @@
 import { randomId } from '$lib/util/random.js';
-import { OUTPUT_DIR } from '../../constants.js';
+import { configImportPaths } from '../../constants.js';
 
 const PACKAGE = 'rimecms';
 
@@ -44,7 +44,7 @@ export const drizzleConfig = (name: string) => `
 import { defineConfig, type Config } from 'drizzle-kit';
 
 export const config: Config = {
-  schema: './src/lib/${OUTPUT_DIR}/schema.server.ts',
+  schema: './src/lib/rime.schema.server.ts',
   out: './db',
   strict: false,
   dialect: 'sqlite',
@@ -56,9 +56,11 @@ export const config: Config = {
 export default defineConfig(config);
 `;
 
-export const hooks = `import { sequence } from '@sveltejs/kit/hooks';
+// Regenerated fresh by rime init every time (setHooks() only skips if the file already
+// exists, and `rime clear`/useConfig.js delete it first) — safe to make mode-aware.
+export const hooks = () => `import { sequence } from '@sveltejs/kit/hooks';
 import { handlers } from '${PACKAGE}/server';
-import config from './lib/${OUTPUT_DIR}/rime.config.server.js';
+import config from '.${configImportPaths().server.replace('$lib', '/lib')}';
 
 export const handle = sequence(...(await handlers(config)));
 `;

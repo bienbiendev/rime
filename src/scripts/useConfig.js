@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import { program } from 'commander';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync } from 'fs';
 import path from 'path';
 
 program.version('0.1').description('CMS utilities');
@@ -12,22 +12,22 @@ program
   .argument('<name>', 'Specify the name')
   .action((name) => {
     try {
-      const configDirPath = path.join(projectRoot, 'src', 'lib', '+rime');
       const frontRoutesPath = path.join(projectRoot, 'src', 'routes', '\\(front\\)');
 
       // Delete previous
       execSync('bun ./src/lib/core/dev/cli/index.ts clear --force');
       execSync(`rm -fr ${frontRoutesPath}`);
 
-      // Copy entire config directory
-      const testConfigDirPath = path.join(projectRoot, 'tests', name, 'config');
+      // tests/<name>/lib/ mirrors src/lib/ exactly — a standalone fixture has
+      // rime.config.server.ts + its collections directly inside, a folder-mode fixture has
+      // a +rime/ subfolder — so one copy handles both, no mode branching needed here.
+      const testLibDirPath = path.join(projectRoot, 'tests', name, 'lib');
+      const libDirPath = path.join(projectRoot, 'src', 'lib');
 
-      if (existsSync(testConfigDirPath)) {
-        mkdirSync(configDirPath);
-        // Copy the entire config directory
-        execSync(`cp -rf ${testConfigDirPath}/* ${configDirPath}/`);
+      if (existsSync(testLibDirPath)) {
+        execSync(`cp -rf ${testLibDirPath}/* ${libDirPath}/`);
       } else {
-        console.warn(`Warning: Config directory not found for ${name}`);
+        console.warn(`Warning: lib directory not found for ${name}`);
       }
 
       // Init files and DB

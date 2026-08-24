@@ -92,7 +92,7 @@ export default defineConfig({
 
 ```typescript
 // src/hooks.server.ts (should be created)
-import config from '$lib/+rime.generated/rime.config.server.js';
+import config from '$rime/config';
 import { handlers } from 'rimecms/server';
 import { sequence } from '@sveltejs/kit/hooks';
 
@@ -129,7 +129,7 @@ curl -v POST http://localhost:5173/api/init \
 ## Configuration Example
 
 ```typescript
-// ./src/lib/+rime/rime.config.ts
+// ./src/lib/rime.config.server.ts
 import { rime, Collection, Area } from '$rime/config';
 import { adapterSqlite } from 'rimecms/adapter-sqlite';
 import { Settings2 } from '@lucide/svelte';

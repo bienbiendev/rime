@@ -6,6 +6,7 @@
 # see (exports/files, native deps, the app/package.json relative-path fixup).
 #
 # Usage: bash src/scripts/local-pack-test.sh [--keep] [--skip-pack] [--base-dir <path>]
+#          [--plugin-tarball <path>] [--field-tarball <path>]
 #   --keep            don't delete the scaffolded app on success (useful for debugging)
 #   --skip-pack       reuse the newest rimecms-*.tgz already at repo root instead of
 #                     re-running `pnpm local-pack` (also skips the on-success tarball
@@ -18,6 +19,15 @@
 #                     pnpm-workspace.yaml instead of the scaffolded app's own (confirmed,
 #                     not theoretical - this is exactly what forced this default).
 #                     Only pass --base-dir "$ROOT_DIR" if you know what you're doing.
+#   --plugin-tarball <path>, --field-tarball <path>
+#                     absolute paths to a packed third-party plugin/field, e.g. built via
+#                     `npm run local-pack` in their own repos (not part of this one - no
+#                     hardcoded path to either, since their location is whatever the
+#                     caller's machine happens to have them checked out at). Optional:
+#                     omitting either skips the extra plugin/field verification pass below
+#                     and this script behaves exactly as before (rimecms-only smoke test).
+#                     Passing only one is an error. npm-pass only, per the "use npm" case
+#                     this pass is meant to cover - the pnpm pass stays rimecms-only.
 set -euo pipefail
 
 ROOT_DIR="$(pwd)"
@@ -25,14 +35,28 @@ APP_NAME="consumer-app-test"
 BASE_DIR="$HOME"
 KEEP_ON_SUCCESS=0
 SKIP_PACK=0
+PLUGIN_TARBALL=""
+FIELD_TARBALL=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --keep) KEEP_ON_SUCCESS=1; shift ;;
     --skip-pack) SKIP_PACK=1; shift ;;
     --base-dir) BASE_DIR="$2"; shift 2 ;;
+    --plugin-tarball) PLUGIN_TARBALL="$2"; shift 2 ;;
+    --field-tarball) FIELD_TARBALL="$2"; shift 2 ;;
     *) shift ;;
   esac
 done
+
+if [[ ( -n "$PLUGIN_TARBALL" && -z "$FIELD_TARBALL" ) || ( -z "$PLUGIN_TARBALL" && -n "$FIELD_TARBALL" ) ]]; then
+  echo "--plugin-tarball and --field-tarball must be passed together (or neither)"; exit 1
+fi
+TEST_PLUGINS=0
+if [[ -n "$PLUGIN_TARBALL" ]]; then
+  [[ -f "$PLUGIN_TARBALL" ]] || { echo "--plugin-tarball not found: $PLUGIN_TARBALL"; exit 1; }
+  [[ -f "$FIELD_TARBALL" ]] || { echo "--field-tarball not found: $FIELD_TARBALL"; exit 1; }
+  TEST_PLUGINS=1
+fi
 
 WORK_DIR="$BASE_DIR/$APP_NAME"
 ADMIN_EMAIL="${TESTS_ADMIN_EMAIL:-admin@email.com}"
@@ -53,6 +77,7 @@ cleanup() {
     echo ""
     echo "[x] consumer test failed (exit $status) - workspace kept at $WORK_DIR"
     [[ -f "$WORK_DIR/dev.log" ]] && { echo "--- last 40 lines of dev.log ---"; tail -40 "$WORK_DIR/dev.log"; }
+    [[ -f "$WORK_DIR/dev-plugins.log" ]] && { echo "--- last 40 lines of dev-plugins.log ---"; tail -40 "$WORK_DIR/dev-plugins.log"; }
     [[ -f "$WORK_DIR/app/prod.log" ]] && { echo "--- last 40 lines of app/prod.log ---"; tail -40 "$WORK_DIR/app/prod.log"; }
   fi
   exit $status
@@ -65,7 +90,8 @@ run_ui_tests() {
   local server_cwd=$3
   local port=$4
   local suffix=$5
-  log "Running UI tests against $url"
+  local test_match=${6:-consumer\\.test\\.ts}
+  log "Running UI tests against $url ($test_match)"
   (
     cd "$ROOT_DIR"
     PUBLIC_RIME_URL="$url" \
@@ -75,6 +101,7 @@ run_ui_tests() {
     CONSUMER_SERVER_COMMAND="$server_command" \
     CONSUMER_SERVER_CWD="$server_cwd" \
     CONSUMER_SERVER_PORT="$port" \
+    CONSUMER_TEST_MATCH="$test_match" \
       pnpm exec playwright test -c tests/consumer/playwright.config.consumer.ts
   )
 }
@@ -107,6 +134,11 @@ cd "$APP_NAME"
 log "[3/13] Installing packed rimecms"
 npm install "$TARBALL"
 
+if [[ $TEST_PLUGINS -eq 1 ]]; then
+  log "[3b/13] Installing packed plugin + field"
+  npm install "$PLUGIN_TARBALL" "$FIELD_TARBALL"
+fi
+
 ## Init rimecms
 log "[4/13] Running rime init"
 npx rime init -n "$APP_NAME"
@@ -119,6 +151,43 @@ run_ui_tests \
   "$WORK_DIR" \
   5173 \
   "dev"
+
+if [[ $TEST_PLUGINS -eq 1 ]]; then
+  log "[5b/13] Swapping in plugin+field config, verifying it mounts"
+  (
+    cd "$WORK_DIR"
+    : > dev-plugins.log
+    ./node_modules/.bin/vite dev --port 5173 >> dev-plugins.log 2>&1 &
+    DEV_PID=$!
+    trap 'kill $DEV_PID 2>/dev/null || true' EXIT
+
+    for i in $(seq 1 30); do
+      grep -q "ready in" dev-plugins.log && break
+      sleep 1
+      [[ $i -eq 30 ]] && { echo "dev server never became ready"; cat dev-plugins.log; exit 1; }
+    done
+
+    # Overwrite the rime-init placeholder config with the one exercising both packages -
+    # the running dev server's file watcher (see core/dev/vite/index.server.ts) picks up
+    # the change and re-sanitizes/regenerates the schema live, same as a real consumer
+    # editing their own config.
+    cp -rf "$ROOT_DIR/tests/consumer/lib/+rime/"* "src/lib/+rime/"
+
+    for i in $(seq 1 30); do
+      grep -q "Schema: generated" dev-plugins.log && break
+      sleep 1
+      [[ $i -eq 30 ]] && { echo "schema never regenerated after config swap"; cat dev-plugins.log; exit 1; }
+    done
+  )
+
+  run_ui_tests \
+    "http://localhost:5173" \
+    "./node_modules/.bin/vite dev --port 5173 2>&1 | tee -a \"$WORK_DIR/dev-plugins.log\"" \
+    "$WORK_DIR" \
+    5173 \
+    "dev-plugins" \
+    "consumer-plugin.test.ts"
+fi
 
 ## Build
 log "[6/13] Building for production"

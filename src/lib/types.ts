@@ -7,7 +7,9 @@ export type {
   Area,
   AreaHooks,
   BuiltArea,
+  BuiltAreaClient,
   BuiltCollection,
+  BuiltCollectionClient,
   BuiltConfig,
   BuiltConfigClient,
   Collection,
@@ -17,7 +19,8 @@ export type {
   ImageSizesConfig,
   LocaleConfig,
   LocalizationConfig,
-  RouteConfig
+  RouteConfig,
+  SanitizedConfigClient
 } from './core/config/types.js';
 
 // Doc types

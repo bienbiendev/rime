@@ -7,21 +7,26 @@ export type RuntimeRegistryEntry = { client: string; server: string };
 export type RuntimeRegistry = Map<string, RuntimeRegistryEntry>;
 
 /**
- * Walks up from `startDir` to the nearest ancestor containing a `package.json`, then returns
- * its `dist/` — self-correcting regardless of how deeply nested this file is (unlike counting
- * a fixed number of `..` segments, which would silently point at the wrong directory, not
- * error, the moment this file's own location changes).
+ * Walks up from `startDir` to the nearest ancestor containing a `package.json` — self-
+ * correcting regardless of how deeply nested this file is (unlike counting a fixed number of
+ * `..` segments, which would silently point at the wrong directory, not error, the moment
+ * this file's own location changes).
  */
-function findDistRoot(startDir: string): string {
+export function findPackageRoot(startDir: string): string {
   let dir = startDir;
   while (!fs.existsSync(path.join(dir, 'package.json'))) {
     const parent = path.dirname(dir);
     if (parent === dir) {
-      throw new Error(`$rime: could not locate rimecms's package root above ${startDir}`);
+      throw new Error(`$rime: could not locate a package root above ${startDir}`);
     }
     dir = parent;
   }
-  return path.join(dir, 'dist');
+  return dir;
+}
+
+/** `findPackageRoot(startDir)/dist` — rime's own package root, specifically. */
+export function findDistRoot(startDir: string): string {
+  return path.join(findPackageRoot(startDir), 'dist');
 }
 
 /** `module.ts` when scanning TS source, `module.js` when scanning a built `dist/`. */
@@ -34,14 +39,27 @@ function findModuleFile(dir: string, baseName: string): string | null {
 }
 
 /**
- * Recursively finds every `module`/`module.server` pair under `root`, registered under the
+ * Direct, single-lookup check for one `<root>/<name>/module(.server)?.ts|js` pair — no
+ * directory walk, just the two `fs.existsSync`-style checks `findModuleFile` already does.
+ * Used by the Vite plugin's `resolveId`/`load` for on-demand resolution; `scanModulePairs`
+ * below (a real walk) stays reserved for type generation, which has no "on demand" available.
+ */
+export function findModulePair(root: string, name: string): RuntimeRegistryEntry | null {
+  const dir = path.join(root, name);
+  const client = findModuleFile(dir, 'module');
+  const server = findModuleFile(dir, 'module.server');
+  return client || server ? { client: client ?? '', server: server ?? '' } : null;
+}
+
+/**
+ * Recursively finds every `module`/`module.server` folder under `root`, registered under the
  * containing folder's path relative to `root` — `$rime/<key>` mirrors the real path, e.g.
  * `fields/relation/module.ts` under a `lib`-rooted scan registers as `fields/relation`.
  *
- * Both files are required to register a `$rime/<key>` entry: this pair only exists for a field
- * whose hook needs different server/client behavior (relation, link) — a field with nothing to
- * split just overrides `generateType()` on its builder directly and never needs either file.
- * `+rime.generated/` is skipped since it's sanitize's own output, unrelated to this.
+ * Either file alone is enough to register (single-sided is legitimate — a server-only piece,
+ * e.g. a collection's hooks, never needs a hand-written client stub; the missing side is just
+ * an empty string here, same convention `findModulePair` above uses). `rime.generated/` is
+ * skipped since it's sanitize's own output, unrelated to this.
  */
 function scanModulePairs(root: string): RuntimeRegistry {
   const registry: RuntimeRegistry = new Map();
@@ -53,9 +71,9 @@ function scanModulePairs(root: string): RuntimeRegistry {
       const fullPath = path.join(dir, entry.name);
       const client = findModuleFile(fullPath, 'module');
       const server = findModuleFile(fullPath, 'module.server');
-      if (client && server) {
+      if (client || server) {
         const key = path.relative(root, fullPath).split(path.sep).join('/');
-        registry.set(key, { client, server });
+        registry.set(key, { client: client ?? '', server: server ?? '' });
       }
       walk(fullPath);
     }

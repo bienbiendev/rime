@@ -7,8 +7,9 @@ import {
   resource,
   upload
 } from '$lib/fields/rich-text/client.js';
+import { buildNewsUrl } from '$rime/+config/news';
 import { Collection } from '$rime/config';
-import LoremFeature from './lorem-fill.js';
+import LoremFeature from '../lorem-fill.js';
 
 import { access } from '$lib/util/access/index.js';
 import { NotebookText } from '@lucide/svelte';
@@ -45,7 +46,7 @@ export const News = Collection.create('news', {
   },
   fields: [tabs(tabNewsAttributes, tabWriter)],
   live: true,
-  $url: (doc) => `${process.env.PUBLIC_RIME_URL}/actualites/${doc.attributes.slug}`,
+  $url: buildNewsUrl,
   access: {
     read: () => true,
     create: (user) => access.isAdmin(user),

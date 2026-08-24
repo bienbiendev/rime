@@ -1,10 +1,7 @@
 import { PACKAGE_NAME } from '$lib/core/constant.server.js';
-import { OUTPUT_DIR } from '../../constants.js';
+import { configImportPaths } from '../../constants.js';
 import type { Routes } from './util.server.js';
 
-// Trick to prevent svelte-kit to replace $lib with resolved imports path
-// same thing for PACKAGE_NAME
-const DOLLAR_LIB = '$lib';
 
 /**
  * Main base layout
@@ -162,8 +159,8 @@ export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.r
 const panelLayout = () => `
 <script>
   import { Panel } from '${PACKAGE_NAME}/panel';
-	import config from '${DOLLAR_LIB}/${OUTPUT_DIR}/rime.config.js';
-	
+	import config from '${configImportPaths().client}';
+
 	const { children, data } = $props();
 	
 	const user = $derived.by(() => {
@@ -216,7 +213,7 @@ export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.d
 const livePage = () => `
 <script>
   import { Live } from '${PACKAGE_NAME}/panel';
-  import config from '${DOLLAR_LIB}/${OUTPUT_DIR}/rime.config.js';
+  import config from '${configImportPaths().client}';
 
   const { data } = $props();
 </script>

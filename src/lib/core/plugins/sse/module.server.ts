@@ -45,7 +45,6 @@ export const sse = definePlugin(() => {
 
   return {
     name: 'sse',
-    type: 'server',
     actions: {
       broadcast
     },

@@ -9,12 +9,15 @@ import path from 'path';
 
 const PORT = Number(process.env.CONSUMER_SERVER_PORT || '5173');
 const PUBLIC_URL = process.env.PUBLIC_RIME_URL || `http://localhost:${PORT}`;
+// Lets local-pack-test.sh point a given pass at a different test file (e.g.
+// consumer-plugin.test.ts) without a second playwright config to keep in sync with this one.
+const TEST_MATCH = new RegExp(process.env.CONSUMER_TEST_MATCH || 'consumer\\.test\\.ts');
 
 export default defineConfig({
   workers: 1,
   reporter: 'line',
   testDir: path.join(process.cwd(), './tests/consumer'),
-  testMatch: /consumer\.test\.ts/,
+  testMatch: TEST_MATCH,
   expect: {
     timeout: 30000
   },

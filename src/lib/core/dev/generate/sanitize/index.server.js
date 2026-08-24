@@ -5,7 +5,7 @@ import { babelParse } from 'ast-kit';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logger } from '../../../logger/index.server.js';
-import { INPUT_DIR, OUTPUT_DIR } from '../../constants.js';
+import { INPUT_DIR, isFolderConfig, OUTPUT_DIR } from '../../constants.js';
 
 /**
  * $ prefix-based sanitizer that rules:
@@ -17,6 +17,42 @@ import { INPUT_DIR, OUTPUT_DIR } from '../../constants.js';
 
 export async function sanitize() {
   const root = process.cwd();
+  return isFolderConfig(root) ? sanitizeFolder(root) : sanitizeStandalone(root);
+}
+
+/**
+ * Standalone mode: the user writes src/lib/rime.config.server.ts directly — real,
+ * hand-authored source, already server-only via SvelteKit's own .server.ts convention, no
+ * tooling needed for that half at all. The only generated file is the client copy, written
+ * as a sibling (src/lib/rime.config.ts) so its relative imports resolve exactly as written, with nothing to rewrite — unlike folder mode's
+ * rime.generated/, which mirrors a whole different directory tree. No server-copy step
+ * either: the real file already exists where it's needed, nothing to duplicate.
+ */
+async function sanitizeStandalone(root) {
+  const serverConfigPath = path.resolve(root, 'src/lib/rime.config.server.ts');
+  const clientConfigPath = path.resolve(root, 'src/lib/rime.config.ts');
+
+  if (!fs.existsSync(serverConfigPath)) return; // ensureUserConfigExist() already guards this
+
+  logger.info('Sanitizing config (standalone)...');
+
+  const content = fs.readFileSync(serverConfigPath, 'utf-8');
+  const ast = babelParse(content, 'ts', { sourceType: 'module', attachComment: false });
+  const analysis = analyzeFile(ast);
+
+  const clientAst = sanitizeClientAst(ast, analysis);
+  const cleanedAst = removeUnusedImports(clientAst);
+  const clientCode = generate(cleanedAst, { compact: false, comments: true }).code;
+
+  if (shouldWriteFile(clientConfigPath, clientCode)) {
+    fs.writeFileSync(clientConfigPath, clientCode);
+    logger.debug('   Sanitized: rime.config.ts');
+  }
+
+  logger.info('Sanitization complete');
+}
+
+async function sanitizeFolder(root) {
   const configDir = path.resolve(root, 'src/lib/', INPUT_DIR);
   const outputDir = path.resolve(root, 'src/lib/', OUTPUT_DIR);
 
@@ -130,10 +166,11 @@ export async function sanitize() {
     }
   }
 
-  // Delete files that exist in current list but not in output list
+  // Delete files that exist in current list but not in output list. Schema no longer lives
+  // in here at all (src/lib/rime.schema.server.ts, unconditional, both modes — see
+  // adapter-sqlite/generate-schema/write.server.ts), so no special-case exclusion needed.
   for (const existingFile of existingFiles) {
-    // Do not delete "schema.server.ts"
-    if (!outputFiles.has(existingFile) && existingFile !== 'schema.server.ts') {
+    if (!outputFiles.has(existingFile)) {
       const fileToDelete = path.join(outputDir, existingFile);
       fs.unlinkSync(fileToDelete);
       logger.debug(`   Deleted: ${existingFile}`);

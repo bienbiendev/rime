@@ -68,7 +68,6 @@ export const cache = definePlugin((options?: CacheOptions) => {
 
   return {
     name: 'cache',
-    type: 'server',
 
     configure: (config) => {
       config = {

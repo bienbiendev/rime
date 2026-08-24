@@ -30,7 +30,6 @@ export const mailer = definePlugin((smtpConfig: SMTPConfig) => {
 
   return {
     name: 'mailer',
-    type: 'server',
     actions: {
       sendMail
     }

@@ -20,7 +20,7 @@ import { trycatchSync } from '$lib/util/function.js';
 import { capitalize, toPascalCase } from '$lib/util/string.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { isInstalledDependency, OUTPUT_DIR } from '../../constants.js';
+import { isFolderConfig, isInstalledDependency, OUTPUT_DIR } from '../../constants.js';
 import { buildRuntimeRegistry } from '../runtime/index.server.js';
 
 const IS_RIME_REPO = !isInstalledDependency(import.meta.url);
@@ -131,9 +131,15 @@ const templateDeclareVirtualModule = () =>
     `\texport * from '${PACKAGE_NAME}/config/server';`,
     `}`,
     `declare module '$rime/schema' {`,
-    `\texport * from '$lib/+rime.generated/schema.server.js';`,
+    `\texport * from '$lib/rime.schema.server.js';`,
     `}`,
-    ...templateDeclareFieldModules()
+    ...templateDeclareFieldModules(),
+    // Fallback for any $rime/<name> not covered above — a package (rime's own, or a
+    // third-party field/plugin) always resolves its own split against its own local
+    // src/lib/dist (see resolveLibRoot in core/dev/vite/index.server.ts), so this app's own
+    // registry (built by templateDeclareFieldModules) is the only one that could ever need a
+    // declaration here. Untyped escape hatch for the rest, e.g. a name typo. Never a scan.
+    `declare module '$rime/*' {\n\tconst value: any;\n\texport = value;\n}`
   ].join('\n');
 
 /**
@@ -148,7 +154,9 @@ const templateDeclareVirtualModule = () =>
 const templateDeclareFieldModules = () => {
   const registry = buildRuntimeRegistry();
   return Array.from(registry.entries()).map(([name, entry]) => {
-    const modulePath = toModuleSpecifier(entry.server);
+    // Prefer the server side (the real implementation) — fall back to client only for a
+    // single-sided module that has no server half at all (rare, but valid).
+    const modulePath = toModuleSpecifier(entry.server || entry.client);
     return `declare module '$rime/${name}' {\n\texport * from '${modulePath}';\n}`;
   });
 };
@@ -308,6 +316,9 @@ export async function generateTypesString<T extends Config>(config: T) {
   const blocksTypeNames = `export type BlockTypes = ${registeredBlocks.map((name) => `'${name}'`).join('|')}\n`;
   const anyBlock = `export type AnyBlock = ${registeredBlocks.map((name) => `Block${toPascalCase(name)}`).join('|')}\n`;
   const typeImports = `import type { ${Array.from(imports).join(', ')} } from '${PACKAGE_NAME}/types'`;
+  const rimeConfigServerPath = isFolderConfig()
+    ? `./lib/${OUTPUT_DIR}/rime.config.server.ts`
+    : './lib/rime.config.server.ts';
 
   const locals = `declare global {
   namespace App {
@@ -342,7 +353,7 @@ export async function generateTypesString<T extends Config>(config: T) {
 			/** Singleton providing access to auth, config and local-api */
       rime: ReturnType<
 				Awaited<
-					typeof import('./lib/${OUTPUT_DIR}/rime.config.server.ts').default
+					typeof import('${rimeConfigServerPath}').default
 				>['createRimeContext']
 			>;
       /** Flag enabled by the core plugin rime.cache when the API cache is ON */
@@ -412,7 +423,7 @@ function write(key: string, content: string, filePath: string) {
  */
 async function generateTypes<T extends Config>(config: T) {
   const mainTypes = await generateTypesString(config);
-  const declarations = [templateDeclareVirtualModule()].join('\n');
+  const declarations = templateDeclareVirtualModule();
 
   const appGeneratedPath = path.resolve(process.cwd(), 'src', 'app.generated.d.ts');
   const virtualModuleGeneratedPath = path.resolve(process.cwd(), 'src', 'rime.generated.d.ts');

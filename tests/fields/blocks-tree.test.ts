@@ -138,7 +138,7 @@ test('Should still have the correct block content after a fresh read', async ({ 
 /****************************************************/
 /* RELATION NESTED INSIDE TREE NESTED INSIDE BLOCK —
 /* three levels deep (sections.N.facts.M.image), the
-/* real-world shape from +rime/pages/tab-layout.ts's
+/* real-world shape from rime/pages/tab-layout.ts's
 /* keyFacts block
 /****************************************************/
 

@@ -5,8 +5,6 @@ import fs from 'fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-const OUTPUT_DIR = '+rime.generated';
-
 const write = (schema: string) => {
   const cachedSchema = cache.get('schema');
 
@@ -14,10 +12,10 @@ const write = (schema: string) => {
     return;
   }
 
-  const outputPath = path.join('./src/lib', OUTPUT_DIR);
-  const outputFile = path.join(outputPath, 'schema.server.ts');
-  if (!fs.existsSync(outputPath)) {
-    fs.mkdirSync(outputPath);
+  const outputFile = path.join('./src/lib', 'rime.schema.server.ts');
+  const outputDir = path.dirname(outputFile);
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
   }
 
   try {
@@ -36,7 +34,7 @@ const write = (schema: string) => {
   };
   const command = commandMap[pm];
 
-  logger.info('[✓] Schema: generated at src/lib/server/schema.ts');
+  logger.info('[✓] Schema: generated at src/lib/rime.schema.server.ts');
   console.log(`\n ⚡︎ ${command} drizzle-kit generate \n`);
   const generateResult = spawnSync(command, ['drizzle-kit', 'generate'], { stdio: 'inherit' });
   if (generateResult.error || generateResult.status !== 0) {

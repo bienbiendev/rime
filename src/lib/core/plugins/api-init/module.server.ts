@@ -58,7 +58,6 @@ export const apiInit = definePlugin(() => {
 
   return {
     name: 'apiInit',
-    type: 'server',
     routes: {
       '/api/init': {
         POST: requestHandler

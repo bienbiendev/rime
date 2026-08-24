@@ -1,4 +1,4 @@
-import type { SMTPConfig } from '$lib/core/plugins/mailer/index.server.js';
+import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
 import { createRime, type Rime } from '../../rime.server.js';
 import { augmentPanel } from '../client/augment-panel.js';
 import { augmentPlugins } from '../client/augment-plugins.js';
@@ -68,14 +68,14 @@ type InferAreasSlug<C> = C extends { areas?: readonly any[] }
   : Array<never>;
 
 type InferCorePlugins<C extends Config> = {
-  cache: import('$lib/core/plugins/cache/index.server.js').CacheActions;
-  sse: import('$lib/core/plugins/sse/index.server.js').SSEActions;
+  cache: import('$lib/core/plugins/cache/module.server.js').CacheActions;
+  sse: import('$lib/core/plugins/sse/module.server.js').SSEActions;
 } & (C['$smtp'] extends SMTPConfig
-  ? { mailer: import('$lib/core/plugins/mailer/index.server.js').MailerActions }
+  ? { mailer: import('$lib/core/plugins/mailer/module.server.js').MailerActions }
   : Record<string, never>);
 
 // Helper type to extract custom plugins from original config
-type ExtractCustomPlugins<C> = C extends { $plugins: readonly (infer P)[] }
+type ExtractCustomPlugins<C> = C extends { plugins: readonly (infer P)[] }
   ? P extends { name: infer N; actions?: infer A }
     ? N extends string
       ? Record<N, NonNullable<A>>
