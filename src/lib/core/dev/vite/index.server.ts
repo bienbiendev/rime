@@ -7,13 +7,13 @@ import { ensureHasInit } from '../../ensure.server.js';
 import { logger } from '../../logger/index.server.js';
 import { getPackageInfoByKey } from '../cli/util/package.server.js';
 import { INPUT_DIR, isInstalledDependency, OUTPUT_DIR, schemaPath } from '../constants.js';
-import { parseExportNames } from '../generate/runtime/parse-exports.server.js';
 import {
   findInstalledPackageRoot,
   findModulePair,
   scanModulePairs,
   type RuntimeRegistryEntry
 } from '../generate/runtime/index.server.js';
+import { parseExportNames } from '../generate/runtime/parse-exports.server.js';
 import { sanitize } from '../generate/sanitize/index.server.js';
 
 dotenv.config({ override: true });
@@ -34,7 +34,9 @@ function exportFrom(entry: RuntimeRegistryEntry, isServer: boolean): string {
   const other = isServer ? entry.client : entry.server;
   if (!other) return '';
   return parseExportNames(other)
-    .map((name) => (name === 'default' ? 'export default undefined;' : `export const ${name} = undefined;`))
+    .map((name) =>
+      name === 'default' ? 'export default undefined;' : `export const ${name} = undefined;`
+    )
     .join('\n');
 }
 
@@ -104,7 +106,9 @@ export function rime(): Plugin {
     const exports = Array.from(pairs.values())
       .map((entry) => entry.server || entry.client)
       .filter(Boolean)
-      .map((file) => `$lib/${path.relative(libDir, file).split(path.sep).join('/')}`.replace(/\.ts$/, '.js'))
+      .map((file) =>
+        `$lib/${path.relative(libDir, file).split(path.sep).join('/')}`.replace(/\.ts$/, '.js')
+      )
       .map((aliased) => `  export * from '${aliased}';`)
       .join('\n');
     writeFileSync(
@@ -136,7 +140,8 @@ export function rime(): Plugin {
       // watcher below (change-only) — a new split is exactly as likely to be a brand new file
       // as an edit to an existing one.
       const isModuleFile = (p: string) =>
-        /[/\\]module(\.server)?\.ts$/.test(p) && p.includes(`${path.sep}src${path.sep}lib${path.sep}`);
+        /[/\\]module(\.server)?\.ts$/.test(p) &&
+        p.includes(`${path.sep}src${path.sep}lib${path.sep}`);
       server.watcher.on('add', (p) => isModuleFile(p) && regenerateModulesDeclaration());
       server.watcher.on('unlink', (p) => isModuleFile(p) && regenerateModulesDeclaration());
       server.watcher.on('change', (p) => isModuleFile(p) && regenerateModulesDeclaration());
@@ -244,7 +249,10 @@ export function rime(): Plugin {
         if (module) return [module];
       }
 
-      if (/[/\\]module(\.server)?\.ts$/.test(file) && file.includes(`${path.sep}src${path.sep}lib${path.sep}`)) {
+      if (
+        /[/\\]module(\.server)?\.ts$/.test(file) &&
+        file.includes(`${path.sep}src${path.sep}lib${path.sep}`)
+      ) {
         const module = invalidateVModule(VModulesId);
         if (module) return [module];
       }
@@ -315,9 +323,12 @@ export function rime(): Plugin {
       // Self-reference qualified form — resolveId returned this bare, no root baked in
       // (matches VModulesId's shape above): resolve directly off this project's own src/lib.
       if (id.startsWith(resolvedVModule(VModulesPrefix))) {
-        const subpath = splitPackageSpecifier(id.slice(resolvedVModule(VModulesPrefix).length)).subpath;
+        const subpath = splitPackageSpecifier(
+          id.slice(resolvedVModule(VModulesPrefix).length)
+        ).subpath;
         const pair = findModulePair(path.resolve(process.cwd(), 'src/lib'), subpath);
-        if (!pair) throw new Error(`${id.slice(1)}: doesn't resolve under this project's own src/lib`);
+        if (!pair)
+          throw new Error(`${id.slice(1)}: doesn't resolve under this project's own src/lib`);
         return exportFrom(pair, isServer);
       }
 
@@ -331,7 +342,8 @@ export function rime(): Plugin {
           const rest = modulesSpecifier.slice(VModulesPrefix.length);
           const { pkgName, subpath } = splitPackageSpecifier(rest);
 
-          const manifestPath = path.join(pkgRoot, 'dist/.rime-modules.json');
+          const distDir = path.join(pkgRoot, 'dist');
+          const manifestPath = path.join(distDir, '.rime-modules.json');
           if (!existsSync(manifestPath)) {
             throw new Error(
               `$rime/modules/${pkgName}: no manifest at ${manifestPath} — does ${pkgName} run 'rime generate-manifest' at prepack?`
@@ -340,9 +352,21 @@ export function rime(): Plugin {
           const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
           const pair = manifest[subpath];
           if (!pair) {
-            throw new Error(`$rime/modules/${pkgName}/${subpath}: not found in ${pkgName}'s manifest`);
+            throw new Error(
+              `$rime/modules/${pkgName}/${subpath}: not found in ${pkgName}'s manifest`
+            );
           }
-          return exportFrom(pair, isServer);
+          // Manifest entries are stored relative to *that package's own* dist/ (written by
+          // generate-manifest on whatever machine packed it) - re-rooted onto distDir (this
+          // installed copy's real, resolved location) here, not trusted as absolute. An
+          // absolute path baked in at pack time would silently read the package author's own
+          // working-copy dist/ instead of what's actually installed here whenever both
+          // happen to exist on the same machine (exactly what authoring rime itself hit).
+          const resolvedPair: RuntimeRegistryEntry = {
+            client: pair.client ? path.join(distDir, pair.client) : '',
+            server: pair.server ? path.join(distDir, pair.server) : ''
+          };
+          return exportFrom(resolvedPair, isServer);
         }
       }
 

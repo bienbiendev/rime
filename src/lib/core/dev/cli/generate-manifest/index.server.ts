@@ -27,12 +27,16 @@ import { getPackageInfoByKey } from '../util/package.server.js';
 export const generateManifest = () => {
   const pkgName = getPackageInfoByKey('name');
   if (!pkgName) {
-    throw new Error('$rime generate-manifest: could not read this package\'s own name from package.json');
+    throw new Error(
+      "$rime generate-manifest: could not read this package's own name from package.json"
+    );
   }
 
   const distDir = path.resolve(process.cwd(), 'dist');
   if (!fs.existsSync(distDir)) {
-    throw new Error(`$rime generate-manifest: no dist/ at ${distDir} — run this after svelte-package, not before`);
+    throw new Error(
+      `$rime generate-manifest: no dist/ at ${distDir} — run this after svelte-package, not before`
+    );
   }
 
   const pairs = scanModulePairs(distDir);
@@ -90,32 +94,41 @@ function buildModuleIndex(pairs: RuntimeRegistry): Map<string, string> {
 }
 
 /**
- * `dist/.rime-modules.json` (runtime, read by a consumer's Vite plugin — absolute filesystem
- * paths, since that's `export * from` inside a *virtual module* Vite resolves through its own
- * bundler-style resolution, where an absolute path is a perfectly ordinary, direct reference)
- * and `dist/.rime-modules.d.ts` (types, referenced by a consumer's generated types).
+ * `dist/.rime-modules.json` (runtime, read by a consumer's Vite plugin) and
+ * `dist/.rime-modules.d.ts` (types, referenced by a consumer's generated types).
  *
- * The `.d.ts` needs a *different* path shape than the runtime manifest, verified directly (a
- * real `tsc` run — a plain filesystem path, absolute or relative, silently resolves to zero
+ * Both store paths *relative to `distDir`*, not absolute — confirmed in practice that an
+ * absolute path here is a real bug, not just a style choice: it bakes in wherever `dist/`
+ * happened to sit on the machine that ran `generate-manifest`, and a consumer's Vite plugin
+ * (`vite/index.server.ts`'s `load()`, third-party qualified form) re-joins it onto the
+ * *installed* package's own root (`findInstalledPackageRoot`) at read time. On a real install
+ * that absolute path wouldn't even exist; on the same dev machine the package was authored on
+ * it silently reads the author's own working-copy `dist/` instead of what's actually installed
+ * in the consumer's `node_modules` - stale-looking field/behavior drift with no error raised.
+ *
+ * The `.d.ts` needs a *different* relative shape than the runtime manifest, verified directly
+ * (a real `tsc` run — a plain filesystem path, absolute or relative, silently resolves to zero
  * exports inside a `declare module` block; only a bare package-qualified specifier, resolved
  * through the same `node_modules` mechanism a real import would use, actually works): every
- * `export *` target is `<pkgName>/dist/<subpath-relative-to-dist>`, not the absolute path.
+ * `export *` target is `<pkgName>/dist/<subpath-relative-to-dist>`.
  */
 function writeManifest(distDir: string, pkgName: string, pairs: RuntimeRegistry) {
   const manifest: Record<string, { client?: string; server?: string }> = {};
   const dts: string[] = [];
 
+  const relativeToDist = (target: string) =>
+    path.relative(distDir, target).split(path.sep).join('/');
+
   for (const [subpath, entry] of pairs) {
     manifest[subpath] = {
-      client: entry.client || undefined,
-      server: entry.server || undefined
+      client: entry.client ? relativeToDist(entry.client) : undefined,
+      server: entry.server ? relativeToDist(entry.server) : undefined
     };
     const target = entry.server || entry.client;
-    const bareSpecifier = `${pkgName}/dist/${path.relative(distDir, target).split(path.sep).join('/')}`.replace(
-      /\.ts$/,
-      '.js'
+    const bareSpecifier = `${pkgName}/dist/${relativeToDist(target)}`.replace(/\.ts$/, '.js');
+    dts.push(
+      `declare module '$rime/modules/${pkgName}/${subpath}' {\n  export * from '${bareSpecifier}';\n}`
     );
-    dts.push(`declare module '$rime/modules/${pkgName}/${subpath}' {\n  export * from '${bareSpecifier}';\n}`);
   }
 
   fs.writeFileSync(path.join(distDir, '.rime-modules.json'), JSON.stringify(manifest));
@@ -179,7 +192,10 @@ function rewriteBarrelImports(distDir: string, pkgName: string, nameOwner: Map<s
       if (changed) {
         ast.body = newBody;
         const { code } = generate(ast, { compact: false, comments: true });
-        fs.writeFileSync(fullPath, entry.name.endsWith('.d.ts') ? withManifestReference(code, fullPath, distDir) : code);
+        fs.writeFileSync(
+          fullPath,
+          entry.name.endsWith('.d.ts') ? withManifestReference(code, fullPath, distDir) : code
+        );
       }
     }
   };
@@ -215,7 +231,9 @@ function splitBarrelImport(
     const importedName = t.isIdentifier(spec.imported) ? spec.imported.name : spec.imported.value;
     const subpath = nameOwner.get(importedName);
     if (!subpath) {
-      throw new Error(`$rime/modules: '${importedName}' imported in ${fullPath} but not exported by any split`);
+      throw new Error(
+        `$rime/modules: '${importedName}' imported in ${fullPath} but not exported by any split`
+      );
     }
     if (!bySubpath.has(subpath)) bySubpath.set(subpath, []);
     bySubpath.get(subpath)!.push(spec);
@@ -247,7 +265,9 @@ function splitBarrelReExport(
     const localName = spec.local.name;
     const subpath = nameOwner.get(localName);
     if (!subpath) {
-      throw new Error(`$rime/modules: '${localName}' re-exported in ${fullPath} but not exported by any split`);
+      throw new Error(
+        `$rime/modules: '${localName}' re-exported in ${fullPath} but not exported by any split`
+      );
     }
     if (!bySubpath.has(subpath)) bySubpath.set(subpath, []);
     bySubpath.get(subpath)!.push(spec);
