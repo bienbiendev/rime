@@ -22,8 +22,8 @@ type PMConfig = Record<
   }
 >;
 
-const deps = ['drizzle-orm@1.0.0-rc.4', '@libsql/client', '@lucide/svelte', 'sharp'];
-const devDeps = ['@sveltejs/adapter-node', 'drizzle-kit@1.0.0-rc.4'];
+const deps = ['drizzle-orm', '@libsql/client', '@lucide/svelte', 'sharp'];
+const devDeps = ['@sveltejs/adapter-node', 'drizzle-kit'];
 
 const packageManagerConfigs: PMConfig = {
   yarn: {
