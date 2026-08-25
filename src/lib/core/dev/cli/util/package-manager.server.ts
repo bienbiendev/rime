@@ -22,25 +22,25 @@ type PMConfig = Record<
   }
 >;
 
+const deps = ['drizzle-orm@1.0.0-rc.4', '@libsql/client', '@lucide/svelte', 'sharp'];
+const devDeps = ['@sveltejs/adapter-node', 'drizzle-kit@1.0.0-rc.4'];
+
 const packageManagerConfigs: PMConfig = {
   yarn: {
     command: 'echo "yarn is not supported, please use pnpm or npm" && exit 1'
   },
   pnpm: {
-    command:
-      'pnpm add -D drizzle-kit && pnpm add -D @sveltejs/adapter-node && pnpm add drizzle-orm @libsql/client @lucide/svelte sharp',
+    command: `pnpm add -D ${devDeps.join(' ')} && pnpm add ${deps.join(' ')}`,
     preInstall: configurePnpm,
     postInstall: () => {
       execSync('pnpm rebuild');
     }
   },
   bun: {
-    command:
-      'bun add -D drizzle-kit && bun add -D @sveltejs/adapter-node && bun add drizzle-orm @libsql/client @lucide/svelte sharp'
+    command: `bun add -D ${devDeps.join(' ')} && bun add ${deps.join(' ')}`
   },
   npm: {
-    command:
-      'npm install -D drizzle-kit && npm install -D @sveltejs/adapter-node && npm install drizzle-orm @libsql/client @lucide/svelte sharp'
+    command: `npm install -D ${devDeps.join(' ')} && npm install ${deps.join(' ')}`
   },
   deno: {
     command: 'echo "deno is not supported, please use pnpm or npm" && exit 1'

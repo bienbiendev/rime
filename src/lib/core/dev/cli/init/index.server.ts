@@ -68,19 +68,14 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
 
   function setConfig(name: string) {
     const configDirPath = path.resolve(root, 'src/lib', INPUT_DIR);
-    const configPath = path.join(configDirPath, 'rime.config.ts');
-    // A standalone config (e.g. copied in by useConfig.js from a test fixture) counts as
-    // already existing too — only scaffold the folder-mode default when truly nothing's there.
-    const standaloneConfigPath = path.resolve(root, 'src/lib', 'rime.config.server.ts');
+    const configPath = path.join(configDirPath, 'rime.config.server.ts');
 
-    if (existsSync(standaloneConfigPath)) {
-      logger.info('[✓] Config already exists (standalone, skip)');
-    } else if (!existsSync(configPath)) {
+    if (!existsSync(configPath)) {
       if (!existsSync(configDirPath)) {
         mkdirSync(configDirPath);
       }
       writeFileSync(configPath, templates.defaultConfig(name.toString()));
-      logger.info(`[✓] Config created at ${configDirPath}/rime.config.ts`);
+      logger.info(`[✓] Config created at ${configDirPath}/rime.config.server.ts`);
     } else {
       logger.info('[✓] Config already exists (skip)');
     }
@@ -111,8 +106,7 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
       '/db',
       '\\+rime.generated',
       'src/app.generated.d.ts',
-      'src/rime.generated.d.ts',
-      'src/lib/rime.schema.server.ts'
+      'src/rime.generated.d.ts'
     ];
     if (!gitignoreContent.includes('# rime')) gitignoreContent += '\n# rime';
     for (const line of updates) {

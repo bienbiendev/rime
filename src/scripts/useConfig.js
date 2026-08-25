@@ -18,9 +18,8 @@ program
       execSync('bun ./src/lib/core/dev/cli/index.ts clear --force');
       execSync(`rm -fr ${frontRoutesPath}`);
 
-      // tests/<name>/lib/ mirrors src/lib/ exactly — a standalone fixture has
-      // rime.config.server.ts + its collections directly inside, a folder-mode fixture has
-      // a +rime/ subfolder — so one copy handles both, no mode branching needed here.
+      // tests/<name>/lib/ mirrors src/lib/ exactly (its +rime/ subfolder and any local
+      // $rime/<name> split folders alike) — a straight copy is correct.
       const testLibDirPath = path.join(projectRoot, 'tests', name, 'lib');
       const libDirPath = path.join(projectRoot, 'src', 'lib');
 

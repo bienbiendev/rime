@@ -76,44 +76,6 @@ The `rime init` command will automatically:
 - Install dependencies.
 - Push initial schema
 
-> [!NOTE]
-> Please check that these files have been properly configured:
-
-```ts
-// vite.config.ts
-import { defineConfig } from 'vite';
-import { sveltekit } from '@sveltejs/kit/vite';
-import { rime } from 'rimecms/vite';
-
-export default defineConfig({
-  plugins: [rime(), sveltekit()]
-});
-```
-
-```typescript
-// src/hooks.server.ts (should be created)
-import config from '$rime/config';
-import { handlers } from 'rimecms/server';
-import { sequence } from '@sveltejs/kit/hooks';
-
-export const handle = sequence(...(await handlers(config)));
-```
-
-```
-#.env
-BETTER_AUTH_SECRET=super_secret
-PUBLIC_RIME_URL=http://localhost:5173
-
-RIME_LOG_TO_FILE=true
-RIME_LOG_LEVEL=DEBUG
-
-# RIME_CACHE_ENABLED=false
-# RIME_SMTP_USER=user@mail.com
-# RIME_SMTP_PASSWORD=supersecret
-# RIME_SMTP_HOST=smtphost.com
-# RIME_SMTP_PORT=465
-```
-
 ### 3. Create the first admin user
 
 ```bash
@@ -129,7 +91,7 @@ curl -v POST http://localhost:5173/api/init \
 ## Configuration Example
 
 ```typescript
-// ./src/lib/rime.config.server.ts
+// ./src/lib/+rime/rime.config.server.ts
 import { rime, Collection, Area } from '$rime/config';
 import { adapterSqlite } from 'rimecms/adapter-sqlite';
 import { Settings2 } from '@lucide/svelte';

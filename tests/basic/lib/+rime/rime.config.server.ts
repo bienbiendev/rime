@@ -2,14 +2,14 @@ import { AppWindowMac, BookType, SlidersVertical } from '@lucide/svelte';
 
 import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
 import { rime } from '$rime/config';
-import { Apps } from './+config/app';
-import { Informations } from './+config/informations';
-import { Medias } from './+config/medias';
-import { Navigation } from './+config/navigation';
-import { News } from './+config/news';
-import { Pages } from './+config/pages';
-import { Settings } from './+config/settings';
-import { Users } from './+config/users';
+import { Apps } from './app';
+import { Informations } from './informations';
+import { Medias } from './medias';
+import { Navigation } from './navigation';
+import { News } from './news';
+import { Pages } from './pages';
+import { Settings } from './settings';
+import { Users } from './users';
 
 export default rime({
   $adapter: adapterSqlite('basic.sqlite'),

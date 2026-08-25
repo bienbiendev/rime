@@ -1,7 +1,10 @@
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isInstalledDependency, OUTPUT_DIR } from '../../constants.js';
+
+const nodeRequire = createRequire(import.meta.url);
 
 export type RuntimeRegistryEntry = { client: string; server: string };
 export type RuntimeRegistry = Map<string, RuntimeRegistryEntry>;
@@ -101,6 +104,63 @@ function scanModulePairs(root: string): RuntimeRegistry {
  * // → registry.get('typo') → undefined
  * // → import { x } from '$rime/typo'               // fails: "cannot resolve module"
  */
+function packageDependencies(pkgJsonPath: string): string[] {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
+    return Object.keys(pkg.dependencies ?? {});
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Discovers every installed package that depends on `rimecms` — a third-party plugin/field
+ * package — starting from the app's own direct dependencies and following the "depends on
+ * rimecms" chain transitively (covers e.g. a plugin that itself depends on a field package,
+ * not just packages the app installs directly; a dep not on that chain is never followed, so
+ * this stays a bounded walk, not a full node_modules scan). Each discovered package's own
+ * `dist/` becomes an extra `$rime/<name>` fallback root for the optimizer-flattened-importer
+ * case (see nativeLibDir/consumerLibDir in vite/index.server.ts) — computed once at Vite
+ * plugin init, never from a runtime importer, so flattening can't affect it either.
+ *
+ * `dependencies` only, not `peerDependencies` — the convention a rime plugin/field package is
+ * expected to declare `rimecms` under. `require.resolve` (not a hand-rolled node_modules join)
+ * so this follows whatever layout the package manager actually used (pnpm's nested
+ * node_modules included), same as Node's own resolution would.
+ *
+ * Two discovered packages defining the same bare `$rime/<name>` split name would collide here
+ * (first match wins) — narrow, accepted risk: this path only runs after the importer-derived
+ * lookup has already failed.
+ */
+export function findRimePluginRoots(appRoot: string): string[] {
+  const roots: string[] = [];
+  const visited = new Set<string>();
+
+  function scan(depNames: string[], fromDir: string) {
+    for (const name of depNames) {
+      if (visited.has(name)) continue;
+      visited.add(name);
+
+      let pkgJsonPath: string;
+      try {
+        pkgJsonPath = nodeRequire.resolve(`${name}/package.json`, { paths: [fromDir] });
+      } catch {
+        continue;
+      }
+
+      const deps = packageDependencies(pkgJsonPath);
+      if (deps.includes('rimecms')) {
+        const pkgDir = path.dirname(pkgJsonPath);
+        roots.push(path.join(pkgDir, 'dist'));
+        scan(deps, pkgDir);
+      }
+    }
+  }
+
+  scan(packageDependencies(path.join(appRoot, 'package.json')), appRoot);
+  return roots;
+}
+
 export function buildRuntimeRegistry(): RuntimeRegistry {
   const registry: RuntimeRegistry = new Map();
 

@@ -1,23 +1,14 @@
 import type { BuiltCollection } from '$lib/types.js';
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { INPUT_DIR, isFolderConfig, OUTPUT_DIR } from './dev/constants.js';
+import { INPUT_DIR, OUTPUT_DIR, schemaPath } from './dev/constants.js';
 
 const projectRoot = process.cwd();
 
 /**
- * Ensure sanitize config exists — in standalone mode the "generated" server config is just
- * the user's own real src/lib/rime.config.server.ts, nothing to look for in rime.generated/.
+ * Ensure sanitize config exists — the generated server config inside rime.generated/.
  */
 export function ensureGeneratedConfig() {
-  if (!isFolderConfig(projectRoot)) {
-    const standaloneServerConfig = path.resolve(projectRoot, 'src/lib', 'rime.config.server.ts');
-    if (!existsSync(standaloneServerConfig)) {
-      throw new Error('Unable to find generated config');
-    }
-    return path.join('$lib', 'rime.config.server.js');
-  }
-
   const configGeneratedPath = path.resolve(
     projectRoot,
     'src/lib',
@@ -31,28 +22,22 @@ export function ensureGeneratedConfig() {
 }
 
 /**
- * Ensure user config exists — either the src/lib/rime/ folder convention, or a standalone
- * src/lib/rime.config.server.ts (see core/dev/generate/sanitize/index.server.js).
+ * Ensure user config exists — the src/lib/+rime/ folder convention.
  */
 export function ensureUserConfigExist() {
-  const folderConfig = path.resolve(projectRoot, 'src/lib', INPUT_DIR, 'rime.config.ts');
-  const standaloneConfig = path.resolve(projectRoot, 'src/lib', 'rime.config.server.ts');
+  const folderConfig = path.resolve(projectRoot, 'src/lib', INPUT_DIR, 'rime.config.server.ts');
 
-  if (!existsSync(folderConfig) && !existsSync(standaloneConfig)) {
+  if (!existsSync(folderConfig)) {
     throw new Error('Unable to find config, did you run rime init');
   }
 }
 
 /**
- * Ensure schema exists — always src/lib/rime.schema.server.ts, in either config mode. Not
- * inside OUTPUT_DIR: unlike rime.config.{ts,server.ts}, the schema was never part of the
- * sanitized-source mirror, so tying it to folder-mode's output dir was never load-bearing —
- * just kept it consistent with everything else that lives directly in src/lib/ now.
+ * Ensure schema exists (see adapter-sqlite/generate-schema/write.server.ts, which writes to
+ * the same path).
  */
 export function ensureSchema() {
-  const schemaPath = path.resolve(projectRoot, 'src/lib', 'rime.schema.server.ts');
-
-  if (!existsSync(schemaPath)) {
+  if (!existsSync(schemaPath(projectRoot))) {
     throw new Error('Unable to find schema, did you run rime init');
   }
 }

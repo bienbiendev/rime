@@ -38,22 +38,35 @@ function generateRoutes<T extends Config>(config: T): void {
   ensureDir(panelRoute);
   ensureDir(paramsDir);
 
-  // 3. Process common routes (now includes the matcher-disambiguated [slug=collection|area] routes)
+  // 3. Process common routes (now includes the matcher-disambiguated [slug=collection|area] routes) —
+  // skip the [slug=collection]/[slug=area] routes and their matchers when there are no collections/areas
+  // configured, rather than generating a matcher that can never match anything.
+  const hasCollections = (config.collections || []).length > 0;
+  const hasAreas = (config.areas || []).length > 0;
+
   for (const [pattern, files] of Object.entries(commonRoutes)) {
+    if (!hasCollections && pattern.includes('[slug=collection]')) continue;
+    if (!hasAreas && pattern.includes('[slug=area]')) continue;
     for (const [fileType, templateFn] of Object.entries(files)) {
       writeRouteFile(rootRoutes, pattern, fileType, templateFn());
     }
   }
 
-  // 4. Write the [slug=collection]/[slug=area] param matchers
-  fs.writeFileSync(
-    path.join(paramsDir, 'collection.ts'),
-    paramMatcher((config.collections || []).map((c) => c.kebab))
-  );
-  fs.writeFileSync(
-    path.join(paramsDir, 'area.ts'),
-    paramMatcher((config.areas || []).map((a) => a.kebab))
-  );
+  // 4. Write the [slug=collection]/[slug=area] param matchers, only when needed — and remove any
+  // stale matcher left over from a previous config that did have collections/areas.
+  const collectionMatcherPath = path.join(paramsDir, 'collection.ts');
+  if (hasCollections) {
+    fs.writeFileSync(collectionMatcherPath, paramMatcher((config.collections || []).map((c) => c.kebab)));
+  } else {
+    fs.rmSync(collectionMatcherPath, { force: true });
+  }
+
+  const areaMatcherPath = path.join(paramsDir, 'area.ts');
+  if (hasAreas) {
+    fs.writeFileSync(areaMatcherPath, paramMatcher((config.areas || []).map((a) => a.kebab)));
+  } else {
+    fs.rmSync(areaMatcherPath, { force: true });
+  }
 
   // 5. Handle custom routes from config
   const customRoutes = config.panel?.routes;

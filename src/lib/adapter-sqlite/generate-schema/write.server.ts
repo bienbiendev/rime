@@ -1,5 +1,6 @@
 import cache from '$lib/core/dev/cache/index.server.js';
 import { getPackageManager } from '$lib/core/dev/cli/util/package-manager.server.js';
+import { schemaPath } from '$lib/core/dev/constants.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import fs from 'fs';
 import { spawnSync } from 'node:child_process';
@@ -12,7 +13,7 @@ const write = (schema: string) => {
     return;
   }
 
-  const outputFile = path.join('./src/lib', 'rime.schema.server.ts');
+  const outputFile = schemaPath();
   const outputDir = path.dirname(outputFile);
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -34,7 +35,7 @@ const write = (schema: string) => {
   };
   const command = commandMap[pm];
 
-  logger.info('[✓] Schema: generated at src/lib/rime.schema.server.ts');
+  logger.info(`[✓] Schema: generated at ${outputFile}`);
   console.log(`\n ⚡︎ ${command} drizzle-kit generate \n`);
   const generateResult = spawnSync(command, ['drizzle-kit', 'generate'], { stdio: 'inherit' });
   if (generateResult.error || generateResult.status !== 0) {

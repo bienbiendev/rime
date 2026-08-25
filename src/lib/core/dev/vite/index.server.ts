@@ -1,15 +1,18 @@
 import dotenv from 'dotenv';
 import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Plugin, UserConfig } from 'vite';
 import { RIME_DEV_CACHE_DIR } from '../../constant.server.js';
 import { ensureHasInit } from '../../ensure.server.js';
 import { logger } from '../../logger/index.server.js';
-import { INPUT_DIR, isFolderConfig, isInstalledDependency, OUTPUT_DIR } from '../constants.js';
+import { INPUT_DIR, isInstalledDependency, OUTPUT_DIR, schemaPath } from '../constants.js';
 import { parseExportNames } from '../generate/runtime/parse-exports.server.js';
 import {
+  findDistRoot,
   findModulePair,
   findPackageRoot,
+  findRimePluginRoots,
   type RuntimeRegistryEntry
 } from '../generate/runtime/index.server.js';
 import { sanitize } from '../generate/sanitize/index.server.js';
@@ -70,6 +73,25 @@ export function rime(): Plugin {
     return path.join(packageRoot, isBuilt ? 'dist' : 'src/lib');
   }
 
+  // Fallback roots for load() below, computed once (not from any runtime importer) — needed
+  // because Vite's esbuild-based dep-optimizer can't resolve a virtual $rime/<name> import
+  // itself (only this plugin's own load() can), so it leaves it as a live import in the
+  // flattened node_modules/.vite/deps/* chunk it produces for rimecms instead of erroring.
+  // Once the browser later requests that chunk, the importer resolveId() sees is the
+  // flattened path, not rime's real source — resolveLibRoot's walk-up then lands on
+  // .vite/deps's own package.json, not rime's. These two static roots are exactly what the
+  // plugin used before it went importer-relative, and they're immune to this: neither is
+  // derived from a runtime importer, so optimizer flattening can't affect them.
+  const consumerLibDir = path.resolve(process.cwd(), 'src/lib');
+  const nativeLibDir = isInstalledDependency(import.meta.url)
+    ? findDistRoot(path.dirname(fileURLToPath(import.meta.url)))
+    : null;
+  // Covers a *third-party* plugin/field package getting optimizer-flattened — nativeLibDir/
+  // consumerLibDir only ever point at rime's own dist or this app's own src/lib, neither of
+  // which is a third-party package's root. Every installed package that itself depends on
+  // rimecms, discovered once at startup (see findRimePluginRoots's own doc comment).
+  const pluginLibDirs = findRimePluginRoots(process.cwd());
+
   return {
     name: 'virtual-rime',
 
@@ -86,15 +108,21 @@ export function rime(): Plugin {
         }
       });
 
-      // Add a watcher for sanitizing config changes
-      // and trigger schema/routes/types generation
-      server.watcher.on('change', async (modulePath) => {
-        const isFolderConfigChange =
-          modulePath.includes(`src/lib/${INPUT_DIR}`) &&
-          !modulePath.includes(`src/lib/${OUTPUT_DIR}`);
-        const isStandaloneConfigChange = modulePath.endsWith('src/lib/rime.config.server.ts');
+      // Add a watcher for sanitizing config changes and triggering schema/routes/types
+      // generation. Debounced + single-flight: a config change is rarely one file (e.g. a
+      // plugin swap copying several files under +rime/ at once) — without this, each file
+      // fires its own overlapping sanitize()+generate()+migrate() run against the same db/
+      // and sqlite file, racing each other.
+      let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+      let reloadInFlight: Promise<void> | null = null;
+      let reloadQueued = false;
 
-        if (isFolderConfigChange || isStandaloneConfigChange) {
+      async function runConfigReload() {
+        if (reloadInFlight) {
+          reloadQueued = true;
+          return;
+        }
+        reloadInFlight = (async () => {
           // Sanitize the config client/server
           try {
             await sanitize();
@@ -107,9 +135,7 @@ export function rime(): Plugin {
             // ssrLoadModule wants the real .ts file path, not a $lib/*.js-style import
             // specifier — different consumer than configImportPaths() (used for generated
             // source code), so computed directly here.
-            const serverConfigPath = isFolderConfig()
-              ? `src/lib/${OUTPUT_DIR}/rime.config.server.ts`
-              : 'src/lib/rime.config.server.ts';
+            const serverConfigPath = `src/lib/${OUTPUT_DIR}/rime.config.server.ts`;
             const mod = await server.ssrLoadModule(serverConfigPath);
             // The config's default export is the createRime() promise; ssrLoadModule
             // only awaits the module's synchronous evaluation, so we must await it
@@ -119,7 +145,27 @@ export function rime(): Plugin {
           } catch (error: any) {
             logger.error('Failed to reload the config', error.message);
           }
+        })();
+        await reloadInFlight;
+        reloadInFlight = null;
+        if (reloadQueued) {
+          reloadQueued = false;
+          await runConfigReload();
         }
+      }
+
+      server.watcher.on('change', (modulePath) => {
+        const isConfigChange =
+          modulePath.includes(`src/lib/${INPUT_DIR}`) &&
+          !modulePath.includes(`src/lib/${OUTPUT_DIR}`);
+
+        if (!isConfigChange) return;
+
+        if (reloadTimer) clearTimeout(reloadTimer);
+        reloadTimer = setTimeout(() => {
+          reloadTimer = null;
+          runConfigReload();
+        }, 150);
       });
     },
 
@@ -197,9 +243,12 @@ export function rime(): Plugin {
       }
 
       if (id === resolvedVModule(VSchemaId) && isServer) {
-        const schemaPath = path.resolve(process.cwd(), `src/lib/rime.schema.server.ts`);
-        if (existsSync(schemaPath)) {
-          const modulePath = schemaPath.replace('.ts', '.js');
+        // Mirrors write.server.ts (adapter-sqlite/generate-schema) — the adapter itself never
+        // needed to change for this, it already goes through this virtual module instead of a
+        // hardcoded path.
+        const schemaFilePath = schemaPath();
+        if (existsSync(schemaFilePath)) {
+          const modulePath = schemaFilePath.replace('.ts', '.js');
           return `export * from '${modulePath}'; export { default } from '${modulePath}';`;
         }
       }
@@ -212,7 +261,20 @@ export function rime(): Plugin {
       const specifier = id.slice(sepIndex + 1);
       const name = specifier.slice(VPrefix.length);
 
-      const hit = findModulePair(root, name);
+      // The importer-derived root first — correct for the vast majority of cases. Falling
+      // back to the static roots covers it being wrong specifically because the importer
+      // was an optimizer-flattened chunk (see the comment on nativeLibDir/consumerLibDir
+      // above) — cheap and harmless to just try them too rather than distinguish why the
+      // first lookup failed. pluginLibDirs last, one findModulePair call per discovered
+      // third-party package — small in practice (how many plugins/fields one app installs).
+      const hit =
+        findModulePair(root, name) ??
+        (nativeLibDir && findModulePair(nativeLibDir, name)) ??
+        findModulePair(consumerLibDir, name) ??
+        pluginLibDirs.reduce<RuntimeRegistryEntry | null>(
+          (found, dir) => found ?? findModulePair(dir, name),
+          null
+        );
       if (!hit) {
         throw new Error(`$rime/${name}: doesn't resolve under ${root}`);
       }

@@ -1,5 +1,5 @@
 import { randomId } from '$lib/util/random.js';
-import { configImportPaths } from '../../constants.js';
+import { configImportPaths, OUTPUT_DIR } from '../../constants.js';
 
 const PACKAGE = 'rimecms';
 
@@ -44,7 +44,7 @@ export const drizzleConfig = (name: string) => `
 import { defineConfig, type Config } from 'drizzle-kit';
 
 export const config: Config = {
-  schema: './src/lib/rime.schema.server.ts',
+  schema: './src/lib/${OUTPUT_DIR}/schema.server.ts',
   out: './db',
   strict: false,
   dialect: 'sqlite',

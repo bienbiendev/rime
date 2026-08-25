@@ -5,7 +5,7 @@ import { babelParse } from 'ast-kit';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logger } from '../../../logger/index.server.js';
-import { INPUT_DIR, isFolderConfig, OUTPUT_DIR } from '../../constants.js';
+import { INPUT_DIR, OUTPUT_DIR } from '../../constants.js';
 
 /**
  * $ prefix-based sanitizer that rules:
@@ -15,44 +15,13 @@ import { INPUT_DIR, isFolderConfig, OUTPUT_DIR } from '../../constants.js';
  * - Outputs to .generated folder, preserving original folder structure
  */
 
+// The top-level config — real, hand-authored. Unlike every other .server.ts file under
+// +rime/ (copied verbatim, server-only, no client counterpart needed), this one always needs
+// a sanitized client copy too — the panel still needs +rime.generated/rime.config.ts.
+const TOP_LEVEL_CONFIG = 'rime.config.server.ts';
+
 export async function sanitize() {
   const root = process.cwd();
-  return isFolderConfig(root) ? sanitizeFolder(root) : sanitizeStandalone(root);
-}
-
-/**
- * Standalone mode: the user writes src/lib/rime.config.server.ts directly — real,
- * hand-authored source, already server-only via SvelteKit's own .server.ts convention, no
- * tooling needed for that half at all. The only generated file is the client copy, written
- * as a sibling (src/lib/rime.config.ts) so its relative imports resolve exactly as written, with nothing to rewrite — unlike folder mode's
- * rime.generated/, which mirrors a whole different directory tree. No server-copy step
- * either: the real file already exists where it's needed, nothing to duplicate.
- */
-async function sanitizeStandalone(root) {
-  const serverConfigPath = path.resolve(root, 'src/lib/rime.config.server.ts');
-  const clientConfigPath = path.resolve(root, 'src/lib/rime.config.ts');
-
-  if (!fs.existsSync(serverConfigPath)) return; // ensureUserConfigExist() already guards this
-
-  logger.info('Sanitizing config (standalone)...');
-
-  const content = fs.readFileSync(serverConfigPath, 'utf-8');
-  const ast = babelParse(content, 'ts', { sourceType: 'module', attachComment: false });
-  const analysis = analyzeFile(ast);
-
-  const clientAst = sanitizeClientAst(ast, analysis);
-  const cleanedAst = removeUnusedImports(clientAst);
-  const clientCode = generate(cleanedAst, { compact: false, comments: true }).code;
-
-  if (shouldWriteFile(clientConfigPath, clientCode)) {
-    fs.writeFileSync(clientConfigPath, clientCode);
-    logger.debug('   Sanitized: rime.config.ts');
-  }
-
-  logger.info('Sanitization complete');
-}
-
-async function sanitizeFolder(root) {
   const configDir = path.resolve(root, 'src/lib/', INPUT_DIR);
   const outputDir = path.resolve(root, 'src/lib/', OUTPUT_DIR);
 
@@ -102,11 +71,21 @@ async function sanitizeFolder(root) {
     }
   }
 
-  // Also scan and copy all existing .server.ts files
-  const serverFiles = await scanServerFiles(configDir);
+  // Also scan and copy all existing .server.ts files — except the top-level config, which
+  // gets its own client+server split below instead of a plain verbatim copy.
+  const serverFiles = (await scanServerFiles(configDir)).filter(
+    (filePath) => path.relative(configDir, filePath) !== TOP_LEVEL_CONFIG
+  );
 
   // Scan and copy all other files (non-.ts files like .svelte, .json, etc.)
   const otherFiles = await scanOtherFiles(configDir);
+
+  // Top-level config split: same client/server treatment as every other split file below,
+  // just addressed by its fixed name instead of found via the scan (it's .server.ts-suffixed,
+  // so scanConfigFiles/allFiles never sees it). Runs after the pre-scan above so splitFiles is
+  // fully populated — this file's own `import { Pages } from './pages'`-style imports need to
+  // know which nested files themselves got split.
+  await processTopLevelConfig(configDir, outputDir, outputFiles, splitFiles);
 
   for (const filePath of allFiles) {
     const relativePath = path.relative(configDir, filePath);
@@ -166,11 +145,13 @@ async function sanitizeFolder(root) {
     }
   }
 
-  // Delete files that exist in current list but not in output list. Schema no longer lives
-  // in here at all (src/lib/rime.schema.server.ts, unconditional, both modes — see
-  // adapter-sqlite/generate-schema/write.server.ts), so no special-case exclusion needed.
+  // Delete files that exist in current list but not in output list. schema.server.ts is
+  // excluded — write.server.ts owns it (writes it straight into OUTPUT_DIR, see schemaPath()
+  // in constants.ts), sanitize() never adds it to outputFiles, so without this exclusion
+  // every sanitize run deletes it out from under write()'s own cache guard.
+  const SCHEMA_FILE = 'schema.server.ts';
   for (const existingFile of existingFiles) {
-    if (!outputFiles.has(existingFile)) {
+    if (existingFile !== SCHEMA_FILE && !outputFiles.has(existingFile)) {
       const fileToDelete = path.join(outputDir, existingFile);
       fs.unlinkSync(fileToDelete);
       logger.debug(`   Deleted: ${existingFile}`);
@@ -178,6 +159,40 @@ async function sanitizeFolder(root) {
   }
 
   logger.info('Sanitization complete');
+}
+
+/**
+ * The top-level config (src/lib/+rime/rime.config.server.ts) — real, hand-authored. Client
+ * copy via analyzeFile + sanitizeClientAst + removeUnusedImports, written into
+ * +rime.generated/, plus a server copy via updateServerImports so its own imports of nested
+ * split files resolve like every other split file's do.
+ */
+async function processTopLevelConfig(configDir, outputDir, outputFiles, splitFiles) {
+  const sourcePath = path.join(configDir, TOP_LEVEL_CONFIG);
+  if (!fs.existsSync(sourcePath)) return; // ensureUserConfigExist() already guards this
+
+  const content = fs.readFileSync(sourcePath, 'utf-8');
+  const ast = babelParse(content, 'ts', { sourceType: 'module', attachComment: false });
+  const analysis = analyzeFile(ast);
+
+  const clientPath = path.join(outputDir, 'rime.config.ts');
+  const serverPath = path.join(outputDir, TOP_LEVEL_CONFIG);
+  outputFiles.add(path.relative(outputDir, clientPath));
+  outputFiles.add(path.relative(outputDir, serverPath));
+
+  const clientAst = sanitizeClientAst(ast, analysis);
+  const cleanedAst = removeUnusedImports(clientAst);
+  const clientCode = generate(cleanedAst, { compact: false, comments: true }).code;
+  if (shouldWriteFile(clientPath, clientCode)) {
+    fs.writeFileSync(clientPath, clientCode);
+    logger.debug(`   Sanitized: rime.config.ts`);
+  }
+
+  const serverContent = updateServerImports(content, splitFiles, '.');
+  if (shouldWriteFile(serverPath, serverContent)) {
+    fs.writeFileSync(serverPath, serverContent);
+    logger.debug(`   Created: ${TOP_LEVEL_CONFIG}`);
+  }
 }
 
 async function scanConfigFiles(configDir) {
