@@ -2,6 +2,14 @@
 
 Two related features landed together, plus fixes discovered by actually running them.
 
+> **Update**: standalone config mode (sections 3, 4, 5) was reverted later this session — back
+> to folder-mode-only, `isFolderConfig()` removed, the schema path centralized through a new
+> `schemaPath()` helper in `constants.ts` instead of branching per call site. `tests/basic`
+> converted back to folder mode too (`lib/+rime/rime.config.server.ts` + a sibling `lib/config/`
+> for its collections, no more standalone-specific `+config/` naming). Left in place below as
+> the historical record of what was tried and why. Sections 1 and 2 stand as-is, unaffected;
+> section 6's `tests/basic` description is now partly stale (see its own note).
+
 ## 1. Plugin unification
 
 **What**: `Plugin`/`PluginClient` merged into one type. `Config.$plugins`/`Config.plugins`
@@ -55,7 +63,7 @@ implied by the file (`module.server.ts`) sitting inside the named folder. Both f
 `fields/relation` naming (no suffix, full real path) was already correct and is now the
 one convention everywhere.
 
-## 3. Standalone config mode
+## 3. Standalone config mode — REVERTED, see note at top
 
 **What**: a consumer can now write `src/lib/rime.config.server.ts` directly instead of
 `src/lib/+rime/rime.config.ts` (a whole folder, AST-scanned in full). The sanitizer detects
@@ -94,7 +102,7 @@ SvelteKit's own special-file convention) makes that collision very unlikely.
 `hooks.server.ts`'s template is mode-aware), `core/dev/cli/clear/*` (removes the standalone
 files too, not just `+rime/`).
 
-## 4. Schema location made mode-consistent
+## 4. Schema location made mode-consistent — REVERTED, see note at top
 
 **What**: `src/lib/rime.schema.server.ts` now, unconditionally, in both modes — not
 `src/lib/+rime.generated/schema.server.ts`.
@@ -112,7 +120,7 @@ Vite plugin's schema loader all had to move together — they'd drifted out of s
 point mid-session (`drizzle-kit generate` failing because `drizzle.config.ts` still pointed
 at the old path) and are now the one thing that agrees across all four.
 
-## 5. `tests/basic` migrated to standalone, as the real end-to-end proof
+## 5. `tests/basic` migrated to standalone, as the real end-to-end proof — REVERTED, see note at top
 
 `tests/basic/config/` (a real, git-tracked fixture — not `src/lib/+rime/`, which is a
 disposable copy `src/scripts/useConfig.js` generates via `cp -rf`) converted to the
@@ -124,6 +132,11 @@ fixture (`rime.config.server.ts` present at the fixture root or not) and copies 
 paths, not just typechecked but actually exercised via `bun ./src/scripts/useConfig.js basic`.
 
 ## 6. Fixture layout renamed to mirror its real destination
+
+> **Partly stale**: `tests/basic` converted back to folder mode when standalone mode was
+> reverted (see note at top) — it now has a `+rime/` subfolder like every other fixture below,
+> not the standalone shape described here. The rename described in this section (`config/` →
+> `lib/`) still stands.
 
 **What**: every `tests/<name>/config/` renamed to `tests/<name>/lib/...`, matching whatever
 each fixture actually lands at under `src/lib/` — `tests/basic/lib/` now holds
