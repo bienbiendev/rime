@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { logger } from '$lib/core/logger/index.server.js';
+import { spawnSync } from 'node:child_process';
 import { program } from 'commander';
 import { existsSync, writeFileSync } from 'fs';
 import { envProduction } from './build/templates.js';
@@ -46,6 +47,55 @@ program
         force: args.force
       });
     } catch {
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command('package')
+  .description(
+    "Builds a rime plugin/field package for publish: svelte-kit sync, svelte-package, then " +
+      'generate-manifest — makes any $rime/modules splits it exports consumable by anyone who ' +
+      'installs it. Equivalent to chaining those three yourself.'
+  )
+  .action(() => {
+    const sync = spawnSync('./node_modules/.bin/svelte-kit', ['sync'], { stdio: 'inherit' });
+    if (sync.status !== 0) {
+      process.exitCode = sync.status ?? 1;
+      return;
+    }
+
+    const build = spawnSync('./node_modules/.bin/svelte-package', [], { stdio: 'inherit' });
+    if (build.status !== 0) {
+      process.exitCode = build.status ?? 1;
+      return;
+    }
+
+    import('./generate-manifest/index.server.js').then(({ generateManifest }) => {
+      try {
+        generateManifest();
+      } catch (error: any) {
+        logger.error(error.message);
+        process.exitCode = 1;
+      }
+    });
+  });
+
+program
+  .command('generate-manifest')
+  .description(
+    "Run after svelte-package, before publish — makes this package's own $rime/modules " +
+      'splits consumable by anyone who installs it (rewrites the barrel into qualified ' +
+      'imports in dist/, writes dist/.rime-modules.json + .d.ts).'
+  )
+  .action(async () => {
+    const generateManifest = await import('./generate-manifest/index.server.js').then(
+      (m) => m.generateManifest
+    );
+    try {
+      generateManifest();
+    } catch (error: any) {
+      logger.error(error.message);
       process.exitCode = 1;
     }
   });

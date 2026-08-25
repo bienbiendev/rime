@@ -1,35 +1,37 @@
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { isInstalledDependency, OUTPUT_DIR } from '../../constants.js';
-
-const nodeRequire = createRequire(import.meta.url);
+import { OUTPUT_DIR } from '../../constants.js';
 
 export type RuntimeRegistryEntry = { client: string; server: string };
 export type RuntimeRegistry = Map<string, RuntimeRegistryEntry>;
 
 /**
- * Walks up from `startDir` to the nearest ancestor containing a `package.json` — self-
- * correcting regardless of how deeply nested this file is (unlike counting a fixed number of
- * `..` segments, which would silently point at the wrong directory, not error, the moment
- * this file's own location changes).
+ * Finds an installed package's root by walking up from `fromDir`, checking each ancestor's
+ * `node_modules/<pkgName>` directly for a `package.json` — the pre-`exports` Node resolution
+ * algorithm, pure directory existence, no `exports`-conditions matching involved at all.
+ *
+ * Needed in place of `require.resolve`/`import.meta.resolve`: both gate on a package's own
+ * `exports` map matching some condition set (`"require"`/`"default"` for the former, whatever
+ * conditions the resolving runtime declares for the latter), and a package that only exposes
+ * conditions neither uses — confirmed in practice with rime's own `"."` export, `types`/
+ * `svelte`/`import` only, no `"require"`/`"default"` fallback — fails to resolve even its own
+ * main entry through either API. This sidesteps that entirely: `node_modules/<pkgName>` is a
+ * real directory (or, under pnpm, a real symlink `fs.existsSync` follows transparently)
+ * regardless of what that package's `exports` map declares.
  */
-export function findPackageRoot(startDir: string): string {
-  let dir = startDir;
-  while (!fs.existsSync(path.join(dir, 'package.json'))) {
+export function findInstalledPackageRoot(pkgName: string, fromDir: string): string {
+  let dir = fromDir;
+  while (true) {
+    const candidate = path.join(dir, 'node_modules', pkgName);
+    if (fs.existsSync(path.join(candidate, 'package.json'))) {
+      return candidate;
+    }
     const parent = path.dirname(dir);
     if (parent === dir) {
-      throw new Error(`$rime: could not locate a package root above ${startDir}`);
+      throw new Error(`$rime/modules: could not find installed package '${pkgName}' above ${fromDir}`);
     }
     dir = parent;
   }
-  return dir;
-}
-
-/** `findPackageRoot(startDir)/dist` — rime's own package root, specifically. */
-export function findDistRoot(startDir: string): string {
-  return path.join(findPackageRoot(startDir), 'dist');
 }
 
 /** `module.ts` when scanning TS source, `module.js` when scanning a built `dist/`. */
@@ -44,8 +46,9 @@ function findModuleFile(dir: string, baseName: string): string | null {
 /**
  * Direct, single-lookup check for one `<root>/<name>/module(.server)?.ts|js` pair — no
  * directory walk, just the two `fs.existsSync`-style checks `findModuleFile` already does.
- * Used by the Vite plugin's `resolveId`/`load` for on-demand resolution; `scanModulePairs`
- * below (a real walk) stays reserved for type generation, which has no "on demand" available.
+ * Used by the Vite plugin's `resolveId`/`load` for on-demand resolution of a `$rime/modules`
+ * self-reference; `scanModulePairs` below (a real walk) stays reserved for the barrel (which
+ * needs every pair at once) and type generation.
  */
 export function findModulePair(root: string, name: string): RuntimeRegistryEntry | null {
   const dir = path.join(root, name);
@@ -56,15 +59,16 @@ export function findModulePair(root: string, name: string): RuntimeRegistryEntry
 
 /**
  * Recursively finds every `module`/`module.server` folder under `root`, registered under the
- * containing folder's path relative to `root` — `$rime/<key>` mirrors the real path, e.g.
- * `fields/relation/module.ts` under a `lib`-rooted scan registers as `fields/relation`.
+ * containing folder's path relative to `root` — e.g. `fields/relation/module.ts` under a
+ * `src/lib`-rooted scan registers as `fields/relation`. Used by the `$rime/modules` barrel
+ * (live, dev-mode only) and by `generate-manifest` (once, at prepack, scanning `dist/`).
  *
  * Either file alone is enough to register (single-sided is legitimate — a server-only piece,
  * e.g. a collection's hooks, never needs a hand-written client stub; the missing side is just
  * an empty string here, same convention `findModulePair` above uses). `rime.generated/` is
  * skipped since it's sanitize's own output, unrelated to this.
  */
-function scanModulePairs(root: string): RuntimeRegistry {
+export function scanModulePairs(root: string): RuntimeRegistry {
   const registry: RuntimeRegistry = new Map();
   if (!fs.existsSync(root)) return registry;
 
@@ -86,95 +90,3 @@ function scanModulePairs(root: string): RuntimeRegistry {
   return registry;
 }
 
-/**
- * Builds the `$rime/<name>` → { browser file, server file } lookup table.
- *
- * @example rime's own field, installed as a dependency in some app
- * // /my-app/node_modules/rimecms/dist/fields/relation/module.ts + module.server.ts
- * // → registry.get('fields/relation') → { client: '.../module.ts', server: '.../module.server.ts' }
- * // → import { x } from '$rime/fields/relation'   // resolves
- *
- * @example that same app's own custom field
- * // /my-app/src/lib/fields/geocode/module.ts + module.server.ts
- * // → registry.get('fields/geocode') → { client: '.../module.ts', server: '.../module.server.ts' }
- * // → import { x } from '$rime/fields/geocode'    // resolves, same mechanism, zero extra setup
- *
- * @example nothing on disk for that name
- * // no folder anywhere has both typo/module.ts and typo/module.server.ts
- * // → registry.get('typo') → undefined
- * // → import { x } from '$rime/typo'               // fails: "cannot resolve module"
- */
-function packageDependencies(pkgJsonPath: string): string[] {
-  try {
-    const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
-    return Object.keys(pkg.dependencies ?? {});
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Discovers every installed package that depends on `rimecms` — a third-party plugin/field
- * package — starting from the app's own direct dependencies and following the "depends on
- * rimecms" chain transitively (covers e.g. a plugin that itself depends on a field package,
- * not just packages the app installs directly; a dep not on that chain is never followed, so
- * this stays a bounded walk, not a full node_modules scan). Each discovered package's own
- * `dist/` becomes an extra `$rime/<name>` fallback root for the optimizer-flattened-importer
- * case (see nativeLibDir/consumerLibDir in vite/index.server.ts) — computed once at Vite
- * plugin init, never from a runtime importer, so flattening can't affect it either.
- *
- * `dependencies` only, not `peerDependencies` — the convention a rime plugin/field package is
- * expected to declare `rimecms` under. `require.resolve` (not a hand-rolled node_modules join)
- * so this follows whatever layout the package manager actually used (pnpm's nested
- * node_modules included), same as Node's own resolution would.
- *
- * Two discovered packages defining the same bare `$rime/<name>` split name would collide here
- * (first match wins) — narrow, accepted risk: this path only runs after the importer-derived
- * lookup has already failed.
- */
-export function findRimePluginRoots(appRoot: string): string[] {
-  const roots: string[] = [];
-  const visited = new Set<string>();
-
-  function scan(depNames: string[], fromDir: string) {
-    for (const name of depNames) {
-      if (visited.has(name)) continue;
-      visited.add(name);
-
-      let pkgJsonPath: string;
-      try {
-        pkgJsonPath = nodeRequire.resolve(`${name}/package.json`, { paths: [fromDir] });
-      } catch {
-        continue;
-      }
-
-      const deps = packageDependencies(pkgJsonPath);
-      if (deps.includes('rimecms')) {
-        const pkgDir = path.dirname(pkgJsonPath);
-        roots.push(path.join(pkgDir, 'dist'));
-        scan(deps, pkgDir);
-      }
-    }
-  }
-
-  scan(packageDependencies(path.join(appRoot, 'package.json')), appRoot);
-  return roots;
-}
-
-export function buildRuntimeRegistry(): RuntimeRegistry {
-  const registry: RuntimeRegistry = new Map();
-
-  if (isInstalledDependency(import.meta.url)) {
-    const nativeLibDir = findDistRoot(path.dirname(fileURLToPath(import.meta.url)));
-    for (const [key, entry] of scanModulePairs(nativeLibDir)) {
-      registry.set(key, entry);
-    }
-  }
-
-  const consumerLibDir = path.resolve(process.cwd(), 'src/lib');
-  for (const [key, entry] of scanModulePairs(consumerLibDir)) {
-    registry.set(key, entry);
-  }
-
-  return registry;
-}

@@ -1,18 +1,17 @@
 import dotenv from 'dotenv';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { Plugin, UserConfig } from 'vite';
 import { RIME_DEV_CACHE_DIR } from '../../constant.server.js';
 import { ensureHasInit } from '../../ensure.server.js';
 import { logger } from '../../logger/index.server.js';
+import { getPackageInfoByKey } from '../cli/util/package.server.js';
 import { INPUT_DIR, isInstalledDependency, OUTPUT_DIR, schemaPath } from '../constants.js';
 import { parseExportNames } from '../generate/runtime/parse-exports.server.js';
 import {
-  findDistRoot,
+  findInstalledPackageRoot,
   findModulePair,
-  findPackageRoot,
-  findRimePluginRoots,
+  scanModulePairs,
   type RuntimeRegistryEntry
 } from '../generate/runtime/index.server.js';
 import { sanitize } from '../generate/sanitize/index.server.js';
@@ -20,18 +19,18 @@ import { sanitize } from '../generate/sanitize/index.server.js';
 dotenv.config({ override: true });
 const dev = process.env.NODE_ENV === 'development';
 
+/** Picks the client or server side of a module.(server.)ts pair. When the requested side
+ *  wasn't authored (e.g. a collection's $url/$hooks, real only server-side, imported anyway by
+ *  the isomorphic index.ts a client build also needs for its field definitions), stubs each of
+ *  the *other* side's export names to `undefined` instead of returning nothing — ESM does
+ *  static named-export binding, so an empty module isn't enough, `import { x } from ...` throws
+ *  a SyntaxError at link time if `x` isn't actually exported, it doesn't lazily become
+ *  `undefined`. Harmless: server-only exports are already stripped from client-side types, so
+ *  nothing client-side ever reads the stubbed value — it only has to exist. */
 function exportFrom(entry: RuntimeRegistryEntry, isServer: boolean): string {
   const target = isServer ? entry.server : entry.client;
   if (target) return `export * from '${target.replace(/\.ts$/, '.js')}';`;
 
-  // That side wasn't authored — e.g. a collection's $url/$hooks, real only in
-  // module.server.ts, imported anyway by the isomorphic index.ts a client build also needs
-  // for its field definitions. ESM does static named-export binding, so an empty module
-  // isn't enough — `import { buildNewsUrl } from ...` throws a SyntaxError at link time if
-  // that name isn't actually exported, it doesn't lazily become `undefined`. Parse the real
-  // side's export names and stub each one out instead. Harmless: $url/$hooks are already
-  // stripped from the client-side collection type (see BuiltCollectionClient), so nothing
-  // client-side ever reads the value — it only has to exist.
   const other = isServer ? entry.client : entry.server;
   if (!other) return '';
   return parseExportNames(other)
@@ -39,58 +38,80 @@ function exportFrom(entry: RuntimeRegistryEntry, isServer: boolean): string {
     .join('\n');
 }
 
+/** Splits `<pkg>/<subpath>` or `@scope/<pkg>/<subpath>` into its package name and the rest —
+ *  a scoped name is two path segments, a plain one is one. */
+function splitPackageSpecifier(rest: string): { pkgName: string; subpath: string } {
+  const segments = rest.split('/');
+  const pkgName = rest.startsWith('@') ? segments.slice(0, 2).join('/') : segments[0];
+  const subpath = segments.slice(pkgName.split('/').length).join('/');
+  return { pkgName, subpath };
+}
+
 export function rime(): Plugin {
+  /** Two reserved names, always resolved to *the currently running app's* generated
+   *  config/schema, independent of who's asking — a third-party plugin importing
+   *  `$rime/config` gets the host app's config, never its own. Unrelated to the modules
+   *  mechanism below (a package's own client/server split): different problem, same `$rime/`
+   *  namespace only by convention. */
   const VCoreId = '$rime/config';
   const VSchemaId = '$rime/schema';
-  /** One rule, no exceptions: `import { x } from '$rime/<name>'` always resolves `<name>`
-   *  relative to the *importing file's own package* — rime's own (relation/index.ts,
-   *  cache/index.ts, ...), a consumer app's own local fields, or a third-party field/plugin
-   *  package's own client/server split, resolved straight off that package's disk (its
-   *  `dist/` once built and installed, its `src/lib/` while still source — rime's own dev, a
-   *  consumer app's own files, or a package's own dev sandbox alike). No package-name prefix
-   *  ever needed, even for a package referencing its own split — `resolveLibRoot` below
-   *  finds the importer's own root directly, so there's nothing to spell out. Never a
-   *  `node_modules` walk. The specifier is a static string baked into the source, so it
-   *  survives esbuild's dep-optimizer flattening — unlike an importer-relative *file* import,
-   *  which breaks the moment the importing file gets pre-bundled (the resolved import then
-   *  points at the flattened chunk, not the real source file); resolving `$rime/<name>`
-   *  itself off the *original* importer sidesteps that entirely. `config` and `schema` are
-   *  reserved names (see VCoreId/VSchemaId below, checked first) — a field can't be
-   *  registered under either. */
-  const VPrefix = '$rime/';
-  // Separates the resolved root from the original specifier inside one virtual module id —
-  // never appears in a real path or a JS specifier, so it's an unambiguous split point.
+
+  /** `$rime/modules` — a package's own client/server split, resolved relative to *whoever's
+   *  asking*, always self-contained. Two forms:
+   *
+   *  - The bare barrel, `$rime/modules`, addressed by *export name* rather than path — dev
+   *    only, live-scans this project's own `src/lib` for every `module.(server.)ts` pair (see
+   *    `regenerateModulesDeclaration` below for the matching local-dev `.d.ts`). Never ships:
+   *    a prepack step (the `generate-manifest` CLI command) AST-rewrites every `$rime/modules`
+   *    import into the qualified form below before publish, so a consumer never sees the
+   *    barrel at all.
+   *  - The qualified form, `$rime/modules/<pkg>/<path>`, always package-qualified — even for a
+   *    package's own internal references to itself. Two ways it resolves, both in `resolveId`
+   *    (not `load`, which never receives `importer`): `<pkg>` equals this project's own
+   *    `package.json` name → self-reference, resolved directly off this project's own
+   *    `src/lib`. Otherwise → an installed dependency, its root found by walking up
+   *    `node_modules/<pkg>` from the importer's own directory (`findInstalledPackageRoot` —
+   *    pure directory existence, no `exports`-conditions matching, since a package whose
+   *    `exports` map declares only conditions neither `require.resolve` nor
+   *    `import.meta.resolve` use fails to resolve through either) and its shipped
+   *    `dist/.rime-modules.json` read directly — no directory-convention guessing beyond that,
+   *    immune to Vite's dep-optimizer flattening a package (reading a known filename off disk
+   *    never touches the import graph the optimizer rewrites). Full design:
+   *    docs/plans/imports.md. */
+  const VModulesId = '$rime/modules';
+  const VModulesPrefix = '$rime/modules/';
+  const ownPackageName = getPackageInfoByKey('name');
+
+  // Separates a resolved root from the original specifier inside one virtual module id — never
+  // appears in a real path or a JS specifier, so it's an unambiguous split point. Only the
+  // third-party qualified-form case needs it (the root has to travel with the id since load()
+  // doesn't receive importer); the barrel and self-reference cases carry no baked-in root.
   const ROOT_SEP = '\x01';
 
   const resolvedVModule = (name: string) => '\0' + name;
 
-  /** `$rime/<name>`'s root: walk up from the importing file to its own nearest
-   *  `package.json`, then use `dist/` if that file is already built/installed
-   *  (`node_modules` anywhere in its path) or `src/lib/` if it's still source. */
-  function resolveLibRoot(importer: string): string {
-    const packageRoot = findPackageRoot(path.dirname(importer));
-    const isBuilt = importer.includes(`${path.sep}node_modules${path.sep}`);
-    return path.join(packageRoot, isBuilt ? 'dist' : 'src/lib');
+  // Local-dev types for the $rime/modules barrel — declares every module.(server.)ts pair
+  // currently under this project's own src/lib, live. Regenerated on startup and whenever a
+  // module file appears/changes/disappears (see the watcher below) — never ships, gitignored,
+  // same treatment as app.generated.d.ts/rime.generated.d.ts.
+  //
+  // $lib/-aliased paths, not bare relative/absolute ones — verified directly (a plain relative
+  // or absolute `export * from` inside a `declare module` block silently resolves to no
+  // exports at all; TS only picks up the re-exported names through a real configured alias).
+  function regenerateModulesDeclaration() {
+    const libDir = path.resolve(process.cwd(), 'src/lib');
+    const pairs = scanModulePairs(libDir);
+    const exports = Array.from(pairs.values())
+      .map((entry) => entry.server || entry.client)
+      .filter(Boolean)
+      .map((file) => `$lib/${path.relative(libDir, file).split(path.sep).join('/')}`.replace(/\.ts$/, '.js'))
+      .map((aliased) => `  export * from '${aliased}';`)
+      .join('\n');
+    writeFileSync(
+      path.resolve(process.cwd(), 'src/rime.modules.generated.d.ts'),
+      `declare module '$rime/modules' {\n${exports}\n}\n`
+    );
   }
-
-  // Fallback roots for load() below, computed once (not from any runtime importer) — needed
-  // because Vite's esbuild-based dep-optimizer can't resolve a virtual $rime/<name> import
-  // itself (only this plugin's own load() can), so it leaves it as a live import in the
-  // flattened node_modules/.vite/deps/* chunk it produces for rimecms instead of erroring.
-  // Once the browser later requests that chunk, the importer resolveId() sees is the
-  // flattened path, not rime's real source — resolveLibRoot's walk-up then lands on
-  // .vite/deps's own package.json, not rime's. These two static roots are exactly what the
-  // plugin used before it went importer-relative, and they're immune to this: neither is
-  // derived from a runtime importer, so optimizer flattening can't affect them.
-  const consumerLibDir = path.resolve(process.cwd(), 'src/lib');
-  const nativeLibDir = isInstalledDependency(import.meta.url)
-    ? findDistRoot(path.dirname(fileURLToPath(import.meta.url)))
-    : null;
-  // Covers a *third-party* plugin/field package getting optimizer-flattened — nativeLibDir/
-  // consumerLibDir only ever point at rime's own dist or this app's own src/lib, neither of
-  // which is a third-party package's root. Every installed package that itself depends on
-  // rimecms, discovered once at startup (see findRimePluginRoots's own doc comment).
-  const pluginLibDirs = findRimePluginRoots(process.cwd());
 
   return {
     name: 'virtual-rime',
@@ -99,6 +120,7 @@ export function rime(): Plugin {
       // Add a listener for when the server starts
       server.httpServer?.once('listening', () => {
         dev && ensureHasInit();
+        regenerateModulesDeclaration();
         // Check if we need to rebuild
         const shouldRebuild = process.argv.includes('--rebuild');
 
@@ -107,6 +129,17 @@ export function rime(): Plugin {
           logger.info('--rebuild : node_modules/.rime folder deleted');
         }
       });
+
+      // module.ts/module.server.ts appearing, changing, or disappearing under this project's
+      // own src/lib — regenerate the $rime/modules declaration above so the IDE picks up the
+      // new/changed/removed split immediately. Listens on add/unlink too, unlike the config
+      // watcher below (change-only) — a new split is exactly as likely to be a brand new file
+      // as an edit to an existing one.
+      const isModuleFile = (p: string) =>
+        /[/\\]module(\.server)?\.ts$/.test(p) && p.includes(`${path.sep}src${path.sep}lib${path.sep}`);
+      server.watcher.on('add', (p) => isModuleFile(p) && regenerateModulesDeclaration());
+      server.watcher.on('unlink', (p) => isModuleFile(p) && regenerateModulesDeclaration());
+      server.watcher.on('change', (p) => isModuleFile(p) && regenerateModulesDeclaration());
 
       // Add a watcher for sanitizing config changes and triggering schema/routes/types
       // generation. Debounced + single-flight: a config change is rarely one file (e.g. a
@@ -210,6 +243,11 @@ export function rime(): Plugin {
         const module = invalidateVModule(VCoreId);
         if (module) return [module];
       }
+
+      if (/[/\\]module(\.server)?\.ts$/.test(file) && file.includes(`${path.sep}src${path.sep}lib${path.sep}`)) {
+        const module = invalidateVModule(VModulesId);
+        if (module) return [module];
+      }
     },
 
     resolveId(id, importer) {
@@ -219,16 +257,26 @@ export function rime(): Plugin {
       if (id === VSchemaId) {
         return resolvedVModule(id);
       }
-      if (id.startsWith(VPrefix)) {
-        if (!importer) {
-          throw new Error(`$rime: '${id}' has no importer to resolve its package root from`);
+      if (id === VModulesId) {
+        return resolvedVModule(id); // barrel, no root to bake in — load() always scans this project's own src/lib
+      }
+      if (id.startsWith(VModulesPrefix)) {
+        const { pkgName } = splitPackageSpecifier(id.slice(VModulesPrefix.length));
+        if (pkgName === ownPackageName) {
+          return resolvedVModule(id); // self-reference: load() scans this project's own src/lib too
         }
-        // The root has to be part of the resolved id itself, not tracked separately — two
-        // different packages can use the same bare name for their own split (e.g. both a
-        // plugin and a field calling it "$rime/module"), and Vite's module graph caches
-        // purely by id, so each needs a genuinely distinct one. load() resolves on demand
-        // and throws its own clear error if nothing matches under that root.
-        return resolvedVModule(`${resolveLibRoot(importer)}${ROOT_SEP}${id}`);
+        if (!importer) {
+          throw new Error(`$rime/modules: '${id}' has no importer to resolve '${pkgName}' from`);
+        }
+        // Third-party dependency: find its installed root now, while `importer` is still
+        // available (load() doesn't receive it) — baked into the id via ROOT_SEP. Walks up
+        // node_modules directly (see findInstalledPackageRoot) rather than resolving through
+        // the package's own `exports` map — confirmed in practice that both `require.resolve`
+        // and `import.meta.resolve` gate on a condition set matching, and a package whose
+        // exports only declare conditions neither uses (rime's own included: `types`/`svelte`/
+        // `import`, no `require`/`default`) fails to resolve at all through either.
+        const pkgRoot = findInstalledPackageRoot(pkgName, path.dirname(importer));
+        return resolvedVModule(`${pkgRoot}${ROOT_SEP}${id}`);
       }
 
       return null;
@@ -253,32 +301,52 @@ export function rime(): Plugin {
         }
       }
 
-      if (!id.startsWith('\0')) return null;
-      const sepIndex = id.indexOf(ROOT_SEP);
-      if (sepIndex === -1) return null; // VCoreId/VSchemaId, already handled above
-
-      const root = id.slice(1, sepIndex);
-      const specifier = id.slice(sepIndex + 1);
-      const name = specifier.slice(VPrefix.length);
-
-      // The importer-derived root first — correct for the vast majority of cases. Falling
-      // back to the static roots covers it being wrong specifically because the importer
-      // was an optimizer-flattened chunk (see the comment on nativeLibDir/consumerLibDir
-      // above) — cheap and harmless to just try them too rather than distinguish why the
-      // first lookup failed. pluginLibDirs last, one findModulePair call per discovered
-      // third-party package — small in practice (how many plugins/fields one app installs).
-      const hit =
-        findModulePair(root, name) ??
-        (nativeLibDir && findModulePair(nativeLibDir, name)) ??
-        findModulePair(consumerLibDir, name) ??
-        pluginLibDirs.reduce<RuntimeRegistryEntry | null>(
-          (found, dir) => found ?? findModulePair(dir, name),
-          null
-        );
-      if (!hit) {
-        throw new Error(`$rime/${name}: doesn't resolve under ${root}`);
+      if (id === resolvedVModule(VModulesId)) {
+        // Dev-mode barrel — re-exports every module.(server.)ts pair found under this
+        // project's own src/lib, live. Never ships: prepack rewrites every '$rime/modules'
+        // import into a qualified one before publish, so this only ever runs during dev.
+        const pairs = scanModulePairs(path.resolve(process.cwd(), 'src/lib'));
+        return Array.from(pairs.values())
+          .map((entry) => exportFrom(entry, isServer))
+          .filter(Boolean)
+          .join('\n');
       }
-      return exportFrom(hit, isServer);
+
+      // Self-reference qualified form — resolveId returned this bare, no root baked in
+      // (matches VModulesId's shape above): resolve directly off this project's own src/lib.
+      if (id.startsWith(resolvedVModule(VModulesPrefix))) {
+        const subpath = splitPackageSpecifier(id.slice(resolvedVModule(VModulesPrefix).length)).subpath;
+        const pair = findModulePair(path.resolve(process.cwd(), 'src/lib'), subpath);
+        if (!pair) throw new Error(`${id.slice(1)}: doesn't resolve under this project's own src/lib`);
+        return exportFrom(pair, isServer);
+      }
+
+      // Third-party qualified form — resolveId baked the resolved package root in via
+      // ROOT_SEP: read what it shipped at prepack, don't guess.
+      {
+        const modulesSepIndex = id.indexOf(ROOT_SEP);
+        const modulesSpecifier = modulesSepIndex === -1 ? '' : id.slice(modulesSepIndex + 1);
+        if (modulesSpecifier.startsWith(VModulesPrefix)) {
+          const pkgRoot = id.slice(1, modulesSepIndex);
+          const rest = modulesSpecifier.slice(VModulesPrefix.length);
+          const { pkgName, subpath } = splitPackageSpecifier(rest);
+
+          const manifestPath = path.join(pkgRoot, 'dist/.rime-modules.json');
+          if (!existsSync(manifestPath)) {
+            throw new Error(
+              `$rime/modules/${pkgName}: no manifest at ${manifestPath} — does ${pkgName} run 'rime generate-manifest' at prepack?`
+            );
+          }
+          const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+          const pair = manifest[subpath];
+          if (!pair) {
+            throw new Error(`$rime/modules/${pkgName}/${subpath}: not found in ${pkgName}'s manifest`);
+          }
+          return exportFrom(pair, isServer);
+        }
+      }
+
+      return null;
     }
   };
 }

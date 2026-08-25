@@ -13,6 +13,7 @@ const clearMessage = `Are you sure you want to delete all related rime files (Y/
 - ./src/lib/${OUTPUT_DIR}
 - ./src/app.generated.d.ts
 - ./src/rime.generated.d.ts
+- ./src/rime.modules.generated.d.ts
 - ./src/hooks.server.ts
 - ./drizzle.config.ts
 `;
@@ -41,6 +42,7 @@ export const clear = async (args: { force?: boolean }) => {
   rmSync(path.join('src', 'hooks.server.ts'), { force: true });
   rmSync(path.join('src', 'app.generated.d.ts'), { force: true });
   rmSync(path.join('src', 'rime.generated.d.ts'), { force: true });
+  rmSync(path.join('src', 'rime.modules.generated.d.ts'), { force: true });
   rmSync(path.join('drizzle.config.ts'), { force: true });
 
   return logger.info('rime cleared');

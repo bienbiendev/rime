@@ -6,7 +6,7 @@ import type { RegisterCollection } from '$lib/index.js';
 import { hasProps, isObjectLiteral } from '$lib/util/object.js';
 import { capitalize } from '$lib/util/string.js';
 import type { WithOptional } from '$lib/util/types.js';
-import { ensureRelationExists } from '$rime/fields/relation';
+import { ensureRelationExists } from '$rime/modules';
 import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
 

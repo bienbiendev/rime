@@ -21,7 +21,6 @@ import { capitalize, toPascalCase } from '$lib/util/string.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { isInstalledDependency, OUTPUT_DIR } from '../../constants.js';
-import { buildRuntimeRegistry } from '../runtime/index.server.js';
 
 const IS_RIME_REPO = !isInstalledDependency(import.meta.url);
 
@@ -132,52 +131,19 @@ const templateDeclareVirtualModule = () =>
     `}`,
     `declare module '$rime/schema' {`,
     `\texport * from '$lib/rime.schema.server.js';`,
-    `}`,
-    ...templateDeclareFieldModules(),
-    // Fallback for any $rime/<name> not covered above — a package (rime's own, or a
-    // third-party field/plugin) always resolves its own split against its own local
-    // src/lib/dist (see resolveLibRoot in core/dev/vite/index.server.ts), so this app's own
-    // registry (built by templateDeclareFieldModules) is the only one that could ever need a
-    // declaration here. Untyped escape hatch for the rest, e.g. a name typo. Never a scan.
-    `declare module '$rime/*' {\n\tconst value: any;\n\texport = value;\n}`
+    `}`
+    // $rime/modules (the bare barrel) is typed by src/rime.modules.generated.d.ts instead —
+    // written directly by the Vite plugin's own dev-server watcher (regenerateModulesDeclaration
+    // in core/dev/vite/index.server.ts), not here, since it needs to react to module.(server.)ts
+    // files appearing/changing on their own, independent of a config regen.
+    //
+    // A package's own qualified $rime/modules/<pkg>/<path> references are self-contained —
+    // generate-manifest inserts a /// <reference> directly into each rewritten .d.ts file at
+    // prepack (see generate-manifest/index.server.ts), so this app never needs to know which
+    // installed packages exist or eagerly reference all of them; verified directly (a real tsc
+    // run resolves it correctly from a file two levels deep inside node_modules, zero consumer
+    // awareness needed).
   ].join('\n');
-
-/**
- * One `declare module '$rime/<name>'` per registered field module.ts + module.server.ts pair
- * (rime-native and consumer-local alike — see buildRuntimeRegistry), sourced from the
- * `.server.ts` side (the real, server-only implementation of the shared hook; the client
- * module.ts only has the no-op). Unrelated to type generation itself — that goes through
- * `field.use.generateType()` on the builder instance directly, not through this registry.
- * Runtime resolution (the Vite plugin's `load()`) is unaffected either way — it still picks
- * the real client-vs-server module dynamically based on build context.
- */
-const templateDeclareFieldModules = () => {
-  const registry = buildRuntimeRegistry();
-  return Array.from(registry.entries()).map(([name, entry]) => {
-    // Prefer the server side (the real implementation) — fall back to client only for a
-    // single-sided module that has no server half at all (rare, but valid).
-    const modulePath = toModuleSpecifier(entry.server || entry.client);
-    return `declare module '$rime/${name}' {\n\texport * from '${modulePath}';\n}`;
-  });
-};
-
-/**
- * `$lib/...` when the file is inside this app's own src/lib (true for a consumer's own custom
- * field, and for rime's own fields when developing rime itself, since they live inside src/lib
- * in that case too) — matches the `$rime/schema` declaration above, and stays readable/portable
- * instead of an absolute path. Falls back to an absolute path only when there's genuinely no
- * alias for it: rime's own fields when installed as a real dependency, living in
- * node_modules/rimecms/dist/, outside this app's src/lib entirely.
- */
-function toModuleSpecifier(serverPath: string): string {
-  const libRoot = path.resolve(process.cwd(), 'src/lib');
-  const jsPath = serverPath.replace(/\.ts$/, '.js');
-  const relative = path.relative(libRoot, jsPath);
-  if (!relative.startsWith('..')) {
-    return `$lib/${relative.split(path.sep).join('/')}`;
-  }
-  return jsPath;
-}
 
 /**
  * Generates type definitions for image sizes
