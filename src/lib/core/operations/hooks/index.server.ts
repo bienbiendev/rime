@@ -160,13 +160,6 @@ export const Hooks = {
   ): Hook<S, 'delete', 'before'> => handler,
 
   /**
-   * Creates an after read hook
-   */
-  afterRead: <S extends DocType = 'raw'>(
-    handler: Hook<S, 'read', 'after'>
-  ): Hook<S, 'read', 'after'> => handler,
-
-  /**
    * Creates an after create hook
    */
   afterCreate: <S extends DocType = 'raw'>(
