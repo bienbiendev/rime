@@ -14,7 +14,7 @@ export default async function <const C extends Config>(rime: Promise<Rime<C>>) {
     createCMSHandler(await rime),
     handleAuth,
     handleCORS,
-    handleRoutes,
-    ...createPluginsHandler(await rime)
+    ...createPluginsHandler(await rime),
+    handleRoutes
   ];
 }
