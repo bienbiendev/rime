@@ -3,15 +3,17 @@ import path from 'path';
 
 /**
  * Test config for consumer-apps that install rimecms.
- * These tests just cover pages/staff creation and sign-in/up on a basic configuration.
+ * These tests cover pages/staff/media creation and sign-in/up on a basic configuration
+ * (consumer.test.ts) plus a third-party plugin+field mounted into that same config
+ * (consumer-plugin.test.ts) - both run by default.
  * see: src/scripts/local-pack-test.sh
  */
 
 const PORT = Number(process.env.CONSUMER_SERVER_PORT || '5173');
 const PUBLIC_URL = process.env.PUBLIC_RIME_URL || `http://localhost:${PORT}`;
-// Lets local-pack-test.sh point a given pass at a different test file (e.g.
-// consumer-plugin.test.ts) without a second playwright config to keep in sync with this one.
-const TEST_MATCH = new RegExp(process.env.CONSUMER_TEST_MATCH || 'consumer\\.test\\.ts');
+// Lets local-pack-test.sh narrow a given pass to a single test file without a second
+// playwright config to keep in sync with this one.
+const TEST_MATCH = new RegExp(process.env.CONSUMER_TEST_MATCH || 'consumer(-plugin)?\\.test\\.ts$');
 
 export default defineConfig({
   workers: 1,

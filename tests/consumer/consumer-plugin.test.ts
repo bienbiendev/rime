@@ -1,11 +1,11 @@
 import test, { expect } from '@playwright/test';
 
-// Exercises tests/consumer/+rime/rime.config.ts, which local-pack-test.sh swaps in over the
-// plain rime-init config once the dev server is already running (see [5b/13] in that script)
-// to also prove the file-watcher's live regeneration path, not just a fresh startup. Both
-// @bienbien/rime-consumer-plugin and @bienbien/rime-consumer-field are real, separately
+// Exercises tests/consumer/lib/+rime/rime.config.server.ts, which local-pack-test.sh copies
+// into place *before* `rime init` runs (see copy_plugin_config in that script), so init's own
+// cold-start generate() mounts the plugin+field for real - not a live dev-server hot-reload.
+// Both @bienbien/rime-consumer-plugin and @bienbien/rime-consumer-field are real, separately
 // packed npm packages installed into the scaffolded app — this is the one place their
-// $rime/<own-name> self-referencing resolution (see stripOwnPackagePrefix in
+// $rime/modules resolution (see findInstalledPackageRoot in
 // core/dev/generate/runtime/index.server.ts) gets exercised as an *installed* dependency
 // rather than a package's own dev sandbox.
 
@@ -57,7 +57,7 @@ test('plugin route, handler, field and hook all mounted correctly', async ({ pag
 
   // Collection injection: the plugin's own `pluginVisits` collection shows up in the nav
   // exactly like a consumer-authored one.
-  await expect(nav.locator(`a[href="${panelUrl('pluginVisits')}"]`)).toBeVisible();
+  await expect(nav.locator(`a[href="${panelUrl('plugin-visits')}"]`)).toBeVisible();
 
   // Field injection + field's own server hook: create a page with the third-party
   // `consumerField` filled in, and the plugin's `consumerPluginNote` field also present.
@@ -84,11 +84,13 @@ test('plugin route, handler, field and hook all mounted correctly', async ({ pag
 
   // Collection hook: the plugin's afterUpdate hook only fires on update, not the initial
   // create above — save again to trigger it, then confirm it wrote a pluginVisits document.
+  // Save is disabled on a pristine form, so dirty it first.
+  await page.locator('input.rz-input[name="note"]').pressSequentially('!', { delay: 50 });
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
   await page.waitForLoadState('networkidle');
 
-  await nav.locator(`a[href="${panelUrl('pluginVisits')}"]`).click();
+  await nav.locator(`a[href="${panelUrl('plugin-visits')}"]`).click();
   await page.waitForLoadState('networkidle');
   await expect(page.locator('.rz-list-row').first()).toBeVisible();
 
