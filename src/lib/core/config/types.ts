@@ -127,7 +127,7 @@ export type PanelConfig = {
     /** Dashboard header */
     header?: Component[];
     /** Collection header */
-    collectionHeader?: Component[];
+    collectionHeader?: Component<{ config: BuiltCollectionClient }>[];
     /** Full dashboard component */
     dashboard?: Component<{ entries: DashboardEntry[]; user?: User }>;
   };
@@ -383,7 +383,7 @@ export type BuiltConfig = {
     $access: (user?: User) => boolean;
     components: {
       header: Component[];
-      collectionHeader?: Component[];
+      collectionHeader?: Component<{ config: BuiltCollectionClient }>[];
       dashboard?: Component<{ entries: DashboardEntry[]; user?: User }>;
     };
     css?: string;
@@ -424,7 +424,7 @@ export type BuiltConfigClient = Omit<
     navigation: NavigationConfig;
     components: {
       header: Component[];
-      collectionHeader?: Component[];
+      collectionHeader?: Component<{ config: BuiltCollectionClient }>[];
       dashboard?: Component<{ entries: DashboardEntry[]; user?: User }>;
     };
   };

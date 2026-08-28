@@ -95,7 +95,7 @@
 
         {#snippet topRight()}
           {#each config.raw.panel.components.collectionHeader || [] as CustomHeaderComponent, index (index)}
-            <CustomHeaderComponent />
+            <CustomHeaderComponent config={collectionConfig} />
           {/each}
 
           <LanguageSwitcher onLocalClick={() => invalidateAll()} />
