@@ -4,7 +4,7 @@
   import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
   import { ListChecks, SquareCheck, SquareMinus, Trash } from '@lucide/svelte';
 
-  const collection = getCollectionContext('list');
+  const collection = getCollectionContext();
   const selectedCount = $derived(collection.selected.length);
   const pluralSuffix = $derived(selectedCount > 1 ? 's' : '');
   const activeListClass = $derived(collection.selectMode ? 'rz-header-select__icon--active' : '');

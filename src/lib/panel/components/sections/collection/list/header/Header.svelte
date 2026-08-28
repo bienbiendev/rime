@@ -6,7 +6,7 @@
 
   type TableColumn = Partial<FormField> & { name: string; label?: string };
 
-  const collection = getCollectionContext('list');
+  const collection = getCollectionContext();
   let gridTemplateColumn = $state('grid-template-columns: 2fr repeat(1, minmax(0, 1fr));');
 
   $effect(() => {

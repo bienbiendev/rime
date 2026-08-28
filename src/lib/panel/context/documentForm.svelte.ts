@@ -23,7 +23,6 @@ import { moveItem } from '../../util/array.js';
 import { getValueAtPath, setValueAtPath } from '../../util/object.js';
 import { snapshot } from '../../util/state.js';
 import { getAPIProxyContext } from './api-proxy.svelte.js';
-import { getCollectionContext } from './collection.svelte.js';
 import { setErrorsContext } from './errors.svelte.js';
 import { getLocaleContext } from './locale.svelte.js';
 import { getTitleContext } from './title.js';
@@ -53,7 +52,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   const user = getUserContext();
   const errors = setErrorsContext(key);
   const isCollection = documentConfig.type === 'collection';
-  const collection = isCollection ? getCollectionContext(documentConfig.slug) : null;
   const hasError = $derived(errors.length);
   const canSubmit = $derived(
     !isDisabled && !readOnly && Object.keys(changes).length > 0 && !hasError
@@ -134,7 +132,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
   function setValue(path: string, value: any) {
     doc = setValueAtPath(path, doc, value);
-    if (collection && operation === 'update') collection.updateDoc(doc as GenericDoc);
     if (onDataChange) onDataChange({ path, value });
   }
 

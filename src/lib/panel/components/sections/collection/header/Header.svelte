@@ -4,7 +4,7 @@
   import SelectUI from './SelectUI.svelte';
   import Separator from './Separator.svelte';
 
-  const collection = getCollectionContext('list');
+  const collection = getCollectionContext();
   const showSelectUI = $derived(!collection.isNested());
   const showDisplayMode = $derived(collection.isUpload || collection.config.nested);
 </script>

@@ -4,7 +4,7 @@
   import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
   import { Search } from '@lucide/svelte';
 
-  const collection = getCollectionContext('list');
+  const collection = getCollectionContext();
   let searchValue = $state('');
 
   $effect(() => {

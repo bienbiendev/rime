@@ -8,7 +8,7 @@ import type { BeforeNavigate } from '@sveltejs/kit';
 import { getContext, setContext } from 'svelte';
 import { getValueAtPath, isObjectLiteral, setValueAtPath } from '../../util/object.js';
 
-const LIVE_KEY = Symbol('rime.live');
+export const LIVE_KEY = Symbol('rime.live');
 
 /**
  * Live Editing Flow:

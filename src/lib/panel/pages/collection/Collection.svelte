@@ -40,7 +40,7 @@
   let bulkDialogOpen = $state(false);
 
   const collection = $derived(
-    setCollectionContext('list', {
+    setCollectionContext({
       initial: data.docs,
       config: collectionConfig,
       canCreate: data.canCreate,

@@ -7,7 +7,7 @@
   } from '$lib/panel/context/collection.svelte.js';
   import { LayoutGrid, List, TextQuote } from '@lucide/svelte';
 
-  const collection = getCollectionContext('list');
+  const collection = getCollectionContext();
   const listIconClass = $derived(collection.isList() ? 'rz-header-display-mode__icon--active' : '');
   const gridIconClass = $derived(collection.isGrid() ? 'rz-header-display-mode__icon--active' : '');
   const nestedIconClass = $derived(

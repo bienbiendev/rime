@@ -3,7 +3,6 @@
   import type { GenericDoc } from '$lib/core/types/doc.js';
   import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import type { FormContext } from '$lib/panel/context/form.svelte.js';
@@ -33,7 +32,6 @@
   const field = $derived(form.useField(path, config));
   // svelte-ignore state_referenced_locally
   const relationConfig = getCollection(config.get.relationTo);
-  const relationCollectionCtx = getCollectionContext(relationConfig.slug);
 
   let initialized = $state(false);
   // the fetched items
@@ -205,10 +203,6 @@
     }
     // update resssource
     ressource.data?.docs.push(doc);
-    // update collection if present
-    if (relationCollectionCtx) {
-      relationCollectionCtx.addDoc(doc);
-    }
     // Set value if not full
     if (isFull) return;
     selectedItems = [...selectedItems, documentToRelationFieldItem(doc)];

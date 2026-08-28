@@ -52,7 +52,7 @@ function createErrorsStore() {
   };
 }
 
-const ERRORS_KEY = 'rime.errors';
+export const ERRORS_KEY = 'rime.errors';
 
 export function setErrorsContext(key: string = 'root') {
   const errors = createErrorsStore();

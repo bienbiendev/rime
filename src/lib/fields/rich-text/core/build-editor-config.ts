@@ -85,8 +85,7 @@ export function buildEditorConfig(args: BuildEditorConfigArgs): RichTextEditorCo
         const titleContext = getTitleContext();
         contexts.set(TITLE_CTX, titleContext);
         contexts.set(CONFIG_CTX, configContext);
-        contexts.set(CONFIG_CTX, configContext);
-        contexts.set(API_PROXY.ROOT, apiProxyContext);
+        contexts.set(API_PROXY, apiProxyContext);
         contexts.set(USER_CTX, userContext);
         contexts.set(LOCALE_CTX, localeContext);
         feature.extension.config.addOptions = () => {

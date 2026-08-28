@@ -90,18 +90,16 @@ function createAPIProxy() {
   };
 }
 
-export function setAPIProxyContext(key = API_PROXY.ROOT) {
+export function setAPIProxyContext() {
   const apiProxy = createAPIProxy();
-  return setContext(key, apiProxy);
+  return setContext(API_PROXY, apiProxy);
 }
 
-export function getAPIProxyContext(key = API_PROXY.ROOT) {
-  return getContext<ReturnType<typeof setAPIProxyContext>>(key);
+export function getAPIProxyContext() {
+  return getContext<ReturnType<typeof setAPIProxyContext>>(API_PROXY);
 }
 
-export const API_PROXY = {
-  ROOT: Symbol('api-proxy.root')
-};
+export const API_PROXY = Symbol('rime.api-proxy');
 
 export type Resource<T = any> = {
   data: T | null;

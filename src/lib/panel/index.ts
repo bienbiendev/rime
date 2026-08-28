@@ -7,6 +7,13 @@ import Doc from './components/sections/document/Document.svelte';
 import Button from './components/ui/button/button.svelte';
 import Input from './components/ui/input/input.svelte';
 import SpinLoader from './components/ui/spin-loader/SpinLoader.svelte';
+import { API_PROXY } from './context/api-proxy.svelte.js';
+import { COLLECTION_CTX } from './context/collection.svelte.js';
+import { LIVE_KEY } from './context/live.svelte.js';
+import { LOCALE_CTX } from './context/locale.svelte.js';
+import { USER_CTX } from './context/user.svelte.js';
+
+import { TITLE_CTX } from './context/title.js';
 import Area from './pages/area/Area.svelte';
 import AreaVersionsDoc from './pages/area/AreaVersionsDoc.svelte';
 import ForgotPassword from './pages/auth/forgot-password/ForgotPassword.svelte';
@@ -39,8 +46,17 @@ export {
   SpinLoader
 };
 
-// Types used in generated routes
+// Context keys, for a plugin/field that needs to read a context rime's own panel sets
+export const CONTEXT = {
+  COLLECTION: COLLECTION_CTX,
+  LIVE: LIVE_KEY,
+  API_PROXY,
+  USER: USER_CTX,
+  LOCALE: LOCALE_CTX,
+  TITLE: TITLE_CTX
+};
 
+// Types used in generated routes
 export type { DocumentFormContext } from './context/documentForm.svelte.js';
 export type CollectionProps = {
   data: {

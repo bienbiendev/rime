@@ -346,34 +346,6 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     }
   }
 
-  async function deleteDoc(id: string) {
-    const res = await fetch(`/api/${config.kebab}/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'content-type': 'application/json'
-      }
-    });
-    if (res.status === 200) {
-      docs = [...docs].filter((doc) => doc.id !== id);
-    } else if (res.status === 404) {
-      console.error('not found');
-    }
-  }
-
-  function addDoc(doc: T) {
-    docs.push(doc);
-    sortBy(sortingBy, false);
-  }
-
-  function updateDoc(incomingDoc: T) {
-    for (const [index, doc] of docs.entries()) {
-      if (doc.id === incomingDoc.id) {
-        docs[index] = incomingDoc;
-        return;
-      }
-    }
-  }
-
   return {
     get stamp() {
       return stamp;
@@ -475,9 +447,6 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       upload = value;
     },
 
-    addDoc,
-    updateDoc,
-    deleteDoc,
     deleteDocs,
     get docs() {
       return docs;
@@ -497,15 +466,15 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
   };
 }
 
-const COLLECTION_KEY = 'rime.collection';
+export const COLLECTION_CTX = Symbol('rime.collection');
 
-export function setCollectionContext(key: string, args: Args) {
+export function setCollectionContext(args: Args) {
   const store = createCollectionStore(args);
-  return setContext(`${COLLECTION_KEY}.${key}`, store);
+  return setContext(COLLECTION_CTX, store);
 }
 
-export function getCollectionContext(key: string = 'root') {
-  return getContext<CollectionContext>(`${COLLECTION_KEY}.${key}`);
+export function getCollectionContext() {
+  return getContext<CollectionContext>(COLLECTION_CTX);
 }
 
 export type CollectionContext = ReturnType<typeof setCollectionContext>;
