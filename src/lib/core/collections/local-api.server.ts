@@ -153,7 +153,7 @@ class CollectionAPI<Doc extends RegisterCollection[CollectionSlug]> {
    *   limit: 10
    * });
    */
-  find(args: APIMethodArgs<typeof find>): Promise<Doc[]> {
+  find(args: APIMethodArgs<typeof find> = {}): Promise<Doc[]> {
     const { query, locale, sort = '-updatedAt', depth = 0, limit, offset, draft } = args;
 
     const params = {
@@ -313,7 +313,8 @@ class CollectionAPI<Doc extends RegisterCollection[CollectionSlug]> {
   };
 
   /**
-   * Deletes multiple documents in the collection
+   * Deletes multiple documents in the collection. No query means no filter —
+   * `delete()` with no args deletes every document in the collection.
    *
    * @example
    * const posts = await rime.collection('posts').delete({
@@ -321,7 +322,7 @@ class CollectionAPI<Doc extends RegisterCollection[CollectionSlug]> {
    *   limit: 10
    * });
    */
-  delete = (args: APIMethodArgs<typeof deleteDocs>) => {
+  delete = (args: APIMethodArgs<typeof deleteDocs> = {}) => {
     return deleteDocs({
       config: this.config,
       event: this.#event,
