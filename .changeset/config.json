@@ -6,7 +6,8 @@
   "changelog": [
     "@changesets/changelog-github",
     {
-      "repo": "bienbiendev/rime"
+      "repo": "bienbiendev/rime",
+      "disableThanks": true
     }
   ],
   "commit": false,
