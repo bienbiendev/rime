@@ -1,5 +1,13 @@
 # rimecms
 
+## 0.31.3
+
+### Patch Changes
+
+- Fixed: custom collection CustomHeaderComponent fails to retrieve the collection context
+
+- Fixed: make argument optionnal for local api collection methods `delete` and `find`
+
 ## 0.31.2
 
 ### Patch Changes
