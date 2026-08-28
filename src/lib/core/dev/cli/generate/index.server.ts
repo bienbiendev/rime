@@ -2,6 +2,7 @@ import { RIME_DEV_CACHE_DIR } from '$lib/core/constant.server.js';
 import cache from '$lib/core/dev/cache/index.server.js';
 import { sanitize } from '$lib/core/dev/generate/sanitize/index.server.js';
 import { ensureGeneratedConfig, ensureUserConfigExist } from '$lib/core/ensure.server.js';
+import { regenerateModulesDeclaration } from '$lib/core/dev/vite/index.server.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import { trycatch } from '$lib/util/function.js';
 import { mkdirSync, rmSync } from 'fs';
@@ -72,6 +73,9 @@ export const generate = async (args: { force?: boolean }) => {
     try {
       ensureUserConfigExist();
       await sanitizeConfig();
+      // Normal `vite dev` writes this from `configureServer`'s `listening` event, which never
+      // fires here — this command's own Vite server runs in `middlewareMode` (no `httpServer`).
+      regenerateModulesDeclaration();
       const importPathJS = ensureGeneratedConfig();
 
       logger.info('Starting vite server...');

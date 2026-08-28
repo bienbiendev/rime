@@ -49,6 +49,26 @@ function splitPackageSpecifier(rest: string): { pkgName: string; subpath: string
   return { pkgName, subpath };
 }
 
+// Writes the local-dev $rime/modules barrel types from every module.(server.)ts pair under
+// src/lib. Exported so the CLI `generate` command can call it too — its Vite server runs in
+// middlewareMode, which never fires the `listening` event `rime()` normally hooks this to.
+export function regenerateModulesDeclaration() {
+  const libDir = path.resolve(process.cwd(), 'src/lib');
+  const pairs = scanModulePairs(libDir);
+  const exports = Array.from(pairs.values())
+    .map((entry) => entry.server || entry.client)
+    .filter(Boolean)
+    .map((file) =>
+      `$lib/${path.relative(libDir, file).split(path.sep).join('/')}`.replace(/\.ts$/, '.js')
+    )
+    .map((aliased) => `  export * from '${aliased}';`)
+    .join('\n');
+  writeFileSync(
+    path.resolve(process.cwd(), 'src/rime.modules.generated.d.ts'),
+    `declare module '$rime/modules' {\n${exports}\n}\n`
+  );
+}
+
 export function rime(): Plugin {
   /** Two reserved names, always resolved to *the currently running app's* generated
    *  config/schema, independent of who's asking — a third-party plugin importing
@@ -58,28 +78,19 @@ export function rime(): Plugin {
   const VCoreId = '$rime/config';
   const VSchemaId = '$rime/schema';
 
-  /** `$rime/modules` — a package's own client/server split, resolved relative to *whoever's
-   *  asking*, always self-contained. Two forms:
+  /**
+   * `$rime/modules` lets a package split its code into client and server files.
    *
-   *  - The bare barrel, `$rime/modules`, addressed by *export name* rather than path — dev
-   *    only, live-scans this project's own `src/lib` for every `module.(server.)ts` pair (see
-   *    `regenerateModulesDeclaration` below for the matching local-dev `.d.ts`). Never ships:
-   *    a prepack step (the `generate-manifest` CLI command) AST-rewrites every `$rime/modules`
-   *    import into the qualified form below before publish, so a consumer never sees the
-   *    barrel at all.
-   *  - The qualified form, `$rime/modules/<pkg>/<path>`, always package-qualified — even for a
-   *    package's own internal references to itself. Two ways it resolves, both in `resolveId`
-   *    (not `load`, which never receives `importer`): `<pkg>` equals this project's own
-   *    `package.json` name → self-reference, resolved directly off this project's own
-   *    `src/lib`. Otherwise → an installed dependency, its root found by walking up
-   *    `node_modules/<pkg>` from the importer's own directory (`findInstalledPackageRoot` —
-   *    pure directory existence, no `exports`-conditions matching, since a package whose
-   *    `exports` map declares only conditions neither `require.resolve` nor
-   *    `import.meta.resolve` use fails to resolve through either) and its shipped
-   *    `dist/.rime-modules.json` read directly — no directory-convention guessing beyond that,
-   *    immune to Vite's dep-optimizer flattening a package (reading a known filename off disk
-   *    never touches the import graph the optimizer rewrites). Full design:
-   *    docs/plans/imports.md. */
+   * While developing, you can just write `$rime/modules` with no path and it scans this
+   * project's own `src/lib` for every split. Before the package is published, that gets
+   * rewritten into explicit imports like `$rime/modules/<pkg>/<path>` — so anyone installing
+   * the package never sees the bare form, only real paths.
+   *
+   * When resolving one of those explicit imports: if `<pkg>` is this same project, we read
+   * straight from `src/lib`. Otherwise it's a real dependency, so we find it in
+   * `node_modules` and read the file list it shipped.
+   *
+   */
   const VModulesId = '$rime/modules';
   const VModulesPrefix = '$rime/modules/';
   const ownPackageName = getPackageInfoByKey('name');
@@ -91,31 +102,6 @@ export function rime(): Plugin {
   const ROOT_SEP = '\x01';
 
   const resolvedVModule = (name: string) => '\0' + name;
-
-  // Local-dev types for the $rime/modules barrel — declares every module.(server.)ts pair
-  // currently under this project's own src/lib, live. Regenerated on startup and whenever a
-  // module file appears/changes/disappears (see the watcher below) — never ships, gitignored,
-  // same treatment as app.generated.d.ts/rime.generated.d.ts.
-  //
-  // $lib/-aliased paths, not bare relative/absolute ones — verified directly (a plain relative
-  // or absolute `export * from` inside a `declare module` block silently resolves to no
-  // exports at all; TS only picks up the re-exported names through a real configured alias).
-  function regenerateModulesDeclaration() {
-    const libDir = path.resolve(process.cwd(), 'src/lib');
-    const pairs = scanModulePairs(libDir);
-    const exports = Array.from(pairs.values())
-      .map((entry) => entry.server || entry.client)
-      .filter(Boolean)
-      .map((file) =>
-        `$lib/${path.relative(libDir, file).split(path.sep).join('/')}`.replace(/\.ts$/, '.js')
-      )
-      .map((aliased) => `  export * from '${aliased}';`)
-      .join('\n');
-    writeFileSync(
-      path.resolve(process.cwd(), 'src/rime.modules.generated.d.ts'),
-      `declare module '$rime/modules' {\n${exports}\n}\n`
-    );
-  }
 
   return {
     name: 'virtual-rime',
@@ -224,9 +210,6 @@ export function rime(): Plugin {
         },
         server: {
           watch: {
-            // db/*.sqlite (+ its -wal/-shm sidecars) and logs/ are runtime data, not source —
-            // every write (e.g. saving a document) touches them, and without this Vite's default
-            // whole-project-root watch treats that churn as a source change and force-reloads.
             ignored: ['**/db/**', '**/logs/**']
           }
         }

@@ -1,8 +1,8 @@
 import { Area, Collection, rime } from '$rime/config';
+import { consumerField } from '@rimecms/test-consumer-field';
+import { consumerPlugin } from '@rimecms/test-consumer-plugin';
 import { adapterSqlite } from 'rimecms/adapter-sqlite';
 import { text, toggle } from 'rimecms/fields';
-import { consumerPlugin } from '@bienbien/rime-consumer-plugin';
-import { consumerField } from '@bienbien/rime-consumer-field';
 
 // Exercises a third-party field's own client/server split (consumerField's server hook
 // prefixes the saved value — see @bienbien/rime-consumer-field/module.server.ts) on a

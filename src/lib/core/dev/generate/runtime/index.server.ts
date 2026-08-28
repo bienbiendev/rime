@@ -63,6 +63,10 @@ export function findModulePair(root: string, name: string): RuntimeRegistryEntry
  * `src/lib`-rooted scan registers as `fields/relation`. Used by the `$rime/modules` barrel
  * (live, dev-mode only) and by `generate-manifest` (once, at prepack, scanning `dist/`).
  *
+ * A pair sitting directly in `root` itself (e.g. `src/lib/module.ts`, no subfolder) registers
+ * under the key `.` — same convention `package.json`'s own `exports` map uses for a package's
+ * root, and a folder literally named `.` can't exist, so it can never collide with a real one.
+ *
  * Either file alone is enough to register (single-sided is legitimate — a server-only piece,
  * e.g. a collection's hooks, never needs a hand-written client stub; the missing side is just
  * an empty string here, same convention `findModulePair` above uses). `rime.generated/` is
@@ -72,16 +76,21 @@ export function scanModulePairs(root: string): RuntimeRegistry {
   const registry: RuntimeRegistry = new Map();
   if (!fs.existsSync(root)) return registry;
 
+  const register = (dir: string, key: string) => {
+    const client = findModuleFile(dir, 'module');
+    const server = findModuleFile(dir, 'module.server');
+    if (client || server) {
+      registry.set(key, { client: client ?? '', server: server ?? '' });
+    }
+  };
+
+  register(root, '.');
+
   const walk = (dir: string) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       if (!entry.isDirectory() || entry.name === OUTPUT_DIR) continue;
       const fullPath = path.join(dir, entry.name);
-      const client = findModuleFile(fullPath, 'module');
-      const server = findModuleFile(fullPath, 'module.server');
-      if (client || server) {
-        const key = path.relative(root, fullPath).split(path.sep).join('/');
-        registry.set(key, { client: client ?? '', server: server ?? '' });
-      }
+      register(fullPath, path.relative(root, fullPath).split(path.sep).join('/'));
       walk(fullPath);
     }
   };
