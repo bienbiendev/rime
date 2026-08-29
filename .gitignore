@@ -42,7 +42,7 @@ src/lib/config
 assets/src
 static/medias
 test-results
-pnpm-lock.yaml
+bun.lock
 
 .auto
 /consumer-app-test

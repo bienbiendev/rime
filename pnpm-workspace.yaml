@@ -1,5 +1,0 @@
-allowBuilds:
-  sharp: true
-  esbuild: false
-  better-sqlite3: false
-strictDepBuilds: false

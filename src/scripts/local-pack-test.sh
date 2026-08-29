@@ -1,47 +1,20 @@
 #!/usr/bin/env bash
-# End-to-end smoke test of the *published* package: pack the repo with `pnpm
-# local-pack`, install that tarball into a throwaway SvelteKit app (like a
-# real consumer would), run it in dev mode, then build it and run it in
-# production mode. Catches packaging bugs the in-repo Playwright suite can't
-# see (exports/files, native deps, the app/package.json relative-path fixup).
+# Smoke tests the published package: packs this repo, installs the tarball into a throwaway
+# SvelteKit app, runs it in dev then prod. Also verifies a plugin and field package mount,
+# across npm, pnpm, and bun passes.
 #
-# Also verifies a third-party plugin and field mount correctly (see
-# tests/consumer/lib/+rime/rime.config.server.ts, which hard-imports both) — in both the npm
-# and pnpm passes, since the polymorphic $rime/<name> resolution they exercise doesn't care
-# which package manager installed them. The plugin+field config is copied into place *before*
-# `rime init` runs, so `rime init`'s own generate() does the schema-gen + drizzle-migrate work
-# as part of a normal cold init — no live dev-server hot-reload involved. (Swapping the config
-# into an *already-running* dev server to exercise the file-watcher's live regen path is a
-# separate, currently-flaky-under-drizzle-<1.0 concern — deferred, not covered here.)
-#
-# Usage: bash src/scripts/local-pack-test.sh --plugin-package <spec> --field-package <spec>
+# Usage: bash src/scripts/local-pack-test.sh --plugin-package <path> --field-package <path>
 #          [--keep] [--skip-pack] [--base-dir <path>]
-#   --plugin-package <spec>, --field-package <spec>
-#                     required, no default — passed straight through to `npm install <spec>`
-#                     / `pnpm add <spec>`, so anything either accepts works: a local tarball
-#                     path (built via `npm run local-pack` in the package's own repo) or a
-#                     real registry package spec (name, optionally @version). No hardcoded
-#                     path to either package anywhere in this script.
-#   --keep            don't delete the scaffolded app on success (useful for debugging)
-#   --skip-pack       reuse the newest rimecms-*.tgz already at repo root instead of
-#                     re-running `pnpm local-pack` (also skips the on-success tarball
-#                     delete, so it stays around for the next --skip-pack run)
-#   --base-dir <path> where to scaffold the app, defaults to $HOME. NOT $ROOT_DIR: pnpm
-#                     resolves `pnpm config set --location=project` (see
-#                     configurePnpm() in package-manager.server.ts) by walking up to the
-#                     nearest git boundary, not by cwd - nested inside rime's own repo,
-#                     that walk-up lands on rime's own root and corrupts its
-#                     pnpm-workspace.yaml instead of the scaffolded app's own (confirmed,
-#                     not theoretical - this is exactly what forced this default).
-#                     Only pass --base-dir "$ROOT_DIR" if you know what you're doing.
+#
+#   --plugin-package <path>, --field-package <path>
+#       local tarball path for consumer-<plugin|field>, or a directory to rebuild from source
+#   --keep       Keep the scaffolded app after a successful run, for debugging.
+#   --skip-pack  Reuse the newest rimecms-*.tgz
+#   --base-dir <path>  Where to scaffold the consumer app. Defaults to $HOME.
 set -euo pipefail
 
 ROOT_DIR="$(pwd)"
-# Must match the db name hardcoded in tests/consumer/lib/+rime/rime.config.server.ts's
-# `adapterSqlite('consumer.sqlite')` — this name is passed to `rime init -n`, which is what
-# generates drizzle.config.ts's `dbCredentials.url`. The fixture overwrites rime.config.server.ts
-# after init but drizzle.config.ts is never regenerated, so a mismatch here means drizzle-kit
-# and the running app silently target two different sqlite files.
+# Must match tests/consumer/lib/+rime/rime.config.server.ts's adapterSqlite('consumer.sqlite')
 APP_NAME="consumer"
 BASE_DIR="$HOME"
 KEEP_ON_SUCCESS=0
@@ -86,14 +59,38 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Rebuilds a directory package from source against the packed rime tarball (pnpm add + pnpm
+# local-pack); a tarball path or registry spec passes through unchanged.
+resolve_package_spec() {
+  local spec=$1
+  if [[ -d "$spec" ]]; then
+    (
+      cd "$spec"
+      echo "  rebuilding $spec from source" >&2
+      pnpm add "$TARBALL" >&2
+      local pack_output
+      pack_output=$(pnpm local-pack)
+      local tarball
+      tarball=$(echo "$pack_output" | tail -1 | sed -E 's/^Package created at: //')
+      [[ -f "$tarball" ]] || {
+        echo "Could not resolve tarball path from $spec's local-pack output:" >&2
+        echo "$pack_output" >&2
+        exit 1
+      }
+      echo "$tarball"
+    )
+  else
+    echo "$spec"
+  fi
+}
+
 run_ui_tests() {
   local url=$1
   local server_command=$2
   local server_cwd=$3
   local port=$4
   local suffix=$5
-  # Both suites by default: consumer.test.ts (base app) and consumer-plugin.test.ts (plugin +
-  # field, now baked into the config from before `rime init` runs - see verify_plugin_mounted).
+  # consumer.test.ts + consumer-plugin.test.ts by default
   local test_match=${6:-'consumer(-plugin)?\.test\.ts$'}
   log "Running UI tests against $url ($test_match)"
   (
@@ -106,34 +103,23 @@ run_ui_tests() {
     CONSUMER_SERVER_CWD="$server_cwd" \
     CONSUMER_SERVER_PORT="$port" \
     CONSUMER_TEST_MATCH="$test_match" \
-      pnpm exec playwright test -c tests/consumer/playwright.config.consumer.ts
+      bunx playwright test -c tests/consumer/playwright.config.consumer.ts
   )
 }
 
-# Copies tests/consumer/lib/+rime/rime.config.server.ts (which hard-imports the plugin/field
-# packages) into the freshly-scaffolded $WORK_DIR *before* `rime init` runs there - `rime
-# init`'s own setConfig() only writes its placeholder when no config exists yet, so this one
-# wins, and init's generate({force:true}) does the full cold-start pipeline against it: AST
-# sanitize -> schema regen -> drizzle-kit generate -> drizzle-kit migrate. Call this right
-# after `rime init` returns.
+# Copies the plugin+field config into place before `rime init` runs, so init's own generate()
+# picks it up.
 copy_plugin_config() {
   mkdir -p "$WORK_DIR/src/lib/+rime"
   cp -rf "$ROOT_DIR/tests/consumer/lib/+rime/"* "$WORK_DIR/src/lib/+rime/"
 }
 
-# Static, no-server check that the plugin+field config `rime init` just processed actually
-# mounted: the generated schema includes the plugin's table, and drizzle-kit's migration
-# created it for real in the sqlite db. `rime init` runs generate() synchronously and returns
-# only once it's done, so nothing here is racing a background process - a live dev-server
-# hot-reload version of this (config swapped into an *already-running* server) is a separate,
-# currently-flaky-under-drizzle-<1.0 concern, deferred rather than covered here.
+# Verifies the plugin+field config actually mounted: schema + db table.
 verify_plugin_mounted() {
   (
     cd "$WORK_DIR"
 
-    # tests/consumer's fixture is folder-mode, so the schema always lands here (see
-    # adapter-sqlite/generate-schema/write.server.ts's isFolderConfig() branch) - not just
-    # that generation ran, but that it produced the right thing.
+    # Schema always lands here.
     SCHEMA_FILE="src/lib/+rime.generated/schema.server.ts"
     grep -q "pluginVisits" "$SCHEMA_FILE" || {
       echo "generated schema is missing the plugin's pluginVisits table"
@@ -141,9 +127,7 @@ verify_plugin_mounted() {
       exit 1
     }
 
-    # The one check that actually proves the whole pipeline worked end to end, not just that
-    # a schema file exists on disk: query the real database for the real table drizzle-kit's
-    # migration was supposed to create.
+    # Confirms drizzle-kit's migration actually created the table.
     TABLE=$(sqlite3 db/consumer.sqlite "SELECT name FROM sqlite_master WHERE type='table' AND name='plugin_visits';" 2>/dev/null || true)
     [[ -n "$TABLE" ]] || { echo "plugin_visits table missing from db/consumer.sqlite after rime init"; exit 1; }
   )
@@ -152,41 +136,47 @@ verify_plugin_mounted() {
 # Packing rime
 
 if [[ $SKIP_PACK -eq 1 ]]; then
-  log "[1/15] --skip-pack: reusing newest rimecms-*.tgz"
+  log "[1/23] --skip-pack: reusing newest rimecms-*.tgz"
   TARBALL=$(ls -t "$ROOT_DIR"/rimecms-*.tgz 2>/dev/null | head -1 || true)
   [[ -f "$TARBALL" ]] || { echo "--skip-pack: no rimecms-*.tgz found at $ROOT_DIR - run once without --skip-pack first"; exit 1; }
   echo "    reusing $TARBALL"
 else
-  log "[1/15] Packing local package (pnpm local-pack)"
-  PACK_OUTPUT=$(pnpm local-pack)
+  log "[1/23] Packing local package (bun run local-pack)"
+  PACK_OUTPUT=$(bun run local-pack)
   TARBALL=$(echo "$PACK_OUTPUT" | tail -1 | sed -E 's/^Package created at: //')
   [[ -f "$TARBALL" ]] || { echo "Could not resolve tarball path from local-pack output:"; echo "$PACK_OUTPUT"; exit 1; }
   log "  packed at $TARBALL"
 fi
 
+log "Resolving plugin/field packages"
+PLUGIN_PACKAGE=$(resolve_package_spec "$PLUGIN_PACKAGE")
+FIELD_PACKAGE=$(resolve_package_spec "$FIELD_PACKAGE")
+echo "  plugin: $PLUGIN_PACKAGE"
+echo "  field:  $FIELD_PACKAGE"
+
 # NPM
 
 ## Create svelte app
-log "[2/15] Scaffolding fresh SvelteKit app"
+log "[2/23] Scaffolding fresh SvelteKit app"
 cd "$BASE_DIR"
 rm -rf "$APP_NAME"
 npx sv create --template minimal --types ts --add eslint --install npm "$APP_NAME"
 cd "$APP_NAME"
 
 ## Install rimecms + plugin + field
-log "[3/15] Installing packed rimecms, plugin and field"
+log "[3/23] Installing packed rimecms, plugin and field"
 npm install "$TARBALL" "$PLUGIN_PACKAGE" "$FIELD_PACKAGE"
 
 ## Copy plugin+field config in before init, so init's own generate() mounts them cold
-log "[4/15] Copying plugin+field config, running rime init"
+log "[4/23] Copying plugin+field config, running rime init"
 copy_plugin_config
 npx rime init -n "$APP_NAME"
 
-log "[5/15] Verifying plugin + field mounted (npm)"
+log "[5/23] Verifying plugin + field mounted (npm)"
 verify_plugin_mounted
 
 ## UI test (dev)
-log "[6/15] UI test pass 1 (dev, :5173)"
+log "[6/23] UI test pass 1 (dev, :5173)"
 run_ui_tests \
   "http://localhost:5173" \
   "./node_modules/.bin/vite dev --port 5173 2>&1 | tee \"$WORK_DIR/dev.log\"" \
@@ -195,13 +185,12 @@ run_ui_tests \
   "dev"
 
 ## Build
-log "[7/15] Building for production"
+log "[7/23] Building for production"
 cd "$WORK_DIR"
 npx rime build -d -e -s -s
 cd app
 
-# Add ../ to every local-package (file:) dependency, not just rimecms — the app just moved
-# down one directory into ./app, so any file: path needs one more ../ to still resolve.
+# Adjust file: deps for the extra ./app nesting
 node -e "
 const fs = require('fs');
 const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
@@ -221,7 +210,7 @@ fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
 npm install serve-static sharp
 
 # UI test (prod)
-log "[8/15] UI test pass 2 (production, :3000)"
+log "[8/23] UI test pass 2 (production, :3000)"
 run_ui_tests \
   "http://localhost:3000" \
   "PORT=3000 HOST=localhost ORIGIN=http://localhost:3000 node --env-file=.env index.js 2>&1 | tee \"$WORK_DIR/app/prod.log\"" \
@@ -232,26 +221,26 @@ run_ui_tests \
 # PNPM
 
 ## Create svelte app
-log "[9/15] Scaffolding fresh SvelteKit app"
+log "[9/23] Scaffolding fresh SvelteKit app"
 cd "$BASE_DIR"
 rm -rf "$APP_NAME"
 pnpm dlx sv create --template minimal --types ts --add eslint --install pnpm "$APP_NAME"
 cd "$APP_NAME"
 
 ## Install rimecms + plugin + field
-log "[10/15] Installing packed rimecms, plugin and field"
+log "[10/23] Installing packed rimecms, plugin and field"
 pnpm add "$TARBALL" "$PLUGIN_PACKAGE" "$FIELD_PACKAGE"
 
 ## Copy plugin+field config in before init, so init's own generate() mounts them cold
-log "[11/15] Copying plugin+field config, running rime init"
+log "[11/23] Copying plugin+field config, running rime init"
 copy_plugin_config
 pnpm exec rime init -n "$APP_NAME"
 
-log "[12/15] Verifying plugin + field mounted (pnpm)"
+log "[12/23] Verifying plugin + field mounted (pnpm)"
 verify_plugin_mounted
 
 ## UI tests (dev)
-log "[13/15] UI test pass 1 (dev, :5173)"
+log "[13/23] UI test pass 1 (dev, :5173)"
 run_ui_tests \
   "http://localhost:5173" \
   "./node_modules/.bin/vite dev --port 5173 2>&1 | tee \"$WORK_DIR/dev.log\"" \
@@ -260,7 +249,7 @@ run_ui_tests \
   "dev"
 
 ## Build
-log "[14/15] Building for production"
+log "[14/23] Building for production"
 cd "$WORK_DIR"
 pnpm exec rime build -d -e -s
 cd app
@@ -269,7 +258,55 @@ cd app
 pnpm add serve-static sharp
 
 ## UI test (prod)
-log "[15/15] UI test pass 2 (production, :3000)"
+log "[15/23] UI test pass 2 (production, :3000)"
+run_ui_tests \
+  "http://localhost:3000" \
+  "PORT=3000 HOST=localhost ORIGIN=http://localhost:3000 node --env-file=.env index.js 2>&1 | tee \"$WORK_DIR/app/prod.log\"" \
+  "$WORK_DIR/app" \
+  3000 \
+  "prod"
+
+# BUN
+
+## Create svelte app
+log "[16/23] Scaffolding fresh SvelteKit app"
+cd "$BASE_DIR"
+rm -rf "$APP_NAME"
+bunx sv create --template minimal --types ts --add eslint --install bun "$APP_NAME"
+cd "$APP_NAME"
+
+## Install rimecms + plugin + field
+log "[17/23] Installing packed rimecms, plugin and field"
+bun add "$TARBALL" "$PLUGIN_PACKAGE" "$FIELD_PACKAGE"
+
+## Copy plugin+field config in before init, so init's own generate() mounts them cold
+log "[18/23] Copying plugin+field config, running rime init"
+copy_plugin_config
+bunx rime init -n "$APP_NAME"
+
+log "[19/23] Verifying plugin + field mounted (bun)"
+verify_plugin_mounted
+
+## UI tests (dev)
+log "[20/23] UI test pass 1 (dev, :5173)"
+run_ui_tests \
+  "http://localhost:5173" \
+  "./node_modules/.bin/vite dev --port 5173 2>&1 | tee \"$WORK_DIR/dev.log\"" \
+  "$WORK_DIR" \
+  5173 \
+  "dev"
+
+## Build
+log "[21/23] Building for production"
+cd "$WORK_DIR"
+bunx rime build -d -e -s
+cd app
+
+## Install deps
+bun add serve-static sharp
+
+## UI test (prod)
+log "[22/23] UI test pass 2 (production, :3000)"
 run_ui_tests \
   "http://localhost:3000" \
   "PORT=3000 HOST=localhost ORIGIN=http://localhost:3000 node --env-file=.env index.js 2>&1 | tee \"$WORK_DIR/app/prod.log\"" \

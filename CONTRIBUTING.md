@@ -19,8 +19,10 @@ git clone https://github.com/bienbiendev/rime.git
 
 ```bash
 cd rime
-pnpm install
+bun install
 ```
+
+> Note : I am using `bun` because pnpm's dependency hoisting breaks type declaration generation at build time (nested transitive types, like `zod`'s, become impossible for TypeScript to name portably), and because it lets CLI commands run straight from their `.ts` files, with no separate compile step.
 
 ## Add your .env file
 
@@ -42,9 +44,9 @@ RIME_LOG_TO_FILE_MAX_DAYS=1
 ## Init & run
 
 ```bash
-pnpm svelte-kit sync
+bunx svelte-kit sync
 bun ./src/lib/core/dev/cli/index.ts init
-pnpm dev
+bun run dev
 ```
 
 ## Configuration
@@ -54,14 +56,12 @@ pnpm dev
 ## Use a predifined config as a starting point
 
 ```bash
-pnpm rime:use basic
+bun run rime:use basic
 ```
 
 Available names are `empty`, `basic`, `multilang`, `versions`, `versions-multilang`, respective config live inside the /tests directory.
 
 ## CLI commands
-
-Note : for now cli commands are .ts files, so I am using `bun` to make theme work inside this repo.
 
 Sanitize config, and generates schema, types, routes
 
