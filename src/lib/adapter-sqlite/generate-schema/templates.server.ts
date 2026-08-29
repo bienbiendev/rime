@@ -308,6 +308,7 @@ export const authSessions = sqliteTable('auth_sessions', {
 export const authAccounts = sqliteTable('auth_accounts', {
 	id: text('id').primaryKey(),
 	accountId: text('account_id').notNull(),
+	issuer: text('issuer').notNull(),
 	providerId: text('provider_id').notNull(),
 	userId: text('user_id')
 		.notNull()
@@ -340,7 +341,8 @@ export const apikey = sqliteTable("apikey", {
 	start: text('start'),
 	prefix: text('prefix'),
 	key: text('key').notNull(),
-	userId: text('user_id').notNull().references(()=> authUsers.id, { onDelete: 'cascade' }),
+	referenceId: text('reference_id').notNull().references(()=> authUsers.id, { onDelete: 'cascade' }),
+	configId: text('config_id').notNull().default('default'),
 	refillInterval: integer('refill_interval'),
 	refillAmount: integer('refill_amount'),
 	lastRefillAt: integer('last_refill_at', { mode: 'timestamp' }),

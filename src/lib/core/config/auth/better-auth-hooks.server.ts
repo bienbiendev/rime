@@ -5,8 +5,7 @@ import { logger } from '$lib/core/logger/index.server.js';
 import { trycatch } from '$lib/util/function.js';
 import { omit } from '$lib/util/object.js';
 import type { AuthContext, MiddlewareContext, MiddlewareOptions } from 'better-auth';
-import { APIError } from 'better-auth/api';
-import { createAuthMiddleware, type AuthMiddleware } from 'better-auth/plugins';
+import { APIError, createAuthMiddleware, type AuthMiddleware } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
 
 type CTX = MiddlewareContext<

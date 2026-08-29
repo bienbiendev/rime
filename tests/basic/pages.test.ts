@@ -247,6 +247,49 @@ test.describe('Layout tab: group + separator + blocks persistence', () => {
   });
 });
 
+test.describe('API Key dialog', () => {
+  test('Should show the api key once on creation, block the redirect until closed, then never show it again', async ({
+    page
+  }) => {
+    await page.goto(panelUrl('sign-in'));
+    await page.locator('input[name="email"]').pressSequentially(ADMIN_EMAIL, { delay: 30 });
+    await page.locator('input[name="password"]').pressSequentially(PASSWORD, { delay: 30 });
+    await page.locator('button[type="submit"]').click();
+    await page.waitForURL(panelUrl());
+
+    await page.goto(panelUrl('apps', 'create'));
+    await page.waitForLoadState('networkidle');
+
+    const saveButton = page.locator('.rz-page-header__row button[type="submit"]');
+    await expect(saveButton).toBeDisabled();
+
+    await page.locator('input.rz-input[name="name"]').pressSequentially('CI App', { delay: 30 });
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click();
+
+    // The key dialog shows the plaintext key exactly once
+    const dialog = page.locator('.rz-dialog-content');
+    await expect(dialog).toBeVisible();
+    const keyText = (await page.locator('.rz-dialog-api__key').innerText()).trim();
+    expect(keyText.length).toBeGreaterThan(0);
+
+    // Redirect is held back while the dialog is open — still on the create route
+    expect(page.url()).toBe(panelUrl('apps', 'create'));
+
+    await page.locator('.rz-dialog-footer button', { hasText: 'Close' }).click();
+    await expect(dialog).not.toBeVisible();
+
+    // Closing the dialog releases the redirect to the created document
+    await page.waitForURL(/\/panel\/apps\/(?!create$)[^/]+$/);
+
+    // Reloading the created document never shows the key again
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('.rz-dialog-content')).toHaveCount(0);
+    await expect(page.getByText(keyText)).toHaveCount(0);
+  });
+});
+
 test.describe('Live Edit', () => {
   test('Should go to Live Panel', async ({ page }) => {
     // Navigate to the login page

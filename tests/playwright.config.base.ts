@@ -13,6 +13,7 @@ export function createPlaywrightConfig({ name }: Args): PlaywrightTestConfig {
       command: `pnpm rime:use ${name} && pnpm exec vite dev`,
       cwd: process.cwd(),
       port: 5173,
+      timeout: 180000,
       stdout: 'pipe',
       stderr: 'pipe'
     },

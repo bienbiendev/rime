@@ -71,10 +71,10 @@ function handleUnauthenticated(event: RequestEvent, resolve: any, routeInfo: Rou
 /**
  * Gets CMS user attributes for the authenticated user
  */
-async function getCmsUserAttributes(
+async function getCmsUserAttributes<C extends Config>(
   authUserId: string,
   userType: string,
-  rime: RimeContext
+  rime: RimeContext<C>
 ): Promise<any> {
   const user = await rime.adapter.auth.getUserAttributes({
     authUserId,
@@ -114,13 +114,12 @@ async function handleApiKeyAuth(
     body: { key: apiKey }
   });
 
-  if (!result.valid || !result.key || typeof result.key.permissions !== 'string') {
+  if (!result.valid || !result.key || !result.key.permissions) {
     logger.error(RimeError.UNAUTHORIZED, 'Invalid api key');
     throw error(401, RimeError.UNAUTHORIZED);
   }
 
-  const permissions = JSON.parse(result.key.permissions);
-  user.roles = permissions.roles;
+  user.roles = result.key.permissions.roles;
 }
 
 /**

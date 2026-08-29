@@ -1239,3 +1239,74 @@ test('Should duplicate a page with nested relations, blocks, and a tree inside a
   await request.delete(`${API_BASE_URL}/medias/${mediaA.id}`, { headers });
   await request.delete(`${API_BASE_URL}/medias/${mediaB.id}`, { headers });
 });
+
+/****************************************************/
+/* API Key (apps collection)
+/****************************************************/
+
+let appId: string;
+let appApiKey: string;
+
+test('Regular should not create an api key app', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/apps`, {
+    headers: await signInRegular(request),
+    data: { name: 'Should fail' }
+  });
+  expect(response.status()).toBe(403);
+});
+
+test('Admin should create an api key app', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/apps`, {
+    headers: await signInSuperAdmin(request),
+    data: { name: 'My App' }
+  });
+  expect(response.status()).toBe(200);
+  const data = await response.json();
+  expect(data.doc.id).toBeDefined();
+  // apiKeyId is server-side only (PRIVATE_FIELDS), never exposed to clients
+  expect(data.doc.apiKeyId).toBeUndefined();
+  // The plaintext key is only ever exposed once, on creation
+  expect(data.doc.apiKey).toBeDefined();
+  appId = data.doc.id;
+  appApiKey = data.doc.apiKey;
+});
+
+test('Should list apps as admin', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/apps`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(response.status()).toBe(200);
+});
+
+test('An invalid api key should be rejected', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const response = await request.get(`${API_BASE_URL}/apps`, {
+    headers: { ...headers, 'x-api-key': 'not-a-real-key' }
+  });
+  expect(response.status()).toBe(401);
+});
+
+test('A valid api key overrides the request roles to its own scope', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  // Even though the session belongs to a superadmin, the api key only
+  // carries the 'apps' role, so admin-gated access should now be denied
+  const response = await request.get(`${API_BASE_URL}/apps`, {
+    headers: { ...headers, 'x-api-key': appApiKey }
+  });
+  expect(response.status()).toBe(403);
+});
+
+test('Admin should delete the api key app', async ({ request }) => {
+  const response = await request.delete(`${API_BASE_URL}/apps/${appId}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(response.status()).toBe(200);
+});
+
+test('A deleted api key should no longer authenticate', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const response = await request.get(`${API_BASE_URL}/apps`, {
+    headers: { ...headers, 'x-api-key': appApiKey }
+  });
+  expect(response.status()).toBe(401);
+});
