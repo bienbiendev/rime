@@ -177,7 +177,11 @@ function authorizePanelUser<C extends Config>(
 }
 
 /**
- * Sets up event locals and resolves the request
+ * Sets up event locals and resolves the request. event.locals.user is always the full
+ * object, on every route type — server-only code (hooks, access checks) can rely on
+ * isStaff/isSuperAdmin regardless of which route triggered it. Only the handful of
+ * load() functions that hand `user` to the client need to call toPublicUser() first
+ * (see dev/generate/routes/common.server.ts's public layout templates).
  */
 function setupLocalsAndResolve(event: any, resolve: any, userData: UserData): any {
   const { user, session, authUser } = userData;
@@ -187,17 +191,6 @@ function setupLocalsAndResolve(event: any, resolve: any, userData: UserData): an
   event.locals.betterAuthUser = authUser;
 
   return resolve(event);
-}
-
-/**
- * Clean up user props
- */
-function cleanupUser(userData: UserData, routeInfo: RouteInfo) {
-  if (!routeInfo.isPanel && !routeInfo.isAPI) {
-    delete userData.user.isSuperAdmin;
-    delete userData.user.isStaff;
-  }
-  return userData;
 }
 
 /**
@@ -221,13 +214,10 @@ export const handleAuth: Handle = async ({ event, resolve }) => {
   }
 
   // Build complete user data
-  let userData = await buildUserData(authResult, rime, event.request.headers);
+  const userData = await buildUserData(authResult, rime, event.request.headers);
 
   // Apply panel authorization rules
   authorizePanelUser(userData, routeInfo, rime.config);
-
-  // Filter user props if not on panel or API
-  userData = cleanupUser(userData, routeInfo);
 
   // Set up locals and resolve
   return setupLocalsAndResolve(event, resolve, userData);

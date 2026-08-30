@@ -114,8 +114,10 @@ export const populateURL = Hooks.beforeRead<'generic'>(async (args) => {
       args.doc = { ...args.doc, url };
     }
 
-    // Add the live url if needed
-    if (config.live && event.locals.user && url) {
+    // Add the live url if needed. Gated on isStaff, not mere session presence — this URL
+    // embeds the real, hideable RIME_PANEL_ROUTE segment, so it must not reach a non-staff
+    // authenticated session either.
+    if (config.live && event.locals.user?.isStaff && url) {
       args.doc._live = `${process.env.PUBLIC_RIME_URL}/${env.RIME_PANEL_ROUTE || 'panel'}/live-edit?src=${url}&slug=${config.slug}&id=${args.doc.id}`;
       args.doc._live += args.doc.versionId ? `&${PARAMS.VERSION_ID}=${args.doc.versionId}` : '';
       args.doc._live += locale ? `&${PARAMS.LOCALE}=${locale}` : '';
