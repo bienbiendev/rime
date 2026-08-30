@@ -9,6 +9,10 @@ You can contribute to this project in many ways :
 - make it work for .js only
 - try other Sveltekit adapters and adjust the build command to handle these.
 
+## Codebase structure
+
+[Structure audit & proposed target](./docs/structure-audit.md) — how `src/lib/core` is laid out today, why the operations flow is hard to read from the tree, and a phased proposal for reorganising it.
+
 ## Clone the repo
 
 ```bash
