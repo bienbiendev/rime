@@ -30,7 +30,7 @@ export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>(async (args) 
 
   if (IS_ROLES_MUTATION) {
     // get the better-auth userId
-    const authUserId = await rime.adapter.auth.getAuthUserId({
+    const authUserId = await rime.adapter.auth.getBetterAuthUserId({
       slug: config.slug,
       id: originalDoc.id
     });
