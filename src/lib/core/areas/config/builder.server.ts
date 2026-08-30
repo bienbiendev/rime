@@ -1,4 +1,4 @@
-import { augmentHooks } from '$lib/core/areas/config/augment-hooks.server.js';
+import { augmentAreaHooks } from '$lib/core/operations/pipeline.server.js';
 import { augmentMetas } from '$lib/core/areas/config/augment-metas.js';
 import { augmentTitle } from '$lib/core/areas/config/augment-title.js';
 import { augmentUrl } from '$lib/core/areas/config/augment-url.js';
@@ -20,7 +20,7 @@ export const create = <S extends string>(
   const withVersions = augmentVersions(withMetas);
   const withUrl = augmentUrl(withVersions);
   const withTitle = augmentTitle(withUrl);
-  const augmented = augmentHooks(withTitle);
+  const augmented = augmentAreaHooks(withTitle);
 
   return {
     ...augmented,

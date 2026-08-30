@@ -1,5 +1,5 @@
 import { augmentAuthServer } from '$lib/core/features/auth/augment.server.js';
-import { augmentHooks } from '$lib/core/collections/config/augment-hooks.server.js';
+import { augmentCollectionHooks } from '$lib/core/operations/pipeline.server.js';
 import { augmentMetas } from '$lib/core/collections/config/augment-metas.js';
 import { augmentNestedServer } from '$lib/core/features/nested/augment.server.js';
 import { augmentTitle } from '$lib/core/collections/config/augment-title.js';
@@ -30,7 +30,7 @@ export const create = <S extends string>(
   const withPanel = augmentPanel(withUrl);
   const withAuth = augmentAuthServer(withPanel);
   const withMetas = augmentMetas(withAuth);
-  const withHooks = augmentHooks(withMetas);
+  const withHooks = augmentCollectionHooks(withMetas);
   const withTitle = augmentTitle(withHooks);
   const augmented = augmentThumbnail(withTitle);
 

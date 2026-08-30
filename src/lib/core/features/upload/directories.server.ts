@@ -1,11 +1,9 @@
-import { augmentHooks } from '$lib/core/collections/config/augment-hooks.server.js';
-import { exctractPath } from '$lib/core/features/upload/hooks/extract-path.server.js';
-import {
-  prepareDirectoryChildren,
-  updateDirectoryChildren
-} from '$lib/core/features/upload/hooks/update-directory-children.server.js';
-import { isUploadConfig, type WithUpload } from '$lib/core/features/upload/util/config.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
+import {
+  augmentCollectionHooks,
+  directoriesPipeline
+} from '$lib/core/operations/pipeline.server.js';
+import { isUploadConfig, type WithUpload } from './util/config.js';
 import { makeUploadDirectoriesCollectionClient } from './derive.js';
 
 export const augmentDirectoriesServer = <T extends { collections?: BuiltCollection[] }>(
@@ -23,27 +21,15 @@ export const augmentDirectoriesServer = <T extends { collections?: BuiltCollecti
 
 const makeUploadDirectoriesCollectionServer = (collection: WithUpload<BuiltCollection>) => {
   const collectionClient = makeUploadDirectoriesCollectionClient(collection);
-  const directoriesConfig = collection.upload.directories;
 
+  // Hook order for a directories collection lives with every other pipeline, in
+  // operations/pipeline.server.ts — not inline here.
   let directoriesCollection: BuiltCollection = {
     ...collectionClient,
-    $hooks: {
-      beforeOperation: directoriesConfig?.$hooks?.beforeOperation || [],
-      beforeCreate: [exctractPath, ...(directoriesConfig?.$hooks?.beforeCreate || [])],
-      beforeRead: directoriesConfig?.$hooks?.beforeRead || [],
-      beforeUpdate: [
-        exctractPath,
-        prepareDirectoryChildren,
-        ...(directoriesConfig?.$hooks?.beforeUpdate || [])
-      ],
-      beforeDelete: directoriesConfig?.$hooks?.beforeDelete || [],
-      afterCreate: directoriesConfig?.$hooks?.afterCreate || [],
-      afterUpdate: [updateDirectoryChildren, ...(directoriesConfig?.$hooks?.afterUpdate || [])],
-      afterDelete: directoriesConfig?.$hooks?.afterDelete || []
-    }
+    $hooks: directoriesPipeline(collection.upload.directories)
   };
 
-  directoriesCollection = augmentHooks(directoriesCollection);
+  directoriesCollection = augmentCollectionHooks(directoriesCollection);
 
   return directoriesCollection;
 };

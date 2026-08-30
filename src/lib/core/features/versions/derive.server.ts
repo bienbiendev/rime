@@ -1,4 +1,4 @@
-import { augmentHooks } from '$lib/core/collections/config/augment-hooks.server.js';
+import { augmentCollectionHooks } from '$lib/core/operations/pipeline.server.js';
 import { withVersionsSuffix } from '$lib/core/naming.js';
 import type { CollectionSlug } from '$lib/core/types/doc.js';
 import { toKebabCase } from '$lib/util/string.js';
@@ -56,7 +56,7 @@ export function makeVersionsCollectionsAliases<C extends Config>(config: C) {
         _generateSchema: false
       } as const;
 
-      versionedCollection = augmentHooks(versionedCollection);
+      versionedCollection = augmentCollectionHooks(versionedCollection);
 
       config.collections = [...(config.collections || []), versionedCollection];
     }
