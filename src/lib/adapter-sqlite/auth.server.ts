@@ -46,7 +46,7 @@ const createAuthFacade = (args: {
    * Retrieves the BetterAuth user ID from a collection row
    * @returns BetterAuth user ID or null if not found
    */
-  const getAuthUserId = async ({ slug, id }: { slug: CollectionSlug; id: string }) => {
+  const getBetterAuthUserId = async ({ slug, id }: { slug: CollectionSlug; id: string }) => {
     const userTable = getTable(slug);
     // @ts-expect-error slug is key of query
     const user = await db.query[slug].findFirst({ where: eq(userTable.id, id) });
@@ -98,7 +98,7 @@ const createAuthFacade = (args: {
   return {
     betterAuthAdapter,
     hasAuthUser,
-    getAuthUserId,
+    getBetterAuthUserId,
     // deleteAuthUserById,
     getUserAttributes,
     isSuperAdmin
