@@ -38,6 +38,17 @@ program
       if (existsSync(testFrontRoutesPath.replace(/\\/g, ''))) {
         execSync(`cp -rf ${testFrontRoutesPath} ${frontRoutesPath}`);
       }
+
+      // Copy any param matchers the fixture's own front routes need. rime generates only
+      // panel/collection/area, so a route naming another matcher (e.g. [parentSlug=news])
+      // must ship it — without it SvelteKit cannot build the route manifest and every
+      // request 500s. Must run after init, which regenerates src/params.
+      const testParamsPath = path.join(projectRoot, 'tests', name, 'params');
+
+      if (existsSync(testParamsPath)) {
+        const paramsDirPath = path.join(projectRoot, 'src', 'params');
+        execSync(`mkdir -p ${paramsDirPath} && cp -rf ${testParamsPath}/* ${paramsDirPath}/`);
+      }
     } catch (error) {
       console.error('Error setting configuration:', error);
     }
