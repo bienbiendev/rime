@@ -1,13 +1,21 @@
 /**
- * Returns an object with the first matching key and all keys for reference
+ * Picks the first key whose value is `true`, checked in the order written —
+ * an if/else-if chain expressed as an object literal, so a run of
+ * conditions can be flat instead of nested.
+ *
+ * Returns `.value` (the winning key, or undefined if none matched) plus
+ * every key mapped to itself, so callers can switch/compare on
+ * `result.SOME_KEY` instead of a raw string literal.
+ *
  * @example
  * const auth = cases({
  *   IS_STAFF: user.role === 'staff',
- *   IS_ADMIN: user.role === 'admin'
+ *   IS_ADMIN: user.role === 'admin',
+ *   IS_USER: true // catch-all, always true, put last
  * });
  *
  * switch (auth.value) {
- *   case auth.IS_STAFF:
+ *   case auth.IS_ADMIN:
  *     // Type-safe access
  * }
  */
