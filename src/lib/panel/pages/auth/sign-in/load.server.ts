@@ -1,3 +1,4 @@
+import { PANEL_AUTH_IMAGE } from '$lib/core/constant.server.js';
 import { redirect, type ServerLoadEvent } from '@sveltejs/kit';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -5,14 +6,14 @@ import path from 'node:path';
 export const signInLoad = async ({ locals, params }: ServerLoadEvent) => {
   const { session, rime } = locals;
 
-  const imageExist = existsSync(path.join(process.cwd(), 'static', 'panel', 'panel.jpg'));
+  const imageExist = existsSync(path.join(process.cwd(), 'static', PANEL_AUTH_IMAGE));
 
   if (session) {
     throw redirect(302, `/${params.panel}`);
   } else {
     return {
       forgotPasswordEnabled: 'mailer' in rime,
-      image: imageExist ? '/panel/panel.jpg' : null,
+      image: imageExist ? PANEL_AUTH_IMAGE : null,
       form: {}
     };
   }

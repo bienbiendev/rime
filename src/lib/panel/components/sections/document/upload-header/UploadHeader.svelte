@@ -87,7 +87,9 @@
         {#each ['filename', 'filesize', 'mimeType'] as key, index (index)}
           <h4>{capitalize(key)}</h4>
           {#if !create && key === 'filename'}
-            <a target="_blank" href="/medias/{form.values[key]}">{form.values[key]}</a>
+            <a target="_blank" rel="external" href="/medias/{form.values[key]}">
+              {form.values[key]}
+            </a>
           {:else}
             <p>{form.values[key]}</p>
           {/if}

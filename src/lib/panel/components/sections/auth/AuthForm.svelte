@@ -114,5 +114,8 @@
 
   .rz-auth.rz-auth--image {
     background-size: cover;
+    .rz-auth__right {
+      background-color: hsl(var(--rz-color-bg) / 0.9);
+    }
   }
 </style>

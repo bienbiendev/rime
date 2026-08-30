@@ -1,4 +1,4 @@
-import { isPublicPanelAuthRoute } from '$lib/core/constant.js';
+import { isPublicPanelAuthRoute } from '$lib/core/constant.server.js';
 import { prototypeKebabToSlug } from '$lib/core/naming.js';
 import buildNavigation from '$lib/panel/navigation.js';
 import { areaFormActions } from '$lib/panel/pages/area/actions.server.js';

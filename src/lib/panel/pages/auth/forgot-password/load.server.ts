@@ -1,3 +1,4 @@
+import { PANEL_AUTH_IMAGE } from '$lib/core/constant.server.js';
 import { error, redirect, type ServerLoadEvent } from '@sveltejs/kit';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -11,10 +12,10 @@ export const forgotPasswordLoad = async ({ locals }: ServerLoadEvent) => {
   if (session) {
     throw redirect(302, '/');
   } else {
-    const imageExist = existsSync(path.join(process.cwd(), 'static', 'panel.jpg'));
+    const imageExist = existsSync(path.join(process.cwd(), 'static', PANEL_AUTH_IMAGE));
     return {
       form: {},
-      image: imageExist ? '/panel/panel.jpg' : null
+      image: imageExist ? PANEL_AUTH_IMAGE : null
     };
   }
 };
