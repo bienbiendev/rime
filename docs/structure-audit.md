@@ -32,10 +32,17 @@ Two things turned out differently from the plan, both simplifications:
   genuinely per-prototype (which adapter method writes, how the document is read
   back) and `find` exists for both.
 
-Verification at the final commit: **334 e2e tests green across all six
-Playwright suites** (basic 78, multilang 74, versions 50, versions-multilang 57,
-fields 72, empty 3), vitest 85/85, madge 7 cycles (unchanged from the
-pre-refactor baseline), and `bun run package` → publint "All good!".
+Verification: **`bun run test` passes end to end — 375 tests, exit 0** (empty 3,
+fields 94, multilang 74, versions 50, versions-multilang 57, basic 97), plus
+vitest 85/85, madge 7 cycles (unchanged from the pre-refactor baseline), and
+`bun run package` → publint "All good!".
+
+Getting there needed two fixes to the test harness itself, both pre-existing and
+unrelated to this refactor — see the commit "test: make `bun run test`
+runnable". Reproducing the `basic` and `fields` suites also needs an SMTP server
+at `RIME_SMTP_HOST`: those configs declare `$smtp` and creating an API key
+really does send mail. The mailer defaults to `secure: true`, so it must speak
+implicit TLS with a certificate the runtime trusts.
 
 `svelte-check` result depends on which config is generated, and matched the
 pre-refactor baseline at every phase: 0 errors under a config that declares
@@ -627,6 +634,10 @@ bunx vitest run            # src/**/*.spec.ts
 bun run test               # the 6 Playwright suites — the real safety net
 bun run package            # publint: proves the exports map still resolves (§9.3)
 ```
+
+`bun run test` needs a `.env` (see CONTRIBUTING) and, for the `basic` and
+`fields` suites, an SMTP server at `RIME_SMTP_HOST` speaking implicit TLS with a
+trusted certificate — creating an API key genuinely sends mail.
 
 Plus, for phases 3 and 4, the inference spot-check from §9.1 — no automated check
 covers it.
