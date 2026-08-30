@@ -70,24 +70,30 @@ import config from '${configImportPaths(HOOKS_DIR).server}';
 export const handle = sequence(...(await handlers(config)));
 `;
 
-/** Writes src/hooks.server.ts if missing, or rewrites it if its content would differ from
- * what's expected now (e.g. after RIME_CONFIG_DIR changes the import path) — called both at
- * `rime init` and whenever the dev server detects a config change, so it never goes stale
- * between the two. Returns whether it wrote anything. */
+const HOOKS_CONFIG_IMPORT_LINE_REGEX = /^import config from ['"][^'"]*['"];\s*$/m;
+
+/** Writes src/hooks.server.ts if missing. If it already exists, patches only the config
+ * import line if it's stale (e.g. after RIME_CONFIG_DIR changes the import path) — the rest
+ * of the file may carry real customizations (e.g. an appended handler), so this never
+ * touches anything else. Called both at `rime init` and whenever the dev server detects a
+ * config change, so the import path never goes stale between the two. Returns whether it
+ * wrote anything. */
 export function regenerateHooks(root: string = process.cwd()): boolean {
   const hooksPath = path.join(root, 'src', 'hooks.server.ts');
   const srcDir = path.join(root, 'src');
-  const content = hooks();
 
   if (!existsSync(hooksPath)) {
     if (!existsSync(srcDir)) {
       mkdirSync(srcDir, { recursive: true });
     }
-    writeFileSync(hooksPath, content, 'utf-8');
+    writeFileSync(hooksPath, hooks(), 'utf-8');
     return true;
   }
-  if (readFileSync(hooksPath, 'utf-8') !== content) {
-    writeFileSync(hooksPath, content, 'utf-8');
+
+  const expectedImportLine = `import config from '${configImportPaths(HOOKS_DIR).server}';`;
+  const content = readFileSync(hooksPath, 'utf-8');
+  if (HOOKS_CONFIG_IMPORT_LINE_REGEX.test(content) && !content.includes(expectedImportLine)) {
+    writeFileSync(hooksPath, content.replace(HOOKS_CONFIG_IMPORT_LINE_REGEX, expectedImportLine));
     return true;
   }
   return false;
