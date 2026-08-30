@@ -1,7 +1,7 @@
 ![rime logo](https://github.com/bienbiendev/rime/blob/main/assets/logo-white.png#gh-dark-mode-only)
 ![rime logo](https://github.com/bienbiendev/rime/blob/main/assets/logo-black.png#gh-light-mode-only)
 
-Headless CMS powered by SvelteKit. [Read the doc](https://github.com/bienbiendev/rime-doc/tree/master/docs)
+Headless CMS powered by SvelteKit. [Read the doc](https://github.com/bienbiendev/rime-doc/blob/develop/docs/02-installation.md)
 
 ![NPM Version](https://img.shields.io/npm/v/rimecms)
 ![NPM Downloads](https://img.shields.io/npm/dm/rimecms)
