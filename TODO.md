@@ -38,11 +38,12 @@
 [x] Add the ability to import data from the default locale
 [x] More better-auth integration
 [x] pnpm deps issue
-[x] configurable config path
 [x] More tests
-[ ] Change edited_by that should be currently_edited, and add last_edited_by, created_by for less confusion.
+[x] configurable config path
+[x] configurable panel route
+[ ] Change edited_by that should be currently_edited_by, and add last_edited_by, created_by for less confusion.
 [ ] Handle auto-save / confirm dialog if version not enabled.
 [ ] Add select feature to findById collection
 [ ] Batch offset/update
-[ ] configurable medias/panel path
+[ ] configurable medias path
 [ ] Put bin commands in a separate package ex: @rime/kit ?
