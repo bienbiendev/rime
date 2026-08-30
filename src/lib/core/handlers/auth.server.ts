@@ -1,4 +1,4 @@
-import { isPublicPanelAuthRoute } from '$lib/core/constant.js';
+import { isPublicPanelAuthRoute } from '$lib/core/constant.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { CollectionSlug } from '$lib/core/types/doc.js';
 import type { Config, User } from '$lib/types.js';
