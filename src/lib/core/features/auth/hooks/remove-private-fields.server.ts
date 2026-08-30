@@ -1,4 +1,4 @@
-import { Hooks } from '$lib/core/operations/hooks/index.server.js';
+import { Hooks } from '$lib/core/operations/hooks.js';
 import { PRIVATE_FIELDS } from '../constant.server.js';
 
 export const removePrivateFields = Hooks.beforeRead(async (args) => {

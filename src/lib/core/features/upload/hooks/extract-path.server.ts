@@ -1,5 +1,5 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import { Hooks } from '$lib/core/operations/hooks/index.server.js';
+import { Hooks } from '$lib/core/operations/hooks.js';
 import { trycatchSync } from '$lib/util/function.js';
 import { getSegments } from '../util/path.js';
 

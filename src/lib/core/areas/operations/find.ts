@@ -1,5 +1,5 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
-import type { OperationContext } from '$lib/core/operations/hooks/index.server.js';
+import type { OperationContext } from '$lib/core/operations/types.js';
 import type { AreaSlug, GenericDoc } from '$lib/core/types/doc.js';
 import { type RegisterArea } from '$lib/index.js';
 import type { RequestEvent } from '@sveltejs/kit';

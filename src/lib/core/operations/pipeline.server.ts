@@ -17,19 +17,19 @@ import {
 import { populateURL } from '../features/url/hooks/populate-url.server.js';
 import { defineVersionOperation } from '../features/versions/hooks/define-version-operation.server.js';
 import { handleNewVersion } from '../features/versions/hooks/handle-new-version.server.js';
-import { mergeWithBlankDocument } from './hooks/before-create/merge-with-blank.server.js';
-import { authorize } from './hooks/before-operation/authorize.server.js';
-import { processDocumentFields } from './hooks/before-read/process-document-fields.server.js';
-import { setDocumentLocale } from './hooks/before-read/set-document-locale.server.js';
-import { setDocumentThumbnail } from './hooks/before-read/set-document-thumbnail.server.js';
-import { setDocumentTitle } from './hooks/before-read/set-document-title.server.js';
-import { setDocumentType } from './hooks/before-read/set-document-type.server.js';
-import { sortDocumentProps } from './hooks/before-read/sort-document-props.server.js';
-import { getOriginalDocument } from './hooks/before-update/get-original-document.server.js';
-import { buildDataConfigMap } from './hooks/before-upsert/data-config-map.server.js';
-import { buildOriginalDocConfigMap } from './hooks/before-upsert/original-config-map.server.js';
-import { setDefaultValues } from './hooks/before-upsert/set-default-values.server.js';
-import { validateFields } from './hooks/before-upsert/validate-fields.server.js';
+import { mergeWithBlankDocument } from './steps/merge-with-blank.server.js';
+import { authorize } from './steps/authorize.server.js';
+import { processDocumentFields } from './steps/process-document-fields.server.js';
+import { setDocumentLocale } from './steps/set-document-locale.server.js';
+import { setDocumentThumbnail } from './steps/set-document-thumbnail.server.js';
+import { setDocumentTitle } from './steps/set-document-title.server.js';
+import { setDocumentType } from './steps/set-document-type.server.js';
+import { sortDocumentProps } from './steps/sort-document-props.server.js';
+import { getOriginalDocument } from './steps/get-original-document.server.js';
+import { buildDataConfigMap } from './steps/data-config-map.server.js';
+import { buildOriginalDocConfigMap } from './steps/original-config-map.server.js';
+import { setDefaultValues } from './steps/set-default-values.server.js';
+import { validateFields } from './steps/validate-fields.server.js';
 
 /**
  * Every hook rime runs, and the order it runs them in.

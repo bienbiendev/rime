@@ -1,5 +1,5 @@
 import { defineVersionUpdateOperation } from '$lib/core/features/versions/strategy.js';
-import { Hooks } from '../../../operations/hooks/index.server.js';
+import { Hooks } from '$lib/core/operations/hooks.js';
 
 export const defineVersionOperation = Hooks.beforeUpdate(async (args) => {
   const { config } = args;

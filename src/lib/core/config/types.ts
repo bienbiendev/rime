@@ -1,6 +1,6 @@
 import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
 import type { PanelLanguage } from '$lib/core/i18n/index.js';
-import type { Hook, HookBeforeOperation } from '$lib/core/operations/hooks/index.server.js';
+import type { Hook, HookBeforeOperation } from '$lib/core/operations/types.js';
 import type { Plugin } from '$lib/core/plugins/index.js';
 import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
 import type { Field, Option } from '$lib/fields/types.js';

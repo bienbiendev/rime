@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
 import { t__ } from '$lib/core/i18n/index.js';
-import { Hooks } from '$lib/core/operations/hooks/index.server.js';
+import { Hooks } from '$lib/core/operations/hooks.js';
 import { access } from '$lib/util/access/index.js';
 import { cases } from '$lib/util/cases.js';
 import { BETTER_AUTH_ROLES } from '../constant.server.js';

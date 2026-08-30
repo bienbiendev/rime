@@ -1,6 +1,6 @@
 import { jsonFileToFile } from '$lib/core/features/upload/util/converter.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { Hooks } from '$lib/core/operations/hooks/index.server.js';
+import { Hooks } from '$lib/core/operations/hooks.js';
 import { isFile } from '$lib/util/file.js';
 
 /**

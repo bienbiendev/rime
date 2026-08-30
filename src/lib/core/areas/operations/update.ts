@@ -1,12 +1,12 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import type { OperationContext } from '$lib/core/operations/hooks/index.server.js';
+import type { OperationContext } from '$lib/core/operations/types.js';
 import type { AreaSlug, GenericDoc } from '$lib/core/types/doc.js';
 import type { DeepPartial } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { saveBlocks } from '../../operations/blocks/index.server.js';
-import { saveRelations } from '../../operations/relations/index.server.js';
-import { saveTreeBlocks } from '../../operations/tree/index.server.js';
+import { saveBlocks } from '../../operations/persist/blocks/index.server.js';
+import { saveRelations } from '../../operations/persist/relations/index.server.js';
+import { saveTreeBlocks } from '../../operations/persist/tree/index.server.js';
 
 type UpdateArgs<T> = {
   data: DeepPartial<T>;

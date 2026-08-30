@@ -1,7 +1,7 @@
 import { UPLOAD_PATH } from '$lib/core/constant.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import { withDirectoriesSuffix } from '$lib/core/naming.js';
-import { Hooks } from '$lib/core/operations/hooks/index.server.js';
+import { Hooks } from '$lib/core/operations/hooks.js';
 import { trycatch } from '$lib/util/function.js';
 import { getSegments } from '../util/path.js';
 

@@ -1,6 +1,6 @@
 import * as Area from '$lib/core/areas/config/builder.server.js';
 import * as Collection from '$lib/core/collections/config/builder.server.js';
-import { Hooks } from '$lib/core/operations/hooks/index.server.js';
+import { Hooks } from '$lib/core/operations/hooks.js';
 import type { BuiltConfigClient, SanitizedConfigClient } from '../types.js';
 import { buildConfig } from './build-config.server.js';
 export type { BuildConfig } from './build-config.server.js';

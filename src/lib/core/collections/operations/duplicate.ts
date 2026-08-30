@@ -1,6 +1,6 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { VERSIONS_STATUS } from '$lib/core/constant.js';
-import { buildConfigMap } from '$lib/core/operations/configMap/index.js';
+import { buildConfigMap } from '$lib/core/operations/config-map/index.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';

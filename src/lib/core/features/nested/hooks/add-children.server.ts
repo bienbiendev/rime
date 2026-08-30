@@ -1,4 +1,4 @@
-import { Hooks } from '$lib/core/operations/hooks/index.server.js';
+import { Hooks } from '$lib/core/operations/hooks.js';
 import { asc, eq } from 'drizzle-orm';
 
 /**

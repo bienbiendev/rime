@@ -1,5 +1,5 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import type { OperationContext } from '$lib/core/operations/hooks/index.server.js';
+import type { OperationContext } from '$lib/core/operations/types.js';
 import type { OperationQuery } from '$lib/core/types/index.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { CollectionSlug } from '../../../types.js';

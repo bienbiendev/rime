@@ -1,5 +1,5 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { Hooks } from '$lib/core/operations/hooks/index.server.js';
+import { Hooks } from '$lib/core/operations/hooks.js';
 import type { WithUpload } from '../util/config.js';
 
 export const populateSizes = Hooks.beforeRead(async (args) => {

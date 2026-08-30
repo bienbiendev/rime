@@ -1,5 +1,5 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import { Hooks } from '$lib/core/operations/hooks/index.server.js';
+import { Hooks } from '$lib/core/operations/hooks.js';
 
 /**
  * After create populate the created API key

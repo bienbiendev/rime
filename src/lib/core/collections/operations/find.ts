@@ -1,6 +1,6 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { logger } from '$lib/core/logger/index.server.js';
-import type { OperationContext } from '$lib/core/operations/hooks/index.server.js';
+import type { OperationContext } from '$lib/core/operations/types.js';
 import type { CollectionSlug, GenericDoc, RawDoc } from '$lib/core/types/doc.js';
 import type { OperationQuery } from '$lib/core/types/index.js';
 import type { RegisterCollection } from '$lib/index.js';

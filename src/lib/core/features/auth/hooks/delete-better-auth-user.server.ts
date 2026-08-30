@@ -1,4 +1,4 @@
-import { Hooks } from '$lib/core/operations/hooks/index.server.js';
+import { Hooks } from '$lib/core/operations/hooks.js';
 
 /**
  * After delete, delete better-auth user

@@ -1,4 +1,4 @@
-import type { OperationContext } from '$lib/core/operations/hooks/index.server.js';
+import type { OperationContext } from '$lib/core/operations/types.js';
 import type { DocumentFormContext } from '$lib/panel/index.js';
 import type { Dic } from '$lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';

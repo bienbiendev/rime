@@ -4,7 +4,7 @@ import type { BuiltAreaClient, BuiltCollectionClient } from '$lib/core/config/ty
 import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant.js';
 import type { FormFieldBuilder } from '$lib/core/fields/builders/index.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';
-import { buildConfigMap } from '$lib/core/operations/configMap/index.js';
+import { buildConfigMap } from '$lib/core/operations/config-map/index.js';
 import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '$lib/core/types/doc.js';
 import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
 import { panelUrl } from '$lib/panel/util/url.js';

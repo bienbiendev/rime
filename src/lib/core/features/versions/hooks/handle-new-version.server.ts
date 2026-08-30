@@ -7,9 +7,9 @@ import { recursiveRemoveKeys } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import path from 'path';
 import type { BuiltArea, BuiltCollection } from '../../../../types.js';
-import type { ConfigMap } from '../../../operations/configMap/types.js';
-import { fallbackDataFromOriginal } from '../../../operations/shared/fallback-data-from-original.js';
-import { Hooks } from '../../../operations/hooks/index.server.js';
+import type { ConfigMap } from '../../../operations/config-map/types.js';
+import { fallbackDataFromOriginal } from '../../../operations/steps/fallback-data-from-original.js';
+import { Hooks } from '$lib/core/operations/hooks.js';
 
 /**
  * Handles version-related operations for document updates
