@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { isAuthConfig } from '$lib/core/features/auth/util';
-  import type { BuiltCollection } from '$lib/core/config/types.js';
+  import type { BuiltCollection } from '$lib/core/factory/config/types.js';
   import { t__ } from '$lib/core/i18n';
   import { text } from '$lib/fields';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';

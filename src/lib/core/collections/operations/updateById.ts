@@ -1,4 +1,4 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
+import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { runUpdate } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';

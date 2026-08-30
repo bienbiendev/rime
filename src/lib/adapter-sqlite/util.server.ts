@@ -1,4 +1,4 @@
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
+import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { RawDoc } from '$lib/core/types/doc.js';
 import type { OperationQuery, ParsedOperationQuery } from '$lib/core/types/index.js';

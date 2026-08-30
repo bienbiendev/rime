@@ -21,7 +21,7 @@ export type {
   LocalizationConfig,
   RouteConfig,
   SanitizedConfigClient
-} from './core/config/types.js';
+} from './core/factory/config/types.js';
 
 // Doc types
 export type {

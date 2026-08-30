@@ -1,4 +1,4 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
+import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { Hooks } from '$lib/core/operations/hooks.js';
 import type { WithUpload } from '../util/config.js';
 

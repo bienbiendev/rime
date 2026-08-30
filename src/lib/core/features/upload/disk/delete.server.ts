@@ -1,4 +1,4 @@
-import type { BuiltCollection, Config } from '$lib/core/config/types.js';
+import type { BuiltCollection, Config } from '$lib/core/factory/config/types.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import { hasVersionsSuffix, withVersionsSuffix } from '$lib/core/naming.js';
 import type { RimeContext } from '$lib/core/rime.server.js';

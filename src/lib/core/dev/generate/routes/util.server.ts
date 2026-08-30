@@ -1,4 +1,4 @@
-import type { Config } from '$lib/core/config/types.js';
+import type { Config } from '$lib/core/factory/config/types.js';
 import cache from '$lib/core/dev/cache/index.server.js';
 import { CONFIG_DIR, PANEL_ROUTE } from '$lib/core/dev/constants.js';
 import { slugify } from '$lib/util/string.js';

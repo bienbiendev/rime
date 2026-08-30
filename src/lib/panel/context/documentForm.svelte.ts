@@ -1,6 +1,6 @@
 import { applyAction, deserialize } from '$app/forms';
 import { page } from '$app/state';
-import type { BuiltAreaClient, BuiltCollectionClient } from '$lib/core/config/types.js';
+import type { BuiltAreaClient, BuiltCollectionClient } from '$lib/core/factory/config/types.js';
 import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant.js';
 import type { FormFieldBuilder } from '$lib/core/fields/builders/index.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';

@@ -1,4 +1,4 @@
-import type { BuiltArea } from '$lib/core/config/types.js';
+import type { BuiltArea } from '$lib/core/factory/config/types.js';
 import { runUpdate } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
 import type { AreaSlug, GenericDoc } from '$lib/core/types/doc.js';

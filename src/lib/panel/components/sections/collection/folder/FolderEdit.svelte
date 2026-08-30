@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Directory } from '$lib/core/features/upload/types';
-  import type { BuiltCollectionClient } from '$lib/core/config/types';
+  import type { BuiltCollectionClient } from '$lib/core/factory/config/types';
   import { t__ } from '$lib/core/i18n/index.js';
   import { withDirectoriesSuffix } from '$lib/core/naming';
   import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';

@@ -1,4 +1,4 @@
-import type { Collection, CollectionAuthConfig } from '$lib/core/config/types.js';
+import type { Collection, CollectionAuthConfig } from '$lib/core/factory/config/types.js';
 import { select } from '$lib/fields/select/index.js';
 import { text } from '$lib/fields/text/index.js';
 import type { Option } from '$lib/types.js';

@@ -1,4 +1,4 @@
-import type { Config } from '../config/types.js';
+import type { Config } from '../factory/config/types.js';
 import type { Rime } from '../rime.server.js';
 import { handleAuth } from './auth.server.js';
 import { handleCORS } from './cors.server.js';

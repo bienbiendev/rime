@@ -1,4 +1,4 @@
-import type { Config } from '$lib/core/config/types.js';
+import type { Config } from '$lib/core/factory/config/types.js';
 import { withLocalesSuffix, withVersionsSuffix } from '$lib/core/naming.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
 import type {

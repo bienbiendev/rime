@@ -2,7 +2,7 @@ import { augmentCollectionHooks } from '$lib/core/operations/pipeline.server.js'
 import { withVersionsSuffix } from '$lib/core/naming.js';
 import type { CollectionSlug } from '$lib/core/types/doc.js';
 import { toKebabCase } from '$lib/util/string.js';
-import type { BuiltCollection, Config } from '../../config/types.js';
+import type { BuiltCollection, Config } from '../../factory/config/types.js';
 
 /**
  * Creates versioned collection aliases for collections and areas with versioning enabled

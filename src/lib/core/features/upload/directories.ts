@@ -1,5 +1,5 @@
 import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
-import type { BuiltCollection } from '$lib/core/config/types.js';
+import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { makeUploadDirectoriesCollectionClient } from './derive.js';
 
 export const augmentDirectories = <T extends { collections?: BuiltCollection[] }>(config: T) => {

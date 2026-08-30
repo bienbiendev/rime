@@ -1,10 +1,10 @@
-import type { CollectionWithoutSlug } from '$lib/core/collections/config/types.js';
+import type { CollectionWithoutSlug } from '$lib/core/factory/collection/types.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import type { Field, Option } from '$lib/types.js';
 import { access } from '$lib/util/index.js';
 import { UsersRound } from '@lucide/svelte';
 import cloneDeep from 'clone-deep';
-import type { Access, AdditionalStaffConfig } from '../../../config/types.js';
+import type { Access, AdditionalStaffConfig } from '../../../factory/config/types.js';
 
 export const staffCollection = {
   label: { singular: 'User', plural: 'Users' },

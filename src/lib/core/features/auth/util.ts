@@ -1,4 +1,4 @@
-import type { CollectionAuthConfig } from '$lib/core/config/types.js';
+import type { CollectionAuthConfig } from '$lib/core/factory/config/types.js';
 
 /**
  * Checks if a collection configuration has authentication capabilities

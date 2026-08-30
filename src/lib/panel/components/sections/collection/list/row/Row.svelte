@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { BuiltCollection } from '$lib/core/config/types.js';
+  import type { BuiltCollection } from '$lib/core/factory/config/types.js';
   import type { GenericDoc } from '$lib/core/types/doc.js';
   import Checkbox from '$lib/panel/components/ui/checkbox/checkbox.svelte';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';

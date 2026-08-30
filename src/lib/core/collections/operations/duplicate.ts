@@ -1,4 +1,4 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
+import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { VERSIONS_STATUS } from '$lib/core/constant.js';
 import { buildConfigMap } from '$lib/core/operations/config-map/index.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';

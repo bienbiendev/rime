@@ -1,4 +1,4 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
+import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { runBeforeOperation } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
 import type { OperationQuery } from '$lib/core/types/index.js';

@@ -3,7 +3,7 @@ import {
   VERSIONS_OPERATIONS,
   VersionOperations
 } from '$lib/core/features/versions/strategy.js';
-import type { Config } from '$lib/core/config/types.js';
+import type { Config } from '$lib/core/factory/config/types.js';
 import { VERSIONS_STATUS } from '$lib/core/constant.js';
 import { withDirectoriesSuffix, withLocalesSuffix, withVersionsSuffix } from '$lib/core/naming.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';

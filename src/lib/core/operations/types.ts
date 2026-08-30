@@ -1,5 +1,5 @@
 import type { VersionOperation } from '$lib/core/features/versions/strategy.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
+import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
 import type { Docs, DocType, RawDoc } from '$lib/core/types/doc.js';
 import type { OperationQuery } from '$lib/core/types/index.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';

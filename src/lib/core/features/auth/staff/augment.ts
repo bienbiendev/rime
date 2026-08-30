@@ -1,6 +1,6 @@
-import type { BuiltCollection, Config } from '$lib/core/config/types.js';
+import type { BuiltCollection, Config } from '$lib/core/factory/config/types.js';
 import { getStaffCollection } from './derive.js';
-import { Collection } from '../../../config/client/index.js';
+import { Collection } from '../../../factory/config/index.js';
 
 export const augmentStaff = <
   T extends { collections?: BuiltCollection[]; staff?: Config['staff'] }
