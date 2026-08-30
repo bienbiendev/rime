@@ -1,4 +1,5 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
+import { runBeforeOperation } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
 import type { OperationQuery } from '$lib/core/types/index.js';
 import type { RequestEvent } from '@sveltejs/kit';
@@ -24,15 +25,12 @@ export const deleteDocs = async (args: DeleteArgs): Promise<string[]> => {
     isSystemOperation
   };
 
-  for (const hook of config.$hooks?.beforeOperation || []) {
-    const result = await hook({
-      config,
-      operation: 'delete',
-      event,
-      context
-    });
-    context = result.context;
-  }
+  context = await runBeforeOperation<CollectionSlug>({
+    config,
+    event,
+    operation: 'delete',
+    context
+  });
 
   const documentsToDelete = await rime.adapter.collection.find({
     slug: config.slug,

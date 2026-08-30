@@ -1,13 +1,9 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import type { Hook, OperationContext } from '$lib/core/operations/types.js';
+import { runUpdate } from '$lib/core/operations/run.server.js';
+import type { OperationContext } from '$lib/core/operations/types.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';
-import type { RegisterCollection } from '$lib/index.js';
 import type { DeepPartial } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { saveBlocks } from '../../operations/persist/blocks/index.server.js';
-import { saveRelations } from '../../operations/persist/relations/index.server.js';
-import { saveTreeBlocks } from '../../operations/persist/tree/index.server.js';
 
 type Args<T> = {
   id: string;
@@ -22,17 +18,17 @@ type Args<T> = {
 };
 
 /**
- * Updates a document by ID
+ * Updates a document by ID.
+ *
+ * The pipeline itself lives in operations/run.server.ts — shared with an area's update. Only
+ * the two prototype-specific pieces are here: which adapter method writes the root row, and
+ * how the saved document is read back.
  */
 export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T>) => {
-  //
   const { event, locale, id, draft, isFallbackLocale = undefined, isSystemOperation } = args;
   const { rime } = event.locals;
-  let { data } = args;
-  let config = args.config;
 
-  // Set hooks context
-  let context: OperationContext<CollectionSlug> = {
+  const context: OperationContext<CollectionSlug> = {
     params: {
       id,
       versionId: args.versionId,
@@ -43,96 +39,29 @@ export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T
     isFallbackLocale
   };
 
-  for (const hook of config.$hooks?.beforeOperation || []) {
-    const result = await hook({
-      config,
-      operation: 'update',
-      event,
-      context
-    });
-    context = result.context;
-  }
-
-  const hooksBeforeUpdate = config.$hooks?.beforeUpdate as Hook<CollectionSlug>[];
-  for (const hook of hooksBeforeUpdate || []) {
-    const result = await hook({
-      data: data as RegisterCollection[CollectionSlug],
-      config,
-      operation: 'update',
-      event,
-      context
-    });
-    config = result.config;
-    context = result.context;
-    data = result.data as Partial<T>;
-  }
-
-  const makeMessage = (name: string) => `missing ${name} @uppdateById`;
-  const makeError = (name: string) => new RimeError(RimeError.OPERATION_ERROR, makeMessage(name));
-
-  if (!context.configMap) throw makeError('configMap');
-  if (!context.originalConfigMap) throw makeError('originalConfigMap');
-  if (!context.originalDoc) throw makeError('originalDoc');
-  if (!context.versionOperation) throw makeError('versionOperation');
-  if (!context.params.versionId) throw makeError('versionId');
-
-  const incomingPaths = Object.keys(context.configMap);
-
-  const { id: updatedId } = await rime.adapter.collection.update({
-    id,
-    versionId: context.params.versionId,
-    slug: config.slug,
-    data: data,
-    locale: locale,
-    versionOperation: context.versionOperation
-  });
-
-  const blocksDiff = await saveBlocks({
+  return runUpdate<CollectionSlug, T, BuiltCollection>({
+    data: args.data,
+    config: args.config,
+    event,
     context,
-    ownerId: context.params.versionId,
-    data,
-    incomingPaths,
-    adapter: rime.adapter,
-    config
-  });
-
-  const treeDiff = await saveTreeBlocks({
-    context,
-    ownerId: context.params.versionId,
-    data,
-    incomingPaths,
-    adapter: rime.adapter,
-    config
-  });
-
-  await saveRelations({
-    ownerId: context.params.versionId,
-    configMap: context.configMap,
-    data,
-    incomingPaths,
-    adapter: rime.adapter,
-    config,
     locale,
-    blocksDiff,
-    treeDiff
+    where: 'updateById',
+
+    write: ({ data, config, context }) =>
+      rime.adapter.collection.update({
+        id,
+        versionId: context.params.versionId!,
+        slug: config.slug,
+        data,
+        locale,
+        versionOperation: context.versionOperation!
+      }),
+
+    reread: ({ written, config, context }) =>
+      rime.collection(config.slug).findById({
+        id: written.id,
+        locale,
+        versionId: context.params.versionId
+      }) as Promise<T>
   });
-
-  const document = await rime.collection(config.slug).findById({
-    id: updatedId,
-    locale,
-    versionId: context.params.versionId
-  });
-
-  for (const hook of config.$hooks?.afterUpdate || []) {
-    await hook({
-      doc: document,
-      data: data as RegisterCollection[CollectionSlug],
-      config,
-      operation: 'update',
-      event,
-      context
-    });
-  }
-
-  return document as T;
 };

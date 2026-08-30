@@ -1,7 +1,7 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
+import { readDocument, runBeforeOperation } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';
-import type { RegisterCollection } from '$lib/index.js';
 import type { RequestEvent } from '@sveltejs/kit';
 
 type Args = {
@@ -32,15 +32,12 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
     isSystemOperation
   };
 
-  for (const hook of config.$hooks?.beforeOperation || []) {
-    const result = await hook({
-      config,
-      operation: 'read',
-      event,
-      context
-    });
-    context = result.context;
-  }
+  context = await runBeforeOperation<CollectionSlug>({
+    config,
+    event,
+    operation: 'read',
+    context
+  });
 
   const documentRaw = await rime.adapter.collection.findById({
     slug: config.slug,
@@ -51,28 +48,15 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
     draft
   });
 
-  const hasSelect = select && Array.isArray(select) && select.length;
-
-  let document = await event.locals.rime.adapter.transform.doc({
-    doc: documentRaw,
-    slug: config.slug,
-    locale,
+  const { doc } = await readDocument<CollectionSlug, T>({
+    raw: documentRaw,
+    config,
     event,
+    context,
+    locale,
     depth,
-    withBlank: !hasSelect
+    select
   });
 
-  for (const hook of config.$hooks?.beforeRead || []) {
-    const result = await hook({
-      doc: document as RegisterCollection[CollectionSlug],
-      config,
-      operation: 'read',
-      event,
-      context
-    });
-    context = result.context;
-    document = result.doc as T;
-  }
-
-  return document as T;
+  return doc;
 };

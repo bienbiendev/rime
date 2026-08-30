@@ -1,5 +1,6 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
+import { runBeforeOperation, runDocHooks } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';
 import type { RequestEvent } from '@sveltejs/kit';
@@ -20,48 +21,45 @@ export const deleteById = async <T extends GenericDoc>(args: DeleteArgs): Promis
     isSystemOperation
   };
 
-  for (const hook of config.$hooks?.beforeOperation || []) {
-    const result = await hook({
-      config,
-      operation: 'delete',
-      event,
-      context
-    });
-    context = result.context;
-  }
+  context = await runBeforeOperation<CollectionSlug>({
+    config,
+    event,
+    operation: 'delete',
+    context
+  });
 
   const document = (await rime.adapter.collection.findById({
     slug: config.slug,
     id,
     draft: true
   })) as T;
+
   if (!document) {
     throw new RimeError(RimeError.NOT_FOUND);
   }
 
-  for (const hook of config.$hooks?.beforeDelete || []) {
-    const result = await hook({
-      doc: document,
-      config,
-      operation: 'delete',
-      event,
-      context
-    });
-    context = result.context;
-  }
+  const before = await runDocHooks<CollectionSlug, T>({
+    hooks: config.$hooks?.beforeDelete,
+    doc: document,
+    config,
+    event,
+    operation: 'delete',
+    context
+  });
+  context = before.context;
 
   await rime.adapter.collection.deleteById({ slug: config.slug, id });
 
-  for (const hook of config.$hooks?.afterDelete || []) {
-    const result = await hook({
-      doc: document,
-      config,
-      operation: 'delete',
-      event,
-      context
-    });
-    context = result.context;
-  }
+  // Deliberately the pre-hook document, matching the previous implementation: beforeDelete's
+  // returned doc was never carried into afterDelete.
+  await runDocHooks<CollectionSlug, T>({
+    hooks: config.$hooks?.afterDelete,
+    doc: document,
+    config,
+    event,
+    operation: 'delete',
+    context
+  });
 
   return args.id;
 };

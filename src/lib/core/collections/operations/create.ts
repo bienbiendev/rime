@@ -1,14 +1,18 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
+import {
+  assertUpsertContext,
+  persistRelational,
+  runBeforeOperation,
+  runDataHooks,
+  runDocHooks
+} from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
 import type { CollectionSlug } from '$lib/core/types/doc.js';
 import type { RegisterCollection } from '$lib/index.js';
 import { omitId } from '$lib/util/object.js';
 import type { DeepPartial } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { saveBlocks } from '../../operations/persist/blocks/index.server.js';
-import { saveRelations } from '../../operations/persist/relations/index.server.js';
-import { saveTreeBlocks } from '../../operations/persist/tree/index.server.js';
 
 type Args<T> = {
   data: DeepPartial<T>;
@@ -24,36 +28,32 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
   const { config, event, locale, isSystemOperation } = args;
   const { rime } = event.locals;
 
-  let data = args.data;
-
   let context: OperationContext<CollectionSlug> = { params: { locale }, isSystemOperation };
 
-  for (const hook of config.$hooks?.beforeOperation || []) {
-    const result = await hook({
-      config,
-      operation: 'create',
-      event,
-      context
-    });
-    context = result.context;
-  }
+  context = await runBeforeOperation<CollectionSlug>({
+    config,
+    event,
+    operation: 'create',
+    context
+  });
 
-  for (const hook of config.$hooks?.beforeCreate || []) {
-    const result = await hook({
-      data: data as DeepPartial<RegisterCollection[CollectionSlug]>,
-      config,
-      operation: 'create',
-      event,
-      context
-    });
-    context = result.context;
-    data = result.data as Partial<T>;
-  }
+  // chainConfig:false — see runDataHooks. Create does not carry an amended config from one
+  // hook to the next, unlike update.
+  const before = await runDataHooks<CollectionSlug, DeepPartial<T>, BuiltCollection>({
+    hooks: config.$hooks?.beforeCreate,
+    data: args.data,
+    config,
+    event,
+    operation: 'create',
+    context,
+    chainConfig: false
+  });
+  const data = before.data;
+  context = before.context;
 
-  if (!context.configMap)
-    throw new RimeError(RimeError.OPERATION_ERROR, 'missing config map @create');
+  assertUpsertContext(context, 'create', ['configMap']);
 
-  const incomingPaths = Object.keys(context.configMap);
+  const incomingPaths = Object.keys(context.configMap!);
 
   const created = await rime.adapter.collection.insert({
     slug: config.slug,
@@ -61,35 +61,15 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
     locale
   });
 
-  // Use the versionId for blocks, trees, and relations
-  const blocksDiff = await saveBlocks({
+  // Blocks, trees and relations hang off the version row, not the document row.
+  await persistRelational({
     context,
     ownerId: created.versionId,
-    data,
-    incomingPaths,
-    adapter: rime.adapter,
-    config
-  });
-
-  const treeDiff = await saveTreeBlocks({
-    context,
-    ownerId: created.versionId,
-    data,
-    incomingPaths,
-    adapter: rime.adapter,
-    config
-  });
-
-  await saveRelations({
-    ownerId: created.versionId,
-    configMap: context.configMap,
     data,
     incomingPaths,
     adapter: rime.adapter,
     config,
-    locale,
-    blocksDiff,
-    treeDiff
+    locale
   });
 
   /**
@@ -139,18 +119,17 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
     rime.setLocale(locale);
   }
 
-  for (const hook of config.$hooks?.afterCreate || []) {
-    const result = await hook({
-      doc: document as RegisterCollection[CollectionSlug],
-      config,
-      operation: 'create',
-      data: data as DeepPartial<RegisterCollection[CollectionSlug]>,
-      event,
-      context
-    });
-    context = result.context;
-    document = result.doc;
-  }
+  // Unlike afterUpdate, afterCreate's returned doc IS propagated — preserved as-is.
+  const after = await runDocHooks<CollectionSlug, T>({
+    hooks: config.$hooks?.afterCreate,
+    doc: document,
+    data,
+    config,
+    event,
+    operation: 'create',
+    context
+  });
+  document = after.doc;
 
   return document;
 };
