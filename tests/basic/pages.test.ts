@@ -1,13 +1,9 @@
 import { toKebabCase } from '$lib/util/string';
 import test, { expect } from '@playwright/test';
+import { panelUrl } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
-
-function panelUrl(...args: string[]) {
-  if (!args.length) return `${process.env.PUBLIC_RIME_URL}/panel`;
-  return `${process.env.PUBLIC_RIME_URL}/panel/${args.join('/')}`;
-}
 
 test.describe('Login form', () => {
   test('should login successfully with valid credentials', async ({ page }) => {

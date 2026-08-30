@@ -1,3 +1,4 @@
+import { env } from '$env/dynamic/private';
 import { PARAMS } from '$lib/core/constant.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import { getValueAtPath } from '$lib/util/object.js';
@@ -115,7 +116,7 @@ export const populateURL = Hooks.beforeRead<'generic'>(async (args) => {
 
     // Add the live url if needed
     if (config.live && event.locals.user && url) {
-      args.doc._live = `${process.env.PUBLIC_RIME_URL}/panel/live-edit?src=${url}&slug=${config.slug}&id=${args.doc.id}`;
+      args.doc._live = `${process.env.PUBLIC_RIME_URL}/${env.RIME_PANEL_ROUTE || 'panel'}/live-edit?src=${url}&slug=${config.slug}&id=${args.doc.id}`;
       args.doc._live += args.doc.versionId ? `&${PARAMS.VERSION_ID}=${args.doc.versionId}` : '';
       args.doc._live += locale ? `&${PARAMS.LOCALE}=${locale}` : '';
     }

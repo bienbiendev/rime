@@ -16,7 +16,7 @@ export const handler: Handle = async ({ event, resolve }) => {
   }
 
   // Do not cache panel routes
-  if (event.url.pathname.startsWith('/panel')) {
+  if (event.params.panel !== undefined) {
     return await resolve(event);
   }
 

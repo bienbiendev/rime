@@ -32,7 +32,7 @@
     if (doc._prototype === 'collection') {
       return `${panelUrl(kebabSlug, doc.id)}?versionId=${doc.versionId}`;
     } else {
-      return `${panelUrl(kebabSlug)}/panel/${toKebabCase(doc._type)}?versionId=${doc.versionId}`;
+      return `${panelUrl(kebabSlug)}?versionId=${doc.versionId}`;
     }
   });
 </script>

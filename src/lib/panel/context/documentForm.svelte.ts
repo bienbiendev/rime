@@ -7,6 +7,7 @@ import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { buildConfigMap } from '$lib/core/operations/configMap/index.js';
 import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '$lib/core/types/doc.js';
 import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
+import { panelUrl } from '$lib/panel/util/url.js';
 import type { FormField } from '$lib/types.js';
 import { normalizeFieldPath } from '$lib/util/doc.js';
 import { apiUrl, random } from '$lib/util/index.js';
@@ -684,12 +685,11 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
    * This function constructs the appropriate URL to which the form data will be submitted.
    */
   const buildPanelActionUrl = () => {
-    // Start with the base URI for the panel
-    let panelUri = `/panel/${config.kebab}`;
-    // Add the item ID to the URI if we're updating a collection doc
-    if (operation === 'update' && initial._prototype === 'collection' && initial.id) {
-      panelUri += `/${initial.id}`;
-    }
+    // Start with the base URI for the panel, adding the item ID if we're updating a collection doc
+    const panelUri =
+      operation === 'update' && initial._prototype === 'collection' && initial.id
+        ? panelUrl(config.kebab, initial.id)
+        : panelUrl(config.kebab);
     // Determine the appropriate action based on whether we're creating or updating
     const actionSuffix = operation === 'create' ? '/create?/create' : '?/update';
     // Add a redirect parameter if we're in a nested form ex: relation creation

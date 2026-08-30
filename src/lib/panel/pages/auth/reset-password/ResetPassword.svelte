@@ -6,6 +6,7 @@
   import { setFormContext } from '$lib/panel/context/form.svelte';
   import { confirmPasswordField, passwordField } from '$lib/panel/pages/auth/fields.js';
   import { authClient } from '$lib/panel/util/auth';
+  import { panelUrl } from '$lib/panel/util/url.js';
   import { toast } from 'svelte-sonner';
 
   let success = $state(false);
@@ -42,7 +43,7 @@
 <AuthForm image={data.image} title={t__('common.resetPassword')}>
   {#if success}
     <p>{t__('common.reset_password_success')}</p>
-    <Button size="xl" href="/panel/sign-in">{t__('common.signin')}</Button>
+    <Button size="xl" href={panelUrl('sign-in')}>{t__('common.signin')}</Button>
   {:else}
     <Text type="password" config={passwordConfig} {form} />
     <Text type="password" config={confirmPasswordConfig} {form} />

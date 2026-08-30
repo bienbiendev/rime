@@ -23,8 +23,9 @@
 
   let active = $derived.by(() => {
     const routePathname = new URL(route.url).pathname;
-    if (routePathname === '/panel') {
-      return pathname === '/panel';
+    const panelRoot = `/${page.params.panel}`;
+    if (routePathname === panelRoot) {
+      return pathname === panelRoot;
     }
     const reg = new RegExp(`^${routePathname}(/.*)?$`);
     return reg.test(pathname);

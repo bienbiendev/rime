@@ -6,7 +6,7 @@ import { withVersionsSuffix } from '$lib/core/naming.js';
 import type { GenericDoc } from '$lib/core/types/doc.js';
 import type { CollectionDocData } from '$lib/panel/index.js';
 import type { Route } from '$lib/panel/types.js';
-import { panelUrl } from '$lib/panel/util/url.js';
+import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
 import { apiUrl } from '$lib/util/index.js';
 import { toKebabCase } from '$lib/util/string.js';
@@ -23,6 +23,7 @@ export async function documentLoad<V extends boolean = boolean>(
   const { locale, user, rime } = event.locals;
   const { id } = event.params;
   const slug = event.params.slug || '';
+  const panelSegment = event.params.panel;
 
   if (!id) throw error(404, 'Not found');
 
@@ -73,21 +74,24 @@ export async function documentLoad<V extends boolean = boolean>(
 
   const collectionAria = {
     title: collection.config.label.plural,
-    url: panelUrl(collection.config.kebab)
+    url: panelUrlFor(panelSegment, collection.config.kebab)
   };
   if (collection.config.upload) {
     const paramUploadPath = event.url.searchParams.get('uploadPath') as UploadPath | null;
     const currentDirectoryPath = paramUploadPath || UPLOAD_PATH.ROOT_NAME;
     aria = [
-      { title: 'Dashboard', icon: 'dashboard', url: panelUrl() },
+      { title: 'Dashboard', icon: 'dashboard', url: panelUrlFor(panelSegment) },
       collectionAria,
-      ...buildUploadAria({ path: currentDirectoryPath, slug }),
+      ...buildUploadAria({ path: currentDirectoryPath, slug, panelSegment }),
       { title: undefined } // Will be populated by title context
     ];
   } else {
     aria = [
-      { title: 'Dashboard', icon: 'dashboard', url: panelUrl() },
-      { title: collection.config.label.plural, url: panelUrl(collection.config.kebab) },
+      { title: 'Dashboard', icon: 'dashboard', url: panelUrlFor(panelSegment) },
+      {
+        title: collection.config.label.plural,
+        url: panelUrlFor(panelSegment, collection.config.kebab)
+      },
       { title: undefined } // Will be populated by title context
     ];
   }

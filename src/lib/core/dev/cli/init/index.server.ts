@@ -9,7 +9,7 @@ import { cp, mkdir } from 'fs/promises';
 import fs from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { CONFIG_DIR, OUTPUT_DIR } from '../../constants.js';
+import { CONFIG_DIR, OUTPUT_DIR, PANEL_ROUTE } from '../../constants.js';
 import { generate } from '../generate/index.server.js';
 import { installDependencies } from '../util/package-manager.server.js';
 import { getPackageInfoByKey } from '../util/package.server.js';
@@ -36,6 +36,7 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
       BETTER_AUTH_SECRET: randomId(32),
       PUBLIC_RIME_URL: 'http://localhost:5173',
       RIME_CONFIG_DIR: CONFIG_DIR,
+      RIME_PANEL_ROUTE: PANEL_ROUTE,
       '# RIME_SMTP_USER': 'user@mail.com',
       '# RIME_SMTP_PASSWORD': 'supersecret',
       '# RIME_SMTP_PORT': '465',

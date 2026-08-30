@@ -1,5 +1,6 @@
 <script lang="ts">
   import { mimeTypeToIcon } from '$lib/panel/util/upload.js';
+  import { panelUrl } from '$lib/panel/util/url.js';
   import { Edit, FileIcon, X } from '@lucide/svelte';
 
   type Resource = {
@@ -40,7 +41,7 @@
 
   <div class="rz-card-resource__info">
     <p class="rz-card-resource__title">
-      {resource.title} <a href="/panel/{resource._type}/{resource.id}"><Edit size="12" /></a>
+      {resource.title} <a href={panelUrl(resource._type, resource.id)}><Edit size="12" /></a>
     </p>
     {#if isUpload}
       <p class="rz-card-resource__info-text">{resource.filesize}</p>

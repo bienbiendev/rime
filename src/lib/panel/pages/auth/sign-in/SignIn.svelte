@@ -8,6 +8,7 @@
   import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
   import { setFormContext } from '$lib/panel/context/form.svelte';
   import { emailField, passwordField } from '$lib/panel/pages/auth/fields.js';
+  import { panelPath, panelUrl } from '$lib/panel/util/url.js';
   import type { FormErrors } from '$lib/types.js';
   import { KeyRound } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
@@ -34,7 +35,7 @@
 
 <AuthForm image={data.image} title={t__('common.signin')}>
   {#if context.status !== 429}
-    <form method="POST" action="/panel/sign-in" use:enhance={context.enhance}>
+    <form method="POST" action={panelPath('sign-in')} use:enhance={context.enhance}>
       <Email config={emailField} form={context} />
       <Text
         type="password"
@@ -50,7 +51,7 @@
       </Button>
 
       {#if data.forgotPasswordEnabled}
-        <Button variant="link" href="/forgot-password">
+        <Button variant="link" href={panelUrl('forgot-password')}>
           {t__('common.forgotPassword')}
         </Button>
       {/if}

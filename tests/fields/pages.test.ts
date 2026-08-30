@@ -1,13 +1,8 @@
 import test, { expect, type Page } from '@playwright/test';
-import { API_BASE_URL, signIn } from '../util.js';
+import { API_BASE_URL, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
-
-function panelUrl(...args: string[]) {
-  if (!args.length) return `${process.env.PUBLIC_RIME_URL}/panel`;
-  return `${process.env.PUBLIC_RIME_URL}/panel/${args.join('/')}`;
-}
 
 async function loginAs(page: Page, email: string, password: string) {
   // Navigating to /sign-in while already authenticated redirects to /panel

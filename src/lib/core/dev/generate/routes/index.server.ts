@@ -1,3 +1,4 @@
+import { PANEL_ROUTE } from '$lib/core/dev/constants.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import type { Config } from '$lib/types.js';
 import fs from 'fs';
@@ -11,11 +12,14 @@ const projectRoot = process.cwd();
 /**
  * Main function to generate browser routes based on configuration.
  * commonRoutes is a fixed set of files (layout, sign-in, dashboard, the
- * matcher-disambiguated /panel/[slug=collection|area]/... and
+ * matcher-disambiguated [panel=panel]/[slug=collection|area]/... and
  * /api/[slug=collection|area]/... dynamic routes) — it no longer varies with
  * how many collections/areas are configured, so there's no per-collection/area
- * loop here anymore. The src/params/collection.ts and area.ts matchers backing
- * those routes DO bake in the actual slug list, so they're rewritten here too.
+ * loop here anymore. The folder is always the literal `[panel=panel]` segment;
+ * only src/params/panel.ts's matcher content varies with RIME_PANEL_ROUTE, so
+ * the URL itself can be hidden from admin-path scanners without ever renaming
+ * a directory. Same idea backs src/params/collection.ts and area.ts, which
+ * bake in the actual slug list — all three are rewritten here.
  */
 function generateRoutes<T extends Config>(config: T): void {
   logger.info('Routes generation...');
@@ -28,7 +32,7 @@ function generateRoutes<T extends Config>(config: T): void {
   // 2. Ensure base directories exist
   const rootRoutes = path.resolve(projectRoot, 'src', 'routes');
   const rimeRoutes = path.join(rootRoutes, '(rime)');
-  const panelRoute = path.join(rimeRoutes, 'panel');
+  const panelRoute = path.join(rimeRoutes, '[panel=panel]');
   const paramsDir = path.resolve(projectRoot, 'src', 'params');
 
   fs.rmSync(rimeRoutes, { recursive: true, force: true });
@@ -52,8 +56,11 @@ function generateRoutes<T extends Config>(config: T): void {
     }
   }
 
-  // 4. Write the [slug=collection]/[slug=area] param matchers, only when needed — and remove any
-  // stale matcher left over from a previous config that did have collections/areas.
+  // 4. Write the [panel=panel] param matcher — always present, unlike collection/area — plus
+  // the [slug=collection]/[slug=area] matchers, only when needed, removing any stale matcher
+  // left over from a previous config that did have collections/areas.
+  fs.writeFileSync(path.join(paramsDir, 'panel.ts'), paramMatcher([PANEL_ROUTE]));
+
   const collectionMatcherPath = path.join(paramsDir, 'collection.ts');
   if (hasCollections) {
     fs.writeFileSync(collectionMatcherPath, paramMatcher((config.collections || []).map((c) => c.kebab)));
@@ -72,7 +79,7 @@ function generateRoutes<T extends Config>(config: T): void {
   const customRoutes = config.panel?.routes;
   if (customRoutes) {
     for (const [route, routeConfig] of Object.entries(customRoutes)) {
-      const routePath = path.join('(rime)', 'panel', route);
+      const routePath = path.join('(rime)', '[panel=panel]', route);
       writeRouteFile(rootRoutes, routePath, 'page', customRoute(routeConfig));
     }
   }

@@ -14,6 +14,7 @@
   import { setLocaleContext } from '$lib/panel/context/locale.svelte';
   import { setTitleContext } from '$lib/panel/context/title';
   import { setUserContext } from '$lib/panel/context/user.svelte';
+  import { panelPath } from '$lib/panel/util/url.js';
   import type { GenericDoc, User } from '$lib/types';
   import { trycatchFetch } from '$lib/util/function';
   import { snapshot } from '$lib/util/state';
@@ -240,13 +241,8 @@
     const slug = data.slug;
     const id = data.doc.id;
 
-    // Start with the base URI for the panel
-    let panelUri = `/panel/${toKebabCase(slug)}`;
-
-    // Add the item ID to the URI if we're updating a collection doc
-    if (id) {
-      panelUri += `/${id}`;
-    }
+    // Start with the base URI for the panel, adding the item ID if present
+    const panelUri = id ? panelPath(toKebabCase(slug), id) : panelPath(toKebabCase(slug));
     return goto(panelUri);
   }
 

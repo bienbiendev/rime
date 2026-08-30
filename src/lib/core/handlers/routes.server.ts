@@ -1,3 +1,4 @@
+import { isPublicPanelAuthRoute } from '$lib/core/constant.js';
 import { prototypeKebabToSlug } from '$lib/core/naming.js';
 import buildNavigation from '$lib/panel/navigation.js';
 import { areaFormActions } from '$lib/panel/pages/area/actions.server.js';
@@ -61,9 +62,9 @@ export const routeHandlers = {
 export const handleRoutes: Handle = async ({ event, resolve }) => {
   const { rime, user } = event.locals;
 
-  const IS_SIGN_IN_ROUTE = event.url.pathname === '/panel/sign-in';
+  const IS_PUBLIC_AUTH_ROUTE = isPublicPanelAuthRoute(event.route.id);
   const IS_API_ROUTE = event.url.pathname.startsWith('/api');
-  const IS_PANEL_ROUTE = event.url.pathname.startsWith('/panel') && !IS_SIGN_IN_ROUTE;
+  const IS_PANEL_ROUTE = event.params.panel !== undefined && !IS_PUBLIC_AUTH_ROUTE;
 
   // event.params.slug comes straight from the URL, always kebab-case (see
   // src/params/collection.ts, area.ts). Collection/area slugs themselves are
@@ -80,7 +81,7 @@ export const handleRoutes: Handle = async ({ event, resolve }) => {
 
   // build panel navigation
   if (IS_PANEL_ROUTE && event.request.method === 'GET') {
-    event.locals.navigation = buildNavigation(rime.config.raw, user);
+    event.locals.navigation = buildNavigation(rime.config.raw, user, event.params.panel);
   }
 
   event.locals.routes = routeHandlers;

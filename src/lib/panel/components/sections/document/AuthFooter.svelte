@@ -7,6 +7,7 @@
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
   import { authClient } from '$lib/panel/util/auth';
+  import { panelUrl } from '$lib/panel/util/url.js';
   import validate from '$lib/util/validate';
   import { toast } from 'svelte-sonner';
   import Button from '../../ui/button/button.svelte';
@@ -27,7 +28,7 @@
   async function sendPasswordResetLink() {
     const { data, error } = await authClient.requestPasswordReset({
       email: form.values.email,
-      redirectTo: `/reset-password?slug=staff`
+      redirectTo: `${panelUrl('reset-password')}?slug=staff`
     });
     if (error && error.message) {
       toast.error(error.message);

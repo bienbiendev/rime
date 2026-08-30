@@ -2,7 +2,7 @@ import { PARAMS, UPLOAD_PATH } from '$lib/core/constant.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { extractData } from '$lib/core/operations/extract-data.server.js';
-import { panelUrl } from '$lib/panel/util/url.js';
+import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
 import { toKebabCase } from '$lib/util/string.js';
 import { type Actions, type RequestEvent } from '@sveltejs/kit';
@@ -16,6 +16,7 @@ export const collectionFormActions: Actions = {
    */
   create: async (event: RequestEvent) => {
     const { rime, locale } = event.locals;
+    const panelSegment = event.params.panel;
 
     const slug = event.params.slug;
     if (!rime.config.isCollection(slug)) {
@@ -53,7 +54,7 @@ export const collectionFormActions: Actions = {
     const params = collection.config.upload
       ? `?${PARAMS.UPLOAD_PATH}=${data._path || UPLOAD_PATH.ROOT_NAME}`
       : '';
-    const redirectUrl = `${panelUrl(toKebabCase(slug), document.id)}${params}`;
+    const redirectUrl = `${panelUrlFor(panelSegment, toKebabCase(slug), document.id)}${params}`;
 
     return {
       redirectUrl,
@@ -69,6 +70,7 @@ export const collectionFormActions: Actions = {
    */
   update: async (event: RequestEvent) => {
     const { rime, locale } = event.locals;
+    const panelSegment = event.params.panel;
     const slug = event.params.slug || '';
     const id = event.params.id || '';
     const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
@@ -101,7 +103,7 @@ export const collectionFormActions: Actions = {
       return {
         document,
         message: t__('common.version_created'),
-        redirectUrl: `${panelUrl(toKebabCase(slug), document.id)}/versions?versionId=${document.versionId}`
+        redirectUrl: `${panelUrlFor(panelSegment, toKebabCase(slug), document.id)}/versions?versionId=${document.versionId}`
       };
     }
 

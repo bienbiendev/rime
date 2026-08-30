@@ -5,7 +5,7 @@ import { withVersionsSuffix } from '$lib/core/naming.js';
 import type { AreaSlug } from '$lib/core/types/doc.js';
 import type { AreaDocData } from '$lib/panel/index.js';
 import type { Route } from '$lib/panel/types.js';
-import { panelUrl } from '$lib/panel/util/url.js';
+import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
 import { apiUrl } from '$lib/util/index.js';
 import { toKebabCase } from '$lib/util/string.js';
@@ -19,6 +19,7 @@ export async function areaLoad<V extends boolean = boolean>(
   const { locals, url, fetch } = event;
   const { rime, locale } = locals;
   const slug = (event.params.slug || '') as AreaSlug;
+  const panelSegment = event.params.panel;
 
   const area = rime.area(slug);
   const authorizedRead = area.config.access.read(locals.user, {});
@@ -29,7 +30,7 @@ export async function areaLoad<V extends boolean = boolean>(
   }
 
   const aria: Partial<Route>[] = [
-    { title: 'Dashboard', icon: 'dashboard', url: panelUrl() },
+    { title: 'Dashboard', icon: 'dashboard', url: panelUrlFor(panelSegment) },
     { title: area.config.label }
   ];
 

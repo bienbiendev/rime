@@ -1,6 +1,7 @@
 import test, { expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { panelUrl, panelUrlRe } from '../util.js';
 
 // Reused from tests/basic rather than adding a new binary fixture just for this suite.
 const FIXTURE_IMAGE = readFileSync(
@@ -13,11 +14,6 @@ const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 // dev/prod passes share the same sqlite db (built with `rime build -d`), so
 // suffix anything that must be unique (staff email) per pass.
 const SUFFIX = process.env.CONSUMER_TEST_SUFFIX || 'run';
-
-function panelUrl(...args: string[]) {
-  const base = process.env.PUBLIC_RIME_URL;
-  return args.length ? `${base}/panel/${args.join('/')}` : `${base}/panel`;
-}
 
 let adminId: string | undefined;
 
@@ -86,7 +82,7 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   // initTitle effect), so it already shows `title` the moment it was typed - it's not
   // proof the create+redirect actually completed. Wait for the URL to actually move off
   // /create before doing anything else, or the next step can race ahead of the redirect.
-  await page.waitForURL(/\/panel\/pages\/(?!create$)[^/]+$/);
+  await page.waitForURL(panelUrlRe('pages'));
   await page.waitForLoadState('networkidle');
   await expect(page.locator('.rz-page-header__row h1')).toHaveText(title);
 
@@ -104,7 +100,7 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
     .pressSequentially(PASSWORD, { delay: 50 });
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await page.waitForURL(/\/panel\/staff\/(?!create$)[^/]+$/);
+  await page.waitForURL(panelUrlRe('staff'));
   await page.waitForLoadState('networkidle');
   await expect(page.locator('.rz-page-header__row h1')).toHaveText(staffEmail);
 
@@ -124,7 +120,7 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   await page.locator('input.rz-input[name="alt"]').pressSequentially('A landscape', { delay: 50 });
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await page.waitForURL(/\/panel\/medias\/(?!create$)[^/]+$/);
+  await page.waitForURL(panelUrlRe('medias'));
   await page.waitForLoadState('networkidle');
   await expect(page.locator('.rz-page-header__row h1')).toHaveText(mediaFilename);
 
