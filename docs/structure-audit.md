@@ -1,8 +1,48 @@
-# `src/lib/core` — structure audit & proposed target
+# `src/lib/core` — structure audit & target
 
-> Status: proposal. Nothing in this document has been applied to the code yet.
-> It describes what is there today, why it reads the way it does, and a target
-> structure with a phased, mechanical migration path.
+> Status: **applied.** All five phases below have landed. Sections 3 and 4
+> describe the layout as it was _before_ the change, and are kept as the record of
+> why it moved; sections 6 onward describe the layout as it is now.
+
+## 0. Outcome
+
+`ls src/lib/core` before → after:
+
+```
+areas/  collections/  config/  operations/       factory/  operations/  features/
+dev/  errors/  fields/  handlers/  i18n/     →   local-api/  rest/  handlers/
+logger/  plugins/  types/                        plugins/  dev/  errors/  fields/
+                                                 i18n/  logger/  types/
+```
+
+Two directories are gone (`collections/`, `areas/`) and four are new
+(`factory/`, `features/`, `local-api/`, `rest/`). Hooks live in one place per
+feature; the pipeline order lives in one file; the update pipeline is written
+once instead of twice.
+
+Two things turned out differently from the plan, both simplifications:
+
+- **`augment-title` needed no `titleFallback` parameter** (§6.4). The area
+  variant is the collection one minus branches that cannot fire on an area, so
+  the collection implementation applied to an area already falls through to
+  `id`. One file, same behaviour, no new knob.
+- **`operations/` kept a prototype split** — `operations/collection/` and
+  `operations/area/` — rather than merging every operation into one flat folder.
+  `runUpdate` removed the duplicated _pipeline_; what is left in each file is
+  genuinely per-prototype (which adapter method writes, how the document is read
+  back) and `find` exists for both.
+
+Verification at the final commit: **334 e2e tests green across all six
+Playwright suites** (basic 78, multilang 74, versions 50, versions-multilang 57,
+fields 72, empty 3), vitest 85/85, madge 7 cycles (unchanged from the
+pre-refactor baseline), and `bun run package` → publint "All good!".
+
+`svelte-check` result depends on which config is generated, and matched the
+pre-refactor baseline at every phase: 0 errors under a config that declares
+`$smtp` (e.g. `basic`), 1 under one that does not (e.g. `versions`). That one
+error is pre-existing and unrelated — `create-better-auth-user.server.ts` calls
+`sendMail` on `plugins.mailer`, which `InferCorePlugins` types as
+`Record<string, never>` when there is no `$smtp` in the config.
 
 ## 1. Scope & method
 
@@ -33,7 +73,7 @@ where "builder" is the correct word, and it is imported from `fields/`,
 
 ---
 
-## 3. Current map
+## 3. The layout before
 
 ```
 src/lib/core/                            LOC   files
@@ -282,10 +322,11 @@ flowchart TB
 operations/
   types.ts             Operation, Timing, HookContext, Hook, OperationContext
   hooks.ts             the `Hooks` factory helper
-  pipeline.server.ts   THE big picture — collectionPipeline + areaPipeline, one file
-  run.server.ts        the 8 shared steps, written once, prototype-parameterized
-  create.ts  find.ts  find-by-id.ts  update.ts  delete.ts  delete-by-id.ts  duplicate.ts
-  steps/               the ~12 remaining generic steps, flat — pipeline.server.ts is the index
+  pipeline.server.ts   THE big picture — collectionPipeline + areaPipeline + directoriesPipeline
+  run.server.ts        the shared steps, written once, prototype-parameterized
+  collection/          create, find, find-by-id, update-by-id, delete, delete-by-id, duplicate
+  area/                find, update
+  steps/               the remaining generic steps, flat — pipeline.server.ts is the index
   persist/             blocks/  relations/  tree/
   config-map/
 ```
@@ -370,9 +411,10 @@ in two different places: `augment-metas` in `factory/shared/`, `augment-url` in
 `features/url/`, `augment-versions` in `features/versions/` — a duplicated augment
 that belongs to a feature goes to the feature, not to `shared/`.
 
-`augment-title` keeps its one real difference as a feature-supplied `titleFallback`
-(upload → `filename`, auth → `email` / `name`) rather than a hard-coded `switch` on
-`config.upload` and `config.auth` inside the shared augment.
+`augment-title` needed no `titleFallback` parameter in the end: the area variant was the
+collection one minus the `upload` and `auth` branches, and an area has neither, so the
+collection implementation applied to an area already falls through to `id`. One shared file,
+same behaviour.
 
 ---
 
@@ -422,6 +464,8 @@ named export, so there is exactly one place to read.
 ---
 
 ## 8. Move table
+
+What was moved, and where to. Kept as the record of the migration.
 
 | from                                                                                | to                                                                                                                             |
 | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -559,7 +603,7 @@ each phase wants its own commit.
 
 ## 10. Phased migration
 
-Each phase is independently shippable and independently testable.
+Each phase was shipped and verified independently — one commit each, in this order.
 
 | #   | phase                         | changes                                                                                                                                                                                                                                                                 | risk   |
 | --- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
@@ -569,8 +613,10 @@ Each phase is independently shippable and independently testable.
 | 4   | **`factory/` merge**          | `collections/config` + `areas/config` + `config/` → `core/factory/`. Dedupe `augment-metas` and `augment-title` into `factory/shared/`. Touches §9.1 — do it in its own commit and run the inference spot-check.                                                        | medium |
 | 5   | **Naming pass**               | kebab-case throughout; `extract-data` → `rest/`; barrels; inline the single-file-folder ceremony from §4.8.                                                                                                                                                             | low    |
 
-Phase 3 is where the real win is and where the real risk is. Phases 1, 2, 4 and 5
-are `git mv` plus import rewrites, verifiable by `bun run check` alone.
+Phase 3 was where the real win and the real risk were, and it split into 3a
+(mechanical moves) and 3b (`run.server.ts`). Phases 1, 2, 4 and 5 were `git mv`
+plus import rewrites, done with a codemod that resolves each specifier against
+the old tree and re-emits it from the importer's new location.
 
 ### Verification for each phase
 

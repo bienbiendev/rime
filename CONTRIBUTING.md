@@ -31,9 +31,14 @@ bun install
 ## Add your .env file
 
 ```bash
+# Must be at least 32 characters, or better-auth warns on every boot
 BETTER_AUTH_SECRET=supersecret
 
 PUBLIC_RIME_URL=http://localhost:5173
+
+# Where your config lives. Required in this repo: `rime:use` copies each test
+# config to src/lib/+rime, while RIME_CONFIG_DIR defaults to src/+rime.
+RIME_CONFIG_DIR=src/lib/+rime
 RIME_CACHE_ENABLED=false
 RIME_LOG_LEVEL=TRACE
 RIME_LOG_TO_FILE=true
