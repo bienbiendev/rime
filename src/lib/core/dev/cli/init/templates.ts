@@ -1,10 +1,13 @@
 import { randomId } from '$lib/util/random.js';
-import { configImportPaths, OUTPUT_DIR } from '../../constants.js';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { CONFIG_DIR, GENERATED_DIR, configImportPaths } from '../../constants.js';
 
 const PACKAGE = 'rimecms';
 
 export const env = () => `BETTER_AUTH_SECRET=${randomId(32)}
 PUBLIC_RIME_URL=http://localhost:5173
+RIME_CONFIG_DIR=${CONFIG_DIR}
 
 # RIME_CACHE_ENABLED=false
 # RIME_SMTP_USER=user@mail.com
@@ -44,7 +47,7 @@ export const drizzleConfig = (name: string) => `
 import { defineConfig, type Config } from 'drizzle-kit';
 
 export const config: Config = {
-  schema: './src/lib/${OUTPUT_DIR}/schema.server.ts',
+  schema: './${GENERATED_DIR}/schema.server.ts',
   out: './db',
   strict: false,
   dialect: 'sqlite',
@@ -58,9 +61,58 @@ export default defineConfig(config);
 
 // Regenerated fresh by rime init every time (setHooks() only skips if the file already
 // exists, and `rime clear`/useConfig.js delete it first) — safe to make mode-aware.
+const HOOKS_DIR = path.resolve(process.cwd(), 'src');
+
 export const hooks = () => `import { sequence } from '@sveltejs/kit/hooks';
 import { handlers } from '${PACKAGE}/server';
-import config from '.${configImportPaths().server.replace('$lib', '/lib')}';
+import config from '${configImportPaths(HOOKS_DIR).server}';
 
 export const handle = sequence(...(await handlers(config)));
 `;
+
+/** Writes src/hooks.server.ts if missing, or rewrites it if its content would differ from
+ * what's expected now (e.g. after RIME_CONFIG_DIR changes the import path) — called both at
+ * `rime init` and whenever the dev server detects a config change, so it never goes stale
+ * between the two. Returns whether it wrote anything. */
+export function regenerateHooks(root: string = process.cwd()): boolean {
+  const hooksPath = path.join(root, 'src', 'hooks.server.ts');
+  const srcDir = path.join(root, 'src');
+  const content = hooks();
+
+  if (!existsSync(hooksPath)) {
+    if (!existsSync(srcDir)) {
+      mkdirSync(srcDir, { recursive: true });
+    }
+    writeFileSync(hooksPath, content, 'utf-8');
+    return true;
+  }
+  if (readFileSync(hooksPath, 'utf-8') !== content) {
+    writeFileSync(hooksPath, content, 'utf-8');
+    return true;
+  }
+  return false;
+}
+
+const DRIZZLE_SCHEMA_LINE_REGEX = /^\s*schema:\s*['"][^'"]*['"],?\s*$/m;
+
+/** Patches drizzle.config.ts's schema path line if it's stale (e.g. after RIME_CONFIG_DIR
+ * changes) — only that one line, since the rest of the file may carry real customizations
+ * (verbose, custom fields, etc.). Must run before generateSchema()'s own drizzle-kit
+ * generate/migrate shell-out, which reads this file from disk. No-op if the file doesn't
+ * exist — creating it from scratch needs a project name, which is `rime init`'s job
+ * (setDrizzle() in init/index.server.ts). Returns whether it patched anything. */
+export function regenerateDrizzleConfig(root: string = process.cwd()): boolean {
+  const drizzleConfigPath = path.join(root, 'drizzle.config.ts');
+  if (!existsSync(drizzleConfigPath)) return false;
+
+  const expectedSchemaLine = `  schema: './${GENERATED_DIR}/schema.server.ts',`;
+  const content = readFileSync(drizzleConfigPath, 'utf-8');
+  if (DRIZZLE_SCHEMA_LINE_REGEX.test(content) && !content.includes(expectedSchemaLine)) {
+    writeFileSync(
+      drizzleConfigPath,
+      content.replace(DRIZZLE_SCHEMA_LINE_REGEX, expectedSchemaLine)
+    );
+    return true;
+  }
+  return false;
+}

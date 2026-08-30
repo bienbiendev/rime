@@ -5,7 +5,7 @@ import { babelParse } from 'ast-kit';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logger } from '../../../logger/index.server.js';
-import { INPUT_DIR, OUTPUT_DIR } from '../../constants.js';
+import { CONFIG_DIR, GENERATED_DIR, OUTPUT_DIR } from '../../constants.js';
 
 /**
  * $ prefix-based sanitizer that rules:
@@ -22,8 +22,8 @@ const TOP_LEVEL_CONFIG = 'rime.config.server.ts';
 
 export async function sanitize() {
   const root = process.cwd();
-  const configDir = path.resolve(root, 'src/lib/', INPUT_DIR);
-  const outputDir = path.resolve(root, 'src/lib/', OUTPUT_DIR);
+  const configDir = path.resolve(root, CONFIG_DIR);
+  const outputDir = path.resolve(root, GENERATED_DIR);
 
   logger.info('Sanitizing config...');
 

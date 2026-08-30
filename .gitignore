@@ -36,8 +36,7 @@ drizzle.config.ts
 src/app.generated.d.ts
 src/rime.generated.d.ts
 src/rime.modules.generated.d.ts
-src/lib/+rime/*
-src/lib/+rime.generated
+src/lib/+rime*
 src/lib/config
 assets/src
 static/medias

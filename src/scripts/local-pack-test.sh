@@ -36,6 +36,11 @@ done
 [[ -n "$FIELD_PACKAGE" ]] || { echo "--field-package is required (a tarball path or npm package spec)"; exit 1; }
 command -v sqlite3 >/dev/null || { echo "sqlite3 is required (used to verify the plugin's migration actually ran)"; exit 1; }
 
+# Always test the CLI's actual default. Without this, this repo's own .env (RIME_CONFIG_DIR=
+# src/lib/+rime, picked up by an autoenv-style shell plugin on cd into this repo) leaks into
+# every child process spawned below, including the scaffolded test apps' own `rime init`.
+unset RIME_CONFIG_DIR
+
 WORK_DIR="$BASE_DIR/$APP_NAME"
 ADMIN_EMAIL="${TESTS_ADMIN_EMAIL:-admin@email.com}"
 ADMIN_PASSWORD="${TESTS_ADMIN_PASSWORD:-a&1Aa&1A}"
@@ -66,8 +71,12 @@ resolve_package_spec() {
   if [[ -d "$spec" ]]; then
     (
       cd "$spec"
-      echo "  rebuilding $spec from source" >&2
       pnpm add "$TARBALL" >&2
+      # local-pack only builds — it never runs `rime generate`, so without this src/routes,
+      # +rime.generated, hooks.server.ts, and drizzle.config.ts stay whatever they were the
+      # last time *anyone* generated them, possibly with an older rime, not the tarball just
+      # installed above.
+      pnpm exec rime generate >&2
       local pack_output
       pack_output=$(pnpm local-pack)
       local tarball
@@ -110,8 +119,8 @@ run_ui_tests() {
 # Copies the plugin+field config into place before `rime init` runs, so init's own generate()
 # picks it up.
 copy_plugin_config() {
-  mkdir -p "$WORK_DIR/src/lib/+rime"
-  cp -rf "$ROOT_DIR/tests/consumer/lib/+rime/"* "$WORK_DIR/src/lib/+rime/"
+  mkdir -p "$WORK_DIR/src/+rime"
+  cp -rf "$ROOT_DIR/tests/consumer/+rime/"* "$WORK_DIR/src/+rime/"
 }
 
 # Verifies the plugin+field config actually mounted: schema + db table.
@@ -120,7 +129,7 @@ verify_plugin_mounted() {
     cd "$WORK_DIR"
 
     # Schema always lands here.
-    SCHEMA_FILE="src/lib/+rime.generated/schema.server.ts"
+    SCHEMA_FILE="src/+rime.generated/schema.server.ts"
     grep -q "pluginVisits" "$SCHEMA_FILE" || {
       echo "generated schema is missing the plugin's pluginVisits table"
       cat "$SCHEMA_FILE"

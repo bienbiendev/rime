@@ -9,7 +9,7 @@ import { cp, mkdir } from 'fs/promises';
 import fs from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { INPUT_DIR } from '../../constants.js';
+import { CONFIG_DIR, OUTPUT_DIR } from '../../constants.js';
 import { generate } from '../generate/index.server.js';
 import { installDependencies } from '../util/package-manager.server.js';
 import { getPackageInfoByKey } from '../util/package.server.js';
@@ -35,6 +35,7 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
     const envUpdates: Record<string, string> = {
       BETTER_AUTH_SECRET: randomId(32),
       PUBLIC_RIME_URL: 'http://localhost:5173',
+      RIME_CONFIG_DIR: CONFIG_DIR,
       '# RIME_SMTP_USER': 'user@mail.com',
       '# RIME_SMTP_PASSWORD': 'supersecret',
       '# RIME_SMTP_PORT': '465',
@@ -67,7 +68,7 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
   }
 
   function setConfig(name: string) {
-    const configDirPath = path.resolve(root, 'src/lib', INPUT_DIR);
+    const configDirPath = path.resolve(root, CONFIG_DIR);
     const configPath = path.join(configDirPath, 'rime.config.server.ts');
 
     if (!existsSync(configPath)) {
@@ -100,20 +101,24 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
 
     let gitignoreContent = readFileSync(gitignorePath, 'utf-8');
 
+    // OUTPUT_DIR is derived from RIME_CONFIG_DIR, so its first character isn't always '+' —
+    // escape every regex metacharacter generically instead of hand-picking one to backslash.
+    const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
     const updates = [
-      '\\.cache',
+      '.cache',
       '/logs',
       '/db',
-      '\\+rime.generated',
+      OUTPUT_DIR,
       'src/app.generated.d.ts',
       'src/rime.generated.d.ts'
     ];
     if (!gitignoreContent.includes('# rime')) gitignoreContent += '\n# rime';
     for (const line of updates) {
-      const exists = gitignoreContent.match(new RegExp(`^${line}`, 'm'));
+      const exists = gitignoreContent.match(new RegExp(`^${escapeRegExp(line)}`, 'm'));
       if (!exists) {
         // Add new value if doesn't exist
-        gitignoreContent += `\n${line.replace('\\', '')}`;
+        gitignoreContent += `\n${line}`;
       }
     }
     writeFileSync(gitignorePath, gitignoreContent);
@@ -125,9 +130,13 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
     if (!existsSync(drizzleConfigPath)) {
       writeFileSync(drizzleConfigPath, templates.drizzleConfig(name.toString()));
       logger.info('[✓] Drizzle config added');
-    } else {
-      logger.info('[✓] Drizzle config already exists (skip)');
+      return;
     }
+    logger.info(
+      templates.regenerateDrizzleConfig(root)
+        ? '[✓] Drizzle config schema path updated'
+        : '[✓] Drizzle config already exists (skip)'
+    );
   }
 
   function configureVite(): void {
@@ -235,24 +244,6 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
     return null;
   }
 
-  function setHooks() {
-    const hooksPath = path.join(root, 'src', 'hooks.server.ts');
-    const srcDir = path.join(root, 'src');
-
-    // Check if file exists
-    if (!existsSync(hooksPath)) {
-      // Ensure src directory exists
-      if (!existsSync(srcDir)) {
-        mkdirSync(srcDir, { recursive: true });
-      }
-      // Create hooks.server.ts with template content
-      writeFileSync(hooksPath, templates.hooks(), 'utf-8');
-      logger.info('[✓] hooks.server.ts created');
-    } else {
-      logger.info('[✓] hooks.server.ts already exists (skip)');
-    }
-  }
-
   async function copyAssets() {
     try {
       const currentDir = path.dirname(fileURLToPath(import.meta.url));
@@ -277,7 +268,6 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
     setConfig(name);
     setDatabase();
     setDrizzle(name);
-    setHooks();
     configureVite();
     await copyAssets();
     !skipInstall && installDependencies();
@@ -306,7 +296,6 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
     setConfig(name);
     setDatabase();
     setDrizzle(name);
-    setHooks();
     configureVite();
     await copyAssets();
     !skipInstall && installDependencies();

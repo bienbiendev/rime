@@ -12,6 +12,7 @@ import { createConfigContext } from './config/config-context.server.js';
 import type { BuildConfig } from './config/server/index.server.js';
 import validate from './config/server/validate.server.js';
 import writeMemo from './config/server/write.server.js';
+import { regenerateDrizzleConfig, regenerateHooks } from './dev/cli/init/templates.js';
 import generateRoutes from './dev/generate/routes/index.server.js';
 import generateTypes from './dev/generate/types/index.server.js';
 import { RimeError } from './errors/index.js';
@@ -57,8 +58,13 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
       }
       if (changed) {
         generateRoutes(config);
+        // Before generateSchema(): it shells out to drizzle-kit generate/migrate, which read
+        // drizzle.config.ts's schema path straight off disk — stale here means the wrong (or
+        // missing) schema file.
+        regenerateDrizzleConfig();
         await generateSchema(config);
         await generateTypes(config);
+        regenerateHooks();
       } else {
         logger.debug('Nothing to generate');
       }

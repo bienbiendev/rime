@@ -1,35 +1,43 @@
 import type { BuiltCollection } from '$lib/types.js';
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { INPUT_DIR, OUTPUT_DIR, schemaPath } from './dev/constants.js';
+import { CONFIG_DIR, GENERATED_DIR, generatedConfigServerPath, schemaPath } from './dev/constants.js';
 
 const projectRoot = process.cwd();
 
 /**
- * Ensure sanitize config exists — the generated server config inside rime.generated/.
+ * Ensure sanitize config exists — the generated server config inside the generated config dir.
  */
 export function ensureGeneratedConfig() {
-  const configGeneratedPath = path.resolve(
-    projectRoot,
-    'src/lib',
-    OUTPUT_DIR,
-    'rime.config.server.ts'
-  );
+  const configGeneratedPath = path.resolve(projectRoot, GENERATED_DIR, 'rime.config.server.ts');
   if (!existsSync(configGeneratedPath)) {
     throw new Error('Unable to find generated config');
   }
-  return path.join('$lib', OUTPUT_DIR, 'rime.config.server.js');
+  return generatedConfigServerPath();
 }
 
 /**
- * Ensure user config exists — the src/lib/+rime/ folder convention.
+ * Ensure user config exists — the CONFIG_DIR folder convention.
  */
 export function ensureUserConfigExist() {
-  const folderConfig = path.resolve(projectRoot, 'src/lib', INPUT_DIR, 'rime.config.server.ts');
+  const folderConfig = path.resolve(projectRoot, CONFIG_DIR, 'rime.config.server.ts');
+  if (existsSync(folderConfig)) return;
 
-  if (!existsSync(folderConfig)) {
-    throw new Error('Unable to find config, did you run rime init');
+  // Every project set up before RIME_CONFIG_DIR existed has its config here — if it's there
+  // but not at CONFIG_DIR, this is almost certainly an upgrade whose .env predates the env
+  // var, not a missing init, so say that instead of the generic message.
+  const LEGACY_DEFAULT = 'src/lib/+rime';
+  if (
+    CONFIG_DIR !== LEGACY_DEFAULT &&
+    existsSync(path.resolve(projectRoot, LEGACY_DEFAULT, 'rime.config.server.ts'))
+  ) {
+    throw new Error(
+      `Unable to find config at ${CONFIG_DIR} — found one at ${LEGACY_DEFAULT} instead. ` +
+        `Set RIME_CONFIG_DIR=${LEGACY_DEFAULT} in your .env to keep using it there, or move it to ${CONFIG_DIR} to match the current default.`
+    );
   }
+
+  throw new Error('Unable to find config, did you run rime init');
 }
 
 /**

@@ -20,7 +20,7 @@ import { trycatchSync } from '$lib/util/function.js';
 import { capitalize, toPascalCase } from '$lib/util/string.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { isInstalledDependency, OUTPUT_DIR } from '../../constants.js';
+import { GENERATED_DIR, isInstalledDependency, relativeImportSpecifier } from '../../constants.js';
 
 const IS_RIME_REPO = !isInstalledDependency(import.meta.url);
 
@@ -282,7 +282,11 @@ export async function generateTypesString<T extends Config>(config: T) {
   const blocksTypeNames = `export type BlockTypes = ${registeredBlocks.map((name) => `'${name}'`).join('|')}\n`;
   const anyBlock = `export type AnyBlock = ${registeredBlocks.map((name) => `Block${toPascalCase(name)}`).join('|')}\n`;
   const typeImports = `import type { ${Array.from(imports).join(', ')} } from '${PACKAGE_NAME}/types'`;
-  const rimeConfigServerPath = `./lib/${OUTPUT_DIR}/rime.config.server.ts`;
+  // app.generated.d.ts always sits at src/app.generated.d.ts (see generateTypes() below).
+  const rimeConfigServerPath = relativeImportSpecifier(
+    path.resolve(process.cwd(), 'src'),
+    path.resolve(process.cwd(), GENERATED_DIR, 'rime.config.server.ts')
+  );
 
   const locals = `declare global {
   namespace App {

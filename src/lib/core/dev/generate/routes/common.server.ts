@@ -1,6 +1,10 @@
 import { PACKAGE_NAME } from '$lib/core/constant.server.js';
+import path from 'node:path';
 import { configImportPaths } from '../../constants.js';
 import type { Routes } from './util.server.js';
+
+const PANEL_LAYOUT_DIR = path.resolve(process.cwd(), 'src/routes/(rime)/panel');
+const LIVE_PAGE_DIR = path.resolve(process.cwd(), 'src/routes/(rime)/panel/live-edit');
 
 
 /**
@@ -159,7 +163,7 @@ export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.r
 const panelLayout = () => `
 <script>
   import { Panel } from '${PACKAGE_NAME}/panel';
-	import config from '${configImportPaths().client}';
+	import config from '${configImportPaths(PANEL_LAYOUT_DIR).client}';
 
 	const { children, data } = $props();
 	
@@ -213,7 +217,7 @@ export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.d
 const livePage = () => `
 <script>
   import { Live } from '${PACKAGE_NAME}/panel';
-  import config from '${configImportPaths().client}';
+  import config from '${configImportPaths(LIVE_PAGE_DIR).client}';
 
   const { data } = $props();
 </script>

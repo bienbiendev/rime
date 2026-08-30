@@ -1,6 +1,7 @@
 import type { Dic } from '$lib/util/types.js';
 import { flatten } from 'flat';
 import cache from '../../dev/cache/index.server.js';
+import { CONFIG_DIR } from '../../dev/constants.js';
 
 /**
  * We actually need to serialize config values that will trigger
@@ -61,6 +62,10 @@ const writeMemo = <T extends object>(config: T) => {
         throw new Error(`Config error : Unable to parse value for key ${key}: ${err.message}`);
       }
     })
+    // Not part of the user's config object, but generated output (routes, schema, hooks) is
+    // relative to it — a RIME_CONFIG_DIR change must invalidate the memo just like a config
+    // change does, even when the config content itself is byte-identical.
+    .concat(`CONFIG_DIR:${CONFIG_DIR}`)
     .join('\n');
 
   const cached = cache.get('config');

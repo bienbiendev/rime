@@ -1,4 +1,3 @@
-import dotenv from 'dotenv';
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Plugin, UserConfig } from 'vite';
@@ -6,7 +5,13 @@ import { RIME_DEV_CACHE_DIR } from '../../constant.server.js';
 import { ensureHasInit } from '../../ensure.server.js';
 import { logger } from '../../logger/index.server.js';
 import { getPackageInfoByKey } from '../cli/util/package.server.js';
-import { INPUT_DIR, isInstalledDependency, OUTPUT_DIR, schemaPath } from '../constants.js';
+import {
+  CONFIG_DIR,
+  GENERATED_DIR,
+  generatedConfigServerPath,
+  isInstalledDependency,
+  schemaPath
+} from '../constants.js';
 import {
   findInstalledPackageRoot,
   findModulePair,
@@ -16,7 +21,6 @@ import {
 import { parseExportNames } from '../generate/runtime/parse-exports.server.js';
 import { sanitize } from '../generate/sanitize/index.server.js';
 
-dotenv.config({ override: true });
 const dev = process.env.NODE_ENV === 'development';
 
 /** Picks the client or server side of a module.(server.)ts pair. When the requested side
@@ -158,9 +162,8 @@ export function rime(): Plugin {
           try {
             // ssrLoadModule wants the real .ts file path, not a $lib/*.js-style import
             // specifier — different consumer than configImportPaths() (used for generated
-            // source code), so computed directly here.
-            const serverConfigPath = `src/lib/${OUTPUT_DIR}/rime.config.server.ts`;
-            const mod = await server.ssrLoadModule(serverConfigPath);
+            // source code).
+            const mod = await server.ssrLoadModule(generatedConfigServerPath());
             // The config's default export is the createRime() promise; ssrLoadModule
             // only awaits the module's synchronous evaluation, so we must await it
             // directly to observe init errors (e.g. invalid config) here instead of
@@ -179,9 +182,7 @@ export function rime(): Plugin {
       }
 
       server.watcher.on('change', (modulePath) => {
-        const isConfigChange =
-          modulePath.includes(`src/lib/${INPUT_DIR}`) &&
-          !modulePath.includes(`src/lib/${OUTPUT_DIR}`);
+        const isConfigChange = modulePath.includes(CONFIG_DIR) && !modulePath.includes(GENERATED_DIR);
 
         if (!isConfigChange) return;
 

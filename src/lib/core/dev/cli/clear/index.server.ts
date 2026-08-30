@@ -2,15 +2,15 @@ import { RIME_DEV_CACHE_DIR } from '$lib/core/constant.server.js';
 import { logger } from '$lib/core/logger/index.server.js';
 import { rmSync } from 'node:fs';
 import path from 'node:path';
-import { INPUT_DIR, OUTPUT_DIR } from '../../constants.js';
+import { CONFIG_DIR, GENERATED_DIR } from '../../constants.js';
 import { prompt } from '../util/prompt.server.js';
 
 const clearMessage = `Are you sure you want to delete all related rime files (Y/n):
 - ./static/medias
 - ./db
 - ./src/routes/(rime)
-- ./src/lib/${INPUT_DIR}
-- ./src/lib/${OUTPUT_DIR}
+- ./${CONFIG_DIR}
+- ./${GENERATED_DIR}
 - ./src/app.generated.d.ts
 - ./src/rime.generated.d.ts
 - ./src/rime.modules.generated.d.ts
@@ -33,8 +33,8 @@ export const clear = async (args: { force?: boolean }) => {
   // Remove directories
   rmSync(RIME_DEV_CACHE_DIR, { recursive: true, force: true });
   rmSync(path.join('src', 'routes', '(rime)'), { recursive: true, force: true });
-  rmSync(path.join('src', 'lib', INPUT_DIR), { recursive: true, force: true });
-  rmSync(path.join('src', 'lib', OUTPUT_DIR), { recursive: true, force: true });
+  rmSync(CONFIG_DIR, { recursive: true, force: true });
+  rmSync(GENERATED_DIR, { recursive: true, force: true });
   rmSync(path.join('db'), { recursive: true, force: true });
   rmSync(path.join('static', 'medias'), { recursive: true, force: true });
 
