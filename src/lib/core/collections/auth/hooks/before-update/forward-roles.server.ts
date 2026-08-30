@@ -5,31 +5,39 @@ import { cases } from '$lib/util/cases.js';
 import { BETTER_AUTH_ROLES } from '../../constant.server.js';
 
 /**
- *  Before update : set proper better-auth role
+ * Syncs this doc's `roles` field to better-auth's role.
+ *
+ * Rime's `roles` array is app-level, free-form per collection.
+ * Better-auth only knows one `role`: admin, staff, or user.
+ * When an update changes `roles`, this hook works out the right
+ * better-auth role and saves it on the better-auth user.
+ *
+ * Only the 'staff' collection can end up admin or staff.
+ * Every other collection always gets 'user'.
  */
 export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>(async (args) => {
   const { event, config, context } = args;
   const { rime } = event.locals;
 
+  // Fallback-locale writes are internal, not a real user action — skip.
   if (args.context.isFallbackLocale) return args;
 
   const IS_ROLES_MUTATION = 'roles' in args.data && Array.isArray(args.data.roles);
   const IS_API_KEY_MUTATION = config.auth?.type === 'apiKey';
 
-  // Never forward roles for APIKey roles mutation
-  // ApiKey doens't have a proper betterAuthUser,
-  // so prevent forwarding roles to the betterAuthUser owner of the apiKey
+  // API key docs have no better-auth user of their own — their `roles` field
+  // permissions the key itself, so there's nothing to forward here.
   if (IS_API_KEY_MUTATION) {
     return args;
   }
 
   const originalDoc = context.originalDoc;
 
-  if (!originalDoc)
+  if (!originalDoc) {
     throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @forwardRolesToBetterAuth');
+  }
 
   if (IS_ROLES_MUTATION) {
-    // get the better-auth userId
     const authUserId = await rime.adapter.auth.getBetterAuthUserId({
       slug: config.slug,
       id: originalDoc.id
@@ -39,20 +47,18 @@ export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>(async (args) 
       throw new RimeError(RimeError.OPERATION_ERROR, 'user not found');
     }
 
-    // Assign proper better-auth role based on who perform action,
-    // on wich collection, and the data.roles value
     const ADMIN_ROLE_IN_DATA = Array.isArray(args.data.roles) && args.data.roles.includes('admin');
     const IS_CURRENT_USER_ADMIN = access.isAdmin(event.locals.user);
     const IS_CURRENT_USER_STAFF = Boolean(event.locals.user?.isStaff);
 
+    // First true condition wins, read top to bottom like an if/else-if chain.
     const role = cases({
-      // Only admins can set others staff users the 'admin' role
+      // Only an admin can grant 'admin', and only on the staff collection.
       [BETTER_AUTH_ROLES.ADMIN]:
         IS_CURRENT_USER_ADMIN && ADMIN_ROLE_IN_DATA && config.slug === 'staff',
-      // If not an admin action, or there is no admin role in data
-      // but it's a staff collection mutation and executed by any staff user then set 'staff'
+      // Any staff member editing a staff doc without granting admin: 'staff'.
       [BETTER_AUTH_ROLES.STAFF]: IS_CURRENT_USER_STAFF && config.slug === 'staff',
-      // Any other case set 'user'
+      // Everything else (non-staff collection, or no condition above matched): 'user'.
       [BETTER_AUTH_ROLES.USER]: true
     });
 
