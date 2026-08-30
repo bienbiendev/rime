@@ -3,8 +3,8 @@ import path from 'node:path';
 import { configImportPaths } from '../../constants.js';
 import type { Routes } from './util.server.js';
 
-const PANEL_LAYOUT_DIR = path.resolve(process.cwd(), 'src/routes/(rime)/panel');
-const LIVE_PAGE_DIR = path.resolve(process.cwd(), 'src/routes/(rime)/panel/live-edit');
+const PANEL_LAYOUT_DIR = path.resolve(process.cwd(), 'src/routes/(rime)/[panel=panel]');
+const LIVE_PAGE_DIR = path.resolve(process.cwd(), 'src/routes/(rime)/[panel=panel]/live-edit');
 
 
 /**
@@ -90,7 +90,7 @@ export const load = async ({ locals }: ServerLoadEvent) => {
 
 /**
  * Login page template
- * (rime)/panel/sign-in/+page.svelte
+ * (rime)/[panel=panel]/sign-in/+page.svelte
  */
 const signInPage = () => `
 <script>
@@ -115,7 +115,7 @@ export const actions = {
 
 /**
  * Forgot password page template
- * (rime)/forgot-password/+page.svelte
+ * (rime)/[panel=panel]/forgot-password/+page.svelte
  */
 const forgotPasswordPage = () => `
 <script>
@@ -126,7 +126,7 @@ const forgotPasswordPage = () => `
 
 /**
  * Forgot password page server template
- * (rime)/forgot-password/+page.server.ts
+ * (rime)/[panel=panel]/forgot-password/+page.server.ts
  */
 const forgotPasswordPageServer = () => `
 import { type ServerLoadEvent } from '@sveltejs/kit';
@@ -136,7 +136,7 @@ export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.f
 
 /**
  * Reset password page template
- * (rime)/reset-password/+page.svelte
+ * (rime)/[panel=panel]/reset-password/+page.svelte
  */
 const resetPasswordPage = () => `
 <script>
@@ -148,7 +148,7 @@ const resetPasswordPage = () => `
 
 /**
  * Reset password page server template
- * (rime)/reset-password/+page.server.ts
+ * (rime)/[panel=panel]/reset-password/+page.server.ts
  */
 const resetPasswordPageServer = () => `
 import { type ServerLoadEvent } from '@sveltejs/kit';
@@ -158,7 +158,7 @@ export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.r
 
 /**
  * Panel layout template
- * (rime)/panel/+layout.svelte
+ * (rime)/[panel=panel]/+layout.svelte
  */
 const panelLayout = () => `
 <script>
@@ -179,7 +179,7 @@ const panelLayout = () => `
 
 /**
  * Panel layout server template
- * (rime)/panel/+layout.server.ts
+ * (rime)/[panel=panel]/+layout.server.ts
  */
 const panelLayoutServer = () => `
 import { type ServerLoadEvent } from '@sveltejs/kit';
@@ -191,7 +191,7 @@ export const load = async ({ locals }: ServerLoadEvent) => {
 
 /**
  * Panel page template
- * (rime)/panel/+page.svelte
+ * (rime)/[panel=panel]/+page.svelte
  */
 const panelPage = () => `
 <script>
@@ -203,7 +203,7 @@ const panelPage = () => `
 
 /**
  * Panel page load template
- * (rime)/panel/+page.server.ts
+ * (rime)/[panel=panel]/+page.server.ts
  */
 const panelPageServer = () => `
 import { type ServerLoadEvent } from '@sveltejs/kit';
@@ -250,7 +250,7 @@ export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.l
 
 /**
  * Collection list page
- * (rime)/panel/[slug=collection]/+page.svelte
+ * (rime)/[panel=panel]/[slug=collection]/+page.svelte
  */
 const collectionListPage = () => `
 <script>
@@ -261,7 +261,7 @@ const collectionListPage = () => `
 <Collection {data} slug={data.slug} />`;
 
 /**
- * (rime)/panel/[slug=collection]/+page.server.ts
+ * (rime)/[panel=panel]/[slug=collection]/+page.server.ts
  */
 const collectionListPageServer = () => `
 import { type ServerLoadEvent } from '@sveltejs/kit';
@@ -273,7 +273,7 @@ export const load = async (event: ServerLoadEvent) => {
 
 /**
  * Area document page
- * (rime)/panel/[slug=area]/+page.svelte
+ * (rime)/[panel=panel]/[slug=area]/+page.svelte
  */
 const areaDocPage = () => `
 <script>
@@ -284,7 +284,7 @@ const areaDocPage = () => `
 <Area {data} />`;
 
 /**
- * (rime)/panel/[slug=area]/+page.server.ts
+ * (rime)/[panel=panel]/[slug=area]/+page.server.ts
  */
 const areaDocPageServer = () => `
 import type { RequestEvent, ServerLoadEvent } from '@sveltejs/kit';
@@ -297,7 +297,7 @@ export const actions = {
 
 /**
  * Collection document page
- * (rime)/panel/[slug=collection]/[id]/+page.svelte
+ * (rime)/[panel=panel]/[slug=collection]/[id]/+page.svelte
  */
 const collectionDocPage = () => `
 <script>
@@ -308,7 +308,7 @@ const collectionDocPage = () => `
 <CollectionDoc {data} />`;
 
 /**
- * (rime)/panel/[slug=collection]/[id]/+page.server.ts
+ * (rime)/[panel=panel]/[slug=collection]/[id]/+page.server.ts
  */
 const collectionDocPageServer = () => `
 import type { RequestEvent, ServerLoadEvent } from '@sveltejs/kit';
@@ -322,7 +322,7 @@ export const actions = {
 
 /**
  * Collection document versions page
- * (rime)/panel/[slug=collection]/[id]/versions/+page.svelte
+ * (rime)/[panel=panel]/[slug=collection]/[id]/versions/+page.svelte
  */
 const collectionDocVersionsPage = () => `
 <script>
@@ -333,7 +333,7 @@ const collectionDocVersionsPage = () => `
 <CollectionDocVersions data={data} />`;
 
 /**
- * (rime)/panel/[slug=collection]/[id]/versions/+page.server.ts
+ * (rime)/[panel=panel]/[slug=collection]/[id]/versions/+page.server.ts
  */
 const collectionDocVersionsPageServer = () => `
 import { type ServerLoadEvent } from '@sveltejs/kit';
@@ -343,7 +343,7 @@ export const load = (event: ServerLoadEvent) =>
 
 /**
  * Area document versions page
- * (rime)/panel/[slug=area]/versions/+page.svelte
+ * (rime)/[panel=panel]/[slug=area]/versions/+page.svelte
  */
 const areaVersionsPage = () => `
 <script>
@@ -354,7 +354,7 @@ const areaVersionsPage = () => `
 <AreaVersionsDoc data={data} />`;
 
 /**
- * (rime)/panel/[slug=area]/versions/+page.server.ts
+ * (rime)/[panel=panel]/[slug=area]/versions/+page.server.ts
  */
 const areaVersionsPageServer = () => `
 import { type ServerLoadEvent } from '@sveltejs/kit';
@@ -482,45 +482,45 @@ export const commonRoutes: Routes = {
     layoutServer: rootLayoutServer,
     error: error
   },
-  '(rime)/panel/sign-in': {
+  '(rime)/[panel=panel]/sign-in': {
     'page@(rime)': signInPage,
     pageServer: signInPageServer
   },
-  '(rime)/forgot-password': {
-    page: forgotPasswordPage,
+  '(rime)/[panel=panel]/forgot-password': {
+    'page@(rime)': forgotPasswordPage,
     pageServer: forgotPasswordPageServer
   },
-  '(rime)/reset-password': {
-    page: resetPasswordPage,
+  '(rime)/[panel=panel]/reset-password': {
+    'page@(rime)': resetPasswordPage,
     pageServer: resetPasswordPageServer
   },
-  '(rime)/panel': {
+  '(rime)/[panel=panel]': {
     layout: panelLayout,
     layoutServer: panelLayoutServer,
     page: panelPage,
     pageServer: panelPageServer
   },
-  '(rime)/panel/live-edit': {
+  '(rime)/[panel=panel]/live-edit': {
     'page@(rime)': livePage,
     pageServer: livePageServer
   },
-  '(rime)/panel/[slug=collection]': {
+  '(rime)/[panel=panel]/[slug=collection]': {
     page: collectionListPage,
     pageServer: collectionListPageServer
   },
-  '(rime)/panel/[slug=collection]/[id]': {
+  '(rime)/[panel=panel]/[slug=collection]/[id]': {
     page: collectionDocPage,
     pageServer: collectionDocPageServer
   },
-  '(rime)/panel/[slug=collection]/[id]/versions': {
+  '(rime)/[panel=panel]/[slug=collection]/[id]/versions': {
     page: collectionDocVersionsPage,
     pageServer: collectionDocVersionsPageServer
   },
-  '(rime)/panel/[slug=area]': {
+  '(rime)/[panel=panel]/[slug=area]': {
     page: areaDocPage,
     pageServer: areaDocPageServer
   },
-  '(rime)/panel/[slug=area]/versions': {
+  '(rime)/[panel=panel]/[slug=area]/versions': {
     page: areaVersionsPage,
     pageServer: areaVersionsPageServer
   },

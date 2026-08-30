@@ -2,7 +2,7 @@ import { PARAMS, UPLOAD_PATH } from '$lib/core/constant.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { CollectionSlug } from '$lib/core/types/doc.js';
 import type { Route } from '$lib/panel/types.js';
-import { panelUrl } from '$lib/panel/util/url.js';
+import { panelUrlFor } from '$lib/panel/util/url.js';
 import { toKebabCase } from '$lib/util/string.js';
 import type { WithRequired } from '$lib/util/types.js';
 
@@ -95,10 +95,12 @@ export function getParentPath(path: UploadPath) {
  */
 export function buildUploadAria({
   path,
-  slug
+  slug,
+  panelSegment
 }: {
   path: UploadPath;
   slug: CollectionSlug;
+  panelSegment: string | undefined;
 }): Partial<Route>[] {
   const segments = path.split(':');
   const result: Aria[] = [];
@@ -110,7 +112,7 @@ export function buildUploadAria({
     if (currentPath !== segments[0]) {
       result.push({
         title: segment,
-        url: `${panelUrl(toKebabCase(slug))}?${PARAMS.UPLOAD_PATH}=${currentPath}`
+        url: `${panelUrlFor(panelSegment, toKebabCase(slug))}?${PARAMS.UPLOAD_PATH}=${currentPath}`
       });
     }
   }

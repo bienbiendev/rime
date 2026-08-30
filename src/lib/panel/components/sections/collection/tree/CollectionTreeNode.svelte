@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { GenericDoc } from '$lib/core/types/doc.js';
   import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
+  import { panelUrl } from '$lib/panel/util/url.js';
   import { GripVertical } from '@lucide/svelte';
   import StatusDot from '../StatusDot.svelte';
   import CollectionTreeNode from './CollectionTreeNode.svelte';
@@ -12,7 +13,7 @@
 
 {#key `${parentId}-${doc.id}-${doc._position}`}
   <div data-parent={parentId} data-id={doc.id} class="rz-collection-node">
-    <a href="/panel/{doc._type}/{doc.id}" class="rz-collection-node__row">
+    <a href={panelUrl(doc._type, doc.id)} class="rz-collection-node__row">
       <div class="rz-collection-node__grip"><GripVertical size="12" /></div>
       <div>
         {doc.title}

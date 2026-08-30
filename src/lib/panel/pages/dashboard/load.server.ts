@@ -1,4 +1,4 @@
-import { panelUrl } from '$lib/panel/util/url.js';
+import { panelUrlFor } from '$lib/panel/util/url.js';
 import { capitalize } from '$lib/util/string.js';
 import type { ServerLoadEvent } from '@sveltejs/kit';
 import type { BuiltCollection, Route } from '../../../types.js';
@@ -6,6 +6,7 @@ import type { DashboardEntry } from './types.js';
 
 export const dashboardLoad = async (event: ServerLoadEvent) => {
   const { locale, user, rime } = event.locals;
+  const panelSegment = event.params.panel;
 
   const entries: DashboardEntry[] = [];
 
@@ -28,7 +29,7 @@ export const dashboardLoad = async (event: ServerLoadEvent) => {
       description: panelConfig.description || null,
       slug: c.slug,
       canCreate: user && c.access.create(user, {}),
-      link: panelUrl(c.kebab),
+      link: panelUrlFor(panelSegment, c.kebab),
       titleSingular: c.label.singular,
       title: c.label.plural,
       layout: panelConfig.dashboard.layout
@@ -83,13 +84,13 @@ export const dashboardLoad = async (event: ServerLoadEvent) => {
         prototype: 'area',
         description: (area.panel && area.panel?.description) || null,
         slug: area.slug,
-        link: panelUrl(area.kebab),
+        link: panelUrlFor(panelSegment, area.kebab),
         title: area.label || capitalize(area.slug)
       });
     }
   }
 
-  const aria: Route[] = [{ title: 'Dashboard', icon: 'dashboard', url: panelUrl() }];
+  const aria: Route[] = [{ title: 'Dashboard', icon: 'dashboard', url: panelUrlFor(panelSegment) }];
 
   return { entries, aria };
 };

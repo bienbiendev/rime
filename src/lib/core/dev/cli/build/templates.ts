@@ -1,3 +1,4 @@
+import { PANEL_ROUTE } from '$lib/core/dev/constants.js';
 import { randomId } from '$lib/util/random.js';
 
 export const envProduction = () => `# BETTER-AUTH
@@ -5,6 +6,7 @@ BETTER_AUTH_SECRET=${randomId(32)}
 
 # RIME
 PUBLIC_RIME_URL=http://localhost:3000
+RIME_PANEL_ROUTE=${PANEL_ROUTE}
 RIME_LOG_LEVEL=ERROR
 RIME_LOG_TO_FILE=true
 RIME_CACHE_ENABLED=true

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { env } from '$env/dynamic/public';
   import * as Tooltip from '$lib/panel/components/ui/tooltip';
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
   import { authClient } from '$lib/panel/util/auth.js';
+  import { panelUrl } from '$lib/panel/util/url.js';
   import { LogOut } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
   import Button from '../button/button.svelte';
@@ -15,7 +15,7 @@
   async function signout() {
     const result = await authClient.signOut();
     if (result.data?.success) {
-      window.location.href = `${env.PUBLIC_RIME_URL}/panel/sign-in`;
+      window.location.href = panelUrl('sign-in');
     } else {
       toast.error(`Can't sign-out, please try again`);
     }
@@ -26,7 +26,7 @@
   {#if !navCollapsed}
     <div class="rz-user-button">
       <div class="rz-user-button__left">
-        <a href="/panel/staff/{user.attributes.id}">
+        <a href={panelUrl('staff', user.attributes.id)}>
           {user.attributes.name?.charAt(0) || ''}
         </a>
         <div class="rz-user-button__name">{user.attributes.name}</div>

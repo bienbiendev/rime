@@ -4,7 +4,7 @@ import { RimeFormError } from '$lib/core/errors/index.js';
 import { redirect, type Actions } from '@sveltejs/kit';
 
 export const signInActions: Actions = {
-  default: async ({ cookies, request, locals }) => {
+  default: async ({ cookies, request, locals, params }) => {
     const { rime } = locals;
 
     const data = await request.formData();
@@ -48,6 +48,6 @@ export const signInActions: Actions = {
       });
     }
 
-    throw redirect(302, '/panel');
+    throw redirect(302, `/${params.panel}`);
   }
 };

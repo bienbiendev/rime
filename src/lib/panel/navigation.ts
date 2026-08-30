@@ -3,15 +3,24 @@ import type { BuildConfig } from '$lib/core/config/server/index.server.js';
 import type { Config } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { Route } from './types.js';
-import { panelUrl } from './util/url.js';
+import { panelUrlFor } from './util/url.js';
 
 /**
- * Builds navigation structure based on config and user permissions
+ * Builds navigation structure based on config and user permissions. Called
+ * directly from the routes handle hook, before resolve() — page.params isn't
+ * populated yet at that point, so the panel segment is passed in explicitly
+ * (from the same event.params.panel the caller already has) rather than
+ * relying on panelUrl()'s page-based default.
  * @param config - Compiled configuration object
  * @param user - Current user object (optional)
+ * @param panelSegment - The resolved [panel=panel] segment for this request
  * @returns Dictionary of navigation groups
  */
-const buildNavigation = <C extends Config>(config: BuildConfig<C>, user: User | undefined): Dic => {
+const buildNavigation = <C extends Config>(
+  config: BuildConfig<C>,
+  user: User | undefined,
+  panelSegment: string | undefined
+): Dic => {
   const groups: Dic = {};
 
   /**
@@ -36,7 +45,7 @@ const buildNavigation = <C extends Config>(config: BuildConfig<C>, user: User | 
         const route: Route = {
           title: collection.label.plural,
           icon: collection.slug,
-          url: panelUrl(collection.kebab)
+          url: panelUrlFor(panelSegment, collection.kebab)
         };
         addRouteToGroup(route, (collection.panel && collection.panel?.group) || 'collections');
       }
@@ -48,7 +57,7 @@ const buildNavigation = <C extends Config>(config: BuildConfig<C>, user: User | 
       const route: Route = {
         title: area.label,
         icon: area.slug,
-        url: panelUrl(area.kebab)
+        url: panelUrlFor(panelSegment, area.kebab)
       };
       addRouteToGroup(route, (area.panel && area.panel?.group) || 'areas');
     }
@@ -59,7 +68,7 @@ const buildNavigation = <C extends Config>(config: BuildConfig<C>, user: User | 
     const route: Route = {
       title: routeConfig.label,
       icon: `custom-${routePath}`,
-      url: panelUrl(routePath)
+      url: panelUrlFor(panelSegment, routePath)
     };
     addRouteToGroup(route, routeConfig.group);
   });

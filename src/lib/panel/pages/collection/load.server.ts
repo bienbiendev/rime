@@ -12,7 +12,7 @@ import { logger } from '$lib/core/logger/index.server.js';
 import { withDirectoriesSuffix } from '$lib/core/naming.js';
 import type { GenericDoc } from '$lib/core/types/doc.js';
 import type { Route } from '$lib/panel/types.js';
-import { panelUrl } from '$lib/panel/util/url.js';
+import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
 import { redirect, type ServerLoadEvent } from '@sveltejs/kit';
 
@@ -30,6 +30,7 @@ type Data = {
 export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
   //
   const { rime, locale, user } = event.locals;
+  const panelSegment = event.params.panel;
 
   const slug = event.params.slug || '';
   if (!rime.config.isCollection(slug)) {
@@ -45,7 +46,7 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
   });
 
   let aria: Partial<Route>[] = [
-    { title: 'Dashboard', url: panelUrl() },
+    { title: 'Dashboard', url: panelUrlFor(panelSegment) },
     { title: collection.config.label.plural }
   ];
 
@@ -100,10 +101,14 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
 
       const collectionAria = {
         title: collection.config.label.plural,
-        url: panelUrl(collection.config.kebab)
+        url: panelUrlFor(panelSegment, collection.config.kebab)
       };
       aria = [...aria].slice(0, -1);
-      aria = [...aria, collectionAria, ...buildUploadAria({ path: currentDirectoryPath, slug })];
+      aria = [
+        ...aria,
+        collectionAria,
+        ...buildUploadAria({ path: currentDirectoryPath, slug, panelSegment })
+      ];
       data.aria = removePathFromLastAria(aria);
     }
 

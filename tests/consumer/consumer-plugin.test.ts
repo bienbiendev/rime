@@ -1,4 +1,5 @@
 import test, { expect } from '@playwright/test';
+import { panelUrl, panelUrlRe } from '../util.js';
 
 // Exercises tests/consumer/lib/+rime/rime.config.server.ts, which local-pack-test.sh copies
 // into place *before* `rime init` runs (see copy_plugin_config in that script), so init's own
@@ -12,11 +13,6 @@ import test, { expect } from '@playwright/test';
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const SUFFIX = process.env.CONSUMER_TEST_SUFFIX || 'run';
-
-function panelUrl(...args: string[]) {
-  const base = process.env.PUBLIC_RIME_URL;
-  return args.length ? `${base}/panel/${args.join('/')}` : `${base}/panel`;
-}
 
 test.beforeAll(async ({ request }) => {
   const initResponse = await request.post(`${process.env.PUBLIC_RIME_URL}/api/init`, {
@@ -74,7 +70,7 @@ test('plugin route, handler, field and hook all mounted correctly', async ({ pag
   const saveButton = page.locator('.rz-page-header__row button[type="submit"]');
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await page.waitForURL(/\/panel\/pages\/(?!create$)[^/]+$/);
+  await page.waitForURL(panelUrlRe('pages'));
   await page.waitForLoadState('networkidle');
   await expect(page.locator('.rz-page-header__row h1')).toHaveText(title);
 

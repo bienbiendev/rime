@@ -1,13 +1,20 @@
 import { randomId } from '$lib/util/random.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { CONFIG_DIR, GENERATED_DIR, configImportPaths } from '../../constants.js';
+import { CONFIG_DIR, GENERATED_DIR, PANEL_ROUTE, configImportPaths } from '../../constants.js';
 
 const PACKAGE = 'rimecms';
 
 export const env = () => `BETTER_AUTH_SECRET=${randomId(32)}
 PUBLIC_RIME_URL=http://localhost:5173
 RIME_CONFIG_DIR=${CONFIG_DIR}
+
+# Panel URL segment (e.g. /panel/...). Change it to hide the panel from
+# automated CMS-admin scanners — requests to the old segment 404 instead of
+# revealing a login page. Run 'rime generate' (or restart 'rime dev') after
+# changing this — the dev server only regenerates routes when it detects a
+# change under RIME_CONFIG_DIR, not on every restart.
+RIME_PANEL_ROUTE=${PANEL_ROUTE}
 
 # RIME_CACHE_ENABLED=false
 # RIME_SMTP_USER=user@mail.com

@@ -37,7 +37,7 @@
 <div class:rz-nav--collapsed={isCollapsed} class="rz-nav">
   <div class="rz-nav__content">
     <div class="rz-nav__header" class:rz-nav__header--collapsed={isCollapsed}>
-      <NavItem href="/panel" {isCollapsed} route={dashBoardRoute} />
+      <NavItem href={panelUrl()} {isCollapsed} route={dashBoardRoute} />
     </div>
 
     <div class="rz-nav__body">

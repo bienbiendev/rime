@@ -1,5 +1,5 @@
 import test, { expect, type Page } from '@playwright/test';
-import { API_BASE_URL, signIn } from '../util.js';
+import { API_BASE_URL, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -17,11 +17,6 @@ const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
  * beforeValidate remap of an out-of-list value can't be triggered from the
  * UI at all, since the UI never offers that option — that one stays API-only).
  */
-
-function panelUrl(...args: string[]) {
-  if (!args.length) return `${process.env.PUBLIC_RIME_URL}/panel`;
-  return `${process.env.PUBLIC_RIME_URL}/panel/${args.join('/')}`;
-}
 
 async function loginAs(page: Page, email: string, password: string) {
   await page.context().clearCookies();

@@ -1,5 +1,6 @@
 import type { Config } from '$lib/core/config/types.js';
 import cache from '$lib/core/dev/cache/index.server.js';
+import { CONFIG_DIR, PANEL_ROUTE } from '$lib/core/dev/constants.js';
 import { slugify } from '$lib/util/string.js';
 import fs from 'fs';
 import path from 'path';
@@ -14,14 +15,24 @@ export type Routes = Record<string, RouteDefinition>;
 /**
  * Check if routes need to be regenerated based on config changes.
  * Panel/API routes are a fixed set of dynamic-segment files (file count never
- * grows with schema size), but the [slug=collection]/[slug=area] param
- * matchers under src/params/ bake in the actual slug lists, so adding,
- * removing, or renaming a collection/area still needs a regen to keep those
- * matchers in sync — same trigger as custom routes and panel CSS.
+ * grows with schema size), but the [panel=panel]/[slug=collection]/[slug=area]
+ * param matchers under src/params/ bake in the actual accepted value(s), so
+ * changing RIME_PANEL_ROUTE or RIME_CONFIG_DIR, or adding/removing/renaming a
+ * collection/area, still needs a regen to keep those matchers in sync — same
+ * trigger as custom routes and panel CSS. Both PANEL_ROUTE and CONFIG_DIR must
+ * stay in this memo: they're read once at process start, so a changed value
+ * only takes effect after a restart, and only if the restart's regen actually
+ * notices the change. CONFIG_DIR specifically is baked into the panel/live
+ * layout's config import path (see configImportPaths() calls in
+ * common.server.ts) — leaving it out would silently keep that import stale
+ * instead of erroring, the same failure mode RIME_CONFIG_DIR hit once for
+ * hooks.server.ts (see regenerateHooks() in cli/init/templates.ts).
  * @returns true if routes should be regenerated, false otherwise
  */
 export function shouldRegenerateRoutes<T extends Config>(config: T): boolean {
   const memo = `
+    panel:${PANEL_ROUTE}
+    config:${CONFIG_DIR}
     custom:${
       config.panel?.routes
         ? Object.entries(config.panel.routes)
@@ -67,11 +78,11 @@ export function ensureDir(dirPath: string): void {
  * @example
  * // Write a page file for a collection
  * const basePath = '/path/to/src/routes';
- * const routePath = '(rime)/panel/news';
+ * const routePath = '(rime)/[panel=panel]/news';
  * const fileType = 'page';
  * const content = '<script>\n  import { Collection } from "rime/panel"\n</script>...';
  * writeRouteFile(basePath, routePath, fileType, content);
- * // Creates /path/to/src/routes/(rime)/panel/news/+page.svelte with the provided content
+ * // Creates /path/to/src/routes/(rime)/[panel=panel]/news/+page.svelte with the provided content
  */
 export function writeRouteFile(
   basePath: string,

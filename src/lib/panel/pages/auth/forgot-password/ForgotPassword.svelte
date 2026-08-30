@@ -6,6 +6,7 @@
   import { setFormContext } from '$lib/panel/context/form.svelte';
   import { emailField } from '$lib/panel/pages/auth/fields.js';
   import { authClient } from '$lib/panel/util/auth';
+  import { panelUrl } from '$lib/panel/util/url.js';
   import { toast } from 'svelte-sonner';
 
   type Props = {
@@ -29,7 +30,7 @@
   async function sendResetPasswordMail() {
     const { data, error } = await authClient.requestPasswordReset({
       email: context.values.email,
-      redirectTo: `/reset-password`
+      redirectTo: panelUrl('reset-password')
     });
     if (error && error.message) {
       toast.error(error.message);

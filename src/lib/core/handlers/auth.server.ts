@@ -1,3 +1,4 @@
+import { isPublicPanelAuthRoute } from '$lib/core/constant.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { CollectionSlug } from '$lib/core/types/doc.js';
 import type { Config, User } from '$lib/types.js';
@@ -9,7 +10,7 @@ import type { ConfigContext, RimeContext } from '../rime.server.js';
 const dev = process.env.NODE_ENV === 'development';
 
 interface RouteInfo {
-  isSignIn: boolean;
+  isPublicAuthRoute: boolean;
   isPanel: boolean;
   isAPI: boolean;
 }
@@ -26,14 +27,21 @@ interface UserData {
 }
 
 /**
- * Analyzes the current route to determine authentication requirements
+ * Analyzes the current route to determine authentication requirements.
+ * isPanel/isPublicAuthRoute are derived from the matched route, not the
+ * pathname — event.params.panel only resolves when the request matched the
+ * [panel=panel] matcher, and event.route.id's literal folder names never
+ * carry the configured RIME_PANEL_ROUTE value — so neither check needs to
+ * know the actual (hideable) panel segment. sign-in/forgot-password/reset-password
+ * all live under [panel=panel] too but must stay reachable without a session,
+ * hence the isPublicAuthRoute carve-out.
  */
-function analyzeRoute(pathname: string): RouteInfo {
-  const isSignIn = pathname === '/panel/sign-in';
-  const isPanel = pathname.startsWith('/panel') && !isSignIn;
-  const isAPI = pathname.startsWith('/api');
+function analyzeRoute(event: RequestEvent): RouteInfo {
+  const isPublicAuthRoute = isPublicPanelAuthRoute(event.route.id);
+  const isPanel = event.params.panel !== undefined && !isPublicAuthRoute;
+  const isAPI = event.url.pathname.startsWith('/api');
 
-  return { isSignIn, isPanel, isAPI };
+  return { isPublicAuthRoute, isPanel, isAPI };
 }
 
 /**
@@ -60,7 +68,7 @@ async function authenticateRequest(
  */
 function handleUnauthenticated(event: RequestEvent, resolve: any, routeInfo: RouteInfo): any {
   if (routeInfo.isPanel) {
-    throw redirect(303, '/panel/sign-in');
+    throw redirect(303, `/${event.params.panel}/sign-in`);
   }
 
   event.locals.user = undefined;
@@ -197,7 +205,7 @@ function cleanupUser(userData: UserData, routeInfo: RouteInfo) {
  */
 export const handleAuth: Handle = async ({ event, resolve }) => {
   const rime = event.locals.rime;
-  const routeInfo = analyzeRoute(event.url.pathname);
+  const routeInfo = analyzeRoute(event);
 
   // Ensure auth is set up
   if (routeInfo.isPanel) {
