@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
-import { extractData } from '$lib/core/operations/extract-data.server.js';
+import { extractData } from '$lib/core/rest/extract-data.server.js';
 import type { FormErrors } from '$lib/types.js';
 import { trycatch, trycatchSync } from '$lib/util/function.js';
 import { email as validateEmail, password as validatePassword } from '$lib/util/validate.js';

@@ -7,13 +7,13 @@ import { FormFieldBuilder } from '../fields/builders/index.js';
 import type { CollectionSlug } from '../types/doc.js';
 import { PRIVATE_FIELDS } from '../features/auth/constant.server.js';
 import { isAuthConfig } from '../features/auth/util.js';
-import { create } from './operations/create.js';
-import { deleteDocs } from './operations/delete.js';
-import { deleteById } from './operations/deleteById.js';
-import { duplicate } from './operations/duplicate.js';
-import { find } from './operations/find.js';
-import { findById } from './operations/findById.js';
-import { updateById } from './operations/updateById.js';
+import { create } from '../operations/collection/create.js';
+import { deleteDocs } from '../operations/collection/delete.js';
+import { deleteById } from '../operations/collection/delete-by-id.js';
+import { duplicate } from '../operations/collection/duplicate.js';
+import { find } from '../operations/collection/find.js';
+import { findById } from '../operations/collection/find-by-id.js';
+import { updateById } from '../operations/collection/update-by-id.js';
 
 type Args = {
   config: BuiltCollection;

@@ -14,8 +14,8 @@ import { dashboardLoad } from '$lib/panel/pages/dashboard/load.server.js';
 import { liveLoad } from '$lib/panel/pages/live/load.server.js';
 import { checkLiveRedirect } from '$lib/panel/util/live.server.js';
 import { type Handle, type RequestEvent, type ServerLoadEvent } from '@sveltejs/kit';
-import { rest as areaRest } from '../areas/rest/index.server.js';
-import { rest as collectionRest } from '../collections/rest/index.server.js';
+import { rest as areaRest } from '../rest/area/index.server.js';
+import { rest as collectionRest } from '../rest/collection/index.server.js';
 
 /**
  * Backs the fixed set of generated /panel/[slug=collection|area]/... and
