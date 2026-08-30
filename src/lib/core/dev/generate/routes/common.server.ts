@@ -12,9 +12,10 @@ const LIVE_PAGE_DIR = path.resolve(process.cwd(), 'src/routes/(rime)/[panel=pane
  * /+layout.server.ts
  */
 const mainLayout = (): string => `
+import { toPublicUser } from '${PACKAGE_NAME}/server';
 import type { ServerLoadEvent } from '@sveltejs/kit';
 export const load = async ({ locals }: ServerLoadEvent) => {
-	return { user: locals.user };
+	return { user: toPublicUser(locals.user) };
 };`;
 
 /**
@@ -78,14 +79,17 @@ const rootLayout = () => `
  */
 const rootLayoutServer = () => `
 import type { ServerLoadEvent } from '@sveltejs/kit';
-import { registerTranslation } from '${PACKAGE_NAME}/server';
+import { registerTranslation, toPublicUser } from '${PACKAGE_NAME}/server';
 
 export const ssr = false;
 
 export const load = async ({ locals }: ServerLoadEvent) => {
 	const { user, rime } = locals;
 	const translations = await registerTranslation(rime.config.raw.panel.language);
-	return { user, translations };
+	// Public here: this layout also covers sign-in/forgot-password/reset-password. The
+	// panel's own nested layout (panelLayoutServer) re-supplies the full user for panel
+	// pages, overriding this on the way down.
+	return { user: toPublicUser(user), translations };
 };`;
 
 /**

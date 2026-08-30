@@ -47,6 +47,11 @@ export const augmentHooks = <T extends PartialConfig>(collection: T): T => {
     beforeOperation: [authorize],
 
     beforeRead: [
+      // Strip private fields first, before any hook below can copy their value into derived
+      // data (e.g. setDocumentTitle reading an arbitrary, collection-author-chosen
+      // config.asTitle field, or a consumer's own $url function) — deleting the original key
+      // afterwards wouldn't undo a copy already made from it.
+      ...(collection.auth ? [removePrivateFields] : []),
       processDocumentFields,
       setDocumentTitle,
       setDocumentLocale,
@@ -54,7 +59,6 @@ export const augmentHooks = <T extends PartialConfig>(collection: T): T => {
       ...(collection.upload ? [populateSizes] : []),
       ...(collection.$url ? [populateURL] : []),
       ...(collection.nested ? [addChildrenProperty] : []),
-      ...(collection.auth ? [removePrivateFields] : []),
       setDocumentThumbnail,
       sortDocumentProps
     ],
