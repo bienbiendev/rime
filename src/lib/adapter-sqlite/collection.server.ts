@@ -1,8 +1,8 @@
-import { getSegments } from '$lib/core/collections/upload/util/path.js';
+import { getSegments } from '$lib/core/features/upload/util/path.js';
 import {
   VERSIONS_OPERATIONS,
   VersionOperations
-} from '$lib/core/collections/versions/operations.js';
+} from '$lib/core/features/versions/strategy.js';
 import type { Config } from '$lib/core/config/types.js';
 import { VERSIONS_STATUS } from '$lib/core/constant.js';
 import { withDirectoriesSuffix, withLocalesSuffix, withVersionsSuffix } from '$lib/core/naming.js';

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
-  import type { User } from '$lib/core/collections/auth/types.js';
+  import type { User } from '$lib/core/features/auth/types.js';
   import { t__ } from '$lib/core/i18n/index.js';
   import Page from '$lib/panel/components/sections/page-layout/Page.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';

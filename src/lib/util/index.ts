@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import * as upload from '../core/collections/upload/util/client.js';
+import * as upload from '../core/features/upload/util/client.js';
 import { access } from './access/index.js';
 import * as array from './array.js';
 import * as doc from './doc.js';

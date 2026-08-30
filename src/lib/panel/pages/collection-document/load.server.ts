@@ -1,4 +1,4 @@
-import { buildUploadAria, type UploadPath } from '$lib/core/collections/upload/util/path.js';
+import { buildUploadAria, type UploadPath } from '$lib/core/features/upload/util/path.js';
 import { PARAMS, UPLOAD_PATH } from '$lib/core/constant.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';

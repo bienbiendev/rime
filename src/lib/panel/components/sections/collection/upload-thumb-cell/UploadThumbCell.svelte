@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getMimeTypeFromExtension } from '$lib/core/collections/upload/util/mime';
+  import { getMimeTypeFromExtension } from '$lib/core/features/upload/util/mime';
   import { mimeTypeToIcon } from '$lib/panel/util/upload.js';
   import { FileText } from '@lucide/svelte';
 

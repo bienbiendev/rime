@@ -3,7 +3,7 @@ import { RimeError } from '$lib/core/errors/index.js';
 import { extractData } from '$lib/core/operations/extract-data.server.js';
 import { trycatch } from '$lib/util/function.js';
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { isAuthConfig } from '../auth/util.js';
+import { isAuthConfig } from '../../features/auth/util.js';
 
 /**
  * POST handler for the collection API endpoint.

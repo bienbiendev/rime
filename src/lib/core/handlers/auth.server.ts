@@ -3,7 +3,7 @@ import { RimeError } from '$lib/core/errors/index.js';
 import type { CollectionSlug } from '$lib/core/types/doc.js';
 import type { Config, User } from '$lib/types.js';
 import { error, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
-import { BETTER_AUTH_ROLES } from '../collections/auth/constant.server.js';
+import { BETTER_AUTH_ROLES } from '../features/auth/constant.server.js';
 import { logger } from '../logger/index.server.js';
 import type { ConfigContext, RimeContext } from '../rime.server.js';
 

@@ -1,11 +1,11 @@
-import { augmentAuthServer } from '$lib/core/collections/config/augment-auth.server.js';
+import { augmentAuthServer } from '$lib/core/features/auth/augment.server.js';
 import { augmentHooks } from '$lib/core/collections/config/augment-hooks.server.js';
 import { augmentMetas } from '$lib/core/collections/config/augment-metas.js';
-import { augmentNestedServer } from '$lib/core/collections/config/augment-nested.server.js';
+import { augmentNestedServer } from '$lib/core/features/nested/augment.server.js';
 import { augmentTitle } from '$lib/core/collections/config/augment-title.js';
-import { augmentUploadServer } from '$lib/core/collections/config/augment-upload.server.js';
-import { augmentUrl } from '$lib/core/collections/config/augment-url.js';
-import { augmentVersions } from '$lib/core/collections/config/augment-versions.js';
+import { augmentUploadServer } from '$lib/core/features/upload/augment.server.js';
+import { augmentUrl } from '$lib/core/features/url/augment.js';
+import { augmentVersions } from '$lib/core/features/versions/augment.js';
 import type { CollectionWithoutSlug } from '$lib/core/collections/config/types.js';
 import type { BuiltCollection, Collection } from '$lib/core/config/types.js';
 import { Hooks } from '$lib/core/operations/hooks/index.server.js';

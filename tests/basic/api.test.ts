@@ -1,4 +1,4 @@
-import { filePathToBase64 } from '$lib/core/collections/upload/util/converter.server.js';
+import { filePathToBase64 } from '$lib/core/features/upload/util/converter.server.js';
 import test, { expect } from '@playwright/test';
 import { readFileSync } from 'fs';
 import path from 'path';

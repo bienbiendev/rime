@@ -7,7 +7,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { betterAuth } from 'better-auth';
 import { AreaAPI } from './areas/local-api.server.js';
 import { CollectionAPI } from './collections/local-api.server.js';
-import { getBaseAuthConfig } from './config/auth/better-auth.server.js';
+import { getBaseAuthConfig } from './features/auth/provider/better-auth.server.js';
 import { createConfigContext } from './config/config-context.server.js';
 import type { BuildConfig } from './config/server/index.server.js';
 import validate from './config/server/validate.server.js';

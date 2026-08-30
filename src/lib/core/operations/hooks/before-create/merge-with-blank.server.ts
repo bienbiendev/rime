@@ -1,4 +1,4 @@
-import { isUploadConfig } from '$lib/core/collections/upload/util/config.js';
+import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
 import { createBlankDocument } from '$lib/util/doc.js';
 import deepmerge from 'deepmerge';
 import { Hooks } from '../index.server.js';

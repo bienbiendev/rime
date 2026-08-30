@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import type { User } from '$lib/core/collections/auth/types.js';
+  import type { User } from '$lib/core/features/auth/types.js';
   import type { BuiltConfigClient } from '$lib/core/config/types.js';
   import Nav from '$lib/panel/components/ui/nav/Nav.svelte';
   import { Toaster } from '$lib/panel/components/ui/sonner';

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { beforeNavigate, goto } from '$app/navigation';
-  import { isAuthConfig } from '$lib/core/collections/auth/util';
-  import { isUploadConfig } from '$lib/core/collections/upload/util/config';
+  import { isAuthConfig } from '$lib/core/features/auth/util';
+  import { isUploadConfig } from '$lib/core/features/upload/util/config';
   import { t__ } from '$lib/core/i18n/index.js';
   import type { GenericDoc } from '$lib/core/types/doc';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';

@@ -5,7 +5,7 @@ export type AreaSlug = GetRegisterType<'AreaSlug'>;
 export type PrototypeSlug = CollectionSlug | AreaSlug;
 
 import type { Dic } from '$lib/util/types.js';
-import type { UploadPath } from '../collections/upload/util/path.js';
+import type { UploadPath } from '../features/upload/util/path.js';
 import type { VersionsStatus } from '../constant.js';
 
 export type Prototype = 'area' | 'collection';

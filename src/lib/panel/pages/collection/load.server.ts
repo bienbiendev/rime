@@ -1,10 +1,10 @@
-import type { Directory } from '$lib/core/collections/upload/upload.js';
+import type { Directory } from '$lib/core/features/upload/types.js';
 import {
   buildUploadAria,
   getParentPath,
   removePathFromLastAria,
   type UploadPath
-} from '$lib/core/collections/upload/util/path.js';
+} from '$lib/core/features/upload/util/path.js';
 import { UPLOAD_PATH } from '$lib/core/constant.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';

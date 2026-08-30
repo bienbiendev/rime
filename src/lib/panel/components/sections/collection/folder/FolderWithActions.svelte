@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
-  import type { Directory } from '$lib/core/collections/upload/upload.js';
+  import type { Directory } from '$lib/core/features/upload/types.js';
   import type { BuiltCollectionClient } from '$lib/core/config/types.js';
   import { PARAMS } from '$lib/core/constant.js';
   import { withDirectoriesSuffix } from '$lib/core/naming.js';

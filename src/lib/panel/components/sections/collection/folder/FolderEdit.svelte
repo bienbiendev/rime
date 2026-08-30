@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Directory } from '$lib/core/collections/upload/upload';
+  import type { Directory } from '$lib/core/features/upload/types';
   import type { BuiltCollectionClient } from '$lib/core/config/types';
   import { t__ } from '$lib/core/i18n/index.js';
   import { withDirectoriesSuffix } from '$lib/core/naming';

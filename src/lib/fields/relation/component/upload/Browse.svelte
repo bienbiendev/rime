@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Directory } from '$lib/core/collections/upload/upload';
+  import type { Directory } from '$lib/core/features/upload/types';
   import { t__ } from '$lib/core/i18n/index.js';
   import { withDirectoriesSuffix } from '$lib/core/naming.js';
   import Empty from '$lib/panel/components/sections/collection/Empty.svelte';

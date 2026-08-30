@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isUploadConfig } from '$lib/core/collections/upload/util/config';
+  import { isUploadConfig } from '$lib/core/features/upload/util/config';
   import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
   import Empty from '../Empty.svelte';
   import Folder from '../folder/FolderWithActions.svelte';

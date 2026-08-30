@@ -1,4 +1,4 @@
-import { isAuthConfig } from '$lib/core/collections/auth/util.js';
+import { isAuthConfig } from '$lib/core/features/auth/util.js';
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
 import cache from '$lib/core/dev/cache/index.server.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';

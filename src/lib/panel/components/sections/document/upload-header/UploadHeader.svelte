@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { WithUpload } from '$lib/core/collections/upload/util/config';
+  import type { WithUpload } from '$lib/core/features/upload/util/config';
   import type { BuiltCollection } from '$lib/core/config/types';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';

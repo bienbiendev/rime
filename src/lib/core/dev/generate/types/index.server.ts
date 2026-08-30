@@ -1,4 +1,4 @@
-import { isUploadConfig } from '$lib/core/collections/upload/util/config.js';
+import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
 import type {
   BuiltArea,
   BuiltCollection,

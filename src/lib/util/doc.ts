@@ -1,4 +1,4 @@
-import { isUploadConfig } from '$lib/core/collections/upload/util/config.js';
+import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { GenericDoc } from '$lib/core/types/doc.js';

@@ -4,7 +4,7 @@
   import type { BuiltCollection } from '$lib/types.js';
   import { toast } from 'svelte-sonner';
 
-  import type { WithUpload } from '$lib/core/collections/upload/util/config';
+  import type { WithUpload } from '$lib/core/features/upload/util/config';
   import type { ChangeEventHandler } from 'svelte/elements';
 
   type Props = {

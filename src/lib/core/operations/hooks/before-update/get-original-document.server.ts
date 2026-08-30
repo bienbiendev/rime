@@ -1,4 +1,4 @@
-import { VersionOperations } from '$lib/core/collections/versions/operations.js';
+import { VersionOperations } from '$lib/core/features/versions/strategy.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '../index.server.js';
 

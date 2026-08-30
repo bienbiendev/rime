@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { isAuthConfig } from '$lib/core/collections/auth/util';
+  import { isAuthConfig } from '$lib/core/features/auth/util';
   import type { BuiltCollection } from '$lib/core/config/types.js';
   import { t__ } from '$lib/core/i18n';
   import { text } from '$lib/fields';

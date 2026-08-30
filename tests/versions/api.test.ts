@@ -1,4 +1,4 @@
-import { filePathToBase64 } from '$lib/core/collections/upload/util/converter.server.js';
+import { filePathToBase64 } from '$lib/core/features/upload/util/converter.server.js';
 import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant';
 import test, { expect } from '@playwright/test';
 import path from 'path';
