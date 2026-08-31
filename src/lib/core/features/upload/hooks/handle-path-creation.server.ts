@@ -1,6 +1,6 @@
 import { UPLOAD_PATH } from '$lib/core/constants.js';
 import { logger } from '$lib/core/logger.server.js';
-import { withDirectoriesSuffix } from '$lib/core/naming.js';
+import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
 import { trycatch } from '$lib/util/function.js';
 import { getSegments } from '../util/path.js';

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { t__ } from '$lib/core/i18n/index.js';
-  import { withDirectoriesSuffix } from '$lib/core/naming';
+  import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
   import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';

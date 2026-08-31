@@ -1,5 +1,6 @@
 import { logger } from '$lib/core/logger.server.js';
-import { withLocalesSuffix, withVersionsSuffix } from '$lib/core/naming.js';
+import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
+import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import type { PrototypeSlug } from '$lib/core/prototype/types.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import { asc, desc, getTableColumns, sql } from 'drizzle-orm';

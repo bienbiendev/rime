@@ -10,7 +10,7 @@ import cache from '$lib/core/dev/cache.server.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { logger } from '$lib/core/logger.server.js';
-import { withVersionsSuffix } from '$lib/core/naming.js';
+import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';

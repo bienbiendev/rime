@@ -1,5 +1,6 @@
 import type { Config } from '$lib/core/factory/config/types.js';
-import { withLocalesSuffix, withVersionsSuffix } from '$lib/core/naming.js';
+import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
+import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type {
   AreaSlug,

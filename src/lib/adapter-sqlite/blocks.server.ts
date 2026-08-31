@@ -1,5 +1,5 @@
 import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
-import { withLocalesSuffix } from '$lib/core/naming.js';
+import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import type { GenericBlock } from '$lib/core/prototype/types.js';
 import type { WithOptional } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';

@@ -1,6 +1,6 @@
 import type { Collection } from '$lib/core/factory/config/types.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { withDirectoriesSuffix } from '$lib/core/naming.js';
+import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import { augmentUpload, type WithNormalizedUpload } from './augment.js';
 
 /**

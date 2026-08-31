@@ -1,5 +1,5 @@
 import { getFieldAtPath } from '$lib/core/fields/util.js';
-import { withLocalesSuffix } from '$lib/core/naming.js';
+import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';

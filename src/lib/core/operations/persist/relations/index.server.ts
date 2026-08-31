@@ -1,6 +1,6 @@
 import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
-import { withVersionsSuffix } from '$lib/core/naming.js';
+import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { GenericBlock } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { ConfigMap } from '../../config-map/types.js';

@@ -5,7 +5,7 @@ import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { PARAMS } from '$lib/core/constants.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/index.js';
 import { isFormField } from '$lib/core/fields/util.js';
-import { withDirectoriesSuffix } from '$lib/core/naming.js';
+import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import type { GenericDoc, GenericNestedDoc } from '$lib/core/prototype/types.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';

@@ -1,7 +1,8 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger.server.js';
-import { hasVersionsSuffix, withLocalesSuffix } from '$lib/core/naming.js';
+import { hasVersionsSuffix } from '$lib/core/features/versions/naming.js';
+import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { type GetRegisterType } from '$lib/index.js';

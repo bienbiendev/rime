@@ -1,6 +1,6 @@
 import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { withVersionsSuffix } from '$lib/core/naming.js';
+import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { TreeBlock } from '$lib/core/prototype/types.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic, WithRequired } from '$lib/util/types.js';

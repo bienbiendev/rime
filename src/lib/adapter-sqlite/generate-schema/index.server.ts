@@ -1,5 +1,5 @@
 import type { Config } from '$lib/core/factory/config/types.js';
-import { withVersionsSuffix } from '$lib/core/naming.js';
+import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { date } from '$lib/fields/date/index.js';
 import {
   toCamelCase,

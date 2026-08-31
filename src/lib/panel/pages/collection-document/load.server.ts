@@ -2,7 +2,7 @@ import { buildUploadAria, type UploadPath } from '$lib/core/features/upload/util
 import { PARAMS, UPLOAD_PATH } from '$lib/core/constants.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { withVersionsSuffix } from '$lib/core/naming.js';
+import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { CollectionDocData } from '$lib/panel/index.js';
 import type { Route } from '$lib/panel/types.js';

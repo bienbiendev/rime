@@ -1,6 +1,6 @@
 import type { WithUpload } from '$lib/core/features/upload/util/config.js';
 import { validatePath } from '$lib/core/features/upload/util/path.js';
-import { withDirectoriesSuffix } from '$lib/core/naming.js';
+import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import { date } from '$lib/fields/date/index.js';
 import { text } from '$lib/fields/text/index.js';
 import type { CollectionSlug } from '$lib/types.js';

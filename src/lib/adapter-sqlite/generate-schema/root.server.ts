@@ -1,7 +1,7 @@
 import type { LocaleConfig } from '$lib/core/factory/config/types.js';
 import { type FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { withLocalesSuffix } from '$lib/core/naming.js';
+import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
