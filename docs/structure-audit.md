@@ -1,55 +1,81 @@
 # `src/lib/core` — structure audit & target
 
-> Status: **applied.** All five phases below have landed. Sections 3 and 4
-> describe the layout as it was _before_ the change, and are kept as the record of
-> why it moved; sections 6 onward describe the layout as it is now.
+> Status: **applied**, over two rounds. Sections 3 and 4 describe the layout as it was
+> _before_ the change and are kept as the record of why it moved; section 0 describes where it
+> landed, including the placement rule that came out of the second round.
 
 ## 0. Outcome
 
 `ls src/lib/core` before → after:
 
 ```
-areas/  collections/  config/  operations/       factory/  operations/  features/
-dev/  errors/  fields/  handlers/  i18n/     →   local-api/  rest/  handlers/
-logger/  plugins/  types/                        plugins/  dev/  errors/  fields/
-                                                 i18n/  logger/  types/
+areas/  collections/  config/  operations/     constants.ts  constants.server.ts  logger.server.ts
+dev/  errors/  fields/  handlers/  i18n/    →  errors/  i18n/  fields/  prototype/
+logger/  plugins/  types/                      factory/  operations/  features/
+                                               rime/  rest/  handlers/  plugins/  dev/
 ```
 
-Two directories are gone (`collections/`, `areas/`) and four are new
-(`factory/`, `features/`, `local-api/`, `rest/`). Hooks live in one place per
-feature; the pipeline order lives in one file; the update pipeline is written
-once instead of twice.
+Two directories are gone (`collections/`, `areas/`), and every entry left is a concept with a
+real name — no `shared/`, no `types/`, no `naming.ts` grab-bag.
 
-Two things turned out differently from the plan, both simplifications:
+### The placement rule
 
-- **`augment-title` needed no `titleFallback` parameter** (§6.4). The area
-  variant is the collection one minus branches that cannot fire on an area, so
-  the collection implementation applied to an area already falls through to
-  `id`. One file, same behaviour, no new knob.
-- **`operations/` kept a prototype split** — `operations/collection/` and
-  `operations/area/` — rather than merging every operation into one flat folder.
-  `runUpdate` removed the duplicated _pipeline_; what is left in each file is
-  genuinely per-prototype (which adapter method writes, how the document is read
-  back) and `find` exists for both.
+The recurring question behind most of this was _"what is core, what is util?"_ — and the honest
+answer for a long time was "wherever it landed". The rule now is:
 
-Verification: **`bun run test` passes end to end — 375 tests, exit 0** (empty 3,
-fields 94, multilang 74, versions 50, versions-multilang 57, basic 97), plus
-vitest 85/85, madge 7 cycles (unchanged from the pre-refactor baseline), and
-`bun run package` → publint "All good!".
+| bucket                  | test                                                                   | examples                                            |
+| ----------------------- | ---------------------------------------------------------------------- | --------------------------------------------------- |
+| `util/`                 | imports **nothing** from rime; pure functions over language primitives | `string`, `object`, `path`, `coerce`                |
+| `core/<concept>/`       | rime vocabulary, or always-on infrastructure                           | `prototype`, `fields`, `errors`, `i18n`             |
+| `core/features/<name>/` | **`pipeline.server.ts` branches on it**                                | `auth`, `upload`, `nested`, `versions`, `url`       |
+| `core/<layer>/`         | a stage of the flow                                                    | `factory`, `operations`, `rime`, `rest`, `handlers` |
 
-Getting there needed two fixes to the test harness itself, both pre-existing and
-unrelated to this refactor — see the commit "test: make `bun run test`
-runnable". Reproducing the `basic` and `fields` suites also needs an SMTP server
-at `RIME_SMTP_HOST`: those configs declare `$smtp` and creating an API key
-really does send mail. The mailer defaults to `secure: true`, so it must speak
-implicit TLS with a certificate the runtime trusts.
+Read the signature: if every type in it is a language type, it is a util; if any type is a rime
+type, it belongs to that type's concept. `toKebabCase(s: string)` → util.
+`withVersionsSuffix(slug: CollectionSlug)` → versions. `isStaff(user: User)` → auth.
 
-`svelte-check` result depends on which config is generated, and matched the
-pre-refactor baseline at every phase: 0 errors under a config that declares
-`$smtp` (e.g. `basic`), 1 under one that does not (e.g. `versions`). That one
-error is pre-existing and unrelated — `create-better-auth-user.server.ts` calls
-`sendMail` on `plugins.mailer`, which `InferCorePlugins` types as
-`Record<string, never>` when there is no `$smtp` in the config.
+Two clarifications make it workable:
+
+- **A barrel is not a home.** `util/index.ts` still publishes `access`, `validate` and `doc`
+  because `rimecms/util` is public API for config authors; where that code _lives_ is a separate
+  question, and it lives with its concept.
+- **The feature test is mechanical, not a matter of taste.** It is what
+  `pipeline.server.ts` branches on. That settles localization: nothing branches on it,
+  `setDocumentLocale` runs unconditionally and every table gets the `Locales` treatment, so it
+  is infrastructure and `withLocalesSuffix` sits in `core/i18n/` — not a feature folder.
+
+Applying the rule paid for itself: splitting `util/doc.ts` (document builders → `prototype/`,
+path helpers → `util/path.ts`, `ensurePathExists` → `util/object.ts`) removed a real circular
+dependency. **Madge is at 6, down from 7.**
+
+Two things came out simpler than round 1 planned:
+
+- **`augment-title` needed no `titleFallback` parameter.** The area variant is the collection
+  one minus branches that cannot fire on an area, so one file covers both.
+- **`operations/` kept a `collection/` and `area/` split.** `runUpdate` removed the duplicated
+  _pipeline_; what is left per file is genuinely per-prototype.
+
+### Four inconsistencies, settled
+
+Round 1 preserved these verbatim and flagged them; round 2 fixed them:
+
+1. **Create now chains the hook config**, so sign-up validates the password it is given —
+   `augmentFieldsPassword`'s fields never reached `validateFields` on create. Its position is
+   load-bearing: after `mergeWithBlankDocument` (password is `.required()`, so a blank document
+   built from the amended config would fail its own validation) and before `buildDataConfigMap`.
+2. **`afterUpdate` returns what its hooks handed back**, matching `afterCreate`.
+3. **`transform.doc` moved inside the per-document `try/catch`** in `find()`.
+4. **The inference guard covers the core plugins**, not just slug literals.
+
+### Verification
+
+`svelte-check` 0 errors, `vitest` 86/86, `madge` 6 cycles. `bun run test` (375 e2e tests across
+six suites) passed at the end of round 1; the round-2 behaviour changes above — commit
+"chain the hook config on create too" in particular — need it run again.
+
+Reproducing `bun run test` needs `.env` per CONTRIBUTING plus an SMTP server at
+`RIME_SMTP_HOST` speaking implicit TLS with a trusted certificate: creating an API key really
+does send mail.
 
 ## 1. Scope & method
 
