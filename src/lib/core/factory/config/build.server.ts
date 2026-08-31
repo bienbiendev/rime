@@ -7,7 +7,7 @@ import { augmentPrototypes } from './augment-prototypes.js';
 import { makeVersionsCollectionsAliases } from '../../features/versions/derive.server.js';
 import type { Config } from './types.js';
 import { augmentCORS } from './augment-cors.server.js';
-import { augmentDirectoriesServer } from '../../features/upload/directories.server.js';
+import { upload } from '../../features/upload/index.server.js';
 import { augmentPanelAccess } from './augment-panel-access.server.js';
 import { augmentPluginsServer } from './augment-plugins.server.js';
 import { augmentStaffServer } from '../../features/auth/staff/augment.server.js';
@@ -26,7 +26,7 @@ function augmentConfig<T extends Config>(config: T) {
   const withPanelAccess = augmentPanelAccess(withPanel);
   const withCORS = augmentCORS(withPanelAccess);
   const withPluginsServer = augmentPluginsServer(withCORS);
-  const withDirectories = augmentDirectoriesServer(withPluginsServer);
+  const withDirectories = upload.derive.server(withPluginsServer);
   const output = augmentPlugins(withDirectories);
   return output;
 }

@@ -4,7 +4,7 @@
 > _before_ the change and are kept as the record of why it moved; section 0 describes where it
 > landed, including the placement rule that came out of the second round.
 >
-> **§§12–16 are the design for the next round; §13.8's first step is now applied — see §17.** §12 argues that two
+> **§§12–16 are the design; §13.8 steps 1 and 2 are applied — see §17 and §18.** §12 argues that two
 > rounds produced a better categorization but still not a _pattern_, and proposes the missing
 > one: a `Feature` contract, sibling to the `Plugin` and `FieldBuilder` contracts this repo
 > already has. §13 pushes it — three phases (**codegen → boot → runtime**, three moments in one
@@ -1860,3 +1860,94 @@ first time, two feature hooks that lived in `core/` are labelled as belonging to
 §13.8 step 2 — the `Feature` type on `url` and `upload`, the two that need no adapter
 cooperation (§14.4). The phase lists now exist to receive them, and the golden schema is in
 place to catch a storage regression in seconds rather than in an e2e run.
+
+---
+
+## 18. Applied: §13.8 step 2 — `Feature` on `url` and `upload`
+
+Done. `core/features/index.ts` now holds `Feature` and `defineFeature`, sibling to
+`core/plugins/index.ts`'s `Plugin`/`definePlugin`, and the two features that need no adapter
+cooperation (§14.4) are declared through it.
+
+### 18.1 Seams actually wired
+
+| seam              | attach point                     | before                                                | after                                 |
+| ----------------- | -------------------------------- | ----------------------------------------------------- | ------------------------------------- |
+| `enabled`         | `operations/pipeline.server.ts`  | `collection.upload ?` / `collection.$url ?` inline ×6 | `uploadRuntime.enabled(collection)`   |
+| `hooks`           | `operations/pipeline.server.ts`  | 9 deep imports                                        | destructured from two feature objects |
+| `boot`            | `core/boot.server.ts`            | `ensureMedias(config)` imported directly              | `await upload.boot(config)`           |
+| `derive` (server) | `factory/config/build.server.ts` | `augmentDirectoriesServer(…)`                         | `upload.derive.server(…)`             |
+| `derive` (client) | `factory/config/build.ts`        | `augmentDirectories(…)`                               | `uploadClient.derive.client(…)`       |
+| `augment`         | `factory/{collection,area}/`     | unchanged — see 18.3                                  | unchanged                             |
+
+### 18.2 The constraint that shaped the file layout
+
+The first attempt imported the whole `upload` feature into `pipeline.server.ts` and produced a
+cycle that would have failed **silently**:
+
+```
+pipeline.server.ts → features/upload/index.server.ts → directories.server.ts → pipeline.server.ts
+```
+
+`directories.server.ts` needs `directoriesPipeline` and `augmentCollectionHooks` — a derived
+prototype legitimately depends on the pipeline. And because `pipeline.server.ts` destructures
+`hooks` at module scope, the half-initialised module would have yielded `undefined` rather than
+throwing. Worth noting that **madge did not catch this**: it does not resolve the `$lib` alias,
+and `directories.server.ts` imports the pipeline through it.
+
+So each feature is split by _who is allowed to see what_, and each narrowing is forced:
+
+| file                | contains                      | consumed by                                       |
+| ------------------- | ----------------------------- | ------------------------------------------------- |
+| `index.ts`          | client-visible seams          | `build.ts` — cannot import `.server.ts`           |
+| `runtime.server.ts` | `enabled` + `hooks` (phase 3) | `pipeline.server.ts` — cycle-free by construction |
+| `index.server.ts`   | the whole feature             | `boot.server.ts`, `build.server.ts`               |
+
+A feature grows only the files its seams require: `upload` has three, `url` has two.
+
+**This is a real finding, not an implementation detail.** The runtime attach point can never see
+a feature's boot half, because boot-time derivation depends on the runtime pipeline. Any
+registry design has to respect that direction.
+
+### 18.3 What was deliberately _not_ wired
+
+`factory/{collection,area}/index{,.server}.ts` still call `augmentUpload`/`augmentUrl` directly
+rather than through `feature.augment`. Routing them through the object typechecks, but the
+augment chain is the one place §9.1 forbids indirection experiments without a strong reason: it
+is a literal `const withX = augmentX(prev)` sequence precisely so slug literals survive to
+`event.locals.rime`. The feature objects _declare_ `augment` — so the client/server pair is
+visible in one place, which is what §12.3's silent-divergence bug needed — while the factories
+keep composing by hand. Revisit only with `inference.spec.ts` watched closely.
+
+### 18.4 Verification
+
+- `bun run check` — 1 error, the pre-existing `sendMail`/`never` under a config without `$smtp`.
+  No new ones.
+- `bunx vitest run` — 90/90 including `inference.spec.ts`.
+- `madge` — 6, back down from 7. The `Feature` wiring briefly introduced a seventh by pulling
+  `upload/augment.ts` into `build.server.ts`'s reach, where its `$lib/types.js` barrel import
+  closed a loop; repointing it at `factory/config/types.js` (where both types are defined
+  anyway) removed it. Same class of fix as round 1's `WithRelationPopulated`.
+- **Golden schema byte-identical** — `versions-multilang` regenerated after the derive rewiring,
+  including `medias_directories` and `pdf_directories`. This is what proves `upload.derive`
+  behaves exactly as the direct call did.
+- **Real boot** — `/panel/sign-in`, `/api/news`, `/api/medias`, `/api/pdf` all 200
+  (`/api/settings` 403, correct: admin-only read, unauthenticated).
+- **Boot hook proven live** — deleted `static/medias`, booted, it came back. `upload.boot` runs.
+
+### 18.5 Verdict, and next
+
+Does it read like `definePlugin`? **Yes for `url`** — 8 lines, every seam visible. **Partly for
+`upload`** — the object is clean, but three files to express one feature is more ceremony than
+`Plugin` needs, and only two of them are justified by a hard constraint (the third, `index.ts`,
+by the client bundle boundary).
+
+The payoff that is already real: the `collection.upload ?` test is written once instead of six
+times; the client/server augment pair is visible in one line; and `ensureMedias`, which used to
+fire as a side effect of building a config object, is now something the upload feature _declares_
+and `boot.server.ts` _places_.
+
+Next is `versions` (§14.7 step 3), the one that tests the adapter contract rather than the type —
+`Adapter` becoming a real interface instead of `ReturnType<typeof …>`, and 8 files of
+import-coupling collapsing into one declared capability. The golden schema is the guard that
+makes it tractable.

@@ -1,7 +1,13 @@
-import type { UploadConfig } from '$lib/core/factory/config/types.js';
+// Straight at factory/config/types.js, not at the $lib/types.js barrel: this module is pulled
+// in by build.server.ts through the feature object, and the barrel re-exports enough of the
+// config layer to close a cycle back onto it. Both types are defined there anyway.
+import type {
+  Collection,
+  ImageSizesConfig,
+  UploadConfig
+} from '$lib/core/factory/config/types.js';
 import { text } from '$lib/fields/text/index.js';
 import { toCamelCase } from '$lib/util/string.js';
-import type { Collection, ImageSizesConfig } from '../../../types.js';
 import { validatePath } from './util/path.js';
 
 export type WithNormalizedUpload<T> = Omit<T, 'upload'> & { upload?: UploadConfig };

@@ -4,17 +4,8 @@ import { augmentFieldsPassword } from '../features/auth/hooks/augment-fields-pas
 import { populateAPIKey } from '../features/auth/hooks/populate-api-key.server.js';
 import { removePrivateFields } from '../features/auth/hooks/remove-private-fields.server.js';
 import { addChildrenProperty } from '../features/nested/hooks/add-children.server.js';
-import { cleanUpFiles } from '../features/upload/hooks/clean-up-files.server.js';
-import { castBase64ToFile } from '../features/upload/hooks/convert-base64.server.js';
-import { exctractPath } from '../features/upload/hooks/extract-path.server.js';
-import { handlePathCreation } from '../features/upload/hooks/handle-path-creation.server.js';
-import { populateSizes } from '../features/upload/hooks/populate-sizes.server.js';
-import { processFileUpload } from '../features/upload/hooks/process-file-upload.server.js';
-import {
-  prepareDirectoryChildren,
-  updateDirectoryChildren
-} from '../features/upload/hooks/update-directory-children.server.js';
-import { populateURL } from '../features/url/hooks/populate-url.server.js';
+import { uploadRuntime } from '../features/upload/runtime.server.js';
+import { urlRuntime } from '../features/url/runtime.server.js';
 import { defineVersionOperation } from '../features/versions/hooks/define-version-operation.server.js';
 import { handleNewVersion } from '../features/versions/hooks/handle-new-version.server.js';
 import { mergeWithBlankDocument } from './steps/merge-with-blank.server.js';
@@ -42,6 +33,28 @@ import { validateFields } from './steps/validate-fields.server.js';
  * A collection's and an area's pipelines sit side by side below so their differences are
  * visible rather than spread across two files.
  */
+
+/**
+ * Hooks come from the features that own them, pulled out here so the pipelines below read as
+ * sequences of names rather than of property accesses. The features declare *which* hooks exist
+ * and *whether* they apply; this file decides *when* they run.
+ *
+ * Deliberately the `runtime.server.ts` half of each feature, never the whole feature: the boot
+ * half reaches derive → directories.server.ts → back to this file, and since these bindings are
+ * read at module scope a cycle would silently yield `undefined` instead of throwing. See
+ * features/upload/runtime.server.ts.
+ */
+const {
+  handlePathCreation,
+  castBase64ToFile,
+  processFileUpload,
+  populateSizes,
+  cleanUpFiles,
+  exctractPath,
+  prepareDirectoryChildren,
+  updateDirectoryChildren
+} = uploadRuntime.hooks;
+const { populateURL } = urlRuntime.hooks;
 
 type PartialCollection = {
   upload?: Collection<any>['upload'];
@@ -74,8 +87,8 @@ export const collectionPipeline = (collection: PartialCollection) => {
       setDocumentTitle,
       setDocumentLocale,
       setDocumentType,
-      ...(collection.upload ? [populateSizes] : []),
-      ...(collection.$url ? [populateURL] : []),
+      ...(uploadRuntime.enabled(collection) ? [populateSizes] : []),
+      ...(urlRuntime.enabled(collection) ? [populateURL] : []),
       ...(collection.nested ? [addChildrenProperty] : []),
       setDocumentThumbnail,
       sortDocumentProps
@@ -100,7 +113,7 @@ export const collectionPipeline = (collection: PartialCollection) => {
       buildDataConfigMap,
       setDefaultValues,
       validateFields,
-      ...(collection.upload ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
+      ...(uploadRuntime.enabled(collection) ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
     ],
 
     afterUpdate: [],
@@ -116,14 +129,14 @@ export const collectionPipeline = (collection: PartialCollection) => {
       setDefaultValues,
       validateFields,
       ...(collection.auth ? [authHooks.createBetterAuthUser] : []),
-      ...(collection.upload ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
+      ...(uploadRuntime.enabled(collection) ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
     ],
 
     afterCreate: [...(IS_API_AUTH ? [populateAPIKey] : [])],
 
     beforeDelete: [
       ...(collection.auth ? [authHooks.preventSupperAdminDeletion] : []),
-      ...(collection.upload ? [cleanUpFiles] : [])
+      ...(uploadRuntime.enabled(collection) ? [cleanUpFiles] : [])
     ],
 
     afterDelete: [...(collection.auth ? [authHooks.deleteBetterAuthUser] : [])]
@@ -146,7 +159,7 @@ export const areaPipeline = (area: PartialArea) => ({
     processDocumentFields,
     setDocumentTitle,
     setDocumentLocale,
-    ...(area.$url ? [populateURL] : []),
+    ...(urlRuntime.enabled(area) ? [populateURL] : []),
     setDocumentType,
     sortDocumentProps
   ],
