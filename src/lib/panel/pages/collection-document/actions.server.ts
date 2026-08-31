@@ -1,7 +1,7 @@
 import { PARAMS, UPLOAD_PATH } from '$lib/core/constants.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { extractData } from '$lib/core/rest/extract-data.server.js';
+import { extractData } from '$lib/core/operations/extract-data.server.js';
 import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
 import { toKebabCase } from '$lib/util/string.js';

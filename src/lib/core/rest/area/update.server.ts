@@ -1,7 +1,7 @@
 import { PARAMS } from '$lib/core/constants.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
-import { extractData } from '$lib/core/rest/extract-data.server.js';
+import { extractData } from '$lib/core/operations/extract-data.server.js';
 import type { AreaSlug } from '$lib/core/prototype/types.js';
 import { trycatch } from '$lib/util/function.js';
 import { json, type RequestEvent } from '@sveltejs/kit';

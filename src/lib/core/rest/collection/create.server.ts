@@ -1,6 +1,6 @@
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { extractData } from '$lib/core/rest/extract-data.server.js';
+import { extractData } from '$lib/core/operations/extract-data.server.js';
 import { trycatch } from '$lib/util/function.js';
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { isAuthConfig } from '../../features/auth/util.js';

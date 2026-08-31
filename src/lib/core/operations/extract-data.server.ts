@@ -2,9 +2,15 @@ import { RimeFormError } from '$lib/core/errors/index.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
+import { normalizeValue } from '$lib/util/coerce.js';
 import { flatten, unflatten } from 'flat';
 
 /**
+ * Turns an incoming request body into document data.
+ *
+ * Lives in operations/, not rest/: both the REST handlers and the panel's form actions call it,
+ * and what it produces is exactly what an operation consumes.
+ *
  * Extracts data from a request based on its content type
  * Handles both multipart/form-data, form-urlencoded and JSON requests
  *
@@ -21,9 +27,13 @@ export const extractData = async <T extends Record<string, any>>(
   let data;
   try {
     const contentType = request.headers.get('content-type');
-    const isMultiPartFormData = contentType?.startsWith('multipart/form-data');
-    const isFormURLEncoded = contentType?.startsWith('application/x-www-form-urlencoded');
-    if (isMultiPartFormData || isFormURLEncoded) {
+    // One branch for both form encodings on purpose: request.formData() decodes
+    // multipart/form-data and application/x-www-form-urlencoded alike, per the Fetch spec, so
+    // the two only ever differ on the wire.
+    const isFormEncoded =
+      contentType?.startsWith('multipart/form-data') ||
+      contentType?.startsWith('application/x-www-form-urlencoded');
+    if (isFormEncoded) {
       /** Handle formData input */
       const formData = await request.formData();
       data = formDataToData(formData);
@@ -73,37 +83,4 @@ export const jsonDataToData = (jsonData: Dic) => {
     flatData[key] = normalizeValue(flatData[key]);
   }
   return unflatten(flatData) as GenericDoc;
-};
-
-/**
- * Normalizes string values to appropriate types
- * Converts 'true'/'false' strings to boolean values
- * Handles null values and numeric conversions
- */
-const normalizeValue = (value: any) => {
-  if (value === 'false' || value === 'true') {
-    return value === 'true';
-  }
-  if (value === 'null') {
-    return null;
-  }
-  if (value === 'undefined') {
-    return undefined;
-  }
-  if (value === '[]') {
-    return [];
-  }
-  // For time values return raw value
-  if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
-    return value;
-  }
-  // For integers parseInt
-  if (/^[\d]+$/.test(value)) {
-    return parseInt(value);
-  }
-  // For floats parseFloat
-  if (/^[\d]+\.[\d]+$/.test(value)) {
-    return parseFloat(value);
-  }
-  return value;
 };
