@@ -54,10 +54,6 @@ export const runBeforeOperation = async <S extends DocType>(args: {
  * All three of data, context and config travel through: a hook may rewrite the incoming data,
  * stash something on the context, or hand back an amended config — auth's augmentFieldsPassword
  * appends the password fields this way, so the validation step below it sees them.
- *
- * Create used to opt out of the config half, which is why sign-up never validated the password
- * it was given. Both timings chain now; pipeline.server.ts places augmentFieldsPassword so that
- * the amended config reaches buildDataConfigMap without reaching mergeWithBlankDocument.
  */
 export const runDataHooks = async <S extends DocType, D, C extends AnyConfig>(args: {
   hooks: unknown;
@@ -66,7 +62,27 @@ export const runDataHooks = async <S extends DocType, D, C extends AnyConfig>(ar
   event: RequestEvent;
   operation: Operation;
   context: OperationContext<S>;
+  /**
+   * Whether a config amended by one hook is handed to the next. True on update, false on create.
+   *
+   * This is deliberate, not an oversight, and an attempt to "fix" it broke the suite. The only
+   * hook that amends config is auth's augmentFieldsPassword, which appends `password` and
+   * `confirmPassword` — fields that exist purely to carry validations, never as columns and
+   * never in the client config. Chaining them on create makes both `.required()` fields
+   * mandatory, and no create path actually supplies them:
+   *
+   * - `POST /api/<auth-collection>` takes { name, email, password } — no confirmPassword, so
+   *   the request 400s on validation before it can 403 on access (tests/basic "Should not
+   *   create a user").
+   * - the PUBLIC_SIGNUP path in createBetterAuthUser is called by better-auth *after* it has
+   *   made the user, with { name, email, authUserId } and no password at all.
+   *
+   * Update has neither shape: it is always a panel form that posts both fields. So create
+   * leaves password validation to better-auth and to the form, and this flag stays.
+   */
+  chainConfig?: boolean;
 }): Promise<{ data: D; config: C; context: OperationContext<S> }> => {
+  const chainConfig = args.chainConfig ?? true;
   let { data, config, context } = args;
 
   for (const hook of (args.hooks as AnyHook[]) || []) {
@@ -79,7 +95,7 @@ export const runDataHooks = async <S extends DocType, D, C extends AnyConfig>(ar
     });
     context = result.context;
     data = result.data;
-    config = result.config;
+    if (chainConfig) config = result.config;
   }
 
   return { data, config, context };

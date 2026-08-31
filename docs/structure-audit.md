@@ -55,23 +55,37 @@ Two things came out simpler than round 1 planned:
 - **`operations/` kept a `collection/` and `area/` split.** `runUpdate` removed the duplicated
   _pipeline_; what is left per file is genuinely per-prototype.
 
-### Four inconsistencies, settled
+### Four inconsistencies: three settled, one explained
 
-Round 1 preserved these verbatim and flagged them; round 2 fixed them:
+Round 1 preserved these verbatim and flagged them. Round 2 fixed three; the fourth turned out
+to be deliberate, and the e2e suite proved it.
 
-1. **Create now chains the hook config**, so sign-up validates the password it is given —
-   `augmentFieldsPassword`'s fields never reached `validateFields` on create. Its position is
-   load-bearing: after `mergeWithBlankDocument` (password is `.required()`, so a blank document
-   built from the amended config would fail its own validation) and before `buildDataConfigMap`.
+1. **Create does _not_ chain the hook config — and must not.** Round 2 "fixed" this and had to
+   revert it. The only hook that amends config is auth's `augmentFieldsPassword`, which appends
+   `password` and `confirmPassword`: fields that carry validations, never columns, never in the
+   client config. Chaining them on create makes both `.required()` fields mandatory, and no
+   create path supplies them — `POST /api/<auth-collection>` takes `{ name, email, password }`
+   with no `confirmPassword` (so the request 400s on validation before it can 403 on access:
+   `tests/basic` "Should not create a user"), and the `PUBLIC_SIGNUP` path in
+   `createBetterAuthUser` is called by better-auth _after_ the user exists, with
+   `{ name, email, authUserId }` and no password at all. Update has neither shape — it is always
+   a panel form posting both fields. So create leaves password validation to better-auth and to
+   the form. The `chainConfig` flag stays, now documented with this reasoning at its definition
+   in `operations/run.server.ts` and at both `augmentFieldsPassword` entries in
+   `pipeline.server.ts`.
 2. **`afterUpdate` returns what its hooks handed back**, matching `afterCreate`.
 3. **`transform.doc` moved inside the per-document `try/catch`** in `find()`.
 4. **The inference guard covers the core plugins**, not just slug literals.
 
+The lesson generalises past this one flag: a divergence between two timings is not automatically
+a bug. Round 1 was right to preserve it and flag it rather than settle it silently — that flag is
+what made the failure legible when the e2e suite caught it.
+
 ### Verification
 
 `svelte-check` 0 errors, `vitest` 86/86, `madge` 6 cycles. `bun run test` (375 e2e tests across
-six suites) passed at the end of round 1; the round-2 behaviour changes above — commit
-"chain the hook config on create too" in particular — need it run again.
+six suites) passed at the end of round 1, and is what surfaced the config-chaining regression
+above; changes 2–4 still want a full run.
 
 Reproducing `bun run test` needs `.env` per CONTRIBUTING plus an SMTP server at
 `RIME_SMTP_HOST` speaking implicit TLS with a trusted certificate: creating an API key really
