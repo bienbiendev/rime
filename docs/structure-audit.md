@@ -4,7 +4,7 @@
 > _before_ the change and are kept as the record of why it moved; section 0 describes where it
 > landed, including the placement rule that came out of the second round.
 >
-> **§§12–15 are not applied — they are the design for the next round.** §12 argues that two
+> **§§12–16 are not applied — they are the design for the next round.** §12 argues that two
 > rounds produced a better categorization but still not a _pattern_, and proposes the missing
 > one: a `Feature` contract, sibling to the `Plugin` and `FieldBuilder` contracts this repo
 > already has. §13 pushes it — three phases (**codegen → boot → runtime**, three moments in one
@@ -14,8 +14,12 @@
 > the table-naming algebra, the five table kinds, and `versions` and `area` written out as
 > features.
 >
+> §16 checks §15 against reality by generating the `versions-multilang` schema — 25 tables, every
+> hard case at once — and turns up five things reading the generator did not show.
+>
 > Read them before §0's placement rule; they are what that rule was reaching for. §15.7–15.8 are
-> the shape to implement, §14.7 the order, §13.8 the cheap first step, §15.9 what is still open.
+> the shape to implement, §14.7 the order, §13.8 the cheap first step, §15.9 what is still open,
+> §16.3 the golden-file check to set up before touching any of it.
 
 ## 0. Outcome
 
@@ -1663,3 +1667,126 @@ Four things I could not settle from the code, worth deciding before implementing
    string. Nothing validates that path against the config map, and it is the one place where a
    nested-field rename would silently orphan rows. Out of scope here, but it is the sharpest
    edge in the storage model.
+
+---
+
+## 16. Worked example: the `versions-multilang` schema
+
+§15 states the naming algebra from reading the generator. This section states it from **running
+it**. Reproduce with:
+
+```sh
+bun run rime:use versions-multilang     # copies the fixture, inits, generates
+cat src/lib/+rime.generated/schema.server.ts
+```
+
+The fixture is the hardest case rime has: versions on all four collections and both areas,
+three locales, upload on two collections, nested on one, plus relations, tabs, groups and
+richText. It produces **25 tables**, and drizzle-kit accepts them (`db/0000_*.sql` is written),
+so this is a valid schema and not just a string.
+
+```
+news    news_versions    news_versionsLocales    news_versionsRels
+medias  medias_versions  medias_versionsLocales
+pdf     pdf_versions
+pages   pages_versions   pages_versionsLocales
+settings  settings_versions  settings_versionsRels
+infos     infos_versions     infos_versionsLocales
+staff   medias_directories  pdf_directories
+authUsers  authSessions  authAccounts  authVerifications
+```
+
+### 16.1 The algebra, confirmed
+
+Every line of §15.1 holds against the output. `news` is the full stack:
+
+```ts
+export const news = sqliteTable('news', {
+  id: pk(),
+  createdAt: …, updatedAt: …                        // root keeps only _root() fields
+});
+export const news_versions = sqliteTable('news_versions', {
+  id: pk(),
+  attributes__intro: …, attributes__published: …,   // tab path joined by __
+  writer__text: …, status: …, editedBy: …,
+  ownerId: text('owner_id').references(() => news.id, { onDelete: 'cascade' })
+});
+export const news_versionsLocales = sqliteTable('news_versions_locales', {
+  id: pk(),
+  attributes__title: …, attributes__slug: …, url: …,
+  locale: text('locale'),
+  ownerId: → news_versions.id                        // ← NOT news.id
+});
+export const news_versionsRels = sqliteTable('news_versions_rels', {
+  id: pk(), path: …, position: …,
+  ownerId: → news_versions.id,                       // ← NOT news.id
+  mediasId: → medias.id
+});
+```
+
+`owner = shadow ?? base` is visible in two places at once: both the locales table and the
+junction table parent onto `news_versions`, never onto `news`. And the dual spelling holds
+through the mixed suffix — the Drizzle property is `news_versionsLocales`, the SQL table is
+`news_versions_locales`.
+
+### 16.2 Five things the output teaches that reading the code did not
+
+**1. `_root()` is visible, and it is doing real work.** `pages` has `nested: true` and
+`versions: { draft: true }`:
+
+```ts
+export const pages = sqliteTable('pages', {
+  id: pk(),
+  _parent: text('_parent').references((): any => pages.id, { onDelete: 'set null' }),
+  _position: real('_position'),
+  createdAt: …, updatedAt: …
+});
+```
+
+The nested tree lives on the **root**, while every content field moved to `pages_versions`. If
+`_parent` were versioned, the site tree would fork per revision. Same for `medias`, whose root
+keeps only `_path → medias_directories.id`. This is the cross-feature protocol of §15.6 working
+correctly, in a case where getting it wrong would be a serious bug — and nothing names it today.
+
+**2. The `_directories` strip rule is load-bearing, not cosmetic.** `medias` has
+`versions: true`, and the table is `medias_directories` — not `medias_versions_directories`. A
+folder tree belongs to the library, not to a revision of a file.
+
+**3. A feature can force a table split.** `pages` declares no `.localized()` field at all, yet
+`pages_versionsLocales` exists — holding exactly one column, `url`, contributed by the **url**
+feature as a localized field. So the locales split is triggered by the _effective_ field set
+after augmentation, not by what the config author wrote. Any `TableSpec` design must run after
+augment, not beside it.
+
+**4. The split can empty its own parent.** Both of `infos`'s fields are localized, so:
+
+```ts
+infos_versions        → editedBy, createdAt, updatedAt, ownerId   // no content at all
+infos_versionsLocales → title, email, locale, ownerId
+```
+
+A shadow table with zero content columns is normal, not a bug.
+
+**5. `status` appears only under `draft: true`.** `news`, `pdf`, `pages` and `settings` declare
+`versions: { draft: true }` and get a `status` column; `medias` and `infos` declare
+`versions: true` and do not. So versions contributes **two different shapes** depending on its
+own options — the shadow table always, the `status` field conditionally. `Feature.enabled` is a
+boolean, but a feature's contribution is a function of its config, not just of its presence.
+
+### 16.3 What this pins down for the contract
+
+- **Four of the five table kinds are exercised here** — root, shadow, locales, junction. The
+  fifth (`child`: `<owner>Blocks<Name>` / `<owner>Tree<Name>`) needs a fixture with blocks or
+  tree fields; `versions-multilang` has none, so those names remain as documented in
+  `generate-schema/util.server.ts` rather than confirmed by this run.
+- **`TableSpec.fields` must be the post-augment field list** (finding 3), which places storage
+  declaration firmly _after_ the augment chain in the codegen phase.
+- **A contribution is `(config) => TableSpec[]`, not a static table** (finding 5).
+- **The `_root()` partition predicate is the single most important thing to get right** in a
+  `versions` conversion (finding 1). It is also the easiest to verify: regenerate this fixture
+  and diff the schema. Any future refactor of the storage contract should treat
+  `versions-multilang`'s generated schema as a golden file.
+
+That last point is the practical one. Before touching any of this, snapshot
+`src/lib/+rime.generated/schema.server.ts` for `versions-multilang` and `fields`; a byte-identical
+schema after the refactor is a far stronger signal than the e2e suite, and far faster to get.
