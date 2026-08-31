@@ -1,21 +1,10 @@
 // import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
-import { dev } from '$app/environment';
-import devCache from '$lib/core/dev/cache.server.js';
 import type { Config } from '$lib/core/factory/config/types.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { betterAuth } from 'better-auth';
-import { regenerateDrizzleConfig, regenerateHooks } from '../dev/cli/templates/init.js';
-import generateRoutes from '../dev/codegen/routes/index.server.js';
-import generateTypes from '../dev/codegen/types/index.server.js';
-import { RimeError } from '../errors/index.js';
-import { createConfigContext } from '../factory/config/context.server.js';
+import { bootRime } from '../boot.server.js';
+import type { createConfigContext } from '../factory/config/context.server.js';
 import type { BuildConfig } from '../factory/config/index.server.js';
-import validate from '../factory/config/validate.server.js';
-import writeMemo from '../factory/config/write.server.js';
-import { getBaseAuthConfig } from '../features/auth/better-auth/config.server.js';
-import i18n from '../i18n/index.js';
-import { registerTranslation } from '../i18n/register.server.js';
 import { logger } from '../logger.server.js';
 import { AreaAPI } from './local-api-area.server.js';
 import { CollectionAPI } from './local-api-collection.server.js';
@@ -29,68 +18,9 @@ export type ConfigContext<C extends Config = Config> = ReturnType<typeof createC
  * that provides access to cms API
  */
 export async function createRime<const C extends Config>(config: BuildConfig<C>) {
-  // Normalize plugins to a simple name->actions map
-  const serverPlugins = config.$plugins;
-  const plugins = Object.fromEntries(
-    serverPlugins.map((plugin) => [plugin.name, plugin.actions ?? {}])
-  ) as typeof config.$InferPluginsServer;
-
-  // Creat config interface
-  const configCtx = createConfigContext(config);
-
-  // Init adapter to get the generateSchema
-  const { createAdapter, generateSchema } = config.$adapter;
-
-  // Generate schema, types, routes
-  if (dev) {
-    // A `rime generate` CLI run may be regenerating the same .rime cache
-    // concurrently (e.g. a running dev server reloading off the CLI's file
-    // writes). Skip our own generation this cycle instead of racing it or
-    // blocking this request on it — the next natural reload will pick up
-    // what the CLI produced.
-    if (process.env.RIME_CLI !== 'true' && devCache.get('.cli')) {
-      logger.debug('Skipping generation, `rime generate` is already running');
-    } else {
-      const changed = writeMemo(config);
-      const valid = validate(config);
-      if (!valid) {
-        throw new RimeError('Config not valid');
-      }
-      if (changed) {
-        generateRoutes(config);
-        // Before generateSchema(): it shells out to drizzle-kit generate/migrate, which read
-        // drizzle.config.ts's schema path straight off disk — stale here means the wrong (or
-        // missing) schema file.
-        regenerateDrizzleConfig();
-        await generateSchema(config);
-        await generateTypes(config);
-        regenerateHooks();
-      } else {
-        logger.debug('Nothing to generate');
-      }
-    }
-  }
-
-  // Create adapter, consume the generated schema
-  const adapter = await createAdapter(configCtx);
-
-  // Create auth
-  const baseAuthconfig = getBaseAuthConfig({ mailer: plugins.mailer, config: configCtx });
-  type BetterAuthPlugins = typeof config.$InferAuthPlugins;
-  const betterAuthPlugins = Array.isArray(config.$auth?.plugins)
-    ? [...baseAuthconfig.plugins, ...(config.$auth.plugins as BetterAuthPlugins)]
-    : baseAuthconfig.plugins;
-
-  const auth = betterAuth({
-    ...baseAuthconfig,
-    plugins: betterAuthPlugins,
-    database: adapter.auth.betterAuthAdapter
-  });
-
-  // Register translation
-  // Register dictionaries for panel Language
-  const dictionnaries = await registerTranslation(config.panel.language);
-  i18n.init(dictionnaries);
+  // Phases 1 and 2 — codegen (dev only) then boot, in that order, written out in
+  // boot.server.ts. Everything below is phase 3: what a request gets.
+  const { plugins, configCtx, adapter, auth } = await bootRime(config);
 
   /**
    * Function that define the locale to use in a request event

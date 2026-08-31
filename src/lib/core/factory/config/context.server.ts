@@ -1,5 +1,4 @@
 import type { AreaSlug, CollectionSlug, Config, PrototypeSlug } from '$lib/types.js';
-import { ensureMedias } from '$lib/core/features/upload/ensure.server.js';
 import { RimeError } from '../../errors/index.js';
 import type { BuildConfig } from './build.server.js';
 
@@ -14,9 +13,6 @@ import type { BuildConfig } from './build.server.js';
  * ```
  */
 export function createConfigContext<const C extends Config>(config: BuildConfig<C>) {
-  //
-  ensureMedias(config);
-
   const mapCollections = Object.fromEntries(
     config.collections.map((c) => [c.slug, c])
   ) as typeof config.$InferCollections;

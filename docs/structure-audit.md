@@ -4,7 +4,7 @@
 > _before_ the change and are kept as the record of why it moved; section 0 describes where it
 > landed, including the placement rule that came out of the second round.
 >
-> **§§12–16 are not applied — they are the design for the next round.** §12 argues that two
+> **§§12–16 are the design for the next round; §13.8's first step is now applied — see §17.** §12 argues that two
 > rounds produced a better categorization but still not a _pattern_, and proposes the missing
 > one: a `Feature` contract, sibling to the `Plugin` and `FieldBuilder` contracts this repo
 > already has. §13 pushes it — three phases (**codegen → boot → runtime**, three moments in one
@@ -1790,3 +1790,73 @@ boolean, but a feature's contribution is a function of its config, not just of i
 That last point is the practical one. Before touching any of this, snapshot
 `src/lib/+rime.generated/schema.server.ts` for `versions-multilang` and `fields`; a byte-identical
 schema after the refactor is a far stronger signal than the e2e suite, and far faster to get.
+
+---
+
+## 17. Applied: §13.8 step 1 — the phase order made readable
+
+The first step of §13.8 is **done**. No `Feature` type, no registry, no behaviour change: only
+the three phases made visible where they run.
+
+### 17.1 What changed
+
+| file                               | before                                                     | after                                                              |
+| ---------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
+| `core/codegen.server.ts`           | _(new)_ — the `if (dev)` block inside `createRime`         | 7 numbered steps, each saying why it is there                      |
+| `core/boot.server.ts`              | _(new)_ — the rest of `createRime`'s body                  | 7 numbered steps returning `{ plugins, configCtx, adapter, auth }` |
+| `core/rime/index.server.ts`        | 100 lines of codegen + boot + the request factory          | one `await bootRime(config)`, then phase 3 only                    |
+| `factory/config/context.server.ts` | called `ensureMedias` — building a config touched the disk | pure again                                                         |
+
+The two hidden feature hooks of §14.1 are now named, at the boot step where they run:
+
+```ts
+// 3. FEATURE (upload): make sure the static directories the upload feature writes into exist.
+//    Lifted out of createConfigContext, which had no business touching the filesystem.
+ensureMedias(config);
+…
+// 6. FEATURE (auth): better-auth. After the adapter, whose betterAuthAdapter it stores into.
+const auth = betterAuth({ … });
+```
+
+Codegen stays **inside** boot and under `dev`, per §13.2 — it was not extracted into a separate
+program, only into a separate file with the sequence written out. The `RIME_CLI` guard moved
+with it and is documented there as concurrency control, not as a wart.
+
+### 17.2 Verification
+
+- `bun run check` — **1 error**, the pre-existing `sendMail`/`never` that appears under any
+  config without `$smtp` (this fixture has none). No new errors.
+- `bunx vitest run` — **90/90**, including `inference.spec.ts`. This was the real risk: §9.1's
+  chain runs through `createRime`'s return type, and `bootRime` sits in the middle of it now.
+  The guard passing means the slug literals still reach `event.locals.rime`.
+- `madge` — **6 cycles**, unchanged. Cycle 4 takes a longer path (`rime → boot → codegen →
+factory/config`) but is the same cycle, not a new one.
+- **Golden schema — byte-identical.** `versions-multilang` regenerated with
+  `rime generate --force`: same md5 as the §16 snapshot. This is the check §16.3 asked for, and
+  it is the one that actually proves codegen still runs in the right order.
+- **Real boot** — `vite dev`, `/panel/sign-in` 200, `/api/news` 200, clean log.
+
+### 17.3 The go/no-go criterion, judged honestly
+
+§13.8 said: _if those lists do not read like `pipeline.server.ts`, stop._
+
+They do not, and the reason is worth keeping. **`pipeline.server.ts` is a declarative array
+because hooks are uniform transforms. Boot is a chain with data flow** — the config context
+feeds the adapter, the adapter feeds better-auth — so it can only ever be a numbered sequence,
+the same shape as `runUpdate`. `codegen.server.ts` is the same: step 4 must write
+`drizzle.config.ts` before step 5 shells out to drizzle-kit, which reads it off disk.
+
+So the verdict is **proceed, with the expectation corrected**: a feature's `boot` and `codegen`
+hooks will be _entries in a written-out sequence_, not elements of a list a registry iterates.
+That is the same conclusion §12.5 and §13.4 reached for hooks — the domain owns the code, the
+layer owns the order — and it survives contact with the actual dependency graph.
+
+What the step delivered is real regardless of what follows: boot has a readable order for the
+first time, two feature hooks that lived in `core/` are labelled as belonging to features, and
+`createConfigContext` no longer writes to disk.
+
+### 17.4 Next
+
+§13.8 step 2 — the `Feature` type on `url` and `upload`, the two that need no adapter
+cooperation (§14.4). The phase lists now exist to receive them, and the golden schema is in
+place to catch a storage regression in seconds rather than in an e2e run.
