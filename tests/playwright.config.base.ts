@@ -20,8 +20,9 @@ export function createPlaywrightConfig({ name }: Args): PlaywrightTestConfig {
       // belongs, under `timeout` below.
       //
       // The panel sign-in page rather than `/`: playwright polls until it gets a 2xx/3xx, and
-      // `/` is a 404 for any config without a front-end route of its own (the `empty` fixture,
-      // for one). Sign-in is generated for every config, needs no auth, and returns 200.
+      // `/` cannot be relied on for that. Every suite starts on a fresh database, so a fixture
+      // whose home page loads a document (basic, versions) 404s until the tests create one.
+      // Sign-in is generated for every config, needs no auth, and returns 200 immediately.
       url: `${process.env.PUBLIC_RIME_URL || 'http://localhost:5173'}/${process.env.RIME_PANEL_ROUTE || 'panel'}/sign-in`,
       timeout: 180000,
       stdout: 'pipe',
