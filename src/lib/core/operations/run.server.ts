@@ -279,7 +279,7 @@ export const runUpdate = async <
   const document = await args.reread({ written, config, context });
 
   // 7. afterUpdate
-  await runDocHooks<S, T>({
+  const after = await runDocHooks<S, T>({
     hooks: config.$hooks?.afterUpdate,
     doc: document,
     data,
@@ -289,8 +289,8 @@ export const runUpdate = async <
     context
   });
 
-  // 8. Return the re-read document, NOT what afterUpdate handed back — both callers did it
-  // this way. Note that create's afterCreate does propagate its returned doc; that
-  // inconsistency predates this refactor and is preserved rather than quietly settled here.
-  return document;
+  // 8. Return what afterUpdate handed back, matching afterCreate. Both callers used to discard
+  // it, so an afterUpdate hook returning an amended doc was silently ignored on update while
+  // the same hook worked on create.
+  return after.doc;
 };

@@ -1,6 +1,6 @@
 import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { logger } from '$lib/core/logger.server.js';
-import { runBeforeOperation, runDocHooks } from '$lib/core/operations/run.server.js';
+import { readDocument, runBeforeOperation } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
 import type { CollectionSlug, GenericDoc, RawDoc } from '$lib/core/prototype/types.js';
 import type { OperationQuery } from '$lib/core/operations/types.js';
@@ -69,35 +69,26 @@ export const find = async <T extends GenericDoc>(args: FindArgs): Promise<T[]> =
     draft
   });
 
-  const hasSelect = !!select && Array.isArray(select) && !!select.length;
-
   async function processDocument(documentRaw: RawDoc) {
-    // Deliberately outside the try below: a transform failure is not a per-document skip, it
-    // rejects the whole find, exactly as before this was extracted.
-    const document = await event.locals.rime.adapter.transform.doc({
-      doc: documentRaw,
-      slug: config.slug,
-      locale,
-      event,
-      depth,
-      withBlank: !hasSelect
-    });
-
     try {
-      const result = await runDocHooks<CollectionSlug, T>({
-        hooks: config.$hooks?.beforeRead,
-        doc: document as T,
+      const result = await readDocument<CollectionSlug, T>({
+        raw: documentRaw,
         config,
         event,
-        operation: 'read',
-        context
+        context,
+        locale,
+        depth,
+        select
       });
       context = result.context;
       return result.doc;
     } catch (error: any) {
-      // If a beforeRead hook throws, skip this document and carry on with the next one
+      // Skip this document and carry on with the next one. The transform is inside the try
+      // alongside the hooks now: a row rime cannot turn into a document is the same kind of
+      // per-row problem as a beforeRead hook rejecting one, and taking the whole query down
+      // for it made a single bad row look like an empty collection.
       logger.error(error.message, error);
-      return null; // Indicate that this document should be filtered out
+      return null;
     }
   }
 
