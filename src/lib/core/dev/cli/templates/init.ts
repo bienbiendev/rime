@@ -1,7 +1,12 @@
 import { randomId } from '$lib/util/random.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { CONFIG_DIR, GENERATED_DIR, PANEL_ROUTE, configImportPaths } from '../../constants.js';
+import {
+  CONFIG_DIR,
+  GENERATED_DIR,
+  PANEL_ROUTE,
+  configImportPaths
+} from '../../constants.server.js';
 
 const PACKAGE = 'rimecms';
 

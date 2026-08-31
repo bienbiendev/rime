@@ -9,12 +9,12 @@ import { cp, mkdir } from 'fs/promises';
 import fs from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { CONFIG_DIR, OUTPUT_DIR, PANEL_ROUTE } from '../../constants.js';
-import { generate } from './generate.server.js';
+import { CONFIG_DIR, OUTPUT_DIR, PANEL_ROUTE } from '../../constants.server.js';
+import * as templates from '../templates/init.js';
 import { installDependencies } from '../util/package-manager.server.js';
 import { getPackageInfoByKey } from '../util/package.server.js';
 import { prompt } from '../util/prompt.server.js';
-import * as templates from '../templates/init.js';
+import { generate } from './generate.server.js';
 
 type Args = {
   force?: boolean;

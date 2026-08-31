@@ -2,16 +2,8 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Plugin, UserConfig } from 'vite';
 import { RIME_DEV_CACHE_DIR } from '../constants.server.js';
-import { ensureHasInit } from './ensure.server.js';
 import { logger } from '../logger.server.js';
 import { getPackageInfoByKey } from './cli/util/package.server.js';
-import {
-  CONFIG_DIR,
-  GENERATED_DIR,
-  generatedConfigServerPath,
-  isInstalledDependency,
-  schemaPath
-} from './constants.js';
 import {
   findInstalledPackageRoot,
   findModulePair,
@@ -20,6 +12,14 @@ import {
 } from './codegen/runtime/index.server.js';
 import { parseExportNames } from './codegen/runtime/parse-exports.server.js';
 import { sanitize } from './codegen/sanitize/index.server.js';
+import {
+  CONFIG_DIR,
+  GENERATED_DIR,
+  generatedConfigServerPath,
+  isInstalledDependency,
+  schemaPath
+} from './constants.server.js';
+import { ensureHasInit } from './ensure.server.js';
 
 const dev = process.env.NODE_ENV === 'development';
 
@@ -182,7 +182,8 @@ export function rime(): Plugin {
       }
 
       server.watcher.on('change', (modulePath) => {
-        const isConfigChange = modulePath.includes(CONFIG_DIR) && !modulePath.includes(GENERATED_DIR);
+        const isConfigChange =
+          modulePath.includes(CONFIG_DIR) && !modulePath.includes(GENERATED_DIR);
 
         if (!isConfigChange) return;
 

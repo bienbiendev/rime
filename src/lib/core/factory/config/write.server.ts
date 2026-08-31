@@ -1,7 +1,7 @@
 import type { Dic } from '$lib/util/types.js';
 import { flatten } from 'flat';
 import cache from '../../dev/cache.server.js';
-import { CONFIG_DIR } from '../../dev/constants.js';
+import { CONFIG_DIR } from '../../dev/constants.server.js';
 
 /**
  * We actually need to serialize config values that will trigger

@@ -2,7 +2,7 @@ import { RIME_DEV_CACHE_DIR } from '$lib/core/constants.server.js';
 import { logger } from '$lib/core/logger.server.js';
 import { rmSync } from 'node:fs';
 import path from 'node:path';
-import { CONFIG_DIR, GENERATED_DIR } from '../../constants.js';
+import { CONFIG_DIR, GENERATED_DIR } from '../../constants.server.js';
 import { prompt } from '../util/prompt.server.js';
 
 const clearMessage = `Are you sure you want to delete all related rime files (Y/n):

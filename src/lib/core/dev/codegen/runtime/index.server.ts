@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { OUTPUT_DIR } from '../../constants.js';
+import { OUTPUT_DIR } from '../../constants.server.js';
 
 export type RuntimeRegistryEntry = { client: string; server: string };
 export type RuntimeRegistry = Map<string, RuntimeRegistryEntry>;
@@ -28,7 +28,9 @@ export function findInstalledPackageRoot(pkgName: string, fromDir: string): stri
     }
     const parent = path.dirname(dir);
     if (parent === dir) {
-      throw new Error(`$rime/modules: could not find installed package '${pkgName}' above ${fromDir}`);
+      throw new Error(
+        `$rime/modules: could not find installed package '${pkgName}' above ${fromDir}`
+      );
     }
     dir = parent;
   }
@@ -98,4 +100,3 @@ export function scanModulePairs(root: string): RuntimeRegistry {
 
   return registry;
 }
-

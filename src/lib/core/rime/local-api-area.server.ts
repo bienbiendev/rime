@@ -1,7 +1,7 @@
 import type { BuiltArea } from '$lib/core/factory/config/types.js';
+import { createBlankDocument } from '$lib/core/prototype/doc.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { createBlankDocument } from '$lib/core/prototype/doc.js';
 import { find } from '../operations/area/find.js';
 import { update } from '../operations/area/update.js';
 

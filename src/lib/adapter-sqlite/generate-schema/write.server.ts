@@ -1,6 +1,6 @@
 import cache from '$lib/core/dev/cache.server.js';
 import { getPackageManager } from '$lib/core/dev/cli/util/package-manager.server.js';
-import { schemaPath } from '$lib/core/dev/constants.js';
+import { schemaPath } from '$lib/core/dev/constants.server.js';
 import { logger } from '$lib/core/logger.server.js';
 import fs from 'fs';
 import { spawnSync } from 'node:child_process';

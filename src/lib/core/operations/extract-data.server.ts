@@ -1,9 +1,45 @@
 import { RimeFormError } from '$lib/core/errors/index.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
+import { normalizeValue } from '$lib/util/coerce.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { normalizeValue } from '$lib/util/coerce.js';
 import { flatten, unflatten } from 'flat';
+
+/**
+ * Converts FormData to a structured document object
+ * Normalizes form values and handles flattened key structures
+ *
+ * @example
+ * const formData = new FormData();
+ * formData.append('user.name', 'John');
+ * formData.append('user.active', 'true');
+ * const data = formDataToData(formData);
+ * // Result: { user: { name: 'John', active: true } }
+ */
+const formDataToData = (formData: FormData) => {
+  const flatData = Object.fromEntries(formData.entries());
+  for (const key of Object.keys(flatData)) {
+    flatData[key] = normalizeValue(flatData[key]);
+  }
+  return unflatten(flatData) as GenericDoc;
+};
+
+/**
+ * Converts a JSON object to a structured document object
+ * Normalizes values and ensures consistent data structure
+ *
+ * @example
+ * const jsonData = { user: { name: 'John', active: 'true' } };
+ * const data = jsonDataToData(jsonData);
+ * // Result: { user: { name: 'John', active: true } }
+ */
+const jsonDataToData = (jsonData: Dic) => {
+  const flatData: Dic = flatten(jsonData);
+  for (const key of Object.keys(flatData)) {
+    flatData[key] = normalizeValue(flatData[key]);
+  }
+  return unflatten(flatData) as GenericDoc;
+};
 
 /**
  * Turns an incoming request body into document data.
@@ -47,40 +83,4 @@ export const extractData = async <T extends Record<string, any>>(
   }
 
   return data as T;
-};
-
-/**
- * Converts FormData to a structured document object
- * Normalizes form values and handles flattened key structures
- *
- * @example
- * const formData = new FormData();
- * formData.append('user.name', 'John');
- * formData.append('user.active', 'true');
- * const data = formDataToData(formData);
- * // Result: { user: { name: 'John', active: true } }
- */
-export const formDataToData = (formData: FormData) => {
-  const flatData = Object.fromEntries(formData.entries());
-  for (const key of Object.keys(flatData)) {
-    flatData[key] = normalizeValue(flatData[key]);
-  }
-  return unflatten(flatData) as GenericDoc;
-};
-
-/**
- * Converts a JSON object to a structured document object
- * Normalizes values and ensures consistent data structure
- *
- * @example
- * const jsonData = { user: { name: 'John', active: 'true' } };
- * const data = jsonDataToData(jsonData);
- * // Result: { user: { name: 'John', active: true } }
- */
-export const jsonDataToData = (jsonData: Dic) => {
-  const flatData: Dic = flatten(jsonData);
-  for (const key of Object.keys(flatData)) {
-    flatData[key] = normalizeValue(flatData[key]);
-  }
-  return unflatten(flatData) as GenericDoc;
 };

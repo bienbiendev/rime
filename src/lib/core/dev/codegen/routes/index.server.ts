@@ -1,4 +1,4 @@
-import { PANEL_ROUTE } from '$lib/core/dev/constants.js';
+import { PANEL_ROUTE } from '$lib/core/dev/constants.server.js';
 import { logger } from '$lib/core/logger.server.js';
 import type { Config } from '$lib/types.js';
 import fs from 'fs';
@@ -63,7 +63,10 @@ function generateRoutes<T extends Config>(config: T): void {
 
   const collectionMatcherPath = path.join(paramsDir, 'collection.ts');
   if (hasCollections) {
-    fs.writeFileSync(collectionMatcherPath, paramMatcher((config.collections || []).map((c) => c.kebab)));
+    fs.writeFileSync(
+      collectionMatcherPath,
+      paramMatcher((config.collections || []).map((c) => c.kebab))
+    );
   } else {
     fs.rmSync(collectionMatcherPath, { force: true });
   }

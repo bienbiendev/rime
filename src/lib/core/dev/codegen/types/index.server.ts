@@ -1,16 +1,16 @@
-import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
+import { PACKAGE_NAME } from '$lib/core/constants.server.js';
+import cache from '$lib/core/dev/cache.server.js';
 import type {
   BuiltArea,
   BuiltCollection,
   Config,
   ImageSizesConfig
 } from '$lib/core/factory/config/types.js';
-import { PACKAGE_NAME } from '$lib/core/constants.server.js';
-import cache from '$lib/core/dev/cache.server.js';
+import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
+import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { logger } from '$lib/core/logger.server.js';
-import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
@@ -20,7 +20,11 @@ import { trycatchSync } from '$lib/util/function.js';
 import { capitalize, toPascalCase } from '$lib/util/string.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { GENERATED_DIR, isInstalledDependency, relativeImportSpecifier } from '../../constants.js';
+import {
+  GENERATED_DIR,
+  isInstalledDependency,
+  relativeImportSpecifier
+} from '../../constants.server.js';
 
 const IS_RIME_REPO = !isInstalledDependency(import.meta.url);
 

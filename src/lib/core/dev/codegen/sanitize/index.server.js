@@ -5,7 +5,7 @@ import { babelParse } from 'ast-kit';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logger } from '../../../logger.server.js';
-import { CONFIG_DIR, GENERATED_DIR, OUTPUT_DIR } from '../../constants.js';
+import { CONFIG_DIR, GENERATED_DIR, OUTPUT_DIR } from '../../constants.server.js';
 
 /**
  * $ prefix-based sanitizer that rules:

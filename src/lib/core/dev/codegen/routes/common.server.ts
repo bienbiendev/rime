@@ -1,11 +1,10 @@
 import { PACKAGE_NAME } from '$lib/core/constants.server.js';
 import path from 'node:path';
-import { configImportPaths } from '../../constants.js';
+import { configImportPaths } from '../../constants.server.js';
 import type { Routes } from './util.server.js';
 
 const PANEL_LAYOUT_DIR = path.resolve(process.cwd(), 'src/routes/(rime)/[panel=panel]');
 const LIVE_PAGE_DIR = path.resolve(process.cwd(), 'src/routes/(rime)/[panel=panel]/live-edit');
-
 
 /**
  * Main base layout

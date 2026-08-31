@@ -1,6 +1,11 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { CONFIG_DIR, GENERATED_DIR, generatedConfigServerPath, schemaPath } from './constants.js';
+import {
+  CONFIG_DIR,
+  GENERATED_DIR,
+  generatedConfigServerPath,
+  schemaPath
+} from './constants.server.js';
 
 const projectRoot = process.cwd();
 
@@ -80,7 +85,6 @@ export function ensureDatabase() {
   const dbDirectory = path.resolve(projectRoot, './db');
   if (!existsSync(dbDirectory)) throw new Error('Missing db directory');
 }
-
 
 export const ensureHasInit = () => {
   ensureEnv();
