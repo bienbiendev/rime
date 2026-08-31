@@ -122,6 +122,11 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
     /* Access
     /****************************************************/
 
+    // Whether this request was denied write access to the field. The field is dropped from
+    // both `output` and `configMap` when so, which also means the caller cannot possibly
+    // satisfy it — see the required check below.
+    let accessDenied = false;
+
     if (operation === 'update' && !skipAccess) {
       const authorizedFieldUpdate = config.use.accessUpdate(user, {
         id: args.context.originalDoc?.id
@@ -130,6 +135,7 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
         output = deleteValueAtPath(output, key);
         delete configMap[key];
         value = undefined;
+        accessDenied = true;
       }
     }
 
@@ -141,11 +147,20 @@ export const validateFields = Hooks.beforeUpsert(async (args) => {
         output = deleteValueAtPath(output, key);
         delete configMap[key];
         value = undefined;
+        accessDenied = true;
       }
     }
 
-    // Required
-    if (config.get.required && config.use.isEmpty(value)) {
+    // Required — but never for a field this request may not write. The block above just
+    // emptied `value` itself, so reporting REQUIRED_FIELD here asks the caller for something
+    // it is not allowed to send: an unsatisfiable 400.
+    //
+    // This bit publicly-creatable collections in particular. FormFieldBuilder's default is
+    // `access.create: (user) => !!user`, so on an anonymous POST every field that does not
+    // override it gets stripped, and each `.required()` one then 400s no matter what was
+    // sent. A denied field is not the caller's to provide; it keeps whatever the blank
+    // document or the column default gives it.
+    if (config.get.required && !accessDenied && config.use.isEmpty(value)) {
       if (skipRequired) {
         // The field's own type-correct default (falling back to '' only
         // when none is set) — a hardcoded '' here was wrong for every

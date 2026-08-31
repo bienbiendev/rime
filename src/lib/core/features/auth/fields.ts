@@ -41,22 +41,17 @@ const password = text('password')
   })
   .validate((value) => validate.password(value));
 
-const confirmPassword = text('confirmPassword')
-  .label('Confirm password')
-  .required()
-  .validate((value, metas) => {
-    if (metas.data.password !== value) {
-      return 'password_mismatch';
-    }
-    return true;
-  });
-
+/**
+ * No `confirmPassword` here on purpose. It is a form control, not a document field: the
+ * panel owns the match check (AuthFooter.svelte builds its own `text('confirmPassword')`),
+ * because comparing two values the same client just sent proves nothing server-side.
+ * Modelling it as a field is what used to force `restCreate` to fake the value.
+ */
 export const usersFields = {
   email: emailField,
   name,
   roles,
-  password,
-  confirmPassword
+  password
 };
 
-export { confirmPassword, emailField as email, name, password, roles };
+export { emailField as email, name, password, roles };

@@ -55,37 +55,60 @@ Two things came out simpler than round 1 planned:
 - **`operations/` kept a `collection/` and `area/` split.** `runUpdate` removed the duplicated
   _pipeline_; what is left per file is genuinely per-prototype.
 
-### Four inconsistencies: three settled, one explained
+### Four inconsistencies, settled
 
-Round 1 preserved these verbatim and flagged them. Round 2 fixed three; the fourth turned out
-to be deliberate, and the e2e suite proved it.
+Round 1 preserved these verbatim and flagged them; round 2 settled them. The first took two
+attempts and is the interesting one.
 
-1. **Create does _not_ chain the hook config — and must not.** Round 2 "fixed" this and had to
-   revert it. The only hook that amends config is auth's `augmentFieldsPassword`, which appends
-   `password` and `confirmPassword`: fields that carry validations, never columns, never in the
-   client config. Chaining them on create makes both `.required()` fields mandatory, and no
-   create path supplies them — `POST /api/<auth-collection>` takes `{ name, email, password }`
-   with no `confirmPassword` (so the request 400s on validation before it can 403 on access:
-   `tests/basic` "Should not create a user"), and the `PUBLIC_SIGNUP` path in
-   `createBetterAuthUser` is called by better-auth _after_ the user exists, with
-   `{ name, email, authUserId }` and no password at all. Update has neither shape — it is always
-   a panel form posting both fields. So create leaves password validation to better-auth and to
-   the form. The `chainConfig` flag stays, now documented with this reasoning at its definition
-   in `operations/run.server.ts` and at both `augmentFieldsPassword` entries in
-   `pipeline.server.ts`.
+1. **Create chains the hook config, like update.** The `chainConfig` flag is gone.
+
+   The first attempt failed e2e (`tests/basic` "Should not create a user" expected 403, got 400)
+   and was reverted with a comment arguing the flag was deliberate. That comment was wrong. The
+   real cause was two fields away:
+
+   - `confirmPassword` was declared with no `.access()`, so it kept `FormFieldBuilder`'s
+     constructor default `create: (user) => !!user`. On an anonymous `POST /api/users` it was
+     stripped by `validateFields`' access block.
+   - `validateFields` then applied `required` to the value that block had just emptied,
+     reporting `REQUIRED_FIELD` → 400, before `createBetterAuthUser` could reach its 403.
+
+   Not chaining had merely been hiding that, at the cost of making `augmentFieldsPassword` dead
+   code on create: it ran, built an amended config, and had it discarded, so **no create path
+   ever enforced the password policy**. Both bugs are fixed below, and chaining now works.
+
+   Ordering is load-bearing: `augmentFieldsPassword` must run _after_ `mergeWithBlankDocument`.
+   The blank document is built from `config.fields` and the config map from the _data_, so
+   augmenting first gives every create a blank `password` that fails its own `.required()` —
+   including better-auth's post-signup callback, which legitimately creates the document with
+   `{ name, email, authUserId }` and no password.
+
 2. **`afterUpdate` returns what its hooks handed back**, matching `afterCreate`.
 3. **`transform.doc` moved inside the per-document `try/catch`** in `find()`.
 4. **The inference guard covers the core plugins**, not just slug literals.
 
-The lesson generalises past this one flag: a divergence between two timings is not automatically
-a bug. Round 1 was right to preserve it and flag it rather than settle it silently — that flag is
-what made the failure legible when the e2e suite caught it.
+### Two bugs found underneath #1
+
+Both were pre-existing, and neither is auth-specific.
+
+- **`confirmPassword` is no longer a document field.** It is a form control: comparing two
+  values the same client just sent proves nothing server-side, and modelling it as data is what
+  forced `restCreate` to fake it (`data.confirmPassword = data.password`) before every API
+  create. `augmentFieldsPassword` now appends `password` only, the fake is deleted, and the
+  panel keeps the match check where a typo can still be corrected (`AuthFooter.svelte`).
+
+- **`required` no longer fires on a field the request may not write.** A field emptied by the
+  access block cannot be supplied by the caller, so demanding it is an unsatisfiable 400. This
+  reaches well past auth: with `access.create` defaulting to `(user) => !!user`, _any_
+  publicly-creatable collection — a sign-up, a contact form — 400s on every `.required()` field
+  that does not explicitly override it. No e2e fixture covers this (they all declare
+  `create: () => true` on the fields they post), so it is guarded by
+  `operations/steps/validate-fields.spec.ts`, verified to fail without the fix.
 
 ### Verification
 
-`svelte-check` 0 errors, `vitest` 86/86, `madge` 6 cycles. `bun run test` (375 e2e tests across
-six suites) passed at the end of round 1, and is what surfaced the config-chaining regression
-above; changes 2–4 still want a full run.
+`svelte-check` 0 errors, `vitest` 90/90, `madge` 6 cycles. `bun run test` (375 e2e tests across
+six suites) passed at the end of round 1, and is what surfaced the config-chaining regression;
+the changes above still want a full run.
 
 Reproducing `bun run test` needs `.env` per CONTRIBUTING plus an SMTP server at
 `RIME_SMTP_HOST` speaking implicit TLS with a trusted certificate: creating an API key really

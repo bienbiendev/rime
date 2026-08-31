@@ -37,16 +37,13 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
     context
   });
 
-  // chainConfig:false — see runDataHooks. Create deliberately does not carry an amended config
-  // from one hook to the next.
   const before = await runDataHooks<CollectionSlug, DeepPartial<T>, BuiltCollection>({
     hooks: config.$hooks?.beforeCreate,
     data: args.data,
     config,
     event,
     operation: 'create',
-    context,
-    chainConfig: false
+    context
   });
   const data = before.data;
   context = before.context;
