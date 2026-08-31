@@ -4,7 +4,7 @@ import { augmentPanel } from './augment-panel.js';
 import { augmentPlugins } from './augment-plugins.js';
 import { augmentIcons } from './augment-icons.js';
 import { augmentPrototypes } from './augment-prototypes.js';
-import { makeVersionsCollectionsAliases } from '../../features/versions/derive.server.js';
+import { versions } from '../../features/versions/index.server.js';
 import type { Config } from './types.js';
 import { augmentCORS } from './augment-cors.server.js';
 import { upload } from '../../features/upload/index.server.js';
@@ -14,7 +14,7 @@ import { augmentStaffServer } from '../../features/auth/staff/augment.server.js'
 
 export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>> => {
   const augmented = augmentConfig(config);
-  const output = makeVersionsCollectionsAliases(augmented);
+  const output = versions.derive.server(augmented);
   return createRime(output as any as BuildConfig<C>);
 };
 

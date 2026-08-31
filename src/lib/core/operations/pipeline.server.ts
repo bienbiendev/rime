@@ -6,8 +6,7 @@ import { removePrivateFields } from '../features/auth/hooks/remove-private-field
 import { addChildrenProperty } from '../features/nested/hooks/add-children.server.js';
 import { uploadRuntime } from '../features/upload/runtime.server.js';
 import { urlRuntime } from '../features/url/runtime.server.js';
-import { defineVersionOperation } from '../features/versions/hooks/define-version-operation.server.js';
-import { handleNewVersion } from '../features/versions/hooks/handle-new-version.server.js';
+import { versionsRuntime } from '../features/versions/runtime.server.js';
 import { mergeWithBlankDocument } from './steps/merge-with-blank.server.js';
 import { authorize } from './steps/authorize.server.js';
 import { processDocumentFields } from './steps/process-document-fields.server.js';
@@ -57,6 +56,8 @@ const { prepareDirectoryChildren } = uploadRuntime.hooks.beforeUpdate;
 const { updateDirectoryChildren } = uploadRuntime.hooks.afterUpdate;
 const { cleanUpFiles } = uploadRuntime.hooks.beforeDelete;
 const { populateURL } = urlRuntime.hooks.beforeRead;
+const { defineVersionOperation } = versionsRuntime.hooks.beforeUpdate;
+const { handleNewVersion } = versionsRuntime.hooks.beforeUpsert;
 
 type PartialCollection = {
   upload?: Collection<any>['upload'];

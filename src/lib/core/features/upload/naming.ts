@@ -1,10 +1,17 @@
 import type { CollectionSlug } from '$lib/types.js';
+import { withoutVersionsSuffix } from '../versions/naming.js';
 
 /**
  * The `_directories` slug and table-name convention for upload collections.
  *
  * Lives with the feature that owns it rather than in a shared naming module: the adapter and
  * the panel consume this vocabulary, they do not define it.
+ *
+ * The one cross-feature dependency here is deliberate and now explicit: a directories table
+ * belongs to the document, not to a revision of it, so the versions suffix has to come off
+ * first. That used to be a hardcoded `.replace('_versions', '')` — upload restating another
+ * feature's convention as a magic string, which would silently produce
+ * `medias_versions_directories` the day versions changed its suffix. It asks versions now.
  */
 
 /**
@@ -18,7 +25,7 @@ import type { CollectionSlug } from '$lib/types.js';
  * withDirectoriesSuffix('pages_versions');
  */
 export const withDirectoriesSuffix = (slug: string) =>
-  `${slug.replace('_versions', '')}_directories` as CollectionSlug;
+  `${withoutVersionsSuffix(slug)}_directories` as CollectionSlug;
 
 /**
  * Remove a _directories suffix to a given name.

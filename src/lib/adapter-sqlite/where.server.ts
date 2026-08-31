@@ -1,7 +1,7 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger.server.js';
-import { hasVersionsSuffix } from '$lib/core/features/versions/naming.js';
+import { hasVersionsSuffix, withoutVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
@@ -83,8 +83,9 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
 
     // Handle hierarchy fields (_parent, _position) in versioned collections
     if (shouldHandleVersionedHierarchyFields(slug, sqlColumn)) {
-      // Get the root table name by removing the '_versions' suffix
-      const rootSlug = slug.replace('_versions', '');
+      // Ask the versions feature for the root name rather than restating its suffix — this
+      // file already imports hasVersionsSuffix from the same module.
+      const rootSlug = withoutVersionsSuffix(slug);
       const rootTable = getTable(rootSlug);
       // Query the root table for the hierarchy field
       return inArray(

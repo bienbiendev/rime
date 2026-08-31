@@ -6,6 +6,7 @@ import {
 import { expect, test } from 'vitest';
 import { uploadRuntime } from './upload/runtime.server.js';
 import { urlRuntime } from './url/runtime.server.js';
+import { versionsRuntime } from './versions/runtime.server.js';
 
 /**
  * Guards the other half of the feature/pipeline contract.
@@ -51,7 +52,7 @@ const placedHooks = (() => {
 })();
 
 /** [featureName, timing, hookName, fn] for every hook every converted feature declares. */
-const declaredHooks = [uploadRuntime, urlRuntime].flatMap((feature) =>
+const declaredHooks = [uploadRuntime, urlRuntime, versionsRuntime].flatMap((feature) =>
   Object.entries(feature.hooks as Record<string, Record<string, unknown>>).flatMap(
     ([timing, hooks]) =>
       Object.entries(hooks).map(
@@ -70,5 +71,5 @@ test('every hook a feature declares is placed in a pipeline', () => {
 
 test('the features under contract actually declare hooks', () => {
   // Cheap canary: if a refactor empties the maps, the test above passes vacuously.
-  expect(declaredHooks.length).toBe(9);
+  expect(declaredHooks.length).toBe(11);
 });

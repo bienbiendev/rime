@@ -4,7 +4,8 @@
 > _before_ the change and are kept as the record of why it moved; section 0 describes where it
 > landed, including the placement rule that came out of the second round.
 >
-> **§§12–16 are the design; §13.8 steps 1 and 2 are applied — see §17 and §18.** §12 argues that two
+> **§§12–16 are the design; §§17–19 are what has been applied.** Three features now run under
+> the `Feature` contract; §19.3 records where it stops and §19.4 what the adapter work needs. §12 argues that two
 > rounds produced a better categorization but still not a _pattern_, and proposes the missing
 > one: a `Feature` contract, sibling to the `Plugin` and `FieldBuilder` contracts this repo
 > already has. §13 pushes it — three phases (**codegen → boot → runtime**, three moments in one
@@ -1982,3 +1983,92 @@ Next is `versions` (§14.7 step 3), the one that tests the adapter contract rath
 `Adapter` becoming a real interface instead of `ReturnType<typeof …>`, and 8 files of
 import-coupling collapsing into one declared capability. The golden schema is the guard that
 makes it tractable.
+
+---
+
+## 19. Applied: `versions` under the contract, and where the contract stops
+
+### 19.1 A hardcoded suffix, found by reading
+
+`features/upload/naming.ts` computed the directories name as
+`` `${slug.replace('_versions', '')}_directories` `` — upload restating **versions'** convention
+as a magic string. It produces the right answer today and would silently produce
+`medias_versions_directories` the day versions changed its suffix. Now:
+
+```ts
+export const withDirectoriesSuffix = (slug: string) =>
+  `${withoutVersionsSuffix(slug)}_directories` as CollectionSlug;
+```
+
+The cross-feature dependency is real — a folder tree belongs to the document, not to a revision
+of it — so the fix is to make it explicit, not to remove it.
+
+The same literal appeared in `adapter-sqlite/where.server.ts`, in a file that **already imported
+`hasVersionsSuffix` from versions' naming module**; it now uses `withoutVersionsSuffix` too.
+
+One instance is deliberately left: `core/prototype/naming.ts` matches
+`/(_(?:directories|versions))$/` — _core_ hardcoding **two** features' suffixes. Importing both
+feature modules there would fix the string duplication while inverting the dependency the wrong
+way (core → features). It is the registry's job, and it is listed in §19.4 rather than patched.
+
+### 19.2 `versions` as a Feature
+
+Converted on the same pattern as `url` and `upload` — `runtime.server.ts` for the phase-3 half,
+`index.server.ts` for the whole thing — and wired at two attach points: `hooks` into
+`pipeline.server.ts`, `derive` into `build.server.ts`.
+
+Its shape is instructive. Versions declares **two** hooks where upload declares eight, because
+almost none of versions lives in the document pipeline. Its weight is in storage topology and
+query rewriting, spread across eight adapter files.
+
+### 19.3 Where the contract stops
+
+**The `versions` feature object does not describe versions.** It covers augment, derive and two
+hooks; it says nothing about the thing versions actually does — splitting a prototype's root
+table from a `<slug>_versions` shadow and re-parenting every locales, blocks, tree and Rels table
+onto the shadow (§15.6, §16.1). `generateSchemaString` branches on `collection.versions`
+directly, and seven more adapter files import `versions/naming.ts` and `versions/strategy.ts`.
+
+That is not a gap to paper over with a `storage` seam, because **there is nothing to declare it
+against**: `Adapter` is `ReturnType<typeof createCollectionFacade>` &c. — a type derived _from_
+the SQLite implementation rather than an interface it implements. A `requires: ['shadowTables']`
+declaration would be a string with no counterpart.
+
+The `derive` in versions makes the same point from the other side. Unlike upload's, it marks the
+derived prototype `_generateSchema: false` / `_generateTypes: false` — because the adapter builds
+those tables itself. **Those two flags are the seam** between "a feature derives storage" and
+"the adapter owns storage", and they are still the only thing naming it.
+
+So the honest state after three features: the contract covers every seam that does not touch
+storage topology, and versions is the proof that a fourth seam is needed rather than the proof
+that three suffice.
+
+### 19.4 What the adapter work actually requires
+
+Not a continuation of this — a different piece of work, in this order:
+
+1. **Make `Adapter` an interface** that `adapter-sqlite` implements, instead of a type derived
+   from it. Nothing below is meaningful until this exists.
+2. **Name the capability from the eight coupled files**, not from theory: table suffix,
+   root/shadow field partition (`f.get.root`), the one-to-many relation, and suffix-aware query
+   rewriting in `where`/`orderBy`/`transform`. Nothing more.
+3. **Replace `_generateSchema: false`** with the capability declaration it stands in for.
+4. **Then** `core/prototype/naming.ts` can ask the registry for known suffixes instead of
+   hardcoding two (§19.1).
+
+The golden schema makes this tractable: `versions-multilang` exercises versions × localization ×
+upload × nested simultaneously, and a byte-identical regeneration is a stronger signal than the
+e2e suite and takes seconds.
+
+### 19.5 Verification
+
+`bun run check` 1 pre-existing error · `vitest` 92/92 (placement guard now covers 11 hooks across
+three features) · `madge` **6** · golden schema byte-identical · dev server 200 on
+`/panel/sign-in`, `/api/news`, `/api/medias`, `/api/pdf`, `/api/pages`.
+
+madge went 6 → 8 mid-change: reaching `versions/augment.ts` and
+`versions/hooks/handle-new-version.server.ts` from `build.server.ts` exposed their
+`$lib/types.js` barrel imports, exactly as happened with `upload/augment.ts` in §18. Repointing
+both at `factory/config/types.js` fixed it. **Third occurrence of the same failure** — pulling a
+feature into the config layer's reach turns a barrel import into a cycle — which is worth a lint
+rule rather than a third manual fix.
