@@ -88,11 +88,13 @@ export const collectionPipeline = (collection: PartialCollection) => {
       handleNewVersion,
       ...(collection.auth
         ? [
-            //
-            augmentFieldsPassword,
             authHooks.preventSuperAdminMutation,
             authHooks.preventUserMutations,
-            authHooks.forwardRolesToBetterAuth
+            authHooks.forwardRolesToBetterAuth,
+            // Immediately before buildDataConfigMap, which is the whole point of it: it appends
+            // the password fields to the config so the config map — and therefore validation —
+            // covers them.
+            augmentFieldsPassword
           ]
         : []),
       buildDataConfigMap,
@@ -104,8 +106,11 @@ export const collectionPipeline = (collection: PartialCollection) => {
     afterUpdate: [],
 
     beforeCreate: [
-      ...(collection.auth ? [augmentFieldsPassword] : []),
       mergeWithBlankDocument,
+      // After mergeWithBlankDocument, never before: password is a required field, so a blank
+      // document built from the amended config would carry an empty password and fail its own
+      // validation. Before buildDataConfigMap, so a password that *was* sent gets validated.
+      ...(collection.auth ? [augmentFieldsPassword] : []),
       buildDataConfigMap,
       setDefaultValues,
       validateFields,

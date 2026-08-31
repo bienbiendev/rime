@@ -54,6 +54,10 @@ export const runBeforeOperation = async <S extends DocType>(args: {
  * All three of data, context and config travel through: a hook may rewrite the incoming data,
  * stash something on the context, or hand back an amended config — auth's augmentFieldsPassword
  * appends the password fields this way, so the validation step below it sees them.
+ *
+ * Create used to opt out of the config half, which is why sign-up never validated the password
+ * it was given. Both timings chain now; pipeline.server.ts places augmentFieldsPassword so that
+ * the amended config reaches buildDataConfigMap without reaching mergeWithBlankDocument.
  */
 export const runDataHooks = async <S extends DocType, D, C extends AnyConfig>(args: {
   hooks: unknown;
@@ -62,18 +66,7 @@ export const runDataHooks = async <S extends DocType, D, C extends AnyConfig>(ar
   event: RequestEvent;
   operation: Operation;
   context: OperationContext<S>;
-  /**
-   * Whether a config amended by one hook is handed to the next.
-   *
-   * True on update, false on create — a real divergence in the pre-refactor code, not an
-   * oversight of this refactor: on create, augmentFieldsPassword's added password fields never
-   * reached the validateFields step below it, so creating a user does not validate them the way
-   * updating one does. Made explicit here rather than settled, since settling it would change
-   * what sign-up accepts.
-   */
-  chainConfig?: boolean;
 }): Promise<{ data: D; config: C; context: OperationContext<S> }> => {
-  const chainConfig = args.chainConfig ?? true;
   let { data, config, context } = args;
 
   for (const hook of (args.hooks as AnyHook[]) || []) {
@@ -86,7 +79,7 @@ export const runDataHooks = async <S extends DocType, D, C extends AnyConfig>(ar
     });
     context = result.context;
     data = result.data;
-    if (chainConfig) config = result.config;
+    config = result.config;
   }
 
   return { data, config, context };
