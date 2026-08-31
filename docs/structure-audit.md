@@ -4,10 +4,13 @@
 > _before_ the change and are kept as the record of why it moved; section 0 describes where it
 > landed, including the placement rule that came out of the second round.
 >
-> **§12 is not applied.** It argues that two rounds produced a better categorization but still
-> not a _pattern_, and proposes the missing one: a `Feature` contract, sibling to the `Plugin`
-> and `FieldBuilder` contracts this repo already has. Read it before §0's placement rule — it
-> is what that rule was reaching for.
+> **§12 and §13 are not applied.** §12 argues that two rounds produced a better categorization
+> but still not a _pattern_, and proposes the missing one: a `Feature` contract, sibling to the
+> `Plugin` and `FieldBuilder` contracts this repo already has. §13 pushes it — three phases
+> (**codegen → boot → runtime**) rather than two, a `boot.server.ts` that does for boot what
+> `pipeline.server.ts` does for a request, and collection/area as the two _base_ features.
+> Read both before §0's placement rule; they are what that rule was reaching for. §13.8 has
+> the cheap first step.
 
 ## 0. Outcome
 
@@ -923,3 +926,219 @@ Two features under the new contract, three under the old convention, everything 
 Then judge whether a `Feature` object reads the way `definePlugin` does. If it does not earn
 its keep across those two, it will not earn it across five — and that is a cheap thing to find
 out.
+
+---
+
+## 13. Round 3, pushed: three phases, and a prototype that is a feature
+
+§12 named the missing contract. It still described features as feeding two things, "buildtime"
+and "runtime", which is wrong in a way that hides the most useful structure in the codebase.
+There are **three** phases, and a feature is consumed by all three.
+
+### 13.1 The three phases
+
+| phase       | when                                     | runs                                                                 | output                                                                                               |
+| ----------- | ---------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **codegen** | dev, on config change or `rime generate` | `dev/codegen/*`, `generateSchema`, `generateRoutes`, `generateTypes` | **files on disk** — `.rime/`, `(rime)/` routes, `src/params/*`, drizzle schema, `app.generated.d.ts` |
+| **boot**    | once per process, at server start        | `createRime()` — config context, adapter, better-auth, i18n          | **an in-memory object** — `event.locals.rime`                                                        |
+| **runtime** | once per request                         | handle chain → route → operations → adapter                          | **a response**                                                                                       |
+
+"Buildtime" collapsed the first two, and they are not alike: codegen _writes source files a
+human can read and commit_, boot _constructs objects that vanish when the process dies_.
+
+### 13.2 The code cannot see these phases — evidence
+
+**Boot and codegen are physically fused.** `core/rime/index.server.ts:45` opens an `if (dev)`
+block inside `createRime()` — the boot function — that calls `generateRoutes`, `generateSchema`,
+`generateTypes` and `regenerateHooks`. Codegen is not a phase in the structure; it is a
+conditional branch inside boot.
+
+**The fusion has a running cost.** Because codegen lives inside boot, two processes that boot
+concurrently both try to codegen, so boot carries a lock: `process.env.RIME_CLI`, a
+`.cli` marker in the dev cache, and a "Skipping generation, `rime generate` is already running"
+path. None of that is boot's business. It exists only because codegen has no entry point of
+its own.
+
+**Codegen depends on boot, and does it by booting.** `dev/cli/commands/generate.server.ts:84`
+spins a middleware-mode Vite server, `ssrLoadModule`s the generated config, and awaits its
+default export — which is the `createRime()` promise. Codegen does not statically analyse the
+config; it **runs boot in a throwaway process and observes the result**. That is why
+`rime generate` fails on a project that was never `init`ed, and it is a real ordering
+constraint that nothing in the folder structure states.
+
+So the dependency is `codegen → boot → runtime`, with codegen _invoking_ boot to do its job.
+The current tree shows none of it.
+
+### 13.3 A feature is consumed at all three phases, through unmarked doors
+
+Trace the five features against the three phases and the pattern is immediate:
+
+| feature      | codegen                                    | boot                                                | runtime                            |
+| ------------ | ------------------------------------------ | --------------------------------------------------- | ---------------------------------- |
+| **auth**     | better-auth tables in the drizzle schema   | `betterAuth({…})` — `rime/index.server.ts:84`       | 9 hooks, `handlers/auth.server.ts` |
+| **upload**   | `<slug>_directories` tables, sizes columns | `ensureMedias()` — **inside `createConfigContext`** | 6 hooks, disk I/O                  |
+| **versions** | `<slug>_versions` tables, suffix naming    | —                                                   | 2 hooks                            |
+| **nested**   | parent/children columns                    | —                                                   | 1 hook                             |
+| **url**      | —                                          | —                                                   | 1 hook                             |
+
+Two of those are the problem. `ensureMedias` sits at `factory/config/context.server.ts:18` —
+the upload feature reaching into boot through the _config context factory_, which has no
+business creating directories on disk. And better-auth is constructed inline in the middle of
+`createRime`. Neither is declared anywhere; you find them by reading the boot function line by
+line.
+
+Meanwhile `adapter-sqlite/generate-schema/` imports `features/versions/naming.js` and
+`features/upload/naming.js` directly. That is the codegen seam, wired by import rather than by
+contract.
+
+### 13.4 The payoff: a `boot.server.ts`
+
+Everyone agrees `pipeline.server.ts` is the best file in the repo (§4.2, §7): one place where
+the whole ordered sequence of a request's hooks is written out literally.
+
+**Boot has no such file.** Its order — config context → media dirs → codegen → adapter →
+better-auth → i18n — is implicit in the body of `createRime`, with one step hidden inside a
+callee. It is exactly as order-dependent as the hook pipeline (the adapter must exist before
+better-auth; the schema must be generated before the adapter reads it) and exactly as
+invisible.
+
+The single most valuable thing this direction produces is therefore not the `Feature` type. It
+is:
+
+```
+core/boot.server.ts      ← what pipeline.server.ts is to a request
+core/codegen.server.ts   ← what pipeline.server.ts is to a build
+```
+
+Ordered, literal, hand-written lists of contributions, one per phase, with the features'
+entries visible in them. `createRime` shrinks to "run the boot list, return the context
+factory". `ensureMedias` stops being a side effect of building a config object and becomes a
+line in the boot list that says `upload`.
+
+Same rule as §12.5 and §7: the phase list is hand-written and never a loop over a registry.
+Ordering is the interesting part.
+
+### 13.5 Collection and area are features
+
+The sharpest version of the idea, and the code already agrees.
+
+`dev/codegen/routes/index.server.ts:48` reads:
+
+```ts
+const hasCollections = (config.collections || []).length > 0;
+const hasAreas = (config.areas || []).length > 0;
+if (!hasCollections && pattern.includes('[slug=collection]')) continue;
+if (!hasAreas && pattern.includes('[slug=area]')) continue;
+```
+
+That is an `enabled` test driving a `codegen.routes` contribution — the feature contract,
+written by hand, for collection and area. Codegen already treats them as two optional,
+independently-enabled contributors that emit routes and param matchers.
+
+They contribute at every seam a feature does, and differ at every one:
+
+| seam           | collection                                                        | area                       |
+| -------------- | ----------------------------------------------------------------- | -------------------------- |
+| factory        | `factory/collection/`                                             | `factory/area/`            |
+| runtime ops    | find, findById, create, updateById, deleteById, delete, duplicate | find, update               |
+| rest           | `rest/collection/` — 8 files                                      | `rest/area/` — 3 files     |
+| local API      | `CollectionAPI`                                                   | `AreaAPI`                  |
+| pipeline       | `collectionPipeline` — 7 timings                                  | `areaPipeline` — 4 timings |
+| adapter        | `adapter-sqlite/collection.server.ts`                             | `…/area.server.ts`         |
+| codegen routes | `[slug=collection]` + matcher                                     | `[slug=area]` + matcher    |
+| panel          | list view, grid, folders                                          | single document            |
+
+Every difference between a collection and an area is a difference in _what it contributes_.
+That is the definition of a feature.
+
+What follows:
+
+- **`core/prototype/` finally dies properly.** §12.6 said it should not exist; this says what
+  replaces it. `features/collection/` and `features/area/` — two base features — and the
+  `collection | area` union becomes what it always was, the discriminant saying which base
+  feature built this config.
+- **Other features declare which base they compose onto.** `upload`, `auth` and `nested` are
+  collection-only; `url` and `versions` apply to both. Today that is enforced by types and by
+  `areaPipeline` simply not mentioning them — real knowledge, written nowhere.
+- **`operations/{collection,area}/` and `rest/{collection,area}/` stop being a duplication
+  smell** (§4.4) and become what they are: two base features' runtime contributions. The
+  question "should these be merged?" dissolves — they are different features.
+
+One refinement the contract needs: a base feature is **exclusive and mandatory** (exactly one
+per config object, chosen by which factory you called), where a composed feature is **optional
+and plural**. Same seams, different arity.
+
+### 13.6 The unified model
+
+Four kinds of contribution, one vocabulary, differing only in scope and arity:
+
+| kind          | extends         | arity | selected by                                         |
+| ------------- | --------------- | ----- | --------------------------------------------------- |
+| **Field**     | a document node | 0..n  | listed in `fields: []`                              |
+| **Prototype** | itself          | 1     | which factory — `Collection.create` / `Area.create` |
+| **Feature**   | a prototype     | 0..n  | a key on the config — `upload: {…}`                 |
+| **Plugin**    | the app         | 0..n  | listed in `rime.config`'s `plugins: []`             |
+
+and each declares contributions **by phase**, which is the part §12 was missing:
+
+```ts
+type Contribution = {
+  name: string;
+  enabled?: (config) => boolean;
+  /** phase 1 — writes files. Never runs in production. */
+  codegen?: { schema?: SchemaContribution; types?: TypeContribution; routes?: RouteContribution };
+  /** phase 2 — once per process. Ordered by core/boot.server.ts, not by the feature. */
+  boot?: (ctx: BootContext) => void | Promise<void>;
+  /** phase 3 — per request. Hooks are named here, ordered by pipeline.server.ts. */
+  runtime?: { augment?: Augment; hooks?: Record<string, Hook>; operations?: …; handler?: Handle };
+};
+```
+
+`augment` sits under `runtime` deliberately: it runs when the config module is imported, which
+happens at boot — and, because codegen boots the app, during codegen too. It is the one seam
+that genuinely spans phases, which is precisely why §12 called the config factory the glue.
+
+### 13.7 Honest assessment
+
+**What it buys.** A contributor's answer to "where do I start?" becomes: _pick a kind from the
+table, write the object, fill the phases you need; `boot.server.ts`, `codegen.server.ts` and
+`pipeline.server.ts` show you where it will run._ Three files describe the whole system's
+order. That is a pattern, not a categorization.
+
+**What it costs.** §12.8's estimate holds and gets worse: `codegen` as a declared seam means
+`adapter-sqlite/generate-schema/` and `dev/codegen/types/` read a registry rather than
+importing features by name — a real refactor of two packages. Splitting codegen out of
+`createRime` touches the dev-server lifecycle, the `RIME_CLI` lock, and the CLI. Neither is a
+rename.
+
+**Where it could fail.** Three risks worth naming before starting:
+
+1. **Type inference.** §9.1 is the hardest invariant in the repo: slug literals must survive
+   from a user's config to `event.locals.rime`, and they survive because `augmentConfig` is a
+   literal sequence of `const withX = augmentX(prev)`. A registry of contributions is an
+   _array_, and arrays widen. Any design here must keep the augment chain literal — the
+   registry can declare, but the factory must still compose by hand. `inference.spec.ts` is the
+   test that will catch a violation.
+2. **The panel is still out of reach.** ~20 Svelte components branch on `upload`/`auth`/
+   `nested`. A contract that implies it covers them would lie.
+3. **Ceremony without payoff.** If `boot.server.ts` and `codegen.server.ts` do not end up as
+   readable as `pipeline.server.ts`, none of this is worth doing, and the `Feature` type is
+   just a bag of optional fields.
+
+### 13.8 Revised proof
+
+§12.9 proposed converting `url` and `upload`. Risk 3 above says that tests the wrong thing
+first — it tests the type, not the payoff. Better order:
+
+1. **Extract `core/boot.server.ts` from `createRime`, changing nothing else.** No `Feature`
+   type, no registry. Just the boot sequence as a literal ordered list, with `ensureMedias`
+   lifted out of `createConfigContext` and better-auth's construction named as a step. If that
+   file does not read like `pipeline.server.ts`, stop — the whole direction is wrong, and the
+   cost was one afternoon.
+2. **Then split codegen out of boot**, giving it its own entry point and removing the
+   `RIME_CLI` lock from boot.
+3. **Only then** introduce the `Feature` type, on `url` and `upload`, with the phase lists
+   already in place to receive them.
+
+Step 1 is cheap, reversible, and independently valuable: even if the contract idea is
+abandoned, boot having a readable order is a straight improvement.
