@@ -4,13 +4,17 @@
 > _before_ the change and are kept as the record of why it moved; section 0 describes where it
 > landed, including the placement rule that came out of the second round.
 >
-> **§12 and §13 are not applied.** §12 argues that two rounds produced a better categorization
-> but still not a _pattern_, and proposes the missing one: a `Feature` contract, sibling to the
+> **§§12–14 are not applied.** §12 argues that two rounds produced a better categorization but
+> still not a _pattern_, and proposes the missing one: a `Feature` contract, sibling to the
 > `Plugin` and `FieldBuilder` contracts this repo already has. §13 pushes it — three phases
-> (**codegen → boot → runtime**) rather than two, a `boot.server.ts` that does for boot what
-> `pipeline.server.ts` does for a request, and collection/area as the two _base_ features.
-> Read both before §0's placement rule; they are what that rule was reaching for. §13.8 has
-> the cheap first step.
+> (**codegen → boot → runtime**, three moments in one process, not three programs) and
+> collection/area as the two _base_ features. §14 does the load-bearing work: where each of the
+> three hook kinds attaches, and how a feature reaches the adapter — which turns out to
+> constrain the whole design, and sorts the five features into pure features, adapter
+> capabilities, and the two that are both.
+>
+> Read them before §0's placement rule; they are what that rule was reaching for. §14.7 has the
+> order of work, §13.8 the cheap first step.
 
 ## 0. Outcome
 
@@ -946,28 +950,34 @@ There are **three** phases, and a feature is consumed by all three.
 "Buildtime" collapsed the first two, and they are not alike: codegen _writes source files a
 human can read and commit_, boot _constructs objects that vanish when the process dies_.
 
-### 13.2 The code cannot see these phases — evidence
+### 13.2 Codegen runs inside boot — by design
 
-**Boot and codegen are physically fused.** `core/rime/index.server.ts:45` opens an `if (dev)`
-block inside `createRime()` — the boot function — that calls `generateRoutes`, `generateSchema`,
-`generateTypes` and `regenerateHooks`. Codegen is not a phase in the structure; it is a
-conditional branch inside boot.
+`core/rime/index.server.ts:45` opens an `if (dev)` block inside `createRime()` that calls
+`generateRoutes`, `generateSchema`, `generateTypes` and `regenerateHooks`.
 
-**The fusion has a running cost.** Because codegen lives inside boot, two processes that boot
-concurrently both try to codegen, so boot carries a lock: `process.env.RIME_CLI`, a
-`.cli` marker in the dev cache, and a "Skipping generation, `rime generate` is already running"
-path. None of that is boot's business. It exists only because codegen has no entry point of
-its own.
+**This is correct and must stay.** In dev, codegen is on the fly: edit a collection, the module
+graph invalidates, the config module re-evaluates, `createRime()` runs again, and the routes,
+schema and types are rewritten as part of that reload. Codegen is not a separate program to be
+extracted — it is **the codegen phase of a boot**, and boot is what triggers it. An earlier
+draft of this section read the `if (dev)` block as a defect and proposed splitting it out; that
+was wrong, and the split would break the dev loop.
 
-**Codegen depends on boot, and does it by booting.** `dev/cli/commands/generate.server.ts:84`
-spins a middleware-mode Vite server, `ssrLoadModule`s the generated config, and awaits its
-default export — which is the `createRime()` promise. Codegen does not statically analyse the
-config; it **runs boot in a throwaway process and observes the result**. That is why
-`rime generate` fails on a project that was never `init`ed, and it is a real ordering
-constraint that nothing in the folder structure states.
+Two consequences follow, and they are properties of the design rather than faults in it:
 
-So the dependency is `codegen → boot → runtime`, with codegen _invoking_ boot to do its job.
-The current tree shows none of it.
+- **`rime generate` does codegen by booting.** `dev/cli/commands/generate.server.ts:84` spins a
+  middleware-mode Vite server, `ssrLoadModule`s the generated config and awaits its default
+  export — the `createRime()` promise. It does not statically analyse the config; it boots the
+  app and lets boot's own codegen phase do the work. That is why `rime generate` fails on a
+  project that was never `init`ed.
+- **Two processes can therefore be in codegen at once** — a running dev server and a CLI
+  invocation — which is why boot carries `process.env.RIME_CLI`, a `.cli` marker in the dev
+  cache, and a "Skipping generation, `rime generate` is already running" path. That is
+  concurrency control for a shared output directory, inherent to codegen-on-reload.
+
+So the three phases are not three programs. They are **three moments in one process**, and each
+runs in order on every dev reload: codegen (dev only) → boot → runtime. What the structure
+lacks is not separate entry points; it is a declared place for a feature to attach to each
+moment.
 
 ### 13.3 A feature is consumed at all three phases, through unmarked doors
 
@@ -1105,11 +1115,12 @@ table, write the object, fill the phases you need; `boot.server.ts`, `codegen.se
 `pipeline.server.ts` show you where it will run._ Three files describe the whole system's
 order. That is a pattern, not a categorization.
 
-**What it costs.** §12.8's estimate holds and gets worse: `codegen` as a declared seam means
+**What it costs.** §12.8's estimate holds: `codegen` as a declared seam means
 `adapter-sqlite/generate-schema/` and `dev/codegen/types/` read a registry rather than
-importing features by name — a real refactor of two packages. Splitting codegen out of
-`createRime` touches the dev-server lifecycle, the `RIME_CLI` lock, and the CLI. Neither is a
-rename.
+importing features by name — a real refactor of two packages. Note this is a refactor of _how
+the codegen step finds its contributors_, not a relocation of the step itself: per §13.2,
+codegen stays inside `createRime`, where the dev reload triggers it. §14 works out what that
+registry has to look like, and the adapter is the hard part.
 
 **Where it could fail.** Three risks worth naming before starting:
 
@@ -1130,15 +1141,229 @@ rename.
 §12.9 proposed converting `url` and `upload`. Risk 3 above says that tests the wrong thing
 first — it tests the type, not the payoff. Better order:
 
-1. **Extract `core/boot.server.ts` from `createRime`, changing nothing else.** No `Feature`
-   type, no registry. Just the boot sequence as a literal ordered list, with `ensureMedias`
-   lifted out of `createConfigContext` and better-auth's construction named as a step. If that
-   file does not read like `pipeline.server.ts`, stop — the whole direction is wrong, and the
-   cost was one afternoon.
-2. **Then split codegen out of boot**, giving it its own entry point and removing the
-   `RIME_CLI` lock from boot.
-3. **Only then** introduce the `Feature` type, on `url` and `upload`, with the phase lists
-   already in place to receive them.
+1. **Give `createRime` a readable phase order, changing nothing else.** No `Feature` type, no
+   registry. `createRime` keeps calling codegen then boot, in place, but each becomes a literal
+   ordered list of named steps — with `ensureMedias` lifted out of `createConfigContext` and
+   better-auth's construction named as a step rather than inlined. If those lists do not read
+   like `pipeline.server.ts`, stop: the whole direction is wrong and the cost was one afternoon.
+2. **Then introduce the `Feature` type** on `url` and `upload` — the two features that need no
+   adapter cooperation (§14.4) — with the phase lists already in place to receive them.
+3. **Only then** attempt `versions`, which is the one that tests the adapter contract.
 
 Step 1 is cheap, reversible, and independently valuable: even if the contract idea is
 abandoned, boot having a readable order is a straight improvement.
+
+---
+
+## 14. The three feature hooks, their attach points, and the adapter
+
+§13 established the three phases. This section does the two things that decide whether the
+`Feature` contract is buildable: **where each hook kind attaches**, and **how a feature reaches
+the adapter** — which is the hard part, and the part that turns out to constrain the design.
+
+### 14.1 The attach points, located
+
+A feature provides up to three hooks. Each has a real place in the running code today; the
+point of the contract is that those places stop being reached by import and start being fed by
+declaration.
+
+**`codegen` — inside `createRime`'s `if (dev)` block** (`rime/index.server.ts:45`), in this
+order:
+
+| step                        | line  | can a feature contribute?                                  |
+| --------------------------- | ----- | ---------------------------------------------------------- |
+| `writeMemo(config)`         | `:54` | no — change detection                                      |
+| `validate(config)`          | `:55` | **yes, unused** — no feature validates its own config here |
+| `generateRoutes(config)`    | `:60` | **yes** — already branches on collections/areas (§13.5)    |
+| `regenerateDrizzleConfig()` | `:64` | no                                                         |
+| `generateSchema(config)`    | `:65` | **yes — via the adapter**, see 14.3                        |
+| `generateTypes(config)`     | `:66` | **yes**                                                    |
+| `regenerateHooks()`         | `:67` | no                                                         |
+
+**`boot` — the rest of `createRime`**, in this order:
+
+| step                                    | line         | feature hook hiding there                             |
+| --------------------------------------- | ------------ | ----------------------------------------------------- |
+| normalize `config.$plugins`             | `:33`        | —                                                     |
+| `createConfigContext(config)`           | `:39`        | **upload** — `ensureMedias` at `context.server.ts:18` |
+| _(codegen block)_                       | `:45`        | —                                                     |
+| `createAdapter(configCtx)`              | `:75`        | the adapter's own boot hook                           |
+| `getBaseAuthConfig` + `betterAuth({…})` | `:78`, `:84` | **auth**, inlined                                     |
+| `registerTranslation` + `i18n.init`     | `:92`        | i18n                                                  |
+
+**`runtime` — three attach points, not one.** This is the correction §12 and §13 both missed:
+
+1. **the document pipeline** — `operations/pipeline.server.ts`. The only attach point that is
+   currently declared. All 19 feature hooks live here.
+2. **the handle chain** — `handlers/index.ts:14`: `createCMSHandler`, `handleAuth`,
+   `handleCORS`, plugins, `handleRoutes`. **`handleAuth` is a feature's request hook living
+   outside its feature folder**, exactly like `ensureMedias` in boot.
+3. **the operation set** — which operations a prototype exposes at all (§13.5: seven for a
+   collection, two for an area). A base feature's contribution.
+
+So the score today: of the three hook kinds across five attach points, **one is declared**
+(pipeline). The other four are reached by import, and two features (`auth`, `upload`) have code
+sitting in `core/` rather than in `features/` as a result.
+
+### 14.2 The adapter is already a three-phase contributor
+
+Before asking how features reach the adapter, note what the adapter itself is.
+`adapterSqlite(database)` returns `{ createAdapter, generateSchema }` — and `createAdapter`
+returns the runtime facades. That is:
+
+| phase   | adapter provides                                                                           |
+| ------- | ------------------------------------------------------------------------------------------ |
+| codegen | `generateSchema(config)` → writes the drizzle schema file                                  |
+| boot    | `createAdapter(configCtx)` → connects the db, builds the facades                           |
+| runtime | `collection`, `area`, `blocks`, `tree`, `relations`, `transform`, `auth`, `db`, `getTable` |
+
+**The adapter is the working proof of the three-hook contract.** It is already exactly the
+shape §13.6 proposes for a feature, it is already swappable in principle, and it is already
+declared as a single object handed to `rime.config`. A `Feature` should look like the adapter,
+not the other way round.
+
+One caveat worth writing down: `type Adapter` is defined as
+`ReturnType<typeof createCollectionFacade>` &c. — it is _derived from_ adapter-sqlite, not an
+interface adapter-sqlite implements. A second adapter would have to be structurally identical
+by accident. That is a separate problem, but it matters here, because everything below assumes
+the adapter surface is a contract.
+
+### 14.3 How a feature reaches storage: three routes, no rule
+
+This is the hard part, and the code answers it three different ways.
+
+| feature      | route to storage                                                                                                   | adapter knows the feature? |
+| ------------ | ------------------------------------------------------------------------------------------------------------------ | -------------------------- |
+| **nested**   | contributes **fields**; `toSchemaColumn` makes columns                                                             | no                         |
+| **url**      | contributes **fields**                                                                                             | no                         |
+| **upload**   | **derives a prototype** (`<slug>_directories`) that flows through the normal loop                                  | no                         |
+| **auth**     | **derives a prototype** (`staff`) — _and_ `templateAuth` / `templateAPIKey` constants for better-auth's own tables | partly                     |
+| **versions** | **derives a prototype _with `_generateSchema: false`_**, plus a hardcoded branch in the adapter                    | heavily                    |
+| **i18n**     | `locales` parameter → `*Locales` tables                                                                            | yes                        |
+
+Two pieces of evidence make the shape of this unmistakable.
+
+**Upload used to take the adapter route and was migrated off it.** In
+`generate-schema/index.server.ts` the block is still there, commented out:
+
+```ts
+// if (collection.upload) {
+// 	schema.push(templateDirectories(collection.slug));
+// 	enumTables = [...enumTables, withDirectoriesSuffix(collection.slug)];
+// }
+```
+
+Someone found that deriving a prototype was better than injecting tables, did it, and left the
+dead branch. The rule was discovered and never written down.
+
+**Versions takes both routes at once.** `features/versions/derive.server.ts` builds a real
+`pages_versions` `BuiltCollection` so the runtime can address it through the normal collection
+API — then sets `_generateSchema: false` and `_generateTypes: false`, because the adapter
+generates the versions tables itself. So `_generateSchema: false` is not a flag; it is **the
+marker for "this derived prototype is runtime-only, storage is handled specially"**, i.e. the
+seam between route 2 and route 3, unnamed.
+
+**The rule the code is reaching for:**
+
+> A feature contributes storage by **fields** or by **deriving a prototype**. Both are
+> adapter-agnostic. Anything that needs a third route is not a feature contribution — it is an
+> **adapter capability**, and belongs in the adapter contract.
+
+### 14.4 Applying the rule sorts the features cleanly
+
+Cross the pipeline test (§0: does `pipeline.server.ts` branch on it?) with the storage test
+(does `generateSchemaString` branch on it?):
+
+|                            | **branches in `pipeline.server.ts`** | **does not**   |
+| -------------------------- | ------------------------------------ | -------------- |
+| **branches in the schema** | `versions`, `auth`                   | `localization` |
+| **does not**               | `upload`, `nested`, `url`            | —              |
+
+Three groups, and the groups are the design:
+
+- **`upload`, `nested`, `url` — pure features.** Runtime hooks plus fields or a derived
+  prototype. The adapter never needs to know they exist. These are the ones to convert first.
+- **`localization` — a pure adapter capability.** §0 called it "infrastructure, not a feature"
+  because nothing in the pipeline branches on it; the schema says the same thing from the other
+  side. Two independent tests agreeing is the strongest evidence in this document that the
+  taxonomy is real.
+- **`versions`, `auth` — both.** Runtime hooks _and_ storage topology. These are the hard
+  cases, and they are hard because they genuinely are two things.
+
+### 14.5 The coupling today, measured
+
+`adapter-sqlite/` imports from `core/features/` **13 times across 9 files**:
+
+- `versions` — **8 files**: `generate-schema/index`, `orderBy`, `area`, `where`, `transform`,
+  `url`, `collection` (naming ×7 plus `strategy` ×2)
+- `upload` — 3: `generate-schema/templates`, `collection` (naming, path segments)
+- `auth` — 1 type import
+
+Versions is not a feature that touches the adapter; **versions is woven through the adapter at
+every level** — schema generation, query building (`where`, `orderBy`), reads (`transform`),
+writes (`collection`, `area`). `features/versions/strategy.ts` exists to serve the adapter.
+
+The reverse direction is just as telling. Features reach `rime.adapter` at runtime through two
+very different surfaces:
+
+- **named, feature-shaped methods**: `adapter.auth.*` (a whole facade), `adapter.updateDocumentUrl`
+  (one method, existing solely for the url feature)
+- **the generic escape hatch**: `adapter.db`, `adapter.getTable`, `adapter.tables` — used raw by
+  `nested/add-children`, `upload/update-directory-children`, `auth/better-auth/hooks`
+
+So the adapter has already grown feature-shaped bulges for the two features that asked loudly
+enough, and the rest reach past the facade into drizzle. That inconsistency is the unnamed
+version of the capability contract.
+
+### 14.6 What the adapter contract has to be
+
+Inverting the dependency is the whole job: today features are imported _by_ the adapter; the
+contract makes the adapter _offer_ named capabilities that features request.
+
+```ts
+type Adapter = {
+  /** What this adapter can do beyond fields-and-prototypes. Checked at boot. */
+  capabilities: {
+    versions?: VersionsCapability; // shadow table + root/version partition + query rewriting
+    localization?: LocalizationCapability; // per-locale tables
+    auth?: AuthCapability; // third-party (better-auth) tables
+  };
+  codegen: { generateSchema(config): Promise<void> };
+  boot(configCtx): Promise<AdapterRuntime>;
+};
+```
+
+A feature that needs route 3 declares `requires: ['versions']`. An adapter that does not
+implement it makes that feature unavailable — **checkable at boot, with a real error**, instead
+of failing as a missing table at the first request. And `versions/strategy.ts` stops being a
+module the adapter imports and becomes the argument the adapter's `versions` capability is
+configured with.
+
+Three honest caveats:
+
+1. **This is a capability vocabulary with exactly one consumer.** Designing `VersionsCapability`
+   against a single adapter risks describing adapter-sqlite's implementation and calling it an
+   interface. The mitigation is to derive it from what the 8 coupled files actually need — table
+   suffix, root/version field partition (`f.get.root`), the one-to-many relation, and
+   suffix-aware query rewriting — and nothing more.
+2. **`Adapter` must become a real interface first.** While it is `ReturnType<typeof …>` of the
+   sqlite implementation, "capability" has no teeth.
+3. **`auth`'s tables are not a rime contribution at all.** better-auth owns that schema; the
+   adapter embeds it as a dependency. Modelling it as a feature capability would be dishonest —
+   it is closer to how `blocks`, `tree` and `relations` are simply _part of_ what an adapter
+   must provide.
+
+### 14.7 The revised order of work
+
+§13.8 step 2 said "convert `url` and `upload`". §14.4 says why those two and not others: they
+are the features that need no adapter cooperation, so converting them tests the contract
+**without** simultaneously testing the adapter interface. Then:
+
+3. **`versions` last**, because it forces both hard problems at once — making `Adapter` a real
+   interface, and turning 8 files of import-coupling into one declared capability. If the
+   contract survives `versions`, it is real. If `versions` has to stay special-cased, that is a
+   defensible outcome too, and the contract should say so out loud rather than pretend
+   otherwise.
+
+`localization` is explicitly **not** on the list: by 14.4 it is an adapter capability, and
+trying to make it a feature would be the same category error `core/prototype/` was.
