@@ -1,4 +1,32 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { Hook, HookBeforeOperation, Operation } from '$lib/core/operations/types.js';
+
+/**
+ * A feature's runtime hooks, keyed by timing — never ordered.
+ *
+ * The keys mirror the `Hooks.*` factory in factory/hooks.ts, so a hook written with
+ * `Hooks.beforeUpsert(...)` is declared under `beforeUpsert` and is placeable in both the
+ * beforeCreate and beforeUpdate arrays. The nesting exists for one reason: it makes the timing
+ * **checkable**. A flat `Record<string, unknown>` map accepted a beforeRead hook that
+ * pipeline.server.ts then placed in afterDelete, with no error anywhere.
+ *
+ * What this deliberately does NOT do is order them. Within a timing the map is unordered, and
+ * pipeline.server.ts still names each hook and picks its position by hand — because the order
+ * interleaves *across* features (in beforeRead, upload's populateSizes sits between core's
+ * setDocumentType and url's populateURL), which no feature can state about itself.
+ */
+export type FeatureHooks = {
+  beforeOperation?: Record<string, HookBeforeOperation<any, Operation>>;
+  beforeRead?: Record<string, Hook<any, 'read', 'before'>>;
+  beforeCreate?: Record<string, Hook<any, 'create', 'before'>>;
+  beforeUpsert?: Record<string, Hook<any, 'create' | 'update', 'before'>>;
+  beforeUpdate?: Record<string, Hook<any, 'update', 'before'>>;
+  beforeDelete?: Record<string, Hook<any, 'delete', 'before'>>;
+  afterCreate?: Record<string, Hook<any, 'create', 'after'>>;
+  afterUpsert?: Record<string, Hook<any, 'create' | 'update', 'after'>>;
+  afterUpdate?: Record<string, Hook<any, 'update', 'after'>>;
+  afterDelete?: Record<string, Hook<any, 'delete', 'after'>>;
+};
 
 /**
  * What a feature contributes, and to which of the three phases.
@@ -54,8 +82,9 @@ export type Feature = {
   /** Phase 2 (boot) — a once-per-process side effect. Placed by boot.server.ts. */
   boot?: (config: any) => void | Promise<void>;
 
-  /** Phase 3 (runtime) — named, NOT ordered. Placed by operations/pipeline.server.ts. */
-  hooks?: Record<string, unknown>;
+  /** Phase 3 (runtime) — keyed by timing, named within it, NOT ordered. Placed by
+   *  operations/pipeline.server.ts. See FeatureHooks above. */
+  hooks?: FeatureHooks;
 };
 
 /**

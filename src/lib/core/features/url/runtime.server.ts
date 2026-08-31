@@ -12,5 +12,5 @@ export const urlRuntime = {
 
   enabled: (config: any) => !!config.$url,
 
-  hooks: { populateURL }
+  hooks: { beforeRead: { populateURL } }
 } as const;

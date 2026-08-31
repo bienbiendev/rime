@@ -1935,7 +1935,38 @@ keep composing by hand. Revisit only with `inference.spec.ts` watched closely.
   (`/api/settings` 403, correct: admin-only read, unauthenticated).
 - **Boot hook proven live** — deleted `static/medias`, booted, it came back. `upload.boot` runs.
 
-### 18.5 Verdict, and next
+### 18.5 Follow-up: making the hook contract actually check something
+
+A question after the first pass — _how does core know where to trigger a hook, and what if a
+feature needs more than one?_ — exposed that it did not check anything at all.
+
+The answer to the question itself is that core does **not** know: `hooks` is a named map and
+`pipeline.server.ts` places each hook by name, position by position. Multiple hooks per feature
+is already the norm — `upload` declares 8, placed at 5 timings across 2 pipelines, and three of
+them run at both create and update. A feature cannot declare its own ordering because the order
+interleaves _across_ features: in `beforeRead`, upload's `populateSizes` sits between core's
+`setDocumentType` and url's `populateURL`, which no feature can state about itself.
+
+But the check was missing. Moving `populateURL` — a `Hooks.beforeRead` — into the `afterDelete`
+array produced **zero** compile errors. Two changes were needed, and only both together work:
+
+1. **Features key `hooks` by timing** (`FeatureHooks` in `core/features/index.ts`), mirroring the
+   `Hooks.*` factory names so `beforeUpsert` hooks are declared once rather than twice.
+2. **The pipelines annotate their return type** — `Required<CollectionHooks<any>>` /
+   `Required<AreaHooks<any>>`. This is the half that actually bites: those types already typed
+   every timing correctly, but `collectionPipeline` returned an _inferred_ object literal, so
+   nothing was ever compared against them. Keying the feature map alone changed nothing.
+
+With both, the same misplacement now fails with
+`Type 'Hook<"generic", "read", "before">' is not assignable to type 'Hook<any, "delete", "after">'`.
+
+The remaining hole — a hook a feature declares and the pipeline simply forgets — is not
+expressible in the type system, so `core/features/placement.spec.ts` covers it: it runs the three
+pipelines with every convertible feature enabled and asserts every declared hook appears in one
+of them, by identity. Verified to fail, naming `upload.hooks.beforeDelete.cleanUpFiles`, when
+that hook is dropped from `beforeDelete`.
+
+### 18.6 Verdict, and next
 
 Does it read like `definePlugin`? **Yes for `url`** — 8 lines, every seam visible. **Partly for
 `upload`** — the object is clean, but three files to express one feature is more ceremony than

@@ -36,25 +36,27 @@ import { validateFields } from './steps/validate-fields.server.js';
 
 /**
  * Hooks come from the features that own them, pulled out here so the pipelines below read as
- * sequences of names rather than of property accesses. The features declare *which* hooks exist
- * and *whether* they apply; this file decides *when* they run.
+ * sequences of names rather than of property accesses. The features declare *which* hooks exist,
+ * at *which timing*, and *whether* they apply; this file decides *when* within that timing they
+ * run, and that is the only thing it decides.
+ *
+ * Destructuring per timing is not cosmetic: `uploadRuntime.hooks.beforeUpsert` is typed
+ * `Record<string, Hook<any, 'create' | 'update', 'before'>>`, so a hook can only be pulled into
+ * an array its own signature fits. Before the map was keyed this way, a `beforeRead` hook could
+ * be placed in `afterDelete` with no error anywhere.
  *
  * Deliberately the `runtime.server.ts` half of each feature, never the whole feature: the boot
  * half reaches derive → directories.server.ts → back to this file, and since these bindings are
  * read at module scope a cycle would silently yield `undefined` instead of throwing. See
  * features/upload/runtime.server.ts.
  */
-const {
-  handlePathCreation,
-  castBase64ToFile,
-  processFileUpload,
-  populateSizes,
-  cleanUpFiles,
-  exctractPath,
-  prepareDirectoryChildren,
-  updateDirectoryChildren
-} = uploadRuntime.hooks;
-const { populateURL } = urlRuntime.hooks;
+const { populateSizes } = uploadRuntime.hooks.beforeRead;
+const { handlePathCreation, castBase64ToFile, processFileUpload, exctractPath } =
+  uploadRuntime.hooks.beforeUpsert;
+const { prepareDirectoryChildren } = uploadRuntime.hooks.beforeUpdate;
+const { updateDirectoryChildren } = uploadRuntime.hooks.afterUpdate;
+const { cleanUpFiles } = uploadRuntime.hooks.beforeDelete;
+const { populateURL } = urlRuntime.hooks.beforeRead;
 
 type PartialCollection = {
   upload?: Collection<any>['upload'];
@@ -69,8 +71,21 @@ type PartialArea = {
   $url?: Area<any>['$url'];
 };
 
+/**
+ * The pipelines' return types, annotated rather than inferred — and that annotation is the
+ * thing that makes a misplaced hook a compile error.
+ *
+ * Keying a feature's `hooks` map by timing constrains what the *feature* may declare, but an
+ * inferred object literal here would still happily accept a `beforeRead` hook in `afterDelete`:
+ * nothing was checking the arrays. `CollectionHooks`/`AreaHooks` already type every timing
+ * correctly; the pipelines simply never said so. `Required<…>` because rime contributes every
+ * timing, even when the array is empty.
+ */
+type CollectionPipeline = Required<CollectionHooks<any>>;
+type AreaPipeline = Required<AreaHooks<any>>;
+
 /** The hooks rime contributes to a collection, in order. */
-export const collectionPipeline = (collection: PartialCollection) => {
+export const collectionPipeline = (collection: PartialCollection): CollectionPipeline => {
   const IS_API_AUTH =
     collection.auth && typeof collection.auth !== 'boolean' && collection.auth.type === 'apiKey';
 
@@ -151,7 +166,7 @@ export const collectionPipeline = (collection: PartialCollection) => {
  * collectionPipeline's beforeRead: populateURL runs before setDocumentType, and there is no
  * thumbnail step.
  */
-export const areaPipeline = (area: PartialArea) => ({
+export const areaPipeline = (area: PartialArea): AreaPipeline => ({
   beforeOperation: [authorize],
 
   beforeRead: [

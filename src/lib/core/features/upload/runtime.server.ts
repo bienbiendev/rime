@@ -30,16 +30,18 @@ export const uploadRuntime = {
 
   enabled: (config: any) => !!config.upload,
 
+  /**
+   * Keyed by the `Hooks.*` timing each was written with, so a hook can only be placed where its
+   * type allows. Unordered within a timing — pipeline.server.ts picks the positions.
+   *
+   * `beforeUpsert` is why the keys mirror the factory rather than the pipeline's array names:
+   * these four run at *both* create and update, and would otherwise have to be listed twice.
+   */
   hooks: {
-    // on the upload collection itself
-    handlePathCreation,
-    castBase64ToFile,
-    processFileUpload,
-    populateSizes,
-    cleanUpFiles,
-    // on its derived <slug>_directories collection
-    exctractPath,
-    prepareDirectoryChildren,
-    updateDirectoryChildren
+    beforeRead: { populateSizes },
+    beforeUpsert: { handlePathCreation, castBase64ToFile, processFileUpload, exctractPath },
+    beforeUpdate: { prepareDirectoryChildren },
+    afterUpdate: { updateDirectoryChildren },
+    beforeDelete: { cleanUpFiles }
   }
 } as const;
