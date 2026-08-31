@@ -1,7 +1,8 @@
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { Field, FormField } from '$lib/fields/types.js';
-import type { Dic, WithoutBuilders } from '$lib/util/types.js';
+import type { WithoutBuilders } from '$lib/core/fields/types.js';
+import type { Dic } from '$lib/util/types.js';
 import { toPascalCase } from '$lib/util/string.js';
 import type { IconProps } from '@lucide/svelte';
 import type { Component } from 'svelte';

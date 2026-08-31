@@ -1,7 +1,7 @@
 import { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import type { Field } from '$lib/fields/types.js';
 import { isCamelCase } from '$lib/util/string.js';
-import type { WithoutBuilders } from '$lib/util/types.js';
+import type { WithoutBuilders } from '$lib/core/fields/types.js';
 import Tabs from './component/Tabs.svelte';
 
 export const tabs = (...tabs: TabBuilder[]) => new TabsBuilder(...tabs);

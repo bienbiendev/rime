@@ -54,7 +54,7 @@ export type { JsonFile } from './core/features/upload/types.js';
 export type { Link } from './fields/link/types.js';
 
 // Util
-export type { WithRelationPopulated } from '$lib/util/types.js';
+export type { WithRelationPopulated } from '$lib/core/fields/types.js';
 
 export type { Plugin } from './core/plugins/index.js';
 export type { Rime, RimeContext } from './core/rime/index.server.js';

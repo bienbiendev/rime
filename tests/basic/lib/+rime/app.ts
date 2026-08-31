@@ -1,4 +1,4 @@
-import access from '$lib/util/access';
+import access from '$lib/core/features/auth/access.js';
 import { Collection } from '$rime/config';
 
 export const Apps = Collection.create('apps', {

@@ -11,7 +11,7 @@ import { buildNewsUrl } from '$rime/modules';
 import { Collection } from '$rime/config';
 import LoremFeature from '../lorem-fill.js';
 
-import { access } from '$lib/util/access/index.js';
+import { access } from '$lib/core/features/auth/access.js';
 import { NotebookText } from '@lucide/svelte';
 
 const tabWriter = tab('writer').fields(

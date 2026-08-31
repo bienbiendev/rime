@@ -12,7 +12,7 @@ import {
   textarea,
   toggle
 } from '$lib/fields/index.js';
-import { access } from '$lib/util/access/index.js';
+import { access } from '$lib/core/features/auth/access.js';
 import { buildPagesUrl, hooks } from '$rime/modules';
 import { Collection } from '$rime/config';
 import { Newspaper } from '@lucide/svelte';

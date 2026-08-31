@@ -17,7 +17,7 @@ import {
   link as linkFeature,
   upload
 } from '$lib/fields/rich-text/client.js';
-import { access } from '$lib/util/access/index.js';
+import { access } from '$lib/core/features/auth/access.js';
 import { Area, Collection, rime } from '$rime/config';
 
 const Settings = Area.create('settings', {

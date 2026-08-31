@@ -1,7 +1,7 @@
 import { email } from '$lib/fields/email/index.js';
 import { select } from '$lib/fields/select/index.js';
 import { text } from '$lib/fields/text/index.js';
-import { access } from '$lib/util/access/index.js';
+import { access } from '$lib/core/features/auth/access.js';
 import { validate } from '$lib/util/index.js';
 
 const emailField = email('email')

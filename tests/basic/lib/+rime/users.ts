@@ -1,5 +1,5 @@
 import { text } from '$lib/fields/index.js';
-import { access } from '$lib/util/access';
+import { access } from '$lib/core/features/auth/access.js';
 import { Collection } from '$rime/config';
 
 export const Users = Collection.create('users', {

@@ -1,7 +1,6 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
-import { access } from '$lib/util/access/index.js';
-import { cases } from '$lib/util/cases.js';
+import { access } from '$lib/core/features/auth/access.js';
 import { BETTER_AUTH_ROLES } from '../constant.server.js';
 
 /**
@@ -51,20 +50,20 @@ export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>(async (args) 
     const IS_CURRENT_USER_ADMIN = access.isAdmin(event.locals.user);
     const IS_CURRENT_USER_STAFF = Boolean(event.locals.user?.isStaff);
 
-    // First true condition wins, read top to bottom like an if/else-if chain.
-    const role = cases({
+    // First true condition wins, read top to bottom.
+    const role =
       // Only an admin can grant 'admin', and only on the staff collection.
-      [BETTER_AUTH_ROLES.ADMIN]:
-        IS_CURRENT_USER_ADMIN && ADMIN_ROLE_IN_DATA && config.slug === 'staff',
-      // Any staff member editing a staff doc without granting admin: 'staff'.
-      [BETTER_AUTH_ROLES.STAFF]: IS_CURRENT_USER_STAFF && config.slug === 'staff',
-      // Everything else (non-staff collection, or no condition above matched): 'user'.
-      [BETTER_AUTH_ROLES.USER]: true
-    });
+      IS_CURRENT_USER_ADMIN && ADMIN_ROLE_IN_DATA && config.slug === 'staff'
+        ? BETTER_AUTH_ROLES.ADMIN
+        : // Any staff member editing a staff doc without granting admin: 'staff'.
+          IS_CURRENT_USER_STAFF && config.slug === 'staff'
+          ? BETTER_AUTH_ROLES.STAFF
+          : // Everything else (non-staff collection, or no condition above matched): 'user'.
+            BETTER_AUTH_ROLES.USER;
 
     await rime.auth.api.setRole({
       headers: args.event.request.headers,
-      body: { userId: authUserId, role: role.value }
+      body: { userId: authUserId, role }
     });
   }
 

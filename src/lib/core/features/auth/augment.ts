@@ -2,7 +2,7 @@ import type { Collection, CollectionAuthConfig } from '$lib/core/factory/config/
 import { select } from '$lib/fields/select/index.js';
 import { text } from '$lib/fields/text/index.js';
 import type { Option } from '$lib/types.js';
-import { access } from '$lib/util/access/index.js';
+import { access } from '$lib/core/features/auth/access.js';
 import { usersFields } from './fields.js';
 
 type Input = {

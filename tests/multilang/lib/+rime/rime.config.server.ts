@@ -16,7 +16,7 @@ import {
   tree
 } from '$lib/fields/index.js';
 import { bold } from '$lib/fields/rich-text/client.js';
-import { access } from '$lib/util/access/index.js';
+import { access } from '$lib/core/features/auth/access.js';
 import { Area, Collection, Hooks, rime } from '$rime/config';
 import { Images, ListTree, Newspaper, ReceiptText, Settings2, Text } from '@lucide/svelte';
 

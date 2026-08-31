@@ -1,5 +1,5 @@
 import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
-import { access } from '$lib/util/access/index.js';
+import { access } from '$lib/core/features/auth/access.js';
 import { rime } from '$rime/config';
 import { HooksTest } from './hooks-test';
 import { Pages } from './pages';

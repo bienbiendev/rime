@@ -8,7 +8,7 @@
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
   import { authClient } from '$lib/panel/util/auth';
   import { panelUrl } from '$lib/panel/util/url.js';
-  import validate from '$lib/util/validate';
+  import validate from '$lib/core/fields/validate';
   import { toast } from 'svelte-sonner';
   import Button from '../../ui/button/button.svelte';
 

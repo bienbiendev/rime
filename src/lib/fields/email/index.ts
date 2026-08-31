@@ -2,7 +2,7 @@ import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
 import { sanitize } from '$lib/util/string.js';
-import validate from '$lib/util/validate.js';
+import validate from '$lib/core/fields/validate.js';
 import EmailComp from './component/Email.svelte';
 
 export class EmailFieldBuilder extends FormFieldBuilder<EmailField> {
