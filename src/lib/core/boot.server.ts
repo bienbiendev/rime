@@ -5,7 +5,7 @@ import { runCodegen } from './codegen.server.js';
 import { createConfigContext } from './factory/config/context.server.js';
 import type { BuildConfig } from './factory/config/index.server.js';
 import { getBaseAuthConfig } from './features/auth/better-auth/config.server.js';
-import { upload } from './features/upload/index.server.js';
+import { ensureMedias } from './features/upload/ensure.server.js';
 import i18n from './i18n/index.js';
 import { registerTranslation } from './i18n/register.server.js';
 
@@ -42,10 +42,9 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   // 2. The config interface — every lookup by slug, the locale list, the raw config.
   const configCtx = createConfigContext(config);
 
-  // 3. FEATURE (upload): make sure the static directories the upload feature writes into exist.
-  //    Declared by the feature (features/upload/index.server.ts), placed here — a feature says
-  //    what it needs at boot, this file says when it happens.
-  await upload.boot(config);
+  // 3. The upload feature's boot step: make sure the static directories it writes into exist.
+  //    Lifted out of createConfigContext, which had no business touching the filesystem.
+  ensureMedias(config);
 
   // 4. Phase 1, in dev only: write routes, schema and types. Before the adapter, which imports
   //    the schema this produces.

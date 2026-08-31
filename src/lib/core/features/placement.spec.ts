@@ -4,30 +4,29 @@ import {
   directoriesPipeline
 } from '$lib/core/operations/pipeline.server.js';
 import { expect, test } from 'vitest';
-import { uploadRuntime } from './upload/runtime.server.js';
-import { urlRuntime } from './url/runtime.server.js';
-import { versionsRuntime } from './versions/runtime.server.js';
+import * as uploadHooks from './upload/hooks/index.server.js';
+import * as urlHooks from './url/hooks/index.server.js';
+import * as versionsHooks from './versions/hooks/index.server.js';
 
 /**
- * Guards the other half of the feature/pipeline contract.
+ * A hook a feature exports but no pipeline ever places simply never runs, and nothing else
+ * notices: the feature looks complete, the tests pass, the behaviour is missing.
  *
- * A feature declares hooks; operations/pipeline.server.ts places them. Two things can go wrong,
- * and the type system only catches one:
+ * The sibling failure — placing a hook at a timing its signature does not allow — is a compile
+ * error, but only since `collectionPipeline`/`areaPipeline` annotate their return as
+ * `Required<CollectionHooks<any>>` / `Required<AreaHooks<any>>`. Those types always described
+ * every timing correctly; the pipelines returned an inferred object literal, so nothing was
+ * compared against them, and a `beforeRead` hook sat in `afterDelete` without complaint.
  *
- * - **Wrong timing** — placing a `beforeRead` hook in the `afterDelete` array. Caught at compile
- *   time, but only since the pipelines annotate their return as `Required<CollectionHooks>` and
- *   features key `hooks` by timing. Both were added together; before that, a misplaced hook
- *   produced no error anywhere.
- * - **Never placed** — a feature exports a hook the pipeline forgets to mention. Nothing catches
- *   that, ever: the hook simply never runs, and the feature looks complete. That is what this
- *   file is for.
+ * This file covers the half types cannot. It checks identity rather than names — a renamed hook
+ * is already a compile error, a silently dropped one is not.
  *
- * It deliberately checks identity, not names: a hook renamed in the feature but not in the
- * pipeline is a compile error already, whereas a hook quietly dropped from a pipeline array is
- * not.
+ * `auth` is not covered: several of its hooks are placed conditionally on the auth *type*
+ * (`populateAPIKey` only for `apiKey` collections), so "declared but unplaced" is not a
+ * well-defined question for it without enumerating auth configs too.
  */
 
-/** Every hook rime places, for a prototype with every convertible feature switched on. */
+/** Every hook rime places, for prototypes with the relevant features switched on. */
 const placedHooks = (() => {
   const placed = new Set<unknown>();
   const collect = (pipeline: Record<string, unknown[]>) =>
@@ -40,10 +39,11 @@ const placedHooks = (() => {
       upload: {},
       nested: true,
       auth: { type: 'password' },
-      $url: () => '/'
+      $url: () => '/',
+      versions: true
     } as any) as any
   );
-  collect(areaPipeline({ $url: () => '/' } as any) as any);
+  collect(areaPipeline({ $url: () => '/', versions: true } as any) as any);
   // The derived <slug>_directories collection has a pipeline of its own — three upload hooks
   // run only there, so omitting it would report them as unplaced.
   collect(directoriesPipeline(undefined) as any);
@@ -51,25 +51,25 @@ const placedHooks = (() => {
   return placed;
 })();
 
-/** [featureName, timing, hookName, fn] for every hook every converted feature declares. */
-const declaredHooks = [uploadRuntime, urlRuntime, versionsRuntime].flatMap((feature) =>
-  Object.entries(feature.hooks as Record<string, Record<string, unknown>>).flatMap(
-    ([timing, hooks]) =>
-      Object.entries(hooks).map(
-        ([hookName, fn]) => [feature.name, timing, hookName, fn] as const
-      )
-  )
+const declaredHooks = (
+  [
+    ['upload', uploadHooks],
+    ['url', urlHooks],
+    ['versions', versionsHooks]
+  ] as const
+).flatMap(([feature, barrel]) =>
+  Object.entries(barrel).map(([hookName, fn]) => [feature, hookName, fn] as const)
 );
 
-test('every hook a feature declares is placed in a pipeline', () => {
+test('every hook these features export is placed in a pipeline', () => {
   const unplaced = declaredHooks
-    .filter(([, , , fn]) => !placedHooks.has(fn))
-    .map(([feature, timing, hookName]) => `${feature}.hooks.${timing}.${hookName}`);
+    .filter(([, , fn]) => !placedHooks.has(fn))
+    .map(([feature, hookName]) => `${feature}/hooks: ${hookName}`);
 
   expect(unplaced).toEqual([]);
 });
 
-test('the features under contract actually declare hooks', () => {
-  // Cheap canary: if a refactor empties the maps, the test above passes vacuously.
+test('the hook barrels are not empty', () => {
+  // Cheap canary: if a refactor empties a barrel, the test above passes vacuously.
   expect(declaredHooks.length).toBe(11);
 });

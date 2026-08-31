@@ -4,9 +4,9 @@ import { augmentFieldsPassword } from '../features/auth/hooks/augment-fields-pas
 import { populateAPIKey } from '../features/auth/hooks/populate-api-key.server.js';
 import { removePrivateFields } from '../features/auth/hooks/remove-private-fields.server.js';
 import { addChildrenProperty } from '../features/nested/hooks/add-children.server.js';
-import { uploadRuntime } from '../features/upload/runtime.server.js';
-import { urlRuntime } from '../features/url/runtime.server.js';
-import { versionsRuntime } from '../features/versions/runtime.server.js';
+import * as uploadHooks from '../features/upload/hooks/index.server.js';
+import { populateURL } from '../features/url/hooks/index.server.js';
+import * as versionsHooks from '../features/versions/hooks/index.server.js';
 import { mergeWithBlankDocument } from './steps/merge-with-blank.server.js';
 import { authorize } from './steps/authorize.server.js';
 import { processDocumentFields } from './steps/process-document-fields.server.js';
@@ -33,31 +33,17 @@ import { validateFields } from './steps/validate-fields.server.js';
  * visible rather than spread across two files.
  */
 
-/**
- * Hooks come from the features that own them, pulled out here so the pipelines below read as
- * sequences of names rather than of property accesses. The features declare *which* hooks exist,
- * at *which timing*, and *whether* they apply; this file decides *when* within that timing they
- * run, and that is the only thing it decides.
- *
- * Destructuring per timing is not cosmetic: `uploadRuntime.hooks.beforeUpsert` is typed
- * `Record<string, Hook<any, 'create' | 'update', 'before'>>`, so a hook can only be pulled into
- * an array its own signature fits. Before the map was keyed this way, a `beforeRead` hook could
- * be placed in `afterDelete` with no error anywhere.
- *
- * Deliberately the `runtime.server.ts` half of each feature, never the whole feature: the boot
- * half reaches derive → directories.server.ts → back to this file, and since these bindings are
- * read at module scope a cycle would silently yield `undefined` instead of throwing. See
- * features/upload/runtime.server.ts.
- */
-const { populateSizes } = uploadRuntime.hooks.beforeRead;
-const { handlePathCreation, castBase64ToFile, processFileUpload, exctractPath } =
-  uploadRuntime.hooks.beforeUpsert;
-const { prepareDirectoryChildren } = uploadRuntime.hooks.beforeUpdate;
-const { updateDirectoryChildren } = uploadRuntime.hooks.afterUpdate;
-const { cleanUpFiles } = uploadRuntime.hooks.beforeDelete;
-const { populateURL } = urlRuntime.hooks.beforeRead;
-const { defineVersionOperation } = versionsRuntime.hooks.beforeUpdate;
-const { handleNewVersion } = versionsRuntime.hooks.beforeUpsert;
+const {
+  populateSizes,
+  handlePathCreation,
+  castBase64ToFile,
+  processFileUpload,
+  exctractPath,
+  prepareDirectoryChildren,
+  updateDirectoryChildren,
+  cleanUpFiles
+} = uploadHooks;
+const { defineVersionOperation, handleNewVersion } = versionsHooks;
 
 type PartialCollection = {
   upload?: Collection<any>['upload'];
@@ -103,8 +89,8 @@ export const collectionPipeline = (collection: PartialCollection): CollectionPip
       setDocumentTitle,
       setDocumentLocale,
       setDocumentType,
-      ...(uploadRuntime.enabled(collection) ? [populateSizes] : []),
-      ...(urlRuntime.enabled(collection) ? [populateURL] : []),
+      ...(collection.upload ? [populateSizes] : []),
+      ...(collection.$url ? [populateURL] : []),
       ...(collection.nested ? [addChildrenProperty] : []),
       setDocumentThumbnail,
       sortDocumentProps
@@ -129,7 +115,7 @@ export const collectionPipeline = (collection: PartialCollection): CollectionPip
       buildDataConfigMap,
       setDefaultValues,
       validateFields,
-      ...(uploadRuntime.enabled(collection) ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
+      ...(collection.upload ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
     ],
 
     afterUpdate: [],
@@ -145,14 +131,14 @@ export const collectionPipeline = (collection: PartialCollection): CollectionPip
       setDefaultValues,
       validateFields,
       ...(collection.auth ? [authHooks.createBetterAuthUser] : []),
-      ...(uploadRuntime.enabled(collection) ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
+      ...(collection.upload ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
     ],
 
     afterCreate: [...(IS_API_AUTH ? [populateAPIKey] : [])],
 
     beforeDelete: [
       ...(collection.auth ? [authHooks.preventSupperAdminDeletion] : []),
-      ...(uploadRuntime.enabled(collection) ? [cleanUpFiles] : [])
+      ...(collection.upload ? [cleanUpFiles] : [])
     ],
 
     afterDelete: [...(collection.auth ? [authHooks.deleteBetterAuthUser] : [])]
@@ -175,7 +161,7 @@ export const areaPipeline = (area: PartialArea): AreaPipeline => ({
     processDocumentFields,
     setDocumentTitle,
     setDocumentLocale,
-    ...(urlRuntime.enabled(area) ? [populateURL] : []),
+    ...(area.$url ? [populateURL] : []),
     setDocumentType,
     sortDocumentProps
   ],

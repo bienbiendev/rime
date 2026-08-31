@@ -4,17 +4,17 @@ import { augmentPanel } from './augment-panel.js';
 import { augmentPlugins } from './augment-plugins.js';
 import { augmentIcons } from './augment-icons.js';
 import { augmentPrototypes } from './augment-prototypes.js';
-import { versions } from '../../features/versions/index.server.js';
+import { makeVersionsCollectionsAliases } from '../../features/versions/derive.server.js';
 import type { Config } from './types.js';
 import { augmentCORS } from './augment-cors.server.js';
-import { upload } from '../../features/upload/index.server.js';
+import { augmentDirectoriesServer } from '../../features/upload/directories.server.js';
 import { augmentPanelAccess } from './augment-panel-access.server.js';
 import { augmentPluginsServer } from './augment-plugins.server.js';
 import { augmentStaffServer } from '../../features/auth/staff/augment.server.js';
 
 export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>> => {
   const augmented = augmentConfig(config);
-  const output = versions.derive.server(augmented);
+  const output = makeVersionsCollectionsAliases(augmented);
   return createRime(output as any as BuildConfig<C>);
 };
 
@@ -26,7 +26,7 @@ function augmentConfig<T extends Config>(config: T) {
   const withPanelAccess = augmentPanelAccess(withPanel);
   const withCORS = augmentCORS(withPanelAccess);
   const withPluginsServer = augmentPluginsServer(withCORS);
-  const withDirectories = upload.derive.server(withPluginsServer);
+  const withDirectories = augmentDirectoriesServer(withPluginsServer);
   const output = augmentPlugins(withDirectories);
   return output;
 }
