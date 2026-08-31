@@ -4,17 +4,18 @@
 > _before_ the change and are kept as the record of why it moved; section 0 describes where it
 > landed, including the placement rule that came out of the second round.
 >
-> **§§12–14 are not applied.** §12 argues that two rounds produced a better categorization but
-> still not a _pattern_, and proposes the missing one: a `Feature` contract, sibling to the
-> `Plugin` and `FieldBuilder` contracts this repo already has. §13 pushes it — three phases
-> (**codegen → boot → runtime**, three moments in one process, not three programs) and
-> collection/area as the two _base_ features. §14 does the load-bearing work: where each of the
-> three hook kinds attaches, and how a feature reaches the adapter — which turns out to
-> constrain the whole design, and sorts the five features into pure features, adapter
-> capabilities, and the two that are both.
+> **§§12–15 are not applied — they are the design for the next round.** §12 argues that two
+> rounds produced a better categorization but still not a _pattern_, and proposes the missing
+> one: a `Feature` contract, sibling to the `Plugin` and `FieldBuilder` contracts this repo
+> already has. §13 pushes it — three phases (**codegen → boot → runtime**, three moments in one
+> process, not three programs) and collection/area as the two _base_ features. §14 locates every
+> attach point and works out how a feature reaches the adapter, sorting the five features into
+> pure features, adapter capabilities, and the two that are both. §15 does the hardest part —
+> the table-naming algebra, the five table kinds, and `versions` and `area` written out as
+> features.
 >
-> Read them before §0's placement rule; they are what that rule was reaching for. §14.7 has the
-> order of work, §13.8 the cheap first step.
+> Read them before §0's placement rule; they are what that rule was reaching for. §15.7–15.8 are
+> the shape to implement, §14.7 the order, §13.8 the cheap first step, §15.9 what is still open.
 
 ## 0. Outcome
 
@@ -1367,3 +1368,298 @@ are the features that need no adapter cooperation, so converting them tests the 
 
 `localization` is explicitly **not** on the list: by 14.4 it is an adapter capability, and
 trying to make it a feature would be the same category error `core/prototype/` was.
+
+---
+
+## 15. Table naming: the algebra, the contract, and two features in pseudo-code
+
+The field → column coupling is already solved: a field declares `dataType` (one of five) and
+`_references`, and `column.server.ts` renders the Drizzle syntax. The adapter owns
+`text('…')`, the field owns "this is text". **This section does the same job one level up**, for
+tables — which is harder, because table names are not one decision but a composition of several,
+and because that composition is what makes `versions` invasive.
+
+### 15.1 The naming algebra, as it actually is
+
+Every table rime generates is named by composing suffixes onto a slug. Written out:
+
+```
+base        = camelCase(slug)                            // pages
+shadow      = base + '_versions'                         // pages_versions        (versions)
+directories = stripVersions(base) + '_directories'       // pages_directories     (upload)
+
+owner       = shadow ?? base          ← THE load-bearing line
+
+locales     = owner + 'Locales'                          // pages_versionsLocales
+block       = owner + 'Blocks' + Pascal(block.name)      // pages_versionsBlocksHero
+tree        = owner + 'Tree'   + Pascal(field.name)      // pages_versionsTreeNav
+junction    = owner + 'Rels'                             // pages_versionsRels
+```
+
+Two spellings coexist and both matter. `templateTable` emits
+`export const <camelName> = sqliteTable('<snakeCase(camelName)>', …)`, so every table has a
+Drizzle **property** name (`pagesVersionsRels`) and a SQL **table** name (`pages_versions_rels`).
+Columns work the same way via `getSchemaColumnNames`: `{ camel: 'groupTitle', snake:
+'group__title' }`, with nested group/tab paths joined by a **double** underscore so a path
+separator can never be confused with a snake-case word break.
+
+The suffixes do not commute, and the code encodes that:
+
+- `withDirectoriesSuffix` **strips `_versions` first**, so a versioned upload collection yields
+  `pages_directories`, never `pages_versions_directories`. The directory tree belongs to the
+  document, not to a revision of it.
+- `withLocalesSuffix` applies **last**, to whatever the owner is — hence
+  `pages_versionsLocales`, a `_snake` suffix followed by a `Pascal` one on the same identifier.
+
+Relations are named too: `rel_<table>HasOne<Pascal(parent)>`, `rel_<table>HasMany<…>`,
+`rel_<table>Rels`.
+
+And there are fixed structural columns, each with one template:
+
+| column                          | template          | appears on                                |
+| ------------------------------- | ----------------- | ----------------------------------------- |
+| `id: pk()`                      | `templateTable`   | every table that does not declare its own |
+| `ownerId → <parent>.id` cascade | `templateParent`  | locales, blocks, tree, shadow, junction   |
+| `locale: text('locale')`        | `templateLocale`  | locales tables, junction when localized   |
+| `authUserId → authUsers.id`     | `templateHasAuth` | auth collections                          |
+| `path`, `position`              | junction template | the `Rels` table                          |
+
+### 15.2 The lineage, and why it matters here
+
+The model is Payload CMS 2's relational modeling, adopted deliberately: a **shadow table** for
+versions rather than a JSON column, a **sibling table** for localized values rather than
+per-locale columns, **one child table per block type**, and **a single polymorphic junction
+table** carrying `path` + `position` rather than one join table per relation field.
+
+That is a good, proven model, and nothing here proposes changing it. What matters for the
+contract is its consequence: **the shape of the schema is decided by composition, not by any
+single feature.** Versions does not add a table; it re-roots the whole subtree. Localization
+does not add a column; it splits every table in two. A contract that lets a feature say only
+"here are my extra tables" cannot express either.
+
+### 15.3 Where the convention lives today
+
+Scattered across three owners, and stated twice in one case:
+
+| convention                                            | defined in                                                                                           | consumed by                         |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `_versions`                                           | `core/features/versions/naming.ts`                                                                   | adapter ×8 files, panel, operations |
+| `_directories`                                        | `core/features/upload/naming.ts`                                                                     | adapter ×3, panel                   |
+| `Locales`                                             | `core/i18n/naming.ts`                                                                                | `root.server.ts`                    |
+| `Blocks<Name>`                                        | **twice** — inline in `root.server.ts`, and `makeBlockTableSlug` in `generate-schema/util.server.ts` | codegen / runtime                   |
+| `Tree<Name>`                                          | **twice** — same pair                                                                                | codegen / runtime                   |
+| `Rels`, `rel_*`                                       | `generate-schema/relations/junction.server.ts`                                                       | adapter only                        |
+| `ownerId`, `locale`, `authUserId`, `path`, `position` | `templates.server.ts`                                                                                | adapter only                        |
+
+The split is not principled. `_versions` is core's because it doubles as a **collection slug**;
+`Blocks<Name>` is the adapter's because it is only ever a table — except that the runtime needs
+it too, so it was restated in `util.server.ts`. Two definitions of one convention is exactly the
+failure mode §12.3 documented for the augment order.
+
+### 15.4 The contract: core owns logical names, the adapter owns physical rendering
+
+One rule, by analogy with the field level:
+
+> **Core declares the logical name and the topology. The adapter renders identifiers and SQL.**
+> A feature never writes `sqliteTable`, and an adapter never writes `'_versions'`.
+
+That draws the line where the code already wants it: `withVersionsSuffix` is core's because it
+is a slug; `snakeCase`, `pk()`, `references(…)` are the adapter's because they are SQLite. It
+also fixes the `Blocks<Name>` duplication by moving the convention to core, where both codegen
+and runtime can reach one definition.
+
+### 15.5 Five table kinds — the whole schema
+
+Everything generated today is one of five. This is the table-level equivalent of `DataType`'s
+five values:
+
+| kind         | logical name             | parent | structural columns                                           | declared by          |
+| ------------ | ------------------------ | ------ | ------------------------------------------------------------ | -------------------- |
+| **root**     | `<slug>`                 | —      | `id`                                                         | the prototype        |
+| **shadow**   | `<slug>_versions`        | root   | `id`, `ownerId`                                              | `versions`           |
+| **locales**  | `<owner>Locales`         | owner  | `id`, `ownerId`, `locale`                                    | i18n, automatically  |
+| **child**    | `<owner>Blocks\|Tree<N>` | owner  | `id`, `ownerId` (+ `path`, `position` for tree)              | blocks / tree fields |
+| **junction** | `<owner>Rels`            | owner  | `id`, `ownerId`, `path`, `position`, `<target>Id`, `locale?` | relation fields      |
+
+A `TableSpec` is therefore small enough to be worth writing:
+
+```ts
+type TableSpec = {
+  kind: 'root' | 'shadow' | 'locales' | 'child' | 'junction';
+  name: string; // logical, from core's naming module
+  parent?: string; // logical name of the table ownerId points at
+  fields: FieldBuilder[]; // rendered by the existing column pipeline
+  singleton?: boolean; // areas: exactly one row
+  /** Children (locales, blocks, tree, junction) attach here instead of to root. */
+  ownsChildren?: boolean;
+};
+```
+
+### 15.6 The re-parenting rule is the hard part, and it is one line
+
+`owner = shadow ?? base`. That is why `versions` appears in 8 adapter files while `upload`
+appears in 3 and `url` in none.
+
+Concretely, in `generateSchemaString`: when a collection has versions, the root table is built
+from **only** the fields flagged `_root()` plus `createdAt`/`updatedAt`; then `rootTableName` is
+reassigned to `withVersionsSuffix(slug)` and `buildRootTable` is called again — so every block,
+tree, locales and junction table underneath is named and parented off the shadow. Enabling
+versions renames most of the schema.
+
+`_root()` deserves naming as a protocol in its own right. It is a `FormFieldBuilder` method
+(`form-field-builder.ts:129`) used by **nested** (`_parent`, `_position`) and **upload**
+(`_path`) to mean _this column must stay on the root table, not move to the shadow_. So it is a
+versions concept, expressed on a field, consumed by the adapter, and declared by two other
+features. Three features and the adapter already share one protocol — with no name for it. In
+the contract it becomes the `shadow` spec's partition predicate.
+
+### 15.7 `versions` as a Feature — pseudo-code
+
+```ts
+// core/features/versions/index.server.ts
+import { withVersionsSuffix } from './naming.js';
+import { defineVersionOperation } from './hooks/define-version-operation.server.js';
+import { handleNewVersion } from './hooks/handle-new-version.server.js';
+
+export const versions = defineFeature({
+  name: 'versions',
+  appliesTo: ['collection', 'area'],
+  enabled: (proto) => !!proto.versions,
+
+  /** Route 3 (§14.3): needs the adapter to support shadow tables. Boot fails loudly if not. */
+  requires: ['shadowTables'],
+
+  codegen: {
+    /**
+     * Replaces the `collection.versions` branch in generateSchemaString and the
+     * `rootTableName = withVersionsSuffix(...)` reassignment beneath it.
+     */
+    storage: (proto) => [
+      {
+        kind: 'root',
+        name: proto.slug,
+        // Only _root() fields stay behind — see 15.6. Areas keep nothing (today's behaviour).
+        fields:
+          proto.type === 'collection'
+            ? [...proto.fields.filter((f) => f.get.root), date('createdAt'), date('updatedAt')]
+            : [date('createdAt'), date('updatedAt')]
+      },
+      {
+        kind: 'shadow',
+        name: withVersionsSuffix(proto.slug),
+        parent: proto.slug,
+        fields: proto.fields.filter((f) => !f.get.root),
+        // THE line. Locales, blocks, tree and Rels hang off the shadow, not the root.
+        ownsChildren: true
+      }
+    ],
+    // pages_versions must not re-enter the loop as its own prototype — this replaces
+    // the `_generateSchema: false` / `_generateTypes: false` markers on the derived
+    // collection (§14.3), which exist today only to suppress exactly this.
+    types: 'inline'
+  },
+
+  /**
+   * Still derives a runtime-addressable prototype so rime.collection('pages_versions')
+   * works — but now says why, instead of leaving `_generateSchema: false` to imply it.
+   */
+  derive: (proto) => [aliasPrototype(proto, withVersionsSuffix(proto.slug), { storage: 'none' })],
+
+  runtime: {
+    hooks: { defineVersionOperation, handleNewVersion },
+    /**
+     * Replaces the 6 non-schema adapter imports: orderBy, where, transform, url,
+     * collection, area all currently import withVersionsSuffix/strategy directly.
+     * The adapter asks the capability instead of importing the feature.
+     */
+    capability: {
+      shadowTables: {
+        suffix: '_versions',
+        isShadow: (name) => name.endsWith('_versions'),
+        resolveRoot: (name) => name.replace('_versions', ''),
+        strategy: versionsStrategy // the existing features/versions/strategy.ts
+      }
+    }
+  }
+});
+```
+
+### 15.8 `area` as a base Prototype — pseudo-code
+
+```ts
+// core/features/area/index.server.ts
+export const area = definePrototype({
+  name: 'area',
+  enabled: (config) => config.type === 'area',
+
+  codegen: {
+    /** One table, one row. No auth column, no _root() partition — today's three deviations
+     *  from the collection loop, stated instead of implied by a duplicated loop body. */
+    storage: (proto) => [
+      { kind: 'root', name: toCamelCase(proto.slug), fields: proto.fields, singleton: true }
+    ],
+    routes: ['[panel=panel]/[slug=area]', 'api/[slug=area]'],
+    types: (proto) => generateAreaTypes(proto)
+  },
+
+  runtime: {
+    /** §14.1's third attach point: which operations exist at all. Two, not seven. */
+    operations: { find, update },
+    pipeline: areaPipeline, // 4 timings, not 7 — no create, no delete
+    rest: { GET: restGetArea, POST: restUpdateArea },
+    api: AreaAPI
+  }
+});
+
+// core/features/collection/index.server.ts — the sibling, for contrast
+export const collection = definePrototype({
+  name: 'collection',
+  enabled: (config) => config.type === 'collection',
+  codegen: {
+    storage: (proto) => [
+      {
+        kind: 'root',
+        name: toCamelCasePreserveTrailingUnderscoreSuffix(proto.slug),
+        fields: proto.fields,
+        hasAuth: !!proto.auth
+      }
+    ],
+    routes: [
+      '[panel=panel]/[slug=collection]',
+      '[panel=panel]/[slug=collection]/[id]',
+      'api/[slug=collection]',
+      'api/[slug=collection]/[id]'
+    ],
+    types: (proto) => generateCollectionTypes(proto)
+  },
+  runtime: {
+    operations: { find, findById, create, updateById, deleteById, deleteDocs, duplicate },
+    pipeline: collectionPipeline, // 7 timings
+    rest: { GET: restGet, POST: restCreate /* …4 more */ },
+    api: CollectionAPI
+  }
+});
+```
+
+Reading those two side by side is the whole argument: every line that differs is a real
+difference between a collection and an area, and there is no line that is duplication.
+
+### 15.9 What is still unresolved
+
+Four things I could not settle from the code, worth deciding before implementing:
+
+1. **`RESOLVE_DEFAULT` still knows every field type by name.** `column.server.ts` keys 15
+   entries off `field.type` (`text`, `slug`, `richText`, …) to pick a SQLite-safe `DEFAULT`. So
+   the field → column decoupling is complete for _storage type_ but not for _default value_.
+   Either fields grow a `schemaDefault`, or this stays an accepted adapter-side table.
+2. **`templateHasAuth` hardcodes `slug === 'staff'`** to add `isSuperAdmin`. A rime slug literal
+   inside the adapter's template layer; it should come from the auth feature.
+3. **Does `locales` belong to a capability or to the core loop?** §14.4 sorted localization as
+   an adapter capability, but unlike versions it is _automatic_ — triggered by
+   `hasLocalizedField(fields)`, not by a config flag. It may be better modelled as an intrinsic
+   of `TableSpec` (`fields.some(f => f.localized)` splits any table) than as a capability an
+   adapter opts into.
+4. **Junction `path` semantics.** The single polymorphic `Rels` table keys rows by a `path`
+   string. Nothing validates that path against the config map, and it is the one place where a
+   nested-field rename would silently orphan rows. Out of scope here, but it is the sharpest
+   edge in the storage model.
