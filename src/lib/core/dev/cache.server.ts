@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { RIME_DEV_CACHE_DIR } from '../../constant.server.js';
+import { RIME_DEV_CACHE_DIR } from '../constants.server.js';
 
 const dev = process.env.NODE_ENV === 'development';
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { PARAMS } from '$lib/core/constant';
+  import { PARAMS } from '$lib/core/constants';
   import { t__ } from '$lib/core/i18n/index.js';
   import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
   import type { CollectionContext } from '$lib/panel/context/collection.svelte';

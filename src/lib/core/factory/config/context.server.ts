@@ -1,5 +1,5 @@
 import type { AreaSlug, CollectionSlug, Config, PrototypeSlug } from '$lib/types.js';
-import { ensureMedias } from '../../ensure.server.js';
+import { ensureMedias } from '$lib/core/features/upload/ensure.server.js';
 import { RimeError } from '../../errors/index.js';
 import type { BuildConfig } from './build.server.js';
 

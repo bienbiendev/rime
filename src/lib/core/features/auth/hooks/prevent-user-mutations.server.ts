@@ -1,5 +1,5 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 
 /**
  * Before update :

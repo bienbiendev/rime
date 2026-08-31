@@ -1,4 +1,4 @@
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { randomId } from '$lib/util/random.js';
 import { isValidSlug, slugify } from '$lib/util/string.js';
 import { generate as generateCode } from '@babel/generator';
@@ -10,11 +10,11 @@ import fs from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { CONFIG_DIR, OUTPUT_DIR, PANEL_ROUTE } from '../../constants.js';
-import { generate } from '../generate/index.server.js';
+import { generate } from './generate.server.js';
 import { installDependencies } from '../util/package-manager.server.js';
 import { getPackageInfoByKey } from '../util/package.server.js';
 import { prompt } from '../util/prompt.server.js';
-import * as templates from './templates.js';
+import * as templates from '../templates/init.js';
 
 type Args = {
   force?: boolean;

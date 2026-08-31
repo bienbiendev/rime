@@ -1,9 +1,9 @@
 import { env } from '$env/dynamic/private';
-import { PARAMS } from '$lib/core/constant.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { PARAMS } from '$lib/core/constants.js';
+import { logger } from '$lib/core/logger.server.js';
 import { getValueAtPath } from '$lib/util/object.js';
 import validate from '$lib/util/validate.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 
 /**
  * Hook to populate _children property on document from a nested collection

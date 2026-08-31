@@ -4,9 +4,9 @@ import {
   VersionOperations
 } from '$lib/core/features/versions/strategy.js';
 import type { Config } from '$lib/core/factory/config/types.js';
-import { VERSIONS_STATUS } from '$lib/core/constant.js';
+import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { withDirectoriesSuffix, withLocalesSuffix, withVersionsSuffix } from '$lib/core/naming.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
+import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type { CollectionSlug, GenericDoc, RawDoc } from '$lib/core/types/doc.js';
 import type { OperationQuery } from '$lib/core/types/index.js';
 import type { GetRegisterType } from '$lib/index.js';

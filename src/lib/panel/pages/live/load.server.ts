@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import { PARAMS } from '$lib/core/constant.js';
+import { PARAMS } from '$lib/core/constants.js';
 import type { PrototypeSlug } from '$lib/core/types/doc.js';
 import type { ServerLoadEvent } from '@sveltejs/kit';
 import { error, redirect } from '@sveltejs/kit';

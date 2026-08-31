@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant.js';
+  import { PARAMS, VERSIONS_STATUS } from '$lib/core/constants.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';

@@ -1,6 +1,6 @@
 import type { JsonFile } from '$lib/core/features/upload/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { fileSizeToString } from '$lib/util/file.js';
 import fs from 'fs';
 import { readFile } from 'fs/promises';

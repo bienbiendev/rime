@@ -1,5 +1,5 @@
 import { PANEL_ROUTE } from '$lib/core/dev/constants.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import type { Config } from '$lib/types.js';
 import fs from 'fs';
 import path from 'path';

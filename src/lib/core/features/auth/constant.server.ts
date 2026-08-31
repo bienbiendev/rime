@@ -22,7 +22,7 @@ export const BETTER_AUTH_ROLES = {
 /**
  * Strips PRIVATE_FIELDS off the session user. Call this only where a load() function is
  * about to hand `user` to the client (the public layouts in
- * dev/generate/routes/common.server.ts) — never on event.locals.user itself, which stays
+ * dev/codegen/routes/common.server.ts) — never on event.locals.user itself, which stays
  * the full object so server-only code (hooks, access checks) always sees real staff status
  * regardless of which route triggered it.
  */

@@ -1,4 +1,4 @@
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import fs from 'fs';
 
 /**

@@ -5,11 +5,11 @@ import type {
   Config,
   ImageSizesConfig
 } from '$lib/core/factory/config/types.js';
-import { PACKAGE_NAME } from '$lib/core/constant.server.js';
-import cache from '$lib/core/dev/cache/index.server.js';
+import { PACKAGE_NAME } from '$lib/core/constants.server.js';
+import cache from '$lib/core/dev/cache.server.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { withVersionsSuffix } from '$lib/core/naming.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
@@ -134,7 +134,7 @@ const templateDeclareVirtualModule = () =>
     `}`
     // $rime/modules (the bare barrel) is typed by src/rime.modules.generated.d.ts instead —
     // written directly by the Vite plugin's own dev-server watcher (regenerateModulesDeclaration
-    // in core/dev/vite/index.server.ts), not here, since it needs to react to module.(server.)ts
+    // in core/dev/vite.server.ts), not here, since it needs to react to module.(server.)ts
     // files appearing/changing on their own, independent of a config regen.
     //
     // A package's own qualified $rime/modules/<pkg>/<path> references are self-contained —
@@ -318,7 +318,7 @@ export async function generateTypesString<T extends Config>(config: T) {
 					type: string;
 				}
 			| undefined;
-			/** Singleton providing access to auth, config and local-api */
+			/** Singleton providing access to auth, config and the local API */
       rime: ReturnType<
 				Awaited<
 					typeof import('${rimeConfigServerPath}').default

@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 import { getRequestEvent } from '$app/server';
 import { BETTER_AUTH_ROLES } from '$lib/core/features/auth/constant.server.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { trycatch } from '$lib/util/function.js';
 import { omit } from '$lib/util/object.js';
 import type { AuthContext, MiddlewareContext, MiddlewareOptions } from 'better-auth';

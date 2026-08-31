@@ -1,5 +1,5 @@
 import type { Config } from '$lib/core/factory/config/types.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
+import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type { GetRegisterType } from '$lib/index.js';
 import type { Dic } from '$lib/util/types.js';
 import { drizzle, LibSQLDatabase } from 'drizzle-orm/libsql';

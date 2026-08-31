@@ -1,5 +1,5 @@
-import { RIME_DEV_CACHE_DIR } from '$lib/core/constant.server.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { RIME_DEV_CACHE_DIR } from '$lib/core/constants.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { rmSync } from 'node:fs';
 import path from 'node:path';
 import { CONFIG_DIR, GENERATED_DIR } from '../../constants.js';

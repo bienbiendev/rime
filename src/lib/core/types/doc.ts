@@ -6,7 +6,7 @@ export type PrototypeSlug = CollectionSlug | AreaSlug;
 
 import type { Dic } from '$lib/util/types.js';
 import type { UploadPath } from '../features/upload/util/path.js';
-import type { VersionsStatus } from '../constant.js';
+import type { VersionsStatus } from '../constants.js';
 
 export type Prototype = 'area' | 'collection';
 

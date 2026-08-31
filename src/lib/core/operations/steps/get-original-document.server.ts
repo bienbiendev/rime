@@ -1,6 +1,6 @@
 import { VersionOperations } from '$lib/core/features/versions/strategy.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 
 export const getOriginalDocument = Hooks.beforeUpdate(async (args) => {
   const { event, config, context } = args;

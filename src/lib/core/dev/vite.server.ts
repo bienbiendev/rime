@@ -1,25 +1,25 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Plugin, UserConfig } from 'vite';
-import { RIME_DEV_CACHE_DIR } from '../../constant.server.js';
-import { ensureHasInit } from '../../ensure.server.js';
-import { logger } from '../../logger/index.server.js';
-import { getPackageInfoByKey } from '../cli/util/package.server.js';
+import { RIME_DEV_CACHE_DIR } from '../constants.server.js';
+import { ensureHasInit } from './ensure.server.js';
+import { logger } from '../logger.server.js';
+import { getPackageInfoByKey } from './cli/util/package.server.js';
 import {
   CONFIG_DIR,
   GENERATED_DIR,
   generatedConfigServerPath,
   isInstalledDependency,
   schemaPath
-} from '../constants.js';
+} from './constants.js';
 import {
   findInstalledPackageRoot,
   findModulePair,
   scanModulePairs,
   type RuntimeRegistryEntry
-} from '../generate/runtime/index.server.js';
-import { parseExportNames } from '../generate/runtime/parse-exports.server.js';
-import { sanitize } from '../generate/sanitize/index.server.js';
+} from './codegen/runtime/index.server.js';
+import { parseExportNames } from './codegen/runtime/parse-exports.server.js';
+import { sanitize } from './codegen/sanitize/index.server.js';
 
 const dev = process.env.NODE_ENV === 'development';
 

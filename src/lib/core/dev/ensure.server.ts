@@ -1,7 +1,6 @@
-import type { BuiltCollection } from '$lib/types.js';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { CONFIG_DIR, GENERATED_DIR, generatedConfigServerPath, schemaPath } from './dev/constants.js';
+import { CONFIG_DIR, GENERATED_DIR, generatedConfigServerPath, schemaPath } from './constants.js';
 
 const projectRoot = process.cwd();
 
@@ -82,15 +81,6 @@ export function ensureDatabase() {
   if (!existsSync(dbDirectory)) throw new Error('Missing db directory');
 }
 
-export function ensureMedias<C extends { collections?: BuiltCollection[] }>(config: C) {
-  const hasUpload = (config.collections || []).some((collection) => !!collection.upload);
-  if (hasUpload) {
-    const mediasDirectory = path.resolve(process.cwd(), 'static/medias');
-    if (!existsSync(mediasDirectory)) {
-      mkdirSync(mediasDirectory, { recursive: true });
-    }
-  }
-}
 
 export const ensureHasInit = () => {
   ensureEnv();

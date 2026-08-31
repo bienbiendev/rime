@@ -2,11 +2,11 @@ import { getRequestEvent } from '$app/server';
 import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 import { eq, inArray } from 'drizzle-orm';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 
 export const setDefaultValues = Hooks.beforeUpsert(async (args) => {
   const { operation, event } = args;

@@ -4,7 +4,7 @@ import * as t from '@babel/types';
 import { babelParse } from 'ast-kit';
 import fs from 'node:fs';
 import path from 'node:path';
-import { logger } from '../../../logger/index.server.js';
+import { logger } from '../../../logger.server.js';
 import { CONFIG_DIR, GENERATED_DIR, OUTPUT_DIR } from '../../constants.js';
 
 /**

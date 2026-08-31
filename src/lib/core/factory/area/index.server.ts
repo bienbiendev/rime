@@ -5,7 +5,7 @@ import { augmentUrl } from '$lib/core/features/url/augment.js';
 import { augmentVersions } from '$lib/core/features/versions/augment.js';
 import type { AreaWithoutSlug } from '$lib/core/factory/area/types.js';
 import type { Area, BuiltArea } from '$lib/core/factory/config/types.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 import { capitalize, toKebabCase } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';
 

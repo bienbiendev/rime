@@ -1,4 +1,4 @@
-import { PACKAGE_NAME } from '$lib/core/constant.server.js';
+import { PACKAGE_NAME } from '$lib/core/constants.server.js';
 import path from 'node:path';
 import { configImportPaths } from '../../constants.js';
 import type { Routes } from './util.server.js';

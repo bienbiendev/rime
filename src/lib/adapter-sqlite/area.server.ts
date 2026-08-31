@@ -4,10 +4,10 @@ import {
   VersionOperations
 } from '$lib/core/features/versions/strategy.js';
 import type { Config } from '$lib/core/factory/config/types.js';
-import { VERSIONS_STATUS } from '$lib/core/constant.js';
+import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { withLocalesSuffix, withVersionsSuffix } from '$lib/core/naming.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
+import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type { AreaSlug, GenericDoc, RawDoc } from '$lib/core/types/doc.js';
 import type { GetRegisterType } from '$lib/index.js';
 import { createBlankDocument } from '$lib/util/doc.js';

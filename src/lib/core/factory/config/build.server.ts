@@ -1,5 +1,5 @@
 import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
-import { createRime, type Rime } from '../../rime.server.js';
+import { createRime, type Rime } from '../../rime/index.server.js';
 import { augmentPanel } from './augment-panel.js';
 import { augmentPlugins } from './augment-plugins.js';
 import { augmentIcons } from './augment-icons.js';

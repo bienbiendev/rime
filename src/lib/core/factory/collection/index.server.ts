@@ -8,7 +8,7 @@ import { augmentUrl } from '$lib/core/features/url/augment.js';
 import { augmentVersions } from '$lib/core/features/versions/augment.js';
 import type { CollectionWithoutSlug } from '$lib/core/factory/collection/types.js';
 import type { BuiltCollection, Collection } from '$lib/core/factory/config/types.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 import { toKebabCase } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';
 import { augmentLabel } from './augment-label.js';

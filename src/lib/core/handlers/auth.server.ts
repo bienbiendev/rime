@@ -1,11 +1,11 @@
-import { isPublicPanelAuthRoute } from '$lib/core/constant.server.js';
+import { isPublicPanelAuthRoute } from '$lib/core/constants.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { CollectionSlug } from '$lib/core/types/doc.js';
 import type { Config, User } from '$lib/types.js';
 import { error, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
 import { BETTER_AUTH_ROLES } from '../features/auth/constant.server.js';
-import { logger } from '../logger/index.server.js';
-import type { ConfigContext, RimeContext } from '../rime.server.js';
+import { logger } from '../logger.server.js';
+import type { ConfigContext, RimeContext } from '../rime/index.server.js';
 
 const dev = process.env.NODE_ENV === 'development';
 
@@ -181,7 +181,7 @@ function authorizePanelUser<C extends Config>(
  * object, on every route type — server-only code (hooks, access checks) can rely on
  * isStaff/isSuperAdmin regardless of which route triggered it. Only the handful of
  * load() functions that hand `user` to the client need to call toPublicUser() first
- * (see dev/generate/routes/common.server.ts's public layout templates).
+ * (see dev/codegen/routes/common.server.ts's public layout templates).
  */
 function setupLocalsAndResolve(event: any, resolve: any, userData: UserData): any {
   const { user, session, authUser } = userData;

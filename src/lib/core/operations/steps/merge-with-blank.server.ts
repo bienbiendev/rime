@@ -1,7 +1,7 @@
 import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
 import { createBlankDocument } from '$lib/util/doc.js';
 import deepmerge from 'deepmerge';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 
 export const mergeWithBlankDocument = Hooks.beforeCreate(async (args) => {
   const { config } = args;

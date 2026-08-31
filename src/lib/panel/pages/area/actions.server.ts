@@ -1,4 +1,4 @@
-import { PARAMS } from '$lib/core/constant.js';
+import { PARAMS } from '$lib/core/constants.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { extractData } from '$lib/core/rest/extract-data.server.js';
 import type { AreaSlug } from '$lib/core/types/doc.js';

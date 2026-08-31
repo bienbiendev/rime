@@ -1,5 +1,5 @@
 import type { VersionsConfig } from '$lib/core/factory/config/types.js';
-import { VERSIONS_STATUS } from '$lib/core/constant.js';
+import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { text } from '$lib/fields/text/index.js';
 import type { Collection } from '../../../types.js';
 

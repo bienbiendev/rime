@@ -1,5 +1,5 @@
 import { getRequestEvent } from '$app/server';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { error, fail, isRedirect, redirect } from '@sveltejs/kit';
 import { APIError } from 'better-auth/api';
 import { RimeError, RimeFormError } from './index.js';

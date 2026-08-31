@@ -1,6 +1,6 @@
 import { cleanUpDocumentFile } from '$lib/core/features/upload/disk/delete.server.js';
 import { saveFile } from '$lib/core/features/upload/disk/save.server.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 import { omit } from '$lib/util/object.js';
 import { toCamelCase } from '$lib/util/string.js';
 import { isUploadConfig } from '../util/config.js';

@@ -1,7 +1,7 @@
 import type { BuiltCollection, Config } from '$lib/core/factory/config/types.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { hasVersionsSuffix, withVersionsSuffix } from '$lib/core/naming.js';
-import type { RimeContext } from '$lib/core/rime.server.js';
+import type { RimeContext } from '$lib/core/rime/index.server.js';
 import type { GenericDoc } from '$lib/core/types/doc.js';
 import { existsSync, unlink, unlinkSync } from 'fs';
 import path from 'path';

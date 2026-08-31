@@ -1,6 +1,6 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import { buildConfigMap } from '../config-map/index.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 
 export const buildOriginalDocConfigMap = Hooks.beforeUpsert(async (args) => {
   const { originalDoc } = args.context;

@@ -1,9 +1,9 @@
 import { isAuthConfig } from '$lib/core/features/auth/util.js';
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/factory/config/types.js';
-import cache from '$lib/core/dev/cache/index.server.js';
+import cache from '$lib/core/dev/cache.server.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { isFormField } from '$lib/core/fields/util.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { withoutDirectoriesSuffix, withoutVersionsSuffix } from '$lib/core/naming.js';
 import type { PrototypeSlug } from '$lib/core/types/doc.js';
 import { BlocksBuilder, type BlocksField } from '$lib/fields/blocks/index.js';

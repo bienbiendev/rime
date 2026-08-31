@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types';
-  import { PARAMS } from '$lib/core/constant';
+  import { PARAMS } from '$lib/core/constants';
   import { t__ } from '$lib/core/i18n/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { ExternalLink, PencilRuler, X } from '@lucide/svelte';

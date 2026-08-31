@@ -1,8 +1,8 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { hasVersionsSuffix, withLocalesSuffix } from '$lib/core/naming.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
+import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { type GetRegisterType } from '$lib/index.js';
 import type { Dic } from '$lib/util/types.js';

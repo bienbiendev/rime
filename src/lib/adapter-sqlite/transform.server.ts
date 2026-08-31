@@ -1,6 +1,6 @@
 import type { Config } from '$lib/core/factory/config/types.js';
 import { withLocalesSuffix, withVersionsSuffix } from '$lib/core/naming.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
+import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type {
   AreaSlug,
   CollectionSlug,
@@ -15,7 +15,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import deepmerge from 'deepmerge';
 import { getTableColumns } from 'drizzle-orm';
 import { flatten, unflatten } from 'flat';
-import { logger } from '../core/logger/index.server.js';
+import { logger } from '../core/logger.server.js';
 import { extractFieldName } from '../fields/tree/util.js';
 import { isObjectLiteral, omit } from '../util/object.js';
 import {

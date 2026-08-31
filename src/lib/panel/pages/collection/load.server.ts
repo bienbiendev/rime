@@ -5,10 +5,10 @@ import {
   removePathFromLastAria,
   type UploadPath
 } from '$lib/core/features/upload/util/path.js';
-import { UPLOAD_PATH } from '$lib/core/constant.js';
+import { UPLOAD_PATH } from '$lib/core/constants.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { withDirectoriesSuffix } from '$lib/core/naming.js';
 import type { GenericDoc } from '$lib/core/types/doc.js';
 import type { Route } from '$lib/panel/types.js';

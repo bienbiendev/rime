@@ -1,6 +1,6 @@
 import { filePathToFile } from '$lib/core/features/upload/util/converter.server.js';
 import { VersionOperations } from '$lib/core/features/versions/strategy.js';
-import { VERSIONS_STATUS } from '$lib/core/constant.js';
+import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { withVersionsSuffix } from '$lib/core/naming.js';
 import { recursiveRemoveKeys } from '$lib/util/object.js';
@@ -9,7 +9,7 @@ import path from 'path';
 import type { BuiltArea, BuiltCollection } from '../../../../types.js';
 import type { ConfigMap } from '../../../operations/config-map/types.js';
 import { fallbackDataFromOriginal } from '../../../operations/steps/fallback-data-from-original.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 
 /**
  * Handles version-related operations for document updates

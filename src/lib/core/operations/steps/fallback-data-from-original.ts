@@ -1,4 +1,4 @@
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import type { ConfigMap } from '../config-map/types.js';

@@ -1,5 +1,5 @@
 import type { Config } from '$lib/core/factory/config/types.js';
-import cache from '$lib/core/dev/cache/index.server.js';
+import cache from '$lib/core/dev/cache.server.js';
 import { CONFIG_DIR, PANEL_ROUTE } from '$lib/core/dev/constants.js';
 import { slugify } from '$lib/util/string.js';
 import fs from 'fs';

@@ -1,4 +1,4 @@
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { withLocalesSuffix, withVersionsSuffix } from '$lib/core/naming.js';
 import type { PrototypeSlug } from '$lib/core/types/doc.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';

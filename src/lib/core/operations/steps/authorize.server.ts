@@ -1,6 +1,6 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import { logger } from '$lib/core/logger/index.server.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { logger } from '$lib/core/logger.server.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 
 export const authorize = Hooks.beforeOperation(async (args) => {
   const { config, event, operation, context } = args;

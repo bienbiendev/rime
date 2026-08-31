@@ -1,5 +1,5 @@
 import { normalizeQuery } from '$lib/adapter-sqlite/util.server.js';
-import { PARAMS } from '$lib/core/constant.js';
+import { PARAMS } from '$lib/core/constants.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
 import { trycatch } from '$lib/util/function.js';

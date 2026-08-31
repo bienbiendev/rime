@@ -1,9 +1,9 @@
-import { RIME_DEV_CACHE_DIR } from '$lib/core/constant.server.js';
-import cache from '$lib/core/dev/cache/index.server.js';
-import { sanitize } from '$lib/core/dev/generate/sanitize/index.server.js';
-import { ensureGeneratedConfig, ensureUserConfigExist } from '$lib/core/ensure.server.js';
-import { regenerateModulesDeclaration } from '$lib/core/dev/vite/index.server.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { RIME_DEV_CACHE_DIR } from '$lib/core/constants.server.js';
+import cache from '$lib/core/dev/cache.server.js';
+import { sanitize } from '$lib/core/dev/codegen/sanitize/index.server.js';
+import { ensureGeneratedConfig, ensureUserConfigExist } from '$lib/core/dev/ensure.server.js';
+import { regenerateModulesDeclaration } from '$lib/core/dev/vite.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { trycatch } from '$lib/util/function.js';
 import { mkdirSync, rmSync } from 'fs';
 import path from 'path';

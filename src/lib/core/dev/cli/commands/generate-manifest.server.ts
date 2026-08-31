@@ -3,9 +3,9 @@ import * as t from '@babel/types';
 import { babelParse } from 'ast-kit';
 import fs from 'node:fs';
 import path from 'node:path';
-import { logger } from '../../../logger/index.server.js';
-import { scanModulePairs, type RuntimeRegistry } from '../../generate/runtime/index.server.js';
-import { parseExportNames } from '../../generate/runtime/parse-exports.server.js';
+import { logger } from '../../../logger.server.js';
+import { scanModulePairs, type RuntimeRegistry } from '../../codegen/runtime/index.server.js';
+import { parseExportNames } from '../../codegen/runtime/parse-exports.server.js';
 import { getPackageInfoByKey } from '../util/package.server.js';
 
 /**

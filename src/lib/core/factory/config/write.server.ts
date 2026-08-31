@@ -1,6 +1,6 @@
 import type { Dic } from '$lib/util/types.js';
 import { flatten } from 'flat';
-import cache from '../../dev/cache/index.server.js';
+import cache from '../../dev/cache.server.js';
 import { CONFIG_DIR } from '../../dev/constants.js';
 
 /**

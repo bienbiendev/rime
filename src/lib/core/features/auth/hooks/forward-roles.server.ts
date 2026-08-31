@@ -1,5 +1,5 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 import { access } from '$lib/util/access/index.js';
 import { cases } from '$lib/util/cases.js';
 import { BETTER_AUTH_ROLES } from '../constant.server.js';

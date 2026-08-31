@@ -1,6 +1,6 @@
 import { richTextJSONToText } from '$lib/fields/rich-text/index.js';
 import { getValueAtPath, isObjectLiteral } from '$lib/util/object.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 
 export const setDocumentTitle = Hooks.beforeRead<'raw'>(async (args) => {
   const config = args.config;

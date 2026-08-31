@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import chalk from 'chalk';
 import { spawnSync } from 'child_process';
 import { copyFileSync, cpSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'fs';
 import { getInvokingPackageManager } from '../util/package-manager.server.js';
-import { envProduction, nodeServer } from './templates.js';
+import { envProduction, nodeServer } from '../templates/build.js';
 
 const installCommands = {
   pnpm: {

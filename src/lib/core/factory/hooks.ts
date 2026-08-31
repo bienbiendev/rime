@@ -1,5 +1,5 @@
 import type { DocType } from '$lib/core/types/doc.js';
-import type { Hook, HookBeforeOperation, Operation } from './types.js';
+import type { Hook, HookBeforeOperation, Operation } from '../operations/types.js';
 
 /**
  * Helper object for creating hooks with specific operation and timing

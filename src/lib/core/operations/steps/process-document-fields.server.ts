@@ -1,9 +1,9 @@
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import type { GenericBlock } from '$lib/core/types/doc.js';
 import { deleteValueAtPath, getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 import { buildConfigMap } from '../config-map/index.js';
 import { getDefaultValue } from './set-default-values.server.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 
 export const processDocumentFields = Hooks.beforeRead(async (args) => {
   const { event } = args;

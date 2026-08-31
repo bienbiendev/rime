@@ -81,8 +81,8 @@
       "import": "./dist/util/index.js"
     },
     "./vite": {
-      "types": "./dist/core/dev/vite/index.server.d.ts",
-      "import": "./dist/core/dev/vite/index.server.js"
+      "types": "./dist/core/dev/vite.server.d.ts",
+      "import": "./dist/core/dev/vite.server.js"
     }
   },
   "files": [

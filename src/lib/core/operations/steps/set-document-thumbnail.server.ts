@@ -7,7 +7,7 @@ import {
   type UploadDoc
 } from '$lib/types.js';
 import { getValueAtPath } from '$lib/util/object.js';
-import { Hooks } from '$lib/core/operations/hooks.js';
+import { Hooks } from '$lib/core/factory/hooks.js';
 
 export const setDocumentThumbnail = Hooks.beforeRead<'raw'>(async (args) => {
   const config = args.config;
