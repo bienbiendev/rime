@@ -3,6 +3,11 @@
 > Status: **applied**, over two rounds. Sections 3 and 4 describe the layout as it was
 > _before_ the change and are kept as the record of why it moved; section 0 describes where it
 > landed, including the placement rule that came out of the second round.
+>
+> **§12 is not applied.** It argues that two rounds produced a better categorization but still
+> not a _pattern_, and proposes the missing one: a `Feature` contract, sibling to the `Plugin`
+> and `FieldBuilder` contracts this repo already has. Read it before §0's placement rule — it
+> is what that rule was reaching for.
 
 ## 0. Outcome
 
@@ -508,9 +513,7 @@ export const collectionPipeline = (c: BuiltCollection) => ({
   // …
 });
 
-export const areaPipeline = (a: BuiltArea) => ({
-  /* … */
-});
+export const areaPipeline = (a: BuiltArea) => ({/* … */});
 ```
 
 Two things change, and only two: the imports resolve to `features/*` and
@@ -712,11 +715,211 @@ covers it.
 - **`core/fields/`** — `builders/` genuinely belongs to fields, not to core.
   Moving it to `src/lib/fields/builders/` would be natural (`src/lib/fields/index.ts`
   already re-exports all four classes) but `src/lib/fields/` is out of scope here.
-  Deferred.
+  Deferred. **§12.2 answers this the other way**: `builders/` is the field _contract_,
+  and a contract lives in `core/` while its implementations live in `lib/`. So
+  `core/fields/builders/` is already correct, and it is `core/fields/` that needs
+  labelling as a contract rather than moving.
 - **`local-api/` vs `operations/`** — the facades are thin (`CollectionAPI` mostly
   resolves the locale and consults the cache). They could fold into `operations/`
   and drop a layer. Kept separate above because the cache-key logic is a real
-  concern and `rime.collection(…)` is public API.
+  concern and `rime.collection(…)` is public API. **§12.6 settles this**: being
+  public API is what makes it the runtime layer's entry point, not what keeps it in
+  a separate directory. It folds into `operations/`.
 - **`rest/collection/` + `rest/area/` vs a flat `rest/`** — after §4.4's
   deduplication the handlers may be similar enough to merge. Decide during
   phase 3, not before.
+
+---
+
+## 12. Round 3 — the missing contract (proposed, not applied)
+
+Rounds 1 and 2 produced a better _categorization_. They did not produce a _pattern_. The
+difference matters for exactly one reader: someone who knows nothing about the project and
+wants to add a feature. Today the honest answer to "where do I start?" is "read about seventy
+files", and no amount of folder renaming fixes that.
+
+### 12.1 The observation
+
+This repo already contains the pattern it is missing — twice.
+
+| contract                                                      | implementations                                   | cost of adding one |
+| ------------------------------------------------------------- | ------------------------------------------------- | ------------------ |
+| `core/fields/builders/*` — `FieldBuilder`, `FormFieldBuilder` | `lib/fields/<name>/` × 21                         | obvious            |
+| `core/plugins/index.ts` — `Plugin`, `definePlugin`            | `plugins/{cache,sse,mailer,api-init}`             | obvious            |
+| _nothing_                                                     | `core/features/{auth,upload,versions,nested,url}` | archaeology        |
+
+`Plugin` is four named seams in one object (`configure`, `actions`, `routes`, `handler`) plus a
+`definePlugin` helper. A feature is a folder convention, learned by reading the code that
+consumes it. §5 already said "generalise what works" and listed both of these — round 2 read
+that as _keep them_ rather than _generalise them_. This section is the generalisation.
+
+### 12.2 The pattern, stated
+
+> **`core/<x>/`** is a contract and the machinery that runs it.
+> **`lib/<x>/`** is implementations of a contract — yours, or a future external package's.
+> **`util/`** has no contract and no rime types.
+
+This supersedes §0's placement rule rather than contradicting it: the rule said where a _file_
+goes, which is still true and still useful. This says why the folder exists at all, which is
+what a contributor actually needs. It also disposes of the `core` vs `util` question for good —
+`util/` is the bucket with no contract, which is why nothing there should ever be interesting.
+
+Three contracts, by what they extend:
+
+| contract       | extends         | declared in                                | seams                                            |
+| -------------- | --------------- | ------------------------------------------ | ------------------------------------------------ |
+| `FieldBuilder` | a **document**  | a collection's `fields: []`                | build, validate, hooks, component, generateType  |
+| `Feature`      | a **prototype** | a key on a collection/area (`upload: {…}`) | enabled, augment, derive, schema, hooks, handler |
+| `Plugin`       | the **app**     | `rime.config`'s `plugins: []`              | configure, routes, actions, handler              |
+
+Feature and Plugin are siblings, not rivals: same vocabulary, different scope. That they
+converge is the point — it is one idea applied at two altitudes.
+
+### 12.3 Evidence: what no contract costs
+
+Not hypothetical. `factory/collection/index.ts` and `index.server.ts` both compose the
+augments, and they do it in **different orders**:
+
+```
+client:  label → upload → nested → versions → url → auth → metas → title → panel → thumbnail
+server:  label → upload → nested → versions → url → panel → auth → metas → hooks → title → thumbnail
+```
+
+`hooks` being server-only is correct. `panel` moving from after `title` to before `auth` is
+not explained anywhere. It is inert _today_ — `augmentPanel` reads only `panel` and `upload`,
+both settled before either position — but nothing records that, and nothing would catch it
+changing. Two hand-maintained sequences that must agree, with no shared declaration between
+them, is the failure mode a contract exists to remove.
+
+Second cost, in the same pair of files: the client `create` returns an explicit object literal
+naming every key, the server one spreads `...augmented`. The whitelist is defensible — the
+client object _is_ the sanitized surface — but it means a feature that adds a config key must
+be remembered in a second, unlinked list, with no compiler help.
+
+### 12.4 The `Feature` contract
+
+Read off what the five existing features already do, not invented:
+
+```ts
+export type Feature = {
+  name: string;
+  /** The pipeline's `...(collection.upload ? [...] : [])` test, named once. */
+  enabled: (config: BuiltCollection | BuiltArea) => boolean;
+  /** buildtime — shape the authored config. Two sides, one declaration. */
+  augment?: { client?: Augment; server?: Augment };
+  /** buildtime — derive extra prototypes: staff, <slug>_directories, _versions. */
+  derive?: (config: BuiltCollection | BuiltArea) => Prototype[];
+  /** buildtime — extra columns, tables, table-name suffixes for the adapter. */
+  schema?: SchemaContribution;
+  /** runtime — named hooks. Named, deliberately not ordered; see 12.5. */
+  hooks?: Record<string, Hook>;
+  /** request — auth needs one. Same field, same meaning as Plugin's. */
+  handler?: Handle;
+};
+```
+
+Checked against all five before writing it down: `auth`, `upload` and `versions` fill every
+slot; `nested` and `url` fill three. Nothing needs a slot that is not there, and no slot exists
+for only one feature.
+
+The win is not the type. It is that `enabled`, `augment`, `derive` and `hooks` stop being
+things you discover by grepping for `features/upload` across the tree, and become things the
+compiler enumerates.
+
+### 12.5 Domain owns the code, layer owns the order
+
+The tempting next step — `features/upload/{factory,operations,infra}` — is wrong. It produces
+five parallel miniature trees and destroys the one file everybody agrees is good:
+`pipeline.server.ts`, where the entire hook order is visible at once (§7 makes this a hard
+requirement).
+
+So the split is:
+
+- the **domain** owns the code — every line of a feature stays in `features/<name>/`;
+- the **layer** owns the order — `pipeline.server.ts` still spells out the sequence literally,
+  by hand, and `factory/` still composes the augments in a written-out sequence.
+
+The contract is what lets both be true without duplication. A feature _declares_
+`hooks: { populateSizes, cleanUpFiles }`; the pipeline _places_ them. `enabled` replaces the
+hand-written `collection.upload ?` test at each site, so the on/off condition is written once
+instead of eleven times, while the ordering stays exactly as legible as it is now.
+
+This is already how `Plugin` behaves: a plugin declares `handler`, and the handle chain decides
+where it runs. Never a loop over a registry — §7 and §9.2 stand.
+
+### 12.6 Structural corrections that follow
+
+Round 2 got these wrong, and the contract view is what makes them obvious:
+
+- **`core/prototype/` should not exist.** It was created to house `core/types/doc.ts` plus two
+  utilities, and it shows: a folder holding a type alias and no behaviour. `collection | area`
+  is the axis features branch on — a type parameter, not a directory. `createBlankDocument`
+  builds a document from a config, which is `factory/`'s job by the §5 definition.
+- **`local-api-*.server.ts` belongs with `operations/`.** It is a facade over
+  `operations/collection/*` and it is the runtime layer's public entry (`rime.collection(…)`).
+  `rime/` should keep only context assembly. §11 already flagged this as an open question and
+  answered it too cautiously.
+- **`pipeline.server.ts` is two files in one coat.** `collectionPipeline` / `areaPipeline` are
+  the ordered table — runtime knowledge. `augmentCollectionHooks` / `augmentAreaHooks` apply it
+  at build time and belong beside the other augments in `factory/`. The table is what §7
+  protects; the augment is not.
+- **`errors` / `i18n` are infrastructure and should be labelled as such**, not left as peers of
+  `operations/` and `factory/`. `fields` is _not_ infrastructure — it is contract #1, and
+  reads as a satellite only because nothing says so.
+
+### 12.7 The argument-forwarding problem is the same problem
+
+`runUpdate`, `runDataHooks` and `runDocHooks` removed real duplication — two ~80-line twins
+that had to stay in lockstep — but every call site now reads as forwarding:
+
+```ts
+const after = await runDocHooks<CollectionSlug, T>({
+  hooks: config.$hooks?.afterCreate,
+  doc: document,
+  data,
+  config,
+  event,
+  operation: 'create',
+  context
+});
+document = after.doc;
+```
+
+The cause is not the extraction. It is that `{ config, event, operation, context }` travel
+together through every step of every operation and are re-spelled by hand at each seam, because
+**no object owns them**. `operations/collection/find.ts` is mostly forwarding for the same
+reason.
+
+Give that tuple a name and the call becomes `runDocHooks(run, config.$hooks?.afterCreate, doc,
+data)`. Same deduplication, no ceremony. Missing contract → argument bags → wrappers that look
+like overhead: one cause, two symptoms. Do not undo the extraction; finish it.
+
+### 12.8 What this reaches, and what it does not
+
+Honest scope, because the cheap part and the expensive part are very different:
+
+**Cheap** — `enabled`, `augment`, `derive`, `hooks`. These are consumed by `factory/` and
+`operations/`, both of which already import features by name. Turning that into a declaration
+is mostly mechanical.
+
+**Expensive** — `schema` and generated types. `adapter-sqlite/generate-schema/` and
+`dev/codegen/types/` would have to _read_ a registry instead of importing
+`features/versions/naming.js` directly. That is a real refactor of two packages, and it is
+where the design would actually be tested.
+
+**Out of reach** — the panel. Roughly twenty components under `panel/` branch on `upload`,
+`auth` and `nested`. Svelte components cannot be declared through this contract, and pretending
+otherwise would produce a second registry that lies. A feature will remain partly manual there,
+and the contract should say so rather than imply completeness.
+
+### 12.9 Proposed proof, before committing
+
+Convert two features and leave the other three alone:
+
+- **`url`** — the smallest: one augment, one hook.
+- **`upload`** — the largest: two augments, a derive, schema contributions, disk I/O, six hooks.
+
+Two features under the new contract, three under the old convention, everything still green.
+Then judge whether a `Feature` object reads the way `definePlugin` does. If it does not earn
+its keep across those two, it will not earn it across five — and that is a cheap thing to find
+out.
