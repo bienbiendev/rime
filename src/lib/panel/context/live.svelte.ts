@@ -1,7 +1,7 @@
 import { page } from '$app/state';
 import { env } from '$env/dynamic/public';
 import { PARAMS } from '$lib/core/constants.js';
-import type { GenericDoc } from '$lib/core/types/doc.js';
+import type { GenericDoc } from '$lib/core/prototype/types.js';
 import { apiUrl } from '$lib/util/index.js';
 import { toKebabCase } from '$lib/util/string.js';
 import type { BeforeNavigate } from '@sveltejs/kit';

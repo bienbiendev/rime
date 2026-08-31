@@ -1,5 +1,5 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import type { GenericBlock } from '$lib/core/types/doc.js';
+import type { GenericBlock } from '$lib/core/prototype/types.js';
 import type { WithOptional } from '$lib/util/types.js';
 import type { OperationContext } from '../../types.js';
 

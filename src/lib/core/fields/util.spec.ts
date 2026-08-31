@@ -16,7 +16,7 @@ import {
   tree
 } from '$lib/fields/index.js';
 import { bold } from '$lib/fields/rich-text/client.js';
-import { normalizeFieldPath } from '$lib/util/doc.js';
+import { normalizeFieldPath } from '$lib/util/path.js';
 import { Images, Text } from '@lucide/svelte';
 import { expect, test } from 'vitest';
 import { FormFieldBuilder } from './builders/form-field-builder.js';

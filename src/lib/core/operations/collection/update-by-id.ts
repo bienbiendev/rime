@@ -1,7 +1,7 @@
 import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { runUpdate } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
-import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';
+import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
 import type { DeepPartial } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 

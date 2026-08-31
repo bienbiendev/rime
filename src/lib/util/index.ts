@@ -2,7 +2,13 @@ import { env } from '$env/dynamic/public';
 import * as upload from '../core/features/upload/util/client.js';
 import { access } from './access/index.js';
 import * as array from './array.js';
-import * as doc from './doc.js';
+// `doc` was one file; its halves now live where the placement rule puts them — the document
+// builders in core/prototype/, the pure path helpers here. This barrel is public API
+// (`rimecms/util`), so the namespace it publishes keeps its original shape.
+import * as docBuilders from '$lib/core/prototype/doc.js';
+import * as docPath from './path.js';
+
+const doc = { ...docBuilders, ...docPath };
 import * as file from './file.js';
 import * as object from './object.js';
 import * as random from './random.js';

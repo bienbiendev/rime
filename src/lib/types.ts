@@ -33,7 +33,7 @@ export type {
   Prototype,
   PrototypeSlug,
   UploadDoc
-} from './core/types/doc.js';
+} from './core/prototype/types.js';
 
 // Fields types
 export type * from '$lib/fields/types.js';

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
-  import type { GenericDoc } from '$lib/core/types/doc.js';
+  import type { GenericDoc } from '$lib/core/prototype/types.js';
   import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';

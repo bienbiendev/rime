@@ -1,10 +1,10 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import { type RegisterCollection } from '$lib/index.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { createBlankDocument } from '../../util/doc.js';
+import { createBlankDocument } from '$lib/core/prototype/doc.js';
 import type { BuiltCollection } from '../factory/config/types.js';
 import { FormFieldBuilder } from '../fields/builders/index.js';
-import type { CollectionSlug } from '../types/doc.js';
+import type { CollectionSlug } from '../prototype/types.js';
 import { PRIVATE_FIELDS } from '../features/auth/constant.server.js';
 import { isAuthConfig } from '../features/auth/util.js';
 import { create } from '../operations/collection/create.js';

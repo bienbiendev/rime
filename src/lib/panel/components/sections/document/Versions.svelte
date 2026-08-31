@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { VersionsStatus } from '$lib/core/constants.js';
-  import type { GenericDoc } from '$lib/core/types/doc.js';
+  import type { GenericDoc } from '$lib/core/prototype/types.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { panelUrl } from '$lib/panel/util/url.js';
   import { toKebabCase } from '$lib/util/string.js';

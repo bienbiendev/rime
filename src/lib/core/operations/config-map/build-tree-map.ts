@@ -1,5 +1,5 @@
 import { isFormField } from '$lib/core/fields/util.js';
-import type { TreeBlock } from '$lib/core/types/doc.js';
+import type { TreeBlock } from '$lib/core/prototype/types.js';
 import type { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { ConfigMap } from './types.js';
 

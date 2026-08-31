@@ -2,7 +2,7 @@ import { PARAMS } from '$lib/core/constants.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { withVersionsSuffix } from '$lib/core/naming.js';
-import type { AreaSlug } from '$lib/core/types/doc.js';
+import type { AreaSlug } from '$lib/core/prototype/types.js';
 import type { AreaDocData } from '$lib/panel/index.js';
 import type { Route } from '$lib/panel/types.js';
 import { panelUrlFor } from '$lib/panel/util/url.js';

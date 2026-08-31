@@ -1,4 +1,4 @@
-import type { DocType } from '$lib/core/types/doc.js';
+import type { DocType } from '$lib/core/prototype/types.js';
 import type { Hook, HookBeforeOperation, Operation } from '../operations/types.js';
 
 /**

@@ -1,5 +1,5 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import type { TreeBlock } from '$lib/core/types/doc.js';
+import type { TreeBlock } from '$lib/core/prototype/types.js';
 import { isObjectLiteral } from '$lib/util/object.js';
 import type { WithRequired } from '$lib/util/types.js';
 import type { OperationContext } from '../../types.js';

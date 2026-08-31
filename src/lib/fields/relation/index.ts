@@ -1,6 +1,6 @@
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';
+import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
 import type { DefaultValueFn, FormField, RelationRef, RelationValue } from '$lib/fields/types.js';
 import type { RegisterCollection } from '$lib/index.js';
 import { hasProps, isObjectLiteral } from '$lib/util/object.js';

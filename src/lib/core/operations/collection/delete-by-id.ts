@@ -2,7 +2,7 @@ import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { runBeforeOperation, runDocHooks } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
-import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';
+import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 
 type DeleteArgs = {

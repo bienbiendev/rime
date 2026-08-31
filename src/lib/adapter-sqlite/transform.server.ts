@@ -8,7 +8,7 @@ import type {
   GenericDoc,
   PrototypeSlug,
   RawDoc
-} from '$lib/core/types/doc.js';
+} from '$lib/core/prototype/types.js';
 import type { Relation } from '$lib/fields/relation/index.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';

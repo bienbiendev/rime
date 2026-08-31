@@ -1,5 +1,5 @@
 import { logger } from '$lib/core/logger.server.js';
-import type { GenericBlock } from '$lib/core/types/doc.js';
+import type { GenericBlock } from '$lib/core/prototype/types.js';
 import { deleteValueAtPath, getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 import { buildConfigMap } from '../config-map/index.js';
 import { getDefaultValue } from './set-default-values.server.js';

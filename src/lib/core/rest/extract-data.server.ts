@@ -1,5 +1,5 @@
 import { RimeFormError } from '$lib/core/errors/index.js';
-import type { GenericDoc } from '$lib/core/types/doc.js';
+import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { flatten, unflatten } from 'flat';

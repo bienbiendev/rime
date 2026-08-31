@@ -3,7 +3,7 @@
   import { page } from '$app/state';
   import { isUploadConfig } from '$lib/core/features/upload/util/config';
   import { PARAMS, UPLOAD_PATH } from '$lib/core/constants.js';
-  import type { GenericDoc } from '$lib/core/types/doc';
+  import type { GenericDoc } from '$lib/core/prototype/types';
   import CardDocument from '$lib/panel/components/ui/card-document/card-document.svelte';
   import Checkbox from '$lib/panel/components/ui/checkbox/checkbox.svelte';
   import { panelUrl } from '$lib/panel/util/url.js';

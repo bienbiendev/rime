@@ -3,7 +3,7 @@
   import { isAuthConfig } from '$lib/core/features/auth/util';
   import { isUploadConfig } from '$lib/core/features/upload/util/config';
   import { t__ } from '$lib/core/i18n/index.js';
-  import type { GenericDoc } from '$lib/core/types/doc';
+  import type { GenericDoc } from '$lib/core/prototype/types';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import {

@@ -5,7 +5,7 @@ import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { isFormField } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger.server.js';
 import { withoutDirectoriesSuffix, withoutVersionsSuffix } from '$lib/core/naming.js';
-import type { PrototypeSlug } from '$lib/core/types/doc.js';
+import type { PrototypeSlug } from '$lib/core/prototype/types.js';
 import { BlocksBuilder, type BlocksField } from '$lib/fields/blocks/index.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';

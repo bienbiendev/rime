@@ -1,7 +1,7 @@
 import { PARAMS } from '$lib/core/constants.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { extractData } from '$lib/core/rest/extract-data.server.js';
-import type { AreaSlug } from '$lib/core/types/doc.js';
+import type { AreaSlug } from '$lib/core/prototype/types.js';
 import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
 import { toKebabCase } from '$lib/util/string.js';

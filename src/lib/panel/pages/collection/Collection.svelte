@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import type { Directory } from '$lib/core/features/upload/types.js';
-  import type { GenericDoc } from '$lib/core/types/doc';
+  import type { GenericDoc } from '$lib/core/prototype/types';
   import BulkUploadDialog from '$lib/panel/components/sections/collection/bulk-upload/BulkUploadDialog.svelte';
   import CollectionGrid from '$lib/panel/components/sections/collection/grid/CollectionGrid.svelte';
   import ButtonCreate from '$lib/panel/components/sections/collection/header/ButtonCreate.svelte';

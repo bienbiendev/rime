@@ -8,7 +8,7 @@ import {
   runDocHooks
 } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
-import type { CollectionSlug } from '$lib/core/types/doc.js';
+import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { RegisterCollection } from '$lib/index.js';
 import { omitId } from '$lib/util/object.js';
 import type { DeepPartial } from '$lib/util/types.js';

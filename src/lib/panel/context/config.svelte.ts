@@ -3,7 +3,7 @@ import type {
   BuiltCollectionClient,
   BuiltConfigClient
 } from '$lib/core/factory/config/types.js';
-import type { Prototype, PrototypeSlug } from '$lib/core/types/doc.js';
+import type { Prototype, PrototypeSlug } from '$lib/core/prototype/types.js';
 import { getContext, setContext } from 'svelte';
 
 function createConfigStore(config: BuiltConfigClient) {

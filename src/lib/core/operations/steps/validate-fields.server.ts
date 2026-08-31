@@ -1,7 +1,7 @@
 import { PARAMS } from '$lib/core/constants.js';
 import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
 import { logger } from '$lib/core/logger.server.js';
-import type { GenericDoc } from '$lib/core/types/doc.js';
+import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { FormErrors } from '$lib/panel/types.js';
 import { deleteValueAtPath, getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 import { Hooks } from '$lib/core/factory/hooks.js';

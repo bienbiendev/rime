@@ -1,6 +1,6 @@
 <script lang="ts">
   import { env } from '$env/dynamic/public';
-  import type { GenericDoc } from '$lib/core/types/doc.js';
+  import type { GenericDoc } from '$lib/core/prototype/types.js';
   import UploadThumbCell from '$lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import { apiUrl } from '$lib/util/index.js';

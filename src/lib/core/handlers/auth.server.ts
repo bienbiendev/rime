@@ -1,6 +1,6 @@
 import { isPublicPanelAuthRoute } from '$lib/core/constants.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import type { CollectionSlug } from '$lib/core/types/doc.js';
+import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { Config, User } from '$lib/types.js';
 import { error, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
 import { BETTER_AUTH_ROLES } from '../features/auth/constant.server.js';

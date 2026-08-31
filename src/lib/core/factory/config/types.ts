@@ -12,7 +12,7 @@ import type { IconProps } from '@lucide/svelte';
 import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
 import type { Component } from 'svelte';
 import type { FieldBuilder } from '../../fields/builders/index.js';
-import type { BaseDoc, DocType } from '../../types/doc.js';
+import type { BaseDoc, DocType } from '../../prototype/types.js';
 
 export interface Config {
   /** If config.siteUrl is defined, a preview button is added

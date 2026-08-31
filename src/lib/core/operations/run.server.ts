@@ -1,7 +1,7 @@
 import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import type { DocType, GenericDoc, RawDoc } from '$lib/core/types/doc.js';
+import type { DocType, GenericDoc, RawDoc } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { saveBlocks } from './persist/blocks/index.server.js';

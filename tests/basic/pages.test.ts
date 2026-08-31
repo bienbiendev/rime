@@ -186,7 +186,7 @@ test.describe('Layout tab: group + separator + blocks persistence', () => {
   // empty-name-key bug (separator() fields never got a name, so
   // reduceFieldsToBlankDocument stamped prev[''] = null next to hero/sections,
   // which corrupted the whole tab's data into looking array-like once
-  // flattened/unflattened through a real form submission — see util/doc.ts).
+  // flattened/unflattened through a real form submission — see core/prototype/doc.ts).
   // This is a direct regression guard for that exact config shape, not the
   // synthetic one in tests/fields.
   test('Should persist hero group fields across the separator+blocks tab after save and reload', async ({

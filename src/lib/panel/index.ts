@@ -1,5 +1,5 @@
 import type { VersionsStatus } from '$lib/core/constants.js';
-import type { GenericDoc } from '$lib/core/types/doc.js';
+import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { Snippet } from 'svelte';
 import { Field } from './components/fields/index.js';
 import Panel from './components/Root.svelte';

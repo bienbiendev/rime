@@ -1,7 +1,6 @@
 import type { VersionOperation } from '$lib/core/features/versions/strategy.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
-import type { Docs, DocType, RawDoc } from '$lib/core/types/doc.js';
-import type { OperationQuery } from '$lib/core/types/index.js';
+import type { Docs, DocType, RawDoc } from '$lib/core/prototype/types.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
 import type { PrototypeSlug } from '$lib/types.js';
 import type { DeepPartial, Dic } from '$lib/util/types.js';
@@ -139,4 +138,12 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
   configMap?: ConfigMap;
   /** @TODO explain what it does */
   isSystemOperation?: boolean;
+};
+
+/** A REST-style query string, or its parsed form. Lives here because an operation's params
+ *  carry it; the adapter consumes it from there. */
+export type OperationQuery = string | ParsedOperationQuery;
+
+export type ParsedOperationQuery = {
+  where: Dic;
 };

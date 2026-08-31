@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { User } from '$lib/core/features/auth/types.js';
-  import type { GenericDoc } from '$lib/core/types/doc.js';
+  import type { GenericDoc } from '$lib/core/prototype/types.js';
   import { apiUrl } from '$lib/util/index.js';
   import { toKebabCase } from '$lib/util/string.js';
   import { onMount } from 'svelte';

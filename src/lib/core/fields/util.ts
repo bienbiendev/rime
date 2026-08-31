@@ -3,7 +3,7 @@ import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field, FormField, SeparatorField } from '$lib/fields/types.js';
-import { normalizeFieldPath } from '$lib/util/doc.js';
+import { normalizeFieldPath } from '$lib/util/path.js';
 import type { Dic } from '$lib/util/types.js';
 import type { FormFieldBuilder } from './builders/form-field-builder.js';
 import type { FieldBuilder } from './builders/index.js';

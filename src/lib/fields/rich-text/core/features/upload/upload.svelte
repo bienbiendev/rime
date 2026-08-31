@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { UploadDoc } from '$lib/core/types/doc.js';
+  import type { UploadDoc } from '$lib/core/prototype/types.js';
   import UploadThumbCell from '$lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import * as Command from '$lib/panel/components/ui/command/index.js';

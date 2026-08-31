@@ -1,14 +1,13 @@
 import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { GenericDoc } from '$lib/core/types/doc.js';
+import type { GenericDoc } from '$lib/core/prototype/types.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { getValueAtPath } from './object.js';
-import { snapshot } from './state.js';
+import { snapshot } from '$lib/util/state.js';
 
 /**
  * Creates a blank document based on a collection or area configuration.
@@ -137,30 +136,4 @@ export const toNestedStructure = (documents: GenericDoc[]) => {
 
   // Filter to get root documents and process them
   return output;
-};
-
-/**
- * Remove block type in path
- * @example
- * normalizePath('foo.bar.0:content.baz')
- *
- * // return foo.bar.0.baz
- */
-export const normalizeFieldPath = (path: string) => {
-  const regExpBlockType = /:[a-zA-Z0-9]+/g;
-  return path.replace(regExpBlockType, '');
-};
-
-/**
- * Ensure path exists, meaning the path hold anything else than undefined.
- *
- * @example
- * const obj = { foo: { baz: null }, bar: 1 };
- * ensurePathExists('foo.bar', obj); // false
- * ensurePathExists('foo.baz', obj); // true
- * ensurePathExists('bar', obj); // true
- */
-export const ensurePathExists = (path: string, obj: Dic): boolean => {
-  const value = getValueAtPath(path, obj);
-  return value !== undefined;
 };

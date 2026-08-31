@@ -1,5 +1,5 @@
 import type { User } from '$lib/core/features/auth/types.js';
-import type { CollectionSlug } from '$lib/core/types/doc.js';
+import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { GetRegisterType } from '$lib/index.js';
 import type { Dic } from '$lib/util/types.js';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';

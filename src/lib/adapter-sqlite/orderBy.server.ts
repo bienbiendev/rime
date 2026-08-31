@@ -1,6 +1,6 @@
 import { logger } from '$lib/core/logger.server.js';
 import { withLocalesSuffix, withVersionsSuffix } from '$lib/core/naming.js';
-import type { PrototypeSlug } from '$lib/core/types/doc.js';
+import type { PrototypeSlug } from '$lib/core/prototype/types.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import { asc, desc, getTableColumns, sql } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
