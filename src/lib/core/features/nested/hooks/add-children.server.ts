@@ -1,5 +1,4 @@
 import { Hooks } from '$lib/core/factory/hooks.js';
-import { asc, eq } from 'drizzle-orm';
 
 /**
  * Hook to populate _children property on document from a nested collection
@@ -18,22 +17,15 @@ export const addChildrenProperty = Hooks.beforeRead(async (args) => {
 
   // Else populate _children
   const { rime } = args.event.locals;
-  const table = rime.adapter.tableForSlug(args.config.slug);
 
-  //@ts-ignore
-  const children = await rime.adapter.db.query[
-    rime.adapter.tableNameForSlug(args.config.slug)
-  ].findMany({
-    where: eq(table._parent, args.doc.id),
-    orderBy: [asc(table._position)],
-    columns: {
-      id: true
-    }
+  const children = await rime.adapter.collection.childrenIds({
+    slug: args.config.slug,
+    parentId: args.doc.id
   });
 
   args.doc = {
     ...args.doc,
-    _children: children.map((c: any) => c.id) || []
+    _children: children
   };
 
   return args;

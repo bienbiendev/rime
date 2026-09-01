@@ -9,7 +9,7 @@ import type { OperationQuery } from '$lib/core/operations/types.js';
 import type { GetRegisterType } from '$lib/index.js';
 import { trycatchSync } from '$lib/util/function.js';
 import type { DeepPartial, Dic } from '$lib/util/types.js';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { RimeError } from '../core/errors/index.js';
 import { buildOrderByParam } from './orderBy.server.js';
@@ -44,6 +44,42 @@ const createCollectionFacade = <const C extends Config>(args: {
     if (!doc) throw new RimeError(RimeError.NOT_FOUND);
 
     return doc as RawDoc;
+  };
+
+  /**
+   * The ids of the documents whose `_parent` is `parentId`, in `_position` order.
+   *
+   * Cannot go through `find`: hierarchy lives on the root table and never on a version, while
+   * `find` resolves a versioned collection's `where` against the versions table. It reads like
+   * the nested feature's question, but `_parent` and `_position` are columns the adapter itself
+   * writes — so answering it belongs here rather than handing core the drizzle handle.
+   */
+  const childrenIds: ChildrenIds = async ({ slug, parentId }) => {
+    const table = tables[baseTableName(slug)];
+
+    const rows = await db
+      .select({ id: table.id })
+      .from(table)
+      .where(eq(table._parent, parentId))
+      .orderBy(asc(table._position));
+
+    return rows.map((row: { id: string }) => row.id);
+  };
+
+  /**
+   * Which of `ids` name a document that exists in `slug`, in table order.
+   *
+   * Answers "does this document exist" without reading it, which is all a default relation
+   * value needs to resolve.
+   */
+  const existingIds: ExistingIds = async ({ slug, ids }) => {
+    if (!ids.length) return [];
+
+    const table = tables[baseTableName(slug)];
+
+    const rows = await db.select({ id: table.id }).from(table).where(inArray(table.id, ids));
+
+    return rows.map((row: { id: string }) => row.id);
   };
 
   /**
@@ -321,7 +357,9 @@ const createCollectionFacade = <const C extends Config>(args: {
     deleteById,
     insert,
     update,
-    find
+    find,
+    childrenIds,
+    existingIds
   };
 };
 
@@ -351,6 +389,10 @@ type FindById = (args: {
 }) => Promise<RawDoc>;
 
 type DeleteById = (args: { slug: CollectionSlug; id: string }) => Promise<string | undefined>;
+
+type ChildrenIds = (args: { slug: CollectionSlug; parentId: string }) => Promise<string[]>;
+
+type ExistingIds = (args: { slug: CollectionSlug; ids: string[] }) => Promise<string[]>;
 
 type Insert = (args: {
   slug: CollectionSlug;

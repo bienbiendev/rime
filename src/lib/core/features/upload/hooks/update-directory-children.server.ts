@@ -1,7 +1,6 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
 import { trycatch } from '$lib/util/function.js';
-import { eq } from 'drizzle-orm';
 
 type Update = { id: string; data: { parent: string } };
 
@@ -13,14 +12,12 @@ export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>(async (a
   if (!originalDoc)
     throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @prepareDirectoryChildren');
 
-  const db = event.locals.rime.adapter.db;
-
   if (data.id) {
-    const table = event.locals.rime.adapter.tableForSlug(config.slug);
-
-    //@ts-ignore
-    const children = await db.query[event.locals.rime.adapter.tableNameForSlug(config.slug)].findMany({
-      where: eq(table.parent, `${originalDoc.id}`)
+    // `parent` is an ordinary field on the directories collection, which is never versioned —
+    // so the normal query path answers this and no drizzle handle is needed.
+    const children = await event.locals.rime.adapter.collection.find({
+      slug: config.slug,
+      query: { where: { parent: { equals: `${originalDoc.id}` } } }
     });
 
     const updates = children.map((childDir: any) => {

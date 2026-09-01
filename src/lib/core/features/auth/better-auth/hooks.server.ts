@@ -6,7 +6,6 @@ import { trycatch } from '$lib/util/function.js';
 import { omit } from '$lib/util/object.js';
 import type { AuthContext, MiddlewareContext, MiddlewareOptions } from 'better-auth';
 import { APIError, createAuthMiddleware, type AuthMiddleware } from 'better-auth/api';
-import { eq } from 'drizzle-orm';
 
 type CTX = MiddlewareContext<
   MiddlewareOptions,
@@ -63,13 +62,10 @@ const handleUserCreation = async (ctx: CTX) => {
    * - set isSuperAdmin to true
    */
   if (event.locals.isInit && dev) {
-    const { authUsers } = event.locals.rime.adapter.tables;
-    await event.locals.rime.adapter.db
-      .update(authUsers)
-      .set({
-        role: BETTER_AUTH_ROLES.ADMIN
-      })
-      .where(eq(authUsers.id, newSession.user.id));
+    await event.locals.rime.adapter.auth.setAuthUserRole({
+      authUserId: newSession.user.id,
+      role: BETTER_AUTH_ROLES.ADMIN
+    });
 
     // Create a placeholder user to authorize staff creation
     event.locals.user = {
@@ -119,12 +115,7 @@ const handleUserCreation = async (ctx: CTX) => {
     const { user } = newSession;
     const event = getRequestEvent();
     const { rime } = event.locals;
-    const sessionTable = rime.adapter.tables.authSessions;
-    const authAccountsTable = rime.adapter.tables.authAccounts;
-    const authUsersTable = rime.adapter.tables.authUsers;
-    await rime.adapter.db.delete(sessionTable).where(eq(sessionTable.userId, user.id));
-    await rime.adapter.db.delete(authAccountsTable).where(eq(authAccountsTable.userId, user.id));
-    await rime.adapter.db.delete(authUsersTable).where(eq(authUsersTable.id, user.id));
+    await rime.adapter.auth.deleteAuthUser({ authUserId: user.id });
     throw new APIError('BAD_REQUEST');
   }
 

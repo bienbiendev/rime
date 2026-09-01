@@ -66,6 +66,34 @@ const createAuthFacade = (args: {
   };
 
   /**
+   * Sets an auth user's Better-auth role.
+   *
+   * Better-auth's own `role` column, not rime's `roles` on the auth collection row — the first
+   * user needs the former to pass Better-auth's admin checks.
+   */
+  const setAuthUserRole = async ({ authUserId, role }: { authUserId: string; role: string }) => {
+    const authUsers = getTable('authUsers');
+    await db.update(authUsers).set({ role }).where(eq(authUsers.id, authUserId));
+  };
+
+  /**
+   * Removes an auth user and everything hanging off it.
+   *
+   * Sessions and accounts first, then the user: they reference it, and nothing here relies on a
+   * cascade. Used to undo a half-made signup, so it must not leave a session behind that would
+   * still authenticate.
+   */
+  const deleteAuthUser = async ({ authUserId }: { authUserId: string }) => {
+    const authSessions = getTable('authSessions');
+    const authAccounts = getTable('authAccounts');
+    const authUsers = getTable('authUsers');
+
+    await db.delete(authSessions).where(eq(authSessions.userId, authUserId));
+    await db.delete(authAccounts).where(eq(authAccounts.userId, authUserId));
+    await db.delete(authUsers).where(eq(authUsers.id, authUserId));
+  };
+
+  /**
    * Retrieves user attributes from an auth collection
    * @returns User object or undefined if not found
    */
@@ -100,7 +128,8 @@ const createAuthFacade = (args: {
     betterAuthAdapter,
     hasAuthUser,
     getBetterAuthUserId,
-    // deleteAuthUserById,
+    setAuthUserRole,
+    deleteAuthUser,
     getUserAttributes,
     isSuperAdmin
   };

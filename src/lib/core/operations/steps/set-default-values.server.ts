@@ -5,7 +5,6 @@ import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-buil
 import { logger } from '$lib/core/logger.server.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
-import { eq, inArray } from 'drizzle-orm';
 import { Hooks } from '$lib/core/factory/hooks.js';
 
 export const setDefaultValues = Hooks.beforeUpsert(async (args) => {
@@ -59,25 +58,26 @@ const defaultRelationValue = async (
   adapter: Adapter
 ) => {
   const buildRelation = async (defaultValue: any) => {
-    let condition;
-    //@TODO encapsulate this into adapter.relation.something
-    const relationTable = adapter.tableForSlug(config.get.relationTo);
-    if (typeof defaultValue === 'string') {
-      condition = eq(relationTable.id, defaultValue);
-    } else if (Array.isArray(defaultValue)) {
-      condition = inArray(relationTable.id, defaultValue);
-    }
-    const existing = (await adapter.db
-      .select({ documentId: relationTable.id })
-      .from(relationTable)
-      .where(condition)) as { documentId: string }[];
+    // A default relation is one id or a list of them. Anything else names no document — which
+    // used to fall through to a `where(undefined)` and hand back *every* row in the collection.
+    const ids =
+      typeof defaultValue === 'string'
+        ? [defaultValue]
+        : Array.isArray(defaultValue)
+          ? defaultValue
+          : [];
 
-    return existing.map(({ documentId }, index) => ({
+    const existing = await adapter.collection.existingIds({
+      slug: config.get.relationTo,
+      ids
+    });
+
+    return existing.map((documentId, index) => ({
       id: null,
       relationTo: config.get.relationTo,
       path: key,
       position: index,
-      documentId: documentId
+      documentId
     }));
   };
 
