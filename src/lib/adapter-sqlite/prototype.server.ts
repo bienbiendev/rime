@@ -8,6 +8,7 @@ import { eq } from 'drizzle-orm';
 import { RimeError } from '../core/errors/index.js';
 import { baseTableName, tableName, type TableName } from './naming.server.js';
 import * as adapterUtil from './util.server.js';
+import { buildWithParam } from './with.server.js';
 
 /**
  * What a collection and an area do identically.
@@ -67,6 +68,79 @@ export const insertRowWithLocales = async (
   }
 
   return id;
+};
+
+type ReadArgs = {
+  slug: string;
+  /** Restrict to one root row. Omitted for a singleton, which has exactly one. */
+  id?: string;
+  versionId?: string;
+  select?: string[];
+  draft?: boolean;
+  locale?: string;
+  config: BuiltCollection | BuiltArea;
+};
+
+/**
+ * Reads one prototype document, merged with the version it should show.
+ *
+ * Returns `undefined` when there is nothing to read rather than throwing, and the caller decides
+ * what that means. Keeping the decision outside is what lets both facades share the query
+ * building, which is the bulk of it — the nested version params were ~40 near-identical lines in
+ * each. For a collection `undefined` is simply a 404.
+ *
+ * It does **not** mean "this prototype has never been written", and an area must not read it that
+ * way: `undefined` also covers a row that exists with no version matching the `draft`/`versionId`
+ * filter. Deciding to bootstrap on it creates a second singleton row. Ask the root table whether
+ * the row is there — see area.server.ts.
+ *
+ * The only structural difference between the two reads is the `where` on the root row, and that
+ * is the singleton difference again: a collection selects one row by id, an area has one row.
+ */
+export const readPrototype = async (
+  { db, tables }: Deps,
+  { slug, id, versionId, select, draft, locale, config }: ReadArgs
+): Promise<Dic | undefined> => {
+  const table = baseTableName(slug);
+  const rootTable = tables[table];
+  // Cast because with a single registered area the slug type collapses to one literal and
+  // Drizzle infers an over-precise per-table shape instead of the general one.
+  const queryTable = (db.query as Record<string, any>)[table];
+  const byId = id ? { where: eq(rootTable.id, id) } : {};
+
+  if (!config.versions) {
+    return queryTable.findFirst({
+      columns: adapterUtil.columnsParams({ table: rootTable, select }),
+      ...byId,
+      with: buildWithParam({ table, select, locale, tables, config }) || undefined
+    });
+  }
+
+  const versionsTable = baseTableName(withVersionsSuffix(slug));
+
+  const doc = await queryTable.findFirst({
+    columns: adapterUtil.columnsParams({ table: rootTable, select }),
+    ...byId,
+    with: {
+      [versionsTable]: {
+        columns: adapterUtil.columnsParams({ table: tables[versionsTable], select }),
+        with: buildWithParam({ table: versionsTable, select, locale, tables, config }),
+        // A named version, or whichever one the draft flag says to show.
+        ...(versionId
+          ? { where: eq(tables[versionsTable].id, versionId) }
+          : adapterUtil.buildPublishedOrLatestVersionParams({
+              draft,
+              config,
+              table: tables[versionsTable]
+            }))
+      }
+    }
+  });
+
+  // A root row with no versions is as good as absent — there is nothing to show.
+  if (!doc || !doc[versionsTable] || doc[versionsTable].length === 0) return undefined;
+
+  return adapterUtil.mergeRawDocumentWithVersion(doc, versionsTable, select);
 };
 
 type UpdateArgs = {

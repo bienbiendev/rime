@@ -7,13 +7,11 @@ import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type { AreaSlug, GenericDoc, RawDoc } from '$lib/core/prototype/types.js';
 import type { GetRegisterType } from '$lib/index.js';
 import { createBlankDocument } from '$lib/core/prototype/doc.js';
-import type { DeepPartial, Dic } from '$lib/util/types.js';
-import { eq } from 'drizzle-orm';
+import type { DeepPartial } from '$lib/util/types.js';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as adapterUtil from './util.server.js';
-import { buildWithParam } from './with.server.js';
 import { baseTableName, tableName } from './naming.server.js';
-import { insertRowWithLocales, updatePrototype } from './prototype.server.js';
+import { insertRowWithLocales, readPrototype, updatePrototype } from './prototype.server.js';
 
 /**
  * Creates an area facade for SQLite adapter operations with CRUD functionality.
@@ -37,98 +35,34 @@ const createAreaFacade = <const C extends Config>(args: {
       throw new RimeError(RimeError.INIT, slug + ' is not an area, should never happen');
     }
 
-    // `db.query[baseTableName(slug)]` can't be typed precisely: with a single registered area,
-    // AreaSlug collapses to one string literal and Drizzle infers an overly
-    // precise (and here incorrect) per-table shape instead of the general one.
-    const queryTable = (db.query as Record<string, any>)[slug];
+    const rootTable = tables[baseTableName(slug)];
 
-    const hasVersions = !!areaConfig.versions;
+    // The bootstrap turns on whether the **row** is absent, not on whether the read came back
+    // empty. Those look like the same question and are not: a versioned area whose only version
+    // is a draft, read without `draft`, has a row and no readable version. Treating that as
+    // "never created" writes a second singleton row and leaves the area permanently doubled.
+    //
+    // @TODO this belongs at boot, not on a read: a singleton should create itself with default
+    // values when the prototype is defined. Left here until definePrototype exists.
+    const [existing] = await db.select({ id: rootTable.id }).from(rootTable);
 
-    if (!hasVersions) {
-      const params = {
-        columns: adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select }),
-        with: buildWithParam({ table: baseTableName(slug), select, locale, tables, config: areaConfig }) || undefined
-      };
-
-      let doc: RawDoc | undefined = await queryTable.findFirst(params);
-
-      if (!doc) {
-        await createArea(slug, createBlankDocument(areaConfig, getRequestEvent()), locale);
-        doc = await queryTable.findFirst(params);
-      }
-      if (!doc) {
-        throw new Error('Database error');
-      }
-      return doc;
-    } else {
-      // First check for record presence
-      const area = await queryTable.findFirst({ id: true });
-
-      // If no area exists yet, create it
-      if (!area) {
-        await createArea(slug, createBlankDocument(areaConfig, getRequestEvent()), locale);
-      }
-
-      // Implementation for versioned areas
-      const versionsTable = baseTableName(withVersionsSuffix(slug));
-      const withParam = buildWithParam({
-        table: versionsTable,
-        select,
-        locale,
-        tables,
-        config: areaConfig
-      });
-
-      // Handle select columns for version table
-      const versionSelectColumns = adapterUtil.columnsParams({
-        table: tables[versionsTable],
-        select
-      });
-      // Handle select columns for root table
-      const rootSelectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
-
-      // Configure the query based on whether we want a specific version or the latest
-      // For the "save in a new draft" action we need to get the published version
-      let params: Dic;
-
-      if (versionId) {
-        // If versionId is provided, get that specific version
-        params = {
-          columns: rootSelectColumns,
-          with: {
-            [versionsTable]: {
-              columns: versionSelectColumns,
-              with: withParam,
-              where: eq(tables[versionsTable].id, versionId)
-            }
-          }
-        };
-      } else {
-        // get the latest
-        params = {
-          columns: rootSelectColumns,
-          with: {
-            [versionsTable]: {
-              columns: versionSelectColumns,
-              with: withParam,
-              ...adapterUtil.buildPublishedOrLatestVersionParams({
-                draft,
-                config: areaConfig,
-                table: tables[versionsTable]
-              })
-            }
-          }
-        };
-      }
-
-      const doc: RawDoc | undefined = await queryTable.findFirst(params);
-
-      if (!doc) {
-        throw new RimeError(RimeError.OPERATION_ERROR);
-      }
-
-      return adapterUtil.mergeRawDocumentWithVersion(doc, versionsTable, select);
+    if (!existing) {
+      await createArea(slug, createBlankDocument(areaConfig, getRequestEvent()), locale);
     }
+
+    // No `id`: an area is a singleton, so there is exactly one row to find.
+    const doc = await readPrototype(
+      { db, tables },
+      { slug, versionId, select, locale, draft, config: areaConfig }
+    );
+
+    if (!doc) {
+      // Row present, nothing matching the version filter: the 404 the merge used to raise.
+      // No row even after bootstrapping: a write that silently did nothing, which is not a 404.
+      throw new RimeError(existing ? RimeError.NOT_FOUND : RimeError.OPERATION_ERROR);
+    }
+
+    return doc as RawDoc;
   };
 
   /**

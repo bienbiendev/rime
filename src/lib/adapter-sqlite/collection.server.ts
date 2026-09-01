@@ -17,7 +17,7 @@ import * as adapterUtil from './util.server.js';
 import { buildWhereParam } from './where.server.js';
 import { buildWithParam } from './with.server.js';
 import { baseTableName, tableName as buildTableName } from './naming.server.js';
-import { insertRowWithLocales, updatePrototype } from './prototype.server.js';
+import { insertRowWithLocales, readPrototype, updatePrototype } from './prototype.server.js';
 type Schema = GetRegisterType<'Schema'>;
 
 /**
@@ -36,71 +36,14 @@ const createCollectionFacade = <const C extends Config>(args: {
    * returns either a specific version (if versionId is provided) or the latest/published version.
    */
   const findById: FindById = async ({ slug, id, versionId, select, locale, draft }) => {
-    const config = configCtx.collections[slug];
-    const isVersioned = !!config.versions;
-    const table = tables[baseTableName(slug)];
+    const doc = await readPrototype(
+      { db, tables },
+      { slug, id, versionId, select, locale, draft, config: configCtx.collections[slug] }
+    );
 
-    if (!isVersioned) {
-      // Original implementation for non-versioned collections
-      const withParam = buildWithParam({ table: baseTableName(slug), select, locale, tables, config });
-      const selectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
+    if (!doc) throw new RimeError(RimeError.NOT_FOUND);
 
-      //@ts-expect-error slug is a table for sure
-      const doc = await db.query[baseTableName(slug)].findFirst({
-        columns: selectColumns,
-        where: eq(table.id, id),
-        with: withParam
-      });
-
-      if (!doc) {
-        throw new RimeError(RimeError.NOT_FOUND);
-      }
-
-      return doc;
-    } else {
-      // Implementation for versioned collections
-      const versionsTable = baseTableName(withVersionsSuffix(slug));
-      const withParam = buildWithParam({ table: versionsTable, select, locale, tables, config });
-      const rootSelectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
-      const versionSelectColumns = adapterUtil.columnsParams({
-        table: tables[versionsTable],
-        select
-      });
-
-      // Build params based
-      // if version Id get the specifi version
-      // else get the published or the latest, depending on the draft param
-      const params = {
-        columns: rootSelectColumns,
-        where: eq(table.id, id),
-        with: {
-          [versionsTable]: {
-            columns: versionSelectColumns,
-            with: withParam,
-            ...(versionId
-              ? {
-                  where: eq(tables[versionsTable].id, versionId)
-                }
-              : adapterUtil.buildPublishedOrLatestVersionParams({
-                  draft,
-                  config,
-                  table: tables[versionsTable]
-                }))
-          }
-        }
-      };
-
-      //@ts-expect-error slug is a table for sure
-      const doc = await db.query[baseTableName(slug)].findFirst(params);
-
-      // Throw 404 if not found
-      // If we found the document but there are no versions, that's also a 404
-      if (!doc || !doc[versionsTable] || doc[versionsTable].length === 0) {
-        throw new RimeError(RimeError.NOT_FOUND);
-      }
-
-      return adapterUtil.mergeRawDocumentWithVersion(doc, versionsTable, select);
-    }
+    return doc as RawDoc;
   };
 
   /**
