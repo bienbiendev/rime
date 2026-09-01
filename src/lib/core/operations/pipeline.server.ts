@@ -4,9 +4,19 @@ import { augmentFieldsPassword } from '../features/auth/hooks/augment-fields-pas
 import { populateAPIKey } from '../features/auth/hooks/populate-api-key.server.js';
 import { removePrivateFields } from '../features/auth/hooks/remove-private-fields.server.js';
 import { addChildrenProperty } from '../features/nested/hooks/add-children.server.js';
-import * as uploadHooks from '../features/upload/hooks/index.server.js';
-import { populateURL } from '../features/url/hooks/index.server.js';
-import * as versionsHooks from '../features/versions/hooks/index.server.js';
+import { cleanUpFiles } from '../features/upload/hooks/clean-up-files.server.js';
+import { castBase64ToFile } from '../features/upload/hooks/convert-base64.server.js';
+import { exctractPath } from '../features/upload/hooks/extract-path.server.js';
+import { handlePathCreation } from '../features/upload/hooks/handle-path-creation.server.js';
+import { populateSizes } from '../features/upload/hooks/populate-sizes.server.js';
+import { processFileUpload } from '../features/upload/hooks/process-file-upload.server.js';
+import {
+  prepareDirectoryChildren,
+  updateDirectoryChildren
+} from '../features/upload/hooks/update-directory-children.server.js';
+import { populateURL } from '../features/url/hooks/populate-url.server.js';
+import { defineVersionOperation } from '../features/versions/hooks/define-version-operation.server.js';
+import { handleNewVersion } from '../features/versions/hooks/handle-new-version.server.js';
 import { mergeWithBlankDocument } from './steps/merge-with-blank.server.js';
 import { authorize } from './steps/authorize.server.js';
 import { processDocumentFields } from './steps/process-document-fields.server.js';
@@ -33,18 +43,6 @@ import { validateFields } from './steps/validate-fields.server.js';
  * visible rather than spread across two files.
  */
 
-const {
-  populateSizes,
-  handlePathCreation,
-  castBase64ToFile,
-  processFileUpload,
-  exctractPath,
-  prepareDirectoryChildren,
-  updateDirectoryChildren,
-  cleanUpFiles
-} = uploadHooks;
-const { defineVersionOperation, handleNewVersion } = versionsHooks;
-
 type PartialCollection = {
   upload?: Collection<any>['upload'];
   nested?: Collection<any>['nested'];
@@ -59,14 +57,12 @@ type PartialArea = {
 };
 
 /**
- * The pipelines' return types, annotated rather than inferred — and that annotation is the
- * thing that makes a misplaced hook a compile error.
+ * The pipelines' return types, annotated rather than inferred.
  *
- * Keying a feature's `hooks` map by timing constrains what the *feature* may declare, but an
- * inferred object literal here would still happily accept a `beforeRead` hook in `afterDelete`:
- * nothing was checking the arrays. `CollectionHooks`/`AreaHooks` already type every timing
- * correctly; the pipelines simply never said so. `Required<…>` because rime contributes every
- * timing, even when the array is empty.
+ * CollectionHooks/AreaHooks always typed every timing correctly, but these functions returned an
+ * inferred object literal, so nothing was compared against them and a `beforeRead` hook could sit
+ * in `afterDelete` with no error anywhere. `Required<…>` because rime contributes every timing,
+ * even when the array is empty.
  */
 type CollectionPipeline = Required<CollectionHooks<any>>;
 type AreaPipeline = Required<AreaHooks<any>>;

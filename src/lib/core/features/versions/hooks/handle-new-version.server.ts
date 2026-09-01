@@ -6,8 +6,7 @@ import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { recursiveRemoveKeys } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import path from 'path';
-// factory/config/types.js, not the $lib/types.js barrel — see versions/augment.ts.
-import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { BuiltArea, BuiltCollection } from '../../../../types.js';
 import type { ConfigMap } from '../../../operations/config-map/types.js';
 import { fallbackDataFromOriginal } from '../../../operations/steps/fallback-data-from-original.js';
 import { Hooks } from '$lib/core/factory/hooks.js';

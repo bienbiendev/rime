@@ -1,9 +1,7 @@
-// Straight at factory/config/types.js rather than the $lib/types.js barrel: this module is
-// reachable from build.server.ts through the feature object, and the barrel re-exports enough of
-// the config layer to close a cycle back onto it.
-import type { Collection, VersionsConfig } from '$lib/core/factory/config/types.js';
+import type { VersionsConfig } from '$lib/core/factory/config/types.js';
 import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { text } from '$lib/fields/text/index.js';
+import type { Collection } from '../../../types.js';
 
 type Input = { versions?: Collection<any>['versions']; fields?: Collection<any>['fields'] };
 type WithVersionsConfig<T> = Omit<T, 'versions'> & { versions?: Required<VersionsConfig> };
