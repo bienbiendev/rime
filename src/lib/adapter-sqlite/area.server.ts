@@ -157,7 +157,7 @@ const createAreaFacade = <const C extends Config>(args: {
 
     if (hasVersions) {
       // Create root document first
-      const docId = await adapterUtil.insertTableRecord(db, tables, slug, {
+      const docId = await adapterUtil.insertTableRecord(db, tables, baseTableName(slug), {
         createdAt: now,
         updatedAt: now
       });
@@ -206,14 +206,14 @@ const createAreaFacade = <const C extends Config>(args: {
       // Prepare data for insertion using the shared utility function
       const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(values, {
         tables,
-        mainTableName: slug,
+        mainTableName: baseTableName(slug),
         localesTableName: tableLocales,
         locale,
         fillNotNull: true
       });
 
       // Insert main record
-      const createId = await adapterUtil.insertTableRecord(db, tables, slug, {
+      const createId = await adapterUtil.insertTableRecord(db, tables, baseTableName(slug), {
         ...mainData
       });
 
@@ -276,13 +276,13 @@ const createAreaFacade = <const C extends Config>(args: {
       // Prepare data for update using the shared utility function
       const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
         tables,
-        mainTableName: slug,
+        mainTableName: baseTableName(slug),
         localesTableName: keyTableLocales,
         locale
       });
 
       // Update main table
-      await adapterUtil.updateTableRecord(db, tables, slug, {
+      await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
         recordId: area.id,
         data: { ...mainData, updatedAt: now }
       });

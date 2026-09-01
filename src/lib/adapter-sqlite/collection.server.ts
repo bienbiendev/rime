@@ -163,7 +163,7 @@ const createCollectionFacade = <const C extends Config>(args: {
       const { data: contentData, rootData } = adapterUtil.extractRootData(data);
 
       // Create root document with hierarchy/upload root props
-      const docId = await adapterUtil.insertTableRecord(db, tables, slug, {
+      const docId = await adapterUtil.insertTableRecord(db, tables, baseTableName(slug), {
         createdAt: now,
         updatedAt: now,
         ...rootData
@@ -211,13 +211,13 @@ const createCollectionFacade = <const C extends Config>(args: {
       // Prepare data for main table
       const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
         tables,
-        mainTableName: slug,
+        mainTableName: baseTableName(slug),
         localesTableName: buildTableName({ owner: baseTableName(slug), branch: 'locales' }),
         locale
       });
 
       // Insert main record
-      await adapterUtil.insertTableRecord(db, tables, slug, {
+      await adapterUtil.insertTableRecord(db, tables, baseTableName(slug), {
         id: docId,
         ...mainData,
         createdAt: now,
@@ -255,7 +255,7 @@ const createCollectionFacade = <const C extends Config>(args: {
 
     if (VersionOperations.isSimpleUpdate(versionOperation)) {
       // Scenario 0: Non-versioned collections
-      const tableName = slug;
+      const tableName = baseTableName(slug);
       const tableLocalesName = buildTableName({ owner: baseTableName(slug), branch: 'locales' });
 
       const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
@@ -293,7 +293,7 @@ const createCollectionFacade = <const C extends Config>(args: {
       const { data: contentData, rootData } = adapterUtil.extractRootData(data);
 
       // Update the root table with updatedAt and any hierarchy fields
-      await adapterUtil.updateTableRecord(db, tables, slug, {
+      await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
         recordId: id,
         data: {
           updatedAt: now,
@@ -345,7 +345,7 @@ const createCollectionFacade = <const C extends Config>(args: {
       const { rootData } = adapterUtil.extractRootData(data);
 
       // 2. Get possible hierarchy data update only the root table
-      await adapterUtil.updateTableRecord(db, tables, slug, {
+      await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
         recordId: id,
         data: { updatedAt: now, ...rootData }
       });
