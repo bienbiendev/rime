@@ -1,4 +1,4 @@
-# Adapter schema gen
+# Decoupling the adapter from prototypes and features.
 
 Objectif decouple "features" from the adapter.
 
@@ -92,3 +92,9 @@ Currently the are complety merge into the adapter logic.
 - Provide a way to persistence to detect tinted data ? Currently it is something like if tables includes hard written pattern `{owner}Block{pascal(name)}`
 
 `__{feature}` `__${feature}` `__$${feature}` maybe used to detect features on a current base table.
+
+## Media directories
+
+This is not a shadow, it create a complete new collection, the panel consume it.
+It is related to the upload parent by hooks.
+Its naming can't be {base}__directories because its a shadow naming so just {base}_directories.
