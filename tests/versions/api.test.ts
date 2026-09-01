@@ -250,7 +250,7 @@ test('Should update a specific infos version', async ({ request }) => {
 });
 
 test('Should return 2 versions of infos', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/infos_versions`, {
+  const response = await request.get(`${API_BASE_URL}/infos--versions`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
@@ -262,7 +262,7 @@ test('Should return 2 versions of infos', async ({ request }) => {
 });
 
 test('Should not return infos versions without credentials', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/infos_versions`);
+  const response = await request.get(`${API_BASE_URL}/infos--versions`);
   expect(response.status()).toBe(403);
 });
 
@@ -405,7 +405,7 @@ test('Should get the initial settings as a draft', async ({ request }) => {
 });
 
 test('Should return 2 versions of settings', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings_versions`, {
+  const response = await request.get(`${API_BASE_URL}/settings--versions`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
@@ -419,7 +419,7 @@ test('Should return 2 versions of settings', async ({ request }) => {
 });
 
 test('Should not return settings versions without credentials', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings_versions`);
+  const response = await request.get(`${API_BASE_URL}/settings--versions`);
   expect(response.status()).toBe(403);
 });
 
@@ -560,7 +560,7 @@ test('Should not return any news (collection query)', async ({ request }) => {
 });
 
 test('News should have 2 versions', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/news_versions`, {
+  const response = await request.get(`${API_BASE_URL}/news--versions`, {
     headers: await signInSuperAdmin(request)
   });
   const status = response.status();
@@ -938,7 +938,7 @@ test('Should create a Pdf and exceed maxVersions with draft updates', async ({ r
   }
 
   const versionsResponse = await request.get(
-    `${API_BASE_URL}/pdf_versions?where[and][0][ownerId][equals]=${pdfId}&where[and][1][status][not_equals]=published&sort=-updatedAt`,
+    `${API_BASE_URL}/pdf--versions?where[and][0][ownerId][equals]=${pdfId}&where[and][1][status][not_equals]=published&sort=-updatedAt`,
     { headers }
   );
   expect(versionsResponse.status()).toBe(200);
@@ -958,7 +958,7 @@ test('Should create a Pdf and exceed maxVersions with draft updates', async ({ r
 });
 
 /*********************************************************
-/* Delete cascades to _versions
+/* Delete cascades to versions
 /*********************************************************/
 
 test('Should remove all versions when the owning document is deleted', async ({ request }) => {
@@ -968,7 +968,7 @@ test('Should remove all versions when the owning document is deleted', async ({ 
   expect(deleteResponse.status()).toBe(200);
 
   const versionsResponse = await request.get(
-    `${API_BASE_URL}/pdf_versions?where[ownerId][equals]=${pdfId}`,
+    `${API_BASE_URL}/pdf--versions?where[ownerId][equals]=${pdfId}`,
     { headers }
   );
   expect(versionsResponse.status()).toBe(200);

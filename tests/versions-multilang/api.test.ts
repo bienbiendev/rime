@@ -288,7 +288,7 @@ test('Should still 1st media EN alt', async ({ request }) => {
 
 test('Should get 3 versions of 1st media (EN)', async ({ request }) => {
   const response = await request.get(
-    `${API_BASE_URL}/medias_versions?where[ownerId][equals]=${mediaId}`,
+    `${API_BASE_URL}/medias--versions?where[ownerId][equals]=${mediaId}`,
     {
       headers: await signInSuperAdmin(request)
     }
@@ -308,7 +308,7 @@ test('Should get 3 versions of 1st media (EN)', async ({ request }) => {
 
 test('Should get 3 versions of 1st media (FR)', async ({ request }) => {
   const response = await request.get(
-    `${API_BASE_URL}/medias_versions?where[ownerId][equals]=${mediaId}&locale=fr`,
+    `${API_BASE_URL}/medias--versions?where[ownerId][equals]=${mediaId}&locale=fr`,
     {
       headers: await signInSuperAdmin(request)
     }
@@ -432,7 +432,7 @@ test('Should update the 1st infos version (DE)', async ({ request }) => {
 });
 
 test('Should return 2 versions of infos (EN)', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/infos_versions`, {
+  const response = await request.get(`${API_BASE_URL}/infos--versions`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
@@ -444,7 +444,7 @@ test('Should return 2 versions of infos (EN)', async ({ request }) => {
 });
 
 test('Should return 2 versions of infos (FR)', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/infos_versions?locale=fr`, {
+  const response = await request.get(`${API_BASE_URL}/infos--versions?locale=fr`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
@@ -457,7 +457,7 @@ test('Should return 2 versions of infos (FR)', async ({ request }) => {
 });
 
 test('Should return 2 versions of infos (DE)', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/infos_versions?locale=de`, {
+  const response = await request.get(`${API_BASE_URL}/infos--versions?locale=de`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
@@ -492,7 +492,7 @@ test('Should update the 1st infos version (EN)', async ({ request }) => {
 });
 
 test('Should not return infos versions without credentials', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/infos_versions`);
+  const response = await request.get(`${API_BASE_URL}/infos--versions`);
   expect(response.status()).toBe(403);
 });
 
@@ -662,7 +662,7 @@ test('Should get the initial settings as a draft', async ({ request }) => {
 });
 
 test('Should return 2 versions of settings', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings_versions`, {
+  const response = await request.get(`${API_BASE_URL}/settings--versions`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
@@ -676,7 +676,7 @@ test('Should return 2 versions of settings', async ({ request }) => {
 });
 
 test('Should not return settings versions without credentials', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings_versions`);
+  const response = await request.get(`${API_BASE_URL}/settings--versions`);
   expect(response.status()).toBe(403);
 });
 
@@ -817,7 +817,7 @@ test('Should not return any news (collection query)', async ({ request }) => {
 });
 
 test('News should have 2 versions', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/news_versions`, {
+  const response = await request.get(`${API_BASE_URL}/news--versions`, {
     headers: await signInSuperAdmin(request)
   });
   const status = response.status();
