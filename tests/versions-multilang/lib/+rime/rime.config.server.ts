@@ -1,14 +1,19 @@
 import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
+import { access } from '$lib/core/features/auth/access.js';
 import {
+  block,
+  blocks,
   date,
   group,
   relation,
   richText,
+  select,
   slug,
   tab,
   tabs,
   text,
-  toggle
+  toggle,
+  tree
 } from '$lib/fields/index.js';
 import {
   bold,
@@ -17,7 +22,6 @@ import {
   link as linkFeature,
   upload
 } from '$lib/fields/rich-text/client.js';
-import { access } from '$lib/core/features/auth/access.js';
 import { Area, Collection, rime } from '$rime/config';
 
 const Settings = Area.create('settings', {
@@ -117,7 +121,23 @@ const Pages = Collection.create('pages', {
       text('title').isTitle(),
       slug('slug'),
       toggle('isHome')
-    )
+    ),
+    tree('list').fields(
+      text('title').localized(),
+      richText('content').localized(),
+      select('icon').options('one', 'two', 'three')
+    ),
+    blocks('sections', [
+      block('paragraph').fields(
+        //
+        text('text').localized()
+      ),
+      block('image').fields(
+        //
+        relation('image').to('medias'),
+        text('legent').localized()
+      )
+    ])
   ],
   $url: () => '/',
   nested: true,
