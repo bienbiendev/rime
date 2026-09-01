@@ -90,7 +90,10 @@ const relations = defineFeature({
       getRelationDiff,
       callAdapterSaveOnChildNamed__$relation_for_currentproto,
     ] // on update / create
-  }
+  },
+  transform: [
+    (arg: {document: RawDoc, configMap: ConfigMap }) => tranformDocument(document)
+  ]
 })
 
 // Will create tables for all prototypes :
@@ -108,7 +111,7 @@ const directories = defineFeature({
   extends: ['collections'],
   type: 'augment',
   configure: (wholeConfig) => augmentedConfigWithDirectoriesCollections,
-  api: { // what go into rime.{prototypeName}
+  api: { // what go into rime.{extends[n]}
     isDirectory: (proto) => regexpTestOverTheNameingconventionCreatedinConfigure(proto.slug)
     // then rime.collections.isDirectory()
   },
@@ -145,7 +148,10 @@ const blocks = defineFeature({
     beforeOperation: [...],
     persistance: [
       getBlocksDiff,
-    ] // on update / create
+    ], // on update / create
+    transform: [
+      (arg: {document: RawDoc, configMap: ConfigMap }) => tranformDocument(document)
+    ]
   }
 })
 ```
@@ -167,6 +173,7 @@ type Feature = {
     afterCodeGen: CodeGenHook[]; // or just FeatureHook
     beforeOperation: RuntimeHook[]; // or just FeatureHook
     persistance: RuntimeHook[]; // or just FeatureHook
+    transform: TransformHook[]; // or just FeatureHook
   };
 };
 
