@@ -23,7 +23,9 @@ type TabsField = {
 
 // Data is
 {
-  tabName : { fieldName: 'baz', fieldText: 'foo', something: 'bar' }
+  tabName : { fieldName: 'baz', fieldText: 'foo', something: 'bar' },
+  otherTabName : { someotherfield: 'baz' },
+  anOtherTabName : { otherfield: 'booz' },
 }
 
 type BlocksField = {
@@ -72,8 +74,20 @@ type TreeField = {
 
 // data is
 {
-  //...
   treeField : [{ fieldText: 'foo', something: 'bar' }]
+}
+
+export type GroupField = {
+  type: 'group';
+  name: string;
+  label?: string;
+  fields: FieldBuilder<Field>[];
+  preview?: Component<FieldsPreviewProps>;
+};
+
+// data is
+{
+  groupField : { fieldText: 'foo', something: 'bar', other: 'baz' }
 }
 ```
 
