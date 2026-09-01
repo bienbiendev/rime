@@ -107,8 +107,11 @@ export interface CollectionAdapter {
 /**
  * An area is a singleton, and the interface says so by what it leaves out: there is no insert
  * and no delete. Exactly one row exists, so creating a second is not an operation and removing
- * the only one leaves the area unreadable. The sqlite adapter still bootstraps a blank document
- * on first read, but that is its own business and no longer something core can ask for.
+ * the only one leaves the area unreadable.
+ *
+ * `ensureExists` is not a way back in. It is the boot lifecycle — `definePrototype` calls it
+ * once per process and nothing at runtime does — and it is shaped so it cannot be used as a
+ * create: no data beyond the blank document, no id back, and a second call does nothing.
  */
 export interface AreaAdapter {
   get(args: {
@@ -119,6 +122,13 @@ export interface AreaAdapter {
     versionId?: string;
     draft?: boolean;
   }): Promise<RawDoc>;
+
+  /** Boot only. Writes the singleton's row if it is absent; a no-op if it is not. */
+  ensureExists(args: {
+    slug: AreaSlug;
+    blank: Partial<GenericDoc>;
+    locale?: string;
+  }): Promise<void>;
 
   update(args: {
     slug: AreaSlug;

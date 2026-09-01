@@ -23,6 +23,16 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
   ) as typeof config.$InferAreas;
   const mapAreasSlug = config.areas.map((a) => a.slug);
 
+  /**
+   * Every built config of one prototype kind, by the name it is registered under.
+   *
+   * The registry-driven counterpart to `.collections` / `.areas`: code that iterates prototypes
+   * asks for a name it got from the registry rather than picking one of two hardcoded accessors,
+   * so a third kind costs nothing here.
+   */
+  const byPrototype = (name: string) =>
+    [...config.collections, ...config.areas].filter((prototype) => prototype.type === name);
+
   const getLocalesCodes = () =>
     config.localization ? config.localization.locales.map((l) => l.code) : [];
 
@@ -79,6 +89,11 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
     get areas() {
       return mapAreas;
     },
+
+    /**
+     * Gets every config of one prototype kind, by registry name
+     */
+    byPrototype,
 
     /**
      * Gets the default locale from the configuration

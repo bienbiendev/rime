@@ -7,6 +7,7 @@ import type { BuildConfig } from './factory/config/index.server.js';
 import { getBaseAuthConfig } from './features/auth/better-auth/config.server.js';
 import { ensureMedias } from './features/upload/ensure.server.js';
 import i18n from './i18n/index.js';
+import { prototypes } from './prototype/extensions/index.js';
 import { registerTranslation } from './i18n/register.server.js';
 
 /**
@@ -55,7 +56,26 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   // 5. The database. Consumes the schema generated in step 4.
   const adapter = await config.$adapter.createAdapter(configCtx);
 
-  // 6. FEATURE (auth): better-auth. After the adapter, whose betterAuthAdapter it stores into.
+  // 6. Each registered prototype's own boot hook, over every config of that kind. Today only the
+  //    singleton has one — an area writes its row if it is missing, so that a read can be a read
+  //    rather than a write in disguise. Boot does not know that; it runs what the registry
+  //    declares, which is the point.
+  //
+  //    After the adapter for the obvious reason, and the first step here to touch the database:
+  //    an unmigrated database now fails at boot rather than on whichever request first happened
+  //    to read an area.
+  for (const prototype of prototypes) {
+    if (!prototype.boot) continue;
+    for (const prototypeConfig of configCtx.byPrototype(prototype.name)) {
+      await prototype.boot({
+        config: prototypeConfig,
+        adapter,
+        defaultLocale: configCtx.getDefaultLocale()
+      });
+    }
+  }
+
+  // 7. FEATURE (auth): better-auth. After the adapter, whose betterAuthAdapter it stores into.
   const baseAuthConfig = getBaseAuthConfig({ mailer: plugins.mailer, config: configCtx });
   const auth = betterAuth({
     ...baseAuthConfig,
@@ -65,7 +85,7 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
     database: adapter.auth.betterAuthAdapter
   });
 
-  // 7. Panel translations, for the configured language.
+  // 8. Panel translations, for the configured language.
   i18n.init(await registerTranslation(config.panel.language));
 
   return { plugins, configCtx, adapter, auth };

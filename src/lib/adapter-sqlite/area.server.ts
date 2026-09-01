@@ -1,4 +1,3 @@
-import { getRequestEvent } from '$app/server';
 import { VERSIONS_OPERATIONS } from '$lib/core/features/versions/strategy.js';
 import type { Config } from '$lib/core/factory/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
@@ -6,7 +5,6 @@ import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type { AreaSlug, GenericDoc, RawDoc } from '$lib/core/prototype/types.js';
 import type { GetRegisterType } from '$lib/index.js';
-import { createBlankDocument } from '$lib/core/prototype/doc.js';
 import type { DeepPartial } from '$lib/util/types.js';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as adapterUtil from './util.server.js';
@@ -25,29 +23,17 @@ const createAreaFacade = <const C extends Config>(args: {
   const { db, tables, configCtx } = args;
 
   /**
-   * Retrieves an area document. If the area doesn't exist, it creates a blank one.
-   * For versioned areas, returns either a specific version (if versionId is provided)
-   * or the latest/published version.
+   * Reads the area's document. A plain read, exactly like a collection's findById.
+   *
+   * It used to bootstrap: check for the row, create it when absent, then read. That put a write
+   * behind a GET and cost an extra SELECT on every read forever, to answer a question whose
+   * answer is "yes" for the entire life of the process after the first time. `definePrototype`
+   * answers it once at boot instead, so by the time any of this runs the row exists.
    */
   const get: Get = async ({ slug, locale, select, versionId, draft }) => {
     const areaConfig = configCtx.areas[slug];
     if (!areaConfig) {
       throw new RimeError(RimeError.INIT, slug + ' is not an area, should never happen');
-    }
-
-    const rootTable = tables[baseTableName(slug)];
-
-    // The bootstrap turns on whether the **row** is absent, not on whether the read came back
-    // empty. Those look like the same question and are not: a versioned area whose only version
-    // is a draft, read without `draft`, has a row and no readable version. Treating that as
-    // "never created" writes a second singleton row and leaves the area permanently doubled.
-    //
-    // @TODO this belongs at boot, not on a read: a singleton should create itself with default
-    // values when the prototype is defined. Left here until definePrototype exists.
-    const [existing] = await db.select({ id: rootTable.id }).from(rootTable);
-
-    if (!existing) {
-      await createArea(slug, createBlankDocument(areaConfig, getRequestEvent()), locale);
     }
 
     // No `id`: an area is a singleton, so there is exactly one row to find.
@@ -56,13 +42,29 @@ const createAreaFacade = <const C extends Config>(args: {
       { slug, versionId, select, locale, draft, config: areaConfig }
     );
 
-    if (!doc) {
-      // Row present, nothing matching the version filter: the 404 the merge used to raise.
-      // No row even after bootstrapping: a write that silently did nothing, which is not a 404.
-      throw new RimeError(existing ? RimeError.NOT_FOUND : RimeError.OPERATION_ERROR);
-    }
+    // The row is there — boot saw to that — so an empty read means no version matched the
+    // draft/versionId filter, which is the same 404 a collection gives.
+    if (!doc) throw new RimeError(RimeError.NOT_FOUND);
 
     return doc as RawDoc;
+  };
+
+  /**
+   * Brings the singleton into being, if it is not already. Boot only — see definePrototype.
+   *
+   * Deliberately not an `insert`. An area has exactly one row, so the operation a caller is
+   * allowed to ask for is not "create one" but "make sure the one exists": it takes no data
+   * beyond the blank document, returns no id, and doing it twice does nothing the second time.
+   * That is what keeps create genuinely off an area's runtime surface while still letting the
+   * row come from somewhere.
+   */
+  const ensureExists: EnsureExists = async ({ slug, blank, locale }) => {
+    const rootTable = tables[baseTableName(slug)];
+    const [existing] = await db.select({ id: rootTable.id }).from(rootTable);
+
+    if (existing) return;
+
+    await createArea(slug, blank, locale);
   };
 
   /**
@@ -209,8 +211,8 @@ const createAreaFacade = <const C extends Config>(args: {
 
   return {
     update,
-    createArea,
-    get
+    get,
+    ensureExists
   };
 };
 
@@ -233,6 +235,13 @@ type Get = (args: {
    */
   draft?: boolean;
 }) => Promise<RawDoc>;
+
+type EnsureExists = (args: {
+  slug: AreaSlug;
+  /** The document to write when the row is absent, already built by the caller. */
+  blank: Partial<GenericDoc>;
+  locale?: string;
+}) => Promise<void>;
 
 type Update = (args: {
   slug: AreaSlug;
