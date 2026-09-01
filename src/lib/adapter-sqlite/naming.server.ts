@@ -1,5 +1,5 @@
 import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
-import { toCamelCase, toPascalCase, toSnakeCase } from '$lib/util/string.js';
+import { mapSegments, toCamelCase, toPascalCase, toSnakeCase } from '$lib/util/string.js';
 
 /**
  * How a table is named, in one place.
@@ -107,8 +107,11 @@ export const childTableNames = (
 /**
  * Generate the column and property names for a field given its name and its parent path.
  * Snake case is used for the sqlite column name and Camel case is used for the drizzle column
- * property name. The `__` separator is a path separator, never a word break, so it survives both
- * conversions.
+ * property name.
+ *
+ * A nested field path uses the same `__` segment separator as a slug, and for the same reason —
+ * it must survive case conversion as a boundary rather than collapse into a word break. This
+ * used to hand-roll the split/rejoin; it shares mapSegments with slug naming now.
  *
  * @example
  * // returns { camel : 'groupTitle', snake: 'group__title' }
@@ -117,19 +120,8 @@ export const childTableNames = (
 export function getSchemaColumnNames(args: { name: string; parentPath?: string }) {
   const name = args.parentPath ? `${args.parentPath}__${args.name}` : args.name;
 
-  // Preserve leading underscore if present
-  const hasLeadingUnderscore = name.startsWith('_');
-  const processedName = hasLeadingUnderscore ? name.slice(1) : name;
-
-  const processParts = (parts: string[], formatter: (s: string) => string) => {
-    const processed = parts.map((part) => formatter(part)).join('__');
-    return hasLeadingUnderscore ? `_${processed}` : processed;
-  };
-
-  const parts = processedName.split('__');
-
   return {
-    camel: processParts(parts, toCamelCase),
-    snake: processParts(parts, toSnakeCase)
+    camel: mapSegments(name, toCamelCase, '__'),
+    snake: mapSegments(name, toSnakeCase, '__')
   };
 }
