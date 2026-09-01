@@ -10,7 +10,7 @@ A collection is a prototype, singleton off.
   - can provide
     - boot hook
     - sveltekit handler
-    - configure —> this way (like plugins) it can add hooks to other collections
+    - configure —> this way like plugins it can add hooks to other collections
     - provide type defintion for config ex: upload, versions
     - extends('prototypeName')
 
@@ -18,16 +18,20 @@ No `derive`, `augment`, ...
 
 Then rime itself could be simplified no more isArea ... isCollection, the rime local api become :
 
-return {
-...prototype
+```ts
+createRimecontext(){
+  return {
+  ...prototypes
+  }
 }
 
-then :
+// then :
 const myAreaOrwhatever = rime.{prototypeName}(prototypeSlug)
 
 if( myAreaOrwhatever.is('singleton') ){
 
 }
+```
 
 > The adapter understand the prototype definition and the contract it brings with it [see](docs/decoupling-adapter.md)
 
@@ -42,7 +46,7 @@ A feature can be defined :
 const upload = defineFeature({
   name: 'upload',
   extends: ['collections']
-  type: 'fields',
+  type: 'augment',
   augment: augmentUpload, // (prototypeConfig) => augmentedPrototypeconfig
   hooks: {
     beforeBoot: [ensureMediasDir],
