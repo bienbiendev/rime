@@ -6,7 +6,7 @@ import type { VersionOperation } from '$lib/core/features/versions/strategy.js';
 import type { Dic } from '$lib/util/types.js';
 import { eq } from 'drizzle-orm';
 import { RimeError } from '../core/errors/index.js';
-import { baseTableName, tableName } from './naming.server.js';
+import { baseTableName, tableName, type TableName } from './naming.server.js';
 import * as adapterUtil from './util.server.js';
 
 /**
@@ -30,6 +30,44 @@ import * as adapterUtil from './util.server.js';
  * meant to shrink into it until the prototype facade is one thing with a singleton flag, as
  * docs/architecture-target.md describes.
  */
+
+/**
+ * Writes a row and, when it has localized columns, its `__$$locales` half.
+ *
+ * The pair appears four times across the two facades. Three are identical in shape — a version
+ * row, a non-versioned collection row, an area's version row — and use it. The fourth, an
+ * area's non-versioned bootstrap, is left alone: it writes no createdAt/updatedAt and guards the
+ * locales insert without checking for empty data, and both look like oversights rather than
+ * intent. Changing them belongs in a commit that can say so, not in an extraction.
+ *
+ * Returns the id actually written, which insertTableRecord derives from `row.id` or generates.
+ */
+export const insertRowWithLocales = async (
+  { db, tables }: Deps,
+  args: {
+    table: TableName;
+    row: Dic;
+    now: Date;
+    localized: { data: Dic; isLocalized: boolean; locale?: string };
+  }
+): Promise<string> => {
+  const id = await adapterUtil.insertTableRecord(db, tables, args.table, {
+    ...args.row,
+    createdAt: args.now,
+    updatedAt: args.now
+  });
+
+  const { data, isLocalized, locale } = args.localized;
+  if (isLocalized && Object.keys(data).length) {
+    await adapterUtil.insertTableRecord(db, tables, tableName({ owner: args.table, branch: 'locales' }), {
+      ...data,
+      ownerId: id,
+      locale: locale!
+    });
+  }
+
+  return id;
+};
 
 type UpdateArgs = {
   slug: string;

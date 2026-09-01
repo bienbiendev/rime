@@ -17,7 +17,7 @@ import * as adapterUtil from './util.server.js';
 import { buildWhereParam } from './where.server.js';
 import { buildWithParam } from './with.server.js';
 import { baseTableName, tableName as buildTableName } from './naming.server.js';
-import { updatePrototype } from './prototype.server.js';
+import { insertRowWithLocales, updatePrototype } from './prototype.server.js';
 type Schema = GetRegisterType<'Schema'>;
 
 /**
@@ -166,8 +166,6 @@ const createCollectionFacade = <const C extends Config>(args: {
         ...rootData
       });
 
-      // Generate version ID
-      const versionId = adapterUtil.generatePK();
       const versionsTableName = baseTableName(withVersionsSuffix(slug));
 
       // Prepare data for versions table
@@ -178,23 +176,15 @@ const createCollectionFacade = <const C extends Config>(args: {
         locale
       });
 
-      // Insert version record
-      await adapterUtil.insertTableRecord(db, tables, versionsTableName, {
-        id: versionId,
-        ownerId: docId,
-        ...mainData,
-        createdAt: now,
-        updatedAt: now
-      });
-
-      // Insert localized data if needed
-      if (isLocalized && Object.keys(localizedData).length) {
-        await adapterUtil.insertTableRecord(db, tables, buildTableName({ owner: versionsTableName, branch: 'locales' }), {
-          ...localizedData,
-          ownerId: versionId,
-          locale: locale!
-        });
-      }
+      const versionId = await insertRowWithLocales(
+        { db, tables },
+        {
+          table: versionsTableName,
+          row: { id: adapterUtil.generatePK(), ownerId: docId, ...mainData },
+          now,
+          localized: { data: localizedData, isLocalized, locale }
+        }
+      );
 
       // Return both IDs for versioned collections
       return {
@@ -213,22 +203,15 @@ const createCollectionFacade = <const C extends Config>(args: {
         locale
       });
 
-      // Insert main record
-      await adapterUtil.insertTableRecord(db, tables, baseTableName(slug), {
-        id: docId,
-        ...mainData,
-        createdAt: now,
-        updatedAt: now
-      });
-
-      // Insert localized data if needed
-      if (isLocalized && Object.keys(localizedData).length) {
-        await adapterUtil.insertTableRecord(db, tables, buildTableName({ owner: baseTableName(slug), branch: 'locales' }), {
-          ...localizedData,
-          ownerId: docId,
-          locale: locale!
-        });
-      }
+      await insertRowWithLocales(
+        { db, tables },
+        {
+          table: baseTableName(slug),
+          row: { id: docId, ...mainData },
+          now,
+          localized: { data: localizedData, isLocalized, locale }
+        }
+      );
 
       // For non-versioned collections, id and versionId are the same
       return {

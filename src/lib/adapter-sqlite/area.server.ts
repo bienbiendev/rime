@@ -13,7 +13,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as adapterUtil from './util.server.js';
 import { buildWithParam } from './with.server.js';
 import { baseTableName, tableName } from './naming.server.js';
-import { updatePrototype } from './prototype.server.js';
+import { insertRowWithLocales, updatePrototype } from './prototype.server.js';
 
 /**
  * Creates an area facade for SQLite adapter operations with CRUD functionality.
@@ -175,22 +175,15 @@ const createAreaFacade = <const C extends Config>(args: {
         mainData.status = 'published';
       }
 
-      // Insert version record
-      const versionId = await adapterUtil.insertTableRecord(db, tables, versionsTableName, {
-        ownerId: docId,
-        ...mainData,
-        createdAt: now,
-        updatedAt: now
-      });
-
-      // Insert localized data if needed
-      if (isLocalized && Object.keys(localizedData).length) {
-        await adapterUtil.insertTableRecord(db, tables, tableName({ owner: versionsTableName, branch: 'locales' }), {
-          ...localizedData,
-          ownerId: versionId,
-          locale: locale!
-        });
-      }
+      const versionId = await insertRowWithLocales(
+        { db, tables },
+        {
+          table: versionsTableName,
+          row: { ownerId: docId, ...mainData },
+          now,
+          localized: { data: localizedData, isLocalized, locale }
+        }
+      );
 
       // Return both IDs for versioned collections
       return {
