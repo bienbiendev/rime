@@ -1,4 +1,5 @@
 import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
+import { tableName } from './naming.server.js';
 import type { Relation } from '$lib/fields/relation/index.js';
 import { omit } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
@@ -10,7 +11,7 @@ const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   const deleteFromPaths: DeleteFromPaths = async ({ parentSlug, ownerId, paths, locale }) => {
     if (paths.length === 0) return true;
 
-    const relationTableName = `${parentSlug}Rels`;
+    const relationTableName = tableName({ owner: parentSlug, child: { kind: 'rels' } });
     const table = tables[relationTableName];
     if (!table) return true;
 
@@ -40,7 +41,7 @@ const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 
   const create: Create = async ({ parentSlug, ownerId, relations }) => {
-    const relationTableName = `${parentSlug}Rels`;
+    const relationTableName = tableName({ owner: parentSlug, child: { kind: 'rels' } });
     const table = tables[relationTableName];
     const columns = getTableColumns(table);
 
@@ -72,7 +73,7 @@ const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 
   const update: Update = async ({ parentSlug, relations }) => {
-    const relationTableName = `${parentSlug}Rels`;
+    const relationTableName = tableName({ owner: parentSlug, child: { kind: 'rels' } });
     const table = tables[relationTableName];
     const columns = getTableColumns(table);
 
@@ -92,7 +93,7 @@ const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 
   const deleteRelations: Delete = async ({ parentSlug, relations }) => {
-    const relationTableName = `${parentSlug}Rels`;
+    const relationTableName = tableName({ owner: parentSlug, child: { kind: 'rels' } });
     const table = tables[relationTableName];
 
     if (relations.length === 0) return true;
@@ -113,7 +114,7 @@ const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 
   const getAll: GetAllRelations = async ({ parentSlug, ownerId, locale }) => {
-    const relationTableName = `${parentSlug}Rels`;
+    const relationTableName = tableName({ owner: parentSlug, child: { kind: 'rels' } });
 
     // If the collection doesn't have relation
     // relationTableName doesn't exist

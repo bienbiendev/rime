@@ -2,6 +2,7 @@ import { RimeError } from '$lib/core/errors/index.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger.server.js';
 import { hasVersionsSuffix, withoutVersionsSuffix } from '$lib/core/features/versions/naming.js';
+import { tableName } from './naming.server.js';
 import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
@@ -187,7 +188,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
         .from(relatedTable)
         .where(relatedCondition);
 
-      const relsTable = getTable(`${slug}Rels`);
+      const relsTable = getTable(tableName({ owner: slug, child: { kind: 'rels' } }));
       // Join relation rows to documents by matching the related id and the relation path
       const ownersWithMatching = db
         .select({ id: relsTable.ownerId })
@@ -228,7 +229,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
       fieldConfig.get.localized,
       fieldConfig.get.many
     ];
-    const relsTableName = `${slug}Rels`;
+    const relsTableName = tableName({ owner: slug, child: { kind: 'rels' } });
     const relsTable = getTable(relsTableName);
 
     // Helpers for building common relation-owner subqueries (operate on the relations table)

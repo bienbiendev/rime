@@ -1,5 +1,6 @@
 import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
 import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
+import { childTableNames, tableName } from './naming.server.js';
 import type { TreeBlock } from '$lib/core/prototype/types.js';
 import { extractFieldName } from '$lib/fields/tree/util.js';
 import type { WithRequired } from '$lib/util/types.js';
@@ -12,7 +13,7 @@ const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   //
   const buildBlockTableName = (slug: string, blockPath: string) => {
     const [fieldName] = extractFieldName(blockPath);
-    return `${slug}Tree${toPascalCase(fieldName)}`;
+    return tableName({ owner: slug, child: { kind: 'tree', name: fieldName } });
   };
 
   const update: UpdateBlock = async ({ parentSlug, block, locale }) => {
@@ -101,8 +102,10 @@ const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
     return true;
   };
 
+  // Named getBlocksTableNames for backwards compatibility with callers; it lists this
+  // facade's *tree* tables. Renaming it is a separate change to the adapter's public surface.
   const getBlocksTableNames = (slug: string): string[] =>
-    Object.keys(tables).filter((key) => key.startsWith(`${slug}Tree`) && !key.endsWith('Locales'));
+    childTableNames(slug, 'tree', tables);
 
   return {
     getBlocksTableNames,

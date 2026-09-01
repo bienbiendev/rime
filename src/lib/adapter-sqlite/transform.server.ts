@@ -19,12 +19,7 @@ import { flatten, unflatten } from 'flat';
 import { logger } from '../core/logger.server.js';
 import { extractFieldName } from '../fields/tree/util.js';
 import { isObjectLiteral, omit } from '../util/object.js';
-import {
-  getBlocksTableNames,
-  getTreeTableNames,
-  makeBlockTableSlug,
-  makeTreeTableSlug
-} from './generate-schema/util.server.js';
+import { childTableNames, tableName as buildTableName } from './naming.server.js';
 import { transformDatabaseColumnsToPaths } from './util.server.js';
 
 /**
@@ -56,7 +51,7 @@ export const transformerFacade = <const C extends Config>(args: {
     const config = configCtx.getBySlug(slug);
     const isVersioned = !!config.versions;
     const tableName = isVersioned ? withVersionsSuffix(slug) : slug;
-    const tableNameRelationFields = `${tableName}Rels`;
+    const tableNameRelationFields = buildTableName({ owner: tableName, child: { kind: 'rels' } });
     const tableNameLocales = withLocalesSuffix(tableName);
 
     const isPanel = event.params.panel !== undefined;
@@ -87,12 +82,12 @@ export const transformerFacade = <const C extends Config>(args: {
     /****************************************************/
 
     /** Extract all blocks  */
-    const blocksTables = getBlocksTableNames(tableName, tables);
+    const blocksTables = childTableNames(tableName, 'blocks', tables);
     const blocks: Dic[] = blocksTables.flatMap((blockTable) => doc[blockTable] || []);
 
     /** Place each block in its path */
     for (let block of blocks) {
-      const blockLocaleTableName = withLocalesSuffix(makeBlockTableSlug(tableName, block.type));
+      const blockLocaleTableName = buildTableName({ owner: tableName, child: { kind: 'blocks', name: block.type }, branch: 'locales' });
       if (locale && blockLocaleTableName in tables) {
         block = {
           ...((block[blockLocaleTableName][0] as Partial<GenericBlock>) || {}),
@@ -130,7 +125,7 @@ export const transformerFacade = <const C extends Config>(args: {
     /****************************************************/
 
     /** Extract all blocks  */
-    const treeTables = getTreeTableNames(tableName, tables);
+    const treeTables = childTableNames(tableName, 'tree', tables);
     let treeBlocks: Dic[] = treeTables.flatMap((treeTable) => doc[treeTable] || []);
 
     treeBlocks = treeBlocks.sort((a, b) => a.path.localeCompare(b.path));
@@ -139,7 +134,7 @@ export const transformerFacade = <const C extends Config>(args: {
     for (let block of treeBlocks) {
       try {
         const [fieldName] = extractFieldName(block.path);
-        const treeBlockLocaleTableName = withLocalesSuffix(makeTreeTableSlug(tableName, fieldName));
+        const treeBlockLocaleTableName = buildTableName({ owner: tableName, child: { kind: 'tree', name: fieldName }, branch: 'locales' });
 
         if (locale && treeBlockLocaleTableName in tables) {
           block = {

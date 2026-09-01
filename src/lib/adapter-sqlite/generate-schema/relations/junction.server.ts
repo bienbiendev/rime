@@ -1,3 +1,4 @@
+import { tableName as buildTableName } from '../../naming.server.js';
 import { templateRelationFieldsTable, templateRelationMany } from '../templates.server.js';
 import type { RelationFieldsMap } from './definition.server.js';
 
@@ -23,7 +24,8 @@ import type { RelationFieldsMap } from './definition.server.js';
 export function generateJunctionTableDefinition(args: Args): Return {
   const { tableName, relationFieldsMap, hasLocale } = args;
   let junctionTable = '';
-  const relationName = `rel_${tableName}Rels`;
+  const relsTableName = buildTableName({ owner: tableName, child: { kind: 'rels' } });
+  const relationName = `rel_${relsTableName}`;
   const tablesRelationsTo = [...new Set(Object.values(relationFieldsMap).map((r) => r.to))];
   if (tablesRelationsTo.length) {
     junctionTable = [
@@ -33,7 +35,7 @@ export function generateJunctionTableDefinition(args: Args): Return {
   }
   return {
     junctionTable,
-    junctionTableName: `${tableName}Rels`
+    junctionTableName: relsTableName
   };
 }
 

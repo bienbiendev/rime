@@ -1,7 +1,7 @@
 import type { DataType, FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { FormField } from '$lib/fields/types.js';
 import { templateReferences, templateUniqueRequired } from './templates.server.js';
-import { getSchemaColumnNames } from './util.server.js';
+import { getSchemaColumnNames } from '../naming.server.js';
 
 const COLUMN_EXPR: Record<DataType, (snake: string) => string> = {
   text: (snake) => `text('${snake}')`,

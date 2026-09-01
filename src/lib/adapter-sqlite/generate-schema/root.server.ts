@@ -8,7 +8,7 @@ import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field, FormField } from '$lib/fields/types.js';
-import { toPascalCase } from '$lib/util/string.js';
+import { tableName as buildTableName } from '../naming.server.js';
 import { toSchemaColumn } from './column.server.js';
 import type { RelationFieldsMap } from './relations/definition.server.js';
 import {
@@ -17,7 +17,6 @@ import {
   templateParent,
   templateTable
 } from './templates.server.js';
-const p = toPascalCase;
 
 type Args = {
   fields: FieldBuilder<Field>[];
@@ -102,7 +101,7 @@ const buildRootTable = async ({
         };
       } else if (field instanceof BlocksBuilder) {
         for (const block of field.get.blocks) {
-          const blockTableName = `${rootName}Blocks${p(block.name)}`;
+          const blockTableName = buildTableName({ owner: rootName, child: { kind: 'blocks', name: block.name } });
           if (!blocksRegister.includes(blockTableName)) {
             // Add the blocks as a relation of the root collection
             relationsDic = {
@@ -133,7 +132,7 @@ const buildRootTable = async ({
           }
         }
       } else if (field instanceof TreeBuilder) {
-        const treeTableName = `${rootName}Tree${p(field.name)}`;
+        const treeTableName = buildTableName({ owner: rootName, child: { kind: 'tree', name: field.name } });
         if (!blocksRegister.includes(treeTableName)) {
           // Add the tree table as relation of the root collection
           relationsDic = {

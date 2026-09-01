@@ -1,5 +1,6 @@
 import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
 import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
+import { childTableNames, tableName } from './naming.server.js';
 import type { GenericBlock } from '$lib/core/prototype/types.js';
 import type { WithOptional } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
@@ -9,7 +10,7 @@ import { generatePK, transformDataToSchema } from './util.server.js';
 
 const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   const buildBlockTableName = (slug: string, blockName: string) =>
-    `${slug}Blocks${toPascalCase(blockName)}`;
+    tableName({ owner: slug, child: { kind: 'blocks', name: blockName } });
 
   const update: UpdateBlock = async ({ parentSlug, block, locale }) => {
     const table = buildBlockTableName(parentSlug, block.type);
@@ -98,9 +99,7 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 
   const getBlocksTableNames = (slug: string): string[] =>
-    Object.keys(tables).filter(
-      (key) => key.startsWith(`${slug}Blocks`) && !key.endsWith('Locales')
-    );
+    childTableNames(slug, 'blocks', tables);
 
   return {
     getBlocksTableNames,
