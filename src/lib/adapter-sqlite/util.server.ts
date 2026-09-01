@@ -318,7 +318,22 @@ export const pathToDatabaseColumn = (path: string): string => path.replace(/\./g
  * // Returns 'attributes.hero.title'
  * databaseColumnToPath('attributes__hero__title');
  */
-export const databaseColumnToPath = (path: string): string => path.replace(/__/g, '.');
+export const databaseColumnToPath = (path: string): string =>
+  isStructuralKey(path) ? path : path.replace(/__/g, '.');
+
+/**
+ * Is this key a table name rather than a column path?
+ *
+ * Both use `__` as a separator, so converting it to `.` blindly turns a relational table's key
+ * into nested document properties: `settings__versions__$relations` became
+ * `settings.versions.$relations` and appeared inside every response, because the cleanup below
+ * looks for the flat key and no longer found it. It was silent — a 200 with wrong data.
+ *
+ * `$` is what separates the two. The naming convention uses it to mark structure — `__$` a
+ * child, `__$$` a branch — and a column path can never contain one, since column names come
+ * from field names, which are identifiers.
+ */
+const isStructuralKey = (key: string) => key.includes('$');
 
 /**
  * Converts an object's keys from database schema format (double underscores) to document format (dot notation).

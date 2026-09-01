@@ -2,12 +2,7 @@ import type { Config } from '$lib/core/factory/config/types.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { baseTableName, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
-import {
-  toCamelCase,
-  toCamelCasePreserveTrailingUnderscoreSuffix,
-  toPascalCase,
-  toSnakeCase
-} from '$lib/util/string.js';
+import { toPascalCase } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import { toSchemaColumn } from './column.server.js';
 import { generateRelationshipDefinitions } from './relations/definition.server.js';

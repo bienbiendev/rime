@@ -5,7 +5,7 @@ import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { asc, eq, getTableColumns, or, SQL } from 'drizzle-orm';
-import { childTableNames, tableName, baseTableName, type TableName } from './naming.server.js';
+import { childTableNames, tableName, type TableName } from './naming.server.js';
 
 export const buildWithParam = (args: {
   table: TableName;

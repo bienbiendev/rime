@@ -1,10 +1,9 @@
 import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
-import { childTableNames, tableName as buildTableName, baseTableName, type TableName } from './naming.server.js';
+import { childTableNames, tableName as buildTableName, type TableName } from './naming.server.js';
 import type { GenericBlock } from '$lib/core/prototype/types.js';
 import type { WithOptional } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
 import { omit } from '../util/object.js';
-import { toPascalCase } from '../util/string.js';
 import { generatePK, transformDataToSchema } from './util.server.js';
 
 const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {

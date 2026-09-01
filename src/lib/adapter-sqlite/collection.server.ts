@@ -1,10 +1,6 @@
 import { getSegments } from '$lib/core/features/upload/util/path.js';
-import {
-  VERSIONS_OPERATIONS,
-  VersionOperations
-} from '$lib/core/features/versions/strategy.js';
+import { VERSIONS_OPERATIONS } from '$lib/core/features/versions/strategy.js';
 import type { Config } from '$lib/core/factory/config/types.js';
-import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { ConfigContext } from '$lib/core/rime/index.server.js';
@@ -21,6 +17,7 @@ import * as adapterUtil from './util.server.js';
 import { buildWhereParam } from './where.server.js';
 import { buildWithParam } from './with.server.js';
 import { baseTableName, tableName as buildTableName } from './naming.server.js';
+import { updatePrototype } from './prototype.server.js';
 type Schema = GetRegisterType<'Schema'>;
 
 /**
@@ -249,112 +246,11 @@ const createCollectionFacade = <const C extends Config>(args: {
    * - Creating new versions from existing ones
    * - Publishing draft versions
    */
-  const update: Update = async ({ slug, id, versionId, data, locale, versionOperation }) => {
-    const now = new Date();
-    const config = configCtx.collections[slug];
-
-    if (VersionOperations.isSimpleUpdate(versionOperation)) {
-      // Scenario 0: Non-versioned collections
-      const tableName = baseTableName(slug);
-      const tableLocalesName = buildTableName({ owner: baseTableName(slug), branch: 'locales' });
-
-      const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
-        tables,
-        mainTableName: tableName,
-        localesTableName: tableLocalesName,
-        locale
-      });
-
-      // Update main table
-      await adapterUtil.updateTableRecord(db, tables, tableName, {
-        recordId: id,
-        data: { ...mainData, updatedAt: now }
-      });
-
-      // Update locales table if needed
-      if (isLocalized) {
-        await adapterUtil.upsertLocalizedData(db, tables, tableLocalesName, {
-          ownerId: id,
-          data: localizedData,
-          locale: locale!
-        });
-      }
-      return { id: data.id || id };
-    } else if (VersionOperations.isSpecificVersionUpdate(versionOperation)) {
-      // Scenario 1: Upadte specific version
-      if (!versionId) {
-        throw new RimeError(
-          RimeError.OPERATION_ERROR,
-          'missing versionId @adapter-update-collection'
-        );
-      }
-
-      // Extract hierarchy fields (_parent, _position) from data
-      const { data: contentData, rootData } = adapterUtil.extractRootData(data);
-
-      // Update the root table with updatedAt and any hierarchy fields
-      await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
-        recordId: id,
-        data: {
-          updatedAt: now,
-          ...rootData
-        }
-      });
-
-      const versionsTable = baseTableName(withVersionsSuffix(slug));
-      const versionsLocalesTable = buildTableName({ owner: versionsTable, branch: 'locales' });
-
-      const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(contentData, {
-        tables,
-        mainTableName: versionsTable,
-        localesTableName: versionsLocalesTable,
-        locale
-      });
-
-      // if draft is enabled on the collection
-      if (config.versions && config.versions.draft && mainData.status === 'published') {
-        // update all rows first to draft
-        await db
-          .update(tables[versionsTable])
-          .set({ status: VERSIONS_STATUS.DRAFT })
-          .where(eq(tables[versionsTable].ownerId, id));
-      }
-
-      // Update version directly
-      await adapterUtil.updateTableRecord(db, tables, versionsTable, {
-        recordId: versionId,
-        data: { ...mainData, updatedAt: now }
-      });
-
-      // Update localized data if needed
-      if (isLocalized) {
-        await adapterUtil.upsertLocalizedData(db, tables, versionsLocalesTable, {
-          ownerId: versionId,
-          data: localizedData,
-          locale: locale!
-        });
-      }
-
-      return { id: data.id || id };
-    } else if (VersionOperations.isNewVersionCreation(versionOperation)) {
-      // Scenario 2: Version creation
-      // The creation is handled by the caller operation updateById
-      // so only update the the root table
-
-      // Extract hierarchy fields (_parent, _position) from data
-      const { rootData } = adapterUtil.extractRootData(data);
-
-      // 2. Get possible hierarchy data update only the root table
-      await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
-        recordId: id,
-        data: { updatedAt: now, ...rootData }
-      });
-
-      return { id: data.id || id };
-    } else {
-      throw new RimeError(RimeError.OPERATION_ERROR, 'Unhandled version operation');
-    }
-  };
+  const update: Update = async ({ slug, id, versionId, data, locale, versionOperation }) =>
+    updatePrototype(
+      { db, tables },
+      { slug, id, versionId, data, locale, versionOperation, config: configCtx.collections[slug] }
+    );
 
   /**
    * Finds documents in a collection with support for filtering, sorting, pagination,

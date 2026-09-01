@@ -1,11 +1,10 @@
 import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
-import { childTableNames, tableName as buildTableName, baseTableName, type TableName } from './naming.server.js';
+import { childTableNames, tableName as buildTableName, type TableName } from './naming.server.js';
 import type { TreeBlock } from '$lib/core/prototype/types.js';
 import { extractFieldName } from '$lib/fields/tree/util.js';
 import type { WithRequired } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
 import { omit } from '../util/object.js';
-import { toPascalCase } from '../util/string.js';
 import { generatePK, transformDataToSchema } from './util.server.js';
 
 const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {

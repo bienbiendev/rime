@@ -1,10 +1,6 @@
 import { getRequestEvent } from '$app/server';
-import {
-  VERSIONS_OPERATIONS,
-  VersionOperations
-} from '$lib/core/features/versions/strategy.js';
+import { VERSIONS_OPERATIONS } from '$lib/core/features/versions/strategy.js';
 import type { Config } from '$lib/core/factory/config/types.js';
-import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { ConfigContext } from '$lib/core/rime/index.server.js';
@@ -17,6 +13,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as adapterUtil from './util.server.js';
 import { buildWithParam } from './with.server.js';
 import { baseTableName, tableName } from './naming.server.js';
+import { updatePrototype } from './prototype.server.js';
 
 /**
  * Creates an area facade for SQLite adapter operations with CRUD functionality.
@@ -263,98 +260,24 @@ const createAreaFacade = <const C extends Config>(args: {
    * @throws RimeError when operation fails or version ID is missing when required
    */
   const update: Update = async ({ slug, data, locale, versionId, versionOperation }) => {
-    const now = new Date();
-    const areaConfig = configCtx.areas[slug];
+    // The one thing an area does differently: it has no id to be given, so it finds its single
+    // row first. Everything after that is identical to a collection's update.
+    const [area] = await db
+      .select({ id: tables[baseTableName(slug)].id })
+      .from(tables[baseTableName(slug)]);
 
-    const rows = await db.select({ id: tables[baseTableName(slug)].id }).from(tables[baseTableName(slug)]);
-    const area = rows[0];
-
-    // Simple update for non-versioned areas
-    if (VersionOperations.isSimpleUpdate(versionOperation)) {
-      // Original implementation for non-versioned areas
-      const keyTableLocales = tableName({ owner: baseTableName(slug), branch: 'locales' });
-      // Prepare data for update using the shared utility function
-      const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
-        tables,
-        mainTableName: baseTableName(slug),
-        localesTableName: keyTableLocales,
-        locale
-      });
-
-      // Update main table
-      await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
-        recordId: area.id,
-        data: { ...mainData, updatedAt: now }
-      });
-
-      // Update localized data if needed
-      if (isLocalized) {
-        await adapterUtil.upsertLocalizedData(db, tables, keyTableLocales, {
-          ownerId: area.id,
-          data: localizedData,
-          locale: locale!
-        });
+    return updatePrototype(
+      { db, tables },
+      {
+        slug,
+        id: area.id,
+        versionId,
+        data,
+        locale,
+        versionOperation,
+        config: configCtx.areas[slug]
       }
-
-      // For non-versioned areas, versionId is the same as id
-      return { id: area.id };
-    } else if (VersionOperations.isSpecificVersionUpdate(versionOperation)) {
-      // Scenario 1: Update a specific version directly
-      if (!versionId) {
-        throw new RimeError(RimeError.OPERATION_ERROR, 'missing versionId @adapter-update-area');
-      }
-      // First, update the root table's updatedAt
-      await db
-        .update(tables[baseTableName(slug)])
-        .set({
-          updatedAt: now
-        })
-        .where(eq(tables[baseTableName(slug)].id, area.id));
-
-      const versionsTable = baseTableName(withVersionsSuffix(slug));
-      const versionsLocalesTable = tableName({ owner: versionsTable, branch: 'locales' });
-
-      // Prepare data for update using the shared utility function
-      const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
-        tables,
-        mainTableName: versionsTable,
-        localesTableName: versionsLocalesTable,
-        locale
-      });
-      // if draft is enabled on the collection
-      if (areaConfig.versions && areaConfig.versions.draft && mainData.status === 'published') {
-        // update all rows first to draft
-        await db.update(tables[versionsTable]).set({ status: VERSIONS_STATUS.DRAFT });
-      }
-      // Update version directly
-      await adapterUtil.updateTableRecord(db, tables, versionsTable, {
-        recordId: versionId,
-        data: { ...mainData, updatedAt: now }
-      });
-      // Update localized data if needed
-      if (isLocalized) {
-        await adapterUtil.upsertLocalizedData(db, tables, versionsLocalesTable, {
-          ownerId: versionId,
-          data: localizedData,
-          locale: locale!
-        });
-      }
-
-      return { id: area.id };
-    } else if (VersionOperations.isNewVersionCreation(versionOperation)) {
-      // Scenario 2: version creation, update only main table
-      // the creation is handled by the caller update operation
-      await db
-        .update(tables[baseTableName(slug)])
-        .set({
-          updatedAt: now
-        })
-        .where(eq(tables[baseTableName(slug)].id, area.id));
-
-      return { id: area.id };
-    } else {
-      throw new RimeError(RimeError.OPERATION_ERROR, 'Unhandled version operation');
-    }
+    );
   };
 
   return {
