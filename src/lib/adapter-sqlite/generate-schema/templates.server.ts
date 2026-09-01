@@ -421,7 +421,7 @@ export const templateHead = (slug: string) => dedent`
 export const templateDirectories = (slug: string) => `
 export const ${baseTableName(withDirectoriesSuffix(slug))} = sqliteTable('${baseTableName(withDirectoriesSuffix(slug))}', {
   id: text('id').notNull().primaryKey(),
-  parent: text('parent').references(():any => ${withDirectoriesSuffix(slug)}.id, {
+  parent: text('parent').references(():any => ${baseTableName(withDirectoriesSuffix(slug))}.id, {
 		onDelete : 'cascade',
 		onUpdate : 'cascade',
 	}),

@@ -113,13 +113,14 @@ const createCollectionFacade = <const C extends Config>(args: {
       const { path, name, parent } = segments;
       // set the normailzed path for the reference in the upload table
       data._path = path;
-      // Get relative directory collection table
-      const tableName = withDirectoriesSuffix(slug);
-      const table = tables[tableName];
+      // The directories collection this upload's folder lives in. `withDirectoriesSuffix`
+      // answers in slug space (`$mediasDirectories`), so it has to be resolved to a table —
+      // the two were the same string until the naming convention changed.
+      const directoriesTable = baseTableName(withDirectoriesSuffix(slug));
+      const table = tables[directoriesTable];
 
       // Check if there is already a folder with the path in the uploadDirectories
-      //@ts-expect-error tableName is a table for sure
-      const uploadDir = await db.query[tableName].findFirst({
+      const uploadDir = await (db.query as Record<string, any>)[directoriesTable].findFirst({
         where: and(eq(table.id, data._path))
       });
 

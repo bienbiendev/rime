@@ -1,4 +1,5 @@
 import type { CollectionSlug } from '$lib/types.js';
+import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import { withoutVersionsSuffix } from '../versions/naming.js';
 
 /**
@@ -29,3 +30,13 @@ export const withoutDirectoriesSuffix = (slug: string) =>
 
 /** `$mediasDirectories` -> true */
 export const hasDirectoriesSuffix = (slug: string) => slug.endsWith(MARKER);
+
+/**
+ * The URL form of a collection's directories sibling: `medias` -> `medias-directories`.
+ *
+ * Takes the **slug**, never the kebab. Three panel call sites did
+ * `apiUrl(withDirectoriesSuffix(config.kebab))`, which was right only while a slug and its
+ * kebab were the same string — it now builds `/api/$mediasDirectories`, and for a multi-word
+ * collection it corrupts the name twice over (`my-medias` -> `$my-mediasDirectories`).
+ */
+export const directoriesKebab = (slug: string) => prototypeKebab(withDirectoriesSuffix(slug));

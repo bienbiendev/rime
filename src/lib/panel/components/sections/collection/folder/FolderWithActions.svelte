@@ -3,7 +3,7 @@
   import type { Directory } from '$lib/core/features/upload/types.js';
   import type { BuiltCollectionClient } from '$lib/core/factory/config/types.js';
   import { PARAMS } from '$lib/core/constants.js';
-  import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
+  import { directoriesKebab } from '$lib/core/features/upload/naming.js';
   import type { GenericDoc } from '$lib/core/prototype/types.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import ContextMenu from '$lib/panel/components/ui/context-menu/ContextMenu.svelte';
@@ -48,7 +48,7 @@
   );
   const childFiles = $derived(APIProxy.getRessource<{ docs: GenericDoc[] }>(childFilesURL));
   const childFilesCount = $derived(childFiles.data?.docs?.length || 0);
-  const baseFolderApiURL = $derived(`${apiUrl(withDirectoriesSuffix(collection.kebab))}`);
+  const baseFolderApiURL = $derived(`${apiUrl(directoriesKebab(collection.slug))}`);
   const childFoldersURL = $derived(
     `${baseFolderApiURL}?where[parent][equals]=${folder.id}&select=id`
   );
