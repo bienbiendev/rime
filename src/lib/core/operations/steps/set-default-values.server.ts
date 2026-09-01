@@ -61,7 +61,7 @@ const defaultRelationValue = async (
   const buildRelation = async (defaultValue: any) => {
     let condition;
     //@TODO encapsulate this into adapter.relation.something
-    const relationTable = adapter.tables[config.get.relationTo];
+    const relationTable = adapter.tableForSlug(config.get.relationTo);
     if (typeof defaultValue === 'string') {
       condition = eq(relationTable.id, defaultValue);
     } else if (Array.isArray(defaultValue)) {

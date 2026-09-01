@@ -6,6 +6,7 @@ import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import { asc, desc, getTableColumns, sql } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import { pathToDatabaseColumn } from './util.server.js';
+import { baseTableName } from './naming.server.js';
 
 type Args = {
   slug: PrototypeSlug;
@@ -24,7 +25,7 @@ export const buildOrderByParam = ({ slug, locale, tables, config, by }: Args) =>
   };
 
   // Get the root table
-  const rootTable = tables[slug];
+  const rootTable = tables[baseTableName(slug)];
   by = by ? pathToDatabaseColumn(by) : by;
 
   // Default case: no sort parameter provided

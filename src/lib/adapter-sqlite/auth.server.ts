@@ -6,6 +6,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { GenericTable } from './types.server.js';
+import { baseTableName } from './naming.server.js';
 // import { configureBetterAuth } from './better-auth.server.js';
 
 /**
@@ -47,7 +48,7 @@ const createAuthFacade = (args: {
    * @returns BetterAuth user ID or null if not found
    */
   const getBetterAuthUserId = async ({ slug, id }: { slug: CollectionSlug; id: string }) => {
-    const userTable = getTable(slug);
+    const userTable = getTable(baseTableName(slug));
     // @ts-expect-error slug is key of query
     const user = await db.query[slug].findFirst({ where: eq(userTable.id, id) });
     if (user) {
@@ -72,7 +73,7 @@ const createAuthFacade = (args: {
     authUserId,
     slug
   }: GetUserAttributesArgs): Promise<User | undefined> => {
-    const table = getTable(slug);
+    const table = getTable(baseTableName(slug));
 
     const columns: Dic = {
       id: table.id,

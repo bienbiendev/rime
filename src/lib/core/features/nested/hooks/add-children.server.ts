@@ -18,8 +18,7 @@ export const addChildrenProperty = Hooks.beforeRead(async (args) => {
 
   // Else populate _children
   const { rime } = args.event.locals;
-  const tableName = args.config.slug;
-  const table = rime.adapter.getTable(tableName);
+  const table = rime.adapter.tableForSlug(args.config.slug);
 
   //@ts-ignore
   const children = await rime.adapter.db.query[tableName].findMany({

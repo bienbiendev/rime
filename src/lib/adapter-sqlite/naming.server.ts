@@ -27,6 +27,22 @@ import { toCamelCase, toPascalCase, toSnakeCase } from '$lib/util/string.js';
  * to before it existed.
  */
 
+/**
+ * The table a prototype's own rows live in.
+ *
+ * Identity today, and that is exactly why it needs to exist: a prototype **slug** and a **table
+ * name** are currently the same string, so nothing in the adapter distinguishes
+ * `tables[slug]` — "the table for this collection" — from `tables[versionsTable]` — "the table
+ * I just computed a name for". They are different questions, and the moment the naming
+ * convention changes they stop having the same answer: the collection `pages_versions` will
+ * live in the table `pages__versions`.
+ *
+ * Routing every slug-keyed lookup through here is what makes that change one edit rather than
+ * an audit of ninety-seven call sites. Sites that already hold a *table name* must not call
+ * this — they are already resolved.
+ */
+export const baseTableName = (slug: string): string => slug;
+
 export type ChildKind = 'blocks' | 'tree' | 'rels';
 
 export type TableParts = {

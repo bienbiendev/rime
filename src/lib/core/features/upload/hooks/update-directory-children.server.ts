@@ -16,7 +16,7 @@ export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>(async (a
   const db = event.locals.rime.adapter.db;
 
   if (data.id) {
-    const table = event.locals.rime.adapter.getTable(config.slug);
+    const table = event.locals.rime.adapter.tableForSlug(config.slug);
 
     //@ts-ignore
     const children = await db.query[config.slug].findMany({

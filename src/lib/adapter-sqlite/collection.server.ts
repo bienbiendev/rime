@@ -21,6 +21,7 @@ import { buildOrderByParam } from './orderBy.server.js';
 import * as adapterUtil from './util.server.js';
 import { buildWhereParam } from './where.server.js';
 import { buildWithParam } from './with.server.js';
+import { baseTableName } from './naming.server.js';
 type Schema = GetRegisterType<'Schema'>;
 
 /**
@@ -41,12 +42,12 @@ const createCollectionFacade = <const C extends Config>(args: {
   const findById: FindById = async ({ slug, id, versionId, select, locale, draft }) => {
     const config = configCtx.collections[slug];
     const isVersioned = !!config.versions;
-    const table = tables[slug];
+    const table = tables[baseTableName(slug)];
 
     if (!isVersioned) {
       // Original implementation for non-versioned collections
       const withParam = buildWithParam({ slug, select, locale, tables, config });
-      const selectColumns = adapterUtil.columnsParams({ table: tables[slug], select });
+      const selectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
 
       //@ts-expect-error slug is a table for sure
       const doc = await db.query[slug].findFirst({
@@ -64,7 +65,7 @@ const createCollectionFacade = <const C extends Config>(args: {
       // Implementation for versioned collections
       const versionsTable = withVersionsSuffix(slug);
       const withParam = buildWithParam({ slug: versionsTable, select, locale, tables, config });
-      const rootSelectColumns = adapterUtil.columnsParams({ table: tables[slug], select });
+      const rootSelectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
       const versionSelectColumns = adapterUtil.columnsParams({
         table: tables[versionsTable],
         select
@@ -111,7 +112,7 @@ const createCollectionFacade = <const C extends Config>(args: {
    * removes the root document and all its versions.
    */
   const deleteById: DeleteById = async ({ slug, id }) => {
-    const docs = await db.delete(tables[slug]).where(eq(tables[slug].id, id)).returning();
+    const docs = await db.delete(tables[baseTableName(slug)]).where(eq(tables[baseTableName(slug)].id, id)).returning();
     if (!docs || !Array.isArray(docs) || !docs.length) {
       throw new RimeError(RimeError.NOT_FOUND);
     }
@@ -392,7 +393,7 @@ const createCollectionFacade = <const C extends Config>(args: {
 
       // Remove undefined properties
       Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);
-      const selectColumns = adapterUtil.columnsParams({ table: tables[slug], select });
+      const selectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
 
       //@ts-expect-error slug is a table for sure
       return await db.query[slug].findMany({
@@ -450,7 +451,7 @@ const createCollectionFacade = <const C extends Config>(args: {
         select
       });
       // Handle select columns for root table
-      const rootSelectColumns = adapterUtil.columnsParams({ table: tables[slug], select });
+      const rootSelectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
 
       //@ts-expect-error slug is a table for sure
       const rawDocs = await db.query[slug].findMany({

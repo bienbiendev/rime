@@ -15,6 +15,7 @@ import { transformerFacade } from './transform.server.js';
 import createTreeFacade from './tree.server.js';
 import type { GenericTable } from './types.server.js';
 import { updateDocumentUrl } from './url.server.js';
+import { baseTableName } from './naming.server.js';
 import { updateTableRecord } from './util.server.js';
 
 type Schema = GetRegisterType<'Schema'>;
@@ -85,6 +86,20 @@ const createAdapter = async <const C extends Config>(args: {
       return tables[key as keyof typeof tables] as T extends any ? GenericTable : T;
     },
 
+    /**
+     * The table holding a *prototype's* rows, by slug.
+     *
+     * Distinct from getTable, which takes a table name already computed. Core code has no
+     * business knowing table names, so this is what it calls — it used to reach into
+     * `adapter.tables[slug]` directly, which only worked because a slug and a table name are
+     * currently the same string.
+     */
+    tableForSlug<T>(slug: string) {
+      return tables[baseTableName(slug) as keyof typeof tables] as T extends any
+        ? GenericTable
+        : T;
+    },
+
     async updateRecord(id: string, tableName: string, data: Dic) {
       return await updateTableRecord(db, tables, tableName, { recordId: id, data });
     },
@@ -121,6 +136,7 @@ export type Adapter = {
   db: LibSQLDatabase<Schema>;
   tables: GetRegisterType<'Tables'>;
   getTable<T>(key: string): T extends any ? GenericTable : T;
+  tableForSlug<T>(slug: string): T extends any ? GenericTable : T;
   updateRecord(
     id: string,
     tableName: string,

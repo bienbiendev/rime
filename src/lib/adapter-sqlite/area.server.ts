@@ -17,6 +17,7 @@ import { eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as adapterUtil from './util.server.js';
 import { buildWithParam } from './with.server.js';
+import { baseTableName } from './naming.server.js';
 
 /**
  * Creates an area facade for SQLite adapter operations with CRUD functionality.
@@ -49,7 +50,7 @@ const createAreaFacade = <const C extends Config>(args: {
 
     if (!hasVersions) {
       const params = {
-        columns: adapterUtil.columnsParams({ table: tables[slug], select }),
+        columns: adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select }),
         with: buildWithParam({ slug, select, locale, tables, config: areaConfig }) || undefined
       };
 
@@ -88,7 +89,7 @@ const createAreaFacade = <const C extends Config>(args: {
         select
       });
       // Handle select columns for root table
-      const rootSelectColumns = adapterUtil.columnsParams({ table: tables[slug], select });
+      const rootSelectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
 
       // Configure the query based on whether we want a specific version or the latest
       // For the "save in a new draft" action we need to get the published version
@@ -266,7 +267,7 @@ const createAreaFacade = <const C extends Config>(args: {
     const now = new Date();
     const areaConfig = configCtx.areas[slug];
 
-    const rows = await db.select({ id: tables[slug].id }).from(tables[slug]);
+    const rows = await db.select({ id: tables[baseTableName(slug)].id }).from(tables[baseTableName(slug)]);
     const area = rows[0];
 
     // Simple update for non-versioned areas
@@ -305,11 +306,11 @@ const createAreaFacade = <const C extends Config>(args: {
       }
       // First, update the root table's updatedAt
       await db
-        .update(tables[slug])
+        .update(tables[baseTableName(slug)])
         .set({
           updatedAt: now
         })
-        .where(eq(tables[slug].id, area.id));
+        .where(eq(tables[baseTableName(slug)].id, area.id));
 
       const versionsTable = withVersionsSuffix(slug);
       const versionsLocalesTable = withLocalesSuffix(versionsTable);
@@ -345,11 +346,11 @@ const createAreaFacade = <const C extends Config>(args: {
       // Scenario 2: version creation, update only main table
       // the creation is handled by the caller update operation
       await db
-        .update(tables[slug])
+        .update(tables[baseTableName(slug)])
         .set({
           updatedAt: now
         })
-        .where(eq(tables[slug].id, area.id));
+        .where(eq(tables[baseTableName(slug)].id, area.id));
 
       return { id: area.id };
     } else {

@@ -7,6 +7,7 @@ import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import { and, eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { GenericTables } from './types.server.js';
+import { baseTableName } from './naming.server.js';
 
 type Params = {
   id: string;
@@ -32,7 +33,7 @@ export async function updateDocumentUrl(url: string, params: Params) {
 
   switch (operationType) {
     case OPERATION.ROOT: {
-      const table = tables[config.slug];
+      const table = tables[baseTableName(config.slug)];
       operation = db.update(table).set({ url }).where(eq(table.id, id));
       break;
     }
