@@ -6,6 +6,7 @@ import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type { CollectionSlug, GenericDoc, RawDoc } from '$lib/core/prototype/types.js';
 import type { OperationQuery } from '$lib/core/operations/types.js';
+import { normalizeQuery } from '$lib/core/operations/query.js';
 import type { GetRegisterType } from '$lib/index.js';
 import { trycatchSync } from '$lib/util/function.js';
 import type { DeepPartial, Dic } from '$lib/util/types.js';
@@ -233,7 +234,7 @@ const createCollectionFacade = <const C extends Config>(args: {
     const config = configCtx.collections[slug];
     const isVersioned = !!config.versions;
 
-    let query = incomingQuery ? adapterUtil.normalizeQuery(incomingQuery) : undefined;
+    let query = incomingQuery ? normalizeQuery(incomingQuery) : undefined;
 
     if (!isVersioned) {
       // Original implementation for non-versioned collections

@@ -1,4 +1,4 @@
-import type { BeforeOperationRelation } from '$lib/adapter-sqlite/relations.server.js';
+import type { BeforeOperationRelation } from '$lib/fields/relation/index.js';
 import { pathToRegex } from '$lib/core/fields/util.js';
 import type { Relation } from '$lib/fields/relation/index.js';
 

@@ -1,13 +1,11 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { RawDoc } from '$lib/core/prototype/types.js';
-import type { OperationQuery, ParsedOperationQuery } from '$lib/core/operations/types.js';
-import { isObjectLiteral, omit, pick } from '$lib/util/object.js';
+import { omit, pick } from '$lib/util/object.js';
 import { randomId } from '$lib/util/random.js';
 import type { Dic } from '$lib/util/types.js';
 import { and, desc, eq, getTableColumns, Table } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
-import qs from 'qs';
 
 /**
  * Main function to generated primaryKeys
@@ -234,36 +232,6 @@ export function buildPublishedOrLatestVersionParams(args: {
       };
 }
 
-/**
- * Convert and validate on incoming query to a complient query
- * for the buildWhereParam wich require an object with a root prop where.
- *
- * @example
- * // returns
- * { where: queryObject }
- */
-export function normalizeQuery(incomingQuery: OperationQuery): ParsedOperationQuery {
-  let query;
-  if (typeof incomingQuery === 'string') {
-    try {
-      query = qs.parse(incomingQuery);
-    } catch (err: any) {
-      throw new RimeError(
-        RimeError.INVALID_DATA,
-        'Unable to parse given string query ' + err.message
-      );
-    }
-  } else {
-    if (!isObjectLiteral(incomingQuery)) {
-      throw new RimeError(RimeError.INVALID_DATA, 'Query is not an object');
-    }
-    query = incomingQuery;
-  }
-  if (!query.where) {
-    throw new RimeError(RimeError.INVALID_DATA, 'Query must have a root where property');
-  }
-  return query as ParsedOperationQuery;
-}
 
 export function columnsParams({ table, select }: { table: Dic; select?: string[] }) {
   // Create an object to hold the columns we want to select

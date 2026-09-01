@@ -1,14 +1,23 @@
 import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
-import { childTableNames, tableName as buildTableName, type TableName } from './naming.server.js';
-import type { GenericBlock } from '$lib/core/prototype/types.js';
+import { baseTableName, tableName as buildTableName } from './naming.server.js';
+import type { GenericBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
 import type { WithOptional } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
 import { omit } from '../util/object.js';
 import { generatePK, transformDataToSchema } from './util.server.js';
 
 const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
-  const buildBlockTableName = (slug: TableName, blockName: string) =>
-    buildTableName({ owner: slug, child: { kind: 'blocks', name: blockName } });
+  /**
+   * Callers name the owner by slug — `pages`, or `$pages__versions` when versioned — and the
+   * mapping to a table happens here. Core used to compute the table name itself and pass it in
+   * a parameter still called `parentSlug`, which is how a table name and a slug came to be the
+   * same variable.
+   */
+  const buildBlockTableName = (parentSlug: PrototypeSlug, blockName: string) =>
+    buildTableName({
+      owner: baseTableName(parentSlug),
+      child: { kind: 'blocks', name: blockName }
+    });
 
   const update: UpdateBlock = async ({ parentSlug, block, locale }) => {
     const table = buildBlockTableName(parentSlug, block.type);
@@ -96,11 +105,7 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
     return true;
   };
 
-  const getBlocksTableNames = (slug: TableName): TableName[] =>
-    childTableNames(slug, 'blocks', tables);
-
   return {
-    getBlocksTableNames,
     delete: deleteBlock,
     create,
     update
@@ -114,16 +119,16 @@ export default createBlocksFacade;
 /****************************************************/
 
 type UpdateBlock = (args: {
-  parentSlug: TableName;
+  parentSlug: PrototypeSlug;
   block: GenericBlock;
   locale?: string;
 }) => Promise<boolean>;
 
 type CreateBlock = (args: {
-  parentSlug: TableName;
+  parentSlug: PrototypeSlug;
   block: WithOptional<GenericBlock, 'id'>;
   ownerId: string;
   locale?: string;
 }) => Promise<boolean>;
 
-type DeleteBlock = (args: { parentSlug: TableName; block: GenericBlock }) => Promise<boolean>;
+type DeleteBlock = (args: { parentSlug: PrototypeSlug; block: GenericBlock }) => Promise<boolean>;

@@ -1,6 +1,6 @@
-import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
+import type { Adapter } from '$lib/core/adapter/types.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
-import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
+import { contentOwnerSlug } from '$lib/core/features/versions/naming.js';
 import type { GenericBlock } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { ConfigMap } from '../../config-map/types.js';
@@ -28,14 +28,12 @@ export const saveRelations = async (args: {
   const { configMap, incomingPaths, blocksDiff, treeDiff, adapter, locale, config, ownerId, data } =
     args;
 
-  // Core stays in slug space; only the adapter knows how a slug maps to a table.
-  const parentTable = adapter.tableNameForSlug(
-    config.versions ? withVersionsSuffix(config.slug) : config.slug
-  );
+  // Whose children these are: the versions shadow when versioned, the base otherwise.
+  const parentSlug = contentOwnerSlug(config);
 
   /** Delete relations from deletedBlocks */
   await adapter.relations.deleteFromPaths({
-    parentSlug: parentTable,
+    parentSlug,
     ownerId,
     paths: blocksDiff.toDelete.map((block) => `${block.path}.${block.position}`),
     locale
@@ -43,7 +41,7 @@ export const saveRelations = async (args: {
 
   /** Delete relations from deletedTreeItems */
   await adapter.relations.deleteFromPaths({
-    parentSlug: parentTable,
+    parentSlug,
     ownerId,
     paths: treeDiff.toDelete.map((block) => `${block.path}.${block.position}`),
     locale
@@ -61,7 +59,7 @@ export const saveRelations = async (args: {
   // if not present in incoming paths don't keep it.
   const existingRelations = await adapter.relations
     .getAll({
-      parentSlug: parentTable,
+      parentSlug,
       ownerId,
       locale: locale
     })
@@ -81,21 +79,21 @@ export const saveRelations = async (args: {
 
   if (relationsDiff.toDelete.length) {
     await adapter.relations.delete({
-      parentSlug: parentTable,
+      parentSlug,
       relations: relationsDiff.toDelete
     });
   }
 
   if (relationsDiff.toUpdate.length) {
     await adapter.relations.update({
-      parentSlug: parentTable,
+      parentSlug,
       relations: relationsDiff.toUpdate
     });
   }
 
   if (relationsDiff.toAdd.length) {
     await adapter.relations.create({
-      parentSlug: parentTable,
+      parentSlug,
       ownerId,
       relations: relationsDiff.toAdd
     });

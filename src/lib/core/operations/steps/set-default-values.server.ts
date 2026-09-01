@@ -1,5 +1,5 @@
 import { getRequestEvent } from '$app/server';
-import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
+import type { Adapter } from '$lib/core/adapter/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { logger } from '$lib/core/logger.server.js';

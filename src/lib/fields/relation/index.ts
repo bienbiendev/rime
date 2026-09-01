@@ -170,4 +170,13 @@ export type Relation = {
   livePreview?: GenericDoc;
 };
 
+/**
+ * A relation before it is written, when the row it hangs off does not exist yet.
+ *
+ * The only difference from `Relation` is that `ownerId` is not known — a create resolves it
+ * after inserting the owner. Declared in the sqlite adapter until now, which meant core's
+ * relation diffing imported a type from an adapter to describe its own intermediate value.
+ */
+export type BeforeOperationRelation = Omit<Relation, 'ownerId'> & { ownerId?: string };
+
 type QueryResolver<Doc extends GenericDoc = GenericDoc> = (doc: WithOptional<Doc, 'id'>) => string;

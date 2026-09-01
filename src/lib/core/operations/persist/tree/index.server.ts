@@ -1,6 +1,6 @@
-import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
+import type { Adapter } from '$lib/core/adapter/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
+import { contentOwnerSlug } from '$lib/core/features/versions/naming.js';
 import type { TreeBlock } from '$lib/core/prototype/types.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic, WithRequired } from '$lib/util/types.js';
@@ -22,10 +22,8 @@ export const saveTreeBlocks = async (args: {
 
   if (!configMap || !ownerId) throw new RimeError(RimeError.OPERATION_ERROR, '@saveBlocks');
 
-  // Core stays in slug space; only the adapter knows how a slug maps to a table.
-  const parentTable = adapter.tableNameForSlug(
-    config.versions ? withVersionsSuffix(config.slug) : config.slug
-  );
+  // Whose children these are: the versions shadow when versioned, the base otherwise.
+  const parentSlug = contentOwnerSlug(config);
 
   // Get incomings
   const incomingTreeBlocks = extractTreeBlocks({
@@ -57,7 +55,7 @@ export const saveTreeBlocks = async (args: {
 
   if (treeDiff.toDelete.length) {
     await Promise.all(
-      treeDiff.toDelete.map((block) => adapter.tree.delete({ parentSlug: parentTable, block }))
+      treeDiff.toDelete.map((block) => adapter.tree.delete({ parentSlug, block }))
     );
   }
 
@@ -65,7 +63,7 @@ export const saveTreeBlocks = async (args: {
     await Promise.all(
       treeDiff.toAdd.map((block) =>
         adapter.tree.create({
-          parentSlug: parentTable,
+          parentSlug,
           ownerId,
           block,
           locale: locale
@@ -77,7 +75,7 @@ export const saveTreeBlocks = async (args: {
   if (treeDiff.toUpdate.length) {
     await Promise.all(
       treeDiff.toUpdate.map((block) =>
-        adapter.tree.update({ parentSlug: parentTable, block, locale: locale })
+        adapter.tree.update({ parentSlug, block, locale: locale })
       )
     );
   }

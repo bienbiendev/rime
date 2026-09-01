@@ -1,4 +1,3 @@
-// import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
 import type { Config } from '$lib/core/factory/config/types.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
 import type { RequestEvent } from '@sveltejs/kit';

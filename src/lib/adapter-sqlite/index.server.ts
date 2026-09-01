@@ -1,3 +1,4 @@
+import type { Adapter, UpdateDocumentUrlParams } from '$lib/core/adapter/types.js';
 import type { Config } from '$lib/core/factory/config/types.js';
 import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type { GetRegisterType } from '$lib/index.js';
@@ -15,14 +16,14 @@ import { transformerFacade } from './transform.server.js';
 import createTreeFacade from './tree.server.js';
 import type { GenericTable } from './types.server.js';
 import { updateDocumentUrl } from './url.server.js';
-import { baseTableName, type TableName } from './naming.server.js';
+import { baseTableName } from './naming.server.js';
 import { updateTableRecord } from './util.server.js';
 
 type Schema = GetRegisterType<'Schema'>;
 type Tables = GetRegisterType<'Tables'>;
 
 export function adapterSqlite(database: string): {
-  createAdapter: <C extends Config>(configCtx: ConfigContext<C>) => Promise<Adapter>;
+  createAdapter: <C extends Config>(configCtx: ConfigContext<C>) => Promise<SqliteAdapter>;
   generateSchema: typeof generateSchema;
 } {
   //
@@ -36,7 +37,7 @@ export function adapterSqlite(database: string): {
 const createAdapter = async <const C extends Config>(args: {
   database: string;
   configCtx: ConfigContext<C>;
-}) => {
+}): Promise<SqliteAdapter> => {
   const { database, configCtx } = args;
 
   const schema = (await import('$rime/schema')) as {
@@ -89,20 +90,9 @@ const createAdapter = async <const C extends Config>(args: {
     /**
      * The table holding a *prototype's* rows, by slug.
      *
-     * Distinct from getTable, which takes a table name already computed. Core code has no
-     * business knowing table names, so this is what it calls — it used to reach into
-     * `adapter.tables[slug]` directly, which only worked because a slug and a table name are
-     * currently the same string.
+     * Part of the escape hatch, not of the Adapter contract: core asks for documents by slug
+     * and never for the table they sit in.
      */
-    /**
-     * The *name* of a prototype's table, for the places that key db.query by it, or hand it
-     * back to a facade. Returns a branded TableName so core can hold one opaquely without
-     * being able to confuse it with the slug it came from.
-     */
-    tableNameForSlug(slug: string): TableName {
-      return baseTableName(slug);
-    },
-
     tableForSlug<T>(slug: string) {
       return tables[baseTableName(slug) as keyof typeof tables] as T extends any
         ? GenericTable
@@ -113,10 +103,7 @@ const createAdapter = async <const C extends Config>(args: {
       return await updateTableRecord(db, tables, tableName, { recordId: id, data });
     },
 
-    async updateDocumentUrl(
-      url: string,
-      params: Omit<Parameters<typeof updateDocumentUrl>[1], 'db' | 'tables'>
-    ) {
+    async updateDocumentUrl(url: string, params: UpdateDocumentUrlParams) {
       return await updateDocumentUrl(url, {
         ...params,
         db,
@@ -134,28 +121,22 @@ const createAdapter = async <const C extends Config>(args: {
   };
 };
 
-export type Adapter = {
-  collection: ReturnType<typeof createCollectionFacade>;
-  area: ReturnType<typeof createAreaFacade>;
-  blocks: ReturnType<typeof createBlocksFacade>;
-  tree: ReturnType<typeof createTreeFacade>;
-  relations: ReturnType<typeof createRelationsFacade>;
-  transform: ReturnType<typeof transformerFacade>;
-  auth: ReturnType<typeof createAuthFacade>;
+/**
+ * Everything this adapter offers: the `Adapter` contract core programs against, plus the
+ * SQL-specific escape hatch it exposes on top.
+ *
+ * The split is the point. `Adapter` lives in core and is written in core's vocabulary; the
+ * members below are things only a SQL adapter can honour, and no core code may use them —
+ * `rime.adapter.db` is documented for *consumers* who need to drop to drizzle.
+ *
+ * `createAdapter`'s return type is checked against `Adapter` where it is declared, so a facade
+ * that drifts from the contract is a build error rather than a runtime surprise.
+ */
+export type SqliteAdapter = Adapter & {
   db: LibSQLDatabase<Schema>;
   tables: GetRegisterType<'Tables'>;
   getTable<T>(key: string): T extends any ? GenericTable : T;
   tableForSlug<T>(slug: string): T extends any ? GenericTable : T;
-  tableNameForSlug(slug: string): TableName;
-  updateRecord(
-    id: string,
-    tableName: string,
-    data: Dic
-  ): Awaited<ReturnType<typeof updateTableRecord>>;
-  updateDocumentUrl: (
-    url: string,
-    params: Omit<Parameters<typeof updateDocumentUrl>[1], 'db' | 'tables'>
-  ) => Promise<void>;
   readonly schema: Schema;
   readonly relationFieldsMap: RelationFieldsMap;
 };

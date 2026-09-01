@@ -27,3 +27,15 @@ export const withoutVersionsSuffix = (name: string) =>
 
 /** `$pages__versions` -> true */
 export const hasVersionsSuffix = (slug: string) => slug.endsWith(MARKER);
+
+/**
+ * The slug that owns a prototype's content — its shadow when versioned, itself when not.
+ *
+ * `owner = shadow ?? base`, the load-bearing line in docs/decoupling-adapter.md: enabling
+ * versions moves a whole subtree of children (blocks, tree, relations) onto the shadow. Every
+ * caller that writes children needs it, and each was spelling the ternary out and then asking
+ * the adapter to turn it into a table name — which put table names in core's hands. Core stays
+ * in slug space; the adapter maps.
+ */
+export const contentOwnerSlug = (config: { slug: string; versions?: unknown }) =>
+  (config.versions ? withVersionsSuffix(config.slug) : config.slug) as CollectionSlug;
