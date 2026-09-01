@@ -11,6 +11,7 @@ import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { SelectFieldBuilder } from '$lib/fields/select/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
+import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import { isCamelCase } from '$lib/util/string.js';
 
 function hasDuplicates(arr: string[]): string[] {
@@ -259,10 +260,37 @@ function validateAuthCollections<T extends Config>(config: T) {
   return errors;
 }
 
+/**
+ * Every prototype's `kebab` must actually be kebab.
+ *
+ * It is what the generated param matchers and every REST/panel URL are built from, so a slug
+ * leaking into it produces routes like `/api/$mediasDirectories` — and a 404, since the matcher
+ * and the link disagree with the config. That happened twice while the naming convention was
+ * being switched: both features that derive a prototype built its kebab from a *slug* helper
+ * instead of prototypeKebab. Neither is a type error, and neither shows up until a request is
+ * made, so it is checked here where codegen already runs.
+ */
+function validateKebabs(config: Config) {
+  const errors: string[] = [];
+  const prototypes = [...(config.collections || []), ...(config.areas || [])];
+
+  for (const prototype of prototypes) {
+    const expected = prototypeKebab(prototype.slug);
+    if (prototype.kebab !== expected) {
+      errors.push(
+        `Prototype ${prototype.slug} has kebab "${prototype.kebab}", expected "${expected}" — build it with prototypeKebab().`
+      );
+    }
+  }
+
+  return errors;
+}
+
 function validate(config: Config): boolean {
   const validateFunctions = [
     hasDuplicateSlug,
     validateSlugs,
+    validateKebabs,
     hasUsersSlug,
     validateFields,
     hasDatabase,
