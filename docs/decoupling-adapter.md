@@ -52,6 +52,25 @@ A child can only has base or shadow as parent.
 The `locales` branch may not be an external feature, it could be built with the adapter.
 The naming `branch` means : the owner may be split into two tables : {child} {child}__$${branch}
 
+# Naming
+
+Rules:
+
+- user must define their collection and area with camelCase slugs.
+- derived collections from feature get a $ preffix on slug
+
+|           | **process**           | **gives**.            |
+| --------- | --------------------- | --------------------- |
+| **slug**  | _                     | `$someSlug__versions` |
+| **urls**  | `kebab(slug minus $)` | `some-slug--versions` |
+| **table** | `snake(slug minus $)` | `some_slug__versions` |
+
+| **slug**              | **url**               | **table**.            |
+| --------------------- | --------------------- | --------------------- |
+| `camelCase`           | `camel-case`          | `camel_case`          |
+| `$mediasDirectories`  | `medias-directories`  | `media_directories`   |
+| `$someSlug__versions` | `some-slug--versions` | `some_slug__versions` |
+
 ## Adapter facade
 
 With this convetion the adapter doesn't need to provide collection, blocks, relation, area,... facades
@@ -92,6 +111,32 @@ Currently the are complety merge into the adapter logic.
 - Provide a way to persistence to detect tinted data ? Currently it is something like if tables includes hard written pattern `{owner}Block{pascal(name)}`
 
 `__{feature}` `__${feature}` `__$${feature}` maybe used to detect features on a current base table.
+
+Idea on a FieldBuilders that need a child table :
+
+```ts
+export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends FormFieldBuilder<
+  RelationField<Doc>
+> {
+  //...
+
+  // Current :
+  // get dataType(): DataType {
+  //   return 'json'; // This weird actually cause it doesn't store a value on owner.
+  // }
+
+  get dataType(): DataType {
+    return 'child'; // <- may gives the adapter and idea on what to do with a field
+    // ex in @src/lib/adapter-sqlite/generate-schema/root.server.ts#102-162
+    // than for field in fields —> if field.dataType === 'child' —> relations / blocks / tree
+    // a child get it's field behave the same as a base table but inside the child table, with a potential __$$branch
+  }
+
+  protected override generateType(): string {
+    return `${this.name}${this.get.required ? '' : '?'}: RelationValue<${capitalize(this.get.relationTo)}Doc>`;
+  }
+}
+```
 
 ## Media directories
 
