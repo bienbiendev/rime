@@ -54,7 +54,10 @@ The naming `branch` means : the owner may be split into two tables : {child} {ch
 
 # Naming
 
-Rule: user must define their collection and area with camelCase slugs.
+Rules:
+
+- user must define their collection and area with camelCase slugs.
+- derived collections from feature get a $ preffix on slug
 
 |           | **process**           | **gives**.            |
 | --------- | --------------------- | --------------------- |
