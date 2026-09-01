@@ -11,13 +11,9 @@ import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { logger } from '$lib/core/logger.server.js';
-import { BlocksBuilder } from '$lib/fields/blocks/index.js';
-import { GroupFieldBuilder } from '$lib/fields/group/index.js';
-import { TabsBuilder } from '$lib/fields/tabs/index.js';
-import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field } from '$lib/fields/types.js';
 import { trycatchSync } from '$lib/util/function.js';
-import { capitalize, toPascalCase } from '$lib/util/string.js';
+import { capitalize } from '$lib/util/string.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -42,7 +38,7 @@ export type RelationValue<T> =
  * makeDocTypeName('pages')
  * // return PagesDoc
  */
-const makeDocTypeName = (slug: string): string => `${capitalize(slug)}Doc`;
+const makeDocTypeName = (slug: string): string => `${capitalize(slug.replace('$', ''))}Doc`;
 
 /**
  * Generate the document's type definition
@@ -52,42 +48,6 @@ const templateDocType = (slug: string, content: string, upload?: boolean): strin
 export type ${makeDocTypeName(slug)} = BaseDoc & ${upload ? 'UploadDoc & ' : ''} {
   ${content};
 	[x: string]: unknown;
-}`;
-
-/**
- * Generates a type for a block with the given slug and content
- * @example
- * makeBlockType('hero', 'title: string')
- * // returns
- * export type BlockHero {
- *   id: string,
- *   type: 'hero',
- *   title: string
- * }
- */
-const makeBlockType = (slug: string, content: string): string => `
-export type Block${toPascalCase(slug)} = {
-  id: string
-  type: '${slug}'
-  ${content}
-}`;
-
-/**
- * Generates a type for a treeBlock with the given slug and content
- * @example
- * makeTreeBlockType('TreeNav', 'title: string')
- * // returns
- * export type TreeNav {
- *   id: string,
- *   title: string
- *   _children: TreeNav[]
- * }
- */
-const makeTreeBlockType = (name: string, content: string): string => `
-export type ${name} = {
-  id: string;
-  ${content};
-	_children: ${name}[]
 }`;
 
 /**
@@ -174,10 +134,9 @@ export async function generateTypesString<T extends Config>(config: T) {
   logger.info('Types generation...');
   const collections = (config.collections || []).filter((c) => c._generateTypes !== false);
   const areas = (config.areas || []).filter((c) => c._generateTypes !== false);
-  const blocksTypes: string[] = [];
-  const treeBlocksTypes: string[] = [];
-  const registeredBlocks: string[] = [];
-  const registeredTreeBlocks: string[] = [];
+
+  // const registeredBlocks: string[] = [];
+  // const registeredTreeBlocks: string[] = [];
   let imports = new Set<string>(['BaseDoc', 'Navigation', 'RouteHandlers', 'User']);
 
   const addImport = (string: string) => {
@@ -192,61 +151,6 @@ export async function generateTypesString<T extends Config>(config: T) {
     return fields.map((field) => field.use.generateType()).filter(Boolean);
   };
 
-  const buildblocksTypes = async (fields: FieldBuilder<Field>[]) => {
-    for (const field of fields) {
-      if (field instanceof BlocksBuilder) {
-        {
-          for (const block of field.get.blocks) {
-            if (!registeredBlocks.includes(block.name)) {
-              const templates = await buildFieldsTypes(
-                block.get.fields
-                  .filter((field) => field instanceof FormFieldBuilder)
-                  .filter((field) => field.name !== 'type')
-              );
-              blocksTypes.push(makeBlockType(block.name, templates.join('\n\t')));
-              registeredBlocks.push(block.name);
-              buildblocksTypes(block.get.fields);
-            }
-          }
-        }
-      } else if (field instanceof TabsBuilder) {
-        for (const tab of field.get.tabs) {
-          await buildblocksTypes(tab.get.fields);
-        }
-      } else if (field instanceof GroupFieldBuilder) {
-        await buildblocksTypes(field.get.fields);
-      } else if (field instanceof TreeBuilder) {
-        await buildblocksTypes(field.get.fields);
-      }
-    }
-  };
-
-  const buildTreeBlockTypes = async (fields: FieldBuilder<Field>[]) => {
-    for (const field of fields) {
-      if (field instanceof BlocksBuilder) {
-        for (const block of field.get.blocks) {
-          await buildTreeBlockTypes(block.get.fields);
-        }
-      } else if (field instanceof TabsBuilder) {
-        for (const tab of field.get.tabs) {
-          await buildTreeBlockTypes(tab.get.fields);
-        }
-      } else if (field instanceof GroupFieldBuilder) {
-        await buildTreeBlockTypes(field.get.fields);
-      } else if (field instanceof TreeBuilder) {
-        const treeBlockTypeName = `Tree${toPascalCase(field.name)}`;
-        if (!registeredTreeBlocks.includes(treeBlockTypeName)) {
-          const treeFieldsTypes = await buildFieldsTypes(
-            field.get.fields.filter((field) => field instanceof FormFieldBuilder)
-          );
-          const treeBlockType = makeTreeBlockType(treeBlockTypeName, treeFieldsTypes.join('\n'));
-          treeBlocksTypes.push(treeBlockType);
-          registeredTreeBlocks.push(treeBlockTypeName);
-        }
-      }
-    }
-  };
-
   const processCollection = async (collection: BuiltCollection) => {
     let fields = collection.fields;
     if (isUploadConfig(collection) && collection.upload.imageSizes?.length) {
@@ -259,8 +163,7 @@ export async function generateTypesString<T extends Config>(config: T) {
       fieldsTypesList.push('versionId: string');
     }
     let fieldsContent = fieldsTypesList.join('\n\t');
-    await buildTreeBlockTypes(fields);
-    await buildblocksTypes(fields);
+
     if (isUploadConfig(collection)) {
       addImport('UploadDoc');
       if (collection.upload.imageSizes?.length) {
@@ -275,16 +178,11 @@ export async function generateTypesString<T extends Config>(config: T) {
     if (area.versions) {
       fieldsTypesList.push('versionId: string');
     }
-    await buildTreeBlockTypes(area.fields);
-    await buildblocksTypes(area.fields);
     return templateDocType(area.slug, fieldsTypesList.join('\n\t'));
   };
 
   const collectionsTypes = (await Promise.all(collections.map(processCollection))).join('\n');
   const areasTypes = (await Promise.all(areas.map(processArea))).join('\n');
-  const hasBlocks = !!registeredBlocks.length;
-  const blocksTypeNames = `export type BlockTypes = ${registeredBlocks.map((name) => `'${name}'`).join('|')}\n`;
-  const anyBlock = `export type AnyBlock = ${registeredBlocks.map((name) => `Block${toPascalCase(name)}`).join('|')}\n`;
   const typeImports = `import type { ${Array.from(imports).join(', ')} } from '${PACKAGE_NAME}/types'`;
   // app.generated.d.ts always sits at src/app.generated.d.ts (see generateTypes() below).
   const rimeConfigServerPath = relativeImportSpecifier(
@@ -347,6 +245,34 @@ export async function generateTypesString<T extends Config>(config: T) {
   }
 }`;
 
+  function parseHeaders(content: string): {
+    content: string;
+    headers: string;
+  } {
+    const regex =
+      /\/\*\*\s*@dedupe-start\s+([^\r\n*]*?)\s*\*\*([\s\S]*?)\*\*\s*@dedupe-end\s*\*\//g;
+
+    const seen = new Set<string>();
+    const headers: string[] = [];
+
+    const remainingContent = content.replace(regex, (_match, group1: string, group2: string) => {
+      const key = group1.replace(/\s+/g, '');
+      const value = group2.trim();
+
+      if (!seen.has(key)) {
+        seen.add(key);
+        headers.push(value);
+      }
+
+      return '';
+    });
+
+    return {
+      content: remainingContent,
+      headers: headers.join('\n\n')
+    };
+  }
+
   const content = [
     ...(IS_RIME_REPO ? ['// eslint-disable-next-line no-restricted-imports'] : []),
     `import '${PACKAGE_NAME}';`,
@@ -358,16 +284,13 @@ export async function generateTypesString<T extends Config>(config: T) {
     `declare global {`,
     collectionsTypes,
     areasTypes,
-    treeBlocksTypes.join('\n'),
-    blocksTypes.join('\n'),
-    hasBlocks ? blocksTypeNames : '',
-    hasBlocks ? anyBlock : '',
     `}`,
     locals,
     templateRegister(config)
   ].join('\n');
 
-  return content;
+  const { headers, content: stripedContent } = parseHeaders(content);
+  return [stripedContent, headers].join('\n');
 }
 
 /**

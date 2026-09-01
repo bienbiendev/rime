@@ -1,10 +1,11 @@
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { Field, FormField } from '$lib/fields/types.js';
 import type { WithoutBuilders } from '$lib/core/fields/types.js';
-import type { Dic } from '$lib/util/types.js';
+import type { Field, FormField } from '$lib/fields/types.js';
 import { toPascalCase } from '$lib/util/string.js';
+import type { Dic } from '$lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';
+import dedent from 'dedent';
 import type { Component } from 'svelte';
 import { number } from '../number/index.js';
 import { text } from '../text/index.js';
@@ -85,8 +86,26 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
   }
 
   protected override generateType(): string {
-    const blockNames = this.field.blocks.map((block) => `Block${toPascalCase(block.name)}`);
-    return `${this.name}: Array<${blockNames.join(' | ')}>,`;
+    const blockNames: string[] = [];
+
+    const blocksTypes = this.field.blocks
+      .map((block) => {
+        const blockTypeName = `Block${toPascalCase(block.name)}`;
+        blockNames.push(blockTypeName);
+        const fieldsType = block.get.fields.map((f) => f.use.generateType()).join(',');
+
+        return dedent`
+      /** @dedupe-start ${blockTypeName} **
+      export type ${blockTypeName} = {
+        id: string
+        type: '${block.name}'
+        ${fieldsType}
+      }
+      ** @dedupe-end */`;
+      })
+      .join('\n');
+
+    return `${blocksTypes}\n\n${this.name}: Array<${blockNames.join(' | ')}>,`;
   }
 }
 
