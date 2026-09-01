@@ -69,7 +69,7 @@ export async function updateDocumentUrl(url: string, params: Params) {
 
     case OPERATION.VERSION_LOCALE: {
       const tableVersionsLocales =
-        tables[tableName({ owner: withVersionsSuffix(config.slug), branch: 'locales' }) as keyof typeof tables];
+        tables[tableName({ owner: baseTableName(withVersionsSuffix(config.slug)), branch: 'locales' }) as keyof typeof tables];
       operation = db
         .update(tableVersionsLocales)
         .set({ url })

@@ -22,9 +22,10 @@ export const saveTreeBlocks = async (args: {
 
   if (!configMap || !ownerId) throw new RimeError(RimeError.OPERATION_ERROR, '@saveBlocks');
 
-  const parentTable = config.versions
-    ? withVersionsSuffix(config.slug)
-    : (config.slug as string);
+  // Core stays in slug space; only the adapter knows how a slug maps to a table.
+  const parentTable = adapter.tableNameForSlug(
+    config.versions ? withVersionsSuffix(config.slug) : config.slug
+  );
 
   // Get incomings
   const incomingTreeBlocks = extractTreeBlocks({

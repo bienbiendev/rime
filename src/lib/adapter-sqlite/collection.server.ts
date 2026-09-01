@@ -45,7 +45,7 @@ const createCollectionFacade = <const C extends Config>(args: {
 
     if (!isVersioned) {
       // Original implementation for non-versioned collections
-      const withParam = buildWithParam({ slug, select, locale, tables, config });
+      const withParam = buildWithParam({ table: baseTableName(slug), select, locale, tables, config });
       const selectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
 
       //@ts-expect-error slug is a table for sure
@@ -63,7 +63,7 @@ const createCollectionFacade = <const C extends Config>(args: {
     } else {
       // Implementation for versioned collections
       const versionsTable = baseTableName(withVersionsSuffix(slug));
-      const withParam = buildWithParam({ slug: versionsTable, select, locale, tables, config });
+      const withParam = buildWithParam({ table: versionsTable, select, locale, tables, config });
       const rootSelectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
       const versionSelectColumns = adapterUtil.columnsParams({
         table: tables[versionsTable],
@@ -379,7 +379,7 @@ const createCollectionFacade = <const C extends Config>(args: {
     if (!isVersioned) {
       // Original implementation for non-versioned collections
       const params: Dic = {
-        with: buildWithParam({ slug, select, tables, config, locale }) || undefined,
+        with: buildWithParam({ table: baseTableName(slug), select, tables, config, locale }) || undefined,
         orderBy: buildOrderByParam({ slug, locale, tables, config, by: sort }),
         // Set a sufficient limit when offset is set but not limit as sqlite requires limit if offset present
         limit: limit || (typeof offset === 'number' ? 1000000 : undefined),
@@ -407,7 +407,7 @@ const createCollectionFacade = <const C extends Config>(args: {
       const versionsSlug = withVersionsSuffix(slug);
       const versionsTable = baseTableName(versionsSlug);
       const withParam =
-        buildWithParam({ slug: versionsTable, select, tables, config, locale }) || undefined;
+        buildWithParam({ table: versionsTable, select, tables, config, locale }) || undefined;
 
       // If draft is not true and versions.draft enabled
       // Then we adjust the query to get the published document

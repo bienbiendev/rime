@@ -50,7 +50,7 @@ const createAreaFacade = <const C extends Config>(args: {
     if (!hasVersions) {
       const params = {
         columns: adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select }),
-        with: buildWithParam({ slug, select, locale, tables, config: areaConfig }) || undefined
+        with: buildWithParam({ table: baseTableName(slug), select, locale, tables, config: areaConfig }) || undefined
       };
 
       let doc: RawDoc | undefined = await queryTable.findFirst(params);
@@ -75,7 +75,7 @@ const createAreaFacade = <const C extends Config>(args: {
       // Implementation for versioned areas
       const versionsTable = baseTableName(withVersionsSuffix(slug));
       const withParam = buildWithParam({
-        slug: versionsTable,
+        table: versionsTable,
         select,
         locale,
         tables,

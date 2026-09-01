@@ -10,6 +10,7 @@ import type { Field, FormField } from '$lib/fields/types.js';
 import { tableName as buildTableName } from '../naming.server.js';
 import { toSchemaColumn } from './column.server.js';
 import type { RelationFieldsMap } from './relations/definition.server.js';
+import type { TableName } from '../naming.server.js';
 import {
   templateHasAuth,
   templateLocale,
@@ -19,8 +20,8 @@ import {
 
 type Args = {
   fields: FieldBuilder<Field>[];
-  tableName: string;
-  rootName: string;
+  tableName: TableName;
+  rootName: TableName;
   locales?: LocaleConfig[];
   hasParent?: boolean;
   relationFieldsMap?: RelationFieldsMap;

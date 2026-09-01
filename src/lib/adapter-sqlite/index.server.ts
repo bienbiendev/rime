@@ -15,7 +15,7 @@ import { transformerFacade } from './transform.server.js';
 import createTreeFacade from './tree.server.js';
 import type { GenericTable } from './types.server.js';
 import { updateDocumentUrl } from './url.server.js';
-import { baseTableName } from './naming.server.js';
+import { baseTableName, type TableName } from './naming.server.js';
 import { updateTableRecord } from './util.server.js';
 
 type Schema = GetRegisterType<'Schema'>;
@@ -94,8 +94,12 @@ const createAdapter = async <const C extends Config>(args: {
      * `adapter.tables[slug]` directly, which only worked because a slug and a table name are
      * currently the same string.
      */
-    /** The *name* of a prototype's table, for the places that key db.query by it. */
-    tableNameForSlug(slug: string) {
+    /**
+     * The *name* of a prototype's table, for the places that key db.query by it, or hand it
+     * back to a facade. Returns a branded TableName so core can hold one opaquely without
+     * being able to confuse it with the slug it came from.
+     */
+    tableNameForSlug(slug: string): TableName {
       return baseTableName(slug);
     },
 
@@ -142,7 +146,7 @@ export type Adapter = {
   tables: GetRegisterType<'Tables'>;
   getTable<T>(key: string): T extends any ? GenericTable : T;
   tableForSlug<T>(slug: string): T extends any ? GenericTable : T;
-  tableNameForSlug(slug: string): string;
+  tableNameForSlug(slug: string): TableName;
   updateRecord(
     id: string,
     tableName: string,

@@ -1,5 +1,5 @@
 import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
-import { tableName } from './naming.server.js';
+import { tableName, type TableName } from './naming.server.js';
 import type { Relation } from '$lib/fields/relation/index.js';
 import { omit } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
@@ -155,22 +155,22 @@ export default createRelationsFacade;
 export type BeforeOperationRelation = Omit<Relation, 'ownerId'> & { ownerId?: string };
 
 type DeleteFromPaths = (args: {
-  parentSlug: string;
+  parentSlug: TableName;
   ownerId: string;
   paths: string[];
   locale?: string;
 }) => Promise<boolean>;
 
-type Delete = (args: { parentSlug: string; relations: Relation[] }) => Promise<boolean>;
-type Update = (args: { parentSlug: string; relations: Relation[] }) => Promise<boolean>;
+type Delete = (args: { parentSlug: TableName; relations: Relation[] }) => Promise<boolean>;
+type Update = (args: { parentSlug: TableName; relations: Relation[] }) => Promise<boolean>;
 type Create = (args: {
-  parentSlug: string;
+  parentSlug: TableName;
   ownerId: string;
   relations: BeforeOperationRelation[];
 }) => Promise<boolean>;
 
 type GetAllRelations = (args: {
-  parentSlug: string;
+  parentSlug: TableName;
   ownerId: string;
   locale?: string;
 }) => Promise<Relation[]>;

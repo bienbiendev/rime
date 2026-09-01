@@ -1,5 +1,5 @@
 import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
-import { childTableNames, tableName as buildTableName, baseTableName } from './naming.server.js';
+import { childTableNames, tableName as buildTableName, baseTableName, type TableName } from './naming.server.js';
 import type { TreeBlock } from '$lib/core/prototype/types.js';
 import { extractFieldName } from '$lib/fields/tree/util.js';
 import type { WithRequired } from '$lib/util/types.js';
@@ -10,7 +10,7 @@ import { generatePK, transformDataToSchema } from './util.server.js';
 
 const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   //
-  const buildBlockTableName = (slug: string, blockPath: string) => {
+  const buildBlockTableName = (slug: TableName, blockPath: string) => {
     const [fieldName] = extractFieldName(blockPath);
     return buildTableName({ owner: slug, child: { kind: 'tree', name: fieldName } });
   };
@@ -103,7 +103,7 @@ const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
 
   // Named getBlocksTableNames for backwards compatibility with callers; it lists this
   // facade's *tree* tables. Renaming it is a separate change to the adapter's public surface.
-  const getBlocksTableNames = (slug: string): string[] =>
+  const getBlocksTableNames = (slug: TableName): TableName[] =>
     childTableNames(slug, 'tree', tables);
 
   return {
@@ -121,19 +121,19 @@ export default createTreeFacade;
 /****************************************************/
 
 type UpdateBlock = (args: {
-  parentSlug: string;
+  parentSlug: TableName;
   block: WithRequired<TreeBlock, 'path'>;
   locale?: string;
 }) => Promise<boolean>;
 
 type CreateBlock = (args: {
-  parentSlug: string;
+  parentSlug: TableName;
   block: WithRequired<TreeBlock, 'path'>;
   ownerId: string;
   locale?: string;
 }) => Promise<boolean>;
 
 type DeleteBlock = (args: {
-  parentSlug: string;
+  parentSlug: TableName;
   block: WithRequired<TreeBlock, 'path'>;
 }) => Promise<boolean>;

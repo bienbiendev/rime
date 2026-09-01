@@ -21,27 +21,35 @@ import { mapSegments, toCamelCase, toSnakeCase } from '$lib/util/string.js';
  * - **child**  — hangs off an owner by `ownerId`: blocks, tree, and the relations junction
  * - **branch** — splits an owner in two: the localized half
  *
- * This module deliberately still emits the *current* names. Consolidating where the convention
- * lives and changing what it produces are separate steps; the generated schema is byte-identical
- * to before it existed.
+ * A `TableName` is branded so it cannot be confused with a prototype slug — see the type below.
  */
 
+declare const TABLE_NAME_BRAND: unique symbol;
+
 /**
- * The table a prototype's own rows live in.
+ * A resolved table name, as opposed to a prototype slug.
  *
- * Identity today, and that is exactly why it needs to exist: a prototype **slug** and a **table
- * name** are currently the same string, so nothing in the adapter distinguishes
- * `tables[slug]` — "the table for this collection" — from `tables[versionsTable]` — "the table
- * I just computed a name for". They are different questions, and the moment the naming
- * convention changes they stop having the same answer: the collection `pages_versions` will
- * live in the table `pages__versions`.
+ * Both are strings, which is why the two got confused for as long as they happened to be the
+ * same string. Since the naming convention changed they are not — the collection `$pages__versions`
+ * lives in the table `pages__versions`, and `camelProbe` in `camel_probe` — and passing one where
+ * the other is wanted produces `undefined` at the schema lookup, never a type error.
  *
- * Routing every slug-keyed lookup through here is what makes that change one edit rather than
- * an audit of ninety-seven call sites. Sites that already hold a *table name* must not call
- * this — they are already resolved.
+ * That cost four separate sweeps to chase down (`tables[…]`, `getTable(…)`, `db.query[…]`, then
+ * the table-name *parameters* of insertTableRecord/updateTableRecord/prepareSchemaData), each
+ * found by a failing request rather than by the compiler. The brand ends that: a plain string
+ * no longer satisfies a table-name parameter, so the remaining cases surface at build time.
  */
-export const baseTableName = (slug: string): string =>
-  mapSegments(slug.replace(/^\$/, ''), toSnakeCase, '__');
+export type TableName = string & { readonly [TABLE_NAME_BRAND]: true };
+
+/** For the few places holding a name that genuinely came from the schema, not from a slug. */
+export const asTableName = (name: string) => name as TableName;
+
+/**
+ * The table a prototype's own rows live in: `$pages__versions` -> `pages__versions`,
+ * `camelProbe` -> `camel_probe`. The only way to turn a slug into a table name.
+ */
+export const baseTableName = (slug: string): TableName =>
+  mapSegments(slug.replace(/^\$/, ''), toSnakeCase, '__') as TableName;
 
 export type ChildKind = 'blocks' | 'tree' | 'rels';
 
@@ -51,7 +59,7 @@ export type TableParts = {
    * Everything below is named relative to it, which is what makes enabling versions rename a
    * whole subtree.
    */
-  owner: string;
+  owner: TableName;
   /** A child table. `name` is the block type or the tree field; `rels` has no name. */
   child?: { kind: ChildKind; name?: string };
   /** The localized half of whatever the parts above resolve to. */
@@ -75,20 +83,20 @@ const BRANCH_MARKER = '__$$locales';
  * Assembles a Drizzle property name from its parts.
  *
  * @example
- * tableName({ owner: 'pages' })                                        // 'pages'
- * tableName({ owner: 'pages_versions', branch: 'locales' })            // 'pages_versionsLocales'
- * tableName({ owner: 'pages', child: { kind: 'blocks', name: 'hero' }})// 'pagesBlocksHero'
- * tableName({ owner: 'pages', child: { kind: 'rels' } })               // 'pagesRels'
+ * tableName({ owner: pages })                                   // 'pages'
+ * tableName({ owner: pagesVersions, branch: 'locales' })        // 'pages__versions__$$locales'
+ * tableName({ owner: pages, child: { kind: 'blocks', name: 'hero' }}) // 'pages__$blocks_hero'
+ * tableName({ owner: pages, child: { kind: 'rels' } })          // 'pages__$relations'
  */
-export const tableName = (parts: TableParts): string => {
-  let name = parts.owner;
+export const tableName = (parts: TableParts): TableName => {
+  let name: string = parts.owner;
 
   if (parts.child) {
     name += CHILD_MARKER[parts.child.kind];
     if (parts.child.name) name += `_${toSnakeCase(parts.child.name)}`;
   }
 
-  return parts.branch === 'locales' ? `${name}${BRANCH_MARKER}` : name;
+  return (parts.branch === 'locales' ? `${name}${BRANCH_MARKER}` : name) as TableName;
 };
 
 /**
@@ -99,7 +107,7 @@ export const tableName = (parts: TableParts): string => {
  * the unreadable mix (`pages_versionsBlocksHero` -> `pages_versions_blocks_hero`, where nothing
  * says which underscore means what).
  */
-export const toSqlTableName = (drizzleName: string) => drizzleName;
+export const toSqlTableName = (drizzleName: TableName) => drizzleName;
 
 /**
  * Every child table of `owner` of a given kind, read back off the schema.
@@ -108,14 +116,15 @@ export const toSqlTableName = (drizzleName: string) => drizzleName;
  * alongside it. Replaces the three hand-written filters, one of which was misnamed.
  */
 export const childTableNames = (
-  owner: string,
+  owner: TableName,
   kind: ChildKind,
   tables: Record<string, unknown>
-): string[] => {
+): TableName[] => {
   const prefix = tableName({ owner, child: { kind } });
+  // Keys of the generated schema: table names by construction.
   return Object.keys(tables).filter(
     (key) => key.startsWith(prefix) && !key.endsWith(BRANCH_MARKER)
-  );
+  ) as TableName[];
 };
 
 /**

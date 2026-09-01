@@ -187,7 +187,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
         .from(relatedTable)
         .where(relatedCondition);
 
-      const relsTable = getTable(tableName({ owner: slug, child: { kind: 'rels' } }));
+      const relsTable = getTable(tableName({ owner: baseTableName(slug), child: { kind: 'rels' } }));
       // Join relation rows to documents by matching the related id and the relation path
       const ownersWithMatching = db
         .select({ id: relsTable.ownerId })
@@ -228,7 +228,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
       fieldConfig.get.localized,
       fieldConfig.get.many
     ];
-    const relsTableName = tableName({ owner: slug, child: { kind: 'rels' } });
+    const relsTableName = tableName({ owner: baseTableName(slug), child: { kind: 'rels' } });
     const relsTable = getTable(relsTableName);
 
     // Helpers for building common relation-owner subqueries (operate on the relations table)

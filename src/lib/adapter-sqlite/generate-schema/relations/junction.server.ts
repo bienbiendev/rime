@@ -1,6 +1,7 @@
 import { tableName as buildTableName } from '../../naming.server.js';
 import { templateRelationFieldsTable, templateRelationMany } from '../templates.server.js';
 import type { RelationFieldsMap } from './definition.server.js';
+import type { TableName } from '../../naming.server.js';
 
 /**
  * Generates a junction table definition for many-to-many relationships
@@ -45,7 +46,7 @@ export function generateJunctionTableDefinition(args: Args): Return {
 }
 
 type Args = {
-  tableName: string;
+  tableName: TableName;
   relationFieldsMap: RelationFieldsMap;
   hasLocale: boolean;
 };

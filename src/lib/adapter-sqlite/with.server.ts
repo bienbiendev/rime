@@ -5,19 +5,19 @@ import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { asc, eq, getTableColumns, or, SQL } from 'drizzle-orm';
-import { childTableNames, tableName, baseTableName } from './naming.server.js';
+import { childTableNames, tableName, baseTableName, type TableName } from './naming.server.js';
 
 export const buildWithParam = (args: {
-  slug: string;
+  table: TableName;
   select?: string[];
   locale?: string;
   tables: any;
   config: BuiltCollection | BuiltArea;
 }) => {
-  const { slug, select = [], locale, tables, config: documentConfig } = args;
+  const { table, select = [], locale, tables, config: documentConfig } = args;
   if (!select.length) {
     return buildFullWithParam({
-      slug,
+      table,
       locale,
       tables
     });
@@ -42,7 +42,7 @@ export const buildWithParam = (args: {
     } else if (fieldConfig instanceof BlocksBuilder) {
       // Handle blocks fields
       blockPaths.push(path);
-      const blocksTables = childTableNames(slug, 'blocks', tables);
+      const blocksTables = childTableNames(table, 'blocks', tables);
       for (const blocksTable of blocksTables) {
         if (!withParam[blocksTable]) {
           const blocksTableObj = tables[blocksTable];
@@ -73,7 +73,7 @@ export const buildWithParam = (args: {
     } else if (fieldConfig instanceof TreeBuilder) {
       // Handle tree fields
       treePaths.push(path);
-      const treeTables = childTableNames(slug, 'tree', tables);
+      const treeTables = childTableNames(table, 'tree', tables);
       for (const treeTable of treeTables) {
         if (!withParam[treeTable]) {
           const treeTableObj = tables[treeTable];
@@ -104,7 +104,7 @@ export const buildWithParam = (args: {
     } else if (fieldConfig) {
       // Handle regular fields
       if (fieldConfig.get.localized && locale) {
-        const localesTableName = tableName({ owner: baseTableName(slug), branch: 'locales' });
+        const localesTableName = tableName({ owner: table, branch: 'locales' });
         if (localesTableName in tables) {
           const tableLocales = tables[localesTableName];
           if (withParam[localesTableName]) {
@@ -126,9 +126,9 @@ export const buildWithParam = (args: {
   // Compute direct relationships if defined
   // this ensure we only fetch the necessary relations
   if (directRelationPaths.length) {
-    withParam[tableName({ owner: slug, child: { kind: 'rels' } })] = {
-      where: or(...directRelationPaths.map((path) => eq(tables[tableName({ owner: slug, child: { kind: 'rels' } })].path, path))),
-      orderBy: [asc(tables[tableName({ owner: slug, child: { kind: 'rels' } })].path), asc(tables[tableName({ owner: slug, child: { kind: 'rels' } })].position)]
+    withParam[tableName({ owner: table, child: { kind: 'rels' } })] = {
+      where: or(...directRelationPaths.map((path) => eq(tables[tableName({ owner: table, child: { kind: 'rels' } })].path, path))),
+      orderBy: [asc(tables[tableName({ owner: table, child: { kind: 'rels' } })].path), asc(tables[tableName({ owner: table, child: { kind: 'rels' } })].position)]
     };
   }
 
@@ -137,12 +137,12 @@ export const buildWithParam = (args: {
   // 1. Include relations table if container paths exist (blocks or trees).
   //    If container paths are present we include relations for those containers
   //    and also include any direct relation paths.
-  if ((blockPaths.length > 0 || treePaths.length > 0) && tableName({ owner: slug, child: { kind: 'rels' } }) in tables) {
-    const relsTable = tables[tableName({ owner: slug, child: { kind: 'rels' } })];
+  if ((blockPaths.length > 0 || treePaths.length > 0) && tableName({ owner: table, child: { kind: 'rels' } }) in tables) {
+    const relsTable = tables[tableName({ owner: table, child: { kind: 'rels' } })];
 
     // Create a where condition that matches relations within any of the container paths,
     // and include direct relation paths as exact matches.
-    withParam[tableName({ owner: slug, child: { kind: 'rels' } })] = {
+    withParam[tableName({ owner: table, child: { kind: 'rels' } })] = {
       where: (relation: any, { like, or }: any) => {
         const conditions = [];
 
@@ -169,7 +169,7 @@ export const buildWithParam = (args: {
 
   // 2. Include tree tables for blocks that might contain trees
   if (blockPaths.length > 0) {
-    const treeTables = childTableNames(slug, 'tree', tables);
+    const treeTables = childTableNames(table, 'tree', tables);
     for (const treeTable of treeTables) {
       if (!withParam[treeTable]) {
         const treeTableObj = tables[treeTable];
@@ -202,7 +202,7 @@ export const buildWithParam = (args: {
 
   // 3. Include block tables for trees that might contain blocks
   if (treePaths.length > 0) {
-    const blocksTables = childTableNames(slug, 'blocks', tables);
+    const blocksTables = childTableNames(table, 'blocks', tables);
     for (const blocksTable of blocksTables) {
       if (!withParam[blocksTable]) {
         const blocksTableObj = tables[blocksTable];
@@ -242,16 +242,16 @@ export const buildWithParam = (args: {
 };
 
 const buildFullWithParam = ({
-  slug,
+  table,
   locale,
   tables
 }: {
-  slug: string;
+  table: TableName;
   locale?: string;
   tables: Dic;
 }): Dic => {
-  const blocksTables = childTableNames(slug, 'blocks', tables);
-  const treeTables = childTableNames(slug, 'tree', tables);
+  const blocksTables = childTableNames(table, 'blocks', tables);
+  const treeTables = childTableNames(table, 'tree', tables);
 
   const withParam: Dic = Object.fromEntries(
     [...blocksTables, ...treeTables].map((key) => {
@@ -268,7 +268,7 @@ const buildFullWithParam = ({
   );
 
   if (locale) {
-    const localesTableName = tableName({ owner: baseTableName(slug), branch: 'locales' });
+    const localesTableName = tableName({ owner: table, branch: 'locales' });
     if (localesTableName in tables) {
       const tableLocales = tables[localesTableName];
       withParam[localesTableName] = { where: eq(tableLocales.locale, locale) };
@@ -301,8 +301,8 @@ const buildFullWithParam = ({
     }
   }
 
-  if (tableName({ owner: slug, child: { kind: 'rels' } }) in tables) {
-    const tableNameRelationFields = tableName({ owner: slug, child: { kind: 'rels' } });
+  if (tableName({ owner: table, child: { kind: 'rels' } }) in tables) {
+    const tableNameRelationFields = tableName({ owner: table, child: { kind: 'rels' } });
     const tableRelationFields = tables[tableNameRelationFields];
     withParam[tableNameRelationFields] = {
       orderBy: [asc(tableRelationFields.path), asc(tableRelationFields.position)]

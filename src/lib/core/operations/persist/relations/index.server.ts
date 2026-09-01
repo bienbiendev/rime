@@ -28,9 +28,10 @@ export const saveRelations = async (args: {
   const { configMap, incomingPaths, blocksDiff, treeDiff, adapter, locale, config, ownerId, data } =
     args;
 
-  const parentTable = config.versions
-    ? withVersionsSuffix(config.slug)
-    : (config.slug as string);
+  // Core stays in slug space; only the adapter knows how a slug maps to a table.
+  const parentTable = adapter.tableNameForSlug(
+    config.versions ? withVersionsSuffix(config.slug) : config.slug
+  );
 
   /** Delete relations from deletedBlocks */
   await adapter.relations.deleteFromPaths({

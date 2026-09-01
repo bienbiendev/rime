@@ -33,9 +33,10 @@ export const saveBlocks = async (args: {
   if (!configMap || !ownerId) throw new RimeError(RimeError.OPERATION_ERROR, '@saveBlocks');
 
   // Determine the correct table name based on versioning configuration
-  const parentTable = config.versions
-    ? withVersionsSuffix(config.slug)
-    : (config.slug as string);
+  // Core stays in slug space; only the adapter knows how a slug maps to a table.
+  const parentTable = adapter.tableNameForSlug(
+    config.versions ? withVersionsSuffix(config.slug) : config.slug
+  );
 
   // Extract all blocks from the incoming form data using the current config
   const incomingBlocks = extractBlocks({

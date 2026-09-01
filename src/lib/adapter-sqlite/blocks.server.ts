@@ -1,5 +1,5 @@
 import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
-import { childTableNames, tableName as buildTableName, baseTableName } from './naming.server.js';
+import { childTableNames, tableName as buildTableName, baseTableName, type TableName } from './naming.server.js';
 import type { GenericBlock } from '$lib/core/prototype/types.js';
 import type { WithOptional } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
@@ -8,7 +8,7 @@ import { toPascalCase } from '../util/string.js';
 import { generatePK, transformDataToSchema } from './util.server.js';
 
 const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
-  const buildBlockTableName = (slug: string, blockName: string) =>
+  const buildBlockTableName = (slug: TableName, blockName: string) =>
     buildTableName({ owner: slug, child: { kind: 'blocks', name: blockName } });
 
   const update: UpdateBlock = async ({ parentSlug, block, locale }) => {
@@ -97,7 +97,7 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
     return true;
   };
 
-  const getBlocksTableNames = (slug: string): string[] =>
+  const getBlocksTableNames = (slug: TableName): TableName[] =>
     childTableNames(slug, 'blocks', tables);
 
   return {
@@ -115,16 +115,16 @@ export default createBlocksFacade;
 /****************************************************/
 
 type UpdateBlock = (args: {
-  parentSlug: string;
+  parentSlug: TableName;
   block: GenericBlock;
   locale?: string;
 }) => Promise<boolean>;
 
 type CreateBlock = (args: {
-  parentSlug: string;
+  parentSlug: TableName;
   block: WithOptional<GenericBlock, 'id'>;
   ownerId: string;
   locale?: string;
 }) => Promise<boolean>;
 
-type DeleteBlock = (args: { parentSlug: string; block: GenericBlock }) => Promise<boolean>;
+type DeleteBlock = (args: { parentSlug: TableName; block: GenericBlock }) => Promise<boolean>;

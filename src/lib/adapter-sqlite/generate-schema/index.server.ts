@@ -1,6 +1,6 @@
 import type { Config } from '$lib/core/factory/config/types.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
-import { baseTableName } from '../naming.server.js';
+import { baseTableName, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
 import {
   toCamelCase,
@@ -162,7 +162,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
    */
   for (const area of areas) {
     const areaSlug = baseTableName(area.slug);
-    let rootTableName = toSnakeCase(areaSlug);
+    let rootTableName: TableName = areaSlug;
     let versionsRelationsDefinitions: string[] = [];
 
     schema.push(templateHead(areaSlug));
