@@ -1,13 +1,12 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import { logger } from '$lib/core/logger.server.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
-import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import type { GetRegisterType } from '$lib/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import { and, eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { GenericTables } from './types.server.js';
-import { baseTableName } from './naming.server.js';
+import { baseTableName, tableName } from './naming.server.js';
 
 type Params = {
   id: string;
@@ -39,7 +38,7 @@ export async function updateDocumentUrl(url: string, params: Params) {
     }
 
     case OPERATION.LOCALE: {
-      const tableLocale = tables[withLocalesSuffix(config.slug) as keyof typeof tables];
+      const tableLocale = tables[tableName({ owner: baseTableName(config.slug), branch: 'locales' }) as keyof typeof tables];
       operation = db
         .update(tableLocale)
         .set({ url })
@@ -54,7 +53,7 @@ export async function updateDocumentUrl(url: string, params: Params) {
     }
 
     case OPERATION.VERSION: {
-      const tableVersions = tables[withVersionsSuffix(config.slug)];
+      const tableVersions = tables[baseTableName(withVersionsSuffix(config.slug))];
       operation = db
         .update(tableVersions)
         .set({ url })
@@ -70,7 +69,7 @@ export async function updateDocumentUrl(url: string, params: Params) {
 
     case OPERATION.VERSION_LOCALE: {
       const tableVersionsLocales =
-        tables[withLocalesSuffix(withVersionsSuffix(config.slug)) as keyof typeof tables];
+        tables[tableName({ owner: withVersionsSuffix(config.slug), branch: 'locales' }) as keyof typeof tables];
       operation = db
         .update(tableVersionsLocales)
         .set({ url })

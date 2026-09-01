@@ -1,6 +1,5 @@
 import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
-import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
-import { childTableNames, tableName } from './naming.server.js';
+import { childTableNames, tableName as buildTableName, baseTableName } from './naming.server.js';
 import type { GenericBlock } from '$lib/core/prototype/types.js';
 import type { WithOptional } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
@@ -10,7 +9,7 @@ import { generatePK, transformDataToSchema } from './util.server.js';
 
 const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   const buildBlockTableName = (slug: string, blockName: string) =>
-    tableName({ owner: slug, child: { kind: 'blocks', name: blockName } });
+    buildTableName({ owner: slug, child: { kind: 'blocks', name: blockName } });
 
   const update: UpdateBlock = async ({ parentSlug, block, locale }) => {
     const table = buildBlockTableName(parentSlug, block.type);
@@ -21,7 +20,7 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
       await db.update(tables[table]).set(values).where(eq(tables[table].id, block.id));
     }
 
-    const keyTableLocales = withLocalesSuffix(table);
+    const keyTableLocales = buildTableName({ owner: table, branch: 'locales' });
     if (locale && keyTableLocales in tables) {
       const tableLocales = tables[keyTableLocales];
       const localizedColumns = getTableColumns(tableLocales);
@@ -32,7 +31,7 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
 
       if (!Object.keys(localizedValues).length) return true;
 
-      //@ts-expect-error keyTableLocales is key of db.query
+      // @ts-expect-error suck
       const localizedRow = await db.query[keyTableLocales].findFirst({
         where: and(eq(tableLocales.ownerId, block.id), eq(tableLocales.locale, locale))
       });
@@ -63,7 +62,7 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   const create: CreateBlock = async ({ parentSlug, block, ownerId, locale }) => {
     const tableName = buildBlockTableName(parentSlug, block.type);
     const blockId = generatePK();
-    const tableNameLocales = withLocalesSuffix(tableName);
+    const tableNameLocales = buildTableName({ owner: tableName, branch: 'locales' });
 
     if (locale && tableNameLocales in tables) {
       const unlocalizedColumns = getTableColumns(tables[tableName]);

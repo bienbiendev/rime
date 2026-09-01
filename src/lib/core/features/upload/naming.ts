@@ -2,43 +2,30 @@ import type { CollectionSlug } from '$lib/types.js';
 import { withoutVersionsSuffix } from '../versions/naming.js';
 
 /**
- * The `_directories` slug and table-name convention for upload collections.
+ * The upload directories naming convention, in slug space.
  *
- * Lives with the feature that owns it rather than in a shared naming module: the adapter and
- * the panel consume this vocabulary, they do not define it.
+ *   medias  ->  $mediasDirectories  ->  table medias_directories  ->  url medias-directories
+ *
+ * `$` marks it rime-derived, but there is deliberately **no `__`**: a directories collection is
+ * a sibling, not a shadow or a child, and holds no schema relationship to its parent. So its
+ * table name carries no relationship marker and stays exactly what it is today. Telling a
+ * directories collection apart is the upload feature's job — by this convention — not something
+ * the table name can answer.
+ *
+ * The versions suffix comes off first, and that dependency is real: a folder tree belongs to
+ * the document, not to a revision of it.
  */
 
-/**
- * Add a _directories suffix to a given name.
- * Used for uploads path slug and tables.
- * Prevent a version table name from being used, force the use of the main one.
- *
- * @example
- * // Returns both 'pages_directories'
- * withDirectoriesSuffix('pages');
- * withDirectoriesSuffix('pages_versions');
- */
+const DERIVED = '$';
+const MARKER = 'Directories';
+
+/** `medias` or `$medias__versions` -> `$mediasDirectories` */
 export const withDirectoriesSuffix = (slug: string) =>
-  `${withoutVersionsSuffix(slug)}_directories` as CollectionSlug;
+  `${DERIVED}${withoutVersionsSuffix(slug)}${MARKER}` as CollectionSlug;
 
-/**
- * Remove a _directories suffix to a given name.
- * Used for uploads path slug and tables.
- * Prevent a version table name from being used, force the use of the main one.
- *
- * @example
- * // Returns 'pages'
- * withoutDirectoriesSuffix('pages_directories');
- * withoutDirectoriesSuffix('pages_versions_directories');
- */
+/** `$mediasDirectories` -> `medias` */
 export const withoutDirectoriesSuffix = (slug: string) =>
-  slug.replace('_directories', '') as CollectionSlug;
+  slug.replace(/^\$/, '').replace(new RegExp(`${MARKER}$`), '') as CollectionSlug;
 
-/**
- * Check if a slug is a _directories collection slug
- *
- * @example
- * // Returns true
- * hasDirectoriesSuffix('medias_directories');
- */
-export const hasDirectoriesSuffix = (slug: string) => slug.endsWith('_directories');
+/** `$mediasDirectories` -> true */
+export const hasDirectoriesSuffix = (slug: string) => slug.endsWith(MARKER);

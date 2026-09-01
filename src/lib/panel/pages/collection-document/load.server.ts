@@ -11,6 +11,7 @@ import { trycatch } from '$lib/util/function.js';
 import { apiUrl } from '$lib/util/index.js';
 import { toKebabCase } from '$lib/util/string.js';
 import { error, type ServerLoadEvent } from '@sveltejs/kit';
+import { prototypeKebab } from '$lib/core/prototype/naming.js';
 
 /**
  * Load function for the collection document page in the panel.
@@ -106,7 +107,7 @@ export async function documentLoad<V extends boolean = boolean>(
   };
 
   if (withVersion) {
-    const url = `${apiUrl(withVersionsSuffix(toKebabCase(doc._type)))}?where[ownerId][equals]=${doc.id}&sort=-updatedAt&select=updatedAt,status`;
+    const url = `${apiUrl(prototypeKebab(withVersionsSuffix(doc._type)))}?where[ownerId][equals]=${doc.id}&sort=-updatedAt&select=updatedAt,status`;
     const promise = event.fetch(url).then((r) => r.json());
     const [error, result] = await trycatch(() => promise);
     if (error || !Array.isArray(result.docs)) {

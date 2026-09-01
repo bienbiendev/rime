@@ -1,6 +1,7 @@
 import type { FieldReference } from '$lib/core/fields/builders/form-field-builder.js';
 import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import { toSnakeCase } from '$lib/util/string.js';
+import { baseTableName } from '../naming.server.js';
 import dedent from 'dedent';
 
 const s = toSnakeCase;
@@ -33,7 +34,7 @@ export const templateTable = (table: string, content: string): string => {
   if (!content.includes('id:')) {
     content = `id: pk(),\n${content}`;
   }
-  return `export const ${table} = sqliteTable( '${s(table)}', {
+  return `export const ${table} = sqliteTable( '${table}', {
 		${content}
 	})
 	`;
@@ -78,13 +79,17 @@ export const templateReferences = ({
   onUpdate,
   selfReferencing
 }: FieldReference) => {
+  // `table` is a prototype *slug* — every $references caller passes one (auth: 'staff',
+  // nested: config.slug, upload: the derived directories slug). Resolving it here keeps
+  // features out of table naming, which is the adapter's business.
+  const referenced = baseTableName(table);
   const arrow = selfReferencing ? '(): any =>' : '() =>';
   const opts = [
     onDelete ? `onDelete: '${onDelete}'` : '',
     onUpdate ? `onUpdate: '${onUpdate}'` : ''
   ].filter(Boolean);
   const optsStr = opts.length ? `, { ${opts.join(', ')} }` : '';
-  return `.references(${arrow} ${table}.id${optsStr})`;
+  return `.references(${arrow} ${referenced}.id${optsStr})`;
 };
 
 /**
@@ -205,10 +210,11 @@ export const templateFieldRelationColumn = (table: string) => {
  */
 export const templateRelationFieldsTable = ({
   table,
+  junctionTable,
   relations,
   hasLocale
 }: FieldsRelationTableArgs) => `
-export const ${table}Rels = sqliteTable('${s(table)}_rels', {
+export const ${junctionTable} = sqliteTable('${junctionTable}', {
   id: pk(),
   path: text('path'),
   position: integer('position'),
@@ -413,7 +419,7 @@ export const templateHead = (slug: string) => dedent`
   /** ${slug} ============================================== **/`;
 
 export const templateDirectories = (slug: string) => `
-export const ${withDirectoriesSuffix(slug)} = sqliteTable('${s(withDirectoriesSuffix(slug))}', {
+export const ${baseTableName(withDirectoriesSuffix(slug))} = sqliteTable('${baseTableName(withDirectoriesSuffix(slug))}', {
   id: text('id').notNull().primaryKey(),
   parent: text('parent').references(():any => ${withDirectoriesSuffix(slug)}.id, {
 		onDelete : 'cascade',
@@ -437,6 +443,7 @@ type RelationManyArgs = {
 };
 type FieldsRelationTableArgs = {
   table: string;
+  junctionTable: string;
   relations: string[];
   hasLocale?: boolean;
 };

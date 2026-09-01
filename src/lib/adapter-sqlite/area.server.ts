@@ -7,7 +7,6 @@ import type { Config } from '$lib/core/factory/config/types.js';
 import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
-import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type { AreaSlug, GenericDoc, RawDoc } from '$lib/core/prototype/types.js';
 import type { GetRegisterType } from '$lib/index.js';
@@ -17,7 +16,7 @@ import { eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as adapterUtil from './util.server.js';
 import { buildWithParam } from './with.server.js';
-import { baseTableName } from './naming.server.js';
+import { baseTableName, tableName } from './naming.server.js';
 
 /**
  * Creates an area facade for SQLite adapter operations with CRUD functionality.
@@ -41,7 +40,7 @@ const createAreaFacade = <const C extends Config>(args: {
       throw new RimeError(RimeError.INIT, slug + ' is not an area, should never happen');
     }
 
-    // `db.query[slug]` can't be typed precisely: with a single registered area,
+    // `db.query[baseTableName(slug)]` can't be typed precisely: with a single registered area,
     // AreaSlug collapses to one string literal and Drizzle infers an overly
     // precise (and here incorrect) per-table shape instead of the general one.
     const queryTable = (db.query as Record<string, any>)[slug];
@@ -74,7 +73,7 @@ const createAreaFacade = <const C extends Config>(args: {
       }
 
       // Implementation for versioned areas
-      const versionsTable = withVersionsSuffix(slug);
+      const versionsTable = baseTableName(withVersionsSuffix(slug));
       const withParam = buildWithParam({
         slug: versionsTable,
         select,
@@ -164,13 +163,13 @@ const createAreaFacade = <const C extends Config>(args: {
       });
 
       // Generate version ID
-      const versionsTableName = withVersionsSuffix(slug);
+      const versionsTableName = baseTableName(withVersionsSuffix(slug));
 
       // Prepare data for versions table
       const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(values, {
         tables,
         mainTableName: versionsTableName,
-        localesTableName: withLocalesSuffix(versionsTableName),
+        localesTableName: tableName({ owner: versionsTableName, branch: 'locales' }),
         locale,
         fillNotNull: true
       });
@@ -189,7 +188,7 @@ const createAreaFacade = <const C extends Config>(args: {
 
       // Insert localized data if needed
       if (isLocalized && Object.keys(localizedData).length) {
-        await adapterUtil.insertTableRecord(db, tables, withLocalesSuffix(versionsTableName), {
+        await adapterUtil.insertTableRecord(db, tables, tableName({ owner: versionsTableName, branch: 'locales' }), {
           ...localizedData,
           ownerId: versionId,
           locale: locale!
@@ -202,7 +201,7 @@ const createAreaFacade = <const C extends Config>(args: {
         versionId
       };
     } else {
-      const tableLocales = withLocalesSuffix(slug);
+      const tableLocales = tableName({ owner: baseTableName(slug), branch: 'locales' });
 
       // Prepare data for insertion using the shared utility function
       const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(values, {
@@ -273,7 +272,7 @@ const createAreaFacade = <const C extends Config>(args: {
     // Simple update for non-versioned areas
     if (VersionOperations.isSimpleUpdate(versionOperation)) {
       // Original implementation for non-versioned areas
-      const keyTableLocales = withLocalesSuffix(slug);
+      const keyTableLocales = tableName({ owner: baseTableName(slug), branch: 'locales' });
       // Prepare data for update using the shared utility function
       const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
         tables,
@@ -312,8 +311,8 @@ const createAreaFacade = <const C extends Config>(args: {
         })
         .where(eq(tables[baseTableName(slug)].id, area.id));
 
-      const versionsTable = withVersionsSuffix(slug);
-      const versionsLocalesTable = withLocalesSuffix(versionsTable);
+      const versionsTable = baseTableName(withVersionsSuffix(slug));
+      const versionsLocalesTable = tableName({ owner: versionsTable, branch: 'locales' });
 
       // Prepare data for update using the shared utility function
       const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {

@@ -4,8 +4,6 @@ import cache from '$lib/core/dev/cache.server.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { isFormField } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger.server.js';
-import { withoutDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
-import { withoutVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { PrototypeSlug } from '$lib/core/prototype/types.js';
 import { BlocksBuilder, type BlocksField } from '$lib/fields/blocks/index.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
@@ -47,13 +45,22 @@ function validateSlugs(config: Config) {
   const slugs: string[] = [
     ...(config.collections || []).map((c) => c.slug),
     ...(config.areas || []).map((a) => a.slug)
-  ]
-    .map(withoutVersionsSuffix)
-    .map(withoutDirectoriesSuffix);
+  ];
 
   for (const slug of slugs) {
+    // `$` marks a slug rime derived itself ($pages__versions, $mediasDirectories). Those are
+    // built from an author slug that was already validated, so skip them — this used to strip
+    // each feature's suffix instead, which meant core had to know what every feature appends.
+    if (slug.startsWith('$')) continue;
+
+    if (slug.includes('__')) {
+      errors.push(
+        `Slug ${slug} may not contain "__": it marks a derived table (pages__versions), and a slug containing it would collide with one.`
+      );
+      continue;
+    }
     if (!isCamelCase(slug)) {
-      errors.push(`Slug ${slug} is not a valid prototype slug`);
+      errors.push(`Slug ${slug} is not a valid prototype slug, it must be camelCase`);
     }
   }
 

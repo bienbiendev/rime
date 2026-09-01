@@ -1,5 +1,4 @@
-import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
-import { mapSegments, toCamelCase, toPascalCase, toSnakeCase } from '$lib/util/string.js';
+import { mapSegments, toCamelCase, toSnakeCase } from '$lib/util/string.js';
 
 /**
  * How a table is named, in one place.
@@ -41,7 +40,8 @@ import { mapSegments, toCamelCase, toPascalCase, toSnakeCase } from '$lib/util/s
  * an audit of ninety-seven call sites. Sites that already hold a *table name* must not call
  * this — they are already resolved.
  */
-export const baseTableName = (slug: string): string => slug;
+export const baseTableName = (slug: string): string =>
+  mapSegments(slug.replace(/^\$/, ''), toSnakeCase, '__');
 
 export type ChildKind = 'blocks' | 'tree' | 'rels';
 
@@ -58,11 +58,18 @@ export type TableParts = {
   branch?: 'locales';
 };
 
-const CHILD_INFIX: Record<ChildKind, string> = {
-  blocks: 'Blocks',
-  tree: 'Tree',
-  rels: 'Rels'
+/**
+ * `__$` marks a child of the owner it is appended to; `rels` needs no name because a prototype
+ * has exactly one relations junction, discriminated by its `path` column rather than by table.
+ */
+const CHILD_MARKER: Record<ChildKind, string> = {
+  blocks: '__$blocks',
+  tree: '__$tree',
+  rels: '__$relations'
 };
+
+/** `__$$` marks a branch: the half of a table holding its localized columns. */
+const BRANCH_MARKER = '__$$locales';
 
 /**
  * Assembles a Drizzle property name from its parts.
@@ -77,15 +84,22 @@ export const tableName = (parts: TableParts): string => {
   let name = parts.owner;
 
   if (parts.child) {
-    name += CHILD_INFIX[parts.child.kind];
-    if (parts.child.name) name += toPascalCase(parts.child.name);
+    name += CHILD_MARKER[parts.child.kind];
+    if (parts.child.name) name += `_${toSnakeCase(parts.child.name)}`;
   }
 
-  return parts.branch === 'locales' ? withLocalesSuffix(name) : name;
+  return parts.branch === 'locales' ? `${name}${BRANCH_MARKER}` : name;
 };
 
-/** The SQL table name for a Drizzle property name. */
-export const toSqlTableName = (drizzleName: string) => toSnakeCase(drizzleName);
+/**
+ * The SQL table name for a Drizzle property name.
+ *
+ * Identity: property names are already snake-cased with their markers intact, so the two forms
+ * are the same string. It used to snake-case a camelCase property name, which is what produced
+ * the unreadable mix (`pages_versionsBlocksHero` -> `pages_versions_blocks_hero`, where nothing
+ * says which underscore means what).
+ */
+export const toSqlTableName = (drizzleName: string) => drizzleName;
 
 /**
  * Every child table of `owner` of a given kind, read back off the schema.
@@ -100,7 +114,7 @@ export const childTableNames = (
 ): string[] => {
   const prefix = tableName({ owner, child: { kind } });
   return Object.keys(tables).filter(
-    (key) => key.startsWith(prefix) && !key.endsWith('Locales')
+    (key) => key.startsWith(prefix) && !key.endsWith(BRANCH_MARKER)
   );
 };
 

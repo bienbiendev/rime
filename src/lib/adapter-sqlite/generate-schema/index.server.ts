@@ -1,5 +1,6 @@
 import type { Config } from '$lib/core/factory/config/types.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
+import { baseTableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
 import {
   toCamelCase,
@@ -37,7 +38,9 @@ export async function generateSchemaString<T extends Config>(config: T) {
   const blocksRegister: string[] = [];
 
   for (const collection of collections) {
-    const collectionSlug = toCamelCasePreserveTrailingUnderscoreSuffix(collection.slug);
+    // The prototype's own table, resolved from its slug rather than case-converted here —
+    // a derived slug like $mediasDirectories has to lose its `$` and snake-case its segments.
+    const collectionSlug = baseTableName(collection.slug);
     let rootTableName = collectionSlug;
     let versionsRelationsDefinitions: string[] = [];
 
@@ -73,7 +76,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
 
       // overwrite the collection name with the _versions one to generate all table
       // eg. blocks, relation related to the _versions one
-      rootTableName = withVersionsSuffix(collectionSlug);
+      rootTableName = baseTableName(withVersionsSuffix(collectionSlug));
 
       // create specific relations between root <-> root_verions
       const manyVersionsToOneName = `rel_${rootTableName}HasOne${toPascalCase(collectionSlug)}`;
@@ -158,7 +161,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
    * Areas
    */
   for (const area of areas) {
-    const areaSlug = toCamelCase(area.slug);
+    const areaSlug = baseTableName(area.slug);
     let rootTableName = toSnakeCase(areaSlug);
     let versionsRelationsDefinitions: string[] = [];
 
@@ -169,7 +172,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
       // as these fields would have no effect
 
       // Overrite
-      rootTableName = withVersionsSuffix(areaSlug);
+      rootTableName = baseTableName(withVersionsSuffix(areaSlug));
       const manyVersionsToOneName = `rel_${rootTableName}HasOne${toPascalCase(areaSlug)}`;
       const oneToManyVersionsName = `rel_${areaSlug}HasMany${toPascalCase(rootTableName)}`;
 

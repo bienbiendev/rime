@@ -1,7 +1,7 @@
 import { augmentCollectionHooks } from '$lib/core/operations/pipeline.server.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
-import { toKebabCase } from '$lib/util/string.js';
+import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import type { BuiltCollection, Config } from '../../factory/config/types.js';
 
 /**
@@ -17,7 +17,7 @@ export function makeVersionsCollectionsAliases<C extends Config>(config: C) {
     if (collection.versions) {
       const versionedCollection: BuiltCollection = {
         slug: withVersionsSuffix(collection.slug) as CollectionSlug,
-        kebab: withVersionsSuffix(toKebabCase(collection.slug)),
+        kebab: prototypeKebab(withVersionsSuffix(collection.slug)),
         versions: undefined,
         access: collection.access,
         $hooks: collection.$hooks,
@@ -41,7 +41,7 @@ export function makeVersionsCollectionsAliases<C extends Config>(config: C) {
     if (area.versions) {
       let versionedCollection: BuiltCollection = {
         slug: withVersionsSuffix(area.slug) as CollectionSlug,
-        kebab: withVersionsSuffix(toKebabCase(area.slug)),
+        kebab: prototypeKebab(withVersionsSuffix(area.slug)),
         icon: area.icon,
         versions: undefined,
         access: area.access,

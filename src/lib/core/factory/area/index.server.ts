@@ -8,6 +8,7 @@ import type { Area, BuiltArea } from '$lib/core/factory/config/types.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
 import { capitalize, toKebabCase } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';
+import { prototypeKebab } from '$lib/core/prototype/naming.js';
 
 export const create = <S extends string>(
   slug: S,
@@ -27,7 +28,7 @@ export const create = <S extends string>(
     type: 'area',
     fields: augmented.fields || [],
     slug: augmented.slug as BuiltArea['slug'],
-    kebab: toKebabCase(augmented.slug),
+    kebab: prototypeKebab(augmented.slug),
     $url: augmented.$url as BuiltArea['$url'],
     icon: augmented.icon || FileText,
     label: augmented.label ? augmented.label : capitalize(area.slug),

@@ -50,7 +50,7 @@ const createAuthFacade = (args: {
   const getBetterAuthUserId = async ({ slug, id }: { slug: CollectionSlug; id: string }) => {
     const userTable = getTable(baseTableName(slug));
     // @ts-expect-error slug is key of query
-    const user = await db.query[slug].findFirst({ where: eq(userTable.id, id) });
+    const user = await db.query[baseTableName(slug)].findFirst({ where: eq(userTable.id, id) });
     if (user) {
       return user.authUserId;
     }

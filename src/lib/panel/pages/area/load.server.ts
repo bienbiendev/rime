@@ -10,6 +10,7 @@ import { trycatch } from '$lib/util/function.js';
 import { apiUrl } from '$lib/util/index.js';
 import { toKebabCase } from '$lib/util/string.js';
 import type { ServerLoadEvent } from '@sveltejs/kit';
+import { prototypeKebab } from '$lib/core/prototype/naming.js';
 
 export async function areaLoad<V extends boolean = boolean>(
   event: ServerLoadEvent,
@@ -49,7 +50,7 @@ export async function areaLoad<V extends boolean = boolean>(
   };
 
   if (withVersions) {
-    const url = `${apiUrl(withVersionsSuffix(toKebabCase(doc._type)))}?where[ownerId][equals]=${doc.id}&sort=-updatedAt&select=updatedAt,status`;
+    const url = `${apiUrl(prototypeKebab(withVersionsSuffix(doc._type)))}?where[ownerId][equals]=${doc.id}&sort=-updatedAt&select=updatedAt,status`;
     const promise = fetch(url).then((r) => r.json());
     const [error, result] = await trycatch(promise);
     if (error || !Array.isArray(result.docs)) {

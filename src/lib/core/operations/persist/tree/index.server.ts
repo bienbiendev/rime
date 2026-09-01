@@ -22,7 +22,9 @@ export const saveTreeBlocks = async (args: {
 
   if (!configMap || !ownerId) throw new RimeError(RimeError.OPERATION_ERROR, '@saveBlocks');
 
-  const parentTable = config.versions ? withVersionsSuffix(config.slug) : config.slug;
+  const parentTable = config.versions
+    ? withVersionsSuffix(config.slug)
+    : (config.slug as string);
 
   // Get incomings
   const incomingTreeBlocks = extractTreeBlocks({

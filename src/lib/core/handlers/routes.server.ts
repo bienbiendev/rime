@@ -1,5 +1,4 @@
 import { isPublicPanelAuthRoute } from '$lib/core/constants.server.js';
-import { prototypeKebabToSlug } from '$lib/core/prototype/naming.js';
 import buildNavigation from '$lib/panel/navigation.js';
 import { areaFormActions } from '$lib/panel/pages/area/actions.server.js';
 import { areaLoad } from '$lib/panel/pages/area/load.server.js';
@@ -76,7 +75,15 @@ export const handleRoutes: Handle = async ({ event, resolve }) => {
   // (e.g. (front)/pages/[slug]) and must be left untouched.
 
   if ((IS_API_ROUTE || IS_PANEL_ROUTE) && event.params.slug) {
-    event.params.slug = prototypeKebabToSlug(event.params.slug);
+    // A lookup, not an inverse transform: `medias-directories` is indistinguishable by rule
+    // from a user collection named `mediasDirectories`, so only the config can say which
+    // prototype a URL segment names. The param matchers are generated from these same kebabs,
+    // so a match here is guaranteed for any route that reached this branch.
+    const kebab = event.params.slug;
+    const prototype = [...rime.config.raw.collections, ...rime.config.raw.areas].find(
+      (p) => p.kebab === kebab
+    );
+    if (prototype) event.params.slug = prototype.slug;
   }
 
   // build panel navigation

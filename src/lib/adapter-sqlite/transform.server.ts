@@ -1,6 +1,5 @@
 import type { Config } from '$lib/core/factory/config/types.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
-import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type {
   AreaSlug,
@@ -19,7 +18,7 @@ import { flatten, unflatten } from 'flat';
 import { logger } from '../core/logger.server.js';
 import { extractFieldName } from '../fields/tree/util.js';
 import { isObjectLiteral, omit } from '../util/object.js';
-import { childTableNames, tableName as buildTableName } from './naming.server.js';
+import { childTableNames, tableName as buildTableName, baseTableName } from './naming.server.js';
 import { transformDatabaseColumnsToPaths } from './util.server.js';
 
 /**
@@ -50,9 +49,9 @@ export const transformerFacade = <const C extends Config>(args: {
 
     const config = configCtx.getBySlug(slug);
     const isVersioned = !!config.versions;
-    const tableName = isVersioned ? withVersionsSuffix(slug) : slug;
+    const tableName = isVersioned ? baseTableName(withVersionsSuffix(slug)) : baseTableName(slug);
     const tableNameRelationFields = buildTableName({ owner: tableName, child: { kind: 'rels' } });
-    const tableNameLocales = withLocalesSuffix(tableName);
+    const tableNameLocales = buildTableName({ owner: tableName, branch: 'locales' });
 
     const isPanel = event.params.panel !== undefined;
 

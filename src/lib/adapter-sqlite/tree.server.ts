@@ -1,6 +1,5 @@
 import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
-import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
-import { childTableNames, tableName } from './naming.server.js';
+import { childTableNames, tableName as buildTableName, baseTableName } from './naming.server.js';
 import type { TreeBlock } from '$lib/core/prototype/types.js';
 import { extractFieldName } from '$lib/fields/tree/util.js';
 import type { WithRequired } from '$lib/util/types.js';
@@ -13,7 +12,7 @@ const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   //
   const buildBlockTableName = (slug: string, blockPath: string) => {
     const [fieldName] = extractFieldName(blockPath);
-    return tableName({ owner: slug, child: { kind: 'tree', name: fieldName } });
+    return buildTableName({ owner: slug, child: { kind: 'tree', name: fieldName } });
   };
 
   const update: UpdateBlock = async ({ parentSlug, block, locale }) => {
@@ -25,7 +24,7 @@ const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
       await db.update(tables[tableName]).set(values).where(eq(tables[tableName].id, block.id));
     }
 
-    const tableLocalesName = withLocalesSuffix(tableName);
+    const tableLocalesName = buildTableName({ owner: tableName, branch: 'locales' });
     if (locale && tableLocalesName in tables) {
       const tableLocales = tables[tableLocalesName];
       const localizedColumns = getTableColumns(tableLocales);
@@ -67,7 +66,7 @@ const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   const create: CreateBlock = async ({ parentSlug, block, ownerId, locale }) => {
     const table = buildBlockTableName(parentSlug, block.path);
     const blockId = generatePK();
-    const tableLocales = withLocalesSuffix(table);
+    const tableLocales = buildTableName({ owner: table, branch: 'locales' });
 
     if (locale && tableLocales in tables) {
       const unlocalizedColumns = getTableColumns(tables[table]);

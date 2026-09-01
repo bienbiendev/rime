@@ -1,20 +1,25 @@
-/**
- * Convert a kebab-case prototype slug.
- * Basically used to convert param matchers slug into a collection/area slug.
- * Only a literal trailing `_directories`/`_versions` suffix is preserved as a
- * suffix — everything else, including a plain `-versions`/`-directories`
- * word, is camelCased like any other segment.
- *
- * @example
- * prototypeKebabToSlug('my-collection') // returns 'myCollection'
- * prototypeKebabToSlug('my-collection_directories') // returns 'myCollection_directories'
- * prototypeKebabToSlug('my-collection_versions') // returns 'myCollection_versions'
- * prototypeKebabToSlug('my-collection-versions') // returns 'myCollectionVersions'
- */
-export const prototypeKebabToSlug = (kebab: string) => {
-  const suffixMatch = kebab.match(/(_(?:directories|versions))$/);
-  const suffix = suffixMatch ? suffixMatch[1] : '';
-  const base = suffix ? kebab.slice(0, -suffix.length) : kebab;
+import { mapSegments, toKebabCase } from '$lib/util/string.js';
 
-  return base.replace(/-([a-z])/g, (_, char) => char.toUpperCase()) + suffix;
-};
+/**
+ * A prototype slug's URL form.
+ *
+ * One canonical slug produces every other representation by pure transform, so nothing here
+ * knows what any particular marker means:
+ *
+ *   pages               ->  pages
+ *   someSlug            ->  some-slug
+ *   $someSlug__versions ->  some-slug--versions
+ *   $someSlugDirectories->  some-slug-directories
+ *
+ * The `$` is dropped — it marks a slug as rime-derived for config authors, and has no business
+ * in a URL. The `__` becomes `--`, keeping a segment boundary visible and distinct from the
+ * word breaks around it.
+ *
+ * This replaced a `prototypeKebabToSlug` that matched `/(_(?:directories|versions))$/` — core
+ * hardcoding two features' suffixes. Going the other way is now a lookup against the config
+ * rather than an inverse transform (see handlers/routes.server.ts), which is both exact and
+ * feature-agnostic: `medias-directories` cannot be reversed by rule, since it is indistinguishable
+ * from a user collection named `mediasDirectories`.
+ */
+export const prototypeKebab = (slug: string) =>
+  mapSegments(slug.replace(/^\$/, ''), toKebabCase, '--');

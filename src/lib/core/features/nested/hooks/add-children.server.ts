@@ -21,7 +21,9 @@ export const addChildrenProperty = Hooks.beforeRead(async (args) => {
   const table = rime.adapter.tableForSlug(args.config.slug);
 
   //@ts-ignore
-  const children = await rime.adapter.db.query[tableName].findMany({
+  const children = await rime.adapter.db.query[
+    rime.adapter.tableNameForSlug(args.config.slug)
+  ].findMany({
     where: eq(table._parent, args.doc.id),
     orderBy: [asc(table._position)],
     columns: {

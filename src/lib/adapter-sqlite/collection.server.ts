@@ -7,7 +7,6 @@ import type { Config } from '$lib/core/factory/config/types.js';
 import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
-import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type { CollectionSlug, GenericDoc, RawDoc } from '$lib/core/prototype/types.js';
 import type { OperationQuery } from '$lib/core/operations/types.js';
@@ -21,7 +20,7 @@ import { buildOrderByParam } from './orderBy.server.js';
 import * as adapterUtil from './util.server.js';
 import { buildWhereParam } from './where.server.js';
 import { buildWithParam } from './with.server.js';
-import { baseTableName } from './naming.server.js';
+import { baseTableName, tableName as buildTableName } from './naming.server.js';
 type Schema = GetRegisterType<'Schema'>;
 
 /**
@@ -50,7 +49,7 @@ const createCollectionFacade = <const C extends Config>(args: {
       const selectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
 
       //@ts-expect-error slug is a table for sure
-      const doc = await db.query[slug].findFirst({
+      const doc = await db.query[baseTableName(slug)].findFirst({
         columns: selectColumns,
         where: eq(table.id, id),
         with: withParam
@@ -63,7 +62,7 @@ const createCollectionFacade = <const C extends Config>(args: {
       return doc;
     } else {
       // Implementation for versioned collections
-      const versionsTable = withVersionsSuffix(slug);
+      const versionsTable = baseTableName(withVersionsSuffix(slug));
       const withParam = buildWithParam({ slug: versionsTable, select, locale, tables, config });
       const rootSelectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
       const versionSelectColumns = adapterUtil.columnsParams({
@@ -95,7 +94,7 @@ const createCollectionFacade = <const C extends Config>(args: {
       };
 
       //@ts-expect-error slug is a table for sure
-      const doc = await db.query[slug].findFirst(params);
+      const doc = await db.query[baseTableName(slug)].findFirst(params);
 
       // Throw 404 if not found
       // If we found the document but there are no versions, that's also a 404
@@ -172,13 +171,13 @@ const createCollectionFacade = <const C extends Config>(args: {
 
       // Generate version ID
       const versionId = adapterUtil.generatePK();
-      const versionsTableName = withVersionsSuffix(slug);
+      const versionsTableName = baseTableName(withVersionsSuffix(slug));
 
       // Prepare data for versions table
       const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(contentData, {
         tables,
         mainTableName: versionsTableName,
-        localesTableName: withLocalesSuffix(versionsTableName),
+        localesTableName: buildTableName({ owner: versionsTableName, branch: 'locales' }),
         locale
       });
 
@@ -193,7 +192,7 @@ const createCollectionFacade = <const C extends Config>(args: {
 
       // Insert localized data if needed
       if (isLocalized && Object.keys(localizedData).length) {
-        await adapterUtil.insertTableRecord(db, tables, withLocalesSuffix(versionsTableName), {
+        await adapterUtil.insertTableRecord(db, tables, buildTableName({ owner: versionsTableName, branch: 'locales' }), {
           ...localizedData,
           ownerId: versionId,
           locale: locale!
@@ -213,7 +212,7 @@ const createCollectionFacade = <const C extends Config>(args: {
       const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
         tables,
         mainTableName: slug,
-        localesTableName: withLocalesSuffix(slug),
+        localesTableName: buildTableName({ owner: baseTableName(slug), branch: 'locales' }),
         locale
       });
 
@@ -227,7 +226,7 @@ const createCollectionFacade = <const C extends Config>(args: {
 
       // Insert localized data if needed
       if (isLocalized && Object.keys(localizedData).length) {
-        await adapterUtil.insertTableRecord(db, tables, withLocalesSuffix(slug), {
+        await adapterUtil.insertTableRecord(db, tables, buildTableName({ owner: baseTableName(slug), branch: 'locales' }), {
           ...localizedData,
           ownerId: docId,
           locale: locale!
@@ -257,7 +256,7 @@ const createCollectionFacade = <const C extends Config>(args: {
     if (VersionOperations.isSimpleUpdate(versionOperation)) {
       // Scenario 0: Non-versioned collections
       const tableName = slug;
-      const tableLocalesName = withLocalesSuffix(slug);
+      const tableLocalesName = buildTableName({ owner: baseTableName(slug), branch: 'locales' });
 
       const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
         tables,
@@ -302,8 +301,8 @@ const createCollectionFacade = <const C extends Config>(args: {
         }
       });
 
-      const versionsTable = withVersionsSuffix(slug);
-      const versionsLocalesTable = withLocalesSuffix(versionsTable);
+      const versionsTable = baseTableName(withVersionsSuffix(slug));
+      const versionsLocalesTable = buildTableName({ owner: versionsTable, branch: 'locales' });
 
       const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(contentData, {
         tables,
@@ -396,13 +395,17 @@ const createCollectionFacade = <const C extends Config>(args: {
       const selectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
 
       //@ts-expect-error slug is a table for sure
-      return await db.query[slug].findMany({
+      return await db.query[baseTableName(slug)].findMany({
         columns: selectColumns,
         ...params
       });
     } else {
       // Implementation for versioned collections
-      const versionsTable = withVersionsSuffix(slug);
+      // Two different things, and they stopped being the same string when the naming convention
+      // changed: buildWithParam reads the schema, so it takes a table name; buildWhereParam
+      // resolves fields against the config, so it takes a slug. They share a parameter name.
+      const versionsSlug = withVersionsSuffix(slug);
+      const versionsTable = baseTableName(versionsSlug);
       const withParam =
         buildWithParam({ slug: versionsTable, select, tables, config, locale }) || undefined;
 
@@ -431,7 +434,7 @@ const createCollectionFacade = <const C extends Config>(args: {
       }
 
       const whereParam = query
-        ? buildWhereParam({ query, slug: versionsTable, locale, db, configCtx, tables })
+        ? buildWhereParam({ query, slug: versionsSlug, locale, db, configCtx, tables })
         : undefined;
 
       // Build the query parameters for pagination and sorting of the root table
@@ -454,7 +457,7 @@ const createCollectionFacade = <const C extends Config>(args: {
       const rootSelectColumns = adapterUtil.columnsParams({ table: tables[baseTableName(slug)], select });
 
       //@ts-expect-error slug is a table for sure
-      const rawDocs = await db.query[slug].findMany({
+      const rawDocs = await db.query[baseTableName(slug)].findMany({
         ...params,
         columns: rootSelectColumns,
         with: {

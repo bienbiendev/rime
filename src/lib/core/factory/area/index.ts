@@ -6,6 +6,7 @@ import type { AreaWithoutSlug } from '$lib/core/factory/area/types.js';
 import type { Area, BuiltArea } from '$lib/core/factory/config/types.js';
 import { capitalize, toKebabCase } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';
+import { prototypeKebab } from '$lib/core/prototype/naming.js';
 
 export const create = <S extends string>(
   slug: S,
@@ -22,7 +23,7 @@ export const create = <S extends string>(
   return {
     type: 'area',
     slug: augmented.slug as BuiltArea['slug'],
-    kebab: toKebabCase(augmented.slug),
+    kebab: prototypeKebab(augmented.slug),
     icon: augmented.icon || FileText,
     label: augmented.label ? augmented.label : capitalize(area.slug),
     fields: augmented.fields || [],

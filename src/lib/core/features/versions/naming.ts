@@ -1,38 +1,29 @@
 import type { CollectionSlug } from '$lib/types.js';
 
 /**
- * The `_versions` slug and table-name convention.
+ * The versions shadow naming convention, in slug space.
  *
- * Lives with the feature that owns it rather than in a shared naming module: the adapter, the
- * panel and the operations layer all consume this vocabulary, none of them define it.
+ * A derived slug is `$` + the base + `__` + the marker:
+ *
+ *   pages  ->  $pages__versions  ->  table pages__versions  ->  url pages--versions
+ *
+ * The `$` says rime made this, matching how `$hooks`/`$url`/`$adapter` already mark
+ * rime-owned config keys. The `__` says *shadow of*, and it is a segment boundary rather than
+ * a word break — which is why every case conversion goes through mapSegments and why an author
+ * slug may not contain it (see factory/config/validate.server.ts). Without that rule a
+ * collection named `pagesVersions` would snake-case onto the same table as this shadow.
  */
 
-/**
- * Add a _versions suffix to a given name.
- * Used for document versioning slug and tables.
- *
- * @example
- * // Returns 'pages_versions'
- * withVersionsSuffix('pages');
- */
-export const withVersionsSuffix = (name: string) => `${name}_versions` as CollectionSlug;
+const DERIVED = '$';
+const MARKER = '__versions';
 
-/**
- * Remove a _versions suffix from a given name.
- * Used for document versioning slug and tables.
- *
- * @example
- * // Returns 'pages'
- * withoutVersionsSuffix('pages_versions');
- */
+/** `pages` -> `$pages__versions` */
+export const withVersionsSuffix = (name: string) =>
+  `${DERIVED}${name.replace(/^\$/, '')}${MARKER}` as CollectionSlug;
+
+/** `$pages__versions` -> `pages`; anything else unchanged. */
 export const withoutVersionsSuffix = (name: string) =>
-  name.replace('_versions', '') as CollectionSlug;
+  name.replace(/^\$/, '').replace(MARKER, '') as CollectionSlug;
 
-/**
- * Check if a slug is a verioned collection slug
- *  * @example
- * // Returns true
- * hasVersionsSuffix('pages_versions');
- *
- */
-export const hasVersionsSuffix = (slug: string) => slug.endsWith('_versions');
+/** `$pages__versions` -> true */
+export const hasVersionsSuffix = (slug: string) => slug.endsWith(MARKER);

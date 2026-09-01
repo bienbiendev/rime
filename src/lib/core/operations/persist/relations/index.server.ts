@@ -28,7 +28,9 @@ export const saveRelations = async (args: {
   const { configMap, incomingPaths, blocksDiff, treeDiff, adapter, locale, config, ownerId, data } =
     args;
 
-  const parentTable = config.versions ? withVersionsSuffix(config.slug) : config.slug;
+  const parentTable = config.versions
+    ? withVersionsSuffix(config.slug)
+    : (config.slug as string);
 
   /** Delete relations from deletedBlocks */
   await adapter.relations.deleteFromPaths({

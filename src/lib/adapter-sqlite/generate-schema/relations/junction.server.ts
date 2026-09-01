@@ -29,7 +29,12 @@ export function generateJunctionTableDefinition(args: Args): Return {
   const tablesRelationsTo = [...new Set(Object.values(relationFieldsMap).map((r) => r.to))];
   if (tablesRelationsTo.length) {
     junctionTable = [
-      templateRelationFieldsTable({ table: tableName, relations: tablesRelationsTo, hasLocale }),
+      templateRelationFieldsTable({
+        table: tableName,
+        junctionTable: relsTableName,
+        relations: tablesRelationsTo,
+        hasLocale
+      }),
       templateRelationMany({ name: relationName, table: tableName, many: tablesRelationsTo })
     ].join('\n');
   }

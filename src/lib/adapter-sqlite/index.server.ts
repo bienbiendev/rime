@@ -94,6 +94,11 @@ const createAdapter = async <const C extends Config>(args: {
      * `adapter.tables[slug]` directly, which only worked because a slug and a table name are
      * currently the same string.
      */
+    /** The *name* of a prototype's table, for the places that key db.query by it. */
+    tableNameForSlug(slug: string) {
+      return baseTableName(slug);
+    },
+
     tableForSlug<T>(slug: string) {
       return tables[baseTableName(slug) as keyof typeof tables] as T extends any
         ? GenericTable
@@ -137,6 +142,7 @@ export type Adapter = {
   tables: GetRegisterType<'Tables'>;
   getTable<T>(key: string): T extends any ? GenericTable : T;
   tableForSlug<T>(slug: string): T extends any ? GenericTable : T;
+  tableNameForSlug(slug: string): string;
   updateRecord(
     id: string,
     tableName: string,

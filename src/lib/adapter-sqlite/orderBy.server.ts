@@ -1,12 +1,11 @@
 import { logger } from '$lib/core/logger.server.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
-import { withLocalesSuffix } from '$lib/core/i18n/naming.js';
 import type { PrototypeSlug } from '$lib/core/prototype/types.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import { asc, desc, getTableColumns, sql } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import { pathToDatabaseColumn } from './util.server.js';
-import { baseTableName } from './naming.server.js';
+import { baseTableName, tableName } from './naming.server.js';
 
 type Args = {
   slug: PrototypeSlug;
@@ -57,7 +56,7 @@ export const buildOrderByParam = ({ slug, locale, tables, config, by }: Args) =>
 
     // Check if it's a localized field in a non-versioned collection
     if (locale) {
-      const localeTableName = withLocalesSuffix(slug) as keyof typeof tables;
+      const localeTableName = tableName({ owner: baseTableName(slug), branch: 'locales' }) as keyof typeof tables;
       if (localeTableName in tables) {
         const localeTable = tables[localeTableName];
         const localizedColumns = getTableColumns(localeTable);
@@ -76,7 +75,7 @@ export const buildOrderByParam = ({ slug, locale, tables, config, by }: Args) =>
       }
     }
   } else {
-    const versionTableName = withVersionsSuffix(slug);
+    const versionTableName = baseTableName(withVersionsSuffix(slug));
     const versionsTable = tables[versionTableName];
     const versionsTableColumns = Object.keys(getTableColumns(versionsTable));
 
@@ -101,7 +100,7 @@ export const buildOrderByParam = ({ slug, locale, tables, config, by }: Args) =>
 
     // Check if it's a localized field in a versioned collection
     if (locale) {
-      const versionsLocaleTableName = withLocalesSuffix(versionTableName) as keyof typeof tables;
+      const versionsLocaleTableName = tableName({ owner: versionTableName, branch: 'locales' }) as keyof typeof tables;
       if (versionsLocaleTableName in tables) {
         const localeTable = tables[versionsLocaleTableName];
         const localizedColumns = getTableColumns(localeTable);
