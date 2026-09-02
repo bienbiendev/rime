@@ -15,7 +15,7 @@ program
       const frontRoutesPath = path.join(projectRoot, 'src', 'routes', '\\(front\\)');
 
       // Delete previous
-      execSync('bun ./src/lib/core/dev/cli/index.ts clear --force');
+      execSync('bun ./src/lib/core/dev/cli/index.ts clear --force', { stdio: 'inherit' });
 
       // tests/<name>/lib/ mirrors src/lib/ exactly (its +rime/ subfolder and any local
       // $rime/<name> split folders alike) — a straight copy is correct.
@@ -29,7 +29,7 @@ program
       }
 
       // Init files and DB
-      execSync(`bun ./src/lib/core/dev/cli/index.ts init -s --name ${name}`);
+      execSync(`bun ./src/lib/core/dev/cli/index.ts init -s --name ${name}`, { stdio: 'inherit' });
 
       // Copy routes. The rm has to happen here, immediately before the copy, not at the top:
       // `cp -rf A B` nests as B/(front) when B already exists, and `init` above regenerates
