@@ -13,20 +13,27 @@ import { dashboardLoad } from '$lib/panel/pages/dashboard/load.server.js';
 import { liveLoad } from '$lib/panel/pages/live/load.server.js';
 import { checkLiveRedirect } from '$lib/panel/util/live.server.js';
 import { type Handle, type RequestEvent, type ServerLoadEvent } from '@sveltejs/kit';
-import { rest as areaRest } from '../rest/area/index.server.js';
-import { rest as collectionRest } from '../rest/collection/index.server.js';
+import { ERROR_CONTEXT, handleError } from '../errors/handler.server.js';
+import { RimeError } from '../errors/index.js';
+import type { RouteConfig } from '../factory/config/types.js';
+import { prototypes } from '../prototype/registry.server.js';
+
+/** Every prototype's declared REST routes, by prototype name then by sub-path. */
+const restRoutes: Record<string, Record<string, RouteConfig>> = Object.fromEntries(
+  prototypes.map((prototype) => [prototype.name, prototype.rest ?? {}])
+);
 
 /**
- * Backs the fixed set of generated /panel/[slug=collection|area]/... and
- * /api/[slug=collection|area]/... routes — each of these reads slug/id off
+ * Backs the fixed set of generated /panel/[slug=<prototype>]/... and
+ * /api/[slug=<prototype>]/... routes — each of these reads slug/id off
  * event.params itself (a real dynamic route param), so the generated file
- * just passes event straight through, no import needed. The param matchers
- * (src/params/collection.ts, area.ts) already disambiguate collection vs
- * area at the router level, so rest.collection/rest.area need no runtime
- * isArea/id branching — each generated route calls the one method that
- * matches its own folder. Deliberately lives outside rime.server.ts: app
- * authors never touch this, and importing these panel/api wrappers there
- * would make RimeContext's inferred type depend on functions that read
+ * just passes event straight through, no import needed. The per-prototype
+ * param matchers under src/params/ already disambiguate one prototype from
+ * another at the router level, so a generated route names only its own
+ * prototype and sub-path and needs no runtime kind branching — see `rest`
+ * below. Deliberately lives outside rime.server.ts: app authors never touch
+ * this, and importing these panel/api wrappers there would make
+ * RimeContext's inferred type depend on functions that read
  * event.locals.rime — i.e. on itself.
  */
 export const routeHandlers = {
@@ -52,9 +59,26 @@ export const routeHandlers = {
     }
   },
 
-  rest: {
-    collection: collectionRest,
-    area: areaRest
+  /**
+   * Dispatches one generated /api route to the handler its prototype declared for that
+   * sub-path and method — the same resolution the `$routes` branch of handleRoutes below does
+   * for plugin and config routes, over the same `RouteConfig` shape.
+   *
+   * By name and path rather than as a nested object the generated files index into: it keeps
+   * those files free of any per-prototype typing, and it is the reason a prototype can add an
+   * endpoint by declaring it and nothing else.
+   */
+  rest: (name: string, path: string, event: RequestEvent) => {
+    const handler = restRoutes[name]?.[path]?.[event.request.method as keyof RouteConfig];
+
+    // Unreachable while the generated routes are current: codegen exports only the methods a
+    // prototype declares, so SvelteKit answers an undeclared one with its own 405 before this
+    // runs. Here so a route left behind by a config change 404s rather than throwing.
+    if (!handler) {
+      return handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.API });
+    }
+
+    return handler(event);
   }
 };
 
@@ -65,13 +89,13 @@ export const handleRoutes: Handle = async ({ event, resolve }) => {
   const IS_API_ROUTE = event.url.pathname.startsWith('/api');
   const IS_PANEL_ROUTE = event.params.panel !== undefined && !IS_PUBLIC_AUTH_ROUTE;
 
-  // event.params.slug comes straight from the URL, always kebab-case (see
-  // src/params/collection.ts, area.ts). Collection/area slugs themselves are
-  // camelCase, so rewrite once here — every downstream handler (panel
+  // event.params.slug comes straight from the URL, always kebab-case (see the
+  // generated src/params/<prototype>.ts matchers). Prototype slugs themselves
+  // are camelCase, so rewrite once here — every downstream handler (panel
   // load/actions, REST) can then keep comparing event.params.slug directly
   // against the config's `slug`. Scoped to routes actually matched via our
-  // own [slug=collection]/[slug=area] param matchers (route.id carries the
-  // matcher name) — a consumer's own app route can also use a `slug` param
+  // own [slug=<prototype>] param matchers (route.id carries the matcher
+  // name) — a consumer's own app route can also use a `slug` param
   // (e.g. (front)/pages/[slug]) and must be left untouched.
 
   if ((IS_API_ROUTE || IS_PANEL_ROUTE) && event.params.slug) {
@@ -80,9 +104,7 @@ export const handleRoutes: Handle = async ({ event, resolve }) => {
     // prototype a URL segment names. The param matchers are generated from these same kebabs,
     // so a match here is guaranteed for any route that reached this branch.
     const kebab = event.params.slug;
-    const prototype = [...rime.config.raw.collections, ...rime.config.raw.areas].find(
-      (p) => p.kebab === kebab
-    );
+    const prototype = rime.config.prototypes.find((p) => p.kebab === kebab);
     if (prototype) event.params.slug = prototype.slug;
   }
 

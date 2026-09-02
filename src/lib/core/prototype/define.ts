@@ -1,5 +1,5 @@
 import type { Adapter } from '$lib/core/adapter/types.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/factory/config/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { GenericDoc } from './types.js';
@@ -51,6 +51,21 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
    * `buildPrototypeApi`, since every prototype has them and none of them has its own version.
    */
   api?: (ctx: PrototypeApiContext<C>) => Dic;
+
+  /**
+   * The REST surface this prototype provides, in the shape routes are already declared in:
+   * `RouteConfig` per path, the same type `config.$routes` and `plugin.routes` use.
+   *
+   * The key is the sub-path **under `/api/[slug=<name>]`** — `''` for the list tier (a
+   * singleton's only tier), `'[id]'`, `'[id]/duplicate'`. It differs from a plugin's key, which
+   * is an absolute pathname, for the reason a prototype has no URL of its own to name: its
+   * slugs come from the user's config, and the param matcher is what turns one into a route.
+   *
+   * `core/dev/codegen/routes/` reads this to write the `+server.ts` files, and
+   * `handlers/routes.server.ts` dispatches through it — so an endpoint appears by being
+   * declared here, not by also editing codegen.
+   */
+  rest?: Record<string, RouteConfig>;
 
   /**
    * Type-only. The accessor this definition contributes to `event.locals.rime`, carrying the
@@ -131,5 +146,6 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Acces
   ({
     singleton: options.singleton ?? false,
     boot: options.boot,
-    api: options.api
+    api: options.api,
+    rest: options.rest
   }) as PrototypeDefinition<C, Accessor>;

@@ -2,18 +2,18 @@ import { PARAMS } from '$lib/core/constants.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
 import { trycatch } from '$lib/util/function.js';
-import { json, type RequestEvent } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
+import { endpoint } from './endpoint.server.js';
 
 /**
  * GET handler for the collection API endpoint to retrieve a document by its ID.
  */
-export async function restGetById(event: RequestEvent) {
+export const restGetById = endpoint(async ({ event, collection }) => {
   //
   const { rime } = event.locals;
-  const slug = event.params.slug;
   const id = event.params.id;
 
-  if (!rime.config.isCollection(slug) || !id) {
+  if (!id) {
     return handleError(new RimeError(RimeError.NOT_FOUND), { context: 'api' });
   }
 
@@ -25,7 +25,7 @@ export async function restGetById(event: RequestEvent) {
   const select = event.url.searchParams.get(PARAMS.SELECT)?.split(',') || undefined;
 
   const [error, document] = await trycatch(() =>
-    rime.collection(slug).findById({
+    collection.findById({
       id,
       locale: rime.getLocale(),
       depth,
@@ -40,4 +40,4 @@ export async function restGetById(event: RequestEvent) {
   }
 
   return json({ doc: document });
-}
+});

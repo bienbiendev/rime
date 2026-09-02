@@ -1,23 +1,15 @@
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
-import { RimeError } from '$lib/core/errors/index.js';
 import { extractData } from '$lib/core/operations/extract-data.server.js';
 import { trycatch } from '$lib/util/function.js';
-import { json, type RequestEvent } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
+import { endpoint } from './endpoint.server.js';
 
 /**
  * POST handler for the collection API endpoint.
  */
-export async function restCreate(event: RequestEvent) {
+export const restCreate = endpoint(async ({ event, collection }) => {
   //
   const { rime } = event.locals;
-
-  // Check if the slug corresponds to a valid collection
-  const slug = event.params.slug;
-  if (!rime.config.isCollection(slug)) {
-    return handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.API });
-  }
-
-  const collection = rime.collection(slug);
 
   // Extract data from the request body
   const [extractError, data] = await trycatch(() => extractData(event.request));
@@ -39,4 +31,4 @@ export async function restCreate(event: RequestEvent) {
   }
 
   return json({ doc: document });
-}
+});

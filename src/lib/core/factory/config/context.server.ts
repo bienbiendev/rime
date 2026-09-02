@@ -30,8 +30,19 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
    * asks for a name it got from the registry rather than picking one of two hardcoded accessors,
    * so a third kind costs nothing here.
    */
+  /**
+   * Every built prototype config, whatever its kind.
+   *
+   * The one place left that still says `collections` and `areas` by name. It survives because
+   * the config *factory* is still two builders (`factory/collection/`, `factory/area/`) — the
+   * doc retires those through `defineFeature({ augment })`, and this spread goes with them.
+   * Everything downstream asks by prototype name instead, so a third kind costs one entry here
+   * and nothing else.
+   */
+  const allPrototypes = [...config.collections, ...config.areas];
+
   const byPrototype = (name: string) =>
-    [...config.collections, ...config.areas].filter((prototype) => prototype.type === name);
+    allPrototypes.filter((prototype) => prototype.type === name);
 
   /**
    * One config, named by prototype and slug.
@@ -105,6 +116,13 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
     /**
      * Gets every config of one prototype kind, by registry name
      */
+    /**
+     * Gets every built prototype config, whatever its kind
+     */
+    get prototypes() {
+      return allPrototypes;
+    },
+
     byPrototype,
 
     /**

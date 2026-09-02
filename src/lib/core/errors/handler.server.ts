@@ -39,7 +39,29 @@ type ErrorHandlerOptions = {
  * const [err] = await trycatch(() => save(data));
  * if (err) return handleError(err, { context: ERROR_CONTEXT.ACTION, formData: data });
  */
+/**
+ * Every branch below either throws — `error()` and `redirect()` are declared `never` — or, in an
+ * action context only, returns `fail()`. So the return type depends entirely on the context, and
+ * the overloads say so: an api/load call contributes nothing to its caller's return type, which
+ * is what lets a `+server.ts` handler be a real `RequestHandler` while still ending
+ * `return handleError(...)`.
+ *
+ * Inferred as one union instead, every REST handler in the repo was typed as possibly returning
+ * an `ActionFailure`, which no api-context call can produce.
+ */
+export function handleError(
+  err: Error,
+  options: ErrorHandlerOptions & { context: typeof ERROR_CONTEXT.ACTION }
+): ReturnType<typeof handleErrorImpl>;
+export function handleError(
+  err: Error,
+  options: ErrorHandlerOptions & { context: typeof ERROR_CONTEXT.API | typeof ERROR_CONTEXT.LOAD }
+): never;
 export function handleError(err: Error, options: ErrorHandlerOptions) {
+  return handleErrorImpl(err, options);
+}
+
+function handleErrorImpl(err: Error, options: ErrorHandlerOptions) {
   const { context, formData } = options;
 
   /****************************************************/

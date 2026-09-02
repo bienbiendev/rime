@@ -15,10 +15,10 @@ export type Routes = Record<string, RouteDefinition>;
 /**
  * Check if routes need to be regenerated based on config changes.
  * Panel/API routes are a fixed set of dynamic-segment files (file count never
- * grows with schema size), but the [panel=panel]/[slug=collection]/[slug=area]
- * param matchers under src/params/ bake in the actual accepted value(s), so
+ * grows with schema size), but the [panel=panel]/[slug=<prototype>] param
+ * matchers under src/params/ bake in the actual accepted value(s), so
  * changing RIME_PANEL_ROUTE or RIME_CONFIG_DIR, or adding/removing/renaming a
- * collection/area, still needs a regen to keep those matchers in sync — same
+ * prototype, still needs a regen to keep those matchers in sync — same
  * trigger as custom routes and panel CSS. Both PANEL_ROUTE and CONFIG_DIR must
  * stay in this memo: they're read once at process start, so a changed value
  * only takes effect after a restart, and only if the restart's regen actually
@@ -41,8 +41,9 @@ export function shouldRegenerateRoutes<T extends Config>(config: T): boolean {
         : ''
     }
     css:${config.panel?.css ? config.panel.css : 'none'}
-    collections:${(config.collections || []).map((c) => c.slug).join(',')}
-    areas:${(config.areas || []).map((a) => a.slug).join(',')}
+    prototypes:${[...(config.collections || []), ...(config.areas || [])]
+      .map((p) => `${p.type}:${p.slug}`)
+      .join(',')}
   `;
 
   const cachedMemo = cache.get('routes');

@@ -1,25 +1,18 @@
 import { PARAMS } from '$lib/core/constants.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
-import { RimeError } from '$lib/core/errors/index.js';
 import { extractData } from '$lib/core/operations/extract-data.server.js';
 import { trycatch } from '$lib/util/function.js';
-import { json, type RequestEvent } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
+import { endpoint } from './endpoint.server.js';
 
 /**
- * PATCH handler for the collection API endpoint to update a document by its ID.
+ * PATCH handler for the area API endpoint.
  */
-export async function restUpdateById(event: RequestEvent) {
+export const restUpdate = endpoint(async ({ event, area }) => {
   //
   const { rime } = event.locals;
-  const slug = event.params.slug;
-  const id = event.params.id;
 
-  // Check if the slug corresponds to a valid collection and if the ID is provided
-  if (!rime.config.isCollection(slug) || !id) {
-    return handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.API });
-  }
-
-  // Extract query parameters for versioning and draft status
+  // Extract versionId and draft parameters from the request URL
   const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
   const draft = event.url.searchParams.get(PARAMS.DRAFT)
     ? event.url.searchParams.get(PARAMS.DRAFT) === 'true'
@@ -36,13 +29,13 @@ export async function restUpdateById(event: RequestEvent) {
     rime.setLocale(data.locale);
   }
 
-  const [error, document] = await trycatch(() =>
-    rime.collection(slug).updateById({
-      id,
+  // Update the area with the extracted data, versionId, draft status, and current locale
+  const [error, doc] = await trycatch(() =>
+    area.update({
       data,
-      locale: rime.getLocale(),
       versionId,
-      draft
+      draft,
+      locale: rime.getLocale()
     })
   );
 
@@ -50,5 +43,5 @@ export async function restUpdateById(event: RequestEvent) {
     return handleError(error, { context: ERROR_CONTEXT.API });
   }
 
-  return json({ doc: document });
-}
+  return json({ doc });
+});

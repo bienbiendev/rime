@@ -1,25 +1,17 @@
 import { PARAMS } from '$lib/core/constants.js';
-import { RimeError } from '$lib/core/errors/index.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
 import { trycatch } from '$lib/util/function.js';
 import type { Dic } from '$lib/util/types.js';
-import { json, type RequestEvent } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
+import { endpoint } from './endpoint.server.js';
 
 /**
  * GET handler for the area API endpoint.
  */
-export async function restGet(event: RequestEvent) {
+export const restGet = endpoint(async ({ event, area }) => {
   //
   const { rime } = event.locals;
-
-  // Check if the slug corresponds to a valid area
-  const slug = event.params.slug;
-  if (!rime.config.isArea(slug)) {
-    return handleError(new RimeError(RimeError.NOT_FOUND), { context: 'api' });
-  }
-
   const params = event.url.searchParams;
-  const areaAPI = rime.area(slug);
 
   // Build the select parameter for the API call based on the request parameters
   function buildSelect(params: typeof event.url.searchParams) {
@@ -29,9 +21,9 @@ export async function restGet(event: RequestEvent) {
     if (
       paramSelect &&
       paramSelect.includes('title') &&
-      !paramSelect.includes(areaAPI.config.asTitle)
+      !paramSelect.includes(area.config.asTitle)
     ) {
-      paramSelect.push(areaAPI.config.asTitle);
+      paramSelect.push(area.config.asTitle);
     }
     return paramSelect;
   }
@@ -46,11 +38,11 @@ export async function restGet(event: RequestEvent) {
   };
 
   // Call the area API to find the document based on the prepared parameters
-  const [error, doc] = await trycatch(() => rime.area(slug).find(apiParams));
+  const [error, doc] = await trycatch(() => area.find(apiParams));
 
   if (error) {
     return handleError(error, { context: 'api' });
   }
 
   return json({ doc });
-}
+});

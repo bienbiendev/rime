@@ -3,7 +3,8 @@ import { logger } from '$lib/core/logger.server.js';
 import type { Config } from '$lib/types.js';
 import fs from 'fs';
 import path from 'path';
-import { commonRoutes, customRoute, paramMatcher } from './common.server.js';
+import { prototypes } from '$lib/core/prototype/registry.server.js';
+import { commonRoutes, customRoute, paramMatcher, prototypeApiServer } from './common.server.js';
 import { injectCustomCSS, removeCustomCSS } from './custom-css.server.js';
 import { ensureDir, shouldRegenerateRoutes, writeRouteFile } from './util.server.js';
 
@@ -11,15 +12,17 @@ const projectRoot = process.cwd();
 
 /**
  * Main function to generate browser routes based on configuration.
- * commonRoutes is a fixed set of files (layout, sign-in, dashboard, the
- * matcher-disambiguated [panel=panel]/[slug=collection|area]/... and
- * /api/[slug=collection|area]/... dynamic routes) — it no longer varies with
- * how many collections/areas are configured, so there's no per-collection/area
- * loop here anymore. The folder is always the literal `[panel=panel]` segment;
- * only src/params/panel.ts's matcher content varies with RIME_PANEL_ROUTE, so
- * the URL itself can be hidden from admin-path scanners without ever renaming
- * a directory. Same idea backs src/params/collection.ts and area.ts, which
- * bake in the actual slug list — all three are rewritten here.
+ *
+ * Every file written here is a fixed set of dynamic-segment routes — the count never grows with
+ * how many collections or areas are configured, only with how many prototype *kinds* exist and
+ * what each one declares. `commonRoutes` holds the ones that are the same for everybody plus the
+ * panel's own [slug=<name>] tree; the /api tree is written from each prototype's `rest`
+ * declaration, so this file names no kind of its own.
+ *
+ * The folder is always the literal `[panel=panel]` segment; only src/params/panel.ts's matcher
+ * content varies with RIME_PANEL_ROUTE, so the URL itself can be hidden from admin-path scanners
+ * without ever renaming a directory. The per-prototype matchers work the same way, baking in the
+ * actual slug list — all of them are rewritten here.
  */
 function generateRoutes<T extends Config>(config: T): void {
   logger.info('Routes generation...');
@@ -42,43 +45,68 @@ function generateRoutes<T extends Config>(config: T): void {
   ensureDir(panelRoute);
   ensureDir(paramsDir);
 
-  // 3. Process common routes (now includes the matcher-disambiguated [slug=collection|area] routes) —
-  // skip the [slug=collection]/[slug=area] routes and their matchers when there are no collections/areas
-  // configured, rather than generating a matcher that can never match anything.
-  const hasCollections = (config.collections || []).length > 0;
-  const hasAreas = (config.areas || []).length > 0;
+  // 3. The URL segments each prototype accepts, by prototype name. A name with none configured
+  // gets no routes and no matcher — generating a matcher that can never match anything would
+  // leave SvelteKit with a route no request can reach.
+  const allPrototypes = [...(config.collections || []), ...(config.areas || [])];
+  const kebabsByPrototype = Object.fromEntries(
+    prototypes.map((prototype) => [
+      prototype.name,
+      allPrototypes.filter((p) => p.type === prototype.name).map((p) => p.kebab)
+    ])
+  );
+
+  // 4. Process common routes — the fixed files plus the panel's own
+  // [panel=panel]/[slug=<name>]/... tree. A pattern naming a matcher is skipped when that
+  // matcher will not exist, read off the pattern itself rather than from a per-kind boolean.
+  const matcherIn = (pattern: string) => pattern.match(/\[slug=([^\]]+)\]/)?.[1];
 
   for (const [pattern, files] of Object.entries(commonRoutes)) {
-    if (!hasCollections && pattern.includes('[slug=collection]')) continue;
-    if (!hasAreas && pattern.includes('[slug=area]')) continue;
+    const matcher = matcherIn(pattern);
+    if (matcher && !kebabsByPrototype[matcher]?.length) continue;
     for (const [fileType, templateFn] of Object.entries(files)) {
       writeRouteFile(rootRoutes, pattern, fileType, templateFn());
     }
   }
 
-  // 4. Write the [panel=panel] param matcher — always present, unlike collection/area — plus
-  // the [slug=collection]/[slug=area] matchers, only when needed, removing any stale matcher
-  // left over from a previous config that did have collections/areas.
+  // 5. The /api tree, written from what each prototype declared in its own rest/index.server.ts
+  // — so an endpoint exists because a definition says so, and codegen never names a kind.
+  for (const prototype of prototypes) {
+    if (!kebabsByPrototype[prototype.name]?.length) continue;
+
+    for (const [routePath, routeConfig] of Object.entries(prototype.rest || {})) {
+      const methods = Object.keys(routeConfig);
+      if (!methods.length) continue;
+
+      const pattern = path.join(`(rime)/api/[slug=${prototype.name}]`, routePath);
+      writeRouteFile(
+        rootRoutes,
+        pattern,
+        'server',
+        prototypeApiServer(prototype.name, routePath, methods)
+      );
+    }
+  }
+
+  // 6. Param matchers. The [panel=panel] one is always present; the rest are one per prototype
+  // name, and **the file name is the prototype name** — that is what makes `[slug=collection]`
+  // in a route pattern mean "a slug of the collection prototype", and the whole reason nothing
+  // above needs a list of kinds. A matcher whose prototype has no configs is removed, so a
+  // stale one from a previous config cannot keep matching.
   fs.writeFileSync(path.join(paramsDir, 'panel.ts'), paramMatcher([PANEL_ROUTE]));
 
-  const collectionMatcherPath = path.join(paramsDir, 'collection.ts');
-  if (hasCollections) {
-    fs.writeFileSync(
-      collectionMatcherPath,
-      paramMatcher((config.collections || []).map((c) => c.kebab))
-    );
-  } else {
-    fs.rmSync(collectionMatcherPath, { force: true });
+  for (const prototype of prototypes) {
+    const matcherPath = path.join(paramsDir, `${prototype.name}.ts`);
+    const kebabs = kebabsByPrototype[prototype.name];
+
+    if (kebabs?.length) {
+      fs.writeFileSync(matcherPath, paramMatcher(kebabs));
+    } else {
+      fs.rmSync(matcherPath, { force: true });
+    }
   }
 
-  const areaMatcherPath = path.join(paramsDir, 'area.ts');
-  if (hasAreas) {
-    fs.writeFileSync(areaMatcherPath, paramMatcher((config.areas || []).map((a) => a.kebab)));
-  } else {
-    fs.rmSync(areaMatcherPath, { force: true });
-  }
-
-  // 5. Handle custom routes from config
+  // 7. Handle custom routes from config
   const customRoutes = config.panel?.routes;
   if (customRoutes) {
     for (const [route, routeConfig] of Object.entries(customRoutes)) {
@@ -87,7 +115,7 @@ function generateRoutes<T extends Config>(config: T): void {
     }
   }
 
-  // 6. Handle custom CSS in layout file
+  // 8. Handle custom CSS in layout file
   const layoutPath = path.join(rimeRoutes, '+layout.svelte');
   if (fs.existsSync(layoutPath)) {
     if (config.panel?.css) {

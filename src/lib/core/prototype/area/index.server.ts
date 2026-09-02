@@ -6,6 +6,7 @@ import { createBlankDocument } from '../doc.js';
 import type { GenericDoc } from '../types.js';
 import { find, type FindArgs } from './operations/find.js';
 import { update, type UpdateArgs } from './operations/update.js';
+import { rest } from './rest/index.server.js';
 
 type Ctx = PrototypeApiContext<BuiltArea>;
 
@@ -103,6 +104,8 @@ export const area = definePrototype<BuiltArea, AreaAccessor>({
   singleton: true,
 
   api: (ctx) => api(ctx),
+
+  rest,
 
   boot: async ({ config, adapter, defaultLocale }) => {
     /**

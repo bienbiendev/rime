@@ -238,17 +238,22 @@ import { type ServerLoadEvent } from '@sveltejs/kit';
 export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.live(event);`;
 
 /****************************************************/
-/* Panel /[slug=collection|area]/... and API /api/[slug=collection|area]/...
-/* — fixed, generic, matcher-disambiguated routes shared by every
-/* collection/area, generated once regardless of how many are configured.
-/* The [slug=collection]/[slug=area] param matchers (src/params/, see
-/* collectionMatcher/areaMatcher below) route each slug to the right folder
-/* at the SvelteKit router level, so collection and area pages/endpoints are
+/* The panel's /[slug=<prototype>]/... routes — fixed, generic,
+/* matcher-disambiguated, generated once regardless of how many prototypes of
+/* that kind are configured. The per-prototype param matchers (src/params/,
+/* see paramMatcher below) route each slug to the right folder at the
+/* SvelteKit router level, so a collection page and an area page are
 /* genuinely separate routes — no runtime kind-branching inside a shared
 /* component, no unauthenticated-branch union fighting the component's data
 /* prop type. Each reads slug/id off event.params (a real dynamic route
 /* param) via event.locals.routes, so none of these import anything from
 /* rimecms besides the panel components.
+/*
+/* These stay written out per kind while the panel does: its loads, actions
+/* and components are per-kind too, so generating the routes from the
+/* registry alone would move that seam rather than close it. The /api tree,
+/* whose handlers a prototype now declares, is generated instead — see
+/* prototypeApiServer below.
 /****************************************************/
 
 /**
@@ -365,54 +370,36 @@ import { type ServerLoadEvent } from '@sveltejs/kit';
 export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.areaVersions(event);`;
 
 /**
- * Collection REST endpoint (list-level)
- * (rime)/api/[slug=collection]/+server.ts
+ * A prototype's REST endpoint, one file per declared sub-path.
+ *
+ * There is no per-kind template any more: `name`, `path` and `methods` all come from what the
+ * prototype declared in its own `rest/index.server.ts`, so an area's file has no POST for the
+ * same reason an area has no create — nobody declared one. An undeclared method stays
+ * unexported and SvelteKit answers it with its own 405, exactly as before.
+ *
+ * The body dispatches by name and path (see `rest` in handlers/routes.server.ts) so this file,
+ * like every other generated route, imports nothing from rimecms.
+ *
+ * (rime)/api/[slug=<name>]/<path>/+server.ts
  */
-const collectionApiServer = () => `
+const prototypeApiServer = (name: string, path: string, methods: string[]) => `
 import { type RequestEvent } from '@sveltejs/kit';
 
-export const GET = (event: RequestEvent) => event.locals.routes.rest.collection.get(event);
-export const POST = (event: RequestEvent) => event.locals.routes.rest.collection.create(event);
-export const DELETE = (event: RequestEvent) => event.locals.routes.rest.collection.delete(event);`;
+const handle = (event: RequestEvent) => event.locals.routes.rest('${name}', '${path}', event);
+
+${methods.map((method) => `export const ${method} = handle;`).join('\n')}`;
 
 /**
- * Area REST endpoint — singleton, no [id] tier: GET reads it, PATCH updates
- * it, no create/delete (areas are config-defined, not created/removed via API).
- * (rime)/api/[slug=area]/+server.ts
- */
-const areaApiServer = () => `
-import { type RequestEvent } from '@sveltejs/kit';
-
-export const GET = (event: RequestEvent) => event.locals.routes.rest.area.get(event);
-export const PATCH = (event: RequestEvent) => event.locals.routes.rest.area.update(event);`;
-
-/**
- * Collection REST endpoint (id-level)
- * (rime)/api/[slug=collection]/[id]/+server.ts
- */
-const collectionIdApiServer = () => `
-import { type RequestEvent } from '@sveltejs/kit';
-
-export const GET = (event: RequestEvent) => event.locals.routes.rest.collection.getById(event);
-export const PATCH = (event: RequestEvent) => event.locals.routes.rest.collection.updateById(event);
-export const DELETE = (event: RequestEvent) => event.locals.routes.rest.collection.deleteById(event);`;
-
-/**
- * Collection duplicate action
- * (rime)/api/[slug=collection]/[id]/duplicate/+server.ts
- */
-const collectionDuplicateApiServer = () => `
-import { type RequestEvent } from '@sveltejs/kit';
-
-export const POST = (event: RequestEvent) => event.locals.routes.rest.collection.duplicate(event);`;
-
-/**
- * Param matchers backing [slug=collection]/[slug=area] — bake in the actual
- * configured slug list at generation time so they stay isomorphic (no
- * server-only config import; SvelteKit resolves matchers on the client too
- * for client-side navigation), same approach as this repo's own hand-written
+ * Param matchers backing [slug=<prototype>] — bake in the actual configured
+ * slug list at generation time so they stay isomorphic (no server-only config
+ * import; SvelteKit resolves matchers on the client too for client-side
+ * navigation), same approach as this repo's own hand-written
  * src/params/news.ts, lang.ts.
- * src/params/collection.ts, src/params/area.ts
+ *
+ * One file per prototype name, named *after* that prototype — see the loop in
+ * index.server.ts, where that naming is what makes `[slug=collection]` mean
+ * "a slug of the collection prototype".
+ * src/params/<prototype>.ts
  */
 const paramMatcher = (slugs: string[]) => `
 import type { ParamMatcher } from '@sveltejs/kit';
@@ -527,21 +514,9 @@ export const commonRoutes: Routes = {
     page: areaVersionsPage,
     pageServer: areaVersionsPageServer
   },
-  '(rime)/api/[slug=collection]': {
-    server: collectionApiServer
-  },
-  '(rime)/api/[slug=collection]/[id]': {
-    server: collectionIdApiServer
-  },
-  '(rime)/api/[slug=collection]/[id]/duplicate': {
-    server: collectionDuplicateApiServer
-  },
-  '(rime)/api/[slug=area]': {
-    server: areaApiServer
-  },
   '(rime)/api/[...rest]': {
     server: apiCatchAllServer
   }
 };
 
-export { customRoute, paramMatcher };
+export { customRoute, paramMatcher, prototypeApiServer };

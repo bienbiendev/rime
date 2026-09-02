@@ -11,6 +11,7 @@ import { duplicate, type DuplicateArgs } from './operations/duplicate.js';
 import { find, type FindArgs } from './operations/find.js';
 import { findById, type FindByIdArgs } from './operations/find-by-id.js';
 import { updateById, type UpdateByIdArgs } from './operations/update-by-id.js';
+import { rest } from './rest/index.server.js';
 
 type Ctx = PrototypeApiContext<BuiltCollection>;
 
@@ -224,5 +225,6 @@ export type CollectionAccessor = <Slug extends keyof RegisterCollection>(
  * a collection with no documents is a collection with no documents.
  */
 export const collection = definePrototype<BuiltCollection, CollectionAccessor>({
-  api: (ctx) => api(ctx)
+  api: (ctx) => api(ctx),
+  rest
 });
