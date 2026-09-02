@@ -8,24 +8,26 @@ import {
   runDocHooks
 } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
+import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { RegisterCollection } from '$lib/index.js';
 import { omitId } from '$lib/util/object.js';
 import type { DeepPartial } from '$lib/util/types.js';
-import type { RequestEvent } from '@sveltejs/kit';
 
-type Args<T> = {
+/**
+ * What a caller passes. Exported, and free of the context, so the API surface a prototype
+ * declares never mentions the request — see the note on `CollectionApi`.
+ */
+export type CreateArgs<T> = {
   data: DeepPartial<T>;
   locale?: string | undefined;
-  config: BuiltCollection;
-  isSystemOperation?: boolean;
-  event: RequestEvent & {
-    locals: App.Locals;
-  };
 };
 
+type Args<T> = CreateArgs<T> & { ctx: PrototypeApiContext<BuiltCollection> };
+
 export const create = async <T extends RegisterCollection[CollectionSlug]>(args: Args<T>) => {
-  const { config, event, locale, isSystemOperation } = args;
+  const { ctx, locale } = args;
+  const { config, event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
   let context: OperationContext<CollectionSlug> = { params: { locale }, isSystemOperation };

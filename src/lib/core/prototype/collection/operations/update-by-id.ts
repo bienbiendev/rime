@@ -1,21 +1,20 @@
 import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { runUpdate } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
+import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
 import type { DeepPartial } from '$lib/util/types.js';
-import type { RequestEvent } from '@sveltejs/kit';
 
-type Args<T> = {
+export type UpdateByIdArgs<T> = {
   id: string;
   versionId?: string;
   draft?: boolean;
   data: DeepPartial<T>;
   locale?: string | undefined;
-  config: BuiltCollection;
-  event: RequestEvent;
   isFallbackLocale?: string | undefined;
-  isSystemOperation?: boolean;
 };
+
+type Args<T> = UpdateByIdArgs<T> & { ctx: PrototypeApiContext<BuiltCollection> };
 
 /**
  * Updates a document by ID.
@@ -25,7 +24,8 @@ type Args<T> = {
  * how the saved document is read back.
  */
 export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T>) => {
-  const { event, locale, id, draft, isFallbackLocale = undefined, isSystemOperation } = args;
+  const { ctx, locale, id, draft, isFallbackLocale = undefined } = args;
+  const { event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
   const context: OperationContext<CollectionSlug> = {
@@ -41,7 +41,7 @@ export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T
 
   return runUpdate<CollectionSlug, T, BuiltCollection>({
     data: args.data,
-    config: args.config,
+    config: ctx.config,
     event,
     context,
     locale,

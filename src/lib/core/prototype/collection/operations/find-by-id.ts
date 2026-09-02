@@ -2,23 +2,23 @@ import { RimeError } from '$lib/core/errors/index.js';
 import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { readDocument, runBeforeOperation } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
+import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
-import type { RequestEvent } from '@sveltejs/kit';
 
-type Args = {
+export type FindByIdArgs = {
   id: string;
   versionId?: string;
   locale?: string | undefined;
-  config: BuiltCollection;
-  event: RequestEvent;
   depth?: number;
   select?: string[];
   draft?: boolean;
-  isSystemOperation?: boolean;
 };
 
+type Args = FindByIdArgs & { ctx: PrototypeApiContext<BuiltCollection> };
+
 export const findById = async <T extends GenericDoc>(args: Args) => {
-  const { config, event, id, versionId, locale, depth, select, draft, isSystemOperation } = args;
+  const { ctx, id, versionId, locale, depth, select, draft } = args;
+  const { config, event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
   let context: OperationContext<CollectionSlug> = {

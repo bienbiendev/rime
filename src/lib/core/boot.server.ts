@@ -8,7 +8,7 @@ import { getBaseAuthConfig } from './features/auth/better-auth/config.server.js'
 import { ensureMedias } from './features/upload/ensure.server.js';
 import i18n from './i18n/index.js';
 import { registerTranslation } from './i18n/register.server.js';
-import { prototypes } from './prototype/extensions/index.js';
+import { prototypes } from './prototype/registry.server.js';
 
 /**
  * Phase 2 of three — everything that happens once, when the process starts.

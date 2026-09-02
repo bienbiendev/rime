@@ -1,23 +1,22 @@
 import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { runBeforeOperation } from '$lib/core/operations/run.server.js';
-import type { OperationContext } from '$lib/core/operations/types.js';
-import type { OperationQuery } from '$lib/core/operations/types.js';
-import type { RequestEvent } from '@sveltejs/kit';
-import type { CollectionSlug } from '../../../types.js';
+import type { OperationContext, OperationQuery } from '$lib/core/operations/types.js';
+import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
+import type { CollectionSlug } from '$lib/core/prototype/types.js';
 
-type DeleteArgs = {
+export type DeleteArgs = {
   query?: OperationQuery;
   locale?: string | undefined;
-  config: BuiltCollection;
-  event: RequestEvent & { locals: App.Locals };
   sort?: string;
   limit?: number;
   offset?: number;
-  isSystemOperation?: boolean;
 };
 
-export const deleteDocs = async (args: DeleteArgs): Promise<string[]> => {
-  const { config, event, locale, limit, offset, sort, query, isSystemOperation } = args;
+type Args = DeleteArgs & { ctx: PrototypeApiContext<BuiltCollection> };
+
+export const deleteDocs = async (args: Args): Promise<string[]> => {
+  const { ctx, locale, limit, offset, sort, query } = args;
+  const { config, event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
   let context: OperationContext<CollectionSlug> = {

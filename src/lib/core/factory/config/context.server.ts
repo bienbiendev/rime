@@ -33,6 +33,18 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
   const byPrototype = (name: string) =>
     [...config.collections, ...config.areas].filter((prototype) => prototype.type === name);
 
+  /**
+   * One config, named by prototype and slug.
+   *
+   * What `rime.<name>(slug)` looks up. It asks for both halves on purpose: `getBySlug` would
+   * find an area for `rime.collection('settings')` and hand back an API that cannot work on it.
+   */
+  const getByPrototype = (name: string, slug: string) => {
+    const found = byPrototype(name).find((prototype) => prototype.slug === slug);
+    if (!found) throw new RimeError(RimeError.BAD_REQUEST, `${slug} is not a ${name}`);
+    return found;
+  };
+
   const getLocalesCodes = () =>
     config.localization ? config.localization.locales.map((l) => l.code) : [];
 
@@ -94,6 +106,11 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
      * Gets every config of one prototype kind, by registry name
      */
     byPrototype,
+
+    /**
+     * Gets one config by prototype name and slug
+     */
+    getByPrototype,
 
     /**
      * Gets the default locale from the configuration

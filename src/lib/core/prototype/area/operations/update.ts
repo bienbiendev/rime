@@ -1,19 +1,18 @@
 import type { BuiltArea } from '$lib/core/factory/config/types.js';
 import { runUpdate } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
+import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { AreaSlug, GenericDoc } from '$lib/core/prototype/types.js';
 import type { DeepPartial } from '$lib/util/types.js';
-import type { RequestEvent } from '@sveltejs/kit';
 
-type UpdateArgs<T> = {
+export type UpdateArgs<T> = {
   data: DeepPartial<T>;
   locale?: string | undefined;
-  config: BuiltArea;
-  event: RequestEvent;
   versionId?: string;
   draft?: boolean;
-  isSystemOperation?: boolean;
 };
+
+type Args<T> = UpdateArgs<T> & { ctx: PrototypeApiContext<BuiltArea> };
 
 /**
  * Updates an area's single document.
@@ -22,8 +21,9 @@ type UpdateArgs<T> = {
  * updateById. Only the two prototype-specific pieces are here: which adapter method writes the
  * root row, and how the saved document is read back.
  */
-export const update = async <T extends GenericDoc = GenericDoc>(args: UpdateArgs<T>) => {
-  const { config, event, locale, draft, isSystemOperation, versionId } = args;
+export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) => {
+  const { ctx, locale, draft, versionId } = args;
+  const { config, event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
   const context: OperationContext<AreaSlug> = {

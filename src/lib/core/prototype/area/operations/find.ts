@@ -2,22 +2,22 @@ import { RimeError } from '$lib/core/errors/index.js';
 import type { BuiltArea } from '$lib/core/factory/config/types.js';
 import { readDocument, runBeforeOperation } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
+import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { AreaSlug, GenericDoc } from '$lib/core/prototype/types.js';
-import type { RequestEvent } from '@sveltejs/kit';
 
-type FindArgs = {
+export type FindArgs = {
   locale?: string | undefined;
-  config: BuiltArea;
-  event: RequestEvent;
   depth?: number;
   select?: string[];
   versionId?: string;
   draft?: boolean;
-  isSystemOperation?: boolean;
 };
 
-export const find = async <T extends GenericDoc>(args: FindArgs): Promise<T> => {
-  const { config, event, locale, depth, select, versionId, draft, isSystemOperation } = args;
+type Args = FindArgs & { ctx: PrototypeApiContext<BuiltArea> };
+
+export const find = async <T extends GenericDoc>(args: Args): Promise<T> => {
+  const { ctx, locale, depth, select, versionId, draft } = args;
+  const { config, event, isSystemOperation } = ctx;
 
   let context: OperationContext<AreaSlug> = {
     params: {

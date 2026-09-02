@@ -11,21 +11,21 @@ import {
   omitId,
   setValueAtPath
 } from '$lib/util/object.js';
+import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { Dic } from '$lib/util/types.js';
-import type { RequestEvent } from '@sveltejs/kit';
 
-type DuplicateArgs = {
+export type DuplicateArgs = {
   id: string;
-  config: BuiltCollection;
-  event: RequestEvent & { locals: App.Locals };
-  isSystemOperation?: boolean;
 };
+
+type Args = DuplicateArgs & { ctx: PrototypeApiContext<BuiltCollection> };
 
 // If block is localized should not keep its id so it created a new one
 // If block is not localized than it should keep its id so block is updated
 
-export const duplicate = async (args: DuplicateArgs): Promise<string> => {
-  const { config, event, id } = args;
+export const duplicate = async (args: Args): Promise<string> => {
+  const { ctx, id } = args;
+  const { config, event } = ctx;
   const { rime } = event.locals;
 
   /**

@@ -1,40 +1,27 @@
 import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { logger } from '$lib/core/logger.server.js';
 import { readDocument, runBeforeOperation } from '$lib/core/operations/run.server.js';
-import type { OperationContext } from '$lib/core/operations/types.js';
+import type { OperationContext, OperationQuery } from '$lib/core/operations/types.js';
+import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug, GenericDoc, RawDoc } from '$lib/core/prototype/types.js';
-import type { OperationQuery } from '$lib/core/operations/types.js';
-import type { RequestEvent } from '@sveltejs/kit';
 
-type FindArgs = {
+export type FindArgs = {
   query?: OperationQuery;
   locale?: string | undefined;
-  config: BuiltCollection;
-  event: RequestEvent & { locals: App.Locals };
   sort?: string;
   depth?: number;
   limit?: number;
   offset?: number;
   select?: string[];
   draft?: boolean;
-  isSystemOperation?: boolean;
 };
 
-export const find = async <T extends GenericDoc>(args: FindArgs): Promise<T[]> => {
+type Args = FindArgs & { ctx: PrototypeApiContext<BuiltCollection> };
+
+export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
   //
-  const {
-    config,
-    event,
-    locale,
-    sort,
-    limit,
-    offset,
-    depth,
-    query,
-    draft,
-    select = [],
-    isSystemOperation
-  } = args;
+  const { ctx, locale, sort, limit, offset, depth, query, draft, select = [] } = args;
+  const { config, event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
   let context: OperationContext<CollectionSlug> = {

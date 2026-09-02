@@ -1,12 +1,11 @@
 import type { Config } from '$lib/core/factory/config/types.js';
-import type { RegisterArea, RegisterCollection } from '$lib/index.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { bootRime } from '../boot.server.js';
 import type { createConfigContext } from '../factory/config/context.server.js';
 import type { BuildConfig } from '../factory/config/index.server.js';
 import { logger } from '../logger.server.js';
-import { AreaAPI } from './local-api-area.server.js';
-import { CollectionAPI } from './local-api-collection.server.js';
+import { buildPrototypeApi } from '../prototype/api.server.js';
+import { prototypes, type PrototypeAccessors } from '../prototype/registry.server.js';
 
 export type Rime<C extends Config = Config> = Awaited<ReturnType<typeof createRime<C>>>;
 export type RimeContext<C extends Config = Config> = ReturnType<Rime<C>['createRimeContext']>;
@@ -55,6 +54,28 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
     }
     return (event.locals.locale = defaultLocale);
   }
+
+  /**
+   * Builds `rime.collection(slug)` / `rime.area(slug)` from the registry.
+   *
+   * There is no per-kind code here any more: a name comes from the registry, its definition
+   * says what the API is, and `buildPrototypeApi` assembles it. The types cannot be derived the
+   * same way — each accessor carries its own slug literals and document types — so they come
+   * from the definitions themselves, through `PrototypeAccessors`.
+   */
+  const buildAccessors = (event: RequestEvent) =>
+    Object.fromEntries(
+      prototypes.map((prototype) => [
+        prototype.name,
+        (slug: string) =>
+          buildPrototypeApi({
+            definition: prototype,
+            config: configCtx.getByPrototype(prototype.name, slug),
+            event,
+            defaultLocale: configCtx.getDefaultLocale()
+          })
+      ])
+    ) as PrototypeAccessors;
 
   return {
     defineLocale,
@@ -126,32 +147,14 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
         },
 
         /**
-         * Get a collection api
-         * @example
+         * One accessor per registered prototype, each handing back that prototype's own local
+         * API for this request.
          *
+         * @example
          * rime.collection('pages').find({ query: 'where[isHome][equals]=true' })
-         */
-        collection<Slug extends keyof RegisterCollection>(slug: Slug) {
-          const collectionConfig = configCtx.collections[slug];
-          return new CollectionAPI<RegisterCollection[Slug]>({
-            event,
-            config: collectionConfig,
-            defaultLocale: configCtx.getDefaultLocale()
-          });
-        },
-
-        /**
-         * Get an area api
          * rime.area('settings').find()
          */
-        area<Slug extends keyof RegisterArea>(slug: Slug) {
-          const areaConfig = configCtx.areas[slug];
-          return new AreaAPI<RegisterArea[Slug]>({
-            event,
-            config: areaConfig,
-            defaultLocale: configCtx.getDefaultLocale()
-          });
-        }
+        ...buildAccessors(event)
       };
     }
   } as const;

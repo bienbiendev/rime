@@ -2,18 +2,18 @@ import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { runBeforeOperation, runDocHooks } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
+import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
-import type { RequestEvent } from '@sveltejs/kit';
 
-type DeleteArgs = {
+export type DeleteByIdArgs = {
   id: string;
-  config: BuiltCollection;
-  event: RequestEvent & { locals: App.Locals };
-  isSystemOperation?: boolean;
 };
 
-export const deleteById = async <T extends GenericDoc>(args: DeleteArgs): Promise<string> => {
-  const { event, id, config, isSystemOperation } = args;
+type Args = DeleteByIdArgs & { ctx: PrototypeApiContext<BuiltCollection> };
+
+export const deleteById = async <T extends GenericDoc>(args: Args): Promise<string> => {
+  const { ctx, id } = args;
+  const { config, event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
   let context: OperationContext<CollectionSlug> = {
@@ -57,5 +57,5 @@ export const deleteById = async <T extends GenericDoc>(args: DeleteArgs): Promis
     context
   });
 
-  return args.id;
+  return id;
 };
