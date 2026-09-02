@@ -30,20 +30,78 @@ absent**, never to fill a gap between two halves that exist.
 
 ---
 
-## The cross table
+## The cross tables
 
-For one pair, with a client half exporting `foo` and a server half exporting `foo` and `bar`:
+A pair has three possible shapes — both halves, server half only, client half only — and the
+first splits in two depending on whether a name is declared on both sides. Four cases, each shown
+with what this repo actually contains.
 
-| pair shape                       | export names                    | server build resolves                 | client build resolves                                           |
-| -------------------------------- | ------------------------------- | ------------------------------------- | --------------------------------------------------------------- |
-| `module.ts` + `module.server.ts` | same on both sides              | `foo` → server implementation         | `foo` → client implementation                                   |
-| `module.ts` + `module.server.ts` | different                       | `foo`, `bar` → server implementations | `foo` → client implementation; **`bar` is not exported at all** |
-| `module.ts` only                 | _(vacuous — one side authored)_ | every name → `undefined`              | `foo` → client implementation                                   |
-| `module.server.ts` only          | _(vacuous — one side authored)_ | `foo`, `bar` → server implementations | `foo`, `bar` → `undefined`                                      |
+### A. Both halves, same names on each side — the intended shape
 
-The "different vs. same names" distinction only means something on the first two rows. With one
-half authored there is nothing to differ _from_, and ② stubs whatever that half exports — which is
-the useful shape for anything server-only.
+`core/features/upload/module.ts` and `module.server.ts` both export `augmentUpload`.
+`fields/link` does the same with `populateRessourceURL`, `fields/relation` with
+`ensureRelationExists`, `features/nested` with `augmentNested`.
+
+| binding                | declared in | server build resolves to                                  | client build resolves to      |
+| ---------------------- | ----------- | --------------------------------------------------------- | ----------------------------- |
+| `augmentUpload`        | both halves | `module.server.ts` — fields **+ the `_path` foreign key** | `module.ts` — the fields only |
+| `populateRessourceURL` | both halves | `fields/link/module.server.ts`                            | `fields/link/module.ts`       |
+
+One name, one import, two implementations. Nothing to think about.
+
+### B. Both halves, but a name only one side declares
+
+`core/plugins/cache/module.ts` exports `cache`. `module.server.ts` exports `cache`, `toHash` and
+the type `CacheActions`.
+
+| binding        | declared in | server build resolves to | client build resolves to |
+| -------------- | ----------- | ------------------------ | ------------------------ |
+| `cache`        | both halves | the server plugin        | the client plugin        |
+| `toHash`       | server only | the real function        | **not exported at all**  |
+| `CacheActions` | server only | (a type; erased)         | **not exported at all**  |
+
+Because a client half exists, the client build takes _its_ export list and stops there — `toHash`
+is not stubbed, it is absent. This is legal and `cache` ships this way: nothing client-side
+imports `toHash`, so nothing ever asks the barrel for it. It becomes a build failure the moment
+something client-reachable writes `import { toHash } from '$rime/modules'`.
+
+That is exactly what broke: `features/upload/index.ts` is loaded by both builds and imported
+`uploadHooks`, which only `module.server.ts` declared.
+
+### C. Server half only — no `module.ts`
+
+`features/url`, `features/upload/hooks`, `features/nested/hooks`, `plugins/sse`,
+`plugins/mailer`, `plugins/api-init`.
+
+| binding       | declared in                              | server build resolves to | client build resolves to              |
+| ------------- | ---------------------------------------- | ------------------------ | ------------------------------------- |
+| `urlHooks`    | `features/url/module.server.ts`          | the real object          | `undefined`                           |
+| `uploadHooks` | `features/upload/hooks/module.server.ts` | the real object          | `undefined`                           |
+| `bootUpload`  | `features/upload/hooks/module.server.ts` | the real function        | `undefined`                           |
+| `sse`         | `plugins/sse/module.server.ts`           | the real plugin          | `undefined`                           |
+| `SSEActions`  | `plugins/sse/module.server.ts`           | (a type; erased)         | `export const SSEActions = undefined` |
+
+With no client half to prefer, branch ② fires and every name is declared and set to `undefined`.
+The client can import them safely; it just must not use them. This is the shape server-only code
+wants, and the reason `features/url` worked from the day it was written while `uploadHooks` did
+not — until it moved out of a pair that had a client half and into its own server-only module.
+
+### D. Client half only — no `module.server.ts`
+
+The mirror of C, and **there is not one instance of it in this repo**. Worth knowing the shape
+anyway, because nothing warns you: a hypothetical `fields/color/module.ts` exporting
+`formatSwatch` and no server half would give the server build `formatSwatch === undefined`. Server
+code importing it gets no error, just a value that is not there.
+
+### All four shapes, side by side
+
+| pair shape                       | example                   | server build          | client build          |
+| -------------------------------- | ------------------------- | --------------------- | --------------------- |
+| both halves, name in both        | `augmentUpload`           | server implementation | client implementation |
+| both halves, name in server only | `toHash`                  | server implementation | **not exported**      |
+| both halves, name in client only | _(none in repo)_          | **not exported**      | client implementation |
+| `module.server.ts` only          | `urlHooks`, `uploadHooks` | server implementation | `undefined`           |
+| `module.ts` only                 | _(none in repo)_          | `undefined`           | client implementation |
 
 ### The two failure modes are not the same
 
