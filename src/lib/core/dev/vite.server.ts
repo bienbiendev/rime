@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Plugin, UserConfig } from 'vite';
-import { RIME_DEV_CACHE_DIR } from '../constants.server.js';
+import { IS_RIME_REPO, RIME_DEV_CACHE_DIR } from '../constants.server.js';
 import { logger } from '../logger.server.js';
 import { getPackageInfoByKey } from './cli/util/package.server.js';
 import {
@@ -16,7 +16,6 @@ import {
   CONFIG_DIR,
   GENERATED_DIR,
   generatedConfigServerPath,
-  isInstalledDependency,
   schemaPath
 } from './constants.server.js';
 import { ensureHasInit } from './ensure.server.js';
@@ -228,7 +227,7 @@ export function rime(): Plugin {
         return null;
       }
 
-      if (!isInstalledDependency(import.meta.url) && file.includes('src/lib/core/config')) {
+      if (IS_RIME_REPO && file.includes('src/lib/core/config')) {
         logger.info('reload core config');
         const module = invalidateVModule(VCoreId);
         if (module) return [module];

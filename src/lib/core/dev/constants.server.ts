@@ -31,15 +31,22 @@ if (!isValidSlug(PANEL_ROUTE)) {
   );
 }
 
-const RESERVED_DIRS = new Set(['lib', 'routes', 'static', 'params'].map((d) => path.resolve(SRC_ROOT, d)));
-
+// Reserved SvelteKit folders where config should never lands inside.
+const RESERVED_DIRS = new Set(
+  ['lib', 'routes', 'static', 'params'].map((d) => path.resolve(SRC_ROOT, d))
+);
+/** Prevent user CONFIG_DIR to be set :
+ * - on a SvelteKit folder by mistake
+ * - outside of src */
 for (const dir of [CONFIG_DIR, GENERATED_DIR]) {
   const resolved = path.resolve(root, dir);
   if (resolved === SRC_ROOT || !resolved.startsWith(SRC_ROOT + path.sep)) {
     throw new Error(`RIME_CONFIG_DIR must resolve to a subdirectory of ${SRC_ROOT} (got "${dir}")`);
   }
   if (RESERVED_DIRS.has(resolved)) {
-    throw new Error(`RIME_CONFIG_DIR must not be src/lib, src/routes, src/static, or src/params (got "${dir}")`);
+    throw new Error(
+      `RIME_CONFIG_DIR must not be src/lib, src/routes, src/static, or src/params (got "${dir}")`
+    );
   }
 }
 
@@ -53,7 +60,10 @@ export function relativeImportSpecifier(fromDir: string, toAbsolutePath: string)
 /** Root-relative filesystem path (posix-style) to a file inside the generated config dir —
  * for Vite's ssrLoadModule, which wants a real file path, not an import specifier. */
 function generatedFilePath(file: string): string {
-  return path.relative(root, path.resolve(root, GENERATED_DIR, file)).split(path.sep).join('/');
+  return path
+    .relative(root, path.resolve(root, GENERATED_DIR, file))
+    .split(path.sep)
+    .join('/');
 }
 
 export function generatedConfigServerPath(): string {
@@ -79,16 +89,4 @@ export function configImportPaths(fromDir: string) {
  * lives instead of hardcoding the path at each call site. */
 export function schemaPath(projectRoot: string = process.cwd()): string {
   return path.resolve(projectRoot, GENERATED_DIR, 'schema.server.ts');
-}
-
-/**
- * True when `metaUrl` (pass the caller's own `import.meta.url` — this can't be one shared
- * value, it depends on which file is asking) is running from inside an installed `rimecms`
- * package (node_modules/rimecms/...), false when running from rime's own repo. Deliberately
- * filesystem-based rather than an env var: a shell dotenv plugin auto-loading this repo's own
- * .env (which used to set IS_RIME_REPO=true) into every child process — including an unrelated
- * consumer app's dev server — made that value unreliable; this can't leak the same way.
- */
-export function isInstalledDependency(metaUrl: string) {
-  return metaUrl.includes('/node_modules/rimecms/');
 }
