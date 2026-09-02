@@ -5,7 +5,7 @@ import { runCodegen } from './codegen.server.js';
 import { createConfigContext } from './factory/config/context.server.js';
 import type { BuildConfig } from './factory/config/index.server.js';
 import { getBaseAuthConfig } from './features/auth/better-auth/config.server.js';
-import { ensureMedias } from './features/upload/ensure.server.js';
+import { bootFeatures } from './features/registry.js';
 import i18n from './i18n/index.js';
 import { registerTranslation } from './i18n/register.server.js';
 import { prototypes } from './prototype/registry.server.js';
@@ -25,8 +25,8 @@ import { prototypes } from './prototype/registry.server.js';
  *
  * Two steps below used to be invisible, and are named here for the first time:
  *
- * - `ensureMedias` is the **upload feature's** boot hook. It ran as a side effect of
- *   createConfigContext, so building a config object created directories on disk.
+ * - The upload feature's boot hook ran as a side effect of createConfigContext, so building a
+ *   config object created directories on disk. It is declared on the feature now (step 3).
  * - better-auth's construction is the **auth feature's** boot hook. It was inlined mid-function
  *   in createRime.
  *
@@ -43,9 +43,10 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   // 2. The config interface — every lookup by slug, the locale list, the raw config.
   const configCtx = createConfigContext(config);
 
-  // 3. The upload feature's boot step: make sure the static directories it writes into exist.
-  //    Lifted out of createConfigContext, which had no business touching the filesystem.
-  ensureMedias(config);
+  // 3. Every feature's boot step, in registry order — upload makes sure the static directory it
+  //    writes into exists. Named here by feature rather than by function: this used to call
+  //    `ensureMedias(config)` directly, which meant boot knew what uploads needed.
+  await bootFeatures(config);
 
   // 4. Phase 1, in dev only: write routes, schema and types. Before the adapter, which imports
   //    the schema this produces.

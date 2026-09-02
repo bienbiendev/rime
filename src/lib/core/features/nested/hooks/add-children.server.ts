@@ -4,8 +4,8 @@ import { Hooks } from '$lib/core/factory/hooks.js';
  * Hook to populate _children property on document from a nested collection
  */
 export const addChildrenProperty = Hooks.beforeRead(async (args) => {
-  if (args.config.type !== 'collection' || !args.config.nested) return args;
-
+  // No `config.nested` check: the feature's `enabled` decides that, and the pipeline only asks
+  // for this hook on a collection. See features/nested/index.ts.
   const select =
     args.context.params.select && Array.isArray(args.context.params.select)
       ? args.context.params.select

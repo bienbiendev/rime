@@ -1,10 +1,7 @@
 import { augmentAuth } from '$lib/core/features/auth/augment.js';
 import { augmentMetas } from '$lib/core/factory/shared/augment-metas.js';
-import { augmentNested } from '$lib/core/features/nested/augment.js';
 import { augmentTitle } from '$lib/core/factory/shared/augment-title.js';
-import { augmentUpload } from '$lib/core/features/upload/augment.js';
 import { augmentWithFeatures } from '$lib/core/features/registry.js';
-import { augmentVersions } from '$lib/core/features/versions/augment.js';
 import type { CollectionWithoutSlug } from '$lib/core/factory/collection/types.js';
 import type { BuiltCollection, Collection } from '$lib/core/factory/config/types.js';
 import { access } from '$lib/util/index.js';
@@ -22,11 +19,10 @@ export const create = <S extends string>(
   const collection: Collection<S> = { ...incomingConfig, slug };
   const initial = { ...collection };
   const withLabel = augmentLabel(initial);
-  const withUpload = augmentUpload(withLabel);
-  const withNested = augmentNested(withUpload);
-  const withVersions = augmentVersions(withNested);
-  // Feature augments run as one call — see the note in index.server.ts.
-  const withFeatures = augmentWithFeatures(withVersions, 'collection');
+  // Every feature augment, in registry order — the order these calls were written in until
+  // this commit. It sits where the block started, not where it ended: the registry now holds
+  // upload, nested, versions and url, and each of them appends fields.
+  const withFeatures = augmentWithFeatures(withLabel, 'collection');
   const withAuth = augmentAuth(withFeatures);
   const withMetas = augmentMetas(withAuth);
   const withTitle = augmentTitle(withMetas);

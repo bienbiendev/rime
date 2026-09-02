@@ -1,10 +1,10 @@
 import type { VersionsConfig } from '$lib/core/factory/config/types.js';
 import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { text } from '$lib/fields/text/index.js';
-import type { Collection } from '../../../types.js';
+import type { Collection } from '$lib/core/factory/config/types.js';
 
 type Input = { versions?: Collection<any>['versions']; fields?: Collection<any>['fields'] };
-type WithVersionsConfig<T> = Omit<T, 'versions'> & { versions?: Required<VersionsConfig> };
+export type WithVersionsConfig<T> = Omit<T, 'versions'> & { versions?: Required<VersionsConfig> };
 
 /**
  * Normalize versions prop and add status field if config.versions.draft is true

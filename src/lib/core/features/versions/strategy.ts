@@ -1,4 +1,4 @@
-import type { BuiltArea, BuiltCollection } from '../../../types.js';
+import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
 
 /**
  * Defines the different version operation strategies for document updates.

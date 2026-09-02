@@ -1,10 +1,21 @@
 import type { UploadConfig } from '$lib/core/factory/config/types.js';
 import { text } from '$lib/fields/text/index.js';
 import { toCamelCase } from '$lib/util/string.js';
-import type { Collection, ImageSizesConfig } from '../../../types.js';
+import type { Collection, ImageSizesConfig } from '$lib/core/factory/config/types.js';
+import type { WithNormalizedUpload } from './types.js';
 import { validatePath } from './util/path.js';
 
-export type WithNormalizedUpload<T> = Omit<T, 'upload'> & { upload?: UploadConfig };
+/**
+ * The upload feature's client half — the augment as it runs on both sides.
+ *
+ * `$rime/modules` resolves this file on a client build and `module.server.ts` on a server one, so
+ * the two halves share the export name `augmentUpload` and only the file differs. The server half
+ * adds a foreign key the client config must not carry; everything else is here.
+ *
+ * Export names are unique across the whole package by necessity — they all land in one virtual
+ * barrel — hence `augmentUpload` rather than a bare `augment`, and hence the type lives in
+ * types.ts: a type exported here would be stubbed as a value on the client.
+ */
 
 const withNormalizedUpload = <T extends { upload?: boolean | UploadConfig }>(
   config: T

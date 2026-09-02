@@ -1,3 +1,4 @@
+import { urlHooks } from '$rime/modules';
 import { defineFeature } from '../define.js';
 import { augmentUrl } from './augment.js';
 
@@ -8,11 +9,11 @@ import { augmentUrl } from './augment.js';
  * and one read hook, asks the adapter for nothing, and applies to every prototype — a collection
  * and an area both get a url the same way.
  *
- * **This is the client-safe half**, and it is all the prototype factories need: an augment runs
- * while a config is being built, on both sides. The hooks live in index.server.ts, because
- * `populateURL` reads private env and talks to the adapter — importing them here would drag that
- * into the browser bundle through `factory/collection/index.ts`. The same `augment.ts` /
- * `augment.server.ts` split the repo already uses, one level up.
+ * One definition, both sides. The augment is isomorphic, and the hook comes from
+ * `module.server.ts` through `$rime/modules`, which resolves to the server half on a server build
+ * and to `undefined` on a client one. That is the repo's own convention for this — `fields/link`,
+ * `fields/relation` and `core/plugins/cache` are the other pairs — and it is why a feature needs
+ * no client and server halves of its *definition*.
  */
 export const url = defineFeature({
   type: 'augment',
@@ -22,5 +23,9 @@ export const url = defineFeature({
   /** A config uses this feature by declaring how to build its url. */
   enabled: (config) => !!config.$url,
 
-  augment: augmentUrl
+  augment: augmentUrl,
+
+  // Read at call time, like every other barrel binding — and `undefined` on the client,
+  // where nothing reads it.
+  hooks: () => urlHooks
 });

@@ -3,19 +3,12 @@ import * as authHooks from '../features/auth/hooks/index.server.js';
 import { augmentFieldsPassword } from '../features/auth/hooks/augment-fields-password.server.js';
 import { populateAPIKey } from '../features/auth/hooks/populate-api-key.server.js';
 import { removePrivateFields } from '../features/auth/hooks/remove-private-fields.server.js';
-import { addChildrenProperty } from '../features/nested/hooks/add-children.server.js';
-import { cleanUpFiles } from '../features/upload/hooks/clean-up-files.server.js';
-import { castBase64ToFile } from '../features/upload/hooks/convert-base64.server.js';
 import { exctractPath } from '../features/upload/hooks/extract-path.server.js';
-import { handlePathCreation } from '../features/upload/hooks/handle-path-creation.server.js';
-import { populateSizes } from '../features/upload/hooks/populate-sizes.server.js';
-import { processFileUpload } from '../features/upload/hooks/process-file-upload.server.js';
 import {
   prepareDirectoryChildren,
   updateDirectoryChildren
 } from '../features/upload/hooks/update-directory-children.server.js';
-import { featureHooks } from '../features/registry.js';
-import { url } from '../features/url/index.server.js';
+import { featureHooks, nested, upload, url } from '../features/registry.js';
 import { defineVersionOperation } from '../features/versions/hooks/define-version-operation.server.js';
 import { handleNewVersion } from '../features/versions/hooks/handle-new-version.server.js';
 import { mergeWithBlankDocument } from './steps/merge-with-blank.server.js';
@@ -89,9 +82,9 @@ export const collectionPipeline = (collection: PartialCollection): CollectionPip
       setDocumentTitle,
       setDocumentLocale,
       setDocumentType,
-      ...(collection.upload ? [populateSizes] : []),
+      ...featureHooks(upload, collection, 'beforeRead'),
       ...featureHooks(url, collection, 'beforeRead'),
-      ...(collection.nested ? [addChildrenProperty] : []),
+      ...featureHooks(nested, collection, 'beforeRead'),
       setDocumentThumbnail,
       sortDocumentProps
     ],
@@ -115,7 +108,7 @@ export const collectionPipeline = (collection: PartialCollection): CollectionPip
       buildDataConfigMap,
       setDefaultValues,
       validateFields,
-      ...(collection.upload ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
+      ...featureHooks(upload, collection, 'beforeUpdate')
     ],
 
     afterUpdate: [],
@@ -131,14 +124,14 @@ export const collectionPipeline = (collection: PartialCollection): CollectionPip
       setDefaultValues,
       validateFields,
       ...(collection.auth ? [authHooks.createBetterAuthUser] : []),
-      ...(collection.upload ? [handlePathCreation, castBase64ToFile, processFileUpload] : [])
+      ...featureHooks(upload, collection, 'beforeCreate')
     ],
 
     afterCreate: [...(IS_API_AUTH ? [populateAPIKey] : [])],
 
     beforeDelete: [
       ...(collection.auth ? [authHooks.preventSupperAdminDeletion] : []),
-      ...(collection.upload ? [cleanUpFiles] : [])
+      ...featureHooks(upload, collection, 'beforeDelete')
     ],
 
     afterDelete: [...(collection.auth ? [authHooks.deleteBetterAuthUser] : [])]

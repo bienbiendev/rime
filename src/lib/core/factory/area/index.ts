@@ -1,7 +1,6 @@
 import { augmentMetas } from '$lib/core/factory/shared/augment-metas.js';
 import { augmentTitle } from '$lib/core/factory/shared/augment-title.js';
 import { augmentWithFeatures } from '$lib/core/features/registry.js';
-import { augmentVersions } from '$lib/core/features/versions/augment.js';
 import type { AreaWithoutSlug } from '$lib/core/factory/area/types.js';
 import type { Area, BuiltArea } from '$lib/core/factory/config/types.js';
 import { capitalize, toKebabCase } from '$lib/util/string.js';
@@ -16,9 +15,10 @@ export const create = <S extends string>(
 
   const initial = { ...area };
   const withMetas = augmentMetas(initial);
-  const withVersions = augmentVersions(withMetas);
-  // Feature augments run as one call — see the note in factory/collection/index.server.ts.
-  const withFeatures = augmentWithFeatures(withVersions, 'area');
+  // Every feature augment, in registry order — the order these calls were written in until
+  // this commit. It sits where the block started, not where it ended: the registry now holds
+  // upload, nested, versions and url, and each of them appends fields.
+  const withFeatures = augmentWithFeatures(withMetas, 'area');
   const augmented = augmentTitle(withFeatures);
 
   return {

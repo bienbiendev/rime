@@ -1,3 +1,4 @@
+import { configureWithFeatures } from '../../features/registry.js';
 import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
 import { createRime, type Rime } from '../../rime/index.server.js';
 import { augmentPanel } from './augment-panel.js';
@@ -7,7 +8,6 @@ import { augmentPrototypes } from './augment-prototypes.js';
 import { makeVersionsCollectionsAliases } from '../../features/versions/derive.server.js';
 import type { Config } from './types.js';
 import { augmentCORS } from './augment-cors.server.js';
-import { augmentDirectoriesServer } from '../../features/upload/directories.server.js';
 import { augmentPanelAccess } from './augment-panel-access.server.js';
 import { augmentPluginsServer } from './augment-plugins.server.js';
 import { augmentStaffServer } from '../../features/auth/staff/augment.server.js';
@@ -26,28 +26,32 @@ function augmentConfig<T extends Config>(config: T) {
   const withPanelAccess = augmentPanelAccess(withPanel);
   const withCORS = augmentCORS(withPanelAccess);
   const withPluginsServer = augmentPluginsServer(withCORS);
-  const withDirectories = augmentDirectoriesServer(withPluginsServer);
-  const output = augmentPlugins(withDirectories);
+  const withFeatures = configureWithFeatures(withPluginsServer);
+  const output = augmentPlugins(withFeatures);
   return output;
 }
 
 type InferCollections<C> = C extends { collections?: readonly any[] }
   ? {
-      [K in NonNullable<C['collections']>[number] as K extends { slug: infer N }
-        ? N extends string
-          ? N
+      [
+        K in NonNullable<C['collections']>[number] as K extends { slug: infer N }
+          ? N extends string
+            ? N
+            : never
           : never
-        : never]: K;
+      ]: K;
     }
   : Record<string, never>;
 
 type InferAreas<C> = C extends { areas?: readonly any[] }
   ? {
-      [K in NonNullable<C['areas']>[number] as K extends { slug: infer N }
-        ? N extends string
-          ? N
+      [
+        K in NonNullable<C['areas']>[number] as K extends { slug: infer N }
+          ? N extends string
+            ? N
+            : never
           : never
-        : never]: K;
+      ]: K;
     }
   : Record<string, never>;
 

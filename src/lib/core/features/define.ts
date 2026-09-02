@@ -52,8 +52,34 @@ export type FeatureDefinition = {
    * What the feature adds to a config of a prototype it extends — fields, mostly.
    *
    * Runs inside the prototype factories, in barrel order, only for configs where `enabled`.
+   *
+   * `any` rather than `Dic`, and for a real reason: each augment names the shape it needs
+   * (`{ slug, nested?, fields? }`, `Collection<any>`), and a parameter is contravariant, so a
+   * list that accepts every feature's augment cannot promise any of them a shape. The same
+   * erasure `AnyHook` makes below, sound for the same reason — an augment only ever sees configs
+   * of a prototype it declared in `extends`. What the augments do to a config's *type* is
+   * declared in registry.ts, where the factories can see it.
    */
-  augment?: (config: Dic) => Dic;
+  augment?: (config: any) => any;
+
+  /**
+   * What the feature adds to the *whole* config, rather than to one prototype's — upload derives
+   * a companion `<slug>Directories` collection for every upload collection it finds.
+   *
+   * The same shape a plugin's `configure` has, and it runs in the same place: the config chain in
+   * factory/config/build{,.server}.ts, after the prototype factories have built what it reads.
+   */
+  configure?: (config: any) => any;
+
+  /**
+   * Run once per process, before anything is served — the feature's own boot step.
+   *
+   * Takes the whole config, not one prototype's, which is why it is not a timing in `hooks`
+   * below: a hook's timing is defined by the arguments available at it, and this one is answering
+   * a question about the config as a whole ("does anything here upload?"). Mirrors
+   * `PrototypeDefinition.boot`.
+   */
+  boot?: (config: any) => void | Promise<void>;
 
   /**
    * The feature's document hooks, by timing.
@@ -64,9 +90,19 @@ export type FeatureDefinition = {
    * and before it is sorted — and a feature has nothing to say about a core step's position.
    * `requires` cannot express it either, since the features that interleave there require
    * nothing of each other.
+   *
+   * **May be a function, and for a feature drawing on `$rime/modules` it must be.** That barrel
+   * re-exports every `module(.server).ts` in the package, so a feature whose modules the barrel
+   * also leads back to — upload's `configure` imports the pipeline, which imports this registry,
+   * which imports upload — is evaluated inside an import cycle. Anything read at module scope
+   * there is whatever it happens to be when the cycle re-enters, which is `undefined` for a
+   * module the barrel has not reached yet. `augment`, `configure` and `boot` are functions
+   * already, so wrapping their bodies is enough; `hooks` is a value, hence the thunk.
    */
-  hooks?: Partial<Record<HookTiming, AnyHook[]>>;
+  hooks?: FeatureHooks | (() => FeatureHooks);
 };
+
+export type FeatureHooks = Partial<Record<HookTiming, AnyHook[]>>;
 
 export type HookTiming =
   | 'beforeOperation'
