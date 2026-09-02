@@ -7,8 +7,8 @@ import type { BuildConfig } from './factory/config/index.server.js';
 import { getBaseAuthConfig } from './features/auth/better-auth/config.server.js';
 import { ensureMedias } from './features/upload/ensure.server.js';
 import i18n from './i18n/index.js';
-import { prototypes } from './prototype/extensions/index.js';
 import { registerTranslation } from './i18n/register.server.js';
+import { prototypes } from './prototype/extensions/index.js';
 
 /**
  * Phase 2 of three — everything that happens once, when the process starts.
@@ -37,7 +37,7 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   // 1. Plugins, flattened to a name -> actions map. First because codegen and better-auth both
   //    read it (the mailer plugin supplies better-auth's transport).
   const plugins = Object.fromEntries(
-    config.$plugins.map((plugin) => [plugin.name, plugin.actions ?? {}])
+    config.plugins.map((plugin) => [plugin.name, plugin.actions ?? {}])
   ) as typeof config.$InferPluginsServer;
 
   // 2. The config interface — every lookup by slug, the locale list, the raw config.

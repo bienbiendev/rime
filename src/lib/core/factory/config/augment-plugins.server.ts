@@ -19,12 +19,6 @@ export const augmentPluginsServer = <const T extends Config>(config: T) => {
     ...(config.$smtp ? [mailer(config.$smtp)] : [])
   ];
 
-  // Widened to Plugin[] on purpose: each factory's own `as const satisfies Plugin` return
-  // keeps a precise literal shape (no `handler` key at all on sse's, no `actions` on
-  // apiInit's, ...) — left as a tuple, downstream code reading `.handler`/`.actions` off
-  // the union fails to typecheck even though both are optional on Plugin. Doesn't affect
-  // build-config.server.ts's ExtractCustomPlugins/InferCorePlugins, which infer off the
-  // pre-augmentation config type, not this array.
   const plugins: Plugin[] = [...corePluginsServer, ...(config.plugins || [])];
 
   let configWithPlugins = config;
@@ -47,6 +41,6 @@ export const augmentPluginsServer = <const T extends Config>(config: T) => {
 
   return {
     ...configWithPlugins,
-    $plugins: plugins
+    plugins: plugins
   } as const;
 };

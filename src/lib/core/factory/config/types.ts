@@ -373,9 +373,6 @@ export type BuiltConfig = {
   icons: Record<string, any>;
   $trustedOrigins: string[];
   $routes?: Record<string, RouteConfig>;
-  /** Fully-resolved plugin list, computed by augmentPluginsServer — internal, not the
-   * consumer-facing config key (that's just `plugins`) */
-  $plugins?: Plugin[];
   plugins?: Plugin[];
   panel: {
     routes: Record<string, CustomPanelRoute>;
@@ -399,13 +396,7 @@ export type BuiltConfig = {
 };
 
 export type ServerConfigProps =
-  | '$adapter'
-  | '$database'
-  | '$trustedOrigins'
-  | '$routes'
-  | '$smtp'
-  | '$custom'
-  | '$auth';
+  '$adapter' | '$database' | '$trustedOrigins' | '$routes' | '$smtp' | '$custom' | '$auth';
 
 export type SanitizedConfigClient = Omit<Config, ServerConfigProps | 'collections' | 'areas'> & {
   collections?: BuiltCollectionClient[];
@@ -413,7 +404,7 @@ export type SanitizedConfigClient = Omit<Config, ServerConfigProps | 'collection
 };
 export type BuiltConfigClient = Omit<
   BuiltConfig,
-  ServerConfigProps | '$plugins' | 'panel' | 'collections' | 'areas'
+  ServerConfigProps | 'panel' | 'collections' | 'areas'
 > & {
   collections: BuiltCollectionClient[];
   areas: BuiltAreaClient[];

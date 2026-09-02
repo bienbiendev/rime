@@ -5,7 +5,7 @@ import type { Rime } from '../rime/index.server.js';
 export function createPluginsHandler<const C extends Config>(rime: Rime<C>) {
   const pluginHandlers: Handle[] = [];
 
-  for (const plugin of rime.config.raw.$plugins || []) {
+  for (const plugin of rime.config.raw.plugins || []) {
     if (plugin.handler) {
       pluginHandlers.push(plugin.handler);
     }
