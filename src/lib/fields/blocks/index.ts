@@ -95,13 +95,13 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
         const fieldsType = block.get.fields.map((f) => f.use.generateType()).join(',');
 
         return dedent`
-      /** @dedupe-start ${blockTypeName} **
-      export type ${blockTypeName} = {
-        id: string
-        type: '${block.name}'
-        ${fieldsType}
-      }
-      ** @dedupe-end */`;
+        //@shared:start ${blockTypeName}
+        export type ${blockTypeName} = {
+          id: string
+          type: '${block.name}'
+          ${fieldsType}
+        }
+        //@shared:end`;
       })
       .join('\n');
 

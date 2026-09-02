@@ -7,6 +7,7 @@ import { hasProps, isObjectLiteral } from '$lib/util/object.js';
 import { capitalize } from '$lib/util/string.js';
 import type { WithOptional } from '$lib/util/types.js';
 import { ensureRelationExists } from '$rime/modules';
+import dedent from 'dedent';
 import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
 
@@ -62,7 +63,17 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
   }
 
   protected override generateType(): string {
-    return `${this.name}${this.get.required ? '' : '?'}: RelationValue<${capitalize(this.get.relationTo)}Doc>`;
+    const relationValueType = dedent`
+    //@shared:start RelationValue
+    export type RelationValue<T> =
+      | T[] // When depth > 0, fully populated docs
+      | { id?: string; relationTo: string; documentId: string }[] // When depth = 0, relation objects
+      | string[]
+      | string; // When sending data to update
+    //@shared:end
+    `;
+    const fieldType = `${this.name}${this.get.required ? '' : '?'}: RelationValue<${capitalize(this.get.relationTo)}Doc>`;
+    return [relationValueType, fieldType].join('\n');
   }
 }
 

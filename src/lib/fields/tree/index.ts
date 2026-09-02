@@ -95,12 +95,13 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
     const blockTypeName = `Tree${toPascalCase(this.name)}`;
     const fieldsType = this.get.fields.map((f) => f.use.generateType()).join(',\n');
     const treeType = dedent`
-    /** @dedupe-start ${blockTypeName} **
+    //@shared:start ${blockTypeName}
      export type ${blockTypeName} = {
         id: string;
         ${fieldsType};
 	      _children: ${blockTypeName}[]
-    } ** @dedupe-end */`;
+    }
+    //@shared:end`;
     return `${treeType}\n\n${this.name}: Array<${blockTypeName}>,`;
   }
 }
