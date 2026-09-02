@@ -3,7 +3,7 @@ import { augmentMetas } from '$lib/core/factory/shared/augment-metas.js';
 import { augmentNested } from '$lib/core/features/nested/augment.js';
 import { augmentTitle } from '$lib/core/factory/shared/augment-title.js';
 import { augmentUpload } from '$lib/core/features/upload/augment.js';
-import { augmentUrl } from '$lib/core/features/url/augment.js';
+import { augmentWithFeatures } from '$lib/core/features/registry.js';
 import { augmentVersions } from '$lib/core/features/versions/augment.js';
 import type { CollectionWithoutSlug } from '$lib/core/factory/collection/types.js';
 import type { BuiltCollection, Collection } from '$lib/core/factory/config/types.js';
@@ -25,8 +25,9 @@ export const create = <S extends string>(
   const withUpload = augmentUpload(withLabel);
   const withNested = augmentNested(withUpload);
   const withVersions = augmentVersions(withNested);
-  const withUrl = augmentUrl(withVersions);
-  const withAuth = augmentAuth(withUrl);
+  // Feature augments run as one call — see the note in index.server.ts.
+  const withFeatures = augmentWithFeatures(withVersions, 'collection');
+  const withAuth = augmentAuth(withFeatures);
   const withMetas = augmentMetas(withAuth);
   const withTitle = augmentTitle(withMetas);
   const withPanel = augmentPanel(withTitle);

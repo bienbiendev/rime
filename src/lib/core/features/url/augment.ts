@@ -4,15 +4,12 @@ import type { Collection } from '../../../types.js';
 type Input = { $url?: Collection<any>['$url']; fields?: Collection<any>['fields'] };
 
 /**
- * Add url field
+ * Adds the hidden `url` field a document's computed url is stored in.
+ *
+ * Applied only to configs that declare `$url` — the feature's `enabled` decides that now, so
+ * this no longer re-tests it. See features/url/index.ts.
  */
-export const augmentUrl = <T extends Input>(config: T): T => {
-  let fields = [...(config.fields || [])];
-  if (config.$url) {
-    fields = [...fields, text('url').localized().hidden()];
-  }
-  return {
-    ...config,
-    fields
-  };
-};
+export const augmentUrl = <T extends Input>(config: T): T => ({
+  ...config,
+  fields: [...(config.fields || []), text('url').localized().hidden()]
+});

@@ -4,7 +4,7 @@ import { augmentMetas } from '$lib/core/factory/shared/augment-metas.js';
 import { augmentNestedServer } from '$lib/core/features/nested/augment.server.js';
 import { augmentTitle } from '$lib/core/factory/shared/augment-title.js';
 import { augmentUploadServer } from '$lib/core/features/upload/augment.server.js';
-import { augmentUrl } from '$lib/core/features/url/augment.js';
+import { augmentWithFeatures } from '$lib/core/features/registry.js';
 import { augmentVersions } from '$lib/core/features/versions/augment.js';
 import type { CollectionWithoutSlug } from '$lib/core/factory/collection/types.js';
 import type { BuiltCollection, Collection } from '$lib/core/factory/config/types.js';
@@ -26,8 +26,12 @@ export const create = <S extends string>(
   const withUpload = augmentUploadServer(withLabel);
   const withNested = augmentNestedServer(withUpload);
   const withVersions = augmentVersions(withNested);
-  const withUrl = augmentUrl(withVersions);
-  const withPanel = augmentPanel(withUrl);
+  // Feature augments run as one call, positioned where the run of feature augments above it
+  // ends. upload, nested and versions are still hand-written here; as each converts it joins
+  // this call in registry order and nothing moves, because that run is contiguous in all four
+  // factories. Order matters: an augment appends fields, so moving one reorders columns.
+  const withFeatures = augmentWithFeatures(withVersions, 'collection');
+  const withPanel = augmentPanel(withFeatures);
   const withAuth = augmentAuthServer(withPanel);
   const withMetas = augmentMetas(withAuth);
   const withHooks = augmentCollectionHooks(withMetas);

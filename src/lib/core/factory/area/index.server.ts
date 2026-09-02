@@ -3,7 +3,7 @@ import type { Area, BuiltArea } from '$lib/core/factory/config/types.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
 import { augmentMetas } from '$lib/core/factory/shared/augment-metas.js';
 import { augmentTitle } from '$lib/core/factory/shared/augment-title.js';
-import { augmentUrl } from '$lib/core/features/url/augment.js';
+import { augmentWithFeatures } from '$lib/core/features/registry.js';
 import { augmentVersions } from '$lib/core/features/versions/augment.js';
 import { augmentAreaHooks } from '$lib/core/operations/pipeline.server.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
@@ -19,8 +19,9 @@ export const create = <S extends string>(
   const initial = { ...area };
   const withMetas = augmentMetas(initial);
   const withVersions = augmentVersions(withMetas);
-  const withUrl = augmentUrl(withVersions);
-  const withTitle = augmentTitle(withUrl);
+  // Feature augments run as one call — see the note in factory/collection/index.server.ts.
+  const withFeatures = augmentWithFeatures(withVersions, 'area');
+  const withTitle = augmentTitle(withFeatures);
   const augmented = augmentAreaHooks(withTitle);
 
   return {

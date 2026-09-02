@@ -14,7 +14,8 @@ import {
   prepareDirectoryChildren,
   updateDirectoryChildren
 } from '../features/upload/hooks/update-directory-children.server.js';
-import { populateURL } from '../features/url/hooks/populate-url.server.js';
+import { featureHooks } from '../features/registry.js';
+import { url } from '../features/url/index.server.js';
 import { defineVersionOperation } from '../features/versions/hooks/define-version-operation.server.js';
 import { handleNewVersion } from '../features/versions/hooks/handle-new-version.server.js';
 import { mergeWithBlankDocument } from './steps/merge-with-blank.server.js';
@@ -35,9 +36,12 @@ import { validateFields } from './steps/validate-fields.server.js';
  * Every hook rime runs, and the order it runs them in.
  *
  * This is the one place the document pipeline is written down. Feature folders own the hook
- * *implementations* (features/auth/hooks, features/upload/hooks, ...); this file owns the
+ * *implementations* and the condition that enables them — `featureHooks(url, collection,
+ * 'beforeRead')` contributes nothing unless that config declares `$url`. This file owns the
  * *order*, spelled out literally. Deliberately not driven by iterating a feature registry —
- * ordering is the interesting part of a pipeline, and a loop would hide it.
+ * ordering is the interesting part of a pipeline, and a loop would hide it. Nor could a loop
+ * find this order: the features that interleave here require nothing of each other, and what
+ * they are really ordered against is the core steps around them.
  *
  * A collection's and an area's pipelines sit side by side below so their differences are
  * visible rather than spread across two files.
@@ -86,7 +90,7 @@ export const collectionPipeline = (collection: PartialCollection): CollectionPip
       setDocumentLocale,
       setDocumentType,
       ...(collection.upload ? [populateSizes] : []),
-      ...(collection.$url ? [populateURL] : []),
+      ...featureHooks(url, collection, 'beforeRead'),
       ...(collection.nested ? [addChildrenProperty] : []),
       setDocumentThumbnail,
       sortDocumentProps
@@ -157,7 +161,7 @@ export const areaPipeline = (area: PartialArea): AreaPipeline => ({
     processDocumentFields,
     setDocumentTitle,
     setDocumentLocale,
-    ...(area.$url ? [populateURL] : []),
+    ...featureHooks(url, area, 'beforeRead'),
     setDocumentType,
     sortDocumentProps
   ],
