@@ -1,3 +1,4 @@
+import { RimeError } from '$lib/core/errors/index.js';
 import type { BuiltArea } from '$lib/core/factory/config/types.js';
 import { readDocument, runBeforeOperation } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
@@ -36,13 +37,15 @@ export const find = async <T extends GenericDoc>(args: FindArgs): Promise<T> => 
     context
   });
 
-  const documentRaw = await event.locals.rime.adapter.area.get({
-    slug: config.slug,
+  // No id: a singleton has exactly one row, and the handle knows it.
+  const documentRaw = await event.locals.rime.adapter.prototype(config.slug).find({
     locale,
     select,
     versionId,
     draft
   });
+
+  if (!documentRaw) throw new RimeError(RimeError.NOT_FOUND);
 
   const { doc } = await readDocument<AreaSlug, T>({
     raw: documentRaw,

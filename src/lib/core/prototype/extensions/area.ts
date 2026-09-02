@@ -25,8 +25,7 @@ export const area = definePrototype<BuiltArea>({
      * The locale is the config's default for the same reason: the locale of an area's first row
      * is a property of the config, not of its first reader.
      */
-    await adapter.area.ensureExists({
-      slug: config.slug,
+    await adapter.prototype(config.slug).ensureExists({
       blank: createBlankDocument(config),
       locale: defaultLocale
     });

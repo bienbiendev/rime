@@ -44,8 +44,7 @@ export const update = async <T extends GenericDoc = GenericDoc>(args: UpdateArgs
     where: 'update',
 
     write: ({ data, config, context }) =>
-      rime.adapter.area.update({
-        slug: config.slug,
+      rime.adapter.prototype(config.slug).update({
         data,
         locale,
         versionId: context.params.versionId!,

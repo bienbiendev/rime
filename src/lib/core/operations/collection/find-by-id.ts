@@ -1,3 +1,4 @@
+import { RimeError } from '$lib/core/errors/index.js';
 import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { readDocument, runBeforeOperation } from '$lib/core/operations/run.server.js';
 import type { OperationContext } from '$lib/core/operations/types.js';
@@ -39,14 +40,17 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
     context
   });
 
-  const documentRaw = await rime.adapter.collection.findById({
-    slug: config.slug,
+  const documentRaw = await rime.adapter.prototype(config.slug).find({
     id,
     versionId,
     locale,
     select,
     draft
   });
+
+  // The adapter reports "nothing matched" and leaves the meaning to us — it used to throw this
+  // itself, which put an HTTP-shaped decision inside the database layer.
+  if (!documentRaw) throw new RimeError(RimeError.NOT_FOUND);
 
   const { doc } = await readDocument<CollectionSlug, T>({
     raw: documentRaw,

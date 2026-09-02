@@ -58,8 +58,7 @@ export const find = async <T extends GenericDoc>(args: FindArgs): Promise<T[]> =
     context
   });
 
-  const documentsRaw = await rime.adapter.collection.find({
-    slug: config.slug,
+  const documentsRaw = await rime.adapter.prototype(config.slug).findMany({
     query,
     sort,
     limit,

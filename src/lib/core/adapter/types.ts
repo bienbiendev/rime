@@ -1,7 +1,6 @@
 import type { VERSIONS_OPERATIONS } from '$lib/core/features/versions/strategy.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
 import type {
-  AreaSlug,
   CollectionSlug,
   GenericBlock,
   GenericDoc,
@@ -34,8 +33,17 @@ import type { DeepPartial, Dic, WithOptional, WithRequired } from '$lib/util/typ
  * See `SqliteAdapter` in adapter-sqlite/index.server.ts for the full concrete surface.
  */
 export interface Adapter {
-  collection: CollectionAdapter;
-  area: AreaAdapter;
+  /**
+   * Register a prototype. Boot only — see core/boot.server.ts.
+   *
+   * The adapter resolves its base, shadow, children and branches once here, rather than working
+   * them out from a slug on every request, and refuses loudly if the tables are not there.
+   */
+  registerPrototype(args: RegisterPrototypeArgs): void;
+
+  /** The handle for a registered prototype. */
+  prototype(slug: string): PrototypeHandle;
+
   blocks: BlocksAdapter;
   tree: TreeAdapter;
   relations: RelationsAdapter;
@@ -51,26 +59,47 @@ export interface Adapter {
 
 type VersionOperation = (typeof VERSIONS_OPERATIONS)[keyof typeof VERSIONS_OPERATIONS];
 
-export type UpdateDocumentUrlParams = {
-  id: string;
-  versionId?: string;
-  /** Which of the four writes to make (root, locale, version, version+locale) reads off this. */
+export type RegisterPrototypeArgs = {
   config: BuiltArea | BuiltCollection;
-  locale?: string;
+  /**
+   * Whether this prototype holds exactly one document.
+   *
+   * The only shape fact the adapter needs, and it is about the *data* — how many rows — not
+   * about a kind. It decides whether a read needs an id, and it is what `insert` and `delete`
+   * refuse on. The adapter does not know the word "area".
+   */
+  singleton: boolean;
 };
 
-export interface CollectionAdapter {
-  findById(args: {
-    slug: CollectionSlug;
-    id: string;
-    versionId?: string;
-    locale?: string;
-    select?: string[];
-    draft?: boolean;
-  }): Promise<RawDoc>;
+/**
+ * What the adapter can do to one registered prototype.
+ *
+ * A uniform toolbox: find, findMany, insert, update, delete over a base and its shadow. Which of
+ * these a caller may actually reach is decided by the prototype definition in core/prototype/,
+ * not here — except for the two a singleton refuses outright, which the adapter enforces at the
+ * database boundary because that is where the guarantee has to hold.
+ */
+export interface PrototypeHandle {
+  readonly slug: string;
+  readonly singleton: boolean;
+  readonly config: BuiltArea | BuiltCollection;
 
-  find(args: {
-    slug: CollectionSlug;
+  /**
+   * One document, merged with the version it should show. `undefined` when nothing matches —
+   * the caller decides whether that is a 404.
+   *
+   * `id` is required to mean anything on a non-singleton, and ignored on a singleton, which has
+   * only one row to return.
+   */
+  find(args?: {
+    id?: string;
+    versionId?: string;
+    select?: string[];
+    locale?: string;
+    draft?: boolean;
+  }): Promise<RawDoc | undefined>;
+
+  findMany(args?: {
     select?: string[];
     query?: OperationQuery;
     sort?: string;
@@ -80,64 +109,41 @@ export interface CollectionAdapter {
     draft?: boolean;
   }): Promise<RawDoc[]>;
 
+  /** Throws on a singleton: there is no second document to make. */
   insert(args: {
-    slug: CollectionSlug;
     data: DeepPartial<GenericDoc>;
     locale?: string;
   }): Promise<{ id: string; versionId: string }>;
 
+  /** `id` is required on a non-singleton; a singleton resolves its own row. */
   update(args: {
-    slug: CollectionSlug;
-    id: string;
+    id?: string;
     versionId?: string;
     versionOperation: VersionOperation;
     data: DeepPartial<GenericDoc>;
     locale?: string;
   }): Promise<{ id: string }>;
 
-  deleteById(args: { slug: CollectionSlug; id: string }): Promise<string | undefined>;
+  /** Throws on a singleton: removing the only document leaves nothing to read. */
+  delete(args: { id: string }): Promise<string | undefined>;
+
+  /** Boot only. Writes the row if absent; a no-op if not. */
+  ensureExists(args: { blank: Dic; locale?: string }): Promise<void>;
 
   /** The ids of the documents parented to `parentId`, in tree order. */
-  childrenIds(args: { slug: CollectionSlug; parentId: string }): Promise<string[]>;
+  childrenIds(args: { parentId: string }): Promise<string[]>;
 
   /** Which of `ids` name a document that exists. */
-  existingIds(args: { slug: CollectionSlug; ids: string[] }): Promise<string[]>;
+  existingIds(args: { ids: string[] }): Promise<string[]>;
 }
 
-/**
- * An area is a singleton, and the interface says so by what it leaves out: there is no insert
- * and no delete. Exactly one row exists, so creating a second is not an operation and removing
- * the only one leaves the area unreadable.
- *
- * `ensureExists` is not a way back in. It is the boot lifecycle — `definePrototype` calls it
- * once per process and nothing at runtime does — and it is shaped so it cannot be used as a
- * create: no data beyond the blank document, no id back, and a second call does nothing.
- */
-export interface AreaAdapter {
-  get(args: {
-    slug: AreaSlug;
-    locale?: string;
-    depth?: number;
-    select?: string[];
-    versionId?: string;
-    draft?: boolean;
-  }): Promise<RawDoc>;
-
-  /** Boot only. Writes the singleton's row if it is absent; a no-op if it is not. */
-  ensureExists(args: {
-    slug: AreaSlug;
-    blank: Partial<GenericDoc>;
-    locale?: string;
-  }): Promise<void>;
-
-  update(args: {
-    slug: AreaSlug;
-    data: DeepPartial<GenericDoc>;
-    locale?: string;
-    versionId?: string;
-    versionOperation: VersionOperation;
-  }): Promise<{ id: string }>;
-}
+export type UpdateDocumentUrlParams = {
+  id: string;
+  versionId?: string;
+  /** Which of the four writes to make (root, locale, version, version+locale) reads off this. */
+  config: BuiltArea | BuiltCollection;
+  locale?: string;
+};
 
 /**
  * `parentSlug` is the slug that owns the children — the versions shadow when the prototype is

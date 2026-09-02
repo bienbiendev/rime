@@ -28,11 +28,7 @@ export const deleteById = async <T extends GenericDoc>(args: DeleteArgs): Promis
     context
   });
 
-  const document = (await rime.adapter.collection.findById({
-    slug: config.slug,
-    id,
-    draft: true
-  })) as T;
+  const document = (await rime.adapter.prototype(config.slug).find({ id, draft: true })) as T;
 
   if (!document) {
     throw new RimeError(RimeError.NOT_FOUND);
@@ -48,7 +44,7 @@ export const deleteById = async <T extends GenericDoc>(args: DeleteArgs): Promis
   });
   context = before.context;
 
-  await rime.adapter.collection.deleteById({ slug: config.slug, id });
+  await rime.adapter.prototype(config.slug).delete({ id });
 
   // Deliberately the pre-hook document, matching the previous implementation: beforeDelete's
   // returned doc was never carried into afterDelete.

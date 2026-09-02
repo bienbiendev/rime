@@ -32,8 +32,7 @@ export const deleteDocs = async (args: DeleteArgs): Promise<string[]> => {
     context
   });
 
-  const documentsToDelete = await rime.adapter.collection.find({
-    slug: config.slug,
+  const documentsToDelete = await rime.adapter.prototype(config.slug).findMany({
     query,
     limit,
     offset,

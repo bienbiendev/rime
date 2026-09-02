@@ -56,14 +56,22 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   // 5. The database. Consumes the schema generated in step 4.
   const adapter = await config.$adapter.createAdapter(configCtx);
 
-  // 6. Each registered prototype's own boot hook, over every config of that kind. Today only the
-  //    singleton has one — an area writes its row if it is missing, so that a read can be a read
-  //    rather than a write in disguise. Boot does not know that; it runs what the registry
-  //    declares, which is the point.
+  // 6. Register every prototype with the adapter, then run each one's boot hook.
   //
-  //    After the adapter for the obvious reason, and the first step here to touch the database:
-  //    an unmigrated database now fails at boot rather than on whichever request first happened
-  //    to read an area.
+  //    Registration is what lets the adapter stop knowing about kinds: it is handed each
+  //    prototype once, with the single shape fact it needs (`singleton` — how many rows, not
+  //    what kind), and resolves that prototype's tables there. `adapter.prototype(slug)` serves
+  //    it from then on.
+  //
+  //    This is also the first step here that touches the database, deliberately: a prototype
+  //    whose tables are missing now fails at boot, naming itself, instead of on whichever
+  //    request first happened to reach it.
+  for (const prototype of prototypes) {
+    for (const prototypeConfig of configCtx.byPrototype(prototype.name)) {
+      adapter.registerPrototype({ config: prototypeConfig, singleton: prototype.singleton });
+    }
+  }
+
   for (const prototype of prototypes) {
     if (!prototype.boot) continue;
     for (const prototypeConfig of configCtx.byPrototype(prototype.name)) {

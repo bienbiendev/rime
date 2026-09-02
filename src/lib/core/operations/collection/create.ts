@@ -52,8 +52,7 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
 
   const incomingPaths = Object.keys(context.configMap!);
 
-  const created = await rime.adapter.collection.insert({
-    slug: config.slug,
+  const created = await rime.adapter.prototype(config.slug).insert({
     data,
     locale
   });

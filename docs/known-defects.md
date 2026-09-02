@@ -61,55 +61,39 @@ proceed should not be `NOT_FOUND`.
 
 ---
 
-## 2. An area's non-versioned bootstrap writes an empty locales row
+## 2. A singleton's bootstrap writes an empty locales row
 
-**Status:** reproduced. Small.
+**Status:** reproduced. Cause corrected — see below; the first diagnosis here was wrong.
 
-`createArea` (`adapter-sqlite/area.server.ts`) has two branches. The versioned one delegates to
-`insertRowWithLocales`; the non-versioned one still writes its own rows, and the two guard the
-locales insert differently:
-
-```ts
-// insertRowWithLocales — skips a locales row that would carry nothing
-if (isLocalized && Object.keys(data).length) { … }
-
-// createArea, non-versioned branch — writes it regardless
-if (isLocalized) { … }
-```
-
-For an area with at least one localized field and no values supplied — which is exactly the
-bootstrap case, since it inserts a blank document — the second writes a row holding nothing but
-its own id, its `locale` and its `ownerId`. Confirmed against the database with a non-versioned
-probe area:
+Bootstrapping a prototype that has at least one localized field writes a row into its
+`__$$locales` table holding nothing but its own id, its `locale` and its `ownerId`:
 
 ```
-probe_area                 ('BFokQ…', None, None, 1788293040211, 1788293040211)
-probe_area__$$locales      ('qv5un…', None, 'en', 'BFokQ…')   ← sub is null; the row says nothing
+infos__versions__$$locales   ('60OVf…', None, None, 'en', 'KdLDm…')   ← title and email both null
+probe_area__$$locales        ('qv5un…', None, 'en', 'BFokQ…')         ← sub null
 ```
 
-Harmless today — reads tolerate it — but it is a row per locale per area that means nothing,
-and the two branches disagreeing is what makes it easy to miss.
+Harmless today — reads tolerate it — but it is a meaningless row per locale per singleton.
 
-### Correction to an earlier claim
+### Why (corrected)
 
-I previously said this branch **also** writes no `createdAt`/`updatedAt`. That was wrong, and
-the run above is what showed it: both columns are populated. They do not come from the write —
-`insertTableRecord` adds nothing and the non-versioned branch passes no timestamps — they come
-from the blank document. `augmentMetas` (`core/factory/shared/augment-metas.ts`) adds
-`date('createdAt')` and `date('updatedAt')` to every prototype, and `DateFieldBuilder`'s
-constructor sets `defaultValue = () => new Date()`, so `createBlankDocument` already carries
-real dates and `prepareSchemaData` passes them through.
+I first recorded this as the two branches of `createArea` guarding differently: the versioned one
+went through `insertRowWithLocales`, which checks `Object.keys(data).length`, and the
+non-versioned one checked only `isLocalized`. Aligning the guards was supposed to fix it.
 
-Worth knowing because the value is the moment the *blank document* was built rather than the
-moment of the insert. For a bootstrap those are microseconds apart, so it is not a bug — but it
-is not the write maintaining them either, and anything that later stops going through
-`createBlankDocument` would silently lose them.
+It does not, and the row appears on **both** paths. A bootstrap prepares its data with
+`fillNotNull: true`, and `transformDataToSchema` treats a not-null column with no value by
+seeding one — for `id` specifically, `result['id'] = randomId(32)`. The locales table's `id` is
+`text('id').primaryKey()`, so it is not-null, so `localizedData` always contains at least that id.
+The emptiness guard therefore never fires, on either branch.
+
+The guards are aligned now anyway (`prototype.server.ts`), and the code says plainly that this
+does not fix it.
 
 ### Where to fix
 
-Adding `&& Object.keys(localizedData).length` to the guard matches `insertRowWithLocales` and is
-the whole change. The larger version is to fold this branch into `insertRowWithLocales`
-outright, which is what it was extracted for; it was left out at the time precisely because
-doing so would have changed this behaviour inside a commit that claimed to change nothing.
-That belongs with the move of `createArea` to a boot-time `definePrototype()`
-(`adapter-sqlite/area.server.ts`, the `@TODO` on the read path).
+Judge emptiness on the values that actually came from the document, not on the seeded key —
+ignore `id` in the check, or do not pass `fillNotNull` when preparing the localized half, since a
+locales row with no localized values should not be written at all. Either way it wants its own
+commit: it changes what is on disk, and the assertion to add is that a freshly bootstrapped
+singleton with only null localized fields has zero rows in its `__$$locales` table.

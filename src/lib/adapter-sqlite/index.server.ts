@@ -5,16 +5,15 @@ import type { GetRegisterType } from '$lib/index.js';
 import type { Dic } from '$lib/util/types.js';
 import { drizzle, LibSQLDatabase } from 'drizzle-orm/libsql';
 import path from 'path';
-import createAreaFacade from './area.server.js';
 import createAuthFacade from './auth.server.js';
 import createBlocksFacade from './blocks.server.js';
-import createCollectionFacade from './collection.server.js';
 import generateSchema from './generate-schema/index.server.js';
 import type { RelationFieldsMap } from './generate-schema/relations/definition.server.js';
 import createRelationsFacade from './relations.server.js';
 import { transformerFacade } from './transform.server.js';
 import createTreeFacade from './tree.server.js';
 import type { GenericTable } from './types.server.js';
+import { createPrototypeRegistry } from './registry.server.js';
 import { updateDocumentUrl } from './url.server.js';
 import { baseTableName } from './naming.server.js';
 import { updateTableRecord } from './util.server.js';
@@ -57,24 +56,15 @@ const createAdapter = async <const C extends Config>(args: {
     db,
     schema: schema.default
   });
-  const collection = createCollectionFacade({
-    db,
-    tables,
-    configCtx
-  });
-  const area = createAreaFacade({
-    db,
-    tables,
-    configCtx
-  });
+  const prototypes = createPrototypeRegistry({ db, tables, configCtx });
   const transform = transformerFacade({
     tables,
     configCtx
   });
 
   return {
-    collection,
-    area,
+    registerPrototype: prototypes.register,
+    prototype: prototypes.get,
     blocks,
     tree,
     relations,

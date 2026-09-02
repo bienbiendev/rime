@@ -15,8 +15,7 @@ export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>(async (a
   if (data.id) {
     // `parent` is an ordinary field on the directories collection, which is never versioned —
     // so the normal query path answers this and no drizzle handle is needed.
-    const children = await event.locals.rime.adapter.collection.find({
-      slug: config.slug,
+    const children = await event.locals.rime.adapter.prototype(config.slug).findMany({
       query: { where: { parent: { equals: `${originalDoc.id}` } } }
     });
 

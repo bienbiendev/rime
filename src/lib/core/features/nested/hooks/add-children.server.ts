@@ -18,8 +18,7 @@ export const addChildrenProperty = Hooks.beforeRead(async (args) => {
   // Else populate _children
   const { rime } = args.event.locals;
 
-  const children = await rime.adapter.collection.childrenIds({
-    slug: args.config.slug,
+  const children = await rime.adapter.prototype(args.config.slug).childrenIds({
     parentId: args.doc.id
   });
 

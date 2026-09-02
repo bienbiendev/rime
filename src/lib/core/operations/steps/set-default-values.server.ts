@@ -67,10 +67,7 @@ const defaultRelationValue = async (
           ? defaultValue
           : [];
 
-    const existing = await adapter.collection.existingIds({
-      slug: config.get.relationTo,
-      ids
-    });
+    const existing = await adapter.prototype(config.get.relationTo).existingIds({ ids });
 
     return existing.map((documentId, index) => ({
       id: null,
