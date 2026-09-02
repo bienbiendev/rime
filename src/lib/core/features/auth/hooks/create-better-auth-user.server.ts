@@ -1,8 +1,8 @@
 import { dev } from '$app/environment';
 import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
-import { t__ } from '$lib/core/i18n/index.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
 import { access } from '$lib/core/features/auth/access.js';
+import { t__ } from '$lib/core/i18n/index.js';
 import { BETTER_AUTH_ROLES } from '../constant.server.js';
 
 /**
@@ -28,9 +28,15 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(async (args) => {
    * Written as a plain if/else-if chain: the conditions are not mutually exclusive and the
    * order between them is the actual logic, so it should read as control flow.
    */
-  type CreationCase = 'INIT' | 'ADMIN_CREATE_USER' | 'STAFF_CREATE_USER' | 'PUBLIC_SIGNUP' | 'API_KEY_CREATION' | undefined;
+  const CREATION_CASE = {
+    INIT: 'INIT',
+    ADMIN_CREATE_USER: 'ADMIN_CREATE_USER',
+    STAFF_CREATE_USER: 'STAFF_CREATE_USER',
+    PUBLIC_SIGNUP: 'PUBLIC_SIGNUP',
+    API_KEY_CREATION: 'API_KEY_CREATION'
+  } as const;
 
-  const resolveCase = (): CreationCase => {
+  const resolveCase = (): (typeof CREATION_CASE)[keyof typeof CREATION_CASE] | undefined => {
     /**
      * 1. First-time Setup (Init)
      * 	- Description: Creating the first admin user when the system is initialized
@@ -40,7 +46,7 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(async (args) => {
      *				- use admin plugin to creates user with "admin" role
      *				- this will be the only isSuperAdmin user
      */
-    if (Boolean(event.locals.isInit) && dev) return 'INIT';
+    if (Boolean(event.locals.isInit) && dev) return CREATION_CASE.INIT;
 
     /**
      *	2. Admin Creating Users
@@ -49,7 +55,7 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(async (args) => {
      *		- Auth Flow:
      *			- Use the admin plugin to create a user
      */
-    if (IS_CURRENT_USER_ADMIN && !IS_API_KEY_OPERATION) return 'ADMIN_CREATE_USER';
+    if (IS_CURRENT_USER_ADMIN && !IS_API_KEY_OPERATION) return CREATION_CASE.ADMIN_CREATE_USER;
 
     /*
      * 3. Staff Creating users
@@ -58,7 +64,7 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(async (args) => {
      *		- Auth Flow:
      *			- ??
      */
-    if (IS_CURRENT_USER_STAFF && !IS_API_KEY_OPERATION) return 'STAFF_CREATE_USER';
+    if (IS_CURRENT_USER_STAFF && !IS_API_KEY_OPERATION) return CREATION_CASE.STAFF_CREATE_USER;
 
     /*
      * 4. Public User Signup
@@ -69,7 +75,7 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(async (args) => {
      * 		- Better-Auth creates user with 'user' role
      * 		- Better-Auth hook call rime.collection(slug).create to create the document
      */
-    if (Boolean(args.data.authUserId)) return 'PUBLIC_SIGNUP';
+    if (args.data.authUserId) return CREATION_CASE.PUBLIC_SIGNUP;
 
     /**
      * 6. API Key Creation
@@ -79,7 +85,12 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(async (args) => {
      * 		- Admin creates API key user that forward current authneticated user
      * 		- API key generated and send by email
      */
-    if (IS_API_KEY_OPERATION && Boolean(event.locals.user) && Boolean(event.locals.betterAuthUser?.id)) return 'API_KEY_CREATION';
+    if (
+      IS_API_KEY_OPERATION &&
+      Boolean(event.locals.user) &&
+      Boolean(event.locals.betterAuthUser?.id)
+    )
+      return CREATION_CASE.API_KEY_CREATION;
 
     /**
      * 7. Programmatic User Creation : API_KEY APP create user
@@ -96,18 +107,18 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(async (args) => {
   const CASE = resolveCase();
 
   // Prevent superAdmin value to be set on creation
-  if ('isSuperAdmin' in args.data && CASE !== 'INIT') {
+  if ('isSuperAdmin' in args.data && CASE !== CREATION_CASE.INIT) {
     throw new RimeError(RimeError.UNAUTHORIZED);
   }
 
   let authUserId;
 
   switch (CASE) {
-    case 'INIT':
+    case CREATION_CASE.INIT:
       authUserId = args.data.authUserId;
       break;
 
-    case 'ADMIN_CREATE_USER': {
+    case CREATION_CASE.ADMIN_CREATE_USER: {
       // Define better-auth role
       // First match wins, read top to bottom.
       const role =
@@ -134,7 +145,7 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(async (args) => {
     }
 
     //
-    case 'STAFF_CREATE_USER': {
+    case CREATION_CASE.STAFF_CREATE_USER: {
       // Define better-auth role, staff can't create admin
       const role = IS_STAFF_CREATION ? BETTER_AUTH_ROLES.STAFF : BETTER_AUTH_ROLES.USER;
 
@@ -154,7 +165,7 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(async (args) => {
       break;
     }
 
-    case 'API_KEY_CREATION': {
+    case CREATION_CASE.API_KEY_CREATION: {
       if (!event.locals.betterAuthUser || !event.locals.user) {
         throw new RimeError(RimeError.UNAUTHORIZED);
       }
@@ -176,11 +187,16 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(async (args) => {
       });
 
       // Send api key by email to the user
-      await rime.mailer.sendMail({
-        to: event.locals.user!.email,
-        subject: t__(`mail.api_key_created_subject`, args.data.name),
-        text: t__(`mail.api_key_created_text`, args.data.name, apiKey.key)
-      });
+      if ('mailer' in rime && rime.mailer) {
+        // Cast as any because when no SMTP config provided by consumer rime.mailer is never
+        await (rime.mailer as any).sendMail({
+          to: event.locals.user!.email,
+          subject: t__(`mail.api_key_created_subject`, args.data.name),
+          text: t__(`mail.api_key_created_text`, args.data.name, apiKey.key)
+        });
+      } else {
+        rime.logger.warn('Missing SMTP configuration');
+      }
 
       return {
         ...args,
@@ -197,7 +213,7 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(async (args) => {
       };
     }
 
-    case 'PUBLIC_SIGNUP':
+    case CREATION_CASE.PUBLIC_SIGNUP:
       authUserId = args.data.authUserId;
       break;
 
