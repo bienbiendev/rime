@@ -9,43 +9,49 @@ import {
 import { getValueAtPath } from '$lib/util/object.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
 
-export const setDocumentThumbnail = Hooks.beforeRead<'raw'>(async (args) => {
-  const config = args.config;
-  let doc = args.doc;
+export const setDocumentThumbnail = Hooks.beforeRead<'raw'>({
+  name: 'setDocumentThumbnail',
+  requires: ['shaped', 'document'],
+  provides: ['document'],
+  run: async (args) => {
+    const config = args.config;
+    let doc = args.doc;
 
-  const hasThumbnail = (
-    c: typeof args.config
-  ): c is BuiltCollection & {
-    asThumbnail: string;
-  } => {
-    return c.type === 'collection' && !!c.asThumbnail;
-  };
-
-  const paramSelect = args.context.params.select;
-  const hasSelect = Array.isArray(paramSelect) && paramSelect.length;
-  const shouldSetThumbnail =
-    hasThumbnail(config) &&
-    !doc._thumbnail &&
-    (!hasSelect || (hasSelect && paramSelect.includes('_thumbnail')));
-
-  if (shouldSetThumbnail) {
-    const relationValue = getValueAtPath<RelationValue<UploadDoc>>(config.asThumbnail, doc);
-    if (!relationValue || (Array.isArray(relationValue) && relationValue.length === 0)) return args;
-
-    const unwraped = Array.isArray(relationValue) ? relationValue[0] : relationValue;
-    if (typeof unwraped === 'string') return args;
-
-    const relationResolved = isRelationResolved<GenericDoc>(unwraped)
-      ? unwraped
-      : await args.event.locals.rime
-          .collection(unwraped.relationTo as CollectionSlug)
-          .findById({ id: unwraped.documentId });
-
-    doc = {
-      _thumbnail: relationResolved._thumbnail,
-      ...doc
+    const hasThumbnail = (
+      c: typeof args.config
+    ): c is BuiltCollection & {
+      asThumbnail: string;
+    } => {
+      return c.type === 'collection' && !!c.asThumbnail;
     };
-  }
 
-  return { ...args, doc };
+    const paramSelect = args.context.params.select;
+    const hasSelect = Array.isArray(paramSelect) && paramSelect.length;
+    const shouldSetThumbnail =
+      hasThumbnail(config) &&
+      !doc._thumbnail &&
+      (!hasSelect || (hasSelect && paramSelect.includes('_thumbnail')));
+
+    if (shouldSetThumbnail) {
+      const relationValue = getValueAtPath<RelationValue<UploadDoc>>(config.asThumbnail, doc);
+      if (!relationValue || (Array.isArray(relationValue) && relationValue.length === 0))
+        return args;
+
+      const unwraped = Array.isArray(relationValue) ? relationValue[0] : relationValue;
+      if (typeof unwraped === 'string') return args;
+
+      const relationResolved = isRelationResolved<GenericDoc>(unwraped)
+        ? unwraped
+        : await args.event.locals.rime
+            .collection(unwraped.relationTo as CollectionSlug)
+            .findById({ id: unwraped.documentId });
+
+      doc = {
+        _thumbnail: relationResolved._thumbnail,
+        ...doc
+      };
+    }
+
+    return { ...args, doc };
+  }
 });

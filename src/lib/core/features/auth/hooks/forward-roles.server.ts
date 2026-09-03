@@ -14,58 +14,67 @@ import { BETTER_AUTH_ROLES } from '../constant.server.js';
  * Only the 'staff' collection can end up admin or staff.
  * Every other collection always gets 'user'.
  */
-export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>(async (args) => {
-  const { event, config, context } = args;
-  const { rime } = event.locals;
+export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>({
+  name: 'forwardRolesToBetterAuth',
+  requires: ['original-doc'],
+  provides: [],
+  run: async (args) => {
+    const { event, config, context } = args;
+    const { rime } = event.locals;
 
-  // Fallback-locale writes are internal, not a real user action — skip.
-  if (args.context.isFallbackLocale) return args;
+    // Fallback-locale writes are internal, not a real user action — skip.
+    if (args.context.isFallbackLocale) return args;
 
-  const IS_ROLES_MUTATION = 'roles' in args.data && Array.isArray(args.data.roles);
-  const IS_API_KEY_MUTATION = config.auth?.type === 'apiKey';
+    const IS_ROLES_MUTATION = 'roles' in args.data && Array.isArray(args.data.roles);
+    const IS_API_KEY_MUTATION = config.auth?.type === 'apiKey';
 
-  // API key docs have no better-auth user of their own — their `roles` field
-  // permissions the key itself, so there's nothing to forward here.
-  if (IS_API_KEY_MUTATION) {
-    return args;
-  }
-
-  const originalDoc = context.originalDoc;
-
-  if (!originalDoc) {
-    throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @forwardRolesToBetterAuth');
-  }
-
-  if (IS_ROLES_MUTATION) {
-    const authUserId = await rime.adapter.auth.getBetterAuthUserId({
-      slug: config.slug,
-      id: originalDoc.id
-    });
-
-    if (!authUserId) {
-      throw new RimeError(RimeError.OPERATION_ERROR, 'user not found');
+    // API key docs have no better-auth user of their own — their `roles` field
+    // permissions the key itself, so there's nothing to forward here.
+    if (IS_API_KEY_MUTATION) {
+      return args;
     }
 
-    const ADMIN_ROLE_IN_DATA = Array.isArray(args.data.roles) && args.data.roles.includes('admin');
-    const IS_CURRENT_USER_ADMIN = access.isAdmin(event.locals.user);
-    const IS_CURRENT_USER_STAFF = Boolean(event.locals.user?.isStaff);
+    const originalDoc = context.originalDoc;
 
-    // First true condition wins, read top to bottom.
-    const role =
-      // Only an admin can grant 'admin', and only on the staff collection.
-      IS_CURRENT_USER_ADMIN && ADMIN_ROLE_IN_DATA && config.slug === 'staff'
-        ? BETTER_AUTH_ROLES.ADMIN
-        : // Any staff member editing a staff doc without granting admin: 'staff'.
-          IS_CURRENT_USER_STAFF && config.slug === 'staff'
-          ? BETTER_AUTH_ROLES.STAFF
-          : // Everything else (non-staff collection, or no condition above matched): 'user'.
-            BETTER_AUTH_ROLES.USER;
+    if (!originalDoc) {
+      throw new RimeError(
+        RimeError.OPERATION_ERROR,
+        'missing originalDoc @forwardRolesToBetterAuth'
+      );
+    }
 
-    await rime.auth.api.setRole({
-      headers: args.event.request.headers,
-      body: { userId: authUserId, role }
-    });
+    if (IS_ROLES_MUTATION) {
+      const authUserId = await rime.adapter.auth.getBetterAuthUserId({
+        slug: config.slug,
+        id: originalDoc.id
+      });
+
+      if (!authUserId) {
+        throw new RimeError(RimeError.OPERATION_ERROR, 'user not found');
+      }
+
+      const ADMIN_ROLE_IN_DATA =
+        Array.isArray(args.data.roles) && args.data.roles.includes('admin');
+      const IS_CURRENT_USER_ADMIN = access.isAdmin(event.locals.user);
+      const IS_CURRENT_USER_STAFF = Boolean(event.locals.user?.isStaff);
+
+      // First true condition wins, read top to bottom.
+      const role =
+        // Only an admin can grant 'admin', and only on the staff collection.
+        IS_CURRENT_USER_ADMIN && ADMIN_ROLE_IN_DATA && config.slug === 'staff'
+          ? BETTER_AUTH_ROLES.ADMIN
+          : // Any staff member editing a staff doc without granting admin: 'staff'.
+            IS_CURRENT_USER_STAFF && config.slug === 'staff'
+            ? BETTER_AUTH_ROLES.STAFF
+            : // Everything else (non-staff collection, or no condition above matched): 'user'.
+              BETTER_AUTH_ROLES.USER;
+
+      await rime.auth.api.setRole({
+        headers: args.event.request.headers,
+        body: { userId: authUserId, role }
+      });
+    }
+
+    return args;
   }
-
-  return args;
 });

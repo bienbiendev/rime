@@ -20,21 +20,26 @@ import { usersFields } from '../fields.js';
  * twice. The panel enforces the match in AuthFooter.svelte, where a mistyped password can
  * still be corrected.
  */
-export const augmentFieldsPassword = Hooks.beforeUpsert<'auth'>(async (args) => {
-  let { config } = args;
+export const augmentFieldsPassword = Hooks.beforeUpsert<'auth'>({
+  name: 'augmentFieldsPassword',
+  requires: ['blank-merged'],
+  provides: ['config-fields'],
+  run: async (args) => {
+    let { config } = args;
 
-  const IS_PASSWORD_AUTH =
-    config.auth && typeof config.auth !== 'boolean' && config.auth.type === 'password';
+    const IS_PASSWORD_AUTH =
+      config.auth && typeof config.auth !== 'boolean' && config.auth.type === 'password';
 
-  if (IS_PASSWORD_AUTH) {
-    config = {
-      ...config,
-      fields: [...config.fields, usersFields.password]
+    if (IS_PASSWORD_AUTH) {
+      config = {
+        ...config,
+        fields: [...config.fields, usersFields.password]
+      };
+    }
+
+    return {
+      ...args,
+      config
     };
   }
-
-  return {
-    ...args,
-    config
-  };
 });

@@ -5,16 +5,21 @@ import { Hooks } from '$lib/core/factory/hooks.js';
  * Before update :
  * - prevent email/name/password to be changed
  */
-export const preventUserMutations = Hooks.beforeUpdate<'auth'>(async (args) => {
-  const IS_MUTATION_AUTH = 'email' in args.data || 'name' in args.data || 'password' in args.data;
+export const preventUserMutations = Hooks.beforeUpdate<'auth'>({
+  name: 'preventUserMutations',
+  requires: ['original-doc'],
+  provides: [],
+  run: async (args) => {
+    const IS_MUTATION_AUTH = 'email' in args.data || 'name' in args.data || 'password' in args.data;
 
-  if (IS_MUTATION_AUTH && args.config.auth) {
-    if (args.context.isFallbackLocale) {
-      delete args.data.password;
-    } else {
-      throw new RimeError(RimeError.UNAUTHORIZED);
+    if (IS_MUTATION_AUTH && args.config.auth) {
+      if (args.context.isFallbackLocale) {
+        delete args.data.password;
+      } else {
+        throw new RimeError(RimeError.UNAUTHORIZED);
+      }
     }
-  }
 
-  return args;
+    return args;
+  }
 });

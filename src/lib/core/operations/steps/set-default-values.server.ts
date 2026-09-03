@@ -7,39 +7,44 @@ import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
 
-export const setDefaultValues = Hooks.beforeUpsert(async (args) => {
-  const { operation, event } = args;
-  const { rime } = event.locals;
+export const setDefaultValues = Hooks.beforeUpsert({
+  name: 'setDefaultValues',
+  requires: ['config-map'],
+  provides: [],
+  run: async (args) => {
+    const { operation, event } = args;
+    const { rime } = event.locals;
 
-  const configMap = args.context.configMap;
+    const configMap = args.context.configMap;
 
-  if (!configMap)
-    throw new RimeError(RimeError.OPERATION_ERROR, 'missing configMap @setDefaultValues');
+    if (!configMap)
+      throw new RimeError(RimeError.OPERATION_ERROR, 'missing configMap @setDefaultValues');
 
-  let output = { ...args.data };
-  for (const [key, config] of Object.entries(configMap)) {
-    let value = getValueAtPath(key, output);
+    let output = { ...args.data };
+    for (const [key, config] of Object.entries(configMap)) {
+      let value = getValueAtPath(key, output);
 
-    let isEmpty;
-    const shouldAddDefault =
-      operation === 'create' || (operation === 'update' && config.get.required);
+      let isEmpty;
+      const shouldAddDefault =
+        operation === 'create' || (operation === 'update' && config.get.required);
 
-    try {
-      isEmpty = config.use.isEmpty(value);
-    } catch {
-      isEmpty = false;
-      logger.warn(`Error in config.isEmpty for field ${key}`);
+      try {
+        isEmpty = config.use.isEmpty(value);
+      } catch {
+        isEmpty = false;
+        logger.warn(`Error in config.isEmpty for field ${key}`);
+      }
+      if (shouldAddDefault && isEmpty && config.get.defaultValue !== undefined) {
+        value = await getDefaultValue({ key, config, adapter: rime.adapter });
+        output = setValueAtPath(key, output, value);
+      }
     }
-    if (shouldAddDefault && isEmpty && config.get.defaultValue !== undefined) {
-      value = await getDefaultValue({ key, config, adapter: rime.adapter });
-      output = setValueAtPath(key, output, value);
-    }
+
+    return {
+      ...args,
+      data: output
+    };
   }
-
-  return {
-    ...args,
-    data: output
-  };
 });
 
 type GetDefaultValue = (args: {

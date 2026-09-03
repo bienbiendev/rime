@@ -24,43 +24,48 @@ import { isUploadConfig } from '../util/config.js';
  *    - Cleans up image variations
  *    - Nullifies related document fields
  */
-export const processFileUpload = Hooks.beforeUpsert<'upload'>(async (args) => {
-  const { operation, config, event } = args;
-  const { rime } = event.locals;
+export const processFileUpload = Hooks.beforeUpsert<'upload'>({
+  name: 'processFileUpload',
+  requires: ['validated'],
+  provides: [],
+  run: async (args) => {
+    const { operation, config, event } = args;
+    const { rime } = event.locals;
 
-  if (!isUploadConfig(config)) throw new Error('Should never throw');
+    if (!isUploadConfig(config)) throw new Error('Should never throw');
 
-  let data = args.data || {};
-  const hasSizeConfig = 'imageSizes' in config.upload && Array.isArray(config.upload.imageSizes);
-  const sizesConfig = hasSizeConfig ? config.upload.imageSizes : [];
+    let data = args.data || {};
+    const hasSizeConfig = 'imageSizes' in config.upload && Array.isArray(config.upload.imageSizes);
+    const sizesConfig = hasSizeConfig ? config.upload.imageSizes : [];
 
-  if (data.file) {
-    if (operation === 'update' && args.context.originalDoc) {
-      await cleanUpDocumentFile({ config, rime, id: args.context.originalDoc.id });
-    }
+    if (data.file) {
+      if (operation === 'update' && args.context.originalDoc) {
+        await cleanUpDocumentFile({ config, rime, id: args.context.originalDoc.id });
+      }
 
-    const { filename, imageSizes } = await saveFile(data.file, sizesConfig!);
-    data = {
-      ...omit(['file'], data),
-      filename,
-      ...imageSizes
-    };
-  }
-
-  // If data.file is explicitly set to null : delete file
-  if (data.file === null) {
-    // delete files
-    if (operation === 'update' && args.context.originalDoc) {
-      await cleanUpDocumentFile({ config, rime, id: args.context.originalDoc.id });
-    }
-    // update data for DB update
-    for (const size of sizesConfig!) {
+      const { filename, imageSizes } = await saveFile(data.file, sizesConfig!);
       data = {
-        ...data,
-        [toCamelCase(size.name)]: null
+        ...omit(['file'], data),
+        filename,
+        ...imageSizes
       };
     }
-  }
 
-  return { ...args, data };
+    // If data.file is explicitly set to null : delete file
+    if (data.file === null) {
+      // delete files
+      if (operation === 'update' && args.context.originalDoc) {
+        await cleanUpDocumentFile({ config, rime, id: args.context.originalDoc.id });
+      }
+      // update data for DB update
+      for (const size of sizesConfig!) {
+        data = {
+          ...data,
+          [toCamelCase(size.name)]: null
+        };
+      }
+    }
+
+    return { ...args, data };
+  }
 });

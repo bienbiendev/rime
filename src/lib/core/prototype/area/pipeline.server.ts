@@ -1,7 +1,7 @@
-import type { Area, AreaHooks } from '$lib/types.js';
-import { featureHooks, url } from '$lib/core/features/registry.js';
+import type { AreaHooks } from '$lib/types.js';
 import { defineVersionOperation } from '$lib/core/features/versions/hooks/define-version-operation.server.js';
 import { handleNewVersion } from '$lib/core/features/versions/hooks/handle-new-version.server.js';
+import { buildPipeline } from '$lib/core/operations/build-pipeline.server.js';
 import { authorize } from '$lib/core/operations/steps/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/operations/steps/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/operations/steps/get-original-document.server.js';
@@ -15,43 +15,24 @@ import { sortDocumentProps } from '$lib/core/operations/steps/sort-document-prop
 import { validateFields } from '$lib/core/operations/steps/validate-fields.server.js';
 
 /**
- * Every hook rime runs on an area, and the order it runs them in.
+ * The hooks an area contributes to its own pipeline.
  *
- * The same split as the collection pipeline beside it: features own the implementations and the
- * condition that enables them, this file owns the order.
+ * The same split as the collection's, and the same silence about features. An area is a single
+ * document: no create, no delete, and no thumbnail step — it simply declares nothing for the
+ * timings it has no use for.
  */
-
-type PartialArea = {
-  $hooks?: AreaHooks<any>;
-  $url?: Area<any>['$url'];
-};
-
-/** Annotated rather than inferred, for the reason given in the collection pipeline. */
-type AreaPipeline = Required<AreaHooks<any>>;
-
-/**
- * The hooks rime contributes to an area, in order.
- *
- * An area is a single document: no create, no delete, and none of the collection-only
- * features (auth, upload, nested). Note the two deliberate differences from
- * collectionPipeline's beforeRead: populateURL runs before setDocumentType, and there is no
- * thumbnail step.
- */
-export const areaPipeline = (area: PartialArea): AreaPipeline => ({
+const ownHooks = () => ({
   beforeOperation: [authorize],
 
   beforeRead: [
-    //
     processDocumentFields,
     setDocumentTitle,
     setDocumentLocale,
-    ...featureHooks(url, area, 'beforeRead'),
     setDocumentType,
     sortDocumentProps
   ],
 
   beforeUpdate: [
-    //
     defineVersionOperation,
     getOriginalDocument,
     buildOriginalDocConfigMap,
@@ -64,17 +45,15 @@ export const areaPipeline = (area: PartialArea): AreaPipeline => ({
   afterUpdate: []
 });
 
-/** Same, for an area — only the four timings an area actually has. */
-export const augmentAreaHooks = <T extends PartialArea>(area: T): T => {
-  const hooks = areaPipeline(area);
-
-  return {
-    ...area,
-    $hooks: {
-      beforeOperation: [...hooks.beforeOperation, ...(area.$hooks?.beforeOperation || [])],
-      beforeUpdate: [...hooks.beforeUpdate, ...(area.$hooks?.beforeUpdate || [])],
-      afterUpdate: [...hooks.afterUpdate, ...(area.$hooks?.afterUpdate || [])],
-      beforeRead: [...hooks.beforeRead, ...(area.$hooks?.beforeRead || [])]
-    }
-  };
+/** Only what the area's own hooks read — `$url` is the url feature's business, not the area's. */
+type PartialArea = {
+  slug?: string;
+  $hooks?: AreaHooks<any>;
 };
+
+/** The area's own hooks, whatever the registry's features contribute, and the consumer's —
+ *  merged and ordered. */
+export const augmentAreaHooks = <T extends PartialArea>(area: T): T => ({
+  ...area,
+  $hooks: buildPipeline('area', area, ownHooks(), area.$hooks)
+});

@@ -147,3 +147,87 @@ export type OperationQuery = string | ParsedOperationQuery;
 export type ParsedOperationQuery = {
   where: Dic;
 };
+
+/**
+ * A named point in a pipeline's progress that a hook can wait on.
+ *
+ * The whole ordering mechanism. A hook declares what state it needs (`requires`) and what state
+ * it leaves behind (`provides`), and the resolver computes the order — so no prototype has to
+ * name a feature and no feature has to know where it sits.
+ *
+ * A closed union on purpose. `requires` is satisfied *vacuously* when nothing active provides
+ * the mark (see resolve-pipeline.server.ts), which is what lets an unconditional hook depend on
+ * a conditional one — `removePrivateFields` only exists when a collection has `auth`. That same
+ * rule would silently reorder the pipeline on a typo, with no error anywhere, so the set of legal
+ * marks has to be closed and a misspelling has to be a type error.
+ *
+ * Features extend it by merging into `FeatureHookMarks`, so a feature adds its own marks without
+ * this file naming the feature.
+ */
+export type HookMark = keyof FeatureHookMarks | CoreHookMark;
+
+/** Marks owned by core — the prototype's own hooks and the operation steps. */
+export type CoreHookMark =
+  /** Private fields are gone; anything deriving from the document may now read it. */
+  | 'sanitized'
+  /** Field values have been processed into their final document shape. */
+  | 'shaped'
+  /** The document's own title has been resolved. */
+  | 'title'
+  /** Anything that writes a document property declares this, so a hook that must run after every
+   *  writer — `sortDocumentProps` — can wait on all of them without naming one. */
+  | 'document'
+  /** The blank document has been merged in, so `config.fields` is the final field list. */
+  | 'blank-merged'
+  /** `config.fields` is final and may be read to build a config map. */
+  | 'config-fields'
+  /** The config map for incoming data exists. */
+  | 'config-map'
+  /** The original document has been loaded. */
+  | 'original-doc'
+  /** The config map for the original document exists. */
+  | 'original-config-map'
+  /** The version operation for this request has been decided. */
+  | 'version-operation'
+  /** Incoming data has been validated. */
+  | 'validated';
+
+/**
+ * Marks contributed by features, extended through declaration merging so that neither this file
+ * nor any prototype names a feature:
+ *
+ * ```ts
+ * declare module '$lib/core/operations/types.js' {
+ *   interface FeatureHookMarks { 'upload:file-written': true }
+ * }
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface FeatureHookMarks {}
+
+/** How a hook declares itself to the resolver. Attached to the hook function, not wrapped
+ *  around it, so every existing call site keeps invoking it directly. */
+export type HookMarks = {
+  /**
+   * Identifies the hook in the generated pipeline and the order fixture.
+   *
+   * Cannot be inferred: these hooks are written `export const x = Hooks.beforeRead(fn)`, where
+   * the function is an *argument*, so JS never gives it a name and `fn.name` is `''`.
+   */
+  name: string;
+  /** Runs after **every** active hook that provides each of these. */
+  requires: HookMark[];
+  /** The marks this hook leaves behind. */
+  provides: HookMark[];
+};
+
+/**
+ * Marks live on the hook at runtime and deliberately **not** in its type.
+ *
+ * They were briefly part of it (`Hook<S, …> & HookMarks`), which broke every consumer: an
+ * intersection of a function type with an object loses the assignability that lets a
+ * `Hook<'raw', 'read', 'before'>` — what `Hooks.beforeRead(fn)` infers when the handler carries
+ * no explicit slug — land in a `CollectionHooks<'pages'>`. Nothing needs the type: the resolver
+ * reads marks through `marksOf()` (resolve-pipeline.server.ts), and a misspelling is still a
+ * compile error where it matters, in the declaration object, because `HookMark` is closed.
+ */

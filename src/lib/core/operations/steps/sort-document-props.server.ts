@@ -2,8 +2,13 @@ import { isObjectLiteral } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
 
-export const sortDocumentProps = Hooks.beforeRead<'generic'>(async (args) => {
-  return { ...args, doc: sortDocumentKeys(args.doc) };
+export const sortDocumentProps = Hooks.beforeRead<'generic'>({
+  name: 'sortDocumentProps',
+  requires: ['document'],
+  provides: [],
+  run: async (args) => {
+    return { ...args, doc: sortDocumentKeys(args.doc) };
+  }
 });
 
 function sortDocumentKeys<T extends Dic>(obj: T): T {

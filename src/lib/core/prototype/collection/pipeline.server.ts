@@ -3,9 +3,9 @@ import * as authHooks from '$lib/core/features/auth/hooks/index.server.js';
 import { augmentFieldsPassword } from '$lib/core/features/auth/hooks/augment-fields-password.server.js';
 import { populateAPIKey } from '$lib/core/features/auth/hooks/populate-api-key.server.js';
 import { removePrivateFields } from '$lib/core/features/auth/hooks/remove-private-fields.server.js';
-import { featureHooks, nested, upload, url } from '$lib/core/features/registry.js';
 import { defineVersionOperation } from '$lib/core/features/versions/hooks/define-version-operation.server.js';
 import { handleNewVersion } from '$lib/core/features/versions/hooks/handle-new-version.server.js';
+import { buildPipeline } from '$lib/core/operations/build-pipeline.server.js';
 import { authorize } from '$lib/core/operations/steps/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/operations/steps/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/operations/steps/get-original-document.server.js';
@@ -21,41 +21,25 @@ import { sortDocumentProps } from '$lib/core/operations/steps/sort-document-prop
 import { validateFields } from '$lib/core/operations/steps/validate-fields.server.js';
 
 /**
- * Every hook rime runs on a collection, and the order it runs them in.
+ * The hooks a collection contributes to its own pipeline.
  *
- * The prototype owns its own pipeline, next to the operations that run it. Feature folders own
- * the hook *implementations* and the condition that enables them — `featureHooks(url,
- * collection, 'beforeRead')` contributes nothing unless that config declares `$url`. This file
- * owns the *order*, spelled out literally. Deliberately not driven by iterating a feature
- * registry: ordering is the interesting part of a pipeline, and a loop would hide it. Nor could
- * a loop find this order — the features that interleave here require nothing of each other, and
- * what they are really ordered against is the core steps around them.
+ * **Its own, and nothing else's.** Where a feature's hooks belong in this list is not stated here
+ * and cannot be: this file names no feature, so extending a collection never means editing it.
+ * `buildPipeline` merges what the registry offers for each timing and `resolvePipeline` decides
+ * the order from what every hook declares about itself.
  *
- * The area pipeline is its own file, beside its own operations. Two deliberate differences to
- * know about, previously visible because both sat in one file: an area runs `populateURL` before
- * `setDocumentType`, and has no thumbnail step.
+ * Until this commit these lists interleaved `...featureHooks(upload, collection, 'beforeRead')`
+ * by hand — a prototype naming a feature, which is backwards: features extend prototypes. That
+ * inversion is what made the feature layer decorative, since adding one still meant editing the
+ * thing it was supposed to extend.
+ *
+ * What remains is genuinely the collection's own. `auth` is core rather than a feature
+ * (docs/architecture-target.md settles that), and versions' two update hooks run for *every*
+ * config, versioned or not — `defineVersionOperation` populates the context that
+ * `assertUpsertContext` then requires — so gating them behind a feature would break
+ * non-versioned updates.
  */
-
-type PartialCollection = {
-  upload?: Collection<any>['upload'];
-  nested?: Collection<any>['nested'];
-  auth?: Collection<any>['auth'];
-  $hooks?: CollectionHooks<any>;
-  $url?: Collection<any>['$url'];
-};
-
-/**
- * The pipeline's return type, annotated rather than inferred.
- *
- * CollectionHooks always typed every timing correctly, but this function returned an inferred
- * object literal, so nothing was compared against it and a `beforeRead` hook could sit in
- * `afterDelete` with no error anywhere. `Required<…>` because rime contributes every timing,
- * even when the array is empty.
- */
-type CollectionPipeline = Required<CollectionHooks<any>>;
-
-/** The hooks rime contributes to a collection, in order. */
-export const collectionPipeline = (collection: PartialCollection): CollectionPipeline => {
+const ownHooks = (collection: PartialCollection) => {
   const IS_API_AUTH =
     collection.auth && typeof collection.auth !== 'boolean' && collection.auth.type === 'apiKey';
 
@@ -63,18 +47,14 @@ export const collectionPipeline = (collection: PartialCollection): CollectionPip
     beforeOperation: [authorize],
 
     beforeRead: [
-      // Strip private fields first, before any hook below can copy their value into derived
-      // data (e.g. setDocumentTitle reading an arbitrary, collection-author-chosen
-      // config.asTitle field, or a consumer's own $url function) — deleting the original key
-      // afterwards wouldn't undo a copy already made from it.
+      // Strips private fields, and everything deriving from the document waits on the mark it
+      // leaves (`sanitized`) rather than on its position — so no hook can copy a private value
+      // into derived data before it runs, whether or not anyone remembers to keep it first.
       ...(collection.auth ? [removePrivateFields] : []),
       processDocumentFields,
       setDocumentTitle,
       setDocumentLocale,
       setDocumentType,
-      ...featureHooks(upload, collection, 'beforeRead'),
-      ...featureHooks(url, collection, 'beforeRead'),
-      ...featureHooks(nested, collection, 'beforeRead'),
       setDocumentThumbnail,
       sortDocumentProps
     ],
@@ -86,9 +66,6 @@ export const collectionPipeline = (collection: PartialCollection): CollectionPip
       handleNewVersion,
       ...(collection.auth
         ? [
-            // Immediately before buildDataConfigMap, which is the point of it: it appends the
-            // password field to the config so the config map — and therefore validation —
-            // covers it.
             augmentFieldsPassword,
             authHooks.preventSuperAdminMutation,
             authHooks.preventUserMutations,
@@ -97,55 +74,45 @@ export const collectionPipeline = (collection: PartialCollection): CollectionPip
         : []),
       buildDataConfigMap,
       setDefaultValues,
-      validateFields,
-      ...featureHooks(upload, collection, 'beforeUpdate')
+      validateFields
     ],
 
     afterUpdate: [],
 
     beforeCreate: [
       mergeWithBlankDocument,
-      // After mergeWithBlankDocument, never before — the blank document is built from
-      // config.fields, so augmenting first gives every create a blank `password` that then
-      // fails its own .required() check. See the hook for the paths that legitimately have
-      // no password.
       ...(collection.auth ? [augmentFieldsPassword] : []),
       buildDataConfigMap,
       setDefaultValues,
       validateFields,
-      ...(collection.auth ? [authHooks.createBetterAuthUser] : []),
-      ...featureHooks(upload, collection, 'beforeCreate')
+      ...(collection.auth ? [authHooks.createBetterAuthUser] : [])
     ],
 
     afterCreate: [...(IS_API_AUTH ? [populateAPIKey] : [])],
 
-    beforeDelete: [
-      ...(collection.auth ? [authHooks.preventSupperAdminDeletion] : []),
-      ...featureHooks(upload, collection, 'beforeDelete')
-    ],
+    beforeDelete: [...(collection.auth ? [authHooks.preventSupperAdminDeletion] : [])],
 
     afterDelete: [...(collection.auth ? [authHooks.deleteBetterAuthUser] : [])]
   };
 };
 
 /**
- * Prepends rime's own collection hooks to whatever the config author declared, so a
- * consumer's hooks always run after the built-in ones for the same timing.
+ * Only what the collection's *own* hooks read.
+ *
+ * It used to also list `upload`, `nested` and `$url` — the properties the interleaved
+ * `featureHooks(...)` calls tested. Those are each a feature's business now: the config travels
+ * on to the registry, and each feature's own `enabled` decides from it. A prototype naming them
+ * even in a type is the same inversion in smaller print.
  */
-export const augmentCollectionHooks = <T extends PartialCollection>(collection: T): T => {
-  const hooks = collectionPipeline(collection);
-
-  return {
-    ...collection,
-    $hooks: {
-      beforeOperation: [...hooks.beforeOperation, ...(collection.$hooks?.beforeOperation || [])],
-      beforeCreate: [...hooks.beforeCreate, ...(collection.$hooks?.beforeCreate || [])],
-      afterCreate: [...hooks.afterCreate, ...(collection.$hooks?.afterCreate || [])],
-      beforeUpdate: [...hooks.beforeUpdate, ...(collection.$hooks?.beforeUpdate || [])],
-      afterUpdate: [...hooks.afterUpdate, ...(collection.$hooks?.afterUpdate || [])],
-      beforeDelete: [...hooks.beforeDelete, ...(collection.$hooks?.beforeDelete || [])],
-      afterDelete: [...hooks.afterDelete, ...(collection.$hooks?.afterDelete || [])],
-      beforeRead: [...hooks.beforeRead, ...(collection.$hooks?.beforeRead || [])]
-    }
-  };
+type PartialCollection = {
+  slug?: string;
+  auth?: Collection<any>['auth'];
+  $hooks?: CollectionHooks<any>;
 };
+
+/** The collection's own hooks, whatever the registry's features contribute, and the consumer's —
+ *  merged and ordered. */
+export const augmentCollectionHooks = <T extends PartialCollection>(collection: T): T => ({
+  ...collection,
+  $hooks: buildPipeline('collection', collection, ownHooks(collection), collection.$hooks)
+});

@@ -15,66 +15,71 @@ import { Hooks } from '$lib/core/factory/hooks.js';
  * Handles version-related operations for document updates
  * Manages specific version updates and new version creation
  */
-export const handleNewVersion = Hooks.beforeUpsert(async (args) => {
-  const { config, event } = args;
-  const { rime } = event.locals;
+export const handleNewVersion = Hooks.beforeUpsert({
+  name: 'handleNewVersion',
+  requires: ['original-doc'],
+  provides: [],
+  run: async (args) => {
+    const { config, event } = args;
+    const { rime } = event.locals;
 
-  const { versionOperation, originalDoc, originalConfigMap, params } = args.context;
+    const { versionOperation, originalDoc, originalConfigMap, params } = args.context;
 
-  if (!originalConfigMap)
-    throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalConfigMap @handleNewVersion');
-  if (!originalDoc)
-    throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @handleNewVersion');
-  if (!versionOperation)
-    throw new RimeError(RimeError.OPERATION_ERROR, 'missing versionOperation @handleNewVersion');
+    if (!originalConfigMap)
+      throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalConfigMap @handleNewVersion');
+    if (!originalDoc)
+      throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @handleNewVersion');
+    if (!versionOperation)
+      throw new RimeError(RimeError.OPERATION_ERROR, 'missing versionOperation @handleNewVersion');
 
-  let versionId;
-  let data;
+    let versionId;
+    let data;
 
-  switch (true) {
-    case VersionOperations.isSpecificVersionUpdate(versionOperation):
-      versionId = originalDoc.versionId;
-      break;
+    switch (true) {
+      case VersionOperations.isSpecificVersionUpdate(versionOperation):
+        versionId = originalDoc.versionId;
+        break;
 
-    case VersionOperations.isNewVersionCreation(versionOperation): {
-      data = await prepareDataForNewVersion({
-        data: args.data,
-        originalDoc,
-        config,
-        originalConfigMap
-      });
-      const versionsSlug = withVersionsSuffix(config.slug);
-
-      const document = await rime.collection(versionsSlug).create({
-        data,
-        locale: params.locale
-      });
-
-      if (config.versions && config.versions.maxVersions) {
-        await rime.collection(versionsSlug).delete({
-          sort: '-updatedAt',
-          query: 'where[status][not_equals]=published',
-          offset: config.versions.maxVersions
+      case VersionOperations.isNewVersionCreation(versionOperation): {
+        data = await prepareDataForNewVersion({
+          data: args.data,
+          originalDoc,
+          config,
+          originalConfigMap
         });
+        const versionsSlug = withVersionsSuffix(config.slug);
+
+        const document = await rime.collection(versionsSlug).create({
+          data,
+          locale: params.locale
+        });
+
+        if (config.versions && config.versions.maxVersions) {
+          await rime.collection(versionsSlug).delete({
+            sort: '-updatedAt',
+            query: 'where[status][not_equals]=published',
+            offset: config.versions.maxVersions
+          });
+        }
+        versionId = document.id;
+        break;
       }
-      versionId = document.id;
-      break;
+
+      default:
+        versionId = originalDoc.id;
     }
 
-    default:
-      versionId = originalDoc.id;
+    return {
+      ...args,
+      context: {
+        ...args.context,
+        params: {
+          ...args.context.params,
+          versionId
+        }
+      }
+    };
   }
-
-  return {
-    ...args,
-    context: {
-      ...args.context,
-      params: {
-        ...args.context.params,
-        versionId
-      }
-    }
-  };
 });
 
 async function prepareDataForNewVersion(args: {

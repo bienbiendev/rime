@@ -136,3 +136,16 @@ export const bootFeatures = async (config: Dic): Promise<void> => {
     await feature.boot?.(config);
   }
 };
+
+/**
+ * Every active feature's hooks for one timing, in barrel order.
+ *
+ * What replaces the pipeline spelling out `...featureHooks(upload, collection, 'beforeRead')` per
+ * feature. A prototype asks the registry for "whatever extends me at this timing" and never
+ * learns which features answered — which is the whole point of the layer.
+ */
+export const featureHooksFor = (
+  prototype: PrototypeName,
+  config: Dic,
+  timing: HookTiming
+): AnyHook[] => featuresFor(prototype).flatMap((feature) => featureHooks(feature, config, timing));

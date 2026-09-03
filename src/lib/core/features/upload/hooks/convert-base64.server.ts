@@ -15,25 +15,30 @@ import { isFile } from '$lib/util/file.js';
  * @param args Hook arguments containing the document to process
  * @returns Updated args object with converted file data
  */
-export const castBase64ToFile = Hooks.beforeUpsert<'upload'>(async (args) => {
-  let data = args.data;
-  if (data?.file && !isFile(data.file)) {
-    try {
-      const { file, filename, filesize, mimeType } = jsonFileToFile(data.file);
-      data = {
-        ...data,
-        file,
-        filename: data.filename || filename,
-        filesize: data.filesize || filesize,
-        mimeType: data.mimeType || mimeType
-      };
-    } catch (err: any) {
-      args.event.locals.rime.logger.error(
-        'Failed to convert base64 string to File object',
-        err.message
-      );
-      throw new RimeError(RimeError.UPLOAD, 'Unable to process file');
+export const castBase64ToFile = Hooks.beforeUpsert<'upload'>({
+  name: 'castBase64ToFile',
+  requires: ['validated'],
+  provides: [],
+  run: async (args) => {
+    let data = args.data;
+    if (data?.file && !isFile(data.file)) {
+      try {
+        const { file, filename, filesize, mimeType } = jsonFileToFile(data.file);
+        data = {
+          ...data,
+          file,
+          filename: data.filename || filename,
+          filesize: data.filesize || filesize,
+          mimeType: data.mimeType || mimeType
+        };
+      } catch (err: any) {
+        args.event.locals.rime.logger.error(
+          'Failed to convert base64 string to File object',
+          err.message
+        );
+        throw new RimeError(RimeError.UPLOAD, 'Unable to process file');
+      }
     }
+    return { ...args, data };
   }
-  return { ...args, data };
 });

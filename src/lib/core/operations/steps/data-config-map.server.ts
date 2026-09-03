@@ -1,14 +1,19 @@
 import { buildConfigMap } from '../config-map/index.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
 
-export const buildDataConfigMap = Hooks.beforeUpsert(async (args) => {
-  const configMap = buildConfigMap(args.data, args.config.fields);
+export const buildDataConfigMap = Hooks.beforeUpsert({
+  name: 'buildDataConfigMap',
+  requires: ['config-fields'],
+  provides: ['config-map'],
+  run: async (args) => {
+    const configMap = buildConfigMap(args.data, args.config.fields);
 
-  return {
-    ...args,
-    context: {
-      ...args.context,
-      configMap
-    }
-  };
+    return {
+      ...args,
+      context: {
+        ...args.context,
+        configMap
+      }
+    };
+  }
 });

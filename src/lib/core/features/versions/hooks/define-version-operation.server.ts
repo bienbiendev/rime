@@ -1,21 +1,26 @@
 import { defineVersionUpdateOperation } from '$lib/core/features/versions/strategy.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
 
-export const defineVersionOperation = Hooks.beforeUpdate(async (args) => {
-  const { config } = args;
+export const defineVersionOperation = Hooks.beforeUpdate({
+  name: 'defineVersionOperation',
+  requires: [],
+  provides: ['version-operation'],
+  run: async (args) => {
+    const { config } = args;
 
-  // Define the kind of update operation depending on versions config
-  const versionOperation = defineVersionUpdateOperation({
-    draft: args.context.params.draft,
-    versionId: args.context.params.versionId,
-    config
-  });
+    // Define the kind of update operation depending on versions config
+    const versionOperation = defineVersionUpdateOperation({
+      draft: args.context.params.draft,
+      versionId: args.context.params.versionId,
+      config
+    });
 
-  return {
-    ...args,
-    context: {
-      ...args.context,
-      versionOperation
-    }
-  };
+    return {
+      ...args,
+      context: {
+        ...args.context,
+        versionOperation
+      }
+    };
+  }
 });
