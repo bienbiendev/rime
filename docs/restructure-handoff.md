@@ -193,6 +193,69 @@ import survives because `applyAugments` needs the `as const` tuple for the type 
 None of it is prototype-specific, so this is a rename that says what it is — `core/config/` and
 `core/pipeline/` — plus deciding where `factory/hooks.ts` belongs.
 
+But four things in those two directories are **misfiled, not just misnamed**, and a rename that
+carries them along preserves the mistake. Each is small. Roughly cheapest first:
+
+#### a. `config/augment-prototypes.ts` belongs to the prototype
+
+Thirteen lines that default `collections` and `areas` to `[]` — the config factory naming the two
+kinds by hand, which is the coupling commit 1 spent its round removing everywhere else. It should
+come from the prototype: an augment declared on `definePrototype` (the commit 9 remainder above
+opens that slot) or a prototype-specific feature, so that adding a third prototype is not an edit
+inside `core/config/`. Server-only today — `build.ts` never calls it, which is itself a smell.
+
+#### b. The hook machinery is split across both directories
+
+`operations/build-pipeline.server.ts`, `operations/resolve-pipeline.server.ts`, their two specs
+(`pipeline-order.spec.ts`, `resolve-pipeline.spec.ts`), `operations/steps/`, and
+`factory/hooks.ts` are one subject — how a hook declares itself, how the order is resolved, what
+actually runs — split across two folders by where files happened to land. They colocate, under
+whatever `core/pipeline/` becomes. `factory/hooks.ts` is the `Hooks.*` authoring helper (~20
+feature and prototype files import it); it is the consumer-facing half of the same subject and
+moves with it.
+
+The other half of the question is whether some of `steps/` should be steps at all. A step that
+only ever runs for one prototype or one feature is a hook that was never declared as one, and the
+`requires`/`provides` resolver (rule 4) is what makes converting it safe. Judge it per step —
+**a feature whose only content is one hook is ceremony**; prefer hanging the hook off the
+prototype's own `hooks.server.ts`, or off a feature that already exists, over minting a new
+feature for it.
+
+#### c. `augment-plugins.ts` and `augment-plugins.server.ts` merge
+
+Both build a plugin list, run each plugin's `configure`, and return `{ ...config, plugins }`. The
+server one additionally seeds `sse` / `cache` / `apiInit` (dev) / `mailer`, and folds
+`plugin.routes` into `$routes`. Now that plugins are declared isomorphic that is one function with
+a server branch, not two files. **`build.server.ts` currently calls both** —
+`augmentPluginsServer` and then `augmentPlugins` — so the merge has to not prepend `cache()` twice
+and not re-run every `configure` a second time (which today it does).
+
+#### d. The three panel augments want to be a `panel` feature
+
+`augment-icons.ts`, `augment-panel.ts`, `augment-panel-access.server.ts` — about 60 lines that
+build the slug→icon map, default the navigation groups / language / components, and default
+`panel.$access` to `isAdmin`. All three are panel concerns living in the config factory. The panel
+itself was never part of this restructure, so this is not a promise to restructure it; a `panel`
+feature is simply where these belong and a start on the rest.
+
+Do (a) first: `augment-icons` reads `collections` and `areas` off the config, so a panel feature
+built before the prototypes stop being named in `core/config/` just moves that coupling one level
+down.
+
+#### The gate for all four
+
+They are all augment-chain edits, so **rule 2 applies**. None of the four appends fields, so the
+generated column order should not move — "should not" being exactly what the golden schema diff is
+for. Capture one before starting. The chains as they stand:
+
+```
+build.server.ts  staff → prototypes → icons → panel → panelAccess → cors → pluginsServer → features → plugins
+build.ts         staff → icons → panel → features → plugins
+```
+
+`configureWithFeatures` (the `features` step) *does* append fields, so moving any of these across
+it is the move that would show up in the diff.
+
 ### Known loose ends
 
 - **`hooks.generated.md` is not regenerated on a normal boot.** It needs
@@ -202,7 +265,6 @@ None of it is prototype-specific, so this is a rename that says what it is — `
   a run.
 - `$rime/modules` warns on boot that `core/plugins/cache` exports `toHash` from its server half
   only. Legal and intentional; the warning exists so an asymmetry that *does* break shows up.
-- `docs/plan.md` is a truncated paste of the plan's opening sections, not the working plan.
 
 ---
 
