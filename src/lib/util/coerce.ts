@@ -2,7 +2,7 @@
  * String-to-value coercion for data arriving over the wire.
  *
  * Pure: every type in here is a language primitive, which is why it sits in util/ while the
- * request parsing that uses it stays in core/operations.
+ * request parsing that uses it stays in core/pipeline.
  */
 /**
  * Normalizes string values to appropriate types

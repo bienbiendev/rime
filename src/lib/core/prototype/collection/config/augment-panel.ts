@@ -1,4 +1,4 @@
-import type { CollectionPanelConfig, UploadConfig } from '$lib/core/factory/config/types.js';
+import type { CollectionPanelConfig, UploadConfig } from '$lib/core/config/types.js';
 
 type Input = {
   panel?: CollectionPanelConfig;

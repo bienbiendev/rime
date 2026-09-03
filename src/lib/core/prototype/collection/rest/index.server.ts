@@ -1,4 +1,4 @@
-import type { RouteConfig } from '$lib/core/factory/config/types.js';
+import type { RouteConfig } from '$lib/core/config/types.js';
 import { restCreate } from './create.server.js';
 import { restDelete } from './delete.server.js';
 import { restDeleteById } from './delete-by-id.server.js';

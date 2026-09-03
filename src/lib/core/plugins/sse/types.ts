@@ -1,4 +1,4 @@
-import type { Operation } from '$lib/core/operations/types.js';
+import type { Operation } from '$lib/core/pipeline/types.js';
 import type { PrototypeSlug } from '../../../types.js';
 
 export type ContentUpdatePayload = {

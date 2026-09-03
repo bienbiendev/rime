@@ -1,7 +1,7 @@
-import type { BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { BuiltCollection } from '$lib/core/config/types.js';
 import { logger } from '$lib/core/logger.server.js';
-import { readDocument, runBeforeOperation } from '$lib/core/operations/run.server.js';
-import type { OperationContext, OperationQuery } from '$lib/core/operations/types.js';
+import { readDocument, runBeforeOperation } from '$lib/core/pipeline/run.server.js';
+import type { OperationContext, OperationQuery } from '$lib/core/pipeline/types.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug, GenericDoc, RawDoc } from '$lib/core/prototype/types.js';
 

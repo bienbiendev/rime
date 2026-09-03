@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
   import type { Directory } from '$lib/core/features/upload/types.js';
-  import type { BuiltCollectionClient } from '$lib/core/factory/config/types.js';
+  import type { BuiltCollectionClient } from '$lib/core/config/types.js';
   import { PARAMS } from '$lib/core/constants.js';
   import { directoriesKebab } from '$lib/core/features/upload/naming.js';
   import type { GenericDoc } from '$lib/core/prototype/types.js';

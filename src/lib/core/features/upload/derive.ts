@@ -5,7 +5,7 @@ import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import { date } from '$lib/fields/date/index.js';
 import { text } from '$lib/fields/text/index.js';
 import type { CollectionSlug } from '$lib/types.js';
-import type { BuiltCollection } from '../../factory/config/types.js';
+import type { BuiltCollection } from '../../config/types.js';
 
 /**
  * Creates an upload directories collection for collections with upload enabled

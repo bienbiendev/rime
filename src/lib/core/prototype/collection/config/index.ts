@@ -1,7 +1,7 @@
 import { applyAugments } from '$lib/core/features/apply.js';
 import { collectionFeatures } from '../definition.js';
 import type { CollectionWithoutSlug } from '$lib/core/prototype/collection/config/types.js';
-import type { BuiltCollection, Collection } from '$lib/core/factory/config/types.js';
+import type { BuiltCollection, Collection } from '$lib/core/config/types.js';
 import { access } from '$lib/util/index.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import { FileText } from '@lucide/svelte';

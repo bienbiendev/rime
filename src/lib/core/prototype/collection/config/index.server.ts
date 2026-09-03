@@ -1,10 +1,10 @@
-import { augmentHooks } from '$lib/core/operations/build-pipeline.server.js';
+import { augmentHooks } from '$lib/core/pipeline/build-pipeline.server.js';
 import { collection as collectionPrototype } from '../definition.server.js';
 import { applyAugments } from '$lib/core/features/apply.js';
 import { collectionFeatures } from '../definition.js';
 import type { CollectionWithoutSlug } from '$lib/core/prototype/collection/config/types.js';
-import type { BuiltCollection, Collection } from '$lib/core/factory/config/types.js';
-import { Hooks } from '$lib/core/factory/hooks.js';
+import type { BuiltCollection, Collection } from '$lib/core/config/types.js';
+import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import { FileText } from '@lucide/svelte';
 import { augmentLabel } from './augment-label.js';

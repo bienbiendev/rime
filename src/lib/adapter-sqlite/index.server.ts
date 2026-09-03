@@ -1,5 +1,5 @@
 import type { Adapter, UpdateDocumentUrlParams } from '$lib/core/adapter/types.js';
-import type { Config } from '$lib/core/factory/config/types.js';
+import type { Config } from '$lib/core/config/types.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { GetRegisterType } from '$lib/index.js';
 import type { Dic } from '$lib/util/types.js';

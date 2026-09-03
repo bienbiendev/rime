@@ -1,5 +1,5 @@
 import type { VERSIONS_OPERATIONS } from '$lib/core/features/versions/strategy.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type {
   CollectionSlug,
   GenericBlock,
@@ -9,7 +9,7 @@ import type {
   TreeBlock
 } from '$lib/core/prototype/types.js';
 import type { User } from '$lib/core/features/auth/types.js';
-import type { OperationQuery } from '$lib/core/operations/types.js';
+import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { BeforeOperationRelation, Relation } from '$lib/fields/relation/index.js';
 import type { DeepPartial, Dic, WithOptional, WithRequired } from '$lib/util/types.js';
 

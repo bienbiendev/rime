@@ -1,4 +1,4 @@
-import type { Collection } from '$lib/core/factory/config/types.js';
+import type { Collection } from '$lib/core/config/types.js';
 import { findTitleField } from './find-title.js';
 
 type Input = {

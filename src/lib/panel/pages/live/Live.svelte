@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import type { BuiltConfigClient } from '$lib/core/factory/config/types';
+  import type { BuiltConfigClient } from '$lib/core/config/types';
   import { t__ } from '$lib/core/i18n';
   import LiveEditPanel from '$lib/panel/components/sections/live/LiveEditPanel.svelte';
   import LiveFloatingUI from '$lib/panel/components/sections/live/LiveFloatingUI.svelte';

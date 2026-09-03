@@ -1,7 +1,7 @@
 import type { HookTiming } from '$lib/core/features/define.js';
 import { getPrototype } from '$lib/core/prototype/registry.server.js';
 import { logger } from '$lib/core/logger.server.js';
-import { marksOf } from '$lib/core/operations/resolve-pipeline.server.js';
+import { marksOf } from '$lib/core/pipeline/resolve-pipeline.server.js';
 import type { PrototypeName } from '$lib/core/prototype/registry.server.js';
 import type { Dic } from '$lib/util/types.js';
 import fs from 'node:fs';

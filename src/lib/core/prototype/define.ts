@@ -1,5 +1,5 @@
 import type { Adapter } from '$lib/core/adapter/types.js';
-import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/factory/config/types.js';
+import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/config/types.js';
 import type { AnyHook, FeatureDefinition, HookTiming } from '$lib/core/features/define.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';

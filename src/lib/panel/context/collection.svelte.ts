@@ -1,7 +1,7 @@
 import { invalidateAll } from '$app/navigation';
 import type { Directory } from '$lib/core/features/upload/types.js';
 import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
-import type { BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { BuiltCollection } from '$lib/core/config/types.js';
 import { PARAMS } from '$lib/core/constants.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/index.js';
 import { isFormField } from '$lib/core/fields/util.js';

@@ -1,6 +1,6 @@
 import { PARAMS } from '$lib/core/constants.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
-import { extractData } from '$lib/core/operations/extract-data.server.js';
+import { extractData } from '$lib/core/pipeline/extract-data.server.js';
 import type { AreaSlug } from '$lib/core/prototype/types.js';
 import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';

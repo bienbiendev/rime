@@ -2,8 +2,8 @@ import type { Adapter } from '$lib/core/adapter/types.js';
 import type { MailerActions } from '$lib/core/plugins/mailer/module.server.js';
 import type { Config } from '$lib/types.js';
 import { betterAuth } from 'better-auth';
-import type { ConfigContext } from '../../../factory/config/context.server.js';
-import type { BuildConfig } from '../../../factory/config/index.server.js';
+import type { ConfigContext } from '../../../config/context.server.js';
+import type { BuildConfig } from '../../../config/index.server.js';
 import { getBaseAuthConfig } from './config.server.js';
 
 /**

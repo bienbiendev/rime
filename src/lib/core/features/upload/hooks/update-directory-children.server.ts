@@ -1,5 +1,5 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import { Hooks } from '$lib/core/factory/hooks.js';
+import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { trycatch } from '$lib/util/function.js';
 
 type Update = { id: string; data: { parent: string } };

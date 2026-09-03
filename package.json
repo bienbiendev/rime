@@ -47,12 +47,12 @@
       "import": "./dist/adapter-sqlite/index.server.js"
     },
     "./config": {
-      "types": "./dist/core/factory/config/index.d.ts",
-      "import": "./dist/core/factory/config/index.js"
+      "types": "./dist/core/config/index.d.ts",
+      "import": "./dist/core/config/index.js"
     },
     "./config/server": {
-      "types": "./dist/core/factory/config/index.server.d.ts",
-      "import": "./dist/core/factory/config/index.server.js"
+      "types": "./dist/core/config/index.server.d.ts",
+      "import": "./dist/core/config/index.server.js"
     },
     "./fields": {
       "types": "./dist/fields/index.d.ts",

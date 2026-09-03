@@ -1,4 +1,4 @@
-import type { LocaleConfig } from '$lib/core/factory/config/types.js';
+import type { LocaleConfig } from '$lib/core/config/types.js';
 import { type FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';

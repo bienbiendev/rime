@@ -1,4 +1,4 @@
-import type { Config } from '$lib/core/factory/config/types.js';
+import type { Config } from '$lib/core/config/types.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { baseTableName, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';

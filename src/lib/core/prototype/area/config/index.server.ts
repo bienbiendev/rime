@@ -1,10 +1,10 @@
-import { augmentHooks } from '$lib/core/operations/build-pipeline.server.js';
+import { augmentHooks } from '$lib/core/pipeline/build-pipeline.server.js';
 import { area as areaPrototype } from '../definition.server.js';
 import { applyAugments } from '$lib/core/features/apply.js';
 import { areaFeatures } from '../definition.js';
 import type { AreaWithoutSlug } from '$lib/core/prototype/area/config/types.js';
-import type { Area, BuiltArea } from '$lib/core/factory/config/types.js';
-import { Hooks } from '$lib/core/factory/hooks.js';
+import type { Area, BuiltArea } from '$lib/core/config/types.js';
+import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import { capitalize } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';

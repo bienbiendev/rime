@@ -15,7 +15,7 @@ import { checkLiveRedirect } from '$lib/panel/util/live.server.js';
 import { type Handle, type RequestEvent, type ServerLoadEvent } from '@sveltejs/kit';
 import { ERROR_CONTEXT, handleError } from '../errors/handler.server.js';
 import { RimeError } from '../errors/index.js';
-import type { RouteConfig } from '../factory/config/types.js';
+import type { RouteConfig } from '../config/types.js';
 import { prototypes } from '../prototype/registry.server.js';
 
 /** Every prototype's declared REST routes, by prototype name then by sub-path. */

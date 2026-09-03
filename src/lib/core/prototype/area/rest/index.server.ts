@@ -1,4 +1,4 @@
-import type { RouteConfig } from '$lib/core/factory/config/types.js';
+import type { RouteConfig } from '$lib/core/config/types.js';
 import { restGet } from './get.server.js';
 import { restUpdate } from './update.server.js';
 

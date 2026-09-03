@@ -74,7 +74,7 @@ export type FeatureDefinition = {
    * a companion `<slug>Directories` collection for every upload collection it finds.
    *
    * The same shape a plugin's `configure` has, and it runs in the same place: the config chain in
-   * factory/config/build{,.server}.ts, after the prototype factories have built what it reads.
+   * core/config/build{,.server}.ts, after the prototype factories have built what it reads.
    */
   configure?: (config: any) => any;
 
@@ -91,12 +91,13 @@ export type FeatureDefinition = {
   /**
    * The feature's document hooks, by timing.
    *
-   * The feature owns the implementations; each prototype's own `pipeline.server.ts` still owns
-   * *where they run*, spelled out literally. That split is deliberate: in a collection's
-   * `beforeRead` these are interleaved with core steps — `populateURL` must run after the
-   * document has been shaped and before it is sorted — and a feature has nothing to say about a
-   * core step's position. `requires` cannot express it either, since the features that interleave
-   * there require nothing of each other.
+   * The feature owns the implementations; it does not own where they run. There is no
+   * `pipeline.server.ts` spelling that out any more — each hook declares `requires`/`provides`
+   * and `resolve-pipeline.server.ts` sorts them (see core/pipeline/hooks.ts). That is what the
+   * literal lists could not do: in a collection's `beforeRead` a feature's hooks interleave with
+   * core steps — `populateURL` must run after the document is shaped and before it is sorted —
+   * and the features that interleave there require nothing of *each other*, so their order was
+   * not expressible as a dependency between features.
    *
    * A plain value, assigned the way every other hook in the repo is. It briefly also accepted a
    * thunk, because the `$rime/modules` barrel evaluated a feature inside an import cycle and a
@@ -121,8 +122,8 @@ export type HookTiming =
   | 'afterDelete';
 
 /**
- * A hook as the registry holds it. Each timing has its own argument shape (see factory/hooks.ts),
- * which a list covering every timing cannot express — the same erasure the prototype registry
+ * A hook as the registry holds it. Each timing has its own argument shape (see
+ * core/pipeline/hooks.ts), which a list covering every timing cannot express — the same erasure the prototype registry
  * makes, and sound for the same reason: a hook only ever reaches the timing it is declared under.
  */
 export type AnyHook = (args: any) => any;

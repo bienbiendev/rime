@@ -1,7 +1,7 @@
-import type { UploadConfig } from '$lib/core/factory/config/types.js';
+import type { UploadConfig } from '$lib/core/config/types.js';
 import { text } from '$lib/fields/text/index.js';
 import { toCamelCase } from '$lib/util/string.js';
-import type { Collection, ImageSizesConfig } from '$lib/core/factory/config/types.js';
+import type { Collection, ImageSizesConfig } from '$lib/core/config/types.js';
 import type { WithNormalizedUpload } from './types.js';
 import { validatePath } from './util/path.js';
 

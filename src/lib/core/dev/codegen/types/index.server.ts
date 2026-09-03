@@ -5,7 +5,7 @@ import type {
   BuiltCollection,
   Config,
   ImageSizesConfig
-} from '$lib/core/factory/config/types.js';
+} from '$lib/core/config/types.js';
 import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
 
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';

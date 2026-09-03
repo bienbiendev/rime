@@ -1,5 +1,5 @@
 import { defineFeature } from '../define.js';
-import { setDocumentTitle } from '$lib/core/operations/steps/set-document-title.server.js';
+import { setDocumentTitle } from '$lib/core/pipeline/steps/set-document-title.server.js';
 import { augmentTitle } from './augment.js';
 
 /**

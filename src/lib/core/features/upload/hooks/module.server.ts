@@ -1,4 +1,4 @@
-import type { BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { BuiltCollection } from '$lib/core/config/types.js';
 import { ensureMedias } from '../ensure.server.js';
 import { cleanUpFiles } from './clean-up-files.server.js';
 import { castBase64ToFile } from './convert-base64.server.js';

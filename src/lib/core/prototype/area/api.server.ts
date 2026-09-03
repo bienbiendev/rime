@@ -1,4 +1,4 @@
-import type { BuiltArea } from '$lib/core/factory/config/types.js';
+import type { BuiltArea } from '$lib/core/config/types.js';
 import type { RegisterArea } from '$lib/index.js';
 import type { PrototypeApi, PrototypeApiContext } from '../define.js';
 import type { GenericDoc } from '../types.js';

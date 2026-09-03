@@ -1,4 +1,4 @@
-import { Hooks } from '$lib/core/factory/hooks.js';
+import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 /**
  * Hook to populate _children property on document from a nested collection

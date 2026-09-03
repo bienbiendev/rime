@@ -1,5 +1,5 @@
-import type { BuiltCollection } from '$lib/core/factory/config/types.js';
-import { augmentHooks } from '$lib/core/operations/build-pipeline.server.js';
+import type { BuiltCollection } from '$lib/core/config/types.js';
+import { augmentHooks } from '$lib/core/pipeline/build-pipeline.server.js';
 import { collection as collectionPrototype } from '$lib/core/prototype/collection/definition.js';
 import { collectionHooks } from '$lib/core/prototype/collection/hooks.server.js';
 import { makeUploadDirectoriesCollectionClient } from '../derive.js';

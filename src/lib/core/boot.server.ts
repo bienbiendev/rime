@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
-import type { Config } from '$lib/core/factory/config/types.js';
-import { createConfigContext } from './factory/config/context.server.js';
-import type { BuildConfig } from './factory/config/index.server.js';
+import type { Config } from '$lib/core/config/types.js';
+import { createConfigContext } from './config/context.server.js';
+import type { BuildConfig } from './config/index.server.js';
 import { createAuthInstance } from './features/auth/better-auth/instance.server.js';
 import { bootFeatures } from './features/registry.js';
 // The **server** registry, and it has to be: the isomorphic one resolves to each definition's

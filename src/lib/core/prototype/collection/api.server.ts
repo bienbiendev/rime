@@ -1,5 +1,5 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import type { BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { BuiltCollection } from '$lib/core/config/types.js';
 import type { RegisterCollection } from '$lib/index.js';
 import type { PrototypeApi, PrototypeApiContext } from '../define.js';
 import type { CollectionSlug } from '../types.js';

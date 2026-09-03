@@ -10,7 +10,7 @@ import type { CollectionSlug } from '$lib/types.js';
  * The `$` says rime made this, matching how `$hooks`/`$url`/`$adapter` already mark
  * rime-owned config keys. The `__` says *shadow of*, and it is a segment boundary rather than
  * a word break — which is why every case conversion goes through mapSegments and why an author
- * slug may not contain it (see factory/config/validate.server.ts). Without that rule a
+ * slug may not contain it (see core/config/validate.server.ts). Without that rule a
  * collection named `pagesVersions` would snake-case onto the same table as this shadow.
  */
 

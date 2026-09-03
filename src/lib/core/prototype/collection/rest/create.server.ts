@@ -1,5 +1,5 @@
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
-import { extractData } from '$lib/core/operations/extract-data.server.js';
+import { extractData } from '$lib/core/pipeline/extract-data.server.js';
 import { trycatch } from '$lib/util/function.js';
 import { json } from '@sveltejs/kit';
 import { endpoint } from './endpoint.server.js';

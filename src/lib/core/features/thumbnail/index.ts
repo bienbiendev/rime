@@ -1,5 +1,5 @@
 import { defineFeature } from '../define.js';
-import { setDocumentThumbnail } from '$lib/core/operations/steps/set-document-thumbnail.server.js';
+import { setDocumentThumbnail } from '$lib/core/pipeline/steps/set-document-thumbnail.server.js';
 import { augmentThumbnail } from './augment.js';
 
 /**

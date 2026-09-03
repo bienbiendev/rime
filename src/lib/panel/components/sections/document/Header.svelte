@@ -1,6 +1,6 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
-  import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types';
+  import type { BuiltArea, BuiltCollection } from '$lib/core/config/types';
   import { PARAMS } from '$lib/core/constants';
   import { t__ } from '$lib/core/i18n/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';

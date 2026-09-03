@@ -1,4 +1,4 @@
-import type { ImageSizesConfig } from '$lib/core/factory/config/types.js';
+import type { ImageSizesConfig } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { UploadDoc } from '$lib/types.js';
 import { normalizeFileName } from '$lib/util/file.js';

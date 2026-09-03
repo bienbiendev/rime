@@ -1,10 +1,10 @@
-import { augmentHooks } from '$lib/core/operations/build-pipeline.server.js';
+import { augmentHooks } from '$lib/core/pipeline/build-pipeline.server.js';
 import { collection as collectionPrototype } from '$lib/core/prototype/collection/definition.js';
 import { collectionHooks } from '$lib/core/prototype/collection/hooks.server.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
-import type { BuiltCollection, Config } from '../../factory/config/types.js';
+import type { BuiltCollection, Config } from '../../config/types.js';
 
 /**
  * Creates versioned collection aliases for collections and areas with versioning enabled

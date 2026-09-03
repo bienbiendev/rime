@@ -1,4 +1,4 @@
-import { Hooks } from '$lib/core/factory/hooks.js';
+import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 /**
  * After delete, delete better-auth user

@@ -1,4 +1,4 @@
-import type { BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import {
   assertUpsertContext,
@@ -6,8 +6,8 @@ import {
   runBeforeOperation,
   runDataHooks,
   runDocHooks
-} from '$lib/core/operations/run.server.js';
-import type { OperationContext } from '$lib/core/operations/types.js';
+} from '$lib/core/pipeline/run.server.js';
+import type { OperationContext } from '$lib/core/pipeline/types.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { RegisterCollection } from '$lib/index.js';

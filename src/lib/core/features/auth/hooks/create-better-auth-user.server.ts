@@ -1,6 +1,6 @@
 import { dev } from '$app/environment';
 import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
-import { Hooks } from '$lib/core/factory/hooks.js';
+import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { access } from '$lib/core/features/auth/access.js';
 import { t__ } from '$lib/core/i18n/index.js';
 import { BETTER_AUTH_ROLES } from '../constant.server.js';

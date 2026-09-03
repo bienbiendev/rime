@@ -1,4 +1,4 @@
-import type { BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { BuiltCollection } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
 import { api, type CollectionAccessor } from './api.server.js';
 import { collection as base } from './definition.js';

@@ -1,7 +1,7 @@
 import { applyAugments } from '$lib/core/features/apply.js';
 import { areaFeatures } from '../definition.js';
 import type { AreaWithoutSlug } from '$lib/core/prototype/area/config/types.js';
-import type { Area, BuiltArea } from '$lib/core/factory/config/types.js';
+import type { Area, BuiltArea } from '$lib/core/config/types.js';
 import { capitalize } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';

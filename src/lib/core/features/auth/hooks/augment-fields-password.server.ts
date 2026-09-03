@@ -1,4 +1,4 @@
-import { Hooks } from '$lib/core/factory/hooks.js';
+import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { usersFields } from '../fields.js';
 
 /**

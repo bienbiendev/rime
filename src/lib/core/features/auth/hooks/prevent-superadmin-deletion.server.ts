@@ -1,5 +1,5 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import { Hooks } from '$lib/core/factory/hooks.js';
+import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const preventSupperAdminDeletion = Hooks.beforeDelete({
   name: 'preventSupperAdminDeletion',

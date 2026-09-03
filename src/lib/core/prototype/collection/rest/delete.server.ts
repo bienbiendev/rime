@@ -1,4 +1,4 @@
-import { normalizeQuery } from '$lib/core/operations/query.js';
+import { normalizeQuery } from '$lib/core/pipeline/query.js';
 import { PARAMS } from '$lib/core/constants.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
 import { trycatch } from '$lib/util/function.js';

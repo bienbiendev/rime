@@ -1,6 +1,6 @@
-import type { BuiltCollection } from '$lib/core/factory/config/types.js';
-import { runUpdate } from '$lib/core/operations/run.server.js';
-import type { OperationContext } from '$lib/core/operations/types.js';
+import type { BuiltCollection } from '$lib/core/config/types.js';
+import { runUpdate } from '$lib/core/pipeline/run.server.js';
+import type { OperationContext } from '$lib/core/pipeline/types.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
 import type { DeepPartial } from '$lib/util/types.js';

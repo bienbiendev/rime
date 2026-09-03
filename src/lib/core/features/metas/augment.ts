@@ -1,6 +1,6 @@
 import { date } from '$lib/fields/date/index.js';
 import { text } from '$lib/fields/text/index.js';
-import type { Collection } from '$lib/core/factory/config/types.js';
+import type { Collection } from '$lib/core/config/types.js';
 
 type Input = { fields?: Collection<any>['fields'] };
 

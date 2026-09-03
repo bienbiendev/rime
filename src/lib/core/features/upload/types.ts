@@ -1,4 +1,4 @@
-import type { UploadConfig } from '$lib/core/factory/config/types.js';
+import type { UploadConfig } from '$lib/core/config/types.js';
 import type { GenericDoc } from '$lib/types.js';
 import type { UploadPath } from './util/path.js';
 

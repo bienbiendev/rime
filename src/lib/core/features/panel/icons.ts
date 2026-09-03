@@ -1,4 +1,4 @@
-import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';
 import type { Component } from 'svelte';

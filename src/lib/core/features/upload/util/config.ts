@@ -1,4 +1,4 @@
-import type { UploadConfig } from '$lib/core/factory/config/types.js';
+import type { UploadConfig } from '$lib/core/config/types.js';
 
 export type WithUpload<T extends { upload?: boolean | UploadConfig }> = T & {
   upload: UploadConfig;

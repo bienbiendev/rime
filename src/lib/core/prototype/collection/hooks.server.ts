@@ -1,17 +1,17 @@
 import { defineVersionOperation } from '$lib/core/features/versions/hooks/define-version-operation.server.js';
 import { handleNewVersion } from '$lib/core/features/versions/hooks/handle-new-version.server.js';
 import type { AnyHook, HookTiming } from '$lib/core/features/define.js';
-import { authorize } from '$lib/core/operations/steps/authorize.server.js';
-import { buildDataConfigMap } from '$lib/core/operations/steps/data-config-map.server.js';
-import { getOriginalDocument } from '$lib/core/operations/steps/get-original-document.server.js';
-import { mergeWithBlankDocument } from '$lib/core/operations/steps/merge-with-blank.server.js';
-import { buildOriginalDocConfigMap } from '$lib/core/operations/steps/original-config-map.server.js';
-import { processDocumentFields } from '$lib/core/operations/steps/process-document-fields.server.js';
-import { setDefaultValues } from '$lib/core/operations/steps/set-default-values.server.js';
-import { setDocumentLocale } from '$lib/core/operations/steps/set-document-locale.server.js';
-import { setDocumentType } from '$lib/core/operations/steps/set-document-type.server.js';
-import { sortDocumentProps } from '$lib/core/operations/steps/sort-document-props.server.js';
-import { validateFields } from '$lib/core/operations/steps/validate-fields.server.js';
+import { authorize } from '$lib/core/pipeline/steps/authorize.server.js';
+import { buildDataConfigMap } from '$lib/core/pipeline/steps/data-config-map.server.js';
+import { getOriginalDocument } from '$lib/core/pipeline/steps/get-original-document.server.js';
+import { mergeWithBlankDocument } from '$lib/core/pipeline/steps/merge-with-blank.server.js';
+import { buildOriginalDocConfigMap } from '$lib/core/pipeline/steps/original-config-map.server.js';
+import { processDocumentFields } from '$lib/core/pipeline/steps/process-document-fields.server.js';
+import { setDefaultValues } from '$lib/core/pipeline/steps/set-default-values.server.js';
+import { setDocumentLocale } from '$lib/core/pipeline/steps/set-document-locale.server.js';
+import { setDocumentType } from '$lib/core/pipeline/steps/set-document-type.server.js';
+import { sortDocumentProps } from '$lib/core/pipeline/steps/sort-document-props.server.js';
+import { validateFields } from '$lib/core/pipeline/steps/validate-fields.server.js';
 
 /**
  * The collection prototype's *own* document hooks — the ones that are its, unconditionally.

@@ -1,4 +1,4 @@
-import type { Collection } from '$lib/core/factory/config/types.js';
+import type { Collection } from '$lib/core/config/types.js';
 import { findThumbnailField } from './find-thumbnail.js';
 
 // Only `fields`. The previous shape also declared `upload` and `auth`, which the body never

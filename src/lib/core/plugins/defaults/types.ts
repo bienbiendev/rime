@@ -1,4 +1,4 @@
-import type { CacheConfig, RouteConfig } from '$lib/core/factory/config/types.js';
+import type { CacheConfig, RouteConfig } from '$lib/core/config/types.js';
 import type { SMTPConfig } from '../mailer/module.server.js';
 import type { Plugin } from '../index.js';
 

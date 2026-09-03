@@ -6,7 +6,7 @@ import { title } from '$lib/core/features/title/index.js';
 import { upload } from '$lib/core/features/upload/index.js';
 import { url } from '$lib/core/features/url/index.js';
 import { versions } from '$lib/core/features/versions/index.js';
-import type { BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { BuiltCollection } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
 
 /**

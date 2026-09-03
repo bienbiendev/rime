@@ -2,7 +2,7 @@ import { metas } from '$lib/core/features/metas/index.js';
 import { title } from '$lib/core/features/title/index.js';
 import { url } from '$lib/core/features/url/index.js';
 import { versions } from '$lib/core/features/versions/index.js';
-import type { BuiltArea } from '$lib/core/factory/config/types.js';
+import type { BuiltArea } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
 
 /**

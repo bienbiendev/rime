@@ -1,4 +1,4 @@
-import type { CollectionLabel } from '$lib/core/factory/config/types.js';
+import type { CollectionLabel } from '$lib/core/config/types.js';
 import { capitalize } from '$lib/util/string.js';
 import type { Collection } from '$lib/types.js';
 

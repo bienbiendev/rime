@@ -1,4 +1,4 @@
-import type { BuiltCollection, Config } from '$lib/core/factory/config/types.js';
+import type { BuiltCollection, Config } from '$lib/core/config/types.js';
 import { hasVersionsSuffix, withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { logger } from '$lib/core/logger.server.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';

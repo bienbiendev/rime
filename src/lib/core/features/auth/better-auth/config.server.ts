@@ -5,7 +5,7 @@ import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { Config } from '$lib/types.js';
 import { apiKey } from '@better-auth/api-key';
 import { admin as adminPlugin } from 'better-auth/plugins';
-import type { BuildConfig } from '../../../factory/config/index.server.js';
+import type { BuildConfig } from '../../../config/index.server.js';
 import { betterAuthAfterHook, betterAuthBeforeHook } from './hooks.server.js';
 import { accessControl, admin, staff, user } from './permissions.js';
 

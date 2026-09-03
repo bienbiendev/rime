@@ -1,5 +1,5 @@
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { Collection } from '$lib/core/factory/config/types.js';
+import type { Collection } from '$lib/core/config/types.js';
 import { augmentAuth as augmentAuthBase, type WithNormalizedAuth } from './module.js';
 
 export const augmentAuth = <T extends Collection<any>>(config: T): WithNormalizedAuth<T> => {

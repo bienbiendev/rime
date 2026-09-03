@@ -1,12 +1,12 @@
 import { VERSIONS_STATUS } from '$lib/core/constants.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
+import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import { getSegments } from '$lib/core/features/upload/util/path.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { VersionOperation } from '$lib/core/features/versions/strategy.js';
 import { VersionOperations } from '$lib/core/features/versions/strategy.js';
-import { normalizeQuery } from '$lib/core/operations/query.js';
-import type { OperationQuery } from '$lib/core/operations/types.js';
+import { normalizeQuery } from '$lib/core/pipeline/query.js';
+import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
 import { trycatchSync } from '$lib/util/function.js';

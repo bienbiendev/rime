@@ -1,13 +1,13 @@
 import devCache from '$lib/core/dev/cache.server.js';
-import type { Config } from '$lib/core/factory/config/types.js';
+import type { Config } from '$lib/core/config/types.js';
 import { regenerateDrizzleConfig, regenerateHooks } from './dev/cli/templates/init.js';
 import generatePipelineDoc from './dev/codegen/pipeline/index.server.js';
 import generateRoutes from './dev/codegen/routes/index.server.js';
 import generateTypes from './dev/codegen/types/index.server.js';
 import { RimeError } from './errors/index.js';
-import type { BuildConfig } from './factory/config/index.server.js';
-import validate from './factory/config/validate.server.js';
-import writeMemo from './factory/config/write.server.js';
+import type { BuildConfig } from './config/index.server.js';
+import validate from './config/validate.server.js';
+import writeMemo from './config/write.server.js';
 import { logger } from './logger.server.js';
 
 /**
