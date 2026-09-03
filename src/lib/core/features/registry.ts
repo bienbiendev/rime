@@ -1,12 +1,6 @@
 import type { PrototypeName } from '$lib/core/prototype/registry.server.js';
 import type { Dic } from '$lib/util/types.js';
-import type {
-  AnyHook,
-  FeatureDefinition,
-  FeatureHooks,
-  HookTiming,
-  RegisteredFeature
-} from './define.js';
+import type { AnyHook, FeatureDefinition, HookTiming, RegisteredFeature } from './define.js';
 import type { WithNormalizedUpload } from './upload/types.js';
 import type { WithVersionsConfig } from './versions/augment.js';
 import { nested } from './nested/index.js';
@@ -115,11 +109,7 @@ export const featureHooks = (
   timing: HookTiming
 ): AnyHook[] => {
   if (!feature.enabled(config)) return [];
-
-  const hooks: FeatureHooks | undefined =
-    typeof feature.hooks === 'function' ? feature.hooks() : feature.hooks;
-
-  return hooks?.[timing] || [];
+  return feature.hooks?.[timing] || [];
 };
 
 /**

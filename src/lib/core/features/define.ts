@@ -91,15 +91,14 @@ export type FeatureDefinition = {
    * `requires` cannot express it either, since the features that interleave there require
    * nothing of each other.
    *
-   * **May be a function, and for a feature drawing on `$rime/modules` it must be.** That barrel
-   * re-exports every `module(.server).ts` in the package, so a feature whose modules the barrel
-   * also leads back to — upload's `configure` imports the pipeline, which imports this registry,
-   * which imports upload — is evaluated inside an import cycle. Anything read at module scope
-   * there is whatever it happens to be when the cycle re-enters, which is `undefined` for a
-   * module the barrel has not reached yet. `augment`, `configure` and `boot` are functions
-   * already, so wrapping their bodies is enough; `hooks` is a value, hence the thunk.
+   * A plain value, assigned the way every other hook in the repo is. It briefly also accepted a
+   * thunk, because the `$rime/modules` barrel evaluated a feature inside an import cycle and a
+   * binding read at module scope could be `undefined`. The barrel is gone — imports are rewritten
+   * per name, so a feature pulls in the one pair it names — and the thunk went with it rather
+   * than staying on as an escape hatch: a second way to declare one thing, whose reason no
+   * longer exists.
    */
-  hooks?: FeatureHooks | (() => FeatureHooks);
+  hooks?: FeatureHooks;
 };
 
 export type FeatureHooks = Partial<Record<HookTiming, AnyHook[]>>;

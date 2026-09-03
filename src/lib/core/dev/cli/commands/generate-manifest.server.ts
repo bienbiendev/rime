@@ -1,11 +1,13 @@
-import { generate } from '@babel/generator';
-import * as t from '@babel/types';
-import { babelParse } from 'ast-kit';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logger } from '../../../logger.server.js';
+import {
+  applyEdits,
+  buildModuleIndex,
+  planBarrelRewrite,
+  type ModuleIndex
+} from '../../codegen/runtime/barrel-rewrite.server.js';
 import { scanModulePairs, type RuntimeRegistry } from '../../codegen/runtime/index.server.js';
-import { parseExportNames } from '../../codegen/runtime/parse-exports.server.js';
 import { getPackageInfoByKey } from '../util/package.server.js';
 
 /**
@@ -13,12 +15,15 @@ import { getPackageInfoByKey } from '../util/package.server.js';
  * makes this package's own `$rime/modules` splits consumable by anyone who installs it:
  *
  * 1. Builds an export-name → split index from every module.(server.)js pair under `dist/`,
- *    validating it as it goes (see `buildModuleIndex` below) — a name that resolves
- *    ambiguously has no correct rewrite target in step 2, so this has to fail loudly here,
- *    not silently later.
- * 2. AST-rewrites every `import ... from '$rime/modules'` found anywhere under `dist/` into
- *    one `import ... from '$rime/modules/<pkg>/<subpath>'` per split it actually draws from —
- *    the bare barrel form never survives past this step.
+ *    validating it as it goes — a name that resolves ambiguously has no correct rewrite target
+ *    in step 2, so this has to fail loudly here, not silently later.
+ * 2. Rewrites every `import ... from '$rime/modules'` found anywhere under `dist/` into one
+ *    `import ... from '$rime/modules/<pkg>/<subpath>'` per split it actually draws from — the
+ *    bare barrel form never survives past this step.
+ *
+ * Steps 1 and 2 are `codegen/runtime/barrel-rewrite.server.ts`, shared with the dev Vite
+ * plugin, which does the same rewrite per module as it transforms. That sharing is the point:
+ * the failure this rewrite prevents is one that reproduces in only one of the two.
  * 3. Writes `dist/.rime-modules.json` (subpath → real file paths, read directly by a
  *    consumer's Vite plugin — no fs.existsSync probing, no guessing) and
  *    `dist/.rime-modules.d.ts` (one `declare module '$rime/modules/<pkg>/<subpath>'` per
@@ -40,58 +45,18 @@ export const generateManifest = () => {
   }
 
   const pairs = scanModulePairs(distDir);
-  const nameOwner = buildModuleIndex(pairs);
+  const index = buildModuleIndex(pairs, (subpath, onlyServer, onlyClient) =>
+    logger.debug(
+      `$rime/modules: ${subpath} — module.ts and module.server.ts export different names ` +
+        `(server-only: ${onlyServer.join(', ') || 'none'}, client-only: ${onlyClient.join(', ') || 'none'})`
+    )
+  );
 
-  rewriteBarrelImports(distDir, pkgName, nameOwner);
+  rewriteBarrelImports(distDir, pkgName, index);
   writeManifest(distDir, pkgName, pairs);
 
   logger.info(`[✓] $rime/modules manifest generated for ${pkgName} (${pairs.size} split(s))`);
 };
-
-/**
- * Export-name → split index, with the two collision scenarios from the design doc handled
- * distinctly:
- * - module.ts and module.server.ts of the *same* split sharing a name — not a collision, that's
- *   the whole point of a pair (skip, both sides collapse to one entry). The two sides don't
- *   need to export the *same set* of names either — a server-only helper the client build
- *   never needs (e.g. cache's own `toHash`) is completely normal, not a broken pair; indexed
- *   from the union of both sides, worth a log for visibility, never a blocking error.
- * - two *different* splits exporting the same name — the actual collision. An ambiguous
- *   `$rime/modules` import has no correct rewrite target, so this is a hard error here, not a
- *   warning: it has to be caught before the rewrite runs, not after.
- */
-function buildModuleIndex(pairs: RuntimeRegistry): Map<string, string> {
-  const nameOwner = new Map<string, string>();
-
-  for (const [subpath, entry] of pairs) {
-    const serverNames = entry.server ? parseExportNames(entry.server) : [];
-    const clientNames = entry.client ? parseExportNames(entry.client) : [];
-
-    if (entry.server && entry.client) {
-      const serverSet = new Set(serverNames);
-      const clientSet = new Set(clientNames);
-      const onlyServer = serverNames.filter((name) => !clientSet.has(name));
-      const onlyClient = clientNames.filter((name) => !serverSet.has(name));
-      if (onlyServer.length || onlyClient.length) {
-        logger.debug(
-          `$rime/modules: ${subpath} — module.ts and module.server.ts export different names ` +
-            `(server-only: ${onlyServer.join(', ') || 'none'}, client-only: ${onlyClient.join(', ') || 'none'})`
-        );
-      }
-    }
-
-    const names = new Set([...serverNames, ...clientNames]);
-    for (const name of names) {
-      const existing = nameOwner.get(name);
-      if (existing && existing !== subpath) {
-        throw new Error(`$rime/modules: "${name}" exported by both ${existing} and ${subpath}`);
-      }
-      nameOwner.set(name, subpath);
-    }
-  }
-
-  return nameOwner;
-}
 
 /**
  * `dist/.rime-modules.json` (runtime, read by a consumer's Vite plugin) and
@@ -149,7 +114,7 @@ function writeManifest(distDir: string, pkgName: string, pairs: RuntimeRegistry)
  * to know this package exists just to get its types working — no eager, app-side aggregation
  * of every installed rime-dependent package required.
  */
-function rewriteBarrelImports(distDir: string, pkgName: string, nameOwner: Map<string, string>) {
+function rewriteBarrelImports(distDir: string, pkgName: string, index: ModuleIndex) {
   const walk = (dir: string) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
@@ -160,43 +125,17 @@ function rewriteBarrelImports(distDir: string, pkgName: string, nameOwner: Map<s
       if (!entry.name.endsWith('.js') && !entry.name.endsWith('.d.ts')) continue;
 
       const content = fs.readFileSync(fullPath, 'utf-8');
-      if (!content.includes('$rime/modules')) continue;
+      // No `side` here, and there cannot be one: this runs once for a package that has not been
+      // built for either side yet. The consumer's own plugin picks the half at load time, so a
+      // name only one half declares is checked there, in the build that actually needs it.
+      const edits = planBarrelRewrite({ code: content, filePath: fullPath, pkgName, index });
+      if (!edits.length) continue;
 
-      const ast = babelParse(content, 'ts', { sourceType: 'module', attachComment: true });
-      let changed = false;
-      const newBody: t.Statement[] = [];
-
-      for (const node of ast.body) {
-        // `import { x } from '$rime/modules'` (runtime .js) and the equivalent re-export
-        // `export { x } from '$rime/modules'` (declaration .d.ts, what tsc/svelte-package
-        // actually emits — a real end-to-end run caught this, not something guessable) both
-        // need the same treatment.
-        if (t.isImportDeclaration(node) && node.source.value === '$rime/modules') {
-          changed = true;
-          newBody.push(...splitBarrelImport(node, fullPath, pkgName, nameOwner));
-          continue;
-        }
-        if (t.isExportNamedDeclaration(node) && node.source?.value === '$rime/modules') {
-          changed = true;
-          newBody.push(...splitBarrelReExport(node, fullPath, pkgName, nameOwner));
-          continue;
-        }
-        if (t.isExportAllDeclaration(node) && node.source.value === '$rime/modules') {
-          throw new Error(
-            `$rime/modules: ${fullPath} does 'export * from $rime/modules' — ambiguous, can't tell which split each re-exported name belongs to. Import/re-export specific names instead.`
-          );
-        }
-        newBody.push(node);
-      }
-
-      if (changed) {
-        ast.body = newBody;
-        const { code } = generate(ast, { compact: false, comments: true });
-        fs.writeFileSync(
-          fullPath,
-          entry.name.endsWith('.d.ts') ? withManifestReference(code, fullPath, distDir) : code
-        );
-      }
+      const code = applyEdits(content, edits);
+      fs.writeFileSync(
+        fullPath,
+        entry.name.endsWith('.d.ts') ? withManifestReference(code, fullPath, distDir) : code
+      );
     }
   };
   walk(distDir);
@@ -209,71 +148,4 @@ function withManifestReference(code: string, fullPath: string, distDir: string):
     .join('/');
   const referencePath = relative.startsWith('.') ? relative : `./${relative}`;
   return `/// <reference path="${referencePath}" />\n${code}`;
-}
-
-/** `import { x } from '$rime/modules'` (runtime .js) — groups specifiers by which split each
- *  name actually belongs to (via `nameOwner`, built by `buildModuleIndex`), one import
- *  statement per split. */
-function splitBarrelImport(
-  node: t.ImportDeclaration,
-  fullPath: string,
-  pkgName: string,
-  nameOwner: Map<string, string>
-): t.ImportDeclaration[] {
-  const bySubpath = new Map<string, t.ImportSpecifier[]>();
-
-  for (const spec of node.specifiers) {
-    if (!t.isImportSpecifier(spec)) {
-      throw new Error(
-        `$rime/modules: ${fullPath} imports the barrel with a default/namespace specifier — only named imports are supported`
-      );
-    }
-    const importedName = t.isIdentifier(spec.imported) ? spec.imported.name : spec.imported.value;
-    const subpath = nameOwner.get(importedName);
-    if (!subpath) {
-      throw new Error(
-        `$rime/modules: '${importedName}' imported in ${fullPath} but not exported by any split`
-      );
-    }
-    if (!bySubpath.has(subpath)) bySubpath.set(subpath, []);
-    bySubpath.get(subpath)!.push(spec);
-  }
-
-  return Array.from(bySubpath.entries()).map(([subpath, specs]) =>
-    t.importDeclaration(specs, t.stringLiteral(`$rime/modules/${pkgName}/${subpath}`))
-  );
-}
-
-/** `export { x } from '$rime/modules'` — what `tsc`/`svelte-package` actually emits in `.d.ts`
- *  output (a real end-to-end run caught this; `import`+`export` pairs aren't the only shape).
- *  Same grouping as `splitBarrelImport`, just keyed off `.local` (the name as it exists in the
- *  source module) instead of `.imported` — `ExportSpecifier` doesn't have that field. */
-function splitBarrelReExport(
-  node: t.ExportNamedDeclaration,
-  fullPath: string,
-  pkgName: string,
-  nameOwner: Map<string, string>
-): t.ExportNamedDeclaration[] {
-  const bySubpath = new Map<string, t.ExportSpecifier[]>();
-
-  for (const spec of node.specifiers) {
-    if (!t.isExportSpecifier(spec)) {
-      throw new Error(
-        `$rime/modules: ${fullPath} re-exports the barrel with a default/namespace specifier — only named exports are supported`
-      );
-    }
-    const localName = spec.local.name;
-    const subpath = nameOwner.get(localName);
-    if (!subpath) {
-      throw new Error(
-        `$rime/modules: '${localName}' re-exported in ${fullPath} but not exported by any split`
-      );
-    }
-    if (!bySubpath.has(subpath)) bySubpath.set(subpath, []);
-    bySubpath.get(subpath)!.push(spec);
-  }
-
-  return Array.from(bySubpath.entries()).map(([subpath, specs]) =>
-    t.exportNamedDeclaration(null, specs, t.stringLiteral(`$rime/modules/${pkgName}/${subpath}`))
-  );
 }

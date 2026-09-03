@@ -15,8 +15,7 @@ export const nested = defineFeature({
   /** A config uses this feature by declaring `nested`. */
   enabled: (config) => !!config.nested,
 
-  // Read at call time — see the note on `hooks` in ../define.ts.
-  augment: (config) => augmentNested(config),
+  augment: augmentNested,
 
-  hooks: () => nestedHooks
+  hooks: nestedHooks
 });

@@ -25,7 +25,7 @@ export const url = defineFeature({
 
   augment: augmentUrl,
 
-  // Read at call time, like every other barrel binding — and `undefined` on the client,
-  // where nothing reads it.
-  hooks: () => urlHooks
+  // `undefined` on the client, where nothing reads it: `features/url` has no `module.ts`, so the
+  // client build gets a stub rather than a missing export.
+  hooks: urlHooks
 });

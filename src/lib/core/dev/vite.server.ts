@@ -10,6 +10,12 @@ import {
   scanModulePairs,
   type RuntimeRegistryEntry
 } from './codegen/runtime/index.server.js';
+import {
+  applyEdits,
+  buildModuleIndex,
+  planBarrelRewrite,
+  type ModuleIndex
+} from './codegen/runtime/barrel-rewrite.server.js';
 import { parseExportNames } from './codegen/runtime/parse-exports.server.js';
 import { sanitize } from './codegen/sanitize/index.server.js';
 import {
@@ -97,6 +103,35 @@ export function rime(): Plugin {
   const VModulesId = '$rime/modules';
   const VModulesPrefix = '$rime/modules/';
   const ownPackageName = getPackageInfoByKey('name');
+
+  /**
+   * Export name → the pair that declares it, for the rewrite in `transform` below.
+   *
+   * Built once and cached because it parses every pair's exports; dropped whenever a pair is
+   * added, changed or removed (see handleHotUpdate). `moduleRewrites` remembers which modules
+   * the rewrite actually touched, so those can be invalidated at the same time — a new pair can
+   * change where an *existing* import resolves to.
+   */
+  let moduleIndex: ModuleIndex | null = null;
+  const moduleRewrites = new Set<string>();
+
+  const getModuleIndex = () => {
+    if (moduleIndex) return moduleIndex;
+
+    const pairs = scanModulePairs(path.resolve(process.cwd(), 'src/lib'));
+    moduleIndex = buildModuleIndex(pairs, (subpath, onlyServer, onlyClient) => {
+      // Legal — a server-only helper beside a client half is normal, and nothing breaks until
+      // something imports across the gap, which `transform` reports precisely. Worth saying out
+      // loud anyway: this is the shape that fails in the browser rather than at build time.
+      logger.warn(
+        `$rime/modules: ${subpath}'s two halves export different names ` +
+          `(server-only: ${onlyServer.join(', ') || 'none'}; ` +
+          `client-only: ${onlyClient.join(', ') || 'none'}). ` +
+          `Importing one of those from isomorphic code fails on the side that lacks it.`
+      );
+    });
+    return moduleIndex;
+  };
 
   // Separates a resolved root from the original specifier inside one virtual module id — never
   // appears in a real path or a JS specifier, so it's an unambiguous split point. Only the
@@ -237,9 +272,57 @@ export function rime(): Plugin {
         /[/\\]module(\.server)?\.ts$/.test(file) &&
         file.includes(`${path.sep}src${path.sep}lib${path.sep}`)
       ) {
-        const module = invalidateVModule(VModulesId);
-        if (module) return [module];
+        // The index is now stale, and so is every rewrite made from it: a pair appearing or
+        // losing an export moves where an existing import resolves to, in files that did not
+        // themselves change.
+        moduleIndex = null;
+        const touched = Array.from(moduleRewrites)
+          .map((id) => server.moduleGraph.getModuleById(id))
+          .filter((module) => module !== undefined);
+        touched.forEach((module) => server.moduleGraph.invalidateModule(module));
+        moduleRewrites.clear();
+        if (touched.length) return touched;
       }
+    },
+
+    /**
+     * Rewrites `import { x } from '$rime/modules'` into an import of the one pair that declares
+     * `x`, per name — the same rewrite `rime generate-manifest` performs at prepack, moved into
+     * dev so both behave alike.
+     *
+     * Why it is not enough to let the bare specifier resolve to a barrel: the barrel re-exports
+     * *every* pair in the package, so importing one binding evaluates all of them and everything
+     * they import. A module the barrel leads back to is then evaluated inside an import cycle,
+     * and a binding it reads at module scope is `undefined` — silently, and only in dev, because
+     * dist has been rewritten since before it shipped. Rewriting here means one pair is
+     * imported, and no barrel module exists in the graph to route a cycle through.
+     */
+    transform(code, id) {
+      if (!code.includes(VModulesId)) return null;
+      // A dependency's own bare imports were already rewritten by *its* prepack; anything left
+      // in node_modules naming the barrel is the qualified form, which resolveId handles.
+      if (id.includes('node_modules')) return null;
+
+      if (!ownPackageName) {
+        throw new Error(
+          `$rime/modules: ${id} imports the barrel, but this project's package.json has no ` +
+            `"name" — the rewrite has no package to qualify the import with.`
+        );
+      }
+
+      const edits = planBarrelRewrite({
+        code,
+        filePath: id,
+        pkgName: ownPackageName,
+        index: getModuleIndex(),
+        side: this.environment?.config?.consumer === 'server' ? 'server' : 'client'
+      });
+      if (!edits.length) return null;
+
+      moduleRewrites.add(id);
+      // Each statement's replacement is one line, so every other line keeps its number and the
+      // original sourcemap stays usable — `map: null` tells Vite exactly that.
+      return { code: applyEdits(code, edits), map: null };
     },
 
     resolveId(id, importer) {
@@ -294,14 +377,15 @@ export function rime(): Plugin {
       }
 
       if (id === resolvedVModule(VModulesId)) {
-        // Dev-mode barrel — re-exports every module.(server.)ts pair found under this
-        // project's own src/lib, live. Never ships: prepack rewrites every '$rime/modules'
-        // import into a qualified one before publish, so this only ever runs during dev.
-        const pairs = scanModulePairs(path.resolve(process.cwd(), 'src/lib'));
-        return Array.from(pairs.values())
-          .map((entry) => exportFrom(entry, isServer))
-          .filter(Boolean)
-          .join('\n');
+        // There is no barrel any more. `transform` above rewrites every bare `$rime/modules`
+        // import into a qualified, per-pair one, so nothing should ever ask to load the bare
+        // specifier as a module. Reaching here means something imported it in a form the
+        // rewrite does not handle and did not go through `transform` — a backstop, not a path.
+        throw new Error(
+          `$rime/modules: something imported the bare barrel without being rewritten. Only ` +
+            `named static imports are supported — not \`import * as\`, \`export * from\`, or ` +
+            `\`import()\`.`
+        );
       }
 
       // Self-reference qualified form — resolveId returned this bare, no root baked in

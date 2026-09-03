@@ -20,15 +20,11 @@ export const upload = defineFeature({
   /** A config uses this feature by declaring `upload`. */
   enabled: (config) => !!config.upload,
 
-  augment: (config) => augmentUpload(config),
+  augment: augmentUpload,
 
-  // Every one of these is read at call time, not at module scope. `configureUploadDirectories`
-  // comes from a module that imports the pipeline, which imports this feature back, so the
-  // barrel evaluates this definition mid-cycle — and which of upload's modules have been reached
-  // by then is an accident of scan order. See the note on `hooks` in ../define.ts.
-  configure: (config) => configureUploadDirectories(config),
+  configure: configureUploadDirectories,
 
-  boot: (config) => bootUpload(config),
+  boot: bootUpload,
 
-  hooks: () => uploadHooks
+  hooks: uploadHooks
 });
