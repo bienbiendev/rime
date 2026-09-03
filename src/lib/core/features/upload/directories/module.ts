@@ -6,7 +6,7 @@ import { isUploadConfig } from '../util/config.js';
  * Derives a `<slug>Directories` collection for every upload collection in the config.
  *
  * Upload's `configure`, in a module pair of its own rather than beside the augment — the server
- * half needs `operations/pipeline.server.ts`, which imports the feature registry, which imports
+ * half needs the collection pipeline, which imports the feature registry, which imports
  * this feature. Keeping that import out of `../module.server.ts` is what lets the augment and the
  * hooks be read normally; only this one is read lazily. See features/upload/index.ts.
  */

@@ -1,16 +1,14 @@
 import type { BuiltCollection } from '$lib/core/factory/config/types.js';
-import {
-  augmentCollectionHooks,
-  directoriesPipeline
-} from '$lib/core/operations/pipeline.server.js';
+import { augmentCollectionHooks } from '$lib/core/prototype/collection/pipeline.server.js';
 import { makeUploadDirectoriesCollectionClient } from '../derive.js';
 import { isUploadConfig, type WithUpload } from '../util/config.js';
+import { directoriesPipeline } from './pipeline.server.js';
 
 const makeUploadDirectoriesCollection = (collection: WithUpload<BuiltCollection>) => {
   const collectionClient = makeUploadDirectoriesCollectionClient(collection);
 
-  // Hook order for a directories collection lives with every other pipeline, in
-  // operations/pipeline.server.ts — not inline here.
+  // Hook order for a directories collection sits beside this file, in ./pipeline.server.ts —
+  // upload's own derived collection, so upload owns its order.
   const directoriesCollection: BuiltCollection = {
     ...collectionClient,
     $hooks: directoriesPipeline(collection.upload.directories)

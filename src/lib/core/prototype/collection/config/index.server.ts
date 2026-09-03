@@ -1,9 +1,9 @@
 import { augmentAuthServer } from '$lib/core/features/auth/augment.server.js';
-import { augmentCollectionHooks } from '$lib/core/operations/pipeline.server.js';
+import { augmentCollectionHooks } from '$lib/core/prototype/collection/pipeline.server.js';
 import { augmentMetas } from '$lib/core/factory/shared/augment-metas.js';
 import { augmentTitle } from '$lib/core/factory/shared/augment-title.js';
 import { augmentWithFeatures } from '$lib/core/features/registry.js';
-import type { CollectionWithoutSlug } from '$lib/core/factory/collection/types.js';
+import type { CollectionWithoutSlug } from '$lib/core/prototype/collection/config/types.js';
 import type { BuiltCollection, Collection } from '$lib/core/factory/config/types.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';

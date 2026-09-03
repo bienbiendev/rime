@@ -1,6 +1,6 @@
 import type { CollectionLabel } from '$lib/core/factory/config/types.js';
 import { capitalize } from '$lib/util/string.js';
-import type { Collection } from '../../../types.js';
+import type { Collection } from '$lib/types.js';
 
 export type WithNormalizedLabel<T> = Omit<T, 'label'> & { label: CollectionLabel };
 

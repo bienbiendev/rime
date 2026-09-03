@@ -1,6 +1,6 @@
 import { findThumbnailField } from '$lib/core/factory/shared/find-thumbnail.js';
 import type { CollectionAuthConfig, UploadConfig } from '$lib/core/factory/config/types.js';
-import type { Collection } from '../../../types.js';
+import type { Collection } from '$lib/types.js';
 
 type Input = {
   upload?: UploadConfig;

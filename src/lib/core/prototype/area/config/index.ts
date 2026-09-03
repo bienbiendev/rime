@@ -1,7 +1,7 @@
 import { augmentMetas } from '$lib/core/factory/shared/augment-metas.js';
 import { augmentTitle } from '$lib/core/factory/shared/augment-title.js';
 import { augmentWithFeatures } from '$lib/core/features/registry.js';
-import type { AreaWithoutSlug } from '$lib/core/factory/area/types.js';
+import type { AreaWithoutSlug } from '$lib/core/prototype/area/config/types.js';
 import type { Area, BuiltArea } from '$lib/core/factory/config/types.js';
 import { capitalize, toKebabCase } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';

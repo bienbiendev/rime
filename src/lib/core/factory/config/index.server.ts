@@ -1,5 +1,5 @@
-import * as Area from '$lib/core/factory/area/index.server.js';
-import * as Collection from '$lib/core/factory/collection/index.server.js';
+import * as Area from '$lib/core/prototype/area/config/index.server.js';
+import * as Collection from '$lib/core/prototype/collection/config/index.server.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
 import type { BuiltConfigClient, SanitizedConfigClient } from './types.js';
 import { buildConfig } from './build.server.js';

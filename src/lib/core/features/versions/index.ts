@@ -10,7 +10,7 @@ import { augmentVersions } from './augment.js';
  * - Its `beforeUpdate` hooks run for *every* config, versioned or not. `defineVersionOperation`
  *   populates `context.versionOperation`, which `assertUpsertContext` then requires on every
  *   update — so gating them behind `enabled` would break updates on non-versioned configs. They
- *   stay listed in operations/pipeline.server.ts until there is a timing that says "always".
+ *   stay listed in the collection pipeline until there is a timing that says "always".
  * - Its shadow tables are half in the adapter. `type: 'shadow'` is declared here so the intent is
  *   on record, but nothing reads it yet: making the adapter take a shadow from a feature is its
  *   own job.

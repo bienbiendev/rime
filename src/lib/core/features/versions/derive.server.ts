@@ -1,4 +1,4 @@
-import { augmentCollectionHooks } from '$lib/core/operations/pipeline.server.js';
+import { augmentCollectionHooks } from '$lib/core/prototype/collection/pipeline.server.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';

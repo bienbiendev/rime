@@ -84,12 +84,12 @@ export type FeatureDefinition = {
   /**
    * The feature's document hooks, by timing.
    *
-   * The feature owns the implementations; `operations/pipeline.server.ts` still owns *where they
-   * run*, spelled out literally. That split is deliberate: in a collection's `beforeRead` these
-   * are interleaved with core steps — `populateURL` must run after the document has been shaped
-   * and before it is sorted — and a feature has nothing to say about a core step's position.
-   * `requires` cannot express it either, since the features that interleave there require
-   * nothing of each other.
+   * The feature owns the implementations; each prototype's own `pipeline.server.ts` still owns
+   * *where they run*, spelled out literally. That split is deliberate: in a collection's
+   * `beforeRead` these are interleaved with core steps — `populateURL` must run after the
+   * document has been shaped and before it is sorted — and a feature has nothing to say about a
+   * core step's position. `requires` cannot express it either, since the features that interleave
+   * there require nothing of each other.
    *
    * A plain value, assigned the way every other hook in the repo is. It briefly also accepted a
    * thunk, because the `$rime/modules` barrel evaluated a feature inside an import cycle and a

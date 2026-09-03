@@ -16,7 +16,7 @@ import { processFileUpload } from './process-file-upload.server.js';
  */
 
 /**
- * `operations/pipeline.server.ts` still decides where each of these runs; the feature only says
+ * the prototype's own `pipeline.server.ts` still decides where each of these runs; the feature only says
  * what they are, and `enabled` (see ../index.ts) says when — reproducing the
  * `collection.upload ? …` that guarded every one of these sites.
  *

@@ -34,10 +34,10 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
    * Every built prototype config, whatever its kind.
    *
    * The one place left that still says `collections` and `areas` by name. It survives because
-   * the config *factory* is still two builders (`factory/collection/`, `factory/area/`) — the
-   * doc retires those through `defineFeature({ augment })`, and this spread goes with them.
-   * Everything downstream asks by prototype name instead, so a third kind costs one entry here
-   * and nothing else.
+   * a config's *shape* still has one keyed array per prototype kind — the builders themselves
+   * now live with their prototypes (`prototype/{collection,area}/config/`), so this spread is
+   * the last of it. Everything downstream asks by prototype name instead, so a third kind costs
+   * one entry here and nothing else.
    */
   const allPrototypes = [...config.collections, ...config.areas];
 
