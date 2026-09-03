@@ -4,7 +4,7 @@ Working notes for whoever picks this up next — most likely me, with none of th
 north star is `docs/architecture-target.md`; this file records where the work has actually got to,
 what is left, and the handful of rules that were expensive to learn and are easy to break again.
 
-Branch: `claude/repo-structure-audit-89hs4d`.
+Branch: `claude/restructure-handoff-docs-vnq2pq` (was `claude/repo-structure-audit-89hs4d`).
 
 ---
 
@@ -41,13 +41,22 @@ names `upload` again, something has gone backwards.
 | 8h | `f21fc07` | `hooks.generated.md` renders as a tree, tagged by contributing feature |
 | 9b/9c | `ceefc6e` | `factory/shared` becomes features; the registry stops naming features in its types |
 | 9-pre/9a | `28143da` | `Rime` is declared, not inferred; the prototype declares `features` and `hooks`; **both `pipeline.server.ts` files deleted** |
+| 10a | `2a9cb4a` | a prototype declares its own whole-config `configure`; `augmentPrototypes` deleted |
+| 10c | `f3ead15` | one plugin step for both sides; the double `augmentPlugins` call (and its three header buttons) gone |
+| 10d | `a54a774` | the three panel augments move to `core/features/panel/` |
+| 10 | `4fd4204` | **`factory/` → `core/config/`, `operations/` → `core/pipeline/`**, `hooks.ts` with them |
+| 10b | `1db951b` | three feature-owned hooks leave `pipeline/steps/` for their features |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 
 ```
 adapter.collection. / adapter.area.   13 -> 0   ✓
-isArea|isCollection|type === '...'    65 -> 59  (the rest are panel and config-factory)
+isArea|isCollection|type === '...'    65 -> 59  ✓ (still 59 after commit 10)
 ```
+
+The 59 that remain are the panel (about half), the two `rest/endpoint.server.ts` files, and
+`config/{validate,context}.server.ts`. None of them is the adapter or the pipeline, which is what
+the greps were for.
 
 ---
 
@@ -109,7 +118,7 @@ and `beforeUpdate`, and what keeps a feature's mark from breaking configs withou
 
 Consequences worth remembering:
 
-- `HookMark` is a **closed union** (`core/operations/types.ts`) extended by features through
+- `HookMark` is a **closed union** (`core/pipeline/types.ts`) extended by features through
   declaration merging. It must stay closed: a typo'd mark is *vacuously satisfied* and reorders
   the pipeline silently — the one failure mode of this design that raises no error at all.
 - Marks that both require and provide `document` cannot require `document` of each other without
@@ -134,12 +143,12 @@ Run against the base commit's **own** numbers, re-measured, not trusted from any
 
 | gate | command | note |
 | --- | --- | --- |
-| types | `bun run check` | 6 pre-existing errors on both `basic` and `versions-multilang` (`collection/operations/create.ts` ×4, `duplicate.ts`, `set-document-thumbnail.server.ts`) — all `DeepPartial` / union-narrowing in generated-type land |
+| types | `bun run check` | **13 on `basic`**: the 6 pre-existing `src/lib` ones (`collection/operations/create.ts` ×4, `duplicate.ts`, `features/thumbnail/hooks/set-document-thumbnail.server.ts` — all `DeepPartial` / union-narrowing in generated-type land) plus 7 in the fixture's own `src/routes/(front)/` pages. Count what the run prints, not what a doc says |
 | lint | `bunx eslint src/lib` | 21; the rest are pre-existing panel `goto()`/`href` and two unused `toKebabCase` |
 | cycles | `bun run check:circular-deps` | 5, and the *list* matters more than the count |
 | unit | `bunx vitest run` | 115 |
 | schema | diff the generated `schema.server.ts` against a golden capture | **the gate for rule 2** |
-| pipeline order | `core/operations/pipeline-order.spec.ts` | **the gate for rule 4** — a wrong mark is schema-identical and probe-identical |
+| pipeline order | `core/pipeline/pipeline-order.spec.ts` | **the gate for rule 4** — a wrong mark is schema-identical and probe-identical |
 | e2e | `bun run test` | expect 375 |
 
 **Capture a golden schema before touching any augment chain.** Boot the dev server on a fixture,
@@ -157,6 +166,27 @@ The one probe that discriminates hardest, and the reason it exists: a **base64**
 `POST /api/medias` must return `filename`, `mimeType`, `filesize`, all five sizes, `_path` and
 `_thumbnail`. A multipart upload does not go through `castBase64ToFile`, so it legitimately leaves
 `mimeType` null — don't read that as a regression.
+
+The shapes, since each one cost a 400 the first time:
+
+```bash
+# seed the admin. The password must pass the field validator - a weak one is rejected as
+# "Field name is not valid", because validateForm reports the password failure under `name`.
+curl -c c.txt -X POST localhost:5173/api/init -H 'content-type: application/json' \
+  -d '{"email":"admin@test.com","name":"Admin","password":"Str0ngPass!word"}'
+curl -c c.txt -b c.txt -X POST localhost:5173/api/auth/sign-in/email -H 'content-type: application/json' \
+  -d '{"email":"admin@test.com","password":"Str0ngPass!word"}'
+
+# a create takes its fields under `attributes` on this fixture, not at the top level
+curl -b c.txt -X POST localhost:5173/api/pages -H 'content-type: application/json' \
+  -d '{"attributes":{"title":"Probe","slug":"probe"}}'
+
+# the base64 upload: `file` is a JsonFile object, not a bare data URI
+# {"file":{"base64":"data:image/jpeg;base64,…","filename":"x.jpg","mimeType":"image/jpeg"},"alt":"…"}
+```
+
+An unauthenticated read is a probe of its own: `/api/pages` 200s on `basic` and an area 403s.
+**403 is the healthy answer** — the 404 that commit 9's boot bug produced is what to watch for.
 
 ### Booting is a gate of its own
 
@@ -185,76 +215,35 @@ Note the client and server factories currently import `collectionFeatures` from 
 import survives because `applyAugments` needs the `as const` tuple for the type fold, which
 `PrototypeDefinition.features: FeatureDefinition[]` has widened away.
 
-### Commit 10 — the two directories go
+### The panel
 
-`factory/` is down to `config/` and `hooks.ts` (`factory/shared/` is gone). `operations/` holds
-`run.server.ts`, `steps/`, `persist/`, `config-map/`, `query.ts`, `extract-data.server.ts`,
-`types.ts`, and the two pipeline files — shared document-pipeline machinery every prototype calls.
-None of it is prototype-specific, so this is a rename that says what it is — `core/config/` and
-`core/pipeline/` — plus deciding where `factory/hooks.ts` belongs.
+The only part of the repo the restructure has not touched, and the last place the `isArea` /
+`isCollection` greps land. `core/features/panel/` exists now (icons, navigation defaults, panel
+access) but holds no `defineFeature` — see the note at the top of its `augment.ts` for why, and
+read it before trying to make one: a feature's `configure` returns the config's type unchanged, and
+these three refine it.
 
-But four things in those two directories are **misfiled, not just misnamed**, and a rename that
-carries them along preserves the mistake. Each is small. Roughly cheapest first:
+### What a whole-config step costs
 
-#### a. `config/augment-prototypes.ts` belongs to the prototype
+Learned twice over during commit 10, and worth knowing before moving any other augment:
 
-Thirteen lines that default `collections` and `areas` to `[]` — the config factory naming the two
-kinds by hand, which is the coupling commit 1 spent its round removing everywhere else. It should
-come from the prototype: an augment declared on `definePrototype` (the commit 9 remainder above
-opens that slot) or a prototype-specific feature, so that adding a third prototype is not an edit
-inside `core/config/`. Server-only today — `build.ts` never calls it, which is itself a smell.
+> A whole-config step that **refines the config's type** cannot go through `configureWithFeatures`.
 
-#### b. The hook machinery is split across both directories
+That step returns `T`. It has to: the prototype registry it reads is annotated to keep every
+feature's hooks out of `BuildConfig`'s loop (rule 1), so there is nothing left to fold. Two ways
+out, and the choice is already made twice in the tree:
 
-`operations/build-pipeline.server.ts`, `operations/resolve-pipeline.server.ts`, their two specs
-(`pipeline-order.spec.ts`, `resolve-pipeline.spec.ts`), `operations/steps/`, and
-`factory/hooks.ts` are one subject — how a hook declares itself, how the order is resolved, what
-actually runs — split across two folders by where files happened to land. They colocate, under
-whatever `core/pipeline/` becomes. `factory/hooks.ts` is the `Hooks.*` authoring helper (~20
-feature and prototype files import it); it is the consumer-facing half of the same subject and
-moves with it.
+- **A declared transform**, folded by name — `prototype/register.ts` (`PrototypeConfigure`) beside
+  `features/register.ts` (`FeatureConfigAugment`). This is what let `augmentPrototypes` become the
+  prototypes' own `configure`.
+- **Stay a typed call in the chain**, owned by whoever it belongs to — `augmentStaff` (auth) and
+  now the three panel augments. `config/inference.spec.ts` guards exactly this: the chain is a
+  literal sequence of `const withX = augmentX(prev)` on purpose, and a loop over an array of
+  augments widens every slug literal to `string`.
 
-The other half of the question is whether some of `steps/` should be steps at all. A step that
-only ever runs for one prototype or one feature is a hook that was never declared as one, and the
-`requires`/`provides` resolver (rule 4) is what makes converting it safe. Judge it per step —
-**a feature whose only content is one hook is ceremony**; prefer hanging the hook off the
-prototype's own `hooks.server.ts`, or off a feature that already exists, over minting a new
-feature for it.
-
-#### c. `augment-plugins.ts` and `augment-plugins.server.ts` merge
-
-Both build a plugin list, run each plugin's `configure`, and return `{ ...config, plugins }`. The
-server one additionally seeds `sse` / `cache` / `apiInit` (dev) / `mailer`, and folds
-`plugin.routes` into `$routes`. Now that plugins are declared isomorphic that is one function with
-a server branch, not two files. **`build.server.ts` currently calls both** —
-`augmentPluginsServer` and then `augmentPlugins` — so the merge has to not prepend `cache()` twice
-and not re-run every `configure` a second time (which today it does).
-
-#### d. The three panel augments want to be a `panel` feature
-
-`augment-icons.ts`, `augment-panel.ts`, `augment-panel-access.server.ts` — about 60 lines that
-build the slug→icon map, default the navigation groups / language / components, and default
-`panel.$access` to `isAdmin`. All three are panel concerns living in the config factory. The panel
-itself was never part of this restructure, so this is not a promise to restructure it; a `panel`
-feature is simply where these belong and a start on the rest.
-
-Do (a) first: `augment-icons` reads `collections` and `areas` off the config, so a panel feature
-built before the prototypes stop being named in `core/config/` just moves that coupling one level
-down.
-
-#### The gate for all four
-
-They are all augment-chain edits, so **rule 2 applies**. None of the four appends fields, so the
-generated column order should not move — "should not" being exactly what the golden schema diff is
-for. Capture one before starting. The chains as they stand:
-
-```
-build.server.ts  staff → prototypes → icons → panel → panelAccess → cors → pluginsServer → features → plugins
-build.ts         staff → icons → panel → features → plugins
-```
-
-`configureWithFeatures` (the `features` step) *does* append fields, so moving any of these across
-it is the move that would show up in the diff.
+Measure before choosing: replace the step with the identity and run `bun run check`. Dropping
+`augmentPrototypes` costs 4 errors (`config.areas` possibly-undefined); dropping the panel three
+costs 7 (`boot.server.ts`, `panel/navigation.ts`, `handlers/auth.server.ts`).
 
 ### Known loose ends
 
@@ -265,12 +254,37 @@ it is the move that would show up in the diff.
   a run.
 - `$rime/modules` warns on boot that `core/plugins/cache` exports `toHash` from its server half
   only. Legal and intentional; the warning exists so an asymmetry that *does* break shows up.
+- **`collectionHooks` imports two `versions` hooks by name** — `defineVersionOperation` and
+  `handleNewVersion`, in `beforeUpdate`. The one place a prototype still names a feature, and it is
+  deliberate: those two run for *every* config, versioned or not (`assertUpsertContext` requires
+  what the first one populates), so `enabled` would break updates on non-versioned configs.
+  `features/versions/index.ts` states it, and states the fix: a timing that says "always".
+- `pipeline/steps/merge-with-blank.server.ts` is imported only by the collection. Left in place —
+  generic machinery a collection happens to be the only caller of, and a folder for one file is
+  ceremony. Revisit if a second collection-only step turns up.
 
 ---
 
 ## Environment
 
-Both must be redone after any container restart.
+### A fresh container starts from nothing
+
+`node_modules/`, `.env` and the active fixture are all gitignored, so a new container has none of
+them and every gate reads as catastrophically broken until they are back:
+
+```bash
+bun install
+# .env is NOT in the repo. `rime init` writes one, but with the *consumer* default
+# RIME_CONFIG_DIR=src/+rime — and this repo's fixtures land in src/lib/+rime, so init then
+# generates a default starter config that imports 'rimecms/adapter-sqlite' and dies. Write the
+# file first (CONTRIBUTING.md has it in full), or fix the line and delete src/+rime{,.generated}.
+bun run rime:use basic
+```
+
+Before that is done, `bun run check` reports ~200 errors — no generated types, no routes, no
+config. That is the fixture missing, not a regression.
+
+### The two that must be redone after any container restart
 
 - **SMTP sink** on `127.0.0.1:1025`, implicit TLS. **Verify it with a real `smtplib.SMTP_SSL`
   login and send — never `pgrep -f sink.py`**, which matches its own command line and always
