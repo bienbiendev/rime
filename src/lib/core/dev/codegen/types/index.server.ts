@@ -112,7 +112,8 @@ export async function generateTypesString<T extends Config>(config: T) {
     // types) wrapped between `//@shared:start <name>` and `//@shared:end`, each on
     // its own line. Extracted once per name, deduped, and hoisted above the doc
     // types that reference them.
-    const regex = /^[ \t]*\/\/@shared:start[ \t]+(\S+)[ \t]*\r?\n([\s\S]*?)^[ \t]*\/\/@shared:end[ \t]*$/gm;
+    const regex =
+      /^[ \t]*\/\/@shared:start[ \t]+(\S+)[ \t]*\r?\n([\s\S]*?)^[ \t]*\/\/@shared:end[ \t]*$/gm;
 
     const seen = new Set<string>();
     const shared: string[] = [];

@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/public';
 import type { MailerActions } from '$lib/core/plugins/mailer/module.server.js';
-import type { ConfigContext } from '$lib/core/rime/index.server.js';
+import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { Config } from '$lib/types.js';
 import { apiKey } from '@better-auth/api-key';
 import { admin as adminPlugin } from 'better-auth/plugins';

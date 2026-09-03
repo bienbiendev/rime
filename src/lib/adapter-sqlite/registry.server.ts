@@ -1,7 +1,7 @@
 import type { PrototypeHandle, RegisterPrototypeArgs } from '$lib/core/adapter/types.js';
-import type { RawDoc } from '$lib/core/prototype/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import type { ConfigContext } from '$lib/core/rime/index.server.js';
+import type { RawDoc } from '$lib/core/prototype/types.js';
+import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { Dic } from '$lib/util/types.js';
 import { baseTableName } from './naming.server.js';
 import {

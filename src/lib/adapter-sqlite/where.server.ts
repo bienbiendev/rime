@@ -1,9 +1,8 @@
 import { RimeError } from '$lib/core/errors/index.js';
+import { hasVersionsSuffix, withoutVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger.server.js';
-import { hasVersionsSuffix, withoutVersionsSuffix } from '$lib/core/features/versions/naming.js';
-import { baseTableName, tableName } from './naming.server.js';
-import type { ConfigContext } from '$lib/core/rime/index.server.js';
+import type { ConfigContext } from '$lib/core/rime.server.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { type GetRegisterType } from '$lib/index.js';
 import type { Dic } from '$lib/util/types.js';
@@ -12,6 +11,7 @@ import { and, eq, getTableColumns, inArray, or } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { ParsedQs } from 'qs';
 import type { PrototypeSlug } from '../types.js';
+import { baseTableName, tableName } from './naming.server.js';
 import type { GenericTable } from './types.server.js';
 
 type BuildWhereArgs = {
@@ -187,7 +187,9 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
         .from(relatedTable)
         .where(relatedCondition);
 
-      const relsTable = getTable(tableName({ owner: baseTableName(slug), child: { kind: 'rels' } }));
+      const relsTable = getTable(
+        tableName({ owner: baseTableName(slug), child: { kind: 'rels' } })
+      );
       // Join relation rows to documents by matching the related id and the relation path
       const ownersWithMatching = db
         .select({ id: relsTable.ownerId })

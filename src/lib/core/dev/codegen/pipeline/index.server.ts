@@ -1,11 +1,11 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { featuresFor } from '$lib/core/features/registry.js';
 import type { HookTiming } from '$lib/core/features/define.js';
+import { featuresFor } from '$lib/core/features/registry.js';
+import { logger } from '$lib/core/logger.server.js';
 import { marksOf } from '$lib/core/operations/resolve-pipeline.server.js';
 import type { PrototypeName } from '$lib/core/prototype/registry.server.js';
 import type { Dic } from '$lib/util/types.js';
-import { GENERATED_DIR } from '../../constants.server.js';
+import fs from 'node:fs';
+import path from 'node:path';
 
 /**
  * Writes the resolved hook order for every config, as a tree.
@@ -79,31 +79,23 @@ const treeFor = (prototype: Dic): string => {
 };
 
 export default function generatePipelineDoc(config: Dic): void {
+  if (process.env.RIME_GENERATE_HOOKS_CHART !== 'true') return;
+
   const prototypes = [...((config.collections as Dic[]) ?? []), ...((config.areas as Dic[]) ?? [])];
 
   const body = prototypes
-    .map(
-      (prototype) =>
-        `## ${prototype.slug} (${prototype.type})\n\n` + '```\n' + treeFor(prototype) + '\n```\n'
-    )
+    .map((proto) => `## ${proto.slug} (${proto.type})\n\n` + '```\n' + treeFor(proto) + '\n```\n')
     .join('\n');
 
+  // Two lines of legend, and only two: `·` and `anonymous` are unreadable without them, and
+  // everything else about how this order is arrived at belongs in the code that arrives at it.
   const contents =
     `# Pipelines\n\n` +
-    `Generated — every hook rime runs for each config, in the order the resolver put them.\n\n` +
-    `The order is not written by hand anywhere. Each hook declares what it needs and what it\n` +
-    `leaves behind (\`requires\`/\`provides\`, see core/operations/types.ts) and \`resolvePipeline\`\n` +
-    `derives this from that. A prototype contributes its own hooks, each active feature\n` +
-    `contributes its own, and neither names the other.\n\n` +
-    `A \`· name\` tag marks a hook a feature contributed — worth reading as the decoupling made\n` +
-    `visible, since the prototype never names the feature that put it there. Untagged hooks are\n` +
-    `either rime's own or your config's; the two cannot be told apart here, because the authored\n` +
-    `\`$hooks\` list is replaced by the resolved pipeline before this runs. A hook shown as\n` +
-    `\`anonymous\` is one your config contributed without naming it — every rime-owned hook is\n` +
-    `named, and boot warns if one is not.\n\n` +
-    `Regenerated on every config change. Worth committing: a diff here is a reordering, which is\n` +
-    `otherwise invisible — the schema and every probe stay identical when hooks move.\n\n` +
+    `\`· name\` marks a hook a feature contributed. \`anonymous\` is one your config contributed\n` +
+    `without naming it — every rime-owned hook is named, and boot warns if one is not.\n\n` +
     body;
 
-  fs.writeFileSync(path.resolve(process.cwd(), GENERATED_DIR, 'pipeline.generated.md'), contents);
+  const chartPath = path.resolve(process.cwd(), 'hooks.generated.md');
+  fs.writeFileSync(chartPath, contents);
+  logger.info('[✓] Hooks chart generated at ' + chartPath);
 }

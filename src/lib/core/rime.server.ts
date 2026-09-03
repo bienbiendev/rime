@@ -1,11 +1,11 @@
 import type { Config } from '$lib/core/factory/config/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { bootRime } from '../boot.server.js';
-import type { createConfigContext } from '../factory/config/context.server.js';
-import type { BuildConfig } from '../factory/config/index.server.js';
-import { logger } from '../logger.server.js';
-import { buildPrototypeApi } from '../prototype/api.server.js';
-import { prototypes, type PrototypeAccessors } from '../prototype/registry.server.js';
+import { bootRime } from './boot.server.js';
+import type { createConfigContext } from './factory/config/context.server.js';
+import type { BuildConfig } from './factory/config/index.server.js';
+import { logger } from './logger.server.js';
+import { buildPrototypeApi } from './prototype/api.server.js';
+import { prototypes, type PrototypeAccessors } from './prototype/registry.server.js';
 
 export type Rime<C extends Config = Config> = Awaited<ReturnType<typeof createRime<C>>>;
 export type RimeContext<C extends Config = Config> = ReturnType<Rime<C>['createRimeContext']>;
