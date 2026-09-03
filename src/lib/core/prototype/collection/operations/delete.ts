@@ -1,6 +1,6 @@
 import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { runBeforeOperation } from '$lib/core/operations/run.server.js';
-import type { OperationContext, OperationQuery } from '$lib/core/operations/types.js';
+import type { OperationQuery } from '$lib/core/operations/types.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 
@@ -19,16 +19,14 @@ export const deleteDocs = async (args: Args): Promise<string[]> => {
   const { config, event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
-  let context: OperationContext<CollectionSlug> = {
-    params: { locale, limit, offset, sort, query },
-    isSystemOperation
-  };
-
-  context = await runBeforeOperation<CollectionSlug>({
+  await runBeforeOperation<CollectionSlug>({
     config,
     event,
     operation: 'delete',
-    context
+    context: {
+      params: { locale, limit, offset, sort, query },
+      isSystemOperation
+    }
   });
 
   const documentsToDelete = await rime.adapter.prototype(config.slug).findMany({
