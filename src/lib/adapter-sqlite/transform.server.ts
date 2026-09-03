@@ -1,6 +1,5 @@
 import type { Config } from '$lib/core/factory/config/types.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
-import type { ConfigContext } from '$lib/core/rime/index.server.js';
 import type {
   AreaSlug,
   CollectionSlug,
@@ -9,6 +8,7 @@ import type {
   PrototypeSlug,
   RawDoc
 } from '$lib/core/prototype/types.js';
+import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { Relation } from '$lib/fields/relation/index.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
@@ -18,7 +18,7 @@ import { flatten, unflatten } from 'flat';
 import { logger } from '../core/logger.server.js';
 import { extractFieldName } from '../fields/tree/util.js';
 import { isObjectLiteral, omit } from '../util/object.js';
-import { childTableNames, tableName as buildTableName, baseTableName } from './naming.server.js';
+import { baseTableName, tableName as buildTableName, childTableNames } from './naming.server.js';
 import { transformDatabaseColumnsToPaths } from './util.server.js';
 
 /**
@@ -86,7 +86,11 @@ export const transformerFacade = <const C extends Config>(args: {
 
     /** Place each block in its path */
     for (let block of blocks) {
-      const blockLocaleTableName = buildTableName({ owner: tableName, child: { kind: 'blocks', name: block.type }, branch: 'locales' });
+      const blockLocaleTableName = buildTableName({
+        owner: tableName,
+        child: { kind: 'blocks', name: block.type },
+        branch: 'locales'
+      });
       if (locale && blockLocaleTableName in tables) {
         block = {
           ...((block[blockLocaleTableName][0] as Partial<GenericBlock>) || {}),
@@ -133,7 +137,11 @@ export const transformerFacade = <const C extends Config>(args: {
     for (let block of treeBlocks) {
       try {
         const [fieldName] = extractFieldName(block.path);
-        const treeBlockLocaleTableName = buildTableName({ owner: tableName, child: { kind: 'tree', name: fieldName }, branch: 'locales' });
+        const treeBlockLocaleTableName = buildTableName({
+          owner: tableName,
+          child: { kind: 'tree', name: fieldName },
+          branch: 'locales'
+        });
 
         if (locale && treeBlockLocaleTableName in tables) {
           block = {

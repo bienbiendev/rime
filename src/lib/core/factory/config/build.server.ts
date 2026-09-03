@@ -1,16 +1,16 @@
-import { configureWithFeatures } from '../../features/registry.js';
 import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
-import { createRime, type Rime } from '../../rime/index.server.js';
+import { augmentStaffServer } from '../../features/auth/staff/augment.server.js';
+import { configureWithFeatures } from '../../features/registry.js';
+import { makeVersionsCollectionsAliases } from '../../features/versions/derive.server.js';
+import { createRime, type Rime } from '../../rime.server.js';
+import { augmentCORS } from './augment-cors.server.js';
+import { augmentIcons } from './augment-icons.js';
+import { augmentPanelAccess } from './augment-panel-access.server.js';
 import { augmentPanel } from './augment-panel.js';
 import { augmentPlugins } from './augment-plugins.js';
-import { augmentIcons } from './augment-icons.js';
-import { augmentPrototypes } from './augment-prototypes.js';
-import { makeVersionsCollectionsAliases } from '../../features/versions/derive.server.js';
-import type { Config } from './types.js';
-import { augmentCORS } from './augment-cors.server.js';
-import { augmentPanelAccess } from './augment-panel-access.server.js';
 import { augmentPluginsServer } from './augment-plugins.server.js';
-import { augmentStaffServer } from '../../features/auth/staff/augment.server.js';
+import { augmentPrototypes } from './augment-prototypes.js';
+import type { Config } from './types.js';
 
 export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>> => {
   const augmented = augmentConfig(config);

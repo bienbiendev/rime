@@ -1,6 +1,6 @@
 import type { Config } from '$lib/core/factory/config/types.js';
 import { type Handle } from '@sveltejs/kit';
-import type { Rime } from '../rime/index.server.js';
+import type { Rime } from '../rime.server.js';
 
 export function createPluginsHandler<const C extends Config>(rime: Rime<C>) {
   const pluginHandlers: Handle[] = [];

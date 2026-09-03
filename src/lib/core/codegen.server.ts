@@ -72,7 +72,6 @@ export const runCodegen = async <const C extends Config>(args: {
   // 7. src/hooks.server.ts, if the consumer has not written one.
   regenerateHooks();
 
-  // 8. pipeline.generated.md — the resolved hook order, which is no longer written by hand
-  //    anywhere. Committed, so a reordering is a reviewable diff rather than silent behaviour.
+  // 8. hooks.generated.md — the resolved hook order.
   generatePipelineDoc(config);
 };

@@ -1,8 +1,8 @@
 import type { PrototypeName } from '$lib/core/prototype/registry.server.js';
 import type { Dic } from '$lib/util/types.js';
-import { logger } from '../logger.server.js';
-import { featureHooksFor } from '../features/registry.js';
 import type { HookTiming } from '../features/define.js';
+import { featureHooksFor } from '../features/registry.js';
+import { logger } from '../logger.server.js';
 import { marksOf, resolvePipeline } from './resolve-pipeline.server.js';
 
 /** Every timing a pipeline can carry. A prototype simply declares nothing for the ones it has
@@ -57,7 +57,7 @@ export const buildPipeline = (
       continue;
     }
 
-    // A rime-owned hook with no name makes `pipeline.generated.md` unreadable exactly where it
+    // A rime-owned hook with no name makes `hooks.generated.md` unreadable exactly where it
     // matters, and the generated file is the only place the order is legible now. Consumer hooks
     // are deliberately exempt — nobody needs to identify someone else's hook in rime's own doc —
     // which is why this counts the prototype's and the features' contributions only.
@@ -69,7 +69,7 @@ export const buildPipeline = (
     if (unnamed) {
       logger.warn(
         `${prototype} ${config.slug} ${timing}: ${unnamed} rime-owned hook(s) declare no name, ` +
-          `so they appear as "anonymous" in pipeline.generated.md.`
+          `so they appear as "anonymous" in hooks.generated.md.`
       );
     }
 

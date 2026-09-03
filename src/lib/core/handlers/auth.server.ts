@@ -5,7 +5,7 @@ import type { Config, User } from '$lib/types.js';
 import { error, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
 import { BETTER_AUTH_ROLES } from '../features/auth/constant.server.js';
 import { logger } from '../logger.server.js';
-import type { ConfigContext, RimeContext } from '../rime/index.server.js';
+import type { ConfigContext, RimeContext } from '../rime.server.js';
 
 const dev = process.env.NODE_ENV === 'development';
 

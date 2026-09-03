@@ -1,5 +1,5 @@
 import type { Config } from '../factory/config/types.js';
-import type { Rime } from '../rime/index.server.js';
+import type { Rime } from '../rime.server.js';
 import { handleAuth } from './auth.server.js';
 import { handleCORS } from './cors.server.js';
 import { createCMSHandler } from './main.server.js';

@@ -44,6 +44,7 @@ export const clear = async (args: { force?: boolean }) => {
   rmSync(path.join('src', 'rime.generated.d.ts'), { force: true });
   rmSync(path.join('src', 'rime.modules.generated.d.ts'), { force: true });
   rmSync(path.join('drizzle.config.ts'), { force: true });
+  rmSync(path.join('hooks.generated.md'), { force: true });
 
   return logger.info('rime cleared');
 };

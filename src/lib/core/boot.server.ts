@@ -1,7 +1,6 @@
 import { dev } from '$app/environment';
 import type { Config } from '$lib/core/factory/config/types.js';
 import { betterAuth } from 'better-auth';
-import { runCodegen } from './codegen.server.js';
 import { createConfigContext } from './factory/config/context.server.js';
 import type { BuildConfig } from './factory/config/index.server.js';
 import { getBaseAuthConfig } from './features/auth/better-auth/config.server.js';
@@ -51,6 +50,7 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   // 4. Phase 1, in dev only: write routes, schema and types. Before the adapter, which imports
   //    the schema this produces.
   if (dev) {
+    const runCodegen = await import('./codegen.server.js').then((m) => m.runCodegen);
     await runCodegen({ config, generateSchema: config.$adapter.generateSchema });
   }
 

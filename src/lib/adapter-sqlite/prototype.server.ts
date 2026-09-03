@@ -1,14 +1,14 @@
 import { VERSIONS_STATUS } from '$lib/core/constants.js';
+import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
 import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import { getSegments } from '$lib/core/features/upload/util/path.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
-import { VersionOperations } from '$lib/core/features/versions/strategy.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/factory/config/types.js';
 import type { VersionOperation } from '$lib/core/features/versions/strategy.js';
-import type { ConfigContext } from '$lib/core/rime/index.server.js';
-import type { OperationQuery } from '$lib/core/operations/types.js';
+import { VersionOperations } from '$lib/core/features/versions/strategy.js';
 import { normalizeQuery } from '$lib/core/operations/query.js';
+import type { OperationQuery } from '$lib/core/operations/types.js';
 import type { PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
+import type { ConfigContext } from '$lib/core/rime.server.js';
 import { trycatchSync } from '$lib/util/function.js';
 import type { Dic } from '$lib/util/types.js';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
@@ -77,11 +77,16 @@ export const insertRowWithLocales = async (
 
   const { data, isLocalized, locale } = args.localized;
   if (isLocalized && Object.keys(data).length) {
-    await adapterUtil.insertTableRecord(db, tables, tableName({ owner: args.table, branch: 'locales' }), {
-      ...data,
-      ownerId: id,
-      locale: locale!
-    });
+    await adapterUtil.insertTableRecord(
+      db,
+      tables,
+      tableName({ owner: args.table, branch: 'locales' }),
+      {
+        ...data,
+        ownerId: id,
+        locale: locale!
+      }
+    );
   }
 
   return id;
@@ -424,7 +429,8 @@ export const findManyPrototypes = async (
   // against the config, so it takes a slug.
   const versionsSlug = withVersionsSuffix(slug);
   const versionsTable = baseTableName(versionsSlug);
-  const withParam = buildWithParam({ table: versionsTable, select, tables, config, locale }) || undefined;
+  const withParam =
+    buildWithParam({ table: versionsTable, select, tables, config, locale }) || undefined;
 
   // Without an explicit draft, a draft-enabled prototype shows only what is published.
   if (!draft && config.versions && config.versions.draft) {
@@ -434,7 +440,12 @@ export const findManyPrototypes = async (
       const originalWhere = { ...query.where };
       query =
         'and' in originalWhere && Array.isArray(originalWhere.and)
-          ? { where: { ...originalWhere, and: [...originalWhere.and, { status: { equals: 'published' } }] } }
+          ? {
+              where: {
+                ...originalWhere,
+                and: [...originalWhere.and, { status: { equals: 'published' } }]
+              }
+            }
           : { where: { and: [originalWhere, { status: { equals: 'published' } }] } };
     }
   }
