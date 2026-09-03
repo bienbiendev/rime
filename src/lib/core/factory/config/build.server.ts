@@ -5,9 +5,9 @@ import { configureWithPrototypes, prototypes } from '$lib/core/prototype/registr
 import { makeVersionsCollectionsAliases } from '../../features/versions/derive.server.js';
 import { createRime, type Rime } from '../../rime.server.js';
 import { augmentCORS } from './augment-cors.server.js';
-import { augmentIcons } from './augment-icons.js';
-import { augmentPanelAccess } from './augment-panel-access.server.js';
-import { augmentPanel } from './augment-panel.js';
+import { augmentIcons } from '../../features/panel/icons.js';
+import { augmentPanelAccess } from '../../features/panel/augment.server.js';
+import { augmentPanel } from '../../features/panel/augment.js';
 import { augmentPlugins } from './augment-plugins.js';
 import type { Config } from './types.js';
 

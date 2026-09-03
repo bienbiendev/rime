@@ -2,6 +2,7 @@ import type { PanelConfig } from '$lib/core/factory/config/types.js';
 import type { User } from '$lib/types.js';
 import { access } from '$lib/util/index.js';
 
+/** Who may open the panel. Server-only: the default is an `isAdmin` check. See ./augment.ts. */
 export const augmentPanelAccess = <const T extends { panel: PanelConfig }>(config: T) => {
   const panel = {
     ...config.panel,

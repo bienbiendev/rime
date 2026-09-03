@@ -12,7 +12,7 @@ export default rime({
   collections: [HooksTest, Targets, Pages],
   areas: [Settings],
 
-  // Defaults to admin-only (augment-panel-access.server.ts) — relaxed to any
+  // Defaults to admin-only (features/panel/augment.server.ts) — relaxed to any
   // staff member so the editor account can reach the panel UI at all, which
   // is the precondition for testing field-level .access() restrictions
   // through the panel (see pages.test.ts's disabled/access test).
