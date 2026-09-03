@@ -1,5 +1,5 @@
 import { defineFeature } from '../define.js';
-import { setDocumentTitle } from '$lib/core/pipeline/steps/set-document-title.server.js';
+import { setDocumentTitle } from './hooks/set-document-title.server.js';
 import { augmentTitle } from './augment.js';
 
 /**
@@ -17,8 +17,9 @@ export const title = defineFeature({
   enabled: () => true,
   augment: augmentTitle,
 
-  // The hook that reads what the augment resolved. Both halves of one idea, so both live here;
-  // the prototype's pipeline used to hold the second.
+  // The hook that reads what the augment resolved. Both halves of one idea, so both live here -
+  // in ./hooks/, where the feature's own code is, rather than in the shared pipeline/steps/ the
+  // prototype's pipeline used to reach it through.
   hooks: { beforeRead: [setDocumentTitle] }
 });
 

@@ -1,7 +1,7 @@
 import { logger } from '$lib/core/logger.server.js';
 import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
-import type { ConfigMap } from '../config-map/types.js';
+import type { ConfigMap } from '$lib/core/pipeline/config-map/types.js';
 
 export const fallbackDataFromOriginal = async <T extends Dic>(args: {
   data: T;
