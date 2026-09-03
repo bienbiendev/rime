@@ -6,9 +6,9 @@ type MaybeAsyncFunction = (...args: any[]) => any | Promise<any>;
 
 export type Plugin = {
   name: string;
-  // Runs from both augment-plugins.server.ts (full Config) and augment-plugins.ts
-  // (SanitizedConfigClient) — same function has to satisfy both call sites now that
-  // there's one Plugin type instead of a separate Plugin/PluginClient pair.
+  // One step, both sides: augment-plugins.ts runs this over a full Config on the server and a
+  // SanitizedConfigClient on the client, so the same function has to satisfy both — as it must
+  // anyway now that there is one Plugin type instead of a Plugin/PluginClient pair.
   configure?: <const C extends Config | SanitizedConfigClient>(config: C) => C;
   actions?: Record<string, MaybeAsyncFunction>;
   routes?: Record<string, RouteConfig>;

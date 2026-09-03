@@ -9,7 +9,6 @@ import { augmentIcons } from './augment-icons.js';
 import { augmentPanelAccess } from './augment-panel-access.server.js';
 import { augmentPanel } from './augment-panel.js';
 import { augmentPlugins } from './augment-plugins.js';
-import { augmentPluginsServer } from './augment-plugins.server.js';
 import type { Config } from './types.js';
 
 export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>> => {
@@ -25,8 +24,7 @@ function augmentConfig<T extends Config>(config: T) {
   const withPanel = augmentPanel(withIcons);
   const withPanelAccess = augmentPanelAccess(withPanel);
   const withCORS = augmentCORS(withPanelAccess);
-  const withPluginsServer = augmentPluginsServer(withCORS);
-  const withFeatures = configureWithFeatures(prototypes, withPluginsServer);
+  const withFeatures = configureWithFeatures(prototypes, withCORS);
   const output = augmentPlugins(withFeatures);
   return output;
 }
