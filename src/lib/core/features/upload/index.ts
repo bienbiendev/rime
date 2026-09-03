@@ -1,3 +1,4 @@
+import type { WithNormalizedUpload } from './types.js';
 import { augmentUpload, bootUpload, configureUploadDirectories, uploadHooks } from '$rime/modules';
 import { defineFeature } from '../define.js';
 
@@ -28,3 +29,10 @@ export const upload = defineFeature({
 
   hooks: uploadHooks
 });
+
+/** Turns an author's `upload: true` into a normalised object. */
+declare module '$lib/core/features/register.js' {
+  interface FeatureConfigAugment<T> {
+    upload: WithNormalizedUpload<T>;
+  }
+}

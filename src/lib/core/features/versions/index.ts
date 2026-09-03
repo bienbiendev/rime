@@ -1,3 +1,4 @@
+import type { WithVersionsConfig } from './augment.js';
 import { defineFeature } from '../define.js';
 import { augmentVersions } from './augment.js';
 
@@ -28,3 +29,10 @@ export const versions = defineFeature({
 
   augment: augmentVersions
 });
+
+/** Turns an author's `versions: true` into a normalised object. */
+declare module '$lib/core/features/register.js' {
+  interface FeatureConfigAugment<T> {
+    versions: WithVersionsConfig<T>;
+  }
+}

@@ -1,6 +1,4 @@
 import { augmentAuth } from '$lib/core/features/auth/augment.js';
-import { augmentMetas } from '$lib/core/factory/shared/augment-metas.js';
-import { augmentTitle } from '$lib/core/factory/shared/augment-title.js';
 import { augmentWithFeatures } from '$lib/core/features/registry.js';
 import type { CollectionWithoutSlug } from '$lib/core/prototype/collection/config/types.js';
 import type { BuiltCollection, Collection } from '$lib/core/factory/config/types.js';
@@ -9,7 +7,6 @@ import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import { FileText } from '@lucide/svelte';
 import { augmentLabel } from './augment-label.js';
 import { augmentPanel } from './augment-panel.js';
-import { augmentThumbnail } from './augment-thumbnail.js';
 
 export const create = <S extends string>(
   slug: S,
@@ -18,16 +15,16 @@ export const create = <S extends string>(
   //
   const collection: Collection<S> = { ...incomingConfig, slug };
   const initial = { ...collection };
+  // The collection's own augments run first, then every feature's in registry order.
+  //
+  // That ordering is now load-bearing rather than incidental: `title` resolves `asTitle` from the
+  // fallback `auth` and `upload` each offer, so auth has to have run before the feature block.
+  // It also moves auth's and metas' fields relative to the feature fields — see the commit
+  // message; the column order changes and a migration comes with it.
   const withLabel = augmentLabel(initial);
-  // Every feature augment, in registry order — the order these calls were written in until
-  // this commit. It sits where the block started, not where it ended: the registry now holds
-  // upload, nested, versions and url, and each of them appends fields.
-  const withFeatures = augmentWithFeatures(withLabel, 'collection');
-  const withAuth = augmentAuth(withFeatures);
-  const withMetas = augmentMetas(withAuth);
-  const withTitle = augmentTitle(withMetas);
-  const withPanel = augmentPanel(withTitle);
-  const augmented = augmentThumbnail(withPanel);
+  const withAuth = augmentAuth(withLabel);
+  const withPanel = augmentPanel(withAuth);
+  const augmented = augmentWithFeatures(withPanel, 'collection');
 
   return {
     type: 'collection',

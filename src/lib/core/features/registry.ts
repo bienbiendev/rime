@@ -1,9 +1,11 @@
 import type { PrototypeName } from '$lib/core/prototype/registry.server.js';
 import type { Dic } from '$lib/util/types.js';
 import type { AnyHook, FeatureDefinition, HookTiming, RegisteredFeature } from './define.js';
-import type { WithNormalizedUpload } from './upload/types.js';
-import type { WithVersionsConfig } from './versions/augment.js';
+import type { ApplyAugments } from './register.js';
+import { metas } from './metas/index.js';
 import { nested } from './nested/index.js';
+import { thumbnail } from './thumbnail/index.js';
+import { title } from './title/index.js';
 import { upload } from './upload/index.js';
 import { url } from './url/index.js';
 import { versions } from './versions/index.js';
@@ -25,13 +27,18 @@ import { versions } from './versions/index.js';
  * `pdf` in the versions-multilang fixture carries both `upload` and `versions`, so swapping two of
  * these renames nothing and silently rewrites that table.
  *
+ * The last three arrived from `factory/shared/`, where they sat because both prototypes used
+ * them — a statement about reuse, not about layer, and reuse is what a feature is for. They come
+ * after the field-appending four on purpose: `title` reads the fallback `upload` offers, which is
+ * the first genuine `requires` in this registry.
+ *
  * Not every feature has moved here yet. `versions` is registered for its augment only (see its
  * definition), and the block/tree/relation children are still loose. `auth` is not a feature at
  * all — docs/architecture-target.md settles that: it is core.
  */
-const features = { upload, nested, versions, url };
+const features = { upload, nested, versions, url, metas, title, thumbnail };
 
-export { nested, upload, url, versions };
+export { metas, nested, thumbnail, title, upload, url, versions };
 
 export type FeatureName = keyof typeof features;
 
@@ -65,28 +72,56 @@ export const featuresFor = (prototype: PrototypeName): RegisteredFeature[] =>
   featureList.filter((feature) => feature.extends.includes(prototype));
 
 /**
+ * The order each prototype's augments apply in, at the type level.
+ *
+ * A list rather than a set, and per prototype rather than one shared: `thumbnail` extends only
+ * collections, so folding it over an area would give an area an `asThumbnail` it never gets. The
+ * runtime check below keeps these honest against each feature's own `extends`.
+ *
+ * These name features, which the registry is entitled to do — it is the registry. What it no
+ * longer names is their *types*: each transform is declared beside its own feature through
+ * `FeatureConfigAugment` (see register.ts).
+ */
+type CollectionAugments = ['upload', 'nested', 'versions', 'url', 'metas', 'title', 'thumbnail'];
+type AreaAugments = ['versions', 'url', 'metas', 'title'];
+
+// Two orderings for one fact, so they are checked rather than trusted: a feature added to the
+// barrel without a matching entry here would silently lose its type transform, which is the
+// quiet half of the same bug the pipeline's golden order exists to catch.
+const declaredOrder: Record<PrototypeName, readonly string[]> = {
+  collection: ['upload', 'nested', 'versions', 'url', 'metas', 'title', 'thumbnail'],
+  area: ['versions', 'url', 'metas', 'title']
+};
+
+for (const [prototype, order] of Object.entries(declaredOrder)) {
+  const actual = featuresFor(prototype as PrototypeName).map((feature) => feature.name);
+  if (actual.join() !== order.join()) {
+    throw new Error(
+      `core/features/registry.ts: the ${prototype} augment order declared for the type fold ` +
+        `(${order.join(', ')}) does not match the barrel (${actual.join(', ')}).`
+    );
+  }
+}
+
+/**
  * Runs every applicable feature's `augment` over a prototype config.
  *
- * Called from the four prototype factories in place of the hand-written `augmentX(...)` chain.
+ * Called from each prototype's config factory in place of the hand-written `augmentX(...)` chain.
  *
- * **The overloads are not decoration.** Two augments do more than append fields — they *narrow*
- * the config: `upload` and `versions` each turn an author's `true` into a normalised object, and
- * the factories' return types depend on that having happened (`BuiltCollection.versions` is
- * `Required<VersionsConfig>`, not `boolean`). A runtime reduce cannot infer it, so it is declared
- * here, once, per prototype. One line per normalising feature is the honest cost — and the day an
- * augment stops normalising, its line goes.
- *
- * Worth noting what that reveals: normalising author input is config-factory work, not feature
- * work. An augment that only appended fields would need no overload at all.
+ * **The return types are not decoration.** Some augments do more than append fields — they
+ * *narrow* the config, and the factories' return types depend on that having happened
+ * (`BuiltCollection.versions` is `Required<VersionsConfig>`, not `boolean`; `asTitle` is a
+ * required `string`). A runtime reduce cannot infer any of it, so it is declared — but by each
+ * feature, about itself, rather than here about them.
  */
 export function augmentWithFeatures<T extends Dic>(
   config: T,
   prototype: 'collection'
-): WithNormalizedUpload<WithVersionsConfig<T>>;
+): ApplyAugments<T, CollectionAugments>;
 export function augmentWithFeatures<T extends Dic>(
   config: T,
   prototype: 'area'
-): WithVersionsConfig<T>;
+): ApplyAugments<T, AreaAugments>;
 export function augmentWithFeatures<T extends Dic>(config: T, prototype: PrototypeName): Dic {
   // The cast inside is the registry's usual one: each augment preserves the shape it is handed,
   // but a list holding augments for more than one prototype kind cannot say so.

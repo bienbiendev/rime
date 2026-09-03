@@ -87,5 +87,8 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
     fields.push(mimeType, text('filename').hidden(), text('filesize').hidden(), _pathField);
   }
 
-  return { ...config, upload: upload || false, fields };
+  // What an upload document is called, offered to the `title` feature rather than guessed at by
+  // it. Overwrites: the old switch in augmentTitle tested `upload` before `auth`, so upload wins
+  // for the rare config carrying both, and registry order puts this after auth's own offer.
+  return { ...config, upload: upload || false, fields, $titleFallback: 'filename' };
 };

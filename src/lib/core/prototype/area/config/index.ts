@@ -1,5 +1,3 @@
-import { augmentMetas } from '$lib/core/factory/shared/augment-metas.js';
-import { augmentTitle } from '$lib/core/factory/shared/augment-title.js';
 import { augmentWithFeatures } from '$lib/core/features/registry.js';
 import type { AreaWithoutSlug } from '$lib/core/prototype/area/config/types.js';
 import type { Area, BuiltArea } from '$lib/core/factory/config/types.js';
@@ -14,12 +12,9 @@ export const create = <S extends string>(
   const area: Area<S> = { ...incomingConfig, slug };
 
   const initial = { ...area };
-  const withMetas = augmentMetas(initial);
-  // Every feature augment, in registry order — the order these calls were written in until
-  // this commit. It sits where the block started, not where it ended: the registry now holds
-  // upload, nested, versions and url, and each of them appends fields.
-  const withFeatures = augmentWithFeatures(withMetas, 'area');
-  const augmented = augmentTitle(withFeatures);
+  // An area declares no augments of its own — metas and title, which used to bracket the feature
+  // block here, are features now. Everything it gets, it gets from the registry.
+  const augmented = augmentWithFeatures(initial, 'area');
 
   return {
     type: 'area',

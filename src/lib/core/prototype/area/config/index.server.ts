@@ -1,8 +1,6 @@
 import type { AreaWithoutSlug } from '$lib/core/prototype/area/config/types.js';
 import type { Area, BuiltArea } from '$lib/core/factory/config/types.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
-import { augmentMetas } from '$lib/core/factory/shared/augment-metas.js';
-import { augmentTitle } from '$lib/core/factory/shared/augment-title.js';
 import { augmentWithFeatures } from '$lib/core/features/registry.js';
 import { augmentAreaHooks } from '$lib/core/prototype/area/pipeline.server.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
@@ -16,13 +14,9 @@ export const create = <S extends string>(
   const area: Area<S> = { ...incomingConfig, slug };
 
   const initial = { ...area };
-  const withMetas = augmentMetas(initial);
-  // Every feature augment, in registry order — the order these calls were written in until
-  // this commit. It sits where the block started, not where it ended: the registry now holds
-  // upload, nested, versions and url, and each of them appends fields.
-  const withFeatures = augmentWithFeatures(withMetas, 'area');
-  const withTitle = augmentTitle(withFeatures);
-  const augmented = augmentAreaHooks(withTitle);
+  // As the client chain, with the hooks step last.
+  const withFeatures = augmentWithFeatures(initial, 'area');
+  const augmented = augmentAreaHooks(withFeatures);
 
   return {
     ...augmented,

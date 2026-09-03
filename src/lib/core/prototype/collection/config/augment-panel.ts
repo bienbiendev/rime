@@ -2,7 +2,10 @@ import type { CollectionPanelConfig, UploadConfig } from '$lib/core/factory/conf
 
 type Input = {
   panel?: CollectionPanelConfig;
-  upload?: UploadConfig;
+  // `boolean | UploadConfig`, not the normalised shape. This only tests it for truthiness, so
+  // requiring the normalised form was a hidden ordering dependency on upload's augment — one
+  // that stopped holding the moment the prototype's own augments moved ahead of the features.
+  upload?: boolean | UploadConfig;
 };
 type WithPanel<T> = T & { panel: CollectionPanelConfig };
 
