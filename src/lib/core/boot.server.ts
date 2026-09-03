@@ -1,13 +1,16 @@
 import { dev } from '$app/environment';
 import type { Config } from '$lib/core/factory/config/types.js';
-import { betterAuth } from 'better-auth';
 import { createConfigContext } from './factory/config/context.server.js';
 import type { BuildConfig } from './factory/config/index.server.js';
-import { getBaseAuthConfig } from './features/auth/better-auth/config.server.js';
+import { createAuthInstance } from './features/auth/better-auth/instance.server.js';
 import { bootFeatures } from './features/registry.js';
+// The **server** registry, and it has to be: the isomorphic one resolves to each definition's
+// client half, which carries `singleton` and `features` but no `boot` — so an area's row was
+// never created and every area read 404'd. `boot` is server-only by nature; the config factory is
+// the side that legitimately reads the isomorphic registry, for `features` alone.
+import { prototypes } from './prototype/registry.server.js';
 import i18n from './i18n/index.js';
 import { registerTranslation } from './i18n/register.server.js';
-import { prototypes } from './prototype/registry.server.js';
 
 /**
  * Phase 2 of three — everything that happens once, when the process starts.
@@ -37,7 +40,10 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   //    read it (the mailer plugin supplies better-auth's transport).
   const plugins = Object.fromEntries(
     config.plugins.map((plugin) => [plugin.name, plugin.actions ?? {}])
-  ) as typeof config.$InferPluginsServer;
+    // Named as `BuildConfig<C>['$InferPluginsServer']`, the same way `Rime` declares it, so the
+    // two agree. `typeof config.$InferPluginsServer` looks equivalent and is not: indexing the
+    // built config picks up `C`'s own `$InferPluginsServer` in the intersection too.
+  ) as BuildConfig<C>['$InferPluginsServer'];
 
   // 2. The config interface — every lookup by slug, the locale list, the raw config.
   const configCtx = createConfigContext(config);
@@ -45,7 +51,7 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   // 3. Every feature's boot step, in registry order — upload makes sure the static directory it
   //    writes into exists. Named here by feature rather than by function: this used to call
   //    `ensureMedias(config)` directly, which meant boot knew what uploads needed.
-  await bootFeatures(config);
+  await bootFeatures(prototypes, config);
 
   // 4. Phase 1, in dev only: write routes, schema and types. Before the adapter, which imports
   //    the schema this produces.
@@ -85,14 +91,9 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   }
 
   // 7. FEATURE (auth): better-auth. After the adapter, whose betterAuthAdapter it stores into.
-  const baseAuthConfig = getBaseAuthConfig({ mailer: plugins.mailer, config: configCtx });
-  const auth = betterAuth({
-    ...baseAuthConfig,
-    plugins: Array.isArray(config.$auth?.plugins)
-      ? [...baseAuthConfig.plugins, ...(config.$auth.plugins as typeof config.$InferAuthPlugins)]
-      : baseAuthConfig.plugins,
-    database: adapter.auth.betterAuthAdapter
-  });
+  //    The instance is built in its own module so `RimeContext` can name its *type* without
+  //    naming this one — bootRime imports the prototype registry, and RimeContext must not.
+  const auth = createAuthInstance({ config, configCtx, mailer: plugins.mailer, adapter });
 
   // 8. Panel translations, for the configured language.
   i18n.init(await registerTranslation(config.panel.language));

@@ -16,8 +16,8 @@ import { augmentUrl } from './augment.js';
  * no client and server halves of its *definition*.
  */
 export const url = defineFeature({
+  name: 'url',
   type: 'augment',
-  extends: ['collection', 'area'],
   requires: [],
 
   /** A config uses this feature by declaring how to build its url. */

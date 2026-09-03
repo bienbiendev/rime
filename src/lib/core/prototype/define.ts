@@ -1,5 +1,6 @@
 import type { Adapter } from '$lib/core/adapter/types.js';
 import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/factory/config/types.js';
+import type { AnyHook, FeatureDefinition, HookTiming } from '$lib/core/features/define.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { GenericDoc } from './types.js';
@@ -39,6 +40,32 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
   singleton: boolean;
 
   /**
+   * The features that extend this prototype, **in the order their augments run** — which is the
+   * order their fields land in, and therefore the order of the columns.
+   *
+   * By value, not by name, and declared here rather than each feature declaring `extends`. The
+   * prototype owns its table, so the prototype says what may add to it and where. That also makes
+   * this list the single source for the type fold: read `as const`, it is the same order at
+   * compile time as at runtime, with no second tuple to keep in step.
+   */
+  features: FeatureDefinition[];
+
+  /**
+   * The prototype's *own* document hooks — the ones that are its, unconditionally.
+   *
+   * There is no `pipeline.server.ts` any more, and its absence is the point. That file listed
+   * every hook by hand, including `...featureHooks(upload, collection, 'beforeRead')` and a
+   * ternary per conditional — a prototype knowing the features that extend it, which is the
+   * inversion this whole design removes. Every one of those conditionals turned out to be a
+   * feature gate: `collection.auth ? [...] : []` is the auth feature's `enabled`.
+   *
+   * So what is left here is unconditional, and short. `buildPipeline` merges it with whatever the
+   * listed features contribute and `resolvePipeline` decides the order from the marks each hook
+   * declares. Nothing here names a feature; nothing here says where a feature's hook goes.
+   */
+  hooks?: Partial<Record<HookTiming, AnyHook[]>>;
+
+  /**
    * Run once per process, per config of this kind. The prototype's own boot hook: what a kind
    * needs doing before any request can be served.
    */
@@ -72,7 +99,7 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
    * slug literals and document types that a mapped type cannot recover from a runtime registry.
    *
    * Never assigned — the same `$Infer…` device `BuildConfig` uses for plugins and auth plugins.
-   * `PrototypeAccessors` in registry.server.ts reads it back off the barrel.
+   * `PrototypeAccessors` (prototype/accessors.server.ts) no longer reads it — see the note there.
    */
   readonly $InferAccessor: Accessor;
 };
@@ -145,6 +172,11 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Acces
 ): PrototypeDefinition<C, Accessor> =>
   ({
     singleton: options.singleton ?? false,
+    // Defaulted rather than optional: `buildPipeline` filters this on every config, and a
+    // prototype with no features is a real case (a third kind would start there). `hooks` stays
+    // undefined-able because the pipeline already treats a missing timing as none.
+    features: options.features ?? [],
+    hooks: options.hooks,
     boot: options.boot,
     api: options.api,
     rest: options.rest

@@ -25,7 +25,9 @@
  * the type already covers, and those stay absent from here — the fold below skips a name it does
  * not find, so absence means "leaves the type alone".
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+// `T` is unused here on purpose: an empty declaration-merging target cannot reference its own
+// parameter, and every merged member does use it (`title: T & { asTitle: string }`).
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unused-vars
 export interface FeatureConfigAugment<T> {}
 
 /**

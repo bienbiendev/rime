@@ -1,8 +1,10 @@
+import { augmentHooks } from '$lib/core/operations/build-pipeline.server.js';
+import { area as areaPrototype } from '../definition.server.js';
+import { applyAugments } from '$lib/core/features/apply.js';
+import { areaFeatures } from '../definition.js';
 import type { AreaWithoutSlug } from '$lib/core/prototype/area/config/types.js';
 import type { Area, BuiltArea } from '$lib/core/factory/config/types.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
-import { augmentWithFeatures } from '$lib/core/features/registry.js';
-import { augmentAreaHooks } from '$lib/core/prototype/area/pipeline.server.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import { capitalize } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';
@@ -15,8 +17,8 @@ export const create = <S extends string>(
 
   const initial = { ...area };
   // As the client chain, with the hooks step last.
-  const withFeatures = augmentWithFeatures(initial, 'area');
-  const augmented = augmentAreaHooks(withFeatures);
+  const withFeatures = applyAugments(areaFeatures, initial);
+  const augmented = augmentHooks(areaPrototype, withFeatures);
 
   return {
     ...augmented,

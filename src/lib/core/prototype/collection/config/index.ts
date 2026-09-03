@@ -1,5 +1,5 @@
-import { augmentAuth } from '$lib/core/features/auth/augment.js';
-import { augmentWithFeatures } from '$lib/core/features/registry.js';
+import { applyAugments } from '$lib/core/features/apply.js';
+import { collectionFeatures } from '../definition.js';
 import type { CollectionWithoutSlug } from '$lib/core/prototype/collection/config/types.js';
 import type { BuiltCollection, Collection } from '$lib/core/factory/config/types.js';
 import { access } from '$lib/util/index.js';
@@ -15,16 +15,16 @@ export const create = <S extends string>(
   //
   const collection: Collection<S> = { ...incomingConfig, slug };
   const initial = { ...collection };
-  // The collection's own augments run first, then every feature's in registry order.
+  // The collection's own augments run first, then every feature's in the order the prototype
+  // listed them.
   //
-  // That ordering is now load-bearing rather than incidental: `title` resolves `asTitle` from the
-  // fallback `auth` and `upload` each offer, so auth has to have run before the feature block.
-  // It also moves auth's and metas' fields relative to the feature fields — see the commit
-  // message; the column order changes and a migration comes with it.
+  // `auth` is not called here any more: it is a feature, and it is *first* in the prototype's
+  // list, which is what `title` needs — `title` resolves `asTitle` from the fallback `auth` and
+  // `upload` each offer, so auth has to have run before it. Calling it here as well appended its
+  // fields twice and boot rejected the config with "Duplicate field 'name' in collection 'staff'".
   const withLabel = augmentLabel(initial);
-  const withAuth = augmentAuth(withLabel);
-  const withPanel = augmentPanel(withAuth);
-  const augmented = augmentWithFeatures(withPanel, 'collection');
+  const withPanel = augmentPanel(withLabel);
+  const augmented = applyAugments(collectionFeatures, withPanel);
 
   return {
     type: 'collection',

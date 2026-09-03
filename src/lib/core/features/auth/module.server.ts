@@ -1,9 +1,9 @@
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { Collection } from '$lib/core/factory/config/types.js';
-import { augmentAuth, type WithNormalizedAuth } from './augment.js';
+import { augmentAuth as augmentAuthBase, type WithNormalizedAuth } from './module.js';
 
-export const augmentAuthServer = <T extends Collection<any>>(config: T): WithNormalizedAuth<T> => {
-  const collection = augmentAuth(config);
+export const augmentAuth = <T extends Collection<any>>(config: T): WithNormalizedAuth<T> => {
+  const collection = augmentAuthBase(config);
 
   const IS_API_AUTH = collection.auth?.type === 'apiKey';
 

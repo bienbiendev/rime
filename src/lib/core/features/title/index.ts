@@ -1,4 +1,5 @@
 import { defineFeature } from '../define.js';
+import { setDocumentTitle } from '$lib/core/operations/steps/set-document-title.server.js';
 import { augmentTitle } from './augment.js';
 
 /**
@@ -10,11 +11,15 @@ import { augmentTitle } from './augment.js';
  * nothing of any other.
  */
 export const title = defineFeature({
+  name: 'title',
   type: 'augment',
-  extends: ['collection', 'area'],
   requires: ['upload'],
   enabled: () => true,
-  augment: augmentTitle
+  augment: augmentTitle,
+
+  // The hook that reads what the augment resolved. Both halves of one idea, so both live here;
+  // the prototype's pipeline used to hold the second.
+  hooks: { beforeRead: [setDocumentTitle] }
 });
 
 /** Resolves `asTitle`, which the built config declares as required. */

@@ -1,5 +1,5 @@
 import type { HookTiming } from '$lib/core/features/define.js';
-import { featuresFor } from '$lib/core/features/registry.js';
+import { getPrototype } from '$lib/core/prototype/registry.server.js';
 import { logger } from '$lib/core/logger.server.js';
 import { marksOf } from '$lib/core/operations/resolve-pipeline.server.js';
 import type { PrototypeName } from '$lib/core/prototype/registry.server.js';
@@ -36,7 +36,7 @@ const featureOwning = (
   timing: string,
   hook: unknown
 ): string | undefined =>
-  featuresFor(prototype).find(
+  (getPrototype(prototype)?.features ?? []).find(
     (feature) =>
       feature.enabled(config) &&
       (feature.hooks?.[timing as HookTiming] ?? []).some((candidate) => candidate === hook)

@@ -1,4 +1,6 @@
-import { augmentCollectionHooks } from '$lib/core/prototype/collection/pipeline.server.js';
+import { augmentHooks } from '$lib/core/operations/build-pipeline.server.js';
+import { collection as collectionPrototype } from '$lib/core/prototype/collection/definition.js';
+import { collectionHooks } from '$lib/core/prototype/collection/hooks.server.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
@@ -56,7 +58,12 @@ export function makeVersionsCollectionsAliases<C extends Config>(config: C) {
         _generateSchema: false
       } as const;
 
-      versionedCollection = augmentCollectionHooks(versionedCollection);
+      // As upload's derived directories collection: the prototype's own hooks plus the features
+      // its definition lists, named separately because this module is reached from the definition.
+      versionedCollection = augmentHooks(
+        { features: collectionPrototype.features, hooks: collectionHooks },
+        versionedCollection
+      );
 
       config.collections = [...(config.collections || []), versionedCollection];
     }

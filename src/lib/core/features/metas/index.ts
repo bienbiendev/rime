@@ -12,8 +12,8 @@ import { augmentMetas } from './augment.js';
  * feature — `extends` says which prototypes, and that is the interesting part.
  */
 export const metas = defineFeature({
+  name: 'metas',
   type: 'augment',
-  extends: ['collection', 'area'],
   requires: [],
   enabled: () => true,
   augment: augmentMetas

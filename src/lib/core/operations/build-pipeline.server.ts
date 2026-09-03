@@ -1,12 +1,11 @@
-import type { PrototypeName } from '$lib/core/prototype/registry.server.js';
 import type { Dic } from '$lib/util/types.js';
 import type { HookTiming } from '../features/define.js';
-import { featureHooksFor } from '../features/registry.js';
+import type { PrototypeDefinition } from '../prototype/define.js';
 import { logger } from '../logger.server.js';
 import { marksOf, resolvePipeline } from './resolve-pipeline.server.js';
 
-/** Every timing a pipeline can carry. A prototype simply declares nothing for the ones it has
- *  no use for — an area has no create or delete. */
+/** Every timing a pipeline can carry. A prototype declares nothing for the ones it has no use
+ *  for — an area has no create or delete. */
 const TIMINGS: HookTiming[] = [
   'beforeOperation',
   'beforeRead',
@@ -18,37 +17,34 @@ const TIMINGS: HookTiming[] = [
   'afterDelete'
 ];
 
-type OwnHooks = Partial<Record<HookTiming, unknown[]>>;
-
 /**
- * Composes one config's pipeline out of the three layers that contribute to it, and orders it.
+ * Composes one config's pipeline out of the two layers that contribute to it, and orders it.
  *
- * The three sources go in as one list per timing, and that list's order is only the *tie-break*
- * — `resolvePipeline` decides the rest from what each hook declares. What matters is what is not
- * here: no prototype names a feature. Before this, a collection's `beforeRead` literally read
- * `...featureHooks(upload, collection, 'beforeRead')`, so extending a prototype meant editing it.
+ * Both come off the definition: its own `hooks`, then each feature it `features`-lists, for the
+ * features this config actually enables. There is no third place — the file that used to hold a
+ * hand-written list per prototype is gone, and with it the last thing that knew both a prototype
+ * and the features extending it.
  *
- * The tie-break order — prototype, then features in registry order, then the consumer's — is the
- * one thing chosen rather than derived, and it is chosen to be *stable*: field order is column
- * order elsewhere in this repo, so two configs declaring the same hooks must resolve the same
- * way every time.
+ * The list order is only the *tie-break*; `resolvePipeline` decides the rest from what each hook
+ * declares. That it is stable still matters — field order is column order elsewhere in this repo.
  */
 export const buildPipeline = (
-  prototype: PrototypeName,
+  definition: Pick<PrototypeDefinition, 'features' | 'hooks'>,
   config: Dic,
-  own: OwnHooks,
   consumer: Dic | undefined
 ): Dic => {
   const pipeline: Dic = {};
+  const active = definition.features.filter((feature) => feature.enabled(config));
 
   for (const timing of TIMINGS) {
+    const own = definition.hooks?.[timing] ?? [];
+    const fromFeatures = active.flatMap((feature) => feature.hooks?.[timing] ?? []);
     const hooks = [
-      ...(own[timing] ?? []),
-      ...featureHooksFor(prototype, config, timing),
+      ...own,
+      ...fromFeatures,
       // A consumer's hooks are last only as a tie-break. Under the resolver they no longer land
       // unconditionally at the end: a `beforeRead` hook defaults to requiring `shaped` and
-      // providing `document`, so `sortDocumentProps` now waits for it. It used to run *after*
-      // the sort, leaving any property a consumer added unsorted.
+      // providing `document`, so `sortDocumentProps` now waits for it.
       ...((consumer?.[timing] as unknown[]) ?? [])
     ];
 
@@ -57,24 +53,38 @@ export const buildPipeline = (
       continue;
     }
 
-    // A rime-owned hook with no name makes `hooks.generated.md` unreadable exactly where it
-    // matters, and the generated file is the only place the order is legible now. Consumer hooks
-    // are deliberately exempt — nobody needs to identify someone else's hook in rime's own doc —
-    // which is why this counts the prototype's and the features' contributions only.
-    const owned = (own[timing]?.length ?? 0) + featureHooksFor(prototype, config, timing).length;
+    // A rime-owned hook with no name makes the generated pipeline unreadable exactly where it
+    // matters. Consumer hooks are exempt — nobody needs to identify someone else's hook here.
     const unnamed = hooks
-      .slice(0, owned)
+      .slice(0, own.length + fromFeatures.length)
       .filter((hook) => marksOf(hook).name === 'anonymous').length;
 
     if (unnamed) {
       logger.warn(
-        `${prototype} ${config.slug} ${timing}: ${unnamed} rime-owned hook(s) declare no name, ` +
-          `so they appear as "anonymous" in hooks.generated.md.`
+        `${config.type} ${config.slug} ${timing}: ${unnamed} rime-owned hook(s) declare no name.`
       );
     }
 
-    pipeline[timing] = resolvePipeline({ hooks, label: `${prototype} ${config.slug} ${timing}` });
+    pipeline[timing] = resolvePipeline({
+      hooks,
+      label: `${config.type} ${config.slug} ${timing}`
+    });
   }
 
   return pipeline;
 };
+
+/**
+ * Attaches the resolved pipeline to a config. What `augmentCollectionHooks` used to do.
+ *
+ * The return says `$hooks` is there rather than leaving it to the caller's own declaration: a
+ * built config declares it already, so the intersection changes nothing for them, and a caller
+ * that does not — the order fixture — can read it without a cast asserting what this line does.
+ */
+export const augmentHooks = <T extends Dic>(
+  definition: Pick<PrototypeDefinition, 'features' | 'hooks'>,
+  config: T
+): T & { $hooks: Dic } => ({
+  ...config,
+  $hooks: buildPipeline(definition, config, config.$hooks as Dic | undefined)
+});

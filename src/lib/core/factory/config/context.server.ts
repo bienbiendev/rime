@@ -3,6 +3,16 @@ import { RimeError } from '../../errors/index.js';
 import type { BuildConfig } from './build.server.js';
 
 /**
+ * What `event.locals.rime.config` is.
+ *
+ * Declared here rather than in rime.server.ts, beside the function it is derived from. It used to
+ * live there, which meant anything wanting to name the config context had to import rime.server.js
+ * — and `createAuthInstance` does, so the auth instance closed a `rime.server → boot.server →
+ * instance.server` cycle just to borrow a type from a module it is imported by.
+ */
+export type ConfigContext<C extends Config = Config> = ReturnType<typeof createConfigContext<C>>;
+
+/**
  * Object passed to the locals.rime to access the configuration in the server context
  * it is created once on server start and can be used in any server context (load, actions, hooks, etc) via `event.locals.rime.config`
  *

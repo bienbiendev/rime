@@ -1,7 +1,8 @@
-import { augmentWithFeatures } from '$lib/core/features/registry.js';
+import { applyAugments } from '$lib/core/features/apply.js';
+import { areaFeatures } from '../definition.js';
 import type { AreaWithoutSlug } from '$lib/core/prototype/area/config/types.js';
 import type { Area, BuiltArea } from '$lib/core/factory/config/types.js';
-import { capitalize, toKebabCase } from '$lib/util/string.js';
+import { capitalize } from '$lib/util/string.js';
 import { FileText } from '@lucide/svelte';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
 
@@ -14,7 +15,7 @@ export const create = <S extends string>(
   const initial = { ...area };
   // An area declares no augments of its own — metas and title, which used to bracket the feature
   // block here, are features now. Everything it gets, it gets from the registry.
-  const augmented = augmentWithFeatures(initial, 'area');
+  const augmented = applyAugments(areaFeatures, initial);
 
   return {
     type: 'area',

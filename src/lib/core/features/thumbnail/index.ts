@@ -1,4 +1,5 @@
 import { defineFeature } from '../define.js';
+import { setDocumentThumbnail } from '$lib/core/operations/steps/set-document-thumbnail.server.js';
 import { augmentThumbnail } from './augment.js';
 
 /**
@@ -9,11 +10,13 @@ import { augmentThumbnail } from './augment.js';
  * step.
  */
 export const thumbnail = defineFeature({
+  name: 'thumbnail',
   type: 'augment',
-  extends: ['collection'],
   requires: [],
   enabled: () => true,
-  augment: augmentThumbnail
+  augment: augmentThumbnail,
+
+  hooks: { beforeRead: [setDocumentThumbnail] }
 });
 
 /** Resolves `asThumbnail`, which the built collection declares as required. */

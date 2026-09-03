@@ -20,8 +20,8 @@ import { augmentVersions } from './augment.js';
  * `$rime/modules` pair, only this definition.
  */
 export const versions = defineFeature({
+  name: 'versions',
   type: 'shadow',
-  extends: ['collection', 'area'],
   requires: [],
 
   /** A config uses this feature by declaring `versions`. */

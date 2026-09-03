@@ -14,8 +14,8 @@ import { defineFeature } from '../define.js';
  * one definition rather than a pair that has to be kept in step.
  */
 export const upload = defineFeature({
+  name: 'upload',
   type: 'augment',
-  extends: ['collection'],
   requires: [],
 
   /** A config uses this feature by declaring `upload`. */

@@ -8,8 +8,8 @@ import { defineFeature } from '../define.js';
  * Collections only — an area is a single document, so there is nothing for it to be nested in.
  */
 export const nested = defineFeature({
+  name: 'nested',
   type: 'augment',
-  extends: ['collection'],
   requires: [],
 
   /** A config uses this feature by declaring `nested`. */

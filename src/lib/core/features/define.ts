@@ -1,4 +1,3 @@
-import type { PrototypeName } from '$lib/core/prototype/registry.server.js';
 import type { Dic } from '$lib/util/types.js';
 
 /**
@@ -19,6 +18,17 @@ import type { Dic } from '$lib/util/types.js';
  */
 export type FeatureDefinition = {
   /**
+   * The feature's name, used to identify it in the generated pipeline and to deduplicate the
+   * whole-config steps (`configure`, `boot`) when several prototypes list the same feature.
+   *
+   * Explicit, where it used to be the registry barrel's key. There is no barrel any more — a
+   * prototype names the features that extend it, by value — so nothing is left to infer a name
+   * from. Same reason a hook declares its own: the thing is passed as an argument, and an
+   * argument has no name.
+   */
+  name: string;
+
+  /**
    * What the feature does to the database, which is what tells the adapter whether to generate
    * anything for it:
    *
@@ -28,15 +38,12 @@ export type FeatureDefinition = {
    */
   type: 'augment' | 'shadow' | 'child';
 
-  /** The prototypes this feature applies to, by registry name. */
-  extends: PrototypeName[];
-
   /**
-   * Features this one is built on top of, by registry name.
+   * Features this one is built on top of, by name.
    *
    * Also an ordering statement: a feature runs after everything it requires. Rather than sorting
-   * by it, the registry *checks* it against the barrel's own order — so the order stays readable
-   * in one place, and a barrel that contradicts a `requires` fails loudly at import.
+   * by it, `definePrototype` *checks* it against the order the prototype listed — so the order
+   * stays readable where it is declared, and a list that contradicts a `requires` fails loudly.
    */
   requires: string[];
 
@@ -120,10 +127,17 @@ export type HookTiming =
  */
 export type AnyHook = (args: any) => any;
 
-/**
- * A feature definition as the registry hands it back: the definition plus the name it is exported
- * under. See registry.ts — the name is the barrel key, not a field to keep in sync with it.
- */
-export type RegisteredFeature = FeatureDefinition & { name: string };
+/** Kept as an alias while call sites migrate: a feature now carries its own name. */
+export type RegisteredFeature = FeatureDefinition;
 
-export const defineFeature = (definition: FeatureDefinition): FeatureDefinition => definition;
+/**
+ * Generic in the *name only*, so `name` survives as a literal — which is what lets a prototype's
+ * `features` list yield an ordered tuple of names for the type fold.
+ *
+ * Not `<const D extends FeatureDefinition>`: that also freezes every array literal in the
+ * definition into a fixed-length tuple, so `hooks.beforeRead` typed as `[Hook]` and refused a
+ * plain `Hook[]`.
+ */
+export const defineFeature = <N extends string>(
+  definition: FeatureDefinition & { name: N }
+): FeatureDefinition & { name: N } => definition;

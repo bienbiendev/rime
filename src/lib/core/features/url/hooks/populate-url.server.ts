@@ -10,7 +10,13 @@ import { Hooks } from '$lib/core/factory/hooks.js';
  */
 export const populateURL = Hooks.beforeRead<'generic'>({
   name: 'populateURL',
-  requires: ['shaped'],
+  // `title` because `config.$url(document)` below is the author's own function over the whole
+  // document, and a slug built from the title is the ordinary case — so the derived title has to
+  // be there before it runs. The hand-written pipeline got this from list position; under marks it
+  // has to be said, and this is the first thing that requires `title` rather than only providing
+  // it. Not `document`: several read hooks both require and provide that, so requiring it here
+  // would close a cycle with `setDocumentThumbnail`.
+  requires: ['shaped', 'title'],
   provides: ['document'],
   run: async (args) => {
     const select =

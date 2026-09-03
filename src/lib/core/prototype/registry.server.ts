@@ -1,6 +1,10 @@
-import { area } from './area/index.server.js';
-import { collection } from './collection/index.server.js';
 import type { PrototypeDefinition, RegisteredPrototype } from './define.js';
+import { area } from './area/definition.server.js';
+import { collection } from './collection/definition.server.js';
+import type { PrototypeName } from './registry.js';
+
+/** Server-side prototypes: the halves carrying `api`, `rest` and `boot`. */
+const protos = { collection, area };
 
 /**
  * The prototype registry — "Protos".
@@ -9,11 +13,9 @@ import type { PrototypeDefinition, RegisteredPrototype } from './define.js';
  * key, and adding a kind is adding a folder and an export. `config.type` on a built config is
  * that same name, which is what matches a config to its definition.
  */
-const protos = { collection, area };
-
 export { area, collection };
 
-export type PrototypeName = keyof typeof protos;
+export type { PrototypeName };
 
 /**
  * The accessors the definitions contribute to `event.locals.rime` — `rime.collection(slug)`,
@@ -24,9 +26,16 @@ export type PrototypeName = keyof typeof protos;
  * signatures: each carries its own slug literals and document types, which only the definition
  * knows. That is why the phantom exists at all.
  */
-export type PrototypeAccessors = {
-  [Name in PrototypeName]: (typeof protos)[Name]['$InferAccessor'];
-};
+// Type-only, and read from `api.server.ts` rather than off the definition — which is a
+// correctness requirement, not a preference. `App.Locals['rime']` is built from these, and a
+// definition now carries its own hooks; a hook is typed through `HookContext`, which reaches
+// `event.locals.rime`. Reading the accessor off the definition therefore made every hook's type
+// depend on itself, and TypeScript answered `any` for all of them. `api.server.ts` imports no
+// hooks, so taking the accessors straight from it cuts the loop.
+// `PrototypeAccessors` moved to ./accessors.server.ts — it is named by `RimeContext`, so
+// anything it imports lands in every hook's type graph. See the note there.
+export type { PrototypeAccessors } from './accessors.server.js';
+
 
 /** Every registered prototype, each carrying the name it is exported under. */
 // Each definition is written against its own config kind — area's boot takes a BuiltArea — and

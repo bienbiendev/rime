@@ -58,7 +58,13 @@ async function ensureFirstAuthSetup<C extends Config>(rime: RimeContext<C>): Pro
  */
 async function authenticateRequest(
   headers: Headers,
-  auth: RimeContext['auth']
+  // Typed by what this uses, not by the whole instance. `RimeContext['auth']` resolves to
+  // `RimeAuth<Config>`, and a better-auth instance varies with the plugins its config declared,
+  // so the one a real request carries is not assignable to that base. Making the helper generic
+  // does not help either — `RimeContext<C>['auth']` has no resolved `api` while `C` is unbound.
+  // Naming the one call it makes keeps the plugin typing intact everywhere it matters and asks
+  // for nothing here that this function does not actually need.
+  auth: { api: { getSession(args: { headers: Headers }): Promise<AuthResult | null> } }
 ): Promise<AuthResult | null> {
   return await auth.api.getSession({ headers });
 }
@@ -107,13 +113,24 @@ function validateAdminRoles(user: any, authUser: any): void {
   }
 }
 
+/** The slice of better-auth this file needs for api keys — see handleApiKeyAuth. */
+type ApiKeyVerifier = {
+  api: {
+    verifyApiKey(args: { body: { key: string } }): Promise<{
+      valid: boolean;
+      key?: { permissions?: { roles: string[] } | null } | null;
+    }>;
+  };
+};
+
 /**
  * Handles API key authentication and role forwarding
  */
 async function handleApiKeyAuth(
   headers: Headers,
   user: any,
-  auth: RimeContext['auth']
+  // As above: the one call this makes, rather than the whole instance.
+  auth: ApiKeyVerifier
 ): Promise<void> {
   const apiKey = headers.get('x-api-key');
   if (!apiKey) return;
@@ -146,8 +163,13 @@ async function buildUserData<C extends Config>(
   // Validate admin roles consistency
   validateAdminRoles(user, authUser);
 
-  // Handle API key authentication
-  await handleApiKeyAuth(headers, user, rime.auth);
+  // Handle API key authentication.
+  //
+  // The narrowing is local and deliberate: `C` is still an unbound type parameter here, so
+  // better-auth's `api` — which is built from the plugin list a config declares — has nothing
+  // concrete to offer yet. The api-key plugin is always in the base config, so the call is sound;
+  // it just cannot be proven from inside a function generic over every config.
+  await handleApiKeyAuth(headers, user, rime.auth as unknown as ApiKeyVerifier);
 
   return { user, session, authUser };
 }

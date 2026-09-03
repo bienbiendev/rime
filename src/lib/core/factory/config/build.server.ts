@@ -1,6 +1,7 @@
 import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
 import { augmentStaffServer } from '../../features/auth/staff/augment.server.js';
 import { configureWithFeatures } from '../../features/registry.js';
+import { prototypes } from '$lib/core/prototype/registry.js';
 import { makeVersionsCollectionsAliases } from '../../features/versions/derive.server.js';
 import { createRime, type Rime } from '../../rime.server.js';
 import { augmentCORS } from './augment-cors.server.js';
@@ -26,7 +27,7 @@ function augmentConfig<T extends Config>(config: T) {
   const withPanelAccess = augmentPanelAccess(withPanel);
   const withCORS = augmentCORS(withPanelAccess);
   const withPluginsServer = augmentPluginsServer(withCORS);
-  const withFeatures = configureWithFeatures(withPluginsServer);
+  const withFeatures = configureWithFeatures(prototypes, withPluginsServer);
   const output = augmentPlugins(withFeatures);
   return output;
 }

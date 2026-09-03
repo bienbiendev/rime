@@ -1,5 +1,8 @@
 # Pipelines
 
+`· name` marks a hook a feature contributed. `anonymous` is one your config contributed
+without naming it — every rime-owned hook is named, and boot warns if one is not.
+
 ## pages (collection)
 
 ```
@@ -8,13 +11,13 @@ pages (collection)
 │  └─ authorize
 ├─ beforeRead
 │  ├─ processDocumentFields
-│  ├─ setDocumentTitle
 │  ├─ setDocumentLocale
 │  ├─ setDocumentType
-│  ├─ addChildrenProperty  · nested
-│  ├─ populateURL          · url
+│  ├─ addChildrenProperty   · nested
+│  ├─ setDocumentTitle      · title
+│  ├─ populateURL           · url
 │  ├─ anonymous
-│  ├─ setDocumentThumbnail
+│  ├─ setDocumentThumbnail  · thumbnail
 │  └─ sortDocumentProps
 ├─ beforeCreate
 │  ├─ mergeWithBlankDocument
@@ -45,11 +48,11 @@ medias (collection)
 │  └─ authorize
 ├─ beforeRead
 │  ├─ processDocumentFields
-│  ├─ setDocumentTitle
 │  ├─ setDocumentLocale
 │  ├─ setDocumentType
-│  ├─ populateSizes  · upload
-│  ├─ setDocumentThumbnail
+│  ├─ populateSizes         · upload
+│  ├─ setDocumentTitle      · title
+│  ├─ setDocumentThumbnail  · thumbnail
 │  └─ sortDocumentProps
 ├─ beforeCreate
 │  ├─ mergeWithBlankDocument
@@ -82,11 +85,11 @@ news (collection)
 │  └─ authorize
 ├─ beforeRead
 │  ├─ processDocumentFields
-│  ├─ setDocumentTitle
 │  ├─ setDocumentLocale
 │  ├─ setDocumentType
-│  ├─ populateURL  · url
-│  ├─ setDocumentThumbnail
+│  ├─ setDocumentTitle      · title
+│  ├─ populateURL           · url
+│  ├─ setDocumentThumbnail  · thumbnail
 │  └─ sortDocumentProps
 ├─ beforeCreate
 │  ├─ mergeWithBlankDocument
@@ -110,36 +113,38 @@ users (collection)
 ├─ beforeOperation
 │  └─ authorize
 ├─ beforeRead
-│  ├─ removePrivateFields
+│  ├─ removePrivateFields   · auth
 │  ├─ processDocumentFields
-│  ├─ setDocumentTitle
 │  ├─ setDocumentLocale
 │  ├─ setDocumentType
-│  ├─ setDocumentThumbnail
+│  ├─ setDocumentTitle      · title
+│  ├─ setDocumentThumbnail  · thumbnail
 │  └─ sortDocumentProps
 ├─ beforeCreate
 │  ├─ mergeWithBlankDocument
-│  ├─ augmentFieldsPassword
+│  ├─ augmentFieldsPassword  · auth
 │  ├─ buildDataConfigMap
 │  ├─ setDefaultValues
 │  ├─ validateFields
-│  └─ createBetterAuthUser
+│  └─ createBetterAuthUser   · auth
+├─ afterCreate
+│  └─ populateAPIKey  · auth
 ├─ beforeUpdate
 │  ├─ defineVersionOperation
 │  ├─ getOriginalDocument
 │  ├─ buildOriginalDocConfigMap
 │  ├─ handleNewVersion
-│  ├─ augmentFieldsPassword
-│  ├─ preventSuperAdminMutation
-│  ├─ preventUserMutations
-│  ├─ forwardRolesToBetterAuth
+│  ├─ augmentFieldsPassword      · auth
+│  ├─ preventSuperAdminMutation  · auth
+│  ├─ preventUserMutations       · auth
+│  ├─ forwardRolesToBetterAuth   · auth
 │  ├─ buildDataConfigMap
 │  ├─ setDefaultValues
 │  └─ validateFields
 ├─ beforeDelete
-│  └─ preventSupperAdminDeletion
+│  └─ preventSupperAdminDeletion  · auth
 └─ afterDelete
-   └─ deleteBetterAuthUser
+   └─ deleteBetterAuthUser  · auth
 ```
 
 ## apps (collection)
@@ -149,38 +154,38 @@ apps (collection)
 ├─ beforeOperation
 │  └─ authorize
 ├─ beforeRead
-│  ├─ removePrivateFields
+│  ├─ removePrivateFields   · auth
 │  ├─ processDocumentFields
-│  ├─ setDocumentTitle
 │  ├─ setDocumentLocale
 │  ├─ setDocumentType
-│  ├─ setDocumentThumbnail
+│  ├─ setDocumentTitle      · title
+│  ├─ setDocumentThumbnail  · thumbnail
 │  └─ sortDocumentProps
 ├─ beforeCreate
 │  ├─ mergeWithBlankDocument
-│  ├─ augmentFieldsPassword
+│  ├─ augmentFieldsPassword  · auth
 │  ├─ buildDataConfigMap
 │  ├─ setDefaultValues
 │  ├─ validateFields
-│  └─ createBetterAuthUser
+│  └─ createBetterAuthUser   · auth
 ├─ afterCreate
-│  └─ populateAPIKey
+│  └─ populateAPIKey  · auth
 ├─ beforeUpdate
 │  ├─ defineVersionOperation
 │  ├─ getOriginalDocument
 │  ├─ buildOriginalDocConfigMap
 │  ├─ handleNewVersion
-│  ├─ augmentFieldsPassword
-│  ├─ preventSuperAdminMutation
-│  ├─ preventUserMutations
-│  ├─ forwardRolesToBetterAuth
+│  ├─ augmentFieldsPassword      · auth
+│  ├─ preventSuperAdminMutation  · auth
+│  ├─ preventUserMutations       · auth
+│  ├─ forwardRolesToBetterAuth   · auth
 │  ├─ buildDataConfigMap
 │  ├─ setDefaultValues
 │  └─ validateFields
 ├─ beforeDelete
-│  └─ preventSupperAdminDeletion
+│  └─ preventSupperAdminDeletion  · auth
 └─ afterDelete
-   └─ deleteBetterAuthUser
+   └─ deleteBetterAuthUser  · auth
 ```
 
 ## staff (collection)
@@ -190,36 +195,38 @@ staff (collection)
 ├─ beforeOperation
 │  └─ authorize
 ├─ beforeRead
-│  ├─ removePrivateFields
+│  ├─ removePrivateFields   · auth
 │  ├─ processDocumentFields
-│  ├─ setDocumentTitle
 │  ├─ setDocumentLocale
 │  ├─ setDocumentType
-│  ├─ setDocumentThumbnail
+│  ├─ setDocumentTitle      · title
+│  ├─ setDocumentThumbnail  · thumbnail
 │  └─ sortDocumentProps
 ├─ beforeCreate
 │  ├─ mergeWithBlankDocument
-│  ├─ augmentFieldsPassword
+│  ├─ augmentFieldsPassword  · auth
 │  ├─ buildDataConfigMap
 │  ├─ setDefaultValues
 │  ├─ validateFields
-│  └─ createBetterAuthUser
+│  └─ createBetterAuthUser   · auth
+├─ afterCreate
+│  └─ populateAPIKey  · auth
 ├─ beforeUpdate
 │  ├─ defineVersionOperation
 │  ├─ getOriginalDocument
 │  ├─ buildOriginalDocConfigMap
 │  ├─ handleNewVersion
-│  ├─ augmentFieldsPassword
-│  ├─ preventSuperAdminMutation
-│  ├─ preventUserMutations
-│  ├─ forwardRolesToBetterAuth
+│  ├─ augmentFieldsPassword      · auth
+│  ├─ preventSuperAdminMutation  · auth
+│  ├─ preventUserMutations       · auth
+│  ├─ forwardRolesToBetterAuth   · auth
 │  ├─ buildDataConfigMap
 │  ├─ setDefaultValues
 │  └─ validateFields
 ├─ beforeDelete
-│  └─ preventSupperAdminDeletion
+│  └─ preventSupperAdminDeletion  · auth
 └─ afterDelete
-   └─ deleteBetterAuthUser
+   └─ deleteBetterAuthUser  · auth
 ```
 
 ## $mediasDirectories (collection)
@@ -230,10 +237,10 @@ $mediasDirectories (collection)
 │  └─ authorize
 ├─ beforeRead
 │  ├─ processDocumentFields
-│  ├─ setDocumentTitle
 │  ├─ setDocumentLocale
 │  ├─ setDocumentType
-│  ├─ setDocumentThumbnail
+│  ├─ setDocumentTitle      · title
+│  ├─ setDocumentThumbnail  · thumbnail
 │  └─ sortDocumentProps
 ├─ beforeCreate
 │  ├─ mergeWithBlankDocument
@@ -263,9 +270,9 @@ settings (area)
 │  └─ authorize
 ├─ beforeRead
 │  ├─ processDocumentFields
-│  ├─ setDocumentTitle
 │  ├─ setDocumentLocale
 │  ├─ setDocumentType
+│  ├─ setDocumentTitle  · title
 │  └─ sortDocumentProps
 └─ beforeUpdate
    ├─ defineVersionOperation
@@ -285,9 +292,9 @@ navigation (area)
 │  └─ authorize
 ├─ beforeRead
 │  ├─ processDocumentFields
-│  ├─ setDocumentTitle
 │  ├─ setDocumentLocale
 │  ├─ setDocumentType
+│  ├─ setDocumentTitle  · title
 │  └─ sortDocumentProps
 └─ beforeUpdate
    ├─ defineVersionOperation
@@ -307,9 +314,9 @@ infos (area)
 │  └─ authorize
 ├─ beforeRead
 │  ├─ processDocumentFields
-│  ├─ setDocumentTitle
 │  ├─ setDocumentLocale
 │  ├─ setDocumentType
+│  ├─ setDocumentTitle  · title
 │  └─ sortDocumentProps
 └─ beforeUpdate
    ├─ defineVersionOperation

@@ -1,6 +1,7 @@
-import { augmentAuthServer } from '$lib/core/features/auth/augment.server.js';
-import { augmentCollectionHooks } from '$lib/core/prototype/collection/pipeline.server.js';
-import { augmentWithFeatures } from '$lib/core/features/registry.js';
+import { augmentHooks } from '$lib/core/operations/build-pipeline.server.js';
+import { collection as collectionPrototype } from '../definition.server.js';
+import { applyAugments } from '$lib/core/features/apply.js';
+import { collectionFeatures } from '../definition.js';
 import type { CollectionWithoutSlug } from '$lib/core/prototype/collection/config/types.js';
 import type { BuiltCollection, Collection } from '$lib/core/factory/config/types.js';
 import { Hooks } from '$lib/core/factory/hooks.js';
@@ -16,14 +17,13 @@ export const create = <S extends string>(
   //
   const collection: Collection<S> = { ...incomingConfig, slug };
   const initial = { ...collection };
-  // Same shape as the client chain: the collection's own augments, then every feature's. The
-  // hooks step stays at the end, after the features that contribute to the pipeline have been
-  // applied to the config it reads.
+  // Same shape as the client chain: the collection's own augments, then every feature's, and no
+  // separate `augmentAuth` — auth is a feature, listed first. The hooks step stays at the end,
+  // after the features that contribute to the pipeline have been applied to the config it reads.
   const withLabel = augmentLabel(initial);
-  const withAuth = augmentAuthServer(withLabel);
-  const withPanel = augmentPanel(withAuth);
-  const withFeatures = augmentWithFeatures(withPanel, 'collection');
-  const augmented = augmentCollectionHooks(withFeatures);
+  const withPanel = augmentPanel(withLabel);
+  const withFeatures = applyAugments(collectionFeatures, withPanel);
+  const augmented = augmentHooks(collectionPrototype, withFeatures);
 
   return {
     ...augmented,

@@ -177,6 +177,18 @@ export type CoreHookMark =
   /** Anything that writes a document property declares this, so a hook that must run after every
    *  writer — `sortDocumentProps` — can wait on all of them without naming one. */
   | 'document'
+  /**
+   * Every hook that reads the caller's submission *as sent* has run, so hooks may now add to
+   * `data`.
+   *
+   * The write-side twin of `sanitized`, and it exists because the auth guards are not merely
+   * early by taste: `preventUserMutations` rejects on `'name' in args.data` and
+   * `preventSuperAdminMutation` on `'isSuperAdmin' in args.data`, so a default filled in before
+   * them turns an ordinary update into a 401. `forwardRolesToBetterAuth` reads `data.roles` the
+   * same way. Nothing here names auth — a mark no active hook provides is satisfied, so on a
+   * collection without it the shaping chain simply starts straight away.
+   */
+  | 'data-inspected'
   /** The blank document has been merged in, so `config.fields` is the final field list. */
   | 'blank-merged'
   /** `config.fields` is final and may be read to build a config map. */

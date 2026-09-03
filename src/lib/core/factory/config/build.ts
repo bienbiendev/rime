@@ -1,4 +1,5 @@
 import { configureWithFeatures } from '../../features/registry.js';
+import { prototypes } from '$lib/core/prototype/registry.js';
 import { augmentIcons } from './augment-icons.js';
 import type { SanitizedConfigClient } from './types.js';
 import { augmentPanel } from './augment-panel.js';
@@ -9,7 +10,7 @@ export const buildConfigClient = <C extends SanitizedConfigClient>(config: C) =>
   const withStaff = augmentStaff(config);
   const withIcons = augmentIcons(withStaff);
   const withPanel = augmentPanel(withIcons);
-  const withFeatures = configureWithFeatures(withPanel);
+  const withFeatures = configureWithFeatures(prototypes, withPanel);
   const output = augmentPlugins(withFeatures);
   return output;
 };

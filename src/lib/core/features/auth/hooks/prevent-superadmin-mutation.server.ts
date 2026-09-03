@@ -8,7 +8,8 @@ import { Hooks } from '$lib/core/factory/hooks.js';
 export const preventSuperAdminMutation = Hooks.beforeUpdate({
   name: 'preventSuperAdminMutation',
   requires: ['original-doc'],
-  provides: [],
+  // Runs before anything adds to `data`: this reads the caller's submission as sent.
+  provides: ['data-inspected'],
   run: async (args) => {
     const { event, context } = args;
     const originalDoc = context.originalDoc;
