@@ -1,7 +1,7 @@
 import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
 import { augmentStaffServer } from '../../features/auth/staff/augment.server.js';
 import { configureWithFeatures } from '../../features/registry.js';
-import { prototypes } from '$lib/core/prototype/registry.js';
+import { configureWithPrototypes, prototypes } from '$lib/core/prototype/registry.js';
 import { makeVersionsCollectionsAliases } from '../../features/versions/derive.server.js';
 import { createRime, type Rime } from '../../rime.server.js';
 import { augmentCORS } from './augment-cors.server.js';
@@ -10,7 +10,6 @@ import { augmentPanelAccess } from './augment-panel-access.server.js';
 import { augmentPanel } from './augment-panel.js';
 import { augmentPlugins } from './augment-plugins.js';
 import { augmentPluginsServer } from './augment-plugins.server.js';
-import { augmentPrototypes } from './augment-prototypes.js';
 import type { Config } from './types.js';
 
 export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>> => {
@@ -21,7 +20,7 @@ export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>>
 
 function augmentConfig<T extends Config>(config: T) {
   const withStaff = augmentStaffServer(config);
-  const withPrototype = augmentPrototypes(withStaff);
+  const withPrototype = configureWithPrototypes(withStaff);
   const withIcons = augmentIcons(withPrototype);
   const withPanel = augmentPanel(withIcons);
   const withPanelAccess = augmentPanelAccess(withPanel);

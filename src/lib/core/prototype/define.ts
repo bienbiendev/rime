@@ -66,6 +66,21 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
   hooks?: Partial<Record<HookTiming, AnyHook[]>>;
 
   /**
+   * What this prototype adds to the **whole** config, rather than to one config of its own kind.
+   *
+   * The mirror of `FeatureDefinition.configure`, and it exists for the same reason a feature has
+   * one: some of what a kind is responsible for is a statement about the config as a whole. For
+   * both prototypes here that is one line — its own list exists, empty if the user named none —
+   * which the config factory used to do on their behalf in `augmentPrototypes`, naming
+   * `collections` and `areas` itself.
+   *
+   * What it does to the config's *type* is declared in register.ts, beside the definition, since
+   * the defaulting is only worth doing if `config.areas` stops being `possibly undefined`
+   * downstream.
+   */
+  configure?: (config: any) => any;
+
+  /**
    * Run once per process, per config of this kind. The prototype's own boot hook: what a kind
    * needs doing before any request can be served.
    */
@@ -177,6 +192,7 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Acces
     // undefined-able because the pipeline already treats a missing timing as none.
     features: options.features ?? [],
     hooks: options.hooks,
+    configure: options.configure,
     boot: options.boot,
     api: options.api,
     rest: options.rest

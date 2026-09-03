@@ -1,6 +1,20 @@
+import type { Dic } from '$lib/util/types.js';
 import type { PrototypeDefinition, RegisteredPrototype } from './define.js';
+import type { ApplyPrototypeConfigure } from './register.js';
 import { area } from './area/index.js';
 import { collection } from './collection/index.js';
+
+/**
+ * Every prototype's name, in the order the whole-config steps fold them.
+ *
+ * A tuple rather than `keyof typeof protos`, because `ApplyPrototypeConfigure` needs the order and
+ * `keyof` gives an unordered union. It cannot drift from the object below: `protos` is annotated
+ * `Record<PrototypeName, …>`, so a prototype added there without a name here is an excess
+ * property, and a name here with no entry there is a missing one.
+ */
+export const prototypeNames = ['collection', 'area'] as const;
+
+export type PrototypeName = (typeof prototypeNames)[number];
 
 /**
  * The prototype registry, isomorphic half.
@@ -13,11 +27,9 @@ import { collection } from './collection/index.js';
  * both sides and needs each prototype's `features` list — which used to be unreachable from a
  * client build, back when the definition was a single `.server.ts` file.
  */
-export const protos = { collection, area };
+export const protos: Record<PrototypeName, PrototypeDefinition> = { collection, area };
 
 export { area, collection };
-
-export type PrototypeName = keyof typeof protos;
 
 /**
  * Every registered prototype. What the whole-config feature steps iterate.
@@ -34,3 +46,19 @@ export const prototypes: RegisteredPrototype[] = Object.entries(protos).map(
   // cannot hold both and stay iterable.
   ([name, definition]) => ({ ...(definition as PrototypeDefinition), name })
 );
+
+/**
+ * Runs every prototype's `configure` over the whole config — the prototype twin of
+ * `configureWithFeatures`.
+ *
+ * Folded over `prototypeNames`, so one declaration fixes the order at runtime and in the type.
+ * That order is what `ApplyPrototypeConfigure` replays: it matters for a transform that is not
+ * merely additive, and neither of the two here is one yet.
+ */
+export const configureWithPrototypes = <T extends Dic>(
+  config: T
+): ApplyPrototypeConfigure<T, typeof prototypeNames> =>
+  prototypeNames.reduce(
+    (current: Dic, name) => (protos[name].configure ? protos[name].configure(current) : current),
+    config
+  ) as ApplyPrototypeConfigure<T, typeof prototypeNames>;

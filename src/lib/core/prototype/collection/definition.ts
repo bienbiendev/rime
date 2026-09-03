@@ -6,6 +6,7 @@ import { title } from '$lib/core/features/title/index.js';
 import { upload } from '$lib/core/features/upload/index.js';
 import { url } from '$lib/core/features/url/index.js';
 import { versions } from '$lib/core/features/versions/index.js';
+import type { BuiltCollection } from '$lib/core/factory/config/types.js';
 import { definePrototype } from '../define.js';
 
 /**
@@ -40,5 +41,23 @@ export const collection = definePrototype({
    * The prototype owns its table, so the prototype says what may add to it and where; no feature
    * declares `extends: ['collection']` about somebody else's.
    */
-  features: [...collectionFeatures]
+  features: [...collectionFeatures],
+
+  /**
+   * A config always has a `collections` list, empty if the user named none.
+   *
+   * One line, but it belongs here rather than in the config factory: every step downstream reads
+   * `config.collections` without guarding, and what makes that sound is a statement about what a
+   * collection is — not something core should be defaulting on the kind's behalf.
+   */
+  configure: <T extends { collections?: BuiltCollection[] }>(config: T) => ({
+    ...config,
+    collections: config.collections || []
+  })
 });
+
+declare module '$lib/core/prototype/register.js' {
+  interface PrototypeConfigure<T> {
+    collection: T & { collections: BuiltCollection[] };
+  }
+}

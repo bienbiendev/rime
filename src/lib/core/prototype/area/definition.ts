@@ -2,6 +2,7 @@ import { metas } from '$lib/core/features/metas/index.js';
 import { title } from '$lib/core/features/title/index.js';
 import { url } from '$lib/core/features/url/index.js';
 import { versions } from '$lib/core/features/versions/index.js';
+import type { BuiltArea } from '$lib/core/factory/config/types.js';
 import { definePrototype } from '../define.js';
 
 /**
@@ -22,5 +23,17 @@ export const area = definePrototype({
    * it to be nested in. It simply does not list them — where it used to be each of those
    * features declaring `extends: ['collection']` about somebody else.
    */
-  features: [...areaFeatures]
+  features: [...areaFeatures],
+
+  /** A config always has an `areas` list, empty if the user named none. See collection's. */
+  configure: <T extends { areas?: BuiltArea[] }>(config: T) => ({
+    ...config,
+    areas: config.areas || []
+  })
 });
+
+declare module '$lib/core/prototype/register.js' {
+  interface PrototypeConfigure<T> {
+    area: T & { areas: BuiltArea[] };
+  }
+}
