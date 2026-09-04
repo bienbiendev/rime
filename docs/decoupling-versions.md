@@ -189,17 +189,46 @@ if (collection.versions) {
 
 ## The observation the plan rests on
 
-> `context.params.versionId` is not a version id. It is **the id of the row that owns this
-> document's children**.
+`context.params.versionId` **is** the shadow row's id — and when there is no shadow row it falls
+back to the document's own. All three branches:
 
 ```ts
-// core/features/versions/hooks/handle-new-version.server.ts — the last branch
-default:
-  versionId = originalDoc.id;      // not versioned: the document's own id
+// core/features/versions/hooks/handle-new-version.server.ts
+switch (true) {
+  case VersionOperations.isSpecificVersionUpdate(versionOperation):
+    versionId = originalDoc.versionId; // the version that was read, written in place
+    break;
+
+  case VersionOperations.isNewVersionCreation(versionOperation): {
+    const document = await rime
+      .collection(withVersionsSuffix(config.slug))
+      .create({ data, locale: params.locale });
+    versionId = document.id; // the shadow row just created
+    break;
+  }
+
+  default:
+    versionId = originalDoc.id; // UPDATE — not versioned, so the root row
+}
 ```
 
+`originalDoc.versionId` in the first branch is put there by the read, which merges the root row
+with the chosen shadow row:
+
 ```ts
-// core/pipeline/run.server.ts — what it is then used for
+// adapter-sqlite/util.server.ts — mergeRawDocumentWithVersion
+return {
+  ...omit([versionTableName], doc),
+  ...omit(['id', 'ownerId', 'createdAt', 'updatedAt'], versionData),
+  versionId: versionData.id // the document keeps the root id; the shadow row id rides along
+} as RawDoc;
+```
+
+So the value is precisely: **the id of the row this document's content lives on** — the shadow row
+when versioned, the root row when not. Which is exactly what the pipeline then uses it for:
+
+```ts
+// core/pipeline/run.server.ts
 await persistRelational({
   context,
   ownerId: context.params.versionId!, // blocks, tree and relations hang off this
@@ -212,14 +241,14 @@ await persistRelational({
 ```
 
 ```ts
-// adapter-sqlite/prototype.server.ts — insertPrototype says the same in its own comment
+// adapter-sqlite/prototype.server.ts — insertPrototype's own comment
 /** For a non-versioned prototype `versionId` comes back equal to `id`. */
 ```
 
-So the pipeline has no versions concept in it. It has a **content owner** concept wearing a
-versions name.
-
----
+The name is right inside the feature and wrong outside it. `core/pipeline/` and
+`core/adapter/types.ts` do not have a versions concept in them — they have a **content owner**
+concept, and `versions` is the feature that changes which row that is. That is what Stage 1 renames,
+and it is a rename only: the same value, called what it is at each layer.
 
 ## What decoupled looks like
 
