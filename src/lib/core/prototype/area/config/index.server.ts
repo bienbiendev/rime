@@ -1,7 +1,8 @@
 import { augmentHooks } from '$lib/core/pipeline/build-pipeline.server.js';
-import { area as areaPrototype } from '../definition.server.js';
 import { applyAugments } from '$lib/core/features/apply.js';
+import type { FeatureDefinition } from '$lib/core/features/define.js';
 import { areaFeatures } from '../definition.js';
+import { areaHooks } from '../hooks.server.js';
 import type { AreaWithoutSlug } from '$lib/core/prototype/area/config/types.js';
 import type { Area, BuiltArea } from '$lib/core/config/types.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
@@ -18,7 +19,11 @@ export const create = <S extends string>(
   const initial = { ...area };
   // As the client chain, with the hooks step last.
   const withFeatures = applyAugments(areaFeatures, initial);
-  const augmented = augmentHooks(areaPrototype, withFeatures);
+  // As the collection's factory: the two lists by name, never the server definition. See there.
+  const augmented = augmentHooks(
+    { features: areaFeatures as unknown as FeatureDefinition[], hooks: areaHooks },
+    withFeatures
+  );
 
   return {
     ...augmented,

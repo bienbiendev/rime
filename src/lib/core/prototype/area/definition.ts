@@ -1,3 +1,4 @@
+import { cors } from '$lib/core/features/cors/index.js';
 import { metas } from '$lib/core/features/metas/index.js';
 import { panel } from '$lib/core/features/panel/index.js';
 import { title } from '$lib/core/features/title/index.js';
@@ -13,7 +14,7 @@ import { definePrototype } from '../define.js';
  * The client half of the pair — what an area *is*. `api`, `rest` and `boot` are server-only and
  * live in `module.server.ts`.
  */
-export const areaFeatures = [panel, versions, url, title, metas] as const;
+export const areaFeatures = [panel, versions, url, title, metas, cors] as const;
 
 export const area = definePrototype({
   singleton: true,

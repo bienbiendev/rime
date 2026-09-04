@@ -1,3 +1,4 @@
+import type { Handle } from '@sveltejs/kit';
 import type { RegisteredPrototype } from '$lib/core/prototype/define.js';
 import type { Dic } from '$lib/util/types.js';
 
@@ -87,6 +88,19 @@ export type FeatureDefinition = {
    * a feature imports no definition at all.
    */
   configure?: (config: any, prototypes: RegisteredPrototype[]) => any;
+
+  /**
+   * A SvelteKit `Handle` the feature contributes to the request pipeline.
+   *
+   * `handlers/index.ts` collects these from the registry and runs them between `handleAuth` and
+   * the plugins' — the slot `handleCORS` occupied when the list was written out by hand in core.
+   *
+   * A feature's *document* hooks are `hooks` below; this is the layer under them, where there is
+   * no document yet. `cors` is the first to need it: enforcing an origin list happens per request,
+   * not per document, and the alternative was leaving half of CORS in `core/handlers/` while the
+   * config half lived in the feature.
+   */
+  handler?: Handle;
 
   /**
    * Run once per process, before anything is served — the feature's own boot step.

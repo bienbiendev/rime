@@ -1,7 +1,8 @@
 import { augmentHooks } from '$lib/core/pipeline/build-pipeline.server.js';
-import { collection as collectionPrototype } from '../definition.server.js';
 import { applyAugments } from '$lib/core/features/apply.js';
+import type { FeatureDefinition } from '$lib/core/features/define.js';
 import { collectionFeatures } from '../definition.js';
+import { collectionHooks } from '../hooks.server.js';
 import type { CollectionWithoutSlug } from '$lib/core/prototype/collection/config/types.js';
 import type { BuiltCollection, Collection } from '$lib/core/config/types.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
@@ -23,7 +24,14 @@ export const create = <S extends string>(
   const withLabel = augmentLabel(initial);
   const withPanel = augmentPanel(withLabel);
   const withFeatures = applyAugments(collectionFeatures, withPanel);
-  const augmented = augmentHooks(collectionPrototype, withFeatures);
+  // The two lists by name, never the server definition: that file spreads `{ ...base }` at module
+  // scope, so importing it from here makes this factory depend on an evaluation order — and when
+  // that order changed, the spread came out without `features` and every feature hook silently
+  // stopped running (rule 3). `definition.ts` and `hooks.server.ts` both depend on nothing.
+  const augmented = augmentHooks(
+    { features: collectionFeatures as unknown as FeatureDefinition[], hooks: collectionHooks },
+    withFeatures
+  );
 
   return {
     ...augmented,

@@ -1,20 +1,9 @@
-import { defineVersionOperation } from '$lib/core/features/versions/hooks/define-version-operation.server.js';
-import { handleNewVersion } from '$lib/core/features/versions/hooks/handle-new-version.server.js';
-import { authorize } from '$lib/core/pipeline/steps/authorize.server.js';
-import { buildDataConfigMap } from '$lib/core/pipeline/steps/data-config-map.server.js';
-import { getOriginalDocument } from '$lib/core/pipeline/steps/get-original-document.server.js';
-import { buildOriginalDocConfigMap } from '$lib/core/pipeline/steps/original-config-map.server.js';
-import { processDocumentFields } from '$lib/core/pipeline/steps/process-document-fields.server.js';
-import { setDefaultValues } from '$lib/core/pipeline/steps/set-default-values.server.js';
-import { setDocumentLocale } from '$lib/core/pipeline/steps/set-document-locale.server.js';
-import { setDocumentType } from '$lib/core/pipeline/steps/set-document-type.server.js';
-import { sortDocumentProps } from '$lib/core/pipeline/steps/sort-document-props.server.js';
-import { validateFields } from '$lib/core/pipeline/steps/validate-fields.server.js';
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
 import { createBlankDocument } from '../doc.js';
 import { api, type AreaAccessor } from './api.server.js';
 import { area as base } from './definition.js';
+import { areaHooks } from './hooks.server.js';
 import { rest } from './rest/index.server.js';
 
 /**
@@ -34,24 +23,11 @@ export const area = definePrototype<BuiltArea, AreaAccessor>({
   rest,
 
   /**
-   * The area's own document hooks. On the server half for the reason the collection's are — a
-   * hook typed through `event.locals.rime` cannot sit where the config factory imports it.
-   *
-   * No create, no delete: a second row is not a thing.
+   * The area's own document hooks, listed in `hooks.server.ts` beside this file. On the server
+   * half for the reason the collection's are — a hook typed through `event.locals.rime` cannot sit
+   * where the config factory imports it.
    */
-  hooks: {
-    beforeOperation: [authorize],
-    beforeRead: [processDocumentFields, setDocumentLocale, setDocumentType, sortDocumentProps],
-    beforeUpdate: [
-      defineVersionOperation,
-      getOriginalDocument,
-      buildOriginalDocConfigMap,
-      handleNewVersion,
-      buildDataConfigMap,
-      setDefaultValues,
-      validateFields
-    ]
-  },
+  hooks: areaHooks,
 
   boot: async ({ config, adapter, defaultLocale }) => {
     /**

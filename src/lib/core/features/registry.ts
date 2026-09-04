@@ -1,3 +1,4 @@
+import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
 import type { RegisteredPrototype } from '$lib/core/prototype/define.js';
 import type { FeatureDefinition } from './define.js';
@@ -44,7 +45,7 @@ const distinct = (prototypes: { features: FeatureDefinition[] }[]): FeatureDefin
  * It has to agree with the runtime order, and `registry.spec.ts` asserts exactly that against the
  * real prototypes, so drift fails a test rather than silently mistyping the config.
  */
-export const configureOrder = ['auth', 'panel', 'upload', 'versions'] as const;
+export const configureOrder = ['auth', 'panel', 'upload', 'versions', 'cors'] as const;
 
 /**
  * Runs every feature's `configure` over the whole config.
@@ -74,3 +75,15 @@ export const bootFeatures = async (
     await feature.boot?.(config);
   }
 };
+
+/**
+ * Every feature's request handler, in prototype-then-list order.
+ *
+ * The third whole-config step, beside `configure` and `boot`: not about any one prototype, so it
+ * needs the union of what the prototypes listed. A feature with no `handler` contributes nothing,
+ * and on a client build a server-only handler resolves to `undefined` — hence the filter.
+ */
+export const featureHandlers = (prototypes: { features: FeatureDefinition[] }[]): Handle[] =>
+  distinct(prototypes)
+    .map((feature) => feature.handler)
+    .filter((handler): handler is Handle => typeof handler === 'function');

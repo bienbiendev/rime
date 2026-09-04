@@ -1,4 +1,5 @@
 import { auth } from '$lib/core/features/auth/index.js';
+import { cors } from '$lib/core/features/cors/index.js';
 import { metas } from '$lib/core/features/metas/index.js';
 import { nested } from '$lib/core/features/nested/index.js';
 import { panel } from '$lib/core/features/panel/index.js';
@@ -31,7 +32,8 @@ export const collectionFeatures = [
   url,
   title,
   thumbnail,
-  metas
+  metas,
+  cors
 ] as const;
 
 export const collection = definePrototype({
