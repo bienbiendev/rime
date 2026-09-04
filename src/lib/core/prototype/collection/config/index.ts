@@ -1,5 +1,5 @@
 import { applyAugments } from '$lib/core/features/apply.js';
-import { collectionFeatures } from '../definition.js';
+import { collectionFeatures, collection as prototype } from '../definition.js';
 import type { CollectionWithoutSlug } from '$lib/core/prototype/collection/config/types.js';
 import type { BuiltCollection, Collection } from '$lib/core/config/types.js';
 import { access } from '$lib/util/index.js';
@@ -14,7 +14,8 @@ export const create = <S extends string>(
 ): BuiltCollection => {
   //
   const collection: Collection<S> = { ...incomingConfig, slug };
-  const initial = { ...collection };
+  // The prototype's own title fallback, which a feature may override before `title` reads it.
+  const initial = { ...collection, _titleFallback: prototype.titleFallback };
   // The collection's own augments run first, then every feature's in the order the prototype
   // listed them.
   //

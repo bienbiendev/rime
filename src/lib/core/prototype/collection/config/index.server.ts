@@ -1,7 +1,7 @@
 import { augmentHooks } from '$lib/core/pipeline/build-pipeline.server.js';
 import { applyAugments } from '$lib/core/features/apply.js';
 import type { FeatureDefinition } from '$lib/core/features/define.js';
-import { collectionFeatures } from '../definition.js';
+import { collectionFeatures, collection as prototype } from '../definition.js';
 import { collectionHooks } from '../hooks.server.js';
 import type { CollectionWithoutSlug } from '$lib/core/prototype/collection/config/types.js';
 import type { BuiltCollection, Collection } from '$lib/core/config/types.js';
@@ -17,7 +17,8 @@ export const create = <S extends string>(
 ): BuiltCollection => {
   //
   const collection: Collection<S> = { ...incomingConfig, slug };
-  const initial = { ...collection };
+  // The prototype's own title fallback, which a feature may override before `title` reads it.
+  const initial = { ...collection, _titleFallback: prototype.titleFallback };
   // Same shape as the client chain: the collection's own augments, then every feature's, and no
   // separate `augmentAuth` — auth is a feature, listed first. The hooks step stays at the end,
   // after the features that contribute to the pipeline have been applied to the config it reads.

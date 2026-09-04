@@ -51,6 +51,16 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
   features: FeatureDefinition[];
 
   /**
+   * What a document of this kind is called when no field is marked as the title.
+   *
+   * The prototype's statement about the base thing, and the bottom of the precedence the `title`
+   * feature resolves: a field marked `.isTitle()` wins, then whatever a feature overrode this
+   * with, then this. It is not part of the authoring surface — a config author marks a field
+   * instead — so the config factories seed it internally, as `_titleFallback`.
+   */
+  titleFallback: string;
+
+  /**
    * The prototype's *own* document hooks: the ones that are its, unconditionally.
    *
    * Short and free of conditionals — a hook that runs only when a config declares something
@@ -180,6 +190,7 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Acces
     singleton: options.singleton ?? false,
     // Defaulted rather than optional: `buildPipeline` filters it on every config, and a prototype
     // with no features is a real case. `hooks` stays optional — a missing timing is already none.
+    titleFallback: options.titleFallback ?? 'id',
     features: options.features ?? [],
     hooks: options.hooks,
     configure: options.configure,

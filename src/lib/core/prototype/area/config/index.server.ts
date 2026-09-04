@@ -1,7 +1,7 @@
 import { augmentHooks } from '$lib/core/pipeline/build-pipeline.server.js';
 import { applyAugments } from '$lib/core/features/apply.js';
 import type { FeatureDefinition } from '$lib/core/features/define.js';
-import { areaFeatures } from '../definition.js';
+import { areaFeatures, area as prototype } from '../definition.js';
 import { areaHooks } from '../hooks.server.js';
 import type { AreaWithoutSlug } from '$lib/core/prototype/area/config/types.js';
 import type { Area, BuiltArea } from '$lib/core/config/types.js';
@@ -16,7 +16,8 @@ export const create = <S extends string>(
 ): BuiltArea => {
   const area: Area<S> = { ...incomingConfig, slug };
 
-  const initial = { ...area };
+  // The prototype's own title fallback, which a feature may override before `title` reads it.
+  const initial = { ...area, _titleFallback: prototype.titleFallback };
   // As the client chain, with the hooks step last.
   const withFeatures = applyAugments(areaFeatures, initial);
   // As the collection's factory: the two lists by name, never the server definition. See there.

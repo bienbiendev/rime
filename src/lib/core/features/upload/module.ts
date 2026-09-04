@@ -87,8 +87,8 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
     fields.push(mimeType, text('filename').hidden(), text('filesize').hidden(), _pathField);
   }
 
-  // What an upload document is called, offered to the `title` feature rather than guessed at by
-  // it. Overwrites rather than defers, so upload wins for the rare config carrying both — registry
-  // order puts this after auth's own offer.
-  return { ...config, upload: upload || false, fields, $titleFallback: 'filename' };
+  // What an upload document is called, overriding the prototype's fallback. Overrides rather than
+  // defers, so upload wins for the rare config carrying both — registry order puts this after
+  // auth's.
+  return { ...config, upload: upload || false, fields, _titleFallback: 'filename' };
 };

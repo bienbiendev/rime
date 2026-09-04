@@ -39,6 +39,9 @@ export const collectionFeatures = [
 export const collection = definePrototype({
   singleton: false,
 
+  /** A document with no title field is named by its id. */
+  titleFallback: 'id',
+
   /**
    * In augment order, which is column order — `auth` first because its `removePrivateFields` and
    * its own fields precede everything, `metas` last because the doc says metas close the table.

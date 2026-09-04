@@ -19,6 +19,9 @@ export const areaFeatures = [panel, versions, url, title, metas, cors] as const;
 export const area = definePrototype({
   singleton: true,
 
+  /** A document with no title field is named by its id. */
+  titleFallback: 'id',
+
   /**
    * In augment order, which is column order. No `auth`, `upload`, `nested` or `thumbnail`: an
    * area is one document, so there is nothing to sign in as, nothing listing it, and nothing for

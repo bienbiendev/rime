@@ -106,12 +106,12 @@ export const augmentAuth = <T extends Input>(config: T): WithNormalizedAuth<T> =
     fields.push(ownerIdField);
   }
 
-  // What an auth document is called, offered to the `title` feature rather than guessed at by it.
-  // Upload overwrites this where a config carries both, which is the precedence registry order
-  // gives: upload is listed after auth.
-  const $titleFallback = IS_API_AUTH ? 'name' : 'email';
+  // What an auth document is called, overriding the prototype's fallback rather than being
+  // guessed at by `title`. Upload overrides it again where a config carries both, which is the
+  // precedence registry order gives: upload is listed after auth.
+  const _titleFallback = IS_API_AUTH ? 'name' : 'email';
 
-  return { ...normalizedAuthConfig, fields, $titleFallback };
+  return { ...normalizedAuthConfig, fields, _titleFallback };
 };
 
 // The staff collection every config gets. Client-side it goes first (the panel lists it
