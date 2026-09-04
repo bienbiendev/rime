@@ -74,16 +74,22 @@ export const buildPipeline = (
 };
 
 /**
- * Attaches the resolved pipeline to a config.
+ * Attaches the resolved pipeline to a config, as `_pipeline`.
  *
- * The return says `$hooks` is there rather than leaving it to the caller's own declaration: a
- * built config declares it already, so the intersection changes nothing for them, and a caller
- * that does not — the order fixture — can read it without a cast asserting what this line does.
+ * **`$hooks` is left exactly as the author wrote it**, and is one of the three inputs here — the
+ * other two being the prototype's own hooks and those of the features it enables, both of which
+ * live on their definitions. Nothing is stored twice: `$hooks` is what was authored, `_pipeline`
+ * is what runs, and a derived config (a versions shadow, upload's directories) copies the first
+ * like any other member and has the second rebuilt for it.
+ *
+ * The return declares `_pipeline` rather than leaving it to the caller: a built config declares it
+ * already, so the intersection changes nothing for them, and a caller that does not — the order
+ * fixture — can read it without a cast asserting what this line does.
  */
 export const augmentHooks = <T extends Dic>(
   definition: Pick<PrototypeDefinition, 'features' | 'hooks'>,
   config: T
-): T & { $hooks: Dic } => ({
+): T & { _pipeline: Dic } => ({
   ...config,
-  $hooks: buildPipeline(definition, config, config.$hooks as Dic | undefined)
+  _pipeline: buildPipeline(definition, config, config.$hooks as Dic | undefined)
 });

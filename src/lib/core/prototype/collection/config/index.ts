@@ -28,7 +28,7 @@ export const create = <S extends string>(
   const augmented = applyAugments(collectionFeatures, withPanel);
 
   return {
-    _authorHooks: incomingConfig.$hooks,
+    $hooks: incomingConfig.$hooks,
     type: 'collection',
     slug: augmented.slug as BuiltCollection['slug'],
     kebab: prototypeKebab(augmented.slug),

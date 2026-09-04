@@ -18,7 +18,7 @@ export const create = <S extends string>(
   const augmented = applyAugments(areaFeatures, initial);
 
   return {
-    _authorHooks: incomingConfig.$hooks,
+    $hooks: incomingConfig.$hooks,
     type: 'area',
     slug: augmented.slug as BuiltArea['slug'],
     kebab: prototypeKebab(augmented.slug),

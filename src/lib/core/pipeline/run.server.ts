@@ -35,7 +35,7 @@ export const runBeforeOperation = async <S extends DocType>(args: {
 }): Promise<OperationContext<S>> => {
   let context = args.context;
 
-  for (const hook of (args.config.$hooks?.beforeOperation as AnyHook[]) || []) {
+  for (const hook of (args.config._pipeline?.beforeOperation as AnyHook[]) || []) {
     const result = await hook({
       config: args.config,
       operation: args.operation,
@@ -192,7 +192,7 @@ export const readDocument = async <S extends DocType, T extends GenericDoc>(args
   });
 
   return runDocHooks<S, T>({
-    hooks: config.$hooks?.beforeRead,
+    hooks: config._pipeline?.beforeRead,
     doc: document as T,
     config,
     event,
@@ -238,7 +238,7 @@ export const runUpdate = async <
 
   // 2. beforeUpdate — may rewrite data, context and config
   const beforeUpdate = await runDataHooks<S, Dic, C>({
-    hooks: args.config.$hooks?.beforeUpdate,
+    hooks: args.config._pipeline?.beforeUpdate,
     data: args.data,
     config: args.config,
     event,
@@ -279,7 +279,7 @@ export const runUpdate = async <
 
   // 7. afterUpdate
   const after = await runDocHooks<S, T>({
-    hooks: config.$hooks?.afterUpdate,
+    hooks: config._pipeline?.afterUpdate,
     doc: document,
     data,
     config,

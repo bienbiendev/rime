@@ -22,7 +22,7 @@ import path from 'node:path';
  * Which feature contributed a hook, if any.
  *
  * Recovered rather than recorded: the same function objects travel from `feature.hooks[timing]`
- * through `buildPipeline` and the resolver into `$hooks`, so identity is enough and
+ * through `buildPipeline` and the resolver into `_pipeline`, so identity is enough and
  * `buildPipeline` needs to know nothing about documentation. Features whose `enabled` is false
  * for this config contribute nothing, and `versions` carries no `hooks` at all — both have to be
  * tolerated rather than assumed away.
@@ -43,7 +43,7 @@ const featureOwning = (
 const branch = (index: number, total: number) => (index === total - 1 ? '└─' : '├─');
 
 const treeFor = (prototype: Dic): string => {
-  const timings = Object.entries((prototype.$hooks as Dic | undefined) ?? {}).filter(
+  const timings = Object.entries((prototype._pipeline as Dic | undefined) ?? {}).filter(
     ([, list]) => Array.isArray(list) && list.length
   ) as [string, unknown[]][];
 

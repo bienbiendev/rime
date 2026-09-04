@@ -19,9 +19,9 @@ describe('a built collection carries both layers of its pipeline', () => {
   const collection = create('pipeline_spec_pages', {
     fields: [text('title').isTitle()],
     $url: (doc) => `/${doc.id}`
-  }) as unknown as { $hooks: Record<string, unknown[]> };
+  }) as unknown as { _pipeline: Record<string, unknown[]> };
 
-  const named = (timing: string) => (collection.$hooks[timing] ?? []).map((h) => marksOf(h).name);
+  const named = (timing: string) => (collection._pipeline[timing] ?? []).map((h) => marksOf(h).name);
 
   it('runs the prototype own hooks', () => {
     expect(named('beforeRead')).toContain('processDocumentFields');

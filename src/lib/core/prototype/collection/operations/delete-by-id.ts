@@ -35,7 +35,7 @@ export const deleteById = async <T extends GenericDoc>(args: Args): Promise<stri
   }
 
   const before = await runDocHooks<CollectionSlug, T>({
-    hooks: config.$hooks?.beforeDelete,
+    hooks: config._pipeline?.beforeDelete,
     doc: document,
     config,
     event,
@@ -49,7 +49,7 @@ export const deleteById = async <T extends GenericDoc>(args: Args): Promise<stri
   // Deliberately the pre-hook document, matching the previous implementation: beforeDelete's
   // returned doc was never carried into afterDelete.
   await runDocHooks<CollectionSlug, T>({
-    hooks: config.$hooks?.afterDelete,
+    hooks: config._pipeline?.afterDelete,
     doc: document,
     config,
     event,

@@ -32,9 +32,10 @@ export function makeVersionsCollectionsAliases<C extends Config>(
    * A shadow is a collection, so it gets a collection's pipeline: the prototype's own hooks, the
    * features **its own** config enables, and the author's hooks.
    *
-   * Not the parent's `$hooks`, which is a pipeline already resolved for the parent's features. A
-   * versioned + nested collection put `addChildrenProperty` on its shadow that way, and the shadow
-   * has no `_parent` column for it to query; a versioned area put every core step on twice.
+   * The shadow copies `$hooks` — what the author wrote — and has its pipeline resolved for its own
+   * config. Inheriting the parent's resolved `_pipeline` instead would run hooks for features the
+   * shadow does not enable, against columns its table does not have: a versioned + nested
+   * collection would query `_parent` on a shadow that has never had it.
    */
   const withPipeline = (shadow: BuiltCollection) =>
     augmentHooks({ features, hooks: collectionHooks }, shadow);
@@ -46,7 +47,7 @@ export function makeVersionsCollectionsAliases<C extends Config>(
         kebab: prototypeKebab(withVersionsSuffix(collection.slug)),
         versions: undefined,
         access: collection.access,
-        $hooks: collection._authorHooks,
+        $hooks: collection.$hooks,
         fields: contentFields(collection),
         auth: collection.auth,
         upload: collection.upload,
@@ -73,7 +74,7 @@ export function makeVersionsCollectionsAliases<C extends Config>(
         access: area.access,
         asTitle: area.asTitle,
         asThumbnail: null,
-        $hooks: area._authorHooks,
+        $hooks: area.$hooks,
         fields: contentFields(area),
         type: 'collection',
         label: { plural: area.label, singular: area.label },
