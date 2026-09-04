@@ -39,6 +39,9 @@ export const collectionFeatures = [
 export const collection = definePrototype({
   singleton: false,
 
+  /** Authored under `collections` in a config. */
+  configKey: 'collections',
+
   /** A document with no title field is named by its id. */
   titleFallback: 'id',
 

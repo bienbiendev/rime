@@ -19,6 +19,9 @@ export const areaFeatures = [panel, versions, url, title, metas, cors] as const;
 export const area = definePrototype({
   singleton: true,
 
+  /** Authored under `areas` in a config. */
+  configKey: 'areas',
+
   /** A document with no title field is named by its id. */
   titleFallback: 'id',
 

@@ -1,11 +1,11 @@
-import type { Config } from '$lib/core/config/types.js';
-import { isFormField } from '$lib/core/fields/util.js';
+import type { CollectionAuthConfig, Config } from '$lib/core/config/types.js';
+import type { BuiltPrototype } from '$lib/core/prototype/define.js';
+import { prototypeConfigs } from '$lib/core/prototype/registry.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { baseTableName, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
 import { toPascalCase } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
-import { toSchemaColumn } from './column.server.js';
 import { generateRelationshipDefinitions } from './relations/definition.server.js';
 import { generateJunctionTableDefinition } from './relations/junction.server.js';
 import buildRootTable from './root.server.js';
@@ -18,14 +18,24 @@ import {
   templateHead,
   templateImports,
   templateRelationMany,
-  templateRelationOne,
-  templateTable
+  templateRelationOne
 } from './templates.server.js';
 import write from './write.server.js';
 
+/**
+ * `auth` is the auth feature's member, so it is present on the configs that declare it and absent
+ * from the rest — asked of the config, never of the kind.
+ */
+const authConfig = (prototype: BuiltPrototype) =>
+  'auth' in prototype ? (prototype.auth as CollectionAuthConfig | undefined) : undefined;
+
 export async function generateSchemaString<T extends Config>(config: T) {
-  const collections = (config.collections || []).filter((c) => c._generateSchema !== false);
-  const areas = (config.areas || []).filter((a) => a._generateSchema !== false);
+  // Every prototype config in the build, folded from the registry rather than read off
+  // `collections` and `areas`: what a prototype is called is core's business, and a third kind
+  // must not mean a third loop here.
+  const prototypes = prototypeConfigs(config).filter(
+    (prototype) => prototype._generateSchema !== false
+  );
 
   const schema: string[] = [templateImports];
   let enumTables: string[] = [];
@@ -33,86 +43,71 @@ export async function generateSchemaString<T extends Config>(config: T) {
   let relationFieldsExportDic: Dic = {};
   const blocksRegister: string[] = [];
 
-  for (const collection of collections) {
+  for (const prototype of prototypes) {
     // The prototype's own table, resolved from its slug rather than case-converted here —
     // a derived slug like $mediasDirectories has to lose its `$` and snake-case its segments.
-    const collectionSlug = baseTableName(collection.slug);
-    let rootTableName = collectionSlug;
+    const baseName = baseTableName(prototype.slug);
+    let rootTableName: TableName = baseName;
     let versionsRelationsDefinitions: string[] = [];
 
-    schema.push(templateHead(collectionSlug));
+    schema.push(templateHead(baseName));
 
-    if (collection.versions) {
-      // Collection that have versions may need some fields forced on the root table and not root_versions
-      // process the root table with these fields first then, handle versions related tables creation
-
-      // 1. Process root table
-
-      // base root fields for versioned tables
-      const baseRootFields = [date('createdAt').hidden(), date('updatedAt').hidden()];
-
-      // Split fields that should be used on the root table
-      const rootFieldsFromConfig = [...collection.fields].filter((f) => f.get.root);
-      const rootFields = [...rootFieldsFromConfig, ...baseRootFields];
-
-      // Build the main root buildRootTable with only _root fields and created/updatedAt
-      const { schema: rootCollectionSchema } = await buildRootTable({
+    if (prototype.versions) {
+      // A versioned prototype is two tables: the base row keeps its own columns — `createdAt`,
+      // `updatedAt` and whatever the config marks `._root()` — and everything else moves onto the
+      // shadow, which is what the rest of this iteration then builds.
+      const { schema: baseSchema } = await buildRootTable({
         blocksRegister: [],
-        fields: rootFields,
-        rootName: rootTableName,
+        fields: [
+          ...prototype.fields.filter((field) => field.get.root),
+          date('createdAt').hidden(),
+          date('updatedAt').hidden()
+        ],
+        rootName: baseName,
         locales: [],
-        hasAuth: !!collection.auth,
+        hasAuth: !!authConfig(prototype),
         versionsFrom: false,
-        tableName: rootTableName
+        tableName: baseName
       });
-      // Ad the root table to the schema
-      schema.push(rootCollectionSchema);
+      schema.push(baseSchema);
 
-      // 2. Handle versions table rename and relation root <-> root_verions definition
+      // From here on, "root" means the shadow: its blocks, tree and relations tables hang off it.
+      rootTableName = baseTableName(withVersionsSuffix(baseName));
 
-      // overwrite the collection name with the _versions one to generate all table
-      // eg. blocks, relation related to the _versions one
-      rootTableName = baseTableName(withVersionsSuffix(collectionSlug));
-
-      // create specific relations between root <-> root_verions
-      const manyVersionsToOneName = `rel_${rootTableName}HasOne${toPascalCase(collectionSlug)}`;
-      const oneToManyVersionsName = `rel_${collectionSlug}HasMany${toPascalCase(rootTableName)}`;
+      const manyVersionsToOneName = `rel_${rootTableName}HasOne${toPascalCase(baseName)}`;
+      const oneToManyVersionsName = `rel_${baseName}HasMany${toPascalCase(rootTableName)}`;
 
       versionsRelationsDefinitions = [
         templateRelationOne({
           name: manyVersionsToOneName,
           table: rootTableName,
-          parent: collectionSlug
+          parent: baseName
         }),
         templateRelationMany({
           name: oneToManyVersionsName,
-          table: collectionSlug,
+          table: baseName,
           many: [rootTableName]
         })
       ];
 
-      // add the root table to :
-      // export tables = { ... }
-      enumTables = [...enumTables, collectionSlug];
-      // add the root <-> root_versions relations to :
-      // export schema = { ... }
+      enumTables = [...enumTables, baseName];
       enumRelations = [...enumRelations, manyVersionsToOneName, oneToManyVersionsName];
     }
 
     const {
-      schema: collectionSchema,
+      schema: prototypeSchema,
       relationsDic,
       relationFieldsMap,
       relationFieldsHasLocale
     } = await buildRootTable({
       blocksRegister,
-      fields: collection.versions
-        ? collection.fields.filter((f) => !f.get.root)
-        : collection.fields,
+      fields: prototype.versions
+        ? prototype.fields.filter((field) => !field.get.root)
+        : prototype.fields,
       rootName: rootTableName,
       locales: config.localization?.locales || [],
-      hasAuth: !!collection.auth,
-      versionsFrom: collection.versions ? collectionSlug : false,
+      hasAuth: !!authConfig(prototype),
+      versionsFrom: prototype.versions ? baseName : false,
       tableName: rootTableName
     });
 
@@ -140,105 +135,15 @@ export async function generateSchemaString<T extends Config>(config: T) {
       [rootTableName]: relationFieldsMap
     };
 
-    // if (collection.upload) {
-    // 	schema.push(templateDirectories(collection.slug));
-    // 	enumTables = [...enumTables, withDirectoriesSuffix(collection.slug)];
-    // }
-
     schema.push(
-      collectionSchema,
+      prototypeSchema,
       junctionTable,
       ...versionsRelationsDefinitions,
       relationsDefinitions
     );
   }
 
-  /**
-   * Areas
-   */
-  for (const area of areas) {
-    const areaSlug = baseTableName(area.slug);
-    let rootTableName: TableName = areaSlug;
-    let versionsRelationsDefinitions: string[] = [];
-
-    schema.push(templateHead(areaSlug));
-
-    if (area.versions) {
-      rootTableName = baseTableName(withVersionsSuffix(areaSlug));
-      const manyVersionsToOneName = `rel_${rootTableName}HasOne${toPascalCase(areaSlug)}`;
-      const oneToManyVersionsName = `rel_${areaSlug}HasMany${toPascalCase(rootTableName)}`;
-
-      // The base row keeps its own columns plus whatever the config marks `._root()`, exactly as
-      // a collection's does. No area field carries the flag today, so this is the same table it
-      // has always generated — but the split is now stated in one place for both prototypes.
-      const baseRootFields = [
-        ...[...area.fields].filter(isFormField).filter((f) => f.get.root),
-        date('createdAt').hidden(),
-        date('updatedAt').hidden()
-      ];
-
-      const schemaResults = baseRootFields.map((field) => toSchemaColumn(field));
-      schema.push(templateTable(areaSlug, schemaResults.join(',\n')));
-
-      versionsRelationsDefinitions = [
-        templateRelationOne({
-          name: manyVersionsToOneName,
-          table: rootTableName,
-          parent: areaSlug
-        }),
-        templateRelationMany({
-          name: oneToManyVersionsName,
-          table: areaSlug,
-          many: [rootTableName]
-        })
-      ];
-
-      enumTables = [...enumTables, areaSlug];
-      enumRelations = [...enumRelations, manyVersionsToOneName, oneToManyVersionsName];
-    }
-
-    const {
-      schema: areaSchema,
-      relationsDic,
-      relationFieldsMap,
-      relationFieldsHasLocale
-    } = await buildRootTable({
-      blocksRegister,
-      fields: area.versions ? area.fields.filter((f) => !f.get.root) : area.fields,
-      rootName: rootTableName,
-      locales: config.localization?.locales || [],
-      tableName: rootTableName,
-      versionsFrom: area.versions ? areaSlug : false
-    });
-
-    const { junctionTable, junctionTableName } = generateJunctionTableDefinition({
-      tableName: rootTableName,
-      relationFieldsMap,
-      hasLocale: relationFieldsHasLocale
-    });
-
-    if (junctionTable.length) {
-      relationsDic[rootTableName] ??= [];
-      relationsDic[rootTableName].push(junctionTableName);
-    }
-
-    const { relationsDefinitions, relationsNames } = generateRelationshipDefinitions({
-      relationsDic
-    });
-
-    const relationsTableNames = Array.from(new Set(Object.values(relationsDic).flat()));
-
-    enumTables = [...enumTables, rootTableName, ...relationsTableNames];
-    enumRelations = [...enumRelations, ...relationsNames];
-    relationFieldsExportDic = {
-      ...relationFieldsExportDic,
-      [rootTableName]: relationFieldsMap
-    };
-
-    schema.push(areaSchema, junctionTable, ...versionsRelationsDefinitions, relationsDefinitions);
-  }
-
-  const HAS_API_KEY = collections.filter((c) => c.auth?.type === 'apiKey').length;
+  const HAS_API_KEY = prototypes.some((prototype) => authConfig(prototype)?.type === 'apiKey');
 
   schema.push(templateAuth);
   if (HAS_API_KEY) {

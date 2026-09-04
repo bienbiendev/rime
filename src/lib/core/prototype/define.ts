@@ -51,6 +51,15 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
   features: FeatureDefinition[];
 
   /**
+   * The config member this prototype's instances are authored under — `collections`, `areas`.
+   *
+   * Declared here so that nothing else has to know the two by name: `prototypeConfigs()` folds the
+   * registry with it, which is how core and the adapter iterate every prototype config in a build
+   * without naming a kind.
+   */
+  configKey: string;
+
+  /**
    * What a document of this kind is called when no field is marked as the title.
    *
    * The prototype's statement about the base thing, and the bottom of the precedence the `title`
@@ -190,6 +199,7 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Acces
     singleton: options.singleton ?? false,
     // Defaulted rather than optional: `buildPipeline` filters it on every config, and a prototype
     // with no features is a real case. `hooks` stays optional — a missing timing is already none.
+    configKey: options.configKey ?? '',
     titleFallback: options.titleFallback ?? 'id',
     features: options.features ?? [],
     hooks: options.hooks,

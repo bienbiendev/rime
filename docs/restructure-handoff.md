@@ -52,6 +52,8 @@ names `upload` again, something has gone backwards.
 | 12 | `a1dc53cc` | the prototype declares `titleFallback`; features override it as `_titleFallback`, off the authoring surface |
 | 12b | `5ebdcee2` | upload's directories derivation takes the collection's features from the registry — **no feature imports a prototype definition** |
 | — | `6a9a81ba` | comment pass: what the code does, not what it replaced |
+| 13 | `8d5500fe` | base-row fields come from the `._root()` flag, not a name list |
+| 13b | `20a3b815` | a versions shadow gets its own pipeline instead of the parent's |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 

@@ -1,5 +1,5 @@
 import type { Dic } from '$lib/util/types.js';
-import type { PrototypeDefinition, RegisteredPrototype } from './define.js';
+import type { BuiltPrototype, PrototypeDefinition, RegisteredPrototype } from './define.js';
 import type { ApplyPrototypeConfigure } from './register.js';
 import { area } from './area/index.js';
 import { collection } from './collection/index.js';
@@ -61,3 +61,13 @@ export const configureWithPrototypes = <T extends Dic>(
     (current: Dic, name) => (protos[name].configure ? protos[name].configure(current) : current),
     config
   ) as ApplyPrototypeConfigure<T, typeof prototypeNames>;
+
+/**
+ * Every prototype config a built config carries, in registry order.
+ *
+ * The fold that replaces `[...config.collections, ...config.areas]`: each prototype declares the
+ * member its instances are authored under, so a caller iterating "every prototype in this config"
+ * names no kind and a third prototype costs nothing.
+ */
+export const prototypeConfigs = <T extends BuiltPrototype = BuiltPrototype>(config: Dic): T[] =>
+  prototypeNames.flatMap((name) => (config[protos[name].configKey] as T[] | undefined) ?? []);

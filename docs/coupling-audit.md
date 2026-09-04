@@ -114,6 +114,12 @@ core/config/types.ts   19 lines naming collections/areas, plus Collection / Area
                        BuiltCollection / BuiltArea and their config types
 ```
 
+**The fold exists now.** A prototype declares the member its instances are authored under
+(`PrototypeDefinition.configKey`), and `prototypeConfigs(config)` in `prototype/registry.ts` folds
+the registry with it. `adapter-sqlite/generate-schema` was the first caller — two near-identical
+loops over `collections` and `areas` became one over prototype configs, 261 lines to 150 — so the
+remaining work is applying the same fold in the files above, not inventing it.
+
 `validate.server.ts` and `context.server.ts` are the two that iterate `[...collections, ...areas]`
 by hand. A third prototype means editing both. The type side (`config/types.ts`) is the bigger
 piece: `Config` declares `collections` and `areas` as members, so the _authoring_ surface names the
@@ -171,7 +177,7 @@ Cheapest first, and each is independently useful:
 3. **Features contribute to `createBlankDocument`**, which moves upload's `sizes` out of
    `prototype/doc.ts`. The same shape as 2; `prototype/api.server.ts` already notes the gap.
 4. **`validate.server.ts` and `context.server.ts` fold the prototype registry** instead of listing
-   `collections` and `areas`. Needs a prototype to declare its config key.
+   `collections` and `areas` — `prototypeConfigs()` is there, the schema generator already uses it.
 5. **`Config`'s authoring surface** derives its prototype members from the registry — the type-level
    half of 4, and the one that makes a third prototype cost only its own folder.
 6. **Auth's boot goes through `bootFeatures`**, which needs `boot` to take the adapter and context
