@@ -1,29 +1,31 @@
 import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
-import { augmentStaffServer } from '../features/auth/staff/augment.server.js';
 import { configureWithFeatures } from '../features/registry.js';
 import { configureWithPrototypes, prototypes } from '$lib/core/prototype/registry.js';
-import { makeVersionsCollectionsAliases } from '../features/versions/derive.server.js';
 import { createRime, type Rime } from '../rime.server.js';
 import { augmentCORS } from './augment-cors.server.js';
-import { augmentIcons } from '../features/panel/icons.js';
-import { augmentPanelAccess } from '../features/panel/augment.server.js';
-import { augmentPanel } from '../features/panel/augment.js';
 import { augmentPlugins } from './augment-plugins.js';
 import type { Config } from './types.js';
 
 export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>> => {
-  const augmented = augmentConfig(config);
-  const output = makeVersionsCollectionsAliases(augmented);
+  const output = augmentConfig(config);
   return createRime(output as any as BuildConfig<C>);
 };
 
+/**
+ * The config chain: one step per layer, and no more.
+ *
+ * It used to name the features it ran — `augmentStaffServer`, `augmentIcons`, `augmentPanel`,
+ * `augmentPanelAccess`, `makeVersionsCollectionsAliases` — which is the config factory knowing
+ * which feature owns what, the inversion this restructure exists to remove. Each of those is now
+ * its owner's `configure`, and what is left is the three layers in the order they apply:
+ * prototypes define, features augment and extend, plugins augment.
+ *
+ * Still a literal sequence rather than a loop: `inference.spec.ts` guards that, and each step's
+ * declared transform is what carries the slug literals forward (see features/register.ts).
+ */
 function augmentConfig<T extends Config>(config: T) {
-  const withStaff = augmentStaffServer(config);
-  const withPrototype = configureWithPrototypes(withStaff);
-  const withIcons = augmentIcons(withPrototype);
-  const withPanel = augmentPanel(withIcons);
-  const withPanelAccess = augmentPanelAccess(withPanel);
-  const withCORS = augmentCORS(withPanelAccess);
+  const withPrototypes = configureWithPrototypes(config);
+  const withCORS = augmentCORS(withPrototypes);
   const withFeatures = configureWithFeatures(prototypes, withCORS);
   const output = augmentPlugins(withFeatures);
   return output;

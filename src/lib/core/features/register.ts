@@ -44,3 +44,40 @@ export type ApplyAugments<T, Names extends readonly unknown[]> = Names extends r
     ? ApplyAugments<FeatureConfigAugment<T>[Head], Tail>
     : ApplyAugments<T, Tail>
   : T;
+
+/**
+ * How a feature declares what its **whole-config** `configure` does to the config's type.
+ *
+ * `FeatureConfigAugment` above is for `augment`, which runs per prototype config;
+ * this is its twin for `configure`, which runs over the whole thing.
+ *
+ * It exists because without it a whole-config step cannot be a feature's at all. Config steps that
+ * *refine* the config's type — `augmentStaff` making `collections` non-empty, the panel's making
+ * `config.panel` present — had to stay hand-written calls in `core/config/build{,.server}.ts`,
+ * where core named the feature that owned them. `configureWithFeatures` returned `T`, so routing
+ * them through it dropped the narrowing and lit up `boot.server.ts`, `panel/navigation.ts` and
+ * `handlers/auth.server.ts`.
+ *
+ * ```ts
+ * declare module '$lib/core/features/register.js' {
+ *   interface FeatureConfigure<T> {
+ *     panel: T & { icons: Dic<Component<IconProps>>; panel: PanelConfig };
+ *   }
+ * }
+ * ```
+ *
+ * As with the augment side: only a feature that changes the type declares anything, and a name
+ * with no declaration passes the type through untouched.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unused-vars
+export interface FeatureConfigure<T> {}
+
+/** Applies each named feature's declared `configure` transform, in the order they run. */
+export type ApplyFeatureConfigure<T, Names extends readonly unknown[]> = Names extends readonly [
+  infer Head,
+  ...infer Tail
+]
+  ? Head extends keyof FeatureConfigure<T>
+    ? ApplyFeatureConfigure<FeatureConfigure<T>[Head], Tail>
+    : ApplyFeatureConfigure<T, Tail>
+  : T;

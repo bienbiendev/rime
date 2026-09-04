@@ -1,3 +1,4 @@
+import { makeVersionsCollectionsAliases } from '$rime/modules';
 import type { WithVersionsConfig } from './augment.js';
 import { defineFeature } from '../define.js';
 import { augmentVersions } from './augment.js';
@@ -27,7 +28,16 @@ export const versions = defineFeature({
   /** A config uses this feature by declaring `versions`. */
   enabled: (config) => !!config.versions,
 
-  augment: augmentVersions
+  augment: augmentVersions,
+
+  /**
+   * The `<slug>__versions` collection behind every versioned config.
+   *
+   * `undefined` on the client, where nothing derives them. It ran as a hand-written call in
+   * `buildConfig` — `makeVersionsCollectionsAliases(augmented)`, core naming a feature — and it
+   * runs here now, after `upload` has derived its directories, exactly as it did before.
+   */
+  configure: makeVersionsCollectionsAliases
 });
 
 /** Turns an author's `versions: true` into a normalised object. */

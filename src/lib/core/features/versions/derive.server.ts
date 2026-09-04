@@ -1,5 +1,5 @@
 import { augmentHooks } from '$lib/core/pipeline/build-pipeline.server.js';
-import { collection as collectionPrototype } from '$lib/core/prototype/collection/definition.js';
+import type { RegisteredPrototype } from '$lib/core/prototype/define.js';
 import { collectionHooks } from '$lib/core/prototype/collection/hooks.server.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
@@ -14,7 +14,10 @@ import type { BuiltCollection, Config } from '../../config/types.js';
  * // if an area "settings" has versions enabled, this will create also a "settings_versions" collection
  * const updatedConfig = makeVersionsCollectionsAliases(config);
  */
-export function makeVersionsCollectionsAliases<C extends Config>(config: C) {
+export function makeVersionsCollectionsAliases<C extends Config>(
+  config: C,
+  prototypes: RegisteredPrototype[] = []
+) {
   for (const collection of config.collections || []) {
     if (collection.versions) {
       const versionedCollection: BuiltCollection = {
@@ -59,9 +62,13 @@ export function makeVersionsCollectionsAliases<C extends Config>(config: C) {
       } as const;
 
       // As upload's derived directories collection: the prototype's own hooks plus the features
-      // its definition lists, named separately because this module is reached from the definition.
+      // its definition lists. The features come from the registry the caller hands over, never
+      // from importing the definition — this module is reached *from* that definition now that it
+      // is the versions feature's `configure`, and importing it back leaves whichever feature is
+      // still in flight `undefined` in the definition's own list. See FeatureDefinition.configure.
+      const features = prototypes.find((prototype) => prototype.name === 'collection')?.features;
       versionedCollection = augmentHooks(
-        { features: collectionPrototype.features, hooks: collectionHooks },
+        { features: features || [], hooks: collectionHooks },
         versionedCollection
       );
 

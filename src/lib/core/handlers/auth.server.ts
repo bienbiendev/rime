@@ -3,6 +3,7 @@ import { RimeError } from '$lib/core/errors/index.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { Config, User } from '$lib/types.js';
 import { error, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
+import { access } from '$lib/util/index.js';
 import { BETTER_AUTH_ROLES } from '../features/auth/constant.server.js';
 import { logger } from '../logger.server.js';
 import type { ConfigContext, RimeContext } from '../rime.server.js';
@@ -191,7 +192,11 @@ function authorizePanelUser<C extends Config>(
       logger.error(RimeError.UNAUTHORIZED);
       throw error(401, RimeError.UNAUTHORIZED);
     }
-    if (!config.raw.panel.$access(user)) {
+    // Defaulted here rather than in the config chain. `augmentPanelAccess` existed to make this
+    // one call safe: a server-only step, refining the config's type, for a member nothing else
+    // reads. One `??` at the only read site costs less than a step in the chain.
+    const panelAccess = config.raw.panel.$access ?? ((u?: User) => access.isAdmin(u));
+    if (!panelAccess(user)) {
       logger.error(RimeError.UNAUTHORIZED);
       throw error(401, RimeError.UNAUTHORIZED);
     }

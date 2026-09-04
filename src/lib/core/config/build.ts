@@ -1,17 +1,12 @@
 import { configureWithFeatures } from '../features/registry.js';
 import { configureWithPrototypes, prototypes } from '$lib/core/prototype/registry.js';
-import { augmentIcons } from '../features/panel/icons.js';
 import type { SanitizedConfigClient } from './types.js';
-import { augmentPanel } from '../features/panel/augment.js';
 import { augmentPlugins } from './augment-plugins.js';
-import { augmentStaff } from '../features/auth/staff/augment.js';
 
+/** The client chain, same three layers as build.server.ts — see the note there. */
 export const buildConfigClient = <C extends SanitizedConfigClient>(config: C) => {
-  const withStaff = augmentStaff(config);
-  const withPrototypes = configureWithPrototypes(withStaff);
-  const withIcons = augmentIcons(withPrototypes);
-  const withPanel = augmentPanel(withIcons);
-  const withFeatures = configureWithFeatures(prototypes, withPanel);
+  const withPrototypes = configureWithPrototypes(config);
+  const withFeatures = configureWithFeatures(prototypes, withPrototypes);
   const output = augmentPlugins(withFeatures);
   return output;
 };

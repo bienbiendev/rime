@@ -1,4 +1,4 @@
-import { augmentAuth } from '$rime/modules';
+import { augmentAuth, augmentStaff } from '$rime/modules';
 import type { WithNormalizedAuth } from './module.js';
 import * as authHooks from './hooks/index.server.js';
 import { augmentFieldsPassword } from './hooks/augment-fields-password.server.js';
@@ -26,6 +26,16 @@ export const auth = defineFeature({
   enabled: (config) => !!config.auth,
 
   augment: augmentAuth,
+
+  /**
+   * The `staff` collection, which every config gets whether or not anything declares `auth`.
+   *
+   * A whole-config step, so `configure` rather than `augment`, and `enabled` does not gate it —
+   * signing into the panel does not depend on a user collection existing. It used to be called by
+   * name from `core/config/build{,.server}.ts` as `augmentStaff`, which is the config factory
+   * knowing which feature owns the staff collection.
+   */
+  configure: augmentStaff,
 
   hooks: {
     // First in `beforeRead`, and by declaration rather than by position: it provides `sanitized`,

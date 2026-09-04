@@ -6,10 +6,10 @@ import type { Component } from 'svelte';
 /**
  * The slug → icon map the panel navigates by, gathered from every prototype config.
  *
- * Runs before the features' `configure` steps, which is why a feature-derived collection
- * (upload's `<slug>Directories`) has no entry: it does not exist yet. That is today's behaviour,
- * kept deliberately — see augment.ts for why these three are chain steps rather than a feature's
- * `configure`.
+ * A feature-derived collection (upload's `<slug>Directories`, versions' aliases) has no entry:
+ * `panel` is listed before `upload` and `versions`, so they do not exist yet when this runs. That
+ * is the behaviour the chain had before the panel became a feature, and the feature list is where
+ * it is now declared — see index.ts.
  */
 export const augmentIcons = <
   const T extends { collections?: BuiltCollection[]; areas?: BuiltArea[] }

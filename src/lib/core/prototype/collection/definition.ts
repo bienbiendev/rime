@@ -1,6 +1,7 @@
 import { auth } from '$lib/core/features/auth/index.js';
 import { metas } from '$lib/core/features/metas/index.js';
 import { nested } from '$lib/core/features/nested/index.js';
+import { panel } from '$lib/core/features/panel/index.js';
 import { thumbnail } from '$lib/core/features/thumbnail/index.js';
 import { title } from '$lib/core/features/title/index.js';
 import { upload } from '$lib/core/features/upload/index.js';
@@ -23,6 +24,7 @@ import { definePrototype } from '../define.js';
  */
 export const collectionFeatures = [
   auth,
+  panel,
   upload,
   nested,
   versions,

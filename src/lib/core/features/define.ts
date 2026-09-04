@@ -1,3 +1,4 @@
+import type { RegisteredPrototype } from '$lib/core/prototype/define.js';
 import type { Dic } from '$lib/util/types.js';
 
 /**
@@ -71,12 +72,21 @@ export type FeatureDefinition = {
 
   /**
    * What the feature adds to the *whole* config, rather than to one prototype's — upload derives
-   * a companion `<slug>Directories` collection for every upload collection it finds.
+   * a companion `<slug>Directories` collection for every upload collection it finds, auth adds the
+   * `staff` collection, the panel fills in its defaults.
    *
-   * The same shape a plugin's `configure` has, and it runs in the same place: the config chain in
-   * core/config/build{,.server}.ts, after the prototype factories have built what it reads.
+   * It runs in the config chain (`core/config/build{,.server}.ts`), through
+   * `configureWithFeatures`. What it does to the config's *type* is declared in register.ts.
+   *
+   * **The prototypes come as an argument, and that is not a convenience.** A step that derives a
+   * prototype config needs that prototype's `features` to build its hooks, and importing the
+   * definition to get them is the back-edge rule 3 forbids: a definition lists its features by
+   * value, so a feature reaching back for the definition can be evaluated *from inside* it and
+   * capture `undefined` for whichever feature is still in flight — which is exactly what
+   * `versions` did the moment its derive step became a `configure`. Handed the registry instead,
+   * a feature imports no definition at all.
    */
-  configure?: (config: any) => any;
+  configure?: (config: any, prototypes: RegisteredPrototype[]) => any;
 
   /**
    * Run once per process, before anything is served — the feature's own boot step.
