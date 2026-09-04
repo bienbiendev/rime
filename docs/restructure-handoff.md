@@ -48,7 +48,7 @@ names `upload` again, something has gone backwards.
 | 10b | `1db951b` | three feature-owned hooks leave `pipeline/steps/` for their features |
 | 10b′ | `9990967` | `mergeWithBlankDocument` goes to the collection — same rule, applied properly |
 | 11 | `f7d751c` | **a feature's `configure` can refine the config's type**; auth, panel and versions own their config steps; the chain stops naming features |
-| 11b | `c786f48` | CORS becomes a core plugin, augment and handler together |
+| 11b | `c786f48` → `6e50592` | CORS becomes a **feature**, augment and handler together; `FeatureDefinition` gains `handler` |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 
@@ -126,6 +126,21 @@ So: **`FeatureDefinition.configure` takes the prototypes as an argument.** A fea
 prototype's `features` or `hooks` gets them from the registry the caller hands over, and imports no
 definition at all.
 
+**The same edge, from the other side, is worse.** Both config factories used to read the prototype
+off `definition.server.ts` just to hand `{ features, hooks }` to `augmentHooks`. Adding one feature
+to a prototype's list was enough to reorder the graph so that the `{ ...base }` spread ran early,
+and the definition came out **without `features`** — so every feature hook stopped running while
+the prototype's own kept going. Documents came back with no `title` and no `url`, and:
+
+> `bun run check`, `eslint`, `madge`, the unit suite, the generated schema **and the generated
+> hooks chart** were all byte-identical to baseline. The chart is built from the config, not from
+> what boots. Only a live read caught it.
+
+Both factories now take `{ features, hooks }` from `definition.ts` and `hooks.server.ts` — the two
+files that depend on nothing — and the area's hooks moved into their own file to make that possible.
+`prototype/collection/config/pipeline.spec.ts` builds a real collection and asserts both layers are
+in its pipeline, which fails if this regresses.
+
 ### 4. A mark nothing active provides is satisfied (the vacuous rule)
 
 `requires: ['x']` means *after **every** active provider of `x`* — and if nothing active provides
@@ -191,7 +206,8 @@ Run against the base commit's **own** numbers, re-measured, not trusted from any
 | types | `bun run check` | **13 on `basic`**: the 6 pre-existing `src/lib` ones (`collection/operations/create.ts` ×4, `duplicate.ts`, `features/thumbnail/hooks/set-document-thumbnail.server.ts` — all `DeepPartial` / union-narrowing in generated-type land) plus 7 in the fixture's own `src/routes/(front)/` pages. Count what the run prints, not what a doc says |
 | lint | `bunx eslint src/lib` | 21; the rest are pre-existing panel `goto()`/`href` and two unused `toKebabCase` |
 | cycles | `bun run check:circular-deps` | 3 since commit 11 (both `staff` cycles went with it), and the *list* matters more than the count |
-| unit | `bunx vitest run` | 116 |
+| unit | `bunx vitest run` | 118 |
+| pipeline layers | `collection/config/pipeline.spec.ts` | **the gate for rule 3** — a definition that lost its `features` is green everywhere else |
 | schema | diff the generated `schema.server.ts` against a golden capture | **the gate for rule 2** |
 | pipeline order | `core/pipeline/pipeline-order.spec.ts` | **the gate for rule 4** — a wrong mark is schema-identical and probe-identical |
 | e2e | `bun run test` | expect 375 |
