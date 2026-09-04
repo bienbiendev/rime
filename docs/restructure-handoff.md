@@ -46,6 +46,9 @@ names `upload` again, something has gone backwards.
 | 10d | `a54a774` | the three panel augments move to `core/features/panel/` |
 | 10 | `4fd4204` | **`factory/` → `core/config/`, `operations/` → `core/pipeline/`**, `hooks.ts` with them |
 | 10b | `1db951b` | three feature-owned hooks leave `pipeline/steps/` for their features |
+| 10b′ | `9990967` | `mergeWithBlankDocument` goes to the collection — same rule, applied properly |
+| 11 | `f7d751c` | **a feature's `configure` can refine the config's type**; auth, panel and versions own their config steps; the chain stops naming features |
+| 11b | `c786f48` | CORS becomes a core plugin, augment and handler together |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 
@@ -107,8 +110,21 @@ silently loses `features`/`hooks`.
 
 This is why `core/prototype/collection/hooks.server.ts` exists as its own file: a list of hooks
 depends on nothing, so a feature deriving a collection (`upload/directories`, `versions/derive`)
-can import it from anywhere. Both call
-`augmentHooks({ features: collectionPrototype.features, hooks: collectionHooks }, cfg)`.
+can import it from anywhere.
+
+**The features list is the other half, and it cannot be filed the same way** — it contains the
+features themselves, so any file reaching it from inside a feature can be entered while that
+feature is still evaluating, and the definition's array literal then captures `undefined` for it.
+`versions/derive.server.ts` imported `collectionPrototype.features` for years without incident,
+because only `build.server.ts` reached it. The moment that call became the versions feature's own
+`configure`, the path became `area/definition.ts → versions/index.ts → derive.server.ts →
+collection/definition.ts` — and `collectionFeatures` came out as
+`[auth, panel, upload, nested, UNDEFINED, url, …]`, with a `Cannot read properties of undefined
+(reading 'augment')` a long way from the cause.
+
+So: **`FeatureDefinition.configure` takes the prototypes as an argument.** A feature that needs a
+prototype's `features` or `hooks` gets them from the registry the caller hands over, and imports no
+definition at all.
 
 ### 4. A mark nothing active provides is satisfied (the vacuous rule)
 
@@ -135,6 +151,35 @@ Consequences worth remembering:
 post-change measurement compared against a baseline taken on a different fixture reads as a
 regression that is not there. This has happened; it cost a round.
 
+### 6. Whole-config steps belong to whoever owns them
+
+The chain was a list of feature-owned calls (`augmentStaffServer`, `augmentIcons`, `augmentPanel`,
+`augmentPanelAccess`, `augmentCORS`, `makeVersionsCollectionsAliases`) for one reason: a whole-config
+step that **refines the config's type** could not go through `configureWithFeatures`, which returned
+`T`. Commit 11 removed that reason. Both layers now have the declaration-merging device:
+
+| layer | declares in | folded by |
+| --- | --- | --- |
+| prototype | `prototype/register.ts` — `PrototypeConfigure<T>` | `configureWithPrototypes` |
+| feature | `features/register.ts` — `FeatureConfigure<T>` | `configureWithFeatures` |
+
+So the server chain is three lines — prototypes, features, plugins — and **nothing in
+`core/config/` names a feature**. Adding a whole-config step means adding `configure` to whoever
+owns it, plus a `declare module` if it changes the type. Three rules fell out:
+
+1. **The fold's order is a hand-written tuple** (`configureOrder` in `features/registry.ts`), because
+   the type cannot read the order back off the annotated registry (rule 1). `registry.spec.ts`
+   asserts it against what actually runs, so drift fails a test instead of silently mistyping.
+2. **A `configure` is handed the prototypes; it must never import one.** See rule 3 below — this is
+   where that rule stopped being theoretical.
+3. **A default with exactly one reader does not need a config step at all.** `panel.$access` and
+   `$trustedOrigins` were each a whole step — server-only, type-refining — for a member one line
+   read. Both are now `??` at that line, and both steps are deleted rather than moved. Check this
+   before writing a `configure`: `grep` the member, and if there is one consumer, stop.
+
+The chain is still a literal sequence rather than a loop, and `config/inference.spec.ts` guards
+that: a reduce over an array of augments widens every slug literal to `string`.
+
 ---
 
 ## Gates, and what they are for
@@ -145,8 +190,8 @@ Run against the base commit's **own** numbers, re-measured, not trusted from any
 | --- | --- | --- |
 | types | `bun run check` | **13 on `basic`**: the 6 pre-existing `src/lib` ones (`collection/operations/create.ts` ×4, `duplicate.ts`, `features/thumbnail/hooks/set-document-thumbnail.server.ts` — all `DeepPartial` / union-narrowing in generated-type land) plus 7 in the fixture's own `src/routes/(front)/` pages. Count what the run prints, not what a doc says |
 | lint | `bunx eslint src/lib` | 21; the rest are pre-existing panel `goto()`/`href` and two unused `toKebabCase` |
-| cycles | `bun run check:circular-deps` | 5, and the *list* matters more than the count |
-| unit | `bunx vitest run` | 115 |
+| cycles | `bun run check:circular-deps` | 3 since commit 11 (both `staff` cycles went with it), and the *list* matters more than the count |
+| unit | `bunx vitest run` | 116 |
 | schema | diff the generated `schema.server.ts` against a golden capture | **the gate for rule 2** |
 | pipeline order | `core/pipeline/pipeline-order.spec.ts` | **the gate for rule 4** — a wrong mark is schema-identical and probe-identical |
 | e2e | `bun run test` | expect 375 |
@@ -217,33 +262,10 @@ import survives because `applyAugments` needs the `as const` tuple for the type 
 
 ### The panel
 
-The only part of the repo the restructure has not touched, and the last place the `isArea` /
-`isCollection` greps land. `core/features/panel/` exists now (icons, navigation defaults, panel
-access) but holds no `defineFeature` — see the note at the top of its `augment.ts` for why, and
-read it before trying to make one: a feature's `configure` returns the config's type unchanged, and
-these three refine it.
-
-### What a whole-config step costs
-
-Learned twice over during commit 10, and worth knowing before moving any other augment:
-
-> A whole-config step that **refines the config's type** cannot go through `configureWithFeatures`.
-
-That step returns `T`. It has to: the prototype registry it reads is annotated to keep every
-feature's hooks out of `BuildConfig`'s loop (rule 1), so there is nothing left to fold. Two ways
-out, and the choice is already made twice in the tree:
-
-- **A declared transform**, folded by name — `prototype/register.ts` (`PrototypeConfigure`) beside
-  `features/register.ts` (`FeatureConfigAugment`). This is what let `augmentPrototypes` become the
-  prototypes' own `configure`.
-- **Stay a typed call in the chain**, owned by whoever it belongs to — `augmentStaff` (auth) and
-  now the three panel augments. `config/inference.spec.ts` guards exactly this: the chain is a
-  literal sequence of `const withX = augmentX(prev)` on purpose, and a loop over an array of
-  augments widens every slug literal to `string`.
-
-Measure before choosing: replace the step with the identity and run `bun run check`. Dropping
-`augmentPrototypes` costs 4 errors (`config.areas` possibly-undefined); dropping the panel three
-costs 7 (`boot.server.ts`, `panel/navigation.ts`, `handlers/auth.server.ts`).
+`core/features/panel/` is a real feature now — icons and the navigation/language/component
+defaults, listed by both prototypes before `upload` and `versions` so the icon map keeps excluding
+derived collections. The panel *itself* (`src/lib/panel/`) is still untouched, and is where most of
+the remaining `isArea` / `isCollection` hits live.
 
 ### Known loose ends
 
@@ -260,8 +282,8 @@ costs 7 (`boot.server.ts`, `panel/navigation.ts`, `handlers/auth.server.ts`).
   what the first one populates), so `enabled` would break updates on non-versioned configs.
   `features/versions/index.ts` states it, and states the fix: a timing that says "always".
 - `pipeline/steps/` is now only what **both** prototypes' hook lists import. A step used by one
-  feature or one prototype belongs to it, whatever the file count — `merge-with-blank.server.ts`
-  briefly stayed put on a "folder for one file is ceremony" argument, which is not a reason.
+  feature or one prototype belongs to it, whatever the file count — "a folder for one file is
+  ceremony" is not a reason, and `merge-with-blank.server.ts` cost a round proving it.
 
 ---
 
