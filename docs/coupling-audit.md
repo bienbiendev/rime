@@ -56,8 +56,11 @@ core/dev/codegen/routes/common.server.ts             8 lines, the panel's versio
 
 Consequences worth naming:
 
-- The versions feature declares `type: 'shadow'`, and **nothing reads it**. The shadow tables are
-  built by the adapter from slug suffixes, not from the declaration.
+- ~~The versions feature declares `type: 'shadow'`, and **nothing reads it**.~~ Fixed for the
+  schema: `FeatureDefinition.shadow` names the table, `shadowOf` folds it over a prototype's
+  features, and `generate-schema` builds the second table from what it returns — it no longer
+  imports `versions/naming.js` at all. The runtime half (`registerPrototype`) still resolves the
+  shadow from slug suffixes.
 - Its `beforeUpdate` hooks are listed by both prototypes rather than by the feature, because they
   must run for every config — `assertUpsertContext` requires what `defineVersionOperation`
   populates. This is the one place a prototype names a feature, and `features/versions/index.ts`

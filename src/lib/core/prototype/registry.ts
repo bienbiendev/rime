@@ -70,4 +70,21 @@ export const configureWithPrototypes = <T extends Dic>(
  * names no kind and a third prototype costs nothing.
  */
 export const prototypeConfigs = <T extends BuiltPrototype = BuiltPrototype>(config: Dic): T[] =>
-  prototypeNames.flatMap((name) => (config[protos[name].configKey] as T[] | undefined) ?? []);
+  prototypeEntries<T>(config).map((entry) => entry.config);
+
+/**
+ * The same fold, but each config still paired with the prototype that defines it.
+ *
+ * For the callers that need something off the definition rather than off the instance — the
+ * features that extend it, above all, which is how a shadow is found without asking a config
+ * whether it has a `versions` member.
+ */
+export const prototypeEntries = <T extends BuiltPrototype = BuiltPrototype>(
+  config: Dic
+): { prototype: PrototypeDefinition; config: T }[] =>
+  prototypeNames.flatMap((name) =>
+    (((config[protos[name].configKey] as T[] | undefined) ?? []) as T[]).map((prototypeConfig) => ({
+      prototype: protos[name],
+      config: prototypeConfig
+    }))
+  );

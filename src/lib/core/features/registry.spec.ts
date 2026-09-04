@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { prototypes } from '$lib/core/prototype/registry.js';
-import { configureOrder } from './registry.js';
+import { collection, prototypes } from '$lib/core/prototype/registry.js';
+import { configureOrder, shadowOf } from './registry.js';
 
 /**
  * `configureOrder` is a hand-written tuple of names, because the type fold needs an order and the
@@ -23,5 +23,29 @@ describe('configureOrder', () => {
 
   it('lists every feature that carries a configure, in the order they run', () => {
     expect(running).toEqual([...configureOrder]);
+  });
+});
+
+/**
+ * A shadow is what makes the adapter build a second table, and nothing else does. The failure to
+ * catch is silent in both directions: a config that stops declaring one loses every column that
+ * moved onto the shadow, and one that starts declaring a shadow for a derived config would
+ * generate a shadow of a shadow.
+ */
+describe('shadowOf', () => {
+  it('names the shadow of a versioned config', () => {
+    expect(shadowOf(collection.features, { slug: 'pages', versions: {} })).toEqual({
+      slug: '$pages__versions'
+    });
+  });
+
+  it('gives a config with no versions no shadow', () => {
+    expect(shadowOf(collection.features, { slug: 'pages' })).toBeUndefined();
+  });
+
+  it('gives the derived shadow collection no shadow of its own', () => {
+    expect(
+      shadowOf(collection.features, { slug: '$pages__versions', versions: undefined })
+    ).toBeUndefined();
   });
 });

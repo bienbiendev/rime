@@ -1,6 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
-import type { FeatureDefinition } from './define.js';
+import type { FeatureDefinition, ShadowDeclaration } from './define.js';
 import type { ApplyFeatureConfigure } from './register.js';
 
 /**
@@ -76,3 +76,23 @@ export const featureHandlers = (prototypes: { features: FeatureDefinition[] }[])
   distinct(prototypes)
     .map((feature) => feature.handler)
     .filter((handler): handler is Handle => typeof handler === 'function');
+
+/**
+ * The shadow a config's content lives in, or `undefined` when it lives on the config's own row.
+ *
+ * Folded over the features that extend the prototype, in their declared order, and the first one
+ * answering wins — a config cannot have its content in two places at once, and the order the
+ * prototype listed is the tie-break. `enabled` gates it, so the question is asked of the config
+ * rather than of the kind.
+ *
+ * Takes a feature list rather than the prototypes, because both callers already hold one: the
+ * schema generator folds it per prototype config, and registration passes the prototype's own.
+ */
+export const shadowOf = (
+  features: FeatureDefinition[],
+  config: Dic
+): ShadowDeclaration | undefined =>
+  features.reduce<ShadowDeclaration | undefined>(
+    (found, feature) => found ?? (feature.enabled(config) ? feature.shadow?.(config) : undefined),
+    undefined
+  );

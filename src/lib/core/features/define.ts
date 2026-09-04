@@ -30,7 +30,7 @@ export type FeatureDefinition = {
    * anything for it:
    *
    * - `augment` — no tables of its own; it only changes a config. The adapter never hears of it.
-   * - `shadow` — deviates the prototype's own table (`{base}__versions`).
+   * - `shadow` — deviates the prototype's own table. Declared by `shadow` below.
    * - `child` — a table owned by the prototype's rows (`{base}__$relations`).
    */
   type: 'augment' | 'shadow' | 'child';
@@ -61,6 +61,23 @@ export type FeatureDefinition = {
    * a prototype that lists it. What it does to the config's *type* is declared in register.ts.
    */
   augment?: (config: any) => any;
+
+  /**
+   * The table this feature deviates a config's content into, or `undefined` when it deviates
+   * nothing.
+   *
+   * A **shadow** stands in for the config's own table: the base row keeps its identity, its
+   * timestamps and whatever fields are marked `._root()`, and every other column — plus the whole
+   * subtree of children hanging off them — moves onto the shadow. Which is why the answer is one
+   * slug: name the row that owns the content and everything downstream follows.
+   *
+   * Asked of a config, not of a kind, and only for configs where `enabled` — so a prototype with
+   * versions on one collection and not the next gets a shadow for the first alone.
+   *
+   * This is what makes `type: 'shadow'` mean something: the adapter builds the second table from
+   * what is declared here rather than from a member it recognises by name.
+   */
+  shadow?: (config: any) => ShadowDeclaration | undefined;
 
   /**
    * What the feature adds to the **whole** config rather than to one prototype's: auth adds the
@@ -105,6 +122,21 @@ export type FeatureDefinition = {
    * it is sorted — while the features interleaving there require nothing of *each other*.
    */
   hooks?: FeatureHooks;
+};
+
+/**
+ * A shadow table, as the feature that owns it describes it.
+ *
+ * Only `slug` for now, and deliberately: it is what the schema needs, and an unread member is
+ * exactly the mistake this declaration replaces. The read selector and the owner column join it
+ * when there is something reading them (docs/decoupling-versions.md, stages 3-4).
+ */
+export type ShadowDeclaration = {
+  /**
+   * The shadow's own slug — `$pages__versions`. In slug space, never a table name: what a slug
+   * is called in the database is the adapter's business, and it maps.
+   */
+  slug: string;
 };
 
 export type FeatureHooks = Partial<Record<HookTiming, AnyHook[]>>;

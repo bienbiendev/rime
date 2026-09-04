@@ -27,7 +27,12 @@ type Args = {
   relationFieldsMap?: RelationFieldsMap;
   relationsDic?: Record<string, string[]>;
   hasAuth?: boolean;
-  versionsFrom?: string | false;
+  /**
+   * The base table this one shadows, when it is a shadow — it gets an `ownerId` pointing back at
+   * it. Named after the relationship rather than after the feature that asks for one: what makes
+   * a shadow is a feature declaring it, not a `versions` member.
+   */
+  shadows?: string | false;
   blocksRegister: string[];
 };
 
@@ -52,7 +57,7 @@ const buildRootTable = async ({
   relationFieldsMap = {},
   relationsDic = {},
   hasAuth,
-  versionsFrom,
+  shadows,
   blocksRegister
 }: Args): Promise<Return> => {
   const blocksTables: string[] = [];
@@ -101,7 +106,10 @@ const buildRootTable = async ({
         };
       } else if (field instanceof BlocksBuilder) {
         for (const block of field.get.blocks) {
-          const blockTableName = buildTableName({ owner: rootName, child: { kind: 'blocks', name: block.name } });
+          const blockTableName = buildTableName({
+            owner: rootName,
+            child: { kind: 'blocks', name: block.name }
+          });
           if (!blocksRegister.includes(blockTableName)) {
             // Add the blocks as a relation of the root collection
             relationsDic = {
@@ -132,7 +140,10 @@ const buildRootTable = async ({
           }
         }
       } else if (field instanceof TreeBuilder) {
-        const treeTableName = buildTableName({ owner: rootName, child: { kind: 'tree', name: field.name } });
+        const treeTableName = buildTableName({
+          owner: rootName,
+          child: { kind: 'tree', name: field.name }
+        });
         if (!blocksRegister.includes(treeTableName)) {
           // Add the tree table as relation of the root collection
           relationsDic = {
@@ -179,8 +190,8 @@ const buildRootTable = async ({
     if (hasParent) {
       strUnlocalizedFields.push(templateParent(rootName));
     }
-    if (versionsFrom) {
-      strUnlocalizedFields.push(templateParent(versionsFrom));
+    if (shadows) {
+      strUnlocalizedFields.push(templateParent(shadows));
     }
     if (hasAuth) {
       strUnlocalizedFields.push(templateHasAuth(rootName));
@@ -195,8 +206,8 @@ const buildRootTable = async ({
     if (hasParent) {
       strFields.push(templateParent(rootName));
     }
-    if (versionsFrom) {
-      strFields.push(templateParent(versionsFrom));
+    if (shadows) {
+      strFields.push(templateParent(shadows));
     }
     if (hasAuth) {
       strFields.push(templateHasAuth(rootName));

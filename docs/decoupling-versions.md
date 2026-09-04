@@ -431,30 +431,75 @@ insert(args: { data; locale? }): Promise<{ id: string; contentId: string }>;
 id: the two reads in `get-original-document`, `params.versionId` itself, and `find`/`update`'s
 parameters, which are stages 3 and 4.
 
-### Stage 2 — the shadow is registered, not inferred
+### Stage 2 — the shadow is declared, not inferred (schema half ✅ done)
+
+**Schema half: done.** A feature says what it deviates a config's content into, and the schema
+generator builds the second table from that rather than from a member it recognises by name:
 
 ```ts
 // core/features/define.ts
-/** A table this feature deviates a prototype's rows into. Read at registerPrototype time. */
+export type ShadowDeclaration = {
+  /** The shadow's own slug — `$pages__versions`. Slug space; the adapter maps. */
+  slug: string;
+};
+
+/** The table this feature deviates a config's content into, or `undefined`. */
 shadow?: (config: any) => ShadowDeclaration | undefined;
 ```
 
 ```ts
-// core/boot.server.ts — where prototypes already register
-for (const prototype of prototypes) {
-  for (const prototypeConfig of configCtx.byPrototype(prototype.name)) {
-    adapter.registerPrototype({
-      config: prototypeConfig,
-      singleton: prototype.singleton,
-      shadow: shadowFor(prototype, prototypeConfig) // first feature declaring one wins
-    });
-  }
+// core/features/versions/index.ts
+shadow: (config) => ({ slug: withVersionsSuffix(config.slug) }),
+```
+
+```ts
+// core/features/registry.ts — first feature answering wins, in the prototype's declared order
+export const shadowOf = (features: FeatureDefinition[], config: Dic) =>
+  features.reduce<ShadowDeclaration | undefined>(
+    (found, feature) => found ?? (feature.enabled(config) ? feature.shadow?.(config) : undefined),
+    undefined
+  );
+```
+
+```ts
+// adapter-sqlite/generate-schema/index.server.ts
+const shadow = shadowOf(entry.prototype.features, prototype);
+
+if (shadow) {
+  // base row: identity, timestamps, the `._root()` fields
+  rootTableName = baseTableName(shadow.slug); // everything else, and every child, moves here
 }
 ```
 
-`generate-schema` then builds tables from registered shadows rather than from `config.versions`,
-and `type: 'shadow'` on the feature finally means something. **This is the stage that touches the
-generated schema** — capture a golden one on `versions` and `versions-multilang` first.
+`prototypeEntries` in `core/prototype/registry.ts` is what makes that possible: the same fold as
+`prototypeConfigs`, but each config still paired with the definition that owns it, so the features
+extending it are reachable without asking the config what kind it is. `root.server.ts`'s
+`versionsFrom` is now `shadows` — named after the relationship, not after the feature that asks
+for one. The generator no longer imports `versions/naming.js`.
+
+**`ShadowDeclaration` is one member on purpose.** `ownerColumn` and `pick` are what the runtime
+half and Stage 3 need; declaring them now would repeat exactly the mistake this stage fixes —
+`type: 'shadow'` sat there for three commits with nothing reading it. Add each when its reader
+exists.
+
+**Runtime half: not done.** `registerPrototype` still resolves a versioned prototype's tables from
+`config.versions`, and the boot order is why it is a separate step:
+
+```
+3. bootFeatures → 4. codegen/generateSchema → 5. createAdapter → 6. registerPrototype
+```
+
+Schema generation runs two steps _before_ registration exists, so the declaration has two
+consumers, not one. The generator folds it per config; registration will carry it per prototype:
+
+```ts
+// core/boot.server.ts — step 6
+adapter.registerPrototype({
+  config: prototypeConfig,
+  singleton: prototype.singleton,
+  shadow: shadowOf(prototype.features, prototypeConfig)
+});
+```
 
 ### Stage 3 — the read selector
 
@@ -586,11 +631,13 @@ The last one is the reason to care: an owner-id mistake is invisible on a single
 
 ---
 
-## Decisions to make before Stage 2
+## Decisions
 
-1. **Does `pick` live in the declaration, or does the feature resolve the content id first?** The
-   declaration keeps reads at one query and puts a small predicate in the contract; resolving first
-   keeps the contract clean and costs a query per read. Measure the read path before choosing.
+1. **Does `pick` live in the declaration, or does the feature resolve the content id first?** Open,
+   and deliberately not settled by Stage 2: the schema half needs neither, so it declares neither.
+   The declaration keeps reads at one query and puts a small predicate in the contract; resolving
+   first keeps the contract clean and costs a query per read. Measure the read path before
+   choosing.
 2. **Does `insert` still write the first content row?** It is the one place the adapter creates a
    shadow row on its own. The alternative — the feature creating it through the public API, as
    `handleNewVersion` already does — is more consistent and costs a round trip on every create.
