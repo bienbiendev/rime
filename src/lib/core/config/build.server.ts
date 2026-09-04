@@ -2,7 +2,6 @@ import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
 import { configureWithFeatures } from '../features/registry.js';
 import { configureWithPrototypes, prototypes } from '$lib/core/prototype/registry.js';
 import { createRime, type Rime } from '../rime.server.js';
-import { augmentCORS } from './augment-cors.server.js';
 import { augmentPlugins } from './augment-plugins.js';
 import type { Config } from './types.js';
 
@@ -14,19 +13,18 @@ export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>>
 /**
  * The config chain: one step per layer, and no more.
  *
- * It used to name the features it ran — `augmentStaffServer`, `augmentIcons`, `augmentPanel`,
- * `augmentPanelAccess`, `makeVersionsCollectionsAliases` — which is the config factory knowing
- * which feature owns what, the inversion this restructure exists to remove. Each of those is now
- * its owner's `configure`, and what is left is the three layers in the order they apply:
- * prototypes define, features augment and extend, plugins augment.
+ * It used to name the parts it ran — `augmentStaffServer`, `augmentIcons`, `augmentPanel`,
+ * `augmentPanelAccess`, `augmentCORS`, `makeVersionsCollectionsAliases` — which is the config
+ * factory knowing which feature owns what, the inversion this restructure exists to remove. Each
+ * of those is now its owner's `configure`, and what is left is the three layers in the order they
+ * apply: prototypes define, features augment and extend, plugins augment.
  *
  * Still a literal sequence rather than a loop: `inference.spec.ts` guards that, and each step's
  * declared transform is what carries the slug literals forward (see features/register.ts).
  */
 function augmentConfig<T extends Config>(config: T) {
   const withPrototypes = configureWithPrototypes(config);
-  const withCORS = augmentCORS(withPrototypes);
-  const withFeatures = configureWithFeatures(prototypes, withCORS);
+  const withFeatures = configureWithFeatures(prototypes, withPrototypes);
   const output = augmentPlugins(withFeatures);
   return output;
 }

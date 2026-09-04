@@ -50,7 +50,15 @@ function validateCorsOrigin(origin: string, trustedOrigins: string[], pathname: 
  */
 export const handleCORS: Handle = async ({ event, resolve }) => {
   const { rime } = event.locals;
-  const trustedOrigins = rime.config.raw.$trustedOrigins || [];
+
+  // `$trustedOrigins` is optional, so a config that does not declare it does not carry the key in
+  // its type either. Defaulted here rather than by a step in the config chain: one reader, one
+  // default. Anything that is not an array falls back to the app's own URL, which is what
+  // `augmentCORS` did before it.
+  const configured = (rime.config.raw as { $trustedOrigins?: string[] }).$trustedOrigins;
+  const trustedOrigins = Array.isArray(configured)
+    ? configured
+    : [process.env.PUBLIC_RIME_URL as string];
 
   const IS_API_ROUTE = event.url.pathname.startsWith('/api');
   const IS_OPTIONS_REQUEST = event.request.method === 'OPTIONS';
