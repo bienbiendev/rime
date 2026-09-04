@@ -26,7 +26,7 @@ const collection = (config: object): unknown =>
     type: 'collection',
     slug: 'test',
     ...config
-  })._pipeline;
+  }).$hooks;
 
 describe('resolved pipeline order', () => {
   describe('a plain collection', () => {
@@ -173,9 +173,9 @@ describe('resolved pipeline order', () => {
   describe('an area with a url', () => {
     const hooks = (
       augmentHooks(area, { type: 'area', slug: 'settings', $url: () => '/s' }) as {
-        _pipeline: unknown;
+        $hooks: unknown;
       }
-    )._pipeline;
+    ).$hooks;
 
     it('reads in the documented order', () => {
       // ACCEPTED DIFF vs the hand-written order, which ran url *before* setDocumentType and

@@ -1,6 +1,3 @@
-import { augmentHooks } from '$lib/core/pipeline/build-pipeline.server.js';
-import type { RegisteredPrototype } from '$lib/core/prototype/define.js';
-import { collectionHooks } from '$lib/core/prototype/collection/hooks.server.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
@@ -20,26 +17,7 @@ const contentFields = (config: { fields: BuiltCollection['fields'] }) =>
  * `pages`, and one per versioned area, which is a collection because a single document still has
  * many revisions.
  */
-export function makeVersionsCollectionsAliases<C extends Config>(
-  config: C,
-  prototypes: RegisteredPrototype[] = []
-) {
-  // The collection prototype's features, from the registry the caller hands over rather than from
-  // importing its definition — see FeatureDefinition.configure.
-  const features = prototypes.find((prototype) => prototype.name === 'collection')?.features || [];
-
-  /**
-   * A shadow is a collection, so it gets a collection's pipeline: the prototype's own hooks, the
-   * features **its own** config enables, and the author's hooks.
-   *
-   * The shadow copies `$hooks` — what the author wrote — and has its pipeline resolved for its own
-   * config. Inheriting the parent's resolved `_pipeline` instead would run hooks for features the
-   * shadow does not enable, against columns its table does not have: a versioned + nested
-   * collection would query `_parent` on a shadow that has never had it.
-   */
-  const withPipeline = (shadow: BuiltCollection) =>
-    augmentHooks({ features, hooks: collectionHooks }, shadow);
-
+export function makeVersionsCollectionsAliases<C extends Config>(config: C) {
   for (const collection of config.collections || []) {
     if (collection.versions) {
       const versionedCollection: BuiltCollection = {
@@ -60,7 +38,7 @@ export function makeVersionsCollectionsAliases<C extends Config>(
         _generateTypes: false,
         _generateSchema: false
       } as const;
-      config.collections = [...(config.collections || []), withPipeline(versionedCollection)];
+      config.collections = [...(config.collections || []), versionedCollection];
     }
   }
 
@@ -83,7 +61,7 @@ export function makeVersionsCollectionsAliases<C extends Config>(
         _generateSchema: false
       } as const;
 
-      config.collections = [...(config.collections || []), withPipeline(versionedCollection)];
+      config.collections = [...(config.collections || []), versionedCollection];
     }
   }
 

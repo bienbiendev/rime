@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { text } from '$lib/fields/text/index.js';
 import { marksOf } from '$lib/core/pipeline/resolve-pipeline.server.js';
 import { create } from './index.server.js';
+import { resolvePipelines } from '$lib/core/prototype/pipelines.server.js';
+import type { Dic } from '$lib/util/types.js';
 
 /**
  * Guards a failure that raises no error at all.
@@ -16,12 +18,15 @@ import { create } from './index.server.js';
  * So: build a real collection and assert both layers are in its pipeline.
  */
 describe('a built collection carries both layers of its pipeline', () => {
-  const collection = create('pipeline_spec_pages', {
-    fields: [text('title').isTitle()],
-    $url: (doc) => `/${doc.id}`
-  }) as unknown as { _pipeline: Record<string, unknown[]> };
+  // Built the way the config chain builds one: `create` leaves `$hooks` as authored, and the
+  // pipeline is resolved once the whole config exists.
+  const built = resolvePipelines({
+    collections: [create('pipeline_spec_pages', { fields: [text('title').isTitle()], $url: (doc) => `/${doc.id}` })]
+  } as unknown as { collections: Dic[] });
 
-  const named = (timing: string) => (collection._pipeline[timing] ?? []).map((h) => marksOf(h).name);
+  const collection = built.collections[0] as unknown as { $hooks: Record<string, unknown[]> };
+
+  const named = (timing: string) => (collection.$hooks[timing] ?? []).map((h) => marksOf(h).name);
 
   it('runs the prototype own hooks', () => {
     expect(named('beforeRead')).toContain('processDocumentFields');

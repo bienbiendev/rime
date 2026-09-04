@@ -1,6 +1,7 @@
 import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
 import { configureWithFeatures } from '../features/registry.js';
 import { configureWithPrototypes, prototypes } from '$lib/core/prototype/registry.js';
+import { resolvePipelines } from '$lib/core/prototype/pipelines.server.js';
 import { createRime, type Rime } from '../rime.server.js';
 import { augmentPlugins } from './augment-plugins.js';
 import type { Config } from './types.js';
@@ -22,7 +23,10 @@ export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>>
 function augmentConfig<T extends Config>(config: T) {
   const withPrototypes = configureWithPrototypes(config);
   const withFeatures = configureWithFeatures(prototypes, withPrototypes);
-  const output = augmentPlugins(withFeatures);
+  // Last, and after the features: every prototype config that exists by now — authored or derived
+  // — has its pipeline resolved by the same step.
+  const withPipelines = resolvePipelines(withFeatures);
+  const output = augmentPlugins(withPipelines);
   return output;
 }
 

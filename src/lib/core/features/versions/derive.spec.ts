@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { marksOf } from '$lib/core/pipeline/resolve-pipeline.server.js';
-import { prototypes } from '$lib/core/prototype/registry.js';
+import { resolvePipelines } from '$lib/core/prototype/pipelines.server.js';
+import type { Dic } from '$lib/util/types.js';
 import { create } from '$lib/core/prototype/collection/config/index.server.js';
 import { text } from '$lib/fields/text/index.js';
 import { makeVersionsCollectionsAliases } from './derive.server.js';
@@ -30,13 +31,16 @@ describe('a versions shadow', () => {
     $hooks: { beforeRead: [authorHook] }
   });
 
+  // The real order: derive first, resolve every pipeline after — as the config chain does.
   const config = { collections: [parent] } as never;
-  makeVersionsCollectionsAliases(config, prototypes);
+  makeVersionsCollectionsAliases(config);
+  const built = resolvePipelines(config as { collections: Dic[] });
 
-  const shadow = (config as { collections: { slug: string; _pipeline?: Record<string, unknown[]> }[] })
-    .collections.find((c) => c.slug === '$derive_spec_pages__versions')!;
+  const shadow = built.collections.find(
+    (c) => c.slug === '$derive_spec_pages__versions'
+  ) as unknown as { $hooks?: Record<string, unknown[]> };
 
-  const beforeRead = (shadow._pipeline?.beforeRead ?? []).map((hook) => marksOf(hook).name);
+  const beforeRead = (shadow.$hooks?.beforeRead ?? []).map((hook) => marksOf(hook).name);
 
   it('runs the author’s own hooks', () => {
     expect(beforeRead).toContain('authorBeforeRead');

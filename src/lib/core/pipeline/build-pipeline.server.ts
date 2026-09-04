@@ -74,22 +74,18 @@ export const buildPipeline = (
 };
 
 /**
- * Attaches the resolved pipeline to a config, as `_pipeline`.
+ * Resolves a config's pipeline into its `$hooks`, from the three lists that feed it: the
+ * prototype's own hooks, the hooks of the features this config enables, and whatever the author
+ * wrote there.
  *
- * **`$hooks` is left exactly as the author wrote it**, and is one of the three inputs here — the
- * other two being the prototype's own hooks and those of the features it enables, both of which
- * live on their definitions. Nothing is stored twice: `$hooks` is what was authored, `_pipeline`
- * is what runs, and a derived config (a versions shadow, upload's directories) copies the first
- * like any other member and has the second rebuilt for it.
- *
- * The return declares `_pipeline` rather than leaving it to the caller: a built config declares it
- * already, so the intersection changes nothing for them, and a caller that does not — the order
- * fixture — can read it without a cast asserting what this line does.
+ * Called once per prototype config, from `prototype/pipelines.server.ts`, as the last step of the
+ * config chain — so `$hooks` is the authored hooks going in and the pipeline coming out, and
+ * nothing anywhere holds a second copy.
  */
 export const augmentHooks = <T extends Dic>(
   definition: Pick<PrototypeDefinition, 'features' | 'hooks'>,
   config: T
-): T & { _pipeline: Dic } => ({
+): T & { $hooks: Dic } => ({
   ...config,
-  _pipeline: buildPipeline(definition, config, config.$hooks as Dic | undefined)
+  $hooks: buildPipeline(definition, config, config.$hooks as Dic | undefined)
 });

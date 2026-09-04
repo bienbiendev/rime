@@ -40,7 +40,7 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
   });
 
   const before = await runDataHooks<CollectionSlug, DeepPartial<T>, BuiltCollection>({
-    hooks: config._pipeline?.beforeCreate,
+    hooks: config.$hooks?.beforeCreate,
     data: args.data,
     config,
     event,
@@ -119,7 +119,7 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
 
   // Unlike afterUpdate, afterCreate's returned doc IS propagated — preserved as-is.
   const after = await runDocHooks<CollectionSlug, T>({
-    hooks: config._pipeline?.afterCreate,
+    hooks: config.$hooks?.afterCreate,
     doc: document,
     data,
     config,

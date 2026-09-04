@@ -1,7 +1,6 @@
 import type { Adapter } from '$lib/core/adapter/types.js';
 import type { PanelLanguage } from '$lib/core/i18n/index.js';
 import type { Hook, HookBeforeOperation } from '$lib/core/pipeline/types.js';
-import type { AnyHook, HookTiming } from '$lib/core/features/define.js';
 import type { Plugin } from '$lib/core/plugins/index.js';
 import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
 import type { Field, Option } from '$lib/fields/types.js';
@@ -322,14 +321,6 @@ export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'up
   upload?: UploadConfig;
   icon: Component<IconProps>;
   access: WithRequired<Access, 'create' | 'read' | 'update' | 'delete'>;
-  /**
-   * The pipeline that runs for this config: the prototype's own hooks, those of the features it
-   * enables, and the author's `$hooks`, ordered by the marks each declares.
-   *
-   * Derived, which is why it is `_` and not `$` — `$hooks` stays what the author wrote, and this
-   * is what `run.server.ts` and the prototype operations read.
-   */
-  _pipeline?: Partial<Record<HookTiming, AnyHook[]>>;
   _generateTypes?: false;
   _generateSchema?: false;
   _generateRoutes?: false;
@@ -356,14 +347,6 @@ export type BuiltArea = Omit<Area<string>, 'versions'> & {
   versions?: Required<VersionsConfig>;
   icon: Component<IconProps>;
   access: WithRequired<Access, 'create' | 'read' | 'update' | 'delete'>;
-  /**
-   * The pipeline that runs for this config: the prototype's own hooks, those of the features it
-   * enables, and the author's `$hooks`, ordered by the marks each declares.
-   *
-   * Derived, which is why it is `_` and not `$` — `$hooks` stays what the author wrote, and this
-   * is what `run.server.ts` and the prototype operations read.
-   */
-  _pipeline?: Partial<Record<HookTiming, AnyHook[]>>;
   _generateTypes?: false;
   _generateSchema?: false;
   _generateRoutes?: false;

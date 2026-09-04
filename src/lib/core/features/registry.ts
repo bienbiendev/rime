@@ -1,6 +1,5 @@
 import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
-import type { RegisteredPrototype } from '$lib/core/prototype/define.js';
 import type { FeatureDefinition } from './define.js';
 import type { ApplyFeatureConfigure } from './register.js';
 
@@ -49,14 +48,11 @@ export const configureOrder = ['auth', 'panel', 'upload', 'versions', 'cors'] as
  * which is the same thing absence means on the augment side.
  */
 export const configureWithFeatures = <T extends Dic>(
-  prototypes: RegisteredPrototype[],
+  prototypes: { features: FeatureDefinition[] }[],
   config: T
 ): ApplyFeatureConfigure<T, typeof configureOrder> =>
   distinct(prototypes).reduce(
-    (current, feature) =>
-      feature.configure
-        ? (feature.configure(current, prototypes as RegisteredPrototype[]) as T)
-        : current,
+    (current, feature) => (feature.configure ? (feature.configure(current) as T) : current),
     config
   ) as unknown as ApplyFeatureConfigure<T, typeof configureOrder>;
 

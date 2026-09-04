@@ -1,5 +1,4 @@
 import type { Handle } from '@sveltejs/kit';
-import type { RegisteredPrototype } from '$lib/core/prototype/define.js';
 import type { Dic } from '$lib/util/types.js';
 
 /**
@@ -71,12 +70,12 @@ export type FeatureDefinition = {
    * Runs through `configureWithFeatures` in the config chain. What it does to the config's *type*
    * is declared in register.ts.
    *
-   * **The prototypes come as an argument so that a feature never imports one.** A step deriving a
-   * prototype config needs that prototype's `features` to build its hooks; importing the
-   * definition for them closes the cycle a definition's own feature list creates, and the feature
-   * still evaluating comes out `undefined` in it.
+   * A feature must never import a prototype definition to do this: a definition lists its
+   * features by value, so a feature reaching back for one can be evaluated from inside it and find
+   * whichever feature is still in flight `undefined`. Anything a derived config needs from a
+   * prototype — its hooks above all — is applied after this step, not by it.
    */
-  configure?: (config: any, prototypes: RegisteredPrototype[]) => any;
+  configure?: (config: any) => any;
 
   /**
    * A SvelteKit `Handle` the feature contributes to the request pipeline, collected by
