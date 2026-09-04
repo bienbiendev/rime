@@ -298,20 +298,44 @@ above the adapter and paying a second query per read is the better trade.
 
 Each is shippable and gate-able on its own. Stages 0 and 1 have no design questions left in them.
 
-### Stage 0 — `_root` fields stop being a hardcoded list
+### Stage 0 — `_root` stops being a hardcoded list
 
-The two halves of the repo already disagree about what a root field is. Schema generation reads a
-flag:
+**What `_root` means:** _this field lives on the base row, not the shadow row_. It says nothing on
+its own — a prototype with no shadow puts everything on the base table — so the flag is read only
+where a shadow exists. The schema split is exactly symmetric:
 
 ```ts
 // adapter-sqlite/generate-schema/index.server.ts
-const rootFieldsFromConfig = [...collection.fields].filter((f) => f.get.root);
+if (collection.versions) {
+  // the base table gets the _root fields …
+  const rootFieldsFromConfig = [...collection.fields].filter((f) => f.get.root);
+  await buildRootTable({ fields: [...rootFieldsFromConfig, date('createdAt'), date('updatedAt')], … });
+  rootTableName = baseTableName(withVersionsSuffix(collectionSlug));
+}
+
+// … and the shadow gets everything else
+await buildRootTable({
+  fields: collection.versions ? collection.fields.filter((f) => !f.get.root) : collection.fields,
+  rootName: rootTableName,
+  …
+});
 ```
 
-The write path matches names:
+Which is why hierarchy and upload paths are marked with it — a site tree that forked per revision
+would be nonsense:
 
 ```ts
-// adapter-sqlite/util.server.ts
+// core/features/nested/module.ts
+fields: [text('_parent').hidden()._root(), number('_position').defaultValue(0).hidden()._root()];
+
+// core/features/upload/module.ts
+const _pathField = text('_path')._root().hidden().validate(validatePath);
+```
+
+**The write path does not read the flag.** It matches those three names:
+
+```ts
+// adapter-sqlite/util.server.ts — called from the two versioned update branches and from insert
 export function extractRootData(data: any) {
   const rootData: { _parent?: string; _position?: number; _path?: string } = {};
   if ('_parent' in data) {
@@ -330,28 +354,25 @@ export function extractRootData(data: any) {
 }
 ```
 
-Those three names are two features' fields, hardcoded in the adapter — and they already carry the
-flag:
+So a field marked `._root()` by anything other than nested or upload is **silently dropped on a
+versioned write**: it has a base column and no shadow column, its value stays in the content half,
+and `prepareSchemaData` keeps only the columns the shadow table actually has —
 
 ```ts
-// core/features/nested/module.ts
-(text('_parent').hidden()._root(), number('_position').defaultValue(0).hidden()._root());
-
-// core/features/upload/module.ts
-const _pathField = text('_path')._root().hidden().validate(validatePath);
+const columns = getTableColumns(tables[mainTableName]);
+return { mainData: transformDataToSchema(data, columns, { fillNotNull }), … };
 ```
 
-So a field marked `._root()` by anything else gets a root **column** and has its **value** written
-to the version row. Take the list from the config:
+— so the value goes nowhere, with no error. Take the list from the config instead:
 
 ```ts
 export function extractRootData(data: Dic, config: BuiltCollection | BuiltArea) {
-  const rootPaths = config.fields
+  const basePaths = config.fields
     .filter(isFormField)
     .filter((f) => f.get.root)
     .map((f) => f.name);
   const rootData: Dic = {};
-  for (const path of rootPaths) {
+  for (const path of basePaths) {
     if (path in data) {
       rootData[path] = data[path];
       delete data[path];
@@ -361,8 +382,19 @@ export function extractRootData(data: Dic, config: BuiltCollection | BuiltArea) 
 }
 ```
 
-No contract change, two feature names out of the adapter, and it exercises the fixtures and gates
-below before anything risky. **Do this first.**
+No contract change, two feature names out of the adapter, one latent bug closed — and it exercises
+the fixtures and gates below before anything risky. **Do this first.**
+
+Two things to notice while in there, both fair game for the same commit:
+
+- **Areas never filter.** `generate-schema` carries `// For now, areas don't need to filter out
+fields with or without _root`, so a versioned area puts every field on the shadow. Harmless today
+  — `nested` and `upload` are collection-only — and wrong the moment anything marks a field on an
+  area.
+- **The name predates the vocabulary.** `docs/decoupling-adapter.md` says base / shadow / child /
+  branch; this flag says `root`. `._base()` would say what it means. A rename touches three feature
+  files, the builder, and the schema generator, and is worth doing only if it happens alongside
+  something else in those files.
 
 ### Stage 1 — `versionId` → `contentOwnerId`, no behaviour change
 
