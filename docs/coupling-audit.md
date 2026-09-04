@@ -89,9 +89,12 @@ core/config/validate.server.ts imports isAuthConfig
 adapter/types.ts               imports User from features/auth/types.js
 ```
 
-`rime.auth` is public API, so the context member is not obviously wrong — but `boot.server.ts`
-naming `createAuthInstance` while every other feature boots through `bootFeatures` is an
-inconsistency with no reason behind it. That one is a small fix.
+`rime.auth` is public API, so the context member is not obviously wrong. `boot.server.ts` naming
+`createAuthInstance` while every other feature boots through `bootFeatures` looks like the
+inconsistency to fix, and it is **not small**: `FeatureDefinition.boot` takes only the config and
+returns nothing, while this one needs the adapter, the config context and the mailer plugin, and
+*returns* the instance that becomes `rime.auth`. Moving it means giving `boot` those arguments and
+a way to contribute a member to the context — a contract change, not a relocation.
 
 ## 4. `core/config/` still names the two kinds
 
@@ -144,17 +147,23 @@ behind the `handler` member the feature contract now has.
 
 Cheapest first, and each is independently useful:
 
-1. **`boot.server.ts` boots auth through `bootFeatures`** like every other feature. Small, removes
-   a named import from core's boot.
-2. **`augment-panel.ts` stops reading `config.upload`.** A panel default keyed on a feature; the
-   feature can offer it the way `$titleFallback` is offered.
-3. **`validate.server.ts` and `context.server.ts` fold the prototype registry** instead of listing
+1. **`augment-panel.ts` stops reading `config.upload`.** The collection's panel augment picks a
+   dashboard layout from a feature; upload can offer one the way it offers `$titleFallback`. No
+   contract change — the only real one-sitting fix on this list.
+2. **`FeatureDefinition.validate`**, which moves the auth-collection rules out of
+   `config/validate.server.ts`. A small contract addition with one caller.
+3. **Features contribute to `createBlankDocument`**, which moves upload's `sizes` out of
+   `prototype/doc.ts`. The same shape as 2; `prototype/api.server.ts` already notes the gap.
+4. **`validate.server.ts` and `context.server.ts` fold the prototype registry** instead of listing
    `collections` and `areas`. Needs a prototype to declare its config key.
-4. **`Config`'s authoring surface** derives its prototype members from the registry — the type-level
-   half of 3, and the one that makes a third prototype cost only its own folder.
-5. **A hook timing meaning "always"**, which lets versions carry its own `beforeUpdate` hooks and
+5. **`Config`'s authoring surface** derives its prototype members from the registry — the type-level
+   half of 4, and the one that makes a third prototype cost only its own folder.
+6. **Auth's boot goes through `bootFeatures`**, which needs `boot` to take the adapter and context
+   and to contribute a member back. Bigger than it looks (see above).
+7. **A hook timing meaning "always"**, which lets versions carry its own `beforeUpdate` hooks and
    removes the last prototype→feature naming.
-6. **The panel**, largest and last: a page per kind, driven by the registry rather than by
+8. **The panel**, largest and last: a page per kind, driven by the registry rather than by
    `isCollection`.
 
-Items 1–2 are hours. 3–4 are the natural next commit after this branch. 5–6 are projects.
+Item 1 is a sitting. 2–3 are a contract member each. 4–5 are the natural next commit. 6–8 are
+projects, and 8 is the biggest thing left in the repo.
