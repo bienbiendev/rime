@@ -259,9 +259,9 @@ costs 7 (`boot.server.ts`, `panel/navigation.ts`, `handlers/auth.server.ts`).
   deliberate: those two run for *every* config, versioned or not (`assertUpsertContext` requires
   what the first one populates), so `enabled` would break updates on non-versioned configs.
   `features/versions/index.ts` states it, and states the fix: a timing that says "always".
-- `pipeline/steps/merge-with-blank.server.ts` is imported only by the collection. Left in place —
-  generic machinery a collection happens to be the only caller of, and a folder for one file is
-  ceremony. Revisit if a second collection-only step turns up.
+- `pipeline/steps/` is now only what **both** prototypes' hook lists import. A step used by one
+  feature or one prototype belongs to it, whatever the file count — `merge-with-blank.server.ts`
+  briefly stayed put on a "folder for one file is ceremony" argument, which is not a reason.
 
 ---
 

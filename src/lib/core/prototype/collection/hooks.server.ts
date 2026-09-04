@@ -4,7 +4,7 @@ import type { AnyHook, HookTiming } from '$lib/core/features/define.js';
 import { authorize } from '$lib/core/pipeline/steps/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/steps/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/pipeline/steps/get-original-document.server.js';
-import { mergeWithBlankDocument } from '$lib/core/pipeline/steps/merge-with-blank.server.js';
+import { mergeWithBlankDocument } from './hooks/merge-with-blank.server.js';
 import { buildOriginalDocConfigMap } from '$lib/core/pipeline/steps/original-config-map.server.js';
 import { processDocumentFields } from '$lib/core/pipeline/steps/process-document-fields.server.js';
 import { setDefaultValues } from '$lib/core/pipeline/steps/set-default-values.server.js';
