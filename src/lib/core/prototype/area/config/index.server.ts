@@ -28,6 +28,9 @@ export const create = <S extends string>(
 
   return {
     ...augmented,
+    // Kept apart from the resolved `$hooks` so a derived config can run them without
+    // inheriting a pipeline resolved for someone else's features.
+    _authorHooks: incomingConfig.$hooks,
     type: 'area',
     fields: augmented.fields || [],
     slug: augmented.slug as BuiltArea['slug'],

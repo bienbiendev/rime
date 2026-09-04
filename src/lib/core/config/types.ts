@@ -321,6 +321,15 @@ export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'up
   upload?: UploadConfig;
   icon: Component<IconProps>;
   access: WithRequired<Access, 'create' | 'read' | 'update' | 'delete'>;
+  /**
+   * The hooks the author wrote for this config, kept apart from `$hooks`.
+   *
+   * `$hooks` is the *resolved pipeline* once the config is built — the prototype's own hooks, its
+   * enabled features', and these, ordered by their marks. A derived config (versions' shadow)
+   * needs to run the author's hooks without inheriting the rest, since it enables a different set
+   * of features and resolves against its own prototype.
+   */
+  _authorHooks?: CollectionHooks<any>;
   _generateTypes?: false;
   _generateSchema?: false;
   _generateRoutes?: false;
@@ -347,6 +356,15 @@ export type BuiltArea = Omit<Area<string>, 'versions'> & {
   versions?: Required<VersionsConfig>;
   icon: Component<IconProps>;
   access: WithRequired<Access, 'create' | 'read' | 'update' | 'delete'>;
+  /**
+   * The hooks the author wrote for this config, kept apart from `$hooks`.
+   *
+   * `$hooks` is the *resolved pipeline* once the config is built — the prototype's own hooks, its
+   * enabled features', and these, ordered by their marks. A derived config (versions' shadow)
+   * needs to run the author's hooks without inheriting the rest, since it enables a different set
+   * of features and resolves against its own prototype.
+   */
+  _authorHooks?: AreaHooks<any>;
   _generateTypes?: false;
   _generateSchema?: false;
   _generateRoutes?: false;

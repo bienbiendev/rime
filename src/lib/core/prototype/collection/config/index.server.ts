@@ -36,6 +36,9 @@ export const create = <S extends string>(
 
   return {
     ...augmented,
+    // Kept apart from the resolved `$hooks` so a derived config can run them without
+    // inheriting a pipeline resolved for someone else's features.
+    _authorHooks: incomingConfig.$hooks,
     fields: augmented.fields || [],
     $url: augmented.$url as BuiltCollection['$url'],
     slug: augmented.slug as BuiltCollection['slug'],

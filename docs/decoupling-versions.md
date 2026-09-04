@@ -383,8 +383,8 @@ export function extractRootData(data: Dic, config: BuiltCollection | BuiltArea) 
 ```
 
 No contract change, two feature names out of the adapter, one latent bug closed — and it exercises
-the fixtures and gates below before anything risky. **Do this first.** *(Done: the read side had
-the same list, missing `_path`, so a `select=_path` on a versioned upload collection dropped it.)*
+the fixtures and gates below before anything risky. **Do this first.** _(Done: the read side had
+the same list, missing `_path`, so a `select=_path` on a versioned upload collection dropped it.)_
 
 Two things to notice while in there, both fair game for the same commit:
 
@@ -527,9 +527,15 @@ forced.
   flight — `undefined`, silently. `prototype/collection/config/pipeline.spec.ts` fails when it
   happens.
 
-- **The shadow runs the collection pipeline.** It is a collection, so anything added to the
-  collection prototype's hooks runs for `$pages__versions` too. Intended, and why `derive.server.ts`
-  calls `augmentHooks`.
+- **The shadow gets a collection's pipeline, resolved for itself.** It is a collection, so
+  anything added to the collection prototype's hooks runs for `$pages__versions` too — intended,
+  and why `derive.server.ts` calls `augmentHooks`. What must _not_ happen is inheriting the
+  parent's `$hooks`: that is a pipeline already resolved against the parent's features, so the
+  shadow ends up running hooks for features it does not enable, against columns its table does not
+  have. A versioned + nested collection got `addChildrenProperty` that way and 500'd on the
+  `_parent` column the shadow has never had; a versioned area got every core step twice. The
+  author's own hooks reach the shadow through `_authorHooks`, which the config factories keep apart
+  from the resolved pipeline for exactly this.
 - **`$` and `__` are load-bearing in slug space.** `$` marks rime-derived, `__` marks _shadow of_
   and survives case conversion as a segment boundary; `config/validate.server.ts` rejects an author
   slug containing `__` for that reason. Do not invent a third marker.
