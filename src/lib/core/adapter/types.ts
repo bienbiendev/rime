@@ -16,17 +16,13 @@ import type { DeepPartial, Dic, WithOptional, WithRequired } from '$lib/util/typ
 /**
  * What core requires of a database adapter.
  *
- * Written here, in core's vocabulary, rather than read off an implementation. It used to be
- * `Adapter = { collection: ReturnType<typeof createCollectionFacade>, ... }` declared inside
- * adapter-sqlite — so the interface *was* the implementation, and seven core files imported
- * their central type from `$lib/adapter-sqlite`. Nothing could be said to conform to it,
- * because it was defined as whatever the one adapter happened to return.
+ * Written here, in core's vocabulary, rather than read off an implementation: an interface
+ * inferred from what one adapter returns is not something a second adapter can conform to.
  *
- * The rule that decides what may appear below: **every argument and return type is something
- * core can name**. Slugs, documents, blocks, relations, queries, locales. No tables, no
- * columns, no drizzle. A method that cannot be phrased that way is a sign the work is on the
- * wrong side of the line — that is how `parentSlug: TableName` was caught, a parameter that
- * named a slug and carried a table.
+ * The rule that decides what may appear below: **every argument and return type is something core
+ * can name**. Slugs, documents, blocks, relations, queries, locales. No tables, no columns, no
+ * drizzle. A method that cannot be phrased that way is work on the wrong side of the line — a
+ * parameter like `parentSlug: TableName`, naming a slug and carrying a table, is the tell.
  *
  * The escape hatch is deliberately **not** here. `rime.adapter.db` is documented for consumers
  * who need to drop to SQL, and adapter-sqlite still exposes it; core is what must not use it.

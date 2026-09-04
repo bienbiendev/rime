@@ -9,9 +9,8 @@ import { generatePK, transformDataToSchema } from './util.server.js';
 const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   /**
    * Callers name the owner by slug — `pages`, or `$pages__versions` when versioned — and the
-   * mapping to a table happens here. Core used to compute the table name itself and pass it in
-   * a parameter still called `parentSlug`, which is how a table name and a slug came to be the
-   * same variable.
+   * mapping to a table happens here, so that a table name never travels in a parameter that
+   * names a slug.
    */
   const buildBlockTableName = (parentSlug: PrototypeSlug, blockName: string) =>
     buildTableName({

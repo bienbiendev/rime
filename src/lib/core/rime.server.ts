@@ -17,20 +17,16 @@ export type { ConfigContext };
 /**
  * What a request gets: `event.locals.rime`.
  *
- * **Declared, not inferred, and that is the whole point of this shape.** It used to be
- * `ReturnType<typeof createRime>`, which made `App.Locals['rime']` depend on everything
- * `createRime` transitively imports. Every hook is typed through `HookContext → event:
- * RequestEvent → App.Locals`, so the moment anything in that import graph was itself typed in
- * terms of `rime`, it referenced itself and TypeScript answered `any`.
+ * **Declared, not inferred, and that is the whole point of this shape.** Inferring it from
+ * `createRime` would make `App.Locals['rime']` depend on everything that function transitively
+ * imports; every hook is typed through `HookContext → event: RequestEvent → App.Locals`, so
+ * anything in that graph typed in terms of `rime` references itself and TypeScript answers `any`
+ * for every hook in the repo — silently.
  *
- * That is not hypothetical and it is not one bug: it is why a `$hooks` written inline in a
- * config broke, why commit 2's accessors resolved to `never`, and why a prototype definition
- * could not carry its own hooks. One inferred alias, three symptoms.
- *
- * The rule this establishes, and the only one to remember when adding a member: **take types
- * from declared config phantoms, never from `createRime` or `bootRime`.** `$InferPluginsServer`
- * and `RimeAuth` are declared *about* a config, so naming them costs nothing. Naming a function
- * that imports the prototype registry puts every hook back in the loop.
+ * The rule to keep when adding a member: **take types from declared config phantoms, never from
+ * `createRime` or `bootRime`.** `$InferPluginsServer` and `RimeAuth` are declared *about* a
+ * config, so naming them costs nothing; naming a function that imports the prototype registry puts
+ * every hook back in the loop.
  */
 export type RimeContext<C extends Config = Config> = PrototypeAccessors &
   // A consumer's own plugins, spread at the top level under their own names — `rime.myPlugin.doThing()`.

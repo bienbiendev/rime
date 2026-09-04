@@ -5,16 +5,9 @@ import type { Plugin } from '$lib/core/plugins/index.js';
 /**
  * The plugin step, once, for both sides.
  *
- * There used to be two: `augmentPlugins` (client) and `augmentPluginsServer`, differing only in
- * which core plugins they prepend and in the server one also collecting `plugin.routes`. That
- * split predates plugins being isomorphic — the core list is a `$rime/modules` pair now
- * (`plugins/defaults/`), so one function serves both builds and each gets its own list.
- *
- * `build.server.ts` called **both**, which was not two steps but one step twice: `cache()` landed
- * in the list a second time and every `configure` ran again, so the panel header carried three
- * copies of the clear-cache button. Running once is the fix, and the position kept is the second
- * one — last in the chain, after the features have derived what they derive — so a plugin's
- * `configure` sees the config the rest of rime will see.
+ * Each build gets its own core plugins from `plugins/defaults/`, a `$rime/modules` pair, so one
+ * function serves both. Last in the config chain, after the features have derived what they
+ * derive, so a plugin's `configure` sees the config the rest of rime will see.
  */
 export const augmentPlugins = <const T extends PluginHost>(config: T) => {
   const plugins: Plugin[] = [...defaultPlugins(config), ...(config.plugins || [])];

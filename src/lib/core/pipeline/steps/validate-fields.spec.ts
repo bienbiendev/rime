@@ -9,13 +9,12 @@ import { validateFields } from './validate-fields.server.js';
 /**
  * Guards the interaction between field-level write access and `required`.
  *
- * These two rules meet in one place and used to contradict each other: the access block
- * empties a field the request may not write, and the required block then reported the now-empty
- * field as missing. The caller could not win — it was not allowed to send the value that would
- * have satisfied the check.
+ * The two can contradict each other: the access block empties a field the request may not write,
+ * and the required block then reports the now-empty field as missing — leaving the caller unable
+ * to win, since it was not allowed to send the value that would satisfy the check.
  *
- * It is easy to think of this as an auth-collection quirk, because that is where it was found
- * (`confirmPassword` had no `.access()`, so an anonymous `POST /api/users` 400d on a field it
+ * It is easy to read this as an auth-collection quirk, since that is where it shows up first
+ * (`confirmPassword` with no `.access()` makes an anonymous `POST /api/users` 400 on a field it
  * could not send, instead of 403ing on access). It is not. `FormFieldBuilder` defaults to
  * `access.create: (user) => !!user`, so this hits *any* publicly-creatable collection whose
  * fields do not each override it — a sign-up form, a contact form, a comment.
@@ -61,10 +60,10 @@ describe('validateFields: required vs. field access on create', () => {
     expect(result.context.configMap).not.toHaveProperty('nickname');
   });
 
-  test('...and that drop no longer turns into an unsatisfiable REQUIRED_FIELD', async () => {
+  test('...and that drop does not turn into an unsatisfiable REQUIRED_FIELD', async () => {
     const fields = [text('nickname').required()];
 
-    // The regression this guards: an anonymous create used to throw here.
+    // An anonymous create must resolve here rather than throw.
     await expect(
       runValidate({ fields, data: { nickname: 'anon' }, user: undefined })
     ).resolves.toBeDefined();

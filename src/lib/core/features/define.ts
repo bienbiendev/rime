@@ -13,20 +13,16 @@ import type { Dic } from '$lib/util/types.js';
  * those fields mean something, and (for `shadow`/`child`) the tables it asks the adapter for.
  * What it does *not* own is where its document hooks sit in the pipeline — see `hooks` below.
  *
- * Only the parts a feature in this repo actually uses are declared here. The doc lists more
- * (`configure`, `beforeBoot`, `afterBoot`, `beforeCodegen`, `afterCodegen`, `persistence`,
- * `transform`); each lands with the feature that first needs it, rather than being designed
- * against a case nobody can name yet.
+ * Only the members some feature here actually uses are declared. `beforeBoot`, `afterBoot`,
+ * `beforeCodegen`, `afterCodegen`, `persistence` and `transform` land when a feature needs them.
  */
 export type FeatureDefinition = {
   /**
-   * The feature's name, used to identify it in the generated pipeline and to deduplicate the
-   * whole-config steps (`configure`, `boot`) when several prototypes list the same feature.
+   * Identifies the feature in the generated pipeline, and deduplicates the whole-config steps
+   * (`configure`, `boot`, `handler`) when several prototypes list the same one.
    *
-   * Explicit, where it used to be the registry barrel's key. There is no barrel any more — a
-   * prototype names the features that extend it, by value — so nothing is left to infer a name
-   * from. Same reason a hook declares its own: the thing is passed as an argument, and an
-   * argument has no name.
+   * Declared rather than inferred: a prototype lists its features by value, and an argument has
+   * no name of its own.
    */
   name: string;
 
@@ -43,17 +39,15 @@ export type FeatureDefinition = {
   /**
    * Features this one is built on top of, by name.
    *
-   * Also an ordering statement: a feature runs after everything it requires. Rather than sorting
-   * by it, `definePrototype` *checks* it against the order the prototype listed — so the order
-   * stays readable where it is declared, and a list that contradicts a `requires` fails loudly.
+   * Also an ordering statement: a feature runs after everything it requires. `definePrototype`
+   * checks this against the order the prototype listed rather than sorting by it, so the order
+   * stays readable where it is declared and a list that contradicts a `requires` fails loudly.
    */
   requires: string[];
 
   /**
-   * Whether a given config uses this feature.
-   *
-   * One place to say it. It used to be repeated: `augmentUrl` tested `config.$url` internally
-   * and the pipeline tested it again at each hook site.
+   * Whether a given config uses this feature — the one place that question is answered, for its
+   * augment and its hooks alike.
    */
   enabled: (config: Dic) => boolean;
 
@@ -62,52 +56,42 @@ export type FeatureDefinition = {
    *
    * Runs inside the prototype factories, in barrel order, only for configs where `enabled`.
    *
-   * `any` rather than `Dic`, and for a real reason: each augment names the shape it needs
-   * (`{ slug, nested?, fields? }`, `Collection<any>`), and a parameter is contravariant, so a
-   * list that accepts every feature's augment cannot promise any of them a shape. The same
-   * erasure `AnyHook` makes below, sound for the same reason — an augment only ever sees configs
-   * of a prototype it declared in `extends`. What the augments do to a config's *type* is
-   * declared in registry.ts, where the factories can see it.
+   * `any` rather than `Dic`: each augment names the shape it needs (`{ slug, nested?, fields? }`,
+   * `Collection<any>`), and a parameter is contravariant, so a list accepting every feature's
+   * augment cannot promise any of them a shape. Sound because an augment only ever sees configs of
+   * a prototype that lists it. What it does to the config's *type* is declared in register.ts.
    */
   augment?: (config: any) => any;
 
   /**
-   * What the feature adds to the *whole* config, rather than to one prototype's — upload derives
-   * a companion `<slug>Directories` collection for every upload collection it finds, auth adds the
-   * `staff` collection, the panel fills in its defaults.
+   * What the feature adds to the **whole** config rather than to one prototype's: auth adds the
+   * `staff` collection, upload derives a `<slug>Directories` companion per upload collection, the
+   * panel fills in its defaults, cors defaults the origin list.
    *
-   * It runs in the config chain (`core/config/build{,.server}.ts`), through
-   * `configureWithFeatures`. What it does to the config's *type* is declared in register.ts.
+   * Runs through `configureWithFeatures` in the config chain. What it does to the config's *type*
+   * is declared in register.ts.
    *
-   * **The prototypes come as an argument, and that is not a convenience.** A step that derives a
-   * prototype config needs that prototype's `features` to build its hooks, and importing the
-   * definition to get them is the back-edge rule 3 forbids: a definition lists its features by
-   * value, so a feature reaching back for the definition can be evaluated *from inside* it and
-   * capture `undefined` for whichever feature is still in flight — which is exactly what
-   * `versions` did the moment its derive step became a `configure`. Handed the registry instead,
-   * a feature imports no definition at all.
+   * **The prototypes come as an argument so that a feature never imports one.** A step deriving a
+   * prototype config needs that prototype's `features` to build its hooks; importing the
+   * definition for them closes the cycle a definition's own feature list creates, and the feature
+   * still evaluating comes out `undefined` in it.
    */
   configure?: (config: any, prototypes: RegisteredPrototype[]) => any;
 
   /**
-   * A SvelteKit `Handle` the feature contributes to the request pipeline.
+   * A SvelteKit `Handle` the feature contributes to the request pipeline, collected by
+   * `handlers/index.ts` and run between `handleAuth` and the plugins'.
    *
-   * `handlers/index.ts` collects these from the registry and runs them between `handleAuth` and
-   * the plugins' — the slot `handleCORS` occupied when the list was written out by hand in core.
-   *
-   * A feature's *document* hooks are `hooks` below; this is the layer under them, where there is
-   * no document yet. `cors` is the first to need it: enforcing an origin list happens per request,
-   * not per document, and the alternative was leaving half of CORS in `core/handlers/` while the
-   * config half lived in the feature.
+   * The layer under `hooks` below: this is where there is no document yet. `cors` enforces its
+   * origin list here, per request rather than per document.
    */
   handler?: Handle;
 
   /**
    * Run once per process, before anything is served — the feature's own boot step.
    *
-   * Takes the whole config, not one prototype's, which is why it is not a timing in `hooks`
-   * below: a hook's timing is defined by the arguments available at it, and this one is answering
-   * a question about the config as a whole ("does anything here upload?"). Mirrors
+   * Takes the whole config, not one prototype's, which is why it is not a timing in `hooks`: it
+   * answers a question about the config as a whole ("does anything here upload?"). Mirrors
    * `PrototypeDefinition.boot`.
    */
   boot?: (config: any) => void | Promise<void>;
@@ -115,20 +99,11 @@ export type FeatureDefinition = {
   /**
    * The feature's document hooks, by timing.
    *
-   * The feature owns the implementations; it does not own where they run. There is no
-   * `pipeline.server.ts` spelling that out any more — each hook declares `requires`/`provides`
-   * and `resolve-pipeline.server.ts` sorts them (see core/pipeline/hooks.ts). That is what the
-   * literal lists could not do: in a collection's `beforeRead` a feature's hooks interleave with
-   * core steps — `populateURL` must run after the document is shaped and before it is sorted —
-   * and the features that interleave there require nothing of *each other*, so their order was
-   * not expressible as a dependency between features.
-   *
-   * A plain value, assigned the way every other hook in the repo is. It briefly also accepted a
-   * thunk, because the `$rime/modules` barrel evaluated a feature inside an import cycle and a
-   * binding read at module scope could be `undefined`. The barrel is gone — imports are rewritten
-   * per name, so a feature pulls in the one pair it names — and the thunk went with it rather
-   * than staying on as an escape hatch: a second way to declare one thing, whose reason no
-   * longer exists.
+   * The feature owns the implementations; it does not own where they run. Each hook declares
+   * `requires`/`provides` (see core/pipeline/hooks.ts) and `resolve-pipeline.server.ts` sorts
+   * them, which is what a written-out list cannot do: in a collection's `beforeRead` a feature's
+   * hooks interleave with core steps — `populateURL` runs after the document is shaped and before
+   * it is sorted — while the features interleaving there require nothing of *each other*.
    */
   hooks?: FeatureHooks;
 };
@@ -152,15 +127,15 @@ export type HookTiming =
  */
 export type AnyHook = (args: any) => any;
 
-/** Kept as an alias while call sites migrate: a feature now carries its own name. */
+/** Alias for call sites that read better naming the registered thing. */
 export type RegisteredFeature = FeatureDefinition;
 
 /**
- * Generic in the *name only*, so `name` survives as a literal — which is what lets a prototype's
- * `features` list yield an ordered tuple of names for the type fold.
+ * Generic in the *name only*, so `name` survives as a literal and a prototype's `features` list
+ * yields an ordered tuple of names for the type fold.
  *
- * Not `<const D extends FeatureDefinition>`: that also freezes every array literal in the
- * definition into a fixed-length tuple, so `hooks.beforeRead` typed as `[Hook]` and refused a
+ * Not `<const D extends FeatureDefinition>`: that would also freeze every array literal in the
+ * definition into a fixed-length tuple, so `hooks.beforeRead` would type as `[Hook]` and refuse a
  * plain `Hook[]`.
  */
 export const defineFeature = <N extends string>(

@@ -10,15 +10,12 @@ import path from 'node:path';
 /**
  * Writes the resolved hook order for every config, as a tree.
  *
- * The order used to be readable because it was written out by hand. It is computed now — which
- * is the point, since a hand-written list meant a prototype naming the features that extend it —
- * but that leaves nobody able to see the pipeline without running the resolver. So the resolver
- * writes down what it decided.
+ * The order is computed from the marks each hook declares, so this is how it can be read without
+ * running the resolver: it writes down what the resolver decided.
  *
- * A pipeline is a vertical sequence, so it is printed vertically. The first version used a table
- * row per timing with the hooks joined by arrows, which put a nine-hook `beforeRead` on one
- * wrapping line — the order being the one thing the file exists to show, and the hardest part of
- * it to read.
+ * A pipeline is a vertical sequence, so it is printed vertically — a row per timing with the hooks
+ * joined by arrows puts a nine-hook `beforeRead` on one wrapping line, which is the one thing the
+ * file exists to show.
  */
 
 /**

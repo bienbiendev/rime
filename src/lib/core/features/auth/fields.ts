@@ -44,8 +44,8 @@ const password = text('password')
 /**
  * No `confirmPassword` here on purpose. It is a form control, not a document field: the
  * panel owns the match check (AuthFooter.svelte builds its own `text('confirmPassword')`),
- * because comparing two values the same client just sent proves nothing server-side.
- * Modelling it as a field is what used to force `restCreate` to fake the value.
+ * because comparing two values the same client just sent proves nothing server-side. Modelling it
+ * as a field would force `restCreate` to fake a value for it.
  */
 export const usersFields = {
   email: emailField,

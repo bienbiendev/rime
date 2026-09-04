@@ -25,15 +25,9 @@ import { registerTranslation } from './i18n/register.server.js';
  * dependencies (schema-before-adapter, adapter-before-auth) are load-bearing and invisible
  * anywhere else.
  *
- * Two steps below used to be invisible, and are named here for the first time:
- *
- * - The upload feature's boot hook ran as a side effect of createConfigContext, so building a
- *   config object created directories on disk. It is declared on the feature now (step 3).
- * - better-auth's construction is the **auth feature's** boot hook. It was inlined mid-function
- *   in createRime.
- *
- * Both belong to features, and neither had anywhere to be declared. They are the concrete case
- * for a Feature contract with a `boot` hook — see docs/structure-audit.md §14.1.
+ * Two of the steps belong to features rather than to core, and are declared as their `boot`
+ * hooks: upload makes sure the static directory it writes into exists (step 3), and better-auth's
+ * construction is the auth feature's.
  */
 export const bootRime = async <const C extends Config>(config: BuildConfig<C>) => {
   // 1. Plugins, flattened to a name -> actions map. First because codegen and better-auth both
@@ -49,8 +43,8 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   const configCtx = createConfigContext(config);
 
   // 3. Every feature's boot step, in registry order — upload makes sure the static directory it
-  //    writes into exists. Named here by feature rather than by function: this used to call
-  //    `ensureMedias(config)` directly, which meant boot knew what uploads needed.
+  //    writes into exists. By feature rather than by function, so boot never knows what any one
+  //    of them needs.
   await bootFeatures(prototypes, config);
 
   // 4. Phase 1, in dev only: write routes, schema and types. Before the adapter, which imports

@@ -49,9 +49,9 @@ function validateSlugs(config: Config) {
   ];
 
   for (const slug of slugs) {
-    // `$` marks a slug rime derived itself ($pages__versions, $mediasDirectories). Those are
-    // built from an author slug that was already validated, so skip them — this used to strip
-    // each feature's suffix instead, which meant core had to know what every feature appends.
+    // `$` marks a slug rime derived itself ($pages__versions, $mediasDirectories), built from an
+    // author slug that was already validated. Skipped by the marker rather than by suffix, so core
+    // never has to know what a feature appends.
     if (slug.startsWith('$')) continue;
 
     if (slug.includes('__')) {

@@ -7,13 +7,10 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 /**
  * The order the pipeline resolves to, pinned.
  *
- * Every sequence below is the order the hand-written pipeline produced before it was replaced by
- * declared marks — recovered from `operations/pipeline.server.ts` at e3ea8f8^ — with the
- * exceptions marked in place, each checked by reading the hooks rather than assumed.
- *
- * The prototype no longer has a pipeline file to read from: it declares its own hooks and lists
- * the features that extend it, and `augmentHooks` composes the two. So this now resolves through
- * exactly the path a real config takes.
+ * Every sequence below is the order a real config resolves to: the prototype declares its own
+ * hooks and lists the features that extend it, `augmentHooks` composes the two, and the resolver
+ * sorts them by the marks each declares. Any accepted departure from the obvious reading is
+ * marked in place, checked against the hooks rather than assumed.
  *
  * This file exists because a wrong mark reorders the pipeline *silently*. The generated schema
  * stays byte-identical, every adapter probe still matches, and the only symptom is behaviour —
@@ -36,10 +33,9 @@ describe('resolved pipeline order', () => {
     const hooks = collection({});
 
     it('reads in the documented order', () => {
-      // ACCEPTED DIFF: `setDocumentTitle` used to sit second, from its position in a hand-written
-      // list. It is the `title` feature's hook now, so it tie-breaks after the prototype's own
-      // steps. Checked against the marks rather than accepted: it requires `shaped` and provides
-      // `title`/`document`, and nothing between the two positions provides or consumes either —
+      // `setDocumentTitle` tie-breaks after the prototype's own steps, being the `title`
+      // feature's hook. Its position is free rather than incidental: it requires `shaped` and
+      // provides `title`/`document`, and nothing it passes provides or consumes either —
       // `setDocumentLocale` and `setDocumentType` write `locale`/`_type` and read neither.
       expect(order(hooks, 'beforeRead')).toEqual([
         'processDocumentFields',
@@ -204,10 +200,9 @@ describe('resolved pipeline order', () => {
   });
 
   describe('a consumer hook', () => {
-    it('is sorted, where the hand-written pipeline left it unsorted', () => {
-      // The old code appended consumer hooks after the built-ins, so a beforeRead hook ran after
-      // sortDocumentProps and any property it added stayed out of order. Its default marks now
-      // place it before the sort.
+    it('is sorted rather than appended after the built-ins', () => {
+      // A consumer's beforeRead hook carries default marks that place it before the sort, so a
+      // property it adds comes back in order like any other.
       const own = Hooks.beforeRead(async (args) => args);
       const hooks = collection({ $hooks: { beforeRead: [own] } });
       const read = order(hooks, 'beforeRead');

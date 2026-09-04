@@ -4,15 +4,14 @@ import { marksOf } from '$lib/core/pipeline/resolve-pipeline.server.js';
 import { create } from './index.server.js';
 
 /**
- * Guards the one failure in this repo that raises no error at all.
+ * Guards a failure that raises no error at all.
  *
- * A built config's pipeline is composed from two lists — the prototype's own hooks and those of
- * the features it lists. Reach either through `definition.server.ts` and the factory depends on an
- * evaluation order, because that file spreads `{ ...base }` at module scope: enter it too early
- * and the spread comes out without `features`, so **every feature hook silently stops running**.
- * Nothing throws. The types are unchanged. The schema is unchanged. A document just comes back
- * with no `title` and no `url`, which is what happened when adding one feature to the collection's
- * list reordered the graph.
+ * A built config's pipeline is composed from two lists: the prototype's own hooks, and those of
+ * the features it lists. Reaching either through `definition.server.ts` makes the factory depend
+ * on evaluation order, because that file spreads `{ ...base }` at module scope — entered too
+ * early, the spread comes out without `features` and **every feature hook silently stops
+ * running**. Nothing throws, the types are unchanged, the schema is unchanged; a document simply
+ * comes back with no `title` and no `url`.
  *
  * So: build a real collection and assert both layers are in its pipeline.
  */

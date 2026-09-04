@@ -1,18 +1,9 @@
 /**
  * How a prototype declares what its whole-config `configure` does to the config's *type*.
  *
- * The same device as `features/register.js`, and for the same reason. `augmentPrototypes` used to
- * do this job inside the config factory:
- *
- * ```ts
- * collections: config.collections || [],
- * areas: config.areas || []
- * ```
- *
- * — core naming the two kinds, and owning the shape of their lists, which is exactly the
- * inversion commit 1 removed everywhere else. A third prototype meant editing that file.
- *
- * Now each prototype merges its own transform in, beside its own definition:
+ * The same device as `features/register.js`. Each prototype merges its own transform in, beside
+ * its own definition, so core never names the kinds or owns the shape of their lists — a third
+ * prototype brings its own declaration and nothing here changes:
  *
  * ```ts
  * declare module '$lib/core/prototype/register.js' {
@@ -34,7 +25,7 @@ export interface PrototypeConfigure<T> {}
  * Applies each named prototype's declared transform, in registry order.
  *
  * A list rather than a set, matching `ApplyAugments`: the runtime step folds the registry in
- * order, so the type has to fold in the same order to stay honest about a transform that is not
+ * order, so the type folds in the same order and stays honest about a transform that is not
  * merely additive. A name with no declaration passes the type through untouched.
  */
 export type ApplyPrototypeConfigure<T, Names extends readonly unknown[]> = Names extends readonly [

@@ -107,8 +107,8 @@ export const augmentAuth = <T extends Input>(config: T): WithNormalizedAuth<T> =
   }
 
   // What an auth document is called, offered to the `title` feature rather than guessed at by it.
-  // `??=` in effect, not `=`: upload overwrites this where a config carries both, which is the
-  // precedence the old augmentTitle switch had when it tested `upload` before `auth`.
+  // Upload overwrites this where a config carries both, which is the precedence registry order
+  // gives: upload is listed after auth.
   const $titleFallback = IS_API_AUTH ? 'name' : 'email';
 
   return { ...normalizedAuthConfig, fields, $titleFallback };

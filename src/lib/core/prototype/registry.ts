@@ -22,10 +22,9 @@ export type PrototypeName = (typeof prototypeNames)[number];
  * A definition's **name is its export name here**, so there is no field to keep in sync with the
  * key, and adding a kind is adding a folder and an export.
  *
- * It can live on this side at all because a definition is a `$rime/modules` pair now: the client
- * build gets the half without `api` and `rest`. That matters because the config factory runs on
- * both sides and needs each prototype's `features` list — which used to be unreachable from a
- * client build, back when the definition was a single `.server.ts` file.
+ * It lives on the isomorphic side because a definition is a `$rime/modules` pair: a client build
+ * gets the half without `api` and `rest`. The config factory runs on both sides and needs each
+ * prototype's `features` list, so that list has to be reachable from a client build.
  */
 export const protos: Record<PrototypeName, PrototypeDefinition> = { collection, area };
 
@@ -36,7 +35,7 @@ export { area, collection };
  *
  * **Annotated, not inferred**, and that is load-bearing — the same rule `Rime` follows in
  * rime.server.ts. `augmentConfig` passes this list to `configureWithFeatures`, so inferring it
- * makes `BuildConfig` depend on each definition's `features`, hence on every feature's hooks,
+ * would make `BuildConfig` depend on each definition's `features`, hence on every feature's hooks,
  * each of which is typed through `event.locals.rime` → `Rime` → `BuildConfig`. That closes the
  * loop and TypeScript answers `any` for all of them. A declared type is resolved lazily by name,
  * so the loop never forms.
@@ -52,8 +51,8 @@ export const prototypes: RegisteredPrototype[] = Object.entries(protos).map(
  * `configureWithFeatures`.
  *
  * Folded over `prototypeNames`, so one declaration fixes the order at runtime and in the type.
- * That order is what `ApplyPrototypeConfigure` replays: it matters for a transform that is not
- * merely additive, and neither of the two here is one yet.
+ * `ApplyPrototypeConfigure` replays that order, which matters for any transform that is not
+ * merely additive.
  */
 export const configureWithPrototypes = <T extends Dic>(
   config: T

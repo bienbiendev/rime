@@ -293,9 +293,9 @@ export const databaseColumnToPath = (path: string): string =>
  * Is this key a table name rather than a column path?
  *
  * Both use `__` as a separator, so converting it to `.` blindly turns a relational table's key
- * into nested document properties: `settings__versions__$relations` became
- * `settings.versions.$relations` and appeared inside every response, because the cleanup below
- * looks for the flat key and no longer found it. It was silent — a 200 with wrong data.
+ * into nested document properties: `settings__versions__$relations` becomes
+ * `settings.versions.$relations`, which the cleanup below cannot find by its flat key, and it
+ * surfaces inside every response — silently, as a 200 with wrong data.
  *
  * `$` is what separates the two. The naming convention uses it to mark structure — `__$` a
  * child, `__$$` a branch — and a column path can never contain one, since column names come

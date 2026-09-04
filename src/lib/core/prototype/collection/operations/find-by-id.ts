@@ -48,8 +48,8 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
     draft
   });
 
-  // The adapter reports "nothing matched" and leaves the meaning to us — it used to throw this
-  // itself, which put an HTTP-shaped decision inside the database layer.
+  // The adapter reports "nothing matched" and leaves the meaning to the caller, so an HTTP-shaped
+  // decision like this one stays out of the database layer.
   if (!documentRaw) throw new RimeError(RimeError.NOT_FOUND);
 
   const { doc } = await readDocument<CollectionSlug, T>({

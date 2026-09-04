@@ -1,17 +1,8 @@
 /**
- * How a feature declares what its augment does to a config's *type*.
+ * How a feature declares what its `augment` does to a prototype config's *type*.
  *
- * The registry used to spell this out itself:
- *
- * ```ts
- * ): WithNormalizedUpload<WithVersionsConfig<T>>;
- * ```
- *
- * — a registry naming two of its entries, and importing their internals to do it. That is the
- * type-level form of the same inversion the pipeline had: the thing meant to be extended knowing
- * the extensions by name. A feature that started or stopped narrowing meant editing the registry.
- *
- * Now each feature merges its own transform in, beside its own definition:
+ * Each feature merges its own transform in, beside its own definition, so nothing central names
+ * the features that narrow a config:
  *
  * ```ts
  * declare module '$lib/core/features/register.js' {
@@ -22,8 +13,8 @@
  * ```
  *
  * Only a feature that *changes* the type declares anything. Most augments append fields, which
- * the type already covers, and those stay absent from here — the fold below skips a name it does
- * not find, so absence means "leaves the type alone".
+ * the type already covers; the fold below skips a name it does not find, so absence means "leaves
+ * the type alone".
  */
 // `T` is unused here on purpose: an empty declaration-merging target cannot reference its own
 // parameter, and every merged member does use it (`title: T & { asTitle: string }`).
@@ -48,15 +39,10 @@ export type ApplyAugments<T, Names extends readonly unknown[]> = Names extends r
 /**
  * How a feature declares what its **whole-config** `configure` does to the config's type.
  *
- * `FeatureConfigAugment` above is for `augment`, which runs per prototype config;
- * this is its twin for `configure`, which runs over the whole thing.
- *
- * It exists because without it a whole-config step cannot be a feature's at all. Config steps that
- * *refine* the config's type — `augmentStaff` making `collections` non-empty, the panel's making
- * `config.panel` present — had to stay hand-written calls in `core/config/build{,.server}.ts`,
- * where core named the feature that owned them. `configureWithFeatures` returned `T`, so routing
- * them through it dropped the narrowing and lit up `boot.server.ts`, `panel/navigation.ts` and
- * `handlers/auth.server.ts`.
+ * The twin of `FeatureConfigAugment` above: that one is for `augment`, which runs per prototype
+ * config, this one for `configure`, which runs over the whole thing. It is what lets a
+ * type-refining step belong to a feature — `configureWithFeatures` folds these declarations, so
+ * `config.panel` is present and `config.$trustedOrigins` is a list for everything downstream.
  *
  * ```ts
  * declare module '$lib/core/features/register.js' {

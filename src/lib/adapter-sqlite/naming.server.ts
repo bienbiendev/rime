@@ -34,10 +34,8 @@ declare const TABLE_NAME_BRAND: unique symbol;
  * lives in the table `pages__versions`, and `camelProbe` in `camel_probe` — and passing one where
  * the other is wanted produces `undefined` at the schema lookup, never a type error.
  *
- * That cost four separate sweeps to chase down (`tables[…]`, `getTable(…)`, `db.query[…]`, then
- * the table-name *parameters* of insertTableRecord/updateTableRecord/prepareSchemaData), each
- * found by a failing request rather than by the compiler. The brand ends that: a plain string
- * no longer satisfies a table-name parameter, so the remaining cases surface at build time.
+ * The brand is what makes the compiler catch it: a plain string does not satisfy a table-name
+ * parameter, so a slug reaching one is a build error rather than a failing request.
  */
 export type TableName = string & { readonly [TABLE_NAME_BRAND]: true };
 
@@ -103,9 +101,9 @@ export const tableName = (parts: TableParts): TableName => {
  * The SQL table name for a Drizzle property name.
  *
  * Identity: property names are already snake-cased with their markers intact, so the two forms
- * are the same string. It used to snake-case a camelCase property name, which is what produced
- * the unreadable mix (`pages_versionsBlocksHero` -> `pages_versions_blocks_hero`, where nothing
- * says which underscore means what).
+ * are the same string. Snake-casing a camelCase property name instead produces an unreadable mix
+ * (`pages_versionsBlocksHero` -> `pages_versions_blocks_hero`), where nothing says which
+ * underscore means what.
  */
 export const toSqlTableName = (drizzleName: TableName) => drizzleName;
 
@@ -132,9 +130,9 @@ export const childTableNames = (
  * Snake case is used for the sqlite column name and Camel case is used for the drizzle column
  * property name.
  *
- * A nested field path uses the same `__` segment separator as a slug, and for the same reason —
- * it must survive case conversion as a boundary rather than collapse into a word break. This
- * used to hand-roll the split/rejoin; it shares mapSegments with slug naming now.
+ * A nested field path uses the same `__` segment separator as a slug, and for the same reason: it
+ * must survive case conversion as a boundary rather than collapse into a word break. Hence
+ * `mapSegments`, shared with slug naming.
  *
  * @example
  * // returns { camel : 'groupTitle', snake: 'group__title' }

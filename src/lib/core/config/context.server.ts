@@ -5,10 +5,9 @@ import type { BuildConfig } from './build.server.js';
 /**
  * What `event.locals.rime.config` is.
  *
- * Declared here rather than in rime.server.ts, beside the function it is derived from. It used to
- * live there, which meant anything wanting to name the config context had to import rime.server.js
- * — and `createAuthInstance` does, so the auth instance closed a `rime.server → boot.server →
- * instance.server` cycle just to borrow a type from a module it is imported by.
+ * Declared here, beside the function it is derived from, so that naming this type does not mean
+ * importing rime.server.js: `createAuthInstance` needs the name, and reaching for it there closes
+ * a `rime.server → boot.server → instance.server` cycle.
  */
 export type ConfigContext<C extends Config = Config> = ReturnType<typeof createConfigContext<C>>;
 

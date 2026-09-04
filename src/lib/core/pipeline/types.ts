@@ -236,10 +236,10 @@ export type HookMarks = {
 /**
  * Marks live on the hook at runtime and deliberately **not** in its type.
  *
- * They were briefly part of it (`Hook<S, …> & HookMarks`), which broke every consumer: an
- * intersection of a function type with an object loses the assignability that lets a
- * `Hook<'raw', 'read', 'before'>` — what `Hooks.beforeRead(fn)` infers when the handler carries
- * no explicit slug — land in a `CollectionHooks<'pages'>`. Nothing needs the type: the resolver
- * reads marks through `marksOf()` (resolve-pipeline.server.ts), and a misspelling is still a
- * compile error where it matters, in the declaration object, because `HookMark` is closed.
+ * Putting them in the type (`Hook<S, …> & HookMarks`) breaks every consumer: intersecting a
+ * function type with an object loses the assignability that lets a `Hook<'raw', 'read', 'before'>`
+ * — what `Hooks.beforeRead(fn)` infers when the handler carries no explicit slug — land in a
+ * `CollectionHooks<'pages'>`. Nothing needs them there: the resolver reads marks through
+ * `marksOf()` (resolve-pipeline.server.ts), and a misspelling is still a compile error where it
+ * matters, in the declaration object, because `HookMark` is closed.
  */

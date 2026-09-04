@@ -9,11 +9,9 @@ import { rest } from './rest/index.server.js';
 /**
  * The server half: the same area, plus `api`, `rest` and the boot step.
  *
- * `boot` is the consequence of `singleton: true`. Nothing at runtime may create the row, so it
- * has to be there already. It used to be conjured on the read path instead — `area.get` checked
- * for the row and wrote it when absent, on every read — which put a write behind a GET, cost a
- * SELECT per read forever to re-ask a question answered "yes" since the first request, and let an
- * area's creation time and locale be decided by whichever request happened to look first.
+ * `boot` is the consequence of `singleton: true`: nothing at runtime may create the row, so it has
+ * to exist before requests arrive. Doing it here keeps writes off the read path, and makes an
+ * area's creation time and locale a property of the config rather than of its first reader.
  */
 export const area = definePrototype<BuiltArea, AreaAccessor>({
   ...base,

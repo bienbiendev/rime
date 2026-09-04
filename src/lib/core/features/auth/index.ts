@@ -9,13 +9,9 @@ import { defineFeature } from '../define.js';
 /**
  * Signing in: what a collection gains by declaring `auth`.
  *
- * It was called core rather than a feature, and that was a description of where it lived, not of
- * what it is. It appends fields (`ownerId`, the password and api-key fields), it contributes
- * hooks at six timings, and every one of those was a `collection.auth ? [...] : []` written into
- * the prototype's pipeline by hand. `enabled` says it once instead, and the conditionals go.
- *
- * That is the whole reason a prototype no longer needs a hook list: every conditional in it was a
- * feature gate wearing a ternary.
+ * It appends fields (`ownerId`, the password and api-key fields) and contributes hooks at six
+ * timings, all of them gated by one `enabled` rather than a condition per hook site. It also owns
+ * the `staff` collection, which is a statement about the whole config — see `configure`.
  */
 export const auth = defineFeature({
   name: 'auth',
@@ -30,10 +26,8 @@ export const auth = defineFeature({
   /**
    * The `staff` collection, which every config gets whether or not anything declares `auth`.
    *
-   * A whole-config step, so `configure` rather than `augment`, and `enabled` does not gate it —
-   * signing into the panel does not depend on a user collection existing. It used to be called by
-   * name from `core/config/build{,.server}.ts` as `augmentStaff`, which is the config factory
-   * knowing which feature owns the staff collection.
+   * A whole-config step, so `configure` rather than `augment`, and `enabled` does not gate it:
+   * signing into the panel does not depend on a user collection existing.
    */
   configure: augmentStaff,
 
@@ -64,10 +58,8 @@ export const auth = defineFeature({
 /**
  * Normalises `auth`: an author may write `auth: true`, the built config always carries the object.
  *
- * Declared because the augment *changes* the type rather than only appending fields. It used to be
- * carried by a hand-written `augmentAuth(...)` step in each collection factory, which also ran the
- * augment a second time and appended its fields twice; the fold does both now, and this is the
- * type half of it.
+ * Declared because the augment *changes* the type rather than only appending fields, so the fold
+ * in register.ts needs to be told.
  */
 declare module '$lib/core/features/register.js' {
   interface FeatureConfigAugment<T> {

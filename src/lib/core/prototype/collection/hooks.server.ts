@@ -14,21 +14,14 @@ import { sortDocumentProps } from '$lib/core/pipeline/steps/sort-document-props.
 import { validateFields } from '$lib/core/pipeline/steps/validate-fields.server.js';
 
 /**
- * The collection prototype's *own* document hooks — the ones that are its, unconditionally.
+ * The collection prototype's *own* document hooks: the ones that are its, unconditionally.
  *
- * There is no `pipeline.server.ts` any more, and its absence is the point. That file listed every
- * hook by hand, including `...featureHooks(upload, collection, 'beforeRead')` and a ternary per
- * conditional — a prototype knowing the features that extend it. Every one of those conditionals
- * turned out to be a feature gate: `collection.auth ? [...] : []` is the auth feature's `enabled`.
- *
- * **In its own file, and not in `definition.server.ts`, for one reason:** a *derived* collection
- * needs the same list. `upload` derives a `<slug>Directories` collection and `versions` derives one
- * per versioned area, and both must run authorize, validation and the rest exactly as an authored
- * collection does. Reaching them from a feature has to not close a module cycle — the definition is
- * imported by every feature already (it lists them), so a feature importing the definition *back*
- * for its hooks would put `definition.server.ts`'s `{ ...base }` spread at the mercy of which side
- * of the pair some unrelated file happened to import first. A list of hooks depends on nothing here,
- * so it is safe to import from anywhere.
+ * **In its own file rather than in `definition.server.ts`, and that is load-bearing.** A derived
+ * collection needs the same list — `upload` derives a `<slug>Directories`, `versions` one per
+ * versioned area, and both must run authorize, validation and the rest as an authored collection
+ * does. This file depends on nothing, so anything can import it; `definition.server.ts` spreads
+ * `{ ...base }` at module scope, so importing *that* makes the importer's correctness depend on
+ * evaluation order, and the spread can come out without `features`.
  */
 export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   beforeOperation: [authorize],

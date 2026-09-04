@@ -22,8 +22,7 @@ export const area = definePrototype({
   /**
    * In augment order, which is column order. No `auth`, `upload`, `nested` or `thumbnail`: an
    * area is one document, so there is nothing to sign in as, nothing listing it, and nothing for
-   * it to be nested in. It simply does not list them — where it used to be each of those
-   * features declaring `extends: ['collection']` about somebody else.
+   * it to be nested in — so it simply does not list them.
    */
   features: [...areaFeatures],
 

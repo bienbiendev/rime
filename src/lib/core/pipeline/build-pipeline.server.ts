@@ -20,10 +20,9 @@ const TIMINGS: HookTiming[] = [
 /**
  * Composes one config's pipeline out of the two layers that contribute to it, and orders it.
  *
- * Both come off the definition: its own `hooks`, then each feature it `features`-lists, for the
- * features this config actually enables. There is no third place — the file that used to hold a
- * hand-written list per prototype is gone, and with it the last thing that knew both a prototype
- * and the features extending it.
+ * Both come off the definition: its own `hooks`, then each feature it lists, for the features this
+ * config enables. There is no third place, so nothing has to know both a prototype and the
+ * features extending it.
  *
  * The list order is only the *tie-break*; `resolvePipeline` decides the rest from what each hook
  * declares. That it is stable still matters — field order is column order elsewhere in this repo.
@@ -42,9 +41,9 @@ export const buildPipeline = (
     const hooks = [
       ...own,
       ...fromFeatures,
-      // A consumer's hooks are last only as a tie-break. Under the resolver they no longer land
-      // unconditionally at the end: a `beforeRead` hook defaults to requiring `shaped` and
-      // providing `document`, so `sortDocumentProps` now waits for it.
+      // A consumer's hooks are last only as a tie-break — the resolver may place them earlier. A
+      // `beforeRead` hook defaults to requiring `shaped` and providing `document`, so
+      // `sortDocumentProps` waits for it.
       ...((consumer?.[timing] as unknown[]) ?? [])
     ];
 
@@ -75,7 +74,7 @@ export const buildPipeline = (
 };
 
 /**
- * Attaches the resolved pipeline to a config. What `augmentCollectionHooks` used to do.
+ * Attaches the resolved pipeline to a config.
  *
  * The return says `$hooks` is there rather than leaving it to the caller's own declaration: a
  * built config declares it already, so the intersection changes nothing for them, and a caller

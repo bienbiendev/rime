@@ -63,8 +63,8 @@ const defaultRelationValue = async (
   adapter: Adapter
 ) => {
   const buildRelation = async (defaultValue: any) => {
-    // A default relation is one id or a list of them. Anything else names no document — which
-    // used to fall through to a `where(undefined)` and hand back *every* row in the collection.
+    // A default relation is one id or a list of them. Anything else names no document, and must
+    // not fall through to a `where(undefined)` that would hand back every row in the collection.
     const ids =
       typeof defaultValue === 'string'
         ? [defaultValue]

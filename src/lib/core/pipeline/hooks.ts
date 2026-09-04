@@ -11,9 +11,9 @@ import type { Hook, HookBeforeOperation, HookMarks, Operation } from './types.js
  * Hooks.beforeRead({ name: 'setDocumentTitle', requires: ['shaped'], provides: ['title'], run: fn })
  * ```
  *
- * The bare form is the one consumers write and the one every hook used before ordering became
- * declared, so it stays the default. The object form is how a hook says where it belongs — see
- * `HookMark` in ./types.ts, and `resolve-pipeline.server.ts` for what is done with it.
+ * The bare form is the default and what consumers write. The object form is how a hook says where
+ * it belongs — see `HookMark` in ./types.ts, and `resolve-pipeline.server.ts` for what is done
+ * with it.
  *
  * **Both forms return the function itself**, with the marks attached as properties rather than
  * wrapped around it. `run.server.ts` invokes hooks directly (`await hook({...})`), so anything
@@ -28,11 +28,9 @@ type Declaration<H> = H | (Partial<HookMarks> & { run: H });
  * Marks a hook carries when it does not declare its own.
  *
  * Not empty on purpose. A hook with no requirements would sort to the front, which is wrong for
- * the common case — a consumer's `beforeRead` hook wants to see a shaped document, and anything
- * that touches the document should be waited on by `sortDocumentProps`. These defaults put an
- * undeclared hook where an author would expect it, which for a `beforeRead` is also *later* than
- * the old code put it: consumer hooks used to be appended after `sortDocumentProps`, leaving any
- * property they added unsorted.
+ * the common case: a consumer's `beforeRead` hook wants a shaped document, and anything touching
+ * the document should be waited on by `sortDocumentProps`. These defaults put an undeclared hook
+ * where an author would expect it, with whatever it adds still sorted.
  */
 const DEFAULTS: Record<string, Pick<HookMarks, 'requires' | 'provides'>> = {
   beforeOperation: { requires: [], provides: [] },

@@ -182,11 +182,9 @@ type Deps = {
 /**
  * Updates a prototype's root row, and its version row when the operation calls for one.
  *
- * Returns `{ id: data.id || id }`, which is what the collection did. The area returned its own
- * looked-up id; the two agree, because an area is a single row and any `id` in its data is that
- * row's. Keeping the collection's form makes the odd case visible rather than silently picking
- * a winner: if `data.id` ever disagreed with the row actually written, the old collection code
- * returned the one it had *not* written.
+ * Returns `{ id: data.id || id }`. For an area the two always agree — it is a single row, so any
+ * `id` in its data is that row's — and preferring `data.id` keeps a disagreement visible instead
+ * of silently picking the id of the row that was written.
  */
 export const updatePrototype = async (
   { db, tables }: Deps,

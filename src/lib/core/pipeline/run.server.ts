@@ -55,9 +55,8 @@ export const runBeforeOperation = async <S extends DocType>(args: {
  * stash something on the context, or hand back an amended config — auth's augmentFieldsPassword
  * appends the password field this way, so the validation step below it sees it.
  *
- * Create used to opt out of the config half, which made augmentFieldsPassword dead code there:
- * it ran, built an amended config, and had it discarded, so no create path ever enforced the
- * password policy. Both timings chain now.
+ * Both timings chain all three, create included — a hook that amends the config on create has to
+ * have that config reach the validation below it, or the policy it adds is never enforced.
  */
 export const runDataHooks = async <S extends DocType, D, C extends AnyConfig>(args: {
   hooks: unknown;
@@ -208,7 +207,7 @@ export const readDocument = async <S extends DocType, T extends GenericDoc>(args
  * Collections and areas run exactly these eight steps in exactly this order; they differ only
  * in `write` (which adapter method persists the root row) and `reread` (how the saved document
  * is fetched back). Everything between — the hook chains, the context assertions, the
- * relational persistence — is identical, and used to be written out twice.
+ * relational persistence — is identical, so it is written once.
  */
 export const runUpdate = async <
   S extends DocType,
@@ -289,8 +288,7 @@ export const runUpdate = async <
     context
   });
 
-  // 8. Return what afterUpdate handed back, matching afterCreate. Both callers used to discard
-  // it, so an afterUpdate hook returning an amended doc was silently ignored on update while
-  // the same hook worked on create.
+  // 8. Return what afterUpdate handed back, matching afterCreate — an afterUpdate hook that
+  // amends the document has to have that document reach the caller.
   return after.doc;
 };

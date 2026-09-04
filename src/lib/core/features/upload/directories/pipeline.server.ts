@@ -8,10 +8,8 @@ import {
 /**
  * The hooks for an upload collection's derived `<slug>_directories` collection.
  *
- * It used to live in the one shared `operations/pipeline.server.ts`, so that every pipeline rime
- * runs was readable in one file. Splitting that file per prototype retired the reason, and this
- * is upload's own derived collection — the same rule that put `uploadHooks` here. The result is
- * still passed through `augmentCollectionHooks`, exactly like an author-written collection.
+ * Upload's own derived collection, so its pipeline belongs to upload — the same rule that puts
+ * `uploadHooks` here. The result goes through `augmentHooks` like an author-written collection.
  */
 export const directoriesPipeline = (
   directoriesConfig: { $hooks?: CollectionHooks<any> } | undefined

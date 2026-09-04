@@ -11,16 +11,13 @@ export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>>
 };
 
 /**
- * The config chain: one step per layer, and no more.
+ * The config chain: one step per layer, in the order they apply — prototypes define, features
+ * augment and extend, plugins augment. Nothing here names a feature; each step folds whatever its
+ * layer's registry holds, and what each contributes to the config's *type* is declared beside it
+ * (prototype/register.ts, features/register.ts).
  *
- * It used to name the parts it ran — `augmentStaffServer`, `augmentIcons`, `augmentPanel`,
- * `augmentPanelAccess`, `augmentCORS`, `makeVersionsCollectionsAliases` — which is the config
- * factory knowing which feature owns what, the inversion this restructure exists to remove. Each
- * of those is now its owner's `configure`, and what is left is the three layers in the order they
- * apply: prototypes define, features augment and extend, plugins augment.
- *
- * Still a literal sequence rather than a loop: `inference.spec.ts` guards that, and each step's
- * declared transform is what carries the slug literals forward (see features/register.ts).
+ * A literal sequence rather than a loop, which `inference.spec.ts` guards: the narrowing at each
+ * step is what carries the slug literals through to `event.locals.rime`.
  */
 function augmentConfig<T extends Config>(config: T) {
   const withPrototypes = configureWithPrototypes(config);

@@ -51,32 +51,24 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
   features: FeatureDefinition[];
 
   /**
-   * The prototype's *own* document hooks — the ones that are its, unconditionally.
+   * The prototype's *own* document hooks: the ones that are its, unconditionally.
    *
-   * There is no `pipeline.server.ts` any more, and its absence is the point. That file listed
-   * every hook by hand, including `...featureHooks(upload, collection, 'beforeRead')` and a
-   * ternary per conditional — a prototype knowing the features that extend it, which is the
-   * inversion this whole design removes. Every one of those conditionals turned out to be a
-   * feature gate: `collection.auth ? [...] : []` is the auth feature's `enabled`.
-   *
-   * So what is left here is unconditional, and short. `buildPipeline` merges it with whatever the
-   * listed features contribute and `resolvePipeline` decides the order from the marks each hook
-   * declares. Nothing here names a feature; nothing here says where a feature's hook goes.
+   * Short and free of conditionals — a hook that runs only when a config declares something
+   * belongs to the feature that owns that something, behind its `enabled`. `buildPipeline` merges
+   * this with what the listed features contribute, and `resolvePipeline` decides the order from
+   * the marks each hook declares, so nothing here names a feature or says where its hooks go.
    */
   hooks?: Partial<Record<HookTiming, AnyHook[]>>;
 
   /**
    * What this prototype adds to the **whole** config, rather than to one config of its own kind.
    *
-   * The mirror of `FeatureDefinition.configure`, and it exists for the same reason a feature has
-   * one: some of what a kind is responsible for is a statement about the config as a whole. For
-   * both prototypes here that is one line — its own list exists, empty if the user named none —
-   * which the config factory used to do on their behalf in `augmentPrototypes`, naming
-   * `collections` and `areas` itself.
+   * The mirror of `FeatureDefinition.configure`: some of what a kind is responsible for is a
+   * statement about the config as a whole. For both prototypes here that is one line — its own
+   * list exists, empty if the user named none — so that no step downstream has to guard it.
    *
-   * What it does to the config's *type* is declared in register.ts, beside the definition, since
-   * the defaulting is only worth doing if `config.areas` stops being `possibly undefined`
-   * downstream.
+   * What it does to the config's *type* is declared in register.ts, which is what makes the
+   * defaulting worth doing: `config.areas` is not `possibly undefined` after it.
    */
   configure?: (config: any) => any;
 
@@ -89,8 +81,8 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
   /**
    * The local API this prototype provides — what `rime.<name>(slug)` hands back.
    *
-   * Returns a plain object of operations. `blank` and `system` are added around it by
-   * `buildPrototypeApi`, since every prototype has them and none of them has its own version.
+   * Returns a plain object of operations. `buildPrototypeApi` adds `blank` and `system` around it,
+   * since every prototype has them and none needs its own version.
    */
   api?: (ctx: PrototypeApiContext<C>) => Dic;
 
@@ -103,9 +95,9 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
    * is an absolute pathname, for the reason a prototype has no URL of its own to name: its
    * slugs come from the user's config, and the param matcher is what turns one into a route.
    *
-   * `core/dev/codegen/routes/` reads this to write the `+server.ts` files, and
-   * `handlers/routes.server.ts` dispatches through it — so an endpoint appears by being
-   * declared here, not by also editing codegen.
+   * `core/dev/codegen/routes/` reads this to write the `+server.ts` files and
+   * `handlers/routes.server.ts` dispatches through it, so an endpoint appears by being declared
+   * here and nowhere else.
    */
   rest?: Record<string, RouteConfig>;
 
@@ -114,7 +106,7 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
    * slug literals and document types that a mapped type cannot recover from a runtime registry.
    *
    * Never assigned — the same `$Infer…` device `BuildConfig` uses for plugins and auth plugins.
-   * `PrototypeAccessors` (prototype/accessors.server.ts) no longer reads it — see the note there.
+   * See prototype/accessors.server.ts for where the accessors are actually read from, and why.
    */
   readonly $InferAccessor: Accessor;
 };
@@ -173,8 +165,7 @@ export type PrototypeApi<A, Doc = GenericDoc> = A & {
 
 /**
  * A prototype definition as the registry hands it back: the definition plus the name it is
- * exported under. See registry.server.ts — the name is the barrel key, not a field somebody has
- * to keep in sync with it.
+ * exported under. The name is the registry's own key, so there is no field to keep in sync.
  */
 export type RegisteredPrototype = PrototypeDefinition & { name: string };
 
@@ -187,9 +178,8 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Acces
 ): PrototypeDefinition<C, Accessor> =>
   ({
     singleton: options.singleton ?? false,
-    // Defaulted rather than optional: `buildPipeline` filters this on every config, and a
-    // prototype with no features is a real case (a third kind would start there). `hooks` stays
-    // undefined-able because the pipeline already treats a missing timing as none.
+    // Defaulted rather than optional: `buildPipeline` filters it on every config, and a prototype
+    // with no features is a real case. `hooks` stays optional — a missing timing is already none.
     features: options.features ?? [],
     hooks: options.hooks,
     configure: options.configure,

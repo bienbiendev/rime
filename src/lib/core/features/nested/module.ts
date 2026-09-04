@@ -8,8 +8,8 @@ type IncomingConfig = { slug: string; nested?: boolean; fields?: Collection<any>
  * Adds the root-table fields a nested collection is addressed by: who its parent is, and where it
  * sits among its siblings.
  *
- * The client half. `module.server.ts` adds the self-referencing foreign key on `_parent`; the
- * condition lives on the feature's `enabled`, so this no longer re-tests `config.nested`.
+ * The client half. `module.server.ts` adds the self-referencing foreign key on `_parent`; whether
+ * a config uses this at all is the feature's `enabled`, so there is no condition here.
  */
 export const augmentNested = <T extends IncomingConfig>(config: T): T => ({
   ...config,

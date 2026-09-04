@@ -17,11 +17,11 @@ import * as string from './string.js';
  * This is a **barrel, not a home**: what a namespace here re-exports and where that code lives
  * are separate questions. Everything in `./*` passes the util rule (no rime vocabulary), while
  * `access`, `validate` and half of `doc` name rime types and therefore live with their concept
- * — auth, fields and prototype respectively. They are published from here because config
- * authors have always imported them from here, and that path is not worth breaking.
+ * — auth, fields and prototype respectively. They are published from here because that is the
+ * path config authors import them from.
  */
 
-/** `doc` used to be one file; its halves now live where the rule puts them. */
+/** `doc`'s two halves, each living with the concept it names. */
 const doc = { ...docBuilders, ...docPath };
 
 /**

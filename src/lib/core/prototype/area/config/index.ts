@@ -13,8 +13,7 @@ export const create = <S extends string>(
   const area: Area<S> = { ...incomingConfig, slug };
 
   const initial = { ...area };
-  // An area declares no augments of its own — metas and title, which used to bracket the feature
-  // block here, are features now. Everything it gets, it gets from the registry.
+  // An area declares no augments of its own: everything it gets, it gets from its feature list.
   const augmented = applyAugments(areaFeatures, initial);
 
   return {

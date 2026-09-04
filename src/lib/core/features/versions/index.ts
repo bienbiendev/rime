@@ -6,19 +6,17 @@ import { augmentVersions } from './augment.js';
 /**
  * Keeps a document's history in a shadow table, and lets one version be the published one.
  *
- * **Registered for its augment only, and that is deliberate.** Two things keep the rest of it out
- * for now:
+ * **Carries its augment and its derived collections, but not its hooks**, for two reasons:
  *
- * - Its `beforeUpdate` hooks run for *every* config, versioned or not. `defineVersionOperation`
- *   populates `context.versionOperation`, which `assertUpsertContext` then requires on every
- *   update — so gating them behind `enabled` would break updates on non-versioned configs. They
- *   stay listed in the collection pipeline until there is a timing that says "always".
- * - Its shadow tables are half in the adapter. `type: 'shadow'` is declared here so the intent is
- *   on record, but nothing reads it yet: making the adapter take a shadow from a feature is its
- *   own job.
+ * - Its `beforeUpdate` hooks run for *every* config, versioned or not: `defineVersionOperation`
+ *   populates `context.versionOperation`, which `assertUpsertContext` requires on every update.
+ *   Gating them behind `enabled` would break updates on non-versioned configs, so the prototypes
+ *   list them until there is a timing that means "always".
+ * - Its shadow tables are half in the adapter. `type: 'shadow'` records the intent; nothing reads
+ *   it yet, and having the adapter take a shadow from a feature is its own job.
  *
  * The augment is isomorphic — it normalises `versions` and adds `status` — so it needs no
- * `$rime/modules` pair, only this definition.
+ * `$rime/modules` pair.
  */
 export const versions = defineFeature({
   name: 'versions',
@@ -31,11 +29,8 @@ export const versions = defineFeature({
   augment: augmentVersions,
 
   /**
-   * The `<slug>__versions` collection behind every versioned config.
-   *
-   * `undefined` on the client, where nothing derives them. It ran as a hand-written call in
-   * `buildConfig` — `makeVersionsCollectionsAliases(augmented)`, core naming a feature — and it
-   * runs here now, after `upload` has derived its directories, exactly as it did before.
+   * The `<slug>__versions` collection behind every versioned config, derived after `upload` has
+   * derived its directories. `undefined` on the client, where nothing derives them.
    */
   configure: makeVersionsCollectionsAliases
 });
