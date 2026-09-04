@@ -47,12 +47,13 @@ export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) =
       rime.adapter.prototype(config.slug).update({
         data,
         locale,
-        versionId: context.params.versionId!,
+        versionId: context.contentOwnerId!,
         versionOperation: context.versionOperation!
       }),
 
-    // Deliberately the versionId this call was made with, not the one the hooks resolved onto
-    // the context, and always draft:true — preserved from the pre-refactor implementation.
+    // The versionId this call was made with — `context.params.versionId` is now the same thing,
+    // since the hooks answer "which row holds the content" on `context.contentOwnerId` instead of
+    // overwriting the caller's parameter. Always draft:true.
     reread: ({ config }) =>
       rime.area(config.slug).find({
         locale,

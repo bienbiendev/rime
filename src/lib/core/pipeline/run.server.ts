@@ -124,10 +124,16 @@ export const runDocHooks = async <S extends DocType, T>(args: {
 export const assertUpsertContext = (
   context: OperationContext<any>,
   where: string,
-  required: readonly ('configMap' | 'originalConfigMap' | 'originalDoc' | 'versionOperation' | 'versionId')[]
+  required: readonly (
+    | 'configMap'
+    | 'originalConfigMap'
+    | 'originalDoc'
+    | 'versionOperation'
+    | 'contentOwnerId'
+  )[]
 ) => {
   for (const name of required) {
-    const present = name === 'versionId' ? context.params.versionId : context[name];
+    const present = context[name];
     if (!present) {
       throw new RimeError(RimeError.OPERATION_ERROR, `missing ${name} @${where}`);
     }
@@ -255,7 +261,7 @@ export const runUpdate = async <
     'originalConfigMap',
     'originalDoc',
     'versionOperation',
-    'versionId'
+    'contentOwnerId'
   ]);
 
   const incomingPaths = Object.keys(context.configMap!);
@@ -263,10 +269,10 @@ export const runUpdate = async <
   // 4. write the root row
   const written = await args.write({ data, config, context });
 
-  // 5. blocks, tree, relations
+  // 5. blocks, tree, relations — against the row the content lives on
   await persistRelational({
     context,
-    ownerId: context.params.versionId!,
+    ownerId: context.contentOwnerId!,
     data,
     incomingPaths,
     adapter: event.locals.rime.adapter,

@@ -126,6 +126,16 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
     query?: OperationQuery;
     draft?: boolean;
   };
+  /**
+   * The row this document's content lives on, which is what its blocks, tree nodes and relations
+   * hang off.
+   *
+   * The base row for a plain document, and the shadow row for one that has a shadow — `versions`
+   * is the feature that makes those differ, and it is what sets this (see
+   * features/versions/hooks/handle-new-version.server.ts). `params.versionId` above stays what the
+   * caller asked for; this is where the answer goes.
+   */
+  contentOwnerId?: string;
   /** Parameter passed to an update operation when creating locale document fallback */
   isFallbackLocale?: string | undefined;
   /** Type of version operation */

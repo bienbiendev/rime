@@ -32,12 +32,12 @@ export const handleNewVersion = Hooks.beforeUpsert({
     if (!versionOperation)
       throw new RimeError(RimeError.OPERATION_ERROR, 'missing versionOperation @handleNewVersion');
 
-    let versionId;
+    let contentOwnerId;
     let data;
 
     switch (true) {
       case VersionOperations.isSpecificVersionUpdate(versionOperation):
-        versionId = originalDoc.versionId;
+        contentOwnerId = originalDoc.versionId;
         break;
 
       case VersionOperations.isNewVersionCreation(versionOperation): {
@@ -61,24 +61,16 @@ export const handleNewVersion = Hooks.beforeUpsert({
             offset: config.versions.maxVersions
           });
         }
-        versionId = document.id;
+        contentOwnerId = document.id;
         break;
       }
 
       default:
-        versionId = originalDoc.id;
+        // Not versioned: there is no shadow row, so the content is on the document's own.
+        contentOwnerId = originalDoc.id;
     }
 
-    return {
-      ...args,
-      context: {
-        ...args.context,
-        params: {
-          ...args.context.params,
-          versionId
-        }
-      }
-    };
+    return { ...args, context: { ...args.context, contentOwnerId } };
   }
 });
 

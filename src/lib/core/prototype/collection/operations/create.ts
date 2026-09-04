@@ -59,10 +59,11 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
     locale
   });
 
-  // Blocks, trees and relations hang off the version row, not the document row.
+  // Blocks, trees and relations hang off the row the content landed on, which is the document's
+  // own row unless something gave it a shadow.
   await persistRelational({
     context,
-    ownerId: created.versionId,
+    ownerId: created.contentId,
     data,
     incomingPaths,
     adapter: rime.adapter,
@@ -91,7 +92,7 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
   // Use the document ID to find the created document
   let document = (await rime
     .collection(config.slug)
-    .findById({ id: created.id, locale, versionId: created.versionId })) as T;
+    .findById({ id: created.id, locale, versionId: created.contentId })) as T;
 
   if (locale) {
     const locales = event.locals.rime.config.getLocalesCodes();
@@ -106,7 +107,7 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
           .system()
           .updateById({
             id: created.id,
-            versionId: created.versionId,
+            versionId: created.contentId,
             data: omitId(document) as DeepPartial<RegisterCollection[CollectionSlug]>,
             locale: otherLocale,
             isFallbackLocale: locale

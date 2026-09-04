@@ -286,15 +286,15 @@ export const updatePrototype = async (
 };
 
 /**
- * Writes a new document: the root row, and a first version row when the prototype is versioned.
+ * Writes a new document: the base row, and a first shadow row when the prototype is versioned.
  *
- * For a non-versioned prototype `versionId` comes back equal to `id` — there is no version row,
- * and callers that thread a versionId through still get something coherent.
+ * `contentId` names the row the content landed on — the shadow row when there is one, the base row
+ * otherwise — which is what the caller hangs blocks, tree nodes and relations off.
  */
 export const insertPrototype = async (
   { db, tables }: Deps,
   { slug, data, locale, config }: InsertArgs
-): Promise<{ id: string; versionId: string }> => {
+): Promise<{ id: string; contentId: string }> => {
   const now = new Date();
 
   // FEATURE (upload): normalise the incoming path and make sure the folder it names exists.
@@ -347,7 +347,7 @@ export const insertPrototype = async (
       locale
     });
 
-    const versionId = await insertRowWithLocales(
+    const contentId = await insertRowWithLocales(
       { db, tables },
       {
         table: versionsTable,
@@ -357,7 +357,7 @@ export const insertPrototype = async (
       }
     );
 
-    return { id: docId, versionId };
+    return { id: docId, contentId };
   }
 
   const docId = data.id || adapterUtil.generatePK();
@@ -381,7 +381,8 @@ export const insertPrototype = async (
   );
 
   // No version row exists, so the two ids are the same thing.
-  return { id: docId, versionId: docId };
+  // No shadow: the content is on the base row, so that is the row children hang off.
+  return { id: docId, contentId: docId };
 };
 
 /**

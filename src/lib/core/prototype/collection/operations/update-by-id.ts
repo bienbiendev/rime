@@ -50,7 +50,7 @@ export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T
     write: ({ data, config, context }) =>
       rime.adapter.prototype(config.slug).update({
         id,
-        versionId: context.params.versionId!,
+        versionId: context.contentOwnerId!,
         data,
         locale,
         versionOperation: context.versionOperation!

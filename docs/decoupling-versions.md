@@ -397,38 +397,39 @@ fields with or without _root`, so a versioned area puts every field on the shado
   files, the builder, and the schema generator, and is worth doing only if it happens alongside
   something else in those files.
 
-### Stage 1 — `versionId` → `contentOwnerId`, no behaviour change
+### Stage 1 — `versionId` → `contentOwnerId`, no behaviour change ✅ done
 
-```diff
-  // core/pipeline/run.server.ts
-  assertUpsertContext(context, where, [
--   'configMap', 'originalConfigMap', 'originalDoc', 'versionOperation', 'versionId'
-+   'configMap', 'originalConfigMap', 'originalDoc', 'versionOperation', 'contentOwnerId'
-  ]);
-
-  await persistRelational({
--   ownerId: context.params.versionId!,
-+   ownerId: context.params.contentOwnerId!,
-    …
-  });
-```
-
-```diff
-  // core/adapter/types.ts
-- insert(args: { data; locale? }): Promise<{ id: string; versionId: string }>;
-+ insert(args: { data; locale? }): Promise<{ id: string; contentId: string }>;
-```
-
-Leave `features/versions/` speaking of versions — inside the feature the name is right:
+What it turned out to be, once written: `versionId` was carrying **two** meanings on one field.
+`context.params.versionId` was the version the caller asked for, and `handleNewVersion` then
+_overwrote_ it with the row the content had to go on. The area's update said so in a comment:
 
 ```ts
-// core/features/versions/hooks/handle-new-version.server.ts — after
-const version = await rime.collection(versionsSlug).create({ data, locale: params.locale });
-return { ...args, context: { ...args.context, params: { ...params, contentOwnerId: version.id } } };
+// Deliberately the versionId this call was made with, not the one the hooks resolved onto
+// the context — preserved from the pre-refactor implementation.
 ```
 
-Mechanical, and doing it alone is the point: the diff shows which remaining references are
-genuinely about versions.
+So the split is the fix, not the rename:
+
+```ts
+context.params.versionId; // what the caller asked for — never written to
+context.contentOwnerId; // the row the content lives on — what handleNewVersion answers
+```
+
+```ts
+// core/features/versions/hooks/handle-new-version.server.ts — returns a context, not a param
+return { ...args, context: { ...args.context, contentOwnerId } };
+
+// core/pipeline/run.server.ts
+assertUpsertContext(context, where, ['configMap', 'originalConfigMap', 'originalDoc', 'versionOperation', 'contentOwnerId']);
+await persistRelational({ context, ownerId: context.contentOwnerId!, … });
+
+// core/adapter/types.ts
+insert(args: { data; locale? }): Promise<{ id: string; contentId: string }>;
+```
+
+`versionId` in `core/pipeline` and `core/adapter` went 11 → 7, and every survivor is a real version
+id: the two reads in `get-original-document`, `params.versionId` itself, and `find`/`update`'s
+parameters, which are stages 3 and 4.
 
 ### Stage 2 — the shadow is registered, not inferred
 

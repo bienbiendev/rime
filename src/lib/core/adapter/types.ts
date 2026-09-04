@@ -105,11 +105,17 @@ export interface PrototypeHandle {
     draft?: boolean;
   }): Promise<RawDoc[]>;
 
-  /** Throws on a singleton: there is no second document to make. */
+  /**
+   * Throws on a singleton: there is no second document to make.
+   *
+   * Returns the document's id and `contentId` — the row its content landed on, which is what its
+   * blocks, tree nodes and relations hang off. The two are the same when the prototype has no
+   * shadow.
+   */
   insert(args: {
     data: DeepPartial<GenericDoc>;
     locale?: string;
-  }): Promise<{ id: string; versionId: string }>;
+  }): Promise<{ id: string; contentId: string }>;
 
   /** `id` is required on a non-singleton; a singleton resolves its own row. */
   update(args: {
