@@ -1,19 +1,20 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { augmentHooks } from '$lib/core/pipeline/build-pipeline.server.js';
-import { collection as collectionPrototype } from '$lib/core/prototype/collection/definition.js';
+import type { FeatureDefinition } from '$lib/core/features/define.js';
+import type { RegisteredPrototype } from '$lib/core/prototype/define.js';
 import { collectionHooks } from '$lib/core/prototype/collection/hooks.server.js';
 import { makeUploadDirectoriesCollectionClient } from '../derive.js';
 import { isUploadConfig, type WithUpload } from '../util/config.js';
 import { directoriesPipeline } from './pipeline.server.js';
 
 /**
- * The return is annotated, not inferred, and it has to be: inferring it would read
- * `collectionPrototype.features` below, and the collection's feature list holds `upload` — this
- * feature, whose `configure` is this function. Same rule as `Rime` and the registry: anything the
- * prototype's own type graph can reach must declare its type rather than derive it.
+ * The return is annotated, not inferred, and it has to be: the collection's feature list holds
+ * `upload` — this feature, whose `configure` is this function — so inferring it would put the
+ * list in its own type graph. Same rule as `Rime` and the registries.
  */
 const makeUploadDirectoriesCollection = (
-  collection: WithUpload<BuiltCollection>
+  collection: WithUpload<BuiltCollection>,
+  features: FeatureDefinition[]
 ): BuiltCollection => {
   const collectionClient = makeUploadDirectoriesCollectionClient(collection);
 
@@ -25,29 +26,29 @@ const makeUploadDirectoriesCollection = (
   };
 
   // A derived collection is still a collection, so it gets the same two pipeline sources an
-  // authored one does: the prototype's own hooks and the features its definition lists. They are
-  // named separately rather than taken off `definition.server.js` because this module is reached
-  // *from* the definition — see the note on `collectionHooks`.
-  return augmentHooks(
-    { features: collectionPrototype.features, hooks: collectionHooks },
-    directoriesCollection
-  );
+  // authored one does: the prototype's own hooks, and the features it lists. Both arrive without
+  // importing a definition — the features from the registry `configure` is handed, the hooks from
+  // a file that depends on nothing.
+  return augmentHooks({ features, hooks: collectionHooks }, directoriesCollection);
 };
 
 /**
  * The server half of the derivation: the same collections, with their pipelines attached.
  *
- * This is the file that closes a cycle — pipeline.server.ts imports the registry, the registry
- * imports upload, upload's definition imports `$rime/modules`, and the barrel evaluates this. The
- * definition therefore reads this export inside a closure rather than at module scope, which is
- * the standard remedy: by the time `configure` is called the cycle has long resolved.
+ * The collection prototype's features come from the registry `configure` is handed, never from
+ * importing its definition: a definition lists its features by value, so a feature reaching back
+ * for one can be evaluated from inside it and find whichever feature is still in flight
+ * `undefined` — including itself.
  */
 export const configureUploadDirectories = <T extends { collections?: BuiltCollection[] }>(
-  config: T
+  config: T,
+  prototypes: RegisteredPrototype[] = []
 ): T & { collections: BuiltCollection[] } => {
+  const features = prototypes.find((prototype) => prototype.name === 'collection')?.features || [];
+
   const directoriesCollections = config.collections
     ?.filter(isUploadConfig)
-    .map(makeUploadDirectoriesCollection);
+    .map((collection) => makeUploadDirectoriesCollection(collection, features));
 
   return {
     ...config,

@@ -27,9 +27,14 @@ Reading it in both directions gives two questions, and they have very different 
 - **The document pipeline.** A prototype declares its own hooks and lists the features that extend
   it; `buildPipeline` merges the two and `resolvePipeline` orders them from declared marks. No
   file knows both a prototype and the features extending it.
-- **Feature → prototype.** No feature imports a prototype definition. The one that needs a
-  prototype's `features` (versions, deriving a collection from an area) is handed the registry as
-  an argument.
+- **Feature → prototype.** No feature imports a prototype definition. The two that need a
+  prototype's `features` — versions deriving a collection from a versioned area, upload deriving a
+  directories collection — are handed the registry as an argument to `configure`, and take the
+  matching prototype's own hooks from `hooks.server.ts`, which depends on nothing.
+
+  This is worth a grep rather than a memory:
+  `grep -rn "prototype/\(collection\|area\)/definition" src/lib/core/{features,pipeline,config}`
+  should return nothing.
 
 ---
 
