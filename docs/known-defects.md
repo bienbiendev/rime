@@ -9,6 +9,9 @@ line responsible, so picking one up does not mean re-doing the diagnosis.
 ## 1. A versioned document that has never been published cannot be PATCHed without a `versionId`
 
 **Status:** reproduced, cause identified. Pre-existing — not introduced by the adapter work.
+**Re-confirmed at `b66a5f3a`** on the `versions` fixture, by stash-and-rerun against the same
+booted database (the technique is in `docs/probing.md` §6): identical 404 with and without the
+tree. The e2e suite never reaches it because every test publishes before it edits.
 
 On a collection with `versions: { draft: true }`, a document created but never published
 returns `404 not_found` on `PATCH /api/<slug>/<id>`, whatever the `draft` query parameter says.
@@ -33,10 +36,10 @@ So the trigger is **"has no published version"**, not the draft flag.
 `VersionOperations.shouldRetrieveDraft` returns true for `UPDATE_VERSION` and
 `NEW_VERSION_FROM_LATEST` only — so for **both** of the operations above it is false.
 
-`getOriginalDocument` (`core/operations/steps/get-original-document.server.ts:24`) uses that
+`getOriginalDocument` (`core/pipeline/steps/get-original-document.server.ts`) uses that
 value as its `draft` argument, so it reads the original with a published-only filter. There is
 no published version, `findById` throws `NOT_FOUND`, and the request 404s in step 3 of
-`runUpdate` — before the write. Nothing is persisted; the document is unchanged.
+`runUpdate` (`core/pipeline/run.server.ts`) — before the write. Nothing is persisted; the document is unchanged.
 
 ### Is it wrong?
 

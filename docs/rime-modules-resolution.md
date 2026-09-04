@@ -1,5 +1,12 @@
 # `$rime/modules`: what resolves, and when
 
+> **Status: current.** The resolution table below still describes what happens, with one change
+> from commit 6: the bare specifier is _rewritten_ rather than served as a whole-package barrel
+> (see `rime-modules-cycles.md`), so ② — "the side was never authored" yielding
+> `export const <name> = undefined` — is now the only way a name comes back undefined, and it is
+> deliberate. A feature's server-only `configure` resolving to `undefined` on a client build is
+> this, working: `versions.configure` and `cors.handler` both rely on it.
+
 `$rime/modules` is a virtual barrel. Vite scans every `module.ts` / `module.server.ts` pair under
 `src/lib` and re-exports whichever side matches the build being made, so one import specifier
 serves both — see `scanModulePairs` and `exportFrom` in `core/dev/vite.server.ts`.

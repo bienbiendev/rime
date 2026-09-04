@@ -1,5 +1,13 @@
 # Why a `$rime/modules` import can be `undefined`, and how to stop it
 
+> **Status: applied** (commit 6, `0fa7f49`). There is no barrel any more — `transform` in
+> `core/dev/vite.server.ts` rewrites every bare `$rime/modules` import into an import of the one
+> pair that declares each name, and the resolver throws if a bare specifier ever reaches it
+> unrewritten. The wrappers are gone: `upload/index.ts` reads `augment: augmentUpload`, no arrow.
+> 24 `module.(server.)ts` files under `src/lib`, 21 import sites, all bare. The document below is
+> the diagnosis that produced the fix and the reasoning for its shape; read it when a
+> `$rime/modules` import comes back `undefined` again.
+
 A feature's definition had to wrap every binding it took from `$rime/modules` in a function:
 
 ```ts

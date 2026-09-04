@@ -1,5 +1,28 @@
 # Decoupling the adapter from prototypes and features.
 
+> **Status: the vocabulary landed, the contract is partway.**
+>
+> Everything under **Vocabulary** and **Naming** below is implemented, in
+> `adapter-sqlite/naming.server.ts`: `base`, `shadow`, `child` (`__$`), `branch` (`__$$`), the
+> `$`-prefixed derived slug, and the three-column slug/url/table table. `TableName` is a branded
+> type so a slug reaching a table-name parameter is a build error. `owner = shadow ?? base` is
+> `contentOwnerSlug` in `features/versions/naming.ts`.
+>
+> **Adapter facade**: landed. The two prototype facades collapsed into one
+> `adapter-sqlite/prototype.server.ts`, and `Adapter` (`core/adapter/types.ts`) is a **declared
+> interface** rather than `ReturnType<typeof …>`. Registration resolves a prototype's tables once
+> at boot instead of per request. What is _not_ done: `registerPrototype` still infers the shadow
+> from the slug suffix rather than from the feature's `shadow` declaration — the schema generator
+> already reads the declaration (`decoupling-versions.md` stage 2).
+>
+> **Blocks, tree, relations**: not started. The `dataType: 'child'` idea below is untouched, and
+> `versionId` / `draft` are still parameters of the adapter contract (6 mentions in
+> `core/adapter/types.ts`) — that is `decoupling-versions.md` stages 3 and 4.
+>
+> **Drizzle 1.0 relations**: not started.
+>
+> **Media directories**: landed as `upload`'s `configure`, deriving `$<slug>Directories`.
+
 Objectif decouple "features" from the adapter.
 
 What's currently here :

@@ -4,6 +4,11 @@ Working notes for whoever picks this up next — most likely me, with none of th
 north star is `docs/architecture-target.md`; this file records where the work has actually got to,
 what is left, and the handful of rules that were expensive to learn and are easy to break again.
 
+> **Start at `docs/cold-start.md`.** It is the map: current state, the ordered backlog, and which
+> document answers what. This file is the _history and the rules_ — the Done table with commits,
+> and the five things that cost a round each. **`docs/probing.md`** is how to verify anything
+> without the e2e suite; it supersedes the "Live probes" section below.
+
 Branch: `claude/restructure-handoff-docs-vnq2pq` (was `claude/repo-structure-audit-89hs4d`).
 
 ---
@@ -224,36 +229,11 @@ again, diff. It is generated, gitignored, and cheap to lose.
 
 ### Live probes
 
-Scratch scripts exercising both pipelines end to end: create a page and check `title` / `url` /
-`_type` / `_thumbnail`; blocks + tree + locale writes; both junction shapes plus a real upload; the
-versioned-area draft-only 404. They need a seeded admin —
-`POST /api/init {email,name,password}` — because `rime:use` recreates the database.
-
-The one probe that discriminates hardest, and the reason it exists: a **base64**
-`POST /api/medias` must return `filename`, `mimeType`, `filesize`, all five sizes, `_path` and
-`_thumbnail`. A multipart upload does not go through `castBase64ToFile`, so it legitimately leaves
-`mimeType` null — don't read that as a regression.
-
-The shapes, since each one cost a 400 the first time:
-
-```bash
-# seed the admin. The password must pass the field validator - a weak one is rejected as
-# "Field name is not valid", because validateForm reports the password failure under `name`.
-curl -c c.txt -X POST localhost:5173/api/init -H 'content-type: application/json' \
-  -d '{"email":"admin@test.com","name":"Admin","password":"Str0ngPass!word"}'
-curl -c c.txt -b c.txt -X POST localhost:5173/api/auth/sign-in/email -H 'content-type: application/json' \
-  -d '{"email":"admin@test.com","password":"Str0ngPass!word"}'
-
-# a create takes its fields under `attributes` on this fixture, not at the top level
-curl -b c.txt -X POST localhost:5173/api/pages -H 'content-type: application/json' \
-  -d '{"attributes":{"title":"Probe","slug":"probe"}}'
-
-# the base64 upload: `file` is a JsonFile object, not a bare data URI
-# {"file":{"base64":"data:image/jpeg;base64,…","filename":"x.jpg","mimeType":"image/jpeg"},"alt":"…"}
-```
-
-An unauthenticated read is a probe of its own: `/api/pages` 200s on `basic` and an area 403s.
-**403 is the healthy answer** — the 404 that commit 9's boot bug produced is what to watch for.
+**Moved to `docs/probing.md`**, expanded: the request shapes, the versions flow in five calls,
+what each probe discriminates, the golden-schema capture loop, the hooks chart as a diagnostic,
+the stash-and-rerun technique for proving a defect pre-existing, and the traps — `curl` needs
+`-g` for any `where[...]` filter, a list endpoint hides drafts, `PATCH` with no `versionId`
+targets the published version.
 
 ### Booting is a gate of its own
 
@@ -282,12 +262,10 @@ _and_ the definition from `definition.server.ts`. The runtime list is the same a
 import survives because `applyAugments` needs the `as const` tuple for the type fold, which
 `PrototypeDefinition.features: FeatureDefinition[]` has widened away.
 
-> **Two docs carry what used to be guesswork here:** `docs/coupling-audit.md` measures every place
-> core still names a feature or a kind, with the greps to re-run; `docs/decoupling-versions.md` is
-> the cold-start handoff for the deepest of them, staged, with the code beside each step.
-
-> **`docs/coupling-audit.md` is the measured version of this section** — every place core still
-> names a feature or a kind, with the greps to re-run and a cheapest-first order.
+> **The ordered backlog lives in `docs/cold-start.md` §4** — eleven items, cheapest first, each
+> with the document behind it. `docs/coupling-audit.md` is the measured version: every place core
+> still names a feature or a kind, with the greps to re-run. `docs/decoupling-versions.md` is the
+> staged plan for the deepest of them, with the code beside each step.
 
 ### The panel
 

@@ -21,6 +21,11 @@
 > Read them before §0's placement rule; they are what that rule was reaching for. §15.7–15.8 are
 > the shape to implement, §14.7 the order, §13.8 the cheap first step, §15.9 what is still open,
 > §16.3 the golden-file check to set up before touching any of it.
+>
+> **§20 recomputes the whole document at `b66a5f3a`** — the layout as it now is, the file counts,
+> §19.4's four steps judged one by one, and the contract as ten features actually use it. Read §20
+> before acting on anything in §§17–19: they describe a tree 122 commits ago. Start from
+> `docs/cold-start.md` if you have no context at all.
 
 ## 0. Outcome
 
@@ -2072,3 +2077,171 @@ madge went 6 → 8 mid-change: reaching `versions/augment.ts` and
 both at `factory/config/types.js` fixed it. **Third occurrence of the same failure** — pulling a
 feature into the config layer's reach turns a barrel import into a cycle — which is worth a lint
 rule rather than a third manual fix.
+
+---
+
+## 20. Recomputed at `b66a5f3a`
+
+§§17–19 recorded the state after three features went under the contract. That was 122 commits and
+463 files ago, and most of §19.3's "where the contract stops" has since moved. This section is the
+**measurement**, re-run against the current tree — every number below is a command you can repeat.
+
+### 20.1 The layout, now
+
+```bash
+ls src/lib/core
+```
+
+```
+adapter/  config/  dev/  errors/  features/  fields/  handlers/  i18n/  pipeline/
+plugins/  prototype/     boot.server.ts  codegen.server.ts  constants.ts
+                         constants.server.ts  logger.server.js  rime.server.ts
+```
+
+Against §0's "after" column, three renames and two additions:
+
+| §0 said       | now              | why                                                                       |
+| ------------- | ---------------- | ------------------------------------------------------------------------- |
+| `factory/`    | `config/`        | it builds a config; "factory" named the pattern, not the thing            |
+| `operations/` | `pipeline/`      | §4.3 found `operations` naming four things; this is the document pipeline |
+| `rime/`       | `rime.server.ts` | one file, and rule 1 requires it be reachable without the registry        |
+| —             | `adapter/`       | `Adapter` as a declared interface (§19.4 step 1)                          |
+| —             | `features/`      | ten of them                                                               |
+
+`prototype/` holds `area/` and `collection/` as siblings built to one pattern, plus the registry,
+`define.ts`, `register.ts`, `pipelines.server.ts` and `naming.ts`. `collections/` and `areas/` at
+the top of `core/` are gone, as §0 predicted.
+
+### 20.2 Volume
+
+```bash
+find src/lib -name '*.ts' -o -name '*.svelte' | wc -l     # 634
+```
+
+| directory                                     | files   | note                                                     |
+| --------------------------------------------- | ------- | -------------------------------------------------------- |
+| `panel/`                                      | 203     | untouched by the restructure; the largest thing left     |
+| `fields/`                                     | 135     | field builders and their components                      |
+| `core/features/`                              | 92      | ten features                                             |
+| `core/prototype/`                             | 52      | two prototypes and the registry                          |
+| `core/pipeline/`                              | 32      | 11 shared steps, `persist/`, `config-map/`, the resolver |
+| `core/dev/`                                   | 25      | codegen, the CLI, the vite plugin                        |
+| `adapter-sqlite/`                             | 22      | was two facades plus a 261-line generator                |
+| `core/plugins/`                               | 20      |                                                          |
+| `core/config/`                                | 10      | the build chain, validation, context                     |
+| `core/fields/`                                | 9       | builders                                                 |
+| `core/handlers/`                              | 5       |                                                          |
+| `core/errors/`, `core/i18n/`, `core/adapter/` | 2, 2, 1 |                                                          |
+
+### 20.3 §19.4's four steps, judged
+
+> 1. Make `Adapter` an interface that `adapter-sqlite` implements. **Done.**
+>    `core/adapter/types.ts` declares it, in core's vocabulary, with the rule written above it:
+>    _every argument and return type is something core can name._ No tables, no columns, no
+>    drizzle. `SqliteAdapter` implements it.
+> 2. Name the capability from the eight coupled files. **Partly.** The naming algebra is
+>    `adapter-sqlite/naming.server.ts` with a branded `TableName`; the root/shadow field partition
+>    is `field.get.root`, declared per field rather than by a name list; the shadow table itself is
+>    now a **feature declaration** (`FeatureDefinition.shadow`) that the schema generator folds
+>    over a prototype's features. What is left is the query side — suffix-aware rewriting in
+>    `where`/`orderBy`/`transform`.
+> 3. Replace `_generateSchema: false` with the capability declaration it stands in for.
+>    **Not done**, and now the last of the four. It has one reader
+>    (`generate-schema/index.server.ts:38`) and one writer (`versions/derive.server.ts`), so it is
+>    small — the question is what replaces it, given the shadow is already declared.
+> 4. `core/prototype/naming.ts` stops hardcoding two features' suffixes. **Done.** It is
+>    `prototypeKebab`, a pure transform that knows what `$` and `__` mean and nothing about which
+>    feature produced them; the inverse direction became a lookup against the config
+>    (`handlers/routes.server.ts`) rather than a regex, which is both exact and feature-agnostic.
+
+Adapter → versions imports are **7 lines across 5 files** (`orderBy`, `prototype` ×3, `transform`,
+`url`, `where`) — all of them the query side, item 2's remainder. `generate-schema` is at zero.
+
+```bash
+grep -rn "features/versions" src/lib/adapter-sqlite | wc -l    # 7
+```
+
+### 20.4 §19.3 revisited — "the `versions` feature object does not describe versions"
+
+It describes more of it than it did. The feature now carries `augment`, `configure` (the derived
+shadow collections), `shadow` (the table) and its `enabled` predicate; its hooks live in
+`features/versions/hooks/`. `generateSchemaString` no longer branches on `collection.versions` —
+it asks `shadowOf(prototype.features, config)`.
+
+What it still does not describe is the **read and write plan**: `versionId`, `draft` and
+`versionOperation` are parameters of `core/adapter/types.ts` (6 mentions), and
+`core/pipeline/types.ts` imports `VersionOperation` from the feature. Stage 1 of
+`docs/decoupling-versions.md` replaced the _write_ half of that with `contentOwnerId` — a question
+the pipeline can ask without knowing the feature exists. Stages 3–4 are the rest.
+
+The `derive` seam §19.3 called out is gone in a way worth recording: **there is no `derive`
+member.** A feature that adds a whole collection uses `configure`, the same whole-config step that
+adds a default or a `staff` collection, and pipelines are resolved once afterwards
+(`prototype/pipelines.server.ts`). One seam instead of two, and the derived config needs nothing
+from the prototype it came from.
+
+### 20.5 The contract, as ten features actually use it
+
+```bash
+ls src/lib/core/features/*/    # auth cors metas nested panel thumbnail title upload url versions
+```
+
+| member      | features declaring it | what it is                                            |
+| ----------- | --------------------- | ----------------------------------------------------- |
+| `augment`   | 8                     | what it adds to one prototype config — fields, mostly |
+| `hooks`     | 6                     | document hooks by timing, ordered by declared marks   |
+| `configure` | 5                     | what it adds to the **whole** config                  |
+| `shadow`    | 1                     | the table it deviates a config's content into         |
+| `handler`   | 1                     | a SvelteKit `Handle` (cors)                           |
+| `boot`      | 1                     | once per process (upload's static directory)          |
+
+§12.4 proposed `enabled`, `augment: {client, server}`, `derive`, `schema`, `hooks` and `handler`,
+read off what five features then did. Four of the six survived unchanged. The two that did not are
+the interesting ones:
+
+- **`augment: { client, server }` became one `augment`.** The two-sided declaration is not the
+  feature's problem: `$rime/modules` picks the side at build time from a `module.ts` /
+  `module.server.ts` pair, so `augment: augmentUpload` is one name that resolves differently per
+  build. A feature whose augment is isomorphic — versions' — needs no pair at all.
+- **`derive` and `schema` both dissolved, in opposite directions.** `derive` became `configure`,
+  the whole-config step, because deriving a collection and adding a default are the same act at
+  the same moment; the _config_ half of the contract split by **scale** instead — one prototype
+  config (`augment`) versus the whole config (`configure`) — which is the distinction §12 could
+  not see from where it stood. `schema` became `shadow`, narrower and concrete: not "extra
+  columns, tables, suffixes" but _the table this feature deviates a config's content into_.
+
+**`FeatureConfigAugment` and `FeatureConfigure` are the two declaration-merging folds** that let
+each of those refine the config's type without the config chain naming a feature — the device §12
+had no answer for, and the reason the chain could stop being a list of feature-owned calls.
+
+Only members some feature uses are declared; `beforeBoot`, `persistence` and `transform` land when
+a feature needs them. That is the lesson `type: 'shadow'` taught by sitting unread for three
+commits before `shadow` gave it a reader.
+
+### 20.6 The structural greps
+
+```bash
+grep -rn "adapter\.collection\.\|adapter\.area\." src/lib                          # 0  (was 13)
+grep -rEn "isArea|isCollection|=== 'collection'|=== 'area'|'collections'|'areas'" \
+  src/lib --include=*.ts --include=*.svelte | wc -l                                # 72
+grep -rn "from '\$lib/panel/" src/lib/core | wc -l                                 # 19
+bun run check:circular-deps                                                        # 3 (was 6)
+```
+
+The 72 break down **core 15 · panel 14 · fields 2 · adapter-sqlite 1**. The adapter's single
+remaining one is `transform.server.ts:59`. The panel's 14 are where §19 expected them and where
+they will largely stay: listing many documents and editing the single one an area holds are
+genuinely different screens (`coupling-audit.md` §5).
+
+The three cycles are `fields/builders → fields/types → fields/checkbox`, `panel/types →
+panel/navigation`, and `rime.server → boot.server → codegen.server → config/index.server →
+config/build.server`. None is the barrel-import failure §19.5 saw three times; that class went
+with commit 6.
+
+### 20.7 What this section does not settle
+
+The audit's own §11 open questions are still open, and one of them got sharper rather than
+answered: **`Config` declares `collections` and `areas` as members**, so the authoring surface
+names the two kinds by construction even though every fold over them is now generic. A prototype
+declaring its config key _and_ its built-config type is the fix, and it is item 5 of
+`docs/cold-start.md` §4.

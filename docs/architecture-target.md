@@ -1,5 +1,27 @@
 # Architecture target
 
+> **Status: mostly landed.** `definePrototype`, `defineFeature` and `definePlugin` all exist;
+> `configKey`, `titleFallback`, `singleton`, `features`, `hooks` and `configure` are declared
+> members; a feature carries `augment`, `configure`, `shadow`, `handler`, `boot` and `hooks`. The
+> adapter speaks base/shadow/child/branch and `adapter.{collection,area}` is gone.
+>
+> Three things below have **not** landed, and two of them turned out to be wrong:
+>
+> - **"No `derive`, `augment`, …"** — `augment` stayed, and it is the right primitive: a feature
+>   adding fields to a prototype's config is not the same act as one adding a whole collection.
+>   `derive` did go: what was `versions.derive` / `upload.derive` is now `configure`, the
+>   whole-config step, so there is one seam instead of two. See `restructure-handoff.md` rule 6.
+> - **`rime.{prototypeName}(slug)`** — accessors are generated per prototype
+>   (`prototype/accessors.server.ts`) but the local API is still reached as
+>   `rime.collection(slug)` / `rime.area(slug)`, and `is('singleton')` does not exist. `singleton`
+>   is on the definition, which is what the adapter reads.
+> - **`extends('prototypeName')`** — a feature does not declare which prototypes it extends; the
+>   prototypes list the features. That direction is deliberate: a prototype's `features` list is
+>   also its _order_, and order is the thing a feature cannot know.
+>
+> `isArea` / `isCollection` is down to 15 lines in core and 1 in the adapter, with 14 left in the
+> panel — where some kind-shaped branch legitimately survives (`coupling-audit.md` §5).
+
 - prototypes : `base` tables
   - With singleton flag
 

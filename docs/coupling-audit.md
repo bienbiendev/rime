@@ -1,7 +1,10 @@
 # Coupling audit
 
 Where the three layers still know about each other, measured rather than remembered. Every claim
-below is a grep you can re-run; the counts are from `basic` at the time of writing.
+below is a grep you can re-run.
+
+**Recomputed at `b66a5f3a`.** Counts below are current unless a line says otherwise; the greps
+themselves are the contract, not the numbers.
 
 The rule being audited, from `docs/architecture-target.md`:
 
@@ -18,23 +21,45 @@ Reading it in both directions gives two questions, and they have very different 
 
 ## What is clean
 
-- **The config chain.** `core/config/build{,.server}.ts` is three steps — prototypes, features,
-  plugins — and names none of them. Each layer folds its own registry, and what each contributes
-  to the config's _type_ is declared beside the code that does it (`prototype/register.ts`,
-  `features/register.ts`).
+- **The config chain.** `core/config/build.server.ts` is four steps — prototypes, features,
+  pipelines, plugins — and names none of them. Each layer folds its own registry, and what each
+  contributes to the config's _type_ is declared beside the code that does it
+  (`prototype/register.ts`, `features/register.ts`).
+
+  ```ts
+  const withPrototypes = configureWithPrototypes(config);
+  const withFeatures = configureWithFeatures(prototypes, withPrototypes);
+  const withPipelines = resolvePipelines(withFeatures);
+  const output = augmentPlugins(withPipelines);
+  ```
+
 - **The adapter's vocabulary.** `core/adapter/types.ts` speaks base / shadow / child / branch. The
   grep that started this (`adapter.collection.` / `adapter.area.`) is at 0.
 - **The document pipeline.** A prototype declares its own hooks and lists the features that extend
   it; `buildPipeline` merges the two and `resolvePipeline` orders them from declared marks. No
   file knows both a prototype and the features extending it.
-- **Feature → prototype.** No feature imports a prototype definition. The two that need a
-  prototype's `features` — versions deriving a collection from a versioned area, upload deriving a
-  directories collection — are handed the registry as an argument to `configure`, and take the
-  matching prototype's own hooks from `hooks.server.ts`, which depends on nothing.
+- **Feature → prototype.** No feature imports a prototype definition, and the reason changed for
+  the better. `configure` used to be _handed_ the registry so a derivation could resolve the
+  derived config's pipeline; it now takes only the config, because **pipelines are resolved once,
+  after every derivation** (`prototype/pipelines.server.ts`, the third step above). A derived
+  collection therefore needs nothing from the prototype at all — it is just another config the
+  final fold walks.
 
-  This is worth a grep rather than a memory:
-  `grep -rn "prototype/\(collection\|area\)/definition" src/lib/core/{features,pipeline,config}`
-  should return nothing.
+  Worth a grep rather than a memory:
+
+  ```bash
+  grep -rn "prototype/\(collection\|area\)/definition" \
+    src/lib/core/features src/lib/core/pipeline src/lib/core/config
+  ```
+
+  Two hits, both in `pipeline/pipeline-order.spec.ts` — a spec asserting the _resolved_ order has
+  to reach a real definition, and a spec is not in anyone's import graph. Any hit outside a
+  `.spec.ts` is the bug rule 3 describes.
+
+- **Shadow tables.** A feature declares the table it deviates a config's content into
+  (`FeatureDefinition.shadow`), `shadowOf` folds it over a prototype's features, and
+  `adapter-sqlite/generate-schema` builds the second table from that. It no longer imports the
+  versions feature at all.
 
 ---
 
@@ -109,19 +134,22 @@ a way to contribute a member to the context — a contract change, not a relocat
 The chain is clean; the files around it are not.
 
 ```
-grep -cE 'config\.(collections|areas)'
-  core/config/validate.server.ts   10
-  core/config/context.server.ts     7
-  core/dev/codegen/{types,routes}   6 across four files
-core/config/types.ts   19 lines naming collections/areas, plus Collection / Area /
-                       BuiltCollection / BuiltArea and their config types
+grep -cE 'collections|areas'
+  core/config/validate.server.ts   15
+  core/config/context.server.ts    13
+  core/dev/codegen/types/*          4 across two files
+core/config/types.ts   Collection / Area / BuiltCollection / BuiltArea and their config types —
+                       `Config` declares `collections` and `areas` as members, so the *authoring*
+                       surface names the two kinds by construction
 ```
 
-**The fold exists now.** A prototype declares the member its instances are authored under
-(`PrototypeDefinition.configKey`), and `prototypeConfigs(config)` in `prototype/registry.ts` folds
-the registry with it. `adapter-sqlite/generate-schema` was the first caller — two near-identical
-loops over `collections` and `areas` became one over prototype configs, 261 lines to 150 — so the
-remaining work is applying the same fold in the files above, not inventing it.
+**The fold exists now**, in two shapes. A prototype declares the member its instances are authored
+under (`PrototypeDefinition.configKey`); `prototypeConfigs(config)` yields every prototype config,
+and `prototypeEntries(config)` yields each still paired with the definition that owns it — for the
+callers that need something off the definition, such as the features extending it.
+`adapter-sqlite/generate-schema` is the worked example: two near-identical loops over `collections`
+and `areas` became one over prototype configs, 261 lines to 150. The remaining work is applying the
+same fold in the files above, not inventing it.
 
 `validate.server.ts` and `context.server.ts` are the two that iterate `[...collections, ...areas]`
 by hand. A third prototype means editing both. The type side (`config/types.ts`) is the bigger
@@ -136,14 +164,16 @@ is the precedent and the fold already exists.
 
 Untouched by the restructure, and where the remaining `isArea` / `isCollection` greps live:
 
+```bash
+grep -rEn "isArea|isCollection|=== 'collection'|=== 'area'|'collections'|'areas'" \
+  src/lib --include=*.ts --include=*.svelte
+# 72 lines: core 15 · panel 14 · fields 2 · adapter-sqlite 1
 ```
-grep -rnE "isArea|isCollection|type === '(collection|area)'"
-  src/lib     59
-  src/lib/panel   33 of those
-    context/documentForm.svelte.ts                11 (counting _prototype too)
-    components/sections/document/Settings.svelte   6
-    components/sections/document/Document.svelte   4
-```
+
+The adapter's single remaining one is `transform.server.ts:59`, `configCtx.isCollection(slug)`.
+Core's 15 are `config/{build,context,types,validate}.server.ts`, four features, two pipeline files,
+both definitions, both REST endpoints, `merge-with-blank.server.ts` and `prototype/doc.ts` — items
+2–5 of the order below cover most of them.
 
 **The panel is a consumer.** That is the frame this section is missing everywhere else, and it
 changes which direction of the coupling is a defect:
@@ -152,9 +182,15 @@ changes which direction of the coupling is a defect:
   `upload/naming` (5), `auth/types` (5), `versions/naming` (2) — is a consumer using the API.
   Whether those particular paths should be public is a question about the published surface, not
   about layering.
-- Core reaching back into the panel is the inversion: `handlers/routes.server.ts` imports 13 panel
-  modules, `config/types.ts` imports `DashboardEntry`, `errors/index.ts` imports `FormErrors`. Core
-  should not know its own admin UI exists.
+- Core reaching back into the panel is the inversion — **19 import lines**, and where they are is
+  the whole story: `handlers/routes.server.ts` **13**, then one each in `config/types.ts`
+  (`DashboardEntry`), `errors/index.ts` (`FormErrors`), `pipeline/steps/validate-fields.server.ts`,
+  `plugins/cache/HeaderButton.svelte`, and two in `features/upload/util/path.ts`. Core should not
+  know its own admin UI exists.
+
+  ```bash
+  grep -rn "from '\$lib/panel/" src/lib/core   # 19
+  ```
 
 **And it will not become prototype-agnostic.** Listing many documents and editing the single one an
 area holds are genuinely different screens; some `isCollection`-shaped branch survives any amount of
@@ -173,14 +209,15 @@ is allowed to reach.
 Cheapest first, and each is independently useful:
 
 1. **`augment-panel.ts` stops reading `config.upload`.** The collection's panel augment picks a
-   dashboard layout from a feature; upload can offer one the way it offers `$titleFallback`. No
+   dashboard layout from a feature; upload can offer one the way it offers `_titleFallback`. No
    contract change — the only real one-sitting fix on this list.
 2. **`FeatureDefinition.validate`**, which moves the auth-collection rules out of
    `config/validate.server.ts`. A small contract addition with one caller.
 3. **Features contribute to `createBlankDocument`**, which moves upload's `sizes` out of
    `prototype/doc.ts`. The same shape as 2; `prototype/api.server.ts` already notes the gap.
-4. **`validate.server.ts` and `context.server.ts` fold the prototype registry** instead of listing
-   `collections` and `areas` — `prototypeConfigs()` is there, the schema generator already uses it.
+4. **`validate.server.ts` (15) and `context.server.ts` (13) fold the prototype registry** instead
+   of listing `collections` and `areas` — `prototypeConfigs()` and `prototypeEntries()` are there,
+   and the schema generator is the worked example.
 5. **`Config`'s authoring surface** derives its prototype members from the registry — the type-level
    half of 4, and the one that makes a third prototype cost only its own folder.
 6. **Auth's boot goes through `bootFeatures`**, which needs `boot` to take the adapter and context
