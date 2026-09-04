@@ -49,6 +49,9 @@ names `upload` again, something has gone backwards.
 | 10b′ | `9990967` | `mergeWithBlankDocument` goes to the collection — same rule, applied properly |
 | 11 | `f7d751c` | **a feature's `configure` can refine the config's type**; auth, panel and versions own their config steps; the chain stops naming features |
 | 11b | `c786f48` → `6e50592` | CORS becomes a **feature**, augment and handler together; `FeatureDefinition` gains `handler` |
+| 12 | `a1dc53cc` | the prototype declares `titleFallback`; features override it as `_titleFallback`, off the authoring surface |
+| 12b | `5ebdcee2` | upload's directories derivation takes the collection's features from the registry — **no feature imports a prototype definition** |
+| — | `6a9a81ba` | comment pass: what the code does, not what it replaced |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 
@@ -275,6 +278,10 @@ Note the client and server factories currently import `collectionFeatures` from 
 *and* the definition from `definition.server.ts`. The runtime list is the same array; the separate
 import survives because `applyAugments` needs the `as const` tuple for the type fold, which
 `PrototypeDefinition.features: FeatureDefinition[]` has widened away.
+
+> **Two docs carry what used to be guesswork here:** `docs/coupling-audit.md` measures every place
+> core still names a feature or a kind, with the greps to re-run; `docs/decoupling-versions.md` is
+> the cold-start handoff for the deepest of them, staged, with the code beside each step.
 
 > **`docs/coupling-audit.md` is the measured version of this section** — every place core still
 > names a feature or a kind, with the greps to re-run and a cheapest-first order.

@@ -36,9 +36,9 @@ import { buildWithParam } from './with.server.js';
  * - An area's update reset every version row to draft with no `where`, a collection scoped the
  *   reset to `ownerId = id`. For a single row those are the same set, so scoping always is
  *   behaviour-preserving.
- * - A collection extracted hierarchy fields (`_parent`, `_position`, `_path`) before writing;
- *   an area did not. `extractRootData` returns `{}` when none are present, so extracting always
- *   is behaviour-preserving too.
+ * - A collection split off the fields its config keeps on the base row before writing; an area did
+ *   not. `extractRootData` returns `{}` when a config marks none, so splitting always is
+ *   behaviour-preserving too.
  *
  * `singleton` survives here as the one thing the adapter genuinely needs to know, and it is a
  * property of the *data* — how many rows there are — not of a kind. It decides whether `find`
@@ -160,7 +160,7 @@ export const readPrototype = async (
   // A root row with no versions is as good as absent — there is nothing to show.
   if (!doc || !doc[versionsTable] || doc[versionsTable].length === 0) return undefined;
 
-  return adapterUtil.mergeRawDocumentWithVersion(doc, versionsTable, select);
+  return adapterUtil.mergeRawDocumentWithVersion(doc, versionsTable, config, select);
 };
 
 type UpdateArgs = {
@@ -228,7 +228,7 @@ export const updatePrototype = async (
 
     // Hierarchy fields live on the root, never on a version — otherwise the site tree would
     // fork per revision.
-    const { data: contentData, rootData } = adapterUtil.extractRootData(data);
+    const { data: contentData, rootData } = adapterUtil.extractRootData(data, config);
 
     await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
       recordId: id,
@@ -272,7 +272,7 @@ export const updatePrototype = async (
 
   if (VersionOperations.isNewVersionCreation(versionOperation)) {
     // Scenario 2: the caller's operation creates the version row; only the root is touched here.
-    const { rootData } = adapterUtil.extractRootData(data);
+    const { rootData } = adapterUtil.extractRootData(data, config);
 
     await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
       recordId: id,
@@ -330,7 +330,7 @@ export const insertPrototype = async (
 
   if (config.versions) {
     // Hierarchy and upload roots live on the root row, never on a version.
-    const { data: contentData, rootData } = adapterUtil.extractRootData(data);
+    const { data: contentData, rootData } = adapterUtil.extractRootData(data, config);
 
     const docId = await adapterUtil.insertTableRecord(db, tables, baseTableName(slug), {
       createdAt: now,
@@ -476,7 +476,7 @@ export const findManyPrototypes = async (
   return rawDocs
     .map((doc: RawDoc) => {
       try {
-        return adapterUtil.mergeRawDocumentWithVersion(doc, versionsTable, select);
+        return adapterUtil.mergeRawDocumentWithVersion(doc, versionsTable, config, select);
       } catch (err: any) {
         // A query forwarded to the versions table can match nothing for a given document; that
         // document simply drops out of the result rather than failing the whole read.

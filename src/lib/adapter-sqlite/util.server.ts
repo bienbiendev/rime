@@ -3,6 +3,8 @@ import { RimeError } from '$lib/core/errors/index.js';
 import type { RawDoc } from '$lib/core/prototype/types.js';
 import { omit, pick } from '$lib/util/object.js';
 import { randomId } from '$lib/util/random.js';
+import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
+import { isFormField } from '$lib/core/fields/util.js';
 import type { Dic } from '$lib/util/types.js';
 import { and, desc, eq, getTableColumns, Table } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
@@ -94,22 +96,39 @@ export async function upsertLocalizedData(
  * - directory props (upload) : _path
  * return an object with the data filtered and the rootData.
  */
-export function extractRootData(data: any) {
-  const rootData: { _parent?: string; _position?: number; _path?: string } = {};
-  // extract nested collection props
-  if ('_parent' in data) {
-    rootData._parent = data._parent;
-    delete data._parent;
+/**
+ * The fields a config keeps on its base row rather than on its shadow — whatever is marked
+ * `._root()`.
+ *
+ * Read off the config, never a list of names, because the schema generator splits the two tables
+ * by the same flag: the base table gets `filter((f) => f.get.root)`, the shadow gets the rest. A
+ * name-matching list here would silently drop any field marked by something other than the two
+ * features whose names happened to be in it — there is no shadow column to fall back to.
+ *
+ * Top-level only, matching the generator: a nested field cannot be split off its parent.
+ */
+export const baseFieldNames = (config: { fields: FieldBuilder[] }): string[] =>
+  config.fields
+    .filter(isFormField)
+    .filter((field) => field.get.root)
+    .map((field) => field.name);
+
+/**
+ * Splits incoming data into what belongs on the base row and what belongs on the shadow.
+ *
+ * Only meaningful for a config that has a shadow; without one the base row holds everything, and
+ * the callers that split are all on versioned paths.
+ */
+export function extractRootData(data: any, config: { fields: FieldBuilder[] }) {
+  const rootData: Dic = {};
+
+  for (const name of baseFieldNames(config)) {
+    if (name in data) {
+      rootData[name] = data[name];
+      delete data[name];
+    }
   }
-  if ('_position' in data) {
-    rootData._position = data._position;
-    delete data._position;
-  }
-  // extract upload directory props
-  if ('_path' in data) {
-    rootData._path = data._path;
-    delete data._path;
-  }
+
   return { data, rootData };
 }
 
@@ -159,13 +178,14 @@ export function prepareSchemaData(
  * This function combines these two data sources into a single document object:
  * 1. Validates that version data exists or throw 404
  * 2. Handles field selection if specified
- * 3. Preserves root document fields (id, createdAt, updatedAt, _parent, _position)
+ * 3. Preserves the base row's own columns and whatever the config keeps on it (`._root()`)
  * 4. Adds version fields while avoiding duplicates
  * 5. Includes the versionId in the result
  */
 export function mergeRawDocumentWithVersion(
   doc: RawDoc,
   versionTableName: string,
+  config: { fields: FieldBuilder[] },
   select?: string[]
 ): RawDoc {
   // Check if we have version data
@@ -177,7 +197,9 @@ export function mergeRawDocumentWithVersion(
   const versionData = doc[versionTableName][0];
 
   if (select && Array.isArray(select) && select.length) {
-    const rootProps = ['createdAt', 'updatedAt', '_parent', '_position', 'id'] as const;
+    // The row's own columns, plus whatever the config keeps on the base row. Hardcoding the
+    // latter is how `_path` came to be missing from this list while being a base field.
+    const rootProps = ['createdAt', 'updatedAt', 'id', ...baseFieldNames(config)];
     const hasRootSelectColumn = rootProps.some((column) => select.includes(column));
 
     // Pick "createdAt" and "updatedAt" on doc if they are in select, or only the "id"
@@ -231,7 +253,6 @@ export function buildPublishedOrLatestVersionParams(args: {
         limit: 1
       };
 }
-
 
 export function columnsParams({ table, select }: { table: Dic; select?: string[] }) {
   // Create an object to hold the columns we want to select

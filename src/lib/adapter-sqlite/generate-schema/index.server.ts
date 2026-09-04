@@ -1,4 +1,5 @@
 import type { Config } from '$lib/core/config/types.js';
+import { isFormField } from '$lib/core/fields/util.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { baseTableName, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
@@ -163,15 +164,18 @@ export async function generateSchemaString<T extends Config>(config: T) {
     schema.push(templateHead(areaSlug));
 
     if (area.versions) {
-      // For now, areas don't need to filter out fields with or without _root
-      // as these fields would have no effect
-
-      // Overrite
       rootTableName = baseTableName(withVersionsSuffix(areaSlug));
       const manyVersionsToOneName = `rel_${rootTableName}HasOne${toPascalCase(areaSlug)}`;
       const oneToManyVersionsName = `rel_${areaSlug}HasMany${toPascalCase(rootTableName)}`;
 
-      const baseRootFields = [date('createdAt').hidden(), date('updatedAt').hidden()];
+      // The base row keeps its own columns plus whatever the config marks `._root()`, exactly as
+      // a collection's does. No area field carries the flag today, so this is the same table it
+      // has always generated — but the split is now stated in one place for both prototypes.
+      const baseRootFields = [
+        ...[...area.fields].filter(isFormField).filter((f) => f.get.root),
+        date('createdAt').hidden(),
+        date('updatedAt').hidden()
+      ];
 
       const schemaResults = baseRootFields.map((field) => toSchemaColumn(field));
       schema.push(templateTable(areaSlug, schemaResults.join(',\n')));
@@ -200,7 +204,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
       relationFieldsHasLocale
     } = await buildRootTable({
       blocksRegister,
-      fields: area.fields,
+      fields: area.versions ? area.fields.filter((f) => !f.get.root) : area.fields,
       rootName: rootTableName,
       locales: config.localization?.locales || [],
       tableName: rootTableName,

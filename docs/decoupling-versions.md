@@ -383,7 +383,8 @@ export function extractRootData(data: Dic, config: BuiltCollection | BuiltArea) 
 ```
 
 No contract change, two feature names out of the adapter, one latent bug closed — and it exercises
-the fixtures and gates below before anything risky. **Do this first.**
+the fixtures and gates below before anything risky. **Do this first.** *(Done: the read side had
+the same list, missing `_path`, so a `select=_path` on a versioned upload collection dropped it.)*
 
 Two things to notice while in there, both fair game for the same commit:
 
