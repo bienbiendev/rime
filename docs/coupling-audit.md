@@ -64,9 +64,9 @@ Consequences worth naming:
   says so.
 - A config without versions still pays for them in every adapter signature.
 
-**What would decouple it:** a hook timing that means "always" (removing the prototype-side listing),
-then making the adapter take a shadow from a feature declaration rather than from a suffix. Both
-are their own projects; the second is the larger.
+**What would decouple it:** `docs/decoupling-versions.md` — the cold-start handoff for exactly this,
+with the mechanism mapped, a staged plan, the traps, and the probes that discriminate. Its first
+stage is small enough to do in a sitting.
 
 ## 2. `upload` leaks through paths and document shape
 
