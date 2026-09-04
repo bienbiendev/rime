@@ -1,51 +1,189 @@
 # Decoupling `versions` from the adapter
 
-Cold-start handoff. Assumes no context beyond `docs/architecture-target.md`'s three layers.
+Cold-start handoff. Assumes no context beyond `docs/architecture-target.md`'s three layers, and
+`docs/decoupling-adapter.md`'s **Vocabulary** section (base / shadow / child / branch).
 
 `versions` is registered as a feature and behaves like a dialect: three of its concepts —
 `versionId`, `draft`, `versionOperation` — are **parameters of the adapter contract**, so every
-prototype and every adapter pays for them whether or not a config uses versions. This file is what
-to know before changing that, and a staged plan for doing it.
+prototype and every adapter pays for them whether or not a config uses versions:
 
-The sibling doc `docs/decoupling-adapter.md` covers the vocabulary the adapter already speaks
-(base / shadow / child / branch). Read its **Vocabulary** section first; this one assumes it.
+```ts
+// core/adapter/types.ts — what every prototype's handle must implement
+find(args?: { id?: string; versionId?: string; select?: string[]; locale?: string; draft?: boolean }): Promise<RawDoc | undefined>;
+findMany(args?: { …; draft?: boolean }): Promise<RawDoc[]>;
+insert(args: { data; locale? }): Promise<{ id: string; versionId: string }>;
+update(args: { id?: string; versionId?: string; versionOperation: VersionOperation; data; locale? }): Promise<{ id: string }>;
+```
 
 ---
 
-## The mechanism, in one page
+## The mechanism, in code
 
-**The shadow is a real collection.** `versions`' `configure` derives `$pages__versions` for every
-versioned config (`features/versions/derive.server.ts`), builds it as a `BuiltCollection`, and
-attaches the collection prototype's pipeline to it. `contentOwnerSlug(config)` — `features/versions/naming.ts`
-— is the load-bearing line: `owner = shadow ?? base`, so enabling versions moves a document's whole
-child subtree (blocks, tree, relations) onto the shadow.
+### The shadow is a real collection
 
-**Five operations, chosen above the adapter.** `defineVersionUpdateOperation({ draft, versionId, config })`
-in `features/versions/strategy.ts` picks one of `UPDATE`, `UPDATE_VERSION`, `UPDATE_PUBLISHED`,
-`NEW_VERSION_FROM_LATEST`, `NEW_DRAFT_FROM_PUBLISHED`. It is the `defineVersionOperation` hook,
-listed in both prototypes' `beforeUpdate`.
+`versions`' `configure` derives one per versioned config, as a plain `BuiltCollection`:
 
-**Where the adapter branches on it**, all in `adapter-sqlite/`:
+```ts
+// core/features/versions/derive.server.ts
+for (const collection of config.collections || []) {
+  if (collection.versions) {
+    const versionedCollection: BuiltCollection = {
+      slug: withVersionsSuffix(collection.slug),   // pages -> $pages__versions
+      versions: undefined,                          // the shadow is not itself versioned
+      fields: collection.fields,
+      panel: false,
+      _generateTypes: false,
+      _generateSchema: false,
+      …
+    };
+    config.collections = [...(config.collections || []), versionedCollection];
+  }
+}
+```
 
-| place                                   | what it does                                                                                       |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `prototype.server.ts` `readPrototype`   | when `config.versions`, joins the shadow table and picks the named version, or published-or-latest |
-| `prototype.server.ts` `updatePrototype` | three branches on `versionOperation` (below)                                                       |
-| `prototype.server.ts` `insertPrototype` | writes root + first version row, returns `{ id, versionId }`                                       |
-| `url.server.ts`                         | four writes: root, root locale, version, version locale                                            |
-| `generate-schema/index.server.ts`       | builds the shadow table and the root↔shadow relations from `config.versions`                       |
+and the children move with it:
 
-The three update branches, and this is the important part:
+```ts
+// core/features/versions/naming.ts — the load-bearing line
+export const contentOwnerSlug = (config: { slug: string; versions?: unknown }) =>
+  (config.versions ? withVersionsSuffix(config.slug) : config.slug) as CollectionSlug;
+```
 
-- **`isSimpleUpdate`** (not versioned) — write the root row, everything on it.
-- **`isSpecificVersionUpdate`** — write `rootData` to the root, the rest to the version row named by
-  `versionId`; if publishing, first demote this document's other versions to draft.
-- **`isNewVersionCreation`** — write `rootData` to the root **and nothing else**. The version row was
-  already created by `handleNewVersion`, through the public API:
-  `rime.collection($pages__versions).create(...)`.
+Enabling versions therefore renames a whole subtree: `pages__$blocks_hero` becomes
+`pages__versions__$blocks_hero`.
 
-That last line is the proof the strategy can live above the adapter: two of the five operations
-already do.
+### Five operations, chosen above the adapter
+
+```ts
+// core/features/versions/strategy.ts
+export function defineVersionUpdateOperation({ draft, versionId, config }: Args): VersionOperation {
+  if (!config.versions) return VERSIONS_OPERATIONS.UPDATE; // not versioned
+  if (versionId) return VERSIONS_OPERATIONS.UPDATE_VERSION; // write that version
+  if (!config.versions.draft) return VERSIONS_OPERATIONS.NEW_VERSION_FROM_LATEST;
+  return draft
+    ? VERSIONS_OPERATIONS.NEW_DRAFT_FROM_PUBLISHED
+    : VERSIONS_OPERATIONS.UPDATE_PUBLISHED;
+}
+```
+
+It runs as the `defineVersionOperation` hook, listed in **both** prototypes' `beforeUpdate`
+(`prototype/collection/hooks.server.ts`, `prototype/area/hooks.server.ts`).
+
+### Where the adapter branches on it
+
+**Read** — `adapter-sqlite/prototype.server.ts`:
+
+```ts
+if (!config.versions) {
+  return queryTable.findFirst({ columns, ...byId, with: buildWithParam({ table, … }) });
+}
+
+const versionsTable = baseTableName(withVersionsSuffix(slug));
+const doc = await queryTable.findFirst({
+  columns, ...byId,
+  with: {
+    [versionsTable]: {
+      columns: adapterUtil.columnsParams({ table: tables[versionsTable], select }),
+      with: buildWithParam({ table: versionsTable, … }),
+      ...(versionId
+        ? { where: eq(tables[versionsTable].id, versionId) }
+        : adapterUtil.buildPublishedOrLatestVersionParams({ draft, config, table: tables[versionsTable] }))
+    }
+  }
+});
+if (!doc || !doc[versionsTable]?.length) return undefined;   // a root with no version is absent
+return adapterUtil.mergeRawDocumentWithVersion(doc, versionsTable, select);
+```
+
+with the pick itself:
+
+```ts
+// adapter-sqlite/util.server.ts
+export function buildPublishedOrLatestVersionParams({ draft, config, table }) {
+  const hasStatus = config.versions && config.versions.draft;
+  return hasStatus && !draft
+    ? { where: eq(table.status, 'published'), limit: 1 }
+    : { orderBy: [desc(table.updatedAt)], limit: 1 };
+}
+```
+
+**Write** — same file, three branches:
+
+```ts
+if (VersionOperations.isSimpleUpdate(versionOperation)) {
+  // not versioned: the root row holds everything
+  await adapterUtil.updateTableRecord(db, tables, table, {
+    recordId: id,
+    data: { ...mainData, updatedAt: now }
+  });
+  return { id: data.id || id };
+}
+
+if (VersionOperations.isSpecificVersionUpdate(versionOperation)) {
+  const { data: contentData, rootData } = adapterUtil.extractRootData(data);
+  await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
+    recordId: id,
+    data: { updatedAt: now, ...rootData }
+  });
+
+  // publishing demotes this document's other versions first
+  if (config.versions?.draft && mainData.status === VERSIONS_STATUS.PUBLISHED) {
+    await db
+      .update(tables[versionsTable])
+      .set({ status: VERSIONS_STATUS.DRAFT })
+      .where(eq(tables[versionsTable].ownerId, id));
+  }
+  await adapterUtil.updateTableRecord(db, tables, versionsTable, {
+    recordId: versionId,
+    data: { ...mainData, updatedAt: now }
+  });
+  return { id: data.id || id };
+}
+
+if (VersionOperations.isNewVersionCreation(versionOperation)) {
+  // the version row already exists — only the root is touched here
+  const { rootData } = adapterUtil.extractRootData(data);
+  await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
+    recordId: id,
+    data: { updatedAt: now, ...rootData }
+  });
+  return { id: data.id || id };
+}
+```
+
+That third branch is the proof the strategy can live above the adapter — the version row was
+already made by the feature, through the public API:
+
+```ts
+// core/features/versions/hooks/handle-new-version.server.ts
+case VersionOperations.isNewVersionCreation(versionOperation): {
+  const versionsSlug = withVersionsSuffix(config.slug);
+  const document = await rime.collection(versionsSlug).create({ data, locale: params.locale });
+  if (config.versions?.maxVersions) {
+    await rime.collection(versionsSlug).delete({
+      sort: '-updatedAt',
+      query: 'where[status][not_equals]=published',
+      offset: config.versions.maxVersions
+    });
+  }
+  versionId = document.id;
+  break;
+}
+```
+
+**Schema** — `adapter-sqlite/generate-schema/index.server.ts` builds the shadow because
+`collection.versions` is truthy:
+
+```ts
+if (collection.versions) {
+  const rootFieldsFromConfig = [...collection.fields].filter((f) => f.get.root);
+  await buildRootTable({ fields: [...rootFieldsFromConfig, date('createdAt'), date('updatedAt')], … });
+
+  rootTableName = baseTableName(withVersionsSuffix(collectionSlug));   // everything below is now the shadow's
+  const manyVersionsToOneName = `rel_${rootTableName}HasOne${toPascalCase(collectionSlug)}`;
+  …
+}
+```
 
 ---
 
@@ -54,138 +192,282 @@ already do.
 > `context.params.versionId` is not a version id. It is **the id of the row that owns this
 > document's children**.
 
-`handleNewVersion` ends with `default: versionId = originalDoc.id` — for a non-versioned document
-it is the document's own id — and `run.server.ts` then passes it as `ownerId` to
-`persistRelational`. `insertPrototype` says the same in its own words: "For a non-versioned
-prototype `versionId` comes back equal to `id`".
+```ts
+// core/features/versions/hooks/handle-new-version.server.ts — the last branch
+default:
+  versionId = originalDoc.id;      // not versioned: the document's own id
+```
 
-So the pipeline does not have a versions concept in it. It has a **content owner** concept, wearing
-a versions name. Rename it and most of the coupling turns into a question with an obvious answer:
-children belong to a row, and `versions` is the feature that changes which row that is.
+```ts
+// core/pipeline/run.server.ts — what it is then used for
+await persistRelational({
+  context,
+  ownerId: context.params.versionId!, // blocks, tree and relations hang off this
+  data,
+  incomingPaths,
+  adapter,
+  config,
+  locale: args.locale
+});
+```
+
+```ts
+// adapter-sqlite/prototype.server.ts — insertPrototype says the same in its own comment
+/** For a non-versioned prototype `versionId` comes back equal to `id`. */
+```
+
+So the pipeline has no versions concept in it. It has a **content owner** concept wearing a
+versions name.
 
 ---
 
 ## What decoupled looks like
 
-The adapter contract stops naming versions and gains one neutral idea — _which row holds the
-content_:
-
 ```ts
-find(args?: { id?: string; contentId?: string; … })
-update(args: { id?: string; contentId?: string; data; locale? }): Promise<{ id: string }>
-insert(args: { data; locale? }): Promise<{ id: string; contentId: string }>
+// core/adapter/types.ts — after
+find(args?: { id?: string; contentId?: string; select?: string[]; locale?: string }): Promise<RawDoc | undefined>;
+insert(args: { data; locale? }): Promise<{ id: string; contentId: string }>;
+update(args: { id?: string; contentId?: string; data; locale? }): Promise<{ id: string }>;
 ```
 
-`contentId` defaults to the root row. A prototype with no shadow never sets it, and its adapter
-paths are the `isSimpleUpdate` branch with no branch left in them.
+`contentId` defaults to the root row, so a prototype with no shadow never sets it and its adapter
+path is the `isSimpleUpdate` branch with no branch left in it.
 
-Two things do **not** decouple by renaming, and they are the real work:
-
-1. **Choosing the content row on a read.** `published-or-latest`, or "the one named by `versionId`",
-   or "the newest" — `buildPublishedOrLatestVersionParams` in `adapter-sqlite/util.server.ts`. The
-   adapter has to resolve it inside the read query; asking the feature first costs a second query
-   per read.
-2. **Generating the shadow table.** `generate-schema` builds it because `collection.versions` is
-   truthy. Nothing reads the feature's `type: 'shadow'` declaration.
-
-Both point the same way: **the shadow becomes something a feature declares at registration**, and
-the adapter is told about it once, at boot, the way prototypes already are
-(`adapter.registerPrototype({ config, singleton })`, `adapter-sqlite/registry.server.ts`).
-
-Sketch, to be argued with rather than followed:
+Two things do **not** decouple by renaming — picking the content row on a read, and generating the
+shadow table — and both point at the shadow becoming a **registration-time declaration**:
 
 ```ts
-registerPrototype({
-  config,
-  singleton,
-  shadow: {
-    slug: '$pages__versions', // where the content rows live
-    ownerColumn: 'ownerId', // how they point back
-    pick: { column: 'status', equals: 'published' } // else newest by updatedAt
-  }
+// what the feature would declare
+shadow: (config) => ({
+  slug: withVersionsSuffix(config.slug), // where the content rows live
+  ownerColumn: 'ownerId', // how they point back at the root
+  pick: config.versions.draft ? { column: 'status', equals: 'published', else: 'newest' } : 'newest'
+});
+
+// what the adapter is told, once, at boot — beside `singleton`, which it already takes
+adapter.registerPrototype({ config, singleton, shadow });
+```
+
+```ts
+// and what the read becomes: no config.versions, no draft, no withVersionsSuffix
+const shadow = handle.shadow;
+if (!shadow) return queryTable.findFirst({ columns, ...byId, with: … });
+
+const doc = await queryTable.findFirst({
+  columns, ...byId,
+  with: { [baseTableName(shadow.slug)]: { columns, with: …, ...pickParams(shadow.pick, contentId, table) } }
 });
 ```
 
 `pick` is the part to be careful with: it is one step from inventing a query language in the
-adapter contract. If it grows past "a column equals a value, else newest", stop and reconsider —
-resolving the id above the adapter and paying the extra query may be the better trade.
+adapter contract. If it grows past "a column equals a value, else newest", stop — resolving the id
+above the adapter and paying a second query per read is the better trade.
 
 ---
 
 ## The plan, in stages
 
-Each stage is shippable on its own and gate-able against the previous one. Stage 0 and 1 have no
-design questions left in them.
+Each is shippable and gate-able on its own. Stages 0 and 1 have no design questions left in them.
 
 ### Stage 0 — `_root` fields stop being a hardcoded list
 
-`adapter-sqlite/util.server.ts` `extractRootData()` hardcodes `_parent`, `_position` and `_path` —
-two features' fields, named in the adapter. Those fields are already declared with `._root()`
-(`fields/builders/form-field-builder.ts:129`, set by `features/nested/module{,.server}.ts` and
-`features/upload/module.ts`), and the flag survives into the compiled field as `root: true`.
+The two halves of the repo already disagree about what a root field is. Schema generation reads a
+flag:
 
-Read the flag off the config instead of matching names. Self-contained, no contract change, and it
-removes two feature names from the adapter. **Do this first** — it is the smallest possible version
-of the whole exercise, and it proves the fixtures and gates below work.
+```ts
+// adapter-sqlite/generate-schema/index.server.ts
+const rootFieldsFromConfig = [...collection.fields].filter((f) => f.get.root);
+```
+
+The write path matches names:
+
+```ts
+// adapter-sqlite/util.server.ts
+export function extractRootData(data: any) {
+  const rootData: { _parent?: string; _position?: number; _path?: string } = {};
+  if ('_parent' in data) {
+    rootData._parent = data._parent;
+    delete data._parent;
+  }
+  if ('_position' in data) {
+    rootData._position = data._position;
+    delete data._position;
+  }
+  if ('_path' in data) {
+    rootData._path = data._path;
+    delete data._path;
+  }
+  return { data, rootData };
+}
+```
+
+Those three names are two features' fields, hardcoded in the adapter — and they already carry the
+flag:
+
+```ts
+// core/features/nested/module.ts
+(text('_parent').hidden()._root(), number('_position').defaultValue(0).hidden()._root());
+
+// core/features/upload/module.ts
+const _pathField = text('_path')._root().hidden().validate(validatePath);
+```
+
+So a field marked `._root()` by anything else gets a root **column** and has its **value** written
+to the version row. Take the list from the config:
+
+```ts
+export function extractRootData(data: Dic, config: BuiltCollection | BuiltArea) {
+  const rootPaths = config.fields
+    .filter(isFormField)
+    .filter((f) => f.get.root)
+    .map((f) => f.name);
+  const rootData: Dic = {};
+  for (const path of rootPaths) {
+    if (path in data) {
+      rootData[path] = data[path];
+      delete data[path];
+    }
+  }
+  return { data, rootData };
+}
+```
+
+No contract change, two feature names out of the adapter, and it exercises the fixtures and gates
+below before anything risky. **Do this first.**
 
 ### Stage 1 — `versionId` → `contentOwnerId`, no behaviour change
 
-Rename through `core/pipeline/` and `core/adapter/types.ts`: the pipeline's
-`context.params.versionId`, `assertUpsertContext`'s required list, `persistRelational`'s `ownerId`
-argument, `insert`'s return. Leave `features/versions/` speaking of versions — inside the feature
-the name is correct.
+```diff
+  // core/pipeline/run.server.ts
+  assertUpsertContext(context, where, [
+-   'configMap', 'originalConfigMap', 'originalDoc', 'versionOperation', 'versionId'
++   'configMap', 'originalConfigMap', 'originalDoc', 'versionOperation', 'contentOwnerId'
+  ]);
 
-Mechanical, and the point of doing it alone is that the diff shows exactly which remaining
-references are genuinely about versions. Expect the count in `core/` to drop by more than half.
+  await persistRelational({
+-   ownerId: context.params.versionId!,
++   ownerId: context.params.contentOwnerId!,
+    …
+  });
+```
+
+```diff
+  // core/adapter/types.ts
+- insert(args: { data; locale? }): Promise<{ id: string; versionId: string }>;
++ insert(args: { data; locale? }): Promise<{ id: string; contentId: string }>;
+```
+
+Leave `features/versions/` speaking of versions — inside the feature the name is right:
+
+```ts
+// core/features/versions/hooks/handle-new-version.server.ts — after
+const version = await rime.collection(versionsSlug).create({ data, locale: params.locale });
+return { ...args, context: { ...args.context, params: { ...params, contentOwnerId: version.id } } };
+```
+
+Mechanical, and doing it alone is the point: the diff shows which remaining references are
+genuinely about versions.
 
 ### Stage 2 — the shadow is registered, not inferred
 
-`FeatureDefinition` gains a `shadow?: (config) => ShadowDeclaration`, read at
-`registerPrototype` time. `generate-schema` builds tables from registered shadows rather than from
-`config.versions`. The feature's `type: 'shadow'` finally means something.
+```ts
+// core/features/define.ts
+/** A table this feature deviates a prototype's rows into. Read at registerPrototype time. */
+shadow?: (config: any) => ShadowDeclaration | undefined;
+```
 
-This is the stage that touches the generated schema. Capture a golden schema on **`versions` and
-`versions-multilang`** first (see Gates).
+```ts
+// core/boot.server.ts — where prototypes already register
+for (const prototype of prototypes) {
+  for (const prototypeConfig of configCtx.byPrototype(prototype.name)) {
+    adapter.registerPrototype({
+      config: prototypeConfig,
+      singleton: prototype.singleton,
+      shadow: shadowFor(prototype, prototypeConfig) // first feature declaring one wins
+    });
+  }
+}
+```
+
+`generate-schema` then builds tables from registered shadows rather than from `config.versions`,
+and `type: 'shadow'` on the feature finally means something. **This is the stage that touches the
+generated schema** — capture a golden one on `versions` and `versions-multilang` first.
 
 ### Stage 3 — the read selector
 
-`find`/`findMany` lose `draft` and `versionId`, gaining `contentId` plus whatever Stage 2's
-declaration says about picking a row. `buildPublishedOrLatestVersionParams` becomes a function of
-the declaration rather than of `config.versions`.
+`find`/`findMany` lose `draft` and `versionId`; `buildPublishedOrLatestVersionParams` becomes a
+function of the declaration rather than of `config.versions`:
+
+```ts
+const pickParams = (pick: Pick, contentId: string | undefined, table: GenericTable) =>
+  contentId
+    ? { where: eq(table.id, contentId), limit: 1 }
+    : pick === 'newest'
+      ? { orderBy: [desc(table.updatedAt)], limit: 1 }
+      : { where: eq(table[pick.column], pick.equals), limit: 1 };
+```
 
 ### Stage 4 — the write plan
 
-`versionOperation` leaves the adapter contract. `updatePrototype` becomes: write `rootData` to the
-root row, write the rest to `contentId` when one was given. The publish demotion (`status = draft`
-on siblings) moves above the adapter into the versions feature, where the other two operations
-already are.
+`versionOperation` leaves the contract, and `updatePrototype` collapses:
 
-### Stage 5 — what is left over
+```ts
+export const updatePrototype = async ({ db, tables }, { slug, id, contentId, data, locale, config }) => {
+  const { data: contentData, rootData } = adapterUtil.extractRootData(data, config);
+  const now = new Date();
+
+  // the root row always: its own fields, plus everything else when there is no content row
+  await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
+    recordId: id,
+    data: { updatedAt: now, ...rootData, ...(contentId ? {} : contentData) }
+  });
+
+  // and the content row when one was named
+  if (contentId) { … write contentData into the shadow, by contentId … }
+
+  return { id: data.id || id };
+};
+```
+
+The publish demotion moves above the adapter, into the versions feature, where two of the five
+operations already are.
+
+### Stage 5 — the remainder
 
 `core/constants.ts` (`VERSIONS_STATUS`), `core/pipeline/types.ts` importing `VersionOperation`,
 `core/dev/codegen/routes/common.server.ts`'s versions pages, and
-`core/pipeline/persist/{blocks,relations,tree}` importing `contentOwnerSlug`. Most of these fall out
-of Stages 2–4; whatever is left is the honest remainder and belongs in the audit rather than being
+`core/pipeline/persist/{blocks,relations,tree}` importing `contentOwnerSlug`. Most fall out of
+Stages 2–4; whatever is left is the honest remainder and belongs in the audit rather than being
 forced.
 
 ---
 
 ## Traps
 
-- **The hooks cannot be gated by `enabled`.** `defineVersionOperation` populates
-  `context.versionOperation`, which `assertUpsertContext` requires on _every_ update — so both
-  prototypes list versions' `beforeUpdate` hooks directly, and gating them behind the feature
-  breaks updates on non-versioned configs. Stage 1 is what makes this fixable: once the context
-  carries a content owner rather than a version operation, a non-versioned config needs nothing
-  from the feature. Do not try to fix the listing before Stage 1.
-- **A feature must not import a prototype definition.** `versions/derive.server.ts` needs the
-  collection prototype's `features`; it takes them from the registry handed to `configure`. A
-  definition lists its features by value, so importing one from inside a feature can be evaluated
-  _from within_ that definition and find the feature still in flight — `undefined`, silently. See
-  `prototype/collection/config/pipeline.spec.ts`, which fails when that happens.
-- **The shadow is a collection, so it runs the collection pipeline.** Anything added to the
-  collection prototype's hooks runs for `$pages__versions` too. That is intended, and it is why
-  `derive.server.ts` calls `augmentHooks`.
+- **The hooks cannot be gated by `enabled`.** `defineVersionOperation` populates what
+  `assertUpsertContext` requires on _every_ update, so both prototypes list versions'
+  `beforeUpdate` hooks directly and gating them breaks updates on non-versioned configs. Stage 1 is
+  what makes this fixable: once the context carries a content owner rather than a version
+  operation, a non-versioned config needs nothing from the feature. Do not attempt the listing
+  before Stage 1.
+- **A feature must not import a prototype definition.** `derive.server.ts` needs the collection
+  prototype's `features` and takes them from the registry `configure` is handed:
+
+  ```ts
+  export function makeVersionsCollectionsAliases<C extends Config>(config: C, prototypes: RegisteredPrototype[] = []) {
+    const features = prototypes.find((p) => p.name === 'collection')?.features || [];
+    …
+    versionedCollection = augmentHooks({ features, hooks: collectionHooks }, versionedCollection);
+  }
+  ```
+
+  Importing the definition instead can be evaluated _from within_ it and find the feature still in
+  flight — `undefined`, silently. `prototype/collection/config/pipeline.spec.ts` fails when it
+  happens.
+
+- **The shadow runs the collection pipeline.** It is a collection, so anything added to the
+  collection prototype's hooks runs for `$pages__versions` too. Intended, and why `derive.server.ts`
+  calls `augmentHooks`.
 - **`$` and `__` are load-bearing in slug space.** `$` marks rime-derived, `__` marks _shadow of_
   and survives case conversion as a segment boundary; `config/validate.server.ts` rejects an author
   slug containing `__` for that reason. Do not invent a third marker.
@@ -194,30 +476,45 @@ forced.
 
 ## Gates
 
-The standing gates are in `docs/restructure-handoff.md`. What is specific to this work:
+Standing gates are in `docs/restructure-handoff.md`. Specific to this work:
 
-- **Run on a versions fixture.** `bun run rime:use versions`, and `versions-multilang` for anything
-  touching locales — the localized version table (`__versions__$$locales`) is where the four-way
-  `url.server.ts` write lives. Re-measure every baseline after switching fixture: the counts differ
-  per fixture and comparing across two reads as a regression that is not there.
-- **Golden schema, per fixture.** Stage 2 onwards changes how the shadow table is generated. Boot,
-  copy `src/lib/+rime.generated/schema.server.ts` somewhere outside the repo, change, boot, diff.
+```bash
+bun run rime:use versions              # and versions-multilang for anything touching locales
+bun run check && bunx eslint src/lib && bunx vitest run && bun run check:circular-deps
+```
+
+- **Re-measure every baseline after switching fixture.** The counts differ per fixture; comparing
+  across two reads as a regression that is not there.
+- **Golden schema, per fixture.** Stage 2 onwards changes how the shadow is generated:
+
+  ```bash
+  cp src/lib/+rime.generated/schema.server.ts /tmp/schema.versions.before.ts
+  # … change, boot again …
+  diff /tmp/schema.versions.before.ts src/lib/+rime.generated/schema.server.ts
+  ```
+
   A shadow that silently stops being generated shows up here and nowhere else.
-- **`prototype/collection/config/pipeline.spec.ts`** must stay green: it is what catches a derived
+
+- **`prototype/collection/config/pipeline.spec.ts`** must stay green — it catches a derived
   collection losing its hooks.
 
-### Probes, and what each one discriminates
+### Probes, and what each discriminates
 
-Seed an admin (`POST /api/init`, see the handoff for the payload), then:
+```bash
+curl -c c.txt -X POST localhost:5173/api/init -H 'content-type: application/json' \
+  -d '{"email":"admin@test.com","name":"Admin","password":"Str0ngPass!word"}'
+curl -c c.txt -b c.txt -X POST localhost:5173/api/auth/sign-in/email -H 'content-type: application/json' \
+  -d '{"email":"admin@test.com","password":"Str0ngPass!word"}'
+```
 
-| probe                                                           | what breaks it                                                                         |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| create a versioned doc, read it back                            | the shadow join, `insert` returning both ids                                           |
-| update it, then read                                            | `contentId` threading — a wrong owner writes children onto the root                    |
-| publish, then create a second draft, then read without `?draft` | the published-or-latest pick                                                           |
-| publish the second draft, then list versions                    | the demotion — exactly one published at a time                                         |
-| a versioned **area** with only a draft                          | must 404, not return the empty root row                                                |
-| blocks or a relation on a versioned doc, updated twice          | children written against the wrong owner survive one write and duplicate on the second |
+| probe                                              | what breaks it                                                                         |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `POST` a versioned doc, then `GET` it              | the shadow join, `insert` returning both ids                                           |
+| `PATCH` it, then `GET`                             | `contentId` threading — a wrong owner writes children onto the root                    |
+| publish, add a draft, `GET` without `?draft=true`  | the published-or-latest pick                                                           |
+| publish the second draft, list `$slug__versions`   | the demotion — exactly one published at a time                                         |
+| a versioned **area** holding only a draft          | must 404, not return the empty root row                                                |
+| a doc with blocks or a relation, updated **twice** | children written against the wrong owner survive one write and duplicate on the second |
 
 The last one is the reason to care: an owner-id mistake is invisible on a single write.
 
@@ -226,7 +523,7 @@ The last one is the reason to care: an owner-id mistake is invisible on a single
 ## Decisions to make before Stage 2
 
 1. **Does `pick` live in the declaration, or does the feature resolve the content id first?** The
-   declaration keeps reads at one query and puts a small predicate in the contract. Resolving first
+   declaration keeps reads at one query and puts a small predicate in the contract; resolving first
    keeps the contract clean and costs a query per read. Measure the read path before choosing.
 2. **Does `insert` still write the first content row?** It is the one place the adapter creates a
    shadow row on its own. The alternative — the feature creating it through the public API, as
