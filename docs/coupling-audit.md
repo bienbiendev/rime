@@ -98,7 +98,7 @@ adapter/types.ts               imports User from features/auth/types.js
 `createAuthInstance` while every other feature boots through `bootFeatures` looks like the
 inconsistency to fix, and it is **not small**: `FeatureDefinition.boot` takes only the config and
 returns nothing, while this one needs the adapter, the config context and the mailer plugin, and
-*returns* the instance that becomes `rime.auth`. Moving it means giving `boot` those arguments and
+_returns_ the instance that becomes `rime.auth`. Moving it means giving `boot` those arguments and
 a way to contribute a member to the context — a contract change, not a relocation.
 
 ## 4. `core/config/` still names the two kinds
@@ -136,15 +136,26 @@ grep -rnE "isArea|isCollection|type === '(collection|area)'"
     components/sections/document/Document.svelte   4
 ```
 
-It also reaches into features directly — `upload/util/config` (5 imports), `upload/naming` (5),
-`auth/types` (5), `versions/naming` (2) — and core reaches back: `handlers/routes.server.ts`
-imports 13 panel modules, `config/types.ts` imports `DashboardEntry`, `errors/index.ts` imports
-`FormErrors`.
+**The panel is a consumer.** That is the frame this section is missing everywhere else, and it
+changes which direction of the coupling is a defect:
 
-`core/features/panel/` exists and owns the panel's config defaults, but the panel itself is a
-parallel structure with a page per kind (`pages/collection`, `pages/area`,
-`pages/collection-document`). Making it a feature proper means the request-shaped half of it moving
-behind the `handler` member the feature contract now has.
+- The panel reaching into core and into features — `upload/util/config` (5 imports),
+  `upload/naming` (5), `auth/types` (5), `versions/naming` (2) — is a consumer using the API.
+  Whether those particular paths should be public is a question about the published surface, not
+  about layering.
+- Core reaching back into the panel is the inversion: `handlers/routes.server.ts` imports 13 panel
+  modules, `config/types.ts` imports `DashboardEntry`, `errors/index.ts` imports `FormErrors`. Core
+  should not know its own admin UI exists.
+
+**And it will not become prototype-agnostic.** Listing many documents and editing the single one an
+area holds are genuinely different screens; some `isCollection`-shaped branch survives any amount of
+restructuring. The goal is for that branch to be _the panel's own_, made against what a config
+declares, rather than core's.
+
+So `core/features/panel/` is, honestly, a filing decision first: somewhere for the panel's config
+defaults to live that is not `core/config/`. It is the first step of decoupling the panel and not
+much more than that — the real work is the direction above, and it is bounded by what a consumer
+is allowed to reach.
 
 ---
 
@@ -167,8 +178,9 @@ Cheapest first, and each is independently useful:
    and to contribute a member back. Bigger than it looks (see above).
 7. **A hook timing meaning "always"**, which lets versions carry its own `beforeUpdate` hooks and
    removes the last prototype→feature naming.
-8. **The panel**, largest and last: a page per kind, driven by the registry rather than by
-   `isCollection`.
+8. **The panel**, largest and last — and the item to read §5 before starting: the work is core
+   letting go of `src/lib/panel/`, not the panel letting go of core, and the end state still has a
+   collection screen and an area screen.
 
 Item 1 is a sitting. 2–3 are a contract member each. 4–5 are the natural next commit. 6–8 are
 projects, and 8 is the biggest thing left in the repo.
