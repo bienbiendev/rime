@@ -276,6 +276,9 @@ Note the client and server factories currently import `collectionFeatures` from 
 import survives because `applyAugments` needs the `as const` tuple for the type fold, which
 `PrototypeDefinition.features: FeatureDefinition[]` has widened away.
 
+> **`docs/coupling-audit.md` is the measured version of this section** — every place core still
+> names a feature or a kind, with the greps to re-run and a cheapest-first order.
+
 ### The panel
 
 `core/features/panel/` is a real feature now — icons and the navigation/language/component
