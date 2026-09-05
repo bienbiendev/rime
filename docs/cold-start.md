@@ -3,8 +3,14 @@
 For whoever picks this up with none of the context — most likely me. Read this first; it is the
 map. Everything else is a specialist document and this file says which one and when.
 
-**Branch:** `claude/restructure-handoff-docs-vnq2pq` · 122 commits and 463 files ahead of
-`develop` · **no PR opened**.
+**Branch:** `claude/cold-start-commit-9-b0f03u`, cut from
+`claude/restructure-handoff-docs-vnq2pq` · **no PR opened**. `develop` has moved a long way since
+the fork, so measure rather than quote:
+
+```bash
+git rev-list --count origin/develop..HEAD          # 57
+git diff --name-only origin/develop..HEAD | wc -l  # 465
+```
 
 ---
 
@@ -75,7 +81,13 @@ Full table with commits in `restructure-handoff.md`. The shape of it:
   `pipeline.server.ts` files are deleted. Every pipeline is resolved **once**, at the end of the
   config build, from three lists: the prototype's, the enabled features', and the author's
   `$hooks`.
-- **`$rime/modules`** resolves per name instead of through a whole-package barrel.
+- **`$rime/modules`** resolves per name instead of through a whole-package barrel, and every
+  feature reaches its server-only hooks through it. `auth`, `title` and `thumbnail` used to import
+  theirs by path, which pulled `.server.ts` files into the browser graph — six 500s, and **the
+  panel never loaded**. Each has a `hooks/module.server.ts` now. See rule 7.
+- **The panel renders**, verified in a real browser — dashboard, a collection screen, an area
+  document, no 500s and no console errors. It had not come up in this container before. The probe
+  is `probing.md` §7 and it is the only gate that sees a server-only module reaching the client.
 - **versions**, partway: the pipeline asks for `contentOwnerId` rather than carrying a
   `versionOperation` (stage 1), and the shadow table is now **declared by the feature that owns
   it** rather than inferred from `config.versions` (stage 2, schema half). `generate-schema` no
@@ -93,8 +105,11 @@ grep -rn "from '\$lib/panel/" src/lib/core | wc -l                              
 grep -rn "features/versions" src/lib/adapter-sqlite | wc -l                        # 7
 ```
 
-Of the 72 kind-naming lines: **15 in core**, **14 in the panel**, 2 in fields, and **1 in the
-adapter** (`transform.server.ts:59`, `configCtx.isCollection(slug)` — the last one).
+Where the 72 kind-naming lines are: **32 in core**, **35 in the panel**, 4 in fields, and **1 in
+the adapter** (`transform.server.ts:59`, `configCtx.isCollection(slug)` — the last one). Core's
+concentrate in four files — `config/context.server.ts` 6, `build.server.ts` 4, `validate.server.ts`
+3, `types.ts` 3 — which is items 4 and 5 below. Two of core's are a prototype naming its own
+`configKey`, which is the whole point of `configKey` and not a hit to remove.
 
 Gates, on the `versions` fixture: `check` **0**, `eslint src/lib` **21**, `check:circular-deps`
 **3**, `vitest` **124**. On `basic`, `check` is **13**; on `versions-multilang`, **6**. All three
@@ -113,8 +128,8 @@ Cheapest first. Each is independently useful and each has a document behind it.
    `config/validate.server.ts`. A contract member with one caller.
 3. **Features contribute to `createBlankDocument`** — moves upload's `sizes` out of
    `prototype/doc.ts`. Same shape as 2; `prototype/api.server.ts` already notes the gap.
-4. **`validate.server.ts` (15 refs) and `context.server.ts` (13) fold the registry** instead of
-   listing `collections` and `areas` by hand. `prototypeConfigs()` and `prototypeEntries()` exist;
+4. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
+   the registry** instead of listing the two by hand. `prototypeConfigs()` and `prototypeEntries()` exist;
    the schema generator is the worked example.
 5. **`Config`'s authoring surface derives its prototype members from the registry** — the
    type-level half of 4, and what makes a third prototype cost only its own folder.
@@ -135,8 +150,11 @@ Cheapest first. Each is independently useful and each has a document behind it.
 Also open, not on the ladder:
 
 - **`bun run test` (375 e2e) has never run in this container.** No SMTP sink; Chromium 1194 vs
-  Playwright's 1234. `probing.md` is the substitute and says what it does not cover.
-- **No PR.** 463 files against `develop`.
+  Playwright's 1234. `probing.md` is the substitute and says what it does not cover — though §7
+  now drives Chromium 1194 through `playwright-core` directly, which is enough to load the panel
+  and read its console, just not to run the suite.
+- **No PR**, and `develop` has moved a long way ahead of the fork point (see §1). Whatever opens
+  it will be a merge, not a fast-forward.
 
 ---
 
@@ -176,6 +194,7 @@ them and every gate reads as catastrophically broken until they are back.
 
 ```bash
 bun install
+bunx svelte-kit sync   # or the CLI cannot resolve $lib and `rime:use` dies on its own `clear` step
 # .env is NOT in the repo. `rime init` writes one with the *consumer* default
 # RIME_CONFIG_DIR=src/+rime — this repo's fixtures land in src/lib/+rime, so init then generates a
 # starter config importing 'rimecms/adapter-sqlite' and dies. Write the file first (CONTRIBUTING.md
@@ -184,5 +203,15 @@ bun run rime:use basic
 ```
 
 Before that, `bun run check` reports ~200 errors. That is the fixture missing, not a regression.
+
+**Adding a `module.server.ts` pair means regenerating the barrel's types**, or `check` reports
+`Module '"$rime/modules"' has no exported member 'X'` for a name that plainly exists.
+`src/rime.modules.generated.d.ts` is gitignored and written by `regenerateModulesDeclaration()`,
+which runs when the dev server starts listening — or on demand, and codegen memoises, so:
+
+```bash
+rm node_modules/.rime/config.txt
+bun ./src/lib/core/dev/cli/index.ts generate
+```
 
 Then read `probing.md` before touching anything.
