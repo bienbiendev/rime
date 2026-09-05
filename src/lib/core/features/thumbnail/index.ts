@@ -1,5 +1,5 @@
+import { thumbnailHooks } from '$rime/modules';
 import { defineFeature } from '../define.js';
-import { setDocumentThumbnail } from './hooks/set-document-thumbnail.server.js';
 import { augmentThumbnail } from './augment.js';
 
 /**
@@ -15,7 +15,7 @@ export const thumbnail = defineFeature({
   enabled: () => true,
   augment: augmentThumbnail,
 
-  hooks: { beforeRead: [setDocumentThumbnail] }
+  hooks: thumbnailHooks
 });
 
 /** Resolves `asThumbnail`, which the built collection declares as required. */

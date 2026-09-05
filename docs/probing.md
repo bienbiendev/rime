@@ -278,9 +278,40 @@ git stash push -- src/lib && bun run check | tail -2 && git stash pop
 
 ---
 
+## 7. Loading the panel in a browser
+
+The one probe `curl` cannot stand in for, and the only one that catches a **server-only module in
+the client graph**. The panel is CSR-only, so `curl /panel` returns the bootstrap script whatever
+is broken; the failure is a 500 on a module request, and only a browser makes those.
+
+Chromium is at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (Playwright 1.62 wants 1234,
+so drive `playwright-core` directly rather than through `@playwright/test`):
+
+```js
+const page = await (
+  await (await chromium.launch({ executablePath: CHROME })).newContext()
+).newPage();
+page.on('response', (r) => {
+  if (r.status() >= 500) console.log(r.url());
+});
+page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
+// sign in at /panel/sign-in, then visit /panel, /panel/<a collection>, /panel/<an area>
+```
+
+What it discriminates: every 500 is a `.server.ts` file SvelteKit refused to serve to the browser,
+and the URL names the file. **Read the URLs, not the message** — SvelteKit's guard walks the
+importer chain to print a "Cannot import X into code that runs in the browser" pyramid, follows one
+arbitrary branch, and when that branch dead-ends before a route entrypoint it throws
+`An impossible situation occurred` instead (`vite/index.js:798`). That string means the guard
+fired, not that anything is unknowable.
+
+Screenshot each page: a green console with an empty page is its own failure.
+
+---
+
 ## What still needs the e2e suite
 
-Nothing above covers the panel's own rendering, the sign-in form, or the api-key tests (which need
+Nothing above covers the panel's interactions, the sign-in form, or the api-key tests (which need
 the SMTP sink on `127.0.0.1:1025`, implicit TLS — **verify it with a real `smtplib.SMTP_SSL` login
 and send, never `pgrep -f sink.py`**, which matches its own command line and always succeeds).
 Chromium needs a temporary `launchOptions.executablePath` in `tests/playwright.config.base.ts`.

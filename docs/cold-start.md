@@ -140,7 +140,7 @@ Also open, not on the ladder:
 
 ---
 
-## 5. The five rules, compressed
+## 5. The seven rules, compressed
 
 Each cost a round. `restructure-handoff.md` has the full statement and the symptom of breaking it.
 
@@ -159,6 +159,13 @@ Each cost a round. `restructure-handoff.md` has the full statement and the sympt
 And the sixth, from commit 11: **a whole-config step belongs to whoever owns it.** Before writing
 a `configure`, grep the member — if it has one reader, make it a `??` at that line and delete the
 step.
+
+And the seventh, which cost the whole panel: **a feature's `index.ts` must not import its own
+`.server.ts` hooks.** A prototype's `features` list is reachable from a client build, so a hook
+imported by path lands in the browser graph and SvelteKit refuses it with `An impossible situation
+occurred` — its own guard firing and failing to name the file. Hooks go in a
+`hooks/module.server.ts` with no `module.ts` beside it, reached through `$rime/modules`. No static
+gate sees the difference; `probing.md` §7 is the one that does.
 
 ---
 

@@ -77,8 +77,13 @@ That is exactly what broke: `features/upload/index.ts` is loaded by both builds 
 
 ### C. Server half only — no `module.ts`
 
-`features/url`, `features/upload/hooks`, `features/nested/hooks`, `plugins/sse`,
-`plugins/mailer`, `plugins/api-init`.
+`features/url`, `features/upload/hooks`, `features/nested/hooks`, `features/auth/hooks`,
+`features/title/hooks`, `features/thumbnail/hooks`, `plugins/sse`, `plugins/mailer`,
+`plugins/api-init`.
+
+The last three joined the list late, and the shape is the whole reason: a feature's `index.ts` is
+isomorphic — a prototype's feature list is reachable from a client build — so a hook it imports by
+path lands in the browser graph. See rule 7 in `restructure-handoff.md`.
 
 | binding       | declared in                              | server build resolves to | client build resolves to              |
 | ------------- | ---------------------------------------- | ------------------------ | ------------------------------------- |

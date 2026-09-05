@@ -1,5 +1,5 @@
+import { titleHooks } from '$rime/modules';
 import { defineFeature } from '../define.js';
-import { setDocumentTitle } from './hooks/set-document-title.server.js';
 import { augmentTitle } from './augment.js';
 
 /**
@@ -15,8 +15,9 @@ export const title = defineFeature({
   enabled: () => true,
   augment: augmentTitle,
 
-  // The hook that reads what the augment resolved — both halves of one idea, both here.
-  hooks: { beforeRead: [setDocumentTitle] }
+  // The hook that reads what the augment resolved — both halves of one idea, both here. Through
+  // `$rime/modules` because a hook is server-only and this file is reachable from a client build.
+  hooks: titleHooks
 });
 
 /** Resolves `asTitle`, which the built config declares as required. */

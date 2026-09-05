@@ -1,9 +1,5 @@
-import { augmentAuth, augmentStaff } from '$rime/modules';
+import { augmentAuth, augmentStaff, authHooks } from '$rime/modules';
 import type { WithNormalizedAuth } from './module.js';
-import * as authHooks from './hooks/index.server.js';
-import { augmentFieldsPassword } from './hooks/augment-fields-password.server.js';
-import { populateAPIKey } from './hooks/populate-api-key.server.js';
-import { removePrivateFields } from './hooks/remove-private-fields.server.js';
 import { defineFeature } from '../define.js';
 
 /**
@@ -31,28 +27,14 @@ export const auth = defineFeature({
    */
   configure: augmentStaff,
 
-  hooks: {
-    // First in `beforeRead`, and by declaration rather than by position: it provides `sanitized`,
-    // which everything deriving from the document requires — so nothing can copy a private value
-    // into derived data, whoever adds a hook later.
-    beforeRead: [removePrivateFields],
-
-    beforeCreate: [augmentFieldsPassword, authHooks.createBetterAuthUser],
-
-    // Self-gates on `auth.type === 'apiKey'`, so it needs no second condition here.
-    afterCreate: [populateAPIKey],
-
-    beforeUpdate: [
-      augmentFieldsPassword,
-      authHooks.preventSuperAdminMutation,
-      authHooks.preventUserMutations,
-      authHooks.forwardRolesToBetterAuth
-    ],
-
-    beforeDelete: [authHooks.preventSupperAdminDeletion],
-
-    afterDelete: [authHooks.deleteBetterAuthUser]
-  }
+  /**
+   * Six timings' worth, listed in `hooks/module.server.ts` and reached through `$rime/modules`.
+   *
+   * Not imported by path: this file is reachable from a client build — a prototype's feature list
+   * is, since `create` runs the augments on both sides — and a `.server.ts` import here drags the
+   * whole hook folder into the browser graph.
+   */
+  hooks: authHooks
 });
 
 /**

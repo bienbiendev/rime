@@ -243,6 +243,36 @@ owns it, plus a `declare module` if it changes the type. Three rules fell out:
 The chain is still a literal sequence rather than a loop, and `config/inference.spec.ts` guards
 that: a reduce over an array of augments widens every slug literal to `string`.
 
+### 7. A feature's `index.ts` must not import its own `.server.ts` hooks
+
+Rule 3's other half, and it cost the whole panel. A prototype's `features` list is reachable from a
+**client** build — `create` runs the augments on both sides — so every feature `index.ts` is
+isomorphic, and a hook it imports by path travels with it into the browser graph. `auth`, `title`
+and `thumbnail` did exactly that; `nested`, `url` and `upload` did not.
+
+The panel never loaded. Every module request 500'd with:
+
+```
+Error: An impossible situation occurred    (@sveltejs/kit/src/exports/vite/index.js:798)
+```
+
+which is SvelteKit's server-only guard **firing correctly** and then failing to explain itself: it
+walks the importer chain to print a "Cannot import X into code that runs in the browser" pyramid,
+follows `candidates[0]` — one arbitrary branch — and throws that fallback when the branch dead-ends
+before a route entrypoint. The message names nothing. **The 500'd request URLs name everything**;
+see `probing.md` §7.
+
+The fix is the convention that already existed: a `hooks/module.server.ts` with **no `module.ts`
+beside it**, imported as a name from `$rime/modules`. Only a module with no client half gets its
+names stubbed to `undefined` on a client build — a pair with both halves exports the client half's
+names and a server-only name is simply _missing_ there (`rime-modules-resolution.md`, cases B and
+C). So `hooks: authHooks` is a real object on the server and `undefined` in the browser, and
+`defineFeature` already treats a missing `hooks` as none.
+
+Nothing static sees this. `check`, `eslint`, `madge`, the unit suite and the generated schema are
+all identical either way — `.server.ts` resolves perfectly well to a type-checker. **Load the panel
+in a browser** before believing a green run that touched a feature's imports.
+
 ---
 
 ## Gates, and what they are for
