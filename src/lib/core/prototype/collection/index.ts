@@ -1,1 +1,1 @@
-export { collection } from './definition.js';
+export { collection, create } from './definition.js';

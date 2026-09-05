@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { text } from '$lib/fields/text/index.js';
 import { marksOf } from '$lib/core/pipeline/resolve-pipeline.server.js';
-import { create } from './index.server.js';
+import { create } from './definition.js';
 import { resolvePipelines } from '$lib/core/prototype/pipelines.server.js';
 import type { Dic } from '$lib/util/types.js';
 
@@ -9,11 +9,11 @@ import type { Dic } from '$lib/util/types.js';
  * Guards a failure that raises no error at all.
  *
  * A built config's pipeline is composed from two lists: the prototype's own hooks, and those of
- * the features it lists. Reaching either through `definition.server.ts` makes the factory depend
- * on evaluation order, because that file spreads `{ ...base }` at module scope — entered too
- * early, the spread comes out without `features` and **every feature hook silently stops
- * running**. Nothing throws, the types are unchanged, the schema is unchanged; a document simply
- * comes back with no `title` and no `url`.
+ * the features it lists. Reaching either through `definition.server.ts` makes `create` depend on
+ * evaluation order, because that file spreads `{ ...base }` at module scope — entered too early,
+ * the spread comes out without `features` and **every feature hook silently stops running**.
+ * Nothing throws, the types are unchanged, the schema is unchanged; a document simply comes back
+ * with no `title` and no `url`.
  *
  * So: build a real collection and assert both layers are in its pipeline.
  */
@@ -21,7 +21,12 @@ describe('a built collection carries both layers of its pipeline', () => {
   // Built the way the config chain builds one: `create` leaves `$hooks` as authored, and the
   // pipeline is resolved once the whole config exists.
   const built = resolvePipelines({
-    collections: [create('pipeline_spec_pages', { fields: [text('title').isTitle()], $url: (doc) => `/${doc.id}` })]
+    collections: [
+      create('pipeline_spec_pages', {
+        fields: [text('title').isTitle()],
+        $url: (doc) => `/${doc.id}`
+      })
+    ]
   } as unknown as { collections: Dic[] });
 
   const collection = built.collections[0] as unknown as { $hooks: Record<string, unknown[]> };

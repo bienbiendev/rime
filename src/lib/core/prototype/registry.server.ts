@@ -4,14 +4,14 @@ import { collection } from './collection/definition.server.js';
 import type { PrototypeName } from './registry.js';
 
 /** Server-side prototypes: the halves carrying `api`, `rest` and `boot`. */
-const protos = { collection, area };
+const protos = { collection, area } satisfies Record<PrototypeName, unknown>;
 
 /**
  * The prototype registry — "Protos".
  *
- * A definition's **name is its export name here**, so there is no field to keep in sync with the
- * key, and adding a kind is adding a folder and an export. `config.type` on a built config is
- * that same name, which is what matches a config to its definition.
+ * A definition **declares its own name** and is exported here under it. `config.type` on a built
+ * config is that same name — `definePrototype` stamps it there — which is what matches a config
+ * to its definition.
  */
 export { area, collection };
 
@@ -36,14 +36,14 @@ export type { PrototypeName };
 // anything it imports lands in every hook's type graph. See the note there.
 export type { PrototypeAccessors } from './accessors.server.js';
 
-
-/** Every registered prototype, each carrying the name it is exported under. */
+/** Every registered prototype, each carrying the name it declares and is exported under. */
 // Each definition is written against its own config kind — area's boot takes a BuiltArea — and
-// the registry erases that, because a list cannot hold both and still be iterable. The cast is
-// sound for the one reason boot.server.ts encodes: a definition is only ever handed configs
+// the registry erases that, because a list cannot hold both and still be iterable. `satisfies`
+// above keeps the set of names closed without widening each definition to the erased shape.
+// It is sound for the one reason boot.server.ts encodes: a definition is only ever handed configs
 // whose `type` is the name it is registered under.
-export const prototypes: RegisteredPrototype[] = Object.entries(protos).map(
-  ([name, definition]) => ({ ...(definition as PrototypeDefinition), name })
+export const prototypes: RegisteredPrototype[] = Object.values(protos).map(
+  (definition) => definition as PrototypeDefinition
 );
 
 export const getPrototype = (name: string): RegisteredPrototype | undefined =>

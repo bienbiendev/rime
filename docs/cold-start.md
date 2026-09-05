@@ -61,8 +61,10 @@ Full table with commits in `restructure-handoff.md`. The shape of it:
   facades collapsed into one `prototype.server.ts`; `generate-schema` went 261 → 150 lines and one
   loop.
 - **Prototypes** own their local API, operations, REST, config factory and hooks. `core/rest/` is
-  deleted. A definition declares `configKey`, `titleFallback`, `singleton`, `features`, `hooks`
-  and its own whole-config `configure`.
+  deleted. A definition declares `name`, `configKey`, `titleFallback`, `singleton`, `features`,
+  `augments`, `hooks` and its own whole-config `configure` — and `definePrototype` composes
+  `create` from them, so `prototype/*/config/` is gone and there is one config factory rather than
+  four.
 - **Features** are a contract with `augment` (per prototype config), `configure` (whole config),
   `shadow`, `handler`, `boot` and `hooks`. Ten of them: `auth`, `panel`, `upload`, `nested`,
   `url`, `versions`, `cors`, `metas`, `thumbnail`, `title`.
@@ -122,15 +124,11 @@ Cheapest first. Each is independently useful and each has a document behind it.
    (`decoupling-versions.md`)
 7. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
    `structure-audit.md` §19.4's four steps; the other three are done.
-8. **Commit 9 remainder: `augment` moves onto `definePrototype`**, so `prototype/*/config/` stops
-   being a folder and becomes a prop. Two things settled and not to relitigate: `create` stays
-   public authoring API, and `config/{index,index.server}.ts` is deliberately _not_ a
-   `$rime/modules` pair.
-9. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and
+8. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and
    to contribute a member back. A contract change, not a relocation. Bigger than it looks.
-10. **A hook timing meaning "always"**, which lets versions carry its own `beforeUpdate` hooks and
-    removes the last place a prototype names a feature.
-11. **The panel.** Largest and last. Read `coupling-audit.md` §5 first: the work is _core letting
+9. **A hook timing meaning "always"**, which lets versions carry its own `beforeUpdate` hooks and
+   removes the last place a prototype names a feature.
+10. **The panel.** Largest and last. Read `coupling-audit.md` §5 first: the work is _core letting
     go of `src/lib/panel/`_ (19 import lines, 13 of them in `handlers/routes.server.ts`), not the
     panel letting go of core — and the end state still has a collection screen and an area screen.
 

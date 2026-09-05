@@ -1,8 +1,9 @@
 # Architecture target
 
 > **Status: mostly landed.** `definePrototype`, `defineFeature` and `definePlugin` all exist;
-> `configKey`, `titleFallback`, `singleton`, `features`, `hooks` and `configure` are declared
-> members; a feature carries `augment`, `configure`, `shadow`, `handler`, `boot` and `hooks`. The
+> `name`, `configKey`, `titleFallback`, `singleton`, `features`, `augments`, `hooks` and
+> `configure` are declared members, and `definePrototype` composes each prototype's `create` from
+> them; a feature carries `augment`, `configure`, `shadow`, `handler`, `boot` and `hooks`. The
 > adapter speaks base/shadow/child/branch and `adapter.{collection,area}` is gone.
 >
 > Three things below have **not** landed, and two of them turned out to be wrong:

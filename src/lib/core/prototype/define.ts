@@ -1,8 +1,11 @@
 import type { Adapter } from '$lib/core/adapter/types.js';
 import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/config/types.js';
+import { applyAugments } from '$lib/core/features/apply.js';
 import type { AnyHook, FeatureDefinition, HookTiming } from '$lib/core/features/define.js';
 import type { Dic } from '$lib/util/types.js';
+import { FileText } from '@lucide/svelte';
 import type { RequestEvent } from '@sveltejs/kit';
+import { prototypeKebab } from './naming.js';
 import type { GenericDoc } from './types.js';
 
 /**
@@ -30,6 +33,16 @@ export type BuiltPrototype = BuiltArea | BuiltCollection;
 
 export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Accessor = unknown> = {
   /**
+   * The kind's name, and the `type` every config it builds carries.
+   *
+   * Declared rather than taken from the registry key, because `create` is composed here and a
+   * config's `type` is what pairs it back to its definition. Both registries still key on it, and
+   * both keep that set closed against `PrototypeName`, so the export name and this stay the same
+   * word — and `RegisteredPrototype` is no longer a definition plus a name.
+   */
+  name: string;
+
+  /**
    * Whether exactly one document exists.
    *
    * On: create and delete are not operations (a second row is not a thing, and removing the only
@@ -49,6 +62,19 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
    * compile time as at runtime, with no second tuple to keep in step.
    */
   features: FeatureDefinition[];
+
+  /**
+   * The prototype's **own** augments, in the order they run — before every feature's.
+   *
+   * The other half of what used to be a hand-written config factory per prototype per side. A
+   * prototype's own defaulting is an augment like any other (a collection normalises its `label`
+   * and seeds its panel defaults; an area falls back to a capitalised slug), so it is declared
+   * here and `create` below runs it, rather than each factory spelling the chain out again.
+   *
+   * `any` for the reason `FeatureDefinition.augment` is `any`: each augment names the shape it
+   * needs, and a list holding several cannot promise any of them that shape.
+   */
+  augments?: readonly ((config: any) => any)[];
 
   /**
    * The config member this prototype's instances are authored under — `collections`, `areas`.
@@ -90,6 +116,24 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
    * defaulting worth doing: `config.areas` is not `possibly undefined` after it.
    */
   configure?: (config: any) => any;
+
+  /**
+   * The config factory: what turns what an author wrote into a built config of this kind.
+   *
+   * **Composed by `definePrototype`, never passed in.** It is `augments`, then `features`, then
+   * the shaping every prototype does the same way — the slug's kebab form, the `type`, the
+   * fallbacks for `fields`, `icon` and `live`, and the staff-only access defaults. There is one
+   * of it rather than a client and a server copy: the two differed only in listing their members
+   * by hand versus spreading them, and `BuiltCollectionClient = BuiltCollection` already said the
+   * two shapes are the same.
+   *
+   * Typed loosely here, and narrowed where it is re-exported: a prototype's authoring type is
+   * generic in the slug (`Collection<S>` types `$hooks` and `$url` from it) and no type parameter
+   * can carry a generic type. So `collection/definition.ts` re-exports a one-line `create` that
+   * states its own signature, which is also the file a config author's `Collection.create` comes
+   * from.
+   */
+  create: (slug: string, config: Dic) => C;
 
   /**
    * Run once per process, per config of this kind. The prototype's own boot hook: what a kind
@@ -183,28 +227,85 @@ export type PrototypeApi<A, Doc = GenericDoc> = A & {
 };
 
 /**
- * A prototype definition as the registry hands it back: the definition plus the name it is
- * exported under. The name is the registry's own key, so there is no field to keep in sync.
+ * A prototype definition as the registry hands it back.
+ *
+ * An alias now rather than an intersection: `name` moved onto the definition itself when `create`
+ * did, since a built config's `type` is that name and `create` has to know it. The registry key is
+ * still the same word — `protos` is held to `PrototypeName` on both sides — so nothing is
+ * synthesised on the way out.
  */
-export type RegisteredPrototype = PrototypeDefinition & { name: string };
+export type RegisteredPrototype = PrototypeDefinition;
 
 type PrototypeOptions<C extends BuiltPrototype> = Partial<
-  Omit<PrototypeDefinition<C>, '$InferAccessor'>
+  Omit<PrototypeDefinition<C>, '$InferAccessor' | 'create'>
 >;
+
+/**
+ * Staff-only, and what every prototype's access defaults to until the author says otherwise.
+ *
+ * Typed on the one member it reads rather than on `User`, which is the `auth` feature's — a
+ * prototype does not know what a feature is, and a parameter is contravariant, so this still
+ * satisfies an `Access` member.
+ */
+const isStaff = (user?: { isStaff?: boolean }) => !!user && !!user.isStaff;
 
 export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Accessor = unknown>(
   options: PrototypeOptions<C> = {}
-): PrototypeDefinition<C, Accessor> =>
-  ({
+): PrototypeDefinition<C, Accessor> => {
+  const name = options.name ?? '';
+  // Defaulted rather than optional: `buildPipeline` filters it on every config, and a prototype
+  // with no features is a real case. `hooks` stays optional — a missing timing is already none.
+  const features = options.features ?? [];
+  const augments = options.augments ?? [];
+  const titleFallback = options.titleFallback ?? 'id';
+
+  /**
+   * One chain, stated once for every prototype.
+   *
+   * `_titleFallback` is seeded first because it is the bottom of the precedence the `title`
+   * feature resolves, and it is internal rather than authoring surface. Then the prototype's own
+   * augments, then the features' in the order the prototype listed them — which is the order
+   * their fields land in, and therefore column order.
+   *
+   * No hooks step: a config's pipeline is resolved once the *whole* config exists (see
+   * prototype/pipelines.server.ts), so a config a feature derived is resolved by the same line as
+   * one an author wrote, and `$hooks` stays what the author wrote until then.
+   */
+  const create = (slug: string, incomingConfig: Dic): C => {
+    const initial: Dic = { ...incomingConfig, slug, _titleFallback: titleFallback };
+    const withOwn = augments.reduce((current, augment) => augment(current), initial);
+    const augmented = applyAugments(features, withOwn) as Dic;
+
+    return {
+      ...augmented,
+      type: name,
+      slug,
+      kebab: prototypeKebab(slug),
+      fields: augmented.fields || [],
+      icon: augmented.icon || FileText,
+      live: augmented.live || false,
+      access: {
+        create: isStaff,
+        read: isStaff,
+        update: isStaff,
+        delete: isStaff,
+        ...augmented.access
+      }
+    } as C;
+  };
+
+  return {
+    name,
     singleton: options.singleton ?? false,
-    // Defaulted rather than optional: `buildPipeline` filters it on every config, and a prototype
-    // with no features is a real case. `hooks` stays optional — a missing timing is already none.
     configKey: options.configKey ?? '',
-    titleFallback: options.titleFallback ?? 'id',
-    features: options.features ?? [],
+    titleFallback,
+    features,
+    augments,
+    create,
     hooks: options.hooks,
     configure: options.configure,
     boot: options.boot,
     api: options.api,
     rest: options.rest
-  }) as PrototypeDefinition<C, Accessor>;
+  } as PrototypeDefinition<C, Accessor>;
+};

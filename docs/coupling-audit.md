@@ -102,7 +102,7 @@ stage is small enough to do in a sitting.
 core/prototype/types.ts    UploadDoc, Docs['upload'], Docs['directory'], imports UploadPath
 core/prototype/doc.ts      imports isUploadConfig to build a blank document
 core/config/types.ts       UploadConfig, image sizes, `upload?: boolean | UploadConfig`
-core/prototype/collection/config/augment-panel.ts   reads `config.upload` to pick a dashboard layout
+core/prototype/collection/augment-panel.ts          reads `config.upload` to pick a dashboard layout
 core/prototype/collection/operations/duplicate.ts   4 upload references
 adapter-sqlite/prototype.server.ts  imports withDirectoriesSuffix and getSegments
 ```

@@ -1,1 +1,1 @@
-export { area } from './definition.js';
+export { area, create } from './definition.js';

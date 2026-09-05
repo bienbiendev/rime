@@ -570,7 +570,7 @@ forced.
   ```
 
   Importing the definition instead can be evaluated _from within_ it and find the feature still in
-  flight — `undefined`, silently. `prototype/collection/config/pipeline.spec.ts` fails when it
+  flight — `undefined`, silently. `prototype/collection/pipeline.spec.ts` fails when it
   happens.
 
 - **A pipeline is resolved once, at the end of the config build.** `prototype/pipelines.server.ts`
@@ -606,7 +606,7 @@ bun run check && bunx eslint src/lib && bunx vitest run && bun run check:circula
 
   A shadow that silently stops being generated shows up here and nowhere else.
 
-- **`prototype/collection/config/pipeline.spec.ts`** must stay green — it catches a derived
+- **`prototype/collection/pipeline.spec.ts`** must stay green — it catches a derived
   collection losing its hooks.
 
 ### Probes, and what each discriminates

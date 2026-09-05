@@ -3,7 +3,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { marksOf } from '$lib/core/pipeline/resolve-pipeline.server.js';
 import { resolvePipelines } from '$lib/core/prototype/pipelines.server.js';
 import type { Dic } from '$lib/util/types.js';
-import { create } from '$lib/core/prototype/collection/config/index.server.js';
+import { create } from '$lib/core/prototype/collection/definition.js';
 import { text } from '$lib/fields/text/index.js';
 import { makeVersionsCollectionsAliases } from './derive.server.js';
 

@@ -59,7 +59,8 @@ names `upload` again, something has gone backwards.
 | —        | `6a9a81ba`            | comment pass: what the code does, not what it replaced                                                                                     |
 | 13       | `8d5500fe`            | base-row fields come from the `._root()` flag, not a name list                                                                             |
 | 13b      | `20a3b815`            | a versions shadow gets its own pipeline instead of the parent's                                                                            |
-| 14       | _this commit_         | **the shadow table is declared by the feature that owns it**; the schema generator stops reading `config.versions`                         |
+| 14       | `b66a5f3`             | **the shadow table is declared by the feature that owns it**; the schema generator stops reading `config.versions`                         |
+| 9r       | _this commit_         | **`augment` moves onto `definePrototype`**; `prototype/*/config/` is gone and `create` is composed once                                    |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 
@@ -71,6 +72,41 @@ isArea|isCollection|type === '...'    65 -> 59  ✓ (still 59 after commit 10)
 The 59 that remain are the panel (about half), the two `rest/endpoint.server.ts` files, and
 `config/{validate,context}.server.ts`. None of them is the adapter or the pipeline, which is what
 the greps were for.
+
+### Commit 9's remainder, as it landed
+
+A prototype's config factory was four files — `prototype/{collection,area}/config/index.ts` and
+`index.server.ts` — each spelling out the same chain: seed `_titleFallback`, run the prototype's own
+augments, run the features', then shape the result. It is now two props and one composition:
+
+- **`augments`** on the definition. The collection lists `augmentLabel` and `augmentPanel`; the area
+  lists `augmentAreaLabel`, which is the `label ?? capitalize(slug)` line its factory used to carry
+  inline. Both files moved up beside the definition, and `config/` is gone.
+- **`create`, composed by `definePrototype`** and never passed in. The shaping the four files did
+  identically — `kebab`, `type`, the `fields` / `icon` / `live` fallbacks and the staff-only access
+  defaults — is stated once, for every prototype.
+- **`name`** on the definition, because `create` stamps `config.type` and that is the name. It was
+  synthesised from the registry key before; `RegisteredPrototype` is now an alias rather than a
+  definition plus a name, and both registries hand back the definitions themselves.
+
+Two consequences worth stating:
+
+- **The client and server factories collapsed into one.** They differed only in listing their
+  members by hand versus spreading them, and `BuiltCollectionClient = BuiltCollection` already said
+  the two shapes are the same. Measured, the client config now carries three things more:
+  `_titleFallback`, `$url` (which `sanitize` strips before the client config is generated, so it
+  never actually appears there), and `panel.dashboard` — the defaults `augmentPanel` computes and
+  the old client factory then threw away by returning `incomingConfig.panel`. The dashboard is built
+  in a **server** load, so nothing read the discarded ones.
+- **The `as const` feature tuple is gone.** `collectionFeatures` / `areaFeatures` existed so
+  `applyAugments` could fold the feature names into the factory's return type. `create` declares its
+  return type (rule 1), so the fold had nothing left to do and the order is stated exactly once,
+  inline in `features`.
+
+`create` stays public authoring API — `Collection.create('pages', {…})` — as a one-line typed
+re-export beside each definition. That is the one thing a definition prop cannot state: the
+authoring type is generic in the slug (`Collection<S>` types `$hooks` and `$url` from it) and no
+type parameter can carry a generic type.
 
 ---
 
@@ -147,10 +183,11 @@ the prototype's own kept going. Documents came back with no `title` and no `url`
 > hooks chart** were all byte-identical to baseline. The chart is built from the config, not from
 > what boots. Only a live read caught it.
 
-Both factories now take `{ features, hooks }` from `definition.ts` and `hooks.server.ts` — the two
-files that depend on nothing — and the area's hooks moved into their own file to make that possible.
-`prototype/collection/config/pipeline.spec.ts` builds a real collection and asserts both layers are
-in its pipeline, which fails if this regresses.
+`create` now takes `{ features, hooks }` from `definition.ts` and `hooks.server.ts` — the two files
+that depend on nothing — and the area's hooks moved into their own file to make that possible.
+`prototype/collection/pipeline.spec.ts` builds a real collection and asserts both layers are in its
+pipeline, which fails if this regresses. The rule outlived the two factories: `auth`'s `augmentStaff`
+still imports `collection/definition.js`, never `definition.server.js`.
 
 ### 4. A mark nothing active provides is satisfied (the vacuous rule)
 
@@ -218,7 +255,7 @@ Run against the base commit's **own** numbers, re-measured, not trusted from any
 | lint            | `bunx eslint src/lib`                                          | 21; the rest are pre-existing panel `goto()`/`href` and two unused `toKebabCase`                                                                                                                                                                                                                                                                                                                                                                                                             |
 | cycles          | `bun run check:circular-deps`                                  | 3 since commit 11 (both `staff` cycles went with it), and the _list_ matters more than the count                                                                                                                                                                                                                                                                                                                                                                                             |
 | unit            | `bunx vitest run`                                              | 124                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| pipeline layers | `collection/config/pipeline.spec.ts`                           | **the gate for rule 3** — a definition that lost its `features` is green everywhere else                                                                                                                                                                                                                                                                                                                                                                                                     |
+| pipeline layers | `collection/pipeline.spec.ts`                                  | **the gate for rule 3** — a definition that lost its `features` is green everywhere else                                                                                                                                                                                                                                                                                                                                                                                                     |
 | schema          | diff the generated `schema.server.ts` against a golden capture | **the gate for rule 2**                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | pipeline order  | `core/pipeline/pipeline-order.spec.ts`                         | **the gate for rule 4** — a wrong mark is schema-identical and probe-identical                                                                                                                                                                                                                                                                                                                                                                                                               |
 | e2e             | `bun run test`                                                 | expect 375                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -246,26 +283,10 @@ area and a collection before believing a green check.**
 
 ## What is left
 
-### Commit 9 remainder — `augment` moves onto `definePrototype`
-
-The definition declares its augment chain and `definePrototype` returns the composed `create`, so
-`prototype/*/config/` stops being a folder and becomes a prop. Two things already settled and
-worth not relitigating:
-
-- `create` stays public authoring API (`Collection.create('pages', {…})`, re-exported as
-  `* as Collection`). Nothing loops it, so there is no dispatch to generalise.
-- `config/{index,index.server}.ts` is deliberately **not** a `$rime/modules` pair — the two-sided
-  barrel picks the side by which file imports it, which is the older and simpler mechanism.
-
-Note the client and server factories currently import `collectionFeatures` from `definition.ts`
-_and_ the definition from `definition.server.ts`. The runtime list is the same array; the separate
-import survives because `applyAugments` needs the `as const` tuple for the type fold, which
-`PrototypeDefinition.features: FeatureDefinition[]` has widened away.
-
-> **The ordered backlog lives in `docs/cold-start.md` §4** — eleven items, cheapest first, each
-> with the document behind it. `docs/coupling-audit.md` is the measured version: every place core
-> still names a feature or a kind, with the greps to re-run. `docs/decoupling-versions.md` is the
-> staged plan for the deepest of them, with the code beside each step.
+> **The ordered backlog lives in `docs/cold-start.md` §4** — ten items, cheapest first, each with
+> the document behind it. `docs/coupling-audit.md` is the measured version: every place core still
+> names a feature or a kind, with the greps to re-run. `docs/decoupling-versions.md` is the staged
+> plan for the deepest of them, with the code beside each step.
 
 ### The panel
 

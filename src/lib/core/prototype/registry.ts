@@ -19,8 +19,10 @@ export type PrototypeName = (typeof prototypeNames)[number];
 /**
  * The prototype registry, isomorphic half.
  *
- * A definition's **name is its export name here**, so there is no field to keep in sync with the
- * key, and adding a kind is adding a folder and an export.
+ * A definition **declares its own name**, and is exported here under it: the annotation below
+ * keeps the set of keys closed, and adding a kind is adding a folder and an export. The name is
+ * on the definition rather than synthesised from the key because `create` is composed inside
+ * `definePrototype` and a built config's `type` is that name.
  *
  * It lives on the isomorphic side because a definition is a `$rime/modules` pair: a client build
  * gets the half without `api` and `rest`. The config factory runs on both sides and needs each
@@ -40,11 +42,7 @@ export { area, collection };
  * loop and TypeScript answers `any` for all of them. A declared type is resolved lazily by name,
  * so the loop never forms.
  */
-export const prototypes: RegisteredPrototype[] = Object.entries(protos).map(
-  // As registry.server.ts: each definition is written against its own config kind and a list
-  // cannot hold both and stay iterable.
-  ([name, definition]) => ({ ...(definition as PrototypeDefinition), name })
-);
+export const prototypes: RegisteredPrototype[] = Object.values(protos);
 
 /**
  * Runs every prototype's `configure` over the whole config — the prototype twin of
