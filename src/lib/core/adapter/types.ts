@@ -1,3 +1,4 @@
+// @decouple versions from adapter
 import type { VERSIONS_OPERATIONS } from '$lib/core/features/versions/strategy.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type {
