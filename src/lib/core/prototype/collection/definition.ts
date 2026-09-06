@@ -35,7 +35,7 @@ export const collection = definePrototype({
   configKey: 'collections',
 
   /** A document with no title field is named by its id. */
-  titleFallback: 'id',
+  titleFallback: 'id', // @decouple can set all fallback title fields here instead of setting it per feature
 
   /**
    * The collection's own augments, ahead of every feature's.
