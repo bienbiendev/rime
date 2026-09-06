@@ -1,3 +1,4 @@
+// @decouple area and collections types, somehow
 import type { Adapter } from '$lib/core/adapter/types.js';
 import type { PanelLanguage } from '$lib/core/i18n/index.js';
 import type { Hook, HookBeforeOperation } from '$lib/core/pipeline/types.js';
