@@ -1,28 +1,72 @@
 import { describe, expect, it } from 'vitest';
-import { collection, prototypes } from '$lib/core/prototype/registry.js';
-import { configureOrder, shadowOf } from './registry.js';
+import { collection } from '$lib/core/prototype/registry.js';
+import type { ConfigureTransforms, FeatureConfigure } from './register.js';
+import { configureWithFeatures, shadowOf } from './registry.js';
 
 /**
- * `configureOrder` is a hand-written tuple of names, because the type fold needs an order and the
- * prototype registry is annotated so that no feature's hooks reach `BuildConfig`. That makes it
- * the one thing here able to drift from what actually runs, and drift is silent: the config would
- * be typed as if a feature's `configure` had not run, or had run somewhere else.
+ * `ApplyFeatureConfigure` intersects every declared `configure` transform instead of folding a
+ * hand-written tuple of feature names, and that is only sound while every transform is
+ * **additive** — `T & {…}`. One that removed or replaced a member would need an order to be
+ * meaningful, and an intersection would keep the member it meant to drop.
  *
- * So: assert the tuple against the real registry, in the real order.
+ * The assertions are type-level; the `expect` below only gives them a home. A non-additive
+ * declaration fails the *compile*, which is the point — there is no runtime shape to check.
  */
-describe('configureOrder', () => {
-  const running = [
-    ...new Map(
-      prototypes
-        .flatMap((prototype) => prototype.features)
-        .map((feature) => [feature.name, feature])
-    ).values()
-  ]
-    .filter((feature) => feature.configure)
-    .map((feature) => feature.name);
+describe('every feature configure transform is additive', () => {
+  type Probe = { $probe: 'probe' };
 
-  it('lists every feature that carries a configure, in the order they run', () => {
-    expect(running).toEqual([...configureOrder]);
+  /** `true` for each declared transform that still extends what it was handed. */
+  type Additive = {
+    [K in keyof FeatureConfigure<Probe>]: FeatureConfigure<Probe>[K] extends Probe ? true : false;
+  }[keyof FeatureConfigure<Probe>];
+
+  const noneIsSubtractive: [Exclude<Additive, true>] extends [never] ? true : false = true;
+
+  /**
+   * And `ConfigureTransforms` names every declaration. Missing one is the failure the old
+   * `configureOrder` test existed to catch, and it is now a compile error rather than an
+   * assertion — a name absent here means that feature's transform silently never applies.
+   */
+  const everyDeclarationIsListed: [
+    Exclude<keyof FeatureConfigure<Probe>, ConfigureTransforms[number]>
+  ] extends [never]
+    ? true
+    : false = true;
+
+  it('holds for every declaration merged into FeatureConfigure', () => {
+    expect([noneIsSubtractive, everyDeclarationIsListed]).toEqual([true, true]);
+  });
+});
+
+/**
+ * And the fold's *result*, which is what the tuple existed to produce: the members `panel` and
+ * `cors` add through `configure` have to be there, and not `any`.
+ */
+describe('configureWithFeatures', () => {
+  const built = configureWithFeatures([collection], { $probe: 'probe' as const });
+
+  type Built = typeof built;
+  type IsAny<T> = 0 extends 1 & T ? true : false;
+
+  const trustedOriginsIsTyped: IsAny<Built['$trustedOrigins']> = false;
+  const panelIsTyped: IsAny<Built['panel']> = false;
+  const iconsIsTyped: IsAny<Built['icons']> = false;
+  /** What it was handed survives — the fold intersects with `T`, it does not replace it. */
+  const inputSurvives: Built['$probe'] = 'probe';
+
+  it('types what each feature configure declares', () => {
+    expect([trustedOriginsIsTyped, panelIsTyped, iconsIsTyped, inputSurvives]).toEqual([
+      false,
+      false,
+      false,
+      'probe'
+    ]);
+  });
+
+  it('and actually produces it', () => {
+    expect(Array.isArray(built.$trustedOrigins)).toBe(true);
+    expect(built.panel.language).toBeDefined();
+    expect(built.$probe).toBe('probe');
   });
 });
 

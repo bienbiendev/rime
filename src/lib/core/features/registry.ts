@@ -27,34 +27,23 @@ const distinct = (prototypes: { features: FeatureDefinition[] }[]): FeatureDefin
 ];
 
 /**
- * The features that carry a whole-config `configure`, in the order they run.
- *
- * A tuple of **names only** — never `typeof someFeature`, which is load-bearing. The order comes
- * from the prototypes' `features` lists at runtime, and a type cannot read it back off them: the
- * registry those lists reach through is annotated so that no feature's hooks land in
- * `BuildConfig`'s type graph. String literals name the transforms without naming the features, so
- * the fold costs nothing.
- *
- * It has to agree with the runtime order, and `registry.spec.ts` asserts that against the real
- * prototypes, so drift fails a test rather than silently mistyping the config.
- */
-export const configureOrder = ['auth', 'panel', 'upload', 'versions', 'cors'] as const;
-
-/**
  * Runs every feature's `configure` over the whole config.
  *
- * The runtime order is the prototypes' own — `distinct` below — and the type replays it through
- * `configureOrder`. A feature not listed there still runs; it just declares no type transform,
- * which is the same thing absence means on the augment side.
+ * The runtime order is the prototypes' own — `distinct` above — and **the type does not replay
+ * it**, because it does not need to: every declared `configure` transform is additive, so how they
+ * compose does not change the result. `ApplyFeatureConfigure` folds `ConfigureTransforms`, a list
+ * of the names that declare something, for a reason that is about type resolution rather than
+ * order — see the note beside it in `register.ts`. Nothing here has to agree with anything at
+ * runtime, so there is nothing here to drift.
  */
 export const configureWithFeatures = <T extends Dic>(
   prototypes: { features: FeatureDefinition[] }[],
   config: T
-): ApplyFeatureConfigure<T, typeof configureOrder> =>
+): ApplyFeatureConfigure<T> =>
   distinct(prototypes).reduce(
     (current, feature) => (feature.configure ? (feature.configure(current) as T) : current),
     config
-  ) as unknown as ApplyFeatureConfigure<T, typeof configureOrder>;
+  ) as unknown as ApplyFeatureConfigure<T>;
 
 /** Runs every feature's boot step. */
 export const bootFeatures = async (

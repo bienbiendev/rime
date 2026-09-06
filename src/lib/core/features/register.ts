@@ -58,11 +58,32 @@ export type ApplyAugments<T, Names extends readonly unknown[]> = Names extends r
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unused-vars
 export interface FeatureConfigure<T> {}
 
-/** Applies each named feature's declared `configure` transform, in the order they run. */
-export type ApplyFeatureConfigure<T, Names extends readonly unknown[]> = Names extends readonly [
-  infer Head,
-  ...infer Tail
-]
+/**
+ * The features that declare a `configure` transform, as a list.
+ *
+ * **The order is not meaningful and does not have to match anything.** Every declaration merged
+ * into `FeatureConfigure` is additive — `T & {…}` — so the result is the same whichever way they
+ * compose; `registry.spec.ts` asserts that additivity, and asserts that this list covers every
+ * declaration. It is deliberately not called an "order", and it is deliberately not the order the
+ * `configure` steps run in at runtime: that order is the prototypes' `features` lists, and nothing
+ * type-level reads it.
+ *
+ * A list rather than `keyof FeatureConfigure<T>` for one reason, and it is the reason this exists
+ * at all: with a **generic** `T` — `bootRime<C>` reads `config.panel.language` while `C` is still
+ * a type parameter — an intersection built from a key union stays deferred, and the optional
+ * `panel` on `C` survives into the result. Literal names make each step of the fold decidable
+ * immediately, so the narrowed type is there when a generic caller asks for it.
+ *
+ * Only the features that *declare* something are listed. One that has a `configure` but changes no
+ * type contributes nothing here, exactly as on the augment side.
+ */
+export type ConfigureTransforms = ['panel', 'cors'];
+
+/** Applies every declared `configure` transform. See `ConfigureTransforms` on why it is a list. */
+export type ApplyFeatureConfigure<
+  T,
+  Names extends readonly unknown[] = ConfigureTransforms
+> = Names extends readonly [infer Head, ...infer Tail]
   ? Head extends keyof FeatureConfigure<T>
     ? ApplyFeatureConfigure<FeatureConfigure<T>[Head], Tail>
     : ApplyFeatureConfigure<T, Tail>

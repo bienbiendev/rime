@@ -230,9 +230,16 @@ So the server chain is three lines — prototypes, features, plugins — and **n
 `core/config/` names a feature**. Adding a whole-config step means adding `configure` to whoever
 owns it, plus a `declare module` if it changes the type. Three rules fell out:
 
-1. **The fold's order is a hand-written tuple** (`configureOrder` in `features/registry.ts`), because
-   the type cannot read the order back off the annotated registry (rule 1). `registry.spec.ts`
-   asserts it against what actually runs, so drift fails a test instead of silently mistyping.
+1. **The type-level fold is a hand-written list** (`ConfigureTransforms` in `features/register.ts`)
+   — but of _names_, not of an order. Every `FeatureConfigure` declaration is additive (`T & {…}`),
+   so how they compose does not matter; the list exists because an intersection built from a key
+   union stays deferred for a **generic** `T`, and `bootRime<C>` reads `config.panel.language`
+   while `C` is still a type parameter. Literal names make each step decidable immediately.
+   `features/registry.spec.ts` asserts both invariants at compile time — that every declaration is
+   additive, and that the list names every declaration. It used to be `configureOrder`, a runtime
+   tuple of all five features carrying a `configure`, checked against runtime order by a test; that
+   claimed an ordering it did not have, listed three features that declare no transform, and was
+   imported by nothing but its own test.
 2. **A `configure` is handed the prototypes; it must never import one.** See rule 3 below — this is
    where that rule stopped being theoretical.
 3. **A default with exactly one reader does not need a config step at all.** `panel.$access` and

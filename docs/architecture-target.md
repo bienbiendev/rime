@@ -103,8 +103,11 @@ Two things the picture is making a point of:
 - **`configure` is the only seam for whole-config work**, and both layers above the config use it:
   a prototype defaults its own list (`config.collections ||= []`), `auth` derives the `staff`
   collection, `upload` derives `<slug>Directories`, `versions` derives the `__versions` aliases,
-  `cors` defaults `$trustedOrigins`. Order is `configureOrder` in `features/registry.ts`, asserted
-  against the runtime order by `features/registry.spec.ts`.
+  `cors` defaults `$trustedOrigins`. The runtime order is the prototypes' own `features` lists;
+  nothing type-level replays it, because every declared `configure` transform is additive and the
+  order does not change the result. `ConfigureTransforms` in `features/register.ts` names the
+  declarations for the type fold — `features/registry.spec.ts` asserts both that they are additive
+  and that the list is complete.
 - **Pipelines are resolved once, at step 3**, after the features have derived everything. A derived
   config is resolved by the same line as an authored one, which is why nothing carries a second
   copy of a pipeline.
