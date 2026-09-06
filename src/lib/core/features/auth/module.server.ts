@@ -1,3 +1,4 @@
+// @decouple the collection type should not appear or at least not being imported from the config
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { Collection } from '$lib/core/config/types.js';
 import { augmentAuth as augmentAuthBase, type WithNormalizedAuth } from './module.js';
