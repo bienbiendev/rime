@@ -128,7 +128,7 @@ export const assertUpsertContext = (
     | 'configMap'
     | 'originalConfigMap'
     | 'originalDoc'
-    | 'versionOperation'
+    | 'versionOperation' // @decouple
     | 'contentOwnerId'
   )[]
 ) => {
@@ -155,7 +155,7 @@ export const persistRelational = async (args: {
   locale?: string | undefined;
 }) => {
   const { context, ownerId, data, incomingPaths, adapter, config, locale } = args;
-
+  // @decouple
   const blocksDiff = await saveBlocks({ context, ownerId, data, incomingPaths, adapter, config });
   const treeDiff = await saveTreeBlocks({ context, ownerId, data, incomingPaths, adapter, config });
 
