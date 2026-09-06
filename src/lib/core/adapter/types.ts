@@ -49,7 +49,7 @@ export interface Adapter {
   /** Writes raw column values to one row. Used by the URL and upload features. */
   updateRecord(id: string, tableName: string, data: Dic): Promise<unknown>;
 
-  /** Writes a document's computed `url`, including onto its versions when it has them. */
+  /** @decouple Writes a document's computed `url`, including onto its versions when it has them. */
   updateDocumentUrl(url: string, params: UpdateDocumentUrlParams): Promise<void>;
 }
 
