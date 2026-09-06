@@ -1,3 +1,4 @@
+// @decouple area and collection references should not surface here, only prototypes
 import type { AreaSlug, CollectionSlug, Config, PrototypeSlug } from '$lib/types.js';
 import { RimeError } from '../errors/index.js';
 import type { BuildConfig } from './build.server.js';
