@@ -116,14 +116,29 @@ export const populateURL = Hooks.beforeRead<'generic'>({
       // Add the url if successfully generated
       if (url) {
         if (args.doc.url !== url) {
-          args.event.locals.rime.adapter.updateDocumentUrl(url, {
-            slug: config.slug,
-            id: args.doc.id,
-            // `versionId` on a document is the row its content is on — undefined for a document
-            // whose content is on its own row.
-            contentId: args.doc.versionId,
-            locale
-          });
+          /**
+           * The url is a field on the row the content is on, so this writes it there.
+           *
+           * The adapter carried a whole `updateDocumentUrl` for this, with a four-way branch over
+           * `locale` × `config.versions` and an `OPERATION` enum. None of that was the database
+           * layer's: the row is the one this document is showing, and the two tables a localized
+           * field lives across are what `updateWhere`'s `locale` already resolves.
+           *
+           * A shadow is a registered prototype in its own right, so writing to it is the same call
+           * to a different handle. `updateWhere` rather than `update` because a url is computed on
+           * read: it must not move `updatedAt`.
+           */
+          const handle = args.event.locals.rime.adapter.prototype(config.slug);
+          const contentSlug = handle.shadow?.slug ?? config.slug;
+          const contentId = handle.shadow ? args.doc.versionId : args.doc.id;
+
+          if (contentId) {
+            args.event.locals.rime.adapter.prototype(contentSlug).updateWhere({
+              query: { where: { id: { equals: contentId } } },
+              data: { url },
+              locale
+            });
+          }
         }
         args.doc = { ...args.doc, url };
       }

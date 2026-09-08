@@ -1,8 +1,7 @@
-import type { Adapter, UpdateDocumentUrlParams } from '$lib/core/adapter.js';
+import type { Adapter } from '$lib/core/adapter.js';
 import type { Config } from '$lib/core/config/types.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { GetRegisterType } from '$lib/index.js';
-import type { Dic } from '$lib/util/types.js';
 import { drizzle, LibSQLDatabase } from 'drizzle-orm/libsql';
 import path from 'path';
 import createAuthFacade from './auth.server.js';
@@ -15,8 +14,6 @@ import createRelationsFacade from './relations.server.js';
 import { transformerFacade } from './transform.server.js';
 import createTreeFacade from './tree.server.js';
 import type { GenericTable } from './types.server.js';
-import { updateDocumentUrl } from './url.server.js';
-import { updateTableRecord } from './util.server.js';
 
 type Schema = GetRegisterType<'Schema'>;
 type Tables = GetRegisterType<'Tables'>;
@@ -85,21 +82,6 @@ const createAdapter = async <const C extends Config>(args: {
      */
     tableForSlug<T>(slug: string) {
       return tables[baseTableName(slug) as keyof typeof tables] as T extends any ? GenericTable : T;
-    },
-
-    async updateRecord(id: string, tableName: string, data: Dic) {
-      return await updateTableRecord(db, tables, tableName, { recordId: id, data });
-    },
-
-    async updateDocumentUrl(url: string, params: UpdateDocumentUrlParams) {
-      return await updateDocumentUrl(url, {
-        ...params,
-        // Where this prototype's content lives — asked of the features that extend it, once, at
-        // config build. See ConfigContext.shadowSlugOf.
-        shadowSlug: configCtx.shadowSlugOf(params.slug),
-        db,
-        tables
-      });
     },
 
     get schema() {

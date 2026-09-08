@@ -5,13 +5,12 @@ import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { Dic } from '$lib/util/types.js';
 import { baseTableName } from './naming.server.js';
 import {
-  childrenIds,
   deletePrototype,
   ensurePrototypeExists,
-  existingIds,
   findManyPrototypes,
   insertPrototype,
   readPrototype,
+  readWhere,
   updatePrototype,
   updateWherePrototype
 } from './prototype.server.js';
@@ -107,9 +106,7 @@ export const createPrototypeRegistry = (deps: {
 
       ensureExists: (args) => ensurePrototypeExists({ db, tables }, { ...args, slug, shadow }),
 
-      childrenIds: (args) => childrenIds({ db, tables }, { ...args, slug }),
-
-      existingIds: (args) => existingIds({ db, tables }, { ...args, slug })
+      readWhere: (args) => readWhere({ db, tables, configCtx }, { ...args, slug })
     };
   };
 

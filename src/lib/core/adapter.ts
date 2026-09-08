@@ -46,12 +46,6 @@ export interface Adapter {
   relations: RelationsAdapter;
   transform: TransformAdapter;
   auth: AuthAdapter;
-
-  /** Writes raw column values to one row. Used by the URL and upload features. */
-  updateRecord(id: string, tableName: string, data: Dic): Promise<unknown>;
-
-  /** Writes a document's computed `url` onto the row that holds it. */
-  updateDocumentUrl(url: string, params: UpdateDocumentUrlParams): Promise<void>;
 }
 
 export type RegisterPrototypeArgs = {
@@ -160,12 +154,14 @@ export interface PrototypeHandle {
   /**
    * Sets columns on every row this prototype owns that `query` matches.
    *
-   * The bulk half of `update`: no pipeline, no locales, no children, and it writes exactly the
-   * columns given — `updatedAt` included only if the caller passes it. For a filter that names
-   * many rows and a patch that names one column, which `update` cannot express without a read
-   * and a write per row.
+   * The bulk half of `update`: no pipeline, no children, and it writes exactly the columns given
+   * — `updatedAt` included only if the caller passes it. For a filter that names many rows and a
+   * patch that names one column, which `update` cannot express without a read and a write per row.
+   *
+   * With `locale`, a localized column lands on the localized half instead. The caller names a
+   * field and a locale; which table that is, is the adapter's business.
    */
-  updateWhere(args: { query: OperationQuery; data: Dic }): Promise<void>;
+  updateWhere(args: { query: OperationQuery; data: Dic; locale?: string }): Promise<void>;
 
   /** Throws on a singleton: removing the only document leaves nothing to read. */
   delete(args: { id: string }): Promise<string | undefined>;
@@ -173,21 +169,18 @@ export interface PrototypeHandle {
   /** Boot only. Writes the row if absent; a no-op if not. */
   ensureExists(args: { blank: Dic; locale?: string }): Promise<void>;
 
-  /** The ids of the documents parented to `parentId`, in tree order. */
-  childrenIds(args: { parentId: string }): Promise<string[]>;
-
-  /** Which of `ids` name a document that exists. */
-  existingIds(args: { ids: string[] }): Promise<string[]>;
+  /**
+   * The ids of this prototype's own rows matching `query`, in `sort` order.
+   *
+   * The read twin of `updateWhere`: the prototype's own table, no content row joined, no document
+   * built. `sort` is a column on that table, `-` for descending.
+   *
+   * It replaces two methods that were each a feature's question — `childrenIds` (`nested`, "what
+   * is parented to this") and `existingIds` (relation defaults, "which of these exist"). Both are
+   * a filter and a projection, so both are this.
+   */
+  readWhere(args: { query: OperationQuery; sort?: string; limit?: number }): Promise<string[]>;
 }
-
-export type UpdateDocumentUrlParams = {
-  slug: string;
-  /** The document. */
-  id: string;
-  /** The row its content is on, when that is not the base row — as `find` and `update` mean it. */
-  contentId?: string;
-  locale?: string;
-};
 
 /**
  * `parentSlug` is the slug that owns the children — the prototype's shadow when it has one, the

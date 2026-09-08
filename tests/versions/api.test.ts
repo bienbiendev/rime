@@ -719,6 +719,19 @@ test('Should publish the child page and then find it by parent', async ({ reques
   const { docs } = await response.json();
   expect(docs).toHaveLength(1);
   expect(docs[0].attributes.title).toBe('Child page');
+
+  /**
+   * And the other direction: the parent lists the child on `_children`.
+   *
+   * `nested` populates it on every read, and nothing asserted it — so the read it does could be
+   * replaced with an empty array and the whole suite would stay green. It is a filter and an
+   * order over columns the feature itself put on the row (`_parent`, `_position`), which is why
+   * it can be an ordinary query rather than a method on the adapter named after the question.
+   */
+  const parent = await request.get(`${API_BASE_URL}/pages/${parentPageId}`, { headers });
+  expect(parent.status()).toBe(200);
+  const { doc: parentDoc } = await parent.json();
+  expect(parentDoc._children).toEqual([childPageId]);
 });
 
 /*********************************************************
@@ -1079,4 +1092,41 @@ test('Should delete the file from disk when the last document referencing it is 
 
   const afterDelete = await request.get(`${BASE_URL}/medias/${filename}`);
   expect(afterDelete.status()).toBe(404);
+});
+
+/*********************************************************
+/* The computed url is stored, on the row that holds the content
+/*********************************************************/
+
+/**
+ * `populateURL` computes `$url` on every read and puts it on the document — so every assertion
+ * about `doc.url` passes whether or not the value was ever written to the database.
+ *
+ * The write is what this asserts, by filtering on the column: a `where[url]` query reads the
+ * stored value and nothing else does. Nothing covered it before, which is how the whole
+ * `updateDocumentUrl` branch could be replaced with a silent no-op and stay green — writing `url`
+ * to a versioned collection's *base* table simply finds no such column and writes nothing.
+ */
+test('Should store the computed url on the version row', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const slug = 'url-probe';
+  const createResponse = await request.post(`${API_BASE_URL}/news`, {
+    headers,
+    data: { attributes: { title: 'url probe', slug }, status: VERSIONS_STATUS.PUBLISHED }
+  });
+  expect(createResponse.status()).toBe(200);
+  const { doc } = await createResponse.json();
+
+  const url = `${process.env.PUBLIC_RIME_URL}/actualites/${slug}`;
+  expect(doc.url).toBe(url);
+
+  // The document is found by the *stored* url, not the computed one.
+  const found = await request.get(
+    `${API_BASE_URL}/news?where[url][equals]=${encodeURIComponent(url)}`,
+    { headers }
+  );
+  expect(found.status()).toBe(200);
+  const { docs } = await found.json();
+  expect(docs.map((one: { id: string }) => one.id)).toContain(doc.id);
 });

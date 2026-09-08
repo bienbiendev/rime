@@ -266,22 +266,62 @@ const writeRow = async (
  * Sets columns on every row of this prototype's own table that `query` matches.
  *
  * A primitive: a table, a filter, a patch. It writes exactly the columns it is given — no
- * `updatedAt`, no locales, no children — because the callers that want a bulk column flip want the
- * rows left otherwise alone. `versions` demotes a document's other versions with it, and that
- * demotion depends on `updatedAt` *not* moving: pruning orders by it, so touching it here would
- * silently re-order which versions survive.
+ * `updatedAt`, no children — because the callers that want a bulk column write want the rows left
+ * otherwise alone. `versions` demotes a document's other versions with it, and that demotion
+ * depends on `updatedAt` *not* moving: pruning orders by it, so touching it here would silently
+ * re-order which versions survive.
+ *
+ * With `locale`, a localized column lands on the `__$$locales` branch instead — resolved by
+ * `prepareSchemaData`, the same split every other write goes through, so a caller says "set this
+ * field" and does not have to know which of the two tables the field is in. That is what `url`
+ * needs: `url` is localized on a localized config and not otherwise, and the adapter used to carry
+ * a whole `updateDocumentUrl` with a four-way branch for exactly that.
  *
  * It goes through `buildWhereParam`, so the filter is the same REST-shaped query every other
  * operation takes rather than a second dialect.
  */
 export const updateWherePrototype = async (
   { db, tables, configCtx }: DepsWithConfig,
-  { slug, query, data }: { slug: PrototypeSlug; query: OperationQuery; data: Dic }
+  {
+    slug,
+    query,
+    data,
+    locale
+  }: { slug: PrototypeSlug; query: OperationQuery; data: Dic; locale?: string }
 ): Promise<void> => {
   const table = baseTableName(slug);
+  const localesTable = tableName({ owner: table, branch: 'locales' });
   const where = buildWhereParam({ query: normalizeQuery(query), slug, db, tables, configCtx });
 
-  await db.update(tables[table]).set(data).where(where);
+  const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
+    tables,
+    mainTableName: table,
+    localesTableName: localesTable,
+    locale
+  });
+
+  if (Object.keys(mainData).length) {
+    await db.update(tables[table]).set(mainData).where(where);
+  }
+
+  if (isLocalized && Object.keys(localizedData).length) {
+    // The branch is keyed by its owner, so the rows to touch are the ones this filter matched.
+    //
+    // An update, never an upsert — `upsertLocalizedData` would *insert* a locales row for a
+    // document that has none yet, and this runs during reads (a computed url). A half-populated
+    // locales row written ahead of the real one is how the versions-multilang duplicate tests
+    // started failing when this was first written as an upsert.
+    const owners = await db.select({ id: tables[table].id }).from(tables[table]).where(where);
+    const ownerIds = (owners as { id: string }[]).map((owner) => owner.id);
+
+    if (ownerIds.length) {
+      const branch = tables[localesTable];
+      await db
+        .update(branch)
+        .set(localizedData)
+        .where(and(inArray(branch.ownerId, ownerIds), eq(branch.locale, locale!)));
+    }
+  }
 };
 
 /**
@@ -487,30 +527,45 @@ export const deletePrototype = async (
  * `where` resolves against the versions table. `_parent` and `_position` are columns the adapter
  * writes itself, so answering this is its job.
  */
-export const childrenIds = async (
-  { db, tables }: Deps,
-  { slug, parentId }: { slug: string; parentId: string }
+/**
+ * The ids of this prototype's **own rows** matching `query`, in `sort` order.
+ *
+ * The read twin of `updateWhere`, and flat in the same way: the prototype's own table, no content
+ * row joined, no document built, no hooks. Two adapter methods used to be this — `childrenIds`
+ * (`where _parent = x order by _position`) and `existingIds` (`where id in (…)`) — each a
+ * feature's question with its own method on the contract. `nested` and the relation defaults ask
+ * it themselves now.
+ *
+ * `sort` is a column on that table, `-` for descending. Deliberately *not* `buildOrderByParam`:
+ * that one is the document-level sort, which reaches through a shadow with correlated subqueries.
+ * The columns this read orders by (`_position`) are base-row columns, and going through the
+ * document sort would make a versioned prototype fall back to `createdAt` for them.
+ *
+ * The query is resolved against the base table for the same reason — `readWhere` is not asking
+ * about content, so a shadowed prototype's `id` here is the document's own id and `_parent`
+ * resolves directly rather than through the owner join.
+ */
+export const readWhere = async (
+  { db, tables, configCtx }: DepsWithConfig,
+  {
+    slug,
+    query,
+    sort,
+    limit
+  }: { slug: PrototypeSlug; query: OperationQuery; sort?: string; limit?: number }
 ): Promise<string[]> => {
   const table = tables[baseTableName(slug)];
+  const where = buildWhereParam({ query: normalizeQuery(query), slug, db, tables, configCtx });
+
+  const column = sort?.replace(/^-/, '');
+  const orderBy = column ? [(sort!.startsWith('-') ? desc : asc)(table[column])] : undefined;
 
   const rows = await db
     .select({ id: table.id })
     .from(table)
-    .where(eq(table._parent, parentId))
-    .orderBy(asc(table._position));
-
-  return rows.map((row: { id: string }) => row.id);
-};
-
-/** Which of `ids` name a document that exists, in table order. */
-export const existingIds = async (
-  { db, tables }: Deps,
-  { slug, ids }: { slug: string; ids: string[] }
-): Promise<string[]> => {
-  if (!ids.length) return [];
-
-  const table = tables[baseTableName(slug)];
-  const rows = await db.select({ id: table.id }).from(table).where(inArray(table.id, ids));
+    .where(where)
+    .orderBy(...(orderBy ?? []))
+    .limit(limit ?? -1);
 
   return rows.map((row: { id: string }) => row.id);
 };

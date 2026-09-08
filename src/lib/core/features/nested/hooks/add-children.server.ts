@@ -22,8 +22,11 @@ export const addChildrenProperty = Hooks.beforeRead({
     // Else populate _children
     const { rime } = args.event.locals;
 
-    const children = await rime.adapter.prototype(args.config.slug).childrenIds({
-      parentId: args.doc.id
+    // What `childrenIds` on the adapter used to be: a filter and an order, both about columns
+    // this feature put on the row. The adapter had a method named after the question.
+    const children = await rime.adapter.prototype(args.config.slug).readWhere({
+      query: { where: { _parent: { equals: args.doc.id } } },
+      sort: '_position'
     });
 
     args.doc = {

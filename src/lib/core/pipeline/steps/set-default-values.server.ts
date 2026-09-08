@@ -72,7 +72,12 @@ const defaultRelationValue = async (
           ? defaultValue
           : [];
 
-    const existing = await adapter.prototype(config.get.relationTo).existingIds({ ids });
+    // `existingIds` on the adapter, written out: which of these ids name a row that exists.
+    const existing = ids.length
+      ? await adapter
+          .prototype(config.get.relationTo)
+          .readWhere({ query: { where: { id: { in_array: ids } } } })
+      : [];
 
     return existing.map((documentId, index) => ({
       id: null,
