@@ -1,5 +1,6 @@
-import { isAuthConfig } from '$lib/core/features/auth/util.js';
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
+import { validateWithFeatures } from '$lib/core/features/registry.js';
+import { prototypeEntries } from '$lib/core/prototype/registry.js';
 import cache from '$lib/core/dev/cache.server.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { isFormField } from '$lib/core/fields/util.js';
@@ -8,7 +9,6 @@ import type { PrototypeSlug } from '$lib/core/prototype/types.js';
 import { BlocksBuilder, type BlocksField } from '$lib/fields/blocks/index.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
-import { SelectFieldBuilder } from '$lib/fields/select/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
@@ -103,33 +103,7 @@ const validateFields = (config: Config) => {
  */
 const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, config: Config) => {
   const errors: string[] = [];
-  const isCollection = (documentConfig: any): documentConfig is BuiltCollection =>
-    documentConfig.type === 'collection';
-  const isAuth = isCollection(documentConfig) && isAuthConfig(documentConfig);
   const registeredBlocks: Record<string, BlocksField['blocks'][number]> = {};
-
-  // const fieldsCompiled = documentConfig.fields.map((f) => f.compile());
-
-  if (isAuth) {
-    const rolesField = documentConfig.fields
-      .filter(isFormField)
-      .filter((f) => f.name === 'roles')
-      .filter((f) => f instanceof SelectFieldBuilder)[0];
-
-    const nameField = documentConfig.fields.filter(isFormField).filter((f) => f.name === 'name')[0];
-    const emailField = documentConfig.fields
-      .filter(isFormField)
-      .find((f) => f.name === 'email' && f.type === 'email');
-
-    if (!rolesField) errors.push(`Field roles is missing in collection ${documentConfig.slug}`);
-    if (!emailField && documentConfig.auth.type !== 'apiKey')
-      errors.push(`Field email is missing in collection ${documentConfig.slug}`);
-    if (!nameField) errors.push(`Field name is missing in collection ${documentConfig.slug}`);
-    if (!rolesField.get.many)
-      errors.push(
-        `Field roles must have "many" enabled : select('roles').options(...).many(), even with a single option`
-      );
-  }
 
   const validateBlockField = (fields: FieldBuilder[], blockType: string) => {
     const reserved = ['path', 'type', 'ownerId', 'position', 'locale'];
@@ -249,15 +223,19 @@ const hasDatabase = <T extends Config>(config: T) => {
   return [];
 };
 
-function validateAuthCollections<T extends Config>(config: T) {
-  const errors = [];
-  const authCollections = (config.collections || []).filter(isAuthConfig);
-  for (const collection of authCollections) {
-    if (collection.versions) {
-      errors.push(`Auth collections can't be versionned (${collection.slug})`);
-    }
-  }
-  return errors;
+/**
+ * What each feature requires of the configs it extends.
+ *
+ * Nothing here knows which feature is asking or what it wants: `prototypeEntries` pairs every
+ * prototype config with the definition that built it, and `validateWithFeatures` folds that
+ * prototype's feature list, gated by `enabled`. Auth's rules were the inhabitants that made this
+ * worth having — they lived above and needed `isAuthConfig` to find the collections they applied
+ * to. See `FeatureDefinition.validate`.
+ */
+function validateFeatures(config: Config) {
+  return prototypeEntries(config).flatMap((entry) =>
+    validateWithFeatures(entry.prototype.features, entry.config)
+  );
 }
 
 /**
@@ -293,8 +271,8 @@ function validate(config: Config): boolean {
     validateKebabs,
     hasUsersSlug,
     validateFields,
-    hasDatabase,
-    validateAuthCollections
+    validateFeatures,
+    hasDatabase
   ];
 
   for (const isValid of validateFunctions) {

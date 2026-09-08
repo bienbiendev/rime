@@ -61,7 +61,8 @@ names `upload` again, something has gone backwards.
 | 13b      | `20a3b815`            | a versions shadow gets its own pipeline instead of the parent's                                                                            |
 | 14       | `b66a5f3`             | **the shadow table is declared by the feature that owns it**; the schema generator stops reading `config.versions`                         |
 | 9r       | `637f9b5`             | **`augment` moves onto `definePrototype`**; `prototype/*/config/` is gone and `create` is composed once                                    |
-| 1a       | _this commit_         | **`augment-panel.ts` is gone**; `upload` states `_dashboardLayout` and the dashboard owns its own defaults                                 |
+| 1a       | `0b5e3076`            | **`augment-panel.ts` is gone**; `upload` states `_dashboardLayout` and the dashboard owns its own defaults                                 |
+| 1b       | _this commit_         | **`FeatureDefinition.validate`**; auth's config rules leave `config/validate.server.ts`                                                    |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 
@@ -321,7 +322,7 @@ area and a collection before believing a green check.**
 
 ## What is left
 
-> **The ordered backlog lives in `docs/cold-start.md` §4** — nine items, cheapest first, each with
+> **The ordered backlog lives in `docs/cold-start.md` §4** — eight items, cheapest first, each with
 > the document behind it. `docs/coupling-audit.md` is the measured version: every place core still
 > names a feature or a kind, with the greps to re-run. `docs/decoupling-versions.md` is the staged
 > plan for the deepest of them, with the code beside each step.

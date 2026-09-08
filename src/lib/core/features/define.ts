@@ -113,6 +113,20 @@ export type FeatureDefinition = {
   boot?: (config: any) => void | Promise<void>;
 
   /**
+   * What this feature requires of a config that uses it, as a list of error messages.
+   *
+   * Asked of each prototype config the feature extends, and only where `enabled` — so a rule is
+   * written about a config that *has* the feature, never guarded by a check for it. An empty list
+   * means the config is fine; codegen refuses to write anything for a config that returns any.
+   *
+   * It exists because these rules were in `config/validate.server.ts`, which had to import
+   * `isAuthConfig` to know which collections auth's rules applied to. Core validating a feature's
+   * own requirements is the same inversion as core deriving a feature's tables: the feature knows
+   * what it needs, so the feature says it.
+   */
+  validate?: (config: any) => string[];
+
+  /**
    * The feature's document hooks, by timing.
    *
    * The feature owns the implementations; it does not own where they run. Each hook declares

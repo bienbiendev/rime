@@ -1,6 +1,7 @@
 import { augmentAuth, augmentStaff, authHooks } from '$rime/modules';
 import type { WithNormalizedAuth } from './module.js';
 import { defineFeature } from '../define.js';
+import { validateAuth } from './validate.js';
 
 /**
  * Signing in: what a collection gains by declaring `auth`.
@@ -26,6 +27,15 @@ export const auth = defineFeature({
    * signing into the panel does not depend on a user collection existing.
    */
   configure: augmentStaff,
+
+  /**
+   * What a collection declaring `auth` has to look like — see `validate.ts` beside this file.
+   *
+   * `config/validate.server.ts` used to hold these and import `isAuthConfig` to know where they
+   * applied. Asked through the contract, they run only for configs this feature is enabled on, so
+   * the rules stopped needing to say which collections they were about.
+   */
+  validate: validateAuth,
 
   /**
    * Six timings' worth, listed in `hooks/module.server.ts` and reached through `$rime/modules`.

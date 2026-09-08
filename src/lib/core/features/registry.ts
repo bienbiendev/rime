@@ -67,6 +67,19 @@ export const featureHandlers = (prototypes: { features: FeatureDefinition[] }[])
     .filter((handler): handler is Handle => typeof handler === 'function');
 
 /**
+ * Every error the features extending a config report about it.
+ *
+ * Folded the same way `shadowOf` is — over the prototype's own feature list, gated by `enabled` —
+ * so a feature's rules are asked of a config that has the feature, and core never tests for one.
+ * Takes a feature list rather than the prototypes because the caller already holds one, from
+ * `prototypeEntries`.
+ */
+export const validateWithFeatures = (features: FeatureDefinition[], config: Dic): string[] =>
+  features.flatMap((feature) =>
+    feature.enabled(config) ? (feature.validate?.(config) ?? []) : []
+  );
+
+/**
  * The shadow a config's content lives in, or `undefined` when it lives on the config's own row.
  *
  * Folded over the features that extend the prototype, in their declared order, and the first one
