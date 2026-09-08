@@ -139,6 +139,29 @@ export type FeatureDefinition = {
   blank?: (doc: any, config: any) => any;
 
   /**
+   * Where this feature sends the halves of an update.
+   *
+   * The default plan puts everything on the prototype's own row. A feature that gives a config a
+   * second row to write — a shadow — refines the plan to say which half lands where, and the
+   * adapter then writes exactly what it is handed.
+   *
+   * Folded in the prototype's feature order, gated by `enabled`, at a fixed point in `runUpdate`:
+   * after every data hook, before the write. **Not a hook**, deliberately. A hook could not be
+   * guaranteed last — a consumer's `beforeUpdate` hook declares `requires: ['validated']` and
+   * provides nothing, so there is no mark a plan step could wait on, and a consumer hook that
+   * rewrote `data` would be silently split around.
+   *
+   * This is what `versionOperation` used to be for: the operation passed the enum down and the
+   * adapter decoded it into three branches. The branches were never about the database — they were
+   * about which rows this write touches, which is what a plan says.
+   *
+   * `any` for the two arguments, like `validate` and `blank` above: this file is the seam every
+   * feature is declared against, and typing them would have it import the pipeline and the config,
+   * which is the coupling the seam exists to avoid. Each feature narrows its own.
+   */
+  writePlan?: (plan: WritePlan, args: { config: any; context: any }) => WritePlan;
+
+  /**
    * The feature's document hooks, by timing.
    *
    * The feature owns the implementations; it does not own where they run. Each hook declares
@@ -148,6 +171,24 @@ export type FeatureDefinition = {
    * it is sorted — while the features interleaving there require nothing of *each other*.
    */
   hooks?: FeatureHooks;
+};
+
+/**
+ * Which rows an update writes, and with what.
+ *
+ * Spreads straight into the adapter's `update` — `update({ id, ...plan, locale })` — so the base
+ * half is named `data`, matching what `data` means in every other adapter method.
+ *
+ * `content` absent means one of two different things, and the adapter does not need to tell them
+ * apart: either the prototype has no content row of its own, or it has one that somebody else has
+ * already written (a new version, created through the public API before this write). Both come
+ * out as "write the base row and stop".
+ */
+export type WritePlan = {
+  /** What goes on the prototype's own row. */
+  data: Dic;
+  /** The content row this write also touches, when it is not the base row. */
+  content?: { id: string; data: Dic };
 };
 
 /**

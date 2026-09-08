@@ -98,19 +98,7 @@ export const createPrototypeRegistry = (deps: {
 
       update: async (args) => {
         const id = singleton ? await resolveSingletonId() : args.id!;
-        return updatePrototype(
-          { db, tables },
-          {
-            slug,
-            id,
-            versionId: args.versionId,
-            data: args.data,
-            locale: args.locale,
-            versionOperation: args.versionOperation,
-            config,
-            shadow
-          }
-        );
+        return updatePrototype({ db, tables }, { ...args, slug, id, shadow });
       },
 
       updateWhere: (args) => updateWherePrototype({ db, tables, configCtx }, { ...args, slug }),

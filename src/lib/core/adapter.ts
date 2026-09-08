@@ -1,7 +1,6 @@
 // @decouple versions from adapter
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type { User } from '$lib/core/features/auth/types.js';
-import type { VERSIONS_OPERATIONS } from '$lib/core/features/versions/strategy.js';
 import type { ShadowDeclaration } from '$lib/core/features/define.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type {
@@ -54,8 +53,6 @@ export interface Adapter {
   /** @decouple Writes a document's computed `url`, including onto its versions when it has them. */
   updateDocumentUrl(url: string, params: UpdateDocumentUrlParams): Promise<void>;
 }
-
-type VersionOperation = (typeof VERSIONS_OPERATIONS)[keyof typeof VERSIONS_OPERATIONS];
 
 export type RegisterPrototypeArgs = {
   config: BuiltArea | BuiltCollection;
@@ -133,12 +130,21 @@ export interface PrototypeHandle {
     locale?: string;
   }): Promise<{ id: string; contentId: string }>;
 
-  /** `id` is required on a non-singleton; a singleton resolves its own row. */
+  /**
+   * Writes the rows a `WritePlan` names: the prototype's own row always, and the content row when
+   * the caller names one.
+   *
+   * `id` is required on a non-singleton; a singleton resolves its own row.
+   *
+   * There is no `versionOperation` and no `versionId` here any more. The caller decided which rows
+   * this write touches before calling — `core/pipeline/run.server.ts` builds the plan, and
+   * `FeatureDefinition.writePlan` is where a feature says its half — so the adapter has a plan to
+   * execute rather than an enum to decode into three branches.
+   */
   update(args: {
     id?: string;
-    versionId?: string;
-    versionOperation: VersionOperation;
-    data: DeepPartial<GenericDoc>;
+    data: Dic;
+    content?: { id: string; data: Dic };
     locale?: string;
   }): Promise<{ id: string }>;
 

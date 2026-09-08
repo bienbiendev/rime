@@ -4,7 +4,7 @@ import type { RawDoc } from '$lib/core/prototype/types.js';
 import { omit, pick } from '$lib/util/object.js';
 import { randomId } from '$lib/util/random.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import { isFormField } from '$lib/core/fields/util.js';
+import { baseFieldNames } from '$lib/core/fields/util.js';
 import type { Dic } from '$lib/util/types.js';
 import { and, desc, eq, getTableColumns, Table } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
@@ -96,42 +96,6 @@ export async function upsertLocalizedData(
  * - directory props (upload) : _path
  * return an object with the data filtered and the rootData.
  */
-/**
- * The fields a config keeps on its base row rather than on its shadow — whatever is marked
- * `._root()`.
- *
- * Read off the config, never a list of names, because the schema generator splits the two tables
- * by the same flag: the base table gets `filter((f) => f.get.root)`, the shadow gets the rest. A
- * name-matching list here would silently drop any field marked by something other than the two
- * features whose names happened to be in it — there is no shadow column to fall back to.
- *
- * Top-level only, matching the generator: a nested field cannot be split off its parent.
- */
-export const baseFieldNames = (config: { fields: FieldBuilder[] }): string[] =>
-  config.fields
-    .filter(isFormField)
-    .filter((field) => field.get.root)
-    .map((field) => field.name);
-
-/**
- * Splits incoming data into what belongs on the base row and what belongs on the shadow.
- *
- * Only meaningful for a config that has a shadow; without one the base row holds everything, and
- * the callers that split are all on versioned paths.
- */
-export function extractRootData(data: any, config: { fields: FieldBuilder[] }) {
-  const rootData: Dic = {};
-
-  for (const name of baseFieldNames(config)) {
-    if (name in data) {
-      rootData[name] = data[name];
-      delete data[name];
-    }
-  }
-
-  return { data, rootData };
-}
-
 /**
  * Prepares data for database operations by transforming it according to table schemas
  */

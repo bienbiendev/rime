@@ -1,6 +1,8 @@
 import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
+import type { FeatureDefinition, WritePlan } from '$lib/core/features/define.js';
+import { writePlanWithFeatures } from '$lib/core/features/registry.js';
 import type { DocType, GenericDoc, RawDoc } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
@@ -227,8 +229,13 @@ export const runUpdate = async <
   where: string;
   /** Passed explicitly rather than read off the context, matching what both callers did. */
   locale?: string | undefined;
-  /** Persists the root row. Returns whatever `reread` needs to find the document again. */
-  write: (ctx: { data: Dic; config: C; context: OperationContext<S> }) => Promise<any>;
+  /**
+   * The features extending this prototype, for the write plan below. Handed down rather than
+   * looked up: the pipeline importing the prototype registry would close a cycle.
+   */
+  features: FeatureDefinition[];
+  /** Persists the write plan. Returns whatever `reread` needs to find the document again. */
+  write: (ctx: { plan: WritePlan; config: C; context: OperationContext<S> }) => Promise<any>;
   /** Fetches the saved document back, for the afterUpdate hooks and the caller. */
   reread: (ctx: { written: any; config: C; context: OperationContext<S> }) => Promise<T>;
 }): Promise<T> => {
@@ -266,8 +273,22 @@ export const runUpdate = async <
 
   const incomingPaths = Object.keys(context.configMap!);
 
-  // 4. write the root row
-  const written = await args.write({ data, config, context });
+  /**
+   * 3.5. which rows this write touches, and with what.
+   *
+   * Here rather than in a hook, and that is the point of it: it has to run after *every* data
+   * hook, and a hook cannot be guaranteed last — a consumer's `beforeUpdate` hook requires
+   * `validated` and provides nothing, so no mark exists for a plan step to wait on. A consumer
+   * hook that rewrote `data` would have been silently split around.
+   *
+   * The default is the whole story for a config with one row: everything goes on it. `versions`
+   * is what refines it (features/versions/write-plan.ts), and it is why `versionOperation` no
+   * longer travels to the adapter — the enum was only ever a way of saying which rows to write.
+   */
+  const plan = writePlanWithFeatures(args.features, { data }, { config, context });
+
+  // 4. write the rows the plan names
+  const written = await args.write({ plan, config, context });
 
   // 5. blocks, tree, relations — against the row the content lives on
   await persistRelational({

@@ -3,8 +3,7 @@ import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import { getSegments } from '$lib/core/features/upload/util/path.js';
 import type { ShadowDeclaration } from '$lib/core/features/define.js';
-import type { VersionOperation } from '$lib/core/features/versions/strategy.js';
-import { VersionOperations } from '$lib/core/features/versions/strategy.js';
+import { splitRootData } from '$lib/core/fields/util.js';
 import { normalizeQuery } from '$lib/core/pipeline/query.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
@@ -35,10 +34,10 @@ import { buildWithParam } from './with.server.js';
  *
  * - An area's update reset every version row to draft with no `where`, a collection scoped the
  *   reset to `ownerId = id`. For a single row those are the same set, so scoping always is
- *   behaviour-preserving.
+ *   behaviour-preserving. (That reset is a versions hook now, not a write this module makes.)
  * - A collection split off the fields its config keeps on the base row before writing; an area did
- *   not. `extractRootData` returns `{}` when a config marks none, so splitting always is
- *   behaviour-preserving too.
+ *   not. `splitRootData` returns an empty half when a config marks none, so splitting always is
+ *   behaviour-preserving too. (The split is core's now; this module is handed both halves.)
  *
  * `singleton` survives here as the one thing the adapter genuinely needs to know, and it is a
  * property of the *data* — how many rows there are — not of a kind. It decides whether `find`
@@ -169,13 +168,13 @@ export const readPrototype = async (
 type UpdateArgs = {
   slug: string;
   shadow?: ShadowDeclaration;
-  /** The root row to write. An area resolves its singleton's id before calling. */
+  /** The base row to write. An area resolves its singleton's id before calling. */
   id: string;
-  versionId?: string;
+  /** What goes on it. */
   data: Dic;
+  /** And the content row this write also touches, when the caller named one. */
+  content?: { id: string; data: Dic };
   locale?: string;
-  versionOperation: VersionOperation;
-  config: BuiltCollection | BuiltArea;
 };
 
 type Deps = {
@@ -184,7 +183,17 @@ type Deps = {
 };
 
 /**
- * Updates a prototype's root row, and its version row when the operation calls for one.
+ * Writes the rows the caller's plan names.
+ *
+ * Three branches until 1ec2dfca's successor: the caller passed a `versionOperation` down and this
+ * function decoded it into "not versioned", "write that version" and "the version already exists".
+ * They differed in exactly two facts — is there a second row, and has somebody already written it
+ * — and both are settled before the call now (core/pipeline/run.server.ts builds the plan,
+ * features/versions/write-plan.ts is what refines it). What was left is the same two writes in
+ * every case, so there is one path.
+ *
+ * The content row's *table* is still the adapter's to know: registration carries the shadow, and
+ * where rows live is storage. Which row, and whether to touch it, is the caller's.
  *
  * Returns `{ id: data.id || id }`. For an area the two always agree — it is a single row, so any
  * `id` in its data is that row's — and preferring `data.id` keeps a disagreement visible instead
@@ -192,94 +201,51 @@ type Deps = {
  */
 export const updatePrototype = async (
   { db, tables }: Deps,
-  { slug, id, versionId, data, locale, versionOperation, config, shadow }: UpdateArgs
+  { slug, id, data, content, locale, shadow }: UpdateArgs
 ) => {
   const now = new Date();
 
-  if (VersionOperations.isSimpleUpdate(versionOperation)) {
-    // Scenario 0: not versioned — the root row holds everything.
-    const table = baseTableName(slug);
-    const localesTable = tableName({ owner: table, branch: 'locales' });
+  await writeRow({ db, tables }, { table: baseTableName(slug), recordId: id, data, locale, now });
 
-    const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
-      tables,
-      mainTableName: table,
-      localesTableName: localesTable,
-      locale
-    });
-
-    await adapterUtil.updateTableRecord(db, tables, table, {
-      recordId: id,
-      data: { ...mainData, updatedAt: now }
-    });
-
-    if (isLocalized) {
-      await adapterUtil.upsertLocalizedData(db, tables, localesTable, {
-        ownerId: id,
-        data: localizedData,
-        locale: locale!
-      });
-    }
-
-    return { id: data.id || id };
+  if (content) {
+    // `shadow!` — a plan names a content row only for a prototype that has one, and registration
+    // answered with the shadow for exactly those.
+    await writeRow(
+      { db, tables },
+      { table: baseTableName(shadow!.slug), recordId: content.id, data: content.data, locale, now }
+    );
   }
 
-  if (VersionOperations.isSpecificVersionUpdate(versionOperation)) {
-    // Scenario 1: write into an existing version row.
-    if (!versionId) {
-      throw new RimeError(RimeError.OPERATION_ERROR, `missing versionId @adapter-update-${slug}`);
-    }
+  return { id: data.id || id };
+};
 
-    // Hierarchy fields live on the root, never on a version — otherwise the site tree would
-    // fork per revision.
-    const { data: contentData, rootData } = adapterUtil.extractRootData(data, config);
+/** One row and its locales, which is what both halves of an update come down to. */
+const writeRow = async (
+  { db, tables }: Deps,
+  args: { table: TableName; recordId: string; data: Dic; locale?: string; now: Date }
+) => {
+  const { table, recordId, data, locale, now } = args;
+  const localesTable = tableName({ owner: table, branch: 'locales' });
 
-    await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
-      recordId: id,
-      data: { updatedAt: now, ...rootData }
+  const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
+    tables,
+    mainTableName: table,
+    localesTableName: localesTable,
+    locale
+  });
+
+  await adapterUtil.updateTableRecord(db, tables, table, {
+    recordId,
+    data: { ...mainData, updatedAt: now }
+  });
+
+  if (isLocalized) {
+    await adapterUtil.upsertLocalizedData(db, tables, localesTable, {
+      ownerId: recordId,
+      data: localizedData,
+      locale: locale!
     });
-
-    // `shadow!` — this branch is a version write, so registration answered with one. Stage 4
-    // moves the decision itself onto the declaration; today the operation still names it.
-    const versionsTable = baseTableName(shadow!.slug);
-    const versionsLocalesTable = tableName({ owner: versionsTable, branch: 'locales' });
-
-    const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(contentData, {
-      tables,
-      mainTableName: versionsTable,
-      localesTableName: versionsLocalesTable,
-      locale
-    });
-
-    await adapterUtil.updateTableRecord(db, tables, versionsTable, {
-      recordId: versionId,
-      data: { ...mainData, updatedAt: now }
-    });
-
-    if (isLocalized) {
-      await adapterUtil.upsertLocalizedData(db, tables, versionsLocalesTable, {
-        ownerId: versionId,
-        data: localizedData,
-        locale: locale!
-      });
-    }
-
-    return { id: data.id || id };
   }
-
-  if (VersionOperations.isNewVersionCreation(versionOperation)) {
-    // Scenario 2: the caller's operation creates the version row; only the root is touched here.
-    const { rootData } = adapterUtil.extractRootData(data, config);
-
-    await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
-      recordId: id,
-      data: { updatedAt: now, ...rootData }
-    });
-
-    return { id: data.id || id };
-  }
-
-  throw new RimeError(RimeError.OPERATION_ERROR, 'Unhandled version operation');
 };
 
 /**
@@ -348,13 +314,15 @@ export const insertPrototype = async (
   }
 
   if (shadow) {
-    // Hierarchy and upload roots live on the root row, never on a version.
-    const { data: contentData, rootData } = adapterUtil.extractRootData(data, config);
+    // Hierarchy and upload roots live on the root row, never on a version. Still split here
+    // rather than by a plan: an insert has no row to name yet, so the caller has nothing to say
+    // that this cannot work out. See docs/decoupling-versions.md stage 4.
+    const { base, content: contentData } = splitRootData(data, config);
 
     const docId = await adapterUtil.insertTableRecord(db, tables, baseTableName(slug), {
       createdAt: now,
       updatedAt: now,
-      ...rootData
+      ...base
     });
 
     const versionsTable = baseTableName(shadow.slug);
@@ -597,8 +565,9 @@ export const ensurePrototypeExists = async (
 
     // A draft-enabled prototype's first version is published; otherwise nothing would be
     // readable without `draft: true`.
-    // Still a `config.versions` read: *whether* a shadow exists is declared, what its rows mean
-    // is not. `pick` on the declaration is stage 3.
+    // Still a `config.versions` read, and the last one on a write path: *whether* a shadow exists
+    // is declared, what its first row means is not. It goes when the insert takes a plan too —
+    // docs/decoupling-versions.md stage 4.
     if (config.versions?.draft) mainData.status = VERSIONS_STATUS.PUBLISHED;
 
     await insertRowWithLocales(

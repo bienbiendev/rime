@@ -42,14 +42,10 @@ export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) =
     context,
     locale,
     where: 'update',
+    features: ctx.features,
 
-    write: ({ data, config, context }) =>
-      rime.adapter.prototype(config.slug).update({
-        data,
-        locale,
-        versionId: context.contentOwnerId!,
-        versionOperation: context.versionOperation!
-      }),
+    // No `id`: an area's handle resolves its single row. See the collection's for the plan.
+    write: ({ plan, config }) => rime.adapter.prototype(config.slug).update({ ...plan, locale }),
 
     /**
      * Read back **the row the write went to** — see the collection's `reread` for the full note.

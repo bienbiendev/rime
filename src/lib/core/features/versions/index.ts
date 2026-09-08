@@ -4,6 +4,7 @@ import { defineFeature } from '../define.js';
 import { augmentVersions } from './augment.js';
 import { demoteOtherVersions } from './hooks/demote-other-versions.js';
 import { withVersionsSuffix } from './naming.js';
+import { versionsWritePlan } from './write-plan.js';
 
 /**
  * Keeps a document's history in a shadow table, and lets one version be the published one.
@@ -38,6 +39,12 @@ export const versions = defineFeature({
 
   /** See the note above for why this is the only hook the feature carries. */
   hooks: { beforeUpdate: [demoteOtherVersions] },
+
+  /**
+   * Where the two halves of an update land — the base row and the version row. What
+   * `versionOperation` used to tell the adapter, said once here instead.
+   */
+  writePlan: versionsWritePlan,
 
   /**
    * The `<slug>__versions` collection behind every versioned config, derived after `upload` has

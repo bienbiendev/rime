@@ -203,6 +203,15 @@ export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
   blank(): GenericDoc;
 
   /**
+   * The features extending this prototype.
+   *
+   * Exposed rather than folded into a capability, unlike `blank()` above, because its one consumer
+   * folds it at a point only `runUpdate` can pick — after the data hooks, before the write. See
+   * `FeatureDefinition.writePlan`.
+   */
+  readonly features: FeatureDefinition[];
+
+  /**
    * Read through the API cache when it is on and this is not a system call.
    *
    * `key` is merged into the cache key on top of the parts every read shares — the slug and who

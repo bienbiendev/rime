@@ -60,6 +60,8 @@ const createPrototypeApiContext = <C extends BuiltPrototype>(
 
     fallbackLocale: (locale?: string) => locale || event.locals.locale || defaultLocale,
 
+    features: definition.features,
+
     /**
      * A blank document of this config's shape, after the features it enables have shaped it.
      *

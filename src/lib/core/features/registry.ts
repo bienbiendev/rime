@@ -1,6 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
-import type { FeatureDefinition, ShadowDeclaration } from './define.js';
+import type { FeatureDefinition, ShadowDeclaration, WritePlan } from './define.js';
 import type { ApplyFeatureConfigure } from './register.js';
 
 /**
@@ -90,6 +90,29 @@ export const blankWithFeatures = (features: FeatureDefinition[], doc: Dic, confi
     (current, feature) =>
       feature.enabled(config) && feature.blank ? feature.blank(current, config) : current,
     doc
+  );
+
+/**
+ * The write plan, after every feature the config enables has said where its half lands.
+ *
+ * Folded in the prototype's feature order like the blank document, starting from "everything on
+ * the prototype's own row" — which is the whole plan for a config no feature gives a second row
+ * to, so nothing needs a not-versioned branch.
+ *
+ * `runUpdate` calls this at a fixed point, after the data hooks and before the write. See
+ * `FeatureDefinition.writePlan` for why it is not itself a hook.
+ */
+export const writePlanWithFeatures = (
+  features: FeatureDefinition[],
+  plan: WritePlan,
+  args: { config: Dic; context: Dic }
+): WritePlan =>
+  features.reduce(
+    (current, feature) =>
+      feature.enabled(args.config) && feature.writePlan
+        ? feature.writePlan(current, args)
+        : current,
+    plan
   );
 
 /**
