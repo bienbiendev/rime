@@ -40,15 +40,12 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
     context
   });
 
-  // `draft` and `versionId` are this API's words, and they stop here: the adapter is told which
-  // content row to take (`contentId`) or that the newest will do (`latest`), and the shadow's own
-  // declaration says what "the newest will do" is being chosen over.
   const documentRaw = await rime.adapter.prototype(config.slug).find({
     id,
-    contentId: versionId,
+    versionId,
     locale,
     select,
-    latest: draft
+    draft
   });
 
   // The adapter reports "nothing matched" and leaves the meaning to the caller, so an HTTP-shaped

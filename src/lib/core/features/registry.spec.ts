@@ -77,23 +77,9 @@ describe('configureWithFeatures', () => {
  * generate a shadow of a shadow.
  */
 describe('shadowOf', () => {
-  it('names the shadow of a versioned config, and how to pick a row from it', () => {
-    // No `draft`: every version is publishable, so the newest one is the document.
+  it('names the shadow of a versioned config', () => {
     expect(shadowOf(collection.features, { slug: 'pages', versions: {} })).toEqual({
-      slug: '$pages__versions',
-      pick: 'newest'
-    });
-  });
-
-  /**
-   * The `pick` half is what stage 3 moved out of the adapter, which used to read
-   * `config.versions.draft` and hardcode `'published'` itself. Asserted because a wrong pick is
-   * silent: reads keep working and quietly return the wrong revision.
-   */
-  it('picks the published row when the config has drafts', () => {
-    expect(shadowOf(collection.features, { slug: 'pages', versions: { draft: true } })).toEqual({
-      slug: '$pages__versions',
-      pick: { column: 'status', equals: 'published' }
+      slug: '$pages__versions'
     });
   });
 

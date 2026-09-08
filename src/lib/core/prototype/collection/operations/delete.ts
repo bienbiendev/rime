@@ -36,8 +36,7 @@ export const deleteDocs = async (args: Args): Promise<string[]> => {
     sort,
     select: ['id'],
     locale,
-    // Everything, published or not — a delete is not a read of the current document.
-    latest: true
+    draft: true
   });
 
   const promisesDelete = documentsToDelete.map(({ id }) => {

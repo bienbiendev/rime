@@ -1,4 +1,4 @@
-import type { ContentPick } from '$lib/core/features/define.js';
+import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { RawDoc } from '$lib/core/prototype/types.js';
 import { omit, pick } from '$lib/util/object.js';
@@ -236,29 +236,22 @@ export function mergeRawDocumentWithVersion(
  * Build the query params to get either the latest updated document
  * or the published one if version.draft is enabled and draft is true
  */
-/**
- * Which content row to read, from the shadow's declaration rather than from a config member.
- *
- * Two axes, and they are different kinds of thing: `pick` is per config and comes from whichever
- * feature declared the shadow, `latest` is per request. `contentId` short-circuits both — a caller
- * that already knows the row wants that row.
- *
- * This was `buildPublishedOrLatestVersionParams`, which read `config.versions.draft` and hardcoded
- * `'published'`: the adapter knowing a feature's column and its magic value.
- */
-export function pickContentParams(args: {
-  pick: ContentPick;
-  contentId?: string;
-  latest?: boolean;
+export function buildPublishedOrLatestVersionParams(args: {
+  draft?: boolean;
+  config: BuiltArea | BuiltCollection;
   table: any;
 }) {
-  const { pick, contentId, latest, table } = args;
-
-  if (contentId) return { where: eq(table.id, contentId), limit: 1 };
-
-  return pick === 'newest' || latest
-    ? { orderBy: [desc(table.updatedAt)], limit: 1 }
-    : { where: eq(table[pick.column], pick.equals), limit: 1 };
+  const { config, table, draft } = args;
+  const hasStatus = config.versions && config.versions.draft;
+  return hasStatus && !draft
+    ? {
+        where: eq(table.status, 'published'),
+        limit: 1
+      }
+    : {
+        orderBy: [desc(table.updatedAt)],
+        limit: 1
+      };
 }
 
 export function columnsParams({ table, select }: { table: Dic; select?: string[] }) {
