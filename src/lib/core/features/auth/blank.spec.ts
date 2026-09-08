@@ -4,7 +4,7 @@ import { text } from '$lib/fields/text/index.js';
 import { collection, create } from '$lib/core/prototype/collection/definition.js';
 import { createBlankDocument } from '$lib/core/prototype/doc.js';
 import { blankWithFeatures } from '../registry.js';
-import { blankAuthDocument } from './blank.js';
+import { blankAuthDocument } from './blank/module.server.js';
 
 /**
  * What a feature takes off the blank document the local API hands out.

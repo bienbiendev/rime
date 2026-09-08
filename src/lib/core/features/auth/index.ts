@@ -1,7 +1,6 @@
-import { augmentAuth, augmentStaff, authHooks } from '$rime/modules';
+import { augmentAuth, augmentStaff, authHooks, blankAuthDocument } from '$rime/modules';
 import type { WithNormalizedAuth } from './module.js';
 import { defineFeature } from '../define.js';
-import { blankAuthDocument } from './blank.js';
 import { validateAuth } from './validate.js';
 
 /**
@@ -38,7 +37,14 @@ export const auth = defineFeature({
    */
   validate: validateAuth,
 
-  /** A password and its better-auth link are not the document's to hand out — see `blank.ts`. */
+  /**
+   * A password and its better-auth link are not the document's to hand out — see
+   * `blank/module.server.ts`.
+   *
+   * Through `$rime/modules` because that file reads `PRIVATE_FIELDS`, which must never be
+   * reachable from a client build. The name resolves to `undefined` there, which is harmless:
+   * `blank()` is only ever assembled server-side.
+   */
   blank: blankAuthDocument,
 
   /**

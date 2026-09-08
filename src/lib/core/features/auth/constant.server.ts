@@ -1,6 +1,21 @@
 import type { Dic } from '$lib/util/types.js';
 import type { User } from './types.js';
-import { PRIVATE_FIELDS } from './private-fields.js';
+
+/**
+ * The members of an auth document that never leave the server.
+ *
+ * `.server` is the guarantee, not a filing convention: nothing client-reachable may import this,
+ * so nothing can ship a copy of the list to a browser or drift from it. Anything that needs it on
+ * the client's behalf goes through the server — see `auth/blank/module.server.ts`.
+ */
+export const PRIVATE_FIELDS = [
+  'password',
+  'token',
+  'isSuperAdmin',
+  'apiKeyId',
+  'authUserId',
+  'isStaff'
+];
 
 export const BETTER_AUTH_ROLES = {
   /** Panel users admin */

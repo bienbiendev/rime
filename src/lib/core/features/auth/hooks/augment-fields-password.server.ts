@@ -1,5 +1,5 @@
 import { Hooks } from '$lib/core/pipeline/hooks.js';
-import { usersFields } from '../fields.js';
+import { passwordField } from '../fields.server.js';
 
 /**
  * Appends the `password` field to the config, so the validation steps that follow
@@ -33,7 +33,7 @@ export const augmentFieldsPassword = Hooks.beforeUpsert<'auth'>({
     if (IS_PASSWORD_AUTH) {
       config = {
         ...config,
-        fields: [...config.fields, usersFields.password]
+        fields: [...config.fields, passwordField]
       };
     }
 

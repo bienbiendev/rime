@@ -64,6 +64,7 @@ names `upload` again, something has gone backwards.
 | 1a       | `0b5e3076`            | **`augment-panel.ts` is gone**; `upload` states `_dashboardLayout` and the dashboard owns its own defaults                                 |
 | 1b       | `1d7d0c8e`            | **`FeatureDefinition.validate`**; auth's config rules leave `config/validate.server.ts`                                                    |
 | 1c       | _this commit_         | **`FeatureDefinition.blank`**; `prototype/doc.ts` and `api.server.ts` stop naming a feature                                                |
+| 1c′      | _this commit_         | `PRIVATE_FIELDS` stays in `.server`; `usersFields` splits so `password` never reaches a client build                                       |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 
@@ -273,7 +274,16 @@ before a route entrypoint. The message names nothing. **The 500'd request URLs n
 see `probing.md` §7.
 
 The fix is the convention that already existed: a `hooks/module.server.ts` with **no `module.ts`
-beside it**, imported as a name from `$rime/modules`. Only a module with no client half gets its
+beside it**, imported as a name from `$rime/modules`.
+
+**And it is the fix for a constant, too — never move the constant.** `auth.blank` reads
+`PRIVATE_FIELDS`, and the first attempt at it lifted that list out of `constant.server.ts` into a
+plain file so the isomorphic `index.ts` could reach it. That trades a guarantee for a convenience:
+`.server` is what stops a browser bundle ever carrying the list, and a second copy on the client
+would be a second source of truth. What crosses `$rime/modules` is the **function**
+(`blank/module.server.ts` → `blankAuthDocument`), which is `undefined` on a client build and never
+called there. Same for a field: `usersFields` held the `password` builder in an isomorphic file
+although only a server hook ever appended it — it lives in `fields.server.ts` now. Only a module with no client half gets its
 names stubbed to `undefined` on a client build — a pair with both halves exports the client half's
 names and a server-only name is simply _missing_ there (`rime-modules-resolution.md`, cases B and
 C). So `hooks: authHooks` is a real object on the server and `undefined` in the browser, and
