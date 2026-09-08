@@ -771,11 +771,67 @@ file from deletion. `tests/versions/api.test.ts` now uploads bytes unique to the
 `GET /medias/<name>` is 200, deletes the document, and asserts 404. Making `ownsField` return `true`
 unconditionally fails it — and failed nothing before it existed.
 
-#### What is left
+#### And the adapter itself (`aebef15d`, `1356bef5`)
 
-`core/constants.ts` (`VERSIONS_STATUS`), which is a shared vocabulary rather than a leak, and the
-codegen'd versions panel pages. In the adapter: `transform.server.ts:51` and the four reads in
-`url.server.ts`.
+```bash
+grep -rn "config\.versions\|features/versions" src/lib/adapter-sqlite   # empty
+grep -rn "core/features" src/lib/adapter-sqlite                        # 4, see below
+```
+
+Three `config.versions` reads went, and they were three different shapes of one mistake:
+
+- **`transform.server.ts`** built the shadow's table name itself. It asks
+  `configCtx.shadowSlugOf(slug) ?? slug` — a `Map` folded once at config build from
+  `shadowOf(entry.prototype.features, config)`, so code holding a `ConfigContext` and no registry
+  can ask too. A context method rather than the registry because `transformDoc` runs on every
+  document of every read, and because a `ConfigContext` exists before registration does.
+- **`url.server.ts`** had four cases behind an `OPERATION` enum. They were two independent
+  questions — which table, and whether this writes one locale — so it is one lookup and one `if`.
+  The contract drops `config` and `versionId` for `slug` + `contentId`, the vocabulary `find` and
+  `update` already use.
+- **`ensurePrototypeExists`** applied a feature's rule to a row it was inserting:
+  `if (config.versions?.draft) mainData.status = PUBLISHED`. That one needed a seam, because the
+  rule is real — `status` defaults to `draft`, right for every version an author makes and wrong
+  for the very first, since a bootstrapped area whose only row is a draft reads as absent.
+
+```ts
+// core/features/define.ts — deliberately not `blank`
+seed?: (doc: any, config: any) => any;
+```
+
+`blank` is where an author's create starts, so it takes the field defaults; `seed` is the
+exception to them, for the document `boot` writes when a prototype must have a row before anybody
+asks. Folding it into `blank` would have put `status: published` on every create form in the panel.
+`PrototypeBootArgs` gains `features` so an area's `boot` can fold it — `boot` is written inside the
+object literal that defines the prototype, so it cannot name itself.
+
+**And upload's block in `insertPrototype`**, whose own comment called it "the upload feature
+reaching into a write". Its directory-row creation was redundant — `handlePathCreation` already
+does it recursively through the public API, and runs first — but its `_path` normalisation was
+not, so that moved into the hook.
+
+That move exposed a live bug worth remembering: the hook defaulted a missing path with
+`!('_path' in args.data)`, which **never fires on a create**, because `mergeWithBlankDocument` puts
+`_path: null` in `data`. Every upload create had been relying on the adapter to default it. Removing
+the block gave `_path: null` and 26 `basic` failures against a baseline of 12. The guard is about
+the operation now, not about a key.
+
+#### What the adapter still imports from core/features
+
+Two are the contract, not a feature: `ShadowDeclaration` and `shadowOf`. Two are real and are
+their own pieces of work:
+
+- `generate-schema/templates.server.ts` — `withDirectoriesSuffix`, building upload's directories
+  table. This is the unbuilt `type: 'child'` declaration (architecture-target.md §6), which is also
+  cold-start item 3's `_generateSchema: false`.
+- `auth.server.ts` — a whole `AuthAdapter` facade for one feature.
+
+#### What is left of versions elsewhere
+
+`core/constants.ts` (`VERSIONS_STATUS`), a shared vocabulary rather than a leak, and the codegen'd
+versions panel pages. Also `features/upload/naming.ts` imports `withoutVersionsSuffix` from
+`features/versions` — a feature importing a feature, missed by earlier greps because it is a
+relative import.
 
 ### Settled on the way: how the adapter knows it has a shadow
 

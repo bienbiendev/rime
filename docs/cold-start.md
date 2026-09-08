@@ -162,23 +162,29 @@ Cheapest first. Each is independently useful and each has a document behind it.
 1. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
    the registry** instead of listing the two by hand. `prototypeConfigs()` and `prototypeEntries()` exist;
    the schema generator is the worked example.
-2. **versions stage 5, and stage 4's insert half** — reads and updates are done; three
-   `config.versions` reads remain in the whole adapter:
-   - **Stage 4's insert half.** `insertPrototype` splits for itself, and `ensurePrototypeExists`
-     reads `config.versions.draft` for the first version's status — the last one on a write path.
-     An insert cannot take the update's plan (it has no row to name yet); the shape it wants is
-     `content?: { data }` with no id, and the adapter returning the id it generated.
-   - **Stage 5**, the remainder. Core no longer imports `features/versions` for anything but the
-     two prototypes' `features: [… versions …]`, which is the switch itself. What is left is in the
-     adapter — `transform.server.ts:51` and the four reads in `url.server.ts` — plus
-     `core/constants.ts` (`VERSIONS_STATUS`, a shared vocabulary rather than a leak) and the
-     codegen'd versions panel pages. (`decoupling-versions.md`)
+2. **The adapter is decoupled.** `grep -rn "config\.versions\|features/versions" src/lib/adapter-sqlite`
+   is empty, and `src/lib/adapter-sqlite` imports nothing from any individual feature — only
+   `ShadowDeclaration` and `shadowOf`, which are the contract. What replaced the last of it:
+   `ConfigContext.shadowSlugOf` (the transform and url writers), `contentId` on the url contract,
+   `FeatureDefinition.seed` (a bootstrapped row's first version), and upload's `_path`
+   normalisation moving into its own hook. (`decoupling-versions.md`)
+
+   Two feature-shaped things remain in the adapter, both their own piece of work:
+   `generate-schema/templates.server.ts`'s `withDirectoriesSuffix` — the unbuilt `type: 'child'`
+   declaration, which is item 3 below — and `auth.server.ts`'s whole facade.
+
+   Also still open, outside the adapter: `features/upload/naming.ts` imports `withoutVersionsSuffix`
+   from `features/versions`, a feature importing a feature (missed by earlier greps because it is a
+   relative import).
+
 3. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
    `structure-audit.md` §19.4's four steps; the other three are done.
 4. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and
    to contribute a member back. A contract change, not a relocation. Bigger than it looks.
-5. **A hook timing meaning "always"**, which lets versions carry its own `beforeUpdate` hooks and
-   removes the last place a prototype names a feature.
+5. ~~**A hook timing meaning "always"**~~ — **dead**. It existed so `versions` could carry its own
+   `beforeUpdate` hooks. Rule 8 in `restructure-handoff.md` replaced it: core states the default
+   (`resolveContentOwner`, `ReadIntent`) and the feature overrides, so `enabled` became the right
+   gate and no prototype names a feature any more.
 6. **The panel.** Largest and last. Read `coupling-audit.md` §5 first: the work is _core letting
    go of `src/lib/panel/`_ (19 import lines, 13 of them in `handlers/routes.server.ts`), not the
    panel letting go of core — and the end state still has a collection screen and an area screen.
