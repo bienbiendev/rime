@@ -80,7 +80,10 @@ names `upload` again, something has gone backwards.
 | 24       | `e921425c`            | **the last two versions-naming imports in core**: upload's file scan asks which table holds `filename`; codegen asks `shadowOf`. No reverse pointer needed                               |
 | 25       | `aebef15d`            | **the adapter's last three `config.versions` reads**: `shadowSlugOf` on the context, `contentId` on the url contract, `FeatureDefinition.seed` for a bootstrapped row                    |
 | 26       | `1356bef5`            | **upload's path block leaves `insertPrototype`** — `src/lib/adapter-sqlite` imports no individual feature at all now                                                                     |
-| 27       | _this commit_         | **`readWhere`/`updateWhere`**: `childrenIds`, `existingIds`, `updateDocumentUrl` and the dead `updateRecord` leave the contract; the `Adapter` interface is two members and five facades |
+| 27       | `2ac83daa`            | **`readWhere`/`updateWhere`**: `childrenIds`, `existingIds`, `updateDocumentUrl` and the dead `updateRecord` leave the contract; the `Adapter` interface is two members and five facades |
+| 27r      | `4b9db413`            | **a shadowed prototype can sort by its base-row columns** — `?sort=_position` on a versioned nested collection silently ordered by `createdAt`                                           |
+| 27r′     | `93f98982`            | **`readWhere` reverted**: it returned ids where the handle returns documents; both callers use `findMany({ select: ['id'] })`                                                            |
+| 28       | _this commit_         | **`mergeRawDocumentWithVersion` splits**: the fold is the adapter's (`mergeContentRow`, emitting `contentId`), the name is versions' (a `beforeRead` hook)                               |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 

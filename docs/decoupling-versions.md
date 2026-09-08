@@ -856,6 +856,37 @@ Two traps, both found by running rather than reasoning:
   pointing the write at the base table of a versioned collection writes nothing and stayed green.
   `_children` had no assertion at all. Both have one now, and each fails under its own probe.
 
+#### Two corrections to the above, and the last versions word
+
+**`readWhere` was wrong and is gone** (`93f98982`). It was really `readIdsWhere`: the `Where`
+carried no information — every read filters, `find` takes `content` and `findMany` takes `query` —
+it built no `with`, and it returned ids where every other member of `PrototypeHandle` returns
+documents. A call on the prototype accessor should mean document handling. Both callers use
+`findMany({ select: ['id'] })`, which with that select builds no children join at all.
+
+It only became possible after a **live bug** turned up underneath it (`4b9db413`):
+`buildOrderByParam` looked at the base table's own columns only in its `!hasShadow` branch, so a
+shadowed prototype could not sort by any `._root()` column — `?sort=_position` on a versioned
+nested collection warned "not a property" and silently ordered by `createdAt`. That is on the
+public query surface for any versioned collection that also enables `nested` or `upload`. Needing a
+flat primitive was a symptom of it.
+
+**`mergeRawDocumentWithVersion` splits in two** (`99aea980`). The name was one problem; the return
+value was the one that settles it:
+
+```ts
+return { ...docFields, ...versionFields, versionId: versionData.id };
+```
+
+A function that has to name a feature in what it hands back is that feature's method, wherever it
+sits — renaming it moves the tell, not the coupling. So the fold stays (it is structural: two rows
+in, one document out, and only the adapter knows there were two) as `mergeContentRow` emitting
+**`contentId`**, and `versions` carries a `beforeRead` hook that puts `versionId` on the document.
+
+Additive, so every consumer of `doc.versionId` is unchanged. Core code that wants the _row_ rather
+than its name reads `contentId` — which is why `features/url` and `features/upload` need no
+ordering against the versions hook, and why `upload` stops naming `versions` a second time.
+
 #### What the adapter still imports from core/features
 
 Two are the contract, not a feature: `ShadowDeclaration` and `shadowOf`. Two are real and are
