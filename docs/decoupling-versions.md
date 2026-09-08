@@ -576,50 +576,85 @@ returns nothing — there are no transactions in the adapter today, so splitting
 into two calls loses a guarantee that was never there. That was the strongest argument for keeping
 the branching low and it does not hold.
 
-### Stage 4 — the write plan moves up
+### Stage 4 — the write plan moves up ✅ update half done (`1ec2dfca`, `5dac93c0`)
 
-`versionOperation` leaves the contract, and `updatePrototype` collapses to "write the root fields
-to the base row, and everything else to the row you were given":
+`updatePrototype` took a `versionOperation` and decoded it into three branches. Diffed, they
+differed in exactly two facts:
+
+```
+isSimpleUpdate           base <- all of data             no content row exists
+isSpecificVersionUpdate  base <- root, content <- rest    write the content row
+isNewVersionCreation     base <- root                     handleNewVersion already wrote it
+```
+
+Both are settled before the call, and the second one **only `versions` can answer** — it is the
+feature that creates the row, through the public API. So the caller names the rows and the adapter
+writes them:
 
 ```ts
-export const updatePrototype = async ({ db, tables }, { slug, id, contentId, data, locale, config }) => {
-  const { data: contentData, rootData } = adapterUtil.extractRootData(data, config);
-  const now = new Date();
+// core/adapter.ts
+update(args: { id?: string; data: Dic; content?: { id: string; data: Dic }; locale?: string });
+```
 
-  // the root row always: its own fields, plus everything else when there is no content row
-  await adapterUtil.updateTableRecord(db, tables, baseTableName(slug), {
-    recordId: id,
-    data: { updatedAt: now, ...rootData, ...(contentId ? {} : contentData) }
-  });
+One path, no branches, no `config`, no `versionOperation`. `content` absent covers two different
+situations — no content row at all, or one somebody else already wrote — and the adapter does not
+need to tell them apart.
 
-  // and the content row when one was named
-  if (contentId) { … write contentData into the shadow, by contentId … }
+**How the plan is built.** `FeatureDefinition.writePlan` refines `{ data }` into
+`{ data, content? }`, folded in feature order and gated by `enabled` — the same seam as `validate`,
+`blank` and `shadow`. Only `versions` declares one:
 
-  return { id: data.id || id };
+```ts
+// core/features/versions/write-plan.ts
+export const versionsWritePlan = (plan, { config, context }) => {
+  const { versionOperation, contentOwnerId } = context;
+  const { base, content } = splitRootData(plan.data, config); // ._root() fields stay on the base row
+
+  return VersionOperations.isNewVersionCreation(versionOperation!)
+    ? { data: base } // handleNewVersion wrote the row already
+    : { data: base, content: { id: contentOwnerId!, data: content } };
 };
 ```
 
-The five-way strategy stays where it already is (`versions/strategy.ts`, run as a `beforeUpdate`
-hook) and each outcome becomes a sequence of primitive calls rather than an enum the adapter
-decodes. Two of the five are already written that way.
+`runUpdate` folds it at step 3.5, after the data hooks and before the write.
 
-**The one genuinely new primitive.** The publish demotion — "set every other version of this
-document to draft" — is the only step with no primitive behind it: the handle has `update` by id
-and `delete` by id, and the local API has `updateById` but no update-many. Either
+**Not a hook, and this is the load-bearing part of the design.** The plan has to be built after
+_every_ data hook, and no mark can express that: a consumer's `beforeUpdate` hook declares
+`requires: ['validated']` and provides nothing, so there is no mark a plan step could wait on, and
+a consumer hook that rewrote `data` would be silently split around. `runUpdate` owns the
+sequencing; the feature owns only its half.
+
+`contentOwnerId` stays and does **not** merge into the plan. Different questions: `contentOwnerId`
+is where blocks, tree nodes and relations hang, and is set in all three cases; `content` is what
+this write touches, and is absent in the third. They name the same row when both are set.
+
+**The one new primitive**, shipped first in `1ec2dfca`:
 
 ```ts
-// on PrototypeHandle, beside delete
-updateWhere(args: { where: OperationQuery; data: Dic }): Promise<string[]>;
+updateWhere(args: { query: OperationQuery; data: Dic }): Promise<void>;
 ```
 
-or the versions feature does a find-then-update-each, which is correct but is N writes where SQL
-does one. `updateWhere` is a primitive by the test that matters — it names a table, a filter and a
-patch, and knows nothing about what a version or a status is — so it is the better answer, but it
-is a contract addition and should be its own commit with its own reason.
+A table, a filter, a patch. The publish demotion — "set every other version of this document to
+draft" — was three lines of raw drizzle in the adapter, guarded by `config.versions.draft`; it is a
+`beforeUpdate` hook on the versions feature now. Two details it depends on: `updateWhere` writes
+exactly the columns given, `updatedAt` included only if passed (pruning orders by `updatedAt`, so
+stamping it would silently re-order which versions survive), and it takes the same REST-shaped
+query every other operation takes rather than a second dialect.
 
-Ordering note: the demotion and the write of the new published row are two statements with no
-transaction around them either way, so moving the pair above the adapter changes nothing about what
-a concurrent reader can observe. It does make that visible, which is worth a line in the audit.
+It is also the first hook the versions feature _carries_. `buildPipeline` gates a feature's hooks
+behind `enabled`, which is wrong for `defineVersionOperation` and `handleNewVersion` — they run for
+every config, versioned or not — but exactly right for a demotion, since a config with no drafts
+has nothing to demote.
+
+Ordering note: the demotion and the write of the published row are two statements with no
+transaction around them, and were not before either. A reader between them sees the document with
+no published version.
+
+**What is left of stage 4.** The insert half. `insertPrototype` still calls `splitRootData` itself,
+and `ensurePrototypeExists` still reads `config.versions.draft` to publish a first version — the
+last one on any write path. An insert has no row to name yet, so a plan cannot say what it says for
+an update; the shape it wants is `content?: { data }` with no id, and the adapter returning the id
+it generated. Worth doing, but a different argument from this one.
 
 ### Stage 5 — the remainder
 

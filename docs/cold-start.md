@@ -106,7 +106,12 @@ Full table with commits in `restructure-handoff.md`. The shape of it:
   a declaration that needs a runtime flag is in the wrong place. Stages 3–5 are re-planned around
   adapter primitives instead: the operation resolves the content row and hands the adapter an id.
   `25a78cdc` is the part of stage 3 that survives — the adapter recognises a shadow by its table
-  rather than by `config.versions`.
+  rather than by `config.versions`. **Stage 4's update half is done** (`1ec2dfca`, `5dac93c0`):
+  `versionOperation` has left the adapter contract and the three branches of `updatePrototype`
+  collapsed to one path, because the caller now hands down a _write plan_ — which rows this write
+  touches, and with what — built by `runUpdate` after the data hooks and refined by
+  `FeatureDefinition.writePlan`. The publish demotion is a versions hook over a new `updateWhere`
+  primitive.
 
 ### Measured, right now
 
@@ -141,14 +146,16 @@ Cheapest first. Each is independently useful and each has a document behind it.
 1. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
    the registry** instead of listing the two by hand. `prototypeConfigs()` and `prototypeEntries()` exist;
    the schema generator is the worked example.
-2. **versions stages 3–5** — the read selector, the write plan, the remainder. Stage 2 is done, so
-   the adapter knows _where_ content lives; stage 3 was built the wrong way round and reverted, so
-   _which row_ is still `config.versions.draft` inside `prototype.server.ts`. The re-plan moves
-   both the read selector and the write plan **above** the adapter, composed from primitives — a
-   shadow is already a registered prototype with its own handle, so resolving a content row needs
-   no new adapter surface, and the one step that does (`updateWhere`, for the publish demotion) is
-   a primitive by the test that matters. Costs one extra query per versioned read and per list, and
-   no atomicity: there are no transactions in the adapter today. (`decoupling-versions.md`)
+2. **versions stages 3 and 5, and stage 4's insert half** — the write path is done. What is left:
+   - **Stage 3, the read selector.** `readPrototype` and `findManyPrototypes` still take
+     `draft`/`versionId` and `buildPublishedOrLatestVersionParams` still reads
+     `config.versions.draft`. The plan is the same move the write just made: the operation resolves
+     which content row it means and hands down an id. No new adapter surface is needed — a shadow
+     is already a registered prototype with its own handle. Costs one extra query per versioned
+     read and per list, and no atomicity (there are none in the adapter).
+   - **Stage 4's insert half.** `insertPrototype` splits for itself and `ensurePrototypeExists`
+     reads `config.versions.draft` for the first version's status — the last two on a write path.
+   - **Stage 5**, the remainder. (`decoupling-versions.md`)
 3. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
    `structure-audit.md` §19.4's four steps; the other three are done.
 4. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and
