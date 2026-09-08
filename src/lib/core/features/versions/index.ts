@@ -1,8 +1,7 @@
-import { makeVersionsCollectionsAliases } from '$rime/modules';
+import { makeVersionsCollectionsAliases, versionsHooks } from '$rime/modules';
 import type { WithVersionsConfig } from './augment.js';
 import { defineFeature } from '../define.js';
 import { augmentVersions } from './augment.js';
-import { demoteOtherVersions } from './hooks/demote-other-versions.js';
 import { withVersionsSuffix } from './naming.js';
 import { versionsReadQuery } from './read-query.js';
 import { versionsWritePlan } from './write-plan.js';
@@ -10,13 +9,15 @@ import { versionsWritePlan } from './write-plan.js';
 /**
  * Keeps a document's history in a shadow table, and lets one version be the published one.
  *
- * **Carries only the hooks that a non-versioned config has no use for.** `defineVersionOperation`
- * and `handleNewVersion` run for *every* config, versioned or not — the first populates
- * `context.versionOperation` and the second `context.contentOwnerId`, both of which
- * `assertUpsertContext` requires on every update. `buildPipeline` gates a feature's hooks behind
- * `enabled`, so those two stay listed by the prototypes until there is a timing that means
- * "always". `demoteOtherVersions` is not one of them: a config with no drafts has nothing to
- * demote, so `enabled` is exactly the right gate for it.
+ * **Carries its own hooks**, which it could not until core had a default for what they answer.
+ * `handleNewVersion` had to run for *every* config because it was the only thing setting
+ * `context.contentOwnerId`, which `assertUpsertContext` requires on every update — so both
+ * prototypes listed it by name and `buildPipeline`'s `enabled` gate could not be applied. Core
+ * states the default now (`pipeline/steps/resolve-content-owner.server.ts`: the document's own
+ * row) and this feature *overrides* it, which is what a feature is for.
+ *
+ * `defineVersionOperation` is the one still listed by the prototypes — see the note in
+ * hooks/define-version-operation.server.ts.
  *
  * The augment is isomorphic — it normalises `versions` and adds `status` — so it needs no
  * `$rime/modules` pair.
@@ -38,8 +39,11 @@ export const versions = defineFeature({
    */
   shadow: (config) => ({ slug: withVersionsSuffix(config.slug) }),
 
-  /** See the note above for why this is the only hook the feature carries. */
-  hooks: { beforeUpdate: [demoteOtherVersions] },
+  /**
+   * Its document hooks. Through `$rime/modules` because `handleNewVersion` is server-only and this
+   * file is reachable from a client build — see hooks/module.server.ts.
+   */
+  hooks: versionsHooks,
 
   /**
    * Where the two halves of an update land — the base row and the version row. What

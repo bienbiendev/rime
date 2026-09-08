@@ -12,13 +12,38 @@ import { fallbackDataFromOriginal } from './fallback-data-from-original.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 /**
- * Handles version-related operations for document updates
- * Manages specific version updates and new version creation
+ * Where a versioned document's content lives for *this* update — overriding the default.
+ *
+ * `resolveContentOwner` has already said "the document's own row", which is right for every
+ * prototype with no shadow. This runs after it, only on a config that enables `versions`, and
+ * answers again:
+ *
+ * - **a specific version** — that row.
+ * - **a new version** — the row this hook creates, through the public API, which is what makes
+ *   the write plan's third case ("already written") true.
+ *
+ * The third branch it used to have — "not versioned: the content is on the document's own row" —
+ * is gone, because that is the default now. It was the only reason both prototypes had to list
+ * this hook by name: gating it behind `enabled` used to leave `contentOwnerId` unset on every
+ * non-versioned config.
+ *
+ * Its marks had to be completed to survive the move. Both prototypes listed it by hand between
+ * `buildOriginalDocConfigMap` and `buildDataConfigMap`, so two constraints it depends on were
+ * being met by that hand-written position rather than by anything it declared:
+ *
+ * - **`requires: 'original-config-map'`** — `prepareDataForNewVersion` reads `originalConfigMap`,
+ *   and the throw below has always said so. Only `original-doc` was declared.
+ * - **`provides: 'data-inspected'`** — it reads the caller's submission *as sent*. Whatever the
+ *   caller did not send, `fallbackDataFromOriginal` fills from the previous version. Let
+ *   `setDefaultValues` run first and those fields arrive already filled with their config
+ *   defaults, so editing one field of a document would reset every unsent field to its default
+ *   instead of carrying it forward. That is what the mark means, and it is what pins this ahead
+ *   of `buildDataConfigMap` now that no list does.
  */
 export const handleNewVersion = Hooks.beforeUpsert({
   name: 'handleNewVersion',
-  requires: ['original-doc'],
-  provides: [],
+  requires: ['original-doc', 'original-config-map', 'content-owner'],
+  provides: ['data-inspected'],
   run: async (args) => {
     const { config, event } = args;
     const { rime } = event.locals;
@@ -32,45 +57,41 @@ export const handleNewVersion = Hooks.beforeUpsert({
     if (!versionOperation)
       throw new RimeError(RimeError.OPERATION_ERROR, 'missing versionOperation @handleNewVersion');
 
-    let contentOwnerId;
-    let data;
-
-    switch (true) {
-      case VersionOperations.isSpecificVersionUpdate(versionOperation):
-        contentOwnerId = originalDoc.versionId;
-        break;
-
-      case VersionOperations.isNewVersionCreation(versionOperation): {
-        data = await prepareDataForNewVersion({
-          data: args.data,
-          originalDoc,
-          config,
-          originalConfigMap
-        });
-        const versionsSlug = withVersionsSuffix(config.slug);
-
-        const document = await rime.collection(versionsSlug).create({
-          data,
-          locale: params.locale
-        });
-
-        if (config.versions && config.versions.maxVersions) {
-          await rime.collection(versionsSlug).delete({
-            sort: '-updatedAt',
-            query: 'where[status][not_equals]=published',
-            offset: config.versions.maxVersions
-          });
-        }
-        contentOwnerId = document.id;
-        break;
-      }
-
-      default:
-        // Not versioned: there is no shadow row, so the content is on the document's own.
-        contentOwnerId = originalDoc.id;
+    if (VersionOperations.isSpecificVersionUpdate(versionOperation)) {
+      return {
+        ...args,
+        context: { ...args.context, contentOwnerId: originalDoc.versionId }
+      };
     }
 
-    return { ...args, context: { ...args.context, contentOwnerId } };
+    if (VersionOperations.isNewVersionCreation(versionOperation)) {
+      const data = await prepareDataForNewVersion({
+        data: args.data,
+        originalDoc,
+        config,
+        originalConfigMap
+      });
+      const versionsSlug = withVersionsSuffix(config.slug);
+
+      const document = await rime.collection(versionsSlug).create({
+        data,
+        locale: params.locale
+      });
+
+      if (config.versions && config.versions.maxVersions) {
+        await rime.collection(versionsSlug).delete({
+          sort: '-updatedAt',
+          query: 'where[status][not_equals]=published',
+          offset: config.versions.maxVersions
+        });
+      }
+
+      return { ...args, context: { ...args.context, contentOwnerId: document.id } };
+    }
+
+    // Versioned, but this update writes neither a named version nor a new one — the default
+    // `resolveContentOwner` set stands.
+    return args;
   }
 });
 

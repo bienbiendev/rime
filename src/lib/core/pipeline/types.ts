@@ -207,6 +207,14 @@ export type CoreHookMark =
   | 'config-map'
   /** The original document has been loaded. */
   | 'original-doc'
+  /**
+   * The row this document's content lives on has been named.
+   *
+   * Core provides the default — the document's own row — so a feature that moves the content
+   * elsewhere requires this and answers again, rather than every prototype having to list that
+   * feature's hook to make the answer exist at all.
+   */
+  | 'content-owner'
   /** The config map for the original document exists. */
   | 'original-config-map'
   /** The version operation for this request has been decided. */

@@ -1,10 +1,10 @@
 import { defineVersionOperation } from '$lib/core/features/versions/hooks/define-version-operation.server.js';
-import { handleNewVersion } from '$lib/core/features/versions/hooks/handle-new-version.server.js';
 import { authorize } from '$lib/core/pipeline/steps/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/steps/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/pipeline/steps/get-original-document.server.js';
 import { buildOriginalDocConfigMap } from '$lib/core/pipeline/steps/original-config-map.server.js';
 import { processDocumentFields } from '$lib/core/pipeline/steps/process-document-fields.server.js';
+import { resolveContentOwner } from '$lib/core/pipeline/steps/resolve-content-owner.server.js';
 import { setDefaultValues } from '$lib/core/pipeline/steps/set-default-values.server.js';
 import { setDocumentLocale } from '$lib/core/pipeline/steps/set-document-locale.server.js';
 import { setDocumentType } from '$lib/core/pipeline/steps/set-document-type.server.js';
@@ -30,7 +30,7 @@ export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     defineVersionOperation,
     getOriginalDocument,
     buildOriginalDocConfigMap,
-    handleNewVersion,
+    resolveContentOwner,
     buildDataConfigMap,
     setDefaultValues,
     validateFields

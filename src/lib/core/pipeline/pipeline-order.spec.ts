@@ -58,11 +58,63 @@ describe('resolved pipeline order', () => {
         'defineVersionOperation',
         'getOriginalDocument',
         'buildOriginalDocConfigMap',
-        'handleNewVersion',
+        'resolveContentOwner',
         'buildDataConfigMap',
         'setDefaultValues',
         'validateFields'
       ]);
+    });
+
+    it('runs no versions hook, because it enables no versions', () => {
+      // It used to run `handleNewVersion` here — the feature's hook, on a config with no
+      // versions, doing nothing but restating the default `resolveContentOwner` states now. That
+      // was the whole reason both prototypes had to list it by name.
+      expect(order(hooks, 'beforeUpdate')).not.toContain('handleNewVersion');
+      expect(order(hooks, 'beforeUpdate')).not.toContain('demoteOtherVersions');
+    });
+  });
+
+  describe('a versioned collection', () => {
+    const hooks = collection({ versions: { draft: true } });
+
+    /**
+     * The feature's hooks appear by the feature being enabled, and nowhere else.
+     *
+     * `handleNewVersion` lands exactly where the prototypes used to list it by hand, and every
+     * edge holding it there is now declared rather than written down:
+     *
+     * - after `resolveContentOwner`, whose default it overrides — `requires: 'content-owner'`
+     * - after `buildOriginalDocConfigMap`, which it reads — `requires: 'original-config-map'`
+     * - before `buildDataConfigMap`, because it reads the submission as sent —
+     *   `provides: 'data-inspected'`
+     *
+     * Only the first was declared before. Dropping any of the three moves it, which is what this
+     * assertion is for: it is the one hook in the pipeline whose position changes what a document
+     * ends up containing rather than merely when something runs.
+     */
+    it('adds the versions hooks, after the default they override', () => {
+      const update = order(hooks, 'beforeUpdate');
+
+      expect(update).toEqual([
+        'defineVersionOperation',
+        'getOriginalDocument',
+        'buildOriginalDocConfigMap',
+        'resolveContentOwner',
+        'handleNewVersion',
+        'buildDataConfigMap',
+        'setDefaultValues',
+        'validateFields',
+        // Last, and unchanged by this move: it reads `data.status` after the defaults are in,
+        // which is where it already ran as a feature hook.
+        'demoteOtherVersions'
+      ]);
+      expect(update.indexOf('resolveContentOwner')).toBeLessThan(
+        update.indexOf('handleNewVersion')
+      );
+      expect(update.indexOf('buildOriginalDocConfigMap')).toBeLessThan(
+        update.indexOf('handleNewVersion')
+      );
+      expect(update.indexOf('handleNewVersion')).toBeLessThan(update.indexOf('setDefaultValues'));
     });
   });
 
@@ -106,7 +158,7 @@ describe('resolved pipeline order', () => {
         'defineVersionOperation',
         'getOriginalDocument',
         'buildOriginalDocConfigMap',
-        'handleNewVersion',
+        'resolveContentOwner',
         'augmentFieldsPassword',
         'preventSuperAdminMutation',
         'preventUserMutations',
