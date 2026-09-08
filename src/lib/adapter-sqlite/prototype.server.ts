@@ -1,13 +1,10 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
-import { getSegments } from '$lib/core/features/upload/util/path.js';
 import type { ShadowDeclaration } from '$lib/core/features/define.js';
 import { splitRootData } from '$lib/core/fields/util.js';
 import { normalizeQuery } from '$lib/core/pipeline/query.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
-import { trycatchSync } from '$lib/util/function.js';
 import type { Dic } from '$lib/util/types.js';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { RimeError } from '../core/errors/index.js';
@@ -298,37 +295,6 @@ export const insertPrototype = async (
   { slug, data, locale, config, shadow }: InsertArgs
 ): Promise<{ id: string; contentId: string }> => {
   const now = new Date();
-
-  // FEATURE (upload): normalise the incoming path and make sure the folder it names exists.
-  // This is the upload feature reaching into a write, and it moves out of here when features
-  // land — see docs/architecture-target.md. Until then it has to stay: without it `_path` is
-  // written unnormalised (null for a bare filename) and no directory row is ever created.
-  // `'upload' in config` rather than a kind check: the question is whether this config carries
-  // upload settings, which is a shape the adapter can see. Whether it is a "collection" is not.
-  if ('upload' in config && config.upload) {
-    const [error, segments] = trycatchSync(() => getSegments(data._path));
-    if (error) throw new RimeError(RimeError.BAD_REQUEST, error.message);
-
-    const { path, name, parent } = segments;
-    data._path = path;
-
-    const directoriesTable = baseTableName(withDirectoriesSuffix(slug));
-    const table = tables[directoriesTable];
-
-    const existing = await (db.query as Record<string, any>)[directoriesTable].findFirst({
-      where: and(eq(table.id, data._path))
-    });
-
-    if (!existing) {
-      await db.insert(table).values({
-        id: data._path,
-        parent,
-        name,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-    }
-  }
 
   if (shadow) {
     // Hierarchy and upload roots live on the root row, never on a version. Still split here
