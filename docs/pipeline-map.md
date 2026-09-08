@@ -46,7 +46,7 @@ No feature contributes a write hook, so `beforeUpdate` is the prototype’s own 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
 | 1 | `defineVersionOperation` | collection | — | `version-operation` |
-| 2 | `getOriginalDocument` | collection | `version-operation` | `original-doc` |
+| 2 | `getOriginalDocument` | collection | — | `original-doc` |
 | 3 | `buildOriginalDocConfigMap` | collection | `original-doc` | `original-config-map` |
 | 4 | `resolveContentOwner` | collection | `original-doc` | `content-owner` |
 | 5 | `buildDataConfigMap` | collection | `config-fields` `data-inspected` | `config-map` |
@@ -88,7 +88,7 @@ The three `versions` hooks appear by the feature being enabled. `handleNewVersio
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
 | 1 | `defineVersionOperation` | collection | — | `version-operation` |
-| 2 | `getOriginalDocument` | collection | `version-operation` | `original-doc` |
+| 2 | `getOriginalDocument` | collection | — | `original-doc` |
 | 3 | `buildOriginalDocConfigMap` | collection | `original-doc` | `original-config-map` |
 | 4 | `resolveContentOwner` | collection | `original-doc` | `content-owner` |
 | 5 | `handleNewVersion` | versions | `original-doc` `original-config-map` `content-owner` | `data-inspected` |
@@ -141,7 +141,7 @@ The three `versions` hooks appear by the feature being enabled. `handleNewVersio
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
 | 1 | `defineVersionOperation` | collection | — | `version-operation` |
-| 2 | `getOriginalDocument` | collection | `version-operation` | `original-doc` |
+| 2 | `getOriginalDocument` | collection | — | `original-doc` |
 | 3 | `buildOriginalDocConfigMap` | collection | `original-doc` | `original-config-map` |
 | 4 | `resolveContentOwner` | collection | `original-doc` | `content-owner` |
 | 5 | `augmentFieldsPassword` | auth | `blank-merged` | `config-fields` |
@@ -205,7 +205,7 @@ The three `versions` hooks appear by the feature being enabled. `handleNewVersio
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
 | 1 | `defineVersionOperation` | collection | — | `version-operation` |
-| 2 | `getOriginalDocument` | collection | `version-operation` | `original-doc` |
+| 2 | `getOriginalDocument` | collection | — | `original-doc` |
 | 3 | `buildOriginalDocConfigMap` | collection | `original-doc` | `original-config-map` |
 | 4 | `resolveContentOwner` | collection | `original-doc` | `content-owner` |
 | 5 | `buildDataConfigMap` | collection | `config-fields` `data-inspected` | `config-map` |
@@ -246,7 +246,7 @@ No create and no delete: a second row is not a thing.
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
 | 1 | `defineVersionOperation` | area | — | `version-operation` |
-| 2 | `getOriginalDocument` | area | `version-operation` | `original-doc` |
+| 2 | `getOriginalDocument` | area | — | `original-doc` |
 | 3 | `buildOriginalDocConfigMap` | area | `original-doc` | `original-config-map` |
 | 4 | `resolveContentOwner` | area | `original-doc` | `content-owner` |
 | 5 | `handleNewVersion` | versions | `original-doc` `original-config-map` `content-owner` | `data-inspected` |

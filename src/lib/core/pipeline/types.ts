@@ -150,6 +150,23 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
   isSystemOperation?: boolean;
 };
 
+/**
+ * Why a read is happening, which can change which row it means.
+ *
+ * - `'read'` — return this document. What every API read is.
+ * - `'original'` — load what an update is about to change, so it can be diffed against and fallen
+ *   back to.
+ *
+ * They are not the same question, and `versions` is where they diverge: on a read `?draft=true`
+ * means "show me the newest revision", while on an update it means "branch a new draft **from the
+ * published one**". That rule used to live in core, as
+ * `VersionOperations.shouldRetrieveDraft(context.versionOperation)` inside `getOriginalDocument` —
+ * a core step importing a feature's enum to decide a feature's policy. Core states that the two
+ * intents exist, because both do for every prototype; `FeatureDefinition.readQuery` says what each
+ * selects.
+ */
+export type ReadIntent = 'read' | 'original';
+
 /** A REST-style query string, or its parsed form. Lives here because an operation's params
  *  carry it; the adapter consumes it from there. */
 export type OperationQuery = string | ParsedOperationQuery;

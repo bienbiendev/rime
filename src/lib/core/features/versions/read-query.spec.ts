@@ -2,6 +2,7 @@ import { collection, create } from '$lib/core/prototype/collection/definition.js
 import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { text } from '$lib/fields/text/index.js';
 import { describe, expect, it } from 'vitest';
+import type { ReadIntent } from '$lib/core/pipeline/types.js';
 import { readQueryOf } from '../registry.js';
 
 /**
@@ -16,8 +17,9 @@ import { readQueryOf } from '../registry.js';
  */
 const queryFor = (
   config: Parameters<typeof readQueryOf>[1],
-  params: { draft?: boolean; versionId?: string }
-) => readQueryOf(collection.features, config, params);
+  params: { draft?: boolean; versionId?: string },
+  intent: ReadIntent = 'read'
+) => readQueryOf(collection.features, config, params, intent);
 
 describe('readQueryOf', () => {
   const drafts = create('spec_read_news', {
@@ -56,6 +58,50 @@ describe('readQueryOf', () => {
     });
 
     expect(queryFor(versioned, {})).toBeUndefined();
+  });
+
+  /**
+   * `intent: 'original'` is the update pipeline loading what it is about to change, and it flips
+   * the meaning of `draft`. These four reproduce `VersionOperations.shouldRetrieveDraft`, which
+   * `getOriginalDocument` used to call — the table it encoded is the reason `ReadIntent` exists,
+   * so it is asserted here rather than trusted.
+   */
+  describe("as an update's original", () => {
+    it('branches from the published version even when drafts were asked for', () => {
+      // The one case that differs from a read: `?draft=true` on an update means NEW_DRAFT_FROM_
+      // PUBLISHED, which fetched with `draft: false`. A read with the same parameter wants the
+      // newest row.
+      expect(queryFor(drafts, { draft: true }, 'original')).toEqual({
+        where: { status: { equals: VERSIONS_STATUS.PUBLISHED } }
+      });
+      expect(queryFor(drafts, { draft: true }, 'read')).toBeUndefined();
+    });
+
+    it('branches from the published version by default', () => {
+      // UPDATE_PUBLISHED, which also fetched with `draft: false`.
+      expect(queryFor(drafts, {}, 'original')).toEqual({
+        where: { status: { equals: VERSIONS_STATUS.PUBLISHED } }
+      });
+    });
+
+    it('takes the named version when one was named', () => {
+      // UPDATE_VERSION fetched with `draft: true`, but also passed the versionId through, so the
+      // row was named either way.
+      expect(queryFor(drafts, { versionId: 'v9' }, 'original')).toEqual({
+        where: { versionId: { equals: 'v9' } }
+      });
+    });
+
+    it('takes the newest row on a versioned config with no drafts', () => {
+      // NEW_VERSION_FROM_LATEST, which fetched with `draft: true` — and with no status column to
+      // filter on, "the newest" is what that meant.
+      const versioned = create('spec_read_original_medias', {
+        versions: true,
+        fields: [text('alt')]
+      });
+
+      expect(queryFor(versioned, {}, 'original')).toBeUndefined();
+    });
   });
 
   it('narrows to nothing when no feature gives the config a content row', () => {

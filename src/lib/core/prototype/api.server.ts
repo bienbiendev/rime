@@ -62,7 +62,8 @@ const createPrototypeApiContext = <C extends BuiltPrototype>(
 
     features: definition.features,
 
-    contentQuery: (params) => readQueryOf(definition.features, config, params),
+    contentQuery: (params, intent = 'read') =>
+      readQueryOf(definition.features, config, params, intent),
 
     /**
      * A blank document of this config's shape, after the features it enables have shaped it.

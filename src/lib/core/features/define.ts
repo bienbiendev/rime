@@ -1,6 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
-import type { OperationQuery } from '$lib/core/pipeline/types.js';
+import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 
 /**
  * A feature **augments and extends** what a prototype defines.
@@ -180,10 +180,15 @@ export type FeatureDefinition = {
    * This is what `draft` and `versionId` used to be on the adapter contract. They were request
    * parameters the database layer decoded, using `config.versions.draft` to know whether the
    * status column even existed; the caller knows both, so the caller says it.
+   *
+   * `intent` is there because the same parameters can mean different rows depending on why the
+   * read is happening — see `ReadIntent`. Core states the two intents because both exist for every
+   * prototype; only a feature can say what each one selects.
    */
   readQuery?: (args: {
     config: any;
     params: { draft?: boolean; versionId?: string };
+    intent: ReadIntent;
   }) => OperationQuery | undefined;
 
   /**

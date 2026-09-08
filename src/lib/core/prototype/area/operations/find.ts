@@ -1,7 +1,7 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { readDocument, runBeforeOperation } from '$lib/core/pipeline/run.server.js';
-import type { OperationContext } from '$lib/core/pipeline/types.js';
+import type { OperationContext, ReadIntent } from '$lib/core/pipeline/types.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { AreaSlug, GenericDoc } from '$lib/core/prototype/types.js';
 
@@ -11,12 +11,14 @@ export type FindArgs = {
   select?: string[];
   versionId?: string;
   draft?: boolean;
+  /** See the collection's findById. */
+  intent?: ReadIntent;
 };
 
 type Args = FindArgs & { ctx: PrototypeApiContext<BuiltArea> };
 
 export const find = async <T extends GenericDoc>(args: Args): Promise<T> => {
-  const { ctx, locale, depth, select, versionId, draft } = args;
+  const { ctx, locale, depth, select, versionId, draft, intent } = args;
   const { config, event, isSystemOperation } = ctx;
 
   let context: OperationContext<AreaSlug> = {
@@ -42,7 +44,7 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T> => {
     locale,
     select,
     // See the collection's findById.
-    content: ctx.contentQuery({ draft, versionId })
+    content: ctx.contentQuery({ draft, versionId }, intent)
   });
 
   if (!documentRaw) throw new RimeError(RimeError.NOT_FOUND);

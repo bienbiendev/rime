@@ -2,7 +2,7 @@ import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
 import type { FeatureDefinition, ShadowDeclaration, WritePlan } from './define.js';
 import type { ApplyFeatureConfigure } from './register.js';
-import type { OperationQuery } from '$lib/core/pipeline/types.js';
+import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 
 /**
  * The whole-config feature steps, and nothing else.
@@ -126,11 +126,13 @@ export const writePlanWithFeatures = (
 export const readQueryOf = (
   features: FeatureDefinition[],
   config: Dic,
-  params: { draft?: boolean; versionId?: string }
+  params: { draft?: boolean; versionId?: string },
+  intent: ReadIntent
 ): OperationQuery | undefined =>
   features.reduce<OperationQuery | undefined>(
     (found, feature) =>
-      found ?? (feature.enabled(config) ? feature.readQuery?.({ config, params }) : undefined),
+      found ??
+      (feature.enabled(config) ? feature.readQuery?.({ config, params, intent }) : undefined),
     undefined
   );
 
