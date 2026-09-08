@@ -734,6 +734,37 @@ test('Should publish the child page and then find it by parent', async ({ reques
   expect(parentDoc._children).toEqual([childPageId]);
 });
 
+/**
+ * Sorting a versioned collection by one of its **base-row** columns.
+ *
+ * `pages` is versioned and nested, so `_position` is on `pages` and every content column is on
+ * `pages__versions`. `buildOrderByParam` only looked at the shadow's columns once a prototype had
+ * one, so this warned `"_position" is not a property of pages` and silently ordered by `createdAt`
+ * — which for two documents created in order is the same answer, and is why nothing caught it.
+ *
+ * Asserted in both directions for that reason: ascending agrees with creation order, descending
+ * does not, so only a real sort passes both.
+ */
+test('Should sort a versioned collection by a base-row column', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  // The parent was created first and the child second; give them the opposite `_position`.
+  await request.patch(`${API_BASE_URL}/pages/${parentPageId}`, { headers, data: { _position: 2 } });
+  await request.patch(`${API_BASE_URL}/pages/${childPageId}`, { headers, data: { _position: 1 } });
+
+  const idsSortedBy = async (sort: string) => {
+    const response = await request.get(`${API_BASE_URL}/pages?sort=${sort}`, { headers });
+    expect(response.status()).toBe(200);
+    const { docs } = await response.json();
+    return docs
+      .map((doc: { id: string }) => doc.id)
+      .filter((id: string) => id === parentPageId || id === childPageId);
+  };
+
+  expect(await idsSortedBy('_position')).toEqual([childPageId, parentPageId]);
+  expect(await idsSortedBy('-_position')).toEqual([parentPageId, childPageId]);
+});
+
 /*********************************************************
 /* Duplicating a versioned document
 /*********************************************************/

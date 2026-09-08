@@ -54,18 +54,32 @@ export const buildOrderByParam = ({ slug, locale, tables, by, shadow }: Args) =>
   const orderFunc = getOrderFunc(by);
   const columnStr = by.replace(/^-/, '');
 
-  // No shadow: every sortable column is on the base table.
+  /**
+   * A column on the prototype's own table, whether or not it also has a shadow.
+   *
+   * This used to be inside the `!hasShadow` branch, and the shadow branch never looked at the base
+   * table at all — so a shadowed prototype could not sort by any of its **base-row** columns. Those
+   * are exactly the `._root()` ones, which is `nested`'s `_parent`/`_position` and `upload`'s
+   * `_path`: `?sort=_position` on a versioned nested collection warned "not a property" and
+   * silently ordered by `createdAt` instead.
+   *
+   * Safe in both branches because the two tables' columns are disjoint by construction — the
+   * schema generator sends `._root()` fields to one and everything else to the other — and the
+   * system fields they share (`createdAt`, `updatedAt`) are answered above this.
+   */
+  const rootTableColumns = Object.keys(getTableColumns(rootTable));
+  if (rootTableColumns.includes(columnStr)) {
+    return [orderFunc(rootTable[columnStr])];
+  }
+
+  // No shadow: every remaining sortable column is a localized one.
   if (!hasShadow) {
-    const rootTableColumns = Object.keys(getTableColumns(rootTable));
-
-    // Check if the column exists in the root table
-    if (rootTableColumns.includes(columnStr)) {
-      return [orderFunc(rootTable[columnStr])];
-    }
-
     // Check if it's a localized field in a non-versioned collection
     if (locale) {
-      const localeTableName = tableName({ owner: baseTableName(slug), branch: 'locales' }) as keyof typeof tables;
+      const localeTableName = tableName({
+        owner: baseTableName(slug),
+        branch: 'locales'
+      }) as keyof typeof tables;
       if (localeTableName in tables) {
         const localeTable = tables[localeTableName];
         const localizedColumns = getTableColumns(localeTable);
@@ -109,7 +123,10 @@ export const buildOrderByParam = ({ slug, locale, tables, by, shadow }: Args) =>
 
     // Check if it's a localized field on the shadow
     if (locale) {
-      const shadowLocaleTableName = tableName({ owner: shadowTableName, branch: 'locales' }) as keyof typeof tables;
+      const shadowLocaleTableName = tableName({
+        owner: shadowTableName,
+        branch: 'locales'
+      }) as keyof typeof tables;
       if (shadowLocaleTableName in tables) {
         const localeTable = tables[shadowLocaleTableName];
         const localizedColumns = getTableColumns(localeTable);
