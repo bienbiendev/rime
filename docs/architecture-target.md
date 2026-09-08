@@ -3,8 +3,8 @@
 > **Status: mostly landed.** `definePrototype`, `defineFeature` and `definePlugin` all exist;
 > `name`, `configKey`, `titleFallback`, `singleton`, `features`, `augments`, `hooks` and
 > `configure` are declared members, and `definePrototype` composes each prototype's `create` from
-> them; a feature carries `augment`, `configure`, `shadow`, `handler`, `boot`, `validate` and
-> `hooks`. The
+> them; a feature carries `augment`, `configure`, `shadow`, `handler`, `boot`, `validate`, `blank`
+> and `hooks`. The
 > adapter speaks base/shadow/child/branch and `adapter.{collection,area}` is gone.
 >
 > Three things below have **not** landed, and two of them turned out to be wrong:
@@ -325,6 +325,8 @@ export type FeatureDefinition = {
   boot?: (config: any) => void | Promise<void>;
   /** What it requires of a config that uses it — asked only where `enabled`. */
   validate?: (config: any) => string[];
+  /** What it takes off, or adds to, the blank document the local API hands out. */
+  blank?: (doc: any, config: any) => any;
   /** Document hooks, by timing. Where they land in the pipeline is not its business. */
   hooks?: FeatureHooks;
 };

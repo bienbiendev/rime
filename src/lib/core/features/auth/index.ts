@@ -1,6 +1,7 @@
 import { augmentAuth, augmentStaff, authHooks } from '$rime/modules';
 import type { WithNormalizedAuth } from './module.js';
 import { defineFeature } from '../define.js';
+import { blankAuthDocument } from './blank.js';
 import { validateAuth } from './validate.js';
 
 /**
@@ -36,6 +37,9 @@ export const auth = defineFeature({
    * the rules stopped needing to say which collections they were about.
    */
   validate: validateAuth,
+
+  /** A password and its better-auth link are not the document's to hand out — see `blank.ts`. */
+  blank: blankAuthDocument,
 
   /**
    * Six timings' worth, listed in `hooks/module.server.ts` and reached through `$rime/modules`.

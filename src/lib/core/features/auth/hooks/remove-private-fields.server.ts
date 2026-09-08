@@ -1,5 +1,5 @@
 import { Hooks } from '$lib/core/pipeline/hooks.js';
-import { PRIVATE_FIELDS } from '../constant.server.js';
+import { PRIVATE_FIELDS } from '../private-fields.js';
 
 export const removePrivateFields = Hooks.beforeRead({
   name: 'removePrivateFields',

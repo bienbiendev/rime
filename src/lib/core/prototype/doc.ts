@@ -1,4 +1,3 @@
-import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
@@ -58,22 +57,22 @@ export const createBlankDocument = <
 
   const fields: GenericDoc['fields'] = config.fields.reduce(reduceFieldsToBlankDocument, {});
 
-  const empty = {
+  /**
+   * The fields, plus what every document has regardless of kind. Nothing feature-shaped: a
+   * feature adds to this through `FeatureDefinition.blank`, which the local API folds — see
+   * `prototype/api.server.ts`.
+   *
+   * An `isUploadConfig(config) && 'imageSizes' in config` branch used to seed `sizes: {}` here.
+   * It never once ran: `imageSizes` is a member of `UploadConfig`, so it lives at
+   * `config.upload.imageSizes` and never at `config.imageSizes` — every other reader in the repo
+   * uses the former. Removed rather than moved to `upload.blank`, because reviving a branch that
+   * has never executed is a behaviour change, not a relocation.
+   */
+  return {
     ...fields,
     _type: config.slug,
     _prototype: config.type
-  };
-
-  if (
-    config.type === 'collection' &&
-    isUploadConfig(config) &&
-    'imageSizes' in config &&
-    config.imageSizes
-  ) {
-    empty.sizes = {};
-  }
-
-  return empty as T;
+  } as T;
 };
 
 /**

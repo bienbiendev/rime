@@ -77,7 +77,7 @@ Full table with commits in `restructure-handoff.md`. The shape of it:
   `create` from them, so `prototype/*/config/` is gone and there is one config factory rather than
   four.
 - **Features** are a contract with `augment` (per prototype config), `configure` (whole config),
-  `shadow`, `handler`, `boot`, `validate` and `hooks`. Ten of them: `auth`, `panel`, `upload`, `nested`,
+  `shadow`, `handler`, `boot`, `validate`, `blank` and `hooks`. Ten of them: `auth`, `panel`, `upload`, `nested`,
   `url`, `versions`, `cors`, `metas`, `thumbnail`, `title`.
 - **The config chain names nothing.** Four lines — prototypes, features, pipelines, plugins — and
   no file in `core/config/` mentions a feature. Both layers refine the config's _type_ through
@@ -113,7 +113,7 @@ grep -rn "features/versions" src/lib/adapter-sqlite | wc -l                     
 Where the 72 kind-naming lines are: **32 in core**, **35 in the panel**, 4 in fields, and **1 in
 the adapter** (`transform.server.ts:59`, `configCtx.isCollection(slug)` — the last one). Core's
 concentrate in four files — `config/context.server.ts` 6, `build.server.ts` 4, `validate.server.ts`
-3, `types.ts` 3 — which is items 2 and 3 below. Two of core's are a prototype naming its own
+3, `types.ts` 3 — which is items 1 and 2 below. Two of core's are a prototype naming its own
 `configKey`, which is the whole point of `configKey` and not a hit to remove.
 
 Gates, on the `versions` fixture: `check` **0**, `eslint src/lib` **21**, `check:circular-deps`
@@ -126,24 +126,22 @@ verified pre-existing. See `probing.md` §1.
 
 Cheapest first. Each is independently useful and each has a document behind it.
 
-1. **Features contribute to `createBlankDocument`** — moves upload's `sizes` out of
-   `prototype/doc.ts`. Same shape as 2; `prototype/api.server.ts` already notes the gap.
-2. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
+1. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
    the registry** instead of listing the two by hand. `prototypeConfigs()` and `prototypeEntries()` exist;
    the schema generator is the worked example.
-3. **`Config`'s authoring surface derives its prototype members from the registry** — the
-   type-level half of 2, and what makes a third prototype cost only its own folder.
-4. **versions stage 2, runtime half** — `registerPrototype` still resolves the shadow from slug
+2. **`Config`'s authoring surface derives its prototype members from the registry** — the
+   type-level half of 1, and what makes a third prototype cost only its own folder.
+3. **versions stage 2, runtime half** — `registerPrototype` still resolves the shadow from slug
    suffixes. The declaration exists; boot order is why it is a separate step (codegen runs at step
    4, registration at step 6). Then stages 3–5: the read selector, the write plan, the remainder.
    (`decoupling-versions.md`)
-5. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
+4. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
    `structure-audit.md` §19.4's four steps; the other three are done.
-6. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and
+5. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and
    to contribute a member back. A contract change, not a relocation. Bigger than it looks.
-7. **A hook timing meaning "always"**, which lets versions carry its own `beforeUpdate` hooks and
+6. **A hook timing meaning "always"**, which lets versions carry its own `beforeUpdate` hooks and
    removes the last place a prototype names a feature.
-8. **The panel.** Largest and last. Read `coupling-audit.md` §5 first: the work is _core letting
+7. **The panel.** Largest and last. Read `coupling-audit.md` §5 first: the work is _core letting
    go of `src/lib/panel/`_ (19 import lines, 13 of them in `handlers/routes.server.ts`), not the
    panel letting go of core — and the end state still has a collection screen and an area screen.
 

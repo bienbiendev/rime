@@ -80,6 +80,19 @@ export const validateWithFeatures = (features: FeatureDefinition[], config: Dic)
   );
 
 /**
+ * The blank document, after every feature the config enables has shaped it.
+ *
+ * Folded in the prototype's feature order, like the augments — a feature that declares nothing
+ * passes it through.
+ */
+export const blankWithFeatures = (features: FeatureDefinition[], doc: Dic, config: Dic): Dic =>
+  features.reduce(
+    (current, feature) =>
+      feature.enabled(config) && feature.blank ? feature.blank(current, config) : current,
+    doc
+  );
+
+/**
  * The shadow a config's content lives in, or `undefined` when it lives on the config's own row.
  *
  * Folded over the features that extend the prototype, in their declared order, and the first one

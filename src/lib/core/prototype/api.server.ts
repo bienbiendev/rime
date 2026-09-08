@@ -1,9 +1,8 @@
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { PRIVATE_FIELDS } from '../features/auth/constant.server.js';
-import { isAuthConfig } from '../features/auth/util.js';
-import { FormFieldBuilder } from '../fields/builders/index.js';
 import type { BuiltPrototype, PrototypeApiContext, PrototypeDefinition } from './define.js';
+import type { GenericDoc } from './types.js';
+import { blankWithFeatures } from '../features/registry.js';
 import { createBlankDocument } from './doc.js';
 
 /**
@@ -51,7 +50,7 @@ export const buildPrototypeApi = <C extends BuiltPrototype>(args: BuildArgs<C>):
 const createPrototypeApiContext = <C extends BuiltPrototype>(
   args: BuildArgs<C> & { isSystemOperation: boolean }
 ): PrototypeApiContext<C> => {
-  const { config, event, defaultLocale, isSystemOperation } = args;
+  const { definition, config, event, defaultLocale, isSystemOperation } = args;
 
   return {
     config,
@@ -61,20 +60,19 @@ const createPrototypeApiContext = <C extends BuiltPrototype>(
 
     fallbackLocale: (locale?: string) => locale || event.locals.locale || defaultLocale,
 
-    blank: () => {
-      // FEATURE (auth): a password and its better-auth link are not the document's to hand out.
-      // Auth is a feature that augments a collection, so this moves onto that feature's
-      // augmentation of `blank` once features land — see docs/architecture-target.md.
-      if ('auth' in config && isAuthConfig(config)) {
-        const withoutPrivateFields = config.fields
-          .filter((f) => f instanceof FormFieldBuilder)
-          .filter((f) => !PRIVATE_FIELDS.includes(f.name));
-
-        return createBlankDocument({ ...config, fields: [...withoutPrivateFields] }, event);
-      }
-
-      return createBlankDocument(config, event);
-    },
+    /**
+     * A blank document of this config's shape, after the features it enables have shaped it.
+     *
+     * The auth case used to be written out here, behind an `isAuthConfig` test and a comment
+     * saying it belonged to the feature — it does now, through `FeatureDefinition.blank`, and
+     * nothing here names a feature or asks what a config declares.
+     */
+    blank: () =>
+      blankWithFeatures(
+        definition.features,
+        createBlankDocument(config, event),
+        config
+      ) as GenericDoc,
 
     cached: <T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T> => {
       if (!event.locals.cacheEnabled || isSystemOperation) return read();

@@ -1,14 +1,6 @@
 import type { Dic } from '$lib/util/types.js';
 import type { User } from './types.js';
-
-export const PRIVATE_FIELDS = [
-  'password',
-  'token',
-  'isSuperAdmin',
-  'apiKeyId',
-  'authUserId',
-  'isStaff'
-];
+import { PRIVATE_FIELDS } from './private-fields.js';
 
 export const BETTER_AUTH_ROLES = {
   /** Panel users admin */

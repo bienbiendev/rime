@@ -127,6 +127,18 @@ export type FeatureDefinition = {
   validate?: (config: any) => string[];
 
   /**
+   * What this feature takes off, or adds to, the blank document the local API hands out.
+   *
+   * Folded over the features a config enables, in the prototype's order, on the result of
+   * `createBlankDocument` — so a feature shapes the blank document without `prototype/doc.ts`
+   * knowing any feature exists. `auth` strips its private members with it.
+   *
+   * The API's `blank()` only: the blank `merge-with-blank` builds to seed a write is deliberately
+   * unfiltered, since a create has to null those members out rather than omit them.
+   */
+  blank?: (doc: any, config: any) => any;
+
+  /**
    * The feature's document hooks, by timing.
    *
    * The feature owns the implementations; it does not own where they run. Each hook declares
