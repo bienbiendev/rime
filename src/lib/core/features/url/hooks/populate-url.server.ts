@@ -117,9 +117,11 @@ export const populateURL = Hooks.beforeRead<'generic'>({
       if (url) {
         if (args.doc.url !== url) {
           args.event.locals.rime.adapter.updateDocumentUrl(url, {
+            slug: config.slug,
             id: args.doc.id,
-            versionId: args.doc.versionId,
-            config,
+            // `versionId` on a document is the row its content is on — undefined for a document
+            // whose content is on its own row.
+            contentId: args.doc.versionId,
             locale
           });
         }

@@ -85,7 +85,8 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
       await prototype.boot({
         config: prototypeConfig,
         adapter,
-        defaultLocale: configCtx.getDefaultLocale()
+        defaultLocale: configCtx.getDefaultLocale(),
+        features: prototype.features
       });
     }
   }

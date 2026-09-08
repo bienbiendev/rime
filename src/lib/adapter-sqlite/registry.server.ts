@@ -105,8 +105,7 @@ export const createPrototypeRegistry = (deps: {
         return deletePrototype({ db, tables }, { slug, id: args.id });
       },
 
-      ensureExists: (args) =>
-        ensurePrototypeExists({ db, tables }, { ...args, slug, config, shadow }),
+      ensureExists: (args) => ensurePrototypeExists({ db, tables }, { ...args, slug, shadow }),
 
       childrenIds: (args) => childrenIds({ db, tables }, { ...args, slug }),
 

@@ -2,6 +2,8 @@
 import type { AreaSlug, CollectionSlug, Config, PrototypeSlug } from '$lib/types.js';
 import { RimeError } from '../errors/index.js';
 import type { BuildConfig } from './build.server.js';
+import { shadowOf } from '../features/registry.js';
+import { prototypeEntries } from '../prototype/registry.js';
 
 /**
  * What `event.locals.rime.config` is.
@@ -53,6 +55,24 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
 
   const byPrototype = (name: string) =>
     allPrototypes.filter((prototype) => prototype.type === name);
+
+  /**
+   * Where each config's content lives, when a feature gives it a second table.
+   *
+   * Folded once, from the features that extend each prototype — the same question `boot` asks
+   * before handing the answer to `registerPrototype`, and the schema generator before building the
+   * table. This exists so that code holding a `ConfigContext` but no registry can ask it too: the
+   * adapter's transform and url writers both did `config.versions ? withVersionsSuffix(slug) : slug`,
+   * which is the database layer naming a feature and its table.
+   *
+   * A `Map` rather than a lookup per call: `transformDoc` runs on every document of every read.
+   */
+  const shadowSlugs = new Map<string, string>(
+    prototypeEntries(config as Config).flatMap((entry) => {
+      const shadow = shadowOf(entry.prototype.features, entry.config);
+      return shadow ? [[entry.config.slug, shadow.slug] as [string, string]] : [];
+    })
+  );
 
   /**
    * One config, named by prototype and slug.
@@ -134,6 +154,13 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
     },
 
     byPrototype,
+
+    /**
+     * The slug a config's content lives under, or `undefined` when it lives on the config's own
+     * row. `shadowSlugOf(slug) ?? slug` is "the table this config's content is in".
+     */
+    shadowSlugOf: (slug: string): PrototypeSlug | undefined =>
+      shadowSlugs.get(slug) as PrototypeSlug | undefined,
 
     /**
      * Gets one config by prototype name and slug

@@ -180,6 +180,13 @@ export type PrototypeBootArgs<C extends BuiltPrototype = BuiltPrototype> = {
   config: C;
   adapter: Adapter;
   defaultLocale?: string;
+  /**
+   * The features extending this prototype, for folding `seed` over a bootstrapped document.
+   *
+   * Handed down rather than read off the definition: `boot` is written inside the object literal
+   * that defines it, so it cannot name itself.
+   */
+  features: FeatureDefinition[];
 };
 
 /**

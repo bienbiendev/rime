@@ -117,6 +117,20 @@ export const writePlanWithFeatures = (
   );
 
 /**
+ * The bootstrapped first document, after every feature the config enables has shaped it.
+ *
+ * Folded like `blankWithFeatures`, over the same starting document, and separate from it for the
+ * reason `FeatureDefinition.seed` gives: one is where an author's create begins, the other is what
+ * `boot` writes for a prototype that must have a row before anybody asks.
+ */
+export const seedWithFeatures = (features: FeatureDefinition[], doc: Dic, config: Dic): Dic =>
+  features.reduce(
+    (current, feature) =>
+      feature.enabled(config) && feature.seed ? feature.seed(current, config) : current,
+    doc
+  );
+
+/**
  * The filter that says which content row a read means, from whichever feature owns the difference.
  *
  * First answer wins and `enabled` gates it, like `shadowOf` — and for the same reason: a config

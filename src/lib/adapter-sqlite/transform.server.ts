@@ -1,5 +1,4 @@
 import type { Config } from '$lib/core/config/types.js';
-import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type {
   AreaSlug,
   CollectionSlug,
@@ -48,8 +47,10 @@ export const transformerFacade = <const C extends Config>(args: {
     let doc = args.doc;
 
     const config = configCtx.getBySlug(slug);
-    const isVersioned = !!config.versions;
-    const tableName = isVersioned ? baseTableName(withVersionsSuffix(slug)) : baseTableName(slug);
+    // The table this document's content is in — its own, unless a feature gave it a shadow. Was
+    // `config.versions ? baseTableName(withVersionsSuffix(slug)) : …`, which is this module naming
+    // a feature and building its table name.
+    const tableName = baseTableName(configCtx.shadowSlugOf(slug) ?? slug);
     const tableNameRelationFields = buildTableName({ owner: tableName, child: { kind: 'rels' } });
     const tableNameLocales = buildTableName({ owner: tableName, branch: 'locales' });
 

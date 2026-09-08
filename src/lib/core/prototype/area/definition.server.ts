@@ -1,5 +1,6 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
+import { seedWithFeatures } from '$lib/core/features/registry.js';
 import { createBlankDocument } from '../doc.js';
 import { api, type AreaAccessor } from './api.server.js';
 import { area as base } from './definition.js';
@@ -27,7 +28,7 @@ export const area = definePrototype<BuiltArea, AreaAccessor>({
    */
   hooks: areaHooks,
 
-  boot: async ({ config, adapter, defaultLocale }) => {
+  boot: async ({ config, adapter, defaultLocale, features }) => {
     /**
      * No request event: boot has no request. `createBlankDocument` takes one only to pass to a
      * field's `defaultValue({ event })`, which already declares it optional — so a default that
@@ -37,7 +38,9 @@ export const area = definePrototype<BuiltArea, AreaAccessor>({
      * is a property of the config, not of its first reader.
      */
     await adapter.prototype(config.slug).ensureExists({
-      blank: createBlankDocument(config),
+      // Through `seed`, not `blank`: a feature that gives this prototype a shadow may need the
+      // first row to differ from what an author's create starts with. See FeatureDefinition.seed.
+      blank: seedWithFeatures(features, createBlankDocument(config), config),
       locale: defaultLocale
     });
   }

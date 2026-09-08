@@ -1,3 +1,4 @@
+import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { makeVersionsCollectionsAliases, versionsHooks } from '$rime/modules';
 import type { WithVersionsConfig } from './augment.js';
 import { defineFeature } from '../define.js';
@@ -56,6 +57,14 @@ export const versions = defineFeature({
    * `versionId` used to tell the adapter, said once here instead.
    */
   readQuery: versionsReadQuery,
+
+  /**
+   * A bootstrapped document's first version is the published one — otherwise the row exists and no
+   * default read can see it, since one narrows to `status = published`. The `status` field's own
+   * default is `draft`, which is right for every version made after this one.
+   */
+  seed: (doc, config) =>
+    config.versions?.draft ? { ...doc, status: VERSIONS_STATUS.PUBLISHED } : doc,
 
   /**
    * The `<slug>__versions` collection behind every versioned config, derived after `upload` has

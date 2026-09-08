@@ -1,4 +1,3 @@
-import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import { getSegments } from '$lib/core/features/upload/util/path.js';
@@ -559,7 +558,7 @@ export const existingIds = async (
  */
 export const ensurePrototypeExists = async (
   { db, tables }: Deps,
-  { slug, blank, locale, config, shadow }: EnsureExistsArgs
+  { slug, blank, locale, shadow }: EnsureExistsArgs
 ): Promise<void> => {
   const table = baseTableName(slug);
   const [existing] = await db.select({ id: tables[table].id }).from(tables[table]);
@@ -583,13 +582,6 @@ export const ensurePrototypeExists = async (
       locale,
       fillNotNull: true
     });
-
-    // A draft-enabled prototype's first version is published; otherwise nothing would be
-    // readable without `draft: true`.
-    // Still a `config.versions` read, and the last one on a write path: *whether* a shadow exists
-    // is declared, what its first row means is not. It goes when the insert takes a plan too —
-    // docs/decoupling-versions.md stage 4.
-    if (config.versions?.draft) mainData.status = VERSIONS_STATUS.PUBLISHED;
 
     await insertRowWithLocales(
       { db, tables },
@@ -655,9 +647,13 @@ type FindManyArgs = {
 type EnsureExistsArgs = {
   shadow?: ShadowDeclaration;
   slug: string;
+  /**
+   * The document to write. Already shaped by whatever the prototype's features say a bootstrapped
+   * first document carries — see `FeatureDefinition.seed`. This module writes it and asks nothing
+   * about what is in it.
+   */
   blank: Dic;
   locale?: string;
-  config: BuiltCollection | BuiltArea;
 };
 
 /**

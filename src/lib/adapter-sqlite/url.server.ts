@@ -1,115 +1,70 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import { logger } from '$lib/core/logger.server.js';
-import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { GetRegisterType } from '$lib/index.js';
-import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import { and, eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { GenericTables } from './types.server.js';
 import { baseTableName, tableName } from './naming.server.js';
 
 type Params = {
+  /** The document. */
   id: string;
-  versionId?: string;
-  config: BuiltArea | BuiltCollection;
+  /** The row its content is on, when that is not the base row. */
+  contentId?: string;
+  slug: string;
+  /** Where this prototype's content lives, when it is not its own row. */
+  shadowSlug?: string;
   locale?: string;
   db: LibSQLDatabase<GetRegisterType<'Schema'>>;
   tables: GenericTables;
 };
 
-const OPERATION = {
-  ROOT: 0,
-  LOCALE: 1,
-  VERSION: 2,
-  VERSION_LOCALE: 3
-};
-
+/**
+ * Writes a document's computed `url` onto the row that holds it.
+ *
+ * Four cases until this commit, decoded from `locale` and `config.versions` through an
+ * `OPERATION` enum — root, locale, version, version+locale — each rebuilding the versions
+ * feature's table name for itself. They are two independent questions and always were:
+ *
+ * - **which table** — the prototype's own, or its shadow when a feature gave it one
+ * - **which branch** — the table itself, or its `__$$locales` half when writing one locale
+ *
+ * So there is one lookup and one `if`. The caller says which row it means (`contentId`), the same
+ * way it does for `find` and `update`; nothing here asks a config what a version is.
+ */
 export async function updateDocumentUrl(url: string, params: Params) {
-  //
-  const { config, id, versionId, tables, db } = params;
-  const operationType = defineOperation(params.locale, params.config);
-  let operation;
+  const { slug, shadowSlug, id, tables, db, locale } = params;
 
-  switch (operationType) {
-    case OPERATION.ROOT: {
-      const table = tables[baseTableName(config.slug)];
-      operation = db.update(table).set({ url }).where(eq(table.id, id));
-      break;
-    }
+  // On a prototype with a shadow the url belongs to the content row, and only the caller knows
+  // which one this document is showing.
+  const contentId = shadowSlug ? params.contentId : id;
 
-    case OPERATION.LOCALE: {
-      const tableLocale = tables[tableName({ owner: baseTableName(config.slug), branch: 'locales' }) as keyof typeof tables];
-      operation = db
-        .update(tableLocale)
-        .set({ url })
-        .where(
-          and(
-            //
-            eq(tableLocale.ownerId, id),
-            eq(tableLocale.locale, params.locale)
-          )
-        );
-      break;
-    }
-
-    case OPERATION.VERSION: {
-      const tableVersions = tables[baseTableName(withVersionsSuffix(config.slug))];
-      operation = db
-        .update(tableVersions)
-        .set({ url })
-        .where(
-          and(
-            //
-            eq(tableVersions.ownerId, id),
-            eq(tableVersions.id, versionId)
-          )
-        );
-      break;
-    }
-
-    case OPERATION.VERSION_LOCALE: {
-      const tableVersionsLocales =
-        tables[tableName({ owner: baseTableName(withVersionsSuffix(config.slug)), branch: 'locales' }) as keyof typeof tables];
-      operation = db
-        .update(tableVersionsLocales)
-        .set({ url })
-        .where(
-          and(
-            //
-            eq(tableVersionsLocales.ownerId, versionId),
-            eq(tableVersionsLocales.locale, params.locale)
-          )
-        );
-      break;
-    }
-
-    default:
-      logger.warn(`can't define url update operation for ${config.slug}, ${id}`);
+  if (!contentId) {
+    logger.warn(`can't define url update operation for ${slug}, ${id}`);
+    return;
   }
 
-  if (operation) {
-    try {
-      operation.run();
-    } catch (err: any) {
-      throw new RimeError(
-        RimeError.OPERATION_ERROR,
-        `Error storing url for ${config.slug}, ${id}. ${err.message}`
-      );
-    }
+  const contentTable = baseTableName(shadowSlug ?? slug);
+
+  // The locales branch is addressed by its owner, the table itself by its own id. The `ownerId`
+  // half of the shadow case is redundant on a unique id and was in the original: it keeps a
+  // `contentId` belonging to another document from writing the wrong row.
+  const localesTable = tableName({ owner: contentTable, branch: 'locales' }) as keyof GenericTables;
+  const table = locale ? tables[localesTable] : tables[contentTable];
+  const where = locale
+    ? and(eq(table.ownerId, contentId), eq(table.locale, locale))
+    : shadowSlug
+      ? and(eq(table.ownerId, id), eq(table.id, contentId))
+      : eq(table.id, id);
+
+  const operation = db.update(table).set({ url }).where(where);
+
+  try {
+    operation.run();
+  } catch (err: any) {
+    throw new RimeError(
+      RimeError.OPERATION_ERROR,
+      `Error storing url for ${slug}, ${id}. ${err.message}`
+    );
   }
 }
-
-const defineOperation = (locale: Params['locale'], config: Params['config']) => {
-  if (!locale && !config.versions) {
-    return OPERATION.ROOT;
-  }
-  if (locale && !config.versions) {
-    return OPERATION.LOCALE;
-  }
-  if (!locale && !!config.versions) {
-    return OPERATION.VERSION;
-  }
-  if (!!locale && !!config.versions) {
-    return OPERATION.VERSION_LOCALE;
-  }
-};

@@ -140,6 +140,22 @@ export type FeatureDefinition = {
   blank?: (doc: any, config: any) => any;
 
   /**
+   * What this feature puts on a prototype's **bootstrapped** first document — the one `boot`
+   * writes when a singleton has no row at all yet.
+   *
+   * Distinct from `blank` above, and the difference is the whole point of having both: `blank` is
+   * what an author's create starts from, so it takes the field defaults; this is the exception to
+   * them. `versions` gives `status` a default of `draft`, which is right for every version an
+   * author makes and wrong for the very first one — a bootstrapped area whose only row is a draft
+   * reads as absent, since a default read narrows to the published one.
+   *
+   * That rule was `if (config.versions?.draft) mainData.status = PUBLISHED` inside the adapter's
+   * `ensurePrototypeExists`, which is the database layer applying a feature's rule to a row it is
+   * inserting. The last one of those.
+   */
+  seed?: (doc: any, config: any) => any;
+
+  /**
    * Where this feature sends the halves of an update.
    *
    * The default plan puts everything on the prototype's own row. A feature that gives a config a

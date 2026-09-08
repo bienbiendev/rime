@@ -50,7 +50,7 @@ export interface Adapter {
   /** Writes raw column values to one row. Used by the URL and upload features. */
   updateRecord(id: string, tableName: string, data: Dic): Promise<unknown>;
 
-  /** @decouple Writes a document's computed `url`, including onto its versions when it has them. */
+  /** Writes a document's computed `url` onto the row that holds it. */
   updateDocumentUrl(url: string, params: UpdateDocumentUrlParams): Promise<void>;
 }
 
@@ -181,10 +181,11 @@ export interface PrototypeHandle {
 }
 
 export type UpdateDocumentUrlParams = {
+  slug: string;
+  /** The document. */
   id: string;
-  versionId?: string;
-  /** Which of the four writes to make (root, locale, version, version+locale) reads off this. */
-  config: BuiltArea | BuiltCollection;
+  /** The row its content is on, when that is not the base row — as `find` and `update` mean it. */
+  contentId?: string;
   locale?: string;
 };
 

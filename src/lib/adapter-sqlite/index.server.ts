@@ -94,6 +94,9 @@ const createAdapter = async <const C extends Config>(args: {
     async updateDocumentUrl(url: string, params: UpdateDocumentUrlParams) {
       return await updateDocumentUrl(url, {
         ...params,
+        // Where this prototype's content lives — asked of the features that extend it, once, at
+        // config build. See ConfigContext.shadowSlugOf.
+        shadowSlug: configCtx.shadowSlugOf(params.slug),
         db,
         tables
       });
