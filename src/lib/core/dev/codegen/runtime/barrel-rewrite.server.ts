@@ -150,7 +150,9 @@ export function planBarrelRewrite({
         if (!t.isImportSpecifier(spec)) throw namespaceImportError(filePath);
         return t.isIdentifier(spec.imported) ? spec.imported.name : spec.imported.value;
       });
-      edits.push(edit(node, group(names, node.specifiers, filePath, index, side), 'import', pkgName));
+      edits.push(
+        edit(node, group(names, node.specifiers, filePath, index, side), 'import', pkgName)
+      );
       continue;
     }
 
@@ -161,7 +163,9 @@ export function planBarrelRewrite({
         if (!t.isExportSpecifier(spec)) throw namespaceImportError(filePath);
         return spec.local.name;
       });
-      edits.push(edit(node, group(names, node.specifiers, filePath, index, side), 'export', pkgName));
+      edits.push(
+        edit(node, group(names, node.specifiers, filePath, index, side), 'export', pkgName)
+      );
       continue;
     }
 
@@ -255,13 +259,14 @@ function namespaceImportError(filePath: string) {
 }
 
 /**
- * `import('$rime/modules')` has no static specifier list, so there is nothing to rewrite it
+ * Dynamic import() $rime/modules, has no static specifier list, so there is nothing to rewrite it
  * into — and serving it the whole barrel is the blind import this rewrite exists to remove.
  *
  * Caught by source scan rather than AST walk on purpose: a dynamic import can appear anywhere
  * in a module, at any depth, and this only needs to say "don't".
  */
 function assertNoDynamicImport(code: string, filePath: string) {
+  // A comments that includes import(...) $rime/modules would be a false positive
   if (/\bimport\s*\(\s*['"]\$rime\/modules['"]\s*\)/.test(code)) {
     throw new Error(
       `$rime/modules: ${filePath} imports the barrel dynamically. A dynamic import has no ` +
