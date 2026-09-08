@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { group } from '$lib/fields/group/index.js';
-import { text } from '$lib/fields/text/index.js';
 import { collection, create } from '$lib/core/prototype/collection/definition.js';
 import { createBlankDocument } from '$lib/core/prototype/doc.js';
+import { group } from '$lib/fields/group/index.js';
+import { text } from '$lib/fields/text/index.js';
+import { describe, expect, it } from 'vitest';
 import { blankWithFeatures } from '../registry.js';
-import { blankAuthDocument } from './blank/module.server.js';
+import { blankAuthDocument } from './blank.server.js';
 
 /**
  * What a feature takes off the blank document the local API hands out.

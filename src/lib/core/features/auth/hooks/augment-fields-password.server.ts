@@ -1,5 +1,15 @@
+import validate from '$lib/core/fields/validate.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
-import { passwordField } from '../fields.server.js';
+import { text } from '$lib/fields/text/index.js';
+
+const passwordField = text('password')
+  .required()
+  .access({
+    create: () => true,
+    read: () => false,
+    update: () => false
+  })
+  .validate((value) => validate.password(value));
 
 /**
  * Appends the `password` field to the config, so the validation steps that follow

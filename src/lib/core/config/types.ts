@@ -317,6 +317,11 @@ export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'up
   label: CollectionLabel;
   asTitle: string;
   asThumbnail: string | null;
+  auth?: CollectionAuthConfig;
+  versions?: Required<VersionsConfig>;
+  upload?: UploadConfig;
+  icon: Component<IconProps>;
+  access: WithRequired<Access, 'create' | 'read' | 'update' | 'delete'>;
   /**
    * How the panel's dashboard should list this collection, when a feature has an opinion.
    *
@@ -329,11 +334,6 @@ export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'up
    * this — a prototype knowing what a feature is, and the whole reason this member exists.
    */
   _dashboardLayout?: 'rows' | 'grid';
-  auth?: CollectionAuthConfig;
-  versions?: Required<VersionsConfig>;
-  upload?: UploadConfig;
-  icon: Component<IconProps>;
-  access: WithRequired<Access, 'create' | 'read' | 'update' | 'delete'>;
   _generateTypes?: false;
   _generateSchema?: false;
   _generateRoutes?: false;

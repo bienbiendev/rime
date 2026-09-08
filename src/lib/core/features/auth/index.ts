@@ -1,6 +1,6 @@
 import { augmentAuth, augmentStaff, authHooks, blankAuthDocument } from '$rime/modules';
-import type { WithNormalizedAuth } from './module.js';
 import { defineFeature } from '../define.js';
+import type { WithNormalizedAuth } from './augment.js';
 import { validateAuth } from './validate.js';
 
 /**
