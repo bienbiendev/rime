@@ -1,4 +1,4 @@
-import type { Adapter } from '$lib/core/adapter/types.js';
+import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/config/types.js';
 import { applyAugments } from '$lib/core/features/apply.js';
 import type { AnyHook, FeatureDefinition, HookTiming } from '$lib/core/features/define.js';

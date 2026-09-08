@@ -9,7 +9,7 @@
 > `contentOwnerSlug` in `features/versions/naming.ts`.
 >
 > **Adapter facade**: landed. The two prototype facades collapsed into one
-> `adapter-sqlite/prototype.server.ts`, and `Adapter` (`core/adapter/types.ts`) is a **declared
+> `adapter-sqlite/prototype.server.ts`, and `Adapter` (`core/adapter.ts`) is a **declared
 > interface** rather than `ReturnType<typeof …>`. Registration resolves a prototype's tables once
 > at boot instead of per request. What is _not_ done: `registerPrototype` still infers the shadow
 > from the slug suffix rather than from the feature's `shadow` declaration — the schema generator
@@ -17,7 +17,7 @@
 >
 > **Blocks, tree, relations**: not started. The `dataType: 'child'` idea below is untouched, and
 > `versionId` / `draft` are still parameters of the adapter contract (6 mentions in
-> `core/adapter/types.ts`) — that is `decoupling-versions.md` stages 3 and 4.
+> `core/adapter.ts`) — that is `decoupling-versions.md` stages 3 and 4.
 >
 > **Drizzle 1.0 relations**: not started.
 >

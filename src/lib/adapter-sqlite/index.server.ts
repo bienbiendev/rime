@@ -1,4 +1,4 @@
-import type { Adapter, UpdateDocumentUrlParams } from '$lib/core/adapter/types.js';
+import type { Adapter, UpdateDocumentUrlParams } from '$lib/core/adapter.js';
 import type { Config } from '$lib/core/config/types.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { GetRegisterType } from '$lib/index.js';

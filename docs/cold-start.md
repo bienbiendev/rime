@@ -62,7 +62,7 @@ The north star is `docs/architecture-target.md`.
 Full table with commits in `restructure-handoff.md`. The shape of it:
 
 - **The adapter** speaks base/shadow/child/branch; `adapter.{collection,area}` is gone (13 → 0
-  call sites). `Adapter` is a **declared interface** in `core/adapter/types.ts`, not
+  call sites). `Adapter` is a **declared interface** in `core/adapter.ts`, not
   `ReturnType<typeof …>`, so a second adapter has something to conform to. Its two prototype
   facades collapsed into one `prototype.server.ts`; `generate-schema` went 261 → 150 lines and one
   loop.

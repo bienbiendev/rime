@@ -1,4 +1,4 @@
-import type { Adapter } from '$lib/core/adapter/types.js';
+import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { DocType, GenericDoc, RawDoc } from '$lib/core/prototype/types.js';

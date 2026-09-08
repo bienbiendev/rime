@@ -8,7 +8,7 @@ Cold-start handoff. Assumes no context beyond `docs/architecture-target.md`'s th
 prototype and every adapter pays for them whether or not a config uses versions:
 
 ```ts
-// core/adapter/types.ts — what every prototype's handle must implement
+// core/adapter.ts — what every prototype's handle must implement
 find(args?: { id?: string; versionId?: string; select?: string[]; locale?: string; draft?: boolean }): Promise<RawDoc | undefined>;
 findMany(args?: { …; draft?: boolean }): Promise<RawDoc[]>;
 insert(args: { data; locale? }): Promise<{ id: string; versionId: string }>;
@@ -246,14 +246,14 @@ await persistRelational({
 ```
 
 The name is right inside the feature and wrong outside it. `core/pipeline/` and
-`core/adapter/types.ts` do not have a versions concept in them — they have a **content owner**
+`core/adapter.ts` do not have a versions concept in them — they have a **content owner**
 concept, and `versions` is the feature that changes which row that is. That is what Stage 1 renames,
 and it is a rename only: the same value, called what it is at each layer.
 
 ## What decoupled looks like
 
 ```ts
-// core/adapter/types.ts — after
+// core/adapter.ts — after
 find(args?: { id?: string; contentId?: string; select?: string[]; locale?: string }): Promise<RawDoc | undefined>;
 insert(args: { data; locale? }): Promise<{ id: string; contentId: string }>;
 update(args: { id?: string; contentId?: string; data; locale? }): Promise<{ id: string }>;
@@ -423,7 +423,7 @@ return { ...args, context: { ...args.context, contentOwnerId } };
 assertUpsertContext(context, where, ['configMap', 'originalConfigMap', 'originalDoc', 'versionOperation', 'contentOwnerId']);
 await persistRelational({ context, ownerId: context.contentOwnerId!, … });
 
-// core/adapter/types.ts
+// core/adapter.ts
 insert(args: { data; locale? }): Promise<{ id: string; contentId: string }>;
 ```
 

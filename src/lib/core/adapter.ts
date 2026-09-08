@@ -1,6 +1,8 @@
 // @decouple versions from adapter
-import type { VERSIONS_OPERATIONS } from '$lib/core/features/versions/strategy.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
+import type { User } from '$lib/core/features/auth/types.js';
+import type { VERSIONS_OPERATIONS } from '$lib/core/features/versions/strategy.js';
+import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type {
   CollectionSlug,
   GenericBlock,
@@ -9,8 +11,6 @@ import type {
   RawDoc,
   TreeBlock
 } from '$lib/core/prototype/types.js';
-import type { User } from '$lib/core/features/auth/types.js';
-import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { BeforeOperationRelation, Relation } from '$lib/fields/relation/index.js';
 import type { DeepPartial, Dic, WithOptional, WithRequired } from '$lib/util/types.js';
 
@@ -215,10 +215,7 @@ export interface AuthAdapter {
   betterAuthAdapter: unknown;
   hasAuthUser(): Promise<boolean>;
   getBetterAuthUserId(args: { slug: CollectionSlug; id: string }): Promise<string | null>;
-  getUserAttributes(args: {
-    authUserId: string;
-    slug: CollectionSlug;
-  }): Promise<User | undefined>;
+  getUserAttributes(args: { authUserId: string; slug: CollectionSlug }): Promise<User | undefined>;
   isSuperAdmin(userId: string): Promise<boolean>;
   setAuthUserRole(args: { authUserId: string; role: string }): Promise<void>;
   deleteAuthUser(args: { authUserId: string }): Promise<void>;

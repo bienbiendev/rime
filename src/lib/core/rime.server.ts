@@ -1,13 +1,13 @@
 import type { Config } from '$lib/core/config/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
+import type { Adapter } from './adapter.js';
 import { bootRime } from './boot.server.js';
 import type { ConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
-import { logger } from './logger.server.js';
-import { buildPrototypeApi } from './prototype/api.server.js';
-import type { Adapter } from './adapter/types.js';
 import type { RimeAuth } from './features/auth/better-auth/instance.server.js';
+import { logger } from './logger.server.js';
 import type { PrototypeAccessors } from './prototype/accessors.server.js';
+import { buildPrototypeApi } from './prototype/api.server.js';
 import { prototypes } from './prototype/registry.server.js';
 
 // Declared in core/config/context.server.ts, beside `createConfigContext`, and re-exported

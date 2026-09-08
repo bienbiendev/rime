@@ -33,7 +33,7 @@ Reading it in both directions gives two questions, and they have very different 
   const output = augmentPlugins(withPipelines);
   ```
 
-- **The adapter's vocabulary.** `core/adapter/types.ts` speaks base / shadow / child / branch. The
+- **The adapter's vocabulary.** `core/adapter.ts` speaks base / shadow / child / branch. The
   grep that started this (`adapter.collection.` / `adapter.area.`) is at 0.
 - **The document pipeline.** A prototype declares its own hooks and lists the features that extend
   it; `buildPipeline` merges the two and `resolvePipeline` orders them from declared marks. No
@@ -70,7 +70,7 @@ The deepest coupling, and the only one that cannot be moved by relocating files.
 calls it:
 
 ```
-core/adapter/types.ts                                versionId ×4, draft ×2, versionOperation ×1
+core/adapter.ts                                versionId ×4, draft ×2, versionOperation ×1
 core/pipeline/steps/get-original-document.server.ts  8 lines mentioning version/draft
 core/pipeline/run.server.ts                          5
 core/pipeline/types.ts             imports VersionOperation from features/versions/strategy.js
@@ -122,7 +122,7 @@ core/boot.server.ts            imports createAuthInstance directly (step 5)
 core/rime.server.ts            RimeAuth on the context
 core/prototype/types.ts        GenericAuthDoc, Docs['auth']
 core/config/validate.server.ts imports isAuthConfig
-adapter/types.ts               imports User from features/auth/types.js
+adapter.ts               imports User from features/auth/types.js
 ```
 
 `rime.auth` is public API, so the context member is not obviously wrong. `boot.server.ts` naming

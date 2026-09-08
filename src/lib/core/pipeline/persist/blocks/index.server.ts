@@ -1,4 +1,4 @@
-import type { Adapter } from '$lib/core/adapter/types.js';
+import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { contentOwnerSlug } from '$lib/core/features/versions/naming.js';

@@ -2136,7 +2136,7 @@ find src/lib -name '*.ts' -o -name '*.svelte' | wc -l     # 634
 ### 20.3 §19.4's four steps, judged
 
 > 1. Make `Adapter` an interface that `adapter-sqlite` implements. **Done.**
->    `core/adapter/types.ts` declares it, in core's vocabulary, with the rule written above it:
+>    `core/adapter.ts` declares it, in core's vocabulary, with the rule written above it:
 >    _every argument and return type is something core can name._ No tables, no columns, no
 >    drizzle. `SqliteAdapter` implements it.
 > 2. Name the capability from the eight coupled files. **Partly.** The naming algebra is
@@ -2169,7 +2169,7 @@ shadow collections), `shadow` (the table) and its `enabled` predicate; its hooks
 it asks `shadowOf(prototype.features, config)`.
 
 What it still does not describe is the **read and write plan**: `versionId`, `draft` and
-`versionOperation` are parameters of `core/adapter/types.ts` (6 mentions), and
+`versionOperation` are parameters of `core/adapter.ts` (6 mentions), and
 `core/pipeline/types.ts` imports `VersionOperation` from the feature. Stage 1 of
 `docs/decoupling-versions.md` replaced the _write_ half of that with `contentOwnerId` — a question
 the pipeline can ask without knowing the feature exists. Stages 3–4 are the rest.

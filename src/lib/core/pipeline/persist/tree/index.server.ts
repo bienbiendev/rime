@@ -1,4 +1,4 @@
-import type { Adapter } from '$lib/core/adapter/types.js';
+import type { Adapter } from '$lib/core/adapter.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { contentOwnerSlug } from '$lib/core/features/versions/naming.js';
 import type { TreeBlock } from '$lib/core/prototype/types.js';
@@ -54,9 +54,7 @@ export const saveTreeBlocks = async (args: {
   });
 
   if (treeDiff.toDelete.length) {
-    await Promise.all(
-      treeDiff.toDelete.map((block) => adapter.tree.delete({ parentSlug, block }))
-    );
+    await Promise.all(treeDiff.toDelete.map((block) => adapter.tree.delete({ parentSlug, block })));
   }
 
   if (treeDiff.toAdd.length) {
@@ -74,9 +72,7 @@ export const saveTreeBlocks = async (args: {
 
   if (treeDiff.toUpdate.length) {
     await Promise.all(
-      treeDiff.toUpdate.map((block) =>
-        adapter.tree.update({ parentSlug, block, locale: locale })
-      )
+      treeDiff.toUpdate.map((block) => adapter.tree.update({ parentSlug, block, locale: locale }))
     );
   }
 

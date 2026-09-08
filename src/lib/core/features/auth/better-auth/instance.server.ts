@@ -1,4 +1,4 @@
-import type { Adapter } from '$lib/core/adapter/types.js';
+import type { Adapter } from '$lib/core/adapter.js';
 import type { MailerActions } from '$lib/core/plugins/mailer/module.server.js';
 import type { Config } from '$lib/types.js';
 import { betterAuth } from 'better-auth';
