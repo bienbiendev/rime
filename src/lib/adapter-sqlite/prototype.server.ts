@@ -2,7 +2,7 @@ import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import { getSegments } from '$lib/core/features/upload/util/path.js';
-import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
+import type { ShadowDeclaration } from '$lib/core/features/define.js';
 import type { VersionOperation } from '$lib/core/features/versions/strategy.js';
 import { VersionOperations } from '$lib/core/features/versions/strategy.js';
 import { normalizeQuery } from '$lib/core/pipeline/query.js';
@@ -94,6 +94,8 @@ export const insertRowWithLocales = async (
 
 type ReadArgs = {
   slug: string;
+  /** Where the content lives, when not on the base row — see `RegisterPrototypeArgs.shadow`. */
+  shadow?: ShadowDeclaration;
   /** Restrict to one root row. Omitted for a singleton, which has exactly one. */
   id?: string;
   versionId?: string;
@@ -119,7 +121,7 @@ type ReadArgs = {
  */
 export const readPrototype = async (
   { db, tables }: Deps,
-  { slug, id, versionId, select, draft, locale, config }: ReadArgs
+  { slug, id, versionId, select, draft, locale, config, shadow }: ReadArgs
 ): Promise<Dic | undefined> => {
   const table = baseTableName(slug);
   const rootTable = tables[table];
@@ -128,7 +130,8 @@ export const readPrototype = async (
   const queryTable = (db.query as Record<string, any>)[table];
   const byId = id ? { where: eq(rootTable.id, id) } : {};
 
-  if (!config.versions) {
+  // No shadow: the content is on the base row and there is nothing to merge.
+  if (!shadow) {
     return queryTable.findFirst({
       columns: adapterUtil.columnsParams({ table: rootTable, select }),
       ...byId,
@@ -136,7 +139,7 @@ export const readPrototype = async (
     });
   }
 
-  const versionsTable = baseTableName(withVersionsSuffix(slug));
+  const versionsTable = baseTableName(shadow.slug);
 
   const doc = await queryTable.findFirst({
     columns: adapterUtil.columnsParams({ table: rootTable, select }),
@@ -165,6 +168,7 @@ export const readPrototype = async (
 
 type UpdateArgs = {
   slug: string;
+  shadow?: ShadowDeclaration;
   /** The root row to write. An area resolves its singleton's id before calling. */
   id: string;
   versionId?: string;
@@ -188,7 +192,7 @@ type Deps = {
  */
 export const updatePrototype = async (
   { db, tables }: Deps,
-  { slug, id, versionId, data, locale, versionOperation, config }: UpdateArgs
+  { slug, id, versionId, data, locale, versionOperation, config, shadow }: UpdateArgs
 ) => {
   const now = new Date();
 
@@ -235,7 +239,9 @@ export const updatePrototype = async (
       data: { updatedAt: now, ...rootData }
     });
 
-    const versionsTable = baseTableName(withVersionsSuffix(slug));
+    // `shadow!` — this branch is a version write, so registration answered with one. Stage 4
+    // moves the decision itself onto the declaration; today the operation still names it.
+    const versionsTable = baseTableName(shadow!.slug);
     const versionsLocalesTable = tableName({ owner: versionsTable, branch: 'locales' });
 
     const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(contentData, {
@@ -293,7 +299,7 @@ export const updatePrototype = async (
  */
 export const insertPrototype = async (
   { db, tables }: Deps,
-  { slug, data, locale, config }: InsertArgs
+  { slug, data, locale, config, shadow }: InsertArgs
 ): Promise<{ id: string; contentId: string }> => {
   const now = new Date();
 
@@ -328,7 +334,7 @@ export const insertPrototype = async (
     }
   }
 
-  if (config.versions) {
+  if (shadow) {
     // Hierarchy and upload roots live on the root row, never on a version.
     const { data: contentData, rootData } = adapterUtil.extractRootData(data, config);
 
@@ -338,7 +344,7 @@ export const insertPrototype = async (
       ...rootData
     });
 
-    const versionsTable = baseTableName(withVersionsSuffix(slug));
+    const versionsTable = baseTableName(shadow.slug);
 
     const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(contentData, {
       tables,
@@ -395,14 +401,15 @@ export const findManyPrototypes = async (
   { db, tables, configCtx }: DepsWithConfig,
   args: FindManyArgs
 ): Promise<RawDoc[]> => {
-  const { select, query: incomingQuery, sort, limit, offset, locale, draft, config } = args;
+  const { select, query: incomingQuery, sort, limit, offset, locale, draft, config, shadow } = args;
   // buildOrderByParam and buildWhereParam resolve fields against the config, so they take a
   // prototype slug. Registration guarantees this one is registered, hence is one.
   const slug = args.slug as PrototypeSlug;
   const table = baseTableName(slug);
   let query = incomingQuery ? normalizeQuery(incomingQuery) : undefined;
 
-  if (!config.versions) {
+  // No shadow: everything is on the base table, so this is one plain query.
+  if (!shadow) {
     const params: Dic = {
       with: buildWithParam({ table, select, tables, config, locale }) || undefined,
       orderBy: buildOrderByParam({ slug, locale, tables, config, by: sort }),
@@ -426,7 +433,11 @@ export const findManyPrototypes = async (
   // Two different things that stopped being the same string when the naming convention changed:
   // buildWithParam reads the schema, so it takes a table name; buildWhereParam resolves fields
   // against the config, so it takes a slug.
-  const versionsSlug = withVersionsSuffix(slug);
+  // `ShadowDeclaration.slug` is a plain string on purpose — a feature names a slug, and only the
+  // registry knows which slugs exist. The cast is the same one `slug` above takes, and sound for
+  // the same reason: a shadow is a registered prototype in its own right (the feature that
+  // declares one also derives its config), so `buildWhereParam` can resolve fields against it.
+  const versionsSlug = shadow.slug as PrototypeSlug;
   const versionsTable = baseTableName(versionsSlug);
   const withParam =
     buildWithParam({ table: versionsTable, select, tables, config, locale }) || undefined;
@@ -545,7 +556,7 @@ export const existingIds = async (
  */
 export const ensurePrototypeExists = async (
   { db, tables }: Deps,
-  { slug, blank, locale, config }: EnsureExistsArgs
+  { slug, blank, locale, config, shadow }: EnsureExistsArgs
 ): Promise<void> => {
   const table = baseTableName(slug);
   const [existing] = await db.select({ id: tables[table].id }).from(tables[table]);
@@ -554,13 +565,13 @@ export const ensurePrototypeExists = async (
 
   const now = new Date();
 
-  if (config.versions) {
+  if (shadow) {
     const docId = await adapterUtil.insertTableRecord(db, tables, table, {
       createdAt: now,
       updatedAt: now
     });
 
-    const versionsTable = baseTableName(withVersionsSuffix(slug));
+    const versionsTable = baseTableName(shadow.slug);
 
     const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(blank, {
       tables,
@@ -572,7 +583,9 @@ export const ensurePrototypeExists = async (
 
     // A draft-enabled prototype's first version is published; otherwise nothing would be
     // readable without `draft: true`.
-    if (config.versions.draft) mainData.status = VERSIONS_STATUS.PUBLISHED;
+    // Still a `config.versions` read: *whether* a shadow exists is declared, what its rows mean
+    // is not. `pick` on the declaration is stage 3.
+    if (config.versions?.draft) mainData.status = VERSIONS_STATUS.PUBLISHED;
 
     await insertRowWithLocales(
       { db, tables },
@@ -614,6 +627,7 @@ export const ensurePrototypeExists = async (
 };
 
 type InsertArgs = {
+  shadow?: ShadowDeclaration;
   slug: string;
   data: Dic;
   locale?: string;
@@ -621,6 +635,7 @@ type InsertArgs = {
 };
 
 type FindManyArgs = {
+  shadow?: ShadowDeclaration;
   slug: string;
   select?: string[];
   query?: OperationQuery;
@@ -633,6 +648,7 @@ type FindManyArgs = {
 };
 
 type EnsureExistsArgs = {
+  shadow?: ShadowDeclaration;
   slug: string;
   blank: Dic;
   locale?: string;

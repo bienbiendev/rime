@@ -3,7 +3,7 @@ import type { Config } from '$lib/core/config/types.js';
 import { createConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
 import { createAuthInstance } from './features/auth/better-auth/instance.server.js';
-import { bootFeatures } from './features/registry.js';
+import { bootFeatures, shadowOf } from './features/registry.js';
 // The **server** registry, and it has to be: the isomorphic one resolves to each definition's
 // client half, which carries `singleton` and `features` but no `boot` — so an area's row was
 // never created and every area read 404'd. `boot` is server-only by nature; the config factory is
@@ -69,7 +69,13 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   //    request first happened to reach it.
   for (const prototype of prototypes) {
     for (const prototypeConfig of configCtx.byPrototype(prototype.name)) {
-      adapter.registerPrototype({ config: prototypeConfig, singleton: prototype.singleton });
+      adapter.registerPrototype({
+        config: prototypeConfig,
+        singleton: prototype.singleton,
+        // Where this config's content lives, asked of the features that extend it rather than
+        // worked out by the adapter from the slug. `undefined` for a config nothing deviates.
+        shadow: shadowOf(prototype.features, prototypeConfig)
+      });
     }
   }
 

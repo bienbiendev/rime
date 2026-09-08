@@ -65,7 +65,8 @@ names `upload` again, something has gone backwards.
 | 1b       | `1d7d0c8e`            | **`FeatureDefinition.validate`**; auth's config rules leave `config/validate.server.ts`                                                    |
 | 1c       | _this commit_         | **`FeatureDefinition.blank`**; `prototype/doc.ts` and `api.server.ts` stop naming a feature                                                |
 | 1c′      | `1726af2b`            | `PRIVATE_FIELDS` stays in `.server`; `usersFields` splits so `password` never reaches a client build                                       |
-| 2        | _this commit_         | **`Config`'s prototype members come from the registry**; `core/config/types.ts` names no kind                                              |
+| 2        | `4f706a9c`            | **`Config`'s prototype members come from the registry**; `core/config/types.ts` names no kind                                              |
+| 15       | _this commit_         | **versions stage 2, runtime half**: registration carries the shadow declaration; the adapter stops appending a suffix                      |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 

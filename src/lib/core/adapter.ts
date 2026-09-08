@@ -2,6 +2,7 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type { User } from '$lib/core/features/auth/types.js';
 import type { VERSIONS_OPERATIONS } from '$lib/core/features/versions/strategy.js';
+import type { ShadowDeclaration } from '$lib/core/features/define.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type {
   CollectionSlug,
@@ -59,6 +60,18 @@ type VersionOperation = (typeof VERSIONS_OPERATIONS)[keyof typeof VERSIONS_OPERA
 export type RegisterPrototypeArgs = {
   config: BuiltArea | BuiltCollection;
   /**
+   * Where this config's content lives, when it does not live on the config's own row.
+   *
+   * Answered by whichever feature deviates it — `versions` today — and folded by `shadowOf` in
+   * `core/features/registry.ts`, so boot hands the adapter an answer rather than the adapter
+   * working one out. It used to derive the table by appending a suffix to the slug, which meant
+   * the database layer knew a feature's naming convention and could only ever know that one.
+   *
+   * `undefined` means the content is on the base row. The declaration carries a slug, not a table
+   * name: how a slug is spelled in the database stays the adapter's business.
+   */
+  shadow?: ShadowDeclaration;
+  /**
    * Whether this prototype holds exactly one document.
    *
    * The only shape fact the adapter needs, and it is about the *data* — how many rows — not
@@ -80,6 +93,8 @@ export interface PrototypeHandle {
   readonly slug: string;
   readonly singleton: boolean;
   readonly config: BuiltArea | BuiltCollection;
+  /** What it was registered with — see `RegisterPrototypeArgs.shadow`. */
+  readonly shadow?: ShadowDeclaration;
 
   /**
    * One document, merged with the version it should show. `undefined` when nothing matches —

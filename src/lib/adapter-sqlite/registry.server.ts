@@ -36,7 +36,7 @@ export const createPrototypeRegistry = (deps: {
   const { db, tables, configCtx } = deps;
   const handles = new Map<string, PrototypeHandle>();
 
-  const buildHandle = ({ config, singleton }: RegisterPrototypeArgs): PrototypeHandle => {
+  const buildHandle = ({ config, singleton, shadow }: RegisterPrototypeArgs): PrototypeHandle => {
     const { slug } = config;
 
     /**
@@ -69,6 +69,7 @@ export const createPrototypeRegistry = (deps: {
       slug,
       singleton,
       config,
+      shadow,
 
       find: (args = {}) =>
         readPrototype(
@@ -81,16 +82,17 @@ export const createPrototypeRegistry = (deps: {
             select: args.select,
             locale: args.locale,
             draft: args.draft,
-            config
+            config,
+            shadow
           }
         ) as Promise<RawDoc | undefined>,
 
       findMany: (args = {}) =>
-        findManyPrototypes({ db, tables, configCtx }, { ...args, slug, config }),
+        findManyPrototypes({ db, tables, configCtx }, { ...args, slug, config, shadow }),
 
       insert: (args) => {
         if (singleton) refuseOnSingleton('insert');
-        return insertPrototype({ db, tables }, { ...args, slug, config });
+        return insertPrototype({ db, tables }, { ...args, slug, config, shadow });
       },
 
       update: async (args) => {
@@ -104,7 +106,8 @@ export const createPrototypeRegistry = (deps: {
             data: args.data,
             locale: args.locale,
             versionOperation: args.versionOperation,
-            config
+            config,
+            shadow
           }
         );
       },
@@ -114,7 +117,8 @@ export const createPrototypeRegistry = (deps: {
         return deletePrototype({ db, tables }, { slug, id: args.id });
       },
 
-      ensureExists: (args) => ensurePrototypeExists({ db, tables }, { ...args, slug, config }),
+      ensureExists: (args) =>
+        ensurePrototypeExists({ db, tables }, { ...args, slug, config, shadow }),
 
       childrenIds: (args) => childrenIds({ db, tables }, { ...args, slug }),
 

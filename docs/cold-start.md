@@ -96,9 +96,11 @@ Full table with commits in `restructure-handoff.md`. The shape of it:
   document, no 500s and no console errors. It had not come up in this container before. The probe
   is `probing.md` §7 and it is the only gate that sees a server-only module reaching the client.
 - **versions**, partway: the pipeline asks for `contentOwnerId` rather than carrying a
-  `versionOperation` (stage 1), and the shadow table is now **declared by the feature that owns
-  it** rather than inferred from `config.versions` (stage 2, schema half). `generate-schema` no
-  longer imports the versions feature at all.
+  `versionOperation` (stage 1), and the shadow table is **declared by the feature that owns it**
+  rather than inferred from `config.versions` (stage 2, both halves) — the schema generator builds
+  it from the declaration and boot hands the same declaration to `registerPrototype`, so neither
+  `generate-schema` nor `adapter-sqlite/prototype.server.ts` imports the versions feature's naming
+  any more. What a version row _means_ is stages 3–5.
 
 ### Measured, right now
 
@@ -133,10 +135,9 @@ Cheapest first. Each is independently useful and each has a document behind it.
 1. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
    the registry** instead of listing the two by hand. `prototypeConfigs()` and `prototypeEntries()` exist;
    the schema generator is the worked example.
-2. **versions stage 2, runtime half** — `registerPrototype` still resolves the shadow from slug
-   suffixes. The declaration exists; boot order is why it is a separate step (codegen runs at step
-   4, registration at step 6). Then stages 3–5: the read selector, the write plan, the remainder.
-   (`decoupling-versions.md`)
+2. **versions stages 3–5** — the read selector, the write plan, the remainder. Stage 2 is done
+   both halves, so the adapter resolves _where_ content lives from the declaration; what a version
+   row _means_ (`config.versions.draft`) is what is left. (`decoupling-versions.md`)
 3. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
    `structure-audit.md` §19.4's four steps; the other three are done.
 4. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and
@@ -149,10 +150,12 @@ Cheapest first. Each is independently useful and each has a document behind it.
 
 Also open, not on the ladder:
 
-- **`bun run test` (375 e2e) has never run in this container.** No SMTP sink; Chromium 1194 vs
-  Playwright's 1234. `probing.md` is the substitute and says what it does not cover — though §7
-  now drives Chromium 1194 through `playwright-core` directly, which is enough to load the panel
-  and read its console, just not to run the suite.
+- **The e2e suite runs here, apart from the browser-driven tests.** Measured: `versions` 50/50,
+  `versions-multilang` 57/57, `fields` 72 passed with 22 failing only on
+  `Executable doesn't exist … chromium_headless_shell-1243` (this box has 1194), `basic` 85 passed
+  with 8 the same and 5 the documented api-key tests wanting an SMTP sink. So an API-shaped change
+  can be gated properly; a panel-shaped one still needs `probing.md` §7, which drives Chromium
+  1194 through `playwright-core` directly.
 - **No PR**, and `develop` has moved a long way ahead of the fork point (see §1). Whatever opens
   it will be a merge, not a fast-forward.
 

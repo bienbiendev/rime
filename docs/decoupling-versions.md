@@ -431,7 +431,7 @@ insert(args: { data; locale? }): Promise<{ id: string; contentId: string }>;
 id: the two reads in `get-original-document`, `params.versionId` itself, and `find`/`update`'s
 parameters, which are stages 3 and 4.
 
-### Stage 2 — the shadow is declared, not inferred (schema half ✅ done)
+### Stage 2 — the shadow is declared, not inferred ✅ done
 
 **Schema half: done.** A feature says what it deviates a config's content into, and the schema
 generator builds the second table from that rather than from a member it recognises by name:
@@ -482,8 +482,16 @@ half and Stage 3 need; declaring them now would repeat exactly the mistake this 
 `type: 'shadow'` sat there for three commits with nothing reading it. Add each when its reader
 exists.
 
-**Runtime half: not done.** `registerPrototype` still resolves a versioned prototype's tables from
-`config.versions`, and the boot order is why it is a separate step:
+**Runtime half: done.** `registerPrototype` takes the declaration and the handle carries it, so
+every operation resolves the second table from `shadow.slug` instead of appending a suffix to the
+config's own. `prototype.server.ts` no longer imports `versions/naming.js`, and the five
+`if (config.versions)` branches that meant "is there a second table" are `if (shadow)`.
+
+What stays is deliberate, and is stages 3–5: `config.versions.draft` still decides what a version
+row _means_ — the published-or-latest selector, the demotion on publish, the first version's
+status. `ShadowDeclaration` gains `pick` and `ownerColumn` when those readers exist, not before.
+
+The boot order is why it was a separate step from the schema half:
 
 ```
 3. bootFeatures → 4. codegen/generateSchema → 5. createAdapter → 6. registerPrototype
