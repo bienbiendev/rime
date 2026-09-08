@@ -54,6 +54,11 @@ export const create = <S extends string>(slug: S, config: AreaWithoutSlug<S>): B
   area.create(slug, config) as BuiltArea;
 
 declare module '$lib/core/prototype/register.js' {
+  /** The member an author writes its instances under. `Config` has no `areas` of its own. */
+  interface PrototypeMembers {
+    areas?: BuiltArea[];
+  }
+
   interface PrototypeConfigure<T> {
     area: T & { areas: BuiltArea[] };
   }

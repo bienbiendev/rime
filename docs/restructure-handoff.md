@@ -64,7 +64,8 @@ names `upload` again, something has gone backwards.
 | 1a       | `0b5e3076`            | **`augment-panel.ts` is gone**; `upload` states `_dashboardLayout` and the dashboard owns its own defaults                                 |
 | 1b       | `1d7d0c8e`            | **`FeatureDefinition.validate`**; auth's config rules leave `config/validate.server.ts`                                                    |
 | 1c       | _this commit_         | **`FeatureDefinition.blank`**; `prototype/doc.ts` and `api.server.ts` stop naming a feature                                                |
-| 1c′      | _this commit_         | `PRIVATE_FIELDS` stays in `.server`; `usersFields` splits so `password` never reaches a client build                                       |
+| 1c′      | `1726af2b`            | `PRIVATE_FIELDS` stays in `.server`; `usersFields` splits so `password` never reaches a client build                                       |
+| 2        | _this commit_         | **`Config`'s prototype members come from the registry**; `core/config/types.ts` names no kind                                              |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 
@@ -333,7 +334,7 @@ area and a collection before believing a green check.**
 
 ## What is left
 
-> **The ordered backlog lives in `docs/cold-start.md` §4** — seven items, cheapest first, each with
+> **The ordered backlog lives in `docs/cold-start.md` §4** — six items, cheapest first, each with
 > the document behind it. `docs/coupling-audit.md` is the measured version: every place core still
 > names a feature or a kind, with the greps to re-run. `docs/decoupling-versions.md` is the staged
 > plan for the deepest of them, with the code beside each step.

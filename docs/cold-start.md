@@ -79,8 +79,10 @@ Full table with commits in `restructure-handoff.md`. The shape of it:
 - **Features** are a contract with `augment` (per prototype config), `configure` (whole config),
   `shadow`, `handler`, `boot`, `validate`, `blank` and `hooks`. Ten of them: `auth`, `panel`, `upload`, `nested`,
   `url`, `versions`, `cors`, `metas`, `thumbnail`, `title`.
-- **The config chain names nothing.** Four lines — prototypes, features, pipelines, plugins — and
-  no file in `core/config/` mentions a feature. Both layers refine the config's _type_ through
+- **The config chain names nothing**, and neither does the config's _type_: `Config` extends
+  `PrototypeMembers` and `BuiltConfig` takes `Required<PrototypeMembers>`, so `collections` and
+  `areas` are declared beside the prototypes that own them. Four lines — prototypes, features,
+  pipelines, plugins — and no file in `core/config/` mentions a feature. Both layers refine the config's _type_ through
   declaration merging (`PrototypeConfigure`, `FeatureConfigAugment`, `FeatureConfigure`).
 - **Hooks declare `requires`/`provides`** and the order is resolved, not written. Both
   `pipeline.server.ts` files are deleted. Every pipeline is resolved **once**, at the end of the
@@ -112,8 +114,10 @@ grep -rn "features/versions" src/lib/adapter-sqlite | wc -l                     
 
 Where the 72 kind-naming lines are: **32 in core**, **35 in the panel**, 4 in fields, and **1 in
 the adapter** (`transform.server.ts:59`, `configCtx.isCollection(slug)` — the last one). Core's
-concentrate in four files — `config/context.server.ts` 6, `build.server.ts` 4, `validate.server.ts`
-3, `types.ts` 3 — which is items 1 and 2 below. Two of core's are a prototype naming its own
+concentrate in three files now — `config/context.server.ts` 6, `build.server.ts` 4,
+`validate.server.ts` 3 — which is item 1 below. `config/types.ts` is down to 0: `Config` and
+`BuiltConfig` take their prototype members from `PrototypeMembers`, which each prototype merges
+beside its own definition. Two of core's are a prototype naming its own
 `configKey`, which is the whole point of `configKey` and not a hit to remove.
 
 Gates, on the `versions` fixture: `check` **0**, `eslint src/lib` **21**, `check:circular-deps`
@@ -129,19 +133,17 @@ Cheapest first. Each is independently useful and each has a document behind it.
 1. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
    the registry** instead of listing the two by hand. `prototypeConfigs()` and `prototypeEntries()` exist;
    the schema generator is the worked example.
-2. **`Config`'s authoring surface derives its prototype members from the registry** — the
-   type-level half of 1, and what makes a third prototype cost only its own folder.
-3. **versions stage 2, runtime half** — `registerPrototype` still resolves the shadow from slug
+2. **versions stage 2, runtime half** — `registerPrototype` still resolves the shadow from slug
    suffixes. The declaration exists; boot order is why it is a separate step (codegen runs at step
    4, registration at step 6). Then stages 3–5: the read selector, the write plan, the remainder.
    (`decoupling-versions.md`)
-4. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
+3. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
    `structure-audit.md` §19.4's four steps; the other three are done.
-5. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and
+4. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and
    to contribute a member back. A contract change, not a relocation. Bigger than it looks.
-6. **A hook timing meaning "always"**, which lets versions carry its own `beforeUpdate` hooks and
+5. **A hook timing meaning "always"**, which lets versions carry its own `beforeUpdate` hooks and
    removes the last place a prototype names a feature.
-7. **The panel.** Largest and last. Read `coupling-audit.md` §5 first: the work is _core letting
+6. **The panel.** Largest and last. Read `coupling-audit.md` §5 first: the work is _core letting
    go of `src/lib/panel/`_ (19 import lines, 13 of them in `handlers/routes.server.ts`), not the
    panel letting go of core — and the end state still has a collection screen and an area screen.
 

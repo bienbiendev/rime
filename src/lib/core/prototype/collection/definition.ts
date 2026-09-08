@@ -99,6 +99,11 @@ export const create = <S extends string>(
   collection.create(slug, config) as BuiltCollection;
 
 declare module '$lib/core/prototype/register.js' {
+  /** The member an author writes its instances under. `Config` has no `collections` of its own. */
+  interface PrototypeMembers {
+    collections?: BuiltCollection[];
+  }
+
   interface PrototypeConfigure<T> {
     collection: T & { collections: BuiltCollection[] };
   }

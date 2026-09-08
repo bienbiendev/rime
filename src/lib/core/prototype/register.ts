@@ -1,4 +1,31 @@
 /**
+ * What a prototype adds to the config an **author writes** — its own list, under its own key.
+ *
+ * The authoring twin of `PrototypeConfigure` below: that one says what `configure` does to the
+ * built config's type, this one says the member exists in the first place. Each prototype merges
+ * its own, beside its own definition:
+ *
+ * ```ts
+ * declare module '$lib/core/prototype/register.js' {
+ *   interface PrototypeMembers {
+ *     collections?: BuiltCollection[];
+ *   }
+ * }
+ * ```
+ *
+ * `Config` extends this and `BuiltConfig` takes `Required<PrototypeMembers>` — the built config is
+ * the same members with the optionality gone, which is exactly what each prototype's `configure`
+ * guarantees at runtime by defaulting its list to `[]`. So `core/config/types.ts` names no kind,
+ * and a third prototype costs its own folder and nothing else.
+ *
+ * Declared **optional** here, because that is what an author may leave out. A prototype that
+ * merged a required member would make every config in the repo fail to type, which is the failure
+ * mode to expect if this is ever got wrong.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface PrototypeMembers {}
+
+/**
  * How a prototype declares what its whole-config `configure` does to the config's *type*.
  *
  * The same device as `features/register.js`. Each prototype merges its own transform in, beside

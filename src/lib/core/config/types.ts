@@ -1,4 +1,3 @@
-// @decouple area and collections types, somehow
 import type { Adapter } from '$lib/core/adapter.js';
 import type { PanelLanguage } from '$lib/core/i18n/index.js';
 import type { Hook, HookBeforeOperation } from '$lib/core/pipeline/types.js';
@@ -14,8 +13,16 @@ import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
 import type { Component } from 'svelte';
 import type { FieldBuilder } from '../fields/builders/index.js';
 import type { BaseDoc, DocType } from '../prototype/types.js';
+import type { PrototypeMembers } from '../prototype/register.js';
 
-export interface Config {
+/**
+ * What an author writes.
+ *
+ * The prototype lists — `collections`, `areas` — are **not** here: each prototype merges its own
+ * into `PrototypeMembers` beside its definition, and this extends that. Core owns the config's
+ * transversal members and knows nothing about which kinds exist.
+ */
+export interface Config extends PrototypeMembers {
   /** If config.siteUrl is defined, a preview button is added
 	on the panel dahsboard, pointing to this url  */
   siteUrl?: string;
@@ -36,10 +43,6 @@ export interface Config {
     // configure?: AuthConfigure;
     // configurePlugins?: (...args: any[]) => any;
   };
-  /** List of Collection  */
-  collections?: BuiltCollection[];
-  /** List of Area  */
-  areas?: BuiltArea[];
   /** List of locales for document i18£n
    * @example
    * localization: {
@@ -372,15 +375,18 @@ export type BuiltCollectionClient = BuiltCollection;
 // 	areas?: BuiltArea[];
 // };
 
-export type BuiltConfig = {
+/**
+ * What the config chain produced.
+ *
+ * `Required<PrototypeMembers>` is every prototype's list with the optionality gone — which is what
+ * each prototype's `configure` guarantees by defaulting its own to `[]`, so downstream reads
+ * `config.collections` without a guard. Same seam as `Config`, so neither names a kind.
+ */
+export type BuiltConfig = Required<PrototypeMembers> & {
   /** Database location relative to the root project ex: ./db/my-app.sqlite */
   $database: string;
   /** The database location */
   siteUrl?: string;
-  /** list of collections */
-  collections: BuiltCollection[];
-  /** list of areas */
-  areas: BuiltArea[];
   /** Define wich language the cms support */
   localization?: LocalizationConfig;
   icons: Record<string, any>;
@@ -411,16 +417,12 @@ export type BuiltConfig = {
 export type ServerConfigProps =
   '$adapter' | '$database' | '$trustedOrigins' | '$routes' | '$smtp' | '$custom' | '$auth';
 
-export type SanitizedConfigClient = Omit<Config, ServerConfigProps | 'collections' | 'areas'> & {
-  collections?: BuiltCollectionClient[];
-  areas?: BuiltAreaClient[];
-};
-export type BuiltConfigClient = Omit<
-  BuiltConfig,
-  ServerConfigProps | 'panel' | 'collections' | 'areas'
-> & {
-  collections: BuiltCollectionClient[];
-  areas: BuiltAreaClient[];
+// The prototype lists are not omitted and re-added: `BuiltCollectionClient` and `BuiltAreaClient`
+// are aliases of the server types (see the note on `BuiltAreaClient`), so re-stating them named
+// two kinds to say nothing. What the client build drops is the server-only config members.
+export type SanitizedConfigClient = Omit<Config, ServerConfigProps>;
+
+export type BuiltConfigClient = Omit<BuiltConfig, ServerConfigProps | 'panel'> & {
   icons: Dic<Component<IconProps>>;
   panel: {
     routes: Record<string, CustomPanelRoute>;
