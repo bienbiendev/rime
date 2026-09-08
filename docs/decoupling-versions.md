@@ -816,6 +816,46 @@ That move exposed a live bug worth remembering: the hook defaulted a missing pat
 the block gave `_path: null` and 26 `basic` failures against a baseline of 12. The guard is about
 the operation now, not about a key.
 
+#### And the contract itself: primitives, not questions
+
+Four members of `Adapter` were a feature's question with a method named after it, and one was
+dead:
+
+```
+childrenIds({ parentId })        nested — "what is parented to this"
+existingIds({ ids })             relation defaults — "which of these exist"
+updateDocumentUrl(url, params)   url — a four-way branch over locale × shadow
+updateRecord(id, tableName, …)   nobody, and it named a *table*
+```
+
+Two twins carry what is left. Both are flat — the prototype's own table, no content row joined, no
+document built, no hooks — and both take the query shape every other operation takes:
+
+```ts
+readWhere(args: { query: OperationQuery; sort?: string; limit?: number }): Promise<string[]>;
+updateWhere(args: { query: OperationQuery; data: Dic; locale?: string }): Promise<void>;
+```
+
+`readWhere`'s `sort` is a column on that table rather than `buildOrderByParam` — the document sort
+reaches through a shadow with correlated subqueries, so a versioned prototype ordering by
+`_position` (a base-row column) would fall back to `createdAt`.
+
+`updateWhere`'s `locale` is what lets `url` own its own write. A shadow is a registered prototype
+in its own right, so writing to it is the same call to a different handle, and which of the two
+tables a localized field lives in is `prepareSchemaData`'s business like every other write.
+`updateWhere` rather than `update` because a url is computed on read and must not move
+`updatedAt`.
+
+Two traps, both found by running rather than reasoning:
+
+- The localized half was first an **upsert**, which _inserts_ a locales row for a document that
+  has none — during a read. Three versions-multilang duplicate tests went red. It is an UPDATE,
+  never an upsert, which is what `updateDocumentUrl` also did.
+- **Neither write was covered.** `populateURL` computes the url on every read and puts it on the
+  document, so every `doc.url` assertion passes whether or not the value reached the database —
+  pointing the write at the base table of a versioned collection writes nothing and stayed green.
+  `_children` had no assertion at all. Both have one now, and each fails under its own probe.
+
 #### What the adapter still imports from core/features
 
 Two are the contract, not a feature: `ShadowDeclaration` and `shadowOf`. Two are real and are

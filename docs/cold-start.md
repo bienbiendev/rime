@@ -162,12 +162,20 @@ Cheapest first. Each is independently useful and each has a document behind it.
 1. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
    the registry** instead of listing the two by hand. `prototypeConfigs()` and `prototypeEntries()` exist;
    the schema generator is the worked example.
-2. **The adapter is decoupled.** `grep -rn "config\.versions\|features/versions" src/lib/adapter-sqlite`
+2. **The adapter is decoupled, and its surface is primitives.** `grep -rn "config\.versions\|features/versions" src/lib/adapter-sqlite`
    is empty, and `src/lib/adapter-sqlite` imports nothing from any individual feature — only
    `ShadowDeclaration` and `shadowOf`, which are the contract. What replaced the last of it:
    `ConfigContext.shadowSlugOf` (the transform and url writers), `contentId` on the url contract,
    `FeatureDefinition.seed` (a bootstrapped row's first version), and upload's `_path`
    normalisation moving into its own hook. (`decoupling-versions.md`)
+
+   The `Adapter` interface is `registerPrototype`, `prototype` and five facades — nothing loose.
+   Four members went in one pass: `childrenIds` (nested's question), `existingIds` (relation
+   defaults'), `updateDocumentUrl` (url's, a four-way branch over locale × shadow), and the dead
+   `updateRecord`, which named a _table_. What carries them is one pair of twins —
+   `readWhere({ query, sort?, limit? })` and `updateWhere({ query, data, locale? })`, both flat
+   over the prototype's own table — plus the fact that a shadow is a registered prototype, so
+   writing to it is the same call to a different handle.
 
    Two feature-shaped things remain in the adapter, both their own piece of work:
    `generate-schema/templates.server.ts`'s `withDirectoriesSuffix` — the unbuilt `type: 'child'`
