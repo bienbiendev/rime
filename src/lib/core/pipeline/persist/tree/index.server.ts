@@ -1,8 +1,6 @@
 import type { Adapter } from '$lib/core/adapter.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { contentOwnerSlug } from '$lib/core/features/versions/naming.js';
-import type { TreeBlock } from '$lib/core/prototype/types.js';
-import type { BuiltArea, BuiltCollection } from '$lib/types.js';
+import type { TreeBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
 import type { Dic, WithRequired } from '$lib/util/types.js';
 import type { OperationContext } from '../../types.js';
 import { defineTreeBlocksDiff } from './diff.server.js';
@@ -14,16 +12,15 @@ export const saveTreeBlocks = async (args: {
   data: Dic;
   incomingPaths: string[];
   adapter: Adapter;
-  config: BuiltArea | BuiltCollection;
+  /** Whose children these are — the shadow's slug when the prototype has one. Resolved by
+   *  `persistRelational` from what the prototype was registered with. */
+  ownerSlug: PrototypeSlug;
 }) => {
-  const { context, ownerId, data, incomingPaths, adapter, config } = args;
+  const { context, ownerId, data, incomingPaths, adapter, ownerSlug } = args;
   const { locale } = context.params;
   const { originalDoc: original, configMap, originalConfigMap } = context;
 
   if (!configMap || !ownerId) throw new RimeError(RimeError.OPERATION_ERROR, '@saveBlocks');
-
-  // Whose children these are: the versions shadow when versioned, the base otherwise.
-  const parentSlug = contentOwnerSlug(config);
 
   // Get incomings
   const incomingTreeBlocks = extractTreeBlocks({
@@ -54,14 +51,16 @@ export const saveTreeBlocks = async (args: {
   });
 
   if (treeDiff.toDelete.length) {
-    await Promise.all(treeDiff.toDelete.map((block) => adapter.tree.delete({ parentSlug, block })));
+    await Promise.all(
+      treeDiff.toDelete.map((block) => adapter.tree.delete({ parentSlug: ownerSlug, block }))
+    );
   }
 
   if (treeDiff.toAdd.length) {
     await Promise.all(
       treeDiff.toAdd.map((block) =>
         adapter.tree.create({
-          parentSlug,
+          parentSlug: ownerSlug,
           ownerId,
           block,
           locale: locale
@@ -72,7 +71,9 @@ export const saveTreeBlocks = async (args: {
 
   if (treeDiff.toUpdate.length) {
     await Promise.all(
-      treeDiff.toUpdate.map((block) => adapter.tree.update({ parentSlug, block, locale: locale }))
+      treeDiff.toUpdate.map((block) =>
+        adapter.tree.update({ parentSlug: ownerSlug, block, locale: locale })
+      )
     );
   }
 

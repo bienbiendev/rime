@@ -694,11 +694,41 @@ it generated. Worth doing, but a different argument from this one.
 
 ### Stage 5 — the remainder
 
-`core/constants.ts` (`VERSIONS_STATUS`), `core/pipeline/types.ts` importing `VersionOperation`,
-`core/dev/codegen/routes/common.server.ts`'s versions pages, and
-`core/pipeline/persist/{blocks,relations,tree}` importing `contentOwnerSlug`. Most fall out of
-Stages 2–4; whatever is left is the honest remainder and belongs in the audit rather than being
-forced.
+**`contentOwnerSlug` is gone** (`_this commit_`). It was a helper in `features/versions/naming.ts`
+answering "whose children are these" out of `config.versions` and the feature's own suffix, and
+`pipeline/persist/{blocks,tree,relations}` each imported it — three files in the pipeline importing
+a feature to name a table.
+
+Registration already answers it. `PrototypeHandle.shadow` is what the feature declared and the
+adapter was handed at boot (stage 2), so `persistRelational` resolves it once and passes it down:
+
+```ts
+// core/pipeline/run.server.ts
+const ownerSlug = (adapter.prototype(config.slug).shadow?.slug ?? config.slug) as PrototypeSlug;
+```
+
+The three writers take `ownerSlug` beside `ownerId` — the row and the table it is in — and **lose
+`config` from their signatures entirely**, since naming the table was the only thing they used it
+for. A second feature declaring a shadow works here with no change, which the suffix version could
+not do.
+
+Guarded: replacing the expression with `config.slug` fails 3 of the versions e2e tests.
+
+#### What is left
+
+Two imports of `features/versions/naming.js`, both about a _name_ rather than a decision:
+
+- `dev/codegen/types/templates.server.ts` — emits a `RegisterCollection` entry for each shadow, so
+  it needs the shadow's slug before registration exists. The schema generator has the same problem
+  and solves it with `shadowOf(entry.prototype.features, config)`; this can do the same.
+- `features/upload/disk/delete.server.ts` — **a feature importing another feature**, which is its
+  own smell. Two uses: `withVersionsSuffix(c.slug)` to scan the table that actually holds
+  `filename` (the handle answers that, and `rime` is in scope), and `hasVersionsSuffix(c.slug)` to
+  _skip_ collections that are somebody's shadow, which has no handle-shaped answer yet — a
+  registered prototype cannot currently say "I am a shadow of X". That is the interesting half.
+
+Plus `core/constants.ts` (`VERSIONS_STATUS`), which is a shared vocabulary rather than a leak, and
+the codegen'd versions panel pages.
 
 ### Settled on the way: how the adapter knows it has a shadow
 

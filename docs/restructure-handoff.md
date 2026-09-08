@@ -75,7 +75,8 @@ names `upload` again, something has gone backwards.
 | 20       | `9c66566a`            | **core owns the default content owner**; `handleNewVersion` moves onto the feature and its two missing marks get declared                                    |
 | 20d      | `dc6b2160`            | **`bun run rime:pipeline`** renders the resolved pipeline with marks and provenance into `docs/pipeline-map.md`, pinned by a spec                            |
 | 21       | `76f308a2`            | **`getOriginalDocument` stops decoding the versions enum**; core declares `ReadIntent`, the feature says what each intent selects                            |
-| 22       | _this commit_         | **`versionOperation` leaves core's vocabulary**; `defineVersionOperation` moves onto the feature and `version-operation` becomes a `FeatureHookMark`         |
+| 22       | `43757e1e`            | **`versionOperation` leaves core's vocabulary**; `defineVersionOperation` moves onto the feature and `version-operation` becomes a `FeatureHookMark`         |
+| 23       | _this commit_         | **`contentOwnerSlug` is gone**; `persistRelational` resolves the owning slug off `PrototypeHandle.shadow` and `pipeline/persist/*` drops `config` as well    |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 

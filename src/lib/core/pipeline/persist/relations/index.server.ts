@@ -1,7 +1,5 @@
 import type { Adapter } from '$lib/core/adapter.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import { contentOwnerSlug } from '$lib/core/features/versions/naming.js';
-import type { GenericBlock } from '$lib/core/prototype/types.js';
+import type { GenericBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { ConfigMap } from '../../config-map/types.js';
 import type { TreeBlocksDiff } from '../tree/diff.server.js';
@@ -22,18 +20,26 @@ export const saveRelations = async (args: {
   treeDiff: TreeBlocksDiff;
   adapter: Adapter;
   locale?: string;
-  config: BuiltArea | BuiltCollection;
+  /** Whose children these are — the shadow's slug when the prototype has one. Resolved by
+   *  `persistRelational` from what the prototype was registered with. */
+  ownerSlug: PrototypeSlug;
   ownerId: string;
 }) => {
-  const { configMap, incomingPaths, blocksDiff, treeDiff, adapter, locale, config, ownerId, data } =
-    args;
-
-  // Whose children these are: the versions shadow when versioned, the base otherwise.
-  const parentSlug = contentOwnerSlug(config);
+  const {
+    configMap,
+    incomingPaths,
+    blocksDiff,
+    treeDiff,
+    adapter,
+    locale,
+    ownerSlug,
+    ownerId,
+    data
+  } = args;
 
   /** Delete relations from deletedBlocks */
   await adapter.relations.deleteFromPaths({
-    parentSlug,
+    parentSlug: ownerSlug,
     ownerId,
     paths: blocksDiff.toDelete.map((block) => `${block.path}.${block.position}`),
     locale
@@ -41,7 +47,7 @@ export const saveRelations = async (args: {
 
   /** Delete relations from deletedTreeItems */
   await adapter.relations.deleteFromPaths({
-    parentSlug,
+    parentSlug: ownerSlug,
     ownerId,
     paths: treeDiff.toDelete.map((block) => `${block.path}.${block.position}`),
     locale
@@ -59,7 +65,7 @@ export const saveRelations = async (args: {
   // if not present in incoming paths don't keep it.
   const existingRelations = await adapter.relations
     .getAll({
-      parentSlug,
+      parentSlug: ownerSlug,
       ownerId,
       locale: locale
     })
@@ -79,21 +85,21 @@ export const saveRelations = async (args: {
 
   if (relationsDiff.toDelete.length) {
     await adapter.relations.delete({
-      parentSlug,
+      parentSlug: ownerSlug,
       relations: relationsDiff.toDelete
     });
   }
 
   if (relationsDiff.toUpdate.length) {
     await adapter.relations.update({
-      parentSlug,
+      parentSlug: ownerSlug,
       relations: relationsDiff.toUpdate
     });
   }
 
   if (relationsDiff.toAdd.length) {
     await adapter.relations.create({
-      parentSlug,
+      parentSlug: ownerSlug,
       ownerId,
       relations: relationsDiff.toAdd
     });

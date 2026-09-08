@@ -1,8 +1,6 @@
 import type { Adapter } from '$lib/core/adapter.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { contentOwnerSlug } from '$lib/core/features/versions/naming.js';
-import type { GenericBlock } from '$lib/core/prototype/types.js';
+import type { GenericBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { OperationContext } from '../../types.js';
 import { defineBlocksDiff } from './diff.server.js';
@@ -23,17 +21,16 @@ export const saveBlocks = async (args: {
   data: Dic;
   incomingPaths: string[];
   adapter: Adapter;
-  config: BuiltArea | BuiltCollection;
+  /** Whose children these are — the shadow's slug when the prototype has one. Resolved by
+   *  `persistRelational` from what the prototype was registered with. */
+  ownerSlug: PrototypeSlug;
 }) => {
   //
-  const { context, ownerId, data, incomingPaths, adapter, config } = args;
+  const { context, ownerId, data, incomingPaths, adapter, ownerSlug } = args;
   const { locale } = context.params;
   const { originalDoc: original, configMap, originalConfigMap } = context;
 
   if (!configMap || !ownerId) throw new RimeError(RimeError.OPERATION_ERROR, '@saveBlocks');
-
-  // Whose children these are: the versions shadow when versioned, the base otherwise.
-  const parentSlug = contentOwnerSlug(config);
 
   // Extract all blocks from the incoming form data using the current config
   const incomingBlocks = extractBlocks({
@@ -73,7 +70,7 @@ export const saveBlocks = async (args: {
   // Execute delete operations first to avoid potential conflicts
   if (blocksDiff.toDelete.length) {
     await Promise.all(
-      blocksDiff.toDelete.map((block) => adapter.blocks.delete({ parentSlug, block }))
+      blocksDiff.toDelete.map((block) => adapter.blocks.delete({ parentSlug: ownerSlug, block }))
     );
   }
 
@@ -82,7 +79,7 @@ export const saveBlocks = async (args: {
     await Promise.all(
       blocksDiff.toAdd.map((block) =>
         adapter.blocks.create({
-          parentSlug,
+          parentSlug: ownerSlug,
           ownerId,
           block,
           locale
@@ -95,7 +92,7 @@ export const saveBlocks = async (args: {
   if (blocksDiff.toUpdate.length) {
     await Promise.all(
       blocksDiff.toUpdate.map((block) =>
-        adapter.blocks.update({ parentSlug, block, locale: locale })
+        adapter.blocks.update({ parentSlug: ownerSlug, block, locale: locale })
       )
     );
   }

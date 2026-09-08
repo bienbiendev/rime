@@ -189,8 +189,9 @@ export type UpdateDocumentUrlParams = {
 };
 
 /**
- * `parentSlug` is the slug that owns the children — the versions shadow when the prototype is
- * versioned, the prototype itself when not. See `contentOwnerSlug`.
+ * `parentSlug` is the slug that owns the children — the prototype's shadow when it has one, the
+ * prototype itself when not. `pipeline/run.server.ts` resolves it off `PrototypeHandle.shadow`,
+ * which is what registration was handed; nothing works it out from a config member.
  */
 export interface BlocksAdapter {
   create(args: {
