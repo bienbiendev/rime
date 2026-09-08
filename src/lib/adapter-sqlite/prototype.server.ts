@@ -251,15 +251,6 @@ export const updatePrototype = async (
       locale
     });
 
-    // Publishing demotes this document's other versions to draft first, so exactly one is
-    // published at a time.
-    if (config.versions && config.versions.draft && mainData.status === VERSIONS_STATUS.PUBLISHED) {
-      await db
-        .update(tables[versionsTable])
-        .set({ status: VERSIONS_STATUS.DRAFT })
-        .where(eq(tables[versionsTable].ownerId, id));
-    }
-
     await adapterUtil.updateTableRecord(db, tables, versionsTable, {
       recordId: versionId,
       data: { ...mainData, updatedAt: now }
@@ -289,6 +280,28 @@ export const updatePrototype = async (
   }
 
   throw new RimeError(RimeError.OPERATION_ERROR, 'Unhandled version operation');
+};
+
+/**
+ * Sets columns on every row of this prototype's own table that `query` matches.
+ *
+ * A primitive: a table, a filter, a patch. It writes exactly the columns it is given — no
+ * `updatedAt`, no locales, no children — because the callers that want a bulk column flip want the
+ * rows left otherwise alone. `versions` demotes a document's other versions with it, and that
+ * demotion depends on `updatedAt` *not* moving: pruning orders by it, so touching it here would
+ * silently re-order which versions survive.
+ *
+ * It goes through `buildWhereParam`, so the filter is the same REST-shaped query every other
+ * operation takes rather than a second dialect.
+ */
+export const updateWherePrototype = async (
+  { db, tables, configCtx }: DepsWithConfig,
+  { slug, query, data }: { slug: PrototypeSlug; query: OperationQuery; data: Dic }
+): Promise<void> => {
+  const table = baseTableName(slug);
+  const where = buildWhereParam({ query: normalizeQuery(query), slug, db, tables, configCtx });
+
+  await db.update(tables[table]).set(data).where(where);
 };
 
 /**

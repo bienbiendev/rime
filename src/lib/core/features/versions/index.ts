@@ -2,16 +2,19 @@ import { makeVersionsCollectionsAliases } from '$rime/modules';
 import type { WithVersionsConfig } from './augment.js';
 import { defineFeature } from '../define.js';
 import { augmentVersions } from './augment.js';
+import { demoteOtherVersions } from './hooks/demote-other-versions.js';
 import { withVersionsSuffix } from './naming.js';
 
 /**
  * Keeps a document's history in a shadow table, and lets one version be the published one.
  *
- * **Carries its augment, its shadow and its derived collections, but not its hooks**: its
- * `beforeUpdate` hooks run for *every* config, versioned or not — `defineVersionOperation`
- * populates `context.versionOperation`, which `assertUpsertContext` requires on every update.
- * Gating them behind `enabled` would break updates on non-versioned configs, so the prototypes
- * list them until there is a timing that means "always".
+ * **Carries only the hooks that a non-versioned config has no use for.** `defineVersionOperation`
+ * and `handleNewVersion` run for *every* config, versioned or not — the first populates
+ * `context.versionOperation` and the second `context.contentOwnerId`, both of which
+ * `assertUpsertContext` requires on every update. `buildPipeline` gates a feature's hooks behind
+ * `enabled`, so those two stay listed by the prototypes until there is a timing that means
+ * "always". `demoteOtherVersions` is not one of them: a config with no drafts has nothing to
+ * demote, so `enabled` is exactly the right gate for it.
  *
  * The augment is isomorphic — it normalises `versions` and adds `status` — so it needs no
  * `$rime/modules` pair.
@@ -32,6 +35,9 @@ export const versions = defineFeature({
    * know which row a write of content belongs on.
    */
   shadow: (config) => ({ slug: withVersionsSuffix(config.slug) }),
+
+  /** See the note above for why this is the only hook the feature carries. */
+  hooks: { beforeUpdate: [demoteOtherVersions] },
 
   /**
    * The `<slug>__versions` collection behind every versioned config, derived after `upload` has

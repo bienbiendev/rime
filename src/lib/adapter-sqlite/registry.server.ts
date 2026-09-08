@@ -12,7 +12,8 @@ import {
   findManyPrototypes,
   insertPrototype,
   readPrototype,
-  updatePrototype
+  updatePrototype,
+  updateWherePrototype
 } from './prototype.server.js';
 
 /**
@@ -111,6 +112,8 @@ export const createPrototypeRegistry = (deps: {
           }
         );
       },
+
+      updateWhere: (args) => updateWherePrototype({ db, tables, configCtx }, { ...args, slug }),
 
       delete: (args) => {
         if (singleton) refuseOnSingleton('delete');

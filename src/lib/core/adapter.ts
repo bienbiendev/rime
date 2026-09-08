@@ -142,6 +142,16 @@ export interface PrototypeHandle {
     locale?: string;
   }): Promise<{ id: string }>;
 
+  /**
+   * Sets columns on every row this prototype owns that `query` matches.
+   *
+   * The bulk half of `update`: no pipeline, no locales, no children, and it writes exactly the
+   * columns given — `updatedAt` included only if the caller passes it. For a filter that names
+   * many rows and a patch that names one column, which `update` cannot express without a read
+   * and a write per row.
+   */
+  updateWhere(args: { query: OperationQuery; data: Dic }): Promise<void>;
+
   /** Throws on a singleton: removing the only document leaves nothing to read. */
   delete(args: { id: string }): Promise<string | undefined>;
 
