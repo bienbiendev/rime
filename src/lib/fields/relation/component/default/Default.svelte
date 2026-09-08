@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import { t__ } from '$lib/core/i18n/index.js';
+  import { createBlankDocument } from '$lib/core/prototype/doc.js';
   import type { GenericDoc } from '$lib/core/prototype/types.js';
   import Document from '$lib/panel/components/sections/document/Document.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
@@ -10,7 +12,6 @@
   import { dataError } from '$lib/panel/util/dataError.js';
   import { dataFocused } from '$lib/panel/util/dataFocused.js';
   import { useSortable } from '$lib/panel/util/Sortable.js';
-  import { createBlankDocument } from '$lib/core/prototype/doc.js';
   import type { RelationComponentProps, RelationFieldItem } from '../types.js';
 
   const {
@@ -83,7 +84,7 @@
     >
       {#each selectedItems as item (item.documentId)}
         <Tag onRemove={() => removeValue(item.documentId)} {readOnly}>
-          <a href={item.editUrl}>{item.title}</a>
+          <a href={resolve(item.editUrl)}>{item.title}</a>
         </Tag>
       {/each}
 
