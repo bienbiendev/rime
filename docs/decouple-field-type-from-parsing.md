@@ -1,6 +1,19 @@
 # Decouple Fields type from parsing logic
 
-Currently fieldbuilder instance type is the way for parser to determine actions.
+Currently fieldbuilder instance type is the way for parser to determine actions, ex :
+
+```ts
+if (fieldConfig instanceof RelationFieldBuilder) {
+  // do something
+} else if (fieldConfig instanceof BlocksBuilder) {
+  // do something else
+}
+```
+
+The idea is to provide fields a get nodes that points the list of fields.
+With this coupled with get fields, the parser can iterate over the fields and build the path without knowing the field type.
+
+Example problematic fields and their respective data structure :
 
 ```ts
 // tabs
@@ -93,15 +106,11 @@ export type GroupField = {
 
 Ideas :
 
-- add a get iterable on the builder when no direct fields is present.
-- a path contribution function
-- a value getter on real data
+- add a get nodes on the builder when no direct fields is present.
+- a path contribution function, hard to say how this could be implemented.
+- a value getter on real data ?
 
-Or
-
-- a FieldsCollection class that help parsing
-
-Rewrite of findThumbnailField easier
+Ex rewrite of findThumbnailField easiest :
 
 ```ts
 export function findThumbnailField(
@@ -135,7 +144,7 @@ export function findThumbnailField(
 }
 ```
 
-Rewrite of buildTreeblockTypes: do not rewrite it move this into the tree field
+Rewrite of buildTreeblockTypes: not been rewrote, all has been moved into each field type generation.
 
 > IMPORTANT type generation should be handled by the field itself with depupe comments
 > Then add a dedupe function to the whole type file.
@@ -154,3 +163,13 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
   }
 }
 ```
+
+## How to proceed :
+
+- list all place where a field type conditional is used in the codebase.
+- in each place status if a get.nodes would be enough to replace the conditional.
+- in each place tell how path a created on the fly and if a buildPath function would be enough to replace the conditional.
+- create a precise plan to decouple fields type from parsers.
+
+For the plan creation, use a lot of code blocks examples to illustrate the idea and the solution. For path handling, nodes handling,...
+One of a hard place to consider is the config-map building.
