@@ -1,22 +1,31 @@
 import { logger } from '$lib/core/logger.server.js';
-import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import type { PrototypeSlug } from '$lib/core/prototype/types.js';
-import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import { asc, desc, getTableColumns, sql } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import { pathToDatabaseColumn } from './util.server.js';
-import { baseTableName, tableName } from './naming.server.js';
+import { baseTableName, tableName, type TableName } from './naming.server.js';
 
 type Args = {
   slug: PrototypeSlug;
   locale?: string;
-  config: BuiltArea | BuiltCollection;
   by?: string;
   tables: any;
+  /**
+   * The table this prototype's content lives in, when it is not the base row — resolved by the
+   * caller from the shadow it was registered with.
+   *
+   * This used to be `!!config.versions`, and the shadow's name was rebuilt here by calling the
+   * versions feature's `withVersionsSuffix`. Two things wrong with that: the adapter named a
+   * feature, and it asked a config a question the schema already answers. The question the sort
+   * builder actually has is "are this prototype's sortable columns on the base row or somewhere
+   * else", which is about tables, so it is asked of `tables`.
+   */
+  shadow?: TableName;
 };
 
-export const buildOrderByParam = ({ slug, locale, tables, config, by }: Args) => {
-  const hasVersions = !!config.versions;
+export const buildOrderByParam = ({ slug, locale, tables, by, shadow }: Args) => {
+  // Presence in the schema, not a config member: a declared shadow with no table is not one.
+  const hasShadow = !!shadow && shadow in tables;
 
   const getOrderFunc = (str?: string) => {
     if (typeof str !== 'string') return asc;
@@ -45,8 +54,8 @@ export const buildOrderByParam = ({ slug, locale, tables, config, by }: Args) =>
   const orderFunc = getOrderFunc(by);
   const columnStr = by.replace(/^-/, '');
 
-  // For non-versioned collections
-  if (!hasVersions) {
+  // No shadow: every sortable column is on the base table.
+  if (!hasShadow) {
     const rootTableColumns = Object.keys(getTableColumns(rootTable));
 
     // Check if the column exists in the root table
@@ -75,52 +84,52 @@ export const buildOrderByParam = ({ slug, locale, tables, config, by }: Args) =>
       }
     }
   } else {
-    const versionTableName = baseTableName(withVersionsSuffix(slug));
-    const versionsTable = tables[versionTableName];
-    const versionsTableColumns = Object.keys(getTableColumns(versionsTable));
+    const shadowTableName = shadow!;
+    const shadowTable = tables[shadowTableName];
+    const shadowTableColumns = Object.keys(getTableColumns(shadowTable));
 
-    // Check if the column exists in the versions table and is not a system field
+    // Check if the column exists in the shadow table and is not a system field
     if (
-      versionsTableColumns.includes(columnStr) &&
+      shadowTableColumns.includes(columnStr) &&
       columnStr !== 'createdAt' &&
       columnStr !== 'updatedAt'
     ) {
-      const { name: sqlVersionsTableName } = getTableConfig(versionsTable);
+      const { name: sqlShadowTableName } = getTableConfig(shadowTable);
       const { name: sqlRootTableName } = getTableConfig(rootTable);
 
-      // Use a subquery to get the value from the latest version for ordering
+      // Use a subquery to get the value from the newest content row for ordering
       return [
         orderFunc(
           sql.raw(
-            `(SELECT DISTINCT ${sqlVersionsTableName}."${columnStr}" FROM ${sqlVersionsTableName} WHERE ${sqlVersionsTableName}."owner_id" = ${sqlRootTableName}."id" ORDER BY ${sqlVersionsTableName}."updated_at" DESC LIMIT 1)`
+            `(SELECT DISTINCT ${sqlShadowTableName}."${columnStr}" FROM ${sqlShadowTableName} WHERE ${sqlShadowTableName}."owner_id" = ${sqlRootTableName}."id" ORDER BY ${sqlShadowTableName}."updated_at" DESC LIMIT 1)`
           )
         )
       ];
     }
 
-    // Check if it's a localized field in a versioned collection
+    // Check if it's a localized field on the shadow
     if (locale) {
-      const versionsLocaleTableName = tableName({ owner: versionTableName, branch: 'locales' }) as keyof typeof tables;
-      if (versionsLocaleTableName in tables) {
-        const localeTable = tables[versionsLocaleTableName];
+      const shadowLocaleTableName = tableName({ owner: shadowTableName, branch: 'locales' }) as keyof typeof tables;
+      if (shadowLocaleTableName in tables) {
+        const localeTable = tables[shadowLocaleTableName];
         const localizedColumns = getTableColumns(localeTable);
 
         if (Object.keys(localizedColumns).includes(columnStr)) {
           const { name: sqlLocaleTableName } = getTableConfig(localeTable);
-          const { name: sqlVersionsTableName } = getTableConfig(versionsTable);
+          const { name: sqlShadowTableName } = getTableConfig(shadowTable);
           const { name: sqlRootTableName } = getTableConfig(rootTable);
 
-          // Nested subquery: first get the latest version, then get the localized value
+          // Nested subquery: first get the newest content row, then get the localized value
           return [
             orderFunc(
               sql.raw(
                 `(SELECT ${sqlLocaleTableName}."${localizedColumns[columnStr].name}"
 								  FROM ${sqlLocaleTableName}
 								  WHERE ${sqlLocaleTableName}."owner_id" IN
-								    (SELECT ${sqlVersionsTableName}."id"
-									 FROM ${sqlVersionsTableName}
-									 WHERE ${sqlVersionsTableName}."owner_id" = ${sqlRootTableName}."id"
-									 ORDER BY ${sqlVersionsTableName}."updated_at" DESC LIMIT 1)
+								    (SELECT ${sqlShadowTableName}."id"
+									 FROM ${sqlShadowTableName}
+									 WHERE ${sqlShadowTableName}."owner_id" = ${sqlRootTableName}."id"
+									 ORDER BY ${sqlShadowTableName}."updated_at" DESC LIMIT 1)
 								  AND ${sqlLocaleTableName}."locale" = '${locale}'
 								  LIMIT 1)`
               )

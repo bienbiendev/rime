@@ -1,5 +1,4 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import { hasVersionsSuffix, withoutVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger.server.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
@@ -19,12 +18,35 @@ type BuildWhereArgs = {
   slug: PrototypeSlug;
   locale?: string;
   db: LibSQLDatabase<GetRegisterType<'Schema'>>;
-  draft?: boolean;
   tables: GetRegisterType<'Tables'>;
   configCtx: ConfigContext;
+  /**
+   * The prototype `slug` is the shadow of, when it is one.
+   *
+   * Two conditions are resolved differently against a shadow: `id` means the base row rather than
+   * the content row, and the hierarchy columns (`_parent`, `_position`, `_path`) live on the base
+   * table and have to be reached through it.
+   *
+   * This used to be `hasVersionsSuffix(slug)` — the adapter recognising a shadow by matching the
+   * versions feature's own suffix, which meant a second feature declaring a shadow would silently
+   * get neither behaviour. The caller knows: it read the shadow off registration to pick this slug
+   * in the first place, so it says so rather than leaving the where builder to infer it from a
+   * naming convention it does not own.
+   */
+  base?: PrototypeSlug;
 };
 
-export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: BuildWhereArgs) => {
+export const buildWhereParam = ({
+  query,
+  slug,
+  db,
+  locale,
+  tables,
+  configCtx,
+  base
+}: BuildWhereArgs) => {
+  /** `slug` names a content table standing in for `base`, not a prototype's own rows. */
+  const isShadow = !!base;
   // Helper to get table by key with correct typing
   function getTable<T>(key: string) {
     return tables[key as keyof typeof tables] as T extends any ? GenericTable : T;
@@ -69,7 +91,7 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
       return subConditions.length ? or(...subConditions) : false;
     }
 
-    conditionObject = normalizedForVersion(conditionObject, slug);
+    conditionObject = normalizedForShadow(conditionObject, isShadow);
 
     const {
       // Get condition members
@@ -81,12 +103,12 @@ export const buildWhereParam = ({ query, slug, db, locale, tables, configCtx }: 
       value
     } = getConditionMembers(conditionObject);
 
-    // Handle hierarchy fields (_parent, _position) in versioned collections
-    if (shouldHandleVersionedHierarchyFields(slug, sqlColumn)) {
-      // Ask the versions feature for the root name rather than restating its suffix — this
-      // file already imports hasVersionsSuffix from the same module.
-      const rootSlug = withoutVersionsSuffix(slug);
-      const rootTable = getTable(rootSlug);
+    // Handle hierarchy fields (_parent, _position), which stay on the base row
+    if (isShadow && isHierarchyColumn(sqlColumn)) {
+      // `baseTableName`, not the bare slug: the two were the same string until the naming
+      // convention changed, and a camelCase slug resolved to `undefined` here rather than to a
+      // table.
+      const rootTable = getTable(baseTableName(base!));
       // Query the root table for the hierarchy field
       return inArray(
         table.ownerId,
@@ -419,27 +441,29 @@ function getConditionMembers(obj: Dic) {
 }
 
 // Determine if we should handle versioned hierarchy fields
-function shouldHandleVersionedHierarchyFields(slug: string, sqlColumn: string) {
-  return (
-    hasVersionsSuffix(slug) &&
-    (sqlColumn === '_parent' || sqlColumn === '_position' || sqlColumn === '_path')
-  );
+/** The columns the `nested` feature puts on a base row, wherever the content lives. */
+function isHierarchyColumn(sqlColumn: string) {
+  return sqlColumn === '_parent' || sqlColumn === '_position' || sqlColumn === '_path';
 }
 
 // Normalize condition object for versioned collections
-function normalizedForVersion(conditionObject: Dic, slug: string): Dic {
-  // Handle id field for versioned collections
-  // if "id" inside the query it should refer to the root table
-  if (hasVersionsSuffix(slug) && 'id' in conditionObject) {
-    // Replace id with ownerId and keep the same operator and value
+/**
+ * Retargets the two id conditions when the table being queried is a shadow.
+ *
+ * A caller filtering by `id` means the document, which is the base row — on a shadow that is
+ * `ownerId`. `versionId` means the content row itself, which is the shadow's own `id`.
+ */
+function normalizedForShadow(conditionObject: Dic, isShadow: boolean): Dic {
+  if (!isShadow) return conditionObject;
+
+  // "id" refers to the document, so it resolves against the base row this shadow hangs off.
+  if ('id' in conditionObject) {
     const idOperator = conditionObject.id;
     delete conditionObject.id;
     conditionObject.ownerId = idOperator;
   }
-  // Handle versionId field for versioned collections
-  // if "versionId" inside the query it should refer to the id of the version table (current)
-  if (hasVersionsSuffix(slug) && 'versionId' in conditionObject) {
-    // Replace id with ownerId and keep the same operator and value
+  // "versionId" refers to the content row, which is this table's own id.
+  if ('versionId' in conditionObject) {
     const idOperator = conditionObject.versionId;
     delete conditionObject.versionId;
     conditionObject.id = idOperator;

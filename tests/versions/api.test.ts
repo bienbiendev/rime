@@ -980,3 +980,51 @@ test('Should remove all versions when the owning document is deleted', async ({ 
   });
   expect(getResponse.status()).toBe(404);
 });
+
+/*********************************************************
+/* Sorting a versioned list by a column that lives on the shadow
+/*********************************************************/
+
+/**
+ * A versioned collection's sortable columns are not on the row being listed.
+ *
+ * `findMany` queries the base table and pulls the content in through a `with`, so ordering by a
+ * content column has to go through a correlated subquery against the shadow — and, for a localized
+ * one, a second subquery through the shadow's locales branch. `buildOrderByParam` used to decide
+ * which of those to build by asking `config.versions` and then rebuilding the shadow's name with
+ * the versions feature's own `withVersionsSuffix`; it is handed the table name now, and a wrong
+ * one is silent: the sort simply falls back to `createdAt` and the list still returns 200.
+ *
+ * `attributes.slug` is localized, so this covers the deeper of the two branches.
+ */
+test('Should sort a versioned list by a localized content column', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  // Two published news whose slugs sort the opposite way round from their creation order, so a
+  // fallback to createdAt cannot pass by accident.
+  for (const slug of ['sort-probe-b', 'sort-probe-a']) {
+    const response = await request.post(`${API_BASE_URL}/news`, {
+      headers,
+      data: {
+        attributes: { title: slug, slug },
+        status: VERSIONS_STATUS.PUBLISHED
+      }
+    });
+    expect(response.status()).toBe(200);
+  }
+
+  const positions = async (sort: string) => {
+    const response = await request.get(`${API_BASE_URL}/news?sort=${sort}`, { headers });
+    expect(response.status()).toBe(200);
+    const { docs } = await response.json();
+    const slugs = docs.map((doc: { attributes: { slug: string } }) => doc.attributes.slug);
+    return [slugs.indexOf('sort-probe-a'), slugs.indexOf('sort-probe-b')];
+  };
+
+  const [ascA, ascB] = await positions('attributes.slug');
+  expect(ascA).toBeGreaterThanOrEqual(0);
+  expect(ascA).toBeLessThan(ascB);
+
+  const [descA, descB] = await positions('-attributes.slug');
+  expect(descB).toBeLessThan(descA);
+});

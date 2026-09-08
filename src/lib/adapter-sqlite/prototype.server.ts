@@ -412,7 +412,7 @@ export const findManyPrototypes = async (
   if (!shadow) {
     const params: Dic = {
       with: buildWithParam({ table, select, tables, config, locale }) || undefined,
-      orderBy: buildOrderByParam({ slug, locale, tables, config, by: sort }),
+      orderBy: buildOrderByParam({ slug, locale, tables, by: sort }),
       // sqlite requires a limit when an offset is present.
       limit: limit || (typeof offset === 'number' ? 1000000 : undefined),
       offset: offset || undefined
@@ -437,8 +437,8 @@ export const findManyPrototypes = async (
   // registry knows which slugs exist. The cast is the same one `slug` above takes, and sound for
   // the same reason: a shadow is a registered prototype in its own right (the feature that
   // declares one also derives its config), so `buildWhereParam` can resolve fields against it.
-  const versionsSlug = shadow.slug as PrototypeSlug;
-  const versionsTable = baseTableName(versionsSlug);
+  const shadowSlug = shadow.slug as PrototypeSlug;
+  const versionsTable = baseTableName(shadowSlug);
   const withParam =
     buildWithParam({ table: versionsTable, select, tables, config, locale }) || undefined;
 
@@ -461,13 +461,14 @@ export const findManyPrototypes = async (
   }
 
   const whereParam = query
-    ? buildWhereParam({ query, slug: versionsSlug, locale, db, configCtx, tables })
+    ? buildWhereParam({ query, slug: shadowSlug, base: slug, locale, db, configCtx, tables })
     : undefined;
 
   const params: Dic = {
     limit: limit || (typeof offset === 'number' ? 1000000 : undefined),
     offset: offset,
-    orderBy: buildOrderByParam({ slug, locale, tables, config, by: sort })
+    // The sortable columns are on the shadow, so the sort builder is handed it by name.
+    orderBy: buildOrderByParam({ slug, locale, tables, by: sort, shadow: versionsTable })
   };
   Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);
 
