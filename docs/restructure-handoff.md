@@ -67,7 +67,8 @@ names `upload` again, something has gone backwards.
 | 1c′      | `1726af2b`            | `PRIVATE_FIELDS` stays in `.server`; `usersFields` splits so `password` never reaches a client build                                       |
 | 2        | `4f706a9c`            | **`Config`'s prototype members come from the registry**; `core/config/types.ts` names no kind                                              |
 | 15       | `7c7b771a`            | **versions stage 2, runtime half**: registration carries the shadow declaration; the adapter stops appending a suffix                      |
-| 16       | `07f39bf3`            | **versions stage 3**: the read selector comes off the declaration; the contract says `contentId`/`latest`, not `versionId`/`draft`         |
+| 16       | ~~`07f39bf3`~~        | **versions stage 3, reverted in `29192dae`**: `pick` was a query language in the adapter contract — the read selector belongs above it     |
+| 16′      | `25a78cdc`            | **a shadow is recognised by its table, not a config member**: `hasVersions`/`hasVersionsSuffix` leave `orderBy`/`where`                    |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 

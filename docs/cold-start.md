@@ -100,7 +100,13 @@ Full table with commits in `restructure-handoff.md`. The shape of it:
   rather than inferred from `config.versions` (stage 2, both halves) — the schema generator builds
   it from the declaration and boot hands the same declaration to `registerPrototype`, so neither
   `generate-schema` nor `adapter-sqlite/prototype.server.ts` imports the versions feature's naming
-  any more. What a version row _means_ is stages 3–5.
+  any more. Stage 3 was built and **reverted** (`29192dae`): it put a `pick` selector — "the row
+  whose column equals this value" — into the declaration, which is a query language inside the
+  adapter contract. The tell is that it needed a per-request `latest` flag beside it to be usable;
+  a declaration that needs a runtime flag is in the wrong place. Stages 3–5 are re-planned around
+  adapter primitives instead: the operation resolves the content row and hands the adapter an id.
+  `25a78cdc` is the part of stage 3 that survives — the adapter recognises a shadow by its table
+  rather than by `config.versions`.
 
 ### Measured, right now
 
@@ -135,11 +141,14 @@ Cheapest first. Each is independently useful and each has a document behind it.
 1. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
    the registry** instead of listing the two by hand. `prototypeConfigs()` and `prototypeEntries()` exist;
    the schema generator is the worked example.
-2. **versions stages 4–5** — the write plan and the remainder. Stages 2 and 3 are done, so the
-   adapter resolves _where_ content lives and _which row_ to read from the declaration. What is
-   left is what a version row _means_ on a write — the publish demotion and the first version's
-   status, the two `config.versions.draft` reads still in `prototype.server.ts` — plus the
-   remainder in `orderBy`/`transform`/`url`/`where`. (`decoupling-versions.md`)
+2. **versions stages 3–5** — the read selector, the write plan, the remainder. Stage 2 is done, so
+   the adapter knows _where_ content lives; stage 3 was built the wrong way round and reverted, so
+   _which row_ is still `config.versions.draft` inside `prototype.server.ts`. The re-plan moves
+   both the read selector and the write plan **above** the adapter, composed from primitives — a
+   shadow is already a registered prototype with its own handle, so resolving a content row needs
+   no new adapter surface, and the one step that does (`updateWhere`, for the publish demotion) is
+   a primitive by the test that matters. Costs one extra query per versioned read and per list, and
+   no atomicity: there are no transactions in the adapter today. (`decoupling-versions.md`)
 3. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
    `structure-audit.md` §19.4's four steps; the other three are done.
 4. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and

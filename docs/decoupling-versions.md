@@ -262,35 +262,64 @@ update(args: { id?: string; contentId?: string; data; locale? }): Promise<{ id: 
 `contentId` defaults to the root row, so a prototype with no shadow never sets it and its adapter
 path is the `isSimpleUpdate` branch with no branch left in it.
 
-Two things do **not** decouple by renaming — picking the content row on a read, and generating the
-shadow table — and both point at the shadow becoming a **registration-time declaration**:
+One thing does **not** decouple by renaming — generating the shadow table — and it points at the
+shadow becoming a **registration-time declaration**:
 
 ```ts
-// what the feature would declare
-shadow: (config) => ({
-  slug: withVersionsSuffix(config.slug), // where the content rows live
-  ownerColumn: 'ownerId', // how they point back at the root
-  pick: config.versions.draft ? { column: 'status', equals: 'published', else: 'newest' } : 'newest'
-});
+// what the feature declares: where the content rows live, and nothing about which one to read
+shadow: (config) => ({ slug: withVersionsSuffix(config.slug) });
 
 // what the adapter is told, once, at boot — beside `singleton`, which it already takes
 adapter.registerPrototype({ config, singleton, shadow });
 ```
 
+That is the whole declaration, and the line it draws is **structure, not policy**. Where the rows
+live is a fact about storage: the schema generator cannot generate a table it has not been told
+about, and the read cannot join a table it cannot name. _Which_ of those rows a given request
+means is a decision, it belongs to whoever makes it, and the adapter is not that.
+
+The first attempt at stage 3 put the decision in the declaration anyway:
+
 ```ts
-// and what the read becomes: no config.versions, no draft, no withVersionsSuffix
+// what was built, and reverted in 29192dae
+pick: config.versions?.draft ? { column: 'status', equals: VERSIONS_STATUS.PUBLISHED } : 'newest';
+```
+
+An earlier draft of this document warned about exactly that — "`pick` is the part to be careful
+with: it is one step from inventing a query language in the adapter contract" — and the commit
+shipped it while quoting the warning. The tell that it was wrong is in the contract it produced:
+`pick` needed a companion per-request `latest` flag to be usable at all, because half the callers
+wanted the row the declaration selected and half wanted the newest one regardless. **A declaration
+that needs a runtime flag beside it is a declaration in the wrong place.** The caller already knows
+which row it wants; it should name it rather than describe a policy for the adapter to re-evaluate.
+
+So the adapter takes an id and no policy:
+
+```ts
+// core/adapter.ts — after
+find(args?: { id?: string; contentId?: string; select?: string[]; locale?: string });
+```
+
+```ts
+// and what the read becomes: no config.versions, no draft, no pick, no withVersionsSuffix
 const shadow = handle.shadow;
 if (!shadow) return queryTable.findFirst({ columns, ...byId, with: … });
 
-const doc = await queryTable.findFirst({
+const contentTable = baseTableName(shadow.slug);
+const content = contentId
+  ? { where: eq(tables[contentTable].id, contentId) }
+  : { orderBy: [desc(tables[contentTable].updatedAt)] }; // the row a bare read means
+
+return queryTable.findFirst({
   columns, ...byId,
-  with: { [baseTableName(shadow.slug)]: { columns, with: …, ...pickParams(shadow.pick, contentId, table) } }
+  with: { [contentTable]: { columns, with: …, ...content, limit: 1 } }
 });
 ```
 
-`pick` is the part to be careful with: it is one step from inventing a query language in the
-adapter contract. If it grows past "a column equals a value, else newest", stop — resolving the id
-above the adapter and paying a second query per read is the better trade.
+The `orderBy` fallback is not the `'newest'` half of `pick` returning by the back door. It is what
+"the content of this document" means when nobody said otherwise — the same statement as `updatedAt`
+being the default sort, and it names no feature, no column of one, and no magic value. A caller
+that wants a _rule_ applied resolves the row first and passes `contentId`.
 
 ---
 
@@ -509,23 +538,48 @@ adapter.registerPrototype({
 });
 ```
 
-### Stage 3 — the read selector
+### Stage 3 — the operation resolves its own content row
 
-`find`/`findMany` lose `draft` and `versionId`; `buildPublishedOrLatestVersionParams` becomes a
-function of the declaration rather than of `config.versions`:
+`find`/`findMany` lose `draft` and `versionId` and gain `contentId`. Nothing replaces them inside
+the adapter: whoever wanted a rule applies it above, and hands down an id.
+
+**The primitive already exists.** A shadow is a registered prototype in its own right —
+`$news__versions` is a collection with a handle, a config and a pipeline, which is how
+`handle-new-version.server.ts` already writes version rows through the public API. So resolving a
+content row needs no new adapter surface at all:
 
 ```ts
-const pickParams = (pick: Pick, contentId: string | undefined, table: GenericTable) =>
-  contentId
-    ? { where: eq(table.id, contentId), limit: 1 }
-    : pick === 'newest'
-      ? { orderBy: [desc(table.updatedAt)], limit: 1 }
-      : { where: eq(table[pick.column], pick.equals), limit: 1 };
+// core/features/versions/… — a beforeRead hook, or the operation itself
+const [version] = await rime.collection(contentOwnerSlug(config)).find({
+  query: draft
+    ? `where[ownerId][equals]=${id}`
+    : `where[and][0][ownerId][equals]=${id}&where[and][1][status][equals]=published`,
+  sort: '-updatedAt',
+  limit: 1
+});
+context.contentId = version?.id;
 ```
 
-### Stage 4 — the write plan
+`findMany` inverts rather than filters. Today it queries the base table and pulls one content row
+in through a `with`, which is why the status filter had to be injected into somebody else's `where`
+clause. The content table is where the filterable and sortable columns actually are — `where`
+resolves against the shadow's slug, and `orderBy` was handed the shadow's table name in 25a78cdc —
+so the natural shape is to list the shadow and fetch the base rows by id.
 
-`versionOperation` leaves the contract, and `updatePrototype` collapses:
+**The cost, stated honestly:** a versioned read goes from one query to two, and a versioned list
+from one to two. Not N+1 — the second query is `where id in (…)` — and the second one is a plain
+lookup by primary key. In exchange the branch disappears from the database layer entirely and a
+second adapter gets versions for free instead of re-implementing the ladder.
+
+**And what it costs nothing in:** atomicity. `grep -rn "transaction\|\.batch(" src/lib/adapter-sqlite/*.ts`
+returns nothing — there are no transactions in the adapter today, so splitting a read or a write
+into two calls loses a guarantee that was never there. That was the strongest argument for keeping
+the branching low and it does not hold.
+
+### Stage 4 — the write plan moves up
+
+`versionOperation` leaves the contract, and `updatePrototype` collapses to "write the root fields
+to the base row, and everything else to the row you were given":
 
 ```ts
 export const updatePrototype = async ({ db, tables }, { slug, id, contentId, data, locale, config }) => {
@@ -545,8 +599,27 @@ export const updatePrototype = async ({ db, tables }, { slug, id, contentId, dat
 };
 ```
 
-The publish demotion moves above the adapter, into the versions feature, where two of the five
-operations already are.
+The five-way strategy stays where it already is (`versions/strategy.ts`, run as a `beforeUpdate`
+hook) and each outcome becomes a sequence of primitive calls rather than an enum the adapter
+decodes. Two of the five are already written that way.
+
+**The one genuinely new primitive.** The publish demotion — "set every other version of this
+document to draft" — is the only step with no primitive behind it: the handle has `update` by id
+and `delete` by id, and the local API has `updateById` but no update-many. Either
+
+```ts
+// on PrototypeHandle, beside delete
+updateWhere(args: { where: OperationQuery; data: Dic }): Promise<string[]>;
+```
+
+or the versions feature does a find-then-update-each, which is correct but is N writes where SQL
+does one. `updateWhere` is a primitive by the test that matters — it names a table, a filter and a
+patch, and knows nothing about what a version or a status is — so it is the better answer, but it
+is a contract addition and should be its own commit with its own reason.
+
+Ordering note: the demotion and the write of the new published row are two statements with no
+transaction around them either way, so moving the pair above the adapter changes nothing about what
+a concurrent reader can observe. It does make that visible, which is worth a line in the audit.
 
 ### Stage 5 — the remainder
 
@@ -555,6 +628,28 @@ operations already are.
 `core/pipeline/persist/{blocks,relations,tree}` importing `contentOwnerSlug`. Most fall out of
 Stages 2–4; whatever is left is the honest remainder and belongs in the audit rather than being
 forced.
+
+### Settled on the way: how the adapter knows it has a shadow
+
+Not from a config member. `buildOrderByParam` asked `!!config.versions` and then rebuilt the
+shadow's name by calling the versions feature's own `withVersionsSuffix`; `buildWhereParam`
+recognised a shadow with `hasVersionsSuffix(slug)`. All three named a feature inside the database
+layer, and the first two asked a config a question the schema already answers.
+
+Registration carries the shadow, so the caller resolves the table once and the builders are told:
+
+```ts
+buildOrderByParam({ slug, tables, by, shadow }); // shadow?: TableName
+const hasShadow = !!shadow && shadow in tables; // presence in the schema, not a config member
+
+buildWhereParam({ query, slug, base, … }); // base?: PrototypeSlug — what this shadow stands for
+const isShadow = !!base;
+```
+
+`hasVersionsSuffix` was load-bearing beyond naming — it is what made `id` mean the base row and the
+hierarchy columns resolve through it — so a _second_ feature declaring a shadow would silently have
+got neither behaviour. Done in 25a78cdc, ahead of stages 3–5 because every one of them reads these
+builders.
 
 ---
 
