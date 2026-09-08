@@ -176,7 +176,7 @@ export const readPrototype = async (
   // A root row with no versions is as good as absent — there is nothing to show.
   if (!doc || !doc[versionsTable] || doc[versionsTable].length === 0) return undefined;
 
-  return adapterUtil.mergeRawDocumentWithVersion(doc, versionsTable, config, select);
+  return adapterUtil.mergeContentRow(doc, versionsTable, config, select);
 };
 
 type UpdateArgs = {
@@ -496,7 +496,7 @@ export const findManyPrototypes = async (
   return rawDocs
     .map((doc: RawDoc) => {
       try {
-        return adapterUtil.mergeRawDocumentWithVersion(doc, versionsTable, config, select);
+        return adapterUtil.mergeContentRow(doc, versionsTable, config, select);
       } catch (err: any) {
         // A query forwarded to the versions table can match nothing for a given document; that
         // document simply drops out of the result rather than failing the whole read.

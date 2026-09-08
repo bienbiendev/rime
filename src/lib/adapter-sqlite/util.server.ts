@@ -132,32 +132,31 @@ export function prepareSchemaData(
 }
 
 /**
- * Merges a document with its version data to create a complete document representation
+ * Folds a base row and its content row into one document.
  *
- * In versioned collections/areas, data is split between:
- * - Root document table (containing hierarchy fields like _parent, _position, and metadata like createdAt)
- * - Version table (containing the actual content fields)
+ * A prototype whose content lives on a shadow reads as two rows; a document is one. This is the
+ * fold, and it is structural — the adapter is the only thing that knows there were two.
  *
- * This function combines these two data sources into a single document object:
- * 1. Validates that version data exists or throw 404
- * 2. Handles field selection if specified
- * 3. Preserves the base row's own columns and whatever the config keeps on it (`._root()`)
- * 4. Adds version fields while avoiding duplicates
- * 5. Includes the versionId in the result
+ * It was `mergeRawDocumentWithVersion`, with `versionTableName`/`versionData`/`versionFields`
+ * locals, and it emitted `versionId`. The name was the feature's word for the adapter's own
+ * concept; the emitted key was worse than that — a method that has to name a feature in its
+ * *return value* is that feature's method, wherever it lives. So the id of the content row goes
+ * out as `contentId`, which is what `insert` already returns and what `find` already takes, and
+ * `versions` puts `versionId` on the document itself (features/versions/hooks/expose-version-id.ts).
  */
-export function mergeRawDocumentWithVersion(
+export function mergeContentRow(
   doc: RawDoc,
-  versionTableName: string,
+  contentTable: string,
   config: { fields: FieldBuilder[] },
   select?: string[]
 ): RawDoc {
-  // Check if we have version data
-  // Note: Versions data can be empty when a query returns no result
-  if (!doc[versionTableName] || doc[versionTableName].length === 0) {
+  // A base row with no content row is as good as absent — note this can be empty when a query
+  // returns no result.
+  if (!doc[contentTable] || doc[contentTable].length === 0) {
     throw new RimeError(RimeError.NOT_FOUND);
   }
 
-  const versionData = doc[versionTableName][0];
+  const contentRow = doc[contentTable][0];
 
   if (select && Array.isArray(select) && select.length) {
     // The row's own columns, plus whatever the config keeps on the base row. Hardcoding the
@@ -172,26 +171,26 @@ export function mergeRawDocumentWithVersion(
 
     // Filter out root props as they should come from the doc,
     // plus the ownerId wich is equals to doc.id
-    const versionFields = omit([...rootProps, 'ownerId'], versionData);
+    const contentFields = omit([...rootProps, 'ownerId'], contentRow);
 
     // `pick`/`omit` return generic Dic types, so TS can't statically confirm
     // `id` survived — it always does, since we explicitly pick it above.
     return {
       ...docFields,
-      ...versionFields,
-      versionId: versionData.id
+      ...contentFields,
+      contentId: contentRow.id
     } as RawDoc;
   }
 
   // Default case - return all fields
-  // `versionTableName` is a plain `string`, not a literal, so `Omit<T, string>`
+  // `contentTable` is a plain `string`, not a literal, so `Omit<T, string>`
   // widens to `Omit<T, keyof T>` and TS loses track of every spread key
   // (including `id`) — the object is correct at runtime, only its inferred
   // type collapses, hence the double cast through `unknown`.
   return {
-    ...omit([versionTableName], doc),
-    ...omit(['id', 'ownerId', 'createdAt', 'updatedAt'], versionData),
-    versionId: versionData.id
+    ...omit([contentTable], doc),
+    ...omit(['id', 'ownerId', 'createdAt', 'updatedAt'], contentRow),
+    contentId: contentRow.id
   } as unknown as RawDoc;
 }
 

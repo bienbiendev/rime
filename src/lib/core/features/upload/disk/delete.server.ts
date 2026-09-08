@@ -44,7 +44,7 @@ const ownsField = <C extends Config>(
  * are two.
  *
  * `selfId` must already be in whichever id-space `selfSlug` resolves to — a shadow row's own id,
- * not the base row's (see `versionId` in mergeRawDocumentWithVersion).
+ * not the base row's (see `contentId` in mergeContentRow).
  *
  * Every configured locale is checked since a localized collection's query can otherwise miss rows
  * in non-default locales, even though `filename` itself is never a localized field.
@@ -99,7 +99,9 @@ export const cleanUpDocumentFile = async <C extends Config>(args: {
       // The table this document's own filename is in — the same expression `persistRelational`
       // uses, off what registration was handed.
       selfSlug: rime.adapter.prototype(config.slug).shadow?.slug ?? config.slug,
-      selfId: doc.versionId ?? doc.id
+      // The content row's id — `contentId` rather than `versionId`, so upload names no
+      // other feature. See mergeContentRow.
+      selfId: doc.contentId ?? doc.id
     });
 
     if (stillReferenced) return doc;

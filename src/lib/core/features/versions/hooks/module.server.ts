@@ -1,5 +1,6 @@
 import { defineVersionOperation } from './define-version-operation.server.js';
 import { demoteOtherVersions } from './demote-other-versions.js';
+import { exposeVersionId } from './expose-version-id.js';
 import { handleNewVersion } from './handle-new-version.server.js';
 
 /**
@@ -15,5 +16,6 @@ import { handleNewVersion } from './handle-new-version.server.js';
  * one list plus an exception.
  */
 export const versionsHooks = {
+  beforeRead: [exposeVersionId],
   beforeUpdate: [defineVersionOperation, handleNewVersion, demoteOtherVersions]
 };

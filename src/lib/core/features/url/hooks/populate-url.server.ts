@@ -130,7 +130,7 @@ export const populateURL = Hooks.beforeRead<'generic'>({
            */
           const handle = args.event.locals.rime.adapter.prototype(config.slug);
           const contentSlug = handle.shadow?.slug ?? config.slug;
-          const contentId = handle.shadow ? args.doc.versionId : args.doc.id;
+          const contentId = handle.shadow ? args.doc.contentId : args.doc.id;
 
           if (contentId) {
             args.event.locals.rime.adapter.prototype(contentSlug).updateWhere({
@@ -148,7 +148,7 @@ export const populateURL = Hooks.beforeRead<'generic'>({
       // authenticated session either.
       if (config.live && event.locals.user?.isStaff && url) {
         args.doc._live = `${process.env.PUBLIC_RIME_URL}/${env.RIME_PANEL_ROUTE || 'panel'}/live-edit?src=${url}&slug=${config.slug}&id=${args.doc.id}`;
-        args.doc._live += args.doc.versionId ? `&${PARAMS.VERSION_ID}=${args.doc.versionId}` : '';
+        args.doc._live += args.doc.contentId ? `&${PARAMS.VERSION_ID}=${args.doc.contentId}` : '';
         args.doc._live += locale ? `&${PARAMS.LOCALE}=${locale}` : '';
       }
     }

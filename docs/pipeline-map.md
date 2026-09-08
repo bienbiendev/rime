@@ -69,9 +69,10 @@ The three `versions` hooks appear by the feature being enabled. `handleNewVersio
 | 1 | `processDocumentFields` | collection | `sanitized` | `shaped` `document` |
 | 2 | `setDocumentLocale` | collection | `shaped` | `document` |
 | 3 | `setDocumentType` | collection | `shaped` | `document` |
-| 4 | `setDocumentTitle` | title | `shaped` | `title` `document` |
-| 5 | `setDocumentThumbnail` | thumbnail | `shaped` `document` | `document` |
-| 6 | `sortDocumentProps` | collection | `document` | — |
+| 4 | `exposeVersionId` | versions | — | `document` |
+| 5 | `setDocumentTitle` | title | `shaped` | `title` `document` |
+| 6 | `setDocumentThumbnail` | thumbnail | `shaped` `document` | `document` |
+| 7 | `sortDocumentProps` | collection | `document` | — |
 
 ### beforeCreate
 
@@ -235,8 +236,9 @@ No create and no delete: a second row is not a thing.
 | 1 | `processDocumentFields` | area | `sanitized` | `shaped` `document` |
 | 2 | `setDocumentLocale` | area | `shaped` | `document` |
 | 3 | `setDocumentType` | area | `shaped` | `document` |
-| 4 | `setDocumentTitle` | title | `shaped` | `title` `document` |
-| 5 | `sortDocumentProps` | area | `document` | — |
+| 4 | `exposeVersionId` | versions | — | `document` |
+| 5 | `setDocumentTitle` | title | `shaped` | `title` `document` |
+| 6 | `sortDocumentProps` | area | `document` | — |
 
 ### beforeUpdate
 
