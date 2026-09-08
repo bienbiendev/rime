@@ -1,4 +1,3 @@
-import type { VersionOperation } from '$lib/core/features/versions/strategy.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type { Docs, DocType, RawDoc } from '$lib/core/prototype/types.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
@@ -138,8 +137,6 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
   contentOwnerId?: string;
   /** Parameter passed to an update operation when creating locale document fallback */
   isFallbackLocale?: string | undefined;
-  /** Type of version operation */
-  versionOperation?: VersionOperation;
   /** The original document if on an update operation */
   originalDoc?: DocTypeForSlugs<S>;
   /** An map to get a field config by path on the original doc */
@@ -234,8 +231,6 @@ export type CoreHookMark =
   | 'content-owner'
   /** The config map for the original document exists. */
   | 'original-config-map'
-  /** The version operation for this request has been decided. */
-  | 'version-operation'
   /** Incoming data has been validated. */
   | 'validated';
 

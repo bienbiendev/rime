@@ -45,13 +45,12 @@ No feature contributes a write hook, so `beforeUpdate` is the prototype’s own 
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `defineVersionOperation` | collection | — | `version-operation` |
-| 2 | `getOriginalDocument` | collection | — | `original-doc` |
-| 3 | `buildOriginalDocConfigMap` | collection | `original-doc` | `original-config-map` |
-| 4 | `resolveContentOwner` | collection | `original-doc` | `content-owner` |
-| 5 | `buildDataConfigMap` | collection | `config-fields` `data-inspected` | `config-map` |
-| 6 | `setDefaultValues` | collection | `config-map` | — |
-| 7 | `validateFields` | collection | `config-map` | `validated` |
+| 1 | `getOriginalDocument` | collection | — | `original-doc` |
+| 2 | `buildOriginalDocConfigMap` | collection | `original-doc` | `original-config-map` |
+| 3 | `resolveContentOwner` | collection | `original-doc` | `content-owner` |
+| 4 | `buildDataConfigMap` | collection | `config-fields` `data-inspected` | `config-map` |
+| 5 | `setDefaultValues` | collection | `config-map` | — |
+| 6 | `validateFields` | collection | `config-map` | `validated` |
 
 ## a versioned collection
 
@@ -87,10 +86,10 @@ The three `versions` hooks appear by the feature being enabled. `handleNewVersio
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `defineVersionOperation` | collection | — | `version-operation` |
-| 2 | `getOriginalDocument` | collection | — | `original-doc` |
-| 3 | `buildOriginalDocConfigMap` | collection | `original-doc` | `original-config-map` |
-| 4 | `resolveContentOwner` | collection | `original-doc` | `content-owner` |
+| 1 | `getOriginalDocument` | collection | — | `original-doc` |
+| 2 | `buildOriginalDocConfigMap` | collection | `original-doc` | `original-config-map` |
+| 3 | `resolveContentOwner` | collection | `original-doc` | `content-owner` |
+| 4 | `defineVersionOperation` | versions | — | `version-operation` |
 | 5 | `handleNewVersion` | versions | `original-doc` `original-config-map` `content-owner` | `data-inspected` |
 | 6 | `buildDataConfigMap` | collection | `config-fields` `data-inspected` | `config-map` |
 | 7 | `setDefaultValues` | collection | `config-map` | — |
@@ -140,17 +139,16 @@ The three `versions` hooks appear by the feature being enabled. `handleNewVersio
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `defineVersionOperation` | collection | — | `version-operation` |
-| 2 | `getOriginalDocument` | collection | — | `original-doc` |
-| 3 | `buildOriginalDocConfigMap` | collection | `original-doc` | `original-config-map` |
-| 4 | `resolveContentOwner` | collection | `original-doc` | `content-owner` |
-| 5 | `augmentFieldsPassword` | auth | `blank-merged` | `config-fields` |
-| 6 | `preventSuperAdminMutation` | auth | `original-doc` | `data-inspected` |
-| 7 | `preventUserMutations` | auth | `original-doc` | `data-inspected` |
-| 8 | `forwardRolesToBetterAuth` | auth | `original-doc` | `data-inspected` |
-| 9 | `buildDataConfigMap` | collection | `config-fields` `data-inspected` | `config-map` |
-| 10 | `setDefaultValues` | collection | `config-map` | — |
-| 11 | `validateFields` | collection | `config-map` | `validated` |
+| 1 | `getOriginalDocument` | collection | — | `original-doc` |
+| 2 | `buildOriginalDocConfigMap` | collection | `original-doc` | `original-config-map` |
+| 3 | `resolveContentOwner` | collection | `original-doc` | `content-owner` |
+| 4 | `augmentFieldsPassword` | auth | `blank-merged` | `config-fields` |
+| 5 | `preventSuperAdminMutation` | auth | `original-doc` | `data-inspected` |
+| 6 | `preventUserMutations` | auth | `original-doc` | `data-inspected` |
+| 7 | `forwardRolesToBetterAuth` | auth | `original-doc` | `data-inspected` |
+| 8 | `buildDataConfigMap` | collection | `config-fields` `data-inspected` | `config-map` |
+| 9 | `setDefaultValues` | collection | `config-map` | — |
+| 10 | `validateFields` | collection | `config-map` | `validated` |
 
 ### beforeDelete
 
@@ -204,16 +202,15 @@ The three `versions` hooks appear by the feature being enabled. `handleNewVersio
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `defineVersionOperation` | collection | — | `version-operation` |
-| 2 | `getOriginalDocument` | collection | — | `original-doc` |
-| 3 | `buildOriginalDocConfigMap` | collection | `original-doc` | `original-config-map` |
-| 4 | `resolveContentOwner` | collection | `original-doc` | `content-owner` |
-| 5 | `buildDataConfigMap` | collection | `config-fields` `data-inspected` | `config-map` |
-| 6 | `setDefaultValues` | collection | `config-map` | — |
-| 7 | `validateFields` | collection | `config-map` | `validated` |
-| 8 | `handlePathCreation` | upload | `validated` | — |
-| 9 | `castBase64ToFile` | upload | `validated` | — |
-| 10 | `processFileUpload` | upload | `validated` | — |
+| 1 | `getOriginalDocument` | collection | — | `original-doc` |
+| 2 | `buildOriginalDocConfigMap` | collection | `original-doc` | `original-config-map` |
+| 3 | `resolveContentOwner` | collection | `original-doc` | `content-owner` |
+| 4 | `buildDataConfigMap` | collection | `config-fields` `data-inspected` | `config-map` |
+| 5 | `setDefaultValues` | collection | `config-map` | — |
+| 6 | `validateFields` | collection | `config-map` | `validated` |
+| 7 | `handlePathCreation` | upload | `validated` | — |
+| 8 | `castBase64ToFile` | upload | `validated` | — |
+| 9 | `processFileUpload` | upload | `validated` | — |
 
 ### beforeDelete
 
@@ -245,10 +242,10 @@ No create and no delete: a second row is not a thing.
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `defineVersionOperation` | area | — | `version-operation` |
-| 2 | `getOriginalDocument` | area | — | `original-doc` |
-| 3 | `buildOriginalDocConfigMap` | area | `original-doc` | `original-config-map` |
-| 4 | `resolveContentOwner` | area | `original-doc` | `content-owner` |
+| 1 | `getOriginalDocument` | area | — | `original-doc` |
+| 2 | `buildOriginalDocConfigMap` | area | `original-doc` | `original-config-map` |
+| 3 | `resolveContentOwner` | area | `original-doc` | `content-owner` |
+| 4 | `defineVersionOperation` | versions | — | `version-operation` |
 | 5 | `handleNewVersion` | versions | `original-doc` `original-config-map` `content-owner` | `data-inspected` |
 | 6 | `buildDataConfigMap` | area | `config-fields` `data-inspected` | `config-map` |
 | 7 | `setDefaultValues` | area | `config-map` | — |

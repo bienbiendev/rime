@@ -1,4 +1,3 @@
-import { defineVersionOperation } from '$lib/core/features/versions/hooks/define-version-operation.server.js';
 import { authorize } from '$lib/core/pipeline/steps/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/steps/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/pipeline/steps/get-original-document.server.js';
@@ -27,7 +26,6 @@ export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   beforeOperation: [authorize],
   beforeRead: [processDocumentFields, setDocumentLocale, setDocumentType, sortDocumentProps],
   beforeUpdate: [
-    defineVersionOperation,
     getOriginalDocument,
     buildOriginalDocConfigMap,
     resolveContentOwner,

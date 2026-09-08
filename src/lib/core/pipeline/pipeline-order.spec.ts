@@ -55,7 +55,6 @@ describe('resolved pipeline order', () => {
         'validateFields'
       ]);
       expect(order(hooks, 'beforeUpdate')).toEqual([
-        'defineVersionOperation',
         'getOriginalDocument',
         'buildOriginalDocConfigMap',
         'resolveContentOwner',
@@ -69,6 +68,10 @@ describe('resolved pipeline order', () => {
       // It used to run `handleNewVersion` here — the feature's hook, on a config with no
       // versions, doing nothing but restating the default `resolveContentOwner` states now. That
       // was the whole reason both prototypes had to list it by name.
+      // The whole list, not a sample: `versions` contributes three hooks and a config that does
+      // not enable it must get none of them. This is the assertion that fails if a prototype
+      // starts listing one by hand again.
+      expect(order(hooks, 'beforeUpdate')).not.toContain('defineVersionOperation');
       expect(order(hooks, 'beforeUpdate')).not.toContain('handleNewVersion');
       expect(order(hooks, 'beforeUpdate')).not.toContain('demoteOtherVersions');
     });
@@ -96,10 +99,10 @@ describe('resolved pipeline order', () => {
       const update = order(hooks, 'beforeUpdate');
 
       expect(update).toEqual([
-        'defineVersionOperation',
         'getOriginalDocument',
         'buildOriginalDocConfigMap',
         'resolveContentOwner',
+        'defineVersionOperation',
         'handleNewVersion',
         'buildDataConfigMap',
         'setDefaultValues',
@@ -115,6 +118,13 @@ describe('resolved pipeline order', () => {
         update.indexOf('handleNewVersion')
       );
       expect(update.indexOf('handleNewVersion')).toBeLessThan(update.indexOf('setDefaultValues'));
+      // And the feature's own ordering: its two consumers wait on the mark it provides.
+      expect(update.indexOf('defineVersionOperation')).toBeLessThan(
+        update.indexOf('handleNewVersion')
+      );
+      expect(update.indexOf('defineVersionOperation')).toBeLessThan(
+        update.indexOf('demoteOtherVersions')
+      );
     });
   });
 
@@ -155,7 +165,6 @@ describe('resolved pipeline order', () => {
         'createBetterAuthUser'
       ]);
       expect(order(hooks, 'beforeUpdate')).toEqual([
-        'defineVersionOperation',
         'getOriginalDocument',
         'buildOriginalDocConfigMap',
         'resolveContentOwner',

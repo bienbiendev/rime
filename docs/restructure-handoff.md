@@ -72,6 +72,10 @@ names `upload` again, something has gone backwards.
 | 17       | `1ec2dfca`            | **`updateWhere`**, and the publish demotion becomes a versions hook; the adapter stops writing rows its own write does not touch                             |
 | 18       | `5dac93c0`            | **versions stage 4, update half**: the write plan is built above the adapter; `versionOperation` leaves the contract and the three branches collapse to one  |
 | 19       | `a89a72c9`            | **versions stage 3**: the read selector comes from the caller as a filter; `draft`/`versionId` leave the contract and `config.versions` leaves the read path |
+| 20       | `9c66566a`            | **core owns the default content owner**; `handleNewVersion` moves onto the feature and its two missing marks get declared                                    |
+| 20d      | `dc6b2160`            | **`bun run rime:pipeline`** renders the resolved pipeline with marks and provenance into `docs/pipeline-map.md`, pinned by a spec                            |
+| 21       | `76f308a2`            | **`getOriginalDocument` stops decoding the versions enum**; core declares `ReadIntent`, the feature says what each intent selects                            |
+| 22       | _this commit_         | **`versionOperation` leaves core's vocabulary**; `defineVersionOperation` moves onto the feature and `version-operation` becomes a `FeatureHookMark`         |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 
@@ -302,6 +306,39 @@ in a browser** before believing a green run that touched a feature's imports.
 
 ---
 
+### 8. A prototype listing a feature's hook means **core is missing a default**
+
+Both prototypes' `beforeUpdate` named `defineVersionOperation` and `handleNewVersion` by import,
+and the comment explaining why said they "run for every config, versioned or not, so `enabled`
+cannot gate them". That is true and it is not the reason. The reason is that each was answering a
+question **core has for every prototype** and core had no answer of its own:
+
+| the question                               | who answered                            | what a prototype with no shadow answers |
+| ------------------------------------------ | --------------------------------------- | --------------------------------------- |
+| where does this document's content live?   | `handleNewVersion`'s `default:` branch  | its own row                             |
+| which revision does an update branch from? | `shouldRetrieveDraft(versionOperation)` | the only one                            |
+
+So the feature had to run everywhere, so it could not be gated, so the prototypes pinned it — and
+deleting the feature would have broken both prototypes and four files in `pipeline/`.
+
+The fix is never "find a timing that means always". It is: **core states the default, the feature
+overrides it.** `resolveContentOwner` provides `content-owner`; `handleNewVersion` requires it and
+answers again. Core declares `ReadIntent` because every prototype has both intents;
+`FeatureDefinition.readQuery` says what each selects. Then `enabled` is exactly the right gate and
+the feature carries its own hooks.
+
+Two things this surfaced that nothing else would have:
+
+- **Marks that were being met by the hand-written position.** `handleNewVersion` read
+  `originalConfigMap` without requiring `original-config-map`, and had to run before
+  `setDefaultValues` without providing `data-inspected` — it was simply listed in the right place.
+  A hook only survives becoming a feature's if **every** edge it depends on is declared, and the
+  second one is not cosmetic: run it after the defaults and editing one field of a document resets
+  every unsent field to its default instead of carrying it forward.
+- **The test for whether a feature is decoupled at all.** `docs/pipeline-map.md` renders each
+  resolved pipeline with a `from` column. A feature's hook appearing under `from: collection` is
+  the prototype listing it by hand. Run `bun run rime:pipeline` and read the column.
+
 ## Gates, and what they are for
 
 Run against the base commit's **own** numbers, re-measured, not trusted from any doc.
@@ -315,6 +352,7 @@ Run against the base commit's **own** numbers, re-measured, not trusted from any
 | pipeline layers | `collection/pipeline.spec.ts`                                  | **the gate for rule 3** — a definition that lost its `features` is green everywhere else                                                                                                                                                                                                                                                                                                                                                                                                     |
 | schema          | diff the generated `schema.server.ts` against a golden capture | **the gate for rule 2**                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | pipeline order  | `core/pipeline/pipeline-order.spec.ts`                         | **the gate for rule 4** — a wrong mark is schema-identical and probe-identical                                                                                                                                                                                                                                                                                                                                                                                                               |
+| pipeline map    | `docs/pipeline-map.md` + `pipeline-map.spec.ts`                | **the gate for rule 8**, and the readable view of rule 4 — every hook with its marks and the feature that contributed it. `bun run rime:pipeline` regenerates; the spec fails if it and the code disagree                                                                                                                                                                                                                                                                                    |
 | e2e             | `bun run test`                                                 | expect 375                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 **Capture a golden schema before touching any augment chain.** Boot the dev server on a fixture,

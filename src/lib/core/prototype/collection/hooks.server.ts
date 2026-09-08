@@ -1,4 +1,3 @@
-import { defineVersionOperation } from '$lib/core/features/versions/hooks/define-version-operation.server.js';
 import type { AnyHook, HookTiming } from '$lib/core/features/define.js';
 import { authorize } from '$lib/core/pipeline/steps/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/steps/data-config-map.server.js';
@@ -28,7 +27,6 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   beforeRead: [processDocumentFields, setDocumentLocale, setDocumentType, sortDocumentProps],
   beforeCreate: [mergeWithBlankDocument, buildDataConfigMap, setDefaultValues, validateFields],
   beforeUpdate: [
-    defineVersionOperation,
     getOriginalDocument,
     buildOriginalDocConfigMap,
     resolveContentOwner,

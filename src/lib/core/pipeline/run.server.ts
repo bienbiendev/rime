@@ -130,7 +130,6 @@ export const assertUpsertContext = (
     | 'configMap'
     | 'originalConfigMap'
     | 'originalDoc'
-    | 'versionOperation' // @decouple
     | 'contentOwnerId'
   )[]
 ) => {
@@ -267,7 +266,6 @@ export const runUpdate = async <
     'configMap',
     'originalConfigMap',
     'originalDoc',
-    'versionOperation',
     'contentOwnerId'
   ]);
 

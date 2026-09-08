@@ -117,6 +117,17 @@ Full table with commits in `restructure-handoff.md`. The shape of it:
   Note the plan in `decoupling-versions.md` said to resolve an _id_ and pay a second query; that
   turned out to be wrong and the doc says why (a versioned list needs one content row per document,
   which no un-nested query expresses).
+- **The versions feature carries its own hooks**, which it could not before (`9c66566a`,
+  `76f308a2`, and the commit after). Both prototypes used to list `defineVersionOperation` and
+  `handleNewVersion` by import, and `pipeline/` imported the feature's enum in three more places —
+  so deleting `versions` would have broken core. The blocker was never the `enabled` gate: it was
+  that core had **no default** for two things the feature was answering on everyone's behalf. Core
+  states them now (`resolveContentOwner`, and `ReadIntent`) and the feature overrides. Rule 8 in
+  `restructure-handoff.md`.
+- **`bun run rime:pipeline`** renders every resolved pipeline — each hook with its `requires`,
+  `provides`, and the feature that contributed it — into `docs/pipeline-map.md`, pinned by a spec
+  so it cannot go stale. It is the readable view of a thing that exists nowhere in the source, and
+  it makes "is this feature decoupled" a one-column question.
 
 ### Measured, right now
 

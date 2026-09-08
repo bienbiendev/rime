@@ -16,8 +16,8 @@ import { versionsWritePlan } from './write-plan.js';
  * states the default now (`pipeline/steps/resolve-content-owner.server.ts`: the document's own
  * row) and this feature *overrides* it, which is what a feature is for.
  *
- * `defineVersionOperation` is the one still listed by the prototypes — see the note in
- * hooks/define-version-operation.server.ts.
+ * `version-operation` is its mark, merged into `FeatureHookMarks` below — core's `CoreHookMark`
+ * used to declare it, which is a feature's word in core's closed union.
  *
  * The augment is isomorphic — it normalises `versions` and adds `status` — so it needs no
  * `$rime/modules` pair.
@@ -68,5 +68,19 @@ export const versions = defineFeature({
 declare module '$lib/core/features/register.js' {
   interface FeatureConfigAugment<T> {
     versions: WithVersionsConfig<T>;
+  }
+}
+
+/**
+ * The mark its own hooks order by: `defineVersionOperation` decides which of the five operations
+ * an update is, and both `handleNewVersion` and `demoteOtherVersions` wait on it.
+ *
+ * Declared here rather than in `CoreHookMark`, where it used to be. The union is closed on purpose
+ * — a misspelled mark would silently reorder the pipeline instead of erroring — and this is the
+ * seam that keeps it closed without core naming a feature.
+ */
+declare module '$lib/core/pipeline/types.js' {
+  interface FeatureHookMarks {
+    'version-operation': true;
   }
 }
