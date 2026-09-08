@@ -51,13 +51,17 @@ export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) =
         versionOperation: context.versionOperation!
       }),
 
-    // The versionId this call was made with — `context.params.versionId` is now the same thing,
-    // since the hooks answer "which row holds the content" on `context.contentOwnerId` instead of
-    // overwriting the caller's parameter. Always draft:true.
-    reread: ({ config }) =>
+    /**
+     * Read back **the row the write went to** — see the collection's `reread` for the full note.
+     *
+     * Not `versionId`, the caller's parameter: the hooks answer "which row holds the content" on
+     * `context.contentOwnerId`, and on a new-version update that is a row the caller never named.
+     * Always draft:true.
+     */
+    reread: ({ config, context }) =>
       rime.area(config.slug).find({
         locale,
-        versionId,
+        versionId: context.contentOwnerId,
         draft: true
       }) as unknown as Promise<T>
   });

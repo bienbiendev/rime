@@ -56,11 +56,23 @@ export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T
         versionOperation: context.versionOperation!
       }),
 
+    /**
+     * Read back **the row the write went to**, not the one the caller asked for.
+     *
+     * `context.contentOwnerId` is what `handleNewVersion` answered and what step 4 wrote to, so on
+     * a new-version update it is the version that was just created — which `params.versionId`
+     * cannot be, since the caller did not name it. Reading `params.versionId` here returned the
+     * *published* version of a `?draft=true` update, unchanged, with a 200.
+     *
+     * `runUpdate` asserts `contentOwnerId` before the write, so it is always set by now. A config
+     * with no versions ignores the parameter entirely (see `readPrototype` in the adapter), where
+     * it is the document's own id anyway.
+     */
     reread: ({ written, config, context }) =>
       rime.collection(config.slug).findById({
         id: written.id,
         locale,
-        versionId: context.params.versionId
+        versionId: context.contentOwnerId
       }) as Promise<T>
   });
 };
