@@ -82,6 +82,53 @@ export const buildPipeline = (
  * config chain — so `$hooks` is the authored hooks going in and the pipeline coming out, and
  * nothing anywhere holds a second copy.
  */
+/**
+ * The same composition as `buildPipeline`, but keeping what it throws away: where each hook came
+ * from.
+ *
+ * `buildPipeline` folds three lists into one and the result is just functions, so nothing
+ * downstream can say whether `handleNewVersion` is the prototype's or a feature's — which is
+ * exactly the question you have when a hook lands somewhere surprising, or when you are asking
+ * whether removing a feature would take its hooks with it.
+ *
+ * Read-only and used by `bun run rime:pipeline`; the runtime path is untouched.
+ */
+export const describePipeline = (
+  definition: Pick<PrototypeDefinition, 'features' | 'hooks'>,
+  config: Dic
+): Record<string, { name: string; from: string; requires: string[]; provides: string[] }[]> => {
+  const active = definition.features.filter((feature) => feature.enabled(config));
+  const described: Record<
+    string,
+    { name: string; from: string; requires: string[]; provides: string[] }[]
+  > = {};
+
+  for (const timing of TIMINGS) {
+    // Who contributed each hook, by identity — the same function object comes out of the resolver.
+    const from = new Map<unknown, string>();
+    for (const hook of definition.hooks?.[timing] ?? []) from.set(hook, config.type ?? 'prototype');
+    for (const feature of active)
+      for (const hook of feature.hooks?.[timing] ?? []) from.set(hook, feature.name);
+    for (const hook of (config.$hooks?.[timing] as unknown[]) ?? [])
+      from.set(hook, 'config.$hooks');
+
+    const resolved = (buildPipeline(definition, config, config.$hooks as Dic | undefined)[timing] ??
+      []) as unknown[];
+
+    described[timing] = resolved.map((hook) => {
+      const marks = marksOf(hook as never);
+      return {
+        name: marks.name,
+        from: from.get(hook) ?? '?',
+        requires: [...marks.requires],
+        provides: [...marks.provides]
+      };
+    });
+  }
+
+  return described;
+};
+
 export const augmentHooks = <T extends Dic>(
   definition: Pick<PrototypeDefinition, 'features' | 'hooks'>,
   config: T
