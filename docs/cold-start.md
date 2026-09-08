@@ -111,7 +111,12 @@ Full table with commits in `restructure-handoff.md`. The shape of it:
   collapsed to one path, because the caller now hands down a _write plan_ — which rows this write
   touches, and with what — built by `runUpdate` after the data hooks and refined by
   `FeatureDefinition.writePlan`. The publish demotion is a versions hook over a new `updateWhere`
-  primitive.
+  primitive. **Stage 3 is done too** (`a89a72c9`): `draft` and `versionId` have left the contract
+  and `config.versions` has left the read path — a read now carries a `content` filter the versions
+  feature wrote (`FeatureDefinition.readQuery`), rather than three parameters the adapter decoded.
+  Note the plan in `decoupling-versions.md` said to resolve an _id_ and pay a second query; that
+  turned out to be wrong and the doc says why (a versioned list needs one content row per document,
+  which no un-nested query expresses).
 
 ### Measured, right now
 
@@ -146,16 +151,15 @@ Cheapest first. Each is independently useful and each has a document behind it.
 1. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
    the registry** instead of listing the two by hand. `prototypeConfigs()` and `prototypeEntries()` exist;
    the schema generator is the worked example.
-2. **versions stages 3 and 5, and stage 4's insert half** — the write path is done. What is left:
-   - **Stage 3, the read selector.** `readPrototype` and `findManyPrototypes` still take
-     `draft`/`versionId` and `buildPublishedOrLatestVersionParams` still reads
-     `config.versions.draft`. The plan is the same move the write just made: the operation resolves
-     which content row it means and hands down an id. No new adapter surface is needed — a shadow
-     is already a registered prototype with its own handle. Costs one extra query per versioned
-     read and per list, and no atomicity (there are none in the adapter).
-   - **Stage 4's insert half.** `insertPrototype` splits for itself and `ensurePrototypeExists`
-     reads `config.versions.draft` for the first version's status — the last two on a write path.
-   - **Stage 5**, the remainder. (`decoupling-versions.md`)
+2. **versions stage 5, and stage 4's insert half** — reads and updates are done; three
+   `config.versions` reads remain in the whole adapter:
+   - **Stage 4's insert half.** `insertPrototype` splits for itself, and `ensurePrototypeExists`
+     reads `config.versions.draft` for the first version's status — the last one on a write path.
+     An insert cannot take the update's plan (it has no row to name yet); the shape it wants is
+     `content?: { data }` with no id, and the adapter returning the id it generated.
+   - **Stage 5**, the remainder: `transform.server.ts:51` and the four in `url.server.ts`, plus
+     `core/constants.ts`, the codegen'd versions pages and `contentOwnerSlug` in
+     `pipeline/persist/*`. (`decoupling-versions.md`)
 3. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
    `structure-audit.md` §19.4's four steps; the other three are done.
 4. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and

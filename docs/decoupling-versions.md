@@ -293,11 +293,11 @@ wanted the row the declaration selected and half wanted the newest one regardles
 that needs a runtime flag beside it is a declaration in the wrong place.** The caller already knows
 which row it wants; it should name it rather than describe a policy for the adapter to re-evaluate.
 
-So the adapter takes an id and no policy:
+So the adapter takes a filter and no policy:
 
 ```ts
 // core/adapter.ts — after
-find(args?: { id?: string; contentId?: string; select?: string[]; locale?: string });
+find(args?: { id?: string; select?: string[]; locale?: string; content?: OperationQuery });
 ```
 
 ```ts
@@ -306,20 +306,26 @@ const shadow = handle.shadow;
 if (!shadow) return queryTable.findFirst({ columns, ...byId, with: … });
 
 const contentTable = baseTableName(shadow.slug);
-const content = contentId
-  ? { where: eq(tables[contentTable].id, contentId) }
-  : { orderBy: [desc(tables[contentTable].updatedAt)] }; // the row a bare read means
 
 return queryTable.findFirst({
   columns, ...byId,
-  with: { [contentTable]: { columns, with: …, ...content, limit: 1 } }
+  with: {
+    [contentTable]: {
+      columns, with: …,
+      ...(content ? { where: buildWhereParam({ query: normalizeQuery(content), … }) } : {}),
+      orderBy: [desc(tables[contentTable].updatedAt)], // the row a bare read means
+      limit: 1
+    }
+  }
 });
 ```
 
 The `orderBy` fallback is not the `'newest'` half of `pick` returning by the back door. It is what
 "the content of this document" means when nobody said otherwise — the same statement as `updatedAt`
 being the default sort, and it names no feature, no column of one, and no magic value. A caller
-that wants a _rule_ applied resolves the row first and passes `contentId`.
+that wants a _rule_ applied writes it as a filter, per request, and that is the difference from
+`pick`: a declaration stored once has to be re-evaluated by the adapter against a request it cannot
+see, which is why `pick` needed a `latest` flag beside it. A filter the caller writes needs none.
 
 ---
 
@@ -538,43 +544,73 @@ adapter.registerPrototype({
 });
 ```
 
-### Stage 3 — the operation resolves its own content row
+### Stage 3 — the read selector comes from the caller ✅ done (`a89a72c9`)
 
-`find`/`findMany` lose `draft` and `versionId` and gain `contentId`. Nothing replaces them inside
-the adapter: whoever wanted a rule applies it above, and hands down an id.
-
-**The primitive already exists.** A shadow is a registered prototype in its own right —
-`$news__versions` is a collection with a handle, a config and a pipeline, which is how
-`handle-new-version.server.ts` already writes version rows through the public API. So resolving a
-content row needs no new adapter surface at all:
+`find` and `findMany` lose `draft` and `versionId` and gain `content`, an ordinary
+`OperationQuery`. The adapter applies a filter instead of choosing one.
 
 ```ts
-// core/features/versions/… — a beforeRead hook, or the operation itself
-const [version] = await rime.collection(contentOwnerSlug(config)).find({
-  query: draft
-    ? `where[ownerId][equals]=${id}`
-    : `where[and][0][ownerId][equals]=${id}&where[and][1][status][equals]=published`,
-  sort: '-updatedAt',
-  limit: 1
-});
-context.contentId = version?.id;
+find(args?: { id?: string; select?: string[]; locale?: string; content?: OperationQuery });
+findMany(args?: { …; query?: OperationQuery; content?: OperationQuery });
 ```
 
-`findMany` inverts rather than filters. Today it queries the base table and pulls one content row
-in through a `with`, which is why the status filter had to be injected into somebody else's `where`
-clause. The content table is where the filterable and sortable columns actually are — `where`
-resolves against the shadow's slug, and `orderBy` was handed the shadow's table name in 25a78cdc —
-so the natural shape is to list the shadow and fetch the base rows by id.
+```ts
+// core/features/versions/read-query.ts — the three branches readPrototype used to decode
+export const versionsReadQuery = ({ config, params }) => {
+  if (params.versionId) return { where: { versionId: { equals: params.versionId } } };
+  if (params.draft || !config.versions?.draft) return undefined; // no narrowing: the newest row
+  return { where: { status: { equals: VERSIONS_STATUS.PUBLISHED } } };
+};
+```
 
-**The cost, stated honestly:** a versioned read goes from one query to two, and a versioned list
-from one to two. Not N+1 — the second query is `where id in (…)` — and the second one is a plain
-lookup by primary key. In exchange the branch disappears from the database layer entirely and a
-second adapter gets versions for free instead of re-implementing the ladder.
+Folded by `readQueryOf` (first answer wins, `enabled`-gated, like `shadowOf`) and reached through
+`PrototypeApiContext.contentQuery()`, so each read operation asks in one line and none of them
+names a feature.
 
-**And what it costs nothing in:** atomicity. `grep -rn "transaction\|\.batch(" src/lib/adapter-sqlite/*.ts`
-returns nothing — there are no transactions in the adapter today, so splitting a read or a write
-into two calls loses a guarantee that was never there. That was the strongest argument for keeping
-the branching low and it does not hold.
+#### This is not what the plan above said, and the plan was wrong
+
+The plan said: resolve the content row to an **id** above the adapter, pay a second query, hand
+down `contentId`. Two things killed it, both found while building it.
+
+**`findMany` cannot be inverted.** The plan's shape was "list the shadow, then fetch base rows by
+id". But a versioned list needs _one content row per document_, and a plain
+`findMany` over the shadow with `limit: 10` returns ten rows that may all belong to one document.
+The nested `with … limit: 1` is what makes it one-per-document, and there is no way to express a
+per-group limit in the query builder without a window function. So the status filter has to travel
+into that nested read either way — which is a filter, not an id.
+
+**Two mechanisms for one idea is worse than the idea being slightly wider.** If `findMany` filters
+and `find` resolves an id, then "which content row does this read mean" has two answers depending
+on how many documents you asked for. One `content` filter on both is one idea.
+
+**And a per-request filter is not `pick` coming back.** `pick` was a _declaration_, stored at
+registration, describing a policy the adapter re-evaluated on every request — which is exactly why
+it needed a companion `latest` flag beside it. A filter the caller writes per request needs no
+flag, because the caller already knows what it wants. `OperationQuery` is also already in the
+contract, on `findMany` and on `updateWhere`; applying it to the other table is not a second
+dialect.
+
+The cost the plan was willing to pay — one extra query per versioned read and per list, on the
+hottest path in the app — turned out to buy nothing. What it was buying was a narrower contract
+type, and the contract is not narrower for having `contentId` instead of `content` when the caller
+has to run a query to produce the id anyway.
+
+#### Two things that look like the branch surviving, and are not
+
+- **`orderBy: [desc(updatedAt)], limit: 1` on the join is unconditional.** That is what "the
+  content of this document" means with nothing else said — the same kind of statement as
+  `updatedAt` being the default sort. A filter narrows within it. It also unified the old
+  `versionId` branch, which had no limit, with the published branch, which had no order.
+- **`findMany` `and`s the two filters** rather than splicing one into the other's `where`. Two
+  filters over the same table are two wheres; they were only ever one object because the merge
+  happened before the builder ran.
+
+`buildPublishedOrLatestVersionParams` is deleted. The delete paths pass no `content` at all —
+`draft: true` was how they said "whichever row is newest", and there is a way to say that now.
+
+**Reads of `config.versions` on a read path: 0.** What is left in the whole adapter is
+`ensurePrototypeExists`' first-version status (stage 4's insert half) and `transform`/`url`
+(stage 5).
 
 ### Stage 4 — the write plan moves up ✅ update half done (`1ec2dfca`, `5dac93c0`)
 

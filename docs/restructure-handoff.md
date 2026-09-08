@@ -33,44 +33,45 @@ names `upload` again, something has gone backwards.
 
 ## Done
 
-| #        | commit                | what                                                                                                                                                        |
-| -------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1        | `9ed1e9d`             | adapter speaks base/shadow/child/branch; `adapter.{collection,area}` deleted                                                                                |
-| 2        | `675fc77`             | definitions own their local API and operations                                                                                                              |
-| 3        | `2a8c015`             | definitions own their REST; codegen reads the registry; `core/rest/` deleted                                                                                |
-| 4        | `f7c49f4`             | the feature contract, with `url` as its first inhabitant                                                                                                    |
-| 5        | `1f8e759`             | `upload`, `nested`, `versions`' augment become features                                                                                                     |
-| 6        | `0fa7f49`             | `$rime/modules` resolves per name instead of through a whole-package barrel                                                                                 |
-| 7        | `e3ea8f8`             | definitions own their config factory and their pipeline                                                                                                     |
-| 8        | `fd621f2`             | hooks declare `requires`/`provides`; the order is **resolved**, not written                                                                                 |
-| 8h       | `f21fc07`             | `hooks.generated.md` renders as a tree, tagged by contributing feature                                                                                      |
-| 9b/9c    | `ceefc6e`             | `factory/shared` becomes features; the registry stops naming features in its types                                                                          |
-| 9-pre/9a | `28143da`             | `Rime` is declared, not inferred; the prototype declares `features` and `hooks`; **both `pipeline.server.ts` files deleted**                                |
-| 10a      | `2a9cb4a`             | a prototype declares its own whole-config `configure`; `augmentPrototypes` deleted                                                                          |
-| 10c      | `f3ead15`             | one plugin step for both sides; the double `augmentPlugins` call (and its three header buttons) gone                                                        |
-| 10d      | `a54a774`             | the three panel augments move to `core/features/panel/`                                                                                                     |
-| 10       | `4fd4204`             | **`factory/` → `core/config/`, `operations/` → `core/pipeline/`**, `hooks.ts` with them                                                                     |
-| 10b      | `1db951b`             | three feature-owned hooks leave `pipeline/steps/` for their features                                                                                        |
-| 10b′     | `9990967`             | `mergeWithBlankDocument` goes to the collection — same rule, applied properly                                                                               |
-| 11       | `f7d751c`             | **a feature's `configure` can refine the config's type**; auth, panel and versions own their config steps; the chain stops naming features                  |
-| 11b      | `c786f48` → `6e50592` | CORS becomes a **feature**, augment and handler together; `FeatureDefinition` gains `handler`                                                               |
-| 12       | `a1dc53cc`            | the prototype declares `titleFallback`; features override it as `_titleFallback`, off the authoring surface                                                 |
-| 12b      | `5ebdcee2`            | upload's directories derivation takes the collection's features from the registry — **no feature imports a prototype definition**                           |
-| —        | `6a9a81ba`            | comment pass: what the code does, not what it replaced                                                                                                      |
-| 13       | `8d5500fe`            | base-row fields come from the `._root()` flag, not a name list                                                                                              |
-| 13b      | `20a3b815`            | a versions shadow gets its own pipeline instead of the parent's                                                                                             |
-| 14       | `b66a5f3`             | **the shadow table is declared by the feature that owns it**; the schema generator stops reading `config.versions`                                          |
-| 9r       | `637f9b5`             | **`augment` moves onto `definePrototype`**; `prototype/*/config/` is gone and `create` is composed once                                                     |
-| 1a       | `0b5e3076`            | **`augment-panel.ts` is gone**; `upload` states `_dashboardLayout` and the dashboard owns its own defaults                                                  |
-| 1b       | `1d7d0c8e`            | **`FeatureDefinition.validate`**; auth's config rules leave `config/validate.server.ts`                                                                     |
-| 1c       | _this commit_         | **`FeatureDefinition.blank`**; `prototype/doc.ts` and `api.server.ts` stop naming a feature                                                                 |
-| 1c′      | `1726af2b`            | `PRIVATE_FIELDS` stays in `.server`; `usersFields` splits so `password` never reaches a client build                                                        |
-| 2        | `4f706a9c`            | **`Config`'s prototype members come from the registry**; `core/config/types.ts` names no kind                                                               |
-| 15       | `7c7b771a`            | **versions stage 2, runtime half**: registration carries the shadow declaration; the adapter stops appending a suffix                                       |
-| 16       | ~~`07f39bf3`~~        | **versions stage 3, reverted in `29192dae`**: `pick` was a query language in the adapter contract — the read selector belongs above it                      |
-| 16′      | `25a78cdc`            | **a shadow is recognised by its table, not a config member**: `hasVersions`/`hasVersionsSuffix` leave `orderBy`/`where`                                     |
-| 17       | `1ec2dfca`            | **`updateWhere`**, and the publish demotion becomes a versions hook; the adapter stops writing rows its own write does not touch                            |
-| 18       | `5dac93c0`            | **versions stage 4, update half**: the write plan is built above the adapter; `versionOperation` leaves the contract and the three branches collapse to one |
+| #        | commit                | what                                                                                                                                                         |
+| -------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1        | `9ed1e9d`             | adapter speaks base/shadow/child/branch; `adapter.{collection,area}` deleted                                                                                 |
+| 2        | `675fc77`             | definitions own their local API and operations                                                                                                               |
+| 3        | `2a8c015`             | definitions own their REST; codegen reads the registry; `core/rest/` deleted                                                                                 |
+| 4        | `f7c49f4`             | the feature contract, with `url` as its first inhabitant                                                                                                     |
+| 5        | `1f8e759`             | `upload`, `nested`, `versions`' augment become features                                                                                                      |
+| 6        | `0fa7f49`             | `$rime/modules` resolves per name instead of through a whole-package barrel                                                                                  |
+| 7        | `e3ea8f8`             | definitions own their config factory and their pipeline                                                                                                      |
+| 8        | `fd621f2`             | hooks declare `requires`/`provides`; the order is **resolved**, not written                                                                                  |
+| 8h       | `f21fc07`             | `hooks.generated.md` renders as a tree, tagged by contributing feature                                                                                       |
+| 9b/9c    | `ceefc6e`             | `factory/shared` becomes features; the registry stops naming features in its types                                                                           |
+| 9-pre/9a | `28143da`             | `Rime` is declared, not inferred; the prototype declares `features` and `hooks`; **both `pipeline.server.ts` files deleted**                                 |
+| 10a      | `2a9cb4a`             | a prototype declares its own whole-config `configure`; `augmentPrototypes` deleted                                                                           |
+| 10c      | `f3ead15`             | one plugin step for both sides; the double `augmentPlugins` call (and its three header buttons) gone                                                         |
+| 10d      | `a54a774`             | the three panel augments move to `core/features/panel/`                                                                                                      |
+| 10       | `4fd4204`             | **`factory/` → `core/config/`, `operations/` → `core/pipeline/`**, `hooks.ts` with them                                                                      |
+| 10b      | `1db951b`             | three feature-owned hooks leave `pipeline/steps/` for their features                                                                                         |
+| 10b′     | `9990967`             | `mergeWithBlankDocument` goes to the collection — same rule, applied properly                                                                                |
+| 11       | `f7d751c`             | **a feature's `configure` can refine the config's type**; auth, panel and versions own their config steps; the chain stops naming features                   |
+| 11b      | `c786f48` → `6e50592` | CORS becomes a **feature**, augment and handler together; `FeatureDefinition` gains `handler`                                                                |
+| 12       | `a1dc53cc`            | the prototype declares `titleFallback`; features override it as `_titleFallback`, off the authoring surface                                                  |
+| 12b      | `5ebdcee2`            | upload's directories derivation takes the collection's features from the registry — **no feature imports a prototype definition**                            |
+| —        | `6a9a81ba`            | comment pass: what the code does, not what it replaced                                                                                                       |
+| 13       | `8d5500fe`            | base-row fields come from the `._root()` flag, not a name list                                                                                               |
+| 13b      | `20a3b815`            | a versions shadow gets its own pipeline instead of the parent's                                                                                              |
+| 14       | `b66a5f3`             | **the shadow table is declared by the feature that owns it**; the schema generator stops reading `config.versions`                                           |
+| 9r       | `637f9b5`             | **`augment` moves onto `definePrototype`**; `prototype/*/config/` is gone and `create` is composed once                                                      |
+| 1a       | `0b5e3076`            | **`augment-panel.ts` is gone**; `upload` states `_dashboardLayout` and the dashboard owns its own defaults                                                   |
+| 1b       | `1d7d0c8e`            | **`FeatureDefinition.validate`**; auth's config rules leave `config/validate.server.ts`                                                                      |
+| 1c       | _this commit_         | **`FeatureDefinition.blank`**; `prototype/doc.ts` and `api.server.ts` stop naming a feature                                                                  |
+| 1c′      | `1726af2b`            | `PRIVATE_FIELDS` stays in `.server`; `usersFields` splits so `password` never reaches a client build                                                         |
+| 2        | `4f706a9c`            | **`Config`'s prototype members come from the registry**; `core/config/types.ts` names no kind                                                                |
+| 15       | `7c7b771a`            | **versions stage 2, runtime half**: registration carries the shadow declaration; the adapter stops appending a suffix                                        |
+| 16       | ~~`07f39bf3`~~        | **versions stage 3, reverted in `29192dae`**: `pick` was a query language in the adapter contract — the read selector belongs above it                       |
+| 16′      | `25a78cdc`            | **a shadow is recognised by its table, not a config member**: `hasVersions`/`hasVersionsSuffix` leave `orderBy`/`where`                                      |
+| 17       | `1ec2dfca`            | **`updateWhere`**, and the publish demotion becomes a versions hook; the adapter stops writing rows its own write does not touch                             |
+| 18       | `5dac93c0`            | **versions stage 4, update half**: the write plan is built above the adapter; `versionOperation` leaves the contract and the three branches collapse to one  |
+| 19       | `a89a72c9`            | **versions stage 3**: the read selector comes from the caller as a filter; `draft`/`versionId` leave the contract and `config.versions` leaves the read path |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 
