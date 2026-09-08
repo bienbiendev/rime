@@ -135,9 +135,11 @@ Cheapest first. Each is independently useful and each has a document behind it.
 1. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
    the registry** instead of listing the two by hand. `prototypeConfigs()` and `prototypeEntries()` exist;
    the schema generator is the worked example.
-2. **versions stages 3–5** — the read selector, the write plan, the remainder. Stage 2 is done
-   both halves, so the adapter resolves _where_ content lives from the declaration; what a version
-   row _means_ (`config.versions.draft`) is what is left. (`decoupling-versions.md`)
+2. **versions stages 4–5** — the write plan and the remainder. Stages 2 and 3 are done, so the
+   adapter resolves _where_ content lives and _which row_ to read from the declaration. What is
+   left is what a version row _means_ on a write — the publish demotion and the first version's
+   status, the two `config.versions.draft` reads still in `prototype.server.ts` — plus the
+   remainder in `orderBy`/`transform`/`url`/`where`. (`decoupling-versions.md`)
 3. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
    `structure-audit.md` §19.4's four steps; the other three are done.
 4. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and

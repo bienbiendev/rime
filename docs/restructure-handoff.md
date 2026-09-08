@@ -66,7 +66,8 @@ names `upload` again, something has gone backwards.
 | 1c       | _this commit_         | **`FeatureDefinition.blank`**; `prototype/doc.ts` and `api.server.ts` stop naming a feature                                                |
 | 1c′      | `1726af2b`            | `PRIVATE_FIELDS` stays in `.server`; `usersFields` splits so `password` never reaches a client build                                       |
 | 2        | `4f706a9c`            | **`Config`'s prototype members come from the registry**; `core/config/types.ts` names no kind                                              |
-| 15       | _this commit_         | **versions stage 2, runtime half**: registration carries the shadow declaration; the adapter stops appending a suffix                      |
+| 15       | `7c7b771a`            | **versions stage 2, runtime half**: registration carries the shadow declaration; the adapter stops appending a suffix                      |
+| 16       | `07f39bf3`            | **versions stage 3**: the read selector comes off the declaration; the contract says `contentId`/`latest`, not `versionId`/`draft`         |
 
 Structural greps (`docs/architecture-target.md`'s own test):
 
