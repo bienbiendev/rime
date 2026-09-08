@@ -10,7 +10,6 @@ import {
   findManyPrototypes,
   insertPrototype,
   readPrototype,
-  readWhere,
   updatePrototype,
   updateWherePrototype
 } from './prototype.server.js';
@@ -104,9 +103,7 @@ export const createPrototypeRegistry = (deps: {
         return deletePrototype({ db, tables }, { slug, id: args.id });
       },
 
-      ensureExists: (args) => ensurePrototypeExists({ db, tables }, { ...args, slug, shadow }),
-
-      readWhere: (args) => readWhere({ db, tables, configCtx }, { ...args, slug })
+      ensureExists: (args) => ensurePrototypeExists({ db, tables }, { ...args, slug, shadow })
     };
   };
 

@@ -168,18 +168,6 @@ export interface PrototypeHandle {
 
   /** Boot only. Writes the row if absent; a no-op if not. */
   ensureExists(args: { blank: Dic; locale?: string }): Promise<void>;
-
-  /**
-   * The ids of this prototype's own rows matching `query`, in `sort` order.
-   *
-   * The read twin of `updateWhere`: the prototype's own table, no content row joined, no document
-   * built. `sort` is a column on that table, `-` for descending.
-   *
-   * It replaces two methods that were each a feature's question — `childrenIds` (`nested`, "what
-   * is parented to this") and `existingIds` (relation defaults, "which of these exist"). Both are
-   * a filter and a projection, so both are this.
-   */
-  readWhere(args: { query: OperationQuery; sort?: string; limit?: number }): Promise<string[]>;
 }
 
 /**

@@ -72,14 +72,15 @@ const defaultRelationValue = async (
           ? defaultValue
           : [];
 
-    // `existingIds` on the adapter, written out: which of these ids name a row that exists.
+    // `existingIds` on the adapter, written out: which of these ids name a document that exists.
+    // The ordinary read, projected — see features/nested/hooks/add-children.server.ts.
     const existing = ids.length
       ? await adapter
           .prototype(config.get.relationTo)
-          .readWhere({ query: { where: { id: { in_array: ids } } } })
+          .findMany({ query: { where: { id: { in_array: ids } } }, select: ['id'] })
       : [];
 
-    return existing.map((documentId, index) => ({
+    return existing.map(({ id: documentId }, index) => ({
       id: null,
       relationTo: config.get.relationTo,
       path: key,

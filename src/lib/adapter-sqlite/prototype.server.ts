@@ -6,7 +6,7 @@ import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { Dic } from '$lib/util/types.js';
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { RimeError } from '../core/errors/index.js';
 import { baseTableName, tableName, type TableName } from './naming.server.js';
 import { buildOrderByParam } from './orderBy.server.js';
@@ -527,49 +527,6 @@ export const deletePrototype = async (
  * `where` resolves against the versions table. `_parent` and `_position` are columns the adapter
  * writes itself, so answering this is its job.
  */
-/**
- * The ids of this prototype's **own rows** matching `query`, in `sort` order.
- *
- * The read twin of `updateWhere`, and flat in the same way: the prototype's own table, no content
- * row joined, no document built, no hooks. Two adapter methods used to be this — `childrenIds`
- * (`where _parent = x order by _position`) and `existingIds` (`where id in (…)`) — each a
- * feature's question with its own method on the contract. `nested` and the relation defaults ask
- * it themselves now.
- *
- * `sort` is a column on that table, `-` for descending. Deliberately *not* `buildOrderByParam`:
- * that one is the document-level sort, which reaches through a shadow with correlated subqueries.
- * The columns this read orders by (`_position`) are base-row columns, and going through the
- * document sort would make a versioned prototype fall back to `createdAt` for them.
- *
- * The query is resolved against the base table for the same reason — `readWhere` is not asking
- * about content, so a shadowed prototype's `id` here is the document's own id and `_parent`
- * resolves directly rather than through the owner join.
- */
-export const readWhere = async (
-  { db, tables, configCtx }: DepsWithConfig,
-  {
-    slug,
-    query,
-    sort,
-    limit
-  }: { slug: PrototypeSlug; query: OperationQuery; sort?: string; limit?: number }
-): Promise<string[]> => {
-  const table = tables[baseTableName(slug)];
-  const where = buildWhereParam({ query: normalizeQuery(query), slug, db, tables, configCtx });
-
-  const column = sort?.replace(/^-/, '');
-  const orderBy = column ? [(sort!.startsWith('-') ? desc : asc)(table[column])] : undefined;
-
-  const rows = await db
-    .select({ id: table.id })
-    .from(table)
-    .where(where)
-    .orderBy(...(orderBy ?? []))
-    .limit(limit ?? -1);
-
-  return rows.map((row: { id: string }) => row.id);
-};
-
 /**
  * Brings a singleton's row into being if it is not already there. Boot only.
  *
