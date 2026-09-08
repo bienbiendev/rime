@@ -105,10 +105,18 @@ export interface PrototypeHandle {
    */
   find(args?: {
     id?: string;
-    versionId?: string;
+    /** One exact content row, by id. Names the row, not a version — see `ShadowDeclaration`. */
+    contentId?: string;
     select?: string[];
     locale?: string;
-    draft?: boolean;
+    /**
+     * Take the newest content row instead of the one the shadow's `pick` selects.
+     *
+     * The per-request half of choosing a row, where `pick` is the per-config half. It was `draft`,
+     * which is the `versions` feature's word for it — the adapter has no business knowing what a
+     * draft is, only that a caller wants the latest rather than the selected one.
+     */
+    latest?: boolean;
   }): Promise<RawDoc | undefined>;
 
   findMany(args?: {
@@ -118,7 +126,8 @@ export interface PrototypeHandle {
     limit?: number;
     offset?: number;
     locale?: string;
-    draft?: boolean;
+    /** As `find`'s: the newest content row per document, rather than the one `pick` selects. */
+    latest?: boolean;
   }): Promise<RawDoc[]>;
 
   /**

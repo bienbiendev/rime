@@ -1,4 +1,5 @@
 import { makeVersionsCollectionsAliases } from '$rime/modules';
+import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import type { WithVersionsConfig } from './augment.js';
 import { defineFeature } from '../define.js';
 import { augmentVersions } from './augment.js';
@@ -31,7 +32,16 @@ export const versions = defineFeature({
    * else on `$<slug>__versions` — the one fact the adapter needs to build the second table and to
    * know which row a write of content belongs on.
    */
-  shadow: (config) => ({ slug: withVersionsSuffix(config.slug) }),
+  shadow: (config) => ({
+    slug: withVersionsSuffix(config.slug),
+    // A draft-enabled config has a `status` column and a read means the published row; without
+    // drafts every version is publishable and the newest one is the document. The adapter used to
+    // ask `config.versions.draft` itself, which is the last thing it knew about this feature's
+    // shape.
+    pick: config.versions?.draft
+      ? { column: 'status', equals: VERSIONS_STATUS.PUBLISHED }
+      : ('newest' as const)
+  }),
 
   /**
    * The `<slug>__versions` collection behind every versioned config, derived after `upload` has

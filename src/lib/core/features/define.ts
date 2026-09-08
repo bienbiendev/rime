@@ -163,7 +163,25 @@ export type ShadowDeclaration = {
    * is called in the database is the adapter's business, and it maps.
    */
   slug: string;
+
+  /**
+   * Which of a config's content rows a read should return when the caller names none.
+   *
+   * `'newest'` is the last-written row. The object form is one equality — "the row whose `column`
+   * is `equals`" — which for `versions` is the published one. A caller asking for the *latest*
+   * regardless gets `'newest'` either way; that is the second axis, and it is per request rather
+   * than per config, so it stays an argument (`latest`) rather than living here.
+   *
+   * **One equality, deliberately.** This is a step away from inventing a query language inside the
+   * adapter contract, and the moment it needs more than a column and a value the better trade is
+   * to resolve the row above the adapter and pay a second query. See
+   * docs/decoupling-versions.md — "`pick` is the part to be careful with".
+   */
+  pick: ContentPick;
 };
+
+/** How to choose a content row: the newest, or the one whose column equals a value. */
+export type ContentPick = 'newest' | { column: string; equals: string };
 
 export type FeatureHooks = Partial<Record<HookTiming, AnyHook[]>>;
 

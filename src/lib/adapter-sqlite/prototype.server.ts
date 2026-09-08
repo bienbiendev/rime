@@ -98,9 +98,11 @@ type ReadArgs = {
   shadow?: ShadowDeclaration;
   /** Restrict to one root row. Omitted for a singleton, which has exactly one. */
   id?: string;
-  versionId?: string;
+  /** One exact content row. Short-circuits the shadow's `pick`. */
+  contentId?: string;
   select?: string[];
-  draft?: boolean;
+  /** Take the newest content row rather than the one `pick` selects. */
+  latest?: boolean;
   locale?: string;
   config: BuiltCollection | BuiltArea;
 };
@@ -112,7 +114,7 @@ type ReadArgs = {
  * what that means — for most callers a 404.
  *
  * It does **not** mean "this prototype has never been written": `undefined` also covers a row
- * that exists with no version matching the `draft`/`versionId` filter. Bootstrapping on it would
+ * that exists with no content row matching the shadow's `pick`. Bootstrapping on it would
  * write a second singleton row. `ensurePrototypeExists` asks the root table directly, which is
  * the only question that actually means "absent".
  *
@@ -121,7 +123,7 @@ type ReadArgs = {
  */
 export const readPrototype = async (
   { db, tables }: Deps,
-  { slug, id, versionId, select, draft, locale, config, shadow }: ReadArgs
+  { slug, id, contentId, select, latest, locale, config, shadow }: ReadArgs
 ): Promise<Dic | undefined> => {
   const table = baseTableName(slug);
   const rootTable = tables[table];
@@ -148,14 +150,13 @@ export const readPrototype = async (
       [versionsTable]: {
         columns: adapterUtil.columnsParams({ table: tables[versionsTable], select }),
         with: buildWithParam({ table: versionsTable, select, locale, tables, config }),
-        // A named version, or whichever one the draft flag says to show.
-        ...(versionId
-          ? { where: eq(tables[versionsTable].id, versionId) }
-          : adapterUtil.buildPublishedOrLatestVersionParams({
-              draft,
-              config,
-              table: tables[versionsTable]
-            }))
+        // The row the caller named, else the one the shadow's declaration selects.
+        ...adapterUtil.pickContentParams({
+          pick: shadow.pick,
+          contentId,
+          latest,
+          table: tables[versionsTable]
+        })
       }
     }
   });
@@ -401,7 +402,17 @@ export const findManyPrototypes = async (
   { db, tables, configCtx }: DepsWithConfig,
   args: FindManyArgs
 ): Promise<RawDoc[]> => {
-  const { select, query: incomingQuery, sort, limit, offset, locale, draft, config, shadow } = args;
+  const {
+    select,
+    query: incomingQuery,
+    sort,
+    limit,
+    offset,
+    locale,
+    latest,
+    config,
+    shadow
+  } = args;
   // buildOrderByParam and buildWhereParam resolve fields against the config, so they take a
   // prototype slug. Registration guarantees this one is registered, hence is one.
   const slug = args.slug as PrototypeSlug;
@@ -442,21 +453,21 @@ export const findManyPrototypes = async (
   const withParam =
     buildWithParam({ table: versionsTable, select, tables, config, locale }) || undefined;
 
-  // Without an explicit draft, a draft-enabled prototype shows only what is published.
-  if (!draft && config.versions && config.versions.draft) {
+  // A list shows the row the shadow selects, unless the caller asked for the latest. The same two
+  // axes `pickContentParams` resolves for a single read, expressed as a query filter because this
+  // one runs per document.
+  const selector = shadow.pick;
+  if (!latest && selector !== 'newest') {
+    const picked = { [selector.column]: { equals: selector.equals } };
+
     if (!query) {
-      query = { where: { status: { equals: 'published' } } };
+      query = { where: picked };
     } else {
       const originalWhere = { ...query.where };
       query =
         'and' in originalWhere && Array.isArray(originalWhere.and)
-          ? {
-              where: {
-                ...originalWhere,
-                and: [...originalWhere.and, { status: { equals: 'published' } }]
-              }
-            }
-          : { where: { and: [originalWhere, { status: { equals: 'published' } }] } };
+          ? { where: { ...originalWhere, and: [...originalWhere.and, picked] } }
+          : { where: { and: [originalWhere, picked] } };
     }
   }
 
@@ -636,6 +647,8 @@ type InsertArgs = {
 
 type FindManyArgs = {
   shadow?: ShadowDeclaration;
+  /** Take the newest content row per document, rather than the one `pick` selects. */
+  latest?: boolean;
   slug: string;
   select?: string[];
   query?: OperationQuery;
@@ -643,7 +656,6 @@ type FindManyArgs = {
   limit?: number;
   offset?: number;
   locale?: string;
-  draft?: boolean;
   config: BuiltCollection | BuiltArea;
 };
 

@@ -78,10 +78,10 @@ export const createPrototypeRegistry = (deps: {
             slug,
             // A singleton ignores an id it was never meant to be given.
             id: singleton ? undefined : args.id,
-            versionId: args.versionId,
+            contentId: args.contentId,
             select: args.select,
             locale: args.locale,
-            draft: args.draft,
+            latest: args.latest,
             config,
             shadow
           }

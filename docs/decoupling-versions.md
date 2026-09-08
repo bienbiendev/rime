@@ -509,10 +509,18 @@ adapter.registerPrototype({
 });
 ```
 
-### Stage 3 — the read selector
+### Stage 3 — the read selector ✅ done
 
-`find`/`findMany` lose `draft` and `versionId`; `buildPublishedOrLatestVersionParams` becomes a
-function of the declaration rather than of `config.versions`:
+`buildPublishedOrLatestVersionParams` is `pickContentParams`, a function of the declaration rather
+than of `config.versions`, and `ShadowDeclaration` carries the `pick` it reads.
+
+**`draft` did not leave the adapter contract; it was renamed.** The sketch below dropped it, which
+would have made every caller resolve a content row first — a second query on `delete`,
+`deleteById`, `duplicate` and the panel's list, all of which pass `draft: true` to mean "the row
+whatever its status". The two axes are genuinely different: `pick` is per config and comes from the
+feature, `latest` is per request. So the adapter takes `contentId` and `latest`, and `draft` and
+`versionId` stop at the core operations — which is the right seam anyway, since a versioned CMS's
+public API may say `draft` and its database layer may not:
 
 ```ts
 const pickParams = (pick: Pick, contentId: string | undefined, table: GenericTable) =>

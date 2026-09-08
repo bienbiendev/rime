@@ -52,7 +52,8 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
     offset,
     locale,
     select,
-    draft
+    // See findById: `draft` is this API's word for "the newest one, whatever its status".
+    latest: draft
   });
 
   async function processDocument(documentRaw: RawDoc) {

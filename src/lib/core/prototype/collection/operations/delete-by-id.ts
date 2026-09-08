@@ -28,7 +28,9 @@ export const deleteById = async <T extends GenericDoc>(args: Args): Promise<stri
     context
   });
 
-  const document = (await rime.adapter.prototype(config.slug).find({ id, draft: true })) as T;
+  // `latest`, not the selected row: deleting has to find the document whether or not anything
+  // of it is published.
+  const document = (await rime.adapter.prototype(config.slug).find({ id, latest: true })) as T;
 
   if (!document) {
     throw new RimeError(RimeError.NOT_FOUND);
