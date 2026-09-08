@@ -102,14 +102,18 @@ stage is small enough to do in a sitting.
 core/prototype/types.ts    UploadDoc, Docs['upload'], Docs['directory'], imports UploadPath
 core/prototype/doc.ts      imports isUploadConfig to build a blank document
 core/config/types.ts       UploadConfig, image sizes, `upload?: boolean | UploadConfig`
-core/prototype/collection/augment-panel.ts          reads `config.upload` to pick a dashboard layout
-core/prototype/collection/operations/duplicate.ts   4 upload references
+core/prototype/collection/operations/duplicate.ts   2 upload references
 adapter-sqlite/prototype.server.ts  imports withDirectoriesSuffix and getSegments
 ```
 
 The document _shapes_ (`UploadDoc`, the `directory` shape) live in core's prototype vocabulary, so
-core knows what an uploaded document is. `augment-panel.ts` reading `config.upload` is the smallest
-and most fixable: it is a panel default keyed on a feature.
+core knows what an uploaded document is.
+
+**`augment-panel.ts` is done.** It was the smallest of these — a panel default keyed on a feature —
+and it did not move, it went: upload now states `_dashboardLayout: 'grid'` the way it already
+states `_titleFallback`, and the dashboard, the only reader of `panel.dashboard`, keeps its own
+`'rows'` default. `duplicate.ts` is the next smallest, and it is the same shape twice: both
+references ask whether a document is a file rather than what the config declares.
 
 ## 3. `auth` is in the request path and the document shape
 

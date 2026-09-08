@@ -317,6 +317,18 @@ export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'up
   label: CollectionLabel;
   asTitle: string;
   asThumbnail: string | null;
+  /**
+   * How the panel's dashboard should list this collection, when a feature has an opinion.
+   *
+   * Off the authoring surface — a config author writes `panel.dashboard.layout` — and the same
+   * device as `_titleFallback`: the feature that knows states its preference, and whoever renders
+   * reads it. `upload` sets `'grid'`, because a collection of files reads better as thumbnails.
+   * The dashboard's own default is `'rows'`, and what an author wrote beats both.
+   *
+   * It replaced `augment-panel.ts`, where the collection prototype tested `config.upload` to pick
+   * this — a prototype knowing what a feature is, and the whole reason this member exists.
+   */
+  _dashboardLayout?: 'rows' | 'grid';
   auth?: CollectionAuthConfig;
   versions?: Required<VersionsConfig>;
   upload?: UploadConfig;

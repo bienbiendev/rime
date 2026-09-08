@@ -11,7 +11,6 @@ import { versions } from '$lib/core/features/versions/index.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
 import { augmentLabel } from './augment-label.js';
-import { augmentPanel } from './augment-panel.js';
 import type { CollectionWithoutSlug } from './types.js';
 
 /**
@@ -38,14 +37,20 @@ export const collection = definePrototype({
   titleFallback: 'id', // @decouple can set all fallback title fields here instead of setting it per feature
 
   /**
-   * The collection's own augments, ahead of every feature's.
+   * The collection's own augments, ahead of every feature's. One: a label is the kind's own
+   * statement about itself.
    *
-   * `auth` is not called here: it is a feature, and it is *first* in the list below, which is what
-   * `title` needs — `title` resolves `asTitle` from the fallback `auth` and `upload` each offer,
-   * so auth has to have run before it. Calling it here as well appended its fields twice and boot
-   * rejected the config with "Duplicate field 'name' in collection 'staff'".
+   * `augmentPanel` used to be here too, defaulting `panel.dashboard` — and picking its layout by
+   * testing `config.upload`, which is a prototype knowing what a feature is. Its `maxEntries` and
+   * `'rows'` defaults were already duplicated by the dashboard, its only reader, so the whole step
+   * is gone: `upload` states `_dashboardLayout` and the dashboard defaults the rest.
+   *
+   * `auth` is not called here either: it is a feature, and it is *first* in the list below, which
+   * is what `title` needs — `title` resolves `asTitle` from the fallback `auth` and `upload` each
+   * offer, so auth has to have run before it. Calling it here as well appended its fields twice and
+   * boot rejected the config with "Duplicate field 'name' in collection 'staff'".
    */
-  augments: [augmentLabel, augmentPanel],
+  augments: [augmentLabel],
 
   /**
    * In augment order, which is column order — `auth` first because its `removePrivateFields` and

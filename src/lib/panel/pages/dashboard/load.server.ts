@@ -10,13 +10,25 @@ export const dashboardLoad = async (event: ServerLoadEvent) => {
 
   const entries: DashboardEntry[] = [];
 
+  /**
+   * The dashboard's own defaults — and the only place they live.
+   *
+   * `panel !== false` is already filtered below, so `c.panel` here is either what the author wrote
+   * or nothing at all. Layout precedence, widest to narrowest: what the author put on the
+   * collection, then what a feature offered through `_dashboardLayout` (`upload` asks for a grid),
+   * then rows.
+   *
+   * The collection prototype used to seed all of this in an `augmentPanel`, which meant `panel`
+   * was always an object by the time it got here — so `panel: false` never survived to be read,
+   * and these defaults ran twice.
+   */
   const normalizedPanelConfig = (c: BuiltCollection) => {
     const incomingConfig = c.panel || {};
     const incomingDashboardConfig = incomingConfig.dashboard || {};
     return {
       ...incomingConfig,
       dashboard: {
-        layout: incomingDashboardConfig.layout ? incomingDashboardConfig.layout : 'rows',
+        layout: incomingDashboardConfig.layout ?? c._dashboardLayout ?? 'rows',
         maxEntries: incomingDashboardConfig.maxEntries || 8
       }
     };
@@ -53,22 +65,16 @@ export const dashboardLoad = async (event: ServerLoadEvent) => {
   const promiseEntries = rime.config.raw.collections
     .filter((collection) => user && collection.access.read(user, {}))
     .filter((collection) => collection.panel !== false && collection.panel?.dashboard !== false)
-    .map(async (collection) => {
-      if (collection.panel) {
-        return getLastEdited(
-          collection,
-          normalizedPanelConfig(collection).dashboard?.maxEntries
-        ).then((docs) => ({
-          ...buildBaseEntry(collection),
-          lastEdited: docs
-        }));
-      } else {
-        return {
-          ...buildBaseEntry(collection),
-          lastEdited: []
-        };
-      }
-    });
+    // No `if (collection.panel)` branch: the filter above has already dropped the collections that
+    // switched the panel or the dashboard off, so everything reaching here wants its documents
+    // listed. The branch existed because `augmentPanel` made `panel` unconditionally truthy, which
+    // made its `else` unreachable — take the augment away and it would have started silently
+    // emptying every collection that authored no `panel` at all.
+    .map(async (collection) =>
+      getLastEdited(collection, normalizedPanelConfig(collection).dashboard.maxEntries).then(
+        (docs) => ({ ...buildBaseEntry(collection), lastEdited: docs })
+      )
+    );
 
   try {
     const collectionEntries = await Promise.all(promiseEntries);

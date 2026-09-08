@@ -66,6 +66,11 @@ Full table with commits in `restructure-handoff.md`. The shape of it:
   `ReturnType<typeof …>`, so a second adapter has something to conform to. Its two prototype
   facades collapsed into one `prototype.server.ts`; `generate-schema` went 261 → 150 lines and one
   loop.
+- **A prototype names no feature in its own augments.** `augmentPanel` went with
+  `augment-panel.ts`: `upload` states `_dashboardLayout: 'grid'` the way it states
+  `_titleFallback`, and the dashboard — the only reader of `panel.dashboard` — keeps its own
+  `'rows'` default instead of having one seeded for it twice. That also restored `panel: false`,
+  which the augment had been spreading into an object.
 - **Prototypes** own their local API, operations, REST, config factory and hooks. `core/rest/` is
   deleted. A definition declares `name`, `configKey`, `titleFallback`, `singleton`, `features`,
   `augments`, `hooks` and its own whole-config `configure` — and `definePrototype` composes
@@ -108,7 +113,7 @@ grep -rn "features/versions" src/lib/adapter-sqlite | wc -l                     
 Where the 72 kind-naming lines are: **32 in core**, **35 in the panel**, 4 in fields, and **1 in
 the adapter** (`transform.server.ts:59`, `configCtx.isCollection(slug)` — the last one). Core's
 concentrate in four files — `config/context.server.ts` 6, `build.server.ts` 4, `validate.server.ts`
-3, `types.ts` 3 — which is items 4 and 5 below. Two of core's are a prototype naming its own
+3, `types.ts` 3 — which is items 3 and 4 below. Two of core's are a prototype naming its own
 `configKey`, which is the whole point of `configKey` and not a hit to remove.
 
 Gates, on the `versions` fixture: `check` **0**, `eslint src/lib` **21**, `check:circular-deps`
@@ -121,31 +126,28 @@ verified pre-existing. See `probing.md` §1.
 
 Cheapest first. Each is independently useful and each has a document behind it.
 
-1. **`augment-panel.ts` stops reading `config.upload`** — a panel default keyed on a feature.
-   Upload can offer a dashboard layout the way it offers `_titleFallback`. No contract change; the
-   one true one-sitting fix. (`coupling-audit.md` §2)
-2. **`FeatureDefinition.validate`** — moves the auth-collection rules out of
+1. **`FeatureDefinition.validate`** — moves the auth-collection rules out of
    `config/validate.server.ts`. A contract member with one caller.
-3. **Features contribute to `createBlankDocument`** — moves upload's `sizes` out of
+2. **Features contribute to `createBlankDocument`** — moves upload's `sizes` out of
    `prototype/doc.ts`. Same shape as 2; `prototype/api.server.ts` already notes the gap.
-4. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
+3. **`validate.server.ts` (18 mentions of `collections`/`areas`) and `context.server.ts` (16) fold
    the registry** instead of listing the two by hand. `prototypeConfigs()` and `prototypeEntries()` exist;
    the schema generator is the worked example.
-5. **`Config`'s authoring surface derives its prototype members from the registry** — the
-   type-level half of 4, and what makes a third prototype cost only its own folder.
-6. **versions stage 2, runtime half** — `registerPrototype` still resolves the shadow from slug
+4. **`Config`'s authoring surface derives its prototype members from the registry** — the
+   type-level half of 3, and what makes a third prototype cost only its own folder.
+5. **versions stage 2, runtime half** — `registerPrototype` still resolves the shadow from slug
    suffixes. The declaration exists; boot order is why it is a separate step (codegen runs at step
    4, registration at step 6). Then stages 3–5: the read selector, the write plan, the remainder.
    (`decoupling-versions.md`)
-7. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
+6. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
    `structure-audit.md` §19.4's four steps; the other three are done.
-8. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and
+7. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and
    to contribute a member back. A contract change, not a relocation. Bigger than it looks.
-9. **A hook timing meaning "always"**, which lets versions carry its own `beforeUpdate` hooks and
+8. **A hook timing meaning "always"**, which lets versions carry its own `beforeUpdate` hooks and
    removes the last place a prototype names a feature.
-10. **The panel.** Largest and last. Read `coupling-audit.md` §5 first: the work is _core letting
-    go of `src/lib/panel/`_ (19 import lines, 13 of them in `handlers/routes.server.ts`), not the
-    panel letting go of core — and the end state still has a collection screen and an area screen.
+9. **The panel.** Largest and last. Read `coupling-audit.md` §5 first: the work is _core letting
+   go of `src/lib/panel/`_ (19 import lines, 13 of them in `handlers/routes.server.ts`), not the
+   panel letting go of core — and the end state still has a collection screen and an area screen.
 
 Also open, not on the ladder:
 

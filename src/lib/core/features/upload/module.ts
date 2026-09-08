@@ -90,5 +90,16 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
   // What an upload document is called, overriding the prototype's fallback. Overrides rather than
   // defers, so upload wins for the rare config carrying both — registry order puts this after
   // auth's.
-  return { ...config, upload: upload || false, fields, _titleFallback: 'filename' };
+  //
+  // `_dashboardLayout` is the same kind of statement: a collection of files reads better as
+  // thumbnails than as rows. Offered, not imposed — the dashboard falls back to `'rows'` and an
+  // author's `panel.dashboard.layout` wins over both. Before this, the *collection prototype*
+  // tested `config.upload` to decide it.
+  return {
+    ...config,
+    upload: upload || false,
+    fields,
+    _titleFallback: 'filename',
+    _dashboardLayout: 'grid' as const
+  };
 };
