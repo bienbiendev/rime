@@ -1,6 +1,7 @@
 import { IS_RIME_REPO, PACKAGE_NAME } from '$lib/core/constants.server.js';
 import type { Config } from '$lib/core/config/types.js';
-import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
+import { shadowOf } from '$lib/core/features/registry.js';
+import { prototypeEntries } from '$lib/core/prototype/registry.js';
 import { capitalize } from '$lib/util/string.js';
 
 /**
@@ -28,14 +29,35 @@ export type ${makeDocTypeName(slug)} = BaseDoc & ${upload ? 'UploadDoc & ' : ''}
 export const templateRegister = <T extends Config>(config: T): string => {
   const collections = (config.collections || []).filter((c) => c._generateTypes !== false);
   const areas = (config.areas || []).filter((c) => c._generateTypes !== false);
+
+  /**
+   * The slug a config's content lives under, when a feature gives it a second table.
+   *
+   * A shadow is registered as a collection in its own right but carries `_generateTypes: false`,
+   * because it has no doc type of its own — it shares its parent's. So it is filtered out above
+   * and its `RegisterCollection` entry added back here, pointing at the parent's type.
+   *
+   * Asked of the features that extend each prototype, the way the schema generator asks. It was
+   * `collection.versions` plus the versions feature's own `withVersionsSuffix`, which is codegen
+   * naming a feature's table for it — and which would have registered nothing for a second
+   * feature that declared a shadow.
+   */
+  const shadowSlugs = new Map(
+    prototypeEntries(config).map((entry) => [
+      entry.config.slug,
+      shadowOf(entry.prototype.features, entry.config)?.slug
+    ])
+  );
+
   const registerCollections = collections.length
     ? [
         '\tinterface RegisterCollection {',
         `${collections
           .map((collection) => {
             let collectionRegister = `\t\t'${collection.slug}': ${makeDocTypeName(collection.slug)}`;
-            if (collection.versions) {
-              collectionRegister += `\n\t\t'${withVersionsSuffix(collection.slug)}': ${makeDocTypeName(collection.slug)}`;
+            const shadowSlug = shadowSlugs.get(collection.slug);
+            if (shadowSlug) {
+              collectionRegister += `\n\t\t'${shadowSlug}': ${makeDocTypeName(collection.slug)}`;
             }
             return collectionRegister;
           })

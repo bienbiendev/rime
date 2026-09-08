@@ -1,6 +1,6 @@
 import type { BuiltCollection, Config } from '$lib/core/config/types.js';
-import { hasVersionsSuffix, withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { logger } from '$lib/core/logger.server.js';
+import { isFormField } from '$lib/core/fields/util.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { RimeContext } from '$lib/core/rime.server.js';
 import { existsSync, unlink, unlinkSync } from 'fs';
@@ -8,18 +8,46 @@ import path from 'path';
 import type { WithUpload } from '../util/config.js';
 
 /**
- * A given filename on disk can be shared by several document rows across
- * unrelated upload collections — saveFile dedupes any byte-identical upload
- * to a single file (see isSameFile). For a versioned collection the root
- * table is just an id/hierarchy envelope — all actual content, including
- * the published state, lives in its `_versions` table — so versioned
- * collections are checked via that sibling, which holds the full history
- * rather than just the one row a base-collection query would join in.
- * `selfId` must already be in whichever id-space `selfSlug` resolves to
- * (a `_versions` row's own id, not the envelope's `id` — see versionId in
- * mergeRawDocumentWithVersion). Every configured locale is checked since a
- * localized collection's query can otherwise miss rows in non-default
- * locales, even though `filename` itself is never a localized field.
+ * Whether this collection's **own table** holds `name` — which is the only question this file has
+ * about where a filename can be.
+ *
+ * A config with a shadow keeps only its `._root()` fields on its own table; everything else is the
+ * shadow's, and the shadow is a registered collection in its own right. `filename` is not a root
+ * field (only `_path` is, on upload), so on a versioned upload collection it lives on the shadow
+ * and the base table has no such column at all.
+ *
+ * This replaces a pair of tests that named the versions feature — `!hasVersionsSuffix(slug)` to
+ * drop the shadows from the scan, then `versions ? withVersionsSuffix(slug) : slug` to map each
+ * base onto one. Same set of slugs, arrived at by asking the schema instead of reading a suffix,
+ * and with no feature importing another feature to do it.
+ */
+const ownsField = <C extends Config>(
+  rime: RimeContext<C>,
+  config: BuiltCollection,
+  name: string
+): boolean => {
+  const field = config.fields.filter(isFormField).find((one) => one.name === name);
+  if (!field) return false;
+
+  return rime.adapter.prototype(config.slug).shadow ? !!field.get.root : true;
+};
+
+/**
+ * A given filename on disk can be shared by several document rows across unrelated upload
+ * collections — saveFile dedupes any byte-identical upload to a single file (see isSameFile).
+ *
+ * The scan goes table by table, not collection by collection, and that distinction is load-bearing
+ * for a collection whose content lives on a shadow: querying the *collection* returns one row per
+ * document (the read joins in a single content row), so a filename referenced only by an older
+ * revision would be missed and the file deleted out from under it. Querying the shadow directly
+ * sees every revision. `ownsField` above is what picks the right table without knowing why there
+ * are two.
+ *
+ * `selfId` must already be in whichever id-space `selfSlug` resolves to — a shadow row's own id,
+ * not the base row's (see `versionId` in mergeRawDocumentWithVersion).
+ *
+ * Every configured locale is checked since a localized collection's query can otherwise miss rows
+ * in non-default locales, even though `filename` itself is never a localized field.
  */
 const isFilenameStillReferenced = async <C extends Config>(args: {
   rime: RimeContext<C>;
@@ -29,9 +57,11 @@ const isFilenameStillReferenced = async <C extends Config>(args: {
 }): Promise<boolean> => {
   const { rime, filename, selfSlug, selfId } = args;
 
+  // Every table a row carrying this filename could be in. `upload` narrows it to collections that
+  // store files at all; `ownsField` picks the one table of each that actually has the column.
   const targetSlugs = Object.values(rime.config.collections)
-    .filter((c) => c?.upload && !hasVersionsSuffix(c.slug))
-    .map((c) => (c.versions ? withVersionsSuffix(c.slug) : c.slug));
+    .filter((c) => c?.upload && ownsField(rime, c, 'filename'))
+    .map((c) => c.slug);
 
   const locales = rime.config.getLocalesCodes();
   const localesToQuery = locales.length ? locales : [undefined];
@@ -66,7 +96,9 @@ export const cleanUpDocumentFile = async <C extends Config>(args: {
     const stillReferenced = await isFilenameStillReferenced({
       rime,
       filename: doc.filename,
-      selfSlug: config.versions ? withVersionsSuffix(config.slug) : config.slug,
+      // The table this document's own filename is in — the same expression `persistRelational`
+      // uses, off what registration was handed.
+      selfSlug: rime.adapter.prototype(config.slug).shadow?.slug ?? config.slug,
       selfId: doc.versionId ?? doc.id
     });
 

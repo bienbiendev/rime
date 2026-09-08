@@ -168,13 +168,11 @@ Cheapest first. Each is independently useful and each has a document behind it.
      reads `config.versions.draft` for the first version's status — the last one on a write path.
      An insert cannot take the update's plan (it has no row to name yet); the shape it wants is
      `content?: { data }` with no id, and the adapter returning the id it generated.
-   - **Stage 5**, the remainder. `contentOwnerSlug` is done — `pipeline/persist/*` resolves the
-     owning slug off `PrototypeHandle.shadow` and no longer imports the feature. What is left:
-     `transform.server.ts:51` and the four in `url.server.ts` (the adapter), plus
-     `dev/codegen/types/templates.server.ts` and `features/upload/disk/delete.server.ts` — the
-     second being a feature importing another feature, and the only one with an open design
-     question in it (a registered prototype cannot say "I am a shadow of X").
-     (`decoupling-versions.md`)
+   - **Stage 5**, the remainder. Core no longer imports `features/versions` for anything but the
+     two prototypes' `features: [… versions …]`, which is the switch itself. What is left is in the
+     adapter — `transform.server.ts:51` and the four reads in `url.server.ts` — plus
+     `core/constants.ts` (`VERSIONS_STATUS`, a shared vocabulary rather than a leak) and the
+     codegen'd versions panel pages. (`decoupling-versions.md`)
 3. **`_generateSchema: false` becomes the capability declaration it stands in for** — the last of
    `structure-audit.md` §19.4's four steps; the other three are done.
 4. **Auth's boot goes through `bootFeatures`** — needs `boot` to take the adapter and context and

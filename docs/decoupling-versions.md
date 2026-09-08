@@ -714,21 +714,68 @@ not do.
 
 Guarded: replacing the expression with `config.slug` fails 3 of the versions e2e tests.
 
+#### And the last two, which were both naming (`_this commit_`)
+
+**The "I am a shadow of X" gap dissolved.** `features/upload/disk/delete.server.ts` used
+`hasVersionsSuffix(c.slug)` to drop shadows from a scan, and it looked like it needed a reverse
+pointer on the declaration — `shadow` points forward, nothing points back. It does not, because the
+question was never "is this a shadow". It is **"does this collection's own table hold `filename`"**:
+
+```ts
+const ownsField = (rime, config, name) => {
+  const field = config.fields.filter(isFormField).find((one) => one.name === name);
+  if (!field) return false;
+  // A config with a shadow keeps only its `._root()` fields; the rest are the shadow's, and the
+  // shadow is a registered collection in its own right.
+  return rime.adapter.prototype(config.slug).shadow ? !!field.get.root : true;
+};
+```
+
+Same set of slugs as before, from the schema instead of a suffix. It also **inverts** which side is
+excluded: the old test dropped the shadows and mapped each base onto one; this drops the _bases_ of
+versioned collections (their table has no `filename` column) and takes the shadows directly.
+
+Worth writing down, because it was the load-bearing fact and it is the opposite of what the phrase
+"root filename field" suggests: **`filename` is not a `._root()` field.** Only `_path` is, on
+upload. So on a versioned upload collection `filename` lives on the shadow, and the base table has
+no such column at all — `medias` has `_path`, `medias__versions` has `filename`.
+
+**The codegen half** is the same move the schema generator already makes:
+
+```ts
+const shadowSlugs = new Map(
+  prototypeEntries(config).map((entry) => [
+    entry.config.slug,
+    shadowOf(entry.prototype.features, entry.config)?.slug
+  ])
+);
+```
+
+A shadow is registered as a collection but carries `_generateTypes: false` — no doc type of its
+own, it shares its parent's — so it is filtered out of the type generation and its
+`RegisterCollection` entry added back pointing at the parent's type. That was
+`collection.versions` plus `withVersionsSuffix`, which registered nothing for a second feature
+declaring a shadow. Generated types are byte-identical; breaking the map drops the four
+`'$…__versions'` entries.
+
+#### A coverage hole this turned up
+
+Nothing asserted that a file is ever **deleted**. The duplicate test proves a _shared_ file survives
+a delete; the other direction had no test, and the failure is one-sided —
+`isFilenameStillReferenced` answers "yes, still referenced" for every way of getting it wrong, so
+the file is silently kept forever and every existing assertion still passes.
+
+Scanning the base table of a versioned upload collection does exactly that: the base row comes back
+under a different slug than `selfSlug`, counts as somebody else, and the document protects its own
+file from deletion. `tests/versions/api.test.ts` now uploads bytes unique to the test, asserts
+`GET /medias/<name>` is 200, deletes the document, and asserts 404. Making `ownsField` return `true`
+unconditionally fails it — and failed nothing before it existed.
+
 #### What is left
 
-Two imports of `features/versions/naming.js`, both about a _name_ rather than a decision:
-
-- `dev/codegen/types/templates.server.ts` — emits a `RegisterCollection` entry for each shadow, so
-  it needs the shadow's slug before registration exists. The schema generator has the same problem
-  and solves it with `shadowOf(entry.prototype.features, config)`; this can do the same.
-- `features/upload/disk/delete.server.ts` — **a feature importing another feature**, which is its
-  own smell. Two uses: `withVersionsSuffix(c.slug)` to scan the table that actually holds
-  `filename` (the handle answers that, and `rime` is in scope), and `hasVersionsSuffix(c.slug)` to
-  _skip_ collections that are somebody's shadow, which has no handle-shaped answer yet — a
-  registered prototype cannot currently say "I am a shadow of X". That is the interesting half.
-
-Plus `core/constants.ts` (`VERSIONS_STATUS`), which is a shared vocabulary rather than a leak, and
-the codegen'd versions panel pages.
+`core/constants.ts` (`VERSIONS_STATUS`), which is a shared vocabulary rather than a leak, and the
+codegen'd versions panel pages. In the adapter: `transform.server.ts:51` and the four reads in
+`url.server.ts`.
 
 ### Settled on the way: how the adapter knows it has a shadow
 

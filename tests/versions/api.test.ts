@@ -2,7 +2,7 @@ import { filePathToBase64 } from '$lib/core/features/upload/util/converter.serve
 import { PARAMS, VERSIONS_STATUS } from '$lib/core/constants';
 import test, { expect } from '@playwright/test';
 import path from 'path';
-import { API_BASE_URL, signIn } from '../util.js';
+import { API_BASE_URL, BASE_URL, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -1027,4 +1027,56 @@ test('Should sort a versioned list by a localized content column', async ({ requ
 
   const [descA, descB] = await positions('-attributes.slug');
   expect(descB).toBeLessThan(descA);
+});
+
+/*********************************************************
+/* The file is actually removed when nothing references it
+/*********************************************************/
+
+/**
+ * The other half of the duplicate test above, and the one that was missing.
+ *
+ * That test proves a shared file **survives** a delete; nothing proved an unshared one is
+ * **removed**. The difference matters because the failure is one-sided: `cleanUpDocumentFile` asks
+ * `isFilenameStillReferenced`, and every way of getting that wrong answers "yes, still referenced"
+ * — so the file is silently kept forever and every assertion in the suite still passes.
+ *
+ * That is exactly what happens if the scan looks at the *base* table of a versioned upload
+ * collection as well as its shadow: the base row comes back under a different slug than `selfSlug`,
+ * counts as somebody else, and the document protects its own file from deletion. The scan is built
+ * to hit one table per collection for that reason.
+ *
+ * Bytes unique to this test, so `saveFile`'s dedup cannot point it at a file another test owns.
+ */
+test('Should delete the file from disk when the last document referencing it is deleted', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+
+  const filename = 'cleanup-probe.txt';
+  // A data URI, which is what filePathToBase64 hands the API elsewhere in this file.
+  const payload = Buffer.from(`unique-to-this-test-${Date.now()}`).toString('base64');
+  const base64 = `data:text/plain;base64,${payload}`;
+
+  const createResponse = await request.post(`${API_BASE_URL}/pdf`, {
+    headers,
+    data: {
+      file: { base64, filename },
+      alt: 'cleanup probe',
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(createResponse.status()).toBe(200);
+  const { doc } = await createResponse.json();
+  expect(doc.filename).toBe(filename);
+
+  // On disk, and served.
+  const beforeDelete = await request.get(`${BASE_URL}/medias/${filename}`);
+  expect(beforeDelete.status()).toBe(200);
+
+  const deleteResponse = await request.delete(`${API_BASE_URL}/pdf/${doc.id}`, { headers });
+  expect(deleteResponse.status()).toBe(200);
+
+  const afterDelete = await request.get(`${BASE_URL}/medias/${filename}`);
+  expect(afterDelete.status()).toBe(404);
 });
