@@ -2,6 +2,7 @@ import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
 import type { FeatureDefinition, ShadowDeclaration, WritePlan } from './define.js';
 import type { ApplyFeatureConfigure } from './register.js';
+import type { OperationQuery } from '$lib/core/pipeline/types.js';
 
 /**
  * The whole-config feature steps, and nothing else.
@@ -113,6 +114,24 @@ export const writePlanWithFeatures = (
         ? feature.writePlan(current, args)
         : current,
     plan
+  );
+
+/**
+ * The filter that says which content row a read means, from whichever feature owns the difference.
+ *
+ * First answer wins and `enabled` gates it, like `shadowOf` — and for the same reason: a config
+ * has one content row, so it has one rule for picking it. `undefined` all the way through means
+ * the read is not narrowed, which is every config with no shadow.
+ */
+export const readQueryOf = (
+  features: FeatureDefinition[],
+  config: Dic,
+  params: { draft?: boolean; versionId?: string }
+): OperationQuery | undefined =>
+  features.reduce<OperationQuery | undefined>(
+    (found, feature) =>
+      found ?? (feature.enabled(config) ? feature.readQuery?.({ config, params }) : undefined),
+    undefined
   );
 
 /**

@@ -2,6 +2,7 @@ import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/config/types.js';
 import { applyAugments } from '$lib/core/features/apply.js';
 import type { AnyHook, FeatureDefinition, HookTiming } from '$lib/core/features/define.js';
+import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { FileText } from '@lucide/svelte';
 import type { RequestEvent } from '@sveltejs/kit';
@@ -201,6 +202,15 @@ export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
 
   /** A document of this config's shape with every default applied, and no id. */
   blank(): GenericDoc;
+
+  /**
+   * Which content row a read means, as the feature that owns the difference narrows it.
+   *
+   * A capability rather than the raw list, like `blank()` above: there is one fold and it happens
+   * at the call site, so nothing outside needs the features to compute it. `undefined` for a
+   * prototype whose content is on its own row, and for a read that asked for no particular one.
+   */
+  contentQuery(params: { draft?: boolean; versionId?: string }): OperationQuery | undefined;
 
   /**
    * The features extending this prototype.

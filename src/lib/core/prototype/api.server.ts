@@ -2,7 +2,7 @@ import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { BuiltPrototype, PrototypeApiContext, PrototypeDefinition } from './define.js';
 import type { GenericDoc } from './types.js';
-import { blankWithFeatures } from '../features/registry.js';
+import { blankWithFeatures, readQueryOf } from '../features/registry.js';
 import { createBlankDocument } from './doc.js';
 
 /**
@@ -61,6 +61,8 @@ const createPrototypeApiContext = <C extends BuiltPrototype>(
     fallbackLocale: (locale?: string) => locale || event.locals.locale || defaultLocale,
 
     features: definition.features,
+
+    contentQuery: (params) => readQueryOf(definition.features, config, params),
 
     /**
      * A blank document of this config's shape, after the features it enables have shaped it.

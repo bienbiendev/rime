@@ -42,10 +42,10 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
 
   const documentRaw = await rime.adapter.prototype(config.slug).find({
     id,
-    versionId,
     locale,
     select,
-    draft
+    // `draft` and `versionId` are request parameters; which row they name is the feature's answer.
+    content: ctx.contentQuery({ draft, versionId })
   });
 
   // The adapter reports "nothing matched" and leaves the meaning to the caller, so an HTTP-shaped

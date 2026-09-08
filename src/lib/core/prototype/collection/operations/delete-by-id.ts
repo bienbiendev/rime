@@ -28,7 +28,9 @@ export const deleteById = async <T extends GenericDoc>(args: Args): Promise<stri
     context
   });
 
-  const document = (await rime.adapter.prototype(config.slug).find({ id, draft: true })) as T;
+  // No `content`: a delete means the document, so it reads whichever row is newest. That is what
+  // `draft: true` said here before there was a way to say "no narrowing".
+  const document = (await rime.adapter.prototype(config.slug).find({ id })) as T;
 
   if (!document) {
     throw new RimeError(RimeError.NOT_FOUND);

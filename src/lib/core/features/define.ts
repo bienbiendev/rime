@@ -1,5 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
+import type { OperationQuery } from '$lib/core/pipeline/types.js';
 
 /**
  * A feature **augments and extends** what a prototype defines.
@@ -160,6 +161,30 @@ export type FeatureDefinition = {
    * which is the coupling the seam exists to avoid. Each feature narrows its own.
    */
   writePlan?: (plan: WritePlan, args: { config: any; context: any }) => WritePlan;
+
+  /**
+   * How this feature narrows *which* content row a read means.
+   *
+   * A prototype with a shadow has more than one row that could answer a read, and the difference
+   * between them is the feature's own — a status, a revision the caller named. So the feature
+   * returns the filter, as an ordinary `OperationQuery`, and the adapter applies it to the shadow
+   * along with everything else it was asked to filter by.
+   *
+   * `undefined` means "no narrowing", which the adapter reads as the newest content row. That is
+   * not a policy sneaking back in: it is what "the content of this document" means when nobody
+   * said otherwise, the same statement as `updatedAt` being the default sort.
+   *
+   * First answer wins, like `shadow` — a config has one content row, so it has one rule for
+   * picking it.
+   *
+   * This is what `draft` and `versionId` used to be on the adapter contract. They were request
+   * parameters the database layer decoded, using `config.versions.draft` to know whether the
+   * status column even existed; the caller knows both, so the caller says it.
+   */
+  readQuery?: (args: {
+    config: any;
+    params: { draft?: boolean; versionId?: string };
+  }) => OperationQuery | undefined;
 
   /**
    * The feature's document hooks, by timing.

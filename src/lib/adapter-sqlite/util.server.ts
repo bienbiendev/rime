@@ -1,4 +1,3 @@
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { RawDoc } from '$lib/core/prototype/types.js';
 import { omit, pick } from '$lib/util/object.js';
@@ -6,7 +5,7 @@ import { randomId } from '$lib/util/random.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { baseFieldNames } from '$lib/core/fields/util.js';
 import type { Dic } from '$lib/util/types.js';
-import { and, desc, eq, getTableColumns, Table } from 'drizzle-orm';
+import { and, eq, getTableColumns, Table } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 
 /**
@@ -194,28 +193,6 @@ export function mergeRawDocumentWithVersion(
     ...omit(['id', 'ownerId', 'createdAt', 'updatedAt'], versionData),
     versionId: versionData.id
   } as unknown as RawDoc;
-}
-
-/**
- * Build the query params to get either the latest updated document
- * or the published one if version.draft is enabled and draft is true
- */
-export function buildPublishedOrLatestVersionParams(args: {
-  draft?: boolean;
-  config: BuiltArea | BuiltCollection;
-  table: any;
-}) {
-  const { config, table, draft } = args;
-  const hasStatus = config.versions && config.versions.draft;
-  return hasStatus && !draft
-    ? {
-        where: eq(table.status, 'published'),
-        limit: 1
-      }
-    : {
-        orderBy: [desc(table.updatedAt)],
-        limit: 1
-      };
 }
 
 export function columnsParams({ table, select }: { table: Dic; select?: string[] }) {

@@ -74,15 +74,12 @@ export const createPrototypeRegistry = (deps: {
 
       find: (args = {}) =>
         readPrototype(
-          { db, tables },
+          { db, tables, configCtx },
           {
+            ...args,
             slug,
             // A singleton ignores an id it was never meant to be given.
             id: singleton ? undefined : args.id,
-            versionId: args.versionId,
-            select: args.select,
-            locale: args.locale,
-            draft: args.draft,
             config,
             shadow
           }

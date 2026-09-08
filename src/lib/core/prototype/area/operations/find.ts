@@ -41,8 +41,8 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T> => {
   const documentRaw = await event.locals.rime.adapter.prototype(config.slug).find({
     locale,
     select,
-    versionId,
-    draft
+    // See the collection's findById.
+    content: ctx.contentQuery({ draft, versionId })
   });
 
   if (!documentRaw) throw new RimeError(RimeError.NOT_FOUND);

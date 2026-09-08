@@ -102,10 +102,18 @@ export interface PrototypeHandle {
    */
   find(args?: {
     id?: string;
-    versionId?: string;
     select?: string[];
     locale?: string;
-    draft?: boolean;
+    /**
+     * Narrows which content row this read means, for a prototype that has one. The newest when
+     * omitted, which is what "the content of this document" means with nothing else said.
+     *
+     * This is what `draft` and `versionId` were. They were request parameters the adapter decoded
+     * against `config.versions.draft`; the caller decodes them now
+     * (`FeatureDefinition.readQuery`) and hands down a filter, so the adapter applies one rather
+     * than choosing one.
+     */
+    content?: OperationQuery;
   }): Promise<RawDoc | undefined>;
 
   findMany(args?: {
@@ -115,7 +123,8 @@ export interface PrototypeHandle {
     limit?: number;
     offset?: number;
     locale?: string;
-    draft?: boolean;
+    /** Per document, which content row — see `find`. Filters the list as well as picking rows. */
+    content?: OperationQuery;
   }): Promise<RawDoc[]>;
 
   /**

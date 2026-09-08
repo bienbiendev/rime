@@ -52,7 +52,9 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
     offset,
     locale,
     select,
-    draft
+    // Which content row each document shows. `and`ed with `query` by the adapter, rather than
+    // spliced into it — see the collection's findById for where the answer comes from.
+    content: ctx.contentQuery({ draft })
   });
 
   async function processDocument(documentRaw: RawDoc) {

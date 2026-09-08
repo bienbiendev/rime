@@ -97,10 +97,10 @@ type ReadArgs = {
   shadow?: ShadowDeclaration;
   /** Restrict to one root row. Omitted for a singleton, which has exactly one. */
   id?: string;
-  versionId?: string;
   select?: string[];
-  draft?: boolean;
   locale?: string;
+  /** Which content row, when the caller means a particular one. The newest otherwise. */
+  content?: OperationQuery;
   config: BuiltCollection | BuiltArea;
 };
 
@@ -111,7 +111,7 @@ type ReadArgs = {
  * what that means — for most callers a 404.
  *
  * It does **not** mean "this prototype has never been written": `undefined` also covers a row
- * that exists with no version matching the `draft`/`versionId` filter. Bootstrapping on it would
+ * that exists with no content row matching the caller's filter. Bootstrapping on it would
  * write a second singleton row. `ensurePrototypeExists` asks the root table directly, which is
  * the only question that actually means "absent".
  *
@@ -119,8 +119,8 @@ type ReadArgs = {
  * `where` on the root row — supply `id`, or don't.
  */
 export const readPrototype = async (
-  { db, tables }: Deps,
-  { slug, id, versionId, select, draft, locale, config, shadow }: ReadArgs
+  { db, tables, configCtx }: DepsWithConfig,
+  { slug, id, select, locale, content, config, shadow }: ReadArgs
 ): Promise<Dic | undefined> => {
   const table = baseTableName(slug);
   const rootTable = tables[table];
@@ -138,7 +138,9 @@ export const readPrototype = async (
     });
   }
 
-  const versionsTable = baseTableName(shadow.slug);
+  // See findManyPrototypes for why the shadow's slug is castable.
+  const shadowSlug = shadow.slug as PrototypeSlug;
+  const versionsTable = baseTableName(shadowSlug);
 
   const doc = await queryTable.findFirst({
     columns: adapterUtil.columnsParams({ table: rootTable, select }),
@@ -147,14 +149,30 @@ export const readPrototype = async (
       [versionsTable]: {
         columns: adapterUtil.columnsParams({ table: tables[versionsTable], select }),
         with: buildWithParam({ table: versionsTable, select, locale, tables, config }),
-        // A named version, or whichever one the draft flag says to show.
-        ...(versionId
-          ? { where: eq(tables[versionsTable].id, versionId) }
-          : adapterUtil.buildPublishedOrLatestVersionParams({
-              draft,
-              config,
-              table: tables[versionsTable]
-            }))
+        // The row the caller's filter names, else the newest — one query either way, and the
+        // adapter chooses nothing. This was three branches decided here, off `draft`, `versionId`
+        // and `config.versions.draft`: a named version, the published one, or the newest. Which
+        // of those a request means is the versions feature's answer now (its `readQuery`), and it
+        // arrives as an ordinary filter.
+        //
+        // The `orderBy`/`limit` are not the third branch coming back: they are what "the content
+        // of this document" means with nothing else said, the same statement as `updatedAt` being
+        // the default sort. A filter narrows within that, it does not replace it.
+        ...(content
+          ? {
+              where: buildWhereParam({
+                query: normalizeQuery(content),
+                slug: shadowSlug,
+                base: slug as PrototypeSlug,
+                locale,
+                db,
+                configCtx,
+                tables
+              })
+            }
+          : {}),
+        orderBy: [desc(tables[versionsTable].updatedAt)],
+        limit: 1
       }
     }
   });
@@ -382,12 +400,22 @@ export const findManyPrototypes = async (
   { db, tables, configCtx }: DepsWithConfig,
   args: FindManyArgs
 ): Promise<RawDoc[]> => {
-  const { select, query: incomingQuery, sort, limit, offset, locale, draft, config, shadow } = args;
+  const {
+    select,
+    query: incomingQuery,
+    sort,
+    limit,
+    offset,
+    locale,
+    content,
+    config,
+    shadow
+  } = args;
   // buildOrderByParam and buildWhereParam resolve fields against the config, so they take a
   // prototype slug. Registration guarantees this one is registered, hence is one.
   const slug = args.slug as PrototypeSlug;
   const table = baseTableName(slug);
-  let query = incomingQuery ? normalizeQuery(incomingQuery) : undefined;
+  const query = incomingQuery ? normalizeQuery(incomingQuery) : undefined;
 
   // No shadow: everything is on the base table, so this is one plain query.
   if (!shadow) {
@@ -423,27 +451,20 @@ export const findManyPrototypes = async (
   const withParam =
     buildWithParam({ table: versionsTable, select, tables, config, locale }) || undefined;
 
-  // Without an explicit draft, a draft-enabled prototype shows only what is published.
-  if (!draft && config.versions && config.versions.draft) {
-    if (!query) {
-      query = { where: { status: { equals: 'published' } } };
-    } else {
-      const originalWhere = { ...query.where };
-      query =
-        'and' in originalWhere && Array.isArray(originalWhere.and)
-          ? {
-              where: {
-                ...originalWhere,
-                and: [...originalWhere.and, { status: { equals: 'published' } }]
-              }
-            }
-          : { where: { and: [originalWhere, { status: { equals: 'published' } }] } };
-    }
-  }
+  // The caller's own filter, and the one saying which content row each document shows. Both
+  // resolve against the shadow, so they are two wheres to `and` rather than two query objects to
+  // splice — which is what this was, a `status: published` condition spliced into somebody else's
+  // `where` by hand, behind `!draft && config.versions.draft`.
+  const wheres = [query, content && normalizeQuery(content)]
+    .filter((one) => !!one)
+    .map((one) =>
+      buildWhereParam({ query: one, slug: shadowSlug, base: slug, locale, db, configCtx, tables })
+    )
+    // Only `undefined` drops out. `buildWhereParam` answers `false` for a degenerate query (an
+    // empty `and`/`or`), and that was passed straight to drizzle before; it still is.
+    .filter((one) => one !== undefined);
 
-  const whereParam = query
-    ? buildWhereParam({ query, slug: shadowSlug, base: slug, locale, db, configCtx, tables })
-    : undefined;
+  const whereParam = wheres.length > 1 ? and(...wheres) : wheres[0];
 
   const params: Dic = {
     limit: limit || (typeof offset === 'number' ? 1000000 : undefined),
@@ -626,7 +647,8 @@ type FindManyArgs = {
   limit?: number;
   offset?: number;
   locale?: string;
-  draft?: boolean;
+  /** Per document, which content row — see `readPrototype`. */
+  content?: OperationQuery;
   config: BuiltCollection | BuiltArea;
 };
 

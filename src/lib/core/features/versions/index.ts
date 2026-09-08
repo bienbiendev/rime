@@ -4,6 +4,7 @@ import { defineFeature } from '../define.js';
 import { augmentVersions } from './augment.js';
 import { demoteOtherVersions } from './hooks/demote-other-versions.js';
 import { withVersionsSuffix } from './naming.js';
+import { versionsReadQuery } from './read-query.js';
 import { versionsWritePlan } from './write-plan.js';
 
 /**
@@ -45,6 +46,12 @@ export const versions = defineFeature({
    * `versionOperation` used to tell the adapter, said once here instead.
    */
   writePlan: versionsWritePlan,
+
+  /**
+   * Which version a read means — the published one, a named one, or the newest. What `draft` and
+   * `versionId` used to tell the adapter, said once here instead.
+   */
+  readQuery: versionsReadQuery,
 
   /**
    * The `<slug>__versions` collection behind every versioned config, derived after `upload` has

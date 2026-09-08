@@ -35,8 +35,8 @@ export const deleteDocs = async (args: Args): Promise<string[]> => {
     offset,
     sort,
     select: ['id'],
-    locale,
-    draft: true
+    locale
+    // No `content`: see deleteById.
   });
 
   const promisesDelete = documentsToDelete.map(({ id }) => {
