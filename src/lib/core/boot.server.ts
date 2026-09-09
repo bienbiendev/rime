@@ -1,9 +1,9 @@
 import { dev } from '$app/environment';
+import { bootUpload } from '$rime/modules';
 import type { Config } from '$lib/core/config/types.js';
 import { createConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
 import { createAuthInstance } from '$lib/core/auth/better-auth/instance.server.js';
-import { distinctFeatures } from './features/fold.js';
 import type { VersionsTable } from './features/define.js';
 // The **server** halves, and it has to be: the isomorphic ones carry `singleton` and `features`
 // but no `boot` — so an area's row was never created and every area read 404'd. `boot` is
@@ -45,13 +45,10 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   // 2. The config interface — every lookup by slug, the locale list, the raw config.
   const configCtx = createConfigContext(config);
 
-  // 3. Every feature's boot step — upload makes sure the static directory it writes into exists,
-  //    and is the only one with a `boot` today. Folded rather than called by name, so boot never
-  //    knows which feature has one or what it needs. Was `bootFeatures(...)`, a wrapper over
-  //    exactly these three lines.
-  for (const feature of distinctFeatures([collection, area])) {
-    await feature.boot?.(config);
-  }
+  // 3. Upload makes sure the static directory it writes into exists. The only boot step any
+  //    feature has ever had, reached through a `FeatureDefinition.boot` seam and a fold over ten
+  //    features. `undefined` on a client build, where nothing boots.
+  await bootUpload?.(config);
 
   // 4. Phase 1, in dev only: write routes, schema and types. Before the adapter, which imports
   //    the schema this produces.

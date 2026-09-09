@@ -1,7 +1,6 @@
 import type { Dic } from '$lib/util/types.js';
 import type { BlankIntent, FeatureDefinition } from './define.js';
 import type { DocTypeContribution } from './doc-type.js';
-import type { ColumnDeclaration, TableDeclaration } from './tables.js';
 import type { ApplyFeatureConfigure } from './register.js';
 
 /**
@@ -53,31 +52,6 @@ export const configureWithFeatures = <T extends Dic>(
   ) as unknown as ApplyFeatureConfigure<T>;
 
 /**
- * Every table the features in play need that no prototype declares.
- *
- * **Ungated**, and that is the decision the annex asked to have written down: `enabled` is
- * `(prototypeConfig) => boolean` and this is asked of the whole config, so gating here would test
- * the wrong object and silently emit nothing. A feature answers `[]` for a config that does not
- * use it — auth asks whether any collection declares `auth`, which is `enabled`'s test made at the
- * scope the question belongs to.
- *
- * Takes the deduplicated list, like the other whole-config steps: a feature both prototypes list
- * must not contribute its tables twice.
- */
-export const tablesOf = (features: FeatureDefinition[], config: Dic): TableDeclaration[] =>
-  features.flatMap((feature) => feature.tables?.(config) ?? []);
-
-/**
- * The storage-only columns the features a config enables put on its table.
- *
- * Gated by `enabled` and folded in the prototype's feature order, like `blankWithFeatures` — this
- * one *is* per-prototype, so the gate is asked of the right object. Takes a feature list because
- * the caller already holds one: it named the prototype whose configs it is iterating.
- */
-export const columnsOf = (features: FeatureDefinition[], config: Dic): ColumnDeclaration[] =>
-  features.flatMap((feature) => (feature.enabled(config) ? (feature.columns?.(config) ?? []) : []));
-
-/**
  * Everything the features a config enables add to its generated document type.
  *
  * Gated and folded in the prototype's feature order, like `columnsOf`. The `fields` predicates are
@@ -101,19 +75,6 @@ export const docTypeWithFeatures = (
       };
     },
     { extends: [], members: [], fields: () => true }
-  );
-
-/**
- * Every error the features extending a config report about it.
- *
- * Folded the same way `versionsTableOf` is — over the prototype's own feature list, gated by `enabled` —
- * so a feature's rules are asked of a config that has the feature, and core never tests for one.
- * Takes a feature list rather than the prototypes because the caller already holds one: it named
- * the prototype whose configs it is iterating.
- */
-export const validateWithFeatures = (features: FeatureDefinition[], config: Dic): string[] =>
-  features.flatMap((feature) =>
-    feature.enabled(config) ? (feature.validate?.(config) ?? []) : []
   );
 
 /**

@@ -1,6 +1,5 @@
 import type { Dic } from '$lib/util/types.js';
 import type { DocTypeContribution } from './doc-type.js';
-import type { ColumnDeclaration, TableDeclaration } from './tables.js';
 
 /**
  * A feature **augments and extends** what a prototype defines.
@@ -45,22 +44,6 @@ export type FeatureDefinition = {
   augment?: (config: any) => any;
 
   /**
-   * Tables this feature needs that no prototype declares.
-   *
-   * `versions` above deviates a prototype's own table; this is for storage that belongs to the
-   * feature itself — better-auth's four tables, an api-key store. They were drizzle source inside
-   * `adapter-sqlite/generate-schema/templates.server.ts`, emitted unconditionally, which is how the
-   * schema generator came to import a feature's vocabulary.
-   *
-   * Asked of the **whole** config, once, because these are not per-prototype. Which is why it is
-   * folded **ungated**: `enabled` is written against a prototype config and would answer the wrong
-   * question here. A feature returns `[]` for a config that does not use it — auth checks whether
-   * any collection declares `auth`, which is the same test `enabled` makes, asked at the right
-   * scope.
-   */
-  tables?: (config: any) => TableDeclaration[];
-
-  /**
    * What this feature adds to a prototype's **generated document type** — see `doc-type.ts`.
    *
    * The type-generation twin of `columns`: that one says what the prototype's row carries, this
@@ -68,19 +51,6 @@ export type FeatureDefinition = {
    * `enabled`.
    */
   docType?: (config: any) => DocTypeContribution;
-
-  /**
-   * Columns this feature adds to a **prototype's** table, when that prototype enables it.
-   *
-   * Not `augment`, which adds *fields* — things a document has, that a form writes and the
-   * pipeline validates. This is storage only: a foreign key into one of the feature's own tables,
-   * a flag no form ever sends. `templateHasAuth` was this, and the `slug === 'staff'` inside it
-   * was the schema generator knowing which collection the feature had derived.
-   *
-   * Folded gated by `enabled`, like `blank`, and appended after the prototype's own columns —
-   * field order is column order (`CONTRIBUTING.md`), and these come last.
-   */
-  columns?: (config: any) => ColumnDeclaration[];
 
   /**
    * What the feature adds to the **whole** config rather than to one prototype's: auth adds the
@@ -96,29 +66,6 @@ export type FeatureDefinition = {
    * prototype — its hooks above all — is applied after this step, not by it.
    */
   configure?: (config: any) => any;
-
-  /**
-   * Run once per process, before anything is served — the feature's own boot step.
-   *
-   * Takes the whole config, not one prototype's, which is why it is not a timing in `hooks`: it
-   * answers a question about the config as a whole ("does anything here upload?"). Mirrors
-   * `PrototypeDefinition.boot`.
-   */
-  boot?: (config: any) => void | Promise<void>;
-
-  /**
-   * What this feature requires of a config that uses it, as a list of error messages.
-   *
-   * Asked of each prototype config the feature extends, and only where `enabled` — so a rule is
-   * written about a config that *has* the feature, never guarded by a check for it. An empty list
-   * means the config is fine; codegen refuses to write anything for a config that returns any.
-   *
-   * It exists because these rules were in `config/validate.server.ts`, which had to import
-   * `isAuthConfig` to know which collections auth's rules applied to. Core validating a feature's
-   * own requirements is the same inversion as core deriving a feature's tables: the feature knows
-   * what it needs, so the feature says it.
-   */
-  validate?: (config: any) => string[];
 
   /**
    * What this feature takes off, or adds to, a blank document.

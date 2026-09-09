@@ -14,6 +14,10 @@ import { SelectFieldBuilder } from '$lib/fields/select/index.js';
  * some of them.
  */
 export const validateAuth = (config: BuiltCollection): string[] => {
+  // Not an auth collection: nothing here applies. `enabled` used to gate this, through a seam
+  // only auth ever implemented.
+  if (!config.auth) return [];
+
   const errors: string[] = [];
 
   // A versioned auth collection would put credentials on a versions row and leave the sign-in path

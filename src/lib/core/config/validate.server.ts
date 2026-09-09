@@ -1,6 +1,5 @@
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
-import { validateWithFeatures } from '$lib/core/features/fold.js';
-import { area, collection } from '$lib/core/prototype/index.js';
+import { validateAuth } from '$lib/core/auth/validate.js';
 import cache from '$lib/core/dev/cache.server.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { isFormField } from '$lib/core/fields/util.js';
@@ -224,18 +223,14 @@ const hasDatabase = <T extends Config>(config: T) => {
 };
 
 /**
- * What each feature requires of the configs it extends.
+ * What auth requires of a collection that declares it — see `core/auth/validate.ts`.
  *
- * Nothing here knows which feature is asking or what it wants: `validateWithFeatures` folds the
- * feature list of the prototype the config came from, gated by `enabled`. Auth's rules were the
- * inhabitants that made this worth having — they lived above and needed `isAuthConfig` to find
- * the collections they applied to. See `FeatureDefinition.validate`.
+ * These rules lived here, and needed `isAuthConfig` to find the collections they applied to. They
+ * are auth's now, and auth guards its own not-an-auth-collection case, which is what a
+ * `FeatureDefinition.validate` seam and a fold over ten features used to do for one implementer.
  */
 function validateFeatures(config: Config) {
-  return [
-    ...(config.collections || []).flatMap((c) => validateWithFeatures(collection.features, c)),
-    ...(config.areas || []).flatMap((a) => validateWithFeatures(area.features, a))
-  ];
+  return (config.collections || []).flatMap((c) => validateAuth(c));
 }
 
 /**

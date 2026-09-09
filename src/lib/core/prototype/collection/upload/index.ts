@@ -1,5 +1,5 @@
 import type { WithNormalizedUpload } from './types.js';
-import { augmentUpload, bootUpload, configureUploadDirectories } from '$rime/modules';
+import { augmentUpload, configureUploadDirectories } from '$rime/modules';
 import { defineFeature } from '$lib/core/features/define.js';
 import { uploadDocType } from './doc-type.js';
 
@@ -22,8 +22,6 @@ export const upload = defineFeature({
   augment: augmentUpload,
 
   configure: configureUploadDirectories,
-
-  boot: bootUpload,
 
   docType: uploadDocType
 });

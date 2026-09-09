@@ -1,8 +1,6 @@
 import { augmentAuth, augmentStaff, blankAuthDocument } from '$rime/modules';
 import { defineFeature } from '$lib/core/features/define.js';
 import type { WithNormalizedAuth } from './augment.js';
-import { authColumns, authTables } from './tables.js';
-import { validateAuth } from './validate.js';
 
 /**
  * Signing in: what a collection gains by declaring `auth`.
@@ -19,31 +17,12 @@ export const auth = defineFeature({
   augment: augmentAuth,
 
   /**
-   * Better-auth's four tables, plus the api-key store when a collection asks for that kind of
-   * auth — see `tables.ts` beside this file. Asked of the whole config and folded ungated, so the
-   * "does anything sign in?" test is auth's own rather than the generator's.
-   */
-  tables: authTables,
-
-  /** The link to the better-auth user, and the super-admin flag on the collection auth derives. */
-  columns: authColumns,
-
-  /**
    * The `staff` collection, which every config gets whether or not anything declares `auth`.
    *
    * A whole-config step, so `configure` rather than `augment`, and `enabled` does not gate it:
    * signing into the panel does not depend on a user collection existing.
    */
   configure: augmentStaff,
-
-  /**
-   * What a collection declaring `auth` has to look like — see `validate.ts` beside this file.
-   *
-   * `config/validate.server.ts` used to hold these and import `isAuthConfig` to know where they
-   * applied. Asked through the contract, they run only for configs this feature is enabled on, so
-   * the rules stopped needing to say which collections they were about.
-   */
-  validate: validateAuth,
 
   /**
    * A password and its better-auth link are not the document's to hand out — see

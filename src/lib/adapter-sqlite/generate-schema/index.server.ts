@@ -1,6 +1,6 @@
 import type { Config } from '$lib/core/config/types.js';
 import { area, collection } from '$lib/core/prototype/index.js';
-import { columnsOf, distinctFeatures, tablesOf } from '$lib/core/features/fold.js';
+import { authColumns, authTables } from '$lib/core/auth/tables.js';
 import { baseTableName, declaredTableProperty, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
 import { toPascalCase } from '$lib/util/string.js';
@@ -66,7 +66,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
         ],
         rootName: baseName,
         locales: [],
-        featureColumns: columnsOf(entry.features, prototype),
+        featureColumns: authColumns(prototype),
         versionsOf: false,
         tableName: baseName
       });
@@ -105,7 +105,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
       fields: versions ? prototype.fields.filter((field) => !field.get.root) : prototype.fields,
       rootName: rootTableName,
       locales: config.localization?.locales || [],
-      featureColumns: columnsOf(entry.features, prototype),
+      featureColumns: authColumns(prototype),
       versionsOf: versions ? baseName : false,
       tableName: rootTableName
     });
@@ -142,11 +142,11 @@ export async function generateSchemaString<T extends Config>(config: T) {
     );
   }
 
-  // The tables the features in play own, which no prototype declares. Was `templateAuth` pushed
-  // unconditionally plus `templateAPIKey` behind a `authConfig(prototype)?.type === 'apiKey'`
-  // sniff — the generator reading a feature's config member to decide what to emit. Asked of the
-  // whole config, which is the scope the question has.
-  for (const table of tablesOf(distinctFeatures([collection, area]), config)) {
+  // Better-auth's tables, which no prototype declares. Named here rather than folded out of a
+  // `FeatureDefinition.tables` seam that only auth ever implemented — this file already carries an
+  // `AuthAdapter` sibling, and auth is one of the three concepts the adapter may name. It answers
+  // `[]` for a config where nothing signs in, which is the test `enabled` used to make.
+  for (const table of authTables(config)) {
     schema.push(templateDeclaredTable(table));
     enumTables.push(declaredTableProperty(table.slug));
   }

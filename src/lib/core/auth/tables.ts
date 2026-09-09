@@ -153,9 +153,14 @@ export const authTables = (config: {
  * flag. `templateHasAuth` decided the second by testing `slug === 'staff'`; the feature that made
  * that collection is the thing that knows which it is.
  */
-export const authColumns = (config: { slug: string }): ColumnDeclaration[] => [
-  { name: 'authUserId', type: 'text', notNull: true, references: authUserRef },
-  ...(config.slug === STAFF_SLUG
-    ? [{ name: 'isSuperAdmin', type: 'boolean' } as ColumnDeclaration]
-    : [])
-];
+export const authColumns = (config: { slug: string; auth?: unknown }): ColumnDeclaration[] =>
+  // Not an auth collection: no link, no flag. `enabled` used to gate this through a
+  // `FeatureDefinition.columns` seam only auth ever implemented.
+  !config.auth
+    ? []
+    : [
+        { name: 'authUserId', type: 'text', notNull: true, references: authUserRef },
+        ...(config.slug === STAFF_SLUG
+          ? [{ name: 'isSuperAdmin', type: 'boolean' } as ColumnDeclaration]
+          : [])
+      ];

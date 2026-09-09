@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { text } from '$lib/fields/text/index.js';
-import { collection, create } from '$lib/core/prototype/collection/definition.js';
-import { validateWithFeatures } from '$lib/core/features/fold.js';
+import { create } from '$lib/core/prototype/collection/definition.js';
 import { validateAuth } from './validate.js';
 
 /**
@@ -28,7 +27,7 @@ describe('validateAuth', () => {
   });
 
   it('names each field it needs', () => {
-    const errors = validateAuth({ slug: 'spec_bare', fields: [] } as any);
+    const errors = validateAuth({ slug: 'spec_bare', auth: true, fields: [] } as any);
 
     expect(errors).toEqual([
       'Field roles is missing in collection spec_bare',
@@ -53,28 +52,31 @@ describe('validateAuth', () => {
    * things actually wrong with it.
    */
   it('reports a non-select roles field instead of throwing on it', () => {
-    const errors = validateAuth({ slug: 'spec_badroles', fields: [text('roles')] } as any);
+    const errors = validateAuth({
+      slug: 'spec_badroles',
+      auth: true,
+      fields: [text('roles')]
+    } as any);
 
     expect(errors).toContain('Field roles is missing in collection spec_badroles');
   });
 });
 
 /**
- * And the wiring: the rules have to be reached through the feature list, gated by `enabled`, or
- * they are just a function nobody calls.
+ * And the guard: these rules only apply to a collection that declares `auth`. That was
+ * `FeatureDefinition.enabled` gating a `validate` seam only auth ever implemented; it is the
+ * function's own first line now, which is why every case above states `auth`.
  */
-describe('validateWithFeatures', () => {
-  it('reports a feature rule for a config that uses the feature', () => {
+describe('the auth guard', () => {
+  it('reports a rule for a collection that declares auth', () => {
     const built = create('spec_wired', { auth: true, versions: true, fields: [] });
 
-    expect(validateWithFeatures(collection.features, built)).toContain(
-      "Auth collections can't be versionned (spec_wired)"
-    );
+    expect(validateAuth(built)).toContain("Auth collections can't be versionned (spec_wired)");
   });
 
-  it('says nothing about a config that does not use it', () => {
+  it('says nothing about a collection that does not', () => {
     const built = create('spec_plain', { versions: true, fields: [text('title').isTitle()] });
 
-    expect(validateWithFeatures(collection.features, built)).toEqual([]);
+    expect(validateAuth(built)).toEqual([]);
   });
 });
