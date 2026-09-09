@@ -31,8 +31,7 @@ export type {
   GenericBlock,
   GenericDoc,
   Prototype,
-  PrototypeSlug,
-  UploadDoc
+  PrototypeSlug
 } from './core/prototype/types.js';
 
 // Fields types
@@ -50,7 +49,7 @@ export type {
 export type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 
 // Upload types
-export type { JsonFile } from './core/features/upload/types.js';
+export type { JsonFile, UploadDoc } from './core/features/upload/types.js';
 export type { Link } from './fields/link/types.js';
 
 // Util

@@ -5,8 +5,7 @@ export type AreaSlug = GetRegisterType<'AreaSlug'>;
 export type PrototypeSlug = CollectionSlug | AreaSlug;
 
 import type { Dic } from '$lib/util/types.js';
-import type { UploadPath } from '../features/upload/util/path.js';
-import type { VersionsStatus } from '$lib/core/features/versions/constant.js';
+import type { FeatureDocTypes } from '../features/register.js';
 
 export type Prototype = 'area' | 'collection';
 
@@ -31,12 +30,6 @@ export type GenericNestedDoc = BaseDoc & {
   _position: number;
 } & Dic;
 
-export type GenericAuthDoc = BaseDoc & {
-  apiKeyId?: string;
-  authUserId?: string;
-  roles?: string[];
-} & Dic;
-
 export type TreeBlock = {
   id: string;
   ownerId?: string;
@@ -53,32 +46,22 @@ export type GenericBlock<T extends string = string> = {
   path?: string;
 } & Dic;
 
-export type UploadDoc = BaseDoc & {
-  mimeType: string;
-  filesize: string;
-  filename: string;
-  url: string;
-  sizes: { [key: string]: string };
-} & Dic;
-
-export type VersionDoc = BaseDoc & {
-  status: VersionsStatus;
-};
-
+/**
+ * Every document shape there is, by the name a `DocType` uses for it.
+ *
+ * Three sources, and none of them is a list kept here. The two below are core's own — anything is
+ * a raw row or a document. `FeatureDocTypes` is what the features contribute (`upload`, `version`,
+ * `auth`, `directory`), each declared beside the feature that means it. `RegisterCollection` and
+ * `RegisterArea` are what codegen writes for the configs in the build.
+ *
+ * The four feature shapes were spelled out here, which is why this file imported `UploadPath` and
+ * `VersionsStatus` out of two features to describe its own registry.
+ */
 export type Docs = {
   raw: RawDoc;
   generic: GenericDoc;
-  upload: UploadDoc;
-  version: VersionDoc;
-  auth: GenericAuthDoc;
-  directory: {
-    id: UploadPath;
-    parent: string | null;
-    name: string;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-} & RegisterCollection &
+} & FeatureDocTypes &
+  RegisterCollection &
   RegisterArea;
 
 export type DocType = keyof Docs;

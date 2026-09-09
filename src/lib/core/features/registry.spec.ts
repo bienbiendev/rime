@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { collection, prototypes } from '$lib/core/prototype/registry.js';
+import type { Docs, DocType } from '$lib/core/prototype/types.js';
 import { handleAuth } from '$lib/core/features/auth/handler/index.server.js';
 import { handleCORS } from '$lib/core/features/cors/handler.server.js';
 import type { ConfigureTransforms, FeatureConfigure } from './register.js';
@@ -108,5 +109,35 @@ describe('shadowOf', () => {
 describe('featureHandlers', () => {
   it('runs auth before cors, which is the order the hand-written list had', () => {
     expect(featureHandlers(prototypes)).toEqual([handleAuth, handleCORS]);
+  });
+});
+
+/**
+ * `Docs` used to spell four feature document shapes itself, which is why
+ * `core/prototype/types.ts` imported `UploadPath` and `VersionsStatus` out of two features to
+ * describe its own registry. They are `FeatureDocTypes` declarations now, beside the feature that
+ * means each one.
+ *
+ * The assertion is type-level, like the two above, and it is checking something a runtime test
+ * cannot: that the declarations are *seen*. A `declare module` in a file nothing imports is not an
+ * error — the key simply never appears, `DocType` silently narrows, and every `OperationContext<'version'>`
+ * stops compiling somewhere far away.
+ */
+describe('every feature document shape reaches the Docs registry', () => {
+  type Contributed = 'upload' | 'version' | 'auth' | 'directory';
+
+  const everyShapeIsRegistered: [Exclude<Contributed, DocType>] extends [never] ? true : false =
+    true;
+
+  /** And each resolves to the feature's own type, not to `any` from a missing declaration. */
+  const uploadIsTheUploadDoc: Docs['upload'] extends { mimeType: string } ? true : false = true;
+  const versionIsTheVersionDoc: Docs['version'] extends { status: string } ? true : false = true;
+
+  it('holds', () => {
+    expect([everyShapeIsRegistered, uploadIsTheUploadDoc, versionIsTheVersionDoc]).toEqual([
+      true,
+      true,
+      true
+    ]);
   });
 });
