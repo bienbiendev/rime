@@ -91,3 +91,41 @@ describe('the union and the runtime list agree', () => {
     ]).toEqual(['__sanitized', true, true]);
   });
 });
+
+/**
+ * What a **consumer's** hook gets, since that is the case this whole thing exists for.
+ *
+ * A consumer's hooks go into the same array `buildPipeline` hands the resolver — same list, same
+ * `assertMarks` — so the four answers below are what an app sees at boot, not a special case.
+ */
+describe('a consumer hook', () => {
+  const consumer = (requires: string[], provides: string[] = []) => [
+    { name: 'myAppHook', requires, provides }
+  ];
+
+  it('may require a rime mark, which is the ordinary case', () => {
+    // Declaring nothing gets exactly this: `Hooks.beforeRead` defaults to `__shaped`/`__document`,
+    // so an app that never heard of marks is already legal.
+    expect(() =>
+      assertMarks(consumer(['__shaped'], ['__document']), 'pages beforeRead')
+    ).not.toThrow();
+  });
+
+  it('may add its own, under its own name', () => {
+    expect(() =>
+      assertMarks(consumer(['__shaped'], ['myapp:priced']), 'pages beforeRead')
+    ).not.toThrow();
+  });
+
+  it('throws on a bare name of its own', () => {
+    expect(() => assertMarks(consumer(['__shaped'], ['ready']), 'pages beforeRead')).toThrow(
+      /myAppHook: "ready" has no namespace/
+    );
+  });
+
+  it('throws on a pre-rename rime mark, which is the upgrade path', () => {
+    // `requires: ['shaped']` was legal before marks were namespaced. It has to fail loudly rather
+    // than vacuously: satisfied-by-nobody would put the hook first and change nothing visible.
+    expect(() => assertMarks(consumer(['shaped']), 'pages beforeRead')).toThrow(/no namespace/);
+  });
+});
