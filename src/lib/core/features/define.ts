@@ -202,11 +202,19 @@ export type FeatureDefinition = {
    * adapter decoded it into three branches. The branches were never about the database — they were
    * about which rows this write touches, which is what a plan says.
    *
-   * `any` for the two arguments, like `validate` and `blank` above: this file is the seam every
-   * feature is declared against, and typing them would have it import the pipeline and the config,
-   * which is the coupling the seam exists to avoid. Each feature narrows its own.
+   * `operation` is there because the two are not the same plan. An update names the content row
+   * it writes; an insert has no row to name yet, so it names the half and the adapter makes the
+   * row. Without it a feature would have to infer which it is from a context member being absent,
+   * which is how `versionOperation` came to travel to the adapter in the first place.
+   *
+   * `any` for the config and context, like `validate` and `blank` above: this file is the seam
+   * every feature is declared against, and typing them would have it import the pipeline and the
+   * config, which is the coupling the seam exists to avoid. Each feature narrows its own.
    */
-  writePlan?: (plan: WritePlan, args: { config: any; context: any }) => WritePlan;
+  writePlan?: (
+    plan: WritePlan,
+    args: { config: any; context: any; operation: 'create' | 'update' }
+  ) => WritePlan;
 
   /**
    * How this feature narrows *which* content row a read means.
@@ -263,8 +271,13 @@ export type FeatureDefinition = {
 export type WritePlan = {
   /** What goes on the prototype's own row. */
   data: Dic;
-  /** The content row this write also touches, when it is not the base row. */
-  content?: { id: string; data: Dic };
+  /**
+   * The content row this write also touches, when it is not the base row.
+   *
+   * `id` is absent on an **insert**, where there is no row yet: the adapter creates it and answers
+   * with its id. Present on an update, which names the row it means.
+   */
+  content?: { id?: string; data: Dic };
 };
 
 /**

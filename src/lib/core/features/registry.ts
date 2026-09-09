@@ -128,13 +128,14 @@ export const blankWithFeatures = (features: FeatureDefinition[], doc: Dic, confi
  * the prototype's own row" — which is the whole plan for a config no feature gives a second row
  * to, so nothing needs a not-versioned branch.
  *
- * `runUpdate` calls this at a fixed point, after the data hooks and before the write. See
- * `FeatureDefinition.writePlan` for why it is not itself a hook.
+ * `runUpdate` and `create` both call this at the same fixed point, after the data hooks and before
+ * the write — which is why `operation` travels with it: an insert has no content row to name yet.
+ * See `FeatureDefinition.writePlan` for why it is not itself a hook.
  */
 export const writePlanWithFeatures = (
   features: FeatureDefinition[],
   plan: WritePlan,
-  args: { config: Dic; context: Dic }
+  args: { config: Dic; context: Dic; operation: 'create' | 'update' }
 ): WritePlan =>
   features.reduce(
     (current, feature) =>

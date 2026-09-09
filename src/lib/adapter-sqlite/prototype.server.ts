@@ -1,6 +1,5 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type { ShadowDeclaration } from '$lib/core/features/define.js';
-import { splitRootData } from '$lib/core/fields/util.js';
 import { normalizeQuery } from '$lib/core/pipeline/query.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
@@ -322,32 +321,41 @@ export const updateWherePrototype = async (
 };
 
 /**
- * Writes a new document: the base row, and a first content row when the prototype has a shadow.
+ * Writes a new document: the rows the plan names.
+ *
+ * The insert half of `updatePrototype`, and it reads the same way now — the caller says which
+ * rows this write touches and this executes. It used to call `splitRootData` itself, which meant
+ * the database layer knew that a shadowed config keeps its `._root()` fields on the base row; that
+ * is the shadow-declaring feature's rule, and it states it in `writePlan` (docs/decoupling.md § 4.4).
  *
  * `contentId` names the row the content landed on — the shadow row when there is one, the base row
  * otherwise — which is what the caller hangs blocks, tree nodes and relations off.
  */
 export const insertPrototype = async (
   { db, tables }: Deps,
-  { slug, data, locale, config, shadow }: InsertArgs
+  { slug, data, content, locale, shadow }: InsertArgs
 ): Promise<{ id: string; contentId: string }> => {
   const now = new Date();
 
   if (shadow) {
-    // A config's `._root()` fields live on the base row, never on the content row. Still split
-    // here rather than by a plan: an insert has no row to name yet, so the caller has nothing to
-    // say that this cannot work out. See docs/decoupling.md § 4.4.
-    const { base, content: contentData } = splitRootData(data, config);
+    // The base row has no columns for the content, so a plan naming no content half would write
+    // half a document and hang its children off the base row. Loud, rather than silently wrong.
+    if (!content) {
+      throw new RimeError(
+        RimeError.OPERATION_ERROR,
+        `insert on "${slug}" names no content row, and its content lives on "${shadow.slug}"`
+      );
+    }
 
     const docId = await adapterUtil.insertTableRecord(db, tables, baseTableName(slug), {
       createdAt: now,
       updatedAt: now,
-      ...base
+      ...data
     });
 
     const contentTable = baseTableName(shadow.slug);
 
-    const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(contentData, {
+    const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(content.data, {
       tables,
       mainTableName: contentTable,
       localesTableName: tableName({ owner: contentTable, branch: 'locales' }),
@@ -601,8 +609,9 @@ type InsertArgs = {
   shadow?: ShadowDeclaration;
   slug: string;
   data: Dic;
+  /** No `id`: the row does not exist yet. See `Adapter.insert`. */
+  content?: { data: Dic };
   locale?: string;
-  config: BuiltCollection | BuiltArea;
 };
 
 type FindManyArgs = {

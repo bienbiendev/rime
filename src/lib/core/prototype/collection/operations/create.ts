@@ -1,6 +1,7 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { userAttributes } from '$lib/core/features/auth/user.server.js';
+import { writePlanWithFeatures } from '$lib/core/features/registry.js';
 import {
   assertUpsertContext,
   persistRelational,
@@ -13,7 +14,7 @@ import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { RegisterCollection } from '$lib/index.js';
 import { omitId } from '$lib/util/object.js';
-import type { DeepPartial } from '$lib/util/types.js';
+import type { DeepPartial, Dic } from '$lib/util/types.js';
 
 /**
  * What a caller passes. Exported, and free of the context, so the API surface a prototype
@@ -55,8 +56,23 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
 
   const incomingPaths = Object.keys(context.configMap!);
 
+  /**
+   * Which rows this create writes, decided here rather than in the adapter.
+   *
+   * The same fold `runUpdate` makes at its step 3.5, and for the same reason: whether a document's
+   * content lands on its own row or a second one is the shadow-declaring feature's statement, not
+   * the database layer's. `operation: 'create'` is what lets that feature answer differently —
+   * an insert names no content row, because there is none yet.
+   */
+  const plan = writePlanWithFeatures(
+    ctx.features,
+    { data: data as Dic },
+    { config, context, operation: 'create' }
+  );
+
   const created = await rime.adapter.prototype(config.slug).insert({
-    data,
+    data: plan.data,
+    content: plan.content && { data: plan.content.data },
     locale
   });
 

@@ -12,13 +12,16 @@ import { VERSIONS_OPERATIONS } from './strategy.js';
  * only the base row and returns 200, and a plan that names the wrong one writes the wrong version
  * — no error either way, and the document reads back through a different query.
  *
- * So the three cases are asserted through the same fold `runUpdate` uses, on a real built config.
+ * So each case is asserted through the same fold the pipeline uses, on a real built config —
+ * including the create, where the plan names no row because the adapter has yet to make one.
  */
 const planFor = (
   config: Parameters<typeof writePlanWithFeatures>[2]['config'],
   data: object,
-  context: object
-) => writePlanWithFeatures(collection.features, { data: { ...data } }, { config, context });
+  context: object,
+  operation: 'create' | 'update' = 'update'
+) =>
+  writePlanWithFeatures(collection.features, { data: { ...data } }, { config, context, operation });
 
 describe('the write plan', () => {
   const versioned = create('spec_plan_news', {
@@ -76,6 +79,30 @@ describe('the write plan', () => {
     expect(plan.content).toBeUndefined();
   });
 
+  it('splits on a create and names no row, because there is none yet', () => {
+    // `insertPrototype` used to call `splitRootData` itself for any prototype with a shadow, which
+    // is this feature's rule applied by the database layer. The plan says it instead, and the
+    // adapter makes the row and answers with its id.
+    const plan = planFor(versioned, { title: 'a', body: 'b' }, {}, 'create');
+
+    expect(plan.data).toEqual({});
+    expect(plan.content).toEqual({ data: { title: 'a', body: 'b' } });
+    expect(plan.content?.id).toBeUndefined();
+  });
+
+  it('keeps a ._root() field on the base row on a create too', () => {
+    const nested = create('spec_plan_nested_create', {
+      versions: true,
+      nested: true,
+      fields: [text('title').isTitle()]
+    });
+
+    const plan = planFor(nested, { title: 'a', _parent: 'p1' }, {}, 'create');
+
+    expect(plan.data).toEqual({ _parent: 'p1' });
+    expect(plan.content).toEqual({ data: { title: 'a' } });
+  });
+
   it('does not empty the data it was handed', () => {
     const data = { title: 'a', body: 'b' };
 
@@ -84,7 +111,8 @@ describe('the write plan', () => {
       { data },
       {
         config: versioned,
-        context: { versionOperation: VERSIONS_OPERATIONS.UPDATE_VERSION, contentOwnerId: 'v1' }
+        context: { versionOperation: VERSIONS_OPERATIONS.UPDATE_VERSION, contentOwnerId: 'v1' },
+        operation: 'update'
       }
     );
 

@@ -27,6 +27,14 @@ type AnyConfig = BuiltCollection | BuiltArea;
 type AnyHook = (args: any) => Promise<any>;
 
 /**
+ * A `WritePlan` that has been through the update path, where a named content row is named.
+ *
+ * The shared type leaves `content.id` optional for inserts; `runUpdate` checks it once and hands
+ * this down, so a `write` callback can pass the plan straight to `adapter.update`.
+ */
+export type UpdateWritePlan = WritePlan & { content?: { id: string; data: Dic } };
+
+/**
  * Runs the beforeOperation chain. These hooks see no document and no data — only the context,
  * which they may replace (authorize, for instance, reads it and throws).
  */
@@ -276,7 +284,7 @@ export const runUpdate = async <
    */
   features: FeatureDefinition[];
   /** Persists the write plan. Returns whatever `reread` needs to find the document again. */
-  write: (ctx: { plan: WritePlan; config: C; context: OperationContext<S> }) => Promise<any>;
+  write: (ctx: { plan: UpdateWritePlan; config: C; context: OperationContext<S> }) => Promise<any>;
   /** Fetches the saved document back, for the afterUpdate hooks and the caller. */
   reread: (ctx: { written: any; config: C; context: OperationContext<S> }) => Promise<T>;
 }): Promise<T> => {
@@ -325,10 +333,25 @@ export const runUpdate = async <
    * is what refines it (features/versions/write-plan.ts), and it is why `versionOperation` no
    * longer travels to the adapter — the enum was only ever a way of saying which rows to write.
    */
-  const plan = writePlanWithFeatures(args.features, { data }, { config, context });
+  const plan = writePlanWithFeatures(
+    args.features,
+    { data },
+    { config, context, operation: 'update' }
+  );
+
+  // `WritePlan.content.id` is optional because an *insert* has no row to name. An update does, so
+  // the invariant is asserted here, once, rather than cast away at each of the two write sites.
+  if (plan.content && !plan.content.id) {
+    throw new RimeError(
+      RimeError.OPERATION_ERROR,
+      `the update plan for ${config.slug} names a content row with no id`
+    );
+  }
+
+  const updatePlan = plan as UpdateWritePlan;
 
   // 4. write the rows the plan names
-  const written = await args.write({ plan, config, context });
+  const written = await args.write({ plan: updatePlan, config, context });
 
   // 5. blocks, tree, relations — against the row the content lives on
   await persistRelational({

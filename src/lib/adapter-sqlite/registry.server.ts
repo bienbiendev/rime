@@ -88,7 +88,7 @@ export const createPrototypeRegistry = (deps: {
 
       insert: (args) => {
         if (singleton) refuseOnSingleton('insert');
-        return insertPrototype({ db, tables }, { ...args, slug, config, shadow });
+        return insertPrototype({ db, tables }, { ...args, slug, shadow });
       },
 
       update: async (args) => {

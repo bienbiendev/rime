@@ -1,15 +1,9 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type { ShadowDeclaration } from '$lib/core/features/define.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
-import type {
-  GenericBlock,
-  GenericDoc,
-  PrototypeSlug,
-  RawDoc,
-  TreeBlock
-} from '$lib/core/prototype/types.js';
+import type { GenericBlock, PrototypeSlug, RawDoc, TreeBlock } from '$lib/core/prototype/types.js';
 import type { BeforeOperationRelation, Relation } from '$lib/fields/relation/index.js';
-import type { DeepPartial, Dic, WithOptional, WithRequired } from '$lib/util/types.js';
+import type { Dic, WithOptional, WithRequired } from '$lib/util/types.js';
 
 /**
  * What core requires of a database adapter.
@@ -134,12 +128,22 @@ export interface PrototypeHandle {
   /**
    * Throws on a singleton: there is no second document to make.
    *
+   * Takes a `WritePlan`, like `update` — the caller decides which rows a write touches, and the
+   * adapter executes. The difference from an update is the one an insert has by definition:
+   * `content` carries no `id`, because the row does not exist yet. The adapter makes it and
+   * answers with it.
+   *
+   * A prototype with a shadow **requires** `content`. Its base row has no columns for the content,
+   * so a plan that names no content half would write half a document and hang its blocks off the
+   * wrong row; the adapter refuses instead.
+   *
    * Returns the document's id and `contentId` — the row its content landed on, which is what its
    * blocks, tree nodes and relations hang off. The two are the same when the prototype has no
    * shadow.
    */
   insert(args: {
-    data: DeepPartial<GenericDoc>;
+    data: Dic;
+    content?: { data: Dic };
     locale?: string;
   }): Promise<{ id: string; contentId: string }>;
 
