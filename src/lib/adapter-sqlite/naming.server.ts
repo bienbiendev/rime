@@ -50,6 +50,20 @@ export const asTableName = (name: string) => name as TableName;
 export const baseTableName = (slug: string): TableName =>
   mapSegments(slug.replace(/^\$/, ''), toSnakeCase, '__') as TableName;
 
+/**
+ * The name a **declared** table is exported under: its slug, minus the `$` marking it derived.
+ *
+ * A prototype's table is exported under its SQL name, because a prototype's slug is authored and
+ * the table name is derived from it — one string, two roles, and `toSqlTableName` is the identity
+ * to say so.
+ *
+ * A declared table is the other way round. The feature that owns it chose the name, and reaches
+ * its rows through the generated schema object by that name, so the identifier is the fixed half
+ * and the SQL name is derived. `$someTable` exports as `someTable` and lives in `some_table`.
+ */
+export const declaredTableProperty = (slug: string): TableName =>
+  slug.replace(/^\$/, '') as TableName;
+
 export type ChildKind = 'blocks' | 'tree' | 'rels';
 
 export type TableParts = {

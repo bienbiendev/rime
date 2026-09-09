@@ -1,6 +1,7 @@
 import { augmentAuth, augmentStaff, authHooks, blankAuthDocument } from '$rime/modules';
 import { defineFeature } from '../define.js';
 import type { WithNormalizedAuth } from './augment.js';
+import { authColumns, authTables } from './tables.js';
 import { validateAuth } from './validate.js';
 
 /**
@@ -19,6 +20,16 @@ export const auth = defineFeature({
   enabled: (config) => !!config.auth,
 
   augment: augmentAuth,
+
+  /**
+   * Better-auth's four tables, plus the api-key store when a collection asks for that kind of
+   * auth — see `tables.ts` beside this file. Asked of the whole config and folded ungated, so the
+   * "does anything sign in?" test is auth's own rather than the generator's.
+   */
+  tables: authTables,
+
+  /** The link to the better-auth user, and the super-admin flag on the collection auth derives. */
+  columns: authColumns,
 
   /**
    * The `staff` collection, which every config gets whether or not anything declares `auth`.

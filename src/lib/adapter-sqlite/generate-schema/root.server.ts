@@ -12,11 +12,12 @@ import { toSchemaColumn } from './column.server.js';
 import type { RelationFieldsMap } from './relations/definition.server.js';
 import type { TableName } from '../naming.server.js';
 import {
-  templateHasAuth,
+  templateDeclaredColumn,
   templateLocale,
   templateParent,
   templateTable
 } from './templates.server.js';
+import type { ColumnDeclaration } from '$lib/core/features/tables.js';
 
 type Args = {
   fields: FieldBuilder<Field>[];
@@ -26,7 +27,14 @@ type Args = {
   hasParent?: boolean;
   relationFieldsMap?: RelationFieldsMap;
   relationsDic?: Record<string, string[]>;
-  hasAuth?: boolean;
+  /**
+   * Storage-only columns the features this config enables put on its table, folded by `columnsOf`.
+   *
+   * Was `hasAuth: boolean`, a flag threaded down two files so that one line could push
+   * `templateHasAuth(rootName)` — the generator carrying a feature's question in its parameter
+   * list. It appends whatever it is handed, in order, and knows nothing about what asked.
+   */
+  featureColumns?: ColumnDeclaration[];
   /**
    * The base table this one shadows, when it is a shadow — it gets an `ownerId` pointing back at
    * it. Named after the relationship rather than after the feature that asks for one: what makes
@@ -56,7 +64,7 @@ const buildRootTable = async ({
   locales,
   relationFieldsMap = {},
   relationsDic = {},
-  hasAuth,
+  featureColumns = [],
   shadows,
   blocksRegister
 }: Args): Promise<Return> => {
@@ -193,8 +201,8 @@ const buildRootTable = async ({
     if (shadows) {
       strUnlocalizedFields.push(templateParent(shadows));
     }
-    if (hasAuth) {
-      strUnlocalizedFields.push(templateHasAuth(rootName));
+    for (const column of featureColumns) {
+      strUnlocalizedFields.push(templateDeclaredColumn(column) + ',');
     }
     table = templateTable(tableName, strUnlocalizedFields.join('\n  '));
     table += templateTable(
@@ -209,8 +217,8 @@ const buildRootTable = async ({
     if (shadows) {
       strFields.push(templateParent(shadows));
     }
-    if (hasAuth) {
-      strFields.push(templateHasAuth(rootName));
+    for (const column of featureColumns) {
+      strFields.push(templateDeclaredColumn(column) + ',');
     }
     table = templateTable(tableName, strFields.join('\n  '));
   }

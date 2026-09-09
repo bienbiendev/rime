@@ -1,8 +1,7 @@
-import type { CollectionAuthConfig, Config } from '$lib/core/config/types.js';
-import type { BuiltPrototype } from '$lib/core/prototype/define.js';
+import type { Config } from '$lib/core/config/types.js';
 import { prototypeEntries } from '$lib/core/prototype/registry.js';
-import { shadowOf } from '$lib/core/features/registry.js';
-import { baseTableName, type TableName } from '../naming.server.js';
+import { columnsOf, shadowOf, tablesOf } from '$lib/core/features/registry.js';
+import { baseTableName, declaredTableProperty, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
 import { toPascalCase } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
@@ -10,8 +9,7 @@ import { generateRelationshipDefinitions } from './relations/definition.server.j
 import { generateJunctionTableDefinition } from './relations/junction.server.js';
 import buildRootTable from './root.server.js';
 import {
-  templateAPIKey,
-  templateAuth,
+  templateDeclaredTable,
   templateExportRelationsFieldsToTable,
   templateExportSchema,
   templateExportTables,
@@ -22,22 +20,13 @@ import {
 } from './templates.server.js';
 import write from './write.server.js';
 
-/**
- * `auth` is the auth feature's member, so it is present on the configs that declare it and absent
- * from the rest — asked of the config, never of the kind.
- */
-const authConfig = (prototype: BuiltPrototype) =>
-  'auth' in prototype ? (prototype.auth as CollectionAuthConfig | undefined) : undefined;
-
 export async function generateSchemaString<T extends Config>(config: T) {
   // Every prototype config in the build, folded from the registry rather than read off
   // `collections` and `areas`: what a prototype is called is core's business, and a third kind
   // must not mean a third loop here. Each stays paired with its definition, whose features are
   // what say whether the config's content lives somewhere other than its own row.
-  const entries = prototypeEntries(config).filter(
-    (entry) => entry.config._generateSchema !== false
-  );
-  const prototypes = entries.map((entry) => entry.config);
+  const allEntries = prototypeEntries(config);
+  const entries = allEntries.filter((entry) => entry.config._generateSchema !== false);
 
   const schema: string[] = [templateImports];
   let enumTables: string[] = [];
@@ -74,7 +63,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
         ],
         rootName: baseName,
         locales: [],
-        hasAuth: !!authConfig(prototype),
+        featureColumns: columnsOf(entry.prototype.features, prototype),
         shadows: false,
         tableName: baseName
       });
@@ -113,7 +102,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
       fields: shadow ? prototype.fields.filter((field) => !field.get.root) : prototype.fields,
       rootName: rootTableName,
       locales: config.localization?.locales || [],
-      hasAuth: !!authConfig(prototype),
+      featureColumns: columnsOf(entry.prototype.features, prototype),
       shadows: shadow ? baseName : false,
       tableName: rootTableName
     });
@@ -150,12 +139,16 @@ export async function generateSchemaString<T extends Config>(config: T) {
     );
   }
 
-  const HAS_API_KEY = prototypes.some((prototype) => authConfig(prototype)?.type === 'apiKey');
-
-  schema.push(templateAuth);
-  if (HAS_API_KEY) {
-    schema.push(templateAPIKey);
-    enumTables.push('apikey');
+  // The tables the features in play own, which no prototype declares. Was `templateAuth` pushed
+  // unconditionally plus `templateAPIKey` behind a `authConfig(prototype)?.type === 'apiKey'`
+  // sniff — the generator reading a feature's config member to decide what to emit. Asked of the
+  // whole config, which is the scope the question has.
+  for (const table of tablesOf(
+    allEntries.map((entry) => entry.prototype),
+    config
+  )) {
+    schema.push(templateDeclaredTable(table));
+    enumTables.push(declaredTableProperty(table.slug));
   }
 
   schema.push(templateExportTables(enumTables));

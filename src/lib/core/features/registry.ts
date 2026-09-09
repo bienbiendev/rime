@@ -1,6 +1,7 @@
 import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
 import type { FeatureDefinition, ShadowDeclaration, WritePlan } from './define.js';
+import type { ColumnDeclaration, TableDeclaration } from './tables.js';
 import type { ApplyFeatureConfigure } from './register.js';
 import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 
@@ -45,6 +46,33 @@ export const configureWithFeatures = <T extends Dic>(
     (current, feature) => (feature.configure ? (feature.configure(current) as T) : current),
     config
   ) as unknown as ApplyFeatureConfigure<T>;
+
+/**
+ * Every table the features in play need that no prototype declares.
+ *
+ * **Ungated**, and that is the decision the annex asked to have written down: `enabled` is
+ * `(prototypeConfig) => boolean` and this is asked of the whole config, so gating here would test
+ * the wrong object and silently emit nothing. A feature answers `[]` for a config that does not
+ * use it — auth asks whether any collection declares `auth`, which is `enabled`'s test made at the
+ * scope the question belongs to.
+ *
+ * Deduplicated by `distinct`, like the other whole-config steps: a feature both prototypes list
+ * must not contribute its tables twice.
+ */
+export const tablesOf = (
+  prototypes: { features: FeatureDefinition[] }[],
+  config: Dic
+): TableDeclaration[] => distinct(prototypes).flatMap((feature) => feature.tables?.(config) ?? []);
+
+/**
+ * The storage-only columns the features a config enables put on its table.
+ *
+ * Gated by `enabled` and folded in the prototype's feature order, like `blankWithFeatures` — this
+ * one *is* per-prototype, so the gate is asked of the right object. Takes a feature list because
+ * the caller holds one, from `prototypeEntries`.
+ */
+export const columnsOf = (features: FeatureDefinition[], config: Dic): ColumnDeclaration[] =>
+  features.flatMap((feature) => (feature.enabled(config) ? (feature.columns?.(config) ?? []) : []));
 
 /** Runs every feature's boot step. */
 export const bootFeatures = async (
