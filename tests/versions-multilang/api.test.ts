@@ -1,5 +1,6 @@
 import { filePathToBase64 } from '$lib/core/features/upload/util/converter.server.js';
-import { PARAMS, VERSIONS_STATUS } from '$lib/core/constants';
+import { PARAMS } from '$lib/core/constants';
+import { VERSIONS_STATUS } from '$lib/core/features/versions/constant';
 import test, { expect } from '@playwright/test';
 import path from 'path';
 import { API_BASE_URL, signIn } from '../util.js';

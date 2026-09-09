@@ -1,4 +1,4 @@
-import { UPLOAD_PATH } from '$lib/core/constants.js';
+import { UPLOAD_PATH } from '$lib/core/features/upload/constant.js';
 import { expect, test } from 'vitest';
 import { getSegments } from './path.js';
 

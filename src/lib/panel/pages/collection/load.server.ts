@@ -5,7 +5,7 @@ import {
   removePathFromLastAria,
   type UploadPath
 } from '$lib/core/features/upload/util/path.js';
-import { UPLOAD_PATH } from '$lib/core/constants.js';
+import { UPLOAD_PATH } from '$lib/core/features/upload/constant.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { logger } from '$lib/core/logger.server.js';

@@ -1,4 +1,4 @@
-import { VERSIONS_STATUS } from '$lib/core/constants.js';
+import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
 import { makeVersionsCollectionsAliases, versionsHooks } from '$rime/modules';
 import type { WithVersionsConfig } from './augment.js';
 import { defineFeature } from '../define.js';

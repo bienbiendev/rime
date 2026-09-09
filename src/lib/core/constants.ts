@@ -1,8 +1,3 @@
-export const VERSIONS_STATUS = {
-  DRAFT: 'draft',
-  PUBLISHED: 'published'
-} as const;
-
 export const PARAMS = {
   /** Fetch nested documents in relation / link at a specific depth */
   DEPTH: 'depth',
@@ -56,10 +51,3 @@ export const PARAMS = {
    */
   SKIP_VALIDATION: 'skipValidation'
 } as const;
-
-export const UPLOAD_PATH = {
-  SEPARATOR: ':',
-  ROOT_NAME: 'root'
-} as const;
-
-export type VersionsStatus = (typeof VERSIONS_STATUS)[keyof typeof VERSIONS_STATUS];

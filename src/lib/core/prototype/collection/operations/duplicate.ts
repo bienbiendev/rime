@@ -1,5 +1,4 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { VERSIONS_STATUS } from '$lib/core/constants.js';
 import { buildConfigMap } from '$lib/core/pipeline/config-map/index.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
@@ -51,16 +50,28 @@ export const duplicate = async (args: Args): Promise<string> => {
   }
 
   /**
-   * Prepare duplcation :
+   * Prepare duplication:
    * - set the copy title
-   * - set status to draft if needed
+   * - drop what a copy does not inherit
    * - normalize properties
    */
   function prepareDuplicate(doc: Dic, locale: string | undefined, keepIds: boolean) {
     let data = setCopyTitle(doc);
-    data.status = data.status ? VERSIONS_STATUS.DRAFT : undefined;
     data = normalizeProps(data, locale, keepIds);
     delete data.id;
+    /**
+     * A copy is a new document, so it starts where a new document starts.
+     *
+     * This was `data.status = data.status ? VERSIONS_STATUS.DRAFT : undefined` — a core operation
+     * naming a feature's vocabulary to say "a copy of a published document is not published".
+     * True, and not this operation's rule: the feature that adds `status` already declares its
+     * default, and `setDefaultValues` applies it on every create. Carrying the original's value
+     * over is what made the reset necessary.
+     *
+     * Unconditional, and safe for a config with no such field: `delete` on an absent key is a
+     * no-op, which is what the `data.status ?` test was standing in for.
+     */
+    delete data.status;
     return data;
   }
 

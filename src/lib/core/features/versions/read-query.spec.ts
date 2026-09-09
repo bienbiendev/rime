@@ -1,5 +1,5 @@
 import { collection, create } from '$lib/core/prototype/collection/definition.js';
-import { VERSIONS_STATUS } from '$lib/core/constants.js';
+import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
 import { text } from '$lib/fields/text/index.js';
 import { describe, expect, it } from 'vitest';
 import type { ReadIntent } from '$lib/core/pipeline/types.js';

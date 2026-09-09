@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { VERSIONS_STATUS, type VersionsStatus } from '$lib/core/constants.js';
+  import { type VersionsStatus } from '$lib/core/features/versions/constant.js';
+  import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
 
   type Props = { status: VersionsStatus };
 

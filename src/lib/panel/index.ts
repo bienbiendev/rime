@@ -1,4 +1,4 @@
-import type { VersionsStatus } from '$lib/core/constants.js';
+import type { VersionsStatus } from '$lib/core/features/versions/constant.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { Snippet } from 'svelte';
 import { Field } from './components/fields/index.js';

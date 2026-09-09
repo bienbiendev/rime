@@ -1,4 +1,4 @@
-import { VERSIONS_STATUS } from '$lib/core/constants.js';
+import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
 import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 

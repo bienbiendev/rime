@@ -1,4 +1,4 @@
-import { VERSIONS_STATUS } from '$lib/core/constants.js';
+import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
 import { VersionOperations } from '$lib/core/features/versions/strategy.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { withVersionsSuffix } from '../naming.js';

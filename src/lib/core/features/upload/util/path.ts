@@ -1,4 +1,5 @@
-import { PARAMS, UPLOAD_PATH } from '$lib/core/constants.js';
+import { PARAMS } from '$lib/core/constants.js';
+import { UPLOAD_PATH } from '$lib/core/features/upload/constant.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { Route } from '$lib/panel/types.js';
