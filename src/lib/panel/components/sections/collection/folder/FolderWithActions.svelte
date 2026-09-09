@@ -1,9 +1,9 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
-  import type { Directory } from '$lib/core/features/upload/types.js';
+  import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
   import type { BuiltCollectionClient } from '$lib/core/config/types.js';
   import { PARAMS } from '$lib/core/constants.js';
-  import { directoriesKebab } from '$lib/core/features/upload/naming.js';
+  import { directoriesKebab } from '$lib/core/prototype/collection/upload/naming.js';
   import type { GenericDoc } from '$lib/core/prototype/types.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import ContextMenu from '$lib/panel/components/ui/context-menu/ContextMenu.svelte';

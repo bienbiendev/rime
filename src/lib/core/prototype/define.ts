@@ -2,7 +2,7 @@ import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/config/types.js';
 import { applyAugments } from '$lib/core/features/apply.js';
 import type { FeatureDefinition } from '$lib/core/features/define.js';
-import { isStaff } from '$lib/core/features/auth/access.js';
+import { isStaff } from '$lib/core/auth/access.js';
 import type { AnyHook, HookTiming, OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { FileText } from '@lucide/svelte';

@@ -2,7 +2,7 @@ import { dev } from '$app/environment';
 import type { Config } from '$lib/core/config/types.js';
 import { createConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
-import { createAuthInstance } from './features/auth/better-auth/instance.server.js';
+import { createAuthInstance } from '$lib/core/auth/better-auth/instance.server.js';
 import { distinctFeatures, shadowOf } from './features/fold.js';
 // The **server** halves, and it has to be: the isomorphic ones carry `singleton` and `features`
 // but no `boot` — so an area's row was never created and every area read 404'd. `boot` is

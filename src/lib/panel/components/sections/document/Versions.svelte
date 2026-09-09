@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { VersionsStatus } from '$lib/core/features/versions/constant.js';
+  import type { VersionsStatus } from '$lib/core/versions/constant.js';
   import type { GenericDoc } from '$lib/core/prototype/types.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { panelUrl } from '$lib/panel/util/url.js';

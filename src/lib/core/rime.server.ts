@@ -4,7 +4,7 @@ import type { Adapter } from './adapter.js';
 import { bootRime } from './boot.server.js';
 import type { ConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
-import type { RimeAuth } from './features/auth/better-auth/instance.server.js';
+import type { RimeAuth } from '$lib/core/auth/better-auth/instance.server.js';
 import { logger } from './logger.server.js';
 import { area } from './prototype/area/definition.server.js';
 import { areaApi, type AreaAccessor } from './prototype/area/api.server.js';

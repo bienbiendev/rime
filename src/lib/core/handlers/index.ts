@@ -1,6 +1,6 @@
 import type { Config } from '../config/types.js';
-import { handleAuth } from '../features/auth/handler/index.server.js';
-import { handleCORS } from '../features/cors/handler.server.js';
+import { handleAuth } from '$lib/core/auth/handler/index.server.js';
+import { handleCORS } from '$lib/core/cors/handler.server.js';
 import type { Rime } from '../rime.server.js';
 import { createCMSHandler } from './main.server.js';
 import { createPluginsHandler } from './plugins.server.js';

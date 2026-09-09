@@ -1,8 +1,8 @@
 import { env } from '$env/dynamic/public';
-import { access } from '$lib/core/features/auth/access.js';
+import { access } from '$lib/core/auth/access.js';
 import * as validate from '$lib/core/fields/validate.js';
 import * as docBuilders from '$lib/core/prototype/doc.js';
-import * as upload from '$lib/core/features/upload/util/client.js';
+import * as upload from '$lib/core/prototype/collection/upload/util/client.js';
 import * as array from './array.js';
 import * as docPath from './path.js';
 import * as file from './file.js';

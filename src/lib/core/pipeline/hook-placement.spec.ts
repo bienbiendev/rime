@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import * as auth from '$lib/core/features/auth/hooks/index.server.js';
-import * as nested from '$lib/core/features/nested/hooks/index.server.js';
-import * as thumbnail from '$lib/core/features/thumbnail/hooks/index.server.js';
-import * as title from '$lib/core/features/title/hooks/index.server.js';
-import * as upload from '$lib/core/features/upload/hooks/index.server.js';
-import * as url from '$lib/core/features/url/hooks/index.server.js';
-import * as versions from '$lib/core/features/versions/hooks/index.server.js';
+import * as auth from '$lib/core/auth/hooks/index.server.js';
+import * as nested from '$lib/core/prototype/collection/nested/hooks/index.server.js';
+import * as thumbnail from '$lib/core/prototype/collection/thumbnail/hooks/index.server.js';
+import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
+import * as upload from '$lib/core/prototype/collection/upload/hooks/index.server.js';
+import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
+import * as versions from '$lib/core/versions/hooks/index.server.js';
 import { areaHooks } from '$lib/core/prototype/area/hooks.server.js';
 import { collectionHooks } from '$lib/core/prototype/collection/hooks.server.js';
 

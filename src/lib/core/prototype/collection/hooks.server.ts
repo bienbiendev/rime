@@ -1,10 +1,10 @@
-import * as auth from '$lib/core/features/auth/hooks/index.server.js';
-import * as nested from '$lib/core/features/nested/hooks/index.server.js';
-import * as thumbnail from '$lib/core/features/thumbnail/hooks/index.server.js';
-import * as title from '$lib/core/features/title/hooks/index.server.js';
-import * as upload from '$lib/core/features/upload/hooks/index.server.js';
-import * as url from '$lib/core/features/url/hooks/index.server.js';
-import * as versions from '$lib/core/features/versions/hooks/index.server.js';
+import * as auth from '$lib/core/auth/hooks/index.server.js';
+import * as nested from '$lib/core/prototype/collection/nested/hooks/index.server.js';
+import * as thumbnail from '$lib/core/prototype/collection/thumbnail/hooks/index.server.js';
+import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
+import * as upload from '$lib/core/prototype/collection/upload/hooks/index.server.js';
+import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
+import * as versions from '$lib/core/versions/hooks/index.server.js';
 import type { AnyHook, HookTiming } from '$lib/core/pipeline/types.js';
 import { authorize } from '$lib/core/pipeline/hooks/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/hooks/data-config-map.server.js';

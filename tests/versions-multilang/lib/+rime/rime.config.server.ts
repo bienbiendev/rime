@@ -1,5 +1,5 @@
 import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
-import { access } from '$lib/core/features/auth/access.js';
+import { access } from '$lib/core/auth/access.js';
 import {
   block,
   blocks,

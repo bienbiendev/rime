@@ -1,6 +1,6 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { userAttributes } from '$lib/core/features/auth/user.server.js';
+import { userAttributes } from '$lib/core/auth/user.server.js';
 import { writePlanWithFeatures } from '$lib/core/features/fold.js';
 import {
   assertUpsertContext,

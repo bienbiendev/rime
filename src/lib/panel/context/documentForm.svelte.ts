@@ -2,7 +2,7 @@ import { applyAction, deserialize } from '$app/forms';
 import { page } from '$app/state';
 import type { BuiltAreaClient, BuiltCollectionClient } from '$lib/core/config/types.js';
 import { PARAMS } from '$lib/core/constants.js';
-import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
+import { VERSIONS_STATUS } from '$lib/core/versions/constant.js';
 import type { FormFieldBuilder } from '$lib/core/fields/builders/index.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { buildConfigMap } from '$lib/core/pipeline/config-map/index.js';

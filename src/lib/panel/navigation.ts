@@ -1,4 +1,4 @@
-import type { User } from '$lib/core/features/auth/types.js';
+import type { User } from '$lib/core/auth/types.js';
 import type { BuildConfig } from '$lib/core/config/index.server.js';
 import type { Config } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';

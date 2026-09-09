@@ -1,6 +1,6 @@
-import * as title from '$lib/core/features/title/hooks/index.server.js';
-import * as url from '$lib/core/features/url/hooks/index.server.js';
-import * as versions from '$lib/core/features/versions/hooks/index.server.js';
+import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
+import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
+import * as versions from '$lib/core/versions/hooks/index.server.js';
 import { authorize } from '$lib/core/pipeline/hooks/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/hooks/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/pipeline/hooks/get-original-document.server.js';

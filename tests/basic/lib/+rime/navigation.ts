@@ -1,5 +1,5 @@
 import { tab, tabs, tree, text, link } from '$lib/fields/index.js';
-import { access } from '$lib/core/features/auth/access.js';
+import { access } from '$lib/core/auth/access.js';
 import { Area } from '$rime/config';
 import { Menu } from '@lucide/svelte';
 

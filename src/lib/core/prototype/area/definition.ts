@@ -1,9 +1,9 @@
-import { cors } from '$lib/core/features/cors/index.js';
-import { metas } from '$lib/core/features/metas/index.js';
-import { panel } from '$lib/core/features/panel/index.js';
-import { title } from '$lib/core/features/title/index.js';
-import { url } from '$lib/core/features/url/index.js';
-import { versions } from '$lib/core/features/versions/index.js';
+import { cors } from '$lib/core/cors/index.js';
+import { metas } from '$lib/core/metas/index.js';
+import { panel } from '$lib/core/panel/index.js';
+import { title } from '$lib/core/prototype/shared/title/index.js';
+import { url } from '$lib/core/prototype/shared/url/index.js';
+import { versions } from '$lib/core/versions/index.js';
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
 import { augmentAreaLabel } from './augment-label.js';

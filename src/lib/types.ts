@@ -1,5 +1,5 @@
 // Auth types
-export type { User } from './core/features/auth/types.js';
+export type { User } from '$lib/core/auth/types.js';
 
 // Config types
 export type {
@@ -49,7 +49,7 @@ export type {
 export type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 
 // Upload types
-export type { JsonFile, UploadDoc } from './core/features/upload/types.js';
+export type { JsonFile, UploadDoc } from '$lib/core/prototype/collection/upload/types.js';
 export type { Link } from './fields/link/types.js';
 
 // Util
