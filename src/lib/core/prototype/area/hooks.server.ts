@@ -7,8 +7,13 @@ import { resolveContentOwner } from '$lib/core/pipeline/steps/resolve-content-ow
 import { setDefaultValues } from '$lib/core/pipeline/steps/set-default-values.server.js';
 import { setDocumentLocale } from '$lib/core/pipeline/steps/set-document-locale.server.js';
 import { setDocumentType } from '$lib/core/pipeline/steps/set-document-type.server.js';
-import { sortDocumentProps } from '$lib/core/pipeline/steps/sort-document-props.server.js';
 import { validateFields } from '$lib/core/pipeline/steps/validate-fields.server.js';
+import { setDocumentTitle } from '$lib/core/features/title/hooks/set-document-title.server.js';
+import { populateURL } from '$lib/core/features/url/hooks/populate-url.server.js';
+import { defineVersionOperation } from '$lib/core/features/versions/hooks/define-version-operation.server.js';
+import { demoteOtherVersions } from '$lib/core/features/versions/hooks/demote-other-versions.js';
+import { exposeVersionId } from '$lib/core/features/versions/hooks/expose-version-id.js';
+import { handleNewVersion } from '$lib/core/features/versions/hooks/handle-new-version.server.js';
 import type { AnyHook, HookTiming } from '$lib/core/features/define.js';
 
 /**
@@ -21,16 +26,33 @@ import type { AnyHook, HookTiming } from '$lib/core/features/define.js';
  * silently lose its feature hooks when an import order changed.
  *
  * No create, no delete: a second row is not a thing.
+ *
+ * The order is written, not computed — see the long note in `collection/hooks.server.ts`. An area
+ * lists fewer features than a collection (no `auth`, `upload`, `nested` or `thumbnail`), so it
+ * places fewer hooks; `buildPipeline` refuses to boot if a feature contributes one this does not.
  */
 export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   beforeOperation: [authorize],
-  beforeRead: [processDocumentFields, setDocumentLocale, setDocumentType, sortDocumentProps],
+
+  beforeRead: [
+    processDocumentFields,
+    setDocumentLocale,
+    setDocumentType,
+    exposeVersionId,
+    setDocumentTitle,
+    // After the title, for the reason the collection's list gives.
+    populateURL
+  ],
+
   beforeUpdate: [
     getOriginalDocument,
     buildOriginalDocConfigMap,
     resolveContentOwner,
+    defineVersionOperation,
+    handleNewVersion,
     buildDataConfigMap,
     setDefaultValues,
-    validateFields
+    validateFields,
+    demoteOtherVersions
   ]
 };

@@ -261,9 +261,10 @@ describe('resolved pipeline order', () => {
   });
 
   describe('a consumer hook', () => {
-    it('is sorted rather than appended after the built-ins', () => {
-      // A consumer's beforeRead hook carries default marks that place it before the sort, so a
-      // property it adds comes back in order like any other.
+    it('runs before the finaliser, so a property it adds comes back sorted', () => {
+      // A consumer's hooks are appended after the prototype's list — but `sortDocumentProps` is
+      // appended after *them*, because it is a finaliser rather than a participant. That is what
+      // keeps a consumer's property in order without letting it interleave.
       const own = Hooks.beforeRead(async (args) => args);
       const hooks = collection({ $hooks: { beforeRead: [own] } });
       const read = order(hooks, 'beforeRead');
@@ -273,12 +274,13 @@ describe('resolved pipeline order', () => {
       expect(read.indexOf('anonymous')).toBeLessThan(read.indexOf('sortDocumentProps'));
     });
 
-    it('keeps its input position when it bypasses Hooks entirely', () => {
-      // A bare function that never went through `Hooks.*` carries no marks, so it constrains
-      // nothing and simply stays where it was put. Saying nothing has to mean nothing.
+    it('runs even when it bypasses Hooks entirely', () => {
+      // A bare function that never went through `Hooks.*` is still a hook: it is appended like any
+      // other consumer hook, and the finaliser still follows it.
       const raw = async (args: unknown) => args;
-      const hooks = collection({ $hooks: { beforeRead: [raw] } });
-      expect(order(hooks, 'beforeRead').at(-1)).toBe('raw');
+      const read = order(collection({ $hooks: { beforeRead: [raw] } }), 'beforeRead');
+      expect(read.at(-2)).toBe('raw');
+      expect(read.at(-1)).toBe('sortDocumentProps');
     });
   });
 });

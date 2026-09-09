@@ -30,8 +30,8 @@ else throws at boot. See `src/lib/core/pipeline/marks.ts`.
 | 4   | `addChildrenProperty`   | nested     | `core:shaped`                 | `core:document`               |
 | 5   | `setDocumentTitle`      | title      | `core:shaped`                 | `core:title` `core:document`  |
 | 6   | `populateURL`           | url        | `core:shaped` `core:title`    | `core:document`               |
-| 7   | `anonymous`             | collection | `core:shaped`                 | `core:document`               |
-| 8   | `setDocumentThumbnail`  | thumbnail  | `core:shaped` `core:document` | `core:document`               |
+| 7   | `setDocumentThumbnail`  | thumbnail  | `core:shaped` `core:document` | `core:document`               |
+| 8   | `anonymous`             | collection | `core:shaped`                 | `core:document`               |
 | 9   | `sortDocumentProps`     | collection | `core:document`               | —                             |
 
 ### beforeCreate
