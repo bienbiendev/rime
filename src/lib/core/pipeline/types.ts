@@ -185,22 +185,25 @@ export type ParsedOperationQuery = {
  * rule would silently reorder the pipeline on a typo, with no error anywhere, so the set of legal
  * marks has to be closed and a misspelling has to be a type error.
  *
- * Features extend it by merging into `FeatureHookMarks`, so a feature adds its own marks without
- * this file naming the feature.
+ * Features and consumers extend it by merging into `FeatureHookMarks`, so this file names no
+ * feature — **and that merge is a hole in the closed union**, because anything reaching it can put
+ * any string in, including one rime already uses. So mark names are namespaced and the namespace
+ * is checked at boot: `__name` is rime's, `owner:name` is everyone else's, and anything else
+ * throws. See `marks.ts`.
  */
 export type HookMark = keyof FeatureHookMarks | CoreHookMark;
 
 /** Marks owned by core — the prototype's own hooks and the operation steps. */
 export type CoreHookMark =
   /** Private fields are gone; anything deriving from the document may now read it. */
-  | 'sanitized'
+  | '__sanitized'
   /** Field values have been processed into their final document shape. */
-  | 'shaped'
+  | '__shaped'
   /** The document's own title has been resolved. */
-  | 'title'
+  | '__title'
   /** Anything that writes a document property declares this, so a hook that must run after every
    *  writer — `sortDocumentProps` — can wait on all of them without naming one. */
-  | 'document'
+  | '__document'
   /**
    * Every hook that reads the caller's submission *as sent* has run, so hooks may now add to
    * `data`.
@@ -212,15 +215,15 @@ export type CoreHookMark =
    * same way. Nothing here names auth — a mark no active hook provides is satisfied, so on a
    * collection without it the shaping chain simply starts straight away.
    */
-  | 'data-inspected'
+  | '__data-inspected'
   /** The blank document has been merged in, so `config.fields` is the final field list. */
-  | 'blank-merged'
+  | '__blank-merged'
   /** `config.fields` is final and may be read to build a config map. */
-  | 'config-fields'
+  | '__config-fields'
   /** The config map for incoming data exists. */
-  | 'config-map'
+  | '__config-map'
   /** The original document has been loaded. */
-  | 'original-doc'
+  | '__original-doc'
   /**
    * The row this document's content lives on has been named.
    *
@@ -228,21 +231,26 @@ export type CoreHookMark =
    * elsewhere requires this and answers again, rather than every prototype having to list that
    * feature's hook to make the answer exist at all.
    */
-  | 'content-owner'
+  | '__content-owner'
   /** The config map for the original document exists. */
-  | 'original-config-map'
+  | '__original-config-map'
   /** Incoming data has been validated. */
-  | 'validated';
+  | '__validated';
 
 /**
- * Marks contributed by features, extended through declaration merging so that neither this file
- * nor any prototype names a feature:
+ * Marks contributed by features, plugins and consumer configs, extended through declaration
+ * merging so that neither this file nor any prototype names one:
  *
  * ```ts
  * declare module '$lib/core/pipeline/types.js' {
  *   interface FeatureHookMarks { 'upload:file-written': true }
  * }
  * ```
+ *
+ * **The key must be `owner:name`.** A bare word — `'session'`, `'ready'` — is refused at boot, and
+ * the reason is that it reads like a name a second person would also reach for: two owners
+ * merging the same bare key do not collide loudly, they silently join the same set and move
+ * whatever waits on it. The `__` prefix is reserved for rime.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface FeatureHookMarks {}

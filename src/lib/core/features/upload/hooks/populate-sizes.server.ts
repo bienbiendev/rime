@@ -4,8 +4,8 @@ import type { WithUpload } from '../util/config.js';
 
 export const populateSizes = Hooks.beforeRead({
   name: 'populateSizes',
-  requires: ['shaped'],
-  provides: ['document'],
+  requires: ['__shaped'],
+  provides: ['__document'],
   run: async (args) => {
     const config = args.config as WithUpload<BuiltCollection>;
     const doc = args.doc;

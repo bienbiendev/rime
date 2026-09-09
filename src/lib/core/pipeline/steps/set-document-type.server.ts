@@ -2,8 +2,8 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const setDocumentType = Hooks.beforeRead<'generic'>({
   name: 'setDocumentType',
-  requires: ['shaped'],
-  provides: ['document'],
+  requires: ['__shaped'],
+  provides: ['__document'],
   run: async (args) => {
     const config = args.config;
     let doc = args.doc;

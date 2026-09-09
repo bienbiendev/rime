@@ -6,8 +6,8 @@ export const buildDataConfigMap = Hooks.beforeUpsert({
   // `data-inspected` starts the shaping chain — `setDefaultValues` and `validateFields` follow
   // this through `config-map`, so declaring it once here holds all three back until every hook
   // that reads the caller's raw submission has run. Vacuous where nothing provides it.
-  requires: ['config-fields', 'data-inspected'],
-  provides: ['config-map'],
+  requires: ['__config-fields', '__data-inspected'],
+  provides: ['__config-map'],
   run: async (args) => {
     const configMap = buildConfigMap(args.data, args.config.fields);
 

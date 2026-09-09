@@ -18,7 +18,7 @@ import { versionsWritePlan } from './write-plan.js';
  * states the default now (`pipeline/steps/resolve-content-owner.server.ts`: the document's own
  * row) and this feature *overrides* it, which is what a feature is for.
  *
- * `version-operation` is its mark, merged into `FeatureHookMarks` below — core's `CoreHookMark`
+ * `versions:operation` is its mark, merged into `FeatureHookMarks` below — core's `CoreHookMark`
  * used to declare it, which is a feature's word in core's closed union.
  *
  * The augment is isomorphic — it normalises `versions` and adds `status` — so it needs no
@@ -93,6 +93,6 @@ declare module '$lib/core/features/register.js' {
  */
 declare module '$lib/core/pipeline/types.js' {
   interface FeatureHookMarks {
-    'version-operation': true;
+    'versions:operation': true;
   }
 }

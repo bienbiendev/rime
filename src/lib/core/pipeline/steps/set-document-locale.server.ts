@@ -2,8 +2,8 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const setDocumentLocale = Hooks.beforeRead<'generic'>({
   name: 'setDocumentLocale',
-  requires: ['shaped'],
-  provides: ['document'],
+  requires: ['__shaped'],
+  provides: ['__document'],
   run: async (args) => {
     let doc = args.doc;
 

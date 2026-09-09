@@ -8,8 +8,8 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const validateFields = Hooks.beforeUpsert({
   name: 'validateFields',
-  requires: ['config-map'],
-  provides: ['validated'],
+  requires: ['__config-map'],
+  provides: ['__validated'],
   run: async (args) => {
     const errors: FormErrors = {};
     const { event, operation } = args;

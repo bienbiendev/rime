@@ -20,7 +20,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 export const getOriginalDocument = Hooks.beforeUpdate({
   name: 'getOriginalDocument',
   requires: [],
-  provides: ['original-doc'],
+  provides: ['__original-doc'],
   run: async (args) => {
     const { event, config, context } = args;
     const { rime } = event.locals;

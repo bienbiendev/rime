@@ -16,8 +16,8 @@ export const populateURL = Hooks.beforeRead<'generic'>({
   // has to be said, and this is the first thing that requires `title` rather than only providing
   // it. Not `document`: several read hooks both require and provide that, so requiring it here
   // would close a cycle with `setDocumentThumbnail`.
-  requires: ['shaped', 'title'],
-  provides: ['document'],
+  requires: ['__shaped', '__title'],
+  provides: ['__document'],
   run: async (args) => {
     const select =
       args.context.params.select && Array.isArray(args.context.params.select)

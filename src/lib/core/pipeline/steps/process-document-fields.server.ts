@@ -7,8 +7,8 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const processDocumentFields = Hooks.beforeRead({
   name: 'processDocumentFields',
-  requires: ['sanitized'],
-  provides: ['shaped', 'document'],
+  requires: ['__sanitized'],
+  provides: ['__shaped', '__document'],
   run: async (args) => {
     const { event } = args;
     let doc = args.doc;

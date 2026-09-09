@@ -4,8 +4,8 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const buildOriginalDocConfigMap = Hooks.beforeUpsert({
   name: 'buildOriginalDocConfigMap',
-  requires: ['original-doc'],
-  provides: ['original-config-map'],
+  requires: ['__original-doc'],
+  provides: ['__original-config-map'],
   run: async (args) => {
     const { originalDoc } = args.context;
 

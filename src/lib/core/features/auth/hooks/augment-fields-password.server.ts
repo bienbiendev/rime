@@ -32,8 +32,8 @@ const passwordField = text('password')
  */
 export const augmentFieldsPassword = Hooks.beforeUpsert<'auth'>({
   name: 'augmentFieldsPassword',
-  requires: ['blank-merged'],
-  provides: ['config-fields'],
+  requires: ['__blank-merged'],
+  provides: ['__config-fields'],
   run: async (args) => {
     let { config } = args;
 

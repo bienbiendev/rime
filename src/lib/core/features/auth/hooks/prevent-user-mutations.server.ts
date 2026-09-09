@@ -7,9 +7,9 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
  */
 export const preventUserMutations = Hooks.beforeUpdate<'auth'>({
   name: 'preventUserMutations',
-  requires: ['original-doc'],
+  requires: ['__original-doc'],
   // Runs before anything adds to `data`: this reads the caller's submission as sent.
-  provides: ['data-inspected'],
+  provides: ['__data-inspected'],
   run: async (args) => {
     const IS_MUTATION_AUTH = 'email' in args.data || 'name' in args.data || 'password' in args.data;
 

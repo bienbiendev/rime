@@ -4,7 +4,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 export const defineVersionOperation = Hooks.beforeUpdate({
   name: 'defineVersionOperation',
   requires: [],
-  provides: ['version-operation'],
+  provides: ['versions:operation'],
   run: async (args) => {
     const { config } = args;
 

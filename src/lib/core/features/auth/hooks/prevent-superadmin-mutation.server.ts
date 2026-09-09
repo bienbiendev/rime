@@ -8,9 +8,9 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
  */
 export const preventSuperAdminMutation = Hooks.beforeUpdate({
   name: 'preventSuperAdminMutation',
-  requires: ['original-doc'],
+  requires: ['__original-doc'],
   // Runs before anything adds to `data`: this reads the caller's submission as sent.
-  provides: ['data-inspected'],
+  provides: ['__data-inspected'],
   run: async (args) => {
     const { event, context } = args;
     const originalDoc = context.originalDoc;

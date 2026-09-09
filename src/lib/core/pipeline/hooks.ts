@@ -8,7 +8,7 @@ import type { Hook, HookBeforeOperation, HookMarks, Operation } from './types.js
  *
  * ```ts
  * Hooks.beforeRead(fn)
- * Hooks.beforeRead({ name: 'setDocumentTitle', requires: ['shaped'], provides: ['title'], run: fn })
+ * Hooks.beforeRead({ name: 'setDocumentTitle', requires: ['__shaped'], provides: ['__title'], run: fn })
  * ```
  *
  * The bare form is the default and what consumers write. The object form is how a hook says where
@@ -34,9 +34,9 @@ type Declaration<H> = H | (Partial<HookMarks> & { run: H });
  */
 const DEFAULTS: Record<string, Pick<HookMarks, 'requires' | 'provides'>> = {
   beforeOperation: { requires: [], provides: [] },
-  beforeRead: { requires: ['shaped'], provides: ['document'] },
-  beforeCreate: { requires: ['validated'], provides: [] },
-  beforeUpdate: { requires: ['validated'], provides: [] },
+  beforeRead: { requires: ['__shaped'], provides: ['__document'] },
+  beforeCreate: { requires: ['__validated'], provides: [] },
+  beforeUpdate: { requires: ['__validated'], provides: [] },
   beforeDelete: { requires: [], provides: [] },
   afterCreate: { requires: [], provides: [] },
   afterUpdate: { requires: [], provides: [] },

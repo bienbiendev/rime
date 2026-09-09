@@ -7,7 +7,7 @@ import deepmerge from 'deepmerge';
 export const mergeWithBlankDocument = Hooks.beforeCreate({
   name: 'mergeWithBlankDocument',
   requires: [],
-  provides: ['blank-merged', 'config-fields'],
+  provides: ['__blank-merged', '__config-fields'],
   run: async (args) => {
     const blank = createBlankDocument(args.config, args.event) as Dic;
     const known = Object.keys(blank);

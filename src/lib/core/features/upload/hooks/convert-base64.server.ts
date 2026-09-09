@@ -17,7 +17,7 @@ import { isFile } from '$lib/util/file.js';
  */
 export const castBase64ToFile = Hooks.beforeUpsert<'upload'>({
   name: 'castBase64ToFile',
-  requires: ['validated'],
+  requires: ['__validated'],
   provides: [],
   run: async (args) => {
     let data = args.data;

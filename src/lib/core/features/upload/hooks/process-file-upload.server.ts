@@ -26,7 +26,7 @@ import { isUploadConfig } from '../util/config.js';
  */
 export const processFileUpload = Hooks.beforeUpsert<'upload'>({
   name: 'processFileUpload',
-  requires: ['validated'],
+  requires: ['__validated'],
   provides: [],
   run: async (args) => {
     const { operation, config, event } = args;

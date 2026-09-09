@@ -1,3 +1,4 @@
+import { assertMarks } from './marks.js';
 import type { HookMark, HookMarks } from './types.js';
 
 /**
@@ -58,6 +59,12 @@ export type ResolveArgs<T> = {
  */
 export function resolvePipeline<T>({ hooks, label }: ResolveArgs<T>): T[] {
   const marks = hooks.map(marksOf);
+
+  // Before ordering anything: every name has to belong to someone. The vacuous rule below cannot
+  // tell "nobody provides this" from "nobody spells this the same way", so the names are checked
+  // here rather than trusted. See marks.ts.
+  assertMarks(marks, label);
+
   // Which hooks provide each mark. A mark absent from here is satisfied *vacuously* — see below.
   const providers = new Map<HookMark, Set<number>>();
   hooks.forEach((_hook, index) => {
@@ -74,14 +81,14 @@ export function resolvePipeline<T>({ hooks, label }: ResolveArgs<T>): T[] {
       //
       // Without it, every unconditional hook that depends on a conditional one would be
       // unsatisfiable on the configs where the conditional hook is absent — `removePrivateFields`
-      // exists only when a collection has `auth`, so `requires: ['sanitized']` would break every
+      // exists only when a collection has `auth`, so `requires: ['__sanitized']` would break every
       // collection that has none. It also lets one `beforeUpsert` declaration be correct at both
       // its timings: `augmentFieldsPassword` requires `blank-merged` and waits for the merge in
       // `beforeCreate`, while in `beforeUpdate`, where nothing merges, it simply runs free.
       //
-      // The cost is that a misspelled mark is silently satisfied rather than reported, which is
-      // why `HookMark` is a closed union — a typo has to be a type error, since it cannot be a
-      // runtime one.
+      // The cost is that a misspelled mark is silently satisfied rather than reported. `HookMark`
+      // being a closed union catches that inside this repo; `assertMarks` above catches it for
+      // anything that reached the union through declaration merging, where the union cannot.
       for (const provider of providers.get(mark) ?? []) {
         // A hook never waits on itself: a writer that both provides and requires `'document'`
         // is describing the document, not a cycle.

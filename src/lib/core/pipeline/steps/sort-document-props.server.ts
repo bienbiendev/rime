@@ -4,7 +4,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const sortDocumentProps = Hooks.beforeRead<'generic'>({
   name: 'sortDocumentProps',
-  requires: ['document'],
+  requires: ['__document'],
   provides: [],
   run: async (args) => {
     return { ...args, doc: sortDocumentKeys(args.doc) };

@@ -9,7 +9,7 @@ import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 
 export const setDefaultValues = Hooks.beforeUpsert({
   name: 'setDefaultValues',
-  requires: ['config-map'],
+  requires: ['__config-map'],
   provides: [],
   run: async (args) => {
     const { operation, event } = args;

@@ -12,7 +12,7 @@ import { getSegments } from '../util/path.js';
  */
 export const handlePathCreation = Hooks.beforeUpsert<'upload'>({
   name: 'handlePathCreation',
-  requires: ['validated'],
+  requires: ['__validated'],
   provides: [],
   run: async (args) => {
     const { rime } = args.event.locals;

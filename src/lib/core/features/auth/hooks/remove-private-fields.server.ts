@@ -4,7 +4,7 @@ import { PRIVATE_FIELDS } from '../constant.server.js';
 export const removePrivateFields = Hooks.beforeRead({
   name: 'removePrivateFields',
   requires: [],
-  provides: ['sanitized'],
+  provides: ['__sanitized'],
   run: async (args) => {
     for (const key of PRIVATE_FIELDS) {
       delete args.doc[key];

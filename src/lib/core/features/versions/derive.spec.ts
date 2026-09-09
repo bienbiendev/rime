@@ -19,7 +19,7 @@ import { makeVersionsCollectionsAliases } from './derive.server.js';
 describe('a versions shadow', () => {
   const authorHook = Hooks.beforeRead({
     name: 'authorBeforeRead',
-    requires: ['shaped'],
+    requires: ['__shaped'],
     provides: [],
     run: async (args) => args
   });

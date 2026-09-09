@@ -19,32 +19,32 @@ describe('resolvePipeline', () => {
   });
 
   it('moves a hook after the mark it requires, however it was ordered on input', () => {
-    const shape = hook('shape', [], ['shaped']);
-    const title = hook('title', ['shaped'], ['title']);
-    expect(resolve([title, shape])).toEqual(['shape', 'title']);
+    const shape = hook('shape', [], ['__shaped']);
+    const title = hook('__title', ['__shaped'], ['__title']);
+    expect(resolve([title, shape])).toEqual(['shape', '__title']);
   });
 
   it('waits for EVERY provider of a mark, not just the first', () => {
     // The property sortDocumentProps depends on: it must follow every hook that writes to the
     // document, including ones from features it cannot name.
-    const sort = hook('sort', ['document']);
-    const core = hook('core', [], ['document']);
-    const feature = hook('feature', [], ['document']);
+    const sort = hook('sort', ['__document']);
+    const core = hook('core', [], ['__document']);
+    const feature = hook('feature', [], ['__document']);
     expect(resolve([sort, core, feature])).toEqual(['core', 'feature', 'sort']);
   });
 
   it('satisfies a requirement vacuously when nothing active provides it', () => {
-    // removePrivateFields only exists when a collection has auth; a hook requiring 'sanitized'
+    // removePrivateFields only exists when a collection has auth; a hook requiring '__sanitized'
     // must still run on collections that have none.
-    expect(resolve([hook('shape', ['sanitized'], ['shaped'])])).toEqual(['shape']);
+    expect(resolve([hook('shape', ['__sanitized'], ['__shaped'])])).toEqual(['shape']);
   });
 
   it('lets one declaration be correct at two timings', () => {
-    // augmentFieldsPassword requires 'blank-merged': it waits in beforeCreate, where the merge
+    // augmentFieldsPassword requires '__blank-merged': it waits in beforeCreate, where the merge
     // provides it, and runs free in beforeUpdate, where nothing does.
-    const augment = hook('augmentFieldsPassword', ['blank-merged'], ['config-fields']);
-    const merge = hook('mergeWithBlankDocument', [], ['blank-merged']);
-    const buildMap = hook('buildDataConfigMap', ['config-fields'], ['config-map']);
+    const augment = hook('augmentFieldsPassword', ['__blank-merged'], ['__config-fields']);
+    const merge = hook('mergeWithBlankDocument', [], ['__blank-merged']);
+    const buildMap = hook('buildDataConfigMap', ['__config-fields'], ['__config-map']);
 
     expect(resolve([merge, augment, buildMap])).toEqual([
       'mergeWithBlankDocument',
@@ -55,24 +55,24 @@ describe('resolvePipeline', () => {
   });
 
   it('does not treat a hook that both provides and requires a mark as a cycle', () => {
-    // Every document writer provides 'document'; some also require it.
-    const a = hook('a', ['document'], ['document']);
-    const b = hook('b', [], ['document']);
+    // Every document writer provides '__document'; some also require it.
+    const a = hook('a', ['__document'], ['__document']);
+    const b = hook('b', [], ['__document']);
     expect(resolve([a, b])).toEqual(['b', 'a']);
   });
 
   it('throws naming the hooks when no order satisfies them', () => {
-    const a = hook('a', ['title'], ['shaped']);
-    const b = hook('b', ['shaped'], ['title']);
+    const a = hook('a', ['__title'], ['__shaped']);
+    const b = hook('b', ['__shaped'], ['__title']);
     expect(() => resolve([a, b])).toThrowError(/no order satisfies these hooks/);
     expect(() => resolve([a, b])).toThrowError(/a waits on b/);
   });
 
   it('breaks ties by input position, so the result is reproducible', () => {
-    const shape = hook('shape', [], ['shaped']);
-    const one = hook('one', ['shaped']);
-    const two = hook('two', ['shaped']);
-    const three = hook('three', ['shaped']);
+    const shape = hook('shape', [], ['__shaped']);
+    const one = hook('one', ['__shaped']);
+    const two = hook('two', ['__shaped']);
+    const three = hook('three', ['__shaped']);
     expect(resolve([shape, one, two, three])).toEqual(['shape', 'one', 'two', 'three']);
     expect(resolve([shape, three, two, one])).toEqual(['shape', 'three', 'two', 'one']);
   });

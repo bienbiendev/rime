@@ -18,7 +18,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 export const exposeVersionId = Hooks.beforeRead({
   name: 'exposeVersionId',
   requires: [],
-  provides: ['document'],
+  provides: ['__document'],
   run: async (args) => {
     if (!args.doc.contentId) return args;
 

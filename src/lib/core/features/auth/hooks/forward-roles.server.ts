@@ -17,9 +17,9 @@ import { betterAuthUserId } from '../user.server.js';
  */
 export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>({
   name: 'forwardRolesToBetterAuth',
-  requires: ['original-doc'],
+  requires: ['__original-doc'],
   // Runs before anything adds to `data`: this reads the caller's submission as sent.
-  provides: ['data-inspected'],
+  provides: ['__data-inspected'],
   run: async (args) => {
     const { event, config, context } = args;
     const { rime } = event.locals;

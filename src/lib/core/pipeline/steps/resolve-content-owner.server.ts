@@ -19,8 +19,8 @@ import { RimeError } from '$lib/core/errors/index.js';
  */
 export const resolveContentOwner = Hooks.beforeUpdate({
   name: 'resolveContentOwner',
-  requires: ['original-doc'],
-  provides: ['content-owner'],
+  requires: ['__original-doc'],
+  provides: ['__content-owner'],
   run: async (args) => {
     const { originalDoc } = args.context;
 
