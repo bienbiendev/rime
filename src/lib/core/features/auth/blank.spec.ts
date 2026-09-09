@@ -36,7 +36,7 @@ describe('blankAuthDocument', () => {
 
 describe('blankWithFeatures', () => {
   const blankFor = (config: Parameters<typeof createBlankDocument>[0]) =>
-    blankWithFeatures(collection.features, createBlankDocument(config), config) as Record<
+    blankWithFeatures(collection.features, createBlankDocument(config), config, 'create') as Record<
       string,
       unknown
     >;

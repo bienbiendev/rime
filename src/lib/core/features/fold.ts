@@ -1,5 +1,5 @@
 import type { Dic } from '$lib/util/types.js';
-import type { FeatureDefinition, ShadowDeclaration, WritePlan } from './define.js';
+import type { BlankIntent, FeatureDefinition, ShadowDeclaration, WritePlan } from './define.js';
 import type { DocTypeContribution } from './doc-type.js';
 import type { ColumnDeclaration, TableDeclaration } from './tables.js';
 import type { ApplyFeatureConfigure } from './register.js';
@@ -118,15 +118,22 @@ export const validateWithFeatures = (features: FeatureDefinition[], config: Dic)
   );
 
 /**
- * The blank document, after every feature the config enables has shaped it.
+ * A blank document, after every feature the config enables has shaped it.
  *
  * Folded in the prototype's feature order, like the augments — a feature that declares nothing
- * passes it through.
+ * passes it through. `intent` says which blank: what an author's create starts from, or the row
+ * `boot` writes for a singleton that has none. Was two identical folds, `blankWithFeatures` and
+ * `seedWithFeatures`, over two identical seams with one implementer each.
  */
-export const blankWithFeatures = (features: FeatureDefinition[], doc: Dic, config: Dic): Dic =>
+export const blankWithFeatures = (
+  features: FeatureDefinition[],
+  doc: Dic,
+  config: Dic,
+  intent: BlankIntent
+): Dic =>
   features.reduce(
     (current, feature) =>
-      feature.enabled(config) && feature.blank ? feature.blank(current, config) : current,
+      feature.enabled(config) && feature.blank ? feature.blank(current, config, intent) : current,
     doc
   );
 
@@ -152,20 +159,6 @@ export const writePlanWithFeatures = (
         ? feature.writePlan(current, args)
         : current,
     plan
-  );
-
-/**
- * The bootstrapped first document, after every feature the config enables has shaped it.
- *
- * Folded like `blankWithFeatures`, over the same starting document, and separate from it for the
- * reason `FeatureDefinition.seed` gives: one is where an author's create begins, the other is what
- * `boot` writes for a prototype that must have a row before anybody asks.
- */
-export const seedWithFeatures = (features: FeatureDefinition[], doc: Dic, config: Dic): Dic =>
-  features.reduce(
-    (current, feature) =>
-      feature.enabled(config) && feature.seed ? feature.seed(current, config) : current,
-    doc
   );
 
 /**

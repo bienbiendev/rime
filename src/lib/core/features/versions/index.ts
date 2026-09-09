@@ -57,10 +57,12 @@ export const versions = defineFeature({
   /**
    * A bootstrapped document's first version is the published one — otherwise the row exists and no
    * default read can see it, since one narrows to `status = published`. The `status` field's own
-   * default is `draft`, which is right for every version made after this one.
+   * default is `draft`, which is right for every version made after this one, hence the intent.
    */
-  seed: (doc, config) =>
-    config.versions?.draft ? { ...doc, status: VERSIONS_STATUS.PUBLISHED } : doc,
+  blank: (doc, config, intent) =>
+    intent === 'seed' && config.versions?.draft
+      ? { ...doc, status: VERSIONS_STATUS.PUBLISHED }
+      : doc,
 
   /**
    * The `<slug>__versions` collection behind every versioned config, derived after `upload` has

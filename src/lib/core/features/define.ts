@@ -158,32 +158,27 @@ export type FeatureDefinition = {
   validate?: (config: any) => string[];
 
   /**
-   * What this feature takes off, or adds to, the blank document the local API hands out.
+   * What this feature takes off, or adds to, a blank document.
    *
    * Folded over the features a config enables, in the prototype's order, on the result of
-   * `createBlankDocument` — so a feature shapes the blank document without `prototype/doc.ts`
-   * knowing any feature exists. `auth` strips its private members with it.
+   * `createBlankDocument` — so a feature shapes it without `prototype/doc.ts` knowing any feature
+   * exists. `auth` strips its private members; `versions` publishes the bootstrapped first row.
    *
-   * The API's `blank()` only: the blank `merge-with-blank` builds to seed a write is deliberately
-   * unfiltered, since a create has to null those members out rather than omit them.
+   * `intent` says which blank this is, the way `readQuery`'s does. `'create'` is what an author's
+   * create starts from, so it takes the field defaults; `'seed'` is the row `boot` writes when a
+   * singleton has none yet, and it is the exception to them. `versions` defaults `status` to
+   * `draft`, right for every version an author makes and wrong for the very first one — a
+   * bootstrapped area whose only row is a draft reads as absent, since a default read narrows to
+   * the published one. That rule was `if (config.versions?.draft) mainData.status = PUBLISHED`
+   * inside the adapter's `ensurePrototypeExists`, the database layer applying a feature's rule to
+   * a row it inserts.
+   *
+   * This was two seams and two folds, `blank` and `seed`, with one implementer each. The API's
+   * `blank()` and boot's seed are the only callers; the blank `merge-with-blank` builds for a
+   * write is deliberately unfiltered, since a create has to null those members out rather than
+   * omit them.
    */
-  blank?: (doc: any, config: any) => any;
-
-  /**
-   * What this feature puts on a prototype's **bootstrapped** first document — the one `boot`
-   * writes when a singleton has no row at all yet.
-   *
-   * Distinct from `blank` above, and the difference is the whole point of having both: `blank` is
-   * what an author's create starts from, so it takes the field defaults; this is the exception to
-   * them. `versions` gives `status` a default of `draft`, which is right for every version an
-   * author makes and wrong for the very first one — a bootstrapped area whose only row is a draft
-   * reads as absent, since a default read narrows to the published one.
-   *
-   * That rule was `if (config.versions?.draft) mainData.status = PUBLISHED` inside the adapter's
-   * `ensurePrototypeExists`, which is the database layer applying a feature's rule to a row it is
-   * inserting. The last one of those.
-   */
-  seed?: (doc: any, config: any) => any;
+  blank?: (doc: any, config: any, intent: BlankIntent) => any;
 
   /**
    * Where this feature sends the halves of an update.
@@ -257,6 +252,9 @@ export type FeatureDefinition = {
  * already written (a new version, created through the public API before this write). Both come
  * out as "write the base row and stop".
  */
+/** Which blank a feature is being asked to shape — see `FeatureDefinition.blank`. */
+export type BlankIntent = 'create' | 'seed';
+
 export type WritePlan = {
   /** What goes on the prototype's own row. */
   data: Dic;
@@ -283,7 +281,6 @@ export type ShadowDeclaration = {
    */
   slug: string;
 };
-
 
 /**
  * Generic in the *name only*, so `name` survives as a literal and a prototype's `features` list

@@ -1,6 +1,6 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
-import { seedWithFeatures } from '$lib/core/features/fold.js';
+import { blankWithFeatures } from '$lib/core/features/fold.js';
 import { createBlankDocument } from '../doc.js';
 import { area as base } from './definition.js';
 import { areaHooks } from './hooks.server.js';
@@ -35,9 +35,10 @@ export const area = definePrototype<BuiltArea>({
      * is a property of the config, not of its first reader.
      */
     await adapter.prototype(config.slug).ensureExists({
-      // Through `seed`, not `blank`: a feature that gives this prototype a shadow may need the
-      // first row to differ from what an author's create starts with. See FeatureDefinition.seed.
-      blank: seedWithFeatures(features, createBlankDocument(config), config),
+      // Intent `'seed'`, not `'create'`: a feature that gives this prototype a shadow may need
+      // the first row to differ from what an author's create starts with. See
+      // FeatureDefinition.blank.
+      blank: blankWithFeatures(features, createBlankDocument(config), config, 'seed'),
       locale: defaultLocale
     });
   }

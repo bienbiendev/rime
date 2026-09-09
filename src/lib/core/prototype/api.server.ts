@@ -82,7 +82,12 @@ export const prototypeContext = <C extends BuiltPrototype>(
      * nothing here names a feature or asks what a config declares.
      */
     blank: () =>
-      blankWithFeatures(features, createBlankDocument(config, event), config) as GenericDoc,
+      blankWithFeatures(
+        features,
+        createBlankDocument(config, event),
+        config,
+        'create'
+      ) as GenericDoc,
 
     cached: <T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T> => {
       if (!event.locals.cacheEnabled || isSystemOperation) return read();
