@@ -70,14 +70,15 @@ export const auth = defineFeature({
   /**
    * Signing a request in, and deciding what it may reach.
    *
-   * Was `core/handlers/auth.server.ts`, named first in `handlers/index.ts` — 253 lines of which
-   * every one is about auth, in core, importing three things out of this feature to do its work.
-   * A feature contributing a handle is `FeatureDefinition.handler`, which `cors` already uses, and
-   * `featureHandlers` collects them in prototype-then-list order: `collection` lists `auth` before
-   * `cors`, so the two still run in the order the hand-written list put them.
+   * Was `core/handlers/auth.server.ts` — 253 lines of which every one is about auth, in core,
+   * importing three things out of this feature to do its work. The feature owns it now.
    *
-   * Ungated by `enabled`, like every feature handler — a request is authenticated whether or not
-   * any *collection* declares `auth`, because signing into the panel does not depend on one.
+   * **Owning it is not the same as deciding when it runs.** `handlers/index.ts` names this and
+   * `cors.handler` in order, because a request chain is short, ordered, and security-relevant —
+   * see the note there on why deriving that order from the prototypes' feature lists was wrong.
+   *
+   * Ungated by `enabled` — a request is authenticated whether or not any *collection* declares
+   * `auth`, because signing into the panel does not depend on one.
    */
   handler: handleAuth
 });

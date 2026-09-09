@@ -1,3 +1,4 @@
+import type { BuiltCollection } from '$lib/core/config/types.js';
 import { auth } from '$lib/core/features/auth/index.js';
 import { cors } from '$lib/core/features/cors/index.js';
 import { metas } from '$lib/core/features/metas/index.js';
@@ -8,7 +9,6 @@ import { title } from '$lib/core/features/title/index.js';
 import { upload } from '$lib/core/features/upload/index.js';
 import { url } from '$lib/core/features/url/index.js';
 import { versions } from '$lib/core/features/versions/index.js';
-import type { BuiltCollection } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
 import { augmentLabel } from './augment-label.js';
 import type { CollectionWithoutSlug } from './types.js';
@@ -27,15 +27,11 @@ import type { CollectionWithoutSlug } from './types.js';
 export const collection = definePrototype({
   /** The name it is exported under, and the `type` every collection config carries. */
   name: 'collection',
-
   singleton: false,
-
   /** Authored under `collections` in a config. */
   configKey: 'collections',
-
   /** A document with no title field is named by its id. */
   titleFallback: 'id', // @decouple can set all fallback title fields here instead of setting it per feature
-
   /**
    * The collection's own augments, ahead of every feature's. One: a label is the kind's own
    * statement about itself.

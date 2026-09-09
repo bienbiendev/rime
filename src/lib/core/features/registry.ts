@@ -1,4 +1,3 @@
-import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
 import type { FeatureDefinition, ShadowDeclaration, WritePlan } from './define.js';
 import type { DocTypeContribution } from './doc-type.js';
@@ -110,17 +109,6 @@ export const bootFeatures = async (
     await feature.boot?.(config);
   }
 };
-
-/**
- * Every feature's request handler, in prototype-then-list order.
- *
- * A feature with no `handler` contributes nothing, and on a client build a server-only handler
- * resolves to `undefined` — hence the filter.
- */
-export const featureHandlers = (prototypes: { features: FeatureDefinition[] }[]): Handle[] =>
-  distinct(prototypes)
-    .map((feature) => feature.handler)
-    .filter((handler): handler is Handle => typeof handler === 'function');
 
 /**
  * Every error the features extending a config report about it.

@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { collection, prototypes } from '$lib/core/prototype/registry.js';
+import { collection } from '$lib/core/prototype/registry.js';
 import type { Docs, DocType } from '$lib/core/prototype/types.js';
-import { handleAuth } from '$lib/core/features/auth/handler/index.server.js';
-import { handleCORS } from '$lib/core/features/cors/handler.server.js';
 import type { ConfigureTransforms, FeatureConfigure } from './register.js';
-import { configureWithFeatures, featureHandlers, shadowOf } from './registry.js';
+import { configureWithFeatures, shadowOf } from './registry.js';
 
 /**
  * `ApplyFeatureConfigure` intersects every declared `configure` transform instead of folding a
@@ -94,21 +92,6 @@ describe('shadowOf', () => {
     expect(
       shadowOf(collection.features, { slug: '$pages__versions', versions: undefined })
     ).toBeUndefined();
-  });
-});
-
-/**
- * The request pipeline used to name `handleAuth` by hand, first, ahead of whatever the features
- * contributed. It is a feature handler now, and the order is no longer written anywhere — it falls
- * out of `distinct`: prototype registry order, then each prototype's feature list.
- *
- * Which makes it exactly the kind of thing rule 4 in `CONTRIBUTING.md` is about. Nothing fails
- * loudly if this inverts: CORS would run before a request is authenticated, and every test that
- * signs in from a trusted origin still passes.
- */
-describe('featureHandlers', () => {
-  it('runs auth before cors, which is the order the hand-written list had', () => {
-    expect(featureHandlers(prototypes)).toEqual([handleAuth, handleCORS]);
   });
 });
 
