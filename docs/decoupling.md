@@ -25,6 +25,9 @@ member. What got it there, newest first:
 
 | commit     | what                                                                                                                                             |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `300ff554` | **§4.5** — the blank merge stops naming a feature to protect one key                                                                             |
+| `1bf70e37` | **§4.5** — `FeatureDefinition.docType`; codegen stops branching on two features                                                                  |
+| `a8bea5d6` | **§4.5** — `FeatureDocTypes`; the `Docs` registry stops spelling four shapes                                                                     |
 | `fb4c9316` | **§4.5** — the auth handler moves onto the feature                                                                                               |
 | `1b0c00c3` | **§4.5** — `VERSIONS_STATUS` / `UPLOAD_PATH` leave core; `duplicate` stops naming one                                                            |
 | `0e580220` | **§4.4** — `insert` takes a write plan, like `update`                                                                                            |
@@ -63,6 +66,7 @@ seed?:       (doc, config) => doc            // what a *bootstrapped* first docu
 shadow?:     (config) => ShadowDeclaration   // a second table holding this config's content
 tables?:     (config) => TableDeclaration[]  // storage the feature owns, asked of the whole config
 columns?:    (config) => ColumnDeclaration[] // storage-only columns on a prototype that enables it
+docType?:    (config) => DocTypeContribution // what the generated document type carries
 writePlan?:  (plan, { config, context }) => plan   // which rows an update touches
 readQuery?:  ({ config, params, intent }) => OperationQuery | undefined  // which content row a read means
 hooks?:      FeatureHooks                    // document hooks, ordered by marks
@@ -105,7 +109,7 @@ Plus a comment sweep so the adapter stops _reasoning_ in feature terms.
 
 ### 1.3 Left
 
-Two of §4.5's four, and §4.6. None of it is large — see §4.5 and §4.6 for what each needs.
+§4.5's codegen routes — which wants a plan rather than a move, see below — and §4.6.
 
 ---
 
@@ -480,74 +484,77 @@ would produce half a document with its blocks hung off the wrong row.
 
 `grep -rn "config\.versions\|versionOperation" src/lib/adapter-sqlite` is empty.
 
-### 4.5 — Core's feature words — **two of four**
-
-**Done:**
+### 4.5 — Core's feature words — **done bar the routes**
 
 ```
-1b0c00c3  core/constants.ts        VERSIONS_STATUS, UPLOAD_PATH -> their features
-fb4c9316  core/handlers/auth.server.ts  -> features/auth/handler/, behind FeatureDefinition.handler
+fb4c9316  core/handlers/auth.server.ts   -> features/auth/handler/, behind FeatureDefinition.handler
+1b0c00c3  core/constants.ts              VERSIONS_STATUS, UPLOAD_PATH -> their features
+a8bea5d6  core/prototype/types.ts        the four feature shapes in `Docs` -> FeatureDocTypes
+1bf70e37  core/dev/codegen/types         two features' branches -> FeatureDefinition.docType
+300ff554  core/prototype/…/merge-with-blank  the isUploadConfig guard, deleted rather than moved
 ```
 
-Moving the constants alone would only have moved the tell, so `duplicate.ts` — the one core
-operation that read `VERSIONS_STATUS` — lost the read rather than the import:
+Two of these were bigger than the audit said, and one was smaller.
+
+**Bigger: `dev/codegen/types`.** The audit listed one `isUploadConfig` import. The generator also
+had `if (collection.versions) push('versionId: string')` — twice, once per prototype kind — and
+three reads of `collection.upload`. Two features named by config member in the one place that
+decides what a consumer's `PagesDoc` looks like. `FeatureDefinition.docType` is the seam, and it
+had three contributions on day one. `processCollection` and `processArea` collapse into one
+function, because the feature branches were the only thing that differed between them.
+
+**Bigger: `Docs`.** Four of its six entries were features' — `upload`, `version`, `auth`,
+`directory` — which is why `prototype/types.ts` imported `UploadPath` and `VersionsStatus` to
+describe its own registry. `FeatureDocTypes` merges them in, the way `FeatureConfigAugment`
+already worked. The precedent was in the same type: `& RegisterCollection & RegisterArea`.
+
+**Smaller: `merge-with-blank`.** The annex said the real question is "does this value come from a
+file", a field question — an `instanceof File` test. **That would have been wrong**: the pipeline
+map puts `castBase64ToFile` at hook 6 of `beforeCreate` and this hook at 1, so the payload can
+still be the JSON shape. The right statement was about the merge, not about upload: merge the keys
+the blank has, carry the rest across. `file` is not a field on any config, so it lands in the
+second half by construction.
+
+> **Two of these are not gated by `bun run check`, and one is not gated by anything the suite runs.**
+> Deleting versions' `docType` drops `versionId` from every generated type and the `versions`
+> fixture still checks at 0 — nothing reads it in a typed position, and the generated types end in
+> `[x: string]: unknown`. A `declare module` in a file nothing imports is not an error either; the
+> key just never appears. Both got specs that assert the contribution rather than a downstream
+> effect, and both were proved by deletion.
+
+`docs/known-defects.md` gained one entry on the way: the field filter `docType` inherited also
+drops blocks, tabs, groups, tree and relations from the generated type of any upload collection
+with image sizes. Carried over verbatim rather than fixed inside a move nothing yet tests.
+
+**Left: the codegen routes.**
 
 ```ts
-data.status = data.status ? VERSIONS_STATUS.DRAFT : undefined; // was
-delete data.status; // is
+// core/dev/codegen/routes/common.server.ts
+'(rime)/[panel=panel]/[slug=collection]/[id]/versions': { page, pageServer },
+'(rime)/[panel=panel]/[slug=area]/versions':            { page, pageServer }
 ```
 
-The feature that adds `status` already declares its default and `setDefaultValues` applies it on
-every create. Carrying the original's value over is what made an explicit reset necessary.
+Two entries in a flat `Record<path, { page, pageServer }>`, and the obvious move —
+`FeatureDefinition.routes`, sibling to `handler` — is not obviously the right one. Both templates
+import panel components, and `src/lib/panel/` is out of scope for this document. So this wants a
+plan, not a commit: routes registered by whoever owns them, with the **panel** as a feature that
+owns its own routes, templates and components, and `versions` contributing to it rather than to
+core's list. See §7.
 
-The handler move is the one with care in it. It went to `features/auth/handler/` with a
-**server-only** `module.server.ts` and no `module.ts`, because `features/auth/module.server.ts` has
-a client half — and a name only a server half declares is _not exported_ on a client build rather
-than `undefined`, which fails at link time. `docs/rime-modules-resolution.md`, cases B and C.
-Handler order is no longer written anywhere, so `registry.spec.ts` pins it: nothing fails loudly if
-it inverts, and CORS running before authentication is not a failure any signed-in test would see.
-
-**Left, and each needs a decision rather than a move:**
-
-```ts
-// core/prototype/collection/hooks/merge-with-blank.server.ts — imports isUploadConfig
-```
-
-It lifts `data.file` out before `deepmerge` and puts it back, because deepmerge clones a `File`
-into a plain object. The annex says the real question is "does this value come from a file", which
-is a **field** question — but `data.file` is not always a `File`: `convert-base64` accepts a JSON
-payload too, so an `instanceof` guard would change behaviour. Decide what the value's contract is
-before rewriting the test.
-
-```ts
-// core/dev/codegen/types/index.server.ts — imports isUploadConfig  (not in the original audit)
-// core/prototype/types.ts             — VersionsStatus on VersionDoc, UploadPath on Docs
-```
-
-`Docs` is core's registry of document shapes, and four of its entries — `upload`, `version`,
-`auth`, `directory` — are features'. That wants type-level declaration merging, the way
-`FeatureConfigAugment` already works, not an import move.
-
-```ts
-// core/dev/codegen/routes/common.server.ts — two hardcoded panel `…/versions` routes
-// → a feature declaring routes is `FeatureDefinition.routes`, sibling to `handler`.
-```
-
-Unchanged from the original plan.
-
-**And three the fixed grep surfaced that the original audit did not list:**
+**And four the fixed grep surfaced that the original audit did not list, all auth:**
 
 ```
-core/boot.server.ts               createAuthInstance
-core/rime.server.ts               type RimeAuth
-core/plugins/api-init/…           hasAuthUser
+core/boot.server.ts                     createAuthInstance
+core/rime.server.ts                     type RimeAuth
+core/plugins/api-init/module.server.ts  hasAuthUser
+core/prototype/collection/operations/create.ts   userAttributes
 ```
 
-The first two are core booting Better-auth, and `RimeAuth` is where it is _on purpose_ — see rule
-1 in `CONTRIBUTING.md`: its type has to be nameable without naming `bootRime`. Untangling those is
-a change about `Rime`'s type graph, not about features, and it should not be attempted casually.
-The third is a plugin asking auth a question, the same shape as the handler leak that just moved;
-it goes when `api-init` becomes something auth declares.
+The first two are core booting Better-auth, and `RimeAuth` is where it is **on purpose** — rule 1
+in `CONTRIBUTING.md`: its type has to be nameable without naming `bootRime`. That is a change about
+`Rime`'s type graph, not about features, and it should not be attempted casually. The other two
+are a plugin and an operation asking auth a question, the same shape as the handler leak that
+moved; they go when each becomes something auth declares.
 
 ### 4.6 — Feature to feature
 
@@ -577,7 +584,7 @@ a new content row inherits. Lowest priority; note it, do not force it.
 4.2  FeatureDefinition.tables     ← done (minus upload's directories)
 4.3  the auth facade              ← done
 4.4  the insert plan              ← done
-4.5  core's feature words         ← two of four done; two left, each needs a decision
+4.5  core's feature words         ← done bar the codegen routes, which want a plan
 4.6  feature to feature           ← unblocked; upload's directories is the first half
 ```
 
@@ -620,6 +627,61 @@ grep -rn "core/features/" src/lib/core/features --include=*.ts \
 ```
 
 Empty, or one entry with a written reason.
+
+---
+
+## 7. Sketch — routes belong to whoever owns them
+
+> Not a stage. The two `…/versions` entries in `core/dev/codegen/routes/common.server.ts` are the
+> last of §4.5, and moving them the obvious way lands in the wrong place. This records where they
+> should go instead, so the move happens once.
+
+### 7.1 Why `FeatureDefinition.routes` is not enough
+
+The obvious shape — a feature returns `Record<path, { page, pageServer }>` and codegen folds it —
+works for the two entries and stops there. Two things are wrong with it:
+
+1. **The templates are panel source.** Both emit `import { CollectionDocVersions } from
+'rimecms/panel'`. So `versions` would be declaring a route whose body names a panel component,
+   which is the same coupling one layer over.
+2. **Core's own list is the same shape.** `COMMON_ROUTES` holds the panel's list, the API
+   catch-all and the live-edit route in one flat record. If a feature can contribute routes, so
+   can a prototype (`[slug=collection]/[id]` is the collection prototype's), and so can the panel.
+   A seam that only features can reach answers a third of the question.
+
+### 7.2 The shape
+
+Routes are **registered**, by whoever owns them, in the same three layers everything else uses:
+
+```
+prototype   [slug=collection], [slug=collection]/[id]     what a kind of document needs
+feature     [slug=collection]/[id]/versions               what a feature adds to one
+plugin      /api/…                                        userland
+```
+
+`panel` is already a feature (both prototypes list it). The end state is that **it owns its
+routes, its templates and its components**, and core's `common.server.ts` holds only what is not
+the panel's — the API catch-all. Then `versions` does not contribute a route to core at all: it
+contributes one to the panel, which is the thing that knows what a page is.
+
+That is a bigger change than §4.5, and it is the natural companion to the scope note at the top of
+this document — core letting go of `src/lib/panel/`.
+
+### 7.3 Order
+
+```
+1. A route declaration in core's vocabulary: path, and the source of each file. No panel imports
+   in the type.
+2. Prototypes register theirs. `COMMON_ROUTES` loses the six `[slug=collection]`/`[slug=area]`
+   entries and keeps the rest — no behaviour change, and it proves the registration works before
+   any feature depends on it.
+3. The panel registers its own, and owns its templates.
+4. `versions` contributes its two to the panel. `common.server.ts` is left with the API
+   catch-all.
+```
+
+Step 2 is worth doing on its own: it is the one that establishes whether a route registry can
+state everything the flat record states today, and it is reversible.
 
 ---
 
