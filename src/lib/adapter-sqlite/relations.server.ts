@@ -5,14 +5,17 @@ import type { PrototypeSlug } from '$lib/core/prototype/types.js';
 import { omit } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import { and, eq, getTableColumns, inArray, isNull, or, type SQLWrapper } from 'drizzle-orm';
-import { transformDataToSchema } from './util.server.js';
+import { transformDataToSchema } from './columns.server.js';
 
 const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   //
   const deleteFromPaths: DeleteFromPaths = async ({ parentSlug, ownerId, paths, locale }) => {
     if (paths.length === 0) return true;
 
-    const relationTableName = tableName({ owner: baseTableName(parentSlug), child: { kind: 'rels' } });
+    const relationTableName = tableName({
+      owner: baseTableName(parentSlug),
+      child: { kind: 'rels' }
+    });
     const table = tables[relationTableName];
     if (!table) return true;
 
@@ -42,7 +45,10 @@ const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 
   const create: Create = async ({ parentSlug, ownerId, relations }) => {
-    const relationTableName = tableName({ owner: baseTableName(parentSlug), child: { kind: 'rels' } });
+    const relationTableName = tableName({
+      owner: baseTableName(parentSlug),
+      child: { kind: 'rels' }
+    });
     const table = tables[relationTableName];
     const columns = getTableColumns(table);
 
@@ -74,7 +80,10 @@ const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 
   const update: Update = async ({ parentSlug, relations }) => {
-    const relationTableName = tableName({ owner: baseTableName(parentSlug), child: { kind: 'rels' } });
+    const relationTableName = tableName({
+      owner: baseTableName(parentSlug),
+      child: { kind: 'rels' }
+    });
     const table = tables[relationTableName];
     const columns = getTableColumns(table);
 
@@ -94,7 +103,10 @@ const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 
   const deleteRelations: Delete = async ({ parentSlug, relations }) => {
-    const relationTableName = tableName({ owner: baseTableName(parentSlug), child: { kind: 'rels' } });
+    const relationTableName = tableName({
+      owner: baseTableName(parentSlug),
+      child: { kind: 'rels' }
+    });
     const table = tables[relationTableName];
 
     if (relations.length === 0) return true;
@@ -115,7 +127,10 @@ const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 
   const getAll: GetAllRelations = async ({ parentSlug, ownerId, locale }) => {
-    const relationTableName = tableName({ owner: baseTableName(parentSlug), child: { kind: 'rels' } });
+    const relationTableName = tableName({
+      owner: baseTableName(parentSlug),
+      child: { kind: 'rels' }
+    });
 
     // If the collection doesn't have relation
     // relationTableName doesn't exist
@@ -152,7 +167,6 @@ const createRelationsFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
 };
 
 export default createRelationsFacade;
-
 
 type DeleteFromPaths = (args: {
   parentSlug: PrototypeSlug;

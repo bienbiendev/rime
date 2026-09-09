@@ -4,7 +4,7 @@ import type { GenericBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
 import type { WithOptional } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
 import { omit } from '../util/object.js';
-import { generatePK, transformDataToSchema } from './util.server.js';
+import { generatePK, transformDataToSchema } from './columns.server.js';
 
 const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   /**

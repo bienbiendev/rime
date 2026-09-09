@@ -3,7 +3,7 @@ import type { GenericBlock } from '$lib/core/prototype/types.js';
 import { deleteValueAtPath, getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 import { buildConfigMap } from '../config-map/index.js';
 import { getDefaultValue } from './set-default-values.server.js';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
 export const processDocumentFields = Hooks.beforeRead({
   name: 'processDocumentFields',

@@ -15,7 +15,7 @@ import { versionsWritePlan } from './write-plan.js';
  * `handleNewVersion` had to run for *every* config because it was the only thing setting
  * `context.contentOwnerId`, which `assertUpsertContext` requires on every update — so both
  * prototypes listed it by name and `buildPipeline`'s `enabled` gate could not be applied. Core
- * states the default now (`pipeline/steps/resolve-content-owner.server.ts`: the document's own
+ * states the default now (`pipeline/hooks/resolve-content-owner.server.ts`: the document's own
  * row) and this feature *overrides* it, which is what a feature is for.
  *
  * `versions:operation` is its mark, merged into `FeatureHookMarks` below — core's `CoreHookMark`

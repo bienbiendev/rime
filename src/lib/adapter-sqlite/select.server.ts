@@ -127,8 +127,15 @@ export const buildWithParam = (args: {
   // this ensure we only fetch the necessary relations
   if (directRelationPaths.length) {
     withParam[tableName({ owner: table, child: { kind: 'rels' } })] = {
-      where: or(...directRelationPaths.map((path) => eq(tables[tableName({ owner: table, child: { kind: 'rels' } })].path, path))),
-      orderBy: [asc(tables[tableName({ owner: table, child: { kind: 'rels' } })].path), asc(tables[tableName({ owner: table, child: { kind: 'rels' } })].position)]
+      where: or(
+        ...directRelationPaths.map((path) =>
+          eq(tables[tableName({ owner: table, child: { kind: 'rels' } })].path, path)
+        )
+      ),
+      orderBy: [
+        asc(tables[tableName({ owner: table, child: { kind: 'rels' } })].path),
+        asc(tables[tableName({ owner: table, child: { kind: 'rels' } })].position)
+      ]
     };
   }
 
@@ -137,7 +144,10 @@ export const buildWithParam = (args: {
   // 1. Include relations table if container paths exist (blocks or trees).
   //    If container paths are present we include relations for those containers
   //    and also include any direct relation paths.
-  if ((blockPaths.length > 0 || treePaths.length > 0) && tableName({ owner: table, child: { kind: 'rels' } }) in tables) {
+  if (
+    (blockPaths.length > 0 || treePaths.length > 0) &&
+    tableName({ owner: table, child: { kind: 'rels' } }) in tables
+  ) {
     const relsTable = tables[tableName({ owner: table, child: { kind: 'rels' } })];
 
     // Create a where condition that matches relations within any of the container paths,

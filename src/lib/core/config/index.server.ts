@@ -1,6 +1,6 @@
 import * as Area from '$lib/core/prototype/area/index.js';
 import * as Collection from '$lib/core/prototype/collection/index.js';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import type { BuiltConfigClient, SanitizedConfigClient } from './types.js';
 import { buildConfig } from './build.server.js';
 export type { BuildConfig } from './build.server.js';

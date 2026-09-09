@@ -1,5 +1,5 @@
 import validate from '$lib/core/fields/validate.js';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { text } from '$lib/fields/text/index.js';
 
 const passwordField = text('password')

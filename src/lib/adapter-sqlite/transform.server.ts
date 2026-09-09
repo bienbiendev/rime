@@ -14,7 +14,7 @@ import {
   childTableNames,
   type TableName
 } from './naming.server.js';
-import { transformDatabaseColumnsToPaths } from './util.server.js';
+import { transformDatabaseColumnsToPaths } from './columns.server.js';
 
 /**
  * Turns the rows a read returned into the four piles core builds a document from.

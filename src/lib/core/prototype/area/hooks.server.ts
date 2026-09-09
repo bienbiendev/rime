@@ -1,16 +1,16 @@
 import * as title from '$lib/core/features/title/hooks/index.server.js';
 import * as url from '$lib/core/features/url/hooks/index.server.js';
 import * as versions from '$lib/core/features/versions/hooks/index.server.js';
-import { authorize } from '$lib/core/pipeline/steps/authorize.server.js';
-import { buildDataConfigMap } from '$lib/core/pipeline/steps/data-config-map.server.js';
-import { getOriginalDocument } from '$lib/core/pipeline/steps/get-original-document.server.js';
-import { buildOriginalDocConfigMap } from '$lib/core/pipeline/steps/original-config-map.server.js';
-import { processDocumentFields } from '$lib/core/pipeline/steps/process-document-fields.server.js';
-import { resolveContentOwner } from '$lib/core/pipeline/steps/resolve-content-owner.server.js';
-import { setDefaultValues } from '$lib/core/pipeline/steps/set-default-values.server.js';
-import { setDocumentLocale } from '$lib/core/pipeline/steps/set-document-locale.server.js';
-import { setDocumentType } from '$lib/core/pipeline/steps/set-document-type.server.js';
-import { validateFields } from '$lib/core/pipeline/steps/validate-fields.server.js';
+import { authorize } from '$lib/core/pipeline/hooks/authorize.server.js';
+import { buildDataConfigMap } from '$lib/core/pipeline/hooks/data-config-map.server.js';
+import { getOriginalDocument } from '$lib/core/pipeline/hooks/get-original-document.server.js';
+import { buildOriginalDocConfigMap } from '$lib/core/pipeline/hooks/original-config-map.server.js';
+import { processDocumentFields } from '$lib/core/pipeline/hooks/process-document-fields.server.js';
+import { resolveContentOwner } from '$lib/core/pipeline/hooks/resolve-content-owner.server.js';
+import { setDefaultValues } from '$lib/core/pipeline/hooks/set-default-values.server.js';
+import { setDocumentLocale } from '$lib/core/pipeline/hooks/set-document-locale.server.js';
+import { setDocumentType } from '$lib/core/pipeline/hooks/set-document-type.server.js';
+import { validateFields } from '$lib/core/pipeline/hooks/validate-fields.server.js';
 import type { AnyHook, HookTiming } from '$lib/core/pipeline/types.js';
 
 /**

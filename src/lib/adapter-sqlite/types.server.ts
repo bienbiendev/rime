@@ -25,4 +25,3 @@ export type GenericTable = SQLiteTableWithColumns<{
 }>;
 
 export type GenericTables = Record<string, GenericTable | SQLiteTableWithColumns<any>>;
-

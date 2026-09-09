@@ -1,6 +1,6 @@
 import { isObjectLiteral } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
 export const sortDocumentProps = Hooks.beforeRead<'generic'>({
   name: 'sortDocumentProps',

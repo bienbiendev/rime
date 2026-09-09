@@ -697,7 +697,7 @@ repeat after, diff. A reordered column is the failure this catches and the only 
 key is a silently dropped field. Cheapest capture is a temporary log in the hook that builds it:
 
 ```ts
-// core/pipeline/steps/data-config-map.server.ts — remove before committing
+// core/pipeline/hooks/data-config-map.server.ts — remove before committing
 console.log(JSON.stringify(Object.keys(map).sort(), null, 2));
 ```
 

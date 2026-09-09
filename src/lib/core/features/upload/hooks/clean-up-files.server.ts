@@ -1,6 +1,6 @@
 import { cleanUpDocumentFile } from '$lib/core/features/upload/disk/delete.server.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import type { WithUpload } from '../util/config.js';
 
 /**

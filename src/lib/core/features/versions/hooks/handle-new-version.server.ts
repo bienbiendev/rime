@@ -8,7 +8,7 @@ import type { Dic } from '$lib/util/types.js';
 import type { BuiltArea, BuiltCollection } from '../../../../types.js';
 import type { ConfigMap } from '../../../pipeline/config-map/types.js';
 import { fallbackDataFromOriginal } from './fallback-data-from-original.js';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
 /**
  * Where a versioned document's content lives for *this* update — overriding the default.

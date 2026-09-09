@@ -1,6 +1,6 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import { logger } from '$lib/core/logger.server.js';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
 export const authorize = Hooks.beforeOperation({
   name: 'authorize',

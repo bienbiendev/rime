@@ -4,15 +4,14 @@ import type { RawDoc } from '$lib/core/prototype/types.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { Dic } from '$lib/util/types.js';
 import { baseTableName } from './naming.server.js';
+import { findManyPrototypes, readPrototype } from './read.server.js';
 import {
   deletePrototype,
   ensurePrototypeExists,
-  findManyPrototypes,
   insertPrototype,
-  readPrototype,
   updatePrototype,
   updateWherePrototype
-} from './prototype.server.js';
+} from './write.server.js';
 
 /**
  * Which prototypes exist, and what each one can do.

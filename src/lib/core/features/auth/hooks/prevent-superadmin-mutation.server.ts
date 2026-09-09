@@ -1,6 +1,6 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import { isSuperAdmin } from '../user.server.js';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
 /**
  * Before update :

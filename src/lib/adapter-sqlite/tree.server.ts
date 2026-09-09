@@ -5,7 +5,7 @@ import { extractFieldName } from '$lib/fields/tree/util.js';
 import type { WithRequired } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
 import { omit } from '../util/object.js';
-import { generatePK, transformDataToSchema } from './util.server.js';
+import { generatePK, transformDataToSchema } from './columns.server.js';
 
 const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   //

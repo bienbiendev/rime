@@ -2,7 +2,7 @@ import { logger } from '$lib/core/logger.server.js';
 import type { PrototypeSlug } from '$lib/core/prototype/types.js';
 import { asc, desc, getTableColumns, sql } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
-import { pathToDatabaseColumn } from './util.server.js';
+import { pathToDatabaseColumn } from './columns.server.js';
 import { baseTableName, tableName, type TableName } from './naming.server.js';
 
 type Args = {

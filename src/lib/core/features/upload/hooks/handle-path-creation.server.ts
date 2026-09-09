@@ -1,7 +1,7 @@
 import { UPLOAD_PATH } from '$lib/core/features/upload/constant.js';
 import { logger } from '$lib/core/logger.server.js';
 import { directoriesOf } from '$lib/core/features/upload/naming.js';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { trycatch } from '$lib/util/function.js';
 import { getSegments } from '../util/path.js';
 

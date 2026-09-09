@@ -1,5 +1,5 @@
 import { defineVersionUpdateOperation } from '$lib/core/features/versions/strategy.js';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
 export const defineVersionOperation = Hooks.beforeUpdate({
   name: 'defineVersionOperation',

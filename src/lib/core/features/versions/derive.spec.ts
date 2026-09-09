@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { hookName } from '$lib/core/pipeline/hook-name.server.js';
 import { resolvePipelines } from '$lib/core/pipeline/build.server.js';
 import type { Dic } from '$lib/util/types.js';

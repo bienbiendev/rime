@@ -7,7 +7,7 @@ import {
   type UploadDoc
 } from '$lib/types.js';
 import { getValueAtPath } from '$lib/util/object.js';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
 export const setDocumentThumbnail = Hooks.beforeRead<'raw'>({
   name: 'setDocumentThumbnail',

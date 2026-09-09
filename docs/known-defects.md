@@ -36,7 +36,7 @@ So the trigger is **"has no published version"**, not the draft flag.
 `VersionOperations.shouldRetrieveDraft` returns true for `UPDATE_VERSION` and
 `NEW_VERSION_FROM_LATEST` only — so for **both** of the operations above it is false.
 
-`getOriginalDocument` (`core/pipeline/steps/get-original-document.server.ts`) uses that
+`getOriginalDocument` (`core/pipeline/hooks/get-original-document.server.ts`) uses that
 value as its `draft` argument, so it reads the original with a published-only filter. There is
 no published version, `findById` throws `NOT_FOUND`, and the request 404s in step 3 of
 `runUpdate` (`core/pipeline/run.server.ts`) — before the write. Nothing is persisted; the document is unchanged.

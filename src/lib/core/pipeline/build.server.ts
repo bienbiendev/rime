@@ -4,7 +4,7 @@ import { area } from '../prototype/area/index.js';
 import { areaHooks } from '../prototype/area/hooks.server.js';
 import { collection } from '../prototype/collection/index.js';
 import { collectionHooks } from '../prototype/collection/hooks.server.js';
-import { sortDocumentProps } from './steps/sort-document-props.server.js';
+import { sortDocumentProps } from './hooks/sort-document-props.server.js';
 import type { HookTiming } from './types.js';
 
 /** Every timing a pipeline can carry. A prototype declares nothing for the ones it has no use

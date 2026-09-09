@@ -1,6 +1,6 @@
 import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
 import { VersionOperations } from '$lib/core/features/versions/strategy.js';
-import { Hooks } from '$lib/core/pipeline/hooks.js';
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { withVersionsSuffix } from '../naming.js';
 
 /**

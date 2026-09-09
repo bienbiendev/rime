@@ -226,7 +226,7 @@ Each is one commit. None depends on a later one.
 | # | move | size | gate |
 | - | ---- | ---: | ---- |
 | 1 | dead fields — `FeatureDefinition.type`, `.requires`, `PrototypeDefinition.titleFallback` | ~55 | `check` |
-| 2 | `pipeline/steps/` → `pipeline/hooks/`; adapter file renames and the 649-line split | ~0 net | `check`, `madge` |
+| 2 | `pipeline/hooks/` → `pipeline/hooks/`; adapter file renames and the 649-line split | ~0 net | `check`, `madge` |
 | 3 | the folder moves of §4 — nothing edited, only moved | ~0 net | `check`, `madge`, generated output identical |
 | 4 | adapter says `versions` — mechanical, 116 places | ~0 net | **schema byte-identical** |
 | 5 | the three versions folds collapse; `WritePlan` → `{ base, version }` | −120 | schema identical, `test:versions` |

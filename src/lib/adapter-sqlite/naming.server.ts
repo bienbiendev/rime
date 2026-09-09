@@ -40,7 +40,6 @@ declare const TABLE_NAME_BRAND: unique symbol;
  */
 export type TableName = string & { readonly [TABLE_NAME_BRAND]: true };
 
-
 /**
  * The table a prototype's own rows live in: `$a__b` -> `a__b`, `camelProbe` -> `camel_probe`.
  * The only way to turn a slug into a table name.
