@@ -1,9 +1,9 @@
-import { collection, create } from '$lib/core/prototype/collection/definition.js';
+import { create } from '$lib/core/prototype/collection/definition.js';
 import { VERSIONS_STATUS } from '$lib/core/versions/constant.js';
 import { text } from '$lib/fields/text/index.js';
 import { describe, expect, it } from 'vitest';
 import type { ReadIntent } from '$lib/core/pipeline/types.js';
-import { readQueryOf } from '$lib/core/features/fold.js';
+import { versionsReadQuery } from './read-query.js';
 
 /**
  * Which content row a read means.
@@ -13,15 +13,15 @@ import { readQueryOf } from '$lib/core/features/fold.js';
  * published-only read starts handing out unpublished drafts with a 200. Nothing else in the stack
  * would catch that — the document is well-formed, it is just the wrong revision.
  *
- * Asserted through the same fold the api context uses, on real built configs.
+ * Asserted through the same function the api context calls, on real built configs.
  */
 const queryFor = (
-  config: Parameters<typeof readQueryOf>[1],
+  config: Parameters<typeof versionsReadQuery>[0]['config'],
   params: { draft?: boolean; versionId?: string },
   intent: ReadIntent = 'read'
-) => readQueryOf(collection.features, config, params, intent);
+) => versionsReadQuery({ config, params, intent });
 
-describe('readQueryOf', () => {
+describe('versionsReadQuery', () => {
   const drafts = create('spec_read_news', {
     versions: { draft: true },
     fields: [text('title').isTitle()]

@@ -1,9 +1,8 @@
 import type { Dic } from '$lib/util/types.js';
-import type { BlankIntent, FeatureDefinition, VersionsTable, WritePlan } from './define.js';
+import type { BlankIntent, FeatureDefinition } from './define.js';
 import type { DocTypeContribution } from './doc-type.js';
 import type { ColumnDeclaration, TableDeclaration } from './tables.js';
 import type { ApplyFeatureConfigure } from './register.js';
-import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 
 /**
  * Asking the features a question about a config, and folding the answers.
@@ -135,68 +134,4 @@ export const blankWithFeatures = (
     (current, feature) =>
       feature.enabled(config) && feature.blank ? feature.blank(current, config, intent) : current,
     doc
-  );
-
-/**
- * The write plan, after every feature the config enables has said where its half lands.
- *
- * Folded in the prototype's feature order like the blank document, starting from "everything on
- * the prototype's own row" — which is the whole plan for a config no feature gives a second row
- * to, so nothing needs a not-versioned branch.
- *
- * `runUpdate` and `create` both call this at the same fixed point, after the data hooks and before
- * the write — which is why `operation` travels with it: an insert has no content row to name yet.
- * See `FeatureDefinition.writePlan` for why it is not itself a hook.
- */
-export const writePlanWithFeatures = (
-  features: FeatureDefinition[],
-  plan: WritePlan,
-  args: { config: Dic; context: Dic; operation: 'create' | 'update' }
-): WritePlan =>
-  features.reduce(
-    (current, feature) =>
-      feature.enabled(args.config) && feature.writePlan
-        ? feature.writePlan(current, args)
-        : current,
-    plan
-  );
-
-/**
- * The filter that says which content row a read means, from whichever feature owns the difference.
- *
- * First answer wins and `enabled` gates it, like `versionsTableOf` — and for the same reason: a config
- * has one content row, so it has one rule for picking it. `undefined` all the way through means
- * the read is not narrowed, which is every config with no versions.
- */
-export const readQueryOf = (
-  features: FeatureDefinition[],
-  config: Dic,
-  params: { draft?: boolean; versionId?: string },
-  intent: ReadIntent
-): OperationQuery | undefined =>
-  features.reduce<OperationQuery | undefined>(
-    (found, feature) =>
-      found ??
-      (feature.enabled(config) ? feature.readQuery?.({ config, params, intent }) : undefined),
-    undefined
-  );
-
-/**
- * The versions a config's content lives in, or `undefined` when it lives on the config's own row.
- *
- * Folded over the features that extend the prototype, in their declared order, and the first one
- * answering wins — a config cannot have its content in two places at once, and the order the
- * prototype listed is the tie-break. `enabled` gates it, so the question is asked of the config
- * rather than of the kind.
- *
- * Takes a feature list rather than the prototypes, because both callers already hold one: the
- * schema generator folds it per prototype config, and registration passes the prototype's own.
- */
-export const versionsTableOf = (
-  features: FeatureDefinition[],
-  config: Dic
-): VersionsTable | undefined =>
-  features.reduce<VersionsTable | undefined>(
-    (found, feature) => found ?? (feature.enabled(config) ? feature.versions?.(config) : undefined),
-    undefined
   );

@@ -125,13 +125,17 @@ export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
   blank(): GenericDoc;
 
   /**
-   * Which content row a read means, as the feature owning the difference narrows it. `undefined`
-   * for a prototype whose content is on its own row.
+   * Which **version row** a read means. `undefined` for a config that is not versioned, which is
+   * "the document's own row".
    *
-   * Pass `intent: 'original'` when loading what an update is about to change — the same parameters
-   * can select a different row. Defaults to `'read'`.
+   * Pass `intent: 'original'` when loading what an update is about to change — `?draft=true` on an
+   * update means "branch a new draft *from what is published*", the opposite of what it means on a
+   * read. Defaults to `'read'`.
+   *
+   * Was `versionQuery`, answered by folding every feature for the one that owns the difference.
+   * Only `versions` ever did.
    */
-  contentQuery(
+  versionQuery(
     params: { draft?: boolean; versionId?: string },
     intent?: ReadIntent
   ): OperationQuery | undefined;

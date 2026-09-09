@@ -58,8 +58,10 @@ export const transformerFacade = <const C extends Config>(args: {
 
     let doc: Dic = args.doc;
 
-    // The table this document's content is in — its own, unless a feature gave it a versions.
-    const tableName = baseTableName(configCtx.versionsSlugOf(slug) ?? slug);
+    // The table this document's content is in — its own, unless the config is versioned. Read off
+    // the config rather than asked of a feature, which is what keeps this file naming none.
+    const config = configCtx.getBySlug(slug) as { _versions?: { slug: string } };
+    const tableName = baseTableName(config._versions?.slug ?? slug);
     const tableNameRelationFields = buildTableName({ owner: tableName, child: { kind: 'rels' } });
     const tableNameLocales = buildTableName({ owner: tableName, branch: 'locales' });
 

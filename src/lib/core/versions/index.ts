@@ -3,10 +3,7 @@ import { makeVersionsCollectionsAliases } from '$rime/modules';
 import type { WithVersionsConfig } from './augment.js';
 import { defineFeature } from '$lib/core/features/define.js';
 import { augmentVersions } from './augment.js';
-import { withVersionsSuffix } from './naming.js';
 import { versionsDocType } from './doc-type.js';
-import { versionsReadQuery } from './read-query.js';
-import { versionsWritePlan } from './write-plan.js';
 
 /**
  * Keeps a document's history in a versions table, and lets one version be the published one.
@@ -18,11 +15,14 @@ import { versionsWritePlan } from './write-plan.js';
  * states the default now (`pipeline/hooks/resolve-content-owner.server.ts`: the document's own
  * row) and this feature *overrides* it, which is what a feature is for.
  *
- * `versions:operation` is its mark, merged into `FeatureHookMarks` below — core's `CoreHookMark`
- * used to declare it, which is a feature's word in core's closed union.
+ * The augment is isomorphic — it normalises `versions`, adds `status`, and states `_versions`,
+ * the table this config's content lives in. That last one was a `FeatureDefinition.shadow` seam
+ * that nothing else ever implemented, folded by five callers; two of them are in `adapter-sqlite/`
+ * and read a config member now, which is what keeps the adapter naming no feature.
  *
- * The augment is isomorphic — it normalises `versions` and adds `status` — so it needs no
- * `$rime/modules` pair.
+ * `readQuery` and `writePlan` were the same story: seams with one implementer, folded over every
+ * feature to reach it. `versionsReadQuery` and `versionsWritePlan` are imported by name now, and
+ * each guards its own not-versioned case on its first line.
  */
 export const versions = defineFeature({
   name: 'versions',
@@ -37,20 +37,6 @@ export const versions = defineFeature({
    * know which row a write of content belongs on.
    */
   docType: versionsDocType,
-
-  versions: (config) => ({ slug: withVersionsSuffix(config.slug) }),
-
-  /**
-   * Where the two halves of an update land — the base row and the version row. What
-   * `versionOperation` used to tell the adapter, said once here instead.
-   */
-  writePlan: versionsWritePlan,
-
-  /**
-   * Which version a read means — the published one, a named one, or the newest. What `draft` and
-   * `versionId` used to tell the adapter, said once here instead.
-   */
-  readQuery: versionsReadQuery,
 
   /**
    * A bootstrapped document's first version is the published one — otherwise the row exists and no

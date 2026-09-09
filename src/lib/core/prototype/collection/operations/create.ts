@@ -1,7 +1,7 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { userAttributes } from '$lib/core/auth/user.server.js';
-import { writePlanWithFeatures } from '$lib/core/features/fold.js';
+import { versionsWritePlan } from '$lib/core/versions/write-plan.js';
 import {
   assertUpsertContext,
   persistRelational,
@@ -59,16 +59,12 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
   /**
    * Which rows this create writes, decided here rather than in the adapter.
    *
-   * The same fold `runUpdate` makes at its step 3.5, and for the same reason: whether a document's
-   * content lands on its own row or a second one is the versions-declaring feature's statement, not
-   * the database layer's. `operation: 'create'` is what lets that feature answer differently —
-   * an insert names no content row, because there is none yet.
+   * The same call `runUpdate` makes at its step 3.5, and for the same reason: whether a document's
+   * content lands on its own row or a second one is versions' statement, not the database layer's.
+   * `operation: 'create'` is what lets it answer differently — an insert names no content row,
+   * because there is none yet.
    */
-  const plan = writePlanWithFeatures(
-    ctx.features,
-    { data: data as Dic },
-    { config, context, operation: 'create' }
-  );
+  const plan = versionsWritePlan({ data: data as Dic }, { config, context, operation: 'create' });
 
   const created = await rime.adapter.prototype(config.slug).insert({
     data: plan.data,

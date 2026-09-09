@@ -1,7 +1,5 @@
 import { IS_RIME_REPO, PACKAGE_NAME } from '$lib/core/constants.server.js';
 import type { Config } from '$lib/core/config/types.js';
-import { versionsTableOf } from '$lib/core/features/fold.js';
-import { collection as collectionPrototype } from '$lib/core/prototype/index.js';
 import { capitalize } from '$lib/util/string.js';
 
 /**
@@ -52,7 +50,7 @@ export const templateRegister = <T extends Config>(config: T): string => {
   const versionsSlugs = new Map(
     (config.collections ?? []).map((c) => [
       c.slug,
-      versionsTableOf(collectionPrototype.features, c)?.slug
+      (c as { _versions?: { slug: string } })._versions?.slug
     ])
   );
 

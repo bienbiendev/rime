@@ -1,8 +1,6 @@
 import type { AreaSlug, CollectionSlug, Config, PrototypeSlug } from '$lib/types.js';
 import { RimeError } from '../errors/index.js';
 import type { BuildConfig } from './build.server.js';
-import { versionsTableOf } from '../features/fold.js';
-import { area, collection } from '$lib/core/prototype/index.js';
 
 /**
  * What `event.locals.rime.config` is.
@@ -36,27 +34,6 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
 
   /** Every built prototype config, whatever its kind. */
   const allPrototypes = [...config.collections, ...config.areas];
-
-  /**
-   * Where each config's content lives, when a feature gives it a second table.
-   *
-   * Folded once, from the features that extend each prototype — the same question `boot` asks
-   * before handing the answer to `registerPrototype`, and the schema generator before building the
-   * table. This exists so that code holding a `ConfigContext` but no registry can ask it too: the
-   * adapter's transform and url writers both did `config.versions ? withVersionsSuffix(slug) : slug`,
-   * which is the database layer naming a feature and its table.
-   *
-   * A `Map` rather than a lookup per call: the transform runs on every document of every read.
-   */
-  const versionsSlugs = new Map<string, string>(
-    [
-      ...config.collections.map((c) => [collection.features, c] as const),
-      ...config.areas.map((a) => [area.features, a] as const)
-    ].flatMap(([features, prototypeConfig]) => {
-      const versions = versionsTableOf(features, prototypeConfig);
-      return versions ? [[prototypeConfig.slug, versions.slug] as [string, string]] : [];
-    })
-  );
 
   const getLocalesCodes = () =>
     config.localization ? config.localization.locales.map((l) => l.code) : [];
@@ -121,13 +98,6 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
     get prototypes() {
       return allPrototypes;
     },
-
-    /**
-     * The slug a config's content lives under, or `undefined` when it lives on the config's own
-     * row. `versionsSlugOf(slug) ?? slug` is "the table this config's content is in".
-     */
-    versionsSlugOf: (slug: string): PrototypeSlug | undefined =>
-      versionsSlugs.get(slug) as PrototypeSlug | undefined,
 
     /**
      * Gets the default locale from the configuration

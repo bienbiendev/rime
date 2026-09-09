@@ -1,7 +1,7 @@
 import { text } from '$lib/fields/text/index.js';
 import { describe, expect, it } from 'vitest';
-import { collection, create } from '$lib/core/prototype/collection/definition.js';
-import { writePlanWithFeatures } from '$lib/core/features/fold.js';
+import { create } from '$lib/core/prototype/collection/definition.js';
+import { versionsWritePlan } from './write-plan.js';
 import { VERSIONS_OPERATIONS } from './strategy.js';
 
 /**
@@ -12,16 +12,18 @@ import { VERSIONS_OPERATIONS } from './strategy.js';
  * only the base row and returns 200, and a plan that names the wrong one writes the wrong version
  * — no error either way, and the document reads back through a different query.
  *
- * So each case is asserted through the same fold the pipeline uses, on a real built config —
+ * So each case is asserted through the same function the pipeline calls, on a real built config —
  * including the create, where the plan names no row because the adapter has yet to make one.
  */
+/** The pipeline hands a whole `OperationContext`; each case here names only what it reads. */
+type Ctx = Parameters<typeof versionsWritePlan>[1]['context'];
+
 const planFor = (
-  config: Parameters<typeof writePlanWithFeatures>[2]['config'],
+  config: Parameters<typeof versionsWritePlan>[1]['config'],
   data: object,
-  context: object,
+  context: Partial<Ctx>,
   operation: 'create' | 'update' = 'update'
-) =>
-  writePlanWithFeatures(collection.features, { data: { ...data } }, { config, context, operation });
+) => versionsWritePlan({ data: { ...data } }, { config, context: context as Ctx, operation });
 
 describe('the write plan', () => {
   const versioned = create('spec_plan_news', {
@@ -106,12 +108,14 @@ describe('the write plan', () => {
   it('does not empty the data it was handed', () => {
     const data = { title: 'a', body: 'b' };
 
-    writePlanWithFeatures(
-      collection.features,
+    versionsWritePlan(
       { data },
       {
         config: versioned,
-        context: { versionOperation: VERSIONS_OPERATIONS.UPDATE_VERSION, contentOwnerId: 'v1' },
+        context: {
+          versionOperation: VERSIONS_OPERATIONS.UPDATE_VERSION,
+          contentOwnerId: 'v1'
+        } as Partial<Ctx> as Ctx,
         operation: 'update'
       }
     );

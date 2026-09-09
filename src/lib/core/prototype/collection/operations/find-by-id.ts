@@ -18,7 +18,7 @@ export type FindByIdArgs = {
    *
    * Internal, in the same way `isSystemOperation` is: `getOriginalDocument` is the only caller
    * that passes it. It is here rather than a `content` filter on the args so that resolving one
-   * stays behind `ctx.contentQuery` and no caller has to know what a version is.
+   * stays behind `ctx.versionQuery` and no caller has to know what a version is.
    */
   intent?: ReadIntent;
 };
@@ -54,7 +54,7 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
     locale,
     select,
     // `draft` and `versionId` are request parameters; which row they name is the feature's answer.
-    content: ctx.contentQuery({ draft, versionId }, intent)
+    content: ctx.versionQuery({ draft, versionId }, intent)
   });
 
   // The adapter reports "nothing matched" and leaves the meaning to the caller, so an HTTP-shaped

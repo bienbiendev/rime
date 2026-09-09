@@ -11,8 +11,9 @@ import { VersionOperations } from './strategy.js';
  * This is the three-way branch `updatePrototype` used to decode out of `versionOperation`, stated
  * once, above the adapter, in the feature that owns the distinction:
  *
- * - **not versioned** — never reached; `enabled` gates this, so the default plan stands and the
- *   base row holds everything.
+ * - **not versioned** — returns the plan untouched, so the base row holds everything. It was
+ *   `enabled` that used to gate this, through a `FeatureDefinition.writePlan` seam only this
+ *   feature ever implemented; the guard is the first line now.
  * - **a specific version** (`UPDATE_VERSION`, `UPDATE_PUBLISHED`) — split, and name the row.
  * - **a new version** (`NEW_VERSION_FROM_LATEST`, `NEW_DRAFT_FROM_PUBLISHED`) — split, and name no
  *   row: `handleNewVersion` already wrote it, through the public API, before this ran.
@@ -36,6 +37,9 @@ export const versionsWritePlan = (
     operation: 'create' | 'update';
   }
 ): WritePlan => {
+  // Not versioned: the whole document is on its own row and there is nothing to split.
+  if (!args.config.versions) return plan;
+
   const { versionOperation, contentOwnerId } = args.context;
 
   // The `._root()` fields stay on the base row; a versions has no column for them.

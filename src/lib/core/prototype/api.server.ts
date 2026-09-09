@@ -3,7 +3,8 @@ import type { FeatureDefinition } from '$lib/core/features/define.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { BuiltPrototype, PrototypeApiContext } from './define.js';
 import type { GenericDoc } from './types.js';
-import { blankWithFeatures, readQueryOf } from '../features/fold.js';
+import { blankWithFeatures } from '../features/fold.js';
+import { versionsReadQuery } from '$lib/core/versions/read-query.js';
 import { createBlankDocument } from './doc.js';
 
 /**
@@ -72,7 +73,7 @@ export const prototypeContext = <C extends BuiltPrototype>(
 
     fallbackLocale: (locale?: string) => locale || event.locals.locale || defaultLocale,
 
-    contentQuery: (params, intent = 'read') => readQueryOf(features, config, params, intent),
+    versionQuery: (params, intent = 'read') => versionsReadQuery({ config, params, intent }),
 
     /**
      * A blank document of this config's shape, after the features it enables have shaped it.

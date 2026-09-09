@@ -1,5 +1,4 @@
 import type { Dic } from '$lib/util/types.js';
-import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 import type { DocTypeContribution } from './doc-type.js';
 import type { ColumnDeclaration, TableDeclaration } from './tables.js';
 
@@ -44,23 +43,6 @@ export type FeatureDefinition = {
    * a prototype that lists it. What it does to the config's *type* is declared in register.ts.
    */
   augment?: (config: any) => any;
-
-  /**
-   * The table this feature deviates a config's content into, or `undefined` when it deviates
-   * nothing.
-   *
-   * A **versions** stands in for the config's own table: the base row keeps its identity, its
-   * timestamps and whatever fields are marked `._root()`, and every other column — plus the whole
-   * subtree of children hanging off them — moves onto the versions. Which is why the answer is one
-   * slug: name the row that owns the content and everything downstream follows.
-   *
-   * Asked of a config, not of a kind, and only for configs where `enabled` — so a prototype with
-   * versions on one collection and not the next gets a versions for the first alone.
-   *
-   * This is what makes `type: 'versions'` mean something: the adapter builds the second table from
-   * what is declared here rather than from a member it recognises by name.
-   */
-  versions?: (config: any) => VersionsTable | undefined;
 
   /**
    * Tables this feature needs that no prototype declares.
@@ -160,66 +142,6 @@ export type FeatureDefinition = {
    * omit them.
    */
   blank?: (doc: any, config: any, intent: BlankIntent) => any;
-
-  /**
-   * Where this feature sends the halves of an update.
-   *
-   * The default plan puts everything on the prototype's own row. A feature that gives a config a
-   * second row to write — a versions — refines the plan to say which half lands where, and the
-   * adapter then writes exactly what it is handed.
-   *
-   * Folded in the prototype's feature order, gated by `enabled`, at a fixed point in `runUpdate`:
-   * after every data hook, before the write. **Not a hook**, deliberately. A hook could not be
-   * guaranteed last — a consumer's `beforeUpdate` hook declares `requires: [HOOK_MARKS.VALIDATED]` and
-   * provides nothing, so there is no mark a plan step could wait on, and a consumer hook that
-   * rewrote `data` would be silently split around.
-   *
-   * This is what `versionOperation` used to be for: the operation passed the enum down and the
-   * adapter decoded it into three branches. The branches were never about the database — they were
-   * about which rows this write touches, which is what a plan says.
-   *
-   * `operation` is there because the two are not the same plan. An update names the content row
-   * it writes; an insert has no row to name yet, so it names the half and the adapter makes the
-   * row. Without it a feature would have to infer which it is from a context member being absent,
-   * which is how `versionOperation` came to travel to the adapter in the first place.
-   *
-   * `any` for the config and context, like `validate` and `blank` above: this file is the seam
-   * every feature is declared against, and typing them would have it import the pipeline and the
-   * config, which is the coupling the seam exists to avoid. Each feature narrows its own.
-   */
-  writePlan?: (
-    plan: WritePlan,
-    args: { config: any; context: any; operation: 'create' | 'update' }
-  ) => WritePlan;
-
-  /**
-   * How this feature narrows *which* content row a read means.
-   *
-   * A prototype with a versions has more than one row that could answer a read, and the difference
-   * between them is the feature's own — a status, a revision the caller named. So the feature
-   * returns the filter, as an ordinary `OperationQuery`, and the adapter applies it to the versions
-   * along with everything else it was asked to filter by.
-   *
-   * `undefined` means "no narrowing", which the adapter reads as the newest content row. That is
-   * not a policy sneaking back in: it is what "the content of this document" means when nobody
-   * said otherwise, the same statement as `updatedAt` being the default sort.
-   *
-   * First answer wins, like `versions` — a config has one content row, so it has one rule for
-   * picking it.
-   *
-   * This is what `draft` and `versionId` used to be on the adapter contract. They were request
-   * parameters the database layer decoded, using `config.versions.draft` to know whether the
-   * status column even existed; the caller knows both, so the caller says it.
-   *
-   * `intent` is there because the same parameters can mean different rows depending on why the
-   * read is happening — see `ReadIntent`. Core states the two intents because both exist for every
-   * prototype; only a feature can say what each one selects.
-   */
-  readQuery?: (args: {
-    config: any;
-    params: { draft?: boolean; versionId?: string };
-    intent: ReadIntent;
-  }) => OperationQuery | undefined;
 };
 
 /**

@@ -3,7 +3,8 @@ import type { Config } from '$lib/core/config/types.js';
 import { createConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
 import { createAuthInstance } from '$lib/core/auth/better-auth/instance.server.js';
-import { distinctFeatures, versionsTableOf } from './features/fold.js';
+import { distinctFeatures } from './features/fold.js';
+import type { VersionsTable } from './features/define.js';
 // The **server** halves, and it has to be: the isomorphic ones carry `singleton` and `features`
 // but no `boot` — so an area's row was never created and every area read 404'd. `boot` is
 // server-only by nature; the config factory is the side that legitimately reads the isomorphic
@@ -94,7 +95,7 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
         singleton: prototype.singleton,
         // Where this config's content lives, asked of the features that extend it rather than
         // worked out by the adapter from the slug. `undefined` for a config nothing deviates.
-        versions: versionsTableOf(prototype.features, prototypeConfig)
+        versions: (prototypeConfig as { _versions?: VersionsTable })._versions
       });
     }
   }

@@ -1,6 +1,6 @@
 import type { Config } from '$lib/core/config/types.js';
 import { area, collection } from '$lib/core/prototype/index.js';
-import { columnsOf, distinctFeatures, versionsTableOf, tablesOf } from '$lib/core/features/fold.js';
+import { columnsOf, distinctFeatures, tablesOf } from '$lib/core/features/fold.js';
 import { baseTableName, declaredTableProperty, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
 import { toPascalCase } from '$lib/util/string.js';
@@ -43,7 +43,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
     // Whether this config's content lives on its own row or on a second table, asked of the
     // features that extend the prototype rather than of a member the adapter recognises by name.
     // A feature declaring a versions is the only thing that makes two tables here.
-    const versions = versionsTableOf(entry.features, prototype);
+    const versions = (prototype as { _versions?: { slug: string } })._versions;
 
     // The prototype's own table, resolved from its slug rather than case-converted here —
     // a derived slug like `$someChild` has to lose its `$` and snake-case its segments.

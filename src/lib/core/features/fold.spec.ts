@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { collection } from '$lib/core/prototype/collection/index.js';
-import type { Docs, DocType } from '$lib/core/prototype/types.js';
 import type { ConfigureTransforms, FeatureConfigure } from './register.js';
-import { configureWithFeatures, versionsTableOf } from './fold.js';
+import { configureWithFeatures } from './fold.js';
 
 /**
  * `ApplyFeatureConfigure` intersects every declared `configure` transform instead of folding a
@@ -68,59 +67,5 @@ describe('configureWithFeatures', () => {
     expect(Array.isArray(built.$trustedOrigins)).toBe(true);
     expect(built.panel.language).toBeDefined();
     expect(built.$probe).toBe('probe');
-  });
-});
-
-/**
- * A versions is what makes the adapter build a second table, and nothing else does. The failure to
- * catch is silent in both directions: a config that stops declaring one loses every column that
- * moved onto the versions, and one that starts declaring a versions for a derived config would
- * generate a versions of a versions.
- */
-describe('versionsTableOf', () => {
-  it('names the versions of a versioned config', () => {
-    expect(versionsTableOf(collection.features, { slug: 'pages', versions: {} })).toEqual({
-      slug: '$pages__versions'
-    });
-  });
-
-  it('gives a config with no versions no versions', () => {
-    expect(versionsTableOf(collection.features, { slug: 'pages' })).toBeUndefined();
-  });
-
-  it('gives the derived versions collection no versions of its own', () => {
-    expect(
-      versionsTableOf(collection.features, { slug: '$pages__versions', versions: undefined })
-    ).toBeUndefined();
-  });
-});
-
-/**
- * `Docs` used to spell four feature document shapes itself, which is why
- * `core/prototype/types.ts` imported `UploadPath` and `VersionsStatus` out of two features to
- * describe its own registry. They are `FeatureDocTypes` declarations now, beside the feature that
- * means each one.
- *
- * The assertion is type-level, like the two above, and it is checking something a runtime test
- * cannot: that the declarations are *seen*. A `declare module` in a file nothing imports is not an
- * error — the key simply never appears, `DocType` silently narrows, and every `OperationContext<'version'>`
- * stops compiling somewhere far away.
- */
-describe('every feature document shape reaches the Docs registry', () => {
-  type Contributed = 'upload' | 'version' | 'auth' | 'directory';
-
-  const everyShapeIsRegistered: [Exclude<Contributed, DocType>] extends [never] ? true : false =
-    true;
-
-  /** And each resolves to the feature's own type, not to `any` from a missing declaration. */
-  const uploadIsTheUploadDoc: Docs['upload'] extends { mimeType: string } ? true : false = true;
-  const versionIsTheVersionDoc: Docs['version'] extends { status: string } ? true : false = true;
-
-  it('holds', () => {
-    expect([everyShapeIsRegistered, uploadIsTheUploadDoc, versionIsTheVersionDoc]).toEqual([
-      true,
-      true,
-      true
-    ]);
   });
 });

@@ -44,7 +44,7 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T> => {
     locale,
     select,
     // See the collection's findById.
-    content: ctx.contentQuery({ draft, versionId }, intent)
+    content: ctx.versionQuery({ draft, versionId }, intent)
   });
 
   if (!documentRaw) throw new RimeError(RimeError.NOT_FOUND);
