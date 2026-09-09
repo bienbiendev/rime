@@ -10,10 +10,3 @@ export const thumbnail = defineFeature({
   name: 'thumbnail',
   enabled: () => true
 });
-
-/** Resolves `asThumbnail`, which the built collection declares as required. */
-declare module '$lib/core/features/register.js' {
-  interface FeatureConfigAugment<T> {
-    thumbnail: T & { asThumbnail: string | null };
-  }
-}

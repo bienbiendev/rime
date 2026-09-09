@@ -13,10 +13,3 @@ export const title = defineFeature({
   // The hook that reads what the augment resolved — both halves of one idea, both here. Through
   // `$rime/modules` because a hook is server-only and this file is reachable from a client build.
 });
-
-/** Resolves `asTitle`, which the built config declares as required. */
-declare module '$lib/core/features/register.js' {
-  interface FeatureConfigAugment<T> {
-    title: T & { asTitle: string };
-  }
-}

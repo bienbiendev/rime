@@ -1,6 +1,5 @@
 import { augmentStaff, blankAuthDocument } from '$rime/modules';
 import { defineFeature } from '$lib/core/features/define.js';
-import type { WithNormalizedAuth } from './augment.js';
 
 /**
  * Signing in: what a collection gains by declaring `auth`.
@@ -32,15 +31,3 @@ export const auth = defineFeature({
    */
   blank: blankAuthDocument
 });
-
-/**
- * Normalises `auth`: an author may write `auth: true`, the built config always carries the object.
- *
- * Declared because the augment *changes* the type rather than only appending fields, so the fold
- * in register.ts needs to be told.
- */
-declare module '$lib/core/features/register.js' {
-  interface FeatureConfigAugment<T> {
-    auth: WithNormalizedAuth<T>;
-  }
-}

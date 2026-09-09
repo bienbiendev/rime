@@ -1,7 +1,3 @@
-import type { PanelConfig } from '$lib/core/config/types.js';
-import type { Dic } from '$lib/util/types.js';
-import type { IconProps } from '@lucide/svelte';
-import type { Component } from 'svelte';
 import { defineFeature } from '$lib/core/features/define.js';
 import { augmentPanel } from './augment.js';
 import { augmentIcons } from './icons.js';
@@ -32,20 +28,3 @@ export const panel = defineFeature({
 
   configure: (config) => augmentPanel(augmentIcons(config))
 });
-
-/**
- * Both halves of the panel's config: the icon map, and `panel` with its defaults filled in.
- *
- * The four members `augmentPanel` always writes are declared **required**, which is the point of
- * defaulting them: `boot.server.ts` reads `panel.language` and `panel/navigation.ts` reads
- * `panel.routes`, and both are optional on `PanelConfig` as an author writes it.
- */
-declare module '$lib/core/features/register.js' {
-  interface FeatureConfigure<T> {
-    panel: T & {
-      icons: Dic<Component<IconProps>>;
-      panel: PanelConfig &
-        Required<Pick<PanelConfig, 'routes' | 'language' | 'navigation' | 'components'>>;
-    };
-  }
-}

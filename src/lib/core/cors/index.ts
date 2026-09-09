@@ -17,10 +17,3 @@ export const cors = defineFeature({
 
   configure: augmentCORS
 });
-
-/** The origin list is always there once this has run, which is what the handler reads. */
-declare module '$lib/core/features/register.js' {
-  interface FeatureConfigure<T> {
-    cors: T & { $trustedOrigins: string[] };
-  }
-}

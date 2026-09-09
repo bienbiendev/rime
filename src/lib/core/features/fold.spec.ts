@@ -1,46 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { collection } from '$lib/core/prototype/collection/index.js';
-import type { ConfigureTransforms, FeatureConfigure } from './register.js';
 import { configureWithFeatures } from './fold.js';
 
 /**
- * `ApplyFeatureConfigure` intersects every declared `configure` transform instead of folding a
- * hand-written tuple of feature names, and that is only sound while every transform is
- * **additive** — `T & {…}`. One that removed or replaced a member would need an order to be
- * meaningful, and an intersection would keep the member it meant to drop.
+ * What the config chain guarantees is there once `configure` has run: `panel` and `icons` from
+ * the panel feature, `$trustedOrigins` from cors — present, and not `any`.
  *
- * The assertions are type-level; the `expect` below only gives them a home. A non-additive
- * declaration fails the *compile*, which is the point — there is no runtime shape to check.
- */
-describe('every feature configure transform is additive', () => {
-  type Probe = { $probe: 'probe' };
-
-  /** `true` for each declared transform that still extends what it was handed. */
-  type Additive = {
-    [K in keyof FeatureConfigure<Probe>]: FeatureConfigure<Probe>[K] extends Probe ? true : false;
-  }[keyof FeatureConfigure<Probe>];
-
-  const noneIsSubtractive: [Exclude<Additive, true>] extends [never] ? true : false = true;
-
-  /**
-   * And `ConfigureTransforms` names every declaration. Missing one is the failure the old
-   * `configureOrder` test existed to catch, and it is now a compile error rather than an
-   * assertion — a name absent here means that feature's transform silently never applies.
-   */
-  const everyDeclarationIsListed: [
-    Exclude<keyof FeatureConfigure<Probe>, ConfigureTransforms[number]>
-  ] extends [never]
-    ? true
-    : false = true;
-
-  it('holds for every declaration merged into FeatureConfigure', () => {
-    expect([noneIsSubtractive, everyDeclarationIsListed]).toEqual([true, true]);
-  });
-});
-
-/**
- * And the fold's *result*, which is what the tuple existed to produce: the members `panel` and
- * `cors` add through `configure` have to be there, and not `any`.
+ * These were produced by `ApplyFeatureConfigure`, a recursion over a hand-written list of the two
+ * features that merged a declaration into `FeatureConfigure`. `configureWithFeatures` declares
+ * them directly now, from `BuiltConfig`, which already spelled all three out. What must not
+ * regress is that they survive a **generic** caller — `bootRime<C>` reads `config.panel.language`
+ * while `C` is a type parameter, and an intersection over a key union stays deferred there.
  */
 describe('configureWithFeatures', () => {
   const built = configureWithFeatures(collection.features, { $probe: 'probe' as const });

@@ -1,6 +1,5 @@
 import { VERSIONS_STATUS } from '$lib/core/versions/constant.js';
 import { makeVersionsCollectionsAliases } from '$rime/modules';
-import type { WithVersionsConfig } from './augment.js';
 import { defineFeature } from '$lib/core/features/define.js';
 import { versionsDocType } from './doc-type.js';
 
@@ -51,10 +50,3 @@ export const versions = defineFeature({
    */
   configure: makeVersionsCollectionsAliases
 });
-
-/** Turns an author's `versions: true` into a normalised object. */
-declare module '$lib/core/features/register.js' {
-  interface FeatureConfigAugment<T> {
-    versions: WithVersionsConfig<T>;
-  }
-}

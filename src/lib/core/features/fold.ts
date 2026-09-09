@@ -1,7 +1,7 @@
 import type { Dic } from '$lib/util/types.js';
 import type { BlankIntent, FeatureDefinition } from './define.js';
 import type { DocTypeContribution } from './doc-type.js';
-import type { ApplyFeatureConfigure } from './register.js';
+import type { BuiltConfig } from '$lib/core/config/types.js';
 
 /**
  * Asking the features a question about a config, and folding the answers.
@@ -35,21 +35,24 @@ export const distinctFeatures = (
 /**
  * Runs every feature's `configure` over the whole config.
  *
- * The runtime order is the prototypes' own — `distinct` above — and **the type does not replay
- * it**, because it does not need to: every declared `configure` transform is additive, so how they
- * compose does not change the result. `ApplyFeatureConfigure` folds `ConfigureTransforms`, a list
- * of the names that declare something, for a reason that is about type resolution rather than
- * order — see the note beside it in `register.ts`. Nothing here has to agree with anything at
- * runtime, so there is nothing here to drift.
+ * The return type is **declared, not folded**. It used to be `ApplyFeatureConfigure<T>`, a
+ * recursion over `ConfigureTransforms = ['panel', 'cors']` — a hand-written list of the two
+ * features that merged a declaration into `FeatureConfigure`. All it ever produced was these
+ * three members, and `BuiltConfig` already declares all three by hand.
+ *
+ * Naming them here keeps the one property the fold existed for: with a **generic** `T` —
+ * `bootRime<C>` reads `config.panel.language` while `C` is still a type parameter — an
+ * intersection built from a key union stays deferred, and `panel` never resolves. A concrete
+ * `Pick` is decidable immediately.
  */
 export const configureWithFeatures = <T extends Dic>(
   features: FeatureDefinition[],
   config: T
-): ApplyFeatureConfigure<T> =>
+): T & Pick<BuiltConfig, 'panel' | 'icons' | '$trustedOrigins'> =>
   features.reduce(
     (current, feature) => (feature.configure ? (feature.configure(current) as T) : current),
     config
-  ) as unknown as ApplyFeatureConfigure<T>;
+  ) as unknown as T & Pick<BuiltConfig, 'panel' | 'icons' | '$trustedOrigins'>;
 
 /**
  * Everything the features a config enables add to its generated document type.
