@@ -59,25 +59,26 @@ hooks?:      FeatureHooks                    // document hooks, ordered by marks
 handler?:    Handle                          // a SvelteKit handle
 ```
 
-### 1.2 Uncommitted, on the working tree
+### 1.2 Committed but unverified — `8d021608`
 
-**Pull the branch and you will find these unstaged.** They are finished but unverified — see
-§4.0, which is the first stage precisely because of that.
+**These are on the branch.** They are finished, every static gate is at baseline, and the one
+behavioural change among them has never been through the panel. §4.0 is the first stage precisely
+because of that: verify it before building anything on top.
 
 ```
- M src/lib/adapter-sqlite/auth.server.ts
- M src/lib/adapter-sqlite/blocks.server.ts
- M src/lib/adapter-sqlite/generate-schema/index.server.ts
- M src/lib/adapter-sqlite/generate-schema/root.server.ts
- M src/lib/adapter-sqlite/generate-schema/templates.server.ts
- M src/lib/adapter-sqlite/naming.server.ts
- M src/lib/adapter-sqlite/orderBy.server.ts
- M src/lib/adapter-sqlite/prototype.server.ts
- M src/lib/adapter-sqlite/transform.server.ts
- M src/lib/adapter-sqlite/util.server.ts
- M src/lib/adapter-sqlite/where.server.ts
- M src/lib/core/adapter.ts
- M src/lib/core/pipeline/run.server.ts
+   src/lib/adapter-sqlite/auth.server.ts
+   src/lib/adapter-sqlite/blocks.server.ts
+   src/lib/adapter-sqlite/generate-schema/index.server.ts
+   src/lib/adapter-sqlite/generate-schema/root.server.ts
+   src/lib/adapter-sqlite/generate-schema/templates.server.ts
+   src/lib/adapter-sqlite/naming.server.ts
+   src/lib/adapter-sqlite/orderBy.server.ts
+   src/lib/adapter-sqlite/prototype.server.ts
+   src/lib/adapter-sqlite/transform.server.ts
+   src/lib/adapter-sqlite/util.server.ts
+   src/lib/adapter-sqlite/where.server.ts
+   src/lib/core/adapter.ts
+   src/lib/core/pipeline/run.server.ts
 ```
 
 Three things in there:
@@ -89,6 +90,8 @@ Three things in there:
    and `readDocument` passes it.
 3. **`templateDirectories` deleted** — dead code with no caller, and its `withDirectoriesSuffix`
    import was the last `upload` reference in the adapter.
+
+Also `panelUsersTable` → `usersTable` in `auth.server.ts`.
 
 Plus a comment sweep so the adapter stops _reasoning_ in feature terms.
 
@@ -205,9 +208,10 @@ three write plans by hand. Leave them.
 Each is shippable on its own and gate-able on its own. Annexes carry the detail:
 `decoupling-transform.md`, `decoupling-tables.md`, `decoupling-auth.md`.
 
-### 4.0 — Land the working tree
+### 4.0 — Verify what `8d021608` landed
 
-**Nothing new to write.** Verify what is already there, then commit.
+**Nothing new to write.** The commit is on the branch; what is missing is the half of the
+verification this container cannot do.
 
 The one behavioural change is `withRowMeta`, and it is behaviour-identical by construction: the
 same expression, on the same `event`, moved one layer up.
@@ -247,18 +251,38 @@ const document = await event.locals.rime.adapter.transform.doc({
 });
 ```
 
-**Verify in this order**, because the panel is the only consumer of that flag and its e2e tests
-do not run in the cloud container (Chromium 1194 vs Playwright's 1243):
+Behaviour-identical by construction is not the same as verified, and the panel is the only
+consumer of that flag — its e2e tests do not run in the cloud container (Chromium 1194 vs
+Playwright's 1243), so nothing in the container's green run touches the code path that changed.
+
+Already green on `8d021608`, in the container:
+
+```bash
+bunx vitest run                # 165
+bunx eslint src/lib            # 20
+bun run check:circular-deps    # 3 — the list matters more than the count
+bun run check                  # byte-identical to the parent commit, same fixture
+```
+
+**Still owed, locally:**
 
 ```bash
 bun run rime:use versions
-bun run check                  # 0
-bunx eslint src/lib            # 20
-bun run check:circular-deps    # 3 — the list matters more than the count
-bunx vitest run                # 165
+bun run check                  # 0 on this fixture
 bun run test:versions          # 54
-bun run test:fields            # the one that has not run since the change
+bun run test:fields            # never completed since the change — the webServer timed out
+bun run test:basic             # see below
 ```
+
+Then the browser probe (`docs/probing.md` §7): open the panel, edit a document that has a blocks
+or tree field, save, reload. `withRowMeta` decides whether each child row keeps its `position` and
+`path`, so a wrong value loses block ordering on save and nothing else in the suite would say so.
+
+> **The reported `tests/basic/pages.test.ts:9 › Login form › should login successfully` failure is
+> unresolved.** In this container it is one of 12 baseline failures, all Chromium-launch errors, so
+> the container has nothing to say about it. Sign-in does not read a document, so `withRowMeta` is
+> an unlikely cause — but check it rather than reason about it: `git stash` the commit's
+> `run.server.ts` hunk, re-run that one test, and compare.
 
 Then the browser probe in `probing.md` §7 — sign in, load a collection document with blocks, edit
 and save one. That is what `withRowMeta` actually gates.
@@ -430,7 +454,7 @@ a new content row inherits. Lowest priority; note it, do not force it.
 ## 5. Order, and why
 
 ```
-4.0  land the working tree        ← blocking: everything else builds on it
+4.0  verify 8d021608            ← blocking: everything else builds on it
 4.1  split transform              ← independent, unblocks a transform timing
 4.2  FeatureDefinition.tables     ← keystone
 4.3  the auth facade              ← needs 4.2
