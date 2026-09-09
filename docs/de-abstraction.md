@@ -30,6 +30,32 @@ Everything else this branch added — `FeatureDefinition`'s eleven seams, `fold.
 Four "features" that a CMS cannot be without, wearing a protocol built for optional things. Six of
 the ten features declare `enabled: () => true`, which is the same statement in miniature.
 
+## The model: SvelteKit
+
+Two things it gets right, and both are missing here:
+
+**Declarative — you see what you implement.** `+page.server.ts` exports `load` and `actions`. The
+file *is* the declaration. There is no `definePage({ load, actions })` handing a config object to a
+factory that folds it later.
+
+**File convention over configuration.** SvelteKit never asks a page to declare its capabilities.
+The filename says what the file is; the exports say what it does; the framework looks in the place
+the convention says to look.
+
+Applied here:
+
+| SvelteKit | rime today | rime after |
+| --------- | ---------- | ---------- |
+| `+page.server.ts` exports `load` | `defineFeature({ augment, hooks, enabled, … })` | `features/upload/augment.ts` exports `augmentUpload` |
+| a page has no manifest | eleven declared seams, seven with one implementer | a feature folder's files are its manifest |
+| `load` is found by name | `augment` is found by folding a registry | `augment` is found by being imported |
+
+`definePrototype` stays. A prototype is a real thing with a name, a factory and a REST surface, and
+there are two of them; the parallel is `hooks.server.ts` in SvelteKit, not `+page`.
+
+`defineFeature` goes. A feature is not a thing — it is a folder of functions that a prototype
+composes.
+
 ## The principle
 
 **Composition, not protocol.** A thing is put together in one place, by name, in a list you can
@@ -69,14 +95,27 @@ which is what unlocks every move below.
 
 ## Move 2 — delete `FeatureDefinition`
 
-A feature folder exports functions. That is all a feature is.
+A feature folder exports functions, and its files are its manifest. No `index.ts` handing a config
+object to `defineFeature`, the same way no SvelteKit page hands one to `definePage`.
 
 ```
 features/upload/
   augment.ts     export const augmentUpload = (config) => …
-  hooks/         export const processFileUpload = …
   enabled.ts     export const isUpload = (config) => !!config.upload
+  hooks/         export const processFileUpload = …
+  index.server.ts   the barrel a prototype's lists import from
 ```
+
+The convention, stated once so it can be followed without reading this document:
+
+| file | exports | who reads it |
+| ---- | ------- | ------------ |
+| `augment.ts` | one augment | the prototype's `augments` list |
+| `enabled.ts` | one predicate | the `when(…)` guards in both lists |
+| `hooks/*.server.ts` | one hook each | the prototype's `hooks.server.ts` |
+| `hooks/index.server.ts` | barrel | same |
+
+A feature that adds a file adds a capability. Nothing declares that it did.
 
 **Deletes:** `features/define.ts` (295), `features/fold.ts` (202), `features/apply.ts` (34),
 `features/tables.ts` (53), `defineFeature`, and the `FeatureConfigure`/`ConfigureTransforms` half of
