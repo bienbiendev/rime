@@ -25,6 +25,7 @@ member. What got it there, newest first:
 
 | commit     | what                                                                                                                                             |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `3427cdca` | **§4.6** — a shadow says whose content it holds; upload's naming stops stripping                                                                 |
 | `300ff554` | **§4.5** — the blank merge stops naming a feature to protect one key                                                                             |
 | `1bf70e37` | **§4.5** — `FeatureDefinition.docType`; codegen stops branching on two features                                                                  |
 | `a8bea5d6` | **§4.5** — `FeatureDocTypes`; the `Docs` registry stops spelling four shapes                                                                     |
@@ -109,7 +110,8 @@ Plus a comment sweep so the adapter stops _reasoning_ in feature terms.
 
 ### 1.3 Left
 
-§4.5's codegen routes — which wants a plan rather than a move, see below — and §4.6.
+§4.5's codegen routes, which want a plan rather than a move — §7 now carries it, including the
+precedent `rest` sets and the one question it leaves open.
 
 ---
 
@@ -556,23 +558,46 @@ in `CONTRIBUTING.md`: its type has to be nameable without naming `bootRime`. Tha
 are a plugin and an operation asking auth a question, the same shape as the handler leak that
 moved; they go when each becomes something auth declares.
 
-### 4.6 — Feature to feature
+### 4.6 — Feature to feature — **done**
+
+`3427cdca`. Two imports, and only one of them was coupling.
+
+**Gone.** `features/upload/naming.ts` imported `withoutVersionsSuffix` so a shadow's directories
+resolved to its parent's — a folder tree belongs to the document, not to a revision of it. True,
+and an answer that could only ever be right for the one feature whose suffix it knew.
+
+```ts
+// core/config/types.ts — the inverse of RegisterPrototypeArgs.shadow, in slug space
+_shadowOf?: string;
+```
 
 ```ts
 // features/upload/naming.ts
-import { withoutVersionsSuffix } from '../versions/naming.js';
-
-export const withDirectoriesSuffix = (slug: string) =>
-  `${DERIVED}${withoutVersionsSuffix(slug)}${MARKER}` as CollectionSlug;
+export const directoriesOf = (config: { slug: string; _shadowOf?: string }) =>
+  withDirectoriesSuffix(config._shadowOf ?? config.slug);
 ```
 
-Upload strips a suffix it should not know about, so that a shadow's directories resolve to its
-parent's. After §4.2 the directories table is a declaration made once per _config_, not a name
-derived per slug, and the import goes with it.
+Whichever feature derives a shadow sets `_shadowOf`; `withDirectoriesSuffix` strips nothing. The
+golden schema is **byte-identical** on the `versions` fixture, which is the only one with versioned
+upload collections and therefore the only place the strip was load-bearing.
 
-The other direction — `handleNewVersion` importing upload's `filePathToFile` to carry a file onto a
-new version — is a genuine cross-feature dependency and the honest fix is a feature declaring what
-a new content row inherits. Lowest priority; note it, do not force it.
+Two specs, and **neither names the other feature** — which is the point.
+`versions/derive.spec.ts` asserts the shadow says whose content it holds;
+`upload/naming.spec.ts` asserts what upload does with the answer, against a plain object carrying
+a `_shadowOf`, so a second feature declaring a shadow needs no change there either.
+
+**Stays, with the reason written down.** `handleNewVersion` asks `upload` for the file a new
+version inherits — without it, a revision of a document nobody re-uploaded to comes out with no
+file. That is a question `versions` has and only `upload` can answer, and no seam makes it go away
+with one inhabitant.
+
+What did change is how much it asks for. It was two things — where upload keeps its files, and how
+to turn a path into a `File` — so `versions` carried a copy of
+`path.resolve(cwd, 'static', 'medias', filename)`, a convention `upload/disk/` follows at eight
+sites. `fileForDocument(doc)` owns both, and the call site asks once.
+
+> The honest fix, if a second inhabitant ever appears, is a feature declaring what a new content
+> row inherits. One inhabitant is a preference, not a seam.
 
 ---
 
@@ -585,7 +610,7 @@ a new content row inherits. Lowest priority; note it, do not force it.
 4.3  the auth facade              ← done
 4.4  the insert plan              ← done
 4.5  core's feature words         ← done bar the codegen routes, which want a plan
-4.6  feature to feature           ← unblocked; upload's directories is the first half
+4.6  feature to feature           ← done; the second half stays, with the reason written down
 ```
 
 4.4 and 4.5 are the cheap ones and can be done any time something bigger is blocked.
@@ -621,12 +646,14 @@ feature lists.
 > grep. Match on `features/` alone.
 
 ```bash
-# a feature naming another
-grep -rn "core/features/" src/lib/core/features --include=*.ts \
-  | grep -vE "^src/lib/core/features/([a-z-]+)/.*features/\1/"
+# a feature naming another — and note `features/` alone, not `core/features/`:
+# the same hole §6's other grep had, since a sibling feature is reachable as `../<name>/`
+grep -rnE "from '(\.\./|[^']*features/)" src/lib/core/features --include=*.ts \
+  | grep -vE "^src/lib/core/features/([a-z-]+)/.*[^.]/\1/"
 ```
 
-Empty, or one entry with a written reason.
+**One entry, with a written reason**: `versions/hooks/handle-new-version.server.ts` asks `upload`
+for the file a new version inherits. See §4.6.
 
 ---
 
@@ -667,12 +694,50 @@ contributes one to the panel, which is the thing that knows what a page is.
 That is a bigger change than §4.5, and it is the natural companion to the scope note at the top of
 this document — core letting go of `src/lib/panel/`.
 
-### 7.3 Order
+### 7.3 The precedent, and the one thing it does not cover
+
+**A prototype already declares routes**, and codegen already folds them:
+
+```ts
+// core/prototype/collection/rest/index.server.ts
+export const rest: Record<string, RouteConfig> = {
+  '': { GET: restGet, POST: restCreate, DELETE: restDelete },
+  '[id]': { GET: restGetById, PATCH: restUpdateById, DELETE: restDeleteById },
+  '[id]/duplicate': { POST: restDuplicate }
+};
+```
+
+```ts
+// dev/codegen/routes/index.server.ts, step 5 — no kind is named
+const pattern = path.join(`(rime)/api/[slug=${prototype.name}]`, routePath);
+```
+
+Sub-paths, not absolute ones, and the matcher name is the prototype name. Panel routes want
+exactly this shape — `''` and `'[id]'` under `(rime)/[panel=panel]/[slug=<name>]` — which would
+take the four prototype entries out of `commonRoutes` and take `[slug=collection]` and
+`[slug=area]` out of the source with them.
+
+**What `rest` does not answer is where the declaration lives.** `rest` declares path → _handlers_,
+which the server loads anyway. A panel route declares path → _codegen template_, and those
+templates are in `dev/codegen/routes/common.server.ts`, which imports `node:path` and calls
+`path.resolve(process.cwd(), …)` **at module scope**. So:
+
+- on `collection/definition.server.ts`, beside `rest` — every server boot loads the codegen
+  templates, and the definition is one half of a `$rime/modules` pair, which is the shape rule 7
+  in `CONTRIBUTING.md` exists for;
+- in a separate `collection/routes.server.ts` imported by codegen — no boot cost, but codegen
+  has to reach it, and importing the two files by name is codegen naming the kinds again, which
+  is the thing step 5 avoids.
+
+The way out is probably that a prototype declares route **names**, not template functions, and
+codegen owns the mapping — the same indirection `rest` gets for free by declaring handlers that
+codegen only has to _name_ in the generated file. Decide that before writing any of it.
+
+### 7.4 Order
 
 ```
-1. A route declaration in core's vocabulary: path, and the source of each file. No panel imports
-   in the type.
-2. Prototypes register theirs. `COMMON_ROUTES` loses the six `[slug=collection]`/`[slug=area]`
+1. Decide the declaration's shape — §7.3. Names, not template functions, most likely.
+2. Prototypes register theirs. `commonRoutes` loses the four `[slug=collection]`/`[slug=area]`
    entries and keeps the rest — no behaviour change, and it proves the registration works before
    any feature depends on it.
 3. The panel registers its own, and owns its templates.
@@ -680,8 +745,10 @@ this document — core letting go of `src/lib/panel/`.
    catch-all.
 ```
 
-Step 2 is worth doing on its own: it is the one that establishes whether a route registry can
-state everything the flat record states today, and it is reversible.
+Step 2 is worth doing on its own: it establishes whether a route registry can state everything the
+flat record states today, and it is reversible. **Its gate is a byte diff of `src/routes/` plus a
+browser probe** — codegen writes SvelteKit route files, and a wrong one is a 404 or a 500 that no
+static check sees.
 
 ---
 
