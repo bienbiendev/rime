@@ -1,7 +1,8 @@
 # Annex — `FeatureDefinition.tables`
 
-> Stage 4.2 of `docs/decoupling.md`. **The keystone**: the auth facade (4.3), upload's
-> directories, and `_generateSchema: false` all resolve into this one declaration.
+> Stage 4.2 of `docs/decoupling.md`. **Landed for auth** (`a7b5bed6`); upload's directories and
+> `_generateSchema: false` are still ahead of it. What follows is the reasoning that produced the
+> declaration; §7 says where the shipped code differs and what was deliberately left.
 
 ---
 
@@ -337,3 +338,73 @@ order (`CONTRIBUTING.md`), so a reorder is a migration nobody asked for.
 
 Repeat on `basic` (auth + api keys), `versions` (auth + shadows), and `versions-multilang` (all of
 it plus locales branches).
+
+---
+
+## 7. What shipped, where it differs
+
+### 7.1 Two members, and where each is gated
+
+`tables` and `columns` both landed as §2 describes. The `enabled` warning in §4.2 was the real
+question, and the answer is written into `registry.ts`:
+
+- **`tables` folds ungated.** `enabled` is `(prototypeConfig) => boolean`; `tables` is asked of the
+  whole config. Gating there tests the wrong object, and the failure mode is emitting nothing at
+  all. Auth's own first line is `if (!collections.some((c) => c.auth)) return []` — `enabled`'s
+  test, made at the scope the question has.
+- **`columns` folds gated**, like `blankWithFeatures`. It is per-prototype, so the gate is asked of
+  the right object.
+
+### 7.2 `ColumnType` has seven values, not six
+
+§2 proposed six. better-auth's own tables store epoch **seconds** in the api-key table and epoch
+**milliseconds** everywhere else, so `timestamp` and `timestampMs` are two entries. Collapsing them
+would have silently rewritten every api-key timestamp column.
+
+### 7.3 A declared table's name is not derived the way a prototype's is
+
+The annex assumed `baseTableName(declaration.slug)` for both the export name and the SQL name, which
+is what Appendix A says for a prototype table. That would have renamed `authUsers` to `auth_users`
+in the schema object — and better-auth resolves its models off that object by name, so the four
+`modelName`s in `better-auth/config.server.ts` and seven lookups in `adapter-sqlite/auth.server.ts`
+would have had to move with it. A rename with no decoupling in it.
+
+`declaredTableProperty` is the rule instead, and it has a reason rather than an exception behind it:
+
+|           | fixed half                   | derived half   |
+| --------- | ---------------------------- | -------------- |
+| prototype | the authored slug            | the table name |
+| declared  | the feature's own identifier | the table name |
+
+A prototype's slug is authored and the table name follows from it. A declared table is the other
+way round — the feature chose the identifier and reaches its rows by it. So `$authUsers` exports as
+`authUsers` and lives in `auth_users`, and **no table is renamed**.
+
+### 7.4 Left out on purpose
+
+- **`adapter.assertTable`** (§4.3 above). It is boot surface with nothing to catch: `configure`
+  derives the staff collection for every config, so auth's tables are always emitted. It lands with
+  the first feature whose tables are genuinely conditional.
+- **upload's directories and `_generateSchema: false`** (§1.4, §3.2). A separate change with its
+  own schema diff, and it is half of §4.6 — the `withoutVersionsSuffix` import goes with it.
+
+### 7.5 The gate, and how to run it without booting vite
+
+§6 says to boot `vite dev` to regenerate. It is not necessary — codegen runs headless:
+
+```bash
+rm node_modules/.rime/config.txt          # codegen memoises; this forces a run
+bun ./src/lib/core/dev/cli/index.ts generate --force
+cp src/lib/+rime.generated/schema.server.ts /tmp/schema-before.ts
+# ... make the change, repeat, diff ...
+bunx drizzle-kit generate                 # the semantic gate: "No schema changes"
+```
+
+The byte diff will never be empty — a generator does not reproduce hand-written whitespace, quote
+style or chain order. **Compare the columns, and let `drizzle-kit generate` answer the question the
+diff cannot**: it reads the built schema, not the source, so "No schema changes, nothing to migrate"
+means the tables are identical however they are spelled.
+
+Captured on `basic` (auth + api keys) and `versions` (auth + shadows). Same tables, same columns,
+same order; the only textual difference is `.notNull().references()` where the template wrote
+`.references().notNull()`.

@@ -25,6 +25,7 @@ member. What got it there, newest first:
 
 | commit     | what                                                                                                                                             |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `a7b5bed6` | **§4.2** — `FeatureDefinition.tables` / `.columns`; the auth templates delete                                                                    |
 | `2428e5aa` | **§4.1** — `transform.doc` becomes `transform.rows`; `buildDocument` is core's half                                                              |
 | `8d021608` | `versionsTable` → `contentTable`, `isPanel` → `withRowMeta`, `templateDirectories` deleted — **verified locally, e2e green**                     |
 | `99aea980` | the row/document merge is the adapter's, naming it is the feature's — `mergeContentRow` emits `contentId`, `versions` adds `versionId` in a hook |
@@ -55,6 +56,8 @@ validate?:   (config) => string[]            // what this feature requires of a 
 blank?:      (doc, config) => doc            // what a blank document carries
 seed?:       (doc, config) => doc            // what a *bootstrapped* first document carries
 shadow?:     (config) => ShadowDeclaration   // a second table holding this config's content
+tables?:     (config) => TableDeclaration[]  // storage the feature owns, asked of the whole config
+columns?:    (config) => ColumnDeclaration[] // storage-only columns on a prototype that enables it
 writePlan?:  (plan, { config, context }) => plan   // which rows an update touches
 readQuery?:  ({ config, params, intent }) => OperationQuery | undefined  // which content row a read means
 hooks?:      FeatureHooks                    // document hooks, ordered by marks
@@ -97,8 +100,8 @@ Plus a comment sweep so the adapter stops _reasoning_ in feature terms.
 
 ### 1.3 Left
 
-§4.2 onward. The short version: **auth**, the **child-table declaration** that auth needs, the
-**insert plan**, and a handful of feature words still in core.
+§4.3 onward. The short version: **the auth facade**, the **insert plan**, and a handful of feature
+words still in core.
 
 ---
 
@@ -113,13 +116,26 @@ for f in versions upload auth nested url title thumbnail metas cors panel draft 
 done | sort -rn
 ```
 
-| count | name     | verdict                                                                  |
-| ----: | -------- | ------------------------------------------------------------------------ |
-|    98 | `auth`   | **real** — the whole of §4.2 and §4.3                                    |
-|    22 | `nested` | false positive — "nested object", "nested path", "nested AND conditions" |
-|    18 | `title`  | false positive — `text('title')` in doc-comment examples                 |
-|     1 | `url`    | "url params" in a comment about comma-separated values                   |
-|     0 | the rest | clean                                                                    |
+| count | name          | verdict                                                                  |
+| ----: | ------------- | ------------------------------------------------------------------------ |
+|    71 | `auth`        | **real**, and 44 of it is `auth.server.ts` — §4.3                        |
+|    22 | `nested`      | false positive — "nested object", "nested path", "nested AND conditions" |
+|    18 | `title`       | false positive — `text('title')` in doc-comment examples                 |
+|     1 | `url`         | "url params" in a comment about comma-separated values                   |
+|     1 | `directories` | a comment naming the three templates `templateDeclaredTable` replaced    |
+|     0 | the rest      | clean                                                                    |
+
+Was 98. §4.2 took the schema generator's 46 down to 5, all of them comments recording what was
+deleted. What is left breaks down as:
+
+```
+  44  auth.server.ts                     the AuthAdapter facade — §4.3
+   5  where.server.ts                    false positive: `attributes.author.name` examples
+   5  generate-schema/templates.server.ts  comments naming the deleted templates
+   4  naming.server.ts                   the `declaredTableProperty` doc comment
+   3  index.server.ts                    wiring the facade
+   2  generate-schema/{root,index}.server.ts  comments recording what `hasAuth` was
+```
 
 `versions` and `panel` were at 1 each — a `docs/` filename in a pointer comment, and the comment
 recording what `withRowMeta` replaced. §4.1 rewrote both files and neither word came back. **Auth
@@ -297,39 +313,76 @@ The e2e suites are the gate that matters here: the transform runs on every docum
 so `test:fields` (blocks and tree in every arrangement), `test:multilang` (the locales branch) and
 `test:versions-multilang` (the locales branch on a shadow) each cover a pile that changed hands.
 
-### 4.2 — `FeatureDefinition.tables`
+### 4.2 — `FeatureDefinition.tables` — **done**
 
-**The keystone.** Everything auth-shaped in the schema generator, plus upload's directories table,
-plus `_generateSchema: false`, is one missing declaration: a feature saying _what tables it needs
-that are not a prototype's own_.
+Two members, not one. `tables` is storage the feature owns and no prototype declares; `columns` is
+storage-only columns it puts on a prototype that enables it — separate from `augment`, which adds
+_fields_, things a document has that a form writes and the pipeline validates.
 
 **Full detail: `docs/decoupling-tables.md`.**
 
 ```ts
 // core/features/define.ts
-/** Tables this feature needs that no prototype declares. Boot and codegen both read it. */
-tables?: (config: BuiltConfig) => TableDeclaration[];
-
-export type TableDeclaration = {
-  /** In slug space. `$` marks it rime-derived. */
-  slug: string;
-  columns: ColumnDeclaration[];
-  /** Rows are deleted with the row they point at. */
-  references?: { column: string; table: string; onDelete: 'cascade' | 'set null' }[];
-};
+tables?: (config) => TableDeclaration[];   // whole-config, folded ungated
+columns?: (config) => ColumnDeclaration[]; // per-prototype, folded gated by `enabled`
 ```
 
 ```ts
-// core/features/auth/index.ts — the four better-auth tables stop being a template
-tables: () => [
-  { slug: '$authUsers',   columns: [text('id').primary(), text('email').notNull(), …] },
-  { slug: '$authSessions', columns: […], references: [{ column: 'userId', table: '$authUsers', onDelete: 'cascade' }] },
-  …
-]
+// core/features/tables.ts — six column types, a slug-space foreign key, no drizzle and no SQL
+export type ColumnType =
+  'text' | 'integer' | 'real' | 'boolean' | 'timestamp' | 'timestampMs' | 'json';
 ```
 
-What it deletes: `templateAuth`, `templateHasAuth`, `HAS_API_KEY`, `authConfig()`, `hasAuth`
-threading through `buildRootTable` — and the `slug === 'staff'` in the column template.
+**The `enabled` question the annex flagged, decided.** `tables` folds **ungated**: `enabled` is
+written against a _prototype_ config and `tables` is asked of the whole one, so gating there tests
+the wrong object and silently emits nothing. Auth returns `[]` when no collection declares `auth` —
+`enabled`'s own test, made at the scope the question has. `columns` _is_ per-prototype, so it folds
+gated, like `blankWithFeatures`.
+
+What deleted:
+
+```
+templateAuth        4 tables as a string constant, emitted unconditionally
+templateAPIKey      a fifth, behind `authConfig(prototype)?.type === 'apiKey'`
+HAS_API_KEY         the sniff itself
+templateHasAuth     a column, plus `slug === 'staff'`
+authConfig()        the config-member read
+hasAuth             a flag threaded through buildRootTable's parameter list
+```
+
+One `templateDeclaredTable` and one `templateDeclaredColumn` replace all of it, and neither names
+anything.
+
+**One new naming rule, and it is the only place a declared table differs from a prototype's.** A
+prototype's slug is authored and its table name derived, so the two are one string and
+`toSqlTableName` is the identity that says so. A declared table is the other way round: the feature
+chose the identifier and reaches its rows by it, so the identifier is fixed and the SQL name is
+derived. `declaredTableProperty` is that rule — `$authUsers` exports as `authUsers` and lives in
+`auth_users`. **No table is renamed**, which is what keeps this a zero-migration change.
+
+Gates, and this is the stage where the schema diff is the whole point:
+
+```bash
+# per fixture: capture, change, regenerate, compare
+rm node_modules/.rime/config.txt
+bun ./src/lib/core/dev/cli/index.ts generate --force
+```
+
+Codegen runs headless — no `vite dev` needed, which is what makes a golden capture cheap. Captured
+before and after on `basic` (auth + api keys) and `versions` (auth + shadows): **same tables, same
+columns, same column order**. The only textual difference is `.notNull().references()` where the
+template wrote `.references().notNull()`, which drizzle resolves identically — and
+`drizzle-kit generate` says `No schema changes, nothing to migrate` on both.
+
+`bun run check` is **0 on `versions`**, the baseline `CONTRIBUTING.md` states.
+
+Two things §4.2 was expected to carry that it does not, deliberately:
+
+- **`adapter.assertTable`** (annex §4.3). Boot surface with nothing to catch yet: `configure`
+  derives the staff collection for every config, so the auth tables are always emitted. It lands
+  with the first feature whose tables are genuinely conditional.
+- **upload's directories** (annex §1.4, §3.2). A separate change with its own schema diff, and it
+  is half of §4.6 — the `withoutVersionsSuffix` import goes with it.
 
 ### 4.3 — The auth facade
 
@@ -431,8 +484,8 @@ a new content row inherits. Lowest priority; note it, do not force it.
 ```
 4.0  verify 8d021608              ← done
 4.1  split transform              ← done
-4.2  FeatureDefinition.tables     ← keystone, next
-4.3  the auth facade              ← needs 4.2
+4.2  FeatureDefinition.tables     ← done (minus upload's directories)
+4.3  the auth facade              ← unblocked, next
 4.4  the insert plan              ← independent, small
 4.5  core's feature words         ← independent, four small commits
 4.6  feature to feature           ← needs 4.2 for the first half
@@ -452,8 +505,9 @@ for f in versions upload auth nested url title thumbnail metas cors panel direct
 done | sort -rn
 ```
 
-Zero, apart from words that are also English ("nested object", "url params") and doc-comment
-examples. Today that is `auth 98`, and after §4.1 it is the **only** name left with a real hit.
+Zero, apart from words that are also English ("nested object", "url params"), doc-comment examples,
+and comments recording what a stage deleted. Today that is `auth 71`, of which 44 is
+`auth.server.ts` — §4.3 is the last of it.
 
 ```bash
 # core naming a feature, other than a prototype listing its own
