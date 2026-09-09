@@ -1,259 +1,226 @@
-# De-abstraction: the plan
+# Composition
 
-## 1. The finding that settles the adapter question
+## The honest scoreboard
 
-The adapter contract already names **`locale`** — 18 times in `core/adapter.ts`, 60 times in
-`adapter-sqlite/prototype.server.ts`. It already names **`auth`**: `AuthAdapter` is a member of the
-`Adapter` interface, and `adapter-sqlite/auth.server.ts` exists.
+| | develop | this branch |
+| - | ------- | ----------- |
+| readable | **yes** | no |
+| features isolated | no | **partly — and not the ones that mattered** |
+| adapter contract | **none at all** | `core/adapter.ts`, 321 lines |
 
-It hides **`versions`**, and only versions, behind the word `shadow` — **116 times** across ten
-adapter files:
+`develop`'s `core/` is `areas/`, `collections/`, `operations/`. There is no `Adapter` interface. A
+second adapter is not possible there and cannot be made possible cheaply — the interface is the
+thing that took the work, because writing it meant finding every place the database layer knew what
+a draft was.
 
-```
-prototype.server.ts        42      naming.server.ts     6
-orderBy.server.ts          23      util.server.ts       4
-generate-schema/index      14      transform.server.ts  2
-where.server.ts             9      blocks.server.ts     1
-generate-schema/root        8      handles.server.ts    7
-```
+**That is the whole `+?`.** One file, and the seams that had to exist for it to be true.
 
-The decoupling did not remove versions from the adapter. **It renamed it.** Every two-table
-code path is still there; it just calls the second table "the shadow", and the reader has to learn
-a word that means `versions` a hundred per cent of the time.
+Everything else this branch added — `FeatureDefinition`'s eleven seams, `fold.ts`, `register.ts`,
+`apply.ts` — was built for features that turn out not to be features:
 
-Three concepts are constitutive of this CMS — auth, locale, versions. Two are named. One is
-disguised. That inconsistency is the thing that makes the adapter unreadable, and it is the
-argument for the decision below.
+- **auth** — `AuthAdapter` is a member of the `Adapter` interface. `adapter-sqlite/auth.server.ts`
+  exists. Already named, everywhere.
+- **locale** — named 18 times in the contract, 60 in `prototype.server.ts`.
+- **metas** — `updatedAt` and `createdAt` appear 29 times in the adapter, and in `BaseDoc`,
+  `sort-document-props.server.ts` and `core/adapter.ts`. `enabled: () => true`. It is not a
+  feature; it is what a document is.
+- **versions** — the one that *was* hidden, behind `shadow`, in 116 places across ten adapter
+  files. The decoupling renamed it rather than removing it.
 
-## 2. The decision
+Four "features" that a CMS cannot be without, wearing a protocol built for optional things. Six of
+the ten features declare `enabled: () => true`, which is the same statement in miniature.
 
-**Name versions in the adapter.** Not because decoupling was wrong, but because it was applied to
-one of three peers and not the other two.
+## The principle
 
-The three options, and why this one:
+**Composition, not protocol.** A thing is put together in one place, by name, in a list you can
+read — the way `prototype/collection/hooks.server.ts` already works, which is the one change this
+month that made something more readable rather than less.
 
-| option | what it means | verdict |
-| ------ | ------------- | ------- |
-| **keep `shadow`** | the adapter learns a synonym for versions | 116 mentions of a word that never means anything else |
-| **adapter hooks** | features register into `beforeInsert`/`afterRead` | **rejected** — makes the adapter's control flow non-local. It is the hook resolver again, one layer down, and the same failure: a hook that does not fire has no symptom |
-| **name it** | `shadow` → `versions`, alongside `locale` and `auth` | consistent with what the adapter already does twice |
+A protocol is the opposite: a definition declares a capability, and something elsewhere discovers
+it by folding. Every seam in `FeatureDefinition` is that, and seven of them have one implementer.
 
-**What this costs.** A second adapter must implement versions. It already had to: a second adapter
-must implement two-table writes, ordering across two tables, and a where-builder that knows which
-column lives where. The cost was never the work, only the word.
+## What core may name
 
-**What stays decoupled, and this is the part worth keeping.** The adapter still never asks *a
-feature* anything. It is handed facts — `versions: { slug }` at registration, a write split into
-base and version, a filter naming which row. `upload`, `url`, `title`, `nested`, `thumbnail`,
-`metas`, `panel` and `cors` stay features, stay out of the adapter, and stay out of core's
-vocabulary. That is the line that lets a second adapter exist, and nothing below crosses it.
+- **core:** `auth`, `locale`, `versions`, `metas`. Constitutive. Three of the four already are.
+- **the adapter:** the same four. It already names three.
+- **nobody:** `upload`, `url`, `title`, `thumbnail`, `nested`, `panel`, `cors`. Seven genuinely
+  optional things, which stay in `features/`, reach a prototype by being listed in its composition,
+  and never appear in `core/` or `adapter-sqlite/` outside their own folder.
 
-## 3. The census
-
-### `FeatureDefinition` — 11 seams, 725 lines of protocol
-
-`define.ts` 295, `fold.ts` 202, `register.ts` 114, `tables.ts` 53, `apply.ts` 34, `doc-type.ts` 27,
-plus 13 `declare module` sites, for ten features.
-
-| seam | implementers | verdict |
-| ---- | ------------ | ------- |
-| `augment` | auth, metas, thumbnail, nested, title, versions, url, upload | **earns it** |
-| `configure` | cors, auth, upload, panel, versions | **earns it** |
-| `docType` | versions, upload | thin, keep |
-| `blank` | auth, versions | thin, keep |
-| `shadow` · `readQuery` · `writePlan` | **versions** | one feature, three seams, three folds |
-| `tables` · `columns` · `validate` | **auth** | one feature, three seams, three folds |
-| `boot` | **upload** | one feature, one caller, three lines |
-| `type` | — | **nothing reads it** |
-| `requires` | — | **nothing reads it** |
-
-`requires` is documented as *"`definePrototype` checks this against the order the prototype listed
-… a list that contradicts a `requires` fails loudly."* There is no such check. Ten features fill in
-`type` and `requires` for no reader.
-
-### `PrototypeDefinition` — 9 fields
-
-| field | readers | verdict |
-| ----- | ------- | ------- |
-| `name` · `features` · `hooks` · `create` · `boot` · `rest` | 1–27 | keep |
-| `singleton` | 1 (boot → `registerPrototype`) | keep — it is the one shape fact the adapter needs |
-| `titleFallback` | both prototypes declare `'id'` | **a seam whose two implementers agree** |
-| `augments` | one entry each, both a label default | thin |
-
-The prototype layer is in far better shape than the feature layer — one dead-equal field against
-seven single-implementer seams. Two prototypes cannot support eleven seams, and it does not try to.
-
-### The `plan` prop
-
-`WritePlan` is `{ data, content?: { id?, data } }` — the base row, and the content row when the
-write touches one. The shape is right. **The name is what is opaque**: "plan" says nothing, and
-neither does "content". Renamed for what it is, this reads without a comment.
-
-## 4. The rule
-
-CONTRIBUTING says:
-
-> If a feature's name appears in `core/` or in `adapter-sqlite/`, a seam is missing.
-
-Replace it with:
-
-> **Core may name `auth`, `locale` and `versions`.** They are what a CMS is; they are not going to
-> be removed, and two of the three were already named. **`adapter-sqlite/` may name them too** —
-> it already names two.
->
-> **Nothing may name the other eight.** `upload`, `url`, `title`, `thumbnail`, `nested`, `metas`,
-> `panel`, `cors` reach core through `augment` and `configure` and reach the adapter not at all.
-> If one of their names appears outside its own folder, a seam is missing.
-
-Every stage below lives or dies by that rule.
+That is the line worth defending, and it is the only one.
 
 ---
 
-## Stage 0 — delete what nothing reads
+## Move 1 — say what is core
 
-`FeatureDefinition.type`, `FeatureDefinition.requires`, and the comment claiming a check that does
-not exist. `PrototypeDefinition.titleFallback`, whose two implementers both say `'id'` — `create`
-seeds `_titleFallback: 'id'` directly, and the features that override it already do.
+```
+core/auth/        was features/auth       (2016 lines)
+core/versions/    was features/versions   (782)
+core/metas/       was features/metas      (38) — or folded into prototype/doc.ts
+core/locale/      already scattered; gather it
 
-**Files:** `features/define.ts`, ten `features/*/index.ts`, `prototype/define.ts`, both
-`prototype/*/definition.ts`.
-**Gate:** `check` on the same fixture; nothing else can move.
-**Size:** ~55 lines deleted. Half an hour.
-**Why first:** free, and it is the proof that the seam count was never load-bearing.
+features/         upload url title thumbnail nested panel cors
+```
 
-## Stage 1 — versions is named, and its three seams collapse into it
+Nothing changes inside the folders. What changes is that core and the adapter may say their names,
+which is what unlocks every move below.
 
-The rename and the collapse are one change, because doing either alone leaves a half-state.
+**Gate:** `check`, `madge`, generated output byte-identical. It is a move, not an edit.
 
-**In the adapter:** `shadow` → `versions` in all 116 places, `ShadowDeclaration` →
-`VersionsTable`, `RegisterPrototypeArgs.shadow` → `.versions`. A rename, no logic touched. The
-diff is large and mechanical; the schema is the gate.
+## Move 2 — delete `FeatureDefinition`
 
-**In core:** the three seams delete.
+A feature folder exports functions. That is all a feature is.
 
-- `shadow` becomes config data. `versions.augment` already normalises `versions` on a versioned
-  config; it also stamps `_versionsTable: { slug: '$pages__versions' }`. Every `shadowOf` caller
-  reads a member — which is what keeps the two adapter callers
-  (`generate-schema/index.server.ts`, `transform.server.ts`) reading data rather than calling a
-  feature. `ConfigContext.shadowSlugOf` and its map go too.
-- `readQuery` and `writePlan` become imports. Both are already whole readable functions in their
-  own files; `versionsReadQuery` is four `if`s — the switch that used to be in the adapter, in the
-  feature that means it. The `reduce` around it was the problem, never the switch.
+```
+features/upload/
+  augment.ts     export const augmentUpload = (config) => …
+  hooks/         export const processFileUpload = …
+  enabled.ts     export const isUpload = (config) => !!config.upload
+```
 
-| caller | was | becomes |
-| ------ | --- | ------- |
-| `prototype/api.server.ts` | `readQueryOf(features, …)` | `versionsReadQuery(…)` |
-| `pipeline/run.server.ts` | `writePlanWithFeatures(features, …)` | `versionsWritePlan(…)` |
-| `collection/operations/create.ts` | `writePlanWithFeatures(features, …)` | `versionsWritePlan(…)` |
-| `boot.server.ts` · `context.server.ts` · `codegen/types/templates.server.ts` | `shadowOf(features, config)` | `config._versionsTable` |
-| `adapter-sqlite/generate-schema` · `transform.server.ts` | `shadowOf(features, config)` | `config._versionsTable` |
+**Deletes:** `features/define.ts` (295), `features/fold.ts` (202), `features/apply.ts` (34),
+`features/tables.ts` (53), `defineFeature`, and the `FeatureConfigure`/`ConfigureTransforms` half of
+`register.ts`. `register.ts` keeps `FeatureConfigAugment` (8 declarers) and `FeatureDocTypes` (4) —
+those are type-level and they earn it.
 
-**And `WritePlan` gets its name.** `{ data, content }` → `{ base, version }`. The adapter is being
-told which rows this write touches; say so.
+**About 600 lines of protocol, gone.**
 
-**Deletes:** `FeatureDefinition.shadow/readQuery/writePlan`, `shadowOf`, `readQueryOf`,
-`writePlanWithFeatures`, `ShadowDeclaration`, `ConfigContext.shadowSlugOf`.
-**Files:** ~11 in core plus 10 in the adapter, and three specs.
-**Gate:** generated schema **byte-identical** — the version tables are in it, so a rename that
-slipped shows up as a diff. Then `check`, `vitest`, `madge`, and `test:versions` (54 tests), the
-fixture that exercises every branch.
-**Size:** ~120 core lines deleted, ~25 added; the adapter rename is mechanical.
+## Move 3 — compose, by hand, in the prototype
 
-**Risk, named:** `_versionsTable` must be stamped before anything reads it — `augment` runs inside
-`create()`, the first thing that touches a config, so it is. The derived `$pages__versions`
-collection must **not** get one; it declares no `versions`, so `enabled` is false. `test:versions`
-proves both.
+The augment chain becomes a written list, exactly like the hook list:
 
-## Stage 2 — auth's three
+```ts
+// prototype/collection/definition.ts
+augments: [
+  augmentLabel,
+  when(isAuth, augmentAuth),
+  augmentPanel,
+  when(isUpload, augmentUpload),
+  when(isNested, augmentNested),
+  augmentVersions,        // self-gates already: `if (versions) {…}`
+  when(hasUrl, augmentUrl),
+  augmentTitle,
+  augmentThumbnail,
+  augmentMetas,
+  augmentCors
+]
+```
 
-`tables` and `columns` have one caller each and it is `adapter-sqlite/generate-schema`. Under the
-new rule the adapter *may* name auth — but these two do not need it: they become config data the
-way the versions table does. `auth.configure` already derives the `staff` collection, so it states
-the tables that config needs; `auth.augment` states the columns. Data beats a name where data is
-this easy.
+`when(pred, fn)` is three lines and replaces `FeatureDefinition.enabled` and the `enabled` map in
+`buildPipeline`. **Six of the ten features need no gate at all** — they declare `enabled: () =>
+true` today.
 
-`validate` has one caller, in core. Direct import: `authValidate(config)`.
+The order is still column order, still declared once, and now you can see what runs and what
+guards it without opening another file. `applyAugments` and its two exported type helpers
+(`FeatureNames`, `Augmented`, both already dead) go.
 
-**Deletes:** `FeatureDefinition.tables/columns/validate`, `tablesOf`, `columnsOf`,
-`validateWithFeatures`, `features/tables.ts`.
-**Gate:** generated schema byte-identical is the whole gate — all three show up there or in
-`check`. Plus `test:basic`.
-**Size:** ~90 lines deleted.
+The hook lists get the same treatment where a gate is needed:
 
-## Stage 3 — `boot`
+```ts
+beforeRead: [when(isAuth, removePrivateFields), processDocumentFields, …]
+```
 
-One implementer, one caller, already three inline lines: `await bootUpload(config)`.
+**Gate:** generated schema byte-identical — field order is column order, so a mis-ordered list is a
+schema diff. Plus `hooks.generated.md` byte-identical and `hook-placement.spec.ts`.
 
-**Gate:** `test:basic` — upload's boot makes the static directory, so a break is a 500 on the first
-media read.
-**Size:** ~15 lines. Fifteen minutes.
+## Move 4 — the adapter says `versions`
 
-## Stage 4 — write down why the survivors survive
+`shadow` → `versions` in all 116 places. `ShadowDeclaration` → `VersionsTable`.
+`RegisterPrototypeArgs.shadow` → `.versions`. Mechanical, no logic touched, its own commit.
 
-`augment` (8 implementers), `configure` (5), `blank` (2), `docType` (2). No deletes. `define.ts`
-loses two thirds of its length with the seams, and what is left gets one honest paragraph each
-instead of an essay — including why `docTypeWithFeatures` keeps its ANDed `fields` predicates
-(upload's image sizes must filter fields that versions' contribution must not un-filter).
+Then in core the three versions seams collapse:
 
-## Stage 5 — `ConfigureTransforms` (optional, last, skippable)
+| was | becomes |
+| --- | ------- |
+| `shadowOf(features, config)` × 5 | `config._versions` — a member, stamped by `augmentVersions` |
+| `readQueryOf(features, …)` | `versionsReadQuery(…)`, imported |
+| `writePlanWithFeatures(features, …)` | `versionsWritePlan(…)`, imported |
+| `WritePlan { data, content }` | `{ base, version }` |
+| `ConfigContext.shadowSlugOf` | gone — anyone with the config reads the member |
 
-`features/register.ts` keeps `FeatureConfigAugment` (8 features) and `FeatureDocTypes` (4). The
-third target — `FeatureConfigure` + `ConfigureTransforms = ['panel', 'cors']` +
-`ApplyFeatureConfigure` — is the merging seam already deleted for prototypes, for two features.
+`versionsReadQuery` is four `if`s. It was always four `if`s; it was a switch in the adapter before
+that. The `reduce` around it was the problem.
 
-**Load-bearing for generic-`T` deferral:** `bootRime<C>` reads `config.panel.language` while `C` is
-a type parameter. Replacing it means `BuiltConfig` naming `panel` and `$trustedOrigins`, measured
-against `check` on **two** fixtures. If `check` moves by one, revert and leave it.
+**Gate:** generated schema byte-identical, then `test:versions` (54 tests), which exercises every
+branch.
+
+## Move 5 — stop hand-maintaining better-auth's schema
+
+`core/auth/tables.ts` is 160 lines of column declarations transcribing better-auth's tables —
+`$authUsers`, `$authSessions`, `$authAccounts`, `$authVerifications`, `$apikey`. When better-auth
+changes its schema, someone diffs their release notes against this file by hand.
+
+It is not better than the template string it replaced. It is further from drizzle and it buys
+nothing: no other feature will ever declare tables, so the `TableDeclaration` type exists for this
+one caller.
+
+**The fix is to generate it.** Better-auth ships a CLI that emits a drizzle schema for the plugins
+you have configured; that output is the thing to consume, and the five tables above stop being
+rime's problem.
+
+**Verify before committing to this one** — check what `@better-auth/cli generate` emits for this
+plugin set, and whether it can be pointed at the schema file codegen already writes. If it cannot,
+the fallback is to keep the declarations but move them beside better-auth's config where the plugin
+list already lives, so the two are read together.
+
+`authColumns` stays — `authUserId` and `isSuperAdmin` are rime's columns on rime's table, not
+better-auth's.
+
+## Move 6 — the small ones
+
+| what | why |
+| ---- | --- |
+| `pipeline/steps/` → `pipeline/hooks/` | they are hooks; the list that places them is called `hooks` |
+| `ctx.contentQuery(params, intent)` → `versionQuery` | "content row" is the same disguise as "shadow" |
+| `ctx.features` | drop it. Three callers, all feeding `writePlanWithFeatures`, which Move 4 deletes |
+| `PrototypeApiContext` in `define.ts` | move it beside `prototypeContext`, the function that builds it |
+| `PrototypeDefinition.titleFallback` | both prototypes answer `'id'`; `create` seeds it directly |
+| `FeatureDefinition.type` / `.requires` | nothing reads either; `requires` documents a check that does not exist |
 
 ---
 
-## The deliverable: reading this repo in fifteen minutes
+## Order, and why
 
-The point of the plan, so it is checkable rather than a feeling. When it is done, this path
-explains the system end to end and nothing on it is a fold you have to decode:
+1. **Move 6's dead fields** — free, proves the seam count was never load-bearing.
+2. **Move 1** — the folder move. Nothing works until core may say `versions`.
+3. **Move 4's rename** — mechanical, own commit, biggest legibility win per minute.
+4. **Move 4's collapse** — the three folds.
+5. **Move 3** — the composition lists. Biggest change, best gated (schema + hooks chart).
+6. **Move 2** — deleting `FeatureDefinition` is what is *left over* once 3 and 4 are done.
+7. **Move 5** — needs its own investigation first.
 
-1. `core/prototype/index.ts` — two exports, `collection` and `area`.
-2. `core/prototype/collection/definition.ts` — what a collection is: its features, in order.
-3. `core/prototype/collection/hooks.server.ts` — what runs on a read, a create, an update.
-4. `core/features/define.ts` — the four things a feature may do.
-5. `core/boot.server.ts` — the eight numbered steps that happen once.
-6. `core/adapter.ts` — what a database has to provide, in words that mean what they say.
+Each is a commit. None depends on a later one. Stopping after 3 still leaves the adapter saying
+what it means.
 
-If a stage lands and that list needs a seventh entry, the stage was wrong.
+## The test
+
+When it is done, this reads the system end to end:
+
+1. `core/prototype/collection/definition.ts` — what a collection is, composed in one list.
+2. `core/prototype/collection/hooks.server.ts` — what runs, in order.
+3. `core/boot.server.ts` — the eight steps that happen once.
+4. `core/adapter.ts` — what a database must provide, in words that mean what they say.
+
+Four files. No folds. If a move lands and this needs a fifth, the move was wrong.
 
 ## Risk register
 
-| risk | where it bites | what catches it |
-| ---- | -------------- | --------------- |
+| risk | bites | caught by |
+| ---- | ----- | --------- |
+| a composed list in the wrong order | column order changes → unrequested migration | generated schema byte-identical |
+| a `when` guard forgotten | a feature's augment runs on configs without it | schema diff, then `test:basic` |
 | the 116-place rename slipping one | a table resolves to the wrong name | generated schema byte-identical |
-| `_versionsTable` read before it is stamped | versioned reads return the wrong row | `test:versions`, 54 tests |
-| the derived versions collection getting its own | recursive table names in the schema | generated schema byte-identical |
-| auth's tables/columns as config data | `staff` or `auth_users` missing | generated schema byte-identical |
-| Stage 5 widening a slug literal | consumer apps lose `rime.collection(...)` autocomplete | `check` on **two** fixtures, `config/inference.spec.ts` |
-| any of it dropping a hook | documents come back with no title, no url | `hooks.generated.md` byte-identical, `hook-placement.spec.ts` |
+| a hook lost in the move | documents with no title, no url | `hooks.generated.md` + `hook-placement.spec.ts` |
+| Move 2 widening a slug literal | consumer apps lose `rime.collection(…)` autocomplete | `check` on **two** fixtures, `inference.spec.ts` |
 
-The schema gate is the one that matters in Stages 1–3 and it is cheap, headless, and takes seconds:
+The schema gate is headless and takes seconds:
 
 ```
 rm node_modules/.rime/config.txt && bun ./src/lib/core/dev/cli/index.ts generate --force
 ```
 
-then diff. No dev server.
+## What is not on the table
 
-## The escape hatch
-
-One commit per stage, each independently revertable, no stage depending on a later one. Stage 1's
-adapter rename is committed separately from Stage 1's core deletes, so the mechanical half can be
-kept even if the collapse is rejected.
-
-Stopping early still wins: Stage 0 alone removes three dead fields from every definition in the
-repo, and Stage 1's rename alone makes the adapter say what it does.
-
-## What this is not
-
-Not a rewrite, and not a retreat from the decoupling. The adapter contract, the feature folders,
-the hook lists, `augment` and `configure` stay. Eight of the ten features remain fully isolated and
-unnameable outside their folders.
-
-What goes is the machinery that let core avoid saying `versions` out loud — while the adapter said
-`locale` and `auth` on every other line.
+Throwing the branch away. `core/adapter.ts` does not exist on `develop`, and it is the one thing
+here that cannot be re-derived in an evening — it took finding every place the database layer knew
+what a draft was. Everything else in this plan is deletion.
