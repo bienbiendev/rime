@@ -9,7 +9,7 @@ import createBlocksFacade from './blocks.server.js';
 import generateSchema from './generate-schema/index.server.js';
 import type { RelationFieldsMap } from './generate-schema/relations/definition.server.js';
 import { baseTableName } from './naming.server.js';
-import { createPrototypeRegistry } from './registry.server.js';
+import { createPrototypeHandles } from './handles.server.js';
 import createRelationsFacade from './relations.server.js';
 import { createTableRegistry } from './table.server.js';
 import { transformerFacade } from './transform.server.js';
@@ -54,7 +54,7 @@ const createAdapter = async <const C extends Config>(args: {
     db,
     schema: schema.default
   });
-  const prototypes = createPrototypeRegistry({ db, tables, configCtx });
+  const prototypes = createPrototypeHandles({ db, tables, configCtx });
   const table = createTableRegistry({ db, tables });
   const transform = transformerFacade({
     tables,
@@ -62,8 +62,7 @@ const createAdapter = async <const C extends Config>(args: {
   });
 
   return {
-    registerPrototype: prototypes.register,
-    prototype: prototypes.get,
+    ...prototypes,
     table,
     blocks,
     tree,

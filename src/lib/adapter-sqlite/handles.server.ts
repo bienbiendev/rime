@@ -22,12 +22,20 @@ import {
  * every request. It also means a prototype whose tables are missing fails at boot, loudly, in a
  * place that names it — instead of on whichever request first happened to touch it.
  *
- * `adapter.prototype(slug)` then hands back that prototype's handle. The handle carries the
- * config and the singleton flag it was registered with, so nothing downstream re-derives them,
- * and — importantly — nothing downstream needs to know whether it is holding an area or a
- * collection. There is no such distinction here. See prototype.server.ts.
+ * `adapter.prototype(slug)` then hands back that prototype's handle, carrying the config, the
+ * shadow and the singleton flag it was registered with, so nothing downstream re-derives them.
+ *
+ * **Nothing here knows the word "area".** The handle does carry `config`, and `config.type` would
+ * say — the adapter simply has no use for it. What it needs is how many rows there are, which is
+ * `singleton`, a fact about the data rather than about a kind. Reading `type === 'area'` would be
+ * re-deriving that flag from a name it was already told the answer for.
+ *
+ * The verbs are one uniform set for both kinds, and that is what the 26 call sites need: most of
+ * them hold a slug rather than a kind (`populateURL`, `resolveContentOwner`, upload's disk
+ * cleanup, a relation's `relationTo`). The two a singleton cannot honour are refused here, at the
+ * database boundary, because that is where the guarantee has to hold.
  */
-export const createPrototypeRegistry = (deps: {
+export const createPrototypeHandles = (deps: {
   db: any;
   tables: Dic;
   configCtx: ConfigContext;
@@ -37,6 +45,11 @@ export const createPrototypeRegistry = (deps: {
 
   const buildHandle = ({ config, singleton, shadow }: RegisterPrototypeArgs): PrototypeHandle => {
     const { slug } = config;
+
+    // What every call below re-stated: the connection, and which prototype this handle is.
+    const write = { db, tables };
+    const read = { db, tables, configCtx };
+    const self = { slug, config, shadow };
 
     /**
      * A singleton has no id to be given, so it looks its one row up. This is the *only* place
@@ -71,44 +84,43 @@ export const createPrototypeRegistry = (deps: {
       shadow,
 
       find: (args = {}) =>
-        readPrototype(
-          { db, tables, configCtx },
-          {
-            ...args,
-            slug,
-            // A singleton ignores an id it was never meant to be given.
-            id: singleton ? undefined : args.id,
-            config,
-            shadow
-          }
-        ) as Promise<RawDoc | undefined>,
+        readPrototype(read, {
+          ...args,
+          ...self,
+          // A singleton ignores an id it was never meant to be given.
+          id: singleton ? undefined : args.id
+        }) as Promise<RawDoc | undefined>,
 
-      findMany: (args = {}) =>
-        findManyPrototypes({ db, tables, configCtx }, { ...args, slug, config, shadow }),
+      findMany: (args = {}) => findManyPrototypes(read, { ...args, ...self }),
 
       insert: (args) => {
         if (singleton) refuseOnSingleton('insert');
-        return insertPrototype({ db, tables }, { ...args, slug, shadow });
+        return insertPrototype(write, { ...args, slug, shadow });
       },
 
       update: async (args) => {
         const id = singleton ? await resolveSingletonId() : args.id!;
-        return updatePrototype({ db, tables }, { ...args, slug, id, shadow });
+        return updatePrototype(write, { ...args, slug, id, shadow });
       },
 
-      updateWhere: (args) => updateWherePrototype({ db, tables, configCtx }, { ...args, slug }),
+      updateWhere: (args) => updateWherePrototype(read, { ...args, slug }),
 
       delete: (args) => {
         if (singleton) refuseOnSingleton('delete');
-        return deletePrototype({ db, tables }, { slug, id: args.id });
+        return deletePrototype(write, { slug, id: args.id });
       },
 
-      ensureExists: (args) => ensurePrototypeExists({ db, tables }, { ...args, slug, shadow })
+      ensureExists: (args) => ensurePrototypeExists(write, { ...args, slug, shadow })
     };
   };
 
+  /**
+   * Named for the two `Adapter` members they become, so the wiring in `index.server.ts` reads as
+   * a spread rather than a rename. They were `register` and `get`, and nothing in `get` said it
+   * was `adapter.prototype`.
+   */
   return {
-    register: (args: RegisterPrototypeArgs) => {
+    registerPrototype: (args: RegisterPrototypeArgs) => {
       const table = baseTableName(args.config.slug);
 
       // The point of registering rather than resolving per request: a missing table is a
@@ -123,7 +135,7 @@ export const createPrototypeRegistry = (deps: {
       handles.set(args.config.slug, buildHandle(args));
     },
 
-    get: (slug: string): PrototypeHandle => {
+    prototype: (slug: string): PrototypeHandle => {
       const handle = handles.get(slug);
 
       if (!handle) {

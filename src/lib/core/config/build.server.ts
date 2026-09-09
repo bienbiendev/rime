@@ -2,7 +2,7 @@ import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
 import { configureWithFeatures } from '../features/registry.js';
 import { area, collection } from '$lib/core/prototype/index.js';
 import { withPrototypeLists } from './build.js';
-import { resolvePipelines } from '$lib/core/pipeline/prototypes.server.js';
+import { resolvePipelines } from '$lib/core/pipeline/build.server.js';
 import { createRime, type Rime } from '../rime.server.js';
 import { augmentPlugins } from './augment-plugins.js';
 import type { Config } from './types.js';

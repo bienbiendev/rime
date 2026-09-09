@@ -196,14 +196,17 @@ What a written order needs, and it is in `buildPipeline`:
 - **`sortDocumentProps` is in neither list.** Nothing may precede it and nothing may follow, so it
   is appended rather than placed; a list is for things whose position is a choice.
 
-What it does **not** have, despite three comments that claimed it: a check that every hook a
-feature owns is placed somewhere. There is nothing left to check it against — a feature carries no
-hook list any more — so an unplaced hook simply never runs, and nothing says so. That is the
-failure this trades for the resolver's, and the only thing standing against it is that the lists
-are read.
+`buildPipeline` cannot check that every hook a feature owns is placed somewhere — a feature carries
+no hook list any more, so at runtime there is nothing to compare against. CONTRIBUTING claimed it
+did, for a while, and it never has. An unplaced hook never runs and nothing throws; in
+`beforeUpdate` that is a security question, since a hook that is written, exported and never placed
+looks exactly like one that is enforcing something.
 
-> If you add a hook to a feature, add it to `collection/hooks.server.ts` and, where it applies,
-> `area/hooks.server.ts`. Nothing will tell you that you did not.
+`pipeline/hook-placement.spec.ts` checks it at build time instead, off the barrels each feature's
+hooks are exported through — the same files `collection/hooks.server.ts` imports to place them. It
+fails naming the hook: dropping `auth.preventUserMutations` from the collection's list fails
+`auth.preventUserMutations`. A hook meant to be owned and placed nowhere goes in its `unplaced`
+map, with the reason.
 
 The cost, stated once: **a consumer's hooks are appended, not interleaved.** They cannot land
 between two of the prototype's — though they still run before the finaliser, so a property they add

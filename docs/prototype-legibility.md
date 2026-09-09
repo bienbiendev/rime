@@ -125,5 +125,4 @@ direct `transport.verify()`. Same five before and after both stages.
 
 - `adapter-sqlite/registry.server.ts` and whether the adapter should know `collection` and `area`
   rather than `singleton: boolean`.
-- `pipeline/build-pipeline.server.ts` — three exports, one of them a four-line wrapper, one of them
-  codegen's only, and a stale doc block describing a function that is not the one below it.
+- ~~`pipeline/build-pipeline.server.ts`~~ — done, see below.

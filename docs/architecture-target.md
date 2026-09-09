@@ -90,7 +90,7 @@ flowchart TB
         direction TB
         E1["<b>1.</b> configureWithPrototypes(config)<br/><i>prototype/registry.ts</i> → every definition.configure"]
         E2["<b>2.</b> configureWithFeatures(prototypes, config)<br/><i>features/registry.ts</i> → every feature.configure, deduped by name"]
-        E3["<b>3.</b> resolvePipelines(config)<br/><i>prototype/pipelines.server.ts</i> → augmentHooks per config"]
+        E3["<b>3.</b> resolvePipelines(config)<br/><i>pipeline/build.server.ts</i> → augmentHooks per config"]
         E4["<b>4.</b> augmentPlugins(config)<br/><i>core/config/augment-plugins.ts</i> → every plugin.configure"]
         E1 --> E2 --> E3 --> E4
     end
@@ -225,7 +225,7 @@ flowchart TB
 
     L3 --> op
 
-    PIPE["<b>config.$hooks</b><br/>resolved at phase 0 step 3 from three lists:<br/>definition.hooks · enabled features' hooks · author's $hooks<br/><i>pipeline/build-pipeline.server.ts</i>"]
+    PIPE["<b>config.$hooks</b><br/>resolved at phase 0 step 3 from three lists:<br/>definition.hooks · enabled features' hooks · author's $hooks<br/><i>pipeline/build.server.ts</i>"]
     PIPE -.->|"read, never rebuilt"| op
 ```
 
@@ -244,7 +244,7 @@ Every place a prototype or a feature reaches into rime, what carries it, and who
 | whether a feature applies     | `enabled`        | `applyAugments`, `buildPipeline`, `shadowOf`                        | three call sites                                   | asked of a **config**, never of a kind  |
 | prototype's own list default  | `configure`      | `configureWithPrototypes`                                           | `prototype/registry.ts`                            | the whole config                        |
 | derived collections, defaults | `configure`      | `configureWithFeatures`                                             | `features/registry.ts`                             | the whole config                        |
-| document hooks                | `hooks`          | `buildPipeline` → `augmentHooks`                                    | `pipeline/build-pipeline.server.ts`                | `config.$hooks`, once, at build time    |
+| document hooks                | `hooks`          | `buildPipeline` → `augmentHooks`                                    | `pipeline/build.server.ts`                         | `config.$hooks`, once, at build time    |
 | the second table              | `shadow`         | `shadowOf(features, config)`                                        | `features/registry.ts`                             | `generate-schema`, and registration     |
 | one-off setup                 | `boot`           | `bootFeatures` / the boot loop                                      | `features/registry.ts`, `boot.server.ts`           | phase 2, steps 3 and 6b                 |
 | how many rows                 | `singleton`      | `adapter.registerPrototype`                                         | `boot.server.ts` step 6a                           | the adapter                             |
@@ -578,7 +578,7 @@ A config's `$hooks` is built once, by `buildPipeline`, out of three lists — an
 where its hooks go**:
 
 ```ts
-// core/pipeline/build-pipeline.server.ts, per timing
+// core/pipeline/build.server.ts, per timing
 const own = definition.hooks?.[timing] ?? [];
 const fromFeatures = active.flatMap((feature) => feature.hooks?.[timing] ?? []);
 const hooks = [...own, ...fromFeatures, ...(consumer?.[timing] ?? [])];

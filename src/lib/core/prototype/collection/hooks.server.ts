@@ -33,9 +33,10 @@ import { mergeWithBlankDocument } from './hooks/merge-with-blank.server.js';
  * A feature still **owns** its hooks; this says when they run. `buildPipeline` filters the list by
  * `feature.enabled(config)`, so a collection without `auth` runs none of auth's.
  *
- * Nothing checks the other direction: a hook a feature owns and this list does not place simply
- * never runs, and nothing says so. There is nothing left to check it against — a feature carries
- * no hook list any more. Adding a hook to a feature means adding it here.
+ * The other direction — a hook a feature owns and this list does not place — never runs and throws
+ * nothing. `buildPipeline` cannot see it: a feature carries no hook list any more.
+ * `pipeline/hook-placement.spec.ts` checks it off the feature barrels instead, and fails naming
+ * the hook.
  *
  * A consumer's hooks are appended after these, per timing. That is the cost of a written order and
  * it is also a fix: under the resolver, a consumer hook that forgot to declare `provides` landed

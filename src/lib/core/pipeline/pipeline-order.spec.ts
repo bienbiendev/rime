@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { area } from '$lib/core/prototype/area/definition.server.js';
 import { collection as collectionPrototype } from '$lib/core/prototype/collection/definition.server.js';
-import { augmentHooks } from './build-pipeline.server.js';
+import { augmentHooks } from './build.server.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 /**
