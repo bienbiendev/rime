@@ -9,8 +9,6 @@ import { defineFeature } from '../define.js';
  */
 export const nested = defineFeature({
   name: 'nested',
-  type: 'augment',
-  requires: [],
   /** A config uses this feature by declaring `nested`. */
   enabled: (config) => !!config.nested,
 

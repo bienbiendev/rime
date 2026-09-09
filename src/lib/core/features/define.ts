@@ -28,25 +28,6 @@ export type FeatureDefinition = {
   name: string;
 
   /**
-   * What the feature does to the database, which is what tells the adapter whether to generate
-   * anything for it:
-   *
-   * - `augment` — no tables of its own; it only changes a config. The adapter never hears of it.
-   * - `shadow` — deviates the prototype's own table. Declared by `shadow` below.
-   * - `child` — a table owned by the prototype's rows (`{base}__$relations`).
-   */
-  type: 'augment' | 'shadow' | 'child';
-
-  /**
-   * Features this one is built on top of, by name.
-   *
-   * Also an ordering statement: a feature runs after everything it requires. `definePrototype`
-   * checks this against the order the prototype listed rather than sorting by it, so the order
-   * stays readable where it is declared and a list that contradicts a `requires` fails loudly.
-   */
-  requires: string[];
-
-  /**
    * Whether a given config uses this feature — the one place that question is answered, for its
    * augment and its hooks alike.
    */

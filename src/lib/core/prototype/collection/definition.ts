@@ -28,8 +28,6 @@ export const collection = definePrototype({
   /** The name it is exported under, and the `type` every collection config carries. */
   name: 'collection',
   singleton: false,
-  /** A document with no title field is named by its id. */
-  titleFallback: 'id', // @decouple can set all fallback title fields here instead of setting it per feature
   /**
    * The collection's own augments, ahead of every feature's. One: a label is the kind's own
    * statement about itself.

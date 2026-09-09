@@ -60,14 +60,6 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype> = {
   augments?: readonly ((config: any) => any)[];
 
   /**
-   * What a document is called when no field is marked as the title.
-   *
-   * The bottom of the precedence `title` resolves: a `.isTitle()` field wins, then whatever a
-   * feature overrode this with, then this. Seeded as `_titleFallback`, not authoring surface.
-   */
-  titleFallback: string;
-
-  /**
    * Every hook this prototype can run, in the order it runs them — including its features'.
    *
    * The order is written down, not computed; see `collection/hooks.server.ts`. `buildPipeline`
@@ -169,17 +161,20 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
   // with no features is a real case. `hooks` stays optional — a missing timing is already none.
   const features = options.features ?? [];
   const augments = options.augments ?? [];
-  const titleFallback = options.titleFallback ?? 'id';
 
   /**
    * One chain, stated once for every prototype: `_titleFallback` first, then the prototype's own
    * augments, then the features' in the order it listed them — which is column order.
    *
+   * `_titleFallback` is seeded as `'id'` for every prototype — it was a `titleFallback` field on
+   * the definition and both of them answered `'id'`. `auth` and `upload` override it in their own
+   * augments, which is where a real preference belongs.
+   *
    * No hooks step. A config's pipeline is resolved once the *whole* config exists (see
    * pipelines.server.ts), so a derived config resolves by the same line as an authored one.
    */
   const create = (slug: string, incomingConfig: Dic): C => {
-    const initial: Dic = { ...incomingConfig, slug, _titleFallback: titleFallback };
+    const initial: Dic = { ...incomingConfig, slug, _titleFallback: 'id' };
     const withOwn = augments.reduce((current, augment) => augment(current), initial);
     const augmented = applyAugments(features, withOwn) as Dic;
 
@@ -212,7 +207,6 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
   return {
     name,
     singleton: options.singleton ?? false,
-    titleFallback,
     features,
     augments,
     create,

@@ -9,8 +9,6 @@ import { augmentTitle } from './augment.js';
  */
 export const title = defineFeature({
   name: 'title',
-  type: 'augment',
-  requires: ['upload'],
   enabled: () => true,
   augment: augmentTitle
 

@@ -26,8 +26,6 @@ import { versionsWritePlan } from './write-plan.js';
  */
 export const versions = defineFeature({
   name: 'versions',
-  type: 'shadow',
-  requires: [],
   /** A config uses this feature by declaring `versions`. */
   enabled: (config) => !!config.versions,
 

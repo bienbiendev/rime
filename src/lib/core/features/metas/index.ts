@@ -12,8 +12,6 @@ import { augmentMetas } from './augment.js';
  */
 export const metas = defineFeature({
   name: 'metas',
-  type: 'augment',
-  requires: [],
   enabled: () => true,
   augment: augmentMetas
 });

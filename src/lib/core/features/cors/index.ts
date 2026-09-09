@@ -13,8 +13,6 @@ import { defineFeature } from '../define.js';
  */
 export const cors = defineFeature({
   name: 'cors',
-  type: 'augment',
-  requires: [],
   enabled: () => true,
 
   configure: augmentCORS

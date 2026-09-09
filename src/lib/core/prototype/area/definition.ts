@@ -22,9 +22,6 @@ export const area = definePrototype({
 
   singleton: true,
 
-  /** A document with no title field is named by its id. */
-  titleFallback: 'id',
-
   /** One own augment: an area falls back to its capitalised slug for a label. */
   augments: [augmentAreaLabel],
 

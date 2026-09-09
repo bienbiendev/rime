@@ -16,8 +16,6 @@ import { uploadDocType } from './doc-type.js';
  */
 export const upload = defineFeature({
   name: 'upload',
-  type: 'augment',
-  requires: [],
   /** A config uses this feature by declaring `upload`. */
   enabled: (config) => !!config.upload,
 

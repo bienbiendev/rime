@@ -9,8 +9,6 @@ import { augmentThumbnail } from './augment.js';
  */
 export const thumbnail = defineFeature({
   name: 'thumbnail',
-  type: 'augment',
-  requires: [],
   enabled: () => true,
   augment: augmentThumbnail
 });

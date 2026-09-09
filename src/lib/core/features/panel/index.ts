@@ -28,8 +28,6 @@ import { augmentIcons } from './icons.js';
  */
 export const panel = defineFeature({
   name: 'panel',
-  type: 'augment',
-  requires: ['auth'],
   enabled: () => true,
 
   configure: (config) => augmentPanel(augmentIcons(config))
