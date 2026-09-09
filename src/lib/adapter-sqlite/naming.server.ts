@@ -40,8 +40,6 @@ declare const TABLE_NAME_BRAND: unique symbol;
  */
 export type TableName = string & { readonly [TABLE_NAME_BRAND]: true };
 
-/** For the few places holding a name that genuinely came from the schema, not from a slug. */
-export const asTableName = (name: string) => name as TableName;
 
 /**
  * The table a prototype's own rows live in: `$a__b` -> `a__b`, `camelProbe` -> `camel_probe`.

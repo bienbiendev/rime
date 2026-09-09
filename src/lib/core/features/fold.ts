@@ -6,23 +6,29 @@ import type { ApplyFeatureConfigure } from './register.js';
 import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 
 /**
- * The whole-config feature steps, and nothing else.
+ * Asking the features a question about a config, and folding the answers.
  *
- * There is no list of features here: a prototype lists the ones that extend it, by value and in
- * order (see `definePrototype`), and each feature carries its own name. What lives here are the
- * three steps that are about no single prototype — `configure` (auth's `staff` collection,
- * upload's derived directories), `boot` (once per process) and `handler` (per request) — each of
- * which needs every feature in play, which is the union of what the prototypes listed.
+ * **Not a registry** — it was called one for a while, which is most of why it read as machinery.
+ * There is no list of features here and never was: a prototype lists the ones that extend it, by
+ * value and in order (see `definePrototype`), and each feature carries its own name. What lives
+ * here is one function per seam on `FeatureDefinition`, each taking the feature list its caller
+ * already holds and folding what those features say.
+ *
+ * Every one of them takes a **feature list**. Three used to take the prototypes and call
+ * `distinct` themselves, which meant two shapes of call for the same idea; `distinctFeatures` is
+ * exported instead and the two callers that need the union compute it once.
  */
 
 /**
  * Every feature any prototype lists, once each.
  *
- * Deduplicated by name: a feature extending both prototypes is listed by both, and these steps
- * must not run twice for it. Order is prototype order then list order — stable, and all these
- * steps need, since none of them interleaves with core steps.
+ * Deduplicated by name: a feature extending both prototypes is listed by both, and a whole-config
+ * step must not run twice for it. Order is prototype order then list order — stable, and all any
+ * caller needs, since none of these steps interleaves with a core one.
  */
-const distinct = (prototypes: { features: FeatureDefinition[] }[]): FeatureDefinition[] => [
+export const distinctFeatures = (
+  prototypes: { features: FeatureDefinition[] }[]
+): FeatureDefinition[] => [
   ...new Map(
     prototypes.flatMap((prototype) => prototype.features).map((feature) => [feature.name, feature])
   ).values()
@@ -39,10 +45,10 @@ const distinct = (prototypes: { features: FeatureDefinition[] }[]): FeatureDefin
  * runtime, so there is nothing here to drift.
  */
 export const configureWithFeatures = <T extends Dic>(
-  prototypes: { features: FeatureDefinition[] }[],
+  features: FeatureDefinition[],
   config: T
 ): ApplyFeatureConfigure<T> =>
-  distinct(prototypes).reduce(
+  features.reduce(
     (current, feature) => (feature.configure ? (feature.configure(current) as T) : current),
     config
   ) as unknown as ApplyFeatureConfigure<T>;
@@ -56,13 +62,11 @@ export const configureWithFeatures = <T extends Dic>(
  * use it — auth asks whether any collection declares `auth`, which is `enabled`'s test made at the
  * scope the question belongs to.
  *
- * Deduplicated by `distinct`, like the other whole-config steps: a feature both prototypes list
+ * Takes the deduplicated list, like the other whole-config steps: a feature both prototypes list
  * must not contribute its tables twice.
  */
-export const tablesOf = (
-  prototypes: { features: FeatureDefinition[] }[],
-  config: Dic
-): TableDeclaration[] => distinct(prototypes).flatMap((feature) => feature.tables?.(config) ?? []);
+export const tablesOf = (features: FeatureDefinition[], config: Dic): TableDeclaration[] =>
+  features.flatMap((feature) => feature.tables?.(config) ?? []);
 
 /**
  * The storage-only columns the features a config enables put on its table.
@@ -99,16 +103,6 @@ export const docTypeWithFeatures = (
     },
     { extends: [], members: [], fields: () => true }
   );
-
-/** Runs every feature's boot step. */
-export const bootFeatures = async (
-  prototypes: { features: FeatureDefinition[] }[],
-  config: Dic
-): Promise<void> => {
-  for (const feature of distinct(prototypes)) {
-    await feature.boot?.(config);
-  }
-};
 
 /**
  * Every error the features extending a config report about it.

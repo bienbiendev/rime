@@ -1,7 +1,7 @@
 import { text } from '$lib/fields/text/index.js';
 import { describe, expect, it } from 'vitest';
 import { collection, create } from '$lib/core/prototype/collection/definition.js';
-import { writePlanWithFeatures } from '../registry.js';
+import { writePlanWithFeatures } from '../fold.js';
 import { VERSIONS_OPERATIONS } from './strategy.js';
 
 /**

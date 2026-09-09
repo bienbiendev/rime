@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { collection } from '$lib/core/prototype/collection/index.js';
 import type { Docs, DocType } from '$lib/core/prototype/types.js';
 import type { ConfigureTransforms, FeatureConfigure } from './register.js';
-import { configureWithFeatures, shadowOf } from './registry.js';
+import { configureWithFeatures, shadowOf } from './fold.js';
 
 /**
  * `ApplyFeatureConfigure` intersects every declared `configure` transform instead of folding a
@@ -44,7 +44,7 @@ describe('every feature configure transform is additive', () => {
  * `cors` add through `configure` have to be there, and not `any`.
  */
 describe('configureWithFeatures', () => {
-  const built = configureWithFeatures([collection], { $probe: 'probe' as const });
+  const built = configureWithFeatures(collection.features, { $probe: 'probe' as const });
 
   type Built = typeof built;
   type IsAny<T> = 0 extends 1 & T ? true : false;

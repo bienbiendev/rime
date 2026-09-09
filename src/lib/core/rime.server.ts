@@ -6,10 +6,10 @@ import type { ConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
 import type { RimeAuth } from './features/auth/better-auth/instance.server.js';
 import { logger } from './logger.server.js';
-import type { PrototypeAccessors } from './prototype/accessors.server.js';
-import { buildPrototypeApi } from './prototype/api.server.js';
 import { area } from './prototype/area/definition.server.js';
+import { areaApi, type AreaAccessor } from './prototype/area/api.server.js';
 import { collection } from './prototype/collection/definition.server.js';
+import { collectionApi, type CollectionAccessor } from './prototype/collection/api.server.js';
 
 // Declared in core/config/context.server.ts, beside `createConfigContext`, and re-exported
 // here because this is where consumers have always imported it from.
@@ -29,7 +29,23 @@ export type { ConfigContext };
  * config, so naming them costs nothing; naming a function that imports the prototype registry puts
  * every hook back in the loop.
  */
-export type RimeContext<C extends Config = Config> = PrototypeAccessors &
+export type RimeContext<C extends Config = Config> = {
+  /**
+   * `rime.collection(slug)` / `rime.area(slug)`.
+   *
+   * **Named from each prototype's `api.server.ts`, never off its definition**, and that is a
+   * correctness requirement rather than a preference. Every hook is typed through `HookContext` →
+   * `event.locals.rime` → this, so reading an accessor off a definition — which carries hooks —
+   * would make every hook's type depend on itself and TypeScript would answer `any` for all of
+   * them. Each `api.server.ts` imports no hooks, so it cuts the loop.
+   *
+   * These two lines were a `PrototypeAccessors` alias in a file of its own, so that this one did
+   * not name a kind. It names two, they are both core's, and the file it took them from is the
+   * file it now names.
+   */
+  collection: CollectionAccessor;
+  area: AreaAccessor;
+} &
   // A consumer's own plugins, spread at the top level under their own names — `rime.myPlugin.doThing()`.
   // Comes off the config's declared phantom, so a plugin's `actions` stay typed per plugin.
   BuildConfig<C>['$InferPluginsServer'] & {
@@ -103,28 +119,27 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
   /**
    * Builds `rime.collection(slug)` / `rime.area(slug)`.
    *
-   * Written out, and the `as PrototypeAccessors` is what makes it safe to be: these types cannot
-   * be derived from the values — each accessor carries its own slug literals and document types —
-   * so they are declared instead, from `api.server.ts` and never off a definition. That cast is
-   * rule 1's boundary. See accessors.server.ts.
+   * The cast is what makes writing it out safe: these types cannot be derived from the values —
+   * each accessor carries its own slug literals and document types — so they are declared, on
+   * `RimeContext` above, from each prototype's `api.server.ts`. That is rule 1's boundary.
    */
   const buildAccessors = (event: RequestEvent) =>
     ({
       collection: (slug: string) =>
-        buildPrototypeApi({
-          definition: collection,
+        collectionApi({
           config: configCtx.getCollection(slug),
+          features: collection.features,
           event,
           defaultLocale: configCtx.getDefaultLocale()
         }),
       area: (slug: string) =>
-        buildPrototypeApi({
-          definition: area,
+        areaApi({
           config: configCtx.getArea(slug),
+          features: area.features,
           event,
           defaultLocale: configCtx.getDefaultLocale()
         })
-    }) as PrototypeAccessors;
+    }) as Pick<RimeContext, 'collection' | 'area'>;
 
   return {
     defineLocale,

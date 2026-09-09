@@ -3,7 +3,7 @@ import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
 import { text } from '$lib/fields/text/index.js';
 import { describe, expect, it } from 'vitest';
 import type { ReadIntent } from '$lib/core/pipeline/types.js';
-import { readQueryOf } from '../registry.js';
+import { readQueryOf } from '../fold.js';
 
 /**
  * Which content row a read means.

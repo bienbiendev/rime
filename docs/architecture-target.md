@@ -89,7 +89,7 @@ flowchart TB
     subgraph chain["buildConfig — core/config/build.server.ts"]
         direction TB
         E1["<b>1.</b> configureWithPrototypes(config)<br/><i>prototype/registry.ts</i> → every definition.configure"]
-        E2["<b>2.</b> configureWithFeatures(prototypes, config)<br/><i>features/registry.ts</i> → every feature.configure, deduped by name"]
+        E2["<b>2.</b> configureWithFeatures(features, config)<br/><i>features/fold.ts</i> → every feature.configure, deduped by name"]
         E3["<b>3.</b> resolvePipelines(config)<br/><i>pipeline/build.server.ts</i> → augmentHooks per config"]
         E4["<b>4.</b> augmentPlugins(config)<br/><i>core/config/augment-plugins.ts</i> → every plugin.configure"]
         E1 --> E2 --> E3 --> E4
@@ -107,7 +107,7 @@ Two things the picture is making a point of:
   `cors` defaults `$trustedOrigins`. The runtime order is the prototypes' own `features` lists;
   nothing type-level replays it, because every declared `configure` transform is additive and the
   order does not change the result. `ConfigureTransforms` in `features/register.ts` names the
-  declarations for the type fold — `features/registry.spec.ts` asserts both that they are additive
+  declarations for the type fold — `features/fold.spec.ts` asserts both that they are additive
   and that the list is complete.
 - **Pipelines are resolved once, at step 3**, after the features have derived everything. A derived
   config is resolved by the same line as an authored one, which is why nothing carries a second
@@ -136,7 +136,7 @@ flowchart TB
 
     P1["<b>prototype.rest</b><br/>Record&lt;subpath, RouteConfig&gt;<br/>declared in <i>{collection,area}/rest/index.server.ts</i>"]
     P2["<b>prototype.configKey</b> + <b>prototype.features</b><br/>via prototypeEntries()<br/><i>prototype/registry.ts</i>"]
-    F1["<b>feature.shadow(config)</b><br/>via shadowOf(features, config)<br/><i>features/registry.ts</i>"]
+    F1["<b>feature.shadow(config)</b><br/>via shadowOf(features, config)<br/><i>features/fold.ts</i>"]
     F2["<b>feature.hooks</b> + <b>feature.enabled</b><br/>via getPrototype(name).features<br/><i>prototype/registry.server.ts</i>"]
 
     P1 -->|"writes +server.ts per tier"| S3
@@ -158,7 +158,7 @@ is numbered: the config context feeds the adapter, the adapter feeds better-auth
 flowchart TB
     B1["<b>1.</b> plugins → name→actions map<br/><i>config.plugins[].actions</i>"]
     B2["<b>2.</b> createConfigContext(config)<br/><i>config/context.server.ts</i>"]
-    B3["<b>3.</b> bootFeatures(prototypes, config)<br/><i>features/registry.ts</i> → every feature.boot"]
+    B3["<b>3.</b> every feature.boot(config)<br/><i>boot.server.ts</i> → folded over distinctFeatures"]
     B4["<b>4.</b> runCodegen(…) — phase 1, dev only"]
     B5["<b>5.</b> config.$adapter.createAdapter(configCtx)<br/>consumes the schema step 4 wrote"]
     B6a["<b>6a.</b> adapter.registerPrototype({ config, singleton })<br/>for every prototype × its configs"]
@@ -196,7 +196,7 @@ flowchart TB
         direction TB
         H1["createCMSHandler(rime)<br/><i>handlers/main.server.ts</i><br/>builds event.locals.rime"]
         H2["handleAuth<br/><i>handlers/auth.server.ts</i>"]
-        H3["…featureHandlers(prototypes)<br/><i>features/registry.ts</i> → feature.handler<br/>cors today"]
+        H3["…featureHandlers(prototypes)<br/><i>features/fold.ts</i> → feature.handler<br/>cors today"]
         H4["…createPluginsHandler(rime)<br/><i>handlers/plugins.server.ts</i> → plugin.handler"]
         H5["handleRoutes<br/><i>handlers/routes.server.ts</i><br/>dispatches through prototype.rest"]
         H1 --> H2 --> H3 --> H4 --> H5
@@ -243,12 +243,12 @@ Every place a prototype or a feature reaches into rime, what carries it, and who
 | feature fields / normalising  | `augment`        | `applyAugments(features, config)`                                   | `features/apply.ts`                                | a prototype config, in list order       |
 | whether a feature applies     | `enabled`        | `applyAugments`, `buildPipeline`, `shadowOf`                        | three call sites                                   | asked of a **config**, never of a kind  |
 | prototype's own list default  | `configure`      | `configureWithPrototypes`                                           | `prototype/registry.ts`                            | the whole config                        |
-| derived collections, defaults | `configure`      | `configureWithFeatures`                                             | `features/registry.ts`                             | the whole config                        |
+| derived collections, defaults | `configure`      | `configureWithFeatures`                                             | `features/fold.ts`                             | the whole config                        |
 | document hooks                | `hooks`          | `buildPipeline` → `augmentHooks`                                    | `pipeline/build.server.ts`                         | `config.$hooks`, once, at build time    |
-| the second table              | `shadow`         | `shadowOf(features, config)`                                        | `features/registry.ts`                             | `generate-schema`, and registration     |
-| one-off setup                 | `boot`           | `bootFeatures` / the boot loop                                      | `features/registry.ts`, `boot.server.ts`           | phase 2, steps 3 and 6b                 |
+| the second table              | `shadow`         | `shadowOf(features, config)`                                        | `features/fold.ts`                             | `generate-schema`, and registration     |
+| one-off setup                 | `boot`           | the boot loops                                                      | `boot.server.ts`                               | phase 2, steps 3 and 6b                 |
 | how many rows                 | `singleton`      | `adapter.registerPrototype`                                         | `boot.server.ts` step 6a                           | the adapter                             |
-| request middleware            | `handler`        | `featureHandlers(prototypes)`                                       | `features/registry.ts`                             | the handler chain                       |
+| request middleware            | `handler`        | `featureHandlers(prototypes)`                                       | `features/fold.ts`                             | the handler chain                       |
 | the REST surface              | `rest`           | `generateRoutes`, `handleRoutes`                                    | `dev/codegen/routes/`, `handlers/routes.server.ts` | `/api` files and their dispatch         |
 | the local API                 | `api`            | `buildPrototypeApi`                                                 | `prototype/api.server.ts`                          | `rime.<name>(slug)`                     |
 | the config member             | `configKey`      | `prototypeConfigs` / `prototypeEntries`                             | `prototype/registry.ts`                            | every "iterate every prototype config"  |

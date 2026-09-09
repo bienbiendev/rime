@@ -1,6 +1,5 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
-import { api, type CollectionAccessor } from './api.server.js';
 import { collection as base } from './definition.js';
 import { collectionHooks } from './hooks.server.js';
 import { rest } from './rest/index.server.js';
@@ -11,9 +10,8 @@ import { rest } from './rest/index.server.js';
  * Same export name as `module.js` — that is what makes the pair resolve — and it takes the
  * client half whole rather than restating it, so the features and hooks are declared once.
  */
-export const collection = definePrototype<BuiltCollection, CollectionAccessor>({
+export const collection = definePrototype<BuiltCollection>({
   ...base,
-  api: (ctx) => api(ctx),
   rest,
 
   /**

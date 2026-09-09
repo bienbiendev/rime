@@ -3,7 +3,7 @@ import type { Config } from '$lib/core/config/types.js';
 import { createConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
 import { createAuthInstance } from './features/auth/better-auth/instance.server.js';
-import { bootFeatures, shadowOf } from './features/registry.js';
+import { distinctFeatures, shadowOf } from './features/fold.js';
 // The **server** halves, and it has to be: the isomorphic ones carry `singleton` and `features`
 // but no `boot` — so an area's row was never created and every area read 404'd. `boot` is
 // server-only by nature; the config factory is the side that legitimately reads the isomorphic
@@ -44,10 +44,13 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   // 2. The config interface — every lookup by slug, the locale list, the raw config.
   const configCtx = createConfigContext(config);
 
-  // 3. Every feature's boot step, in registry order — upload makes sure the static directory it
-  //    writes into exists. By feature rather than by function, so boot never knows what any one
-  //    of them needs.
-  await bootFeatures([collection, area], config);
+  // 3. Every feature's boot step — upload makes sure the static directory it writes into exists,
+  //    and is the only one with a `boot` today. Folded rather than called by name, so boot never
+  //    knows which feature has one or what it needs. Was `bootFeatures(...)`, a wrapper over
+  //    exactly these three lines.
+  for (const feature of distinctFeatures([collection, area])) {
+    await feature.boot?.(config);
+  }
 
   // 4. Phase 1, in dev only: write routes, schema and types. Before the adapter, which imports
   //    the schema this produces.

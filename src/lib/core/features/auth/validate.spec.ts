@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { text } from '$lib/fields/text/index.js';
 import { collection, create } from '$lib/core/prototype/collection/definition.js';
-import { validateWithFeatures } from '../registry.js';
+import { validateWithFeatures } from '../fold.js';
 import { validateAuth } from './validate.js';
 
 /**

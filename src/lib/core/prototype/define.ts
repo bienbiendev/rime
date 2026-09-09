@@ -28,7 +28,7 @@ import type { GenericDoc } from './types.js';
  */
 export type BuiltPrototype = BuiltArea | BuiltCollection;
 
-export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Accessor = unknown> = {
+export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype> = {
   /** The kind's name, and the `type` every config it builds carries. */
   name: string;
 
@@ -58,9 +58,6 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
    * a list holding several cannot promise any of them that shape.
    */
   augments?: readonly ((config: any) => any)[];
-
-  /** The config member instances are authored under — `collections`, `areas`. */
-  configKey: string;
 
   /**
    * What a document is called when no field is marked as the title.
@@ -92,12 +89,6 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
   boot?: (args: PrototypeBootArgs<C>) => Promise<void>;
 
   /**
-   * The local API — what `rime.<name>(slug)` hands back. `buildPrototypeApi` adds `blank` and
-   * `system` around it, since every prototype has them.
-   */
-  api?: (ctx: PrototypeApiContext<C>) => Dic;
-
-  /**
    * The REST surface, keyed by sub-path **under `/api/[slug=<name>]`** — `''`, `'[id]'`,
    * `'[id]/duplicate'`. Not an absolute pathname like a plugin's: a prototype has no URL of its
    * own, only slugs the author's config supplies.
@@ -106,14 +97,6 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
    * dispatches through it, so an endpoint exists by being declared here and nowhere else.
    */
   rest?: Record<string, RouteConfig>;
-
-  /**
-   * Type-only. The accessor this definition contributes to `event.locals.rime`, carrying the slug
-   * literals a mapped type cannot recover from a runtime registry.
-   *
-   * Never assigned — the same `$Infer…` device `BuildConfig` uses. See accessors.server.ts.
-   */
-  readonly $InferAccessor: Accessor;
 };
 
 export type PrototypeBootArgs<C extends BuiltPrototype = BuiltPrototype> = {
@@ -176,23 +159,11 @@ export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
   cached<T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T>;
 };
 
-/** Whatever the definition's `api` returned, plus the two members every prototype has. */
-export type PrototypeApi<A, Doc = GenericDoc> = A & {
-  blank(): Doc;
-  /**
-   * The same API, telling the pipeline that rime is the caller. `system(false)` hands this one
-   * back unchanged, which is what lets `system(someBoolean)` read as "escalate if needed".
-   */
-  system(isSystem?: boolean): PrototypeApi<A, Doc>;
-};
+type PrototypeOptions<C extends BuiltPrototype> = Partial<Omit<PrototypeDefinition<C>, 'create'>>;
 
-type PrototypeOptions<C extends BuiltPrototype> = Partial<
-  Omit<PrototypeDefinition<C>, '$InferAccessor' | 'create'>
->;
-
-export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Accessor = unknown>(
+export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
   options: PrototypeOptions<C> = {}
-): PrototypeDefinition<C, Accessor> => {
+): PrototypeDefinition<C> => {
   const name = options.name ?? '';
   // Defaulted rather than optional: `buildPipeline` filters it on every config, and a prototype
   // with no features is a real case. `hooks` stays optional — a missing timing is already none.
@@ -241,14 +212,12 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Acces
   return {
     name,
     singleton: options.singleton ?? false,
-    configKey: options.configKey ?? '',
     titleFallback,
     features,
     augments,
     create,
     hooks: options.hooks,
     boot: options.boot,
-    api: options.api,
     rest: options.rest
-  } as PrototypeDefinition<C, Accessor>;
+  } as PrototypeDefinition<C>;
 };

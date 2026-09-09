@@ -2,7 +2,7 @@ import { IS_RIME_REPO, PACKAGE_NAME } from '$lib/core/constants.server.js';
 import cache from '$lib/core/dev/cache.server.js';
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
 import type { FeatureDefinition } from '$lib/core/features/define.js';
-import { docTypeWithFeatures } from '$lib/core/features/registry.js';
+import { docTypeWithFeatures } from '$lib/core/features/fold.js';
 import { area, collection } from '$lib/core/prototype/index.js';
 
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';

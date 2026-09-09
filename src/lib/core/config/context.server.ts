@@ -1,7 +1,7 @@
 import type { AreaSlug, CollectionSlug, Config, PrototypeSlug } from '$lib/types.js';
 import { RimeError } from '../errors/index.js';
 import type { BuildConfig } from './build.server.js';
-import { shadowOf } from '../features/registry.js';
+import { shadowOf } from '../features/fold.js';
 import { area, collection } from '$lib/core/prototype/index.js';
 
 /**

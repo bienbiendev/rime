@@ -1,6 +1,6 @@
 import type { Config } from '$lib/core/config/types.js';
 import { area, collection } from '$lib/core/prototype/index.js';
-import { columnsOf, shadowOf, tablesOf } from '$lib/core/features/registry.js';
+import { columnsOf, distinctFeatures, shadowOf, tablesOf } from '$lib/core/features/fold.js';
 import { baseTableName, declaredTableProperty, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
 import { toPascalCase } from '$lib/util/string.js';
@@ -146,7 +146,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
   // unconditionally plus `templateAPIKey` behind a `authConfig(prototype)?.type === 'apiKey'`
   // sniff — the generator reading a feature's config member to decide what to emit. Asked of the
   // whole config, which is the scope the question has.
-  for (const table of tablesOf([collection, area], config)) {
+  for (const table of tablesOf(distinctFeatures([collection, area]), config)) {
     schema.push(templateDeclaredTable(table));
     enumTables.push(declaredTableProperty(table.slug));
   }

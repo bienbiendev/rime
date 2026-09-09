@@ -1,6 +1,7 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
 import type { RegisterArea } from '$lib/index.js';
-import type { PrototypeApi, PrototypeApiContext } from '../define.js';
+import type { PrototypeApiContext } from '../define.js';
+import { withSystem, type PrototypeApiArgs } from '../api.server.js';
 import type { GenericDoc } from '../types.js';
 import { find, type FindArgs } from './operations/find.js';
 import { update, type UpdateArgs } from './operations/update.js';
@@ -8,14 +9,23 @@ import { update, type UpdateArgs } from './operations/update.js';
 type Ctx = PrototypeApiContext<BuiltArea>;
 
 /**
- * The local API an area provides: exactly two operations.
+ * Everything `rime.area('settings')` hands back: two operations, a config and a blank.
  *
  * There is no `create` and no `delete` — not because they are switched off somewhere, but
  * because a singleton has no second document to make and nothing left to read if its only one
  * goes. Nor is there an id anywhere in these signatures. That is what "singleton" buys, and it
  * is why this is a separate definition rather than a collection with a flag.
+ *
+ * The whole surface is here, `config` and `blank` included; only `system` is composed on, by
+ * `withSystem`, because it has to re-enter this builder.
  */
-export const api = <Doc extends GenericDoc>(ctx: Ctx) => ({
+const shape = <Doc extends GenericDoc>(ctx: Ctx) => ({
+  /** The built config this API acts on. */
+  config: ctx.config,
+
+  /** A document of this area's shape with every default applied. */
+  blank: ctx.blank as () => Doc,
+
   /**
    * Retrieves the area's document
    *
@@ -76,11 +86,14 @@ export const api = <Doc extends GenericDoc>(ctx: Ctx) => ({
   }
 });
 
+/** Builds an area's API for one request. What `rime.area(slug)` calls. */
+export const areaApi = <Doc extends GenericDoc>(args: PrototypeApiArgs<BuiltArea>): AreaApi<Doc> =>
+  withSystem(args, shape<Doc>) as AreaApi<Doc>;
+
 /** What `rime.area(slug)` hands back. See the note on `CollectionApi` about the context. */
-export type AreaApi<Doc extends GenericDoc = GenericDoc> = PrototypeApi<
-  ReturnType<typeof api<Doc>>,
-  Doc
-> & { config: BuiltArea };
+export type AreaApi<Doc extends GenericDoc = GenericDoc> = ReturnType<typeof shape<Doc>> & {
+  system(isSystem?: boolean): AreaApi<Doc>;
+};
 
 export type AreaAccessor = <Slug extends keyof RegisterArea>(
   slug: Slug

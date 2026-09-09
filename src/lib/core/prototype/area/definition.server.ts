@@ -1,23 +1,20 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
-import { seedWithFeatures } from '$lib/core/features/registry.js';
+import { seedWithFeatures } from '$lib/core/features/fold.js';
 import { createBlankDocument } from '../doc.js';
-import { api, type AreaAccessor } from './api.server.js';
 import { area as base } from './definition.js';
 import { areaHooks } from './hooks.server.js';
 import { rest } from './rest/index.server.js';
 
 /**
- * The server half: the same area, plus `api`, `rest` and the boot step.
+ * The server half: the same area, plus `rest` and the boot step.
  *
  * `boot` is the consequence of `singleton: true`: nothing at runtime may create the row, so it has
  * to exist before requests arrive. Doing it here keeps writes off the read path, and makes an
  * area's creation time and locale a property of the config rather than of its first reader.
  */
-export const area = definePrototype<BuiltArea, AreaAccessor>({
+export const area = definePrototype<BuiltArea>({
   ...base,
-
-  api: (ctx) => api(ctx),
 
   rest,
 

@@ -2,7 +2,6 @@ import type { GetRegisterType } from '$lib/index.js';
 import type { ColumnBaseConfig, ColumnDataType } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { SQLiteColumn, SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
-import type { PrototypeSlug } from '../types.js';
 
 // Basic types needed across multiple files
 export type GenericAdapteFacadeArgs = {
@@ -27,4 +26,3 @@ export type GenericTable = SQLiteTableWithColumns<{
 
 export type GenericTables = Record<string, GenericTable | SQLiteTableWithColumns<any>>;
 
-export type TableLocaleName = `${PrototypeSlug}Locales`;

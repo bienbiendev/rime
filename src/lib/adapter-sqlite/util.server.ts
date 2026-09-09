@@ -5,8 +5,7 @@ import { randomId } from '$lib/util/random.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { baseFieldNames } from '$lib/core/fields/util.js';
 import type { Dic } from '$lib/util/types.js';
-import { and, eq, getTableColumns, Table } from 'drizzle-orm';
-import { getTableConfig } from 'drizzle-orm/sqlite-core';
+import { and, eq, getTableColumns } from 'drizzle-orm';
 
 /**
  * Main function to generated primaryKeys
@@ -213,14 +212,6 @@ export function columnsParams({ table, select }: { table: Dic; select?: string[]
     }
   }
   return Object.keys(selectColumns).length ? selectColumns : undefined;
-}
-
-/**
- * Get the primary key name given a table
- */
-export function getPrimaryKey(table: Table) {
-  const columnsPrimary = getTableConfig(table).columns.filter((c) => c.primary);
-  return columnsPrimary.length ? columnsPrimary[0].name : 'id';
 }
 
 /**

@@ -232,7 +232,7 @@ is why `references` names a **slug** rather than being derived from a relation f
 
 ```ts
 // adapter-sqlite/generate-schema/index.server.ts
-import { tablesOf } from '$lib/core/features/registry.js';
+import { tablesOf } from '$lib/core/features/fold.js';
 
 for (const declaration of tablesOf(config)) {
   schema.push(templateDeclaredTable(declaration));
@@ -276,7 +276,7 @@ const toSchemaColumn = (column: ColumnDeclaration) => {
 ### 4.2 The fold
 
 ```ts
-// core/features/registry.ts — the same shape as shadowOf / blankWithFeatures
+// core/features/fold.ts — the same shape as shadowOf / blankWithFeatures
 export const tablesOf = (features: FeatureDefinition[], config: Dic): TableDeclaration[] =>
   features.flatMap((feature) => (feature.enabled(config) ? (feature.tables?.(config) ?? []) : []));
 

@@ -1,69 +1,78 @@
 import type { Dic } from '$lib/util/types.js';
+import type { FeatureDefinition } from '$lib/core/features/define.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import type { BuiltPrototype, PrototypeApiContext, PrototypeDefinition } from './define.js';
+import type { BuiltPrototype, PrototypeApiContext } from './define.js';
 import type { GenericDoc } from './types.js';
-import { blankWithFeatures, readQueryOf } from '../features/registry.js';
+import { blankWithFeatures, readQueryOf } from '../features/fold.js';
 import { createBlankDocument } from './doc.js';
 
 /**
- * The plumbing every prototype's local API needs, written once.
+ * The two pieces a prototype's local API is composed from. **Not a base it is fitted into.**
  *
- * `CollectionAPI` and `AreaAPI` were two classes with the same private half — the same locale
- * fallback, the same blank document, the same `system()` clone, and the same cache wrapper
- * spelled out at each cached read. None of that is about being a collection or an area, so none
- * of it belongs to either; a definition should only have to say what it lets a caller *do*.
+ * This used to be `buildPrototypeApi({ definition, … })`: core assembled the API, called back
+ * into `definition.api(ctx)` for the middle of it, and appended `blank` and `system` on the
+ * prototype's behalf. So `rime.collection('pages')` was three files deep and no file said what
+ * the object actually had on it — `collection/api.server.ts` listed the verbs and then a comment
+ * explaining which members were somebody else's.
+ *
+ * Now each prototype states its whole surface in its own `api.server.ts` and reaches for these
+ * two when it wants them. Nothing here knows a prototype has a `blank`, or a `find`, or anything.
  */
 
-type BuildArgs<C extends BuiltPrototype> = {
-  definition: PrototypeDefinition<C, unknown>;
+/** What building a prototype's API for one request needs. */
+export type PrototypeApiArgs<C extends BuiltPrototype> = {
   config: C;
+  /** The features extending this prototype — the definition's own list, passed by the caller. */
+  features: FeatureDefinition[];
   event: RequestEvent;
   defaultLocale: string | undefined;
 };
 
 /**
- * Builds a prototype's local API for one request.
+ * Adds `.system()` to an API: the same API over an escalated context.
  *
- * `system()` is here rather than in a definition because it has to re-enter this builder: a
- * system call is the same API over a different context, not a mutable flag on a shared object.
+ * A combinator rather than a member a prototype could write itself, because a system call has to
+ * *re-enter* the builder — it is the same API over a different context, not a mutable flag on a
+ * shared object. `system(false)` hands back the API it was called on, which is what lets
+ * `system(someBoolean)` read as "escalate if needed".
  */
-export const buildPrototypeApi = <C extends BuiltPrototype>(args: BuildArgs<C>): Dic => {
-  const build = (isSystemOperation: boolean): Dic => {
-    const ctx = createPrototypeApiContext({ ...args, isSystemOperation });
-
-    const api: Dic = {
-      config: ctx.config,
-      ...args.definition.api?.(ctx),
-      blank: ctx.blank
+export const withSystem = <C extends BuiltPrototype, A extends Dic>(
+  args: PrototypeApiArgs<C>,
+  build: (ctx: PrototypeApiContext<C>) => A
+): A & { system(isSystem?: boolean): A } => {
+  const make = (isSystemOperation: boolean) => {
+    const api = build(prototypeContext({ ...args, isSystemOperation })) as A & {
+      system(isSystem?: boolean): A;
     };
-
-    // Matching the classes: escalating always builds a fresh API, and `system(false)` returns
-    // this one — so it never demotes a system API that a caller passed a computed flag to.
-    api.system = (isSystem: boolean = true) => (isSystem ? build(true) : api);
-
+    api.system = (isSystem: boolean = true) => (isSystem ? make(true) : api);
     return api;
   };
 
-  return build(false);
+  return make(false);
 };
 
-const createPrototypeApiContext = <C extends BuiltPrototype>(
-  args: BuildArgs<C> & { isSystemOperation: boolean }
+/**
+ * The per-call plumbing a prototype's operations are handed — the locale fallback, the blank
+ * document, the content query, the cache wrapper.
+ *
+ * Per-call, not per-process: `isSystemOperation` is part of it, so `.system()` is a second
+ * context rather than a flag anybody has to remember to forward.
+ */
+export const prototypeContext = <C extends BuiltPrototype>(
+  args: PrototypeApiArgs<C> & { isSystemOperation: boolean }
 ): PrototypeApiContext<C> => {
-  const { definition, config, event, defaultLocale, isSystemOperation } = args;
+  const { config, features, event, defaultLocale, isSystemOperation } = args;
 
   return {
     config,
     event,
     defaultLocale,
     isSystemOperation,
+    features,
 
     fallbackLocale: (locale?: string) => locale || event.locals.locale || defaultLocale,
 
-    features: definition.features,
-
-    contentQuery: (params, intent = 'read') =>
-      readQueryOf(definition.features, config, params, intent),
+    contentQuery: (params, intent = 'read') => readQueryOf(features, config, params, intent),
 
     /**
      * A blank document of this config's shape, after the features it enables have shaped it.
@@ -73,11 +82,7 @@ const createPrototypeApiContext = <C extends BuiltPrototype>(
      * nothing here names a feature or asks what a config declares.
      */
     blank: () =>
-      blankWithFeatures(
-        definition.features,
-        createBlankDocument(config, event),
-        config
-      ) as GenericDoc,
+      blankWithFeatures(features, createBlankDocument(config, event), config) as GenericDoc,
 
     cached: <T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T> => {
       if (!event.locals.cacheEnabled || isSystemOperation) return read();

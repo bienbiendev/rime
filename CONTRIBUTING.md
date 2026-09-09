@@ -237,7 +237,7 @@ names a feature**. Three consequences:
    order. Every `FeatureConfigure` declaration is additive (`T & {…}`), so composition order does
    not matter; the list exists because an intersection built from a key union stays deferred for a
    **generic** `T`, and `bootRime<C>` reads `config.panel.language` while `C` is a type parameter.
-   `features/registry.spec.ts` asserts both invariants at compile time.
+   `features/fold.spec.ts` asserts both invariants at compile time.
 2. **A `configure` is handed the prototypes; it must never import one.** See rule 3.
 3. **A default with exactly one reader does not need a config step at all.** `grep` the member
    first — one consumer means `??` at that line.

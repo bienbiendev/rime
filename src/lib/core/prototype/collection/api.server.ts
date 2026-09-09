@@ -1,7 +1,8 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import type { RegisterCollection } from '$lib/index.js';
-import type { PrototypeApi, PrototypeApiContext } from '../define.js';
+import type { PrototypeApiContext } from '../define.js';
+import { withSystem, type PrototypeApiArgs } from '../api.server.js';
 import type { CollectionSlug } from '../types.js';
 import { create, type CreateArgs } from './operations/create.js';
 import { deleteById, type DeleteByIdArgs } from './operations/delete-by-id.js';
@@ -14,20 +15,19 @@ import { updateById, type UpdateByIdArgs } from './operations/update-by-id.js';
 type Ctx = PrototypeApiContext<BuiltCollection>;
 
 /**
- * The local API a collection provides.
+ * Everything `rime.collection('pages')` hands back, declared here in the collection's own folder,
+ * next to the operations that implement it.
  *
- * Everything a caller reaches through `rime.collection('pages')` is declared here, in the
- * collection's own folder, next to the operations that implement it. `blank`, `system` and
- * `config` are not — they belong to every prototype, so `buildPrototypeApi` adds them.
+ * **Its whole surface**, `config` and `blank` included. Those used to be appended by a shared
+ * `buildPrototypeApi`, which meant no single file said what a collection's API actually was.
+ * `system` is the one exception, and it is composed rather than appended — see `withSystem`.
  */
-export const api = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
-  /**
-   * Whether this collection carries authentication.
-   *
-   * @example
-   * if (rime.collection('users').isAuth) { … }
-   */
-  isAuth: !!ctx.config.auth,
+const shape = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
+  /** The built config this API acts on. */
+  config: ctx.config,
+
+  /** A document of this collection's shape with every default applied, and no id. */
+  blank: ctx.blank as () => Doc,
 
   /**
    * Creates a new document in the collection
@@ -197,6 +197,11 @@ export const api = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) =>
   }
 });
 
+/** Builds a collection's API for one request. What `rime.collection(slug)` calls. */
+export const collectionApi = <Doc extends RegisterCollection[CollectionSlug]>(
+  args: PrototypeApiArgs<BuiltCollection>
+): CollectionApi<Doc> => withSystem(args, shape<Doc>) as CollectionApi<Doc>;
+
 /**
  * What `rime.collection(slug)` hands back.
  *
@@ -209,7 +214,7 @@ export const api = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) =>
  */
 export type CollectionApi<
   Doc extends RegisterCollection[CollectionSlug] = RegisterCollection[CollectionSlug]
-> = PrototypeApi<ReturnType<typeof api<Doc>>, Doc> & { config: BuiltCollection };
+> = ReturnType<typeof shape<Doc>> & { system(isSystem?: boolean): CollectionApi<Doc> };
 
 export type CollectionAccessor = <Slug extends keyof RegisterCollection>(
   slug: Slug

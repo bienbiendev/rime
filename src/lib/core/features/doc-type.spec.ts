@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { collection, create } from '$lib/core/prototype/collection/definition.js';
 import { text } from '$lib/fields/text/index.js';
-import { docTypeWithFeatures } from './registry.js';
+import { docTypeWithFeatures } from './fold.js';
 
 /**
  * What each feature adds to a generated document type.

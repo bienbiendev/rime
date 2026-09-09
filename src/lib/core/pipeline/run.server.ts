@@ -2,7 +2,7 @@ import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { FeatureDefinition, WritePlan } from '$lib/core/features/define.js';
-import { writePlanWithFeatures } from '$lib/core/features/registry.js';
+import { writePlanWithFeatures } from '$lib/core/features/fold.js';
 import type { DocType, GenericDoc, PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';

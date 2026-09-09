@@ -36,13 +36,6 @@ export const withDirectoriesSuffix = (slug: string) =>
 export const directoriesOf = (config: { slug: string; _shadowOf?: string }) =>
   withDirectoriesSuffix(config._shadowOf ?? config.slug);
 
-/** `$mediasDirectories` -> `medias` */
-export const withoutDirectoriesSuffix = (slug: string) =>
-  slug.replace(/^\$/, '').replace(new RegExp(`${MARKER}$`), '') as CollectionSlug;
-
-/** `$mediasDirectories` -> true */
-export const hasDirectoriesSuffix = (slug: string) => slug.endsWith(MARKER);
-
 /**
  * The URL form of a collection's directories sibling: `medias` -> `medias-directories`.
  *

@@ -284,8 +284,6 @@ export type ShadowDeclaration = {
   slug: string;
 };
 
-/** Alias for call sites that read better naming the registered thing. */
-export type RegisteredFeature = FeatureDefinition;
 
 /**
  * Generic in the *name only*, so `name` survives as a literal and a prototype's `features` list

@@ -12,7 +12,7 @@ import type { IconProps } from '@lucide/svelte';
 import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
 import type { Component } from 'svelte';
 import type { FieldBuilder } from '../fields/builders/index.js';
-import type { BaseDoc, DocType } from '../prototype/types.js';
+import type { DocType } from '../prototype/types.js';
 
 /**
  * What an author writes.
@@ -179,7 +179,6 @@ export type CollectionLabel = {
 };
 
 export type VersionsConfig = { draft?: boolean; autoSave?: boolean; maxVersions?: number };
-export type UrlDefinition<T extends BaseDoc = BaseDoc> = (document: T) => string;
 
 type PrototypeConfig<S extends string = string> = {
   slug: S;

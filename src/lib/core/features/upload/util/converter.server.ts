@@ -2,8 +2,8 @@ import type { JsonFile } from '$lib/core/features/upload/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { logger } from '$lib/core/logger.server.js';
 import { fileSizeToString } from '$lib/util/file.js';
-import fs from 'fs';
 import { readFile } from 'fs/promises';
+import fs from 'fs';
 import path from 'path';
 import { getExtensionFromMimeType, getMimeTypeFromExtension } from './mime.js';
 
@@ -64,6 +64,7 @@ export const jsonFileToFile = (jsonFile: JsonFile) => {
   }
 };
 
+/** Used by the e2e suites — each fixture's `api.test.ts` — to post an upload as base64. */
 export async function filePathToBase64(filePath: string): Promise<string> {
   try {
     const data = await readFile(filePath);
