@@ -4,11 +4,11 @@ import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { Config, User } from '$lib/types.js';
 import { error, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
 import { access } from '$lib/util/index.js';
-import { BETTER_AUTH_ROLES } from '../features/auth/constant.server.js';
-import { userAttributes } from '../features/auth/user.server.js';
-import { hasAuthUser } from '../features/auth/better-auth-tables.server.js';
-import { logger } from '../logger.server.js';
-import type { ConfigContext, RimeContext } from '../rime.server.js';
+import { BETTER_AUTH_ROLES } from '../constant.server.js';
+import { userAttributes } from '../user.server.js';
+import { hasAuthUser } from '../better-auth-tables.server.js';
+import { logger } from '$lib/core/logger.server.js';
+import type { ConfigContext, RimeContext } from '$lib/core/rime.server.js';
 
 const dev = process.env.NODE_ENV === 'development';
 

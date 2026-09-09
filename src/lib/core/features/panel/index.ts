@@ -24,7 +24,7 @@ import { augmentIcons } from './icons.js';
  * `requires: ['auth']` is the other half — the `staff` collection has to be there to get an icon.
  *
  * Who may open the panel is not here: `panel.$access` has one reader
- * (`handlers/auth.server.ts`), which defaults it to an `isAdmin` check itself.
+ * (`features/auth/handler/index.server.ts`), which defaults it to an `isAdmin` check itself.
  */
 export const panel = defineFeature({
   name: 'panel',

@@ -2,7 +2,6 @@ import type { Config } from '../config/types.js';
 import { featureHandlers } from '../features/registry.js';
 import { prototypes } from '../prototype/registry.js';
 import type { Rime } from '../rime.server.js';
-import { handleAuth } from './auth.server.js';
 import { createCMSHandler } from './main.server.js';
 import { createPluginsHandler } from './plugins.server.js';
 import { handleRoutes } from './routes.server.js';
@@ -13,9 +12,9 @@ import { handleRoutes } from './routes.server.js';
 export default async function <const C extends Config>(rime: Promise<Rime<C>>) {
   return [
     createCMSHandler(await rime),
-    handleAuth,
-    // Whatever the registered features contribute — `cors` today, in the slot `handleCORS` held
-    // when this list named it.
+    // Whatever the registered features contribute. `handleAuth` was named here until it moved onto
+    // the feature it is entirely about; `featureHandlers` folds prototype-then-list order, and
+    // `collection` lists `auth` before `cors`, so this is the same sequence the list spelled out.
     ...featureHandlers(prototypes),
     ...createPluginsHandler(await rime),
     handleRoutes

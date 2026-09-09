@@ -1,4 +1,4 @@
-import { augmentAuth, augmentStaff, authHooks, blankAuthDocument } from '$rime/modules';
+import { augmentAuth, augmentStaff, authHooks, blankAuthDocument, handleAuth } from '$rime/modules';
 import { defineFeature } from '../define.js';
 import type { WithNormalizedAuth } from './augment.js';
 import { authColumns, authTables } from './tables.js';
@@ -65,7 +65,21 @@ export const auth = defineFeature({
    * is, since `create` runs the augments on both sides — and a `.server.ts` import here drags the
    * whole hook folder into the browser graph.
    */
-  hooks: authHooks
+  hooks: authHooks,
+
+  /**
+   * Signing a request in, and deciding what it may reach.
+   *
+   * Was `core/handlers/auth.server.ts`, named first in `handlers/index.ts` — 253 lines of which
+   * every one is about auth, in core, importing three things out of this feature to do its work.
+   * A feature contributing a handle is `FeatureDefinition.handler`, which `cors` already uses, and
+   * `featureHandlers` collects them in prototype-then-list order: `collection` lists `auth` before
+   * `cors`, so the two still run in the order the hand-written list put them.
+   *
+   * Ungated by `enabled`, like every feature handler — a request is authenticated whether or not
+   * any *collection* declares `auth`, because signing into the panel does not depend on one.
+   */
+  handler: handleAuth
 });
 
 /**
