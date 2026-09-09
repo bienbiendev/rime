@@ -24,9 +24,9 @@ import type { AnyHook, HookTiming } from '$lib/core/pipeline/types.js';
  *
  * No create, no delete: a second row is not a thing.
  *
- * The order is written, not computed — see the long note in `collection/hooks.server.ts`. An area
- * lists fewer features than a collection (no `auth`, `upload`, `nested` or `thumbnail`), so it
- * places fewer hooks; `buildPipeline` refuses to boot if a feature contributes one this does not.
+ * The order is written, not computed — see the long note in `collection/hooks.server.ts`, which
+ * also says what nothing checks. An area lists fewer features than a collection (no `auth`,
+ * `upload`, `nested` or `thumbnail`), so it places fewer hooks.
  */
 export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   beforeOperation: [authorize],

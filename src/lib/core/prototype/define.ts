@@ -79,14 +79,6 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Acces
   hooks?: Partial<Record<HookTiming, AnyHook[]>>;
 
   /**
-   * What this prototype adds to the **whole** config rather than to one of its own kind.
-   *
-   * For both prototypes here that is one line — its own list exists, empty if the author named
-   * none — so nothing downstream has to guard it. The type side is declared in register.ts.
-   */
-  configure?: (config: any) => any;
-
-  /**
    * The config factory. **Composed by `definePrototype`, never passed in**: `augments`, then
    * `features`, then the shaping every prototype does the same way.
    *
@@ -255,7 +247,6 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Acces
     augments,
     create,
     hooks: options.hooks,
-    configure: options.configure,
     boot: options.boot,
     api: options.api,
     rest: options.rest

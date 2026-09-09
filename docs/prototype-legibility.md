@@ -1,5 +1,8 @@
 # Less abstraction in `prototype/`
 
+**Done.** Stage 1 is `8bb0ccb6`, Stage 2 the commit after it. What follows is the plan as written,
+with an outcome section at the end.
+
 The decoupling worked; what it cost is legibility. `core/prototype/` has no visible entry point,
 and `prototypeNames` / `protos` / `prototypes` are three views of the same two objects.
 
@@ -9,16 +12,16 @@ that let core avoid ever writing the words `collection` and `area`.
 
 ## What goes
 
-| goes                                                    | replaced by                                  |
-| ------------------------------------------------------- | -------------------------------------------- |
-| `prototypeNames`, `protos`, `prototypes` (both halves)   | `import { collection, area }`                 |
-| `prototypeEntries`, `prototypeConfigs`                   | `config.collections` / `config.areas`         |
-| `prototype/index.server.ts`                              | server callers name `*/definition.server.js`  |
-| `prototype/hooks.server.ts` (`prototypeHooks`)           | `collectionHooks` / `areaHooks` by name       |
-| `prototype/register.ts` + spec                           | `Config` names its two lists                  |
-| `configureWithPrototypes`, both `configure` props        | two `?? []` lines in the config chain         |
-| `configCtx.byPrototype`                                  | the two lists                                 |
-| `RegisteredPrototype`, `$InferAccessor`                  | `PrototypeDefinition`                         |
+| goes                                                   | replaced by                                  |
+| ------------------------------------------------------ | -------------------------------------------- |
+| `prototypeNames`, `protos`, `prototypes` (both halves) | `import { collection, area }`                |
+| `prototypeEntries`, `prototypeConfigs`                 | `config.collections` / `config.areas`        |
+| `prototype/index.server.ts`                            | server callers name `*/definition.server.js` |
+| `prototype/hooks.server.ts` (`prototypeHooks`)         | `collectionHooks` / `areaHooks` by name      |
+| `prototype/register.ts` + spec                         | `Config` names its two lists                 |
+| `configureWithPrototypes`, both `configure` props      | two `?? []` lines in the config chain        |
+| `configCtx.byPrototype`                                | the two lists                                |
+| `RegisteredPrototype`, `$InferAccessor`                | `PrototypeDefinition`                        |
 
 The `@decouple` comments in `config/index.ts`, `config/index.server.ts` and
 `config/context.server.ts` ask for exactly the abstraction being removed. They go with it.
@@ -82,3 +85,45 @@ The chart is the gate that matters on Stage 1. Rule 3's story is a definition si
 ## Not in scope
 
 `singleton`, the adapter contract, any feature seam, and `docs/decoupling.md` §7.
+
+---
+
+## Outcome
+
+Both stages landed. Two things came out of doing it that the plan did not predict.
+
+**`HookTiming` and `AnyHook` were still on `FeatureDefinition`.** A timing was a feature's
+vocabulary while features carried their own hook lists; they stopped when the order became
+written. Both moved to `pipeline/types.ts` in Stage 1.
+
+**Rule 4's boot guard does not exist.** Three places said `buildPipeline` "refuses to boot if a
+feature contributes a hook no prototype places" — CONTRIBUTING, and both `hooks.server.ts` files.
+There is no such check, and there is nothing left to write one against: a feature carries no hook
+list any more. So a hook a feature owns and no prototype places simply never runs, silently. The
+claim is now stated as the gap it is, in all three places.
+
+`getByPrototype` went too. Its only callers were the two accessors, and `getCollection` /
+`getArea` already existed and threw the same way.
+
+### Gates
+
+| gate                                                         | Stage 1             | Stage 2                 |
+| ------------------------------------------------------------ | ------------------- | ----------------------- |
+| `check` (basic fixture)                                      | 13 — baseline       | 13 — baseline           |
+| `vitest`                                                     | 185                 | 182 (register.spec cut) |
+| `eslint src/lib/core`, adapter                               | clean               | clean                   |
+| `check:circular-deps`                                        | 3                   | 3                       |
+| generated schema, types, routes, param matchers, hooks chart | byte-identical      | byte-identical          |
+| `test:basic`                                                 | 92 passed, 5 failed | 92 passed, 5 failed     |
+
+The five e2e failures are the API-key tests, and they are environmental: creating an API key
+requires SMTP by design (`Can't create API KEY without smtp config`, then a real `sendMail`), and
+the configured host refuses connections — `ECONNREFUSED 193.70.18.144:465`, confirmed with a
+direct `transport.verify()`. Same five before and after both stages.
+
+## Still open
+
+- `adapter-sqlite/registry.server.ts` and whether the adapter should know `collection` and `area`
+  rather than `singleton: boolean`.
+- `pipeline/build-pipeline.server.ts` — three exports, one of them a four-line wrapper, one of them
+  codegen's only, and a stale doc block describing a function that is not the one below it.

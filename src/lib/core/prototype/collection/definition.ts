@@ -59,19 +59,7 @@ export const collection = definePrototype({
    * declares its return type instead (rule 1), so there is nothing left for a second export to
    * carry and the order is stated exactly once.
    */
-  features: [auth, panel, upload, nested, versions, url, title, thumbnail, metas, cors],
-
-  /**
-   * A config always has a `collections` list, empty if the user named none.
-   *
-   * One line, but it belongs here rather than in the config factory: every step downstream reads
-   * `config.collections` without guarding, and what makes that sound is a statement about what a
-   * collection is — not something core should be defaulting on the kind's behalf.
-   */
-  configure: <T extends { collections?: BuiltCollection[] }>(config: T) => ({
-    ...config,
-    collections: config.collections || []
-  })
+  features: [auth, panel, upload, nested, versions, url, title, thumbnail, metas, cors]
 });
 
 /**
@@ -93,14 +81,3 @@ export const create = <S extends string>(
   // definition is, and the client half is written against `BuiltPrototype` so that the registry
   // can hold both in one list.
   collection.create(slug, config) as BuiltCollection;
-
-declare module '$lib/core/prototype/register.js' {
-  /** The member an author writes its instances under. `Config` has no `collections` of its own. */
-  interface PrototypeMembers {
-    collections?: BuiltCollection[];
-  }
-
-  interface PrototypeConfigure<T> {
-    collection: T & { collections: BuiltCollection[] };
-  }
-}

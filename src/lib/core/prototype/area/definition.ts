@@ -36,13 +36,7 @@ export const area = definePrototype({
    * area is one document, so there is nothing to sign in as, nothing listing it, and nothing for
    * it to be nested in — so it simply does not list them.
    */
-  features: [panel, versions, url, title, metas, cors],
-
-  /** A config always has an `areas` list, empty if the user named none. See collection's. */
-  configure: <T extends { areas?: BuiltArea[] }>(config: T) => ({
-    ...config,
-    areas: config.areas || []
-  })
+  features: [panel, versions, url, title, metas, cors]
 });
 
 /**
@@ -52,14 +46,3 @@ export const area = definePrototype({
 export const create = <S extends string>(slug: S, config: AreaWithoutSlug<S>): BuiltArea =>
   // See the collection's for the cast.
   area.create(slug, config) as BuiltArea;
-
-declare module '$lib/core/prototype/register.js' {
-  /** The member an author writes its instances under. `Config` has no `areas` of its own. */
-  interface PrototypeMembers {
-    areas?: BuiltArea[];
-  }
-
-  interface PrototypeConfigure<T> {
-    area: T & { areas: BuiltArea[] };
-  }
-}

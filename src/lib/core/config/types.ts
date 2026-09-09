@@ -13,16 +13,21 @@ import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
 import type { Component } from 'svelte';
 import type { FieldBuilder } from '../fields/builders/index.js';
 import type { BaseDoc, DocType } from '../prototype/types.js';
-import type { PrototypeMembers } from '../prototype/register.js';
 
 /**
  * What an author writes.
  *
- * The prototype lists — `collections`, `areas` — are **not** here: each prototype merges its own
- * into `PrototypeMembers` beside its definition, and this extends that. Core owns the config's
- * transversal members and knows nothing about which kinds exist.
+ * The two prototype lists were merged in from beside each definition, through a
+ * `PrototypeMembers` interface this extended. That kept core from naming a kind and made the
+ * authoring surface of every config in the repo depend on a declaration-merging target whose
+ * failure mode is silence: an augmentation that stops being reachable leaves the interface empty
+ * and `config.collections` starts reading `any`, far from the cause.
  */
-export interface Config extends PrototypeMembers {
+export interface Config {
+  /** The collections an author writes. Optional here, defaulted to `[]` by the config chain. */
+  collections?: BuiltCollection[];
+  /** The areas an author writes. Same. */
+  areas?: BuiltArea[];
   /** If config.siteUrl is defined, a preview button is added
 	on the panel dahsboard, pointing to this url  */
   siteUrl?: string;
@@ -384,19 +389,15 @@ export type BuiltArea = Omit<Area<string>, 'versions'> & {
 // See BuiltAreaClient just above for why this isn't a narrowing Omit.
 export type BuiltCollectionClient = BuiltCollection;
 
-// export type Config = Omit<Config, 'collections' | 'areas'> & {
-// 	collections?: BuiltCollection[];
-// 	areas?: BuiltArea[];
-// };
-
 /**
  * What the config chain produced.
  *
- * `Required<PrototypeMembers>` is every prototype's list with the optionality gone — which is what
- * each prototype's `configure` guarantees by defaulting its own to `[]`, so downstream reads
- * `config.collections` without a guard. Same seam as `Config`, so neither names a kind.
+ * The two lists with the optionality gone — which is what the chain guarantees by defaulting each
+ * to `[]`, so downstream reads `config.collections` without a guard.
  */
-export type BuiltConfig = Required<PrototypeMembers> & {
+export type BuiltConfig = {
+  collections: BuiltCollection[];
+  areas: BuiltArea[];
   /** Database location relative to the root project ex: ./db/my-app.sqlite */
   $database: string;
   /** The database location */

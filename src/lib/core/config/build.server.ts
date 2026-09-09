@@ -1,7 +1,7 @@
 import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
 import { configureWithFeatures } from '../features/registry.js';
 import { area, collection } from '$lib/core/prototype/index.js';
-import { configureWithPrototypes } from './build.js';
+import { withPrototypeLists } from './build.js';
 import { resolvePipelines } from '$lib/core/pipeline/prototypes.server.js';
 import { createRime, type Rime } from '../rime.server.js';
 import { augmentPlugins } from './augment-plugins.js';
@@ -14,15 +14,16 @@ export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>>
 
 /**
  * The config chain: one step per layer, in the order they apply — prototypes define, features
- * augment and extend, plugins augment. Nothing here names a feature; each step folds whatever its
- * layer's registry holds, and what each contributes to the config's *type* is declared beside it
- * (prototype/register.ts, features/register.ts).
+ * augment and extend, plugins augment. Nothing here names a feature: the feature step folds
+ * whatever the two prototypes list, and what each feature contributes to the config's *type* is
+ * declared beside it (features/register.ts). The prototype step names both kinds, because there
+ * are two and they are both core's.
  *
  * A literal sequence rather than a loop, which `inference.spec.ts` guards: the narrowing at each
  * step is what carries the slug literals through to `event.locals.rime`.
  */
 function augmentConfig<T extends Config>(config: T) {
-  const withPrototypes = configureWithPrototypes(config);
+  const withPrototypes = withPrototypeLists(config);
   const withFeatures = configureWithFeatures([collection, area], withPrototypes);
   // Last, and after the features: every prototype config that exists by now — authored or derived
   // — has its pipeline resolved by the same step.

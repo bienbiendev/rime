@@ -1,27 +1,29 @@
 import { configureWithFeatures } from '../features/registry.js';
 import { area, collection } from '$lib/core/prototype/index.js';
-import type { ApplyPrototypeConfigure } from '$lib/core/prototype/register.js';
-import type { Dic } from '$lib/util/types.js';
-import type { SanitizedConfigClient } from './types.js';
+import type { BuiltArea, BuiltCollection, SanitizedConfigClient } from './types.js';
 import { augmentPlugins } from './augment-plugins.js';
 
 /**
- * Runs each prototype's whole-config `configure` — one line each, both of them the same line:
- * its own list exists, empty if the author named none, so nothing downstream has to guard it.
+ * Both prototype lists exist, empty if the author named none, so nothing downstream guards them.
  *
- * The type side is declared in prototype/register.ts, because `configure` is typed `(any) => any`
- * on the definition and calling it directly would answer `any`.
+ * Was two `configure` props on the definitions, folded by `configureWithPrototypes`, with the
+ * result's *type* declared through a `PrototypeConfigure` merging target and replayed by a
+ * recursive `ApplyPrototypeConfigure`. Three mechanisms for two `?? []`, and the type they
+ * produced is the one an object literal infers on its own.
  */
-export const configureWithPrototypes = <T extends Dic>(
+export const withPrototypeLists = <
+  T extends { collections?: BuiltCollection[]; areas?: BuiltArea[] }
+>(
   config: T
-): ApplyPrototypeConfigure<T, ['collection', 'area']> => {
-  const withCollections = collection.configure ? collection.configure(config) : config;
-  return (area.configure ? area.configure(withCollections) : withCollections) as never;
-};
+): T & { collections: BuiltCollection[]; areas: BuiltArea[] } => ({
+  ...config,
+  collections: config.collections ?? [],
+  areas: config.areas ?? []
+});
 
 /** The client chain, same three layers as build.server.ts — see the note there. */
 export const buildConfigClient = <C extends SanitizedConfigClient>(config: C) => {
-  const withPrototypes = configureWithPrototypes(config);
+  const withPrototypes = withPrototypeLists(config);
   const withFeatures = configureWithFeatures([collection, area], withPrototypes);
   const output = augmentPlugins(withFeatures);
   return output;

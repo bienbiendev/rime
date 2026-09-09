@@ -133,8 +133,9 @@ hooks (100 errors).
 
 Four places hold that line — check them first if a self-reference cascade returns:
 
-- `core/rime.server.ts` — `Rime` / `RimeContext` declared.
-- `core/prototype/registry.ts` — `prototypes: RegisteredPrototype[]` **annotated**.
+- `core/rime.server.ts` — `Rime` / `RimeContext` declared, and `buildAccessors` cast
+  `as PrototypeAccessors` rather than inferred from the two definitions it names.
+- `core/boot.server.ts` — the `registered` pair **annotated**, not inferred.
 - `core/prototype/accessors.server.ts` — reads from `api.server.ts`, which imports no hooks.
 - `core/features/auth/better-auth/instance.server.ts` — `RimeAuth` lives here so its _type_ can be
   named without naming `bootRime`.
@@ -190,12 +191,19 @@ misspelling did not disable a hook, it **hoisted it to the front of the timing**
 that is a security question: `preventUserMutations` rejects on `'name' in args.data`, so a default
 filled in before it turns an ordinary update into a 401.
 
-Two things a written order needs, and both are in `buildPipeline`:
+What a written order needs, and it is in `buildPipeline`:
 
-- **It refuses to boot** if a feature contributes a hook no prototype places. That hook would
-  simply never run and nothing else would say so — the one failure this trades for the resolver's.
 - **`sortDocumentProps` is in neither list.** Nothing may precede it and nothing may follow, so it
   is appended rather than placed; a list is for things whose position is a choice.
+
+What it does **not** have, despite three comments that claimed it: a check that every hook a
+feature owns is placed somewhere. There is nothing left to check it against — a feature carries no
+hook list any more — so an unplaced hook simply never runs, and nothing says so. That is the
+failure this trades for the resolver's, and the only thing standing against it is that the lists
+are read.
+
+> If you add a hook to a feature, add it to `collection/hooks.server.ts` and, where it applies,
+> `area/hooks.server.ts`. Nothing will tell you that you did not.
 
 The cost, stated once: **a consumer's hooks are appended, not interleaved.** They cannot land
 between two of the prototype's — though they still run before the finaliser, so a property they add
@@ -208,10 +216,16 @@ compared against a baseline taken on a different fixture reads as a regression t
 
 ### 6. Whole-config steps belong to whoever owns them
 
-| layer     | declares in                                       | folded by                 |
-| --------- | ------------------------------------------------- | ------------------------- |
-| prototype | `prototype/register.ts` — `PrototypeConfigure<T>` | `configureWithPrototypes` |
-| feature   | `features/register.ts` — `FeatureConfigure<T>`    | `configureWithFeatures`   |
+| layer     | declares in                                    | folded by               |
+| --------- | ---------------------------------------------- | ----------------------- |
+| prototype | nothing — `Config` names its two lists         | `withPrototypeLists`    |
+| feature   | `features/register.ts` — `FeatureConfigure<T>` | `configureWithFeatures` |
+
+The prototype row used to match the feature row: a `PrototypeConfigure<T>` merging target, a
+recursive `ApplyPrototypeConfigure`, and a `configure` prop on each definition. Three mechanisms
+for two `?? []`, producing a type an object literal infers on its own — and resting on a
+declaration-merging target whose failure mode is an empty interface and `config.collections`
+reading `any` far from the cause. There are two prototypes, both core's, so `Config` names them.
 
 The server chain is three lines — prototypes, features, plugins — and **nothing in `core/config/`
 names a feature**. Three consequences:
@@ -284,9 +298,9 @@ Two things this surfaced:
 - **What this rule is actually about is conditionality, not listing.** A prototype _does_ list
   every hook it can run — `prototype/collection/hooks.server.ts` — because the order is written
   down rather than computed. What went wrong with those two hooks was that they ran for configs
-  with no versions at all. `buildPipeline` filters the list by `feature.enabled(config)`, and
-  refuses to boot if a feature contributes a hook no prototype places, so a listed hook cannot
-  fire where its feature is off and an unlisted one cannot vanish silently.
+  with no versions at all. `buildPipeline` filters the list by `feature.enabled(config)`, so a
+  listed hook cannot fire where its feature is off. An unlisted one still vanishes silently; see
+  rule 4.
 
 ## Gates
 
