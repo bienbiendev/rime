@@ -1,6 +1,6 @@
 import type { Collection } from '$lib/core/config/types.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
+import { directoriesOf } from '$lib/core/features/upload/naming.js';
 import { augmentUpload as augmentUploadBase } from './module.js';
 import type { WithNormalizedUpload } from './types.js';
 
@@ -23,7 +23,7 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
 
   (collection.fields || []).forEach((field) => {
     if (field instanceof FormFieldBuilder && field.name === '_path') {
-      field.$references(withDirectoriesSuffix(config.slug), {
+      field.$references(directoriesOf(config), {
         onDelete: 'cascade',
         onUpdate: 'cascade'
       });

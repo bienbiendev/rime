@@ -1,6 +1,6 @@
 import { UPLOAD_PATH } from '$lib/core/features/upload/constant.js';
 import { logger } from '$lib/core/logger.server.js';
-import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
+import { directoriesOf } from '$lib/core/features/upload/naming.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { trycatch } from '$lib/util/function.js';
 import { getSegments } from '../util/path.js';
@@ -45,7 +45,7 @@ export const handlePathCreation = Hooks.beforeUpsert<'upload'>({
     const pathInfo = getSegments(args.data._path);
     args.data._path = pathInfo.path;
 
-    const directorySlug = withDirectoriesSuffix(args.config.slug);
+    const directorySlug = directoriesOf(args.config);
 
     const [, dir] = await trycatch(() =>
       rime.collection(directorySlug).findById({

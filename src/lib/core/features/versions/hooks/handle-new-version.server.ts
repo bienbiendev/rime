@@ -1,11 +1,10 @@
-import { filePathToFile } from '$lib/core/features/upload/util/converter.server.js';
+import { fileForDocument } from '$lib/core/features/upload/util/converter.server.js';
 import { VersionOperations } from '$lib/core/features/versions/strategy.js';
 import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { withVersionsSuffix } from '$lib/core/features/versions/naming.js';
 import { recursiveRemoveKeys } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
-import path from 'path';
 import type { BuiltArea, BuiltCollection } from '../../../../types.js';
 import type { ConfigMap } from '../../../pipeline/config-map/types.js';
 import { fallbackDataFromOriginal } from './fallback-data-from-original.js';
@@ -104,16 +103,18 @@ async function prepareDataForNewVersion(args: {
   const { config, originalDoc, originalConfigMap } = args;
   let data = { ...args.data };
 
-  const isCollection = config.type === 'collection';
-  // Add the original file if we are on an upload collection
-  if (isCollection && config.upload && !data.file && originalDoc.filename) {
-    // Create a File object from the existing file path
-    const filePath = path.resolve(process.cwd(), 'static', 'medias', originalDoc.filename);
-    try {
-      data.file = await filePathToFile(filePath);
-    } catch (err) {
-      console.error(`Failed to create file from path: ${filePath}`, err);
-    }
+  /**
+   * A new version of an upload document inherits the file the old one had, unless the write brings
+   * a new one — the version row has its own `filename`, so without this a revision of a document
+   * nobody re-uploaded to comes out with no file.
+   *
+   * This asked `upload` for two things: where it keeps its files, and how to turn a path into a
+   * `File`. It asks for one now. The remaining import is the genuine cross-feature dependency
+   * docs/decoupling.md § 4.6 names — what a new content row inherits is a question this feature
+   * has and only that one can answer — and it is one call rather than a copy of a convention.
+   */
+  if (config.type === 'collection' && config.upload && !data.file) {
+    data.file = (await fileForDocument(originalDoc)) ?? data.file;
   }
 
   // Use missing required data from original version

@@ -116,3 +116,28 @@ export async function filePathToFile(filePath: string): Promise<File> {
     throw new RimeError(RimeError.UPLOAD, `Failed to create File from path: ${error.message}`);
   }
 }
+
+/**
+ * The file a stored document already has, as a `File`.
+ *
+ * One call rather than two things a caller has to know. It used to be spelled out at the call
+ * site — `path.resolve(process.cwd(), 'static', 'medias', doc.filename)` and then
+ * `filePathToFile(...)` — which meant a *second* feature carried a copy of where this one keeps
+ * its files. That is the convention `disk/save.server.ts` and `disk/delete.server.ts` follow, and
+ * it lives on this side of the line.
+ *
+ * `undefined` when the document has no file, so a caller asking "does it have one?" and "give it
+ * to me" makes one call, not two.
+ */
+export async function fileForDocument(doc: { filename?: unknown }): Promise<File | undefined> {
+  if (typeof doc.filename !== 'string' || !doc.filename) return undefined;
+
+  const filePath = path.resolve(process.cwd(), 'static', 'medias', doc.filename);
+
+  try {
+    return await filePathToFile(filePath);
+  } catch (err) {
+    logger.error(`Failed to create file from path: ${filePath}`, err);
+    return undefined;
+  }
+}

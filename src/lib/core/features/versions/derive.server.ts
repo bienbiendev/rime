@@ -36,7 +36,10 @@ export function makeVersionsCollectionsAliases<C extends Config>(config: C) {
         icon: collection.icon,
         panel: false,
         _generateTypes: false,
-        _generateSchema: false
+        _generateSchema: false,
+        // Whose content this holds. The feature that derives a shadow is the only thing that knows,
+        // and saying it is what stops anything downstream working it out from the slug.
+        _shadowOf: collection.slug
       } as const;
       config.collections = [...(config.collections || []), versionedCollection];
     }
@@ -58,7 +61,8 @@ export function makeVersionsCollectionsAliases<C extends Config>(config: C) {
         label: { plural: area.label, singular: area.label },
         panel: false,
         _generateTypes: false,
-        _generateSchema: false
+        _generateSchema: false,
+        _shadowOf: area.slug
       } as const;
 
       config.collections = [...(config.collections || []), versionedCollection];

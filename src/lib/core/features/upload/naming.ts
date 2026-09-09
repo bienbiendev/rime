@@ -1,6 +1,5 @@
 import type { CollectionSlug } from '$lib/types.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
-import { withoutVersionsSuffix } from '../versions/naming.js';
 
 /**
  * The upload directories naming convention, in slug space.
@@ -13,16 +12,29 @@ import { withoutVersionsSuffix } from '../versions/naming.js';
  * directories collection apart is the upload feature's job — by this convention — not something
  * the table name can answer.
  *
- * The versions suffix comes off first, and that dependency is real: a folder tree belongs to
- * the document, not to a revision of it.
+ * A folder tree belongs to the **document**, not to a revision of it, so a shadow's directories
+ * are its owner's. That used to be spelled `withoutVersionsSuffix(slug)` here — this feature
+ * stripping another feature's suffix, and the only feature-to-feature import in the whole
+ * registry. `directoriesOf` below asks the config whose it is instead, and a second feature
+ * declaring a shadow works with no change.
  */
 
 const DERIVED = '$';
 const MARKER = 'Directories';
 
-/** `medias` or `$medias__versions` -> `$mediasDirectories` */
+/** `medias` -> `$mediasDirectories`. A slug in, a slug out; it strips nothing. */
 export const withDirectoriesSuffix = (slug: string) =>
-  `${DERIVED}${withoutVersionsSuffix(slug)}${MARKER}` as CollectionSlug;
+  `${DERIVED}${slug}${MARKER}` as CollectionSlug;
+
+/**
+ * The directories collection a config's files live under — its own, or its owner's when it is a
+ * shadow.
+ *
+ * The one call site that has a config rather than a bare slug should use this. `_shadowOf` is
+ * core's answer to "whose content is this", set by whichever feature derived the shadow.
+ */
+export const directoriesOf = (config: { slug: string; _shadowOf?: string }) =>
+  withDirectoriesSuffix(config._shadowOf ?? config.slug);
 
 /** `$mediasDirectories` -> `medias` */
 export const withoutDirectoriesSuffix = (slug: string) =>
