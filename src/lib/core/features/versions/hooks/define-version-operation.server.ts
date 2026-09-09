@@ -1,11 +1,8 @@
-import { VERSIONS_MARKS } from '$lib/core/features/versions/marks.js';
 import { defineVersionUpdateOperation } from '$lib/core/features/versions/strategy.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const defineVersionOperation = Hooks.beforeUpdate({
   name: 'defineVersionOperation',
-  requires: [],
-  provides: [VERSIONS_MARKS.OPERATION],
   run: async (args) => {
     const { config } = args;
 

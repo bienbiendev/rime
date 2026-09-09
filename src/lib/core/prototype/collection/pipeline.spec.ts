@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { text } from '$lib/fields/text/index.js';
-import { marksOf } from '$lib/core/pipeline/resolve-pipeline.server.js';
+import { hookName } from '$lib/core/pipeline/hook-name.server.js';
 import { create } from './definition.js';
 import { resolvePipelines } from '$lib/core/prototype/pipelines.server.js';
 import type { Dic } from '$lib/util/types.js';
@@ -31,7 +31,7 @@ describe('a built collection carries both layers of its pipeline', () => {
 
   const collection = built.collections[0] as unknown as { $hooks: Record<string, unknown[]> };
 
-  const named = (timing: string) => (collection.$hooks[timing] ?? []).map((h) => marksOf(h).name);
+  const named = (timing: string) => (collection.$hooks[timing] ?? []).map((h) => hookName(h));
 
   it('runs the prototype own hooks', () => {
     expect(named('beforeRead')).toContain('processDocumentFields');

@@ -177,19 +177,29 @@ the generated hooks chart** were byte-identical to baseline. The chart is built 
 from what boots. Only a live read caught it. `prototype/collection/pipeline.spec.ts` now asserts
 both layers are in the pipeline.
 
-### 4. A mark nothing active provides is satisfied (the vacuous rule)
+### 4. The hook order is written down, and only enablement is computed
 
-`requires: ['x']` means _after **every** active provider of `x`_ — and if nothing active provides
-it, the requirement is met. That is what lets one declaration be correct in both `beforeCreate` and
-`beforeUpdate`, and what keeps a feature's mark from breaking configs without that feature.
+Each prototype's `hooks.server.ts` places every hook it can run, in the order it runs them.
+`buildPipeline` decides only _which_ of them this config runs — `feature.enabled(config)` — and
+appends the consumer's after, then `sortDocumentProps` after that.
 
-- `HookMark` is a **closed union** (`core/pipeline/types.ts`) extended by features through
-  declaration merging. It must stay closed: a typo'd mark is _vacuously satisfied_ and reorders the
-  pipeline silently — the one failure mode of this design that raises no error at all.
-- Marks that both require and provide `document` cannot require `document` of each other without
-  closing a cycle. Name the specific thing (`populateURL` requires `title`), not the generic one.
-- `data-inspected` is the write-side twin of `sanitized`. `preventUserMutations` rejects on
-  `'name' in args.data` — run it after `setDefaultValues` and a filled default 401s every update.
+It used to be derived: hooks declared `requires`/`provides` and a resolver sorted them. That bought
+a generality nothing used — thirteen marks encoding four real dependencies — and paid for it in a
+failure mode with no symptom. A mark nothing active provides was satisfied _vacuously_, so a
+misspelling did not disable a hook, it **hoisted it to the front of the timing**. In `beforeUpdate`
+that is a security question: `preventUserMutations` rejects on `'name' in args.data`, so a default
+filled in before it turns an ordinary update into a 401.
+
+Two things a written order needs, and both are in `buildPipeline`:
+
+- **It refuses to boot** if a feature contributes a hook no prototype places. That hook would
+  simply never run and nothing else would say so — the one failure this trades for the resolver's.
+- **`sortDocumentProps` is in neither list.** Nothing may precede it and nothing may follow, so it
+  is appended rather than placed; a list is for things whose position is a choice.
+
+The cost, stated once: **a consumer's hooks are appended, not interleaved.** They cannot land
+between two of the prototype's — though they still run before the finaliser, so a property they add
+comes back sorted.
 
 ### 5. Re-measure baselines on the _same fixture_
 
@@ -271,27 +281,30 @@ Two things this surfaced:
   `setDefaultValues` without providing `data-inspected`. A hook only survives becoming a feature's
   if **every** edge it depends on is declared — and the second is not cosmetic: run it after the
   defaults and editing one field resets every unsent field to its default.
-- **The test for whether a feature is decoupled at all.** `docs/pipeline-map.md` renders each
-  resolved pipeline with a `from` column. A feature's hook under `from: collection` is the prototype
-  listing it by hand. `bun run rime:pipeline`, then read the column.
+- **What this rule is actually about is conditionality, not listing.** A prototype _does_ list
+  every hook it can run — `prototype/collection/hooks.server.ts` — because the order is written
+  down rather than computed. What went wrong with those two hooks was that they ran for configs
+  with no versions at all. `buildPipeline` filters the list by `feature.enabled(config)`, and
+  refuses to boot if a feature contributes a hook no prototype places, so a listed hook cannot
+  fire where its feature is off and an unlisted one cannot vanish silently.
 
 ## Gates
 
 Run against the base commit's **own** numbers, re-measured, never trusted from a doc.
 
-| gate            | command                                         | note                                                                                     |
-| --------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| types           | `bun run check`                                 | fixture-dependent — **0 on `versions`**. Count what the run prints                       |
-| lint            | `bunx eslint src/lib`                           | ~20; the rest are pre-existing panel `goto()`/`href`                                     |
-| cycles          | `bun run check:circular-deps`                   | 3 — and the _list_ matters more than the count                                           |
-| unit            | `bunx vitest run`                               | 165                                                                                      |
-| format          | `bunx prettier --check .`                       | run it before committing, not after                                                      |
-| pipeline layers | `prototype/collection/pipeline.spec.ts`         | **the gate for rule 3** — a definition that lost its `features` is green everywhere else |
-| schema          | golden diff + `bunx drizzle-kit generate`       | **the gate for rule 2** — see below; the byte diff alone is not it                       |
-| pipeline order  | `core/pipeline/pipeline-order.spec.ts`          | **the gate for rule 4** — a wrong mark is schema- and probe-identical                    |
-| pipeline map    | `docs/pipeline-map.md` + `pipeline-map.spec.ts` | **the gate for rule 8**. `bun run rime:pipeline` regenerates                             |
-| e2e             | `bun run test:<fixture>`                        | per-fixture baselines below                                                              |
-| browser         | `docs/probing.md` §7                            | **the gate for rule 7** — nothing static sees it                                         |
+| gate            | command                                   | note                                                                                     |
+| --------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------- |
+| types           | `bun run check`                           | fixture-dependent — **0 on `versions`**. Count what the run prints                       |
+| lint            | `bunx eslint src/lib`                     | ~20; the rest are pre-existing panel `goto()`/`href`                                     |
+| cycles          | `bun run check:circular-deps`             | 3 — and the _list_ matters more than the count                                           |
+| unit            | `bunx vitest run`                         | 165                                                                                      |
+| format          | `bunx prettier --check .`                 | run it before committing, not after                                                      |
+| pipeline layers | `prototype/collection/pipeline.spec.ts`   | **the gate for rule 3** — a definition that lost its `features` is green everywhere else |
+| schema          | golden diff + `bunx drizzle-kit generate` | **the gate for rule 2** — see below; the byte diff alone is not it                       |
+| pipeline order  | `core/pipeline/pipeline-order.spec.ts`    | pins the order each prototype's `hooks.server.ts` writes down, per config shape          |
+| hooks chart     | `hooks.generated.md`                      | which of those hooks _this_ config runs, after `enabled` filtering                       |
+| e2e             | `bun run test:<fixture>`                  | per-fixture baselines below                                                              |
+| browser         | `docs/probing.md` §7                      | **the gate for rule 7** — nothing static sees it                                         |
 
 **Capture a golden schema before touching any augment chain** — or anything that emits a column.
 Codegen runs headless, so this needs no dev server:
@@ -367,7 +380,7 @@ Each of these has eaten at least a round.
   An adapter with zero `features/versions` imports still had `versionsTable`, `versionsLocalesTable`
   and a `hasVersions` branch. Imports are the easy half.
 - **A green `bun run check` after moving a hook proves nothing about the pipeline.** Regenerate
-  `docs/pipeline-map.md` and read the diff.
+  `hooks.generated.md` (`RIME_GENERATE_HOOKS_CHART=true`) and read the diff.
 
 ## Environment
 

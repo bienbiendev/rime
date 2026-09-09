@@ -1,4 +1,3 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 /**
@@ -18,8 +17,6 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
  */
 export const exposeVersionId = Hooks.beforeRead({
   name: 'exposeVersionId',
-  requires: [],
-  provides: [HOOK_MARKS.DOCUMENT],
   run: async (args) => {
     if (!args.doc.contentId) return args;
 

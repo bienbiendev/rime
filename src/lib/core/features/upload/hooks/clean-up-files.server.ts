@@ -14,8 +14,6 @@ import type { WithUpload } from '../util/config.js';
  */
 export const cleanUpFiles = Hooks.beforeDelete({
   name: 'cleanUpFiles',
-  requires: [],
-  provides: [],
   run: async (args) => {
     const config = args.config as WithUpload<BuiltCollection>;
     const id = args.context.params.id || '';

@@ -4,8 +4,6 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const authorize = Hooks.beforeOperation({
   name: 'authorize',
-  requires: [],
-  provides: [],
   run: async (args) => {
     const { config, event, operation, context } = args;
     let authorized = false;

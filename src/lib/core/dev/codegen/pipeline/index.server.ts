@@ -1,7 +1,7 @@
 import type { HookTiming } from '$lib/core/features/define.js';
 import { getPrototype } from '$lib/core/prototype/registry.server.js';
 import { logger } from '$lib/core/logger.server.js';
-import { marksOf } from '$lib/core/pipeline/resolve-pipeline.server.js';
+import { hookName } from '$lib/core/pipeline/hook-name.server.js';
 import type { PrototypeName } from '$lib/core/prototype/registry.server.js';
 import type { Dic } from '$lib/util/types.js';
 import fs from 'node:fs';
@@ -39,10 +39,6 @@ const featureOwning = (
       (feature.hooks?.[timing as HookTiming] ?? []).some((candidate) => candidate === hook)
   )?.name;
 
-/** Backticks, or an em dash when there is nothing to show. */
-const cell = (marks: readonly string[]) =>
-  marks.length ? marks.map((mark) => `\`${mark}\``).join(' ') : '—';
-
 /**
  * A markdown table, with the columns padded.
  *
@@ -70,10 +66,11 @@ const table = (header: string[], rows: string[][]) => {
  *
  * A timing is the unit worth reading — the question is always "what runs on a read", never "what
  * runs across all eight" — and one table per prototype would put four unrelated sequences in one
- * column of numbers. The `#` is the resolved position, which is the whole output: it is
- * *computed* from `requires`/`provides`, so those two columns are what to check when a hook lands
- * somewhere unexpected. A mark nothing provides is satisfied silently, and reads here as a
- * `requires` naming something no `provides` above it mentions.
+ * column of numbers.
+ *
+ * The order itself is written down, in each prototype's `hooks.server.ts`. What this adds is the
+ * one thing the source cannot show: which of those hooks **this** config actually runs, after
+ * `buildPipeline` filters by whether each owning feature is enabled.
  */
 const tablesFor = (prototype: Dic): string => {
   const timings = Object.entries((prototype.$hooks as Dic | undefined) ?? {}).filter(
@@ -85,25 +82,13 @@ const tablesFor = (prototype: Dic): string => {
   return timings
     .map(([timing, hooks]) => {
       const rows = hooks.map((hook, index) => {
-        const marks = marksOf(hook);
         const from =
           featureOwning(prototype.type as PrototypeName, prototype, timing, hook) ?? prototype.type;
 
-        return [
-          String(index + 1),
-          `\`${marks.name}\``,
-          String(from),
-          cell(marks.requires),
-          cell(marks.provides)
-        ];
+        return [String(index + 1), `\`${hookName(hook)}\``, String(from)];
       });
 
-      return [
-        `### ${timing}`,
-        '',
-        table(['#', 'hook', 'from', 'requires', 'provides'], rows),
-        ''
-      ].join('\n');
+      return [`### ${timing}`, '', table(['#', 'hook', 'from'], rows), ''].join('\n');
     })
     .join('\n');
 };
@@ -121,15 +106,13 @@ export default function generatePipelineDoc(config: Dic): void {
   // arrived at belongs in the code that arrives at it.
   const contents =
     `# Pipelines\n\n` +
-    `One table per timing, in the order the hooks actually run. **\`#\` is computed** — from\n` +
-    `\`requires\` and \`provides\`, never from a written list — so those two columns are what to\n` +
-    `read when a hook lands somewhere unexpected. A \`requires\` naming something no \`provides\`\n` +
-    `above it mentions is satisfied _silently_, which is the one failure this file exists to make\n` +
-    `visible.\n\n` +
-    `\`from\` is the prototype, or the feature that contributed the hook. \`anonymous\` is a hook\n` +
-    `your config contributed without naming it — every rime-owned hook is named.\n\n` +
-    `Marks are namespaced: \`__name\` is rime's, \`owner:name\` is everyone else's, and anything\n` +
-    `else throws at boot. See \`src/lib/core/pipeline/marks.ts\`.\n\n` +
+    `One table per timing, in the order the hooks actually run.\n\n` +
+    `**The order itself is written down**, in each prototype's \`hooks.server.ts\`. What this adds\n` +
+    `is the one thing that file cannot show: which of those hooks **this** config runs, after\n` +
+    `\`buildPipeline\` filters out the features it does not enable.\n\n` +
+    `\`from\` is the prototype, or the feature that owns the hook. \`anonymous\` is a hook your\n` +
+    `config contributed without naming it — every rime-owned hook is named, and a consumer's are\n` +
+    `appended after the prototype's, before the finaliser.\n\n` +
     body;
 
   const chartPath = path.resolve(process.cwd(), 'hooks.generated.md');

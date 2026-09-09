@@ -1,12 +1,9 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 import type { WithUpload } from '../util/config.js';
 
 export const populateSizes = Hooks.beforeRead({
   name: 'populateSizes',
-  requires: [HOOK_MARKS.SHAPED],
-  provides: [HOOK_MARKS.DOCUMENT],
   run: async (args) => {
     const config = args.config as WithUpload<BuiltCollection>;
     const doc = args.doc;

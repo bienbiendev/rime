@@ -1,4 +1,3 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { env } from '$env/dynamic/private';
 import { PARAMS } from '$lib/core/constants.js';
 import { logger } from '$lib/core/logger.server.js';
@@ -17,8 +16,6 @@ export const populateURL = Hooks.beforeRead<'generic'>({
   // has to be said, and this is the first thing that requires `title` rather than only providing
   // it. Not `document`: several read hooks both require and provide that, so requiring it here
   // would close a cycle with `setDocumentThumbnail`.
-  requires: [HOOK_MARKS.SHAPED, HOOK_MARKS.TITLE],
-  provides: [HOOK_MARKS.DOCUMENT],
   run: async (args) => {
     const select =
       args.context.params.select && Array.isArray(args.context.params.select)

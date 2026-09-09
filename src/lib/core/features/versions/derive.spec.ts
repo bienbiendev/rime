@@ -1,7 +1,6 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { describe, expect, it } from 'vitest';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
-import { marksOf } from '$lib/core/pipeline/resolve-pipeline.server.js';
+import { hookName } from '$lib/core/pipeline/hook-name.server.js';
 import { resolvePipelines } from '$lib/core/prototype/pipelines.server.js';
 import type { Dic } from '$lib/util/types.js';
 import { create } from '$lib/core/prototype/collection/definition.js';
@@ -20,8 +19,6 @@ import { makeVersionsCollectionsAliases } from './derive.server.js';
 describe('a versions shadow', () => {
   const authorHook = Hooks.beforeRead({
     name: 'authorBeforeRead',
-    requires: [HOOK_MARKS.SHAPED],
-    provides: [],
     run: async (args) => args
   });
 
@@ -41,7 +38,7 @@ describe('a versions shadow', () => {
     (c) => c.slug === '$derive_spec_pages__versions'
   ) as unknown as { $hooks?: Record<string, unknown[]> };
 
-  const beforeRead = (shadow.$hooks?.beforeRead ?? []).map((hook) => marksOf(hook).name);
+  const beforeRead = (shadow.$hooks?.beforeRead ?? []).map((hook) => hookName(hook));
 
   it('runs the author’s own hooks', () => {
     expect(beforeRead).toContain('authorBeforeRead');

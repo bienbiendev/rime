@@ -4,8 +4,6 @@ import { isSuperAdmin } from '../user.server.js';
 
 export const preventSupperAdminDeletion = Hooks.beforeDelete({
   name: 'preventSupperAdminDeletion',
-  requires: [],
-  provides: [],
   run: async (args) => {
     const { doc, event } = args;
     const isSuperAdminDeletion = await isSuperAdmin(event.locals.rime.adapter, doc.id);

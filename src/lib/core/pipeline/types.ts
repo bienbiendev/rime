@@ -1,4 +1,3 @@
-import type { HOOK_MARKS } from './marks.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type { Docs, DocType, RawDoc } from '$lib/core/prototype/types.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
@@ -174,60 +173,13 @@ export type ParsedOperationQuery = {
 };
 
 /**
- * A named point in a pipeline's progress that a hook can wait on.
+ * What a hook declares about itself. Attached to the function, not wrapped around it, so every
+ * call site keeps invoking it directly.
  *
- * The whole ordering mechanism. A hook declares what state it needs (`requires`) and what state
- * it leaves behind (`provides`), and the resolver computes the order — so no prototype has to
- * name a feature and no feature has to know where it sits.
- *
- * A closed union on purpose. `requires` is satisfied *vacuously* when nothing active provides
- * the mark (see resolve-pipeline.server.ts), which is what lets an unconditional hook depend on
- * a conditional one — `removePrivateFields` only exists when a collection has `auth`. That same
- * rule would silently reorder the pipeline on a typo, with no error anywhere, so the set of legal
- * marks has to be closed and a misspelling has to be a type error.
- *
- * Features and consumers extend it by merging into `FeatureHookMarks`, so this file names no
- * feature — **and that merge is a hole in the closed union**, because anything reaching it can put
- * any string in, including one core already uses. So every mark carries its owner
- * (`owner:name`, with `core` reserved) and the namespace is checked at boot. See `marks.ts`.
+ * Only a name, now. It used to carry `requires`/`provides` and a resolver computed the order from
+ * them; the order is written down in each prototype's `hooks.server.ts` instead — see the note
+ * there for why.
  */
-export type HookMark = keyof FeatureHookMarks | CoreHookMark;
-
-/**
- * Marks owned by core, **derived** from `HOOK_MARKS` rather than restated.
- *
- * It used to be a hand-written union beside a hand-written runtime list, with a spec whose only
- * job was to stop the two drifting. One source now: the object is the list, the union is read off
- * it, and adding a mark is adding a line to `marks.ts`.
- */
-export type CoreHookMark = (typeof HOOK_MARKS)[keyof typeof HOOK_MARKS];
-
-/**
- * Marks contributed by features, plugins and consumer configs, extended through declaration
- * merging so that neither this file nor any prototype names one:
- *
- * ```ts
- * declare module '$lib/core/pipeline/types.js' {
- *   interface FeatureHookMarks { 'upload:file-written': true }
- * }
- * ```
- *
- * **The key must be `owner:name`.** A bare word — `'session'`, `'ready'` — is refused at boot, and
- * the reason is that it reads like a name a second person would also reach for: two owners
- * merging the same bare key do not collide loudly, they silently join the same set and move
- * whatever waits on it. The `core` owner is reserved.
- *
- * Declare the value beside the interface, so nothing writes the string twice:
- *
- * ```ts
- * export const VERSIONS_MARKS = { OPERATION: 'versions:operation' } as const;
- * ```
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface FeatureHookMarks {}
-
-/** How a hook declares itself to the resolver. Attached to the hook function, not wrapped
- *  around it, so every existing call site keeps invoking it directly. */
 export type HookMarks = {
   /**
    * Identifies the hook in the generated pipeline and the order fixture.
@@ -236,19 +188,14 @@ export type HookMarks = {
    * the function is an *argument*, so JS never gives it a name and `fn.name` is `''`.
    */
   name: string;
-  /** Runs after **every** active hook that provides each of these. */
-  requires: HookMark[];
-  /** The marks this hook leaves behind. */
-  provides: HookMark[];
 };
 
 /**
- * Marks live on the hook at runtime and deliberately **not** in its type.
+ * A hook's name lives on the function at runtime and deliberately **not** in its type.
  *
- * Putting them in the type (`Hook<S, …> & HookMarks`) breaks every consumer: intersecting a
+ * Putting it in the type (`Hook<S, …> & HookMarks`) breaks every consumer: intersecting a
  * function type with an object loses the assignability that lets a `Hook<'raw', 'read', 'before'>`
  * — what `Hooks.beforeRead(fn)` infers when the handler carries no explicit slug — land in a
- * `CollectionHooks<'pages'>`. Nothing needs them there: the resolver reads marks through
- * `marksOf()` (resolve-pipeline.server.ts), and a misspelling is still a compile error where it
- * matters, in the declaration object, because `HookMark` is closed.
+ * `CollectionHooks<'pages'>`. Nothing needs it there: only the pipeline chart reads it, through
+ * `hookName()`.
  */

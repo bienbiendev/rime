@@ -8,7 +8,6 @@
     "build": "bun ./src/lib/core/dev/cli/index.ts clear --force && vite build && npm run package && bun run build:css",
     "build:css": "postcss dist/**/*.css --replace --config ./postcss.config.cjs",
     "rime:use": "bun ./src/scripts/useConfig.js",
-    "rime:pipeline": "RIME_WRITE_PIPELINE_MAP=1 vitest run src/lib/core/pipeline/pipeline-map.spec.ts",
     "preview": "vite preview",
     "package": "bun ./src/lib/core/dev/cli/index.ts clear --force && bun ./src/lib/core/dev/cli/index.ts package && publint",
     "prepublishOnly": "rm -fr src/lib/site && npm run package && bun run build:css",

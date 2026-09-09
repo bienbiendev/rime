@@ -1,488 +1,486 @@
 # Pipelines
 
-One table per timing, in the order the hooks actually run. **`#` is computed** — from
-`requires` and `provides`, never from a written list — so those two columns are what to
-read when a hook lands somewhere unexpected. A `requires` naming something no `provides`
-above it mentions is satisfied _silently_, which is the one failure this file exists to make
-visible.
+One table per timing, in the order the hooks actually run.
 
-`from` is the prototype, or the feature that contributed the hook. `anonymous` is a hook
-your config contributed without naming it — every rime-owned hook is named.
+**The order itself is written down**, in each prototype's `hooks.server.ts`. What this adds
+is the one thing that file cannot show: which of those hooks **this** config runs, after
+`buildPipeline` filters out the features it does not enable.
 
-Marks are namespaced: `__name` is rime's, `owner:name` is everyone else's, and anything
-else throws at boot. See `src/lib/core/pipeline/marks.ts`.
+`from` is the prototype, or the feature that owns the hook. `anonymous` is a hook your
+config contributed without naming it — every rime-owned hook is named, and a consumer's are
+appended after the prototype's, before the finaliser.
 
 ## pages (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       | requires | provides |
-| --- | ----------- | ---------- | -------- | -------- |
-| 1   | `authorize` | collection | —        | —        |
+| #   | hook        | from       |
+| --- | ----------- | ---------- |
+| 1   | `authorize` | collection |
 
 ### beforeRead
 
-| #   | hook                    | from       | requires                      | provides                      |
-| --- | ----------------------- | ---------- | ----------------------------- | ----------------------------- |
-| 1   | `processDocumentFields` | collection | `core:sanitized`              | `core:shaped` `core:document` |
-| 2   | `setDocumentLocale`     | collection | `core:shaped`                 | `core:document`               |
-| 3   | `setDocumentType`       | collection | `core:shaped`                 | `core:document`               |
-| 4   | `addChildrenProperty`   | nested     | `core:shaped`                 | `core:document`               |
-| 5   | `setDocumentTitle`      | title      | `core:shaped`                 | `core:title` `core:document`  |
-| 6   | `populateURL`           | url        | `core:shaped` `core:title`    | `core:document`               |
-| 7   | `setDocumentThumbnail`  | thumbnail  | `core:shaped` `core:document` | `core:document`               |
-| 8   | `anonymous`             | collection | `core:shaped`                 | `core:document`               |
-| 9   | `sortDocumentProps`     | collection | `core:document`               | —                             |
+| #   | hook                    | from       |
+| --- | ----------------------- | ---------- |
+| 1   | `processDocumentFields` | collection |
+| 2   | `setDocumentLocale`     | collection |
+| 3   | `setDocumentType`       | collection |
+| 4   | `addChildrenProperty`   | nested     |
+| 5   | `setDocumentTitle`      | title      |
+| 6   | `populateURL`           | url        |
+| 7   | `setDocumentThumbnail`  | thumbnail  |
+| 8   | `anonymous`             | collection |
+| 9   | `sortDocumentProps`     | collection |
 
 ### beforeCreate
 
-| #   | hook                     | from       | requires                                   | provides                                 |
-| --- | ------------------------ | ---------- | ------------------------------------------ | ---------------------------------------- |
-| 1   | `mergeWithBlankDocument` | collection | —                                          | `core:blank-merged` `core:config-fields` |
-| 2   | `buildDataConfigMap`     | collection | `core:config-fields` `core:data-inspected` | `core:config-map`                        |
-| 3   | `setDefaultValues`       | collection | `core:config-map`                          | —                                        |
-| 4   | `validateFields`         | collection | `core:config-map`                          | `core:validated`                         |
-| 5   | `anonymous`              | collection | `core:validated`                           | —                                        |
+| #   | hook                     | from       |
+| --- | ------------------------ | ---------- |
+| 1   | `mergeWithBlankDocument` | collection |
+| 2   | `buildDataConfigMap`     | collection |
+| 3   | `setDefaultValues`       | collection |
+| 4   | `validateFields`         | collection |
+| 5   | `anonymous`              | collection |
 
 ### afterCreate
 
-| #   | hook        | from       | requires | provides |
-| --- | ----------- | ---------- | -------- | -------- |
-| 1   | `anonymous` | collection | —        | —        |
+| #   | hook        | from       |
+| --- | ----------- | ---------- |
+| 1   | `anonymous` | collection |
 
 ### beforeUpdate
 
-| #   | hook                        | from       | requires                                   | provides                   |
-| --- | --------------------------- | ---------- | ------------------------------------------ | -------------------------- |
-| 1   | `getOriginalDocument`       | collection | —                                          | `core:original-doc`        |
-| 2   | `buildOriginalDocConfigMap` | collection | `core:original-doc`                        | `core:original-config-map` |
-| 3   | `resolveContentOwner`       | collection | `core:original-doc`                        | `core:content-owner`       |
-| 4   | `buildDataConfigMap`        | collection | `core:config-fields` `core:data-inspected` | `core:config-map`          |
-| 5   | `setDefaultValues`          | collection | `core:config-map`                          | —                          |
-| 6   | `validateFields`            | collection | `core:config-map`                          | `core:validated`           |
-| 7   | `anonymous`                 | collection | `core:validated`                           | —                          |
+| #   | hook                        | from       |
+| --- | --------------------------- | ---------- |
+| 1   | `getOriginalDocument`       | collection |
+| 2   | `buildOriginalDocConfigMap` | collection |
+| 3   | `resolveContentOwner`       | collection |
+| 4   | `buildDataConfigMap`        | collection |
+| 5   | `setDefaultValues`          | collection |
+| 6   | `validateFields`            | collection |
+| 7   | `anonymous`                 | collection |
 
 ### afterUpdate
 
-| #   | hook        | from       | requires | provides |
-| --- | ----------- | ---------- | -------- | -------- |
-| 1   | `anonymous` | collection | —        | —        |
+| #   | hook        | from       |
+| --- | ----------- | ---------- |
+| 1   | `anonymous` | collection |
 
 ## medias (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       | requires | provides |
-| --- | ----------- | ---------- | -------- | -------- |
-| 1   | `authorize` | collection | —        | —        |
+| #   | hook        | from       |
+| --- | ----------- | ---------- |
+| 1   | `authorize` | collection |
 
 ### beforeRead
 
-| #   | hook                    | from       | requires                      | provides                      |
-| --- | ----------------------- | ---------- | ----------------------------- | ----------------------------- |
-| 1   | `processDocumentFields` | collection | `core:sanitized`              | `core:shaped` `core:document` |
-| 2   | `setDocumentLocale`     | collection | `core:shaped`                 | `core:document`               |
-| 3   | `setDocumentType`       | collection | `core:shaped`                 | `core:document`               |
-| 4   | `populateSizes`         | upload     | `core:shaped`                 | `core:document`               |
-| 5   | `setDocumentTitle`      | title      | `core:shaped`                 | `core:title` `core:document`  |
-| 6   | `setDocumentThumbnail`  | thumbnail  | `core:shaped` `core:document` | `core:document`               |
-| 7   | `sortDocumentProps`     | collection | `core:document`               | —                             |
+| #   | hook                    | from       |
+| --- | ----------------------- | ---------- |
+| 1   | `processDocumentFields` | collection |
+| 2   | `setDocumentLocale`     | collection |
+| 3   | `setDocumentType`       | collection |
+| 4   | `populateSizes`         | upload     |
+| 5   | `setDocumentTitle`      | title      |
+| 6   | `setDocumentThumbnail`  | thumbnail  |
+| 7   | `sortDocumentProps`     | collection |
 
 ### beforeCreate
 
-| #   | hook                     | from       | requires                                   | provides                                 |
-| --- | ------------------------ | ---------- | ------------------------------------------ | ---------------------------------------- |
-| 1   | `mergeWithBlankDocument` | collection | —                                          | `core:blank-merged` `core:config-fields` |
-| 2   | `buildDataConfigMap`     | collection | `core:config-fields` `core:data-inspected` | `core:config-map`                        |
-| 3   | `setDefaultValues`       | collection | `core:config-map`                          | —                                        |
-| 4   | `validateFields`         | collection | `core:config-map`                          | `core:validated`                         |
-| 5   | `handlePathCreation`     | upload     | `core:validated`                           | —                                        |
-| 6   | `castBase64ToFile`       | upload     | `core:validated`                           | —                                        |
-| 7   | `processFileUpload`      | upload     | `core:validated`                           | —                                        |
+| #   | hook                     | from       |
+| --- | ------------------------ | ---------- |
+| 1   | `mergeWithBlankDocument` | collection |
+| 2   | `buildDataConfigMap`     | collection |
+| 3   | `setDefaultValues`       | collection |
+| 4   | `validateFields`         | collection |
+| 5   | `handlePathCreation`     | upload     |
+| 6   | `castBase64ToFile`       | upload     |
+| 7   | `processFileUpload`      | upload     |
 
 ### beforeUpdate
 
-| #   | hook                        | from       | requires                                   | provides                   |
-| --- | --------------------------- | ---------- | ------------------------------------------ | -------------------------- |
-| 1   | `getOriginalDocument`       | collection | —                                          | `core:original-doc`        |
-| 2   | `buildOriginalDocConfigMap` | collection | `core:original-doc`                        | `core:original-config-map` |
-| 3   | `resolveContentOwner`       | collection | `core:original-doc`                        | `core:content-owner`       |
-| 4   | `buildDataConfigMap`        | collection | `core:config-fields` `core:data-inspected` | `core:config-map`          |
-| 5   | `setDefaultValues`          | collection | `core:config-map`                          | —                          |
-| 6   | `validateFields`            | collection | `core:config-map`                          | `core:validated`           |
-| 7   | `handlePathCreation`        | upload     | `core:validated`                           | —                          |
-| 8   | `castBase64ToFile`          | upload     | `core:validated`                           | —                          |
-| 9   | `processFileUpload`         | upload     | `core:validated`                           | —                          |
+| #   | hook                        | from       |
+| --- | --------------------------- | ---------- |
+| 1   | `getOriginalDocument`       | collection |
+| 2   | `buildOriginalDocConfigMap` | collection |
+| 3   | `resolveContentOwner`       | collection |
+| 4   | `buildDataConfigMap`        | collection |
+| 5   | `setDefaultValues`          | collection |
+| 6   | `validateFields`            | collection |
+| 7   | `handlePathCreation`        | upload     |
+| 8   | `castBase64ToFile`          | upload     |
+| 9   | `processFileUpload`         | upload     |
 
 ### beforeDelete
 
-| #   | hook           | from   | requires | provides |
-| --- | -------------- | ------ | -------- | -------- |
-| 1   | `cleanUpFiles` | upload | —        | —        |
+| #   | hook           | from   |
+| --- | -------------- | ------ |
+| 1   | `cleanUpFiles` | upload |
 
 ## news (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       | requires | provides |
-| --- | ----------- | ---------- | -------- | -------- |
-| 1   | `authorize` | collection | —        | —        |
+| #   | hook        | from       |
+| --- | ----------- | ---------- |
+| 1   | `authorize` | collection |
 
 ### beforeRead
 
-| #   | hook                    | from       | requires                      | provides                      |
-| --- | ----------------------- | ---------- | ----------------------------- | ----------------------------- |
-| 1   | `processDocumentFields` | collection | `core:sanitized`              | `core:shaped` `core:document` |
-| 2   | `setDocumentLocale`     | collection | `core:shaped`                 | `core:document`               |
-| 3   | `setDocumentType`       | collection | `core:shaped`                 | `core:document`               |
-| 4   | `setDocumentTitle`      | title      | `core:shaped`                 | `core:title` `core:document`  |
-| 5   | `populateURL`           | url        | `core:shaped` `core:title`    | `core:document`               |
-| 6   | `setDocumentThumbnail`  | thumbnail  | `core:shaped` `core:document` | `core:document`               |
-| 7   | `sortDocumentProps`     | collection | `core:document`               | —                             |
+| #   | hook                    | from       |
+| --- | ----------------------- | ---------- |
+| 1   | `processDocumentFields` | collection |
+| 2   | `setDocumentLocale`     | collection |
+| 3   | `setDocumentType`       | collection |
+| 4   | `setDocumentTitle`      | title      |
+| 5   | `populateURL`           | url        |
+| 6   | `setDocumentThumbnail`  | thumbnail  |
+| 7   | `sortDocumentProps`     | collection |
 
 ### beforeCreate
 
-| #   | hook                     | from       | requires                                   | provides                                 |
-| --- | ------------------------ | ---------- | ------------------------------------------ | ---------------------------------------- |
-| 1   | `mergeWithBlankDocument` | collection | —                                          | `core:blank-merged` `core:config-fields` |
-| 2   | `buildDataConfigMap`     | collection | `core:config-fields` `core:data-inspected` | `core:config-map`                        |
-| 3   | `setDefaultValues`       | collection | `core:config-map`                          | —                                        |
-| 4   | `validateFields`         | collection | `core:config-map`                          | `core:validated`                         |
+| #   | hook                     | from       |
+| --- | ------------------------ | ---------- |
+| 1   | `mergeWithBlankDocument` | collection |
+| 2   | `buildDataConfigMap`     | collection |
+| 3   | `setDefaultValues`       | collection |
+| 4   | `validateFields`         | collection |
 
 ### beforeUpdate
 
-| #   | hook                        | from       | requires                                   | provides                   |
-| --- | --------------------------- | ---------- | ------------------------------------------ | -------------------------- |
-| 1   | `getOriginalDocument`       | collection | —                                          | `core:original-doc`        |
-| 2   | `buildOriginalDocConfigMap` | collection | `core:original-doc`                        | `core:original-config-map` |
-| 3   | `resolveContentOwner`       | collection | `core:original-doc`                        | `core:content-owner`       |
-| 4   | `buildDataConfigMap`        | collection | `core:config-fields` `core:data-inspected` | `core:config-map`          |
-| 5   | `setDefaultValues`          | collection | `core:config-map`                          | —                          |
-| 6   | `validateFields`            | collection | `core:config-map`                          | `core:validated`           |
+| #   | hook                        | from       |
+| --- | --------------------------- | ---------- |
+| 1   | `getOriginalDocument`       | collection |
+| 2   | `buildOriginalDocConfigMap` | collection |
+| 3   | `resolveContentOwner`       | collection |
+| 4   | `buildDataConfigMap`        | collection |
+| 5   | `setDefaultValues`          | collection |
+| 6   | `validateFields`            | collection |
 
 ## users (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       | requires | provides |
-| --- | ----------- | ---------- | -------- | -------- |
-| 1   | `authorize` | collection | —        | —        |
+| #   | hook        | from       |
+| --- | ----------- | ---------- |
+| 1   | `authorize` | collection |
 
 ### beforeRead
 
-| #   | hook                    | from       | requires                      | provides                      |
-| --- | ----------------------- | ---------- | ----------------------------- | ----------------------------- |
-| 1   | `removePrivateFields`   | auth       | —                             | `core:sanitized`              |
-| 2   | `processDocumentFields` | collection | `core:sanitized`              | `core:shaped` `core:document` |
-| 3   | `setDocumentLocale`     | collection | `core:shaped`                 | `core:document`               |
-| 4   | `setDocumentType`       | collection | `core:shaped`                 | `core:document`               |
-| 5   | `setDocumentTitle`      | title      | `core:shaped`                 | `core:title` `core:document`  |
-| 6   | `setDocumentThumbnail`  | thumbnail  | `core:shaped` `core:document` | `core:document`               |
-| 7   | `sortDocumentProps`     | collection | `core:document`               | —                             |
+| #   | hook                    | from       |
+| --- | ----------------------- | ---------- |
+| 1   | `removePrivateFields`   | auth       |
+| 2   | `processDocumentFields` | collection |
+| 3   | `setDocumentLocale`     | collection |
+| 4   | `setDocumentType`       | collection |
+| 5   | `setDocumentTitle`      | title      |
+| 6   | `setDocumentThumbnail`  | thumbnail  |
+| 7   | `sortDocumentProps`     | collection |
 
 ### beforeCreate
 
-| #   | hook                     | from       | requires                                   | provides                                 |
-| --- | ------------------------ | ---------- | ------------------------------------------ | ---------------------------------------- |
-| 1   | `mergeWithBlankDocument` | collection | —                                          | `core:blank-merged` `core:config-fields` |
-| 2   | `augmentFieldsPassword`  | auth       | `core:blank-merged`                        | `core:config-fields`                     |
-| 3   | `buildDataConfigMap`     | collection | `core:config-fields` `core:data-inspected` | `core:config-map`                        |
-| 4   | `setDefaultValues`       | collection | `core:config-map`                          | —                                        |
-| 5   | `validateFields`         | collection | `core:config-map`                          | `core:validated`                         |
-| 6   | `createBetterAuthUser`   | auth       | `core:validated`                           | —                                        |
+| #   | hook                     | from       |
+| --- | ------------------------ | ---------- |
+| 1   | `mergeWithBlankDocument` | collection |
+| 2   | `augmentFieldsPassword`  | auth       |
+| 3   | `buildDataConfigMap`     | collection |
+| 4   | `setDefaultValues`       | collection |
+| 5   | `validateFields`         | collection |
+| 6   | `createBetterAuthUser`   | auth       |
 
 ### afterCreate
 
-| #   | hook             | from | requires | provides |
-| --- | ---------------- | ---- | -------- | -------- |
-| 1   | `populateAPIKey` | auth | —        | —        |
+| #   | hook             | from |
+| --- | ---------------- | ---- |
+| 1   | `populateAPIKey` | auth |
 
 ### beforeUpdate
 
-| #   | hook                        | from       | requires                                   | provides                   |
-| --- | --------------------------- | ---------- | ------------------------------------------ | -------------------------- |
-| 1   | `getOriginalDocument`       | collection | —                                          | `core:original-doc`        |
-| 2   | `buildOriginalDocConfigMap` | collection | `core:original-doc`                        | `core:original-config-map` |
-| 3   | `resolveContentOwner`       | collection | `core:original-doc`                        | `core:content-owner`       |
-| 4   | `augmentFieldsPassword`     | auth       | `core:blank-merged`                        | `core:config-fields`       |
-| 5   | `preventSuperAdminMutation` | auth       | `core:original-doc`                        | `core:data-inspected`      |
-| 6   | `preventUserMutations`      | auth       | `core:original-doc`                        | `core:data-inspected`      |
-| 7   | `forwardRolesToBetterAuth`  | auth       | `core:original-doc`                        | `core:data-inspected`      |
-| 8   | `buildDataConfigMap`        | collection | `core:config-fields` `core:data-inspected` | `core:config-map`          |
-| 9   | `setDefaultValues`          | collection | `core:config-map`                          | —                          |
-| 10  | `validateFields`            | collection | `core:config-map`                          | `core:validated`           |
+| #   | hook                        | from       |
+| --- | --------------------------- | ---------- |
+| 1   | `getOriginalDocument`       | collection |
+| 2   | `buildOriginalDocConfigMap` | collection |
+| 3   | `resolveContentOwner`       | collection |
+| 4   | `augmentFieldsPassword`     | auth       |
+| 5   | `preventSuperAdminMutation` | auth       |
+| 6   | `preventUserMutations`      | auth       |
+| 7   | `forwardRolesToBetterAuth`  | auth       |
+| 8   | `buildDataConfigMap`        | collection |
+| 9   | `setDefaultValues`          | collection |
+| 10  | `validateFields`            | collection |
 
 ### beforeDelete
 
-| #   | hook                         | from | requires | provides |
-| --- | ---------------------------- | ---- | -------- | -------- |
-| 1   | `preventSupperAdminDeletion` | auth | —        | —        |
+| #   | hook                         | from |
+| --- | ---------------------------- | ---- |
+| 1   | `preventSupperAdminDeletion` | auth |
 
 ### afterDelete
 
-| #   | hook                   | from | requires | provides |
-| --- | ---------------------- | ---- | -------- | -------- |
-| 1   | `deleteBetterAuthUser` | auth | —        | —        |
+| #   | hook                   | from |
+| --- | ---------------------- | ---- |
+| 1   | `deleteBetterAuthUser` | auth |
 
 ## apps (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       | requires | provides |
-| --- | ----------- | ---------- | -------- | -------- |
-| 1   | `authorize` | collection | —        | —        |
+| #   | hook        | from       |
+| --- | ----------- | ---------- |
+| 1   | `authorize` | collection |
 
 ### beforeRead
 
-| #   | hook                    | from       | requires                      | provides                      |
-| --- | ----------------------- | ---------- | ----------------------------- | ----------------------------- |
-| 1   | `removePrivateFields`   | auth       | —                             | `core:sanitized`              |
-| 2   | `processDocumentFields` | collection | `core:sanitized`              | `core:shaped` `core:document` |
-| 3   | `setDocumentLocale`     | collection | `core:shaped`                 | `core:document`               |
-| 4   | `setDocumentType`       | collection | `core:shaped`                 | `core:document`               |
-| 5   | `setDocumentTitle`      | title      | `core:shaped`                 | `core:title` `core:document`  |
-| 6   | `setDocumentThumbnail`  | thumbnail  | `core:shaped` `core:document` | `core:document`               |
-| 7   | `sortDocumentProps`     | collection | `core:document`               | —                             |
+| #   | hook                    | from       |
+| --- | ----------------------- | ---------- |
+| 1   | `removePrivateFields`   | auth       |
+| 2   | `processDocumentFields` | collection |
+| 3   | `setDocumentLocale`     | collection |
+| 4   | `setDocumentType`       | collection |
+| 5   | `setDocumentTitle`      | title      |
+| 6   | `setDocumentThumbnail`  | thumbnail  |
+| 7   | `sortDocumentProps`     | collection |
 
 ### beforeCreate
 
-| #   | hook                     | from       | requires                                   | provides                                 |
-| --- | ------------------------ | ---------- | ------------------------------------------ | ---------------------------------------- |
-| 1   | `mergeWithBlankDocument` | collection | —                                          | `core:blank-merged` `core:config-fields` |
-| 2   | `augmentFieldsPassword`  | auth       | `core:blank-merged`                        | `core:config-fields`                     |
-| 3   | `buildDataConfigMap`     | collection | `core:config-fields` `core:data-inspected` | `core:config-map`                        |
-| 4   | `setDefaultValues`       | collection | `core:config-map`                          | —                                        |
-| 5   | `validateFields`         | collection | `core:config-map`                          | `core:validated`                         |
-| 6   | `createBetterAuthUser`   | auth       | `core:validated`                           | —                                        |
+| #   | hook                     | from       |
+| --- | ------------------------ | ---------- |
+| 1   | `mergeWithBlankDocument` | collection |
+| 2   | `augmentFieldsPassword`  | auth       |
+| 3   | `buildDataConfigMap`     | collection |
+| 4   | `setDefaultValues`       | collection |
+| 5   | `validateFields`         | collection |
+| 6   | `createBetterAuthUser`   | auth       |
 
 ### afterCreate
 
-| #   | hook             | from | requires | provides |
-| --- | ---------------- | ---- | -------- | -------- |
-| 1   | `populateAPIKey` | auth | —        | —        |
+| #   | hook             | from |
+| --- | ---------------- | ---- |
+| 1   | `populateAPIKey` | auth |
 
 ### beforeUpdate
 
-| #   | hook                        | from       | requires                                   | provides                   |
-| --- | --------------------------- | ---------- | ------------------------------------------ | -------------------------- |
-| 1   | `getOriginalDocument`       | collection | —                                          | `core:original-doc`        |
-| 2   | `buildOriginalDocConfigMap` | collection | `core:original-doc`                        | `core:original-config-map` |
-| 3   | `resolveContentOwner`       | collection | `core:original-doc`                        | `core:content-owner`       |
-| 4   | `augmentFieldsPassword`     | auth       | `core:blank-merged`                        | `core:config-fields`       |
-| 5   | `preventSuperAdminMutation` | auth       | `core:original-doc`                        | `core:data-inspected`      |
-| 6   | `preventUserMutations`      | auth       | `core:original-doc`                        | `core:data-inspected`      |
-| 7   | `forwardRolesToBetterAuth`  | auth       | `core:original-doc`                        | `core:data-inspected`      |
-| 8   | `buildDataConfigMap`        | collection | `core:config-fields` `core:data-inspected` | `core:config-map`          |
-| 9   | `setDefaultValues`          | collection | `core:config-map`                          | —                          |
-| 10  | `validateFields`            | collection | `core:config-map`                          | `core:validated`           |
+| #   | hook                        | from       |
+| --- | --------------------------- | ---------- |
+| 1   | `getOriginalDocument`       | collection |
+| 2   | `buildOriginalDocConfigMap` | collection |
+| 3   | `resolveContentOwner`       | collection |
+| 4   | `augmentFieldsPassword`     | auth       |
+| 5   | `preventSuperAdminMutation` | auth       |
+| 6   | `preventUserMutations`      | auth       |
+| 7   | `forwardRolesToBetterAuth`  | auth       |
+| 8   | `buildDataConfigMap`        | collection |
+| 9   | `setDefaultValues`          | collection |
+| 10  | `validateFields`            | collection |
 
 ### beforeDelete
 
-| #   | hook                         | from | requires | provides |
-| --- | ---------------------------- | ---- | -------- | -------- |
-| 1   | `preventSupperAdminDeletion` | auth | —        | —        |
+| #   | hook                         | from |
+| --- | ---------------------------- | ---- |
+| 1   | `preventSupperAdminDeletion` | auth |
 
 ### afterDelete
 
-| #   | hook                   | from | requires | provides |
-| --- | ---------------------- | ---- | -------- | -------- |
-| 1   | `deleteBetterAuthUser` | auth | —        | —        |
+| #   | hook                   | from |
+| --- | ---------------------- | ---- |
+| 1   | `deleteBetterAuthUser` | auth |
 
 ## staff (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       | requires | provides |
-| --- | ----------- | ---------- | -------- | -------- |
-| 1   | `authorize` | collection | —        | —        |
+| #   | hook        | from       |
+| --- | ----------- | ---------- |
+| 1   | `authorize` | collection |
 
 ### beforeRead
 
-| #   | hook                    | from       | requires                      | provides                      |
-| --- | ----------------------- | ---------- | ----------------------------- | ----------------------------- |
-| 1   | `removePrivateFields`   | auth       | —                             | `core:sanitized`              |
-| 2   | `processDocumentFields` | collection | `core:sanitized`              | `core:shaped` `core:document` |
-| 3   | `setDocumentLocale`     | collection | `core:shaped`                 | `core:document`               |
-| 4   | `setDocumentType`       | collection | `core:shaped`                 | `core:document`               |
-| 5   | `setDocumentTitle`      | title      | `core:shaped`                 | `core:title` `core:document`  |
-| 6   | `setDocumentThumbnail`  | thumbnail  | `core:shaped` `core:document` | `core:document`               |
-| 7   | `sortDocumentProps`     | collection | `core:document`               | —                             |
+| #   | hook                    | from       |
+| --- | ----------------------- | ---------- |
+| 1   | `removePrivateFields`   | auth       |
+| 2   | `processDocumentFields` | collection |
+| 3   | `setDocumentLocale`     | collection |
+| 4   | `setDocumentType`       | collection |
+| 5   | `setDocumentTitle`      | title      |
+| 6   | `setDocumentThumbnail`  | thumbnail  |
+| 7   | `sortDocumentProps`     | collection |
 
 ### beforeCreate
 
-| #   | hook                     | from       | requires                                   | provides                                 |
-| --- | ------------------------ | ---------- | ------------------------------------------ | ---------------------------------------- |
-| 1   | `mergeWithBlankDocument` | collection | —                                          | `core:blank-merged` `core:config-fields` |
-| 2   | `augmentFieldsPassword`  | auth       | `core:blank-merged`                        | `core:config-fields`                     |
-| 3   | `buildDataConfigMap`     | collection | `core:config-fields` `core:data-inspected` | `core:config-map`                        |
-| 4   | `setDefaultValues`       | collection | `core:config-map`                          | —                                        |
-| 5   | `validateFields`         | collection | `core:config-map`                          | `core:validated`                         |
-| 6   | `createBetterAuthUser`   | auth       | `core:validated`                           | —                                        |
+| #   | hook                     | from       |
+| --- | ------------------------ | ---------- |
+| 1   | `mergeWithBlankDocument` | collection |
+| 2   | `augmentFieldsPassword`  | auth       |
+| 3   | `buildDataConfigMap`     | collection |
+| 4   | `setDefaultValues`       | collection |
+| 5   | `validateFields`         | collection |
+| 6   | `createBetterAuthUser`   | auth       |
 
 ### afterCreate
 
-| #   | hook             | from | requires | provides |
-| --- | ---------------- | ---- | -------- | -------- |
-| 1   | `populateAPIKey` | auth | —        | —        |
+| #   | hook             | from |
+| --- | ---------------- | ---- |
+| 1   | `populateAPIKey` | auth |
 
 ### beforeUpdate
 
-| #   | hook                        | from       | requires                                   | provides                   |
-| --- | --------------------------- | ---------- | ------------------------------------------ | -------------------------- |
-| 1   | `getOriginalDocument`       | collection | —                                          | `core:original-doc`        |
-| 2   | `buildOriginalDocConfigMap` | collection | `core:original-doc`                        | `core:original-config-map` |
-| 3   | `resolveContentOwner`       | collection | `core:original-doc`                        | `core:content-owner`       |
-| 4   | `augmentFieldsPassword`     | auth       | `core:blank-merged`                        | `core:config-fields`       |
-| 5   | `preventSuperAdminMutation` | auth       | `core:original-doc`                        | `core:data-inspected`      |
-| 6   | `preventUserMutations`      | auth       | `core:original-doc`                        | `core:data-inspected`      |
-| 7   | `forwardRolesToBetterAuth`  | auth       | `core:original-doc`                        | `core:data-inspected`      |
-| 8   | `buildDataConfigMap`        | collection | `core:config-fields` `core:data-inspected` | `core:config-map`          |
-| 9   | `setDefaultValues`          | collection | `core:config-map`                          | —                          |
-| 10  | `validateFields`            | collection | `core:config-map`                          | `core:validated`           |
+| #   | hook                        | from       |
+| --- | --------------------------- | ---------- |
+| 1   | `getOriginalDocument`       | collection |
+| 2   | `buildOriginalDocConfigMap` | collection |
+| 3   | `resolveContentOwner`       | collection |
+| 4   | `augmentFieldsPassword`     | auth       |
+| 5   | `preventSuperAdminMutation` | auth       |
+| 6   | `preventUserMutations`      | auth       |
+| 7   | `forwardRolesToBetterAuth`  | auth       |
+| 8   | `buildDataConfigMap`        | collection |
+| 9   | `setDefaultValues`          | collection |
+| 10  | `validateFields`            | collection |
 
 ### beforeDelete
 
-| #   | hook                         | from | requires | provides |
-| --- | ---------------------------- | ---- | -------- | -------- |
-| 1   | `preventSupperAdminDeletion` | auth | —        | —        |
+| #   | hook                         | from |
+| --- | ---------------------------- | ---- |
+| 1   | `preventSupperAdminDeletion` | auth |
 
 ### afterDelete
 
-| #   | hook                   | from | requires | provides |
-| --- | ---------------------- | ---- | -------- | -------- |
-| 1   | `deleteBetterAuthUser` | auth | —        | —        |
+| #   | hook                   | from |
+| --- | ---------------------- | ---- |
+| 1   | `deleteBetterAuthUser` | auth |
 
 ## $mediasDirectories (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       | requires | provides |
-| --- | ----------- | ---------- | -------- | -------- |
-| 1   | `authorize` | collection | —        | —        |
+| #   | hook        | from       |
+| --- | ----------- | ---------- |
+| 1   | `authorize` | collection |
 
 ### beforeRead
 
-| #   | hook                    | from       | requires                      | provides                      |
-| --- | ----------------------- | ---------- | ----------------------------- | ----------------------------- |
-| 1   | `processDocumentFields` | collection | `core:sanitized`              | `core:shaped` `core:document` |
-| 2   | `setDocumentLocale`     | collection | `core:shaped`                 | `core:document`               |
-| 3   | `setDocumentType`       | collection | `core:shaped`                 | `core:document`               |
-| 4   | `setDocumentTitle`      | title      | `core:shaped`                 | `core:title` `core:document`  |
-| 5   | `setDocumentThumbnail`  | thumbnail  | `core:shaped` `core:document` | `core:document`               |
-| 6   | `sortDocumentProps`     | collection | `core:document`               | —                             |
+| #   | hook                    | from       |
+| --- | ----------------------- | ---------- |
+| 1   | `processDocumentFields` | collection |
+| 2   | `setDocumentLocale`     | collection |
+| 3   | `setDocumentType`       | collection |
+| 4   | `setDocumentTitle`      | title      |
+| 5   | `setDocumentThumbnail`  | thumbnail  |
+| 6   | `sortDocumentProps`     | collection |
 
 ### beforeCreate
 
-| #   | hook                     | from       | requires                                   | provides                                 |
-| --- | ------------------------ | ---------- | ------------------------------------------ | ---------------------------------------- |
-| 1   | `mergeWithBlankDocument` | collection | —                                          | `core:blank-merged` `core:config-fields` |
-| 2   | `buildDataConfigMap`     | collection | `core:config-fields` `core:data-inspected` | `core:config-map`                        |
-| 3   | `setDefaultValues`       | collection | `core:config-map`                          | —                                        |
-| 4   | `validateFields`         | collection | `core:config-map`                          | `core:validated`                         |
-| 5   | `exctractPath`           | collection | —                                          | —                                        |
+| #   | hook                     | from       |
+| --- | ------------------------ | ---------- |
+| 1   | `mergeWithBlankDocument` | collection |
+| 2   | `buildDataConfigMap`     | collection |
+| 3   | `setDefaultValues`       | collection |
+| 4   | `validateFields`         | collection |
+| 5   | `exctractPath`           | collection |
 
 ### beforeUpdate
 
-| #   | hook                        | from       | requires                                   | provides                   |
-| --- | --------------------------- | ---------- | ------------------------------------------ | -------------------------- |
-| 1   | `getOriginalDocument`       | collection | —                                          | `core:original-doc`        |
-| 2   | `buildOriginalDocConfigMap` | collection | `core:original-doc`                        | `core:original-config-map` |
-| 3   | `resolveContentOwner`       | collection | `core:original-doc`                        | `core:content-owner`       |
-| 4   | `buildDataConfigMap`        | collection | `core:config-fields` `core:data-inspected` | `core:config-map`          |
-| 5   | `setDefaultValues`          | collection | `core:config-map`                          | —                          |
-| 6   | `validateFields`            | collection | `core:config-map`                          | `core:validated`           |
-| 7   | `exctractPath`              | collection | —                                          | —                          |
-| 8   | `prepareDirectoryChildren`  | collection | —                                          | —                          |
+| #   | hook                        | from       |
+| --- | --------------------------- | ---------- |
+| 1   | `getOriginalDocument`       | collection |
+| 2   | `buildOriginalDocConfigMap` | collection |
+| 3   | `resolveContentOwner`       | collection |
+| 4   | `buildDataConfigMap`        | collection |
+| 5   | `setDefaultValues`          | collection |
+| 6   | `validateFields`            | collection |
+| 7   | `exctractPath`              | collection |
+| 8   | `prepareDirectoryChildren`  | collection |
 
 ### afterUpdate
 
-| #   | hook                      | from       | requires | provides |
-| --- | ------------------------- | ---------- | -------- | -------- |
-| 1   | `updateDirectoryChildren` | collection | —        | —        |
+| #   | hook                      | from       |
+| --- | ------------------------- | ---------- |
+| 1   | `updateDirectoryChildren` | collection |
 
 ## settings (area)
 
 ### beforeOperation
 
-| #   | hook        | from | requires | provides |
-| --- | ----------- | ---- | -------- | -------- |
-| 1   | `authorize` | area | —        | —        |
+| #   | hook        | from |
+| --- | ----------- | ---- |
+| 1   | `authorize` | area |
 
 ### beforeRead
 
-| #   | hook                    | from  | requires         | provides                      |
-| --- | ----------------------- | ----- | ---------------- | ----------------------------- |
-| 1   | `processDocumentFields` | area  | `core:sanitized` | `core:shaped` `core:document` |
-| 2   | `setDocumentLocale`     | area  | `core:shaped`    | `core:document`               |
-| 3   | `setDocumentType`       | area  | `core:shaped`    | `core:document`               |
-| 4   | `setDocumentTitle`      | title | `core:shaped`    | `core:title` `core:document`  |
-| 5   | `sortDocumentProps`     | area  | `core:document`  | —                             |
+| #   | hook                    | from  |
+| --- | ----------------------- | ----- |
+| 1   | `processDocumentFields` | area  |
+| 2   | `setDocumentLocale`     | area  |
+| 3   | `setDocumentType`       | area  |
+| 4   | `setDocumentTitle`      | title |
+| 5   | `sortDocumentProps`     | area  |
 
 ### beforeUpdate
 
-| #   | hook                        | from | requires                                   | provides                   |
-| --- | --------------------------- | ---- | ------------------------------------------ | -------------------------- |
-| 1   | `getOriginalDocument`       | area | —                                          | `core:original-doc`        |
-| 2   | `buildOriginalDocConfigMap` | area | `core:original-doc`                        | `core:original-config-map` |
-| 3   | `resolveContentOwner`       | area | `core:original-doc`                        | `core:content-owner`       |
-| 4   | `buildDataConfigMap`        | area | `core:config-fields` `core:data-inspected` | `core:config-map`          |
-| 5   | `setDefaultValues`          | area | `core:config-map`                          | —                          |
-| 6   | `validateFields`            | area | `core:config-map`                          | `core:validated`           |
+| #   | hook                        | from |
+| --- | --------------------------- | ---- |
+| 1   | `getOriginalDocument`       | area |
+| 2   | `buildOriginalDocConfigMap` | area |
+| 3   | `resolveContentOwner`       | area |
+| 4   | `buildDataConfigMap`        | area |
+| 5   | `setDefaultValues`          | area |
+| 6   | `validateFields`            | area |
 
 ## navigation (area)
 
 ### beforeOperation
 
-| #   | hook        | from | requires | provides |
-| --- | ----------- | ---- | -------- | -------- |
-| 1   | `authorize` | area | —        | —        |
+| #   | hook        | from |
+| --- | ----------- | ---- |
+| 1   | `authorize` | area |
 
 ### beforeRead
 
-| #   | hook                    | from  | requires         | provides                      |
-| --- | ----------------------- | ----- | ---------------- | ----------------------------- |
-| 1   | `processDocumentFields` | area  | `core:sanitized` | `core:shaped` `core:document` |
-| 2   | `setDocumentLocale`     | area  | `core:shaped`    | `core:document`               |
-| 3   | `setDocumentType`       | area  | `core:shaped`    | `core:document`               |
-| 4   | `setDocumentTitle`      | title | `core:shaped`    | `core:title` `core:document`  |
-| 5   | `sortDocumentProps`     | area  | `core:document`  | —                             |
+| #   | hook                    | from  |
+| --- | ----------------------- | ----- |
+| 1   | `processDocumentFields` | area  |
+| 2   | `setDocumentLocale`     | area  |
+| 3   | `setDocumentType`       | area  |
+| 4   | `setDocumentTitle`      | title |
+| 5   | `sortDocumentProps`     | area  |
 
 ### beforeUpdate
 
-| #   | hook                        | from | requires                                   | provides                   |
-| --- | --------------------------- | ---- | ------------------------------------------ | -------------------------- |
-| 1   | `getOriginalDocument`       | area | —                                          | `core:original-doc`        |
-| 2   | `buildOriginalDocConfigMap` | area | `core:original-doc`                        | `core:original-config-map` |
-| 3   | `resolveContentOwner`       | area | `core:original-doc`                        | `core:content-owner`       |
-| 4   | `buildDataConfigMap`        | area | `core:config-fields` `core:data-inspected` | `core:config-map`          |
-| 5   | `setDefaultValues`          | area | `core:config-map`                          | —                          |
-| 6   | `validateFields`            | area | `core:config-map`                          | `core:validated`           |
+| #   | hook                        | from |
+| --- | --------------------------- | ---- |
+| 1   | `getOriginalDocument`       | area |
+| 2   | `buildOriginalDocConfigMap` | area |
+| 3   | `resolveContentOwner`       | area |
+| 4   | `buildDataConfigMap`        | area |
+| 5   | `setDefaultValues`          | area |
+| 6   | `validateFields`            | area |
 
 ## infos (area)
 
 ### beforeOperation
 
-| #   | hook        | from | requires | provides |
-| --- | ----------- | ---- | -------- | -------- |
-| 1   | `authorize` | area | —        | —        |
+| #   | hook        | from |
+| --- | ----------- | ---- |
+| 1   | `authorize` | area |
 
 ### beforeRead
 
-| #   | hook                    | from  | requires         | provides                      |
-| --- | ----------------------- | ----- | ---------------- | ----------------------------- |
-| 1   | `processDocumentFields` | area  | `core:sanitized` | `core:shaped` `core:document` |
-| 2   | `setDocumentLocale`     | area  | `core:shaped`    | `core:document`               |
-| 3   | `setDocumentType`       | area  | `core:shaped`    | `core:document`               |
-| 4   | `setDocumentTitle`      | title | `core:shaped`    | `core:title` `core:document`  |
-| 5   | `sortDocumentProps`     | area  | `core:document`  | —                             |
+| #   | hook                    | from  |
+| --- | ----------------------- | ----- |
+| 1   | `processDocumentFields` | area  |
+| 2   | `setDocumentLocale`     | area  |
+| 3   | `setDocumentType`       | area  |
+| 4   | `setDocumentTitle`      | title |
+| 5   | `sortDocumentProps`     | area  |
 
 ### beforeUpdate
 
-| #   | hook                        | from | requires                                   | provides                   |
-| --- | --------------------------- | ---- | ------------------------------------------ | -------------------------- |
-| 1   | `getOriginalDocument`       | area | —                                          | `core:original-doc`        |
-| 2   | `buildOriginalDocConfigMap` | area | `core:original-doc`                        | `core:original-config-map` |
-| 3   | `resolveContentOwner`       | area | `core:original-doc`                        | `core:content-owner`       |
-| 4   | `buildDataConfigMap`        | area | `core:config-fields` `core:data-inspected` | `core:config-map`          |
-| 5   | `setDefaultValues`          | area | `core:config-map`                          | —                          |
-| 6   | `validateFields`            | area | `core:config-map`                          | `core:validated`           |
+| #   | hook                        | from |
+| --- | --------------------------- | ---- |
+| 1   | `getOriginalDocument`       | area |
+| 2   | `buildOriginalDocConfigMap` | area |
+| 3   | `resolveContentOwner`       | area |
+| 4   | `buildDataConfigMap`        | area |
+| 5   | `setDefaultValues`          | area |
+| 6   | `validateFields`            | area |

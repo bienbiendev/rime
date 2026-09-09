@@ -1,10 +1,7 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const setDocumentType = Hooks.beforeRead<'generic'>({
   name: 'setDocumentType',
-  requires: [HOOK_MARKS.SHAPED],
-  provides: [HOOK_MARKS.DOCUMENT],
   run: async (args) => {
     const config = args.config;
     let doc = args.doc;

@@ -5,17 +5,18 @@ import { augmentHooks } from './build-pipeline.server.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 /**
- * The order the pipeline resolves to, pinned.
+ * What each shape of config actually runs, pinned.
  *
- * Every sequence below is the order a real config resolves to: the prototype declares its own
- * hooks and lists the features that extend it, `augmentHooks` composes the two, and the resolver
- * sorts them by the marks each declares. Any accepted departure from the obvious reading is
- * marked in place, checked against the hooks rather than assumed.
+ * The order is written down — `prototype/collection/hooks.server.ts` places every hook a
+ * collection can run. What is *computed* is which of them apply: `buildPipeline` keeps a feature's
+ * hook only where that feature is enabled. So every sequence below is one list filtered one way,
+ * and this file is the record of what each filter leaves.
  *
- * This file exists because a wrong mark reorders the pipeline *silently*. The generated schema
+ * It exists because an edit to those lists reorders the pipeline *silently*. The generated schema
  * stays byte-identical, every adapter probe still matches, and the only symptom is behaviour —
- * which is exactly how a feature once shipped contributing no hooks at all. Nothing else in the
- * suite would catch it.
+ * which is exactly how a feature once shipped contributing no hooks at all. In `beforeUpdate` the
+ * stakes are higher than order: auth's three guards read the caller's submission as sent, and a
+ * default filled in above them turns an ordinary update into a 401.
  */
 
 const order = (hooks: unknown, timing: string): string[] =>
@@ -34,8 +35,7 @@ describe('resolved pipeline order', () => {
 
     it('reads in the documented order', () => {
       // `setDocumentTitle` tie-breaks after the prototype's own steps, being the `title`
-      // feature's hook. Its position is free rather than incidental: it requires `shaped` and
-      // provides `title`/`document`, and nothing it passes provides or consumes either —
+      // feature's hook. Its position is written down in `collection/hooks.server.ts` —
       // `setDocumentLocale` and `setDocumentType` write `locale`/`_type` and read neither.
       expect(order(hooks, 'beforeRead')).toEqual([
         'processDocumentFields',
@@ -86,10 +86,10 @@ describe('resolved pipeline order', () => {
      * `handleNewVersion` lands exactly where the prototypes used to list it by hand, and every
      * edge holding it there is now declared rather than written down:
      *
-     * - after `resolveContentOwner`, whose default it overrides — `requires: 'content-owner'`
-     * - after `buildOriginalDocConfigMap`, which it reads — `requires: 'original-config-map'`
+     * - after `resolveContentOwner`, whose default it overrides
+     * - after `buildOriginalDocConfigMap`, which it reads
      * - before `buildDataConfigMap`, because it reads the submission as sent —
-     *   `provides: 'data-inspected'`
+     *   as sent
      *
      * Only the first was declared before. Dropping any of the three moves it, which is what this
      * assertion is for: it is the one hook in the pipeline whose position changes what a document
@@ -118,7 +118,7 @@ describe('resolved pipeline order', () => {
         update.indexOf('handleNewVersion')
       );
       expect(update.indexOf('handleNewVersion')).toBeLessThan(update.indexOf('setDefaultValues'));
-      // And the feature's own ordering: its two consumers wait on the mark it provides.
+      // And the feature's own ordering: its two consumers run after the hook they read.
       expect(update.indexOf('defineVersionOperation')).toBeLessThan(
         update.indexOf('handleNewVersion')
       );
@@ -196,7 +196,7 @@ describe('resolved pipeline order', () => {
       // list order, which is the tie-break.
       //
       // `setDocumentTitle` before `populateURL` is *not* a tie-break: the features list puts url
-      // first, and the resolver still orders title ahead of it because `populateURL` requires
+      // first, and the list still places title ahead of it because `populateURL` reads
       // `title`. That is the one edge in this timing that a wrong mark would silently invert —
       // `$url` would then build a slug from an undefined title — so it is declared, not inherited.
       expect(order(hooks, 'beforeRead')).toEqual([

@@ -19,7 +19,6 @@ export const url = defineFeature({
   name: 'url',
   type: 'augment',
   requires: [],
-
   /** A config uses this feature by declaring how to build its url. */
   enabled: (config) => !!config.$url,
 

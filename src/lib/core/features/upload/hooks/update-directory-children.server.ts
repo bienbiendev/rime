@@ -6,8 +6,6 @@ type Update = { id: string; data: { parent: string } };
 
 export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>({
   name: 'prepareDirectoryChildren',
-  requires: [],
-  provides: [],
   run: async (args) => {
     const data = args.data;
     const { event, config, context } = args;
@@ -43,8 +41,6 @@ export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>({
 
 export const updateDirectoryChildren = Hooks.afterUpdate<'directory'>({
   name: 'updateDirectoryChildren',
-  requires: [],
-  provides: [],
   run: async (args) => {
     const { event, config } = args;
     const collection = event.locals.rime.collection(config.slug);

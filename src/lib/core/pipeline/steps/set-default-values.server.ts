@@ -1,4 +1,3 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { getRequestEvent } from '$app/server';
 import type { Adapter } from '$lib/core/adapter.js';
 import { RimeError } from '$lib/core/errors/index.js';
@@ -10,8 +9,6 @@ import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 
 export const setDefaultValues = Hooks.beforeUpsert({
   name: 'setDefaultValues',
-  requires: [HOOK_MARKS.CONFIG_MAP],
-  provides: [],
   run: async (args) => {
     const { operation, event } = args;
     const { rime } = event.locals;

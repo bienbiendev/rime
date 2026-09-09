@@ -1,10 +1,7 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const setDocumentLocale = Hooks.beforeRead<'generic'>({
   name: 'setDocumentLocale',
-  requires: [HOOK_MARKS.SHAPED],
-  provides: [HOOK_MARKS.DOCUMENT],
   run: async (args) => {
     let doc = args.doc;
 

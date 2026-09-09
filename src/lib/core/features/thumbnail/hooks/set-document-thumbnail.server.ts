@@ -1,4 +1,3 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { isRelationResolved } from '$lib/fields/relation/index.js';
 import {
   type BuiltCollection,
@@ -12,8 +11,6 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const setDocumentThumbnail = Hooks.beforeRead<'raw'>({
   name: 'setDocumentThumbnail',
-  requires: [HOOK_MARKS.SHAPED, HOOK_MARKS.DOCUMENT],
-  provides: [HOOK_MARKS.DOCUMENT],
   run: async (args) => {
     const config = args.config;
     let doc = args.doc;

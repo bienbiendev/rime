@@ -1,4 +1,3 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { cleanUpDocumentFile } from '$lib/core/features/upload/disk/delete.server.js';
 import { saveFile } from '$lib/core/features/upload/disk/save.server.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
@@ -27,8 +26,6 @@ import { isUploadConfig } from '../util/config.js';
  */
 export const processFileUpload = Hooks.beforeUpsert<'upload'>({
   name: 'processFileUpload',
-  requires: [HOOK_MARKS.VALIDATED],
-  provides: [],
   run: async (args) => {
     const { operation, config, event } = args;
     const { rime } = event.locals;

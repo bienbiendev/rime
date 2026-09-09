@@ -1,4 +1,3 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import type { DocType } from '$lib/core/prototype/types.js';
 import type { Hook, HookBeforeOperation, HookMarks, Operation } from './types.js';
 
@@ -9,50 +8,25 @@ import type { Hook, HookBeforeOperation, HookMarks, Operation } from './types.js
  *
  * ```ts
  * Hooks.beforeRead(fn)
- * Hooks.beforeRead({ name: 'setDocumentTitle', requires: [HOOK_MARKS.SHAPED], provides: [HOOK_MARKS.TITLE], run: fn })
+ * Hooks.beforeRead({ name: 'setDocumentTitle', run: fn })
  * ```
  *
- * The bare form is the default and what consumers write. The object form is how a hook says where
- * it belongs — see `HookMark` in ./types.ts, and `resolve-pipeline.server.ts` for what is done
- * with it.
+ * The bare form is the default and what consumers write. The object form exists to give a hook a
+ * **name**, which is what the generated pipeline chart shows it under and what a stack trace
+ * reports. Where a hook runs is not said here — a prototype's `hooks.server.ts` places it.
  *
- * **Both forms return the function itself**, with the marks attached as properties rather than
- * wrapped around it. `run.server.ts` invokes hooks directly (`await hook({...})`), so anything
- * that returned an object here would break every call site; this way the resolver is the only
- * thing that ever looks at the marks.
+ * **Both forms return the function itself**, with the name set on it rather than wrapped around
+ * it. `run.server.ts` invokes hooks directly (`await hook({...})`), so anything that returned an
+ * object here would break every call site.
  */
 
 /** What a timing's factory accepts: the function, or the function plus its marks. */
 type Declaration<H> = H | (Partial<HookMarks> & { run: H });
 
-/**
- * Marks a hook carries when it does not declare its own.
- *
- * Not empty on purpose. A hook with no requirements would sort to the front, which is wrong for
- * the common case: a consumer's `beforeRead` hook wants a shaped document, and anything touching
- * the document should be waited on by `sortDocumentProps`. These defaults put an undeclared hook
- * where an author would expect it, with whatever it adds still sorted.
- */
-const DEFAULTS: Record<string, Pick<HookMarks, 'requires' | 'provides'>> = {
-  beforeOperation: { requires: [], provides: [] },
-  beforeRead: { requires: [HOOK_MARKS.SHAPED], provides: [HOOK_MARKS.DOCUMENT] },
-  beforeCreate: { requires: [HOOK_MARKS.VALIDATED], provides: [] },
-  beforeUpdate: { requires: [HOOK_MARKS.VALIDATED], provides: [] },
-  beforeDelete: { requires: [], provides: [] },
-  afterCreate: { requires: [], provides: [] },
-  afterUpdate: { requires: [], provides: [] },
-  afterDelete: { requires: [], provides: [] }
-};
-
-const declare = <H>(timing: string, declaration: Declaration<H>): H => {
+const declare = <H>(declaration: Declaration<H>): H => {
   const isObject = typeof declaration === 'object' && declaration !== null && 'run' in declaration;
   const run = (isObject ? (declaration as { run: H }).run : declaration) as H & object;
   const marks: Partial<HookMarks> = isObject ? (declaration as Partial<HookMarks>) : {};
-
-  Object.assign(run, {
-    requires: marks.requires ?? DEFAULTS[timing].requires,
-    provides: marks.provides ?? DEFAULTS[timing].provides
-  });
 
   // `name` cannot go through Object.assign: a function's own `name` is non-writable, so
   // assigning to it throws a TypeError in strict mode, which every ES module is. It *is*
@@ -70,17 +44,17 @@ export const Hooks = {
   /** Creates a before operation hook */
   beforeOperation: <S extends DocType = 'raw'>(
     declaration: Declaration<HookBeforeOperation<S, Operation>>
-  ): HookBeforeOperation<S, Operation> => declare('beforeOperation', declaration),
+  ): HookBeforeOperation<S, Operation> => declare(declaration),
 
   /** Creates a before read hook */
   beforeRead: <S extends DocType = 'raw'>(
     declaration: Declaration<Hook<S, 'read', 'before'>>
-  ): Hook<S, 'read', 'before'> => declare('beforeRead', declaration),
+  ): Hook<S, 'read', 'before'> => declare(declaration),
 
   /** Creates a before create hook */
   beforeCreate: <S extends DocType = 'raw'>(
     declaration: Declaration<Hook<S, 'create', 'before'>>
-  ): Hook<S, 'create', 'before'> => declare('beforeCreate', declaration),
+  ): Hook<S, 'create', 'before'> => declare(declaration),
 
   /**
    * Creates a hook that runs before both create and update.
@@ -91,35 +65,35 @@ export const Hooks = {
    */
   beforeUpsert: <S extends DocType = 'raw'>(
     declaration: Declaration<Hook<S, 'create' | 'update', 'before'>>
-  ): Hook<S, 'create' | 'update', 'before'> => declare('beforeCreate', declaration),
+  ): Hook<S, 'create' | 'update', 'before'> => declare(declaration),
 
   /** Creates a before update hook */
   beforeUpdate: <S extends DocType = 'raw'>(
     declaration: Declaration<Hook<S, 'update', 'before'>>
-  ): Hook<S, 'update', 'before'> => declare('beforeUpdate', declaration),
+  ): Hook<S, 'update', 'before'> => declare(declaration),
 
   /** Creates a before delete hook */
   beforeDelete: <S extends DocType = 'raw'>(
     declaration: Declaration<Hook<S, 'delete', 'before'>>
-  ): Hook<S, 'delete', 'before'> => declare('beforeDelete', declaration),
+  ): Hook<S, 'delete', 'before'> => declare(declaration),
 
   /** Creates an after create hook */
   afterCreate: <S extends DocType = 'raw'>(
     declaration: Declaration<Hook<S, 'create', 'after'>>
-  ): Hook<S, 'create', 'after'> => declare('afterCreate', declaration),
+  ): Hook<S, 'create', 'after'> => declare(declaration),
 
   /** Creates a hook that runs after both create and update */
   afterUpsert: <S extends DocType = 'raw'>(
     declaration: Declaration<Hook<S, 'create' | 'update', 'after'>>
-  ): Hook<S, 'create' | 'update', 'after'> => declare('afterCreate', declaration),
+  ): Hook<S, 'create' | 'update', 'after'> => declare(declaration),
 
   /** Creates an after update hook */
   afterUpdate: <S extends DocType = 'raw'>(
     declaration: Declaration<Hook<S, 'update', 'after'>>
-  ): Hook<S, 'update', 'after'> => declare('afterUpdate', declaration),
+  ): Hook<S, 'update', 'after'> => declare(declaration),
 
   /** Creates an after delete hook */
   afterDelete: <S extends DocType = 'raw'>(
     declaration: Declaration<Hook<S, 'delete', 'after'>>
-  ): Hook<S, 'delete', 'after'> => declare('afterDelete', declaration)
+  ): Hook<S, 'delete', 'after'> => declare(declaration)
 };

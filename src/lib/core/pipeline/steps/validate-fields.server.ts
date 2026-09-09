@@ -1,4 +1,3 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { PARAMS } from '$lib/core/constants.js';
 import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
 import { logger } from '$lib/core/logger.server.js';
@@ -9,8 +8,6 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const validateFields = Hooks.beforeUpsert({
   name: 'validateFields',
-  requires: [HOOK_MARKS.CONFIG_MAP],
-  provides: [HOOK_MARKS.VALIDATED],
   run: async (args) => {
     const errors: FormErrors = {};
     const { event, operation } = args;

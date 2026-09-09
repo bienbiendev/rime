@@ -1,4 +1,3 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { jsonFileToFile } from '$lib/core/features/upload/util/converter.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
@@ -18,8 +17,6 @@ import { isFile } from '$lib/util/file.js';
  */
 export const castBase64ToFile = Hooks.beforeUpsert<'upload'>({
   name: 'castBase64ToFile',
-  requires: [HOOK_MARKS.VALIDATED],
-  provides: [],
   run: async (args) => {
     let data = args.data;
     if (data?.file && !isFile(data.file)) {

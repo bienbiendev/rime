@@ -15,7 +15,6 @@ export const auth = defineFeature({
   name: 'auth',
   type: 'augment',
   requires: [],
-
   /** A collection uses this feature by declaring `auth`. */
   enabled: (config) => !!config.auth,
 

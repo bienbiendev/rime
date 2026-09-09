@@ -1,4 +1,3 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { RimeError } from '$lib/core/errors/index.js';
 
@@ -20,8 +19,6 @@ import { RimeError } from '$lib/core/errors/index.js';
  */
 export const resolveContentOwner = Hooks.beforeUpdate({
   name: 'resolveContentOwner',
-  requires: [HOOK_MARKS.ORIGINAL_DOC],
-  provides: [HOOK_MARKS.CONTENT_OWNER],
   run: async (args) => {
     const { originalDoc } = args.context;
 

@@ -1,4 +1,3 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { createBlankDocument } from '$lib/core/prototype/doc.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { omit, pick } from '$lib/util/object.js';
@@ -7,8 +6,6 @@ import deepmerge from 'deepmerge';
 
 export const mergeWithBlankDocument = Hooks.beforeCreate({
   name: 'mergeWithBlankDocument',
-  requires: [],
-  provides: [HOOK_MARKS.BLANK_MERGED, HOOK_MARKS.CONFIG_FIELDS],
   run: async (args) => {
     const blank = createBlankDocument(args.config, args.event) as Dic;
     const known = Object.keys(blank);

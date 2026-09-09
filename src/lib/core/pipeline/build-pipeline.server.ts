@@ -4,7 +4,7 @@ import type { FeatureDefinition } from '../features/define.js';
 import type { PrototypeDefinition } from '../prototype/define.js';
 import { sortDocumentProps } from './steps/sort-document-props.server.js';
 import { logger } from '../logger.server.js';
-import { marksOf } from './resolve-pipeline.server.js';
+import { hookName } from './hook-name.server.js';
 
 /** Every timing a pipeline can carry. A prototype declares nothing for the ones it has no use
  *  for — an area has no create or delete. */
@@ -60,7 +60,7 @@ export const buildPipeline = (
       for (const hook of feature.hooks?.[timing] ?? []) {
         if (!placedSet.has(hook)) {
           throw new Error(
-            `${label}: ${feature.name} contributes "${marksOf(hook).name}", and the prototype's list does not place it`
+            `${label}: ${feature.name} contributes "${hookName(hook)}", and the prototype's list does not place it`
           );
         }
       }
@@ -68,7 +68,7 @@ export const buildPipeline = (
 
     // A rime-owned hook with no name makes the generated pipeline unreadable exactly where it
     // matters. Consumer hooks are exempt — nobody needs to identify someone else's hook here.
-    const unnamed = placed.filter((hook) => marksOf(hook).name === 'anonymous').length;
+    const unnamed = placed.filter((hook) => hookName(hook) === 'anonymous').length;
     if (unnamed) {
       logger.warn(`${label}: ${unnamed} rime-owned hook(s) declare no name.`);
     }
@@ -114,17 +114,14 @@ export const buildPipeline = (
  * exactly the question you have when a hook lands somewhere surprising, or when you are asking
  * whether removing a feature would take its hooks with it.
  *
- * Read-only and used by `bun run rime:pipeline`; the runtime path is untouched.
+ * Read-only, and what the generated hooks chart renders; the runtime path is untouched.
  */
 export const describePipeline = (
   definition: Pick<PrototypeDefinition, 'features' | 'hooks'>,
   config: Dic
-): Record<string, { name: string; from: string; requires: string[]; provides: string[] }[]> => {
+): Record<string, { name: string; from: string }[]> => {
   const active = definition.features.filter((feature) => feature.enabled(config));
-  const described: Record<
-    string,
-    { name: string; from: string; requires: string[]; provides: string[] }[]
-  > = {};
+  const described: Record<string, { name: string; from: string }[]> = {};
 
   for (const timing of TIMINGS) {
     // Who contributed each hook, by identity — the same function object comes out of the resolver.
@@ -139,14 +136,11 @@ export const describePipeline = (
       []) as unknown[];
 
     described[timing] = resolved.map((hook) => {
-      const marks = marksOf(hook as never);
       return {
-        name: marks.name,
+        name: hookName(hook),
         // Anything not contributed by a feature or the config is the prototype's — including
         // the finaliser, which `buildPipeline` appends rather than reading off a list.
-        from: from.get(hook) ?? config.type ?? 'prototype',
-        requires: [...marks.requires],
-        provides: [...marks.provides]
+        from: from.get(hook) ?? config.type ?? 'prototype'
       };
     });
   }

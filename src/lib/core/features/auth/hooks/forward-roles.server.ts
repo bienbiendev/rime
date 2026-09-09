@@ -1,4 +1,3 @@
-import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { access } from '$lib/core/features/auth/access.js';
@@ -18,9 +17,7 @@ import { betterAuthUserId } from '../user.server.js';
  */
 export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>({
   name: 'forwardRolesToBetterAuth',
-  requires: [HOOK_MARKS.ORIGINAL_DOC],
   // Runs before anything adds to `data`: this reads the caller's submission as sent.
-  provides: [HOOK_MARKS.DATA_INSPECTED],
   run: async (args) => {
     const { event, config, context } = args;
     const { rime } = event.locals;
