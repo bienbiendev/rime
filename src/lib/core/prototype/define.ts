@@ -6,6 +6,7 @@ import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { FileText } from '@lucide/svelte';
 import type { RequestEvent } from '@sveltejs/kit';
+import { isStaff } from '$lib/core/features/auth/access.js';
 import { prototypeKebab } from './naming.js';
 import type { GenericDoc } from './types.js';
 
@@ -272,15 +273,6 @@ type PrototypeOptions<C extends BuiltPrototype> = Partial<
   Omit<PrototypeDefinition<C>, '$InferAccessor' | 'create'>
 >;
 
-/**
- * Staff-only, and what every prototype's access defaults to until the author says otherwise.
- *
- * Typed on the one member it reads rather than on `User`, which is the `auth` feature's — a
- * prototype does not know what a feature is, and a parameter is contravariant, so this still
- * satisfies an `Access` member.
- */
-const isStaff = (user?: { isStaff?: boolean }) => !!user && !!user.isStaff;
-
 export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Accessor = unknown>(
   options: PrototypeOptions<C> = {}
 ): PrototypeDefinition<C, Accessor> => {
@@ -316,6 +308,19 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Acces
       fields: augmented.fields || [],
       icon: augmented.icon || FileText,
       live: augmented.live || false,
+      /**
+       * Staff-only until the author says otherwise, and `isStaff` is **auth's**.
+       *
+       * It used to be a second copy here — the same body, typed on the one member it reads rather
+       * than on `User` — with a comment saying a prototype does not know what a feature is. But
+       * defaulting every prototype to staff-only *is* knowing: `user.isStaff` is a member auth
+       * puts there, and writing the predicate out did not remove the dependency, it duplicated it.
+       * Renaming a tell moves it; it does not move the coupling (docs/decoupling.md § 3).
+       *
+       * So there is one definition, and the audit shows the edge honestly. What would actually
+       * remove it is the default coming from whichever feature owns the policy rather than from
+       * `definePrototype` — a real change, not a rewording.
+       */
       access: {
         create: isStaff,
         read: isStaff,
