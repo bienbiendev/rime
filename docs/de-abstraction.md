@@ -1,265 +1,277 @@
-# Composition
-
-## The honest scoreboard
-
-| | develop | this branch |
-| - | ------- | ----------- |
-| readable | **yes** | no |
-| features isolated | no | **partly — and not the ones that mattered** |
-| adapter contract | **none at all** | `core/adapter.ts`, 321 lines |
-
-`develop`'s `core/` is `areas/`, `collections/`, `operations/`. There is no `Adapter` interface. A
-second adapter is not possible there and cannot be made possible cheaply — the interface is the
-thing that took the work, because writing it meant finding every place the database layer knew what
-a draft was.
-
-**That is the whole `+?`.** One file, and the seams that had to exist for it to be true.
-
-Everything else this branch added — `FeatureDefinition`'s eleven seams, `fold.ts`, `register.ts`,
-`apply.ts` — was built for features that turn out not to be features:
-
-- **auth** — `AuthAdapter` is a member of the `Adapter` interface. `adapter-sqlite/auth.server.ts`
-  exists. Already named, everywhere.
-- **locale** — named 18 times in the contract, 60 in `prototype.server.ts`.
-- **metas** — `updatedAt` and `createdAt` appear 29 times in the adapter, and in `BaseDoc`,
-  `sort-document-props.server.ts` and `core/adapter.ts`. `enabled: () => true`. It is not a
-  feature; it is what a document is.
-- **versions** — the one that *was* hidden, behind `shadow`, in 116 places across ten adapter
-  files. The decoupling renamed it rather than removing it.
-
-Four "features" that a CMS cannot be without, wearing a protocol built for optional things. Six of
-the ten features declare `enabled: () => true`, which is the same statement in miniature.
+# Composable and readable
 
 ## The model: SvelteKit
-
-Two things it gets right, and both are missing here:
 
 **Declarative — you see what you implement.** `+page.server.ts` exports `load` and `actions`. The
 file *is* the declaration. There is no `definePage({ load, actions })` handing a config object to a
 factory that folds it later.
 
 **File convention over configuration.** SvelteKit never asks a page to declare its capabilities.
-The filename says what the file is; the exports say what it does; the framework looks in the place
-the convention says to look.
+The filename says what the file is, the exports say what it does, and the framework looks where the
+convention says to look.
 
-Applied here:
-
-| SvelteKit | rime today | rime after |
-| --------- | ---------- | ---------- |
-| `+page.server.ts` exports `load` | `defineFeature({ augment, hooks, enabled, … })` | `features/upload/augment.ts` exports `augmentUpload` |
-| a page has no manifest | eleven declared seams, seven with one implementer | a feature folder's files are its manifest |
-| `load` is found by name | `augment` is found by folding a registry | `augment` is found by being imported |
-
-`definePrototype` stays. A prototype is a real thing with a name, a factory and a REST surface, and
-there are two of them; the parallel is `hooks.server.ts` in SvelteKit, not `+page`.
-
-`defineFeature` goes. A feature is not a thing — it is a folder of functions that a prototype
-composes.
-
-## The principle
-
-**Composition, not protocol.** A thing is put together in one place, by name, in a list you can
-read — the way `prototype/collection/hooks.server.ts` already works, which is the one change this
-month that made something more readable rather than less.
-
-A protocol is the opposite: a definition declares a capability, and something elsewhere discovers
-it by folding. Every seam in `FeatureDefinition` is that, and seven of them have one implementer.
-
-## What core may name
-
-- **core:** `auth`, `locale`, `versions`, `metas`. Constitutive. Three of the four already are.
-- **the adapter:** the same four. It already names three.
-- **nobody:** `upload`, `url`, `title`, `thumbnail`, `nested`, `panel`, `cors`. Seven genuinely
-  optional things, which stay in `features/`, reach a prototype by being listed in its composition,
-  and never appear in `core/` or `adapter-sqlite/` outside their own folder.
-
-That is the line worth defending, and it is the only one.
+`definePrototype` stays — a prototype is a real thing with a name, a factory and a REST surface, and
+there are two of them. **`defineFeature` goes.** A feature is not a thing; it is a folder of
+functions a prototype composes.
 
 ---
 
-## Move 1 — say what is core
+## 1. What the ceremony costs, measured
 
+Ten `index.ts` manifests — `defineFeature({…})` plus a `declare module` — total **383 lines**:
+
+| feature | total lines | manifest | |
+| ------- | -----------: | -------: | - |
+| metas | 38 | 19 | **50% of the feature is its manifest** |
+| nested | 123 | 73 | **59%**, counting its `module.ts` pair |
+| title | 167 | 35 | **five files** for one augment and one hook |
+| cors | 141 | 28 | and `augmentCORS` is a `configure`, misnamed |
+| panel | 116 | 53 | manifest is the largest file in the folder |
+| url | 209 | 37 | |
+| thumbnail | 161 | 32 | |
+| upload | 1710 | 38 | |
+| versions | 782 | 79 | |
+| auth | 2016 | 71 | |
+
+Plus `features/define.ts` 295, `fold.ts` 202, `apply.ts` 34, `tables.ts` 53, `register.ts` 114 —
+**698 more lines of protocol**.
+
+## 2. Two duplications, both found by reading
+
+### `FeatureConfigAugment` restates what `BuiltCollection` already says
+
+`core/config/types.ts` declares, by hand:
+
+```ts
+export type BuiltCollection = … & {
+  asTitle: string;                      //  title  declares `T & { asTitle: string }`
+  asThumbnail: string | null;           //  thumbnail declares the same
+  auth?: CollectionAuthConfig;          //  auth   declares `WithNormalizedAuth<T>`
+  versions?: Required<VersionsConfig>;  //  versions declares `WithVersionsConfig<T>`
+  upload?: UploadConfig;                //  upload declares `WithNormalizedUpload<T>`
+};
 ```
-core/auth/        was features/auth       (2016 lines)
-core/versions/    was features/versions   (782)
-core/metas/       was features/metas      (38) — or folded into prototype/doc.ts
-core/locale/      already scattered; gather it
 
-features/         upload url title thumbnail nested panel cors
-```
+**All five, twice.** Once concretely in core, once through a declaration-merging target that
+`ApplyAugments` folds over a tuple of names that `FeatureNames` maps off the features list.
 
-Nothing changes inside the folders. What changes is that core and the adapter may say their names,
-which is what unlocks every move below.
+`FeatureConfigAugment`, `ApplyAugments`, `Augmented`, `FeatureNames` — the whole apparatus
+reproduces a type that is already written down, and `FeatureNames`/`Augmented` are already dead
+exports.
 
-**Gate:** `check`, `madge`, generated output byte-identical. It is a move, not an edit.
+### `FeatureConfigure` imports the type it then declares
 
-## Move 2 — delete `FeatureDefinition`
+`features/panel/index.ts` imports `PanelConfig` from `core/config/types.ts`, then merges a
+declaration back so that core knows what panel adds. The type is already core's. Same for cors and
+`$trustedOrigins: string[]`.
 
-A feature folder exports functions, and its files are its manifest. No `index.ts` handing a config
-object to `defineFeature`, the same way no SvelteKit page hands one to `definePage`.
+**Both merging targets go.** `register.ts` keeps `FeatureDocTypes` — four shapes core genuinely
+does not own — and nothing else.
 
-```
-features/upload/
-  augment.ts     export const augmentUpload = (config) => …
-  enabled.ts     export const isUpload = (config) => !!config.upload
-  hooks/         export const processFileUpload = …
-  index.server.ts   the barrel a prototype's lists import from
-```
+## 3. The convention
 
-The convention, stated once so it can be followed without reading this document:
+Every folder that extends something uses the same file names. No `index.ts` manifest anywhere.
 
-| file | exports | who reads it |
-| ---- | ------- | ------------ |
-| `augment.ts` | one augment | the prototype's `augments` list |
+| file | exports | read by |
+| ---- | ------- | ------- |
+| `augment.ts` | one function, shapes **one prototype config** | that prototype's `augments` list |
+| `configure.ts` | one function, shapes **the whole config** | `config/build.ts` |
 | `enabled.ts` | one predicate | the `when(…)` guards in both lists |
-| `hooks/*.server.ts` | one hook each | the prototype's `hooks.server.ts` |
-| `hooks/index.server.ts` | barrel | same |
+| `hooks/<verb>.server.ts` | one hook | the prototype's `hooks.server.ts` |
+| `hooks/index.server.ts` | barrel | same — this one stays, it is a barrel not a manifest |
+| `handler.server.ts` | one request handler | `handlers/index.ts` |
+| `boot.server.ts` | one boot step | `boot.server.ts` |
 
-A feature that adds a file adds a capability. Nothing declares that it did.
+A folder that adds a capability adds a file. Nothing declares that it did.
 
-**Deletes:** `features/define.ts` (295), `features/fold.ts` (202), `features/apply.ts` (34),
-`features/tables.ts` (53), `defineFeature`, and the `FeatureConfigure`/`ConfigureTransforms` half of
-`register.ts`. `register.ts` keeps `FeatureConfigAugment` (8 declarers) and `FeatureDocTypes` (4) —
-those are type-level and they earn it.
+**One file per exported thing only when it earns it.** `versions/read-query.ts` is a 12-line
+function under 27 lines of comment in a file of its own; it belongs with `write-plan.ts` in
+`versions/rows.ts` — *which row a read means, which rows a write touches* is one subject. Same
+test everywhere: `metas/augment.ts` at 19 lines needs no folder around it.
 
-**About 600 lines of protocol, gone.**
+## 4. Where things live
 
-## Move 3 — compose, by hand, in the prototype
+Two rules, applied in order.
 
-The augment chain becomes a written list, exactly like the hook list:
+1. **Core and the adapter may name `auth`, `locale`, `versions`, `metas`.** They are constitutive
+   and three of the four are already named in the adapter. Those live in `core/`.
+2. **Everything else lives at the scope it extends** — the prototype whose configs it touches, or
+   `core/` when it touches no prototype at all.
+
+Which gives, from the two `features` lists as they stand:
+
+| thing | augments | goes to |
+| ----- | -------- | ------- |
+| auth | collection | `core/auth/` — the adapter names it |
+| versions | both | `core/versions/` — the adapter names it |
+| metas | both | `core/metas/` — `updatedAt` is in `BaseDoc` and 29× in the adapter |
+| cors | neither — `configure` only | `core/cors/`, and `augmentCORS` → `configureCORS` |
+| panel | neither — `configure` only | `core/panel/` |
+| upload | collection | `prototype/collection/upload/` |
+| nested | collection | `prototype/collection/nested/` |
+| thumbnail | collection | `prototype/collection/thumbnail/` |
+| title | both | `prototype/shared/title/` |
+| url | both | `prototype/shared/url/` |
+
+`features/` is empty at the end, and that is the honest outcome: there was never a feature layer,
+there were four core concerns, two whole-config defaults, three collection extensions and two
+shared ones.
+
+### The tree
+
+```
+core/
+  adapter.ts  boot.server.ts  rime.server.ts
+  auth/       augment.ts  configure.ts  enabled.ts  hooks/  handler.server.ts  better-auth/
+  versions/   augment.ts  rows.ts  hooks/  naming.ts  strategy.ts
+  metas/      augment.ts
+  cors/       configure.ts  handler.server.ts
+  panel/      configure.ts  icons.ts
+  pipeline/
+    hooks/    ← was steps/
+    build.server.ts  run.server.ts  types.ts
+  prototype/
+    define.ts  doc.ts  naming.ts  types.ts
+    collection/
+      definition.ts  hooks.server.ts  api.server.ts  operations/  rest/
+      upload/     augment.ts  enabled.ts  hooks/  disk/  path.ts
+      nested/     augment.ts  enabled.ts  hooks/
+      thumbnail/  augment.ts  hooks/  find-thumbnail.ts
+    area/
+      definition.ts  hooks.server.ts  api.server.ts  operations/  rest/
+    shared/
+      title/  augment.ts  hooks/  find-title.ts
+      url/    augment.ts  enabled.ts  hooks/
+```
+
+## 5. What a prototype then reads like
 
 ```ts
 // prototype/collection/definition.ts
-augments: [
-  augmentLabel,
-  when(isAuth, augmentAuth),
-  augmentPanel,
-  when(isUpload, augmentUpload),
-  when(isNested, augmentNested),
-  augmentVersions,        // self-gates already: `if (versions) {…}`
-  when(hasUrl, augmentUrl),
-  augmentTitle,
-  augmentThumbnail,
-  augmentMetas,
-  augmentCors
-]
+export const collection = definePrototype({
+  name: 'collection',
+  singleton: false,
+  augments: [
+    augmentLabel,
+    when(isAuth, augmentAuth),
+    when(isUpload, augmentUpload),
+    when(isNested, augmentNested),
+    augmentVersions,          // self-gates already: `if (versions) {…}`
+    when(hasUrl, augmentUrl),
+    augmentTitle,
+    augmentThumbnail,
+    augmentMetas
+  ]
+});
 ```
 
-`when(pred, fn)` is three lines and replaces `FeatureDefinition.enabled` and the `enabled` map in
-`buildPipeline`. **Six of the ten features need no gate at all** — they declare `enabled: () =>
-true` today.
+No `features` array, no `enabled` fold, no `applyAugments`. `when(pred, fn)` is three lines and
+replaces `FeatureDefinition.enabled` and `buildPipeline`'s `enabled` map. **Six of the ten features
+declare `enabled: () => true` today** — they get no guard at all.
 
-The order is still column order, still declared once, and now you can see what runs and what
-guards it without opening another file. `applyAugments` and its two exported type helpers
-(`FeatureNames`, `Augmented`, both already dead) go.
-
-The hook lists get the same treatment where a gate is needed:
+The order is still column order, declared once, and now you read what runs and what guards it in
+one place. The hook lists take the same treatment where a gate is needed:
 
 ```ts
 beforeRead: [when(isAuth, removePrivateFields), processDocumentFields, …]
 ```
 
-**Gate:** generated schema byte-identical — field order is column order, so a mis-ordered list is a
-schema diff. Plus `hooks.generated.md` byte-identical and `hook-placement.spec.ts`.
+## 6. The adapter
 
-## Move 4 — the adapter says `versions`
+`shadow` → `versions` in all **116 places** across ten files. The decoupling renamed versions
+rather than removing it; the adapter already says `locale` 18 times in the contract and carries an
+`AuthAdapter` member. Three constitutive concepts, two named, one disguised.
 
-`shadow` → `versions` in all 116 places. `ShadowDeclaration` → `VersionsTable`.
-`RegisterPrototypeArgs.shadow` → `.versions`. Mechanical, no logic touched, its own commit.
+Then the names that say nothing:
 
-Then in core the three versions seams collapse:
+| file | lines | rename / split |
+| ---- | ----: | -------------- |
+| `prototype.server.ts` | 649 | split by verb: `read.server.ts`, `write.server.ts` |
+| `util.server.ts` | 368 | `columns.server.ts` — it is column and primary-key work |
+| `with.server.ts` | 313 | `select.server.ts` — "with" is drizzle's word, not a description |
+| `orderBy.server.ts` | 164 | `order-by.server.ts` — every other file is kebab |
+| `ShadowDeclaration` | — | `VersionsTable` |
+| `WritePlan { data, content }` | — | `{ base, version }` |
+
+And in core the three versions folds collapse:
 
 | was | becomes |
 | --- | ------- |
-| `shadowOf(features, config)` × 5 | `config._versions` — a member, stamped by `augmentVersions` |
+| `shadowOf(features, config)` ×5 | `config._versions`, stamped by `augmentVersions` |
 | `readQueryOf(features, …)` | `versionsReadQuery(…)`, imported |
 | `writePlanWithFeatures(features, …)` | `versionsWritePlan(…)`, imported |
-| `WritePlan { data, content }` | `{ base, version }` |
 | `ConfigContext.shadowSlugOf` | gone — anyone with the config reads the member |
 
-`versionsReadQuery` is four `if`s. It was always four `if`s; it was a switch in the adapter before
-that. The `reduce` around it was the problem.
+## 7. `core/auth/tables.ts`
 
-**Gate:** generated schema byte-identical, then `test:versions` (54 tests), which exercises every
-branch.
+161 lines transcribing better-auth's five tables as column declarations. When better-auth changes
+its schema, somebody diffs their release notes against this file by hand. It is not better than the
+template string it replaced — it is further from drizzle, and `TableDeclaration` exists for this one
+caller.
 
-## Move 5 — stop hand-maintaining better-auth's schema
+**Generate it.** Better-auth ships a CLI that emits a drizzle schema for the configured plugin set;
+that output is what to consume. **Verify first** — check what it emits for this plugin list and
+whether it can target the schema file codegen already writes. If it cannot, the fallback is to move
+the declarations beside `better-auth/config.server.ts`, where the plugin list they mirror already
+lives, so the two are read together.
 
-`core/auth/tables.ts` is 160 lines of column declarations transcribing better-auth's tables —
-`$authUsers`, `$authSessions`, `$authAccounts`, `$authVerifications`, `$apikey`. When better-auth
-changes its schema, someone diffs their release notes against this file by hand.
-
-It is not better than the template string it replaced. It is further from drizzle and it buys
-nothing: no other feature will ever declare tables, so the `TableDeclaration` type exists for this
-one caller.
-
-**The fix is to generate it.** Better-auth ships a CLI that emits a drizzle schema for the plugins
-you have configured; that output is the thing to consume, and the five tables above stop being
-rime's problem.
-
-**Verify before committing to this one** — check what `@better-auth/cli generate` emits for this
-plugin set, and whether it can be pointed at the schema file codegen already writes. If it cannot,
-the fallback is to keep the declarations but move them beside better-auth's config where the plugin
-list already lives, so the two are read together.
-
-`authColumns` stays — `authUserId` and `isSuperAdmin` are rime's columns on rime's table, not
-better-auth's.
-
-## Move 6 — the small ones
-
-| what | why |
-| ---- | --- |
-| `pipeline/steps/` → `pipeline/hooks/` | they are hooks; the list that places them is called `hooks` |
-| `ctx.contentQuery(params, intent)` → `versionQuery` | "content row" is the same disguise as "shadow" |
-| `ctx.features` | drop it. Three callers, all feeding `writePlanWithFeatures`, which Move 4 deletes |
-| `PrototypeApiContext` in `define.ts` | move it beside `prototypeContext`, the function that builds it |
-| `PrototypeDefinition.titleFallback` | both prototypes answer `'id'`; `create` seeds it directly |
-| `FeatureDefinition.type` / `.requires` | nothing reads either; `requires` documents a check that does not exist |
+`authColumns` stays: `authUserId` and `isSuperAdmin` are rime's columns on rime's table.
 
 ---
 
-## Order, and why
+## The order
 
-1. **Move 6's dead fields** — free, proves the seam count was never load-bearing.
-2. **Move 1** — the folder move. Nothing works until core may say `versions`.
-3. **Move 4's rename** — mechanical, own commit, biggest legibility win per minute.
-4. **Move 4's collapse** — the three folds.
-5. **Move 3** — the composition lists. Biggest change, best gated (schema + hooks chart).
-6. **Move 2** — deleting `FeatureDefinition` is what is *left over* once 3 and 4 are done.
-7. **Move 5** — needs its own investigation first.
+Each is one commit. None depends on a later one.
 
-Each is a commit. None depends on a later one. Stopping after 3 still leaves the adapter saying
-what it means.
+| # | move | size | gate |
+| - | ---- | ---: | ---- |
+| 1 | dead fields — `FeatureDefinition.type`, `.requires`, `PrototypeDefinition.titleFallback` | ~55 | `check` |
+| 2 | `pipeline/steps/` → `pipeline/hooks/`; adapter file renames and the 649-line split | ~0 net | `check`, `madge` |
+| 3 | the folder moves of §4 — nothing edited, only moved | ~0 net | `check`, `madge`, generated output identical |
+| 4 | adapter says `versions` — mechanical, 116 places | ~0 net | **schema byte-identical** |
+| 5 | the three versions folds collapse; `WritePlan` → `{ base, version }` | −120 | schema identical, `test:versions` |
+| 6 | auth's `validate` → import; `tables`/`columns` → config data | −90 | schema identical, `test:basic` |
+| 7 | `upload.boot` → `await bootUpload(config)` | −15 | `test:basic` |
+| 8 | composition lists + `when()`; delete `applyAugments` | −60 | **schema identical** (field order = column order), hooks chart identical |
+| 9 | delete both merging targets; `BuiltConfig` names `panel` and `$trustedOrigins` | −180 | `check` on **two** fixtures, `inference.spec.ts` |
+| 10 | delete `defineFeature`, `features/define.ts`, `fold.ts`, `apply.ts`, `tables.ts`, ten manifests | −900 | `check`, full e2e |
+| 11 | better-auth schema — investigate first | ? | schema identical |
+
+Roughly **1400 lines deleted**, no behaviour changed, and every step gated on the generated schema
+being byte-identical — which is headless and takes seconds:
+
+```
+rm node_modules/.rime/config.txt && bun ./src/lib/core/dev/cli/index.ts generate --force
+```
 
 ## The test
 
-When it is done, this reads the system end to end:
+Four files explain the system end to end, and none of them is a fold:
 
 1. `core/prototype/collection/definition.ts` — what a collection is, composed in one list.
 2. `core/prototype/collection/hooks.server.ts` — what runs, in order.
 3. `core/boot.server.ts` — the eight steps that happen once.
 4. `core/adapter.ts` — what a database must provide, in words that mean what they say.
 
-Four files. No folds. If a move lands and this needs a fifth, the move was wrong.
+If a move lands and this needs a fifth, the move was wrong.
 
 ## Risk register
 
 | risk | bites | caught by |
 | ---- | ----- | --------- |
-| a composed list in the wrong order | column order changes → unrequested migration | generated schema byte-identical |
-| a `when` guard forgotten | a feature's augment runs on configs without it | schema diff, then `test:basic` |
-| the 116-place rename slipping one | a table resolves to the wrong name | generated schema byte-identical |
-| a hook lost in the move | documents with no title, no url | `hooks.generated.md` + `hook-placement.spec.ts` |
-| Move 2 widening a slug literal | consumer apps lose `rime.collection(…)` autocomplete | `check` on **two** fixtures, `inference.spec.ts` |
+| a composed list reordered | column order changes → unrequested migration | schema byte-identical |
+| a `when` guard forgotten | an augment runs on configs without the feature | schema diff, then `test:basic` |
+| the 116-place rename slipping one | a table resolves to the wrong name | schema byte-identical |
+| a hook lost in a folder move | documents with no title, no url | hooks chart identical, `hook-placement.spec.ts` |
+| move 9 widening a slug literal | consumer apps lose `rime.collection(…)` autocomplete | `check` on two fixtures |
+| a `$rime/modules` pair broken by a move | 500 on every module request, message names nothing | **load the panel in a browser** — CONTRIBUTING rule 7 |
 
-The schema gate is headless and takes seconds:
-
-```
-rm node_modules/.rime/config.txt && bun ./src/lib/core/dev/cli/index.ts generate --force
-```
+That last one has no static gate. Every folder move that touches a `module.ts` / `module.server.ts`
+pair needs a browser check before the commit.
 
 ## What is not on the table
 
-Throwing the branch away. `core/adapter.ts` does not exist on `develop`, and it is the one thing
-here that cannot be re-derived in an evening — it took finding every place the database layer knew
-what a draft was. Everything else in this plan is deletion.
+Throwing the branch away. `develop` has no `Adapter` interface — its core is `areas/`,
+`collections/`, `operations/`. That one file is the only thing here that cannot be redone in an
+evening, because writing it meant finding every place the database layer knew what a draft was.
+Everything above is deletion.
