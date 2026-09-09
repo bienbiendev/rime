@@ -87,7 +87,7 @@ export const collection = definePrototype({
  * `definePrototype` and the signature lives here, next to the kind it belongs to.
  *
  * Isomorphic on purpose. A feature that derives a collection (`auth`'s `staff`) imports this file
- * and not `definition.server.ts` — see the rule in docs/restructure-handoff.md.
+ * and not `definition.server.ts` — see rule 3 in CONTRIBUTING.md.
  */
 export const create = <S extends string>(
   slug: S,

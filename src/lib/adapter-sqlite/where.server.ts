@@ -27,9 +27,9 @@ type BuildWhereArgs = {
    * the content row, and the hierarchy columns (`_parent`, `_position`, `_path`) live on the base
    * table and have to be reached through it.
    *
-   * This used to be `hasVersionsSuffix(slug)` — the adapter recognising a shadow by matching the
-   * versions feature's own suffix, which meant a second feature declaring a shadow would silently
-   * get neither behaviour. The caller knows: it read the shadow off registration to pick this slug
+   * This used to be a suffix test — the adapter recognising a shadow by matching one feature's
+   * own naming convention, which meant a second feature declaring a shadow would silently get
+   * neither behaviour. The caller knows: it read the shadow off registration to pick this slug
    * in the first place, so it says so rather than leaving the where builder to infer it from a
    * naming convention it does not own.
    */
@@ -441,7 +441,7 @@ function getConditionMembers(obj: Dic) {
 }
 
 // Determine if we should handle versioned hierarchy fields
-/** The columns the `nested` feature puts on a base row, wherever the content lives. */
+/** The hierarchy columns, which stay on a base row wherever the content lives. */
 function isHierarchyColumn(sqlColumn: string) {
   return sqlColumn === '_parent' || sqlColumn === '_position' || sqlColumn === '_path';
 }

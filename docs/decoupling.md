@@ -1,0 +1,553 @@
+# Decoupling rime
+
+The adapter should not know what a feature is. Neither should core. This document is the state of
+that work, a fresh audit of where it actually stands, and the stages left — each with the
+implementation written out rather than described.
+
+**Scope note:** `src/lib/panel/` is out of scope throughout. The panel is a consumer of core like
+any other; core letting go of the panel is a separate piece of work and nothing below depends on
+it.
+
+> **Read `CONTRIBUTING.md` first** if you are picking this up cold. It has the gates, the traps
+> that cost a round each, and the verification loop. Every number in this document is a grep you
+> can re-run — the greps are the contract, not the numbers.
+
+---
+
+## 1. State of the branch
+
+Branch: `claude/cold-start-commit-9-b0f03u`.
+
+### 1.1 Landed
+
+The adapter no longer imports any individual feature, and no longer reads any feature's config
+member. What got it there, newest first:
+
+| commit     | what                                                                                                                                             |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `99aea980` | the row/document merge is the adapter's, naming it is the feature's — `mergeContentRow` emits `contentId`, `versions` adds `versionId` in a hook |
+| `93f98982` | `readWhere` reverted; `nested` and relation defaults use `findMany({ select: ['id'] })`                                                          |
+| `4b9db413` | **bug**: a shadowed prototype could not sort by its base-row columns                                                                             |
+| `2ac83daa` | `readWhere`/`updateWhere`; `childrenIds`, `existingIds`, `updateDocumentUrl`, `updateRecord` leave the contract                                  |
+| `1356bef5` | upload's `_path` block leaves `insertPrototype`                                                                                                  |
+| `aebef15d` | the adapter's last three `config.versions` reads                                                                                                 |
+| `e921425c` | the last two `features/versions/naming` imports in core                                                                                          |
+| `14fb6d2a` | `contentOwnerSlug` gone; the owning slug comes off `PrototypeHandle.shadow`                                                                      |
+| `43757e1e` | `versionOperation` leaves core's vocabulary                                                                                                      |
+| `76f308a2` | `getOriginalDocument` stops decoding the versions enum; core declares `ReadIntent`                                                               |
+| `dc6b2160` | `bun run rime:pipeline` renders the resolved pipeline into `docs/pipeline-map.md`                                                                |
+| `9c66566a` | core owns the default content owner; `handleNewVersion` moves onto the feature                                                                   |
+| `1ec2dfca` | `updateWhere`, and the publish demotion becomes a versions hook                                                                                  |
+| `5dac93c0` | the write plan is built above the adapter                                                                                                        |
+| `a89a72c9` | the read selector comes from the caller as a filter                                                                                              |
+| `25a78cdc` | a shadow is recognised by its table, not a config member                                                                                         |
+| `7c7b771a` | registration carries the shadow declaration                                                                                                      |
+
+The seams that came out of it, all on `FeatureDefinition`:
+
+```ts
+// core/features/define.ts — what a feature may contribute
+augment?:    (config) => config              // fields, defaults, normalisation
+configure?:  (config) => config              // whole-config steps, e.g. deriving a collection
+validate?:   (config) => string[]            // what this feature requires of a config
+blank?:      (doc, config) => doc            // what a blank document carries
+seed?:       (doc, config) => doc            // what a *bootstrapped* first document carries
+shadow?:     (config) => ShadowDeclaration   // a second table holding this config's content
+writePlan?:  (plan, { config, context }) => plan   // which rows an update touches
+readQuery?:  ({ config, params, intent }) => OperationQuery | undefined  // which content row a read means
+hooks?:      FeatureHooks                    // document hooks, ordered by marks
+handler?:    Handle                          // a SvelteKit handle
+```
+
+### 1.2 Uncommitted, on the working tree
+
+**Pull the branch and you will find these unstaged.** They are finished but unverified — see
+§4.0, which is the first stage precisely because of that.
+
+```
+ M src/lib/adapter-sqlite/auth.server.ts
+ M src/lib/adapter-sqlite/blocks.server.ts
+ M src/lib/adapter-sqlite/generate-schema/index.server.ts
+ M src/lib/adapter-sqlite/generate-schema/root.server.ts
+ M src/lib/adapter-sqlite/generate-schema/templates.server.ts
+ M src/lib/adapter-sqlite/naming.server.ts
+ M src/lib/adapter-sqlite/orderBy.server.ts
+ M src/lib/adapter-sqlite/prototype.server.ts
+ M src/lib/adapter-sqlite/transform.server.ts
+ M src/lib/adapter-sqlite/util.server.ts
+ M src/lib/adapter-sqlite/where.server.ts
+ M src/lib/core/adapter.ts
+ M src/lib/core/pipeline/run.server.ts
+```
+
+Three things in there:
+
+1. **`versionsTable` → `contentTable`** (and `versionsLocalesTable` → `contentLocalesTable`) in
+   `prototype.server.ts`. 23 identifier hits. Pure rename.
+2. **`isPanel` is gone.** `transform.doc` was testing `event.params.panel !== undefined` to decide
+   whether to keep `position`/`path`/`ownerId`/`locale` on child rows. It takes `withRowMeta` now
+   and `readDocument` passes it.
+3. **`templateDirectories` deleted** — dead code with no caller, and its `withDirectoriesSuffix`
+   import was the last `upload` reference in the adapter.
+
+Plus a comment sweep so the adapter stops _reasoning_ in feature terms.
+
+### 1.3 Left
+
+Everything in §4. The short version: **auth**, the **child-table declaration** that auth needs,
+the **transform split**, the **insert plan**, and a handful of feature words still in core.
+
+---
+
+## 2. The audit
+
+Case-insensitive, every feature name, across `src/lib/adapter-sqlite`:
+
+```bash
+cd src/lib/adapter-sqlite
+for f in versions upload auth nested url title thumbnail metas cors panel draft directories; do
+  echo "$(grep -rin "$f" --include=*.ts . | wc -l)  $f"
+done | sort -rn
+```
+
+| count | name       | verdict                                                                  |
+| ----: | ---------- | ------------------------------------------------------------------------ |
+|    98 | `auth`     | **real** — the whole of §4.2 and §4.3                                    |
+|    22 | `nested`   | false positive — "nested object", "nested path", "nested AND conditions" |
+|    18 | `title`    | false positive — `text('title')` in doc-comment examples                 |
+|     1 | `versions` | a `docs/` filename in a pointer comment                                  |
+|     1 | `url`      | "url params" in a comment about comma-separated values                   |
+|     1 | `panel`    | the comment recording what `withRowMeta` replaced                        |
+|     0 | the rest   | clean                                                                    |
+
+The 98 `auth` hits break down as:
+
+```
+  44  auth.server.ts                     the AuthAdapter facade
+  30  generate-schema/templates.server.ts  templateAuth (4 tables) + templateHasAuth
+   9  generate-schema/index.server.ts    authConfig(), hasAuth, HAS_API_KEY
+   7  generate-schema/root.server.ts     hasAuth → templateHasAuth
+   5  where.server.ts                    false positive: `attributes.author.name` examples
+   3  index.server.ts                    wiring the facade
+```
+
+Two hardcoded slugs, which is the sharpest tell in the whole audit:
+
+```ts
+// adapter-sqlite/auth.server.ts
+const usersTable = getTable('staff');          // :37
+if (slug === 'staff') { … }                    // :113
+isStaff: slug === 'staff'                      // :123
+
+// adapter-sqlite/generate-schema/templates.server.ts
+${slug === 'staff' ? `isSuperAdmin: integer('is_super_admin', …),` : ''}   // :105
+```
+
+The database layer knows a collection called `staff` exists and that it is special.
+
+### 2.1 Core's remaining feature words
+
+```bash
+grep -rn "core/features/" src/lib/core --include=*.ts \
+  | grep -v "^src/lib/core/features/" | grep -v spec
+```
+
+Legitimate — a prototype listing the features that extend it, and the registry contract:
+
+```
+prototype/{collection,area}/definition.ts   features: [auth, panel, upload, …]
+config/{validate,build,context}.server.ts   features/registry.js  (shadowOf, validateWithFeatures…)
+prototype/api.server.ts                     features/registry.js  (blankWithFeatures, readQueryOf)
+handlers/index.ts                           features/registry.js  (featureHandlers)
+```
+
+Leaks:
+
+```
+core/handlers/auth.server.ts                      → features/auth/constant.server.js  (BETTER_AUTH_ROLES)
+core/prototype/collection/hooks/merge-with-blank  → features/upload/util/config.js    (isUploadConfig)
+core/constants.ts                                 VERSIONS_STATUS, UPLOAD_PATH
+core/dev/codegen/routes/common.server.ts          two hardcoded `…/versions` panel routes
+```
+
+### 2.2 Feature-to-feature
+
+```
+features/upload/naming.ts                    → features/versions/naming.js   (withoutVersionsSuffix)
+features/versions/hooks/handle-new-version   → features/upload/util/converter.server.js (filePathToFile)
+```
+
+Both are real. The first is why `withDirectoriesSuffix('$pages__versions')` resolves to
+`$pagesDirectories` — upload strips a suffix it should not know about.
+
+---
+
+## 3. The rule this is all trying to satisfy
+
+From `docs/architecture-target.md`:
+
+> Each part of the system is responsible for itself. A prototype does not know what a feature is.
+
+Three tests that have actually caught things, in order of how often they fire:
+
+1. **A method named after a feature's question.** `childrenIds` was `nested`'s question. `updateDocumentUrl` was `url`'s. If you can only explain what a method is for by naming a feature, it is that feature's method.
+2. **A feature word in a _return value_.** `mergeRawDocumentWithVersion` emitted `versionId`. Renaming it moves the tell, not the coupling — the caller still receives a feature's vocabulary.
+3. **A prototype listing a feature's hook.** That means _core is missing a default_. The fix is never "find a timing that means always"; it is core stating the default and the feature overriding it.
+
+And the counter-test, which matters just as much: `blocks`, `tree` and `relations` are facades for
+**storage shapes**, not features. Collapsing those into primitives would make core rebuild the same
+three write plans by hand. Leave them.
+
+---
+
+## 4. The stages
+
+Each is shippable on its own and gate-able on its own. Annexes carry the detail:
+`decoupling-transform.md`, `decoupling-tables.md`, `decoupling-auth.md`.
+
+### 4.0 — Land the working tree
+
+**Nothing new to write.** Verify what is already there, then commit.
+
+The one behavioural change is `withRowMeta`, and it is behaviour-identical by construction: the
+same expression, on the same `event`, moved one layer up.
+
+```ts
+// adapter-sqlite/transform.server.ts — before
+const isPanel = event.params.panel !== undefined;
+if (!isPanel) {
+  delete block.position;
+  delete block.path;
+  delete block.ownerId;
+  delete block.locale;
+}
+```
+
+```ts
+// adapter-sqlite/transform.server.ts — after
+const { withRowMeta = false } = args;
+if (!withRowMeta) {
+  delete block.position;
+  delete block.path;
+  delete block.ownerId;
+  delete block.locale;
+}
+```
+
+```ts
+// core/pipeline/run.server.ts — readDocument, the one caller
+const document = await event.locals.rime.adapter.transform.doc({
+  doc: raw,
+  slug: config.slug,
+  locale,
+  event,
+  depth,
+  withBlank: !hasSelect,
+  withRowMeta: event.params.panel !== undefined
+});
+```
+
+**Verify in this order**, because the panel is the only consumer of that flag and its e2e tests
+do not run in the cloud container (Chromium 1194 vs Playwright's 1243):
+
+```bash
+bun run rime:use versions
+bun run check                  # 0
+bunx eslint src/lib            # 20
+bun run check:circular-deps    # 3 — the list matters more than the count
+bunx vitest run                # 165
+bun run test:versions          # 54
+bun run test:fields            # the one that has not run since the change
+```
+
+Then the browser probe in `probing.md` §7 — sign in, load a collection document with blocks, edit
+and save one. That is what `withRowMeta` actually gates.
+
+> ⚠️ **`tests/basic/pages.test.ts:9 › Login form › should login successfully` is reported failing.**
+> In the cloud container that test is one of 12 baseline failures, all of them Chromium
+> launch errors. On a machine with a working Chromium it is a **real signal** and must be
+> resolved before this stage lands. Sign-in does not read a document, so `withRowMeta` is an
+> unlikely cause — but check it before assuming, and use the browser probe rather than reasoning.
+
+### 4.1 — Split `transform`
+
+`adapter-sqlite/transform.server.ts` is ~300 lines and only half of it is database work. The half
+that is: unflattening rows, resolving child table names, merging the locales branch. The half that
+is not: merging the blank document, deciding which keys to strip, assembling relations into
+document properties.
+
+**Full detail: `docs/decoupling-transform.md`.**
+
+The shape:
+
+```ts
+// core/adapter.ts — the adapter's half shrinks to this
+export interface TransformAdapter {
+  /** Storage rows for one document, unflattened and grouped. No blank, no stripping. */
+  rows(args: { doc: RawDoc; slug: string; locale?: string }): Promise<DocumentRows>;
+}
+```
+
+```ts
+// core/pipeline/transform/index.server.ts — core's half
+export const buildDocument = (rows: DocumentRows, args: BuildArgs): GenericDoc => { … };
+```
+
+This is also what earns a **transform hook timing**. Right now `versions`' `exposeVersionId` is a
+`beforeRead` hook, which is consistent with `setDocumentType` and `populateSizes` but is
+conceptually a mapping, not an enrichment. Once the mapping is a stage in core with four or five
+participants, a timing for it has inhabitants on day one — not before.
+
+### 4.2 — `FeatureDefinition.tables`
+
+**The keystone.** Everything auth-shaped in the schema generator, plus upload's directories table,
+plus `_generateSchema: false`, is one missing declaration: a feature saying _what tables it needs
+that are not a prototype's own_.
+
+**Full detail: `docs/decoupling-tables.md`.**
+
+```ts
+// core/features/define.ts
+/** Tables this feature needs that no prototype declares. Boot and codegen both read it. */
+tables?: (config: BuiltConfig) => TableDeclaration[];
+
+export type TableDeclaration = {
+  /** In slug space. `$` marks it rime-derived. */
+  slug: string;
+  columns: ColumnDeclaration[];
+  /** Rows are deleted with the row they point at. */
+  references?: { column: string; table: string; onDelete: 'cascade' | 'set null' }[];
+};
+```
+
+```ts
+// core/features/auth/index.ts — the four better-auth tables stop being a template
+tables: () => [
+  { slug: '$authUsers',   columns: [text('id').primary(), text('email').notNull(), …] },
+  { slug: '$authSessions', columns: […], references: [{ column: 'userId', table: '$authUsers', onDelete: 'cascade' }] },
+  …
+]
+```
+
+What it deletes: `templateAuth`, `templateHasAuth`, `HAS_API_KEY`, `authConfig()`, `hasAuth`
+threading through `buildRootTable` — and the `slug === 'staff'` in the column template.
+
+### 4.3 — The auth facade
+
+With §4.2 landed, `AuthAdapter`'s seven methods are ordinary reads against declared tables.
+
+**Full detail: `docs/decoupling-auth.md`.**
+
+```ts
+// core/adapter.ts — what is left of it
+export interface AuthAdapter {
+  /** Opaque to core, which only hands it to Better-auth. */
+  betterAuthAdapter: unknown;
+}
+```
+
+Every other method becomes something the feature does through primitives it already has:
+
+```ts
+// features/auth — was adapter.auth.isSuperAdmin(userId)
+const [id] = await rime.adapter.prototype(config.slug).findMany({
+  query: { where: { id: { equals: userId }, isSuperAdmin: { equals: true } } },
+  select: ['id']
+});
+return !!id;
+```
+
+And the two hardcoded `'staff'` slugs go: the feature knows which collection is its own, because
+it is the one that derived it.
+
+### 4.4 — The insert plan
+
+The last `config.versions` read on any write path, and the last place `insertPrototype` splits data
+for itself.
+
+```ts
+// core/adapter.ts — insert takes a plan, like update already does
+insert(args: {
+  data: Dic;
+  content?: { data: Dic };     // no id — the adapter makes the row and answers with it
+  locale?: string;
+}): Promise<{ id: string; contentId: string }>;
+```
+
+The update plan cannot be reused verbatim, because an insert has no row to name yet. `WritePlan`
+gains an optional id:
+
+```ts
+export type WritePlan = {
+  data: Dic;
+  /** `id` absent on an insert, where the adapter creates the row and answers with its id. */
+  content?: { id?: string; data: Dic };
+};
+```
+
+`create.ts` folds `writePlanWithFeatures` before calling `insert`, exactly as `runUpdate` does at
+step 3.5. `ensurePrototypeExists` already takes a seeded blank (`FeatureDefinition.seed`), so it
+needs nothing further.
+
+### 4.5 — Core's feature words
+
+Four small ones, each independent:
+
+```ts
+// core/handlers/auth.server.ts — imports BETTER_AUTH_ROLES from the auth feature
+// → the feature's `handler` already exists; this belongs behind it.
+
+// core/prototype/collection/hooks/merge-with-blank.server.ts — imports isUploadConfig
+// → what it actually needs is "does this field come from a file", which is a field question.
+
+// core/constants.ts — VERSIONS_STATUS, UPLOAD_PATH
+// → move each into its feature; they are only shared because they were declared centrally.
+
+// core/dev/codegen/routes/common.server.ts — two hardcoded panel `…/versions` routes
+// → a feature declaring routes is `FeatureDefinition.routes`, sibling to `handler`.
+```
+
+### 4.6 — Feature to feature
+
+```ts
+// features/upload/naming.ts
+import { withoutVersionsSuffix } from '../versions/naming.js';
+
+export const withDirectoriesSuffix = (slug: string) =>
+  `${DERIVED}${withoutVersionsSuffix(slug)}${MARKER}` as CollectionSlug;
+```
+
+Upload strips a suffix it should not know about, so that a shadow's directories resolve to its
+parent's. After §4.2 the directories table is a declaration made once per _config_, not a name
+derived per slug, and the import goes with it.
+
+The other direction — `handleNewVersion` importing upload's `filePathToFile` to carry a file onto a
+new version — is a genuine cross-feature dependency and the honest fix is a feature declaring what
+a new content row inherits. Lowest priority; note it, do not force it.
+
+---
+
+## 5. Order, and why
+
+```
+4.0  land the working tree        ← blocking: everything else builds on it
+4.1  split transform              ← independent, unblocks a transform timing
+4.2  FeatureDefinition.tables     ← keystone
+4.3  the auth facade              ← needs 4.2
+4.4  the insert plan              ← independent, small
+4.5  core's feature words         ← independent, four small commits
+4.6  feature to feature           ← needs 4.2 for the first half
+```
+
+4.4 and 4.5 are the cheap ones and can be done any time something bigger is blocked.
+
+---
+
+## 6. What "done" looks like
+
+```bash
+# every feature name, case-insensitive, in the database layer
+cd src/lib/adapter-sqlite
+for f in versions upload auth nested url title thumbnail metas cors panel directories; do
+  echo "$(grep -rin "$f" --include=*.ts . | wc -l)  $f"
+done | sort -rn
+```
+
+Zero, apart from words that are also English ("nested object", "url params") and doc-comment
+examples. Today that is `auth 98`.
+
+```bash
+# core naming a feature, other than a prototype listing its own
+grep -rn "core/features/" src/lib/core --include=*.ts | grep -v "^src/lib/core/features/"
+```
+
+Only `features/registry.js` and the two prototype definitions' feature lists.
+
+```bash
+# a feature naming another
+grep -rn "core/features/" src/lib/core/features --include=*.ts \
+  | grep -vE "^src/lib/core/features/([a-z-]+)/.*features/\1/"
+```
+
+Empty, or one entry with a written reason.
+
+---
+
+## Appendix A — the adapter's vocabulary
+
+Four words, and every table name in the generated schema is one of them. This is what
+`adapter-sqlite/naming.server.ts` implements; `TableName` is a branded type, so a slug reaching a
+table-name parameter is a build error rather than a runtime miss.
+
+```
+pages__versions__$blocks_hero__$$locales
+└base┘  └shadow┘  └───child───┘ └branch┘
+```
+
+**base** — `snakeCase(slug)`. The prototype's own table.
+
+```
+pages
+```
+
+**shadow** — `{owner}__{shadow}`. `__` reads "shadow of". A shadow only ever shadows a base, and
+carries a relation back to its owner. A prototype has at most one.
+
+```
+pages__versions
+```
+
+**child** — `{owner}__${kind}` (`__$` reads "child of"). A table junctioned to a base or a shadow,
+never to another child. Created because a field needs rows rather than a column.
+
+```
+pages__$blocks_hero      # a blocks field
+pages__$relations        # any relation field in the tree
+pages__$tree             # a tree field
+```
+
+**branch** — `{owner}__$${branch}` (`__$$` reads "branch of"). The owner split in two, the same
+columns on a second axis.
+
+```
+pages__$$locales
+pages__versions__$$locales
+pages__$blocks_hero__$$locales
+pages__versions__$blocks_hero__$$locales
+```
+
+`owner = shadow ?? base` is the load-bearing line: everything a base can own, a shadow owns
+instead when one exists. In code that is `ConfigContext.shadowSlugOf(slug) ?? slug`, and no caller
+of it names the feature that declared the shadow.
+
+### Naming, across the three surfaces
+
+A slug is authored `camelCase`. A slug **derived by a feature** takes a `$` prefix, which is
+stripped everywhere but the slug itself.
+
+|           | process               | gives                 |
+| --------- | --------------------- | --------------------- |
+| **slug**  | —                     | `$someSlug__versions` |
+| **url**   | `kebab(slug minus $)` | `some-slug--versions` |
+| **table** | `snake(slug minus $)` | `some_slug__versions` |
+
+| slug                  | url                   | table                 |
+| --------------------- | --------------------- | --------------------- |
+| `camelCase`           | `camel-case`          | `camel_case`          |
+| `$mediasDirectories`  | `medias-directories`  | `media_directories`   |
+| `$someSlug__versions` | `some-slug--versions` | `some_slug__versions` |
+
+### What the vocabulary buys
+
+The adapter answers structural questions by table presence, never by config membership:
+
+```ts
+// not `config.versions.enabled`
+const hasShadow = shadowTableName(slug) in tables;
+
+// not `config.upload` — a child table exists or it does not
+const blocksTables = childTableNames(owner, 'blocks', tables);
+```
+
+A feature that adds a table adds a word to the schema, and the adapter reads the word. That is the
+whole contract — everything in §4 is an application of it.

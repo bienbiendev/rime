@@ -1,5 +1,4 @@
 import type { FieldReference } from '$lib/core/fields/builders/form-field-builder.js';
-import { withDirectoriesSuffix } from '$lib/core/features/upload/naming.js';
 import { toSnakeCase } from '$lib/util/string.js';
 import { baseTableName } from '../naming.server.js';
 import dedent from 'dedent';
@@ -80,7 +79,7 @@ export const templateReferences = ({
   selfReferencing
 }: FieldReference) => {
   // `table` is a prototype *slug* — every $references caller passes one (auth: 'staff',
-  // nested: config.slug, upload: the derived directories slug). Resolving it here keeps
+  // the prototype's own slug, or a derived one). Resolving it here keeps
   // features out of table naming, which is the adapter's business.
   const referenced = baseTableName(table);
   const arrow = selfReferencing ? '(): any =>' : '() =>';
@@ -94,7 +93,7 @@ export const templateReferences = ({
 
 /**
  * Generates authentication-related fields for a table
- * Adds super admin flag for the panel users table
+ * Adds the super-admin flag to a table of users
  *
  * @example
  * ```typescript
@@ -141,9 +140,9 @@ export const templateUniqueRequired = (
  *
  * @example
  * ```typescript
- * export const rel_pagesVersionsHasOnePages = relations(pagesVersions, ({ one }) => ({
+ * export const rel_pagesShadowHasOnePages = relations(pagesShadow, ({ one }) => ({
  *   pages: one(pages, {
- *     fields: [pagesVersions.ownerId],
+ *     fields: [pagesShadow.ownerId],
  *     references: [pages.id],
  *   }),
  * }))
@@ -375,9 +374,9 @@ export const apikey = sqliteTable("apikey", {
  * ```typescript
  * const schema = {
  *   pages,
- *   pagesVersions,
- *   rel_pagesVersionsHasOnePages,
- *   rel_pagesHasManyVersions,
+ *   pagesShadow,
+ *   rel_pagesShadowHasOnePages,
+ *   rel_pagesHasManyShadow,
  *   authUsers,
  *   authAccounts,
  *   authVerifications,
@@ -417,19 +416,6 @@ export default schema
  */
 export const templateHead = (slug: string) => dedent`
   /** ${slug} ============================================== **/`;
-
-export const templateDirectories = (slug: string) => `
-export const ${baseTableName(withDirectoriesSuffix(slug))} = sqliteTable('${baseTableName(withDirectoriesSuffix(slug))}', {
-  id: text('id').notNull().primaryKey(),
-  parent: text('parent').references(():any => ${baseTableName(withDirectoriesSuffix(slug))}.id, {
-		onDelete : 'cascade',
-		onUpdate : 'cascade',
-	}),
-  name: text('name').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-})
-`;
 
 type RelationOneArgs = {
   name: string;

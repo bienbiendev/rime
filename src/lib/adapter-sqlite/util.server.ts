@@ -91,8 +91,8 @@ export async function upsertLocalizedData(
 
 /**
  * Extract root table properties :
- * - hierarchy props (nested) : _parent and _position
- * - directory props (upload) : _path
+ * - hierarchy props : _parent and _position
+ * - directory props : _path
  * return an object with the data filtered and the rootData.
  */
 /**
@@ -142,7 +142,7 @@ export function prepareSchemaData(
  * concept; the emitted key was worse than that — a method that has to name a feature in its
  * *return value* is that feature's method, wherever it lives. So the id of the content row goes
  * out as `contentId`, which is what `insert` already returns and what `find` already takes, and
- * `versions` puts `versionId` on the document itself (features/versions/hooks/expose-version-id.ts).
+ * whichever feature declared the shadow names that row on the document itself, in a hook.
  */
 export function mergeContentRow(
   doc: RawDoc,
@@ -206,7 +206,7 @@ export function columnsParams({ table, select }: { table: Dic; select?: string[]
       // Convert nested paths (dot notation) to SQL format (double underscore)
       // Example: 'attributes.slug' becomes 'attributes__slug'
       const sqlPath = path.replace(/\./g, '__');
-      // If this column exists on the versions table, add it to our select
+      // If this column exists on the content table, add it to our select
       if (sqlPath in table) {
         selectColumns[sqlPath] = true;
       }
@@ -254,8 +254,8 @@ export const databaseColumnToPath = (path: string): string =>
  * Is this key a table name rather than a column path?
  *
  * Both use `__` as a separator, so converting it to `.` blindly turns a relational table's key
- * into nested document properties: `settings__versions__$relations` becomes
- * `settings.versions.$relations`, which the cleanup below cannot find by its flat key, and it
+ * into nested document properties: `settings__shadow__$relations` becomes
+ * `settings.shadow.$relations`, which the cleanup below cannot find by its flat key, and it
  * surfaces inside every response — silently, as a 200 with wrong data.
  *
  * `$` is what separates the two. The naming convention uses it to mark structure — `__$` a

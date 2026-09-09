@@ -30,7 +30,7 @@ type Args = {
   /**
    * The base table this one shadows, when it is a shadow — it gets an `ownerId` pointing back at
    * it. Named after the relationship rather than after the feature that asks for one: what makes
-   * a shadow is a feature declaring it, not a `versions` member.
+   * a shadow is a feature declaring one, never a config member this module recognises.
    */
   shadows?: string | false;
   blocksRegister: string[];

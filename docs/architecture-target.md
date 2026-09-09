@@ -12,7 +12,7 @@
 > - **"No `derive`, `augment`, …"** — `augment` stayed, and it is the right primitive: a feature
 >   adding fields to a prototype's config is not the same act as one adding a whole collection.
 >   `derive` did go: what was `versions.derive` / `upload.derive` is now `configure`, the
->   whole-config step, so there is one seam instead of two. See `restructure-handoff.md` rule 6.
+>   whole-config step, so there is one seam instead of two. See rule 6 in `CONTRIBUTING.md`.
 > - **`rime.{prototypeName}(slug)`** — accessors _are_ generated per prototype
 >   (`prototype/accessors.server.ts`, built by `buildAccessors` in `rime.server.ts`), so the shape
 >   landed; the names are still `collection` and `area` because those are the two registered, and
@@ -24,7 +24,7 @@
 >
 > `isArea` / `isCollection` and the quoted kind names are down to **32 lines in core**, 1 in the
 > adapter and 4 in fields, with **35 in the panel** — where some kind-shaped branch legitimately
-> survives (`coupling-audit.md` §5). Core's concentrate in `config/{context,build,validate}.server.ts`
+> survives (out of scope — see `decoupling.md` § 2). Core's concentrate in `config/{context,build,validate}.server.ts`
 > and `config/types.ts`.
 >
 > The sections below are the **real** contracts and the **real** flow, read off the code. The
@@ -52,7 +52,7 @@
   touches a prototype config.
 
 > The adapter understands the prototype definition and the contract it brings with it —
-> [`decoupling-adapter.md`](decoupling-adapter.md).
+> [`decoupling.md`](decoupling.md), whose appendix A is the table vocabulary it speaks.
 
 ---
 
@@ -641,5 +641,4 @@ its API.
 **A feature-shaped `auth`** — the sketch ends "I think auth is core not a feature full stop",
 because better-auth's instance needs the adapter and contributes a member back. It **is** a feature
 now, with one exception: its better-auth construction is still step 7 of `bootRime` rather than its
-`boot`, because `boot` takes only the config and cannot contribute anything back. That is item 8 of
-`cold-start.md` §4 — a contract change, not a relocation.
+`boot`, because `boot` takes only the config and cannot contribute anything back. That is `decoupling.md` § 4.3 — a contract change, not a relocation.

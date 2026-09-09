@@ -14,11 +14,11 @@ type Args = {
    * The table this prototype's content lives in, when it is not the base row — resolved by the
    * caller from the shadow it was registered with.
    *
-   * This used to be `!!config.versions`, and the shadow's name was rebuilt here by calling the
-   * versions feature's `withVersionsSuffix`. Two things wrong with that: the adapter named a
-   * feature, and it asked a config a question the schema already answers. The question the sort
-   * builder actually has is "are this prototype's sortable columns on the base row or somewhere
-   * else", which is about tables, so it is asked of `tables`.
+   * This used to be read off a config member, with the shadow's name rebuilt here from a
+   * feature's own suffix. Two things wrong with that: the adapter named a feature, and it asked a
+   * config a question the schema already answers. The question the sort builder actually has is
+   * "are this prototype's sortable columns on the base row or somewhere else", which is about
+   * tables, so it is asked of `tables`.
    */
   shadow?: TableName;
 };
@@ -59,9 +59,9 @@ export const buildOrderByParam = ({ slug, locale, tables, by, shadow }: Args) =>
    *
    * This used to be inside the `!hasShadow` branch, and the shadow branch never looked at the base
    * table at all — so a shadowed prototype could not sort by any of its **base-row** columns. Those
-   * are exactly the `._root()` ones, which is `nested`'s `_parent`/`_position` and `upload`'s
-   * `_path`: `?sort=_position` on a versioned nested collection warned "not a property" and
-   * silently ordered by `createdAt` instead.
+   * are exactly the `._root()` ones — the hierarchy and path columns features put on a base row.
+   * `?sort=_position` on a shadowed prototype warned "not a property" and silently ordered by
+   * `createdAt` instead.
    *
    * Safe in both branches because the two tables' columns are disjoint by construction — the
    * schema generator sends `._root()` fields to one and everything else to the other — and the

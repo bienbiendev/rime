@@ -54,7 +54,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
     const shadow = shadowOf(entry.prototype.features, prototype);
 
     // The prototype's own table, resolved from its slug rather than case-converted here —
-    // a derived slug like $mediasDirectories has to lose its `$` and snake-case its segments.
+    // a derived slug like `$someChild` has to lose its `$` and snake-case its segments.
     const baseName = baseTableName(prototype.slug);
     let rootTableName: TableName = baseName;
     let shadowRelationsDefinitions: string[] = [];

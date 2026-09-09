@@ -8,7 +8,7 @@ import { generatePK, transformDataToSchema } from './util.server.js';
 
 const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   /**
-   * Callers name the owner by slug — `pages`, or `$pages__versions` when versioned — and the
+   * Callers name the owner by slug — the prototype's own, or its shadow's — and the
    * mapping to a table happens here, so that a table name never travels in a parameter that
    * names a slug.
    */

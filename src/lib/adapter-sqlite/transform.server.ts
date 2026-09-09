@@ -38,23 +38,32 @@ export const transformerFacade = <const C extends Config>(args: {
     event: RequestEvent;
     depth?: number;
     withBlank?: boolean;
+    withRowMeta?: boolean;
   }): Promise<T> => {
     //
 
-    const { slug, locale, event, withBlank = true, depth = 0 } = args;
+    const { slug, locale, event, withBlank = true, withRowMeta = false, depth = 0 } = args;
     const { rime } = event.locals;
 
     let doc = args.doc;
 
     const config = configCtx.getBySlug(slug);
     // The table this document's content is in — its own, unless a feature gave it a shadow. Was
-    // `config.versions ? baseTableName(withVersionsSuffix(slug)) : …`, which is this module naming
-    // a feature and building its table name.
+    // read off a config member with the shadow's name rebuilt from a feature's own suffix, which
+    // is this module naming a feature and building its table.
     const tableName = baseTableName(configCtx.shadowSlugOf(slug) ?? slug);
     const tableNameRelationFields = buildTableName({ owner: tableName, child: { kind: 'rels' } });
     const tableNameLocales = buildTableName({ owner: tableName, branch: 'locales' });
 
-    const isPanel = event.params.panel !== undefined;
+    /**
+     * Whether the caller wants a child row's own bookkeeping — `position`, `path`, `ownerId`,
+     * `locale` — left on it, and `editedBy` left on the document.
+     *
+     * This was `event.params.panel !== undefined`: the database layer reading a route parameter to
+     * work out who was asking, and naming a feature to do it. It is not the adapter's decision and
+     * it never was — an editor that writes blocks back in place needs the bookkeeping, an API read
+     * does not. The caller says so, the same way it already says `withBlank`.
+     */
 
     let docAPI;
     if (configCtx.isCollection(slug)) {
@@ -112,7 +121,7 @@ export const transformerFacade = <const C extends Config>(args: {
 
       /** Clean */
       const { position, path } = block;
-      if (!isPanel) {
+      if (!withRowMeta) {
         delete block.position;
         delete block.path;
         delete block.ownerId;
@@ -167,7 +176,7 @@ export const transformerFacade = <const C extends Config>(args: {
         const { position, path } = block;
         if (!block._children) block._children = [];
 
-        if (!isPanel) {
+        if (!withRowMeta) {
           delete block.position;
           delete block.path;
           delete block.ownerId;
@@ -218,7 +227,7 @@ export const transformerFacade = <const C extends Config>(args: {
               delete relation[key];
             }
           }
-          if (!isPanel) {
+          if (!withRowMeta) {
             delete relation.position;
             delete relation.ownerId;
             delete relation.path;
@@ -271,7 +280,7 @@ export const transformerFacade = <const C extends Config>(args: {
     }
     output = cleanEmptyElementsInArrays(output);
 
-    if (!isPanel || !event.locals.user) {
+    if (!withRowMeta || !event.locals.user) {
       keysToDelete.push('editedBy');
     }
 

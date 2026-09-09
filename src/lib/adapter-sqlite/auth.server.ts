@@ -34,11 +34,11 @@ const createAuthFacade = (args: {
   const getTable = (name: string) => schema[name as keyof typeof schema] as unknown as GenericTable;
 
   const isSuperAdmin = async (userId: string) => {
-    const panelUsersTable = getTable('staff');
+    const usersTable = getTable('staff');
     const [user] = await db
-      .select({ isSuperAdmin: panelUsersTable.isSuperAdmin })
-      .from(panelUsersTable)
-      .where(eq(panelUsersTable.id, userId));
+      .select({ isSuperAdmin: usersTable.isSuperAdmin })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId));
     if (!user) return false;
     return user.isSuperAdmin === true;
   };

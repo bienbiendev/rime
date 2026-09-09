@@ -1,8 +1,8 @@
 # `$rime/modules`: what resolves, and when
 
 > **Status: current.** The resolution table below still describes what happens, with one change
-> from commit 6: the bare specifier is _rewritten_ rather than served as a whole-package barrel
-> (see `rime-modules-cycles.md`), so ② — "the side was never authored" yielding
+> from commit 6: the bare specifier is _rewritten_ into an import of the one pair that declares
+> each name, rather than served as a whole-package barrel, so ② — "the side was never authored" yielding
 > `export const <name> = undefined` — is now the only way a name comes back undefined, and it is
 > deliberate. A feature's server-only `configure` resolving to `undefined` on a client build is
 > this, working: `versions.configure` and `cors.handler` both rely on it.
@@ -83,7 +83,7 @@ That is exactly what broke: `features/upload/index.ts` is loaded by both builds 
 
 The last three joined the list late, and the shape is the whole reason: a feature's `index.ts` is
 isomorphic — a prototype's feature list is reachable from a client build — so a hook it imports by
-path lands in the browser graph. See rule 7 in `restructure-handoff.md`.
+path lands in the browser graph. See rule 7 in `CONTRIBUTING.md`.
 
 | binding       | declared in                              | server build resolves to | client build resolves to              |
 | ------------- | ---------------------------------------- | ------------------------ | ------------------------------------- |

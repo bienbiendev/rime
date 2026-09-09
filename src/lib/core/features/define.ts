@@ -242,7 +242,7 @@ export type WritePlan = {
  *
  * Only `slug` for now, and deliberately: it is what the schema needs, and an unread member is
  * exactly the mistake this declaration replaces. The read selector and the owner column join it
- * when there is something reading them (docs/decoupling-versions.md, stages 3-4).
+ * when there is something reading them (docs/decoupling.md § 4.4).
  */
 export type ShadowDeclaration = {
   /**

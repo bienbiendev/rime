@@ -18,8 +18,8 @@ import { buildWithParam } from './with.server.js';
  * Everything the adapter can do to a prototype's tables — and it does not know what kind of
  * prototype it is holding.
  *
- * The adapter's vocabulary is the one in docs/decoupling-adapter.md: **base**, **shadow**
- * (the versions table), **child** (blocks, tree, the relations junction) and **branch** (the
+ * The adapter's vocabulary is the one in docs/decoupling.md, appendix A: **base**, **shadow**
+ * (a second table holding the content), **child** (blocks, tree, the relations junction) and **branch** (the
  * localized half). "Collection" and "area" are not adapter words. They were, in the two facades
  * this module replaces, and that was the mistake: a whole parallel implementation existed
  * because the database layer thought the kinds were different things.
@@ -28,9 +28,9 @@ import { buildWithParam } from './with.server.js';
  * supplies the root row's id**. Given one, or looking up the only row there is. Two apparent
  * differences turned out to be nothing at all:
  *
- * - An area's update reset every version row to draft with no `where`, a collection scoped the
+ * - An area's update reset every content row's status with no `where`, a collection scoped the
  *   reset to `ownerId = id`. For a single row those are the same set, so scoping always is
- *   behaviour-preserving. (That reset is a versions hook now, not a write this module makes.)
+ *   behaviour-preserving. (That reset is a feature's hook now, not a write this module makes.)
  * - A collection split off the fields its config keeps on the base row before writing; an area did
  *   not. `splitRootData` returns an empty half when a config marks none, so splitting always is
  *   behaviour-preserving too. (The split is core's now; this module is handed both halves.)
@@ -101,7 +101,7 @@ type ReadArgs = {
 };
 
 /**
- * Reads one prototype document, merged with the version it should show.
+ * Reads one prototype document, merged with the content row it should show.
  *
  * Returns `undefined` when there is nothing to read rather than throwing, and the caller decides
  * what that means — for most callers a 404.
@@ -136,20 +136,18 @@ export const readPrototype = async (
 
   // See findManyPrototypes for why the shadow's slug is castable.
   const shadowSlug = shadow.slug as PrototypeSlug;
-  const versionsTable = baseTableName(shadowSlug);
+  const contentTable = baseTableName(shadowSlug);
 
   const doc = await queryTable.findFirst({
     columns: adapterUtil.columnsParams({ table: rootTable, select }),
     ...byId,
     with: {
-      [versionsTable]: {
-        columns: adapterUtil.columnsParams({ table: tables[versionsTable], select }),
-        with: buildWithParam({ table: versionsTable, select, locale, tables, config }),
+      [contentTable]: {
+        columns: adapterUtil.columnsParams({ table: tables[contentTable], select }),
+        with: buildWithParam({ table: contentTable, select, locale, tables, config }),
         // The row the caller's filter names, else the newest — one query either way, and the
-        // adapter chooses nothing. This was three branches decided here, off `draft`, `versionId`
-        // and `config.versions.draft`: a named version, the published one, or the newest. Which
-        // of those a request means is the versions feature's answer now (its `readQuery`), and it
-        // arrives as an ordinary filter.
+        // adapter chooses nothing. Which content row a request means is decided above this module
+        // and arrives as an ordinary filter (`FeatureDefinition.readQuery`).
         //
         // The `orderBy`/`limit` are not the third branch coming back: they are what "the content
         // of this document" means with nothing else said, the same statement as `updatedAt` being
@@ -167,16 +165,16 @@ export const readPrototype = async (
               })
             }
           : {}),
-        orderBy: [desc(tables[versionsTable].updatedAt)],
+        orderBy: [desc(tables[contentTable].updatedAt)],
         limit: 1
       }
     }
   });
 
-  // A root row with no versions is as good as absent — there is nothing to show.
-  if (!doc || !doc[versionsTable] || doc[versionsTable].length === 0) return undefined;
+  // A base row with no content row is as good as absent — there is nothing to show.
+  if (!doc || !doc[contentTable] || doc[contentTable].length === 0) return undefined;
 
-  return adapterUtil.mergeContentRow(doc, versionsTable, config, select);
+  return adapterUtil.mergeContentRow(doc, contentTable, config, select);
 };
 
 type UpdateArgs = {
@@ -199,12 +197,11 @@ type Deps = {
 /**
  * Writes the rows the caller's plan names.
  *
- * Three branches until 1ec2dfca's successor: the caller passed a `versionOperation` down and this
- * function decoded it into "not versioned", "write that version" and "the version already exists".
+ * Three branches until 1ec2dfca's successor, decoded here from an enum the caller passed down.
  * They differed in exactly two facts — is there a second row, and has somebody already written it
- * — and both are settled before the call now (core/pipeline/run.server.ts builds the plan,
- * features/versions/write-plan.ts is what refines it). What was left is the same two writes in
- * every case, so there is one path.
+ * — and both are settled before the call now (`core/pipeline/run.server.ts` builds the plan,
+ * `FeatureDefinition.writePlan` refines it). What was left is the same two writes in every case,
+ * so there is one path.
  *
  * The content row's *table* is still the adapter's to know: registration carries the shadow, and
  * where rows live is storage. Which row, and whether to touch it, is the caller's.
@@ -267,15 +264,15 @@ const writeRow = async (
  *
  * A primitive: a table, a filter, a patch. It writes exactly the columns it is given — no
  * `updatedAt`, no children — because the callers that want a bulk column write want the rows left
- * otherwise alone. `versions` demotes a document's other versions with it, and that demotion
- * depends on `updatedAt` *not* moving: pruning orders by it, so touching it here would silently
- * re-order which versions survive.
+ * otherwise alone. Its one caller flips a status column across a document's other content rows,
+ * and depends on `updatedAt` *not* moving: that caller prunes by `updatedAt`, so touching it here
+ * would silently re-order which rows survive.
  *
  * With `locale`, a localized column lands on the `__$$locales` branch instead — resolved by
  * `prepareSchemaData`, the same split every other write goes through, so a caller says "set this
- * field" and does not have to know which of the two tables the field is in. That is what `url`
- * needs: `url` is localized on a localized config and not otherwise, and the adapter used to carry
- * a whole `updateDocumentUrl` with a four-way branch for exactly that.
+ * field" and does not have to know which of the two tables the field is in. That is what a
+ * computed column written back on read needs — localized on a localized config and not otherwise
+ * — and the adapter used to carry a whole method with a four-way branch for exactly that.
  *
  * It goes through `buildWhereParam`, so the filter is the same REST-shaped query every other
  * operation takes rather than a second dialect.
@@ -308,9 +305,9 @@ export const updateWherePrototype = async (
     // The branch is keyed by its owner, so the rows to touch are the ones this filter matched.
     //
     // An update, never an upsert — `upsertLocalizedData` would *insert* a locales row for a
-    // document that has none yet, and this runs during reads (a computed url). A half-populated
-    // locales row written ahead of the real one is how the versions-multilang duplicate tests
-    // started failing when this was first written as an upsert.
+    // document that has none yet, and its caller runs during reads. A half-populated
+    // locales row written ahead of the real one is how the multilingual duplicate tests started
+    // failing when this was first written as an upsert.
     const owners = await db.select({ id: tables[table].id }).from(tables[table]).where(where);
     const ownerIds = (owners as { id: string }[]).map((owner) => owner.id);
 
@@ -325,7 +322,7 @@ export const updateWherePrototype = async (
 };
 
 /**
- * Writes a new document: the base row, and a first shadow row when the prototype is versioned.
+ * Writes a new document: the base row, and a first content row when the prototype has a shadow.
  *
  * `contentId` names the row the content landed on — the shadow row when there is one, the base row
  * otherwise — which is what the caller hangs blocks, tree nodes and relations off.
@@ -337,9 +334,9 @@ export const insertPrototype = async (
   const now = new Date();
 
   if (shadow) {
-    // Hierarchy and upload roots live on the root row, never on a version. Still split here
-    // rather than by a plan: an insert has no row to name yet, so the caller has nothing to say
-    // that this cannot work out. See docs/decoupling-versions.md stage 4.
+    // A config's `._root()` fields live on the base row, never on the content row. Still split
+    // here rather than by a plan: an insert has no row to name yet, so the caller has nothing to
+    // say that this cannot work out. See docs/decoupling.md § 4.4.
     const { base, content: contentData } = splitRootData(data, config);
 
     const docId = await adapterUtil.insertTableRecord(db, tables, baseTableName(slug), {
@@ -348,19 +345,19 @@ export const insertPrototype = async (
       ...base
     });
 
-    const versionsTable = baseTableName(shadow.slug);
+    const contentTable = baseTableName(shadow.slug);
 
     const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(contentData, {
       tables,
-      mainTableName: versionsTable,
-      localesTableName: tableName({ owner: versionsTable, branch: 'locales' }),
+      mainTableName: contentTable,
+      localesTableName: tableName({ owner: contentTable, branch: 'locales' }),
       locale
     });
 
     const contentId = await insertRowWithLocales(
       { db, tables },
       {
-        table: versionsTable,
+        table: contentTable,
         row: { id: adapterUtil.generatePK(), ownerId: docId, ...mainData },
         now,
         localized: { data: localizedData, isLocalized, locale }
@@ -390,16 +387,16 @@ export const insertPrototype = async (
     }
   );
 
-  // No version row exists, so the two ids are the same thing.
+  // No second row exists, so the two ids are the same thing.
   // No shadow: the content is on the base row, so that is the row children hang off.
   return { id: docId, contentId: docId };
 };
 
 /**
- * Reads many documents, merged with the version each should show.
+ * Reads many documents, merged with the content row each should show.
  *
- * The versioned branch queries the root table and pulls one version row per document, because
- * pagination and ordering are properties of the document rather than of a revision.
+ * The shadowed branch queries the base table and pulls one content row per document, because
+ * pagination and ordering are properties of the document rather than of one of its rows.
  */
 export const findManyPrototypes = async (
   { db, tables, configCtx }: DepsWithConfig,
@@ -452,14 +449,14 @@ export const findManyPrototypes = async (
   // the same reason: a shadow is a registered prototype in its own right (the feature that
   // declares one also derives its config), so `buildWhereParam` can resolve fields against it.
   const shadowSlug = shadow.slug as PrototypeSlug;
-  const versionsTable = baseTableName(shadowSlug);
+  const contentTable = baseTableName(shadowSlug);
   const withParam =
-    buildWithParam({ table: versionsTable, select, tables, config, locale }) || undefined;
+    buildWithParam({ table: contentTable, select, tables, config, locale }) || undefined;
 
   // The caller's own filter, and the one saying which content row each document shows. Both
   // resolve against the shadow, so they are two wheres to `and` rather than two query objects to
-  // splice — which is what this was, a `status: published` condition spliced into somebody else's
-  // `where` by hand, behind `!draft && config.versions.draft`.
+  // splice — which is what this was, a condition spliced into somebody else's `where` by hand
+  // behind a config read.
   const wheres = [query, content && normalizeQuery(content)]
     .filter((one) => !!one)
     .map((one) =>
@@ -475,7 +472,7 @@ export const findManyPrototypes = async (
     limit: limit || (typeof offset === 'number' ? 1000000 : undefined),
     offset: offset,
     // The sortable columns are on the shadow, so the sort builder is handed it by name.
-    orderBy: buildOrderByParam({ slug, locale, tables, by: sort, shadow: versionsTable })
+    orderBy: buildOrderByParam({ slug, locale, tables, by: sort, shadow: contentTable })
   };
   Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);
 
@@ -483,12 +480,12 @@ export const findManyPrototypes = async (
     ...params,
     columns: adapterUtil.columnsParams({ table: tables[table], select }),
     with: {
-      [versionsTable]: {
+      [contentTable]: {
         with: withParam,
         where: whereParam,
-        orderBy: [desc(tables[versionsTable].updatedAt)],
+        orderBy: [desc(tables[contentTable].updatedAt)],
         limit: 1,
-        columns: adapterUtil.columnsParams({ table: tables[versionsTable], select })
+        columns: adapterUtil.columnsParams({ table: tables[contentTable], select })
       }
     }
   });
@@ -496,9 +493,9 @@ export const findManyPrototypes = async (
   return rawDocs
     .map((doc: RawDoc) => {
       try {
-        return adapterUtil.mergeContentRow(doc, versionsTable, config, select);
+        return adapterUtil.mergeContentRow(doc, contentTable, config, select);
       } catch (err: any) {
-        // A query forwarded to the versions table can match nothing for a given document; that
+        // A query forwarded to the content table can match nothing for a given document; that
         // document simply drops out of the result rather than failing the whole read.
         if (err instanceof RimeError && err.code === RimeError.NOT_FOUND) return false;
         throw err;
@@ -507,7 +504,7 @@ export const findManyPrototypes = async (
     .filter(Boolean);
 };
 
-/** Removes a document. Versions and children follow by cascade. */
+/** Removes a document. Its content rows and children follow by cascade. */
 export const deletePrototype = async (
   { db, tables }: Deps,
   { slug, id }: { slug: string; id: string }
@@ -523,8 +520,8 @@ export const deletePrototype = async (
 /**
  * The ids of the documents whose `_parent` is `parentId`, in `_position` order.
  *
- * Cannot go through `findMany`: hierarchy lives on the root table while a versioned prototype's
- * `where` resolves against the versions table. `_parent` and `_position` are columns the adapter
+ * Cannot go through `findMany`: hierarchy lives on the base table while a shadowed prototype's
+ * `where` resolves against the content table. `_parent` and `_position` are columns the adapter
  * writes itself, so answering this is its job.
  */
 /**
@@ -551,12 +548,12 @@ export const ensurePrototypeExists = async (
       updatedAt: now
     });
 
-    const versionsTable = baseTableName(shadow.slug);
+    const contentTable = baseTableName(shadow.slug);
 
     const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(blank, {
       tables,
-      mainTableName: versionsTable,
-      localesTableName: tableName({ owner: versionsTable, branch: 'locales' }),
+      mainTableName: contentTable,
+      localesTableName: tableName({ owner: contentTable, branch: 'locales' }),
       locale,
       fillNotNull: true
     });
@@ -564,7 +561,7 @@ export const ensurePrototypeExists = async (
     await insertRowWithLocales(
       { db, tables },
       {
-        table: versionsTable,
+        table: contentTable,
         row: { ownerId: docId, ...mainData },
         now,
         localized: { data: localizedData, isLocalized, locale }

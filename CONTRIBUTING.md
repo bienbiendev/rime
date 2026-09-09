@@ -11,7 +11,9 @@ You can contribute to this project in many ways :
 
 ## Codebase structure
 
-[Structure audit & proposed target](./docs/structure-audit.md) — how `src/lib/core` is laid out today, why the operations flow is hard to read from the tree, and a phased proposal for reorganising it.
+- [Architecture target](./docs/architecture-target.md) — the three layers (prototype, feature, plugin), the three phases, and where each layer is injected.
+- [Decoupling rime](./docs/decoupling.md) — where the layering actually stands, the audit behind it, and the staged plan to finish it.
+- [Working on this codebase](#working-on-this-codebase) — below: the rules, the gates, and every trap that has cost a round.
 
 ## Clone the repo
 
@@ -95,3 +97,279 @@ bun ./src/lib/core/dev/cli/build.ts build -d
 # Also add a .env file to the app folder
 bun ./src/lib/core/dev/cli/build.ts build -e
 ```
+
+---
+
+# Working on this codebase
+
+Everything below was paid for in rounds. It is not style advice — each rule has a failure behind
+it, and most of those failures were **green on every static check**.
+
+## The shape, in three lines
+
+```
+prototype  definePrototype  — collection / area. What every document of a kind has.
+feature    defineFeature    — versions, upload, auth, url, nested, title, panel, …
+plugin     definePlugin     — user land.
+```
+
+A feature does its work through the seams on `FeatureDefinition` — `augment`, `configure`,
+`validate`, `blank`, `seed`, `shadow`, `writePlan`, `readQuery`, `hooks`, `handler` — and through
+nothing else. If a feature's name appears in `core/` or in `adapter-sqlite/`, a seam is missing.
+See `docs/decoupling.md`.
+
+## The rules
+
+### 1. Anything reachable from `Rime`'s type graph must **declare** its type, never infer it
+
+`Rime` was `Awaited<ReturnType<typeof createRime>>`. Every hook is typed through
+`HookContext → event → App.Locals → rime`, so the moment a definition in `createRime`'s value graph
+carried hooks, each hook referenced itself and TypeScript answered `any`. One inferred alias, three
+symptoms: inline `$hooks` broke, accessors resolved to `never`, a prototype could not carry its own
+hooks (100 errors).
+
+> Take types from **declared config phantoms** (`BuildConfig<C>['$InferPluginsServer']`,
+> `RimeAuth<C>`), never from `createRime` or `bootRime`.
+
+Four places hold that line — check them first if a self-reference cascade returns:
+
+- `core/rime.server.ts` — `Rime` / `RimeContext` declared.
+- `core/prototype/registry.ts` — `prototypes: RegisteredPrototype[]` **annotated**.
+- `core/prototype/accessors.server.ts` — reads from `api.server.ts`, which imports no hooks.
+- `core/features/auth/better-auth/instance.server.ts` — `RimeAuth` lives here so its _type_ can be
+  named without naming `bootRime`.
+
+The cost is one-directional: `Rime` is hand-maintained, and a member added to `createRime` without
+adding it to the interface is invisible to consumers. `satisfies` catches only the opposite mistake.
+
+### 2. Field order is column order
+
+The config factories fix the order in which augments append fields, and that is the order of the
+columns in the generated schema. **Never reorder an augment chain or a `features` list casually.**
+The golden schema diff is the only gate that catches it.
+
+### 3. A feature must not import a prototype's _server_ definition
+
+`collection/definition.ts` imports every feature, so a feature importing the definition back closes
+a cycle. Survivable when the back-edge is read inside a function — but `definition.server.ts`
+spreads `{ ...base }` **at module scope**, so if `definition.ts` is entered first the spread sees an
+uninitialized binding and the definition silently loses `features`/`hooks`.
+
+That is why `collection/hooks.server.ts` is its own file: a list of hooks depends on nothing.
+
+**The features list cannot be filed the same way** — it contains the features themselves, so any
+file reaching it from inside a feature can be entered while that feature is still evaluating, and
+the array literal captures `undefined`. `versions/derive.server.ts` did this for years without
+incident because only `build.server.ts` reached it; the moment that call became the feature's own
+`configure`, the path became `area/definition.ts → versions/index.ts → derive.server.ts →
+collection/definition.ts` and `collectionFeatures` came out
+`[auth, panel, upload, nested, UNDEFINED, url, …]`.
+
+> **`FeatureDefinition.configure` takes the prototypes as an argument.** A feature that needs a
+> prototype's `features` or `hooks` gets them from the registry the caller hands over.
+
+The same edge from the other side is worse. Both config factories used to read the prototype off
+`definition.server.ts` just to hand `{ features, hooks }` to `augmentHooks`; adding one feature to a
+list reordered the graph, the spread ran early, the definition came out **without `features`**, and
+every feature hook stopped running while the prototype's own kept going. Documents came back with no
+`title` and no `url` — and `check`, `eslint`, `madge`, the unit suite, the generated schema **and
+the generated hooks chart** were byte-identical to baseline. The chart is built from the config, not
+from what boots. Only a live read caught it. `prototype/collection/pipeline.spec.ts` now asserts
+both layers are in the pipeline.
+
+### 4. A mark nothing active provides is satisfied (the vacuous rule)
+
+`requires: ['x']` means _after **every** active provider of `x`_ — and if nothing active provides
+it, the requirement is met. That is what lets one declaration be correct in both `beforeCreate` and
+`beforeUpdate`, and what keeps a feature's mark from breaking configs without that feature.
+
+- `HookMark` is a **closed union** (`core/pipeline/types.ts`) extended by features through
+  declaration merging. It must stay closed: a typo'd mark is _vacuously satisfied_ and reorders the
+  pipeline silently — the one failure mode of this design that raises no error at all.
+- Marks that both require and provide `document` cannot require `document` of each other without
+  closing a cycle. Name the specific thing (`populateURL` requires `title`), not the generic one.
+- `data-inspected` is the write-side twin of `sanitized`. `preventUserMutations` rejects on
+  `'name' in args.data` — run it after `setDefaultValues` and a filled default 401s every update.
+
+### 5. Re-measure baselines on the _same fixture_
+
+`rime:use <fixture>` swaps the active fixture and changes the `bun run check` count. A measurement
+compared against a baseline taken on a different fixture reads as a regression that is not there.
+
+### 6. Whole-config steps belong to whoever owns them
+
+| layer     | declares in                                       | folded by                 |
+| --------- | ------------------------------------------------- | ------------------------- |
+| prototype | `prototype/register.ts` — `PrototypeConfigure<T>` | `configureWithPrototypes` |
+| feature   | `features/register.ts` — `FeatureConfigure<T>`    | `configureWithFeatures`   |
+
+The server chain is three lines — prototypes, features, plugins — and **nothing in `core/config/`
+names a feature**. Three consequences:
+
+1. **The type-level fold is a hand-written list** (`ConfigureTransforms`) — of _names_, not of an
+   order. Every `FeatureConfigure` declaration is additive (`T & {…}`), so composition order does
+   not matter; the list exists because an intersection built from a key union stays deferred for a
+   **generic** `T`, and `bootRime<C>` reads `config.panel.language` while `C` is a type parameter.
+   `features/registry.spec.ts` asserts both invariants at compile time.
+2. **A `configure` is handed the prototypes; it must never import one.** See rule 3.
+3. **A default with exactly one reader does not need a config step at all.** `grep` the member
+   first — one consumer means `??` at that line.
+
+`config/inference.spec.ts` guards the chain staying a literal sequence: a reduce over an array of
+augments widens every slug literal to `string`.
+
+### 7. A feature's `index.ts` must not import its own `.server.ts` hooks
+
+Rule 3's other half, and it cost the whole panel. A prototype's `features` list is reachable from a
+**client** build, so every feature `index.ts` is isomorphic and a hook it imports by path travels
+into the browser graph. Every module request 500'd with:
+
+```
+Error: An impossible situation occurred    (@sveltejs/kit/src/exports/vite/index.js:798)
+```
+
+which is SvelteKit's server-only guard **firing correctly** and then failing to explain itself: it
+walks the importer chain to print a "Cannot import X into code that runs in the browser" pyramid,
+follows `candidates[0]` — one arbitrary branch — and throws that fallback when the branch dead-ends
+before a route entrypoint. The message names nothing. **The 500'd request URLs name everything**;
+see `docs/probing.md` §7.
+
+The fix is the convention that already exists: a `hooks/module.server.ts` with **no `module.ts`
+beside it**, imported as a name from `$rime/modules`.
+
+**And never move a constant to make an isomorphic file reach it.** `.server` is what stops a browser
+bundle ever carrying `PRIVATE_FIELDS`. What crosses `$rime/modules` is the **function**, which is
+`undefined` on a client build and never called there. Only a module with no client half gets its
+names stubbed to `undefined`; a pair with both halves exports the client half's names and a
+server-only name is simply _missing_ (`docs/rime-modules-resolution.md`, cases B and C).
+
+Nothing static sees this. **Load the panel in a browser** before believing a green run that touched
+a feature's imports.
+
+### 8. A prototype listing a feature's hook means **core is missing a default**
+
+Both prototypes' `beforeUpdate` named `defineVersionOperation` and `handleNewVersion` by import, and
+the comment said they "run for every config, versioned or not, so `enabled` cannot gate them". True,
+and not the reason. Each was answering a question **core has for every prototype**, and core had no
+answer of its own:
+
+| the question                               | who answered                            | what a prototype with no shadow answers |
+| ------------------------------------------ | --------------------------------------- | --------------------------------------- |
+| where does this document's content live?   | `handleNewVersion`'s `default:` branch  | its own row                             |
+| which revision does an update branch from? | `shouldRetrieveDraft(versionOperation)` | the only one                            |
+
+> The fix is never "find a timing that means always". It is: **core states the default, the feature
+> overrides it.**
+
+`resolveContentOwner` provides `content-owner`; `handleNewVersion` requires it and answers again.
+Then `enabled` is the right gate and the feature carries its own hooks.
+
+Two things this surfaced:
+
+- **Marks that were being met by the hand-written position.** `handleNewVersion` read
+  `originalConfigMap` without requiring `original-config-map`, and had to run before
+  `setDefaultValues` without providing `data-inspected`. A hook only survives becoming a feature's
+  if **every** edge it depends on is declared — and the second is not cosmetic: run it after the
+  defaults and editing one field resets every unsent field to its default.
+- **The test for whether a feature is decoupled at all.** `docs/pipeline-map.md` renders each
+  resolved pipeline with a `from` column. A feature's hook under `from: collection` is the prototype
+  listing it by hand. `bun run rime:pipeline`, then read the column.
+
+## Gates
+
+Run against the base commit's **own** numbers, re-measured, never trusted from a doc.
+
+| gate            | command                                         | note                                                                                     |
+| --------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| types           | `bun run check`                                 | fixture-dependent — **0 on `versions`**. Count what the run prints                       |
+| lint            | `bunx eslint src/lib`                           | ~20; the rest are pre-existing panel `goto()`/`href`                                     |
+| cycles          | `bun run check:circular-deps`                   | 3 — and the _list_ matters more than the count                                           |
+| unit            | `bunx vitest run`                               | 165                                                                                      |
+| format          | `bunx prettier --check .`                       | run it before committing, not after                                                      |
+| pipeline layers | `prototype/collection/pipeline.spec.ts`         | **the gate for rule 3** — a definition that lost its `features` is green everywhere else |
+| schema          | golden diff of generated `schema.server.ts`     | **the gate for rule 2**                                                                  |
+| pipeline order  | `core/pipeline/pipeline-order.spec.ts`          | **the gate for rule 4** — a wrong mark is schema- and probe-identical                    |
+| pipeline map    | `docs/pipeline-map.md` + `pipeline-map.spec.ts` | **the gate for rule 8**. `bun run rime:pipeline` regenerates                             |
+| e2e             | `bun run test:<fixture>`                        | per-fixture baselines below                                                              |
+| browser         | `docs/probing.md` §7                            | **the gate for rule 7** — nothing static sees it                                         |
+
+**Capture a golden schema before touching any augment chain.** Boot on a fixture, copy
+`src/lib/+rime.generated/schema.server.ts` outside the repo, make the change, boot again, diff. It
+is generated, gitignored, and cheap to lose.
+
+### e2e baselines
+
+Per fixture, and re-measure them in your own container before comparing:
+
+| fixture              | expected                                                            |
+| -------------------- | ------------------------------------------------------------------- |
+| `versions`           | 54 / 54                                                             |
+| `versions-multilang` | 57 / 57                                                             |
+| `multilang`          | 74 / 74                                                             |
+| `basic`              | 85 pass, 12 fail on a box with no working Chromium and no SMTP sink |
+| `fields`             | 72 pass                                                             |
+
+A failure count is only a signal against a baseline **from the same box**. `basic`'s 12 split into
+8 Chromium-launch errors and 4 api-key/SMTP.
+
+## The loop that actually works
+
+1. Take the baseline first, on the fixture you will re-measure on.
+2. Make the change.
+3. **Prove the guard by breaking it.** Delete the hook you just added and count the failures. If
+   the number does not move, the guard is not doing what you think — this caught two changes that
+   were passing for the wrong reason (a `url` computed on read, so every stored-`url` assertion was
+   vacuous; `_children` with no assertion at all).
+4. Re-run the gates on the same fixture.
+5. Boot and probe. `docs/probing.md` has the request shapes.
+
+## Traps
+
+Each of these has eaten at least a round.
+
+- **`git checkout <file>` after a probe reverts your work.** Probing often leaves generated files
+  dirty and the reflex is to check them out. Stash instead.
+- **Running `bun run check` while a background e2e run switches fixtures** gives spurious counts —
+  seen at 215, 263, and other numbers that look like catastrophe. Never overlap them.
+- **`pgrep -f sink.py` always succeeds** because it matches its own command line. Verify the SMTP
+  sink with a real `smtplib.SMTP_SSL` login and send.
+- **Kill the dev server in a Bash call of its own.** `fuser -k 5173/tcp` combined with later
+  commands takes the shell down with it.
+- **`rime:use` runs `clear --force` then `init`.** Interrupting between the two leaves the repo
+  without `src/hooks.server.ts` and vite refuses to boot; re-run `rime:use` to repair.
+- **Do not delete `+rime.generated/schema.server.ts` to force regeneration** — vite requires the
+  file to exist at boot. Let codegen overwrite it in place. Codegen also memoises:
+  `rm node_modules/.rime/config.txt` forces a run.
+- **`hooks.generated.md` is not regenerated on a normal boot.** It needs
+  `RIME_GENERATE_HOOKS_CHART=true`, writes to the repo root, and `rime:use` deletes it. It is
+  committed from the **`basic`** fixture — regenerate it there or its diff is a fixture swap.
+- **`curl` needs `-g`** for any `where[...]` filter, a list endpoint hides drafts, and a `PATCH`
+  with no `versionId` targets the published version.
+- **vite dev-server startup can time out at 180s** under load. That is the environment, not a test
+  failure; re-run before believing it.
+- **Grep for feature names case-insensitively, as identifiers and in comments — not for imports.**
+  An adapter with zero `features/versions` imports still had `versionsTable`, `versionsLocalesTable`
+  and a `hasVersions` branch. Imports are the easy half.
+- **A green `bun run check` after moving a hook proves nothing about the pipeline.** Regenerate
+  `docs/pipeline-map.md` and read the diff.
+
+## Environment
+
+A fresh container has no `node_modules/`, no `.env` and no active fixture — all gitignored. Before
+they are back, `bun run check` reports ~200 errors. That is the fixture missing, not a regression.
+
+```bash
+bun install
+# Write .env by hand (above) BEFORE `init`: `rime init` defaults RIME_CONFIG_DIR to src/+rime,
+# this repo's fixtures land in src/lib/+rime, so init generates a starter config that imports
+# 'rimecms/adapter-sqlite' and dies.
+bun run rime:use basic
+```
+
+Two things must be redone after any container restart:
+
+- **SMTP sink** on `127.0.0.1:1025`, implicit TLS. Without it, `basic`'s api-key tests fail with
+  `mail_error`.
+- **Chromium**: if the box's revision and Playwright's disagree, a temporary
+  `launchOptions.executablePath` in `tests/playwright.config.base.ts` bridges it. **Never commit
+  it.**

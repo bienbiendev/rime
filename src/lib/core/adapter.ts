@@ -230,7 +230,15 @@ export interface RelationsAdapter {
 }
 
 export interface TransformAdapter {
-  doc(args: Dic): Promise<GenericDoc>;
+  /**
+   * Turns stored rows into one document.
+   *
+   * `withRowMeta` keeps a child row's own bookkeeping on it — `position`, `path`, `ownerId`,
+   * `locale` — and `editedBy` on the document. Off by default: an API read wants the document, an
+   * editor that writes blocks back in place wants the bookkeeping too. It replaced the adapter
+   * testing `event.params.panel`, which was the database layer working out who was asking.
+   */
+  doc(args: Dic & { withRowMeta?: boolean }): Promise<GenericDoc>;
 }
 
 export interface AuthAdapter {
