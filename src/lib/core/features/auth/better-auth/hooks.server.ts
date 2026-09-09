@@ -2,6 +2,10 @@ import { dev } from '$app/environment';
 import { getRequestEvent } from '$app/server';
 import { BETTER_AUTH_ROLES } from '$lib/core/features/auth/constant.server.js';
 import { userAttributes } from '$lib/core/features/auth/user.server.js';
+import {
+  deleteAuthUser,
+  setAuthUserRole
+} from '$lib/core/features/auth/better-auth-tables.server.js';
 import { logger } from '$lib/core/logger.server.js';
 import { trycatch } from '$lib/util/function.js';
 import { omit } from '$lib/util/object.js';
@@ -63,7 +67,7 @@ const handleUserCreation = async (ctx: CTX) => {
    * - set isSuperAdmin to true
    */
   if (event.locals.isInit && dev) {
-    await event.locals.rime.adapter.auth.setAuthUserRole({
+    await setAuthUserRole(event.locals.rime.adapter, {
       authUserId: newSession.user.id,
       role: BETTER_AUTH_ROLES.ADMIN
     });
@@ -116,7 +120,7 @@ const handleUserCreation = async (ctx: CTX) => {
     const { user } = newSession;
     const event = getRequestEvent();
     const { rime } = event.locals;
-    await rime.adapter.auth.deleteAuthUser({ authUserId: user.id });
+    await deleteAuthUser(rime.adapter, { authUserId: user.id });
     throw new APIError('BAD_REQUEST');
   }
 

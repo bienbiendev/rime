@@ -6,6 +6,7 @@ import { error, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
 import { access } from '$lib/util/index.js';
 import { BETTER_AUTH_ROLES } from '../features/auth/constant.server.js';
 import { userAttributes } from '../features/auth/user.server.js';
+import { hasAuthUser } from '../features/auth/better-auth-tables.server.js';
 import { logger } from '../logger.server.js';
 import type { ConfigContext, RimeContext } from '../rime.server.js';
 
@@ -50,7 +51,7 @@ function analyzeRoute(event: RequestEvent): RouteInfo {
  * Ensures panel is properly set up before allowing access
  */
 async function ensureFirstAuthSetup<C extends Config>(rime: RimeContext<C>): Promise<void> {
-  if (!(await rime.adapter.auth.hasAuthUser()) && !dev) {
+  if (!(await hasAuthUser(rime.adapter)) && !dev) {
     throw new RimeError(RimeError.NOT_FOUND);
   }
 }

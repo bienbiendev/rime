@@ -11,6 +11,7 @@ import type { RelationFieldsMap } from './generate-schema/relations/definition.s
 import { baseTableName } from './naming.server.js';
 import { createPrototypeRegistry } from './registry.server.js';
 import createRelationsFacade from './relations.server.js';
+import { createTableRegistry } from './table.server.js';
 import { transformerFacade } from './transform.server.js';
 import createTreeFacade from './tree.server.js';
 import type { GenericTable } from './types.server.js';
@@ -54,6 +55,7 @@ const createAdapter = async <const C extends Config>(args: {
     schema: schema.default
   });
   const prototypes = createPrototypeRegistry({ db, tables, configCtx });
+  const table = createTableRegistry({ db, tables });
   const transform = transformerFacade({
     tables,
     configCtx
@@ -62,6 +64,7 @@ const createAdapter = async <const C extends Config>(args: {
   return {
     registerPrototype: prototypes.register,
     prototype: prototypes.get,
+    table,
     blocks,
     tree,
     relations,

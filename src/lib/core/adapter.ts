@@ -38,6 +38,19 @@ export interface Adapter {
   /** The handle for a registered prototype. */
   prototype(slug: string): PrototypeHandle;
 
+  /**
+   * The handle for a table a feature declared — see `FeatureDefinition.tables`.
+   *
+   * Separate from `prototype` because a declared table is not one: no fields, no pipeline, no
+   * access rules, nothing to merge a blank into. Passing one to `prototype()` would ask the
+   * adapter to look up a config that does not exist.
+   *
+   * Deliberately three verbs and a flat filter. A feature that declares a table already knows its
+   * columns, so there is nothing here to resolve against a config — which is the whole difference
+   * between this and `PrototypeHandle`, and the reason this can stay small.
+   */
+  table(slug: string): TableHandle;
+
   blocks: BlocksAdapter;
   tree: TreeAdapter;
   relations: RelationsAdapter;
@@ -264,29 +277,41 @@ export type DocumentRows = {
 };
 
 /**
- * A whole facade on this interface, for one feature — which is why it is the last thing on it that
- * names one, and why what remains is only what genuinely cannot be phrased in core's vocabulary.
+ * Read and write one table a feature declared.
  *
- * Three methods left in `a7b5bed6`'s wake: `isSuperAdmin`, `getBetterAuthUserId` and
- * `getUserAttributes` were each `select … from <a prototype's table> where <a column> = ?`, which
- * is `prototype(slug).findMany`. They looked like adapter work because all three named a
- * collection called `staff`, and the database layer was the only place that name appeared.
+ * `where` is a flat map of column to value, ANDed. Not `OperationQuery`: that resolves paths
+ * against a prototype's fields, handles localized columns and relation properties, and a declared
+ * table has none of those. A feature that declared a table knows its columns, so there is nothing
+ * to resolve.
  *
- * The three below read and write tables that are not prototypes — no fields, no pipeline, no
- * access rules — so `prototype()` is the wrong handle for them and core has no other. See
- * docs/decoupling-auth.md § 2.2: either a table handle, or Better-auth's own API covers all three
- * and this collapses to `betterAuthAdapter` alone.
+ * `update` and `delete` **refuse an empty `where`**. A filter that matches everything is never
+ * what a caller meant, and drizzle's `and()` of nothing is `undefined`, which is a statement with
+ * no `WHERE` clause at all.
+ */
+export interface TableHandle {
+  /** Rows matching every condition, all columns unless `select` names some. */
+  find(args?: { where?: Dic; select?: string[]; limit?: number }): Promise<Dic[]>;
+  update(args: { where: Dic; data: Dic }): Promise<void>;
+  delete(args: { where: Dic }): Promise<void>;
+}
+
+/**
+ * What is left of a whole facade that existed for one feature.
+ *
+ * Six methods went. Three — `isSuperAdmin`, `getBetterAuthUserId`, `getUserAttributes` — were each
+ * `select … from <a prototype's table> where <a column> = ?`, which is `prototype(slug).findMany`;
+ * they looked like adapter work only because all three named a collection called `staff`. The
+ * other three read and wrote Better-auth's own tables, which are declared tables now, so
+ * `table(slug)` reaches them.
+ *
+ * **Better-auth's admin API cannot replace those three**, which `docs/decoupling-auth.md` § 2.2
+ * left open. `listUsers`, `setRole` and `removeUser` all sit behind `adminMiddleware`, and every
+ * caller here runs where no admin session exists: `hasAuthUser` gates the init route, which only
+ * runs when there is no user at all; `setAuthUserRole` promotes the very first signup; and
+ * `deleteAuthUser` rolls back a failed signup, which `removeUser` refuses outright with
+ * `YOU_CANNOT_REMOVE_YOURSELF`.
  */
 export interface AuthAdapter {
   /** The Better-auth database adapter. Opaque to core, which only hands it to Better-auth. */
   betterAuthAdapter: unknown;
-  /** Whether anybody has signed up yet. Gates the init route. */
-  hasAuthUser(): Promise<boolean>;
-  /** Better-auth's own `role` column, not the `roles` field on the collection row. */
-  setAuthUserRole(args: { authUserId: string; role: string }): Promise<void>;
-  /**
-   * Removes an auth user and everything hanging off it. Undoes a half-made signup, so it must not
-   * leave a session behind that would still authenticate.
-   */
-  deleteAuthUser(args: { authUserId: string }): Promise<void>;
 }

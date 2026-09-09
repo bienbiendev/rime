@@ -2,6 +2,7 @@ import { dev } from '$app/environment';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
 import { extractData } from '$lib/core/pipeline/extract-data.server.js';
+import { hasAuthUser } from '$lib/core/features/auth/better-auth-tables.server.js';
 import type { FormErrors } from '$lib/types.js';
 import { trycatch, trycatchSync } from '$lib/util/function.js';
 import { email as validateEmail, password as validatePassword } from '$lib/core/fields/validate.js';
@@ -12,8 +13,8 @@ export const apiInit = definePlugin(() => {
   const requestHandler: RequestHandler = async (event) => {
     if (!dev) throw new RimeError(RimeError.NOT_FOUND);
 
-    const hasAuthUser = await event.locals.rime.adapter.auth.hasAuthUser();
-    if (hasAuthUser || (!hasAuthUser && !dev)) {
+    const alreadyHasAuthUser = await hasAuthUser(event.locals.rime.adapter);
+    if (alreadyHasAuthUser || (!alreadyHasAuthUser && !dev)) {
       throw handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.API });
     }
 
