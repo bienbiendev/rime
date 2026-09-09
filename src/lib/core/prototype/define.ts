@@ -2,176 +2,124 @@ import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/config/types.js';
 import { applyAugments } from '$lib/core/features/apply.js';
 import type { AnyHook, FeatureDefinition, HookTiming } from '$lib/core/features/define.js';
+import { isStaff } from '$lib/core/features/auth/access.js';
 import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { FileText } from '@lucide/svelte';
 import type { RequestEvent } from '@sveltejs/kit';
-import { isStaff } from '$lib/core/features/auth/access.js';
 import { prototypeKebab } from './naming.js';
 import type { GenericDoc } from './types.js';
 
 /**
  * A prototype **defines** a kind of thing rime stores, and brings its own surface with it.
  *
- * That last part is the whole point, and it is what separates a prototype from the two other
- * layers around it:
+ * | layer         | verb                   | scale                        |
+ * | ------------- | ---------------------- | ---------------------------- |
+ * | **prototype** | *defines*              | the base thing itself        |
+ * | **feature**   | *augments and extends* | large — across prototypes    |
+ * | **plugin**    | *augments*             | small                        |
  *
- * | layer | verb | scale |
- * | --- | --- | --- |
- * | **prototype** | *defines* | the base thing itself |
- * | **feature** | *augments and extends* | large — across prototypes, adds shadows and children |
- * | **plugin** | *augments* | small |
+ * So `collection` and `area` are two definitions built to the same pattern, not one
+ * implementation with a discriminator. Nothing here knows there are two of them, which is what
+ * makes a third cost only its own folder.
  *
- * So `collection` and `area` are not one implementation with a discriminator. They are two
- * definitions built to the same pattern, each stating what it is (`singleton`), what it needs
- * doing before requests arrive (`boot`), and what it lets a caller do (`api`). Nothing here
- * knows there are exactly two of them, which is what makes a third cost only its own folder.
- *
- * A definition carries no config: it is the *kind*, not an instance of it. The configs come from
- * the user, and `config.type` — the name the definition is exported under in registry.server.ts —
- * is what pairs them up.
+ * A definition carries no config — it is the kind, not an instance. `config.type` is the name it
+ * is registered under, and that is what pairs the two.
  */
 export type BuiltPrototype = BuiltArea | BuiltCollection;
 
 export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype, Accessor = unknown> = {
-  /**
-   * The kind's name, and the `type` every config it builds carries.
-   *
-   * Declared rather than taken from the registry key, because `create` is composed here and a
-   * config's `type` is what pairs it back to its definition. Both registries still key on it, and
-   * both keep that set closed against `PrototypeName`, so the export name and this stay the same
-   * word — and `RegisteredPrototype` is no longer a definition plus a name.
-   */
+  /** The kind's name, and the `type` every config it builds carries. */
   name: string;
 
   /**
    * Whether exactly one document exists.
    *
-   * On: create and delete are not operations (a second row is not a thing, and removing the only
-   * one leaves nothing to read), reads and updates take no id, and the row has to exist before
-   * runtime — hence `boot`. It is a fact about the data, not a kind, which is why it is the one
-   * shape fact the adapter is told.
+   * On: no create, no delete, reads and updates take no id, and the row must exist before runtime
+   * — hence `boot`. A fact about the data rather than the kind, which is why it is the one shape
+   * fact the adapter is told.
    */
   singleton: boolean;
 
   /**
    * The features that extend this prototype, **in the order their augments run** — which is the
-   * order their fields land in, and therefore the order of the columns.
+   * order their fields land in, and therefore column order.
    *
-   * By value, not by name, and declared here rather than each feature declaring `extends`. The
-   * prototype owns its table, so the prototype says what may add to it and where. That also makes
-   * this list the single source for the type fold: read `as const`, it is the same order at
-   * compile time as at runtime, with no second tuple to keep in step.
+   * By value, and declared here rather than each feature declaring `extends`: the prototype owns
+   * its table, so it says what may add to it. Read `as const`, this is also the type fold's source,
+   * so there is no second tuple to keep in step.
    */
   features: FeatureDefinition[];
 
   /**
-   * The prototype's **own** augments, in the order they run — before every feature's.
+   * The prototype's own augments, before every feature's.
    *
-   * The other half of what used to be a hand-written config factory per prototype per side. A
-   * prototype's own defaulting is an augment like any other (a collection normalises its `label`
-   * and seeds its panel defaults; an area falls back to a capitalised slug), so it is declared
-   * here and `create` below runs it, rather than each factory spelling the chain out again.
-   *
-   * `any` for the reason `FeatureDefinition.augment` is `any`: each augment names the shape it
-   * needs, and a list holding several cannot promise any of them that shape.
+   * `any` for the reason `FeatureDefinition.augment` is: each augment names the shape it needs, and
+   * a list holding several cannot promise any of them that shape.
    */
   augments?: readonly ((config: any) => any)[];
 
-  /**
-   * The config member this prototype's instances are authored under — `collections`, `areas`.
-   *
-   * Declared here so that nothing else has to know the two by name: `prototypeConfigs()` folds the
-   * registry with it, which is how core and the adapter iterate every prototype config in a build
-   * without naming a kind.
-   */
+  /** The config member instances are authored under — `collections`, `areas`. */
   configKey: string;
 
   /**
-   * What a document of this kind is called when no field is marked as the title.
+   * What a document is called when no field is marked as the title.
    *
-   * The prototype's statement about the base thing, and the bottom of the precedence the `title`
-   * feature resolves: a field marked `.isTitle()` wins, then whatever a feature overrode this
-   * with, then this. It is not part of the authoring surface — a config author marks a field
-   * instead — so the config factories seed it internally, as `_titleFallback`.
+   * The bottom of the precedence `title` resolves: a `.isTitle()` field wins, then whatever a
+   * feature overrode this with, then this. Seeded as `_titleFallback`, not authoring surface.
    */
   titleFallback: string;
 
   /**
-   * The prototype's *own* document hooks: the ones that are its, unconditionally.
+   * Every hook this prototype can run, in the order it runs them — including its features'.
    *
-   * Short and free of conditionals — a hook that runs only when a config declares something
-   * belongs to the feature that owns that something, behind its `enabled`. `buildPipeline` merges
-   * this with what the listed features contribute, and `resolvePipeline` decides the order from
-   * the marks each hook declares, so nothing here names a feature or says where its hooks go.
+   * The order is written down, not computed; see `collection/hooks.server.ts`. `buildPipeline`
+   * decides only *which* of them a config runs, from the feature each hook names.
    */
   hooks?: Partial<Record<HookTiming, AnyHook[]>>;
 
   /**
-   * What this prototype adds to the **whole** config, rather than to one config of its own kind.
+   * What this prototype adds to the **whole** config rather than to one of its own kind.
    *
-   * The mirror of `FeatureDefinition.configure`: some of what a kind is responsible for is a
-   * statement about the config as a whole. For both prototypes here that is one line — its own
-   * list exists, empty if the user named none — so that no step downstream has to guard it.
-   *
-   * What it does to the config's *type* is declared in register.ts, which is what makes the
-   * defaulting worth doing: `config.areas` is not `possibly undefined` after it.
+   * For both prototypes here that is one line — its own list exists, empty if the author named
+   * none — so nothing downstream has to guard it. The type side is declared in register.ts.
    */
   configure?: (config: any) => any;
 
   /**
-   * The config factory: what turns what an author wrote into a built config of this kind.
+   * The config factory. **Composed by `definePrototype`, never passed in**: `augments`, then
+   * `features`, then the shaping every prototype does the same way.
    *
-   * **Composed by `definePrototype`, never passed in.** It is `augments`, then `features`, then
-   * the shaping every prototype does the same way — the slug's kebab form, the `type`, the
-   * fallbacks for `fields`, `icon` and `live`, and the staff-only access defaults. There is one
-   * of it rather than a client and a server copy: the two differed only in listing their members
-   * by hand versus spreading them, and `BuiltCollectionClient = BuiltCollection` already said the
-   * two shapes are the same.
-   *
-   * Typed loosely here, and narrowed where it is re-exported: a prototype's authoring type is
-   * generic in the slug (`Collection<S>` types `$hooks` and `$url` from it) and no type parameter
-   * can carry a generic type. So `collection/definition.ts` re-exports a one-line `create` that
-   * states its own signature, which is also the file a config author's `Collection.create` comes
-   * from.
+   * Typed loosely here and narrowed where it is re-exported — a prototype's authoring type is
+   * generic in the slug and no type parameter can carry a generic type, so
+   * `collection/definition.ts` re-exports a one-line `create` stating its own signature.
    */
   create: (slug: string, config: Dic) => C;
 
-  /**
-   * Run once per process, per config of this kind. The prototype's own boot hook: what a kind
-   * needs doing before any request can be served.
-   */
+  /** Run once per process, per config of this kind, before any request is served. */
   boot?: (args: PrototypeBootArgs<C>) => Promise<void>;
 
   /**
-   * The local API this prototype provides — what `rime.<name>(slug)` hands back.
-   *
-   * Returns a plain object of operations. `buildPrototypeApi` adds `blank` and `system` around it,
-   * since every prototype has them and none needs its own version.
+   * The local API — what `rime.<name>(slug)` hands back. `buildPrototypeApi` adds `blank` and
+   * `system` around it, since every prototype has them.
    */
   api?: (ctx: PrototypeApiContext<C>) => Dic;
 
   /**
-   * The REST surface this prototype provides, in the shape routes are already declared in:
-   * `RouteConfig` per path, the same type `config.$routes` and `plugin.routes` use.
+   * The REST surface, keyed by sub-path **under `/api/[slug=<name>]`** — `''`, `'[id]'`,
+   * `'[id]/duplicate'`. Not an absolute pathname like a plugin's: a prototype has no URL of its
+   * own, only slugs the author's config supplies.
    *
-   * The key is the sub-path **under `/api/[slug=<name>]`** — `''` for the list tier (a
-   * singleton's only tier), `'[id]'`, `'[id]/duplicate'`. It differs from a plugin's key, which
-   * is an absolute pathname, for the reason a prototype has no URL of its own to name: its
-   * slugs come from the user's config, and the param matcher is what turns one into a route.
-   *
-   * `core/dev/codegen/routes/` reads this to write the `+server.ts` files and
-   * `handlers/routes.server.ts` dispatches through it, so an endpoint appears by being declared
-   * here and nowhere else.
+   * `dev/codegen/routes/` writes the `+server.ts` files from this and `handlers/routes.server.ts`
+   * dispatches through it, so an endpoint exists by being declared here and nowhere else.
    */
   rest?: Record<string, RouteConfig>;
 
   /**
-   * Type-only. The accessor this definition contributes to `event.locals.rime`, carrying the
-   * slug literals and document types that a mapped type cannot recover from a runtime registry.
+   * Type-only. The accessor this definition contributes to `event.locals.rime`, carrying the slug
+   * literals a mapped type cannot recover from a runtime registry.
    *
-   * Never assigned — the same `$Infer…` device `BuildConfig` uses for plugins and auth plugins.
-   * See prototype/accessors.server.ts for where the accessors are actually read from, and why.
+   * Never assigned — the same `$Infer…` device `BuildConfig` uses. See accessors.server.ts.
    */
   readonly $InferAccessor: Accessor;
 };
@@ -182,8 +130,6 @@ export type PrototypeBootArgs<C extends BuiltPrototype = BuiltPrototype> = {
   adapter: Adapter;
   defaultLocale?: string;
   /**
-   * The features extending this prototype, for folding `seed` over a bootstrapped document.
-   *
    * Handed down rather than read off the definition: `boot` is written inside the object literal
    * that defines it, so it cannot name itself.
    */
@@ -191,11 +137,11 @@ export type PrototypeBootArgs<C extends BuiltPrototype = BuiltPrototype> = {
 };
 
 /**
- * What a definition's operations are handed: the request, the config they run against, and the
- * plumbing that would otherwise be written out once per prototype.
+ * What a definition's operations are handed: the request, the config, and the plumbing that would
+ * otherwise be written out once per prototype.
  *
- * It is a per-call value, not a per-process one — `isSystemOperation` is part of it, so
- * `.system()` is a second context rather than a flag anybody has to remember to forward.
+ * Per-call, not per-process — `isSystemOperation` is part of it, so `.system()` is a second
+ * context rather than a flag anybody has to remember to forward.
  */
 export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
   config: C;
@@ -212,14 +158,11 @@ export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
   blank(): GenericDoc;
 
   /**
-   * Which content row a read means, as the feature that owns the difference narrows it.
+   * Which content row a read means, as the feature owning the difference narrows it. `undefined`
+   * for a prototype whose content is on its own row.
    *
-   * A capability rather than the raw list, like `blank()` above: there is one fold and it happens
-   * at the call site, so nothing outside needs the features to compute it. `undefined` for a
-   * prototype whose content is on its own row, and for a read that asked for no particular one.
-   *
-   * `intent` defaults to `'read'`. Pass `'original'` when loading what an update is about to
-   * change — the same parameters can select a different row, see `ReadIntent`.
+   * Pass `intent: 'original'` when loading what an update is about to change — the same parameters
+   * can select a different row. Defaults to `'read'`.
    */
   contentQuery(
     params: { draft?: boolean; versionId?: string },
@@ -229,44 +172,29 @@ export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
   /**
    * The features extending this prototype.
    *
-   * Exposed rather than folded into a capability, unlike `blank()` above, because its one consumer
-   * folds it at a point only `runUpdate` can pick — after the data hooks, before the write. See
-   * `FeatureDefinition.writePlan`.
+   * Exposed rather than folded into a capability, unlike `blank()`, because its one consumer folds
+   * it at a point only `runUpdate` can pick — after the data hooks, before the write.
    */
   readonly features: FeatureDefinition[];
 
   /**
-   * Read through the API cache when it is on and this is not a system call.
-   *
-   * `key` is merged into the cache key on top of the parts every read shares — the slug and who
-   * is asking — so an operation only names what is particular to it.
+   * Read through the API cache when it is on and this is not a system call. `key` is merged on top
+   * of what every read shares — the slug and who is asking.
    */
   cached<T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T>;
 };
 
-/**
- * A built local API: whatever the definition's `api` returned, plus the two members every
- * prototype has.
- */
+/** Whatever the definition's `api` returned, plus the two members every prototype has. */
 export type PrototypeApi<A, Doc = GenericDoc> = A & {
   blank(): Doc;
   /**
-   * The same API, telling the pipeline that rime is the caller rather than a user.
-   *
-   * `system(false)` hands back this API unchanged — it does not turn a system API back into a
-   * user one, which is what lets `system(someBoolean)` read as "escalate if needed".
+   * The same API, telling the pipeline that rime is the caller. `system(false)` hands this one
+   * back unchanged, which is what lets `system(someBoolean)` read as "escalate if needed".
    */
   system(isSystem?: boolean): PrototypeApi<A, Doc>;
 };
 
-/**
- * A prototype definition as the registry hands it back.
- *
- * An alias now rather than an intersection: `name` moved onto the definition itself when `create`
- * did, since a built config's `type` is that name and `create` has to know it. The registry key is
- * still the same word — `protos` is held to `PrototypeName` on both sides — so nothing is
- * synthesised on the way out.
- */
+/** An alias: `name` lives on the definition itself, so there is nothing to synthesise. */
 export type RegisteredPrototype = PrototypeDefinition;
 
 type PrototypeOptions<C extends BuiltPrototype> = Partial<
@@ -284,16 +212,11 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Acces
   const titleFallback = options.titleFallback ?? 'id';
 
   /**
-   * One chain, stated once for every prototype.
+   * One chain, stated once for every prototype: `_titleFallback` first, then the prototype's own
+   * augments, then the features' in the order it listed them — which is column order.
    *
-   * `_titleFallback` is seeded first because it is the bottom of the precedence the `title`
-   * feature resolves, and it is internal rather than authoring surface. Then the prototype's own
-   * augments, then the features' in the order the prototype listed them — which is the order
-   * their fields land in, and therefore column order.
-   *
-   * No hooks step: a config's pipeline is resolved once the *whole* config exists (see
-   * prototype/pipelines.server.ts), so a config a feature derived is resolved by the same line as
-   * one an author wrote, and `$hooks` stays what the author wrote until then.
+   * No hooks step. A config's pipeline is resolved once the *whole* config exists (see
+   * pipelines.server.ts), so a derived config resolves by the same line as an authored one.
    */
   const create = (slug: string, incomingConfig: Dic): C => {
     const initial: Dic = { ...incomingConfig, slug, _titleFallback: titleFallback };
@@ -311,15 +234,10 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype, Acces
       /**
        * Staff-only until the author says otherwise, and `isStaff` is **auth's**.
        *
-       * It used to be a second copy here — the same body, typed on the one member it reads rather
-       * than on `User` — with a comment saying a prototype does not know what a feature is. But
-       * defaulting every prototype to staff-only *is* knowing: `user.isStaff` is a member auth
-       * puts there, and writing the predicate out did not remove the dependency, it duplicated it.
-       * Renaming a tell moves it; it does not move the coupling (docs/decoupling.md § 3).
-       *
-       * So there is one definition, and the audit shows the edge honestly. What would actually
-       * remove it is the default coming from whichever feature owns the policy rather than from
-       * `definePrototype` — a real change, not a rewording.
+       * There used to be a copy of it here, typed on the one member it reads, with a comment
+       * saying a prototype does not know what a feature is. But defaulting to staff-only *is*
+       * knowing — the copy duplicated the dependency rather than removing it. Removing it means
+       * the default coming from whichever feature owns the policy, which is a real change.
        */
       access: {
         create: isStaff,
