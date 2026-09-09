@@ -10,6 +10,7 @@ import { BETTER_AUTH_ROLES } from '../constant.server.js';
  */
 export const createBetterAuthUser = Hooks.beforeCreate<'auth'>({
   name: 'createBetterAuthUser',
+  feature: 'auth',
   run: async (args) => {
     const { config, event } = args;
     const { rime } = event.locals;

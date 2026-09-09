@@ -3,6 +3,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const defineVersionOperation = Hooks.beforeUpdate({
   name: 'defineVersionOperation',
+  feature: 'versions',
   run: async (args) => {
     const { config } = args;
 

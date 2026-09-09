@@ -7,6 +7,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
  */
 export const populateAPIKey = Hooks.afterCreate<'auth'>({
   name: 'populateAPIKey',
+  feature: 'auth',
   run: async (args) => {
     const { config } = args;
 

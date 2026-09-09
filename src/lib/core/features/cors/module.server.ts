@@ -1,6 +1,7 @@
-// Server half. Both are server-only — a browser has no origin list to enforce — so there is no
-// client half to pair this with, and a client build resolves both names to `undefined`: the
-// feature simply carries no `configure` and no `handler` there. Same shape as `features/url`'s
-// hooks. See docs/rime-modules-resolution.md, case C.
+// Server half, and no client half to pair it with — a browser has no origin list to enforce — so
+// a client build resolves the name to `undefined` and the feature simply carries no `configure`
+// there. See docs/rime-modules-resolution.md, case C.
+//
+// The handler is not here: `handlers/index.ts` imports it directly, because that file is
+// server-only and a feature no longer carries its handler as a property.
 export { augmentCORS } from './augment.server.js';
-export { handleCORS } from './handler.server.js';

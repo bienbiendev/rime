@@ -1,4 +1,4 @@
-import { augmentAuth, augmentStaff, authHooks, blankAuthDocument, handleAuth } from '$rime/modules';
+import { augmentAuth, augmentStaff, blankAuthDocument } from '$rime/modules';
 import { defineFeature } from '../define.js';
 import type { WithNormalizedAuth } from './augment.js';
 import { authColumns, authTables } from './tables.js';
@@ -55,31 +55,7 @@ export const auth = defineFeature({
    * reachable from a client build. The name resolves to `undefined` there, which is harmless:
    * `blank()` is only ever assembled server-side.
    */
-  blank: blankAuthDocument,
-
-  /**
-   * Six timings' worth, listed in `hooks/module.server.ts` and reached through `$rime/modules`.
-   *
-   * Not imported by path: this file is reachable from a client build — a prototype's feature list
-   * is, since `create` runs the augments on both sides — and a `.server.ts` import here drags the
-   * whole hook folder into the browser graph.
-   */
-  hooks: authHooks,
-
-  /**
-   * Signing a request in, and deciding what it may reach.
-   *
-   * Was `core/handlers/auth.server.ts` — 253 lines of which every one is about auth, in core,
-   * importing three things out of this feature to do its work. The feature owns it now.
-   *
-   * **Owning it is not the same as deciding when it runs.** `handlers/index.ts` names this and
-   * `cors.handler` in order, because a request chain is short, ordered, and security-relevant —
-   * see the note there on why deriving that order from the prototypes' feature lists was wrong.
-   *
-   * Ungated by `enabled` — a request is authenticated whether or not any *collection* declares
-   * `auth`, because signing into the panel does not depend on one.
-   */
-  handler: handleAuth
+  blank: blankAuthDocument
 });
 
 /**

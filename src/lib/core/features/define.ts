@@ -1,4 +1,3 @@
-import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
 import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 import type { DocTypeContribution } from './doc-type.js';
@@ -136,15 +135,6 @@ export type FeatureDefinition = {
   configure?: (config: any) => any;
 
   /**
-   * A SvelteKit `Handle` the feature contributes to the request pipeline, collected by
-   * `handlers/index.ts` and run between `handleAuth` and the plugins'.
-   *
-   * The layer under `hooks` below: this is where there is no document yet. `cors` enforces its
-   * origin list here, per request rather than per document.
-   */
-  handler?: Handle;
-
-  /**
    * Run once per process, before anything is served — the feature's own boot step.
    *
    * Takes the whole config, not one prototype's, which is why it is not a timing in `hooks`: it
@@ -254,17 +244,6 @@ export type FeatureDefinition = {
     params: { draft?: boolean; versionId?: string };
     intent: ReadIntent;
   }) => OperationQuery | undefined;
-
-  /**
-   * The feature's document hooks, by timing.
-   *
-   * The feature owns the implementations; it does not own where they run. Each hook declares
-   * `requires`/`provides` (see core/pipeline/hooks.ts) and `resolve-pipeline.server.ts` sorts
-   * them, which is what a written-out list cannot do: in a collection's `beforeRead` a feature's
-   * hooks interleave with core steps — `populateURL` runs after the document is shaped and before
-   * it is sorted — while the features interleaving there require nothing of *each other*.
-   */
-  hooks?: FeatureHooks;
 };
 
 /**
@@ -304,8 +283,6 @@ export type ShadowDeclaration = {
    */
   slug: string;
 };
-
-export type FeatureHooks = Partial<Record<HookTiming, AnyHook[]>>;
 
 export type HookTiming =
   | 'beforeOperation'

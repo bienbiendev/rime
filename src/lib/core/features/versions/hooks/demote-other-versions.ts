@@ -22,6 +22,7 @@ import { withVersionsSuffix } from '../naming.js';
  */
 export const demoteOtherVersions = Hooks.beforeUpdate({
   name: 'demoteOtherVersions',
+  feature: 'versions',
   run: async (args) => {
     const { config, data, event, context } = args;
 

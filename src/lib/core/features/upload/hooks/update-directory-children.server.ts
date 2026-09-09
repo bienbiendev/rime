@@ -6,6 +6,7 @@ type Update = { id: string; data: { parent: string } };
 
 export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>({
   name: 'prepareDirectoryChildren',
+  feature: 'upload',
   run: async (args) => {
     const data = args.data;
     const { event, config, context } = args;

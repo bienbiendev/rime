@@ -32,6 +32,7 @@ const passwordField = text('password')
  */
 export const augmentFieldsPassword = Hooks.beforeUpsert<'auth'>({
   name: 'augmentFieldsPassword',
+  feature: 'auth',
   run: async (args) => {
     let { config } = args;
 

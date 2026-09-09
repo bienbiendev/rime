@@ -10,6 +10,7 @@ import { getSegments } from '../util/path.js';
  */
 export const exctractPath = Hooks.beforeUpsert<'directory'>({
   name: 'exctractPath',
+  feature: 'upload',
   run: async (args) => {
     let data = args.data;
 

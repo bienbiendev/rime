@@ -11,6 +11,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const setDocumentThumbnail = Hooks.beforeRead<'raw'>({
   name: 'setDocumentThumbnail',
+  feature: 'thumbnail',
   run: async (args) => {
     const config = args.config;
     let doc = args.doc;

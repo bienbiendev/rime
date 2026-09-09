@@ -5,6 +5,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
  */
 export const addChildrenProperty = Hooks.beforeRead({
   name: 'addChildrenProperty',
+  feature: 'nested',
   run: async (args) => {
     // No `config.nested` check: the feature's `enabled` decides that, and the pipeline only asks
     // for this hook on a collection. See features/nested/index.ts.

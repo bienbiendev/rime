@@ -1,3 +1,6 @@
+import * as title from '$lib/core/features/title/hooks/index.server.js';
+import * as url from '$lib/core/features/url/hooks/index.server.js';
+import * as versions from '$lib/core/features/versions/hooks/index.server.js';
 import { authorize } from '$lib/core/pipeline/steps/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/steps/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/pipeline/steps/get-original-document.server.js';
@@ -8,12 +11,6 @@ import { setDefaultValues } from '$lib/core/pipeline/steps/set-default-values.se
 import { setDocumentLocale } from '$lib/core/pipeline/steps/set-document-locale.server.js';
 import { setDocumentType } from '$lib/core/pipeline/steps/set-document-type.server.js';
 import { validateFields } from '$lib/core/pipeline/steps/validate-fields.server.js';
-import { setDocumentTitle } from '$lib/core/features/title/hooks/set-document-title.server.js';
-import { populateURL } from '$lib/core/features/url/hooks/populate-url.server.js';
-import { defineVersionOperation } from '$lib/core/features/versions/hooks/define-version-operation.server.js';
-import { demoteOtherVersions } from '$lib/core/features/versions/hooks/demote-other-versions.js';
-import { exposeVersionId } from '$lib/core/features/versions/hooks/expose-version-id.js';
-import { handleNewVersion } from '$lib/core/features/versions/hooks/handle-new-version.server.js';
 import type { AnyHook, HookTiming } from '$lib/core/features/define.js';
 
 /**
@@ -38,21 +35,21 @@ export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     processDocumentFields,
     setDocumentLocale,
     setDocumentType,
-    exposeVersionId,
-    setDocumentTitle,
+    versions.exposeVersionId,
+    title.setDocumentTitle,
     // After the title, for the reason the collection's list gives.
-    populateURL
+    url.populateURL
   ],
 
   beforeUpdate: [
     getOriginalDocument,
     buildOriginalDocConfigMap,
     resolveContentOwner,
-    defineVersionOperation,
-    handleNewVersion,
+    versions.defineVersionOperation,
+    versions.handleNewVersion,
     buildDataConfigMap,
     setDefaultValues,
     validateFields,
-    demoteOtherVersions
+    versions.demoteOtherVersions
   ]
 };

@@ -28,6 +28,8 @@ const declare = <H>(declaration: Declaration<H>): H => {
   const run = (isObject ? (declaration as { run: H }).run : declaration) as H & object;
   const marks: Partial<HookMarks> = isObject ? (declaration as Partial<HookMarks>) : {};
 
+  if (marks.feature) Object.assign(run, { feature: marks.feature });
+
   // `name` cannot go through Object.assign: a function's own `name` is non-writable, so
   // assigning to it throws a TypeError in strict mode, which every ES module is. It *is*
   // configurable, so defineProperty works — and it sets the function's real name, so the hook

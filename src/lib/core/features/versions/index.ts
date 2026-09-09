@@ -1,5 +1,5 @@
 import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
-import { makeVersionsCollectionsAliases, versionsHooks } from '$rime/modules';
+import { makeVersionsCollectionsAliases } from '$rime/modules';
 import type { WithVersionsConfig } from './augment.js';
 import { defineFeature } from '../define.js';
 import { augmentVersions } from './augment.js';
@@ -41,12 +41,6 @@ export const versions = defineFeature({
   docType: versionsDocType,
 
   shadow: (config) => ({ slug: withVersionsSuffix(config.slug) }),
-
-  /**
-   * Its document hooks. Through `$rime/modules` because `handleNewVersion` is server-only and this
-   * file is reachable from a client build — see hooks/module.server.ts.
-   */
-  hooks: versionsHooks,
 
   /**
    * Where the two halves of an update land — the base row and the version row. What

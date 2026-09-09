@@ -10,6 +10,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
  */
 export const populateURL = Hooks.beforeRead<'generic'>({
   name: 'populateURL',
+  feature: 'url',
   // `title` because `config.$url(document)` below is the author's own function over the whole
   // document, and a slug built from the title is the ordinary case — so the derived title has to
   // be there before it runs. The hand-written pipeline got this from list position; under marks it

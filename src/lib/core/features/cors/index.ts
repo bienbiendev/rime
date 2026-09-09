@@ -1,4 +1,4 @@
-import { augmentCORS, handleCORS } from '$rime/modules';
+import { augmentCORS } from '$rime/modules';
 import { defineFeature } from '../define.js';
 
 /**
@@ -17,8 +17,7 @@ export const cors = defineFeature({
   requires: [],
   enabled: () => true,
 
-  configure: augmentCORS,
-  handler: handleCORS
+  configure: augmentCORS
 });
 
 /** The origin list is always there once this has run, which is what the handler reads. */

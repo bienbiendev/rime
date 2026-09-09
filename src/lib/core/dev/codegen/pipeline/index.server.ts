@@ -1,8 +1,5 @@
-import type { HookTiming } from '$lib/core/features/define.js';
-import { getPrototype } from '$lib/core/prototype/registry.server.js';
 import { logger } from '$lib/core/logger.server.js';
 import { hookName } from '$lib/core/pipeline/hook-name.server.js';
-import type { PrototypeName } from '$lib/core/prototype/registry.server.js';
 import type { Dic } from '$lib/util/types.js';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,27 +14,6 @@ import path from 'node:path';
  * joined by arrows puts a nine-hook `beforeRead` on one wrapping line, which is the one thing the
  * file exists to show.
  */
-
-/**
- * Which feature contributed a hook, if any.
- *
- * Recovered rather than recorded: the same function objects travel from `feature.hooks[timing]`
- * through `buildPipeline` and the resolver into `$hooks`, so identity is enough and
- * `buildPipeline` needs to know nothing about documentation. Features whose `enabled` is false
- * for this config contribute nothing, and `versions` carries no `hooks` at all — both have to be
- * tolerated rather than assumed away.
- */
-const featureOwning = (
-  prototype: PrototypeName,
-  config: Dic,
-  timing: string,
-  hook: unknown
-): string | undefined =>
-  (getPrototype(prototype)?.features ?? []).find(
-    (feature) =>
-      feature.enabled(config) &&
-      (feature.hooks?.[timing as HookTiming] ?? []).some((candidate) => candidate === hook)
-  )?.name;
 
 /**
  * A markdown table, with the columns padded.
@@ -82,8 +58,10 @@ const tablesFor = (prototype: Dic): string => {
   return timings
     .map(([timing, hooks]) => {
       const rows = hooks.map((hook, index) => {
-        const from =
-          featureOwning(prototype.type as PrototypeName, prototype, timing, hook) ?? prototype.type;
+        // A hook says whose it is — `feature: 'auth'` beside its name. Anything that says nothing
+        // is the prototype's own. It used to be recovered by identity against
+        // `FeatureDefinition.hooks`, which no longer exists.
+        const from = (hook as { feature?: string }).feature ?? prototype.type;
 
         return [String(index + 1), `\`${hookName(hook)}\``, String(from)];
       });

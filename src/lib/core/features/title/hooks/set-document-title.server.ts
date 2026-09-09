@@ -4,6 +4,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const setDocumentTitle = Hooks.beforeRead<'raw'>({
   name: 'setDocumentTitle',
+  feature: 'title',
   run: async (args) => {
     const config = args.config;
     let doc = args.doc;

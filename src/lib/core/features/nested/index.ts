@@ -1,4 +1,4 @@
-import { augmentNested, nestedHooks } from '$rime/modules';
+import { augmentNested } from '$rime/modules';
 import { defineFeature } from '../define.js';
 
 /**
@@ -14,7 +14,5 @@ export const nested = defineFeature({
   /** A config uses this feature by declaring `nested`. */
   enabled: (config) => !!config.nested,
 
-  augment: augmentNested,
-
-  hooks: nestedHooks
+  augment: augmentNested
 });

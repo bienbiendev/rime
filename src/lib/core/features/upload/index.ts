@@ -1,5 +1,5 @@
 import type { WithNormalizedUpload } from './types.js';
-import { augmentUpload, bootUpload, configureUploadDirectories, uploadHooks } from '$rime/modules';
+import { augmentUpload, bootUpload, configureUploadDirectories } from '$rime/modules';
 import { defineFeature } from '../define.js';
 import { uploadDocType } from './doc-type.js';
 
@@ -27,9 +27,7 @@ export const upload = defineFeature({
 
   boot: bootUpload,
 
-  docType: uploadDocType,
-
-  hooks: uploadHooks
+  docType: uploadDocType
 });
 
 /** Turns an author's `upload: true` into a normalised object. */

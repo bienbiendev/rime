@@ -1,4 +1,3 @@
-import { titleHooks } from '$rime/modules';
 import { defineFeature } from '../define.js';
 import { augmentTitle } from './augment.js';
 
@@ -13,11 +12,10 @@ export const title = defineFeature({
   type: 'augment',
   requires: ['upload'],
   enabled: () => true,
-  augment: augmentTitle,
+  augment: augmentTitle
 
   // The hook that reads what the augment resolved — both halves of one idea, both here. Through
   // `$rime/modules` because a hook is server-only and this file is reachable from a client build.
-  hooks: titleHooks
 });
 
 /** Resolves `asTitle`, which the built config declares as required. */

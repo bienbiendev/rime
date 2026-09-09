@@ -5,6 +5,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
  */
 export const deleteBetterAuthUser = Hooks.afterDelete<'auth'>({
   name: 'deleteBetterAuthUser',
+  feature: 'auth',
   run: async (args) => {
     const { doc, event, config } = args;
     const IS_API_AUTH = config.auth && config.auth?.type === 'apiKey';

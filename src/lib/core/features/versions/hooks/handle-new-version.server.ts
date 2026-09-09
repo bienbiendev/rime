@@ -41,6 +41,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
  */
 export const handleNewVersion = Hooks.beforeUpsert({
   name: 'handleNewVersion',
+  feature: 'versions',
   run: async (args) => {
     const { config, event } = args;
     const { rime } = event.locals;

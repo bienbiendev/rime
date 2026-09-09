@@ -1,26 +1,11 @@
+import * as auth from '$lib/core/features/auth/hooks/index.server.js';
+import * as nested from '$lib/core/features/nested/hooks/index.server.js';
+import * as thumbnail from '$lib/core/features/thumbnail/hooks/index.server.js';
+import * as title from '$lib/core/features/title/hooks/index.server.js';
+import * as upload from '$lib/core/features/upload/hooks/index.server.js';
+import * as url from '$lib/core/features/url/hooks/index.server.js';
+import * as versions from '$lib/core/features/versions/hooks/index.server.js';
 import type { AnyHook, HookTiming } from '$lib/core/features/define.js';
-import { augmentFieldsPassword } from '$lib/core/features/auth/hooks/augment-fields-password.server.js';
-import { createBetterAuthUser } from '$lib/core/features/auth/hooks/create-better-auth-user.server.js';
-import { deleteBetterAuthUser } from '$lib/core/features/auth/hooks/delete-better-auth-user.server.js';
-import { forwardRolesToBetterAuth } from '$lib/core/features/auth/hooks/forward-roles.server.js';
-import { populateAPIKey } from '$lib/core/features/auth/hooks/populate-api-key.server.js';
-import { preventSupperAdminDeletion } from '$lib/core/features/auth/hooks/prevent-superadmin-deletion.server.js';
-import { preventSuperAdminMutation } from '$lib/core/features/auth/hooks/prevent-superadmin-mutation.server.js';
-import { preventUserMutations } from '$lib/core/features/auth/hooks/prevent-user-mutations.server.js';
-import { removePrivateFields } from '$lib/core/features/auth/hooks/remove-private-fields.server.js';
-import { addChildrenProperty } from '$lib/core/features/nested/hooks/add-children.server.js';
-import { setDocumentThumbnail } from '$lib/core/features/thumbnail/hooks/set-document-thumbnail.server.js';
-import { setDocumentTitle } from '$lib/core/features/title/hooks/set-document-title.server.js';
-import { castBase64ToFile } from '$lib/core/features/upload/hooks/convert-base64.server.js';
-import { cleanUpFiles } from '$lib/core/features/upload/hooks/clean-up-files.server.js';
-import { handlePathCreation } from '$lib/core/features/upload/hooks/handle-path-creation.server.js';
-import { populateSizes } from '$lib/core/features/upload/hooks/populate-sizes.server.js';
-import { processFileUpload } from '$lib/core/features/upload/hooks/process-file-upload.server.js';
-import { populateURL } from '$lib/core/features/url/hooks/populate-url.server.js';
-import { defineVersionOperation } from '$lib/core/features/versions/hooks/define-version-operation.server.js';
-import { demoteOtherVersions } from '$lib/core/features/versions/hooks/demote-other-versions.js';
-import { exposeVersionId } from '$lib/core/features/versions/hooks/expose-version-id.js';
-import { handleNewVersion } from '$lib/core/features/versions/hooks/handle-new-version.server.js';
 import { authorize } from '$lib/core/pipeline/steps/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/steps/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/pipeline/steps/get-original-document.server.js';
@@ -65,62 +50,62 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
 
   beforeRead: [
     // First, so nothing deriving from the document can copy a private value into derived data.
-    removePrivateFields,
+    auth.removePrivateFields,
     processDocumentFields,
     setDocumentLocale,
     setDocumentType,
-    populateSizes,
-    addChildrenProperty,
-    exposeVersionId,
-    setDocumentTitle,
+    upload.populateSizes,
+    nested.addChildrenProperty,
+    versions.exposeVersionId,
+    title.setDocumentTitle,
     // After the title: `config.$url(document)` is the author's own function, and a slug built
     // from the title is the ordinary case.
-    populateURL,
-    // After the sizes: it takes the thumbnail `populateSizes` derived when there is one.
-    setDocumentThumbnail
+    url.populateURL,
+    // After the sizes: it takes the thumbnail `upload.populateSizes` derived when there is one.
+    thumbnail.setDocumentThumbnail
   ],
 
   beforeCreate: [
     mergeWithBlankDocument,
     // After the merge: it appends the password field, and the config map below has to see it.
-    augmentFieldsPassword,
+    auth.augmentFieldsPassword,
     buildDataConfigMap,
     setDefaultValues,
     validateFields,
-    createBetterAuthUser,
-    handlePathCreation,
-    castBase64ToFile,
-    processFileUpload
+    auth.createBetterAuthUser,
+    upload.handlePathCreation,
+    upload.castBase64ToFile,
+    upload.processFileUpload
   ],
 
-  afterCreate: [populateAPIKey],
+  afterCreate: [auth.populateAPIKey],
 
   beforeUpdate: [
     getOriginalDocument,
     buildOriginalDocConfigMap,
     resolveContentOwner,
-    augmentFieldsPassword,
+    auth.augmentFieldsPassword,
     // The three guards read the caller's submission *as sent*, so they run before anything adds
-    // to it. `preventUserMutations` rejects on `'name' in args.data` and
-    // `preventSuperAdminMutation` on `'isSuperAdmin' in args.data` — a default filled in above
+    // to it. `auth.preventUserMutations` rejects on `'name' in args.data` and
+    // `auth.preventSuperAdminMutation` on `'isSuperAdmin' in args.data` — a default filled in above
     // either of them turns an ordinary update into a 401.
-    preventSuperAdminMutation,
-    preventUserMutations,
-    forwardRolesToBetterAuth,
+    auth.preventSuperAdminMutation,
+    auth.preventUserMutations,
+    auth.forwardRolesToBetterAuth,
     // Also reads the submission as sent, and overrides the content row core resolved above.
-    defineVersionOperation,
-    handleNewVersion,
+    versions.defineVersionOperation,
+    versions.handleNewVersion,
     buildDataConfigMap,
     setDefaultValues,
     validateFields,
-    handlePathCreation,
-    castBase64ToFile,
-    processFileUpload,
+    upload.handlePathCreation,
+    upload.castBase64ToFile,
+    upload.processFileUpload,
     // Last: it demotes the other versions once this one is known to be valid and published.
-    demoteOtherVersions
+    versions.demoteOtherVersions
   ],
 
-  beforeDelete: [preventSupperAdminDeletion, cleanUpFiles],
+  beforeDelete: [auth.preventSupperAdminDeletion, upload.cleanUpFiles],
 
-  afterDelete: [deleteBetterAuthUser]
+  afterDelete: [auth.deleteBetterAuthUser]
 };

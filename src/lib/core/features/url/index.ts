@@ -1,4 +1,3 @@
-import { urlHooks } from '$rime/modules';
 import { defineFeature } from '../define.js';
 import { augmentUrl } from './augment.js';
 
@@ -22,9 +21,8 @@ export const url = defineFeature({
   /** A config uses this feature by declaring how to build its url. */
   enabled: (config) => !!config.$url,
 
-  augment: augmentUrl,
+  augment: augmentUrl
 
   // `undefined` on the client, where nothing reads it: `features/url` has no `module.ts`, so the
   // client build gets a stub rather than a missing export.
-  hooks: urlHooks
 });

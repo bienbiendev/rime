@@ -1,4 +1,3 @@
-import { thumbnailHooks } from '$rime/modules';
 import { defineFeature } from '../define.js';
 import { augmentThumbnail } from './augment.js';
 
@@ -13,9 +12,7 @@ export const thumbnail = defineFeature({
   type: 'augment',
   requires: [],
   enabled: () => true,
-  augment: augmentThumbnail,
-
-  hooks: thumbnailHooks
+  augment: augmentThumbnail
 });
 
 /** Resolves `asThumbnail`, which the built collection declares as required. */

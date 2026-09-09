@@ -377,7 +377,7 @@ appended after the prototype's, before the finaliser.
 | 2   | `buildDataConfigMap`     | collection |
 | 3   | `setDefaultValues`       | collection |
 | 4   | `validateFields`         | collection |
-| 5   | `exctractPath`           | collection |
+| 5   | `exctractPath`           | upload     |
 
 ### beforeUpdate
 
@@ -389,8 +389,8 @@ appended after the prototype's, before the finaliser.
 | 4   | `buildDataConfigMap`        | collection |
 | 5   | `setDefaultValues`          | collection |
 | 6   | `validateFields`            | collection |
-| 7   | `exctractPath`              | collection |
-| 8   | `prepareDirectoryChildren`  | collection |
+| 7   | `exctractPath`              | upload     |
+| 8   | `prepareDirectoryChildren`  | upload     |
 
 ### afterUpdate
 

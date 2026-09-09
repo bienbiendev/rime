@@ -12,6 +12,7 @@ import { getSegments } from '../util/path.js';
  */
 export const handlePathCreation = Hooks.beforeUpsert<'upload'>({
   name: 'handlePathCreation',
+  feature: 'upload',
   run: async (args) => {
     const { rime } = args.event.locals;
     const data = args.data;

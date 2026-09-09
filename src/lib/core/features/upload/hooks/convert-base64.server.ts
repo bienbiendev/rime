@@ -17,6 +17,7 @@ import { isFile } from '$lib/util/file.js';
  */
 export const castBase64ToFile = Hooks.beforeUpsert<'upload'>({
   name: 'castBase64ToFile',
+  feature: 'upload',
   run: async (args) => {
     let data = args.data;
     if (data?.file && !isFile(data.file)) {

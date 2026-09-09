@@ -188,6 +188,20 @@ export type HookMarks = {
    * the function is an *argument*, so JS never gives it a name and `fn.name` is `''`.
    */
   name: string;
+
+  /**
+   * The feature this hook belongs to, when it belongs to one.
+   *
+   * Absent means core's — a prototype's own step, which always runs. Named means
+   * `buildPipeline` runs it only where that feature is enabled, which is what stops a versioned
+   * hook firing on a config with no versions.
+   *
+   * Said on the hook rather than collected on the feature. `FeatureDefinition.hooks` used to be
+   * that list, mirrored per timing, reached through `$rime/modules` because a feature's
+   * `index.ts` is client-reachable — three indirections for one word, and a second list that had
+   * to agree with the prototype's.
+   */
+  feature?: string;
 };
 
 /**
