@@ -1,9 +1,11 @@
 # Annex — splitting `transform`
 
-> Stage 4.1 of `docs/decoupling.md`.
+> Stage 4.1 of `docs/decoupling.md`. **Landed.** What follows is the reasoning that produced the
+> split, kept because §3 is still open work; where the shipped code differs from the plan below,
+> §5 says so and the code wins.
 
-`adapter-sqlite/transform.server.ts` turns the rows a read returns into one document. It is ~300
-lines and about half of it has nothing to do with a database.
+`adapter-sqlite/transform.server.ts` turned the rows a read returns into one document. It was ~300
+lines and about half of it had nothing to do with a database.
 
 ---
 
@@ -208,3 +210,33 @@ And `probing.md` §7 for `withRowMeta`, which only the panel exercises.
 `util/object.ts:221` has a known missing backslash in `/^d+$/` (should be `/^\d+$/`) so the numeric
 branch of `getValueAtPath` never fires — benign today because JS array indexing accepts string
 keys, but it is exactly the kind of thing this split will surface. It is in `known-defects.md`.
+
+---
+
+## 5. What shipped, where it differs
+
+`adapter-sqlite/transform.server.ts` is 169 lines; `core/pipeline/build-document.server.ts` is 129.
+Three departures from §2:
+
+**`base` comes back flat.** §2.3 had core run `transformDatabaseColumnsToPaths(flatten(rows.base))`.
+That is core applying the adapter's own rule — that `__` separates path segments in a column name.
+The adapter applies it and returns `base` already flat and path-keyed; core unflattens once, at the
+end, after everything is placed.
+
+**Child-table keys are stripped where they are read, not by name at the end.** The old code
+flattened the whole row, so `pages__$blocks_hero` became `pages__$blocks_hero.0.id` and rode through
+every step to be removed by name after the blank merge. `rows()` omits those keys before flattening,
+because it has just finished reading them into their own piles.
+
+**The locale and orphan checks run before the depth walk.** The old order fetched the related
+document, then decided the row belonged to another locale and dropped it. Same output, one less
+read per skipped relation.
+
+And one thing §2.3 predicted exactly: the adapter no longer takes `event`, and no longer calls
+`rime.collection(slug).blank()` or `rime.collection(…).findById()` — the two places the database
+layer was reaching up into the local API.
+
+`resolveRelationTarget` is the piece with no name in the plan. The junction table carries one
+nullable foreign key column per target collection and exactly one is set; naming which is a
+question about columns, so the adapter answers it and emits `relationTo`/`documentId`. A row with
+no column set is an orphan, and it comes back untouched so core can name it in the warning.

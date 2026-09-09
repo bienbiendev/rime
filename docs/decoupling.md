@@ -25,6 +25,8 @@ member. What got it there, newest first:
 
 | commit     | what                                                                                                                                             |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `2428e5aa` | **§4.1** — `transform.doc` becomes `transform.rows`; `buildDocument` is core's half                                                              |
+| `8d021608` | `versionsTable` → `contentTable`, `isPanel` → `withRowMeta`, `templateDirectories` deleted — **verified locally, e2e green**                     |
 | `99aea980` | the row/document merge is the adapter's, naming it is the feature's — `mergeContentRow` emits `contentId`, `versions` adds `versionId` in a hook |
 | `93f98982` | `readWhere` reverted; `nested` and relation defaults use `findMany({ select: ['id'] })`                                                          |
 | `4b9db413` | **bug**: a shadowed prototype could not sort by its base-row columns                                                                             |
@@ -59,11 +61,9 @@ hooks?:      FeatureHooks                    // document hooks, ordered by marks
 handler?:    Handle                          // a SvelteKit handle
 ```
 
-### 1.2 Committed but unverified — `8d021608`
+### 1.2 `8d021608` — verified
 
-**These are on the branch.** They are finished, every static gate is at baseline, and the one
-behavioural change among them has never been through the panel. §4.0 is the first stage precisely
-because of that: verify it before building anything on top.
+The e2e suites ran green locally, which is what §4.0 was waiting for. The files it touched:
 
 ```
    src/lib/adapter-sqlite/auth.server.ts
@@ -97,8 +97,8 @@ Plus a comment sweep so the adapter stops _reasoning_ in feature terms.
 
 ### 1.3 Left
 
-Everything in §4. The short version: **auth**, the **child-table declaration** that auth needs,
-the **transform split**, the **insert plan**, and a handful of feature words still in core.
+§4.2 onward. The short version: **auth**, the **child-table declaration** that auth needs, the
+**insert plan**, and a handful of feature words still in core.
 
 ---
 
@@ -113,15 +113,17 @@ for f in versions upload auth nested url title thumbnail metas cors panel draft 
 done | sort -rn
 ```
 
-| count | name       | verdict                                                                  |
-| ----: | ---------- | ------------------------------------------------------------------------ |
-|    98 | `auth`     | **real** — the whole of §4.2 and §4.3                                    |
-|    22 | `nested`   | false positive — "nested object", "nested path", "nested AND conditions" |
-|    18 | `title`    | false positive — `text('title')` in doc-comment examples                 |
-|     1 | `versions` | a `docs/` filename in a pointer comment                                  |
-|     1 | `url`      | "url params" in a comment about comma-separated values                   |
-|     1 | `panel`    | the comment recording what `withRowMeta` replaced                        |
-|     0 | the rest   | clean                                                                    |
+| count | name     | verdict                                                                  |
+| ----: | -------- | ------------------------------------------------------------------------ |
+|    98 | `auth`   | **real** — the whole of §4.2 and §4.3                                    |
+|    22 | `nested` | false positive — "nested object", "nested path", "nested AND conditions" |
+|    18 | `title`  | false positive — `text('title')` in doc-comment examples                 |
+|     1 | `url`    | "url params" in a comment about comma-separated values                   |
+|     0 | the rest | clean                                                                    |
+
+`versions` and `panel` were at 1 each — a `docs/` filename in a pointer comment, and the comment
+recording what `withRowMeta` replaced. §4.1 rewrote both files and neither word came back. **Auth
+is now the only real hit in the whole database layer.**
 
 The 98 `auth` hits break down as:
 
@@ -208,119 +210,92 @@ three write plans by hand. Leave them.
 Each is shippable on its own and gate-able on its own. Annexes carry the detail:
 `decoupling-transform.md`, `decoupling-tables.md`, `decoupling-auth.md`.
 
-### 4.0 — Verify what `8d021608` landed
+### 4.0 — Verify what `8d021608` landed — **done**
 
-**Nothing new to write.** The commit is on the branch; what is missing is the half of the
-verification this container cannot do.
+The commit's one behavioural change was `withRowMeta`: the same `event.params.panel` expression,
+moved one layer up out of the adapter. It ran green through the e2e suites locally, which is the
+half the cloud container could not do — its Chromium and Playwright's disagree, so nothing in a
+container run reaches the panel, and the panel is the only consumer of that flag.
 
-The one behavioural change is `withRowMeta`, and it is behaviour-identical by construction: the
-same expression, on the same `event`, moved one layer up.
+The reported `tests/basic/pages.test.ts:9 › Login form › should login successfully` failure was a
+container artefact, not a signal. It passes locally.
 
-```ts
-// adapter-sqlite/transform.server.ts — before
-const isPanel = event.params.panel !== undefined;
-if (!isPanel) {
-  delete block.position;
-  delete block.path;
-  delete block.ownerId;
-  delete block.locale;
-}
-```
+### 4.1 — Split `transform` — **done**
 
-```ts
-// adapter-sqlite/transform.server.ts — after
-const { withRowMeta = false } = args;
-if (!withRowMeta) {
-  delete block.position;
-  delete block.path;
-  delete block.ownerId;
-  delete block.locale;
-}
-```
-
-```ts
-// core/pipeline/run.server.ts — readDocument, the one caller
-const document = await event.locals.rime.adapter.transform.doc({
-  doc: raw,
-  slug: config.slug,
-  locale,
-  event,
-  depth,
-  withBlank: !hasSelect,
-  withRowMeta: event.params.panel !== undefined
-});
-```
-
-Behaviour-identical by construction is not the same as verified, and the panel is the only
-consumer of that flag — its e2e tests do not run in the cloud container (Chromium 1194 vs
-Playwright's 1243), so nothing in the container's green run touches the code path that changed.
-
-Already green on `8d021608`, in the container:
-
-```bash
-bunx vitest run                # 165
-bunx eslint src/lib            # 20
-bun run check:circular-deps    # 3 — the list matters more than the count
-bun run check                  # byte-identical to the parent commit, same fixture
-```
-
-**Still owed, locally:**
-
-```bash
-bun run rime:use versions
-bun run check                  # 0 on this fixture
-bun run test:versions          # 54
-bun run test:fields            # never completed since the change — the webServer timed out
-bun run test:basic             # see below
-```
-
-Then the browser probe (`docs/probing.md` §7): open the panel, edit a document that has a blocks
-or tree field, save, reload. `withRowMeta` decides whether each child row keeps its `position` and
-`path`, so a wrong value loses block ordering on save and nothing else in the suite would say so.
-
-> **The reported `tests/basic/pages.test.ts:9 › Login form › should login successfully` failure is
-> unresolved.** In this container it is one of 12 baseline failures, all Chromium-launch errors, so
-> the container has nothing to say about it. Sign-in does not read a document, so `withRowMeta` is
-> an unlikely cause — but check it rather than reason about it: `git stash` the commit's
-> `run.server.ts` hunk, re-run that one test, and compare.
-
-Then the browser probe in `probing.md` §7 — sign in, load a collection document with blocks, edit
-and save one. That is what `withRowMeta` actually gates.
-
-> ⚠️ **`tests/basic/pages.test.ts:9 › Login form › should login successfully` is reported failing.**
-> In the cloud container that test is one of 12 baseline failures, all of them Chromium
-> launch errors. On a machine with a working Chromium it is a **real signal** and must be
-> resolved before this stage lands. Sign-in does not read a document, so `withRowMeta` is an
-> unlikely cause — but check it before assuming, and use the browser probe rather than reasoning.
-
-### 4.1 — Split `transform`
-
-`adapter-sqlite/transform.server.ts` is ~300 lines and only half of it is database work. The half
-that is: unflattening rows, resolving child table names, merging the locales branch. The half that
-is not: merging the blank document, deciding which keys to strip, assembling relations into
-document properties.
+`adapter-sqlite/transform.server.ts` was ~300 lines and about half of it had nothing to do with a
+database. It is 169 now, and the half that left is 129 lines of
+`core/pipeline/build-document.server.ts`.
 
 **Full detail: `docs/decoupling-transform.md`.**
 
-The shape:
-
 ```ts
-// core/adapter.ts — the adapter's half shrinks to this
+// core/adapter.ts — the adapter's half
 export interface TransformAdapter {
-  /** Storage rows for one document, unflattened and grouped. No blank, no stripping. */
-  rows(args: { doc: RawDoc; slug: string; locale?: string }): Promise<DocumentRows>;
+  rows(args: { doc: RawDoc; slug: PrototypeSlug; locale?: string }): Promise<DocumentRows>;
 }
+
+export type DocumentRows = {
+  /** Flat, keyed by document path, locales branch merged, child-table keys removed. */
+  base: Dic;
+  blocks: Dic[];
+  tree: Dic[];
+  /** `relationTo` and `documentId` resolved off whichever foreign key column was set. */
+  relations: Dic[];
+};
 ```
 
 ```ts
-// core/pipeline/transform/index.server.ts — core's half
-export const buildDocument = (rows: DocumentRows, args: BuildArgs): GenericDoc => { … };
+// core/pipeline/build-document.server.ts — core's half
+export const buildDocument = async <T extends GenericDoc>(
+  rows: DocumentRows,
+  args: { config; event; locale?; depth?; withBlank?; withRowMeta? }
+): Promise<T> => { … };
 ```
 
-This is also what earns a **transform hook timing**. Right now `versions`' `exposeVersionId` is a
-`beforeRead` hook, which is consistent with `setDocumentType` and `populateSizes` but is
-conceptually a mapping, not an enrichment. Once the mapping is a stage in core with four or five
-participants, a timing for it has inhabitants on day one — not before.
+What crossed the line, and why each was never the adapter's:
+
+| moved                       | it needed                                              |
+| --------------------------- | ------------------------------------------------------ |
+| the blank merge             | `rime.collection(slug).blank()` — a fold over features |
+| the `withRowMeta` strip     | who is asking                                          |
+| relation assembly and depth | `rime.collection(relationTo).findById()`               |
+| the `editedBy` strip        | `event.locals.user`                                    |
+| the orphan warnings         | `config.slug`                                          |
+
+Two things the adapter stopped doing, both of which were the inversion that hid this:
+
+- **It no longer takes `event`.** `rows()` takes a doc, a slug and a locale.
+- **It no longer reaches up into the local API.** Both calls it made — `blank()` and the depth
+  walk's `findById` — were the database layer calling core.
+
+Three decisions the annex left open:
+
+1. **`base` comes back flat.** The annex had core run `transformDatabaseColumnsToPaths(flatten(…))`,
+   which is core applying the adapter's own column-naming rule (`__` separates path segments).
+   The adapter does it and hands back flat, path-keyed columns; core unflattens once, at the end.
+2. **Child-table keys are stripped up front, not at the end.** They used to ride through every
+   step as `pages__$blocks_hero.0.id` and get removed by name after the blank merge.
+3. **The locale and orphan checks moved above the depth walk**, so a relation that is about to be
+   dropped no longer costs a `findById` first. Same output, one less read.
+
+This is what earns a **transform hook timing** — `versions`' `exposeVersionId`, `upload`'s
+`populateSizes`, core's `setDocumentType` and `setDocumentLocale` are all mappings living in
+`beforeRead`. Four inhabitants on day one. Not yet built: a seam with one inhabitant is a
+preference, and this repo has been bitten by building seams early.
+
+Gates, all re-measured on the same fixture against the change stashed:
+
+```bash
+bun run check                # 13 — identical list stashed and unstashed, so fixture, not regression
+bunx vitest run              # 165
+bunx eslint src/lib          # 20
+bun run check:circular-deps  # 3, same list
+bun run test                 # green, every fixture
+```
+
+The e2e suites are the gate that matters here: the transform runs on every document of every read,
+so `test:fields` (blocks and tree in every arrangement), `test:multilang` (the locales branch) and
+`test:versions-multilang` (the locales branch on a shadow) each cover a pile that changed hands.
 
 ### 4.2 — `FeatureDefinition.tables`
 
@@ -454,9 +429,9 @@ a new content row inherits. Lowest priority; note it, do not force it.
 ## 5. Order, and why
 
 ```
-4.0  verify 8d021608            ← blocking: everything else builds on it
-4.1  split transform              ← independent, unblocks a transform timing
-4.2  FeatureDefinition.tables     ← keystone
+4.0  verify 8d021608              ← done
+4.1  split transform              ← done
+4.2  FeatureDefinition.tables     ← keystone, next
 4.3  the auth facade              ← needs 4.2
 4.4  the insert plan              ← independent, small
 4.5  core's feature words         ← independent, four small commits
@@ -478,7 +453,7 @@ done | sort -rn
 ```
 
 Zero, apart from words that are also English ("nested object", "url params") and doc-comment
-examples. Today that is `auth 98`.
+examples. Today that is `auth 98`, and after §4.1 it is the **only** name left with a real hit.
 
 ```bash
 # core naming a feature, other than a prototype listing its own
