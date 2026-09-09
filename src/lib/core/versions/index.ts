@@ -2,7 +2,6 @@ import { VERSIONS_STATUS } from '$lib/core/versions/constant.js';
 import { makeVersionsCollectionsAliases } from '$rime/modules';
 import type { WithVersionsConfig } from './augment.js';
 import { defineFeature } from '$lib/core/features/define.js';
-import { augmentVersions } from './augment.js';
 import { versionsDocType } from './doc-type.js';
 
 /**
@@ -28,8 +27,6 @@ export const versions = defineFeature({
   name: 'versions',
   /** A config uses this feature by declaring `versions`. */
   enabled: (config) => !!config.versions,
-
-  augment: augmentVersions,
 
   /**
    * A versioned config keeps its identity and its `._root()` fields on its own row and everything

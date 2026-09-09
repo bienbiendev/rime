@@ -32,18 +32,6 @@ export type FeatureDefinition = {
   enabled: (config: Dic) => boolean;
 
   /**
-   * What the feature adds to a config of a prototype it extends — fields, mostly.
-   *
-   * Runs inside the prototype factories, in barrel order, only for configs where `enabled`.
-   *
-   * `any` rather than `Dic`: each augment names the shape it needs (`{ slug, nested?, fields? }`,
-   * `Collection<any>`), and a parameter is contravariant, so a list accepting every feature's
-   * augment cannot promise any of them a shape. Sound because an augment only ever sees configs of
-   * a prototype that lists it. What it does to the config's *type* is declared in register.ts.
-   */
-  augment?: (config: any) => any;
-
-  /**
    * What this feature adds to a prototype's **generated document type** — see `doc-type.ts`.
    *
    * The type-generation twin of `columns`: that one says what the prototype's row carries, this

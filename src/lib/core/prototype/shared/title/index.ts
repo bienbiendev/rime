@@ -1,5 +1,4 @@
 import { defineFeature } from '$lib/core/features/define.js';
-import { augmentTitle } from './augment.js';
 
 /**
  * Which of a document's own fields stands in for it — `asTitle`.
@@ -9,8 +8,7 @@ import { augmentTitle } from './augment.js';
  */
 export const title = defineFeature({
   name: 'title',
-  enabled: () => true,
-  augment: augmentTitle
+  enabled: () => true
 
   // The hook that reads what the augment resolved — both halves of one idea, both here. Through
   // `$rime/modules` because a hook is server-only and this file is reachable from a client build.

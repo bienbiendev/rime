@@ -1,4 +1,16 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
+import { augmentAuth } from '$rime/modules';
+import { isAuth } from '$lib/core/auth/enabled.js';
+import { augmentMetas } from '$lib/core/metas/augment.js';
+import { augmentNested } from '$rime/modules';
+import { isNested } from '$lib/core/prototype/collection/nested/enabled.js';
+import { augmentThumbnail } from '$lib/core/prototype/collection/thumbnail/augment.js';
+import { augmentTitle } from '$lib/core/prototype/shared/title/augment.js';
+import { augmentUpload } from '$rime/modules';
+import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
+import { augmentUrl } from '$lib/core/prototype/shared/url/augment.js';
+import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
+import { augmentVersions } from '$lib/core/versions/augment.js';
 import { auth } from '$lib/core/auth/index.js';
 import { cors } from '$lib/core/cors/index.js';
 import { metas } from '$lib/core/metas/index.js';
@@ -9,6 +21,7 @@ import { title } from '$lib/core/prototype/shared/title/index.js';
 import { upload } from '$lib/core/prototype/collection/upload/index.js';
 import { url } from '$lib/core/prototype/shared/url/index.js';
 import { versions } from '$lib/core/versions/index.js';
+import { when } from '../when.js';
 import { definePrototype } from '../define.js';
 import { augmentLabel } from './augment-label.js';
 import type { CollectionWithoutSlug } from './types.js';
@@ -29,31 +42,37 @@ export const collection = definePrototype({
   name: 'collection',
   singleton: false,
   /**
-   * The collection's own augments, ahead of every feature's. One: a label is the kind's own
-   * statement about itself.
+   * **Everything that shapes a collection config, in the order it runs** — which is the order the
+   * fields land in, and therefore column order (CONTRIBUTING rule 2).
    *
-   * `augmentPanel` used to be here too, defaulting `panel.dashboard` — and picking its layout by
-   * testing `config.upload`, which is a prototype knowing what a feature is. Its `maxEntries` and
-   * `'rows'` defaults were already duplicated by the dashboard, its only reader, so the whole step
-   * is gone: `upload` states `_dashboardLayout` and the dashboard defaults the rest.
+   * This was two declarations: `augments: [augmentLabel]` for the prototype's own, and
+   * `features: [auth, panel, upload, …]` for the rest, folded by `applyAugments`, each entry
+   * gated by a `FeatureDefinition.enabled` predicate declared in its own file. Reading the chain
+   * meant opening ten of them. It is one list now, and the guard is beside the step.
    *
-   * `auth` is not called here either: it is a feature, and it is *first* in the list below, which
-   * is what `title` needs — `title` resolves `asTitle` from the fallback `auth` and `upload` each
-   * offer, so auth has to have run before it. Calling it here as well appended its fields twice and
-   * boot rejected the config with "Duplicate field 'name' in collection 'staff'".
+   * `auth` is first because `title` resolves `asTitle` from the fallback `auth` and `upload` each
+   * offer, so both have to have run before it. `metas` is last because metas close the table.
+   * `augmentVersions` carries its own guard on its first line; the four `when`s are the rest of
+   * what `enabled` used to answer, and the unguarded steps are the six that answered `() => true`.
+   *
+   * `panel` and `cors` are not here: neither has an augment. They shape the whole config and are
+   * called by the config chain — see `config/build.ts`.
    */
-  augments: [augmentLabel],
+  augments: [
+    augmentLabel,
+    when(isAuth, augmentAuth),
+    when(isUpload, augmentUpload),
+    when(isNested, augmentNested),
+    augmentVersions,
+    when(hasUrl, augmentUrl),
+    augmentTitle,
+    augmentThumbnail,
+    augmentMetas
+  ],
 
   /**
-   * In augment order, which is column order — `auth` first because its `removePrivateFields` and
-   * its own fields precede everything, `metas` last because the doc says metas close the table.
-   * The prototype owns its table, so the prototype says what may add to it and where; no feature
-   * declares `extends: ['collection']` about somebody else's.
-   *
-   * Declared inline rather than beside the definition as an `as const` tuple. The tuple existed
-   * so `applyAugments` could fold the feature names into the factory's return type; `create`
-   * declares its return type instead (rule 1), so there is nothing left for a second export to
-   * carry and the order is stated exactly once.
+   * The features this collection enables, still listed for the three whole-config folds that read
+   * it — `configure`, `blank` and `docType`. The augment chain above no longer does.
    */
   features: [auth, panel, upload, nested, versions, url, title, thumbnail, metas, cors]
 });

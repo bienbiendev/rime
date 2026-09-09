@@ -1,4 +1,3 @@
-import { augmentNested } from '$rime/modules';
 import { defineFeature } from '$lib/core/features/define.js';
 
 /**
@@ -10,7 +9,5 @@ import { defineFeature } from '$lib/core/features/define.js';
 export const nested = defineFeature({
   name: 'nested',
   /** A config uses this feature by declaring `nested`. */
-  enabled: (config) => !!config.nested,
-
-  augment: augmentNested
+  enabled: (config) => !!config.nested
 });

@@ -1,5 +1,4 @@
 import { defineFeature } from '$lib/core/features/define.js';
-import { augmentThumbnail } from './augment.js';
 
 /**
  * Which relation field stands in for a document visually — `asThumbnail`.
@@ -9,8 +8,7 @@ import { augmentThumbnail } from './augment.js';
  */
 export const thumbnail = defineFeature({
   name: 'thumbnail',
-  enabled: () => true,
-  augment: augmentThumbnail
+  enabled: () => true
 });
 
 /** Resolves `asThumbnail`, which the built collection declares as required. */

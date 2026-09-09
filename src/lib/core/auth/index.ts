@@ -1,4 +1,4 @@
-import { augmentAuth, augmentStaff, blankAuthDocument } from '$rime/modules';
+import { augmentStaff, blankAuthDocument } from '$rime/modules';
 import { defineFeature } from '$lib/core/features/define.js';
 import type { WithNormalizedAuth } from './augment.js';
 
@@ -13,8 +13,6 @@ export const auth = defineFeature({
   name: 'auth',
   /** A collection uses this feature by declaring `auth`. */
   enabled: (config) => !!config.auth,
-
-  augment: augmentAuth,
 
   /**
    * The `staff` collection, which every config gets whether or not anything declares `auth`.

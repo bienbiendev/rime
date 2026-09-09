@@ -1,6 +1,5 @@
 import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/config/types.js';
-import { applyAugments } from '$lib/core/features/apply.js';
 import type { FeatureDefinition } from '$lib/core/features/define.js';
 import { isStaff } from '$lib/core/auth/access.js';
 import type { AnyHook, HookTiming, OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
@@ -52,10 +51,10 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype> = {
   features: FeatureDefinition[];
 
   /**
-   * The prototype's own augments, before every feature's.
+   * **Every** augment this prototype runs, in order — its own and its features', one written list.
    *
-   * `any` for the reason `FeatureDefinition.augment` is: each augment names the shape it needs, and
-   * a list holding several cannot promise any of them that shape.
+   * `any` for the reason each augment is typed loosely: each names the shape it needs, and a list
+   * holding several cannot promise any of them that shape. A guarded entry is `when(pred, fn)`.
    */
   augments?: readonly ((config: any) => any)[];
 
@@ -167,8 +166,12 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
   const augments = options.augments ?? [];
 
   /**
-   * One chain, stated once for every prototype: `_titleFallback` first, then the prototype's own
-   * augments, then the features' in the order it listed them — which is column order.
+   * One chain, stated once for every prototype: `_titleFallback` first, then every augment the
+   * prototype lists, in the order it lists them — which is column order.
+   *
+   * It used to be two: the prototype's own augments, then `applyAugments` folding each feature's
+   * out of the `features` list and gating it on `FeatureDefinition.enabled`. The list is written
+   * out now, guards included — see `prototype/collection/definition.ts`.
    *
    * `_titleFallback` is seeded as `'id'` for every prototype — it was a `titleFallback` field on
    * the definition and both of them answered `'id'`. `auth` and `upload` override it in their own
@@ -179,8 +182,7 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
    */
   const create = (slug: string, incomingConfig: Dic): C => {
     const initial: Dic = { ...incomingConfig, slug, _titleFallback: 'id' };
-    const withOwn = augments.reduce((current, augment) => augment(current), initial);
-    const augmented = applyAugments(features, withOwn) as Dic;
+    const augmented = augments.reduce((current, augment) => augment(current), initial) as Dic;
 
     return {
       ...augmented,

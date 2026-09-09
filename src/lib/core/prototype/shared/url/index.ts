@@ -1,5 +1,4 @@
 import { defineFeature } from '$lib/core/features/define.js';
-import { augmentUrl } from './augment.js';
 
 /**
  * Gives a document a `url`, computed from the config's own `$url` function.
@@ -17,9 +16,7 @@ import { augmentUrl } from './augment.js';
 export const url = defineFeature({
   name: 'url',
   /** A config uses this feature by declaring how to build its url. */
-  enabled: (config) => !!config.$url,
-
-  augment: augmentUrl
+  enabled: (config) => !!config.$url
 
   // `undefined` on the client, where nothing reads it: `features/url` has no `module.ts`, so the
   // client build gets a stub rather than a missing export.

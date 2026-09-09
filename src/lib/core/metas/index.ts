@@ -1,5 +1,4 @@
 import { defineFeature } from '$lib/core/features/define.js';
-import { augmentMetas } from './augment.js';
 
 /**
  * The bookkeeping fields every document carries: who edited it and when.
@@ -12,6 +11,5 @@ import { augmentMetas } from './augment.js';
  */
 export const metas = defineFeature({
   name: 'metas',
-  enabled: () => true,
-  augment: augmentMetas
+  enabled: () => true
 });
