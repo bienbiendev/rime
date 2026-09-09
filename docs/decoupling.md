@@ -25,6 +25,9 @@ member. What got it there, newest first:
 
 | commit     | what                                                                                                                                             |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `fb4c9316` | **§4.5** — the auth handler moves onto the feature                                                                                               |
+| `1b0c00c3` | **§4.5** — `VERSIONS_STATUS` / `UPLOAD_PATH` leave core; `duplicate` stops naming one                                                            |
+| `0e580220` | **§4.4** — `insert` takes a write plan, like `update`                                                                                            |
 | `df71014f` | **§4.3** — `adapter.table(slug)`; `AuthAdapter` collapses to `betterAuthAdapter`                                                                 |
 | `74619ab2` | **§4.3** — auth's three ordinary reads become `prototype(slug).findMany`                                                                         |
 | `a7b5bed6` | **§4.2** — `FeatureDefinition.tables` / `.columns`; the auth templates delete                                                                    |
@@ -102,8 +105,7 @@ Plus a comment sweep so the adapter stops _reasoning_ in feature terms.
 
 ### 1.3 Left
 
-§4.4 onward, and none of it is large: the **insert plan**, four **feature words in core**, and
-**upload's directories** (deferred out of §4.2, and half of §4.6).
+Two of §4.5's four, and §4.6. None of it is large — see §4.5 and §4.6 for what each needs.
 
 ---
 
@@ -448,52 +450,104 @@ but the session that authenticates as it is not. So `user.spec.ts` pins the slug
 the projection, and `better-auth-tables.spec.ts` pins the order. Proved by breaking it: dropping
 the `isSuperAdmin` condition fails one test.
 
-### 4.4 — The insert plan
+### 4.4 — The insert plan — **done** (`0e580220`)
 
-The last `config.versions` read on any write path, and the last place `insertPrototype` splits data
-for itself.
+`insertPrototype` called `splitRootData(data, config)` for any prototype with a shadow — the
+database layer applying a rule that belongs to whoever declared the shadow. It was the last
+`config` read on any write path.
 
 ```ts
-// core/adapter.ts — insert takes a plan, like update already does
+// core/adapter.ts — insert takes a plan, like update already did
 insert(args: {
   data: Dic;
-  content?: { data: Dic };     // no id — the adapter makes the row and answers with it
+  content?: { data: Dic };   // no id — the adapter makes the row and answers with it
   locale?: string;
 }): Promise<{ id: string; contentId: string }>;
 ```
 
-The update plan cannot be reused verbatim, because an insert has no row to name yet. `WritePlan`
-gains an optional id:
+Two things the stage as written did not anticipate:
 
-```ts
-export type WritePlan = {
-  data: Dic;
-  /** `id` absent on an insert, where the adapter creates the row and answers with its id. */
-  content?: { id?: string; data: Dic };
-};
+1. **`FeatureDefinition.writePlan` gains `operation`.** Without it a feature has to infer
+   create-vs-update from a context member being absent, which is how `versionOperation` came to
+   travel to the adapter in the first place. `versionsWritePlan` gets a fourth case, and it is the
+   simplest: split, and name no row.
+2. **`runUpdate` asserts the update invariant once.** `WritePlan.content.id` is optional now
+   because an insert has no row to name; an update does, so the check lives at the fold and a
+   narrowed `UpdateWritePlan` goes down to the two write sites, rather than a cast at each.
+
+A prototype with a shadow whose plan names no content half is refused: writing the base row alone
+would produce half a document with its blocks hung off the wrong row.
+
+`grep -rn "config\.versions\|versionOperation" src/lib/adapter-sqlite` is empty.
+
+### 4.5 — Core's feature words — **two of four**
+
+**Done:**
+
+```
+1b0c00c3  core/constants.ts        VERSIONS_STATUS, UPLOAD_PATH -> their features
+fb4c9316  core/handlers/auth.server.ts  -> features/auth/handler/, behind FeatureDefinition.handler
 ```
 
-`create.ts` folds `writePlanWithFeatures` before calling `insert`, exactly as `runUpdate` does at
-step 3.5. `ensurePrototypeExists` already takes a seeded blank (`FeatureDefinition.seed`), so it
-needs nothing further.
-
-### 4.5 — Core's feature words
-
-Four small ones, each independent:
+Moving the constants alone would only have moved the tell, so `duplicate.ts` — the one core
+operation that read `VERSIONS_STATUS` — lost the read rather than the import:
 
 ```ts
-// core/handlers/auth.server.ts — imports BETTER_AUTH_ROLES from the auth feature
-// → the feature's `handler` already exists; this belongs behind it.
+data.status = data.status ? VERSIONS_STATUS.DRAFT : undefined; // was
+delete data.status; // is
+```
 
+The feature that adds `status` already declares its default and `setDefaultValues` applies it on
+every create. Carrying the original's value over is what made an explicit reset necessary.
+
+The handler move is the one with care in it. It went to `features/auth/handler/` with a
+**server-only** `module.server.ts` and no `module.ts`, because `features/auth/module.server.ts` has
+a client half — and a name only a server half declares is _not exported_ on a client build rather
+than `undefined`, which fails at link time. `docs/rime-modules-resolution.md`, cases B and C.
+Handler order is no longer written anywhere, so `registry.spec.ts` pins it: nothing fails loudly if
+it inverts, and CORS running before authentication is not a failure any signed-in test would see.
+
+**Left, and each needs a decision rather than a move:**
+
+```ts
 // core/prototype/collection/hooks/merge-with-blank.server.ts — imports isUploadConfig
-// → what it actually needs is "does this field come from a file", which is a field question.
+```
 
-// core/constants.ts — VERSIONS_STATUS, UPLOAD_PATH
-// → move each into its feature; they are only shared because they were declared centrally.
+It lifts `data.file` out before `deepmerge` and puts it back, because deepmerge clones a `File`
+into a plain object. The annex says the real question is "does this value come from a file", which
+is a **field** question — but `data.file` is not always a `File`: `convert-base64` accepts a JSON
+payload too, so an `instanceof` guard would change behaviour. Decide what the value's contract is
+before rewriting the test.
 
+```ts
+// core/dev/codegen/types/index.server.ts — imports isUploadConfig  (not in the original audit)
+// core/prototype/types.ts             — VersionsStatus on VersionDoc, UploadPath on Docs
+```
+
+`Docs` is core's registry of document shapes, and four of its entries — `upload`, `version`,
+`auth`, `directory` — are features'. That wants type-level declaration merging, the way
+`FeatureConfigAugment` already works, not an import move.
+
+```ts
 // core/dev/codegen/routes/common.server.ts — two hardcoded panel `…/versions` routes
 // → a feature declaring routes is `FeatureDefinition.routes`, sibling to `handler`.
 ```
+
+Unchanged from the original plan.
+
+**And three the fixed grep surfaced that the original audit did not list:**
+
+```
+core/boot.server.ts               createAuthInstance
+core/rime.server.ts               type RimeAuth
+core/plugins/api-init/…           hasAuthUser
+```
+
+The first two are core booting Better-auth, and `RimeAuth` is where it is _on purpose_ — see rule
+1 in `CONTRIBUTING.md`: its type has to be nameable without naming `bootRime`. Untangling those is
+a change about `Rime`'s type graph, not about features, and it should not be attempted casually.
+The third is a plugin asking auth a question, the same shape as the handler leak that just moved;
+it goes when `api-init` becomes something auth declares.
 
 ### 4.6 — Feature to feature
 
@@ -522,8 +576,8 @@ a new content row inherits. Lowest priority; note it, do not force it.
 4.1  split transform              ← done
 4.2  FeatureDefinition.tables     ← done (minus upload's directories)
 4.3  the auth facade              ← done
-4.4  the insert plan              ← independent, small — next
-4.5  core's feature words         ← independent, four small commits
+4.4  the insert plan              ← done
+4.5  core's feature words         ← two of four done; two left, each needs a decision
 4.6  feature to feature           ← unblocked; upload's directories is the first half
 ```
 
@@ -547,10 +601,17 @@ and comments recording what a stage deleted. Today that is `auth 71`, of which 4
 
 ```bash
 # core naming a feature, other than a prototype listing its own
-grep -rn "core/features/" src/lib/core --include=*.ts | grep -v "^src/lib/core/features/"
+grep -rnE "features/" src/lib/core --include=*.ts | grep -v "^src/lib/core/features/"
 ```
 
-Only `features/registry.js` and the two prototype definitions' feature lists.
+Only `features/{define,registry,apply}.js` — the contract — and the two prototype definitions'
+feature lists.
+
+> ⚠️ **This grep used to read `"core/features/"`, and that missed every relative import.**
+> `core/handlers/auth.server.ts` imported three things out of the auth feature as
+> `../features/auth/…` and did not appear in the audit at all; nor did `prototype/types.ts`
+> importing `UploadPath`. The greps are the contract, so a grep with a hole in it is worse than no
+> grep. Match on `features/` alone.
 
 ```bash
 # a feature naming another
