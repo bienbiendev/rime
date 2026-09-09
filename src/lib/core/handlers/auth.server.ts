@@ -5,6 +5,7 @@ import type { Config, User } from '$lib/types.js';
 import { error, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
 import { access } from '$lib/util/index.js';
 import { BETTER_AUTH_ROLES } from '../features/auth/constant.server.js';
+import { userAttributes } from '../features/auth/user.server.js';
 import { logger } from '../logger.server.js';
 import type { ConfigContext, RimeContext } from '../rime.server.js';
 
@@ -91,7 +92,7 @@ async function getCmsUserAttributes<C extends Config>(
   userType: string,
   rime: RimeContext<C>
 ): Promise<any> {
-  const user = await rime.adapter.auth.getUserAttributes({
+  const user = await userAttributes(rime.adapter, {
     authUserId,
     slug: userType as CollectionSlug
   });

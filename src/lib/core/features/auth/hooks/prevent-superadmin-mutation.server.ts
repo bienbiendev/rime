@@ -1,4 +1,5 @@
 import { RimeError } from '$lib/core/errors/index.js';
+import { isSuperAdmin } from '../user.server.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 /**
@@ -21,9 +22,7 @@ export const preventSuperAdminMutation = Hooks.beforeUpdate({
       );
 
     const IS_ROLES_MUTATION = 'roles' in args.data && Array.isArray(args.data.roles);
-    const IS_SUPERADMIN_MUTATION = await event.locals.rime.adapter.auth.isSuperAdmin(
-      originalDoc.id
-    );
+    const IS_SUPERADMIN_MUTATION = await isSuperAdmin(event.locals.rime.adapter, originalDoc.id);
 
     // Prevent super admin user to be changed by someone
     if (IS_SUPERADMIN_MUTATION && !event.locals.user?.isSuperAdmin) {

@@ -1,18 +1,22 @@
-import type { User } from '$lib/core/features/auth/types.js';
-import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { GetRegisterType } from '$lib/index.js';
-import type { Dic } from '$lib/util/types.js';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { GenericTable } from './types.server.js';
-import { baseTableName } from './naming.server.js';
-// import { configureBetterAuth } from './better-auth.server.js';
 
 /**
- * Creates and configures the authentication facade for the SQLite adapter
- * @param args Configuration parameters for the auth facade
- * @returns Object containing all auth-related functions
+ * What is left of the auth facade: Better-auth's own database adapter, and the three statements
+ * against Better-auth's own tables.
+ *
+ * Three others lived here — `isSuperAdmin`, `getBetterAuthUserId` and `getUserAttributes`. All
+ * three were `select … from <a prototype's table> where <a column> = ?`, which is what `findMany`
+ * already is, and all three named a collection called `staff`. They are
+ * `core/features/auth/user.server.ts` now, written against `adapter.prototype(slug)` like any
+ * other reader, and the slug is a constant in the feature that derives that collection.
+ *
+ * The rest still reads `auth_users`, `auth_sessions` and `auth_accounts` directly. Those are
+ * declared tables now (`FeatureDefinition.tables`) rather than a hand-written template, but core
+ * has no handle for a table that is not a prototype — see docs/decoupling-auth.md § 2.2.
  */
 const createAuthFacade = (args: {
   db: LibSQLDatabase<GetRegisterType<'Schema'>>;
@@ -32,30 +36,6 @@ const createAuthFacade = (args: {
   });
 
   const getTable = (name: string) => schema[name as keyof typeof schema] as unknown as GenericTable;
-
-  const isSuperAdmin = async (userId: string) => {
-    const usersTable = getTable('staff');
-    const [user] = await db
-      .select({ isSuperAdmin: usersTable.isSuperAdmin })
-      .from(usersTable)
-      .where(eq(usersTable.id, userId));
-    if (!user) return false;
-    return user.isSuperAdmin === true;
-  };
-
-  /**
-   * Retrieves the BetterAuth user ID from a collection row
-   * @returns BetterAuth user ID or null if not found
-   */
-  const getBetterAuthUserId = async ({ slug, id }: { slug: CollectionSlug; id: string }) => {
-    const userTable = getTable(baseTableName(slug));
-    // @ts-expect-error slug is key of query
-    const user = await db.query[baseTableName(slug)].findFirst({ where: eq(userTable.id, id) });
-    if (user) {
-      return user.authUserId;
-    }
-    return null;
-  };
 
   /**
    * Check whether an auth user exists
@@ -93,51 +73,12 @@ const createAuthFacade = (args: {
     await db.delete(authUsers).where(eq(authUsers.id, authUserId));
   };
 
-  /**
-   * Retrieves user attributes from an auth collection
-   * @returns User object or undefined if not found
-   */
-  const getUserAttributes = async ({
-    authUserId,
-    slug
-  }: GetUserAttributesArgs): Promise<User | undefined> => {
-    const table = getTable(baseTableName(slug));
-
-    const columns: Dic = {
-      id: table.id,
-      name: table.name,
-      roles: table.roles,
-      email: table.email
-    };
-
-    if (slug === 'staff') {
-      columns.isSuperAdmin = table.isSuperAdmin;
-    }
-
-    const [user] = await db.select(columns).from(table).where(eq(table.authUserId, authUserId));
-
-    if (!user) return undefined;
-
-    return {
-      ...user,
-      isStaff: slug === 'staff'
-    } as User;
-  };
-
   return {
     betterAuthAdapter,
     hasAuthUser,
-    getBetterAuthUserId,
     setAuthUserRole,
-    deleteAuthUser,
-    getUserAttributes,
-    isSuperAdmin
+    deleteAuthUser
   };
 };
 
 export default createAuthFacade;
-
-type GetUserAttributesArgs = {
-  authUserId: string;
-  slug: CollectionSlug;
-};

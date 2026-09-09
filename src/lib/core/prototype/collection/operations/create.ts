@@ -1,5 +1,6 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
+import { userAttributes } from '$lib/core/features/auth/user.server.js';
 import {
   assertUpsertContext,
   persistRelational,
@@ -83,7 +84,7 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
       throw new RimeError(RimeError.OPERATION_ERROR, 'unable to signin user');
     }
 
-    event.locals.user = await rime.adapter.auth.getUserAttributes({
+    event.locals.user = await userAttributes(rime.adapter, {
       authUserId: args.data.authUserId,
       slug: config.slug
     });

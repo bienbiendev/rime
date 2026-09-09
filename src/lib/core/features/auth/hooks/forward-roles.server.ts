@@ -2,6 +2,7 @@ import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { access } from '$lib/core/features/auth/access.js';
 import { BETTER_AUTH_ROLES } from '../constant.server.js';
+import { betterAuthUserId } from '../user.server.js';
 
 /**
  * Syncs this doc's `roles` field to better-auth's role.
@@ -45,7 +46,7 @@ export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>({
     }
 
     if (IS_ROLES_MUTATION) {
-      const authUserId = await rime.adapter.auth.getBetterAuthUserId({
+      const authUserId = await betterAuthUserId(rime.adapter, {
         slug: config.slug,
         id: originalDoc.id
       });

@@ -164,7 +164,7 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
          *
          * @example
          * rime.adapter.db.query.pages.findFirst()
-         * rime.adatpter.auth.getUserAttributes({ authUserId: '12345', slug: 'users' })
+         * rime.adapter.prototype('users').findMany({ query: { where: { id: { equals: '1' } } } })
          */
         get adapter() {
           return adapter;

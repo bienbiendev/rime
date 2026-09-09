@@ -1,10 +1,7 @@
-// @decouple versions from adapter
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import type { User } from '$lib/core/features/auth/types.js';
 import type { ShadowDeclaration } from '$lib/core/features/define.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type {
-  CollectionSlug,
   GenericBlock,
   GenericDoc,
   PrototypeSlug,
@@ -266,13 +263,30 @@ export type DocumentRows = {
   relations: Dic[];
 };
 
+/**
+ * A whole facade on this interface, for one feature — which is why it is the last thing on it that
+ * names one, and why what remains is only what genuinely cannot be phrased in core's vocabulary.
+ *
+ * Three methods left in `a7b5bed6`'s wake: `isSuperAdmin`, `getBetterAuthUserId` and
+ * `getUserAttributes` were each `select … from <a prototype's table> where <a column> = ?`, which
+ * is `prototype(slug).findMany`. They looked like adapter work because all three named a
+ * collection called `staff`, and the database layer was the only place that name appeared.
+ *
+ * The three below read and write tables that are not prototypes — no fields, no pipeline, no
+ * access rules — so `prototype()` is the wrong handle for them and core has no other. See
+ * docs/decoupling-auth.md § 2.2: either a table handle, or Better-auth's own API covers all three
+ * and this collapses to `betterAuthAdapter` alone.
+ */
 export interface AuthAdapter {
   /** The Better-auth database adapter. Opaque to core, which only hands it to Better-auth. */
   betterAuthAdapter: unknown;
+  /** Whether anybody has signed up yet. Gates the init route. */
   hasAuthUser(): Promise<boolean>;
-  getBetterAuthUserId(args: { slug: CollectionSlug; id: string }): Promise<string | null>;
-  getUserAttributes(args: { authUserId: string; slug: CollectionSlug }): Promise<User | undefined>;
-  isSuperAdmin(userId: string): Promise<boolean>;
+  /** Better-auth's own `role` column, not the `roles` field on the collection row. */
   setAuthUserRole(args: { authUserId: string; role: string }): Promise<void>;
+  /**
+   * Removes an auth user and everything hanging off it. Undoes a half-made signup, so it must not
+   * leave a session behind that would still authenticate.
+   */
   deleteAuthUser(args: { authUserId: string }): Promise<void>;
 }

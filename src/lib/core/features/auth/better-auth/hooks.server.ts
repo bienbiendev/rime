@@ -1,6 +1,7 @@
 import { dev } from '$app/environment';
 import { getRequestEvent } from '$app/server';
 import { BETTER_AUTH_ROLES } from '$lib/core/features/auth/constant.server.js';
+import { userAttributes } from '$lib/core/features/auth/user.server.js';
 import { logger } from '$lib/core/logger.server.js';
 import { trycatch } from '$lib/util/function.js';
 import { omit } from '$lib/util/object.js';
@@ -24,7 +25,7 @@ const getUserAttributes = async (ctx: CTX) => {
 
   if (newSession) {
     const event = getRequestEvent();
-    const user = await event.locals.rime.adapter.auth.getUserAttributes({
+    const user = await userAttributes(event.locals.rime.adapter, {
       authUserId: newSession.user.id,
       slug: newSession.user.type
     });
