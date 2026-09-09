@@ -1,3 +1,4 @@
+import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import type { DocType } from '$lib/core/prototype/types.js';
 import type { Hook, HookBeforeOperation, HookMarks, Operation } from './types.js';
 
@@ -8,7 +9,7 @@ import type { Hook, HookBeforeOperation, HookMarks, Operation } from './types.js
  *
  * ```ts
  * Hooks.beforeRead(fn)
- * Hooks.beforeRead({ name: 'setDocumentTitle', requires: ['__shaped'], provides: ['__title'], run: fn })
+ * Hooks.beforeRead({ name: 'setDocumentTitle', requires: [HOOK_MARKS.SHAPED], provides: [HOOK_MARKS.TITLE], run: fn })
  * ```
  *
  * The bare form is the default and what consumers write. The object form is how a hook says where
@@ -34,9 +35,9 @@ type Declaration<H> = H | (Partial<HookMarks> & { run: H });
  */
 const DEFAULTS: Record<string, Pick<HookMarks, 'requires' | 'provides'>> = {
   beforeOperation: { requires: [], provides: [] },
-  beforeRead: { requires: ['__shaped'], provides: ['__document'] },
-  beforeCreate: { requires: ['__validated'], provides: [] },
-  beforeUpdate: { requires: ['__validated'], provides: [] },
+  beforeRead: { requires: [HOOK_MARKS.SHAPED], provides: [HOOK_MARKS.DOCUMENT] },
+  beforeCreate: { requires: [HOOK_MARKS.VALIDATED], provides: [] },
+  beforeUpdate: { requires: [HOOK_MARKS.VALIDATED], provides: [] },
   beforeDelete: { requires: [], provides: [] },
   afterCreate: { requires: [], provides: [] },
   afterUpdate: { requires: [], provides: [] },

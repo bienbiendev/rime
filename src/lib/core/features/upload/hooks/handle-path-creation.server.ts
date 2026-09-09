@@ -1,3 +1,4 @@
+import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { UPLOAD_PATH } from '$lib/core/features/upload/constant.js';
 import { logger } from '$lib/core/logger.server.js';
 import { directoriesOf } from '$lib/core/features/upload/naming.js';
@@ -12,7 +13,7 @@ import { getSegments } from '../util/path.js';
  */
 export const handlePathCreation = Hooks.beforeUpsert<'upload'>({
   name: 'handlePathCreation',
-  requires: ['__validated'],
+  requires: [HOOK_MARKS.VALIDATED],
   provides: [],
   run: async (args) => {
     const { rime } = args.event.locals;

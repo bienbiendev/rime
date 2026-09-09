@@ -1,3 +1,4 @@
+import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 /**
@@ -5,8 +6,8 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
  */
 export const addChildrenProperty = Hooks.beforeRead({
   name: 'addChildrenProperty',
-  requires: ['__shaped'],
-  provides: ['__document'],
+  requires: [HOOK_MARKS.SHAPED],
+  provides: [HOOK_MARKS.DOCUMENT],
   run: async (args) => {
     // No `config.nested` check: the feature's `enabled` decides that, and the pipeline only asks
     // for this hook on a collection. See features/nested/index.ts.

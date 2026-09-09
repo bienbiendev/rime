@@ -81,7 +81,7 @@ export function resolvePipeline<T>({ hooks, label }: ResolveArgs<T>): T[] {
       //
       // Without it, every unconditional hook that depends on a conditional one would be
       // unsatisfiable on the configs where the conditional hook is absent — `removePrivateFields`
-      // exists only when a collection has `auth`, so `requires: ['__sanitized']` would break every
+      // exists only when a collection has `auth`, so `requires: [HOOK_MARKS.SANITIZED]` would break every
       // collection that has none. It also lets one `beforeUpsert` declaration be correct at both
       // its timings: `augmentFieldsPassword` requires `blank-merged` and waits for the merge in
       // `beforeCreate`, while in `beforeUpdate`, where nothing merges, it simply runs free.

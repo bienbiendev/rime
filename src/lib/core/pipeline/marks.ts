@@ -6,69 +6,96 @@
  * name nobody provides is indistinguishable from a name nobody spelled correctly: both are
  * "already satisfied", both reorder the pipeline, and neither says anything.
  *
- * `HookMark` being a closed union caught that for **this** repo's own hooks. It does not catch it
- * for a consumer, who reaches the same union through declaration merging and can put any string
- * in it — including one rime already uses. A config that merged `'shaped'` would not collide
- * loudly; it would join the set of hooks providing rime's shape mark and quietly move whatever
- * waits on it.
+ * So every mark carries its owner, and one rule covers all of them:
  *
- * So mark names are namespaced, and the namespace is checked at boot:
+ *   core:shaped          the pipeline's own vocabulary
+ *   versions:operation   a feature's
+ *   collection:…         a prototype's — available, nothing needs one today
+ *   app:priced           a consumer's
  *
- * - `__name` — **rime's**, and a closed list. Anything else starting `__` is a typo.
- * - `owner:name` — anyone else's. A plugin, a consumer's own config, a third-party feature.
- *   Namespaced by whoever owns it, so two of them cannot collide by accident either.
+ * `core` is reserved. Everything else is whoever is speaking, which is what stops two owners
+ * reaching independently for the same obvious word — `session`, `ready` — and silently joining
+ * one set instead of colliding.
  *
- * Any other shape throws. That is the point: a bare `'session'` reads like a name a second person
- * would also reach for, and the failure it causes is silent.
+ * **Nothing writes a mark as a string.** `HOOK_MARKS` below is where core's live, a feature
+ * declares its own beside itself (`features/versions/marks.ts`), and `CoreHookMark` is *derived*
+ * from this object rather than restated — so there is no second list to drift from.
  */
 
-/** What marks a rime-owned mark. Reserved: nothing outside this repo may use it. */
-export const RIME_MARK_PREFIX = '__';
+/** The owner name reserved for rime's own pipeline. */
+export const CORE_MARK_OWNER = 'core';
 
-/** What separates an owner from its mark name, for everyone else. */
-export const OWNED_MARK_SEPARATOR = ':';
+/** What separates an owner from its mark name. */
+export const MARK_SEPARATOR = ':';
 
 /**
- * Every mark rime owns, at runtime.
+ * Core's marks — the points in a pipeline's progress that core itself names.
  *
- * The twin of `CoreHookMark` in types.ts, and it has to be written twice: the union is what makes
- * a misspelling a *compile* error inside this repo, and this list is what makes it a *boot* error
- * for anything that reached the union through declaration merging. `marks.spec.ts` asserts the
- * two agree, so neither can drift.
+ * Owned by core, provided by whoever reaches them: `core:document` is provided by every hook that
+ * writes a document property, most of which are features'. Owning a mark is stating that the
+ * point exists, not claiming to be the one that gets there.
  */
-export const RIME_MARKS = [
-  '__sanitized',
-  '__shaped',
-  '__title',
-  '__document',
-  '__data-inspected',
-  '__blank-merged',
-  '__config-fields',
-  '__config-map',
-  '__original-doc',
-  '__content-owner',
-  '__original-config-map',
-  '__validated'
-] as const;
+export const HOOK_MARKS = {
+  /** Private fields are gone; anything deriving from the document may now read it. */
+  SANITIZED: 'core:sanitized',
+  /** Field values have been processed into their final document shape. */
+  SHAPED: 'core:shaped',
+  /** The document's own title has been resolved. */
+  TITLE: 'core:title',
+  /**
+   * Anything that writes a document property declares this, so a hook that must run after every
+   * writer — `sortDocumentProps` — can wait on all of them without naming one.
+   */
+  DOCUMENT: 'core:document',
+  /**
+   * Every hook that reads the caller's submission *as sent* has run, so hooks may now add to
+   * `data`.
+   *
+   * The write-side twin of `SANITIZED`, and it exists because the auth guards are not merely early
+   * by taste: `preventUserMutations` rejects on `'name' in args.data` and
+   * `preventSuperAdminMutation` on `'isSuperAdmin' in args.data`, so a default filled in before
+   * them turns an ordinary update into a 401.
+   */
+  DATA_INSPECTED: 'core:data-inspected',
+  /** The blank document has been merged in, so `config.fields` is the final field list. */
+  BLANK_MERGED: 'core:blank-merged',
+  /** `config.fields` is final and may be read to build a config map. */
+  CONFIG_FIELDS: 'core:config-fields',
+  /** The config map for incoming data exists. */
+  CONFIG_MAP: 'core:config-map',
+  /** The original document has been loaded. */
+  ORIGINAL_DOC: 'core:original-doc',
+  /**
+   * The row this document's content lives on has been named.
+   *
+   * Core provides the default — the document's own row — so a feature that moves the content
+   * elsewhere requires this and answers again, rather than every prototype having to list that
+   * feature's hook to make the answer exist at all.
+   */
+  CONTENT_OWNER: 'core:content-owner',
+  /** The config map for the original document exists. */
+  ORIGINAL_CONFIG_MAP: 'core:original-config-map',
+  /** Incoming data has been validated. */
+  VALIDATED: 'core:validated'
+} as const;
 
-const RIME_MARK_SET: ReadonlySet<string> = new Set(RIME_MARKS);
+const CORE_MARK_VALUES: ReadonlySet<string> = new Set(Object.values(HOOK_MARKS));
 
 /** Why a mark name is not legal, or `undefined` when it is. */
 export const markProblem = (mark: string): string | undefined => {
-  if (mark.startsWith(RIME_MARK_PREFIX)) {
-    return RIME_MARK_SET.has(mark)
-      ? undefined
-      : `"${mark}" starts with the reserved "${RIME_MARK_PREFIX}" prefix but is not a rime mark — a misspelling, or a name that wants an owner prefix instead`;
+  const separator = mark.indexOf(MARK_SEPARATOR);
+
+  if (separator < 1 || separator === mark.length - 1) {
+    return `"${mark}" is not "owner${MARK_SEPARATOR}name" — every mark says who owns it, so two owners cannot reach for the same word and silently share it`;
   }
 
-  if (mark.includes(OWNED_MARK_SEPARATOR)) {
-    const [owner, ...rest] = mark.split(OWNED_MARK_SEPARATOR);
-    return owner && rest.join(OWNED_MARK_SEPARATOR)
-      ? undefined
-      : `"${mark}" is missing one half of "owner${OWNED_MARK_SEPARATOR}name"`;
+  // A name in core's namespace that core does not have is a misspelling, and the vacuous rule
+  // would otherwise swallow it.
+  if (mark.slice(0, separator) === CORE_MARK_OWNER && !CORE_MARK_VALUES.has(mark)) {
+    return `"${mark}" is in the reserved "${CORE_MARK_OWNER}" namespace but is not one of core's marks — a misspelling, or a name that wants your own owner instead`;
   }
 
-  return `"${mark}" has no namespace — rime's own marks start with "${RIME_MARK_PREFIX}", and everyone else's are "owner${OWNED_MARK_SEPARATOR}name" so two of them cannot collide`;
+  return undefined;
 };
 
 /**
@@ -77,6 +104,10 @@ export const markProblem = (mark: string): string | undefined => {
  * Boot-time, beside the cycle check and for the same reason: what a hook declares is knowable
  * before anything runs, and the alternative to throwing here is a pipeline that runs in an order
  * nobody chose.
+ *
+ * It has to exist even though `HookMark` is a closed union, because `FeatureHookMarks` declaration
+ * merging is a hole in that union: anything reaching it can put any string in, and a consumer's
+ * hooks go into the same array the resolver orders.
  */
 export const assertMarks = (
   hooks: { name: string; requires: readonly string[]; provides: readonly string[] }[],

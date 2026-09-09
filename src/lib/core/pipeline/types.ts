@@ -1,3 +1,4 @@
+import type { HOOK_MARKS } from './marks.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type { Docs, DocType, RawDoc } from '$lib/core/prototype/types.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
@@ -187,55 +188,19 @@ export type ParsedOperationQuery = {
  *
  * Features and consumers extend it by merging into `FeatureHookMarks`, so this file names no
  * feature — **and that merge is a hole in the closed union**, because anything reaching it can put
- * any string in, including one rime already uses. So mark names are namespaced and the namespace
- * is checked at boot: `__name` is rime's, `owner:name` is everyone else's, and anything else
- * throws. See `marks.ts`.
+ * any string in, including one core already uses. So every mark carries its owner
+ * (`owner:name`, with `core` reserved) and the namespace is checked at boot. See `marks.ts`.
  */
 export type HookMark = keyof FeatureHookMarks | CoreHookMark;
 
-/** Marks owned by core — the prototype's own hooks and the operation steps. */
-export type CoreHookMark =
-  /** Private fields are gone; anything deriving from the document may now read it. */
-  | '__sanitized'
-  /** Field values have been processed into their final document shape. */
-  | '__shaped'
-  /** The document's own title has been resolved. */
-  | '__title'
-  /** Anything that writes a document property declares this, so a hook that must run after every
-   *  writer — `sortDocumentProps` — can wait on all of them without naming one. */
-  | '__document'
-  /**
-   * Every hook that reads the caller's submission *as sent* has run, so hooks may now add to
-   * `data`.
-   *
-   * The write-side twin of `sanitized`, and it exists because the auth guards are not merely
-   * early by taste: `preventUserMutations` rejects on `'name' in args.data` and
-   * `preventSuperAdminMutation` on `'isSuperAdmin' in args.data`, so a default filled in before
-   * them turns an ordinary update into a 401. `forwardRolesToBetterAuth` reads `data.roles` the
-   * same way. Nothing here names auth — a mark no active hook provides is satisfied, so on a
-   * collection without it the shaping chain simply starts straight away.
-   */
-  | '__data-inspected'
-  /** The blank document has been merged in, so `config.fields` is the final field list. */
-  | '__blank-merged'
-  /** `config.fields` is final and may be read to build a config map. */
-  | '__config-fields'
-  /** The config map for incoming data exists. */
-  | '__config-map'
-  /** The original document has been loaded. */
-  | '__original-doc'
-  /**
-   * The row this document's content lives on has been named.
-   *
-   * Core provides the default — the document's own row — so a feature that moves the content
-   * elsewhere requires this and answers again, rather than every prototype having to list that
-   * feature's hook to make the answer exist at all.
-   */
-  | '__content-owner'
-  /** The config map for the original document exists. */
-  | '__original-config-map'
-  /** Incoming data has been validated. */
-  | '__validated';
+/**
+ * Marks owned by core, **derived** from `HOOK_MARKS` rather than restated.
+ *
+ * It used to be a hand-written union beside a hand-written runtime list, with a spec whose only
+ * job was to stop the two drifting. One source now: the object is the list, the union is read off
+ * it, and adding a mark is adding a line to `marks.ts`.
+ */
+export type CoreHookMark = (typeof HOOK_MARKS)[keyof typeof HOOK_MARKS];
 
 /**
  * Marks contributed by features, plugins and consumer configs, extended through declaration
@@ -250,7 +215,13 @@ export type CoreHookMark =
  * **The key must be `owner:name`.** A bare word — `'session'`, `'ready'` — is refused at boot, and
  * the reason is that it reads like a name a second person would also reach for: two owners
  * merging the same bare key do not collide loudly, they silently join the same set and move
- * whatever waits on it. The `__` prefix is reserved for rime.
+ * whatever waits on it. The `core` owner is reserved.
+ *
+ * Declare the value beside the interface, so nothing writes the string twice:
+ *
+ * ```ts
+ * export const VERSIONS_MARKS = { OPERATION: 'versions:operation' } as const;
+ * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface FeatureHookMarks {}

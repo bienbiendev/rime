@@ -1,3 +1,4 @@
+import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { describe, expect, it } from 'vitest';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { marksOf } from '$lib/core/pipeline/resolve-pipeline.server.js';
@@ -19,7 +20,7 @@ import { makeVersionsCollectionsAliases } from './derive.server.js';
 describe('a versions shadow', () => {
   const authorHook = Hooks.beforeRead({
     name: 'authorBeforeRead',
-    requires: ['__shaped'],
+    requires: [HOOK_MARKS.SHAPED],
     provides: [],
     run: async (args) => args
   });

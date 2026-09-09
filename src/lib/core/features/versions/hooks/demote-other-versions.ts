@@ -1,3 +1,5 @@
+import { VERSIONS_MARKS } from '$lib/core/features/versions/marks.js';
+import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
 import { VersionOperations } from '$lib/core/features/versions/strategy.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
@@ -22,7 +24,7 @@ import { withVersionsSuffix } from '../naming.js';
  */
 export const demoteOtherVersions = Hooks.beforeUpdate({
   name: 'demoteOtherVersions',
-  requires: ['versions:operation', '__original-doc'],
+  requires: [VERSIONS_MARKS.OPERATION, HOOK_MARKS.ORIGINAL_DOC],
   provides: [],
   run: async (args) => {
     const { config, data, event, context } = args;

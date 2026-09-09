@@ -1,3 +1,4 @@
+import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { dev } from '$app/environment';
 import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
@@ -10,7 +11,7 @@ import { BETTER_AUTH_ROLES } from '../constant.server.js';
  */
 export const createBetterAuthUser = Hooks.beforeCreate<'auth'>({
   name: 'createBetterAuthUser',
-  requires: ['__validated'],
+  requires: [HOOK_MARKS.VALIDATED],
   provides: [],
   run: async (args) => {
     const { config, event } = args;

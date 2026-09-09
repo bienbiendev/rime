@@ -1,3 +1,4 @@
+import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { fileForDocument } from '$lib/core/features/upload/util/converter.server.js';
 import { VersionOperations } from '$lib/core/features/versions/strategy.js';
 import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
@@ -41,8 +42,8 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
  */
 export const handleNewVersion = Hooks.beforeUpsert({
   name: 'handleNewVersion',
-  requires: ['__original-doc', '__original-config-map', '__content-owner'],
-  provides: ['__data-inspected'],
+  requires: [HOOK_MARKS.ORIGINAL_DOC, HOOK_MARKS.ORIGINAL_CONFIG_MAP, HOOK_MARKS.CONTENT_OWNER],
+  provides: [HOOK_MARKS.DATA_INSPECTED],
   run: async (args) => {
     const { config, event } = args;
     const { rime } = event.locals;

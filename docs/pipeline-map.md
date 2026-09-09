@@ -25,32 +25,32 @@ No feature contributes a write hook, so `beforeUpdate` is the prototype’s own 
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `processDocumentFields` | collection | `__sanitized` | `__shaped` `__document` |
-| 2 | `setDocumentLocale` | collection | `__shaped` | `__document` |
-| 3 | `setDocumentType` | collection | `__shaped` | `__document` |
-| 4 | `setDocumentTitle` | title | `__shaped` | `__title` `__document` |
-| 5 | `setDocumentThumbnail` | thumbnail | `__shaped` `__document` | `__document` |
-| 6 | `sortDocumentProps` | collection | `__document` | — |
+| 1 | `processDocumentFields` | collection | `core:sanitized` | `core:shaped` `core:document` |
+| 2 | `setDocumentLocale` | collection | `core:shaped` | `core:document` |
+| 3 | `setDocumentType` | collection | `core:shaped` | `core:document` |
+| 4 | `setDocumentTitle` | title | `core:shaped` | `core:title` `core:document` |
+| 5 | `setDocumentThumbnail` | thumbnail | `core:shaped` `core:document` | `core:document` |
+| 6 | `sortDocumentProps` | collection | `core:document` | — |
 
 ### beforeCreate
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `mergeWithBlankDocument` | collection | — | `__blank-merged` `__config-fields` |
-| 2 | `buildDataConfigMap` | collection | `__config-fields` `__data-inspected` | `__config-map` |
-| 3 | `setDefaultValues` | collection | `__config-map` | — |
-| 4 | `validateFields` | collection | `__config-map` | `__validated` |
+| 1 | `mergeWithBlankDocument` | collection | — | `core:blank-merged` `core:config-fields` |
+| 2 | `buildDataConfigMap` | collection | `core:config-fields` `core:data-inspected` | `core:config-map` |
+| 3 | `setDefaultValues` | collection | `core:config-map` | — |
+| 4 | `validateFields` | collection | `core:config-map` | `core:validated` |
 
 ### beforeUpdate
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `getOriginalDocument` | collection | — | `__original-doc` |
-| 2 | `buildOriginalDocConfigMap` | collection | `__original-doc` | `__original-config-map` |
-| 3 | `resolveContentOwner` | collection | `__original-doc` | `__content-owner` |
-| 4 | `buildDataConfigMap` | collection | `__config-fields` `__data-inspected` | `__config-map` |
-| 5 | `setDefaultValues` | collection | `__config-map` | — |
-| 6 | `validateFields` | collection | `__config-map` | `__validated` |
+| 1 | `getOriginalDocument` | collection | — | `core:original-doc` |
+| 2 | `buildOriginalDocConfigMap` | collection | `core:original-doc` | `core:original-config-map` |
+| 3 | `resolveContentOwner` | collection | `core:original-doc` | `core:content-owner` |
+| 4 | `buildDataConfigMap` | collection | `core:config-fields` `core:data-inspected` | `core:config-map` |
+| 5 | `setDefaultValues` | collection | `core:config-map` | — |
+| 6 | `validateFields` | collection | `core:config-map` | `core:validated` |
 
 ## a versioned collection
 
@@ -66,36 +66,36 @@ The three `versions` hooks appear by the feature being enabled. `handleNewVersio
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `processDocumentFields` | collection | `__sanitized` | `__shaped` `__document` |
-| 2 | `setDocumentLocale` | collection | `__shaped` | `__document` |
-| 3 | `setDocumentType` | collection | `__shaped` | `__document` |
-| 4 | `exposeVersionId` | versions | — | `__document` |
-| 5 | `setDocumentTitle` | title | `__shaped` | `__title` `__document` |
-| 6 | `setDocumentThumbnail` | thumbnail | `__shaped` `__document` | `__document` |
-| 7 | `sortDocumentProps` | collection | `__document` | — |
+| 1 | `processDocumentFields` | collection | `core:sanitized` | `core:shaped` `core:document` |
+| 2 | `setDocumentLocale` | collection | `core:shaped` | `core:document` |
+| 3 | `setDocumentType` | collection | `core:shaped` | `core:document` |
+| 4 | `exposeVersionId` | versions | — | `core:document` |
+| 5 | `setDocumentTitle` | title | `core:shaped` | `core:title` `core:document` |
+| 6 | `setDocumentThumbnail` | thumbnail | `core:shaped` `core:document` | `core:document` |
+| 7 | `sortDocumentProps` | collection | `core:document` | — |
 
 ### beforeCreate
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `mergeWithBlankDocument` | collection | — | `__blank-merged` `__config-fields` |
-| 2 | `buildDataConfigMap` | collection | `__config-fields` `__data-inspected` | `__config-map` |
-| 3 | `setDefaultValues` | collection | `__config-map` | — |
-| 4 | `validateFields` | collection | `__config-map` | `__validated` |
+| 1 | `mergeWithBlankDocument` | collection | — | `core:blank-merged` `core:config-fields` |
+| 2 | `buildDataConfigMap` | collection | `core:config-fields` `core:data-inspected` | `core:config-map` |
+| 3 | `setDefaultValues` | collection | `core:config-map` | — |
+| 4 | `validateFields` | collection | `core:config-map` | `core:validated` |
 
 ### beforeUpdate
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `getOriginalDocument` | collection | — | `__original-doc` |
-| 2 | `buildOriginalDocConfigMap` | collection | `__original-doc` | `__original-config-map` |
-| 3 | `resolveContentOwner` | collection | `__original-doc` | `__content-owner` |
+| 1 | `getOriginalDocument` | collection | — | `core:original-doc` |
+| 2 | `buildOriginalDocConfigMap` | collection | `core:original-doc` | `core:original-config-map` |
+| 3 | `resolveContentOwner` | collection | `core:original-doc` | `core:content-owner` |
 | 4 | `defineVersionOperation` | versions | — | `versions:operation` |
-| 5 | `handleNewVersion` | versions | `__original-doc` `__original-config-map` `__content-owner` | `__data-inspected` |
-| 6 | `buildDataConfigMap` | collection | `__config-fields` `__data-inspected` | `__config-map` |
-| 7 | `setDefaultValues` | collection | `__config-map` | — |
-| 8 | `validateFields` | collection | `__config-map` | `__validated` |
-| 9 | `demoteOtherVersions` | versions | `versions:operation` `__original-doc` | — |
+| 5 | `handleNewVersion` | versions | `core:original-doc` `core:original-config-map` `core:content-owner` | `core:data-inspected` |
+| 6 | `buildDataConfigMap` | collection | `core:config-fields` `core:data-inspected` | `core:config-map` |
+| 7 | `setDefaultValues` | collection | `core:config-map` | — |
+| 8 | `validateFields` | collection | `core:config-map` | `core:validated` |
+| 9 | `demoteOtherVersions` | versions | `versions:operation` `core:original-doc` | — |
 
 ## an auth collection
 
@@ -111,24 +111,24 @@ The three `versions` hooks appear by the feature being enabled. `handleNewVersio
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `removePrivateFields` | auth | — | `__sanitized` |
-| 2 | `processDocumentFields` | collection | `__sanitized` | `__shaped` `__document` |
-| 3 | `setDocumentLocale` | collection | `__shaped` | `__document` |
-| 4 | `setDocumentType` | collection | `__shaped` | `__document` |
-| 5 | `setDocumentTitle` | title | `__shaped` | `__title` `__document` |
-| 6 | `setDocumentThumbnail` | thumbnail | `__shaped` `__document` | `__document` |
-| 7 | `sortDocumentProps` | collection | `__document` | — |
+| 1 | `removePrivateFields` | auth | — | `core:sanitized` |
+| 2 | `processDocumentFields` | collection | `core:sanitized` | `core:shaped` `core:document` |
+| 3 | `setDocumentLocale` | collection | `core:shaped` | `core:document` |
+| 4 | `setDocumentType` | collection | `core:shaped` | `core:document` |
+| 5 | `setDocumentTitle` | title | `core:shaped` | `core:title` `core:document` |
+| 6 | `setDocumentThumbnail` | thumbnail | `core:shaped` `core:document` | `core:document` |
+| 7 | `sortDocumentProps` | collection | `core:document` | — |
 
 ### beforeCreate
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `mergeWithBlankDocument` | collection | — | `__blank-merged` `__config-fields` |
-| 2 | `augmentFieldsPassword` | auth | `__blank-merged` | `__config-fields` |
-| 3 | `buildDataConfigMap` | collection | `__config-fields` `__data-inspected` | `__config-map` |
-| 4 | `setDefaultValues` | collection | `__config-map` | — |
-| 5 | `validateFields` | collection | `__config-map` | `__validated` |
-| 6 | `createBetterAuthUser` | auth | `__validated` | — |
+| 1 | `mergeWithBlankDocument` | collection | — | `core:blank-merged` `core:config-fields` |
+| 2 | `augmentFieldsPassword` | auth | `core:blank-merged` | `core:config-fields` |
+| 3 | `buildDataConfigMap` | collection | `core:config-fields` `core:data-inspected` | `core:config-map` |
+| 4 | `setDefaultValues` | collection | `core:config-map` | — |
+| 5 | `validateFields` | collection | `core:config-map` | `core:validated` |
+| 6 | `createBetterAuthUser` | auth | `core:validated` | — |
 
 ### afterCreate
 
@@ -140,16 +140,16 @@ The three `versions` hooks appear by the feature being enabled. `handleNewVersio
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `getOriginalDocument` | collection | — | `__original-doc` |
-| 2 | `buildOriginalDocConfigMap` | collection | `__original-doc` | `__original-config-map` |
-| 3 | `resolveContentOwner` | collection | `__original-doc` | `__content-owner` |
-| 4 | `augmentFieldsPassword` | auth | `__blank-merged` | `__config-fields` |
-| 5 | `preventSuperAdminMutation` | auth | `__original-doc` | `__data-inspected` |
-| 6 | `preventUserMutations` | auth | `__original-doc` | `__data-inspected` |
-| 7 | `forwardRolesToBetterAuth` | auth | `__original-doc` | `__data-inspected` |
-| 8 | `buildDataConfigMap` | collection | `__config-fields` `__data-inspected` | `__config-map` |
-| 9 | `setDefaultValues` | collection | `__config-map` | — |
-| 10 | `validateFields` | collection | `__config-map` | `__validated` |
+| 1 | `getOriginalDocument` | collection | — | `core:original-doc` |
+| 2 | `buildOriginalDocConfigMap` | collection | `core:original-doc` | `core:original-config-map` |
+| 3 | `resolveContentOwner` | collection | `core:original-doc` | `core:content-owner` |
+| 4 | `augmentFieldsPassword` | auth | `core:blank-merged` | `core:config-fields` |
+| 5 | `preventSuperAdminMutation` | auth | `core:original-doc` | `core:data-inspected` |
+| 6 | `preventUserMutations` | auth | `core:original-doc` | `core:data-inspected` |
+| 7 | `forwardRolesToBetterAuth` | auth | `core:original-doc` | `core:data-inspected` |
+| 8 | `buildDataConfigMap` | collection | `core:config-fields` `core:data-inspected` | `core:config-map` |
+| 9 | `setDefaultValues` | collection | `core:config-map` | — |
+| 10 | `validateFields` | collection | `core:config-map` | `core:validated` |
 
 ### beforeDelete
 
@@ -177,41 +177,41 @@ The three `versions` hooks appear by the feature being enabled. `handleNewVersio
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `processDocumentFields` | collection | `__sanitized` | `__shaped` `__document` |
-| 2 | `setDocumentLocale` | collection | `__shaped` | `__document` |
-| 3 | `setDocumentType` | collection | `__shaped` | `__document` |
-| 4 | `populateSizes` | upload | `__shaped` | `__document` |
-| 5 | `addChildrenProperty` | nested | `__shaped` | `__document` |
-| 6 | `setDocumentTitle` | title | `__shaped` | `__title` `__document` |
-| 7 | `populateURL` | url | `__shaped` `__title` | `__document` |
-| 8 | `setDocumentThumbnail` | thumbnail | `__shaped` `__document` | `__document` |
-| 9 | `sortDocumentProps` | collection | `__document` | — |
+| 1 | `processDocumentFields` | collection | `core:sanitized` | `core:shaped` `core:document` |
+| 2 | `setDocumentLocale` | collection | `core:shaped` | `core:document` |
+| 3 | `setDocumentType` | collection | `core:shaped` | `core:document` |
+| 4 | `populateSizes` | upload | `core:shaped` | `core:document` |
+| 5 | `addChildrenProperty` | nested | `core:shaped` | `core:document` |
+| 6 | `setDocumentTitle` | title | `core:shaped` | `core:title` `core:document` |
+| 7 | `populateURL` | url | `core:shaped` `core:title` | `core:document` |
+| 8 | `setDocumentThumbnail` | thumbnail | `core:shaped` `core:document` | `core:document` |
+| 9 | `sortDocumentProps` | collection | `core:document` | — |
 
 ### beforeCreate
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `mergeWithBlankDocument` | collection | — | `__blank-merged` `__config-fields` |
-| 2 | `buildDataConfigMap` | collection | `__config-fields` `__data-inspected` | `__config-map` |
-| 3 | `setDefaultValues` | collection | `__config-map` | — |
-| 4 | `validateFields` | collection | `__config-map` | `__validated` |
-| 5 | `handlePathCreation` | upload | `__validated` | — |
-| 6 | `castBase64ToFile` | upload | `__validated` | — |
-| 7 | `processFileUpload` | upload | `__validated` | — |
+| 1 | `mergeWithBlankDocument` | collection | — | `core:blank-merged` `core:config-fields` |
+| 2 | `buildDataConfigMap` | collection | `core:config-fields` `core:data-inspected` | `core:config-map` |
+| 3 | `setDefaultValues` | collection | `core:config-map` | — |
+| 4 | `validateFields` | collection | `core:config-map` | `core:validated` |
+| 5 | `handlePathCreation` | upload | `core:validated` | — |
+| 6 | `castBase64ToFile` | upload | `core:validated` | — |
+| 7 | `processFileUpload` | upload | `core:validated` | — |
 
 ### beforeUpdate
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `getOriginalDocument` | collection | — | `__original-doc` |
-| 2 | `buildOriginalDocConfigMap` | collection | `__original-doc` | `__original-config-map` |
-| 3 | `resolveContentOwner` | collection | `__original-doc` | `__content-owner` |
-| 4 | `buildDataConfigMap` | collection | `__config-fields` `__data-inspected` | `__config-map` |
-| 5 | `setDefaultValues` | collection | `__config-map` | — |
-| 6 | `validateFields` | collection | `__config-map` | `__validated` |
-| 7 | `handlePathCreation` | upload | `__validated` | — |
-| 8 | `castBase64ToFile` | upload | `__validated` | — |
-| 9 | `processFileUpload` | upload | `__validated` | — |
+| 1 | `getOriginalDocument` | collection | — | `core:original-doc` |
+| 2 | `buildOriginalDocConfigMap` | collection | `core:original-doc` | `core:original-config-map` |
+| 3 | `resolveContentOwner` | collection | `core:original-doc` | `core:content-owner` |
+| 4 | `buildDataConfigMap` | collection | `core:config-fields` `core:data-inspected` | `core:config-map` |
+| 5 | `setDefaultValues` | collection | `core:config-map` | — |
+| 6 | `validateFields` | collection | `core:config-map` | `core:validated` |
+| 7 | `handlePathCreation` | upload | `core:validated` | — |
+| 8 | `castBase64ToFile` | upload | `core:validated` | — |
+| 9 | `processFileUpload` | upload | `core:validated` | — |
 
 ### beforeDelete
 
@@ -233,23 +233,23 @@ No create and no delete: a second row is not a thing.
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `processDocumentFields` | area | `__sanitized` | `__shaped` `__document` |
-| 2 | `setDocumentLocale` | area | `__shaped` | `__document` |
-| 3 | `setDocumentType` | area | `__shaped` | `__document` |
-| 4 | `exposeVersionId` | versions | — | `__document` |
-| 5 | `setDocumentTitle` | title | `__shaped` | `__title` `__document` |
-| 6 | `sortDocumentProps` | area | `__document` | — |
+| 1 | `processDocumentFields` | area | `core:sanitized` | `core:shaped` `core:document` |
+| 2 | `setDocumentLocale` | area | `core:shaped` | `core:document` |
+| 3 | `setDocumentType` | area | `core:shaped` | `core:document` |
+| 4 | `exposeVersionId` | versions | — | `core:document` |
+| 5 | `setDocumentTitle` | title | `core:shaped` | `core:title` `core:document` |
+| 6 | `sortDocumentProps` | area | `core:document` | — |
 
 ### beforeUpdate
 
 | # | hook | from | requires | provides |
 | - | ---- | ---- | -------- | -------- |
-| 1 | `getOriginalDocument` | area | — | `__original-doc` |
-| 2 | `buildOriginalDocConfigMap` | area | `__original-doc` | `__original-config-map` |
-| 3 | `resolveContentOwner` | area | `__original-doc` | `__content-owner` |
+| 1 | `getOriginalDocument` | area | — | `core:original-doc` |
+| 2 | `buildOriginalDocConfigMap` | area | `core:original-doc` | `core:original-config-map` |
+| 3 | `resolveContentOwner` | area | `core:original-doc` | `core:content-owner` |
 | 4 | `defineVersionOperation` | versions | — | `versions:operation` |
-| 5 | `handleNewVersion` | versions | `__original-doc` `__original-config-map` `__content-owner` | `__data-inspected` |
-| 6 | `buildDataConfigMap` | area | `__config-fields` `__data-inspected` | `__config-map` |
-| 7 | `setDefaultValues` | area | `__config-map` | — |
-| 8 | `validateFields` | area | `__config-map` | `__validated` |
-| 9 | `demoteOtherVersions` | versions | `versions:operation` `__original-doc` | — |
+| 5 | `handleNewVersion` | versions | `core:original-doc` `core:original-config-map` `core:content-owner` | `core:data-inspected` |
+| 6 | `buildDataConfigMap` | area | `core:config-fields` `core:data-inspected` | `core:config-map` |
+| 7 | `setDefaultValues` | area | `core:config-map` | — |
+| 8 | `validateFields` | area | `core:config-map` | `core:validated` |
+| 9 | `demoteOtherVersions` | versions | `versions:operation` `core:original-doc` | — |

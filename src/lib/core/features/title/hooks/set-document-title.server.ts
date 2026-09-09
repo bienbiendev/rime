@@ -1,11 +1,12 @@
+import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { richTextJSONToText } from '$lib/fields/rich-text/index.js';
 import { getValueAtPath, isObjectLiteral } from '$lib/util/object.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const setDocumentTitle = Hooks.beforeRead<'raw'>({
   name: 'setDocumentTitle',
-  requires: ['__shaped'],
-  provides: ['__title', '__document'],
+  requires: [HOOK_MARKS.SHAPED],
+  provides: [HOOK_MARKS.TITLE, HOOK_MARKS.DOCUMENT],
   run: async (args) => {
     const config = args.config;
     let doc = args.doc;

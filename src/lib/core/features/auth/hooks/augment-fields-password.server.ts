@@ -1,3 +1,4 @@
+import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import validate from '$lib/core/fields/validate.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 import { text } from '$lib/fields/text/index.js';
@@ -32,8 +33,8 @@ const passwordField = text('password')
  */
 export const augmentFieldsPassword = Hooks.beforeUpsert<'auth'>({
   name: 'augmentFieldsPassword',
-  requires: ['__blank-merged'],
-  provides: ['__config-fields'],
+  requires: [HOOK_MARKS.BLANK_MERGED],
+  provides: [HOOK_MARKS.CONFIG_FIELDS],
   run: async (args) => {
     let { config } = args;
 

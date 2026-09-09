@@ -1,10 +1,11 @@
+import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { isObjectLiteral } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const sortDocumentProps = Hooks.beforeRead<'generic'>({
   name: 'sortDocumentProps',
-  requires: ['__document'],
+  requires: [HOOK_MARKS.DOCUMENT],
   provides: [],
   run: async (args) => {
     return { ...args, doc: sortDocumentKeys(args.doc) };

@@ -204,7 +204,7 @@ export type FeatureDefinition = {
    *
    * Folded in the prototype's feature order, gated by `enabled`, at a fixed point in `runUpdate`:
    * after every data hook, before the write. **Not a hook**, deliberately. A hook could not be
-   * guaranteed last — a consumer's `beforeUpdate` hook declares `requires: ['__validated']` and
+   * guaranteed last — a consumer's `beforeUpdate` hook declares `requires: [HOOK_MARKS.VALIDATED]` and
    * provides nothing, so there is no mark a plan step could wait on, and a consumer hook that
    * rewrote `data` would be silently split around.
    *

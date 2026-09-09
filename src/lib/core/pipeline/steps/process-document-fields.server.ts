@@ -1,3 +1,4 @@
+import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { logger } from '$lib/core/logger.server.js';
 import type { GenericBlock } from '$lib/core/prototype/types.js';
 import { deleteValueAtPath, getValueAtPath, setValueAtPath } from '$lib/util/object.js';
@@ -7,8 +8,8 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 
 export const processDocumentFields = Hooks.beforeRead({
   name: 'processDocumentFields',
-  requires: ['__sanitized'],
-  provides: ['__shaped', '__document'],
+  requires: [HOOK_MARKS.SANITIZED],
+  provides: [HOOK_MARKS.SHAPED, HOOK_MARKS.DOCUMENT],
   run: async (args) => {
     const { event } = args;
     let doc = args.doc;

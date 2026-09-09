@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { assertMarks, markProblem, RIME_MARKS } from './marks.js';
-import type { CoreHookMark } from './types.js';
+import { assertMarks, HOOK_MARKS, markProblem } from './marks.js';
+import type { HookMark } from './types.js';
 
 /**
  * Who may name a mark, and what happens to a name nobody owns.
@@ -13,8 +13,8 @@ import type { CoreHookMark } from './types.js';
  * So the namespace is checked at boot, and these are the four answers it can give.
  */
 describe('mark namespaces', () => {
-  it('accepts a rime mark', () => {
-    expect(markProblem('__shaped')).toBeUndefined();
+  it('accepts a core mark', () => {
+    expect(markProblem(HOOK_MARKS.SHAPED)).toBeUndefined();
   });
 
   it('accepts an owned mark', () => {
@@ -24,15 +24,15 @@ describe('mark namespaces', () => {
   it('refuses a bare name, because a second owner would reach for the same one', () => {
     // The case this exists for. `session` is exactly the kind of word two people pick
     // independently, and two owners providing it join one set rather than colliding.
-    expect(markProblem('session')).toMatch(/no namespace/);
+    expect(markProblem('session')).toMatch(/is not "owner:name"/);
   });
 
-  it('refuses a misspelled rime mark rather than satisfying it vacuously', () => {
-    expect(markProblem('__shpaed')).toMatch(/reserved/);
+  it('refuses a misspelled core mark rather than satisfying it vacuously', () => {
+    expect(markProblem('core:shpaed')).toMatch(/reserved "core" namespace/);
   });
 
   it('refuses half of an owned name', () => {
-    expect(markProblem('upload:')).toMatch(/missing one half/);
+    expect(markProblem('upload:')).toMatch(/is not "owner:name"/);
   });
 });
 
@@ -45,7 +45,10 @@ describe('assertMarks', () => {
 
   it('says nothing when every name belongs to someone', () => {
     expect(() =>
-      assertMarks([hook('authorize', ['__shaped'], ['upload:file-written'])], 'pages beforeRead')
+      assertMarks(
+        [hook('authorize', [HOOK_MARKS.SHAPED], ['upload:file-written'])],
+        'pages beforeRead'
+      )
     ).not.toThrow();
   });
 
@@ -57,38 +60,6 @@ describe('assertMarks', () => {
 
   it('checks provides as well as requires', () => {
     expect(() => assertMarks([hook('mine', [], ['ready'])], 'pages beforeRead')).toThrow(/ready/);
-  });
-});
-
-/**
- * The union and the list are the same set, and they have to be written twice for a reason: the
- * union makes a misspelling a *compile* error inside this repo, the list makes it a *boot* error
- * for anything that reached the union through declaration merging, where the union cannot.
- *
- * Which means they can drift, so this is the thing that stops them. Both directions: a mark added
- * to one and not the other is a compile error here.
- */
-describe('the union and the runtime list agree', () => {
-  const everyListedMarkIsInTheUnion: CoreHookMark = RIME_MARKS[0];
-
-  const everyUnionMemberIsListed: [Exclude<CoreHookMark, (typeof RIME_MARKS)[number]>] extends [
-    never
-  ]
-    ? true
-    : false = true;
-
-  const nothingListedIsMissingFromTheUnion: [
-    Exclude<(typeof RIME_MARKS)[number], CoreHookMark>
-  ] extends [never]
-    ? true
-    : false = true;
-
-  it('holds', () => {
-    expect([
-      everyListedMarkIsInTheUnion,
-      everyUnionMemberIsListed,
-      nothingListedIsMissingFromTheUnion
-    ]).toEqual(['__sanitized', true, true]);
   });
 });
 
@@ -107,25 +78,55 @@ describe('a consumer hook', () => {
     // Declaring nothing gets exactly this: `Hooks.beforeRead` defaults to `__shaped`/`__document`,
     // so an app that never heard of marks is already legal.
     expect(() =>
-      assertMarks(consumer(['__shaped'], ['__document']), 'pages beforeRead')
+      assertMarks(consumer([HOOK_MARKS.SHAPED], [HOOK_MARKS.DOCUMENT]), 'pages beforeRead')
     ).not.toThrow();
   });
 
   it('may add its own, under its own name', () => {
     expect(() =>
-      assertMarks(consumer(['__shaped'], ['myapp:priced']), 'pages beforeRead')
+      assertMarks(consumer([HOOK_MARKS.SHAPED], ['myapp:priced']), 'pages beforeRead')
     ).not.toThrow();
   });
 
   it('throws on a bare name of its own', () => {
-    expect(() => assertMarks(consumer(['__shaped'], ['ready']), 'pages beforeRead')).toThrow(
-      /myAppHook: "ready" has no namespace/
+    expect(() => assertMarks(consumer([HOOK_MARKS.SHAPED], ['ready']), 'pages beforeRead')).toThrow(
+      /myAppHook: "ready" is not "owner:name"/
     );
   });
 
-  it('throws on a pre-rename rime mark, which is the upgrade path', () => {
+  it('throws on a pre-namespace mark, which is the upgrade path', () => {
     // `requires: ['shaped']` was legal before marks were namespaced. It has to fail loudly rather
     // than vacuously: satisfied-by-nobody would put the hook first and change nothing visible.
-    expect(() => assertMarks(consumer(['shaped']), 'pages beforeRead')).toThrow(/no namespace/);
+    expect(() => assertMarks(consumer(['shaped']), 'pages beforeRead')).toThrow(
+      /is not "owner:name"/
+    );
+  });
+});
+
+/**
+ * The union is still closed.
+ *
+ * Worth its own guard because it broke silently once while this was being written: declaring the
+ * feature merge as `interface FeatureHookMarks extends Record<typeof MARKS[keyof typeof MARKS],
+ * true>` widened `keyof FeatureHookMarks` to `string | number`, which opens `HookMark` to every
+ * string. Nothing failed — the boot check still ran, and the compile-time half, which is the
+ * stronger one, was simply gone.
+ *
+ * Each `@ts-expect-error` below is the assertion: if the union opened, the directive would be
+ * unused and *that* is the compile error.
+ */
+describe('HookMark stays closed', () => {
+  // @ts-expect-error a bare word is not a mark
+  const bare: HookMark = 'session';
+  // @ts-expect-error a misspelled core mark is not a mark
+  const misspelled: HookMark = 'core:shpaed';
+  // @ts-expect-error a namespace nobody declared is not a mark
+  const undeclared: HookMark = 'whoever:thing';
+
+  /** And what a feature declared is, through `FeatureHookMarks`. */
+  const declared: HookMark = 'versions:operation';
+
+  it('holds', () => {
+    expect([bare, misspelled, undeclared, declared]).toHaveLength(4);
   });
 });

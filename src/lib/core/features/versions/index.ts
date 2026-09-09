@@ -1,3 +1,5 @@
+import { VERSIONS_MARKS } from '$lib/core/features/versions/marks.js';
+import type { FeatureHookMarks } from '$lib/core/pipeline/types.js';
 import { VERSIONS_STATUS } from '$lib/core/features/versions/constant.js';
 import { makeVersionsCollectionsAliases, versionsHooks } from '$rime/modules';
 import type { WithVersionsConfig } from './augment.js';
@@ -87,12 +89,25 @@ declare module '$lib/core/features/register.js' {
  * The mark its own hooks order by: `defineVersionOperation` decides which of the five operations
  * an update is, and both `handleNewVersion` and `demoteOtherVersions` wait on it.
  *
- * Declared here rather than in `CoreHookMark`, where it used to be. The union is closed on purpose
- * — a misspelled mark would silently reorder the pipeline instead of erroring — and this is the
- * seam that keeps it closed without core naming a feature.
+ * Declared here rather than in core's `HOOK_MARKS`, and namespaced to this feature. The union is
+ * closed on purpose — a misspelled mark would silently reorder the pipeline instead of erroring —
+ * and this is the seam that keeps it closed without core naming a feature.
  */
 declare module '$lib/core/pipeline/types.js' {
   interface FeatureHookMarks {
     'versions:operation': true;
   }
 }
+
+/**
+ * The merge key and the constant are the same string, and this is what stops them drifting.
+ *
+ * An interface key must be a literal — a computed one is only legal for symbols, and extending a
+ * `Record` of the constant's type silently widens `keyof FeatureHookMarks` to `string | number`,
+ * which would open the closed union this whole mechanism rests on. So it is written twice, and
+ * checked once: a constant that no longer matches the merged key fails to compile here.
+ */
+const _markKeyMatchesConstant: (typeof VERSIONS_MARKS)['OPERATION'] extends keyof FeatureHookMarks
+  ? true
+  : false = true;
+void _markKeyMatchesConstant;

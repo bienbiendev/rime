@@ -1,3 +1,4 @@
+import { HOOK_MARKS } from '$lib/core/pipeline/marks.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';
 
@@ -20,7 +21,7 @@ import { Hooks } from '$lib/core/pipeline/hooks.js';
 export const getOriginalDocument = Hooks.beforeUpdate({
   name: 'getOriginalDocument',
   requires: [],
-  provides: ['__original-doc'],
+  provides: [HOOK_MARKS.ORIGINAL_DOC],
   run: async (args) => {
     const { event, config, context } = args;
     const { rime } = event.locals;
