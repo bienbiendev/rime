@@ -10,6 +10,33 @@ import type { ConfigMap } from './config-map/types.js';
 export type Operation = 'read' | 'create' | 'update' | 'delete';
 export type Timing = 'before' | 'after';
 
+/**
+ * The points a document hook can run at.
+ *
+ * Here rather than on `FeatureDefinition`, where it used to live: a timing is the pipeline's own
+ * vocabulary. It was a feature's while features carried their own hook lists; they do not any
+ * more — each prototype's `hooks.server.ts` writes the order — so the only readers left are
+ * `buildPipeline` and the two lists it folds.
+ */
+export type HookTiming =
+  | 'beforeOperation'
+  | 'beforeRead'
+  | 'beforeCreate'
+  | 'afterCreate'
+  | 'beforeUpdate'
+  | 'afterUpdate'
+  | 'beforeDelete'
+  | 'afterDelete';
+
+/**
+ * A hook as a written list holds it.
+ *
+ * Each timing has its own argument shape (see `hooks.ts`), which a list covering every timing
+ * cannot express. Sound for the reason the erasure elsewhere is: a hook only ever reaches the
+ * timing it is placed under.
+ */
+export type AnyHook = (args: any) => any;
+
 // Helper type for document types based on slugs
 export type DocTypeForSlugs<S extends DocType = PrototypeSlug> = S extends PrototypeSlug
   ? S extends keyof RegisterCollection

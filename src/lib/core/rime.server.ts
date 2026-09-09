@@ -8,7 +8,8 @@ import type { RimeAuth } from './features/auth/better-auth/instance.server.js';
 import { logger } from './logger.server.js';
 import type { PrototypeAccessors } from './prototype/accessors.server.js';
 import { buildPrototypeApi } from './prototype/api.server.js';
-import { prototypes } from './prototype/index.server.js';
+import { area } from './prototype/area/definition.server.js';
+import { collection } from './prototype/collection/definition.server.js';
 
 // Declared in core/config/context.server.ts, beside `createConfigContext`, and re-exported
 // here because this is where consumers have always imported it from.
@@ -100,26 +101,30 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
   }
 
   /**
-   * Builds `rime.collection(slug)` / `rime.area(slug)` from the registry.
+   * Builds `rime.collection(slug)` / `rime.area(slug)`.
    *
-   * There is no per-kind code here any more: a name comes from the registry, its definition
-   * says what the API is, and `buildPrototypeApi` assembles it. The types cannot be derived the
-   * same way — each accessor carries its own slug literals and document types — so they come
-   * from the definitions themselves, through `PrototypeAccessors`.
+   * Written out, and the `as PrototypeAccessors` is what makes it safe to be: these types cannot
+   * be derived from the values — each accessor carries its own slug literals and document types —
+   * so they are declared instead, from `api.server.ts` and never off a definition. That cast is
+   * rule 1's boundary. See accessors.server.ts.
    */
   const buildAccessors = (event: RequestEvent) =>
-    Object.fromEntries(
-      prototypes.map((prototype) => [
-        prototype.name,
-        (slug: string) =>
-          buildPrototypeApi({
-            definition: prototype,
-            config: configCtx.getByPrototype(prototype.name, slug),
-            event,
-            defaultLocale: configCtx.getDefaultLocale()
-          })
-      ])
-    ) as PrototypeAccessors;
+    ({
+      collection: (slug: string) =>
+        buildPrototypeApi({
+          definition: collection,
+          config: configCtx.getCollection(slug),
+          event,
+          defaultLocale: configCtx.getDefaultLocale()
+        }),
+      area: (slug: string) =>
+        buildPrototypeApi({
+          definition: area,
+          config: configCtx.getArea(slug),
+          event,
+          defaultLocale: configCtx.getDefaultLocale()
+        })
+    }) as PrototypeAccessors;
 
   return {
     defineLocale,

@@ -5,7 +5,7 @@ import * as title from '$lib/core/features/title/hooks/index.server.js';
 import * as upload from '$lib/core/features/upload/hooks/index.server.js';
 import * as url from '$lib/core/features/url/hooks/index.server.js';
 import * as versions from '$lib/core/features/versions/hooks/index.server.js';
-import type { AnyHook, HookTiming } from '$lib/core/features/define.js';
+import type { AnyHook, HookTiming } from '$lib/core/pipeline/types.js';
 import { authorize } from '$lib/core/pipeline/steps/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/steps/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/pipeline/steps/get-original-document.server.js';

@@ -16,12 +16,14 @@ import { type Handle, type RequestEvent, type ServerLoadEvent } from '@sveltejs/
 import { ERROR_CONTEXT, handleError } from '../errors/handler.server.js';
 import { RimeError } from '../errors/index.js';
 import type { RouteConfig } from '../config/types.js';
-import { prototypes } from '$lib/core/prototype/index.server.js';
+import { area } from '$lib/core/prototype/area/definition.server.js';
+import { collection } from '$lib/core/prototype/collection/definition.server.js';
 
 /** Every prototype's declared REST routes, by prototype name then by sub-path. */
-const restRoutes: Record<string, Record<string, RouteConfig>> = Object.fromEntries(
-  prototypes.map((prototype) => [prototype.name, prototype.rest ?? {}])
-);
+const restRoutes: Record<string, Record<string, RouteConfig>> = {
+  collection: collection.rest ?? {},
+  area: area.rest ?? {}
+};
 
 /**
  * Backs the fixed set of generated /panel/[slug=<prototype>]/... and

@@ -1,9 +1,9 @@
 import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/config/types.js';
 import { applyAugments } from '$lib/core/features/apply.js';
-import type { AnyHook, FeatureDefinition, HookTiming } from '$lib/core/features/define.js';
+import type { FeatureDefinition } from '$lib/core/features/define.js';
 import { isStaff } from '$lib/core/features/auth/access.js';
-import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
+import type { AnyHook, HookTiming, OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { FileText } from '@lucide/svelte';
 import type { RequestEvent } from '@sveltejs/kit';
@@ -193,9 +193,6 @@ export type PrototypeApi<A, Doc = GenericDoc> = A & {
    */
   system(isSystem?: boolean): PrototypeApi<A, Doc>;
 };
-
-/** An alias: `name` lives on the definition itself, so there is nothing to synthesise. */
-export type RegisteredPrototype = PrototypeDefinition;
 
 type PrototypeOptions<C extends BuiltPrototype> = Partial<
   Omit<PrototypeDefinition<C>, '$InferAccessor' | 'create'>

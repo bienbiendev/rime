@@ -1,6 +1,6 @@
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
 import { validateWithFeatures } from '$lib/core/features/registry.js';
-import { prototypeEntries } from '$lib/core/prototype/index.js';
+import { area, collection } from '$lib/core/prototype/index.js';
 import cache from '$lib/core/dev/cache.server.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { isFormField } from '$lib/core/fields/util.js';
@@ -226,16 +226,16 @@ const hasDatabase = <T extends Config>(config: T) => {
 /**
  * What each feature requires of the configs it extends.
  *
- * Nothing here knows which feature is asking or what it wants: `prototypeEntries` pairs every
- * prototype config with the definition that built it, and `validateWithFeatures` folds that
- * prototype's feature list, gated by `enabled`. Auth's rules were the inhabitants that made this
- * worth having — they lived above and needed `isAuthConfig` to find the collections they applied
- * to. See `FeatureDefinition.validate`.
+ * Nothing here knows which feature is asking or what it wants: `validateWithFeatures` folds the
+ * feature list of the prototype the config came from, gated by `enabled`. Auth's rules were the
+ * inhabitants that made this worth having — they lived above and needed `isAuthConfig` to find
+ * the collections they applied to. See `FeatureDefinition.validate`.
  */
 function validateFeatures(config: Config) {
-  return prototypeEntries(config).flatMap((entry) =>
-    validateWithFeatures(entry.prototype.features, entry.config)
-  );
+  return [
+    ...(config.collections || []).flatMap((c) => validateWithFeatures(collection.features, c)),
+    ...(config.areas || []).flatMap((a) => validateWithFeatures(area.features, a))
+  ];
 }
 
 /**

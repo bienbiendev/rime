@@ -1,7 +1,7 @@
 import { IS_RIME_REPO, PACKAGE_NAME } from '$lib/core/constants.server.js';
 import type { Config } from '$lib/core/config/types.js';
 import { shadowOf } from '$lib/core/features/registry.js';
-import { prototypeEntries } from '$lib/core/prototype/index.js';
+import { collection as collectionPrototype } from '$lib/core/prototype/index.js';
 import { capitalize } from '$lib/util/string.js';
 
 /**
@@ -41,16 +41,16 @@ export const templateRegister = <T extends Config>(config: T): string => {
    * because it has no doc type of its own — it shares its parent's. So it is filtered out above
    * and its `RegisterCollection` entry added back here, pointing at the parent's type.
    *
-   * Asked of the features that extend each prototype, the way the schema generator asks. It was
+   * Asked of the features that extend a collection, the way the schema generator asks. It was
    * `collection.versions` plus the versions feature's own `withVersionsSuffix`, which is codegen
    * naming a feature's table for it — and which would have registered nothing for a second
    * feature that declared a shadow.
+   *
+   * Collections only: a shadow is registered as a collection in its own right, and this map is
+   * read nowhere but in `RegisterCollection` below.
    */
   const shadowSlugs = new Map(
-    prototypeEntries(config).map((entry) => [
-      entry.config.slug,
-      shadowOf(entry.prototype.features, entry.config)?.slug
-    ])
+    (config.collections ?? []).map((c) => [c.slug, shadowOf(collectionPrototype.features, c)?.slug])
   );
 
   const registerCollections = collections.length

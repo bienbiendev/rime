@@ -1,9 +1,8 @@
-// @decouple area and collection references should not surface here, only prototypes
 import type { AreaSlug, CollectionSlug, Config, PrototypeSlug } from '$lib/types.js';
 import { RimeError } from '../errors/index.js';
 import type { BuildConfig } from './build.server.js';
 import { shadowOf } from '../features/registry.js';
-import { prototypeEntries } from '$lib/core/prototype/index.js';
+import { area, collection } from '$lib/core/prototype/index.js';
 
 /**
  * What `event.locals.rime.config` is.
@@ -35,26 +34,8 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
   ) as typeof config.$InferAreas;
   const mapAreasSlug = config.areas.map((a) => a.slug);
 
-  /**
-   * Every built config of one prototype kind, by the name it is registered under.
-   *
-   * The registry-driven counterpart to `.collections` / `.areas`: code that iterates prototypes
-   * asks for a name it got from the registry rather than picking one of two hardcoded accessors,
-   * so a third kind costs nothing here.
-   */
-  /**
-   * Every built prototype config, whatever its kind.
-   *
-   * The one place left that still says `collections` and `areas` by name. It survives because
-   * a config's *shape* still has one keyed array per prototype kind — the builders themselves
-   * now live with their prototypes (`prototype/{collection,area}/config/`), so this spread is
-   * the last of it. Everything downstream asks by prototype name instead, so a third kind costs
-   * one entry here and nothing else.
-   */
+  /** Every built prototype config, whatever its kind. */
   const allPrototypes = [...config.collections, ...config.areas];
-
-  const byPrototype = (name: string) =>
-    allPrototypes.filter((prototype) => prototype.type === name);
 
   /**
    * Where each config's content lives, when a feature gives it a second table.
@@ -68,23 +49,14 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
    * A `Map` rather than a lookup per call: the transform runs on every document of every read.
    */
   const shadowSlugs = new Map<string, string>(
-    prototypeEntries(config as Config).flatMap((entry) => {
-      const shadow = shadowOf(entry.prototype.features, entry.config);
-      return shadow ? [[entry.config.slug, shadow.slug] as [string, string]] : [];
+    [
+      ...config.collections.map((c) => [collection.features, c] as const),
+      ...config.areas.map((a) => [area.features, a] as const)
+    ].flatMap(([features, prototypeConfig]) => {
+      const shadow = shadowOf(features, prototypeConfig);
+      return shadow ? [[prototypeConfig.slug, shadow.slug] as [string, string]] : [];
     })
   );
-
-  /**
-   * One config, named by prototype and slug.
-   *
-   * What `rime.<name>(slug)` looks up. It asks for both halves on purpose: `getBySlug` would
-   * find an area for `rime.collection('settings')` and hand back an API that cannot work on it.
-   */
-  const getByPrototype = (name: string, slug: string) => {
-    const found = byPrototype(name).find((prototype) => prototype.slug === slug);
-    if (!found) throw new RimeError(RimeError.BAD_REQUEST, `${slug} is not a ${name}`);
-    return found;
-  };
 
   const getLocalesCodes = () =>
     config.localization ? config.localization.locales.map((l) => l.code) : [];
@@ -144,16 +116,11 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
     },
 
     /**
-     * Gets every config of one prototype kind, by registry name
-     */
-    /**
      * Gets every built prototype config, whatever its kind
      */
     get prototypes() {
       return allPrototypes;
     },
-
-    byPrototype,
 
     /**
      * The slug a config's content lives under, or `undefined` when it lives on the config's own
@@ -161,11 +128,6 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
      */
     shadowSlugOf: (slug: string): PrototypeSlug | undefined =>
       shadowSlugs.get(slug) as PrototypeSlug | undefined,
-
-    /**
-     * Gets one config by prototype name and slug
-     */
-    getByPrototype,
 
     /**
      * Gets the default locale from the configuration

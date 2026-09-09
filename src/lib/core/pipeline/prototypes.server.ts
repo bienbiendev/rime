@@ -1,6 +1,9 @@
+import type { PrototypeDefinition } from '$lib/core/prototype/define.js';
 import type { Dic } from '$lib/util/types.js';
-import { protos, prototypeNames } from '../prototype/index.js';
-import { prototypeHooks } from '../prototype/hooks.server.js';
+import { area } from '../prototype/area/index.js';
+import { areaHooks } from '../prototype/area/hooks.server.js';
+import { collection } from '../prototype/collection/index.js';
+import { collectionHooks } from '../prototype/collection/hooks.server.js';
 import { augmentHooks } from './build-pipeline.server.js';
 
 /**
@@ -14,19 +17,23 @@ import { augmentHooks } from './build-pipeline.server.js';
  *
  * That is why nothing carries a second copy of anything: a config derived before this runs never
  * has a pipeline to inherit, and never needs one rebuilt.
+ *
+ * Each prototype's `features` comes off its **isomorphic** half and its hooks from the
+ * `hooks.server.ts` beside it — never through `definition.server.ts`, which spreads `{ ...base }`
+ * at module scope. See rule 3 in CONTRIBUTING.md; the failure has no symptom but a missing title.
  */
-export const resolvePipelines = <T extends Dic>(config: T): T =>
-  prototypeNames.reduce((current, name) => {
-    const key = protos[name].configKey;
-    const configs = (current[key] as Dic[] | undefined) ?? [];
+export const resolvePipelines = <T extends Dic>(config: T): T => {
+  const resolve = (
+    definition: Pick<PrototypeDefinition, 'features' | 'hooks'>,
+    configs: unknown
+  ): Dic[] => ((configs as Dic[] | undefined) ?? []).map((c) => augmentHooks(definition, c));
 
-    return {
-      ...current,
-      [key]: configs.map((prototypeConfig) =>
-        augmentHooks(
-          { features: protos[name].features, hooks: prototypeHooks[name] },
-          prototypeConfig
-        )
-      )
-    };
-  }, config as Dic) as T;
+  return {
+    ...config,
+    collections: resolve(
+      { features: collection.features, hooks: collectionHooks },
+      config.collections
+    ),
+    areas: resolve({ features: area.features, hooks: areaHooks }, config.areas)
+  } as T;
+};

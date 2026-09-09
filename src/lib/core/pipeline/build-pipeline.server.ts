@@ -1,5 +1,5 @@
 import type { Dic } from '$lib/util/types.js';
-import type { HookTiming } from '../features/define.js';
+import type { HookTiming } from './types.js';
 import type { PrototypeDefinition } from '../prototype/define.js';
 import { sortDocumentProps } from './steps/sort-document-props.server.js';
 import { hookName } from './hook-name.server.js';

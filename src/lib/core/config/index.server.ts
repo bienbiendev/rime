@@ -1,7 +1,3 @@
-// @decouple prototype definition, area and collections should not be named here
-// ex:
-// create a barrel from prototypes that export all prototypes
-// the export * from prototypes  
 import * as Area from '$lib/core/prototype/area/index.js';
 import * as Collection from '$lib/core/prototype/collection/index.js';
 import { Hooks } from '$lib/core/pipeline/hooks.js';

@@ -11,7 +11,7 @@ import { setDefaultValues } from '$lib/core/pipeline/steps/set-default-values.se
 import { setDocumentLocale } from '$lib/core/pipeline/steps/set-document-locale.server.js';
 import { setDocumentType } from '$lib/core/pipeline/steps/set-document-type.server.js';
 import { validateFields } from '$lib/core/pipeline/steps/validate-fields.server.js';
-import type { AnyHook, HookTiming } from '$lib/core/features/define.js';
+import type { AnyHook, HookTiming } from '$lib/core/pipeline/types.js';
 
 /**
  * The area prototype's *own* document hooks — the ones that are its, unconditionally.

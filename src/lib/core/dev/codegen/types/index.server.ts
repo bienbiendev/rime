@@ -3,7 +3,7 @@ import cache from '$lib/core/dev/cache.server.js';
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
 import type { FeatureDefinition } from '$lib/core/features/define.js';
 import { docTypeWithFeatures } from '$lib/core/features/registry.js';
-import { prototypeEntries } from '$lib/core/prototype/index.js';
+import { area, collection } from '$lib/core/prototype/index.js';
 
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { logger } from '$lib/core/logger.server.js';
@@ -49,12 +49,11 @@ export async function generateTypesString<T extends Config>(config: T) {
    * `if (collection.versions)` once. Both are `docType` contributions now, so what is left is the
    * same for either kind — which is why there is one function.
    */
-  const processPrototype = async (entry: {
-    config: BuiltArea | BuiltCollection;
-    prototype: { features: FeatureDefinition[] };
-  }) => {
-    const { config } = entry;
-    const contribution = docTypeWithFeatures(entry.prototype.features, config);
+  const processPrototype = async (
+    features: FeatureDefinition[],
+    config: BuiltArea | BuiltCollection
+  ) => {
+    const contribution = docTypeWithFeatures(features, config);
 
     const fieldsTypesList = await buildFieldsTypes(config.fields.filter(contribution.fields));
     contribution.extends.forEach(addImport);
@@ -66,13 +65,16 @@ export async function generateTypesString<T extends Config>(config: T) {
     );
   };
 
-  const entries = prototypeEntries(config).filter((entry) => entry.config._generateTypes !== false);
+  const generated = <T extends { _generateTypes?: false }>(configs: T[] | undefined) =>
+    (configs ?? []).filter((c) => c._generateTypes !== false);
 
   const collectionsTypes = (
-    await Promise.all(entries.filter((e) => e.config.type === 'collection').map(processPrototype))
+    await Promise.all(
+      generated(config.collections).map((c) => processPrototype(collection.features, c))
+    )
   ).join('\n');
   const areasTypes = (
-    await Promise.all(entries.filter((e) => e.config.type === 'area').map(processPrototype))
+    await Promise.all(generated(config.areas).map((a) => processPrototype(area.features, a)))
   ).join('\n');
   const typeImports = `import type { ${Array.from(imports).join(', ')} } from '${PACKAGE_NAME}/types'`;
   // app.generated.d.ts always sits at src/app.generated.d.ts (see generateTypes() below).

@@ -1,5 +1,5 @@
 import type { Config } from '$lib/core/config/types.js';
-import { prototypeEntries } from '$lib/core/prototype/index.js';
+import { area, collection } from '$lib/core/prototype/index.js';
 import { columnsOf, shadowOf, tablesOf } from '$lib/core/features/registry.js';
 import { baseTableName, declaredTableProperty, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
@@ -21,11 +21,14 @@ import {
 import write from './write.server.js';
 
 export async function generateSchemaString<T extends Config>(config: T) {
-  // Every prototype config in the build, folded from the registry rather than read off
-  // `collections` and `areas`: what a prototype is called is core's business, and a third kind
-  // must not mean a third loop here. Each stays paired with its definition, whose features are
-  // what say whether the config's content lives somewhere other than its own row.
-  const allEntries = prototypeEntries(config);
+  // Every prototype config in the build, each paired with the features that extend its kind —
+  // which is what says whether the config's content lives somewhere other than its own row.
+  // One list rather than a loop per kind: the body below is two hundred lines and identical
+  // for either.
+  const allEntries = [
+    ...(config.collections ?? []).map((c) => ({ features: collection.features, config: c })),
+    ...(config.areas ?? []).map((a) => ({ features: area.features, config: a }))
+  ];
   const entries = allEntries.filter((entry) => entry.config._generateSchema !== false);
 
   const schema: string[] = [templateImports];
@@ -40,7 +43,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
     // Whether this config's content lives on its own row or on a second table, asked of the
     // features that extend the prototype rather than of a member the adapter recognises by name.
     // A feature declaring a shadow is the only thing that makes two tables here.
-    const shadow = shadowOf(entry.prototype.features, prototype);
+    const shadow = shadowOf(entry.features, prototype);
 
     // The prototype's own table, resolved from its slug rather than case-converted here —
     // a derived slug like `$someChild` has to lose its `$` and snake-case its segments.
@@ -63,7 +66,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
         ],
         rootName: baseName,
         locales: [],
-        featureColumns: columnsOf(entry.prototype.features, prototype),
+        featureColumns: columnsOf(entry.features, prototype),
         shadows: false,
         tableName: baseName
       });
@@ -102,7 +105,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
       fields: shadow ? prototype.fields.filter((field) => !field.get.root) : prototype.fields,
       rootName: rootTableName,
       locales: config.localization?.locales || [],
-      featureColumns: columnsOf(entry.prototype.features, prototype),
+      featureColumns: columnsOf(entry.features, prototype),
       shadows: shadow ? baseName : false,
       tableName: rootTableName
     });
@@ -143,10 +146,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
   // unconditionally plus `templateAPIKey` behind a `authConfig(prototype)?.type === 'apiKey'`
   // sniff — the generator reading a feature's config member to decide what to emit. Asked of the
   // whole config, which is the scope the question has.
-  for (const table of tablesOf(
-    allEntries.map((entry) => entry.prototype),
-    config
-  )) {
+  for (const table of tablesOf([collection, area], config)) {
     schema.push(templateDeclaredTable(table));
     enumTables.push(declaredTableProperty(table.slug));
   }

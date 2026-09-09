@@ -3,7 +3,8 @@ import { logger } from '$lib/core/logger.server.js';
 import type { Config } from '$lib/types.js';
 import fs from 'fs';
 import path from 'path';
-import { prototypes } from '$lib/core/prototype/index.server.js';
+import { area } from '$lib/core/prototype/area/definition.server.js';
+import { collection } from '$lib/core/prototype/collection/definition.server.js';
 import { commonRoutes, customRoute, paramMatcher, prototypeApiServer } from './common.server.js';
 import { injectCustomCSS, removeCustomCSS } from './custom-css.server.js';
 import { ensureDir, shouldRegenerateRoutes, writeRouteFile } from './util.server.js';
@@ -48,13 +49,11 @@ function generateRoutes<T extends Config>(config: T): void {
   // 3. The URL segments each prototype accepts, by prototype name. A name with none configured
   // gets no routes and no matcher — generating a matcher that can never match anything would
   // leave SvelteKit with a route no request can reach.
-  const allPrototypes = [...(config.collections || []), ...(config.areas || [])];
-  const kebabsByPrototype = Object.fromEntries(
-    prototypes.map((prototype) => [
-      prototype.name,
-      allPrototypes.filter((p) => p.type === prototype.name).map((p) => p.kebab)
-    ])
-  );
+  const prototypes = [collection, area];
+  const kebabsByPrototype: Record<string, string[]> = {
+    collection: (config.collections || []).map((c) => c.kebab),
+    area: (config.areas || []).map((a) => a.kebab)
+  };
 
   // 4. Process common routes — the fixed files plus the panel's own
   // [panel=panel]/[slug=<name>]/... tree. A pattern naming a matcher is skipped when that

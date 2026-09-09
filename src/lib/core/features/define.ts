@@ -284,23 +284,6 @@ export type ShadowDeclaration = {
   slug: string;
 };
 
-export type HookTiming =
-  | 'beforeOperation'
-  | 'beforeRead'
-  | 'beforeCreate'
-  | 'afterCreate'
-  | 'beforeUpdate'
-  | 'afterUpdate'
-  | 'beforeDelete'
-  | 'afterDelete';
-
-/**
- * A hook as the registry holds it. Each timing has its own argument shape (see
- * core/pipeline/hooks.ts), which a list covering every timing cannot express — the same erasure the prototype registry
- * makes, and sound for the same reason: a hook only ever reaches the timing it is declared under.
- */
-export type AnyHook = (args: any) => any;
-
 /** Alias for call sites that read better naming the registered thing. */
 export type RegisteredFeature = FeatureDefinition;
 
