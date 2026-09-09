@@ -1,5 +1,5 @@
 import { configureWithFeatures } from '../features/registry.js';
-import { configureWithPrototypes, prototypes } from '$lib/core/prototype/registry.js';
+import { configureWithPrototypes, prototypes } from '$lib/core/prototype/index.js';
 import type { SanitizedConfigClient } from './types.js';
 import { augmentPlugins } from './augment-plugins.js';
 

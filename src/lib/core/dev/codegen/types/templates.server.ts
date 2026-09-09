@@ -1,7 +1,7 @@
 import { IS_RIME_REPO, PACKAGE_NAME } from '$lib/core/constants.server.js';
 import type { Config } from '$lib/core/config/types.js';
 import { shadowOf } from '$lib/core/features/registry.js';
-import { prototypeEntries } from '$lib/core/prototype/registry.js';
+import { prototypeEntries } from '$lib/core/prototype/index.js';
 import { capitalize } from '$lib/util/string.js';
 
 /**

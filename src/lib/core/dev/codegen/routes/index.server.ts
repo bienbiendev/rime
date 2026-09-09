@@ -3,7 +3,7 @@ import { logger } from '$lib/core/logger.server.js';
 import type { Config } from '$lib/types.js';
 import fs from 'fs';
 import path from 'path';
-import { prototypes } from '$lib/core/prototype/registry.server.js';
+import { prototypes } from '$lib/core/prototype/index.server.js';
 import { commonRoutes, customRoute, paramMatcher, prototypeApiServer } from './common.server.js';
 import { injectCustomCSS, removeCustomCSS } from './custom-css.server.js';
 import { ensureDir, shouldRegenerateRoutes, writeRouteFile } from './util.server.js';

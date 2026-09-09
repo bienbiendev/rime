@@ -30,8 +30,6 @@ export type PrototypeName = (typeof prototypeNames)[number];
  */
 export const protos: Record<PrototypeName, PrototypeDefinition> = { collection, area };
 
-export { area, collection };
-
 /**
  * Every registered prototype. What the whole-config feature steps iterate.
  *

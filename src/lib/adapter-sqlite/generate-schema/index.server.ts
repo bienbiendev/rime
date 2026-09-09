@@ -1,5 +1,5 @@
 import type { Config } from '$lib/core/config/types.js';
-import { prototypeEntries } from '$lib/core/prototype/registry.js';
+import { prototypeEntries } from '$lib/core/prototype/index.js';
 import { columnsOf, shadowOf, tablesOf } from '$lib/core/features/registry.js';
 import { baseTableName, declaredTableProperty, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';

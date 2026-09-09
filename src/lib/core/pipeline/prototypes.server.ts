@@ -1,17 +1,7 @@
-import { augmentHooks } from '$lib/core/pipeline/build-pipeline.server.js';
 import type { Dic } from '$lib/util/types.js';
-import { areaHooks } from './area/hooks.server.js';
-import { collectionHooks } from './collection/hooks.server.js';
-import { protos, prototypeNames, type PrototypeName } from './registry.js';
-
-/**
- * Each prototype's own hooks, by name.
- *
- * Taken from the `hooks.server.ts` files rather than from the server definitions: those spread
- * `{ ...base }` at module scope, so importing one makes this depend on an evaluation order, and
- * the spread can arrive without `features`. A list of hooks depends on nothing.
- */
-const prototypeHooks: Record<PrototypeName, Dic> = { collection: collectionHooks, area: areaHooks };
+import { protos, prototypeNames } from '../prototype/index.js';
+import { prototypeHooks } from '../prototype/hooks.server.js';
+import { augmentHooks } from './build-pipeline.server.js';
 
 /**
  * Resolves every prototype config's pipeline, once the whole config exists.
@@ -22,8 +12,8 @@ const prototypeHooks: Record<PrototypeName, Dic> = { collection: collectionHooks
  * three inputs: the prototype's own hooks, the hooks of the features this config enables, and the
  * author's `$hooks`.
  *
- * That is why nothing needs to carry a second copy of anything: a config that is derived before
- * this runs never has a pipeline to inherit, and never needs one rebuilt.
+ * That is why nothing carries a second copy of anything: a config derived before this runs never
+ * has a pipeline to inherit, and never needs one rebuilt.
  */
 export const resolvePipelines = <T extends Dic>(config: T): T =>
   prototypeNames.reduce((current, name) => {

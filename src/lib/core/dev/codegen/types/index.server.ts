@@ -3,7 +3,7 @@ import cache from '$lib/core/dev/cache.server.js';
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
 import type { FeatureDefinition } from '$lib/core/features/define.js';
 import { docTypeWithFeatures } from '$lib/core/features/registry.js';
-import { prototypeEntries } from '$lib/core/prototype/registry.js';
+import { prototypeEntries } from '$lib/core/prototype/index.js';
 
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { logger } from '$lib/core/logger.server.js';

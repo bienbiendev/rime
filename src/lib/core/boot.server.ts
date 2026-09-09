@@ -8,7 +8,7 @@ import { bootFeatures, shadowOf } from './features/registry.js';
 // client half, which carries `singleton` and `features` but no `boot` — so an area's row was
 // never created and every area read 404'd. `boot` is server-only by nature; the config factory is
 // the side that legitimately reads the isomorphic registry, for `features` alone.
-import { prototypes } from './prototype/registry.server.js';
+import { prototypes } from './prototype/index.server.js';
 import i18n from './i18n/index.js';
 import { registerTranslation } from './i18n/register.server.js';
 

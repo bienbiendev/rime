@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { collection } from '$lib/core/prototype/registry.js';
+import { collection } from '$lib/core/prototype/collection/index.js';
 import type { Docs, DocType } from '$lib/core/prototype/types.js';
 import type { ConfigureTransforms, FeatureConfigure } from './register.js';
 import { configureWithFeatures, shadowOf } from './registry.js';

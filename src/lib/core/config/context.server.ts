@@ -3,7 +3,7 @@ import type { AreaSlug, CollectionSlug, Config, PrototypeSlug } from '$lib/types
 import { RimeError } from '../errors/index.js';
 import type { BuildConfig } from './build.server.js';
 import { shadowOf } from '../features/registry.js';
-import { prototypeEntries } from '../prototype/registry.js';
+import { prototypeEntries } from '$lib/core/prototype/index.js';
 
 /**
  * What `event.locals.rime.config` is.

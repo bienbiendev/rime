@@ -8,7 +8,7 @@ import type { RimeAuth } from './features/auth/better-auth/instance.server.js';
 import { logger } from './logger.server.js';
 import type { PrototypeAccessors } from './prototype/accessors.server.js';
 import { buildPrototypeApi } from './prototype/api.server.js';
-import { prototypes } from './prototype/registry.server.js';
+import { prototypes } from './prototype/index.server.js';
 
 // Declared in core/config/context.server.ts, beside `createConfigContext`, and re-exported
 // here because this is where consumers have always imported it from.
