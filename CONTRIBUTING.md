@@ -287,15 +287,31 @@ Run against the base commit's **own** numbers, re-measured, never trusted from a
 | unit            | `bunx vitest run`                               | 165                                                                                      |
 | format          | `bunx prettier --check .`                       | run it before committing, not after                                                      |
 | pipeline layers | `prototype/collection/pipeline.spec.ts`         | **the gate for rule 3** — a definition that lost its `features` is green everywhere else |
-| schema          | golden diff of generated `schema.server.ts`     | **the gate for rule 2**                                                                  |
+| schema          | golden diff + `bunx drizzle-kit generate`       | **the gate for rule 2** — see below; the byte diff alone is not it                       |
 | pipeline order  | `core/pipeline/pipeline-order.spec.ts`          | **the gate for rule 4** — a wrong mark is schema- and probe-identical                    |
 | pipeline map    | `docs/pipeline-map.md` + `pipeline-map.spec.ts` | **the gate for rule 8**. `bun run rime:pipeline` regenerates                             |
 | e2e             | `bun run test:<fixture>`                        | per-fixture baselines below                                                              |
 | browser         | `docs/probing.md` §7                            | **the gate for rule 7** — nothing static sees it                                         |
 
-**Capture a golden schema before touching any augment chain.** Boot on a fixture, copy
-`src/lib/+rime.generated/schema.server.ts` outside the repo, make the change, boot again, diff. It
-is generated, gitignored, and cheap to lose.
+**Capture a golden schema before touching any augment chain** — or anything that emits a column.
+Codegen runs headless, so this needs no dev server:
+
+```bash
+rm node_modules/.rime/config.txt          # codegen memoises; this forces a run
+bun ./src/lib/core/dev/cli/index.ts generate --force
+cp src/lib/+rime.generated/schema.server.ts /tmp/schema-before.ts
+# … make the change, regenerate, diff …
+bunx drizzle-kit generate                 # must print "No schema changes, nothing to migrate"
+```
+
+`schema.server.ts` is generated, gitignored, and cheap to lose.
+
+**Read the diff for column order; let drizzle-kit answer whether the schema changed.** A generator
+does not reproduce hand-written whitespace, quote style or chain order, so a byte diff is never
+empty after a template change and says nothing on its own. `drizzle-kit generate` reads the _built_
+schema rather than the source, so "No schema changes" means the tables are identical however they
+are spelled. Both matter: column order is a migration (rule 2), and drizzle-kit is what proves
+nothing else moved.
 
 ### e2e baselines
 

@@ -1,9 +1,10 @@
 # Annex — the auth facade
 
-> Stage 4.3 of `docs/decoupling.md`. **Depends on 4.2** (`FeatureDefinition.tables`): four of the
-> seven methods read tables that only a declaration can make exist in core's vocabulary.
+> Stage 4.3 of `docs/decoupling.md`. **Landed** — `74619ab2` and `df71014f`. What follows is the
+> reasoning that produced the split; §5 records what shipped, and answers the question §2.2 left
+> open.
 
-`auth` is 98 of the adapter's ~100 remaining feature hits. 44 of them are `auth.server.ts`, a
+`auth` was 98 of the adapter's ~100 remaining feature hits. 44 of them were `auth.server.ts`, a
 whole facade on the `Adapter` interface for one feature.
 
 ---
@@ -232,3 +233,66 @@ So verify auth changes with, in order:
 
 > A wrong answer from `isSuperAdmin` is a privilege escalation, not a bug. Treat every change in
 > this annex as security-relevant and probe it in a browser rather than reasoning about it.
+
+---
+
+## 5. What shipped
+
+Seven members down to one, in two commits. `auth.server.ts` is 35 lines and builds
+`drizzleAdapter(...)`; nothing else.
+
+### 5.1 §2.1 landed as written
+
+`features/auth/user.server.ts`, three functions taking the adapter. `STAFF_SLUG` lives in
+`features/auth/tables.ts` — the file §4.2 created, which is also where the super-admin column is
+declared, so the two statements about that collection sit together.
+
+One departure: `userAttributes` **names the members it returns** rather than spreading the row.
+The hand-written `db.select()` named them too, and going through `findMany` would otherwise have
+carried `contentId` onto `event.locals.user` for a shadowed auth collection. What reaches the
+client through `toPublicUser` is a decision, not whatever the read happened to return.
+
+`isSuperAdmin` filters on the id and the flag together rather than fetching the row and testing it.
+Same answer, and it does not bring the row back to a caller that only asked a yes/no question.
+
+### 5.2 §2.2 is option (a). Option (b) is closed.
+
+**Better-auth's admin API cannot serve any of the three.** `listUsers`, `setRole` and `removeUser`
+are all `use: [adminMiddleware]`, and every caller runs where no admin session exists:
+
+| call              | when it runs                              | why the admin API refuses    |
+| ----------------- | ----------------------------------------- | ---------------------------- |
+| `hasAuthUser`     | gates the init route — no user exists yet | no session to authorize      |
+| `setAuthUserRole` | promotes the very first signup to admin   | no admin exists to authorize |
+| `deleteAuthUser`  | rolls back a failed signup                | `YOU_CANNOT_REMOVE_YOURSELF` |
+
+`removeUser` _does_ delete sessions before the user, so the security property §2.2 asked about
+holds on its side — but it is unreachable from here regardless. `hooks.server.ts` already carried
+the finding as a comment: "would be cleaner to do it with the admin plugin, not possible at the
+moment". It is written down with the reason now, so nobody re-reads better-auth to find out.
+
+So: `adapter.table(slug)`, three verbs and a flat column-to-value filter.
+
+```ts
+export interface TableHandle {
+  find(args?: { where?: Dic; select?: string[]; limit?: number }): Promise<Dic[]>;
+  update(args: { where: Dic; data: Dic }): Promise<void>;
+  delete(args: { where: Dic }): Promise<void>;
+}
+```
+
+§2.2 called this "a second read/write surface to maintain", which is the honest cost. What makes it
+small is that a declared table has no config behind it — no path resolution, no locales branch, no
+children, no blank — so it does not grow toward `PrototypeHandle`. `update` and `delete` refuse an
+empty `where`: drizzle's `and()` of nothing is `undefined`, and a write with no `WHERE` is never
+what a caller meant.
+
+### 5.3 The gate §4 asked for, and the one it could not
+
+§4 is right that the e2e suite is the net and that these fail _open_. Both commits therefore carry
+specs that assert **the call, not the result** — the slug, the filter, the projection, and for
+`deleteAuthUser` the order. `user.spec.ts` was proved by breaking it: dropping the `isSuperAdmin`
+condition fails exactly one test.
+
+`bun run test:basic` ran green on a machine with SMTP and a matching Chromium, which is what §4
+asked for before landing.

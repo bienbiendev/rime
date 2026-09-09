@@ -25,6 +25,8 @@ member. What got it there, newest first:
 
 | commit     | what                                                                                                                                             |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `df71014f` | **§4.3** — `adapter.table(slug)`; `AuthAdapter` collapses to `betterAuthAdapter`                                                                 |
+| `74619ab2` | **§4.3** — auth's three ordinary reads become `prototype(slug).findMany`                                                                         |
 | `a7b5bed6` | **§4.2** — `FeatureDefinition.tables` / `.columns`; the auth templates delete                                                                    |
 | `2428e5aa` | **§4.1** — `transform.doc` becomes `transform.rows`; `buildDocument` is core's half                                                              |
 | `8d021608` | `versionsTable` → `contentTable`, `isPanel` → `withRowMeta`, `templateDirectories` deleted — **verified locally, e2e green**                     |
@@ -100,8 +102,8 @@ Plus a comment sweep so the adapter stops _reasoning_ in feature terms.
 
 ### 1.3 Left
 
-§4.3 onward. The short version: **the auth facade**, the **insert plan**, and a handful of feature
-words still in core.
+§4.4 onward, and none of it is large: the **insert plan**, four **feature words in core**, and
+**upload's directories** (deferred out of §4.2, and half of §4.6).
 
 ---
 
@@ -384,33 +386,67 @@ Two things §4.2 was expected to carry that it does not, deliberately:
 - **upload's directories** (annex §1.4, §3.2). A separate change with its own schema diff, and it
   is half of §4.6 — the `withoutVersionsSuffix` import goes with it.
 
-### 4.3 — The auth facade
+### 4.3 — The auth facade — **done**
 
-With §4.2 landed, `AuthAdapter`'s seven methods are ordinary reads against declared tables.
+Seven members down to one, in two commits.
 
 **Full detail: `docs/decoupling-auth.md`.**
 
 ```ts
-// core/adapter.ts — what is left of it
+// core/adapter.ts — all that is left
 export interface AuthAdapter {
-  /** Opaque to core, which only hands it to Better-auth. */
+  /** The Better-auth database adapter. Opaque to core, which only hands it to Better-auth. */
   betterAuthAdapter: unknown;
 }
 ```
 
-Every other method becomes something the feature does through primitives it already has:
+**`74619ab2` — the three ordinary reads.** `isSuperAdmin`, `getBetterAuthUserId` and
+`getUserAttributes` were each `select … from <a prototype's table> where <a column> = ?`, which is
+`prototype(slug).findMany`. They looked like adapter work because all three named a collection
+called `staff`. They are `features/auth/user.server.ts` now, and the slug is `STAFF_SLUG` in the
+feature that derives that collection. The `where` builder resolves against the table's real
+columns, so `authUserId` and `isSuperAdmin` — declared columns since §4.2, not fields — needed no
+special case.
+
+**`df71014f` — the three on Better-auth's own tables**, and one new handle:
 
 ```ts
-// features/auth — was adapter.auth.isSuperAdmin(userId)
-const [id] = await rime.adapter.prototype(config.slug).findMany({
-  query: { where: { id: { equals: userId }, isSuperAdmin: { equals: true } } },
-  select: ['id']
-});
-return !!id;
+// core/adapter.ts
+table(slug: string): TableHandle;
+
+export interface TableHandle {
+  find(args?: { where?: Dic; select?: string[]; limit?: number }): Promise<Dic[]>;
+  update(args: { where: Dic; data: Dic }): Promise<void>;
+  delete(args: { where: Dic }): Promise<void>;
+}
 ```
 
-And the two hardcoded `'staff'` slugs go: the feature knows which collection is its own, because
-it is the one that derived it.
+Three verbs and a flat column-to-value filter, because a declared table has no config behind it:
+nothing to resolve a path against, no locales branch, no children, no blank to merge. That is the
+whole difference from `PrototypeHandle`, and the reason this stays small. `update` and `delete`
+refuse an empty `where` — drizzle's `and()` of nothing is `undefined`, which renders as a statement
+with no `WHERE` clause.
+
+**The annex's open question, answered: Better-auth's admin API cannot replace those three.**
+`listUsers`, `setRole` and `removeUser` all sit behind `adminMiddleware`, and every caller runs
+where no admin session exists:
+
+| call              | when                                      | why the admin API refuses    |
+| ----------------- | ----------------------------------------- | ---------------------------- |
+| `hasAuthUser`     | gates the init route — no user exists yet | no session to authorize      |
+| `setAuthUserRole` | promotes the very first signup to admin   | no admin exists to authorize |
+| `deleteAuthUser`  | rolls back a failed signup                | `YOU_CANNOT_REMOVE_YOURSELF` |
+
+`better-auth/hooks.server.ts` already carried a comment saying so — "would be cleaner to do it with
+the admin plugin, not possible at the moment". It is now written down with the reason.
+
+**Both commits are gated by specs that assert the call, not the result**, because two of these fail
+_open_. A wrong `isSuperAdmin` query that matches nothing reads as "not the super-admin" and one
+that matches too much reads as "yes"; neither is visible in a passing suite. `deleteAuthUser` is
+the same shape — it deletes sessions before the user they belong to, and reversed, the row is gone
+but the session that authenticates as it is not. So `user.spec.ts` pins the slug, the filter and
+the projection, and `better-auth-tables.spec.ts` pins the order. Proved by breaking it: dropping
+the `isSuperAdmin` condition fails one test.
 
 ### 4.4 — The insert plan
 
@@ -485,10 +521,10 @@ a new content row inherits. Lowest priority; note it, do not force it.
 4.0  verify 8d021608              ← done
 4.1  split transform              ← done
 4.2  FeatureDefinition.tables     ← done (minus upload's directories)
-4.3  the auth facade              ← unblocked, next
-4.4  the insert plan              ← independent, small
+4.3  the auth facade              ← done
+4.4  the insert plan              ← independent, small — next
 4.5  core's feature words         ← independent, four small commits
-4.6  feature to feature           ← needs 4.2 for the first half
+4.6  feature to feature           ← unblocked; upload's directories is the first half
 ```
 
 4.4 and 4.5 are the cheap ones and can be done any time something bigger is blocked.
