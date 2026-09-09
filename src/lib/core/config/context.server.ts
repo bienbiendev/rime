@@ -65,7 +65,7 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
    * adapter's transform and url writers both did `config.versions ? withVersionsSuffix(slug) : slug`,
    * which is the database layer naming a feature and its table.
    *
-   * A `Map` rather than a lookup per call: `transformDoc` runs on every document of every read.
+   * A `Map` rather than a lookup per call: the transform runs on every document of every read.
    */
   const shadowSlugs = new Map<string, string>(
     prototypeEntries(config as Config).flatMap((entry) => {

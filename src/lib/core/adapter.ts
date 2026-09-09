@@ -231,15 +231,40 @@ export interface RelationsAdapter {
 
 export interface TransformAdapter {
   /**
-   * Turns stored rows into one document.
+   * The rows one document is stored across, unflattened and grouped by what they are.
    *
-   * `withRowMeta` keeps a child row's own bookkeeping on it — `position`, `path`, `ownerId`,
-   * `locale` — and `editedBy` on the document. Off by default: an API read wants the document, an
-   * editor that writes blocks back in place wants the bookkeeping too. It replaced the adapter
-   * testing `event.params.panel`, which was the database layer working out who was asking.
+   * This used to return the finished document, which meant the database layer merged the blank,
+   * decided which bookkeeping to keep, assembled relations into document properties, and read a
+   * route parameter to work out who was asking. None of that needs a table. What does: resolving
+   * which tables hang off this document, merging each locales branch, and turning column names
+   * back into document paths — so that is all this does now. `buildDocument` in
+   * `core/pipeline/build-document.server.ts` takes it from here.
    */
-  doc(args: Dic & { withRowMeta?: boolean }): Promise<GenericDoc>;
+  rows(args: { doc: RawDoc; slug: PrototypeSlug; locale?: string }): Promise<DocumentRows>;
 }
+
+/**
+ * One document's storage rows, in core's vocabulary. No table names leave the adapter.
+ */
+export type DocumentRows = {
+  /**
+   * The document's own columns: flat, keyed by document path, with the locales branch merged in
+   * and every child table's key removed.
+   *
+   * Flat because the column-to-path rule (`__` separates path segments) is the adapter's, and
+   * applying it needs the flattened keys. Core unflattens once, at the end.
+   */
+  base: Dic;
+  /** Block rows, keyed by document path, each carrying its own `path`, `position` and `type`. */
+  blocks: Dic[];
+  /** Tree rows, same shape, ordered by `path`. */
+  tree: Dic[];
+  /**
+   * Junction rows, each with `relationTo` and `documentId` resolved off whichever foreign key
+   * column was set. A row with neither is an orphan; core warns and drops it.
+   */
+  relations: Dic[];
+};
 
 export interface AuthAdapter {
   /** The Better-auth database adapter. Opaque to core, which only hands it to Better-auth. */

@@ -6,6 +6,7 @@ import { writePlanWithFeatures } from '$lib/core/features/registry.js';
 import type { DocType, GenericDoc, PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
+import { buildDocument } from './build-document.server.js';
 import { saveBlocks } from './persist/blocks/index.server.js';
 import { saveRelations } from './persist/relations/index.server.js';
 import { saveTreeBlocks } from './persist/tree/index.server.js';
@@ -216,11 +217,16 @@ export const readDocument = async <S extends DocType, T extends GenericDoc>(args
   const { raw, config, event, locale, depth, select } = args;
   const hasSelect = !!select && Array.isArray(select) && !!select.length;
 
-  const document = await event.locals.rime.adapter.transform.doc({
+  const rows = await event.locals.rime.adapter.transform.rows({
     doc: raw,
     slug: config.slug,
-    locale,
+    locale
+  });
+
+  const document = await buildDocument(rows, {
+    config,
     event,
+    locale,
     depth,
     withBlank: !hasSelect,
     /**
