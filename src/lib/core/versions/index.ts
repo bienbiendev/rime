@@ -9,7 +9,7 @@ import { versionsReadQuery } from './read-query.js';
 import { versionsWritePlan } from './write-plan.js';
 
 /**
- * Keeps a document's history in a shadow table, and lets one version be the published one.
+ * Keeps a document's history in a versions table, and lets one version be the published one.
  *
  * **Carries its own hooks**, which it could not until core had a default for what they answer.
  * `handleNewVersion` had to run for *every* config because it was the only thing setting
@@ -38,7 +38,7 @@ export const versions = defineFeature({
    */
   docType: versionsDocType,
 
-  shadow: (config) => ({ slug: withVersionsSuffix(config.slug) }),
+  versions: (config) => ({ slug: withVersionsSuffix(config.slug) }),
 
   /**
    * Where the two halves of an update land — the base row and the version row. What

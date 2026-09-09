@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { collection } from '$lib/core/prototype/collection/index.js';
 import type { Docs, DocType } from '$lib/core/prototype/types.js';
 import type { ConfigureTransforms, FeatureConfigure } from './register.js';
-import { configureWithFeatures, shadowOf } from './fold.js';
+import { configureWithFeatures, versionsTableOf } from './fold.js';
 
 /**
  * `ApplyFeatureConfigure` intersects every declared `configure` transform instead of folding a
@@ -72,25 +72,25 @@ describe('configureWithFeatures', () => {
 });
 
 /**
- * A shadow is what makes the adapter build a second table, and nothing else does. The failure to
+ * A versions is what makes the adapter build a second table, and nothing else does. The failure to
  * catch is silent in both directions: a config that stops declaring one loses every column that
- * moved onto the shadow, and one that starts declaring a shadow for a derived config would
- * generate a shadow of a shadow.
+ * moved onto the versions, and one that starts declaring a versions for a derived config would
+ * generate a versions of a versions.
  */
-describe('shadowOf', () => {
-  it('names the shadow of a versioned config', () => {
-    expect(shadowOf(collection.features, { slug: 'pages', versions: {} })).toEqual({
+describe('versionsTableOf', () => {
+  it('names the versions of a versioned config', () => {
+    expect(versionsTableOf(collection.features, { slug: 'pages', versions: {} })).toEqual({
       slug: '$pages__versions'
     });
   });
 
-  it('gives a config with no versions no shadow', () => {
-    expect(shadowOf(collection.features, { slug: 'pages' })).toBeUndefined();
+  it('gives a config with no versions no versions', () => {
+    expect(versionsTableOf(collection.features, { slug: 'pages' })).toBeUndefined();
   });
 
-  it('gives the derived shadow collection no shadow of its own', () => {
+  it('gives the derived versions collection no versions of its own', () => {
     expect(
-      shadowOf(collection.features, { slug: '$pages__versions', versions: undefined })
+      versionsTableOf(collection.features, { slug: '$pages__versions', versions: undefined })
     ).toBeUndefined();
   });
 });

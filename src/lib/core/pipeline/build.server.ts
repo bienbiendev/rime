@@ -84,7 +84,7 @@ export const augmentHooks = <T extends Dic>(
  *
  * The **last** step of the config chain, and the only place a pipeline is built. By the time it
  * runs, the features have derived whatever they derive — upload's `<slug>Directories`, versions'
- * shadows — so a derived config is resolved by the same line as an authored one, from the same
+ * version tables — so a derived config is resolved by the same line as an authored one, from the same
  * three inputs: the prototype's own hooks, the hooks of the features this config enables, and the
  * author's `$hooks`.
  *

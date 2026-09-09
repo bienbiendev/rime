@@ -1,7 +1,7 @@
 /**
  * How a feature describes storage it needs, in core's terms.
  *
- * A `shadow` deviates a prototype's own table and a prototype's fields become its columns. Neither
+ * A `versions` deviates a prototype's own table and a prototype's fields become its columns. Neither
  * covers a table that belongs to the **feature** — better-auth's four, an api-key store, an audit
  * log. Those were written out as drizzle source inside the schema generator, which is how the
  * database layer came to know that a collection called `staff` exists and is special.

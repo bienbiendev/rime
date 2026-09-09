@@ -1,6 +1,6 @@
 import { IS_RIME_REPO, PACKAGE_NAME } from '$lib/core/constants.server.js';
 import type { Config } from '$lib/core/config/types.js';
-import { shadowOf } from '$lib/core/features/fold.js';
+import { versionsTableOf } from '$lib/core/features/fold.js';
 import { collection as collectionPrototype } from '$lib/core/prototype/index.js';
 import { capitalize } from '$lib/util/string.js';
 
@@ -37,20 +37,23 @@ export const templateRegister = <T extends Config>(config: T): string => {
   /**
    * The slug a config's content lives under, when a feature gives it a second table.
    *
-   * A shadow is registered as a collection in its own right but carries `_generateTypes: false`,
+   * A versions is registered as a collection in its own right but carries `_generateTypes: false`,
    * because it has no doc type of its own — it shares its parent's. So it is filtered out above
    * and its `RegisterCollection` entry added back here, pointing at the parent's type.
    *
    * Asked of the features that extend a collection, the way the schema generator asks. It was
    * `collection.versions` plus the versions feature's own `withVersionsSuffix`, which is codegen
    * naming a feature's table for it — and which would have registered nothing for a second
-   * feature that declared a shadow.
+   * feature that declared a versions.
    *
-   * Collections only: a shadow is registered as a collection in its own right, and this map is
+   * Collections only: a versions is registered as a collection in its own right, and this map is
    * read nowhere but in `RegisterCollection` below.
    */
-  const shadowSlugs = new Map(
-    (config.collections ?? []).map((c) => [c.slug, shadowOf(collectionPrototype.features, c)?.slug])
+  const versionsSlugs = new Map(
+    (config.collections ?? []).map((c) => [
+      c.slug,
+      versionsTableOf(collectionPrototype.features, c)?.slug
+    ])
   );
 
   const registerCollections = collections.length
@@ -59,9 +62,9 @@ export const templateRegister = <T extends Config>(config: T): string => {
         `${collections
           .map((collection) => {
             let collectionRegister = `\t\t'${collection.slug}': ${makeDocTypeName(collection.slug)}`;
-            const shadowSlug = shadowSlugs.get(collection.slug);
-            if (shadowSlug) {
-              collectionRegister += `\n\t\t'${shadowSlug}': ${makeDocTypeName(collection.slug)}`;
+            const versionsSlug = versionsSlugs.get(collection.slug);
+            if (versionsSlug) {
+              collectionRegister += `\n\t\t'${versionsSlug}': ${makeDocTypeName(collection.slug)}`;
             }
             return collectionRegister;
           })

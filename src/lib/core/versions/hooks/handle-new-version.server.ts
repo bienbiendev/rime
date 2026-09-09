@@ -14,7 +14,7 @@ import { Hooks } from '$lib/core/pipeline/define-hook.js';
  * Where a versioned document's content lives for *this* update — overriding the default.
  *
  * `resolveContentOwner` has already said "the document's own row", which is right for every
- * prototype with no shadow. This runs after it, only on a config that enables `versions`, and
+ * prototype with no versions. This runs after it, only on a config that enables `versions`, and
  * answers again:
  *
  * - **a specific version** — that row.

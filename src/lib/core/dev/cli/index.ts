@@ -54,7 +54,7 @@ program
 program
   .command('package')
   .description(
-    "Builds a rime plugin/field package for publish: svelte-kit sync, svelte-package, then " +
+    'Builds a rime plugin/field package for publish: svelte-kit sync, svelte-package, then ' +
       'generate-manifest — makes any $rime/modules splits it exports consumable by anyone who ' +
       'installs it. Equivalent to chaining those three yourself.'
   )

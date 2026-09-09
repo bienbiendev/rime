@@ -11,13 +11,13 @@ import type { WithUpload } from '$lib/core/prototype/collection/upload/util/conf
  * Whether this collection's **own table** holds `name` — which is the only question this file has
  * about where a filename can be.
  *
- * A config with a shadow keeps only its `._root()` fields on its own table; everything else is the
- * shadow's, and the shadow is a registered collection in its own right. `filename` is not a root
- * field (only `_path` is, on upload), so on a versioned upload collection it lives on the shadow
+ * A config with a versions keeps only its `._root()` fields on its own table; everything else is the
+ * versions's, and the versions is a registered collection in its own right. `filename` is not a root
+ * field (only `_path` is, on upload), so on a versioned upload collection it lives on the versions
  * and the base table has no such column at all.
  *
  * This replaces a pair of tests that named the versions feature — `!hasVersionsSuffix(slug)` to
- * drop the shadows from the scan, then `versions ? withVersionsSuffix(slug) : slug` to map each
+ * drop the version tables from the scan, then `versions ? withVersionsSuffix(slug) : slug` to map each
  * base onto one. Same set of slugs, arrived at by asking the schema instead of reading a suffix,
  * and with no feature importing another feature to do it.
  */
@@ -29,7 +29,7 @@ const ownsField = <C extends Config>(
   const field = config.fields.filter(isFormField).find((one) => one.name === name);
   if (!field) return false;
 
-  return rime.adapter.prototype(config.slug).shadow ? !!field.get.root : true;
+  return rime.adapter.prototype(config.slug).versions ? !!field.get.root : true;
 };
 
 /**
@@ -37,13 +37,13 @@ const ownsField = <C extends Config>(
  * collections — saveFile dedupes any byte-identical upload to a single file (see isSameFile).
  *
  * The scan goes table by table, not collection by collection, and that distinction is load-bearing
- * for a collection whose content lives on a shadow: querying the *collection* returns one row per
+ * for a collection whose content lives on a versions: querying the *collection* returns one row per
  * document (the read joins in a single content row), so a filename referenced only by an older
- * revision would be missed and the file deleted out from under it. Querying the shadow directly
+ * revision would be missed and the file deleted out from under it. Querying the versions directly
  * sees every revision. `ownsField` above is what picks the right table without knowing why there
  * are two.
  *
- * `selfId` must already be in whichever id-space `selfSlug` resolves to — a shadow row's own id,
+ * `selfId` must already be in whichever id-space `selfSlug` resolves to — a versions row's own id,
  * not the base row's (see `contentId` in mergeContentRow).
  *
  * Every configured locale is checked since a localized collection's query can otherwise miss rows
@@ -98,7 +98,7 @@ export const cleanUpDocumentFile = async <C extends Config>(args: {
       filename: doc.filename,
       // The table this document's own filename is in — the same expression `persistRelational`
       // uses, off what registration was handed.
-      selfSlug: rime.adapter.prototype(config.slug).shadow?.slug ?? config.slug,
+      selfSlug: rime.adapter.prototype(config.slug).versions?.slug ?? config.slug,
       // The content row's id — `contentId` rather than `versionId`, so upload names no
       // other feature. See mergeContentRow.
       selfId: doc.contentId ?? doc.id

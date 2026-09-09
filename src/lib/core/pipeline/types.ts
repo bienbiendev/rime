@@ -156,7 +156,7 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
    * The row this document's content lives on, which is what its blocks, tree nodes and relations
    * hang off.
    *
-   * The base row for a plain document, and the shadow row for one that has a shadow — `versions`
+   * The base row for a plain document, and the versions row for one that has a versions — `versions`
    * is the feature that makes those differ, and it is what sets this (see
    * features/versions/hooks/handle-new-version.server.ts). `params.versionId` above stays what the
    * caller asked for; this is where the answer goes.

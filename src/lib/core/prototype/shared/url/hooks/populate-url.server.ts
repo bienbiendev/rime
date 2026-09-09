@@ -123,13 +123,13 @@ export const populateURL = Hooks.beforeRead<'generic'>({
            * layer's: the row is the one this document is showing, and the two tables a localized
            * field lives across are what `updateWhere`'s `locale` already resolves.
            *
-           * A shadow is a registered prototype in its own right, so writing to it is the same call
+           * A versions is a registered prototype in its own right, so writing to it is the same call
            * to a different handle. `updateWhere` rather than `update` because a url is computed on
            * read: it must not move `updatedAt`.
            */
           const handle = args.event.locals.rime.adapter.prototype(config.slug);
-          const contentSlug = handle.shadow?.slug ?? config.slug;
-          const contentId = handle.shadow ? args.doc.contentId : args.doc.id;
+          const contentSlug = handle.versions?.slug ?? config.slug;
+          const contentId = handle.versions ? args.doc.contentId : args.doc.id;
 
           if (contentId) {
             args.event.locals.rime.adapter.prototype(contentSlug).updateWhere({

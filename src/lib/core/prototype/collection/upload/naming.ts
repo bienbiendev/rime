@@ -7,16 +7,16 @@ import { prototypeKebab } from '$lib/core/prototype/naming.js';
  *   medias  ->  $mediasDirectories  ->  table medias_directories  ->  url medias-directories
  *
  * `$` marks it rime-derived, but there is deliberately **no `__`**: a directories collection is
- * a sibling, not a shadow or a child, and holds no schema relationship to its parent. So its
+ * a sibling, not a versions or a child, and holds no schema relationship to its parent. So its
  * table name carries no relationship marker and stays exactly what it is today. Telling a
  * directories collection apart is the upload feature's job — by this convention — not something
  * the table name can answer.
  *
- * A folder tree belongs to the **document**, not to a revision of it, so a shadow's directories
+ * A folder tree belongs to the **document**, not to a revision of it, so a versions's directories
  * are its owner's. That used to be spelled `withoutVersionsSuffix(slug)` here — this feature
  * stripping another feature's suffix, and the only feature-to-feature import in the whole
  * registry. `directoriesOf` below asks the config whose it is instead, and a second feature
- * declaring a shadow works with no change.
+ * declaring a versions works with no change.
  */
 
 const DERIVED = '$';
@@ -28,10 +28,10 @@ export const withDirectoriesSuffix = (slug: string) =>
 
 /**
  * The directories collection a config's files live under — its own, or its owner's when it is a
- * shadow.
+ * versions.
  *
  * The one call site that has a config rather than a bare slug should use this. `_shadowOf` is
- * core's answer to "whose content is this", set by whichever feature derived the shadow.
+ * core's answer to "whose content is this", set by whichever feature derived the versions.
  */
 export const directoriesOf = (config: { slug: string; _shadowOf?: string }) =>
   withDirectoriesSuffix(config._shadowOf ?? config.slug);

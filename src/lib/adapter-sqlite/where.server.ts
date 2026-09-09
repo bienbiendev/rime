@@ -21,15 +21,15 @@ type BuildWhereArgs = {
   tables: GetRegisterType<'Tables'>;
   configCtx: ConfigContext;
   /**
-   * The prototype `slug` is the shadow of, when it is one.
+   * The prototype `slug` is the versions of, when it is one.
    *
-   * Two conditions are resolved differently against a shadow: `id` means the base row rather than
+   * Two conditions are resolved differently against a versions: `id` means the base row rather than
    * the content row, and the hierarchy columns (`_parent`, `_position`, `_path`) live on the base
    * table and have to be reached through it.
    *
-   * This used to be a suffix test — the adapter recognising a shadow by matching one feature's
-   * own naming convention, which meant a second feature declaring a shadow would silently get
-   * neither behaviour. The caller knows: it read the shadow off registration to pick this slug
+   * This used to be a suffix test — the adapter recognising a versions by matching one feature's
+   * own naming convention, which meant a second feature declaring a versions would silently get
+   * neither behaviour. The caller knows: it read the versions off registration to pick this slug
    * in the first place, so it says so rather than leaving the where builder to infer it from a
    * naming convention it does not own.
    */
@@ -448,15 +448,15 @@ function isHierarchyColumn(sqlColumn: string) {
 
 // Normalize condition object for versioned collections
 /**
- * Retargets the two id conditions when the table being queried is a shadow.
+ * Retargets the two id conditions when the table being queried is a versions.
  *
- * A caller filtering by `id` means the document, which is the base row — on a shadow that is
- * `ownerId`. `versionId` means the content row itself, which is the shadow's own `id`.
+ * A caller filtering by `id` means the document, which is the base row — on a versions that is
+ * `ownerId`. `versionId` means the content row itself, which is the versions's own `id`.
  */
 function normalizedForShadow(conditionObject: Dic, isShadow: boolean): Dic {
   if (!isShadow) return conditionObject;
 
-  // "id" refers to the document, so it resolves against the base row this shadow hangs off.
+  // "id" refers to the document, so it resolves against the base row this versions hangs off.
   if ('id' in conditionObject) {
     const idOperator = conditionObject.id;
     delete conditionObject.id;

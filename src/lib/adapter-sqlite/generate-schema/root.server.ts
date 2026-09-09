@@ -36,11 +36,11 @@ type Args = {
    */
   featureColumns?: ColumnDeclaration[];
   /**
-   * The base table this one shadows, when it is a shadow — it gets an `ownerId` pointing back at
+   * The base table this one version tables, when it is a versions — it gets an `ownerId` pointing back at
    * it. Named after the relationship rather than after the feature that asks for one: what makes
-   * a shadow is a feature declaring one, never a config member this module recognises.
+   * a versions is a feature declaring one, never a config member this module recognises.
    */
-  shadows?: string | false;
+  versionsOf?: string | false;
   blocksRegister: string[];
 };
 
@@ -65,7 +65,7 @@ const buildRootTable = async ({
   relationFieldsMap = {},
   relationsDic = {},
   featureColumns = [],
-  shadows,
+  versionsOf,
   blocksRegister
 }: Args): Promise<Return> => {
   const blocksTables: string[] = [];
@@ -198,8 +198,8 @@ const buildRootTable = async ({
     if (hasParent) {
       strUnlocalizedFields.push(templateParent(rootName));
     }
-    if (shadows) {
-      strUnlocalizedFields.push(templateParent(shadows));
+    if (versionsOf) {
+      strUnlocalizedFields.push(templateParent(versionsOf));
     }
     for (const column of featureColumns) {
       strUnlocalizedFields.push(templateDeclaredColumn(column) + ',');
@@ -214,8 +214,8 @@ const buildRootTable = async ({
     if (hasParent) {
       strFields.push(templateParent(rootName));
     }
-    if (shadows) {
-      strFields.push(templateParent(shadows));
+    if (versionsOf) {
+      strFields.push(templateParent(versionsOf));
     }
     for (const column of featureColumns) {
       strFields.push(templateDeclaredColumn(column) + ',');

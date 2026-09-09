@@ -15,9 +15,9 @@ import { mapSegments, toCamelCase, toSnakeCase } from '$lib/util/string.js';
  * The vocabulary follows docs/decoupling.md, appendix A:
  *
  * - **base**   — a prototype's own table (`pages`)
- * - **shadow** — a second table standing in for the base, declared by whichever feature deviates
- *                the prototype (`ShadowDeclaration`). Callers pass an already-resolved `owner`,
- *                because which of base or shadow owns a subtree is decided before a name is
+ * - **versions** — a second table standing in for the base, declared by whichever feature deviates
+ *                the prototype (`VersionsTable`). Callers pass an already-resolved `owner`,
+ *                because which of base or versions owns a subtree is decided before a name is
  *                needed.
  * - **child**  — hangs off an owner by `ownerId`: blocks, tree, and the relations junction
  * - **branch** — splits an owner in two: the localized half
@@ -65,9 +65,9 @@ export type ChildKind = 'blocks' | 'tree' | 'rels';
 
 export type TableParts = {
   /**
-   * The base or shadow table this hangs off, already resolved.
+   * The base or versions table this hangs off, already resolved.
    *
-   * Everything below is named relative to it, which is what makes a config gaining a shadow move
+   * Everything below is named relative to it, which is what makes a config gaining a versions move
    * a whole subtree of children onto it.
    */
   owner: TableName;

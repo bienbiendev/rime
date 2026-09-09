@@ -2,10 +2,7 @@ import { dev } from '$app/environment';
 import { getRequestEvent } from '$app/server';
 import { BETTER_AUTH_ROLES } from '$lib/core/auth/constant.server.js';
 import { userAttributes } from '$lib/core/auth/user.server.js';
-import {
-  deleteAuthUser,
-  setAuthUserRole
-} from '$lib/core/auth/better-auth-tables.server.js';
+import { deleteAuthUser, setAuthUserRole } from '$lib/core/auth/better-auth-tables.server.js';
 import { logger } from '$lib/core/logger.server.js';
 import { trycatch } from '$lib/util/function.js';
 import { omit } from '$lib/util/object.js';

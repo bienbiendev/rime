@@ -10,7 +10,7 @@ import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
  * `shouldRetrieveDraft` table `getOriginalDocument` decoded out of `versionOperation`:
  *
  * - **a named version** — that row, whatever its status. `versionId` rather than `id`, because on
- *   a shadow `id` means the document (see `normalizedForShadow` in the adapter's where builder).
+ *   a versions `id` means the document (see `normalizedForShadow` in the adapter's where builder).
  * - **a config with no drafts** — no narrowing, which the adapter reads as the newest row. There
  *   is no meaningful status on its rows, and filtering on one would match nothing.
  * - **the original of an update** — always the published one. `?draft=true` on an update means

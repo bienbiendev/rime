@@ -4,16 +4,16 @@ import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import type { BuiltCollection, Config } from '$lib/core/config/types.js';
 
 /**
- * The shadow holds the content half of a document, so it carries the content half of the fields:
+ * The versions holds the content half of a document, so it carries the content half of the fields:
  * everything except what the base row keeps (`._root()`). The schema generator splits the two
- * tables by the same flag, so a shadow config claiming a base field would name a column its table
+ * tables by the same flag, so a versions config claiming a base field would name a column its table
  * does not have.
  */
 const contentFields = (config: { fields: BuiltCollection['fields'] }) =>
   config.fields.filter((field) => !field.get.root);
 
 /**
- * Derives the shadow collection behind every versioned config — `$pages__versions` for a versioned
+ * Derives the versions collection behind every versioned config — `$pages__versions` for a versioned
  * `pages`, and one per versioned area, which is a collection because a single document still has
  * many revisions.
  */
@@ -37,7 +37,7 @@ export function makeVersionsCollectionsAliases<C extends Config>(config: C) {
         panel: false,
         _generateTypes: false,
         _generateSchema: false,
-        // Whose content this holds. The feature that derives a shadow is the only thing that knows,
+        // Whose content this holds. The feature that derives a versions is the only thing that knows,
         // and saying it is what stops anything downstream working it out from the slug.
         _shadowOf: collection.slug
       } as const;

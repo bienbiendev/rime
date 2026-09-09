@@ -1,6 +1,6 @@
 import type { Config } from '$lib/core/config/types.js';
 import { area, collection } from '$lib/core/prototype/index.js';
-import { columnsOf, distinctFeatures, shadowOf, tablesOf } from '$lib/core/features/fold.js';
+import { columnsOf, distinctFeatures, versionsTableOf, tablesOf } from '$lib/core/features/fold.js';
 import { baseTableName, declaredTableProperty, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
 import { toPascalCase } from '$lib/util/string.js';
@@ -42,21 +42,21 @@ export async function generateSchemaString<T extends Config>(config: T) {
 
     // Whether this config's content lives on its own row or on a second table, asked of the
     // features that extend the prototype rather than of a member the adapter recognises by name.
-    // A feature declaring a shadow is the only thing that makes two tables here.
-    const shadow = shadowOf(entry.features, prototype);
+    // A feature declaring a versions is the only thing that makes two tables here.
+    const versions = versionsTableOf(entry.features, prototype);
 
     // The prototype's own table, resolved from its slug rather than case-converted here —
     // a derived slug like `$someChild` has to lose its `$` and snake-case its segments.
     const baseName = baseTableName(prototype.slug);
     let rootTableName: TableName = baseName;
-    let shadowRelationsDefinitions: string[] = [];
+    let versionsRelationsDefinitions: string[] = [];
 
     schema.push(templateHead(baseName));
 
-    if (shadow) {
-      // A shadowed prototype is two tables: the base row keeps its own columns — `createdAt`,
+    if (versions) {
+      // A versioned prototype is two tables: the base row keeps its own columns — `createdAt`,
       // `updatedAt` and whatever the config marks `._root()` — and everything else moves onto the
-      // shadow, which is what the rest of this iteration then builds.
+      // versions, which is what the rest of this iteration then builds.
       const { schema: baseSchema } = await buildRootTable({
         blocksRegister: [],
         fields: [
@@ -67,32 +67,32 @@ export async function generateSchemaString<T extends Config>(config: T) {
         rootName: baseName,
         locales: [],
         featureColumns: columnsOf(entry.features, prototype),
-        shadows: false,
+        versionsOf: false,
         tableName: baseName
       });
       schema.push(baseSchema);
 
-      // From here on, "root" means the shadow: its blocks, tree and relations tables hang off it.
-      rootTableName = baseTableName(shadow.slug);
+      // From here on, "root" means the versions: its blocks, tree and relations tables hang off it.
+      rootTableName = baseTableName(versions.slug);
 
-      const manyShadowsToOneName = `rel_${rootTableName}HasOne${toPascalCase(baseName)}`;
-      const oneToManyShadowsName = `rel_${baseName}HasMany${toPascalCase(rootTableName)}`;
+      const manyVersionsToOneName = `rel_${rootTableName}HasOne${toPascalCase(baseName)}`;
+      const oneToManyVersionsName = `rel_${baseName}HasMany${toPascalCase(rootTableName)}`;
 
-      shadowRelationsDefinitions = [
+      versionsRelationsDefinitions = [
         templateRelationOne({
-          name: manyShadowsToOneName,
+          name: manyVersionsToOneName,
           table: rootTableName,
           parent: baseName
         }),
         templateRelationMany({
-          name: oneToManyShadowsName,
+          name: oneToManyVersionsName,
           table: baseName,
           many: [rootTableName]
         })
       ];
 
       enumTables = [...enumTables, baseName];
-      enumRelations = [...enumRelations, manyShadowsToOneName, oneToManyShadowsName];
+      enumRelations = [...enumRelations, manyVersionsToOneName, oneToManyVersionsName];
     }
 
     const {
@@ -102,11 +102,11 @@ export async function generateSchemaString<T extends Config>(config: T) {
       relationFieldsHasLocale
     } = await buildRootTable({
       blocksRegister,
-      fields: shadow ? prototype.fields.filter((field) => !field.get.root) : prototype.fields,
+      fields: versions ? prototype.fields.filter((field) => !field.get.root) : prototype.fields,
       rootName: rootTableName,
       locales: config.localization?.locales || [],
       featureColumns: columnsOf(entry.features, prototype),
-      shadows: shadow ? baseName : false,
+      versionsOf: versions ? baseName : false,
       tableName: rootTableName
     });
 
@@ -137,7 +137,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
     schema.push(
       prototypeSchema,
       junctionTable,
-      ...shadowRelationsDefinitions,
+      ...versionsRelationsDefinitions,
       relationsDefinitions
     );
   }

@@ -1,7 +1,7 @@
 import type { AreaSlug, CollectionSlug, Config, PrototypeSlug } from '$lib/types.js';
 import { RimeError } from '../errors/index.js';
 import type { BuildConfig } from './build.server.js';
-import { shadowOf } from '../features/fold.js';
+import { versionsTableOf } from '../features/fold.js';
 import { area, collection } from '$lib/core/prototype/index.js';
 
 /**
@@ -48,13 +48,13 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
    *
    * A `Map` rather than a lookup per call: the transform runs on every document of every read.
    */
-  const shadowSlugs = new Map<string, string>(
+  const versionsSlugs = new Map<string, string>(
     [
       ...config.collections.map((c) => [collection.features, c] as const),
       ...config.areas.map((a) => [area.features, a] as const)
     ].flatMap(([features, prototypeConfig]) => {
-      const shadow = shadowOf(features, prototypeConfig);
-      return shadow ? [[prototypeConfig.slug, shadow.slug] as [string, string]] : [];
+      const versions = versionsTableOf(features, prototypeConfig);
+      return versions ? [[prototypeConfig.slug, versions.slug] as [string, string]] : [];
     })
   );
 
@@ -124,10 +124,10 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
 
     /**
      * The slug a config's content lives under, or `undefined` when it lives on the config's own
-     * row. `shadowSlugOf(slug) ?? slug` is "the table this config's content is in".
+     * row. `versionsSlugOf(slug) ?? slug` is "the table this config's content is in".
      */
-    shadowSlugOf: (slug: string): PrototypeSlug | undefined =>
-      shadowSlugs.get(slug) as PrototypeSlug | undefined,
+    versionsSlugOf: (slug: string): PrototypeSlug | undefined =>
+      versionsSlugs.get(slug) as PrototypeSlug | undefined,
 
     /**
      * Gets the default locale from the configuration

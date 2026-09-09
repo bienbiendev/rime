@@ -7,11 +7,11 @@ import type { ColumnDeclaration, TableDeclaration } from './tables.js';
  * A feature **augments and extends** what a prototype defines.
  *
  * The middle of the three layers — a prototype *defines* the base thing, a feature augments and
- * extends it at large scale (across prototypes, adding shadows and children), a plugin augments
+ * extends it at large scale (across prototypes, adding version tables and children), a plugin augments
  * at small scale. See docs/architecture-target.md.
  *
  * What a feature owns is its whole vertical: the fields it adds to a config, the hooks that make
- * those fields mean something, and (for `shadow`/`child`) the tables it asks the adapter for.
+ * those fields mean something, and (for `versions`/`child`) the tables it asks the adapter for.
  * What it does *not* own is where its document hooks sit in the pipeline — see `hooks` below.
  *
  * Only the members some feature here actually uses are declared. `beforeBoot`, `afterBoot`,
@@ -49,23 +49,23 @@ export type FeatureDefinition = {
    * The table this feature deviates a config's content into, or `undefined` when it deviates
    * nothing.
    *
-   * A **shadow** stands in for the config's own table: the base row keeps its identity, its
+   * A **versions** stands in for the config's own table: the base row keeps its identity, its
    * timestamps and whatever fields are marked `._root()`, and every other column — plus the whole
-   * subtree of children hanging off them — moves onto the shadow. Which is why the answer is one
+   * subtree of children hanging off them — moves onto the versions. Which is why the answer is one
    * slug: name the row that owns the content and everything downstream follows.
    *
    * Asked of a config, not of a kind, and only for configs where `enabled` — so a prototype with
-   * versions on one collection and not the next gets a shadow for the first alone.
+   * versions on one collection and not the next gets a versions for the first alone.
    *
-   * This is what makes `type: 'shadow'` mean something: the adapter builds the second table from
+   * This is what makes `type: 'versions'` mean something: the adapter builds the second table from
    * what is declared here rather than from a member it recognises by name.
    */
-  shadow?: (config: any) => ShadowDeclaration | undefined;
+  versions?: (config: any) => VersionsTable | undefined;
 
   /**
    * Tables this feature needs that no prototype declares.
    *
-   * `shadow` above deviates a prototype's own table; this is for storage that belongs to the
+   * `versions` above deviates a prototype's own table; this is for storage that belongs to the
    * feature itself — better-auth's four tables, an api-key store. They were drizzle source inside
    * `adapter-sqlite/generate-schema/templates.server.ts`, emitted unconditionally, which is how the
    * schema generator came to import a feature's vocabulary.
@@ -165,7 +165,7 @@ export type FeatureDefinition = {
    * Where this feature sends the halves of an update.
    *
    * The default plan puts everything on the prototype's own row. A feature that gives a config a
-   * second row to write — a shadow — refines the plan to say which half lands where, and the
+   * second row to write — a versions — refines the plan to say which half lands where, and the
    * adapter then writes exactly what it is handed.
    *
    * Folded in the prototype's feature order, gated by `enabled`, at a fixed point in `runUpdate`:
@@ -195,16 +195,16 @@ export type FeatureDefinition = {
   /**
    * How this feature narrows *which* content row a read means.
    *
-   * A prototype with a shadow has more than one row that could answer a read, and the difference
+   * A prototype with a versions has more than one row that could answer a read, and the difference
    * between them is the feature's own — a status, a revision the caller named. So the feature
-   * returns the filter, as an ordinary `OperationQuery`, and the adapter applies it to the shadow
+   * returns the filter, as an ordinary `OperationQuery`, and the adapter applies it to the versions
    * along with everything else it was asked to filter by.
    *
    * `undefined` means "no narrowing", which the adapter reads as the newest content row. That is
    * not a policy sneaking back in: it is what "the content of this document" means when nobody
    * said otherwise, the same statement as `updatedAt` being the default sort.
    *
-   * First answer wins, like `shadow` — a config has one content row, so it has one rule for
+   * First answer wins, like `versions` — a config has one content row, so it has one rule for
    * picking it.
    *
    * This is what `draft` and `versionId` used to be on the adapter contract. They were request
@@ -249,15 +249,15 @@ export type WritePlan = {
 };
 
 /**
- * A shadow table, as the feature that owns it describes it.
+ * A versions table, as the feature that owns it describes it.
  *
  * Only `slug` for now, and deliberately: it is what the schema needs, and an unread member is
  * exactly the mistake this declaration replaces. The read selector and the owner column join it
  * when there is something reading them (docs/decoupling.md § 4.4).
  */
-export type ShadowDeclaration = {
+export type VersionsTable = {
   /**
-   * The shadow's own slug — `$pages__versions`. In slug space, never a table name: what a slug
+   * The versions's own slug — `$pages__versions`. In slug space, never a table name: what a slug
    * is called in the database is the adapter's business, and it maps.
    */
   slug: string;

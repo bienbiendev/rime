@@ -12,20 +12,20 @@ type Args = {
   tables: any;
   /**
    * The table this prototype's content lives in, when it is not the base row — resolved by the
-   * caller from the shadow it was registered with.
+   * caller from the versions it was registered with.
    *
-   * This used to be read off a config member, with the shadow's name rebuilt here from a
+   * This used to be read off a config member, with the versions's name rebuilt here from a
    * feature's own suffix. Two things wrong with that: the adapter named a feature, and it asked a
    * config a question the schema already answers. The question the sort builder actually has is
    * "are this prototype's sortable columns on the base row or somewhere else", which is about
    * tables, so it is asked of `tables`.
    */
-  shadow?: TableName;
+  versions?: TableName;
 };
 
-export const buildOrderByParam = ({ slug, locale, tables, by, shadow }: Args) => {
-  // Presence in the schema, not a config member: a declared shadow with no table is not one.
-  const hasShadow = !!shadow && shadow in tables;
+export const buildOrderByParam = ({ slug, locale, tables, by, versions }: Args) => {
+  // Presence in the schema, not a config member: a declared versions with no table is not one.
+  const hasShadow = !!versions && versions in tables;
 
   const getOrderFunc = (str?: string) => {
     if (typeof str !== 'string') return asc;
@@ -55,12 +55,12 @@ export const buildOrderByParam = ({ slug, locale, tables, by, shadow }: Args) =>
   const columnStr = by.replace(/^-/, '');
 
   /**
-   * A column on the prototype's own table, whether or not it also has a shadow.
+   * A column on the prototype's own table, whether or not it also has a versions.
    *
-   * This used to be inside the `!hasShadow` branch, and the shadow branch never looked at the base
-   * table at all — so a shadowed prototype could not sort by any of its **base-row** columns. Those
+   * This used to be inside the `!hasShadow` branch, and the versions branch never looked at the base
+   * table at all — so a versioned prototype could not sort by any of its **base-row** columns. Those
    * are exactly the `._root()` ones — the hierarchy and path columns features put on a base row.
-   * `?sort=_position` on a shadowed prototype warned "not a property" and silently ordered by
+   * `?sort=_position` on a versioned prototype warned "not a property" and silently ordered by
    * `createdAt` instead.
    *
    * Safe in both branches because the two tables' columns are disjoint by construction — the
@@ -72,7 +72,7 @@ export const buildOrderByParam = ({ slug, locale, tables, by, shadow }: Args) =>
     return [orderFunc(rootTable[columnStr])];
   }
 
-  // No shadow: every remaining sortable column is a localized one.
+  // No versions: every remaining sortable column is a localized one.
   if (!hasShadow) {
     // Check if it's a localized field in a non-versioned collection
     if (locale) {
@@ -98,17 +98,17 @@ export const buildOrderByParam = ({ slug, locale, tables, by, shadow }: Args) =>
       }
     }
   } else {
-    const shadowTableName = shadow!;
-    const shadowTable = tables[shadowTableName];
-    const shadowTableColumns = Object.keys(getTableColumns(shadowTable));
+    const versionsTableName = versions!;
+    const versionsTable = tables[versionsTableName];
+    const versionsTableColumns = Object.keys(getTableColumns(versionsTable));
 
-    // Check if the column exists in the shadow table and is not a system field
+    // Check if the column exists in the versions table and is not a system field
     if (
-      shadowTableColumns.includes(columnStr) &&
+      versionsTableColumns.includes(columnStr) &&
       columnStr !== 'createdAt' &&
       columnStr !== 'updatedAt'
     ) {
-      const { name: sqlShadowTableName } = getTableConfig(shadowTable);
+      const { name: sqlShadowTableName } = getTableConfig(versionsTable);
       const { name: sqlRootTableName } = getTableConfig(rootTable);
 
       // Use a subquery to get the value from the newest content row for ordering
@@ -121,19 +121,19 @@ export const buildOrderByParam = ({ slug, locale, tables, by, shadow }: Args) =>
       ];
     }
 
-    // Check if it's a localized field on the shadow
+    // Check if it's a localized field on the versions
     if (locale) {
-      const shadowLocaleTableName = tableName({
-        owner: shadowTableName,
+      const versionsLocaleTableName = tableName({
+        owner: versionsTableName,
         branch: 'locales'
       }) as keyof typeof tables;
-      if (shadowLocaleTableName in tables) {
-        const localeTable = tables[shadowLocaleTableName];
+      if (versionsLocaleTableName in tables) {
+        const localeTable = tables[versionsLocaleTableName];
         const localizedColumns = getTableColumns(localeTable);
 
         if (Object.keys(localizedColumns).includes(columnStr)) {
           const { name: sqlLocaleTableName } = getTableConfig(localeTable);
-          const { name: sqlShadowTableName } = getTableConfig(shadowTable);
+          const { name: sqlShadowTableName } = getTableConfig(versionsTable);
           const { name: sqlRootTableName } = getTableConfig(rootTable);
 
           // Nested subquery: first get the newest content row, then get the localized value

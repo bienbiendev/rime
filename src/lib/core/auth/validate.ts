@@ -16,7 +16,7 @@ import { SelectFieldBuilder } from '$lib/fields/select/index.js';
 export const validateAuth = (config: BuiltCollection): string[] => {
   const errors: string[] = [];
 
-  // A versioned auth collection would put credentials on a shadow row and leave the sign-in path
+  // A versioned auth collection would put credentials on a versions row and leave the sign-in path
   // reading whichever version happened to be published.
   if (config.versions) {
     errors.push(`Auth collections can't be versionned (${config.slug})`);

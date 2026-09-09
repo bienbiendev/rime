@@ -168,16 +168,16 @@ export const persistRelational = async (args: {
    * `features/versions/naming.ts` that read `config.versions` and appended the feature's own
    * suffix. Three files in the pipeline importing a feature to name a table.
    *
-   * Registration already answered it: `shadow` is what the feature declared and the adapter was
-   * handed at boot (stage 2), so the handle knows, and a second feature declaring a shadow works
+   * Registration already answered it: `versions` is what the feature declared and the adapter was
+   * handed at boot (stage 2), so the handle knows, and a second feature declaring a versions works
    * here with no change. `ownerId` is the row; this is the table it is in.
    *
    * The cast is the one `findManyPrototypes` takes, and sound for the same reason:
-   * `ShadowDeclaration.slug` is a plain `string` because a feature names a slug and only the
-   * registry knows which exist — but a shadow *is* a registered prototype, since the feature that
+   * `VersionsTable.slug` is a plain `string` because a feature names a slug and only the
+   * registry knows which exist — but a versions *is* a registered prototype, since the feature that
    * declares one also derives its config. `contentOwnerSlug` cast to `CollectionSlug` here too.
    */
-  const ownerSlug = (adapter.prototype(config.slug).shadow?.slug ?? config.slug) as PrototypeSlug;
+  const ownerSlug = (adapter.prototype(config.slug).versions?.slug ?? config.slug) as PrototypeSlug;
 
   const blocksDiff = await saveBlocks({
     context,

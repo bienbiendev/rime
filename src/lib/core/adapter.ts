@@ -1,5 +1,5 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import type { ShadowDeclaration } from '$lib/core/features/define.js';
+import type { VersionsTable } from '$lib/core/features/define.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { GenericBlock, PrototypeSlug, RawDoc, TreeBlock } from '$lib/core/prototype/types.js';
 import type { BeforeOperationRelation, Relation } from '$lib/fields/relation/index.js';
@@ -24,7 +24,7 @@ export interface Adapter {
   /**
    * Register a prototype. Boot only — see core/boot.server.ts.
    *
-   * The adapter resolves its base, shadow, children and branches once here, rather than working
+   * The adapter resolves its base, versions, children and branches once here, rather than working
    * them out from a slug on every request, and refuses loudly if the tables are not there.
    */
   registerPrototype(args: RegisterPrototypeArgs): void;
@@ -57,7 +57,7 @@ export type RegisterPrototypeArgs = {
   /**
    * Where this config's content lives, when it does not live on the config's own row.
    *
-   * Answered by whichever feature deviates it — `versions` today — and folded by `shadowOf` in
+   * Answered by whichever feature deviates it — `versions` today — and folded by `versionsTableOf` in
    * `core/features/registry.ts`, so boot hands the adapter an answer rather than the adapter
    * working one out. It used to derive the table by appending a suffix to the slug, which meant
    * the database layer knew a feature's naming convention and could only ever know that one.
@@ -65,7 +65,7 @@ export type RegisterPrototypeArgs = {
    * `undefined` means the content is on the base row. The declaration carries a slug, not a table
    * name: how a slug is spelled in the database stays the adapter's business.
    */
-  shadow?: ShadowDeclaration;
+  versions?: VersionsTable;
   /**
    * Whether this prototype holds exactly one document.
    *
@@ -79,7 +79,7 @@ export type RegisterPrototypeArgs = {
 /**
  * What the adapter can do to one registered prototype.
  *
- * A uniform toolbox: find, findMany, insert, update, delete over a base and its shadow. Which of
+ * A uniform toolbox: find, findMany, insert, update, delete over a base and its versions. Which of
  * these a caller may actually reach is decided by the prototype definition in core/prototype/,
  * not here — except for the two a singleton refuses outright, which the adapter enforces at the
  * database boundary because that is where the guarantee has to hold.
@@ -88,8 +88,8 @@ export interface PrototypeHandle {
   readonly slug: string;
   readonly singleton: boolean;
   readonly config: BuiltArea | BuiltCollection;
-  /** What it was registered with — see `RegisterPrototypeArgs.shadow`. */
-  readonly shadow?: ShadowDeclaration;
+  /** What it was registered with — see `RegisterPrototypeArgs.versions`. */
+  readonly versions?: VersionsTable;
 
   /**
    * One document, merged with the version it should show. `undefined` when nothing matches —
@@ -133,13 +133,13 @@ export interface PrototypeHandle {
    * `content` carries no `id`, because the row does not exist yet. The adapter makes it and
    * answers with it.
    *
-   * A prototype with a shadow **requires** `content`. Its base row has no columns for the content,
+   * A prototype with a versions **requires** `content`. Its base row has no columns for the content,
    * so a plan that names no content half would write half a document and hang its blocks off the
    * wrong row; the adapter refuses instead.
    *
    * Returns the document's id and `contentId` — the row its content landed on, which is what its
    * blocks, tree nodes and relations hang off. The two are the same when the prototype has no
-   * shadow.
+   * versions.
    */
   insert(args: {
     data: Dic;
@@ -185,8 +185,8 @@ export interface PrototypeHandle {
 }
 
 /**
- * `parentSlug` is the slug that owns the children — the prototype's shadow when it has one, the
- * prototype itself when not. `pipeline/run.server.ts` resolves it off `PrototypeHandle.shadow`,
+ * `parentSlug` is the slug that owns the children — the prototype's versions when it has one, the
+ * prototype itself when not. `pipeline/run.server.ts` resolves it off `PrototypeHandle.versions`,
  * which is what registration was handed; nothing works it out from a config member.
  */
 export interface BlocksAdapter {

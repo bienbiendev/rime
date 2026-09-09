@@ -1,5 +1,5 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import type { ShadowDeclaration } from '$lib/core/features/define.js';
+import type { VersionsTable } from '$lib/core/features/define.js';
 import { normalizeQuery } from '$lib/core/pipeline/query.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
@@ -16,7 +16,7 @@ import { buildWithParam } from './select.server.js';
 /**
  * Reading a prototype's rows.
  *
- * The adapter's vocabulary is docs/decoupling.md appendix A: **base**, **shadow** (a second table
+ * The adapter's vocabulary is docs/decoupling.md appendix A: **base**, **versions** (a second table
  * holding the content), **child** (blocks, tree, the relations junction) and **branch** (the
  * localized half). "Collection" and "area" are not adapter words. They were, in the two facades
  * this replaces, and that was the mistake: a whole parallel implementation existed because the
@@ -30,8 +30,8 @@ import { buildWithParam } from './select.server.js';
 
 type ReadArgs = {
   slug: string;
-  /** Where the content lives, when not on the base row — see `RegisterPrototypeArgs.shadow`. */
-  shadow?: ShadowDeclaration;
+  /** Where the content lives, when not on the base row — see `RegisterPrototypeArgs.versions`. */
+  versions?: VersionsTable;
   /** Restrict to one root row. Omitted for a singleton, which has exactly one. */
   id?: string;
   select?: string[];
@@ -57,7 +57,7 @@ type ReadArgs = {
  */
 export const readPrototype = async (
   { db, tables, configCtx }: DepsWithConfig,
-  { slug, id, select, locale, content, config, shadow }: ReadArgs
+  { slug, id, select, locale, content, config, versions }: ReadArgs
 ): Promise<Dic | undefined> => {
   const table = baseTableName(slug);
   const rootTable = tables[table];
@@ -66,8 +66,8 @@ export const readPrototype = async (
   const queryTable = (db.query as Record<string, any>)[table];
   const byId = id ? { where: eq(rootTable.id, id) } : {};
 
-  // No shadow: the content is on the base row and there is nothing to merge.
-  if (!shadow) {
+  // No versions: the content is on the base row and there is nothing to merge.
+  if (!versions) {
     return queryTable.findFirst({
       columns: adapterUtil.columnsParams({ table: rootTable, select }),
       ...byId,
@@ -75,9 +75,9 @@ export const readPrototype = async (
     });
   }
 
-  // See findManyPrototypes for why the shadow's slug is castable.
-  const shadowSlug = shadow.slug as PrototypeSlug;
-  const contentTable = baseTableName(shadowSlug);
+  // See findManyPrototypes for why the versions's slug is castable.
+  const versionsSlug = versions.slug as PrototypeSlug;
+  const contentTable = baseTableName(versionsSlug);
 
   const doc = await queryTable.findFirst({
     columns: adapterUtil.columnsParams({ table: rootTable, select }),
@@ -97,7 +97,7 @@ export const readPrototype = async (
           ? {
               where: buildWhereParam({
                 query: normalizeQuery(content),
-                slug: shadowSlug,
+                slug: versionsSlug,
                 base: slug as PrototypeSlug,
                 locale,
                 db,
@@ -131,7 +131,7 @@ export const findManyPrototypes = async (
     locale,
     content,
     config,
-    shadow
+    versions
   } = args;
   // buildOrderByParam and buildWhereParam resolve fields against the config, so they take a
   // prototype slug. Registration guarantees this one is registered, hence is one.
@@ -139,8 +139,8 @@ export const findManyPrototypes = async (
   const table = baseTableName(slug);
   const query = incomingQuery ? normalizeQuery(incomingQuery) : undefined;
 
-  // No shadow: everything is on the base table, so this is one plain query.
-  if (!shadow) {
+  // No versions: everything is on the base table, so this is one plain query.
+  if (!versions) {
     const params: Dic = {
       with: buildWithParam({ table, select, tables, config, locale }) || undefined,
       orderBy: buildOrderByParam({ slug, locale, tables, by: sort }),
@@ -164,23 +164,23 @@ export const findManyPrototypes = async (
   // Two different things that stopped being the same string when the naming convention changed:
   // buildWithParam reads the schema, so it takes a table name; buildWhereParam resolves fields
   // against the config, so it takes a slug.
-  // `ShadowDeclaration.slug` is a plain string on purpose — a feature names a slug, and only the
+  // `VersionsTable.slug` is a plain string on purpose — a feature names a slug, and only the
   // registry knows which slugs exist. The cast is the same one `slug` above takes, and sound for
-  // the same reason: a shadow is a registered prototype in its own right (the feature that
+  // the same reason: a versions is a registered prototype in its own right (the feature that
   // declares one also derives its config), so `buildWhereParam` can resolve fields against it.
-  const shadowSlug = shadow.slug as PrototypeSlug;
-  const contentTable = baseTableName(shadowSlug);
+  const versionsSlug = versions.slug as PrototypeSlug;
+  const contentTable = baseTableName(versionsSlug);
   const withParam =
     buildWithParam({ table: contentTable, select, tables, config, locale }) || undefined;
 
   // The caller's own filter, and the one saying which content row each document shows. Both
-  // resolve against the shadow, so they are two wheres to `and` rather than two query objects to
+  // resolve against the versions, so they are two wheres to `and` rather than two query objects to
   // splice — which is what this was, a condition spliced into somebody else's `where` by hand
   // behind a config read.
   const wheres = [query, content && normalizeQuery(content)]
     .filter((one) => !!one)
     .map((one) =>
-      buildWhereParam({ query: one, slug: shadowSlug, base: slug, locale, db, configCtx, tables })
+      buildWhereParam({ query: one, slug: versionsSlug, base: slug, locale, db, configCtx, tables })
     )
     // Only `undefined` drops out. `buildWhereParam` answers `false` for a degenerate query (an
     // empty `and`/`or`), and that was passed straight to drizzle before; it still is.
@@ -191,8 +191,8 @@ export const findManyPrototypes = async (
   const params: Dic = {
     limit: limit || (typeof offset === 'number' ? 1000000 : undefined),
     offset: offset,
-    // The sortable columns are on the shadow, so the sort builder is handed it by name.
-    orderBy: buildOrderByParam({ slug, locale, tables, by: sort, shadow: contentTable })
+    // The sortable columns are on the versions, so the sort builder is handed it by name.
+    orderBy: buildOrderByParam({ slug, locale, tables, by: sort, versions: contentTable })
   };
   Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);
 
@@ -227,7 +227,7 @@ export const findManyPrototypes = async (
 /** Removes a document. Its content rows and children follow by cascade. */
 
 type FindManyArgs = {
-  shadow?: ShadowDeclaration;
+  versions?: VersionsTable;
   slug: string;
   select?: string[];
   query?: OperationQuery;

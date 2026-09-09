@@ -10,11 +10,11 @@ import { directoriesOf, withDirectoriesSuffix } from './naming.js';
  * feature-to-feature import in the registry, and an answer that could only ever be right for the
  * one feature whose convention it knew.
  *
- * `_shadowOf` is core's answer, set by whichever feature derived the shadow. Asserted here against
+ * `_shadowOf` is core's answer, set by whichever feature derived the versions. Asserted here against
  * a plain object on purpose: nothing in this file knows that `versions` exists.
  */
 describe('directoriesOf', () => {
-  it('is a config’s own directories when it shadows nothing', () => {
+  it('is a config’s own directories when it version tables nothing', () => {
     expect(directoriesOf({ slug: 'medias' })).toBe('$mediasDirectories');
   });
 
@@ -24,8 +24,8 @@ describe('directoriesOf', () => {
     );
   });
 
-  it('works for a shadow named by any convention, not just one suffix', () => {
-    // The whole point of asking rather than stripping: a second feature declaring a shadow needs
+  it('works for a versions named by any convention, not just one suffix', () => {
+    // The whole point of asking rather than stripping: a second feature declaring a versions needs
     // no change here, whatever it calls the slug.
     expect(directoriesOf({ slug: 'medias--anything', _shadowOf: 'medias' })).toBe(
       '$mediasDirectories'

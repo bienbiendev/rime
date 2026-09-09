@@ -345,13 +345,13 @@ export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'up
   _generateSchema?: false;
   _generateRoutes?: false;
   /**
-   * The config this one shadows, when it is a shadow — the inverse of
-   * `RegisterPrototypeArgs.shadow`, in slug space.
+   * The config this one version tables, when it is a versions — the inverse of
+   * `RegisterPrototypeArgs.versions`, in slug space.
    *
-   * A shadow carries its owner's members, so anything asking "whose content am I?" used to answer
+   * A versions carries its owner's members, so anything asking "whose content am I?" used to answer
    * by string surgery on the slug: `withDirectoriesSuffix` stripped **versions'** own suffix so a
-   * shadow's directories resolved to its parent's, which is why `features/upload/naming.ts`
-   * imported from `features/versions`. Whichever feature derives a shadow knows the answer, so it
+   * versions's directories resolved to its parent's, which is why `features/upload/naming.ts`
+   * imported from `features/versions`. Whichever feature derives a versions knows the answer, so it
    * says it.
    *
    * `undefined` on every config an author wrote, which is what makes `config._shadowOf ?? config.slug`

@@ -133,7 +133,7 @@ export function prepareSchemaData(
 /**
  * Folds a base row and its content row into one document.
  *
- * A prototype whose content lives on a shadow reads as two rows; a document is one. This is the
+ * A prototype whose content lives on a versions reads as two rows; a document is one. This is the
  * fold, and it is structural — the adapter is the only thing that knows there were two.
  *
  * It was `mergeRawDocumentWithVersion`, with `versionTableName`/`versionData`/`versionFields`
@@ -141,7 +141,7 @@ export function prepareSchemaData(
  * concept; the emitted key was worse than that — a method that has to name a feature in its
  * *return value* is that feature's method, wherever it lives. So the id of the content row goes
  * out as `contentId`, which is what `insert` already returns and what `find` already takes, and
- * whichever feature declared the shadow names that row on the document itself, in a hook.
+ * whichever feature declared the versions names that row on the document itself, in a hook.
  */
 export function mergeContentRow(
   doc: RawDoc,
@@ -246,7 +246,7 @@ export const databaseColumnToPath = (path: string): string =>
  *
  * Both use `__` as a separator, so converting it to `.` blindly turns a relational table's key
  * into nested document properties: `settings__shadow__$relations` becomes
- * `settings.shadow.$relations`, which the cleanup below cannot find by its flat key, and it
+ * `settings.versions.$relations`, which the cleanup below cannot find by its flat key, and it
  * surfaces inside every response — silently, as a 200 with wrong data.
  *
  * `$` is what separates the two. The naming convention uses it to mark structure — `__$` a

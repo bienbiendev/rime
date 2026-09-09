@@ -1,4 +1,4 @@
-import type { ShadowDeclaration } from '$lib/core/features/define.js';
+import type { VersionsTable } from '$lib/core/features/define.js';
 import { normalizeQuery } from '$lib/core/pipeline/query.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { PrototypeSlug } from '$lib/core/prototype/types.js';
@@ -70,7 +70,7 @@ export const insertRowWithLocales = async (
 
 type UpdateArgs = {
   slug: string;
-  shadow?: ShadowDeclaration;
+  versions?: VersionsTable;
   /** The base row to write. An area resolves its singleton's id before calling. */
   id: string;
   /** What goes on it. */
@@ -94,7 +94,7 @@ type Deps = {
  * `FeatureDefinition.writePlan` refines it). What was left is the same two writes in every case,
  * so there is one path.
  *
- * The content row's *table* is still the adapter's to know: registration carries the shadow, and
+ * The content row's *table* is still the adapter's to know: registration carries the versions, and
  * where rows live is storage. Which row, and whether to touch it, is the caller's.
  *
  * Returns `{ id: data.id || id }`. For an area the two always agree — it is a single row, so any
@@ -103,18 +103,24 @@ type Deps = {
  */
 export const updatePrototype = async (
   { db, tables }: Deps,
-  { slug, id, data, content, locale, shadow }: UpdateArgs
+  { slug, id, data, content, locale, versions }: UpdateArgs
 ) => {
   const now = new Date();
 
   await writeRow({ db, tables }, { table: baseTableName(slug), recordId: id, data, locale, now });
 
   if (content) {
-    // `shadow!` — a plan names a content row only for a prototype that has one, and registration
-    // answered with the shadow for exactly those.
+    // `versions!` — a plan names a content row only for a prototype that has one, and registration
+    // answered with the versions for exactly those.
     await writeRow(
       { db, tables },
-      { table: baseTableName(shadow!.slug), recordId: content.id, data: content.data, locale, now }
+      {
+        table: baseTableName(versions!.slug),
+        recordId: content.id,
+        data: content.data,
+        locale,
+        now
+      }
     );
   }
 
@@ -217,25 +223,25 @@ export const updateWherePrototype = async (
  *
  * The insert half of `updatePrototype`, and it reads the same way now — the caller says which
  * rows this write touches and this executes. It used to call `splitRootData` itself, which meant
- * the database layer knew that a shadowed config keeps its `._root()` fields on the base row; that
- * is the shadow-declaring feature's rule, and it states it in `writePlan` (docs/decoupling.md § 4.4).
+ * the database layer knew that a versioned config keeps its `._root()` fields on the base row; that
+ * is the versions-declaring feature's rule, and it states it in `writePlan` (docs/decoupling.md § 4.4).
  *
- * `contentId` names the row the content landed on — the shadow row when there is one, the base row
+ * `contentId` names the row the content landed on — the versions row when there is one, the base row
  * otherwise — which is what the caller hangs blocks, tree nodes and relations off.
  */
 export const insertPrototype = async (
   { db, tables }: Deps,
-  { slug, data, content, locale, shadow }: InsertArgs
+  { slug, data, content, locale, versions }: InsertArgs
 ): Promise<{ id: string; contentId: string }> => {
   const now = new Date();
 
-  if (shadow) {
+  if (versions) {
     // The base row has no columns for the content, so a plan naming no content half would write
     // half a document and hang its children off the base row. Loud, rather than silently wrong.
     if (!content) {
       throw new RimeError(
         RimeError.OPERATION_ERROR,
-        `insert on "${slug}" names no content row, and its content lives on "${shadow.slug}"`
+        `insert on "${slug}" names no content row, and its content lives on "${versions.slug}"`
       );
     }
 
@@ -245,7 +251,7 @@ export const insertPrototype = async (
       ...data
     });
 
-    const contentTable = baseTableName(shadow.slug);
+    const contentTable = baseTableName(versions.slug);
 
     const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(content.data, {
       tables,
@@ -288,14 +294,14 @@ export const insertPrototype = async (
   );
 
   // No second row exists, so the two ids are the same thing.
-  // No shadow: the content is on the base row, so that is the row children hang off.
+  // No versions: the content is on the base row, so that is the row children hang off.
   return { id: docId, contentId: docId };
 };
 
 /**
  * Reads many documents, merged with the content row each should show.
  *
- * The shadowed branch queries the base table and pulls one content row per document, because
+ * The versioned branch queries the base table and pulls one content row per document, because
  * pagination and ordering are properties of the document rather than of one of its rows.
  */
 
@@ -314,7 +320,7 @@ export const deletePrototype = async (
 /**
  * The ids of the documents whose `_parent` is `parentId`, in `_position` order.
  *
- * Cannot go through `findMany`: hierarchy lives on the base table while a shadowed prototype's
+ * Cannot go through `findMany`: hierarchy lives on the base table while a versioned prototype's
  * `where` resolves against the content table. `_parent` and `_position` are columns the adapter
  * writes itself, so answering this is its job.
  */
@@ -327,7 +333,7 @@ export const deletePrototype = async (
  */
 export const ensurePrototypeExists = async (
   { db, tables }: Deps,
-  { slug, blank, locale, shadow }: EnsureExistsArgs
+  { slug, blank, locale, versions }: EnsureExistsArgs
 ): Promise<void> => {
   const table = baseTableName(slug);
   const [existing] = await db.select({ id: tables[table].id }).from(tables[table]);
@@ -336,13 +342,13 @@ export const ensurePrototypeExists = async (
 
   const now = new Date();
 
-  if (shadow) {
+  if (versions) {
     const docId = await adapterUtil.insertTableRecord(db, tables, table, {
       createdAt: now,
       updatedAt: now
     });
 
-    const contentTable = baseTableName(shadow.slug);
+    const contentTable = baseTableName(versions.slug);
 
     const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(blank, {
       tables,
@@ -392,7 +398,7 @@ export const ensurePrototypeExists = async (
 };
 
 type InsertArgs = {
-  shadow?: ShadowDeclaration;
+  versions?: VersionsTable;
   slug: string;
   data: Dic;
   /** No `id`: the row does not exist yet. See `Adapter.insert`. */
@@ -401,7 +407,7 @@ type InsertArgs = {
 };
 
 type EnsureExistsArgs = {
-  shadow?: ShadowDeclaration;
+  versions?: VersionsTable;
   slug: string;
   /**
    * The document to write. Already shaped by whatever the prototype's features say a bootstrapped

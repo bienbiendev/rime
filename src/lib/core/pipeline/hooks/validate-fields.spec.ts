@@ -81,7 +81,11 @@ describe('validateFields: required vs. field access on create', () => {
   });
 
   test('required still fires for an anonymous request on a field opened to it', async () => {
-    const fields = [text('nickname').required().access({ create: () => true })];
+    const fields = [
+      text('nickname')
+        .required()
+        .access({ create: () => true })
+    ];
 
     const promise = runValidate({ fields, data: { nickname: '' }, user: undefined });
 

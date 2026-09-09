@@ -19,9 +19,9 @@ import { VersionOperations } from './strategy.js';
  *
  * A **create** is the fourth case and the simplest: split, and name no row because none exists —
  * the adapter writes the first version and answers with its id. The split used to happen inside
- * `insertPrototype`, which meant the adapter knew that a shadowed config keeps its `._root()`
+ * `insertPrototype`, which meant the adapter knew that a versioned config keeps its `._root()`
  * fields on the base row. It is the same `splitRootData` call, made by whoever declared the
- * shadow.
+ * versions.
  *
  * `context.contentOwnerId` is the row, and it is not the same question as this plan's `content`.
  * That one is "where do this document's blocks, tree nodes and relations hang", which has an
@@ -38,7 +38,7 @@ export const versionsWritePlan = (
 ): WritePlan => {
   const { versionOperation, contentOwnerId } = args.context;
 
-  // The `._root()` fields stay on the base row; a shadow has no column for them.
+  // The `._root()` fields stay on the base row; a versions has no column for them.
   const { base, content } = splitRootData(plan.data, args.config);
 
   // No row to name: this document has no version yet, and the adapter makes the first one.

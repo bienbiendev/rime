@@ -12,7 +12,7 @@ export const saveTreeBlocks = async (args: {
   data: Dic;
   incomingPaths: string[];
   adapter: Adapter;
-  /** Whose children these are — the shadow's slug when the prototype has one. Resolved by
+  /** Whose children these are — the versions's slug when the prototype has one. Resolved by
    *  `persistRelational` from what the prototype was registered with. */
   ownerSlug: PrototypeSlug;
 }) => {

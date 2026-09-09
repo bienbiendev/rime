@@ -28,7 +28,7 @@ export const addChildrenProperty = Hooks.beforeRead({
      * The ordinary document read, projected to ids — not a raw-row primitive. Everything on
      * `adapter.prototype(slug)` returns documents, and a second read verb that returned ids
      * instead was a worse trade than the one join `select: ['id']` still costs. It needed
-     * `buildOrderByParam` to resolve base-row columns on a shadowed prototype, which it did not
+     * `buildOrderByParam` to resolve base-row columns on a versioned prototype, which it did not
      * do until 4b9db413 — `sort: '_position'` here would have silently ordered by `createdAt`.
      *
      * No `draft`/content narrowing: a parent lists every document parented to it, published or

@@ -80,7 +80,7 @@ describe('the write plan', () => {
   });
 
   it('splits on a create and names no row, because there is none yet', () => {
-    // `insertPrototype` used to call `splitRootData` itself for any prototype with a shadow, which
+    // `insertPrototype` used to call `splitRootData` itself for any prototype with a versions, which
     // is this feature's rule applied by the database layer. The plan says it instead, and the
     // adapter makes the row and answers with its id.
     const plan = planFor(versioned, { title: 'a', body: 'b' }, {}, 'create');

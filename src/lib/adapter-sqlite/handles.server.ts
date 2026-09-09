@@ -22,7 +22,7 @@ import {
  * place that names it — instead of on whichever request first happened to touch it.
  *
  * `adapter.prototype(slug)` then hands back that prototype's handle, carrying the config, the
- * shadow and the singleton flag it was registered with, so nothing downstream re-derives them.
+ * versions and the singleton flag it was registered with, so nothing downstream re-derives them.
  *
  * **Nothing here knows the word "area".** The handle does carry `config`, and `config.type` would
  * say — the adapter simply has no use for it. What it needs is how many rows there are, which is
@@ -42,13 +42,13 @@ export const createPrototypeHandles = (deps: {
   const { db, tables, configCtx } = deps;
   const handles = new Map<string, PrototypeHandle>();
 
-  const buildHandle = ({ config, singleton, shadow }: RegisterPrototypeArgs): PrototypeHandle => {
+  const buildHandle = ({ config, singleton, versions }: RegisterPrototypeArgs): PrototypeHandle => {
     const { slug } = config;
 
     // What every call below re-stated: the connection, and which prototype this handle is.
     const write = { db, tables };
     const read = { db, tables, configCtx };
-    const self = { slug, config, shadow };
+    const self = { slug, config, versions };
 
     /**
      * A singleton has no id to be given, so it looks its one row up. This is the *only* place
@@ -80,7 +80,7 @@ export const createPrototypeHandles = (deps: {
       slug,
       singleton,
       config,
-      shadow,
+      versions,
 
       find: (args = {}) =>
         readPrototype(read, {
@@ -94,12 +94,12 @@ export const createPrototypeHandles = (deps: {
 
       insert: (args) => {
         if (singleton) refuseOnSingleton('insert');
-        return insertPrototype(write, { ...args, slug, shadow });
+        return insertPrototype(write, { ...args, slug, versions });
       },
 
       update: async (args) => {
         const id = singleton ? await resolveSingletonId() : args.id!;
-        return updatePrototype(write, { ...args, slug, id, shadow });
+        return updatePrototype(write, { ...args, slug, id, versions });
       },
 
       updateWhere: (args) => updateWherePrototype(read, { ...args, slug }),
@@ -109,7 +109,7 @@ export const createPrototypeHandles = (deps: {
         return deletePrototype(write, { slug, id: args.id });
       },
 
-      ensureExists: (args) => ensurePrototypeExists(write, { ...args, slug, shadow })
+      ensureExists: (args) => ensurePrototypeExists(write, { ...args, slug, versions })
     };
   };
 

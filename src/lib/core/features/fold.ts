@@ -1,5 +1,5 @@
 import type { Dic } from '$lib/util/types.js';
-import type { BlankIntent, FeatureDefinition, ShadowDeclaration, WritePlan } from './define.js';
+import type { BlankIntent, FeatureDefinition, VersionsTable, WritePlan } from './define.js';
 import type { DocTypeContribution } from './doc-type.js';
 import type { ColumnDeclaration, TableDeclaration } from './tables.js';
 import type { ApplyFeatureConfigure } from './register.js';
@@ -107,7 +107,7 @@ export const docTypeWithFeatures = (
 /**
  * Every error the features extending a config report about it.
  *
- * Folded the same way `shadowOf` is — over the prototype's own feature list, gated by `enabled` —
+ * Folded the same way `versionsTableOf` is — over the prototype's own feature list, gated by `enabled` —
  * so a feature's rules are asked of a config that has the feature, and core never tests for one.
  * Takes a feature list rather than the prototypes because the caller already holds one: it named
  * the prototype whose configs it is iterating.
@@ -164,9 +164,9 @@ export const writePlanWithFeatures = (
 /**
  * The filter that says which content row a read means, from whichever feature owns the difference.
  *
- * First answer wins and `enabled` gates it, like `shadowOf` — and for the same reason: a config
+ * First answer wins and `enabled` gates it, like `versionsTableOf` — and for the same reason: a config
  * has one content row, so it has one rule for picking it. `undefined` all the way through means
- * the read is not narrowed, which is every config with no shadow.
+ * the read is not narrowed, which is every config with no versions.
  */
 export const readQueryOf = (
   features: FeatureDefinition[],
@@ -182,7 +182,7 @@ export const readQueryOf = (
   );
 
 /**
- * The shadow a config's content lives in, or `undefined` when it lives on the config's own row.
+ * The versions a config's content lives in, or `undefined` when it lives on the config's own row.
  *
  * Folded over the features that extend the prototype, in their declared order, and the first one
  * answering wins — a config cannot have its content in two places at once, and the order the
@@ -192,11 +192,11 @@ export const readQueryOf = (
  * Takes a feature list rather than the prototypes, because both callers already hold one: the
  * schema generator folds it per prototype config, and registration passes the prototype's own.
  */
-export const shadowOf = (
+export const versionsTableOf = (
   features: FeatureDefinition[],
   config: Dic
-): ShadowDeclaration | undefined =>
-  features.reduce<ShadowDeclaration | undefined>(
-    (found, feature) => found ?? (feature.enabled(config) ? feature.shadow?.(config) : undefined),
+): VersionsTable | undefined =>
+  features.reduce<VersionsTable | undefined>(
+    (found, feature) => found ?? (feature.enabled(config) ? feature.versions?.(config) : undefined),
     undefined
   );

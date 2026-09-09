@@ -60,7 +60,7 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
    * Which rows this create writes, decided here rather than in the adapter.
    *
    * The same fold `runUpdate` makes at its step 3.5, and for the same reason: whether a document's
-   * content lands on its own row or a second one is the shadow-declaring feature's statement, not
+   * content lands on its own row or a second one is the versions-declaring feature's statement, not
    * the database layer's. `operation: 'create'` is what lets that feature answer differently —
    * an insert names no content row, because there is none yet.
    */
@@ -77,7 +77,7 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
   });
 
   // Blocks, trees and relations hang off the row the content landed on, which is the document's
-  // own row unless something gave it a shadow.
+  // own row unless something gave it a versions.
   await persistRelational({
     context,
     ownerId: created.contentId,
