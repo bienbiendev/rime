@@ -100,3 +100,39 @@ ignore `id` in the check, or do not pass `fillNotNull` when preparing the locali
 locales row with no localized values should not be written at all. Either way it wants its own
 commit: it changes what is on disk, and the assertion to add is that a freshly bootstrapped
 singleton with only null localized fields has zero rows in its `__$$locales` table.
+
+---
+
+## An upload collection with image sizes loses its non-leaf fields from the generated type
+
+`features/upload/doc-type.ts`, the `fields` predicate.
+
+An upload collection that declares `imageSizes` gets a filter over the fields codegen generates
+members for, so the per-size columns do not appear twice — their type comes from the one `sizes`
+member instead. Correct. But the filter it inherited is two clauses:
+
+```ts
+fields: (field) => field instanceof FormFieldBuilder && !sizes.some((s) => s.name === field.name);
+```
+
+The first clause drops **every non-leaf field** — blocks, tabs, groups, tree, relations — from the
+generated document type, for any upload collection with image sizes. `upload: true` alone is fine:
+the whole filter only applies when there are sizes, so the two behave differently for no reason
+anybody wrote down.
+
+It has been that way since the filter was written in `dev/codegen/types/index.server.ts`, and it
+survived the move onto `FeatureDefinition.docType` verbatim rather than being quietly fixed inside
+an untested refactor.
+
+### Why no fixture catches it
+
+Every upload collection in `tests/` is flat — `medias` is `alt` plus its sizes. A collection with
+both `imageSizes` and a `blocks` field would generate a `MediasDoc` missing the blocks member, and
+nothing would fail: the doc types end in `[x: string]: unknown`, so reading the absent property
+still compiles.
+
+### Where to fix
+
+Drop the `field instanceof FormFieldBuilder` clause, so the predicate says only what it means —
+"not a field an image size already describes". The gate is a fixture: an upload collection with
+`imageSizes` **and** a blocks field, asserting the block type appears in `app.generated.d.ts`.

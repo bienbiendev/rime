@@ -1,6 +1,7 @@
 import type { WithNormalizedUpload } from './types.js';
 import { augmentUpload, bootUpload, configureUploadDirectories, uploadHooks } from '$rime/modules';
 import { defineFeature } from '../define.js';
+import { uploadDocType } from './doc-type.js';
 
 /**
  * Files on disk, and the fields and hooks that put them there.
@@ -26,6 +27,8 @@ export const upload = defineFeature({
   configure: configureUploadDirectories,
 
   boot: bootUpload,
+
+  docType: uploadDocType,
 
   hooks: uploadHooks
 });

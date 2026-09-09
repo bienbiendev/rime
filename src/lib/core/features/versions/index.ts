@@ -4,6 +4,7 @@ import type { WithVersionsConfig } from './augment.js';
 import { defineFeature } from '../define.js';
 import { augmentVersions } from './augment.js';
 import { withVersionsSuffix } from './naming.js';
+import { versionsDocType } from './doc-type.js';
 import { versionsReadQuery } from './read-query.js';
 import { versionsWritePlan } from './write-plan.js';
 
@@ -38,6 +39,8 @@ export const versions = defineFeature({
    * else on `$<slug>__versions` — the one fact the adapter needs to build the second table and to
    * know which row a write of content belongs on.
    */
+  docType: versionsDocType,
+
   shadow: (config) => ({ slug: withVersionsSuffix(config.slug) }),
 
   /**

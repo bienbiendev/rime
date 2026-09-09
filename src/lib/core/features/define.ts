@@ -1,6 +1,7 @@
 import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
 import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
+import type { DocTypeContribution } from './doc-type.js';
 import type { ColumnDeclaration, TableDeclaration } from './tables.js';
 
 /**
@@ -96,6 +97,15 @@ export type FeatureDefinition = {
    * scope.
    */
   tables?: (config: any) => TableDeclaration[];
+
+  /**
+   * What this feature adds to a prototype's **generated document type** — see `doc-type.ts`.
+   *
+   * The type-generation twin of `columns`: that one says what the prototype's row carries, this
+   * says what a consumer's `PagesDoc` carries. Both are per-prototype and both fold gated by
+   * `enabled`.
+   */
+  docType?: (config: any) => DocTypeContribution;
 
   /**
    * Columns this feature adds to a **prototype's** table, when that prototype enables it.

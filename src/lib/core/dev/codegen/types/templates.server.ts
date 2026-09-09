@@ -16,8 +16,12 @@ const makeDocTypeName = (slug: string): string => `${capitalize(slug.replace('$'
  * Generate the document's type definition
  * @returns the full document type
  */
-export const templateDocType = (slug: string, content: string, upload?: boolean): string => `
-export type ${makeDocTypeName(slug)} = BaseDoc & ${upload ? 'UploadDoc & ' : ''} {
+export const templateDocType = (
+  slug: string,
+  content: string,
+  extendsTypes: string[] = []
+): string => `
+export type ${makeDocTypeName(slug)} = BaseDoc & ${extendsTypes.map((name) => `${name} & `).join('')} {
   ${content};
 	[x: string]: unknown;
 }`;

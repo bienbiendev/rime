@@ -1,6 +1,7 @@
 import type { Handle } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
 import type { FeatureDefinition, ShadowDeclaration, WritePlan } from './define.js';
+import type { DocTypeContribution } from './doc-type.js';
 import type { ColumnDeclaration, TableDeclaration } from './tables.js';
 import type { ApplyFeatureConfigure } from './register.js';
 import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
@@ -73,6 +74,32 @@ export const tablesOf = (
  */
 export const columnsOf = (features: FeatureDefinition[], config: Dic): ColumnDeclaration[] =>
   features.flatMap((feature) => (feature.enabled(config) ? (feature.columns?.(config) ?? []) : []));
+
+/**
+ * Everything the features a config enables add to its generated document type.
+ *
+ * Gated and folded in the prototype's feature order, like `columnsOf`. The `fields` predicates are
+ * **ANDed** rather than replaced: each says which fields it still wants generated, and a field has
+ * to survive all of them.
+ */
+export const docTypeWithFeatures = (
+  features: FeatureDefinition[],
+  config: Dic
+): Required<DocTypeContribution> =>
+  features.reduce<Required<DocTypeContribution>>(
+    (current, feature) => {
+      if (!feature.enabled(config) || !feature.docType) return current;
+      const contribution = feature.docType(config);
+      return {
+        extends: [...current.extends, ...(contribution.extends ?? [])],
+        members: [...current.members, ...(contribution.members ?? [])],
+        fields: contribution.fields
+          ? (field) => current.fields(field) && contribution.fields!(field)
+          : current.fields
+      };
+    },
+    { extends: [], members: [], fields: () => true }
+  );
 
 /** Runs every feature's boot step. */
 export const bootFeatures = async (

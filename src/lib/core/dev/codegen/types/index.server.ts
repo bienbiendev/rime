@@ -1,15 +1,11 @@
 import { IS_RIME_REPO, PACKAGE_NAME } from '$lib/core/constants.server.js';
 import cache from '$lib/core/dev/cache.server.js';
-import type {
-  BuiltArea,
-  BuiltCollection,
-  Config,
-  ImageSizesConfig
-} from '$lib/core/config/types.js';
-import { isUploadConfig } from '$lib/core/features/upload/util/config.js';
+import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
+import type { FeatureDefinition } from '$lib/core/features/define.js';
+import { docTypeWithFeatures } from '$lib/core/features/registry.js';
+import { prototypeEntries } from '$lib/core/prototype/registry.js';
 
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { logger } from '$lib/core/logger.server.js';
 import type { Field } from '$lib/fields/types.js';
 import { trycatchSync } from '$lib/util/function.js';
@@ -24,31 +20,11 @@ import {
 } from './templates.server.js';
 
 /**
- * Generates type definitions for image sizes
- * @returns A string containing the type definition for image sizes
- */
-function generateImageSizesType(sizes: ImageSizesConfig[]) {
-  const sizesTypes = sizes
-    .map((size) => {
-      if (size.out && size.out.length > 1) {
-        return size.out.map((format) => `${size.name}_${format}: string`).join(', ');
-      } else {
-        return `${size.name}: string`;
-      }
-    })
-    .join(', ');
-  return `\n\t\tsizes:{${sizesTypes}}`;
-}
-
-/**
  * Generates the complete TypeScript type definitions string based on the built configuration
  * @returns A string containing all type definitions
  */
 export async function generateTypesString<T extends Config>(config: T) {
   logger.info('Types generation...');
-  const collections = (config.collections || []).filter((c) => c._generateTypes !== false);
-  const areas = (config.areas || []).filter((c) => c._generateTypes !== false);
-
   // const registeredBlocks: string[] = [];
   // const registeredTreeBlocks: string[] = [];
   let imports = new Set<string>(['BaseDoc', 'Navigation', 'RouteHandlers', 'User']);
@@ -65,38 +41,39 @@ export async function generateTypesString<T extends Config>(config: T) {
     return fields.map((field) => field.use.generateType()).filter(Boolean);
   };
 
-  const processCollection = async (collection: BuiltCollection) => {
-    let fields = collection.fields;
-    if (isUploadConfig(collection) && collection.upload.imageSizes?.length) {
-      fields = collection.fields
-        .filter((f) => f instanceof FormFieldBuilder)
-        .filter((field) => !collection.upload.imageSizes!.some((size) => size.name === field.name));
-    }
-    const fieldsTypesList = await buildFieldsTypes(fields);
-    if (collection.versions) {
-      fieldsTypesList.push('versionId: string');
-    }
-    let fieldsContent = fieldsTypesList.join('\n\t');
+  /**
+   * One prototype's document type.
+   *
+   * Was two functions, `processCollection` and `processArea`, differing only in the feature
+   * branches the first one carried: `isUploadConfig(collection)` three times and
+   * `if (collection.versions)` once. Both are `docType` contributions now, so what is left is the
+   * same for either kind — which is why there is one function.
+   */
+  const processPrototype = async (entry: {
+    config: BuiltArea | BuiltCollection;
+    prototype: { features: FeatureDefinition[] };
+  }) => {
+    const { config } = entry;
+    const contribution = docTypeWithFeatures(entry.prototype.features, config);
 
-    if (isUploadConfig(collection)) {
-      addImport('UploadDoc');
-      if (collection.upload.imageSizes?.length) {
-        fieldsContent += generateImageSizesType(collection.upload.imageSizes);
-      }
-    }
-    return templateDocType(collection.slug, fieldsContent, !!collection.upload);
+    const fieldsTypesList = await buildFieldsTypes(config.fields.filter(contribution.fields));
+    contribution.extends.forEach(addImport);
+
+    return templateDocType(
+      config.slug,
+      [...fieldsTypesList, ...contribution.members].join('\n\t'),
+      contribution.extends
+    );
   };
 
-  const processArea = async (area: BuiltArea) => {
-    const fieldsTypesList = await buildFieldsTypes(area.fields);
-    if (area.versions) {
-      fieldsTypesList.push('versionId: string');
-    }
-    return templateDocType(area.slug, fieldsTypesList.join('\n\t'));
-  };
+  const entries = prototypeEntries(config).filter((entry) => entry.config._generateTypes !== false);
 
-  const collectionsTypes = (await Promise.all(collections.map(processCollection))).join('\n');
-  const areasTypes = (await Promise.all(areas.map(processArea))).join('\n');
+  const collectionsTypes = (
+    await Promise.all(entries.filter((e) => e.config.type === 'collection').map(processPrototype))
+  ).join('\n');
+  const areasTypes = (
+    await Promise.all(entries.filter((e) => e.config.type === 'area').map(processPrototype))
+  ).join('\n');
   const typeImports = `import type { ${Array.from(imports).join(', ')} } from '${PACKAGE_NAME}/types'`;
   // app.generated.d.ts always sits at src/app.generated.d.ts (see generateTypes() below).
   const rimeConfigServerPath = relativeImportSpecifier(
