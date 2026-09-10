@@ -1,4 +1,4 @@
-import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
+import type { AdapterDeps } from '$lib/adapter-sqlite/types.server.js';
 import { baseTableName, tableName as buildTableName } from './naming.server.js';
 import type { GenericBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
 import type { WithOptional } from '$lib/util/types.js';
@@ -6,7 +6,7 @@ import { and, eq, getTableColumns } from 'drizzle-orm';
 import { omit } from '../util/object.js';
 import { generatePK, transformDataToSchema } from './columns.server.js';
 
-const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
+const createBlocksAdapter = ({ db, tables }: AdapterDeps) => {
   /**
    * Callers name the owner by slug — the prototype's own, or its versions's — and the
    * mapping to a table happens here, so that a table name never travels in a parameter that
@@ -111,7 +111,7 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 };
 
-export default createBlocksFacade;
+export default createBlocksAdapter;
 
 /****************************************************/
 /* Types

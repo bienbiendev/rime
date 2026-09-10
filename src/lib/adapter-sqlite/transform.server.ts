@@ -24,7 +24,7 @@ import { transformDatabaseColumnsToPaths } from './columns.server.js';
  * the key stripping, the relation assembly, the depth walk — is in
  * `core/pipeline/build-document.server.ts`.
  */
-export const transformerFacade = <const C extends Config>(args: {
+export const createTransformAdapter = <const C extends Config>(args: {
   configCtx: ConfigContext<C>;
   tables: any;
 }) => {

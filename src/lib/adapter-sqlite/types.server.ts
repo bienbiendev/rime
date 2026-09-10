@@ -4,7 +4,10 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { SQLiteColumn, SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core';
 
 // Basic types needed across multiple files
-export type GenericAdapteFacadeArgs = {
+/**
+ * What every facade in this folder is built from: the connection and the generated tables.
+ */
+export type AdapterDeps = {
   db: LibSQLDatabase<GetRegisterType<'Schema'>>;
   tables: GenericTables;
 };

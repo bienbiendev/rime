@@ -18,7 +18,7 @@ import type { GenericTable } from './types.server.js';
  * read and wrote `auth_users`, `auth_sessions` and `auth_accounts` — real tables that core simply
  * had no way to name until a feature could declare one.
  */
-export const createTableRegistry = (args: {
+export const createTableHandles = (args: {
   db: LibSQLDatabase<GetRegisterType<'Schema'>>;
   tables: GetRegisterType<'Tables'>;
 }) => {

@@ -1,4 +1,4 @@
-import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
+import type { AdapterDeps } from '$lib/adapter-sqlite/types.server.js';
 import { baseTableName, tableName as buildTableName } from './naming.server.js';
 import type { PrototypeSlug, TreeBlock } from '$lib/core/prototype/types.js';
 import { extractFieldName } from '$lib/fields/tree/util.js';
@@ -7,7 +7,7 @@ import { and, eq, getTableColumns } from 'drizzle-orm';
 import { omit } from '../util/object.js';
 import { generatePK, transformDataToSchema } from './columns.server.js';
 
-const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
+const createTreeAdapter = ({ db, tables }: AdapterDeps) => {
   //
   /** As in the blocks facade: callers name the owner by slug, the table is derived here. */
   const buildBlockTableName = (parentSlug: PrototypeSlug, blockPath: string) => {
@@ -111,7 +111,7 @@ const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   };
 };
 
-export default createTreeFacade;
+export default createTreeAdapter;
 
 /****************************************************/
 /* Types
