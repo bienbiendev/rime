@@ -9,7 +9,7 @@ import type { Plugin } from '$lib/core/plugins/index.js';
  * function serves both. Last in the config chain, after the features have derived what they
  * derive, so a plugin's `configure` sees the config the rest of rime will see.
  */
-export const augmentPlugins = <const T extends PluginHost>(config: T) => {
+export const configurePlugins = <const T extends PluginHost>(config: T) => {
   const plugins: Plugin[] = [...defaultPlugins(config), ...(config.plugins || [])];
 
   let output = config;

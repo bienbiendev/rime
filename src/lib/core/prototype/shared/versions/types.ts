@@ -16,3 +16,9 @@ declare module '$lib/core/prototype/types.js' {
     version: VersionDoc;
   }
 }
+
+/**
+ * What an author writes under `versions`. Lived in `core/config/types.ts`, which is what made
+ * core own the shape of a thing only this folder reads.
+ */
+export type VersionsConfig = { draft?: boolean; autoSave?: boolean; maxVersions?: number };

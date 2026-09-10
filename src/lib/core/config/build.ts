@@ -1,6 +1,6 @@
 import { configureConfig } from './configure.js';
 import type { BuiltArea, BuiltCollection, SanitizedConfigClient } from './types.js';
-import { augmentPlugins } from './augment-plugins.js';
+import { configurePlugins } from '$lib/core/plugins/configure.js';
 
 /**
  * Both prototype lists exist, empty if the author named none, so nothing downstream guards them.
@@ -24,6 +24,6 @@ export const withPrototypeLists = <
 export const buildConfigClient = <C extends SanitizedConfigClient>(config: C) => {
   const withPrototypes = withPrototypeLists(config);
   const withFeatures = configureConfig(withPrototypes);
-  const output = augmentPlugins(withFeatures);
+  const output = configurePlugins(withFeatures);
   return output;
 };

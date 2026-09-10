@@ -7,7 +7,7 @@ import generateTypes from './dev/codegen/types/index.server.js';
 import { RimeError } from './errors/index.js';
 import type { BuildConfig } from './config/index.server.js';
 import validate from './config/validate.server.js';
-import writeMemo from './config/write.server.js';
+import writeMemo from './dev/config-memo.server.js';
 import { logger } from './logger.server.js';
 
 /**

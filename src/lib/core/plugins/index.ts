@@ -6,7 +6,7 @@ type MaybeAsyncFunction = (...args: any[]) => any | Promise<any>;
 
 export type Plugin = {
   name: string;
-  // One step, both sides: augment-plugins.ts runs this over a full Config on the server and a
+  // One step, both sides: configure.ts runs this over a full Config on the server and a
   // SanitizedConfigClient on the client, so the same function has to satisfy both — as it must
   // anyway now that there is one Plugin type instead of a Plugin/PluginClient pair.
   configure?: <const C extends Config | SanitizedConfigClient>(config: C) => C;

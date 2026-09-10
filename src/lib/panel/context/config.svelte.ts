@@ -1,8 +1,4 @@
-import type {
-  BuiltAreaClient,
-  BuiltCollectionClient,
-  BuiltConfigClient
-} from '$lib/core/config/types.js';
+import type { BuiltAreaClient, BuiltCollectionClient, BuiltConfigClient } from '$lib/core/config/types.js';
 import type { Prototype, PrototypeSlug } from '$lib/core/prototype/types.js';
 import { getContext, setContext } from 'svelte';
 

@@ -1,4 +1,5 @@
-import type { Collection, CollectionAuthConfig } from '$lib/core/config/types.js';
+import type { Collection } from '$lib/core/config/types.js';
+import type { CollectionAuthConfig } from '$lib/core/auth/types.js';
 import { access } from '$lib/core/auth/access.js';
 import { email } from '$lib/fields/email/index.js';
 import { select } from '$lib/fields/select/index.js';

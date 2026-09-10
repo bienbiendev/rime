@@ -4,7 +4,8 @@ import type { Field, Option } from '$lib/types.js';
 import { access } from '$lib/util/index.js';
 import { UsersRound } from '@lucide/svelte';
 import cloneDeep from 'clone-deep';
-import type { Access, AdditionalStaffConfig } from '$lib/core/config/types.js';
+import type { Access } from '$lib/core/config/types.js';
+import type { AdditionalStaffConfig } from '$lib/core/auth/types.js';
 
 export const staffCollection = {
   label: { singular: 'User', plural: 'Users' },

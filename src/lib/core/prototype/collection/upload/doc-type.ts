@@ -1,5 +1,5 @@
 import type { Dic } from '$lib/util/types.js';
-import type { ImageSizesConfig } from '$lib/core/config/types.js';
+import type { ImageSizesConfig } from '$lib/core/prototype/collection/upload/types.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DocTypeContribution } from '$lib/core/dev/codegen/types/contributions.server.js';
 

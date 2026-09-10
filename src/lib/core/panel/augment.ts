@@ -1,4 +1,4 @@
-import type { PanelConfig } from '$lib/core/config/types.js';
+import type { PanelConfig } from '$lib/core/panel/types.js';
 import { Book, BookCopy, BookType, SlidersVertical } from '@lucide/svelte';
 
 /**

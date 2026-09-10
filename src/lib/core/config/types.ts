@@ -1,13 +1,26 @@
+import type { LocalizationConfig } from '$lib/core/locale/types.js';
+import type {
+  PanelConfig,
+  CollectionPanelConfig,
+  CustomPanelRoute,
+  NavigationConfig
+} from '$lib/core/panel/types.js';
+import type { CacheConfig } from '$lib/core/plugins/cache/types.js';
+import type { CollectionAuthConfig, AdditionalStaffConfig } from '$lib/core/auth/types.js';
+import type { CollectionLabel } from '$lib/core/prototype/collection/types.js';
+import type {
+  UploadConfig,
+} from '$lib/core/prototype/collection/upload/types.js';
+import type { VersionsConfig } from '$lib/core/prototype/shared/versions/types.js';
 import type { Adapter } from '$lib/core/adapter.js';
-import type { PanelLanguage } from '$lib/core/i18n/index.js';
 import type { Hook, HookBeforeOperation } from '$lib/core/pipeline/types.js';
 import type { Plugin } from '$lib/core/plugins/index.js';
 import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
-import type { Field, Option } from '$lib/fields/types.js';
+import type { Field } from '$lib/fields/types.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
 import type { DashboardEntry } from '$lib/panel/pages/dashboard/types.js';
 import type { AreaSlug, CollectionSlug, User } from '$lib/types.js';
-import type { AtLeastOne, Dic, WithRequired } from '$lib/util/types.js';
+import type { Dic, WithRequired } from '$lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';
 import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
 import type { Component } from 'svelte';
@@ -112,73 +125,12 @@ export type Access = {
   delete?: (user: User | undefined, options: AccessOptions) => boolean;
 };
 
-export type AdditionalStaffConfig = {
-  roles?: (string | Option)[];
-  panel?: {
-    group?: string;
-  };
-  access?: Access;
-  label?: CollectionLabel;
-  fields?: FieldBuilder<Field>[];
-};
-
-export type PanelConfig = {
-  /** who can accesss the panel */
-  $access?: (user: User | undefined) => boolean;
-  /** Custom panel routes that render a given component */
-  routes?: Record<string, CustomPanelRoute>;
-  /** The panel language, "en" or "fr" supports only */
-  language?: PanelLanguage;
-  /** Sidebar navigation groups labels and icons */
-  navigation?: NavigationConfig;
-  /** Specific components */
-  components?: {
-    /** Dashboard header */
-    header?: Component[];
-    /** Collection header */
-    collectionHeader?: Component<{ config: BuiltCollectionClient }>[];
-    /** Full dashboard component */
-    dashboard?: Component<{ entries: DashboardEntry[]; user?: User }>;
-  };
-  /** a relative path from the "static" directory or an external url
-   * @example
-   * // for static/assets/custom.css
-   * css : '/assets/custom.css'
-   */
-  css?: string;
-};
-
-export type CacheConfig = { isEnabled?: (event: RequestEvent) => boolean };
-
 export type RouteConfig = {
   POST?: RequestHandler;
   GET?: RequestHandler;
   PATCH?: RequestHandler;
   DELETE?: RequestHandler;
 };
-
-export type LocalizationConfig = {
-  locales: LocaleConfig[];
-  default: string;
-};
-
-export type LocaleConfig = {
-  code: string;
-  label: string;
-};
-
-export type CollectionLabel = {
-  singular: string;
-  plural: string;
-  /** Label to search document, ex: Search for pages... */
-  search?: string;
-  /** Label for creation ex: New page */
-  create?: string;
-  /** Label when no document found, ex: No pages found */
-  none?: string;
-};
-
-export type VersionsConfig = { draft?: boolean; autoSave?: boolean; maxVersions?: number };
 
 type PrototypeConfig<S extends string = string> = {
   slug: S;
@@ -192,71 +144,6 @@ type PrototypeConfig<S extends string = string> = {
   /** If the document can be edited live, if enabled the url prop must be set also. */
   live?: boolean;
 };
-
-export type UploadConfig = {
-  /**
-   * Define image sizes that will be generated when an image is uploaded.
-   * A 'thumbnail' size will be added, if none provided with this name.
-   * @example
-   * ```typescript
-   * imageSizes: [
-   *   {
-   *     name: 'thumbnail',
-   *     width: 200,
-   *     height: 200,
-   *     out: ['jpg', 'webp'],
-   *     compression: 80
-   *   },
-   *   {
-   *     name: 'medium',
-   *     width: 800,
-   *     compression: 85
-   *   }
-   * ]
-   * ```
-   */
-  imageSizes?: ImageSizesConfig[];
-  /**
-   * Allowed mimeTypes
-   * @example
-   * ```typescript
-   * accept: ['image/jpeg', 'image/svg']
-   * ```
-   */
-  accept?: string[];
-  /** Directories */
-  directories?: {
-    fields: FieldBuilder<Field>[];
-    access?: Access;
-    // @TODO better types
-    $hooks?: CollectionHooks<any>;
-  };
-};
-
-export type CollectionAuthConfig = (
-  | {
-      type: 'password';
-    }
-  | { type: 'apiKey' }
-) & {
-  roles?: (string | Option)[];
-};
-
-export type CollectionPanelConfig =
-  | false
-  | {
-      /** Description for the collection/area, basically displayed on the dashboard */
-      description?: string;
-      /** Sidebar navigation group */
-      group?: string;
-      /** Dashboard settings */
-      dashboard?:
-        | {
-            layout?: 'rows' | 'grid';
-            maxEntries?: number;
-          }
-        | false;
-    };
 
 export type Collection<S> = {
   slug: S;
@@ -293,26 +180,6 @@ export type Area<S> = PrototypeConfig & {
         group?: string;
       };
 };
-
-type NavigationConfig = { groups: Array<{ label: string; icon: Component<IconProps> }> };
-
-export type CustomPanelRoute = {
-  group?: string;
-  label: string;
-  icon?: Component<IconProps>;
-  component: Component;
-};
-
-export type ImageSizesConfig = {
-  name: string;
-  /** If none provided, will fallback to original file extesion */
-  out?: Array<'jpg' | 'webp'>;
-  /** Default compression: 60 */
-  compression?: number;
-} & AtLeastOne<{
-  width: number;
-  height: number;
-}>;
 
 export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'upload' | 'auth'> & {
   slug: CollectionSlug;

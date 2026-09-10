@@ -26,3 +26,29 @@ export type User = {
   isStaff?: boolean;
   isSuperAdmin?: boolean;
 };
+
+import type { Option } from '$lib/fields/types.js';
+import type { Access } from '$lib/core/config/types.js';
+import type { CollectionLabel } from '$lib/core/prototype/collection/types.js';
+import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
+import type { Field } from '$lib/fields/types.js';
+
+/** What an author writes under `auth`, and what `staff` may be extended with. */
+export type CollectionAuthConfig = (
+  | {
+      type: 'password';
+    }
+  | { type: 'apiKey' }
+) & {
+  roles?: (string | Option)[];
+};
+
+export type AdditionalStaffConfig = {
+  roles?: (string | Option)[];
+  panel?: {
+    group?: string;
+  };
+  access?: Access;
+  label?: CollectionLabel;
+  fields?: FieldBuilder<Field>[];
+};

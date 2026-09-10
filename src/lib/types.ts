@@ -3,7 +3,6 @@ export type { User } from '$lib/core/auth/types.js';
 
 // Config types
 export type {
-  AdditionalStaffConfig,
   Area,
   AreaHooks,
   BuiltArea,
@@ -15,13 +14,13 @@ export type {
   Collection,
   CollectionHooks,
   Config,
-  CustomPanelRoute,
-  ImageSizesConfig,
-  LocaleConfig,
-  LocalizationConfig,
   RouteConfig,
   SanitizedConfigClient
 } from './core/config/types.js';
+export type { AdditionalStaffConfig } from './core/auth/types.js';
+export type { CustomPanelRoute } from './core/panel/types.js';
+export type { ImageSizesConfig } from './core/prototype/collection/upload/types.js';
+export type { LocaleConfig, LocalizationConfig } from './core/locale/types.js';
 
 // Doc types
 export type {
