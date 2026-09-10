@@ -3,13 +3,12 @@ import type { RegisterArea } from '$lib/index.js';
 import type { PrototypeApiContext } from '../define.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
+import type { GenericDoc } from '../types.js';
+import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 import { createBlankDocument } from '../doc.js';
 import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
-import type { GenericDoc } from '../types.js';
 import { find, type FindArgs } from './operations/find.js';
 import { update, type UpdateArgs } from './operations/update.js';
-
-type Ctx = PrototypeApiContext<BuiltArea>;
 
 /** What building an area's API for one request needs. */
 export type AreaApiArgs = {
@@ -19,80 +18,77 @@ export type AreaApiArgs = {
 };
 
 /**
- * The per-call plumbing this area's operations are handed.
+ * Everything `rime.area('settings')` can do: exactly two operations.
  *
- * Written out here rather than shared with the collection's. The two contexts were one
- * `prototypeContext` and they are not the same object: an area's `blank()` is the document as its
- * fields default it, full stop — no auth step, because an area lists no `auth`. The collection's
- * strips auth's private members. Neither was ever reachable from the other kind, and a shared
- * `shapeBlank` with an `intent` parameter existed to say so.
+ * There is no `create` and no `delete` — not switched off, absent, because a singleton has no
+ * second document to make and nothing left to read if its only one goes. Nor is there an id
+ * anywhere in these signatures. That is the whole difference from a collection, and it is why
+ * this is its own class rather than a collection with a flag.
  *
- * Per-call, not per-process — `isSystemOperation` is part of it, so `.system()` is a second
- * context rather than a flag anybody has to remember to forward.
+ * `blank()` is the document as its fields default it, full stop: no auth step, because an area
+ * lists no `auth`. The collection's strips auth's private members — the two were one
+ * `prototypeContext` with a `shapeBlank(doc, config, intent)` between them, for a branch neither
+ * kind could reach.
  */
-const context = (args: AreaApiArgs & { isSystemOperation: boolean }): Ctx => {
-  const { config, event, defaultLocale, isSystemOperation } = args;
+class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> {
+  readonly config: BuiltArea;
+  readonly event: RequestEvent;
+  readonly defaultLocale: string | undefined;
 
-  return {
-    config,
-    event,
-    defaultLocale,
-    isSystemOperation,
+  /** True when rime itself is the caller: access checks and some hooks stand down. */
+  readonly isSystemOperation: boolean;
 
-    fallbackLocale: (locale?: string) => locale || event.locals.locale || defaultLocale,
+  constructor(
+    private readonly args: AreaApiArgs,
+    isSystemOperation = false
+  ) {
+    this.config = args.config;
+    this.event = args.event;
+    this.defaultLocale = args.defaultLocale;
+    this.isSystemOperation = isSystemOperation;
+  }
 
-    versionQuery: (params, intent = 'read') => versionsReadQuery({ config, params, intent }),
+  /**
+   * The same API, telling the pipeline that rime is the caller.
+   *
+   * A new instance rather than a flag, so a system call cannot leak back into the one it was
+   * escalated from. `system(false)` hands this one back.
+   */
+  system(isSystem = true): AreaAPI<Doc> {
+    return isSystem ? new AreaAPI<Doc>(this.args, true) : this;
+  }
 
-    blank: () => createBlankDocument(config, event),
+  /** The area's document with every default applied. */
+  blank(): Doc {
+    return createBlankDocument(this.config, this.event) as Doc;
+  }
 
-    cached: <T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T> => {
-      if (!event.locals.cacheEnabled || isSystemOperation) return read();
+  /** The locale to act in: the one asked for, else the request's, else the config's default. */
+  fallbackLocale(locale?: string): string | undefined {
+    return locale || this.event.locals.locale || this.defaultLocale;
+  }
 
-      const cacheKey = event.locals.rime.cache.createKey(operation, {
-        slug: config.slug,
-        userEmail: event.locals.user?.email,
-        userRoles: event.locals.user?.roles,
-        ...key
-      });
+  /** Which version row a read means — see `versionsReadQuery`. */
+  versionQuery(
+    params: { draft?: boolean; versionId?: string },
+    intent: ReadIntent = 'read'
+  ): OperationQuery | undefined {
+    return versionsReadQuery({ config: this.config, params, intent });
+  }
 
-      return event.locals.rime.cache.get(cacheKey, read);
-    }
-  };
-};
+  /** Read through the API cache when it is on and this is not a system call. */
+  cached<T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T> {
+    if (!this.event.locals.cacheEnabled || this.isSystemOperation) return read();
 
-/**
- * Adds `.system()`: the same API over an escalated context.
- *
- * It has to *re-enter* this builder — a system call is the same API over a different context, not
- * a mutable flag on a shared object. `system(false)` hands back the API it was called on, which is
- * what lets `system(someBoolean)` read as "escalate if needed".
- */
-const build = <Doc extends GenericDoc>(
-  args: AreaApiArgs,
-  isSystemOperation = false
-): AreaApi<Doc> => {
-  const api = shape<Doc>(context({ ...args, isSystemOperation })) as AreaApi<Doc>;
-  api.system = (isSystem = true) => (isSystem ? build<Doc>(args, true) : api);
-  return api;
-};
+    const cacheKey = this.event.locals.rime.cache.createKey(operation, {
+      slug: this.config.slug,
+      userEmail: this.event.locals.user?.email,
+      userRoles: this.event.locals.user?.roles,
+      ...key
+    });
 
-/**
- * Everything `rime.area('settings')` hands back: two operations, a config and a blank.
- *
- * There is no `create` and no `delete` — not because they are switched off somewhere, but
- * because a singleton has no second document to make and nothing left to read if its only one
- * goes. Nor is there an id anywhere in these signatures. That is what "singleton" buys, and it
- * is why this is a separate definition rather than a collection with a flag.
- *
- * The whole surface is here, `config` and `blank` included; only `system` is composed on, by
- * `system` is composed on by `build` below, because it has to re-enter that builder.
- */
-const shape = <Doc extends GenericDoc>(ctx: Ctx) => ({
-  /** The built config this API acts on. */
-  config: ctx.config,
-
-  /** A document of this area's shape with every default applied. */
-  blank: ctx.blank as () => Doc,
+    return this.event.locals.rime.cache.get(cacheKey, read);
+  }
 
   /**
    * Retrieves the area's document
@@ -114,17 +110,17 @@ const shape = <Doc extends GenericDoc>(ctx: Ctx) => ({
     const { locale, select = [], depth = 0, versionId, draft } = args;
 
     // As on a collection's find: the key holds the caller's locale, not the resolved one.
-    return ctx.cached('area.find', { select, versionId, depth, draft, locale }, () =>
+    return this.cached('area.find', { select, versionId, depth, draft, locale }, () =>
       find<Doc>({
-        ctx,
+        ctx: this,
         select,
         versionId,
         depth,
         draft,
-        locale: ctx.fallbackLocale(locale)
+        locale: this.fallbackLocale(locale)
       })
     );
-  },
+  }
 
   /**
    * Updates the area's document
@@ -145,23 +141,27 @@ const shape = <Doc extends GenericDoc>(ctx: Ctx) => ({
     const { data, locale, versionId, draft } = args;
 
     return update<Doc>({
-      ctx,
+      ctx: this,
       data,
       versionId,
       draft,
-      locale: ctx.fallbackLocale(locale)
+      locale: this.fallbackLocale(locale)
     });
   }
-});
+}
 
 /** Builds an area's API for one request. What `rime.area(slug)` calls. */
 export const areaApi = <Doc extends GenericDoc>(args: AreaApiArgs): AreaApi<Doc> =>
-  build<Doc>(args);
+  new AreaAPI<Doc>(args);
 
-/** What `rime.area(slug)` hands back. See the note on `CollectionApi` about the context. */
-export type AreaApi<Doc extends GenericDoc = GenericDoc> = ReturnType<typeof shape<Doc>> & {
-  system(isSystem?: boolean): AreaApi<Doc>;
-};
+/**
+ * What `rime.area(slug)` hands back — written out, not read off the class. See the note on
+ * `CollectionApi` for why the plumbing must not appear in this type.
+ */
+export type AreaApi<Doc extends GenericDoc = GenericDoc> = Pick<
+  AreaAPI<Doc>,
+  'config' | 'blank' | 'find' | 'update' | 'system'
+>;
 
 export type AreaAccessor = <Slug extends keyof RegisterArea>(
   slug: Slug

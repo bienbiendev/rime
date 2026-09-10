@@ -1,10 +1,10 @@
+import type { RimeAuth } from '$lib/core/auth/better-auth/instance.server.js';
 import type { Config } from '$lib/core/config/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Adapter } from './adapter.js';
 import { bootRime } from './boot.server.js';
 import type { ConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
-import type { RimeAuth } from '$lib/core/auth/better-auth/instance.server.js';
 import { logger } from './logger.server.js';
 import { areaApi, type AreaAccessor } from './prototype/area/api.server.js';
 import { collectionApi, type CollectionAccessor } from './prototype/collection/api.server.js';

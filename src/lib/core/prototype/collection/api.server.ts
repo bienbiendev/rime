@@ -4,12 +4,12 @@ import type { RegisterCollection } from '$lib/index.js';
 import type { PrototypeApiContext } from '../define.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
-import type { GenericDoc } from '../types.js';
 import { blankAuthDocument } from '$lib/core/auth/blank.server.js';
 import { isAuth } from '$lib/core/auth/enabled.js';
 import { createBlankDocument } from '../doc.js';
 import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
 import type { CollectionSlug } from '../types.js';
+import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 import { create, type CreateArgs } from './operations/create.js';
 import { deleteById, type DeleteByIdArgs } from './operations/delete-by-id.js';
 import { deleteDocs, type DeleteArgs } from './operations/delete.js';
@@ -17,8 +17,6 @@ import { duplicate, type DuplicateArgs } from './operations/duplicate.js';
 import { findById, type FindByIdArgs } from './operations/find-by-id.js';
 import { find, type FindArgs } from './operations/find.js';
 import { updateById, type UpdateByIdArgs } from './operations/update-by-id.js';
-
-type Ctx = PrototypeApiContext<BuiltCollection>;
 
 /** What building a collection's API for one request needs. */
 export type CollectionApiArgs = {
@@ -28,80 +26,85 @@ export type CollectionApiArgs = {
 };
 
 /**
- * The per-call plumbing this collection's operations are handed.
+ * Everything `rime.collection('pages')` can do, in the collection's own folder, beside the
+ * operations that implement it.
  *
- * Written out here rather than shared with the area's. The two contexts were one
- * `prototypeContext` and they are not the same object: a collection's `blank()` strips auth's private members, because only a collection
- * signs in; an area's publishes its first version, because only an area is booted. Neither step
- * was ever reachable from the other kind, and a shared `shapeBlank` with an `intent` parameter
- * existed to say so.
+ * A class, and the operations are handed `this`. It was a `context()` building a plumbing object,
+ * a `shape(ctx)` returning the verbs, a `build()` wiring `system` around them and a
+ * `collectionApi()` calling that — four functions to hand back one object, and a
+ * `ReturnType<typeof shape>` to name it afterwards.
  *
- * Per-call, not per-process — `isSystemOperation` is part of it, so `.system()` is a second
- * context rather than a flag anybody has to remember to forward.
+ * The plumbing members below `system` are what the operations reach for; `CollectionApi` at the
+ * foot of this file is the list a caller sees.
  */
-const context = (args: CollectionApiArgs & { isSystemOperation: boolean }): Ctx => {
-  const { config, event, defaultLocale, isSystemOperation } = args;
+class CollectionAPI<
+  Doc extends RegisterCollection[CollectionSlug]
+> implements PrototypeApiContext<BuiltCollection> {
+  readonly config: BuiltCollection;
+  readonly event: RequestEvent;
+  readonly defaultLocale: string | undefined;
 
-  return {
-    config,
-    event,
-    defaultLocale,
-    isSystemOperation,
+  /** True when rime itself is the caller: access checks and some hooks stand down. */
+  readonly isSystemOperation: boolean;
 
-    fallbackLocale: (locale?: string) => locale || event.locals.locale || defaultLocale,
+  constructor(
+    private readonly args: CollectionApiArgs,
+    isSystemOperation = false
+  ) {
+    this.config = args.config;
+    this.event = args.event;
+    this.defaultLocale = args.defaultLocale;
+    this.isSystemOperation = isSystemOperation;
+  }
 
-    versionQuery: (params, intent = 'read') => versionsReadQuery({ config, params, intent }),
+  /**
+   * The same API, telling the pipeline that rime is the caller.
+   *
+   * A new instance rather than a flag, so a system call cannot leak back into the one it was
+   * escalated from. `system(false)` hands this one back, which is what lets `system(someBoolean)`
+   * read as "escalate if needed".
+   */
+  system(isSystem = true): CollectionAPI<Doc> {
+    return isSystem ? new CollectionAPI<Doc>(this.args, true) : this;
+  }
 
-    blank: () =>
-      (isAuth(config)
-        ? blankAuthDocument(createBlankDocument(config, event))
-        : createBlankDocument(config, event)) as GenericDoc,
+  /**
+   * A document of this collection's shape with every default applied, and no id.
+   *
+   * An auth collection hands back nothing private — the password, the better-auth link. Only a
+   * collection signs in, which is why this step is here and not on the area's.
+   */
+  blank(): Doc {
+    const doc = createBlankDocument(this.config, this.event);
+    return (isAuth(this.config) ? blankAuthDocument(doc) : doc) as Doc;
+  }
 
-    cached: <T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T> => {
-      if (!event.locals.cacheEnabled || isSystemOperation) return read();
+  /** The locale to act in: the one asked for, else the request's, else the config's default. */
+  fallbackLocale(locale?: string): string | undefined {
+    return locale || this.event.locals.locale || this.defaultLocale;
+  }
 
-      const cacheKey = event.locals.rime.cache.createKey(operation, {
-        slug: config.slug,
-        userEmail: event.locals.user?.email,
-        userRoles: event.locals.user?.roles,
-        ...key
-      });
+  /** Which version row a read means — see `versionsReadQuery`. */
+  versionQuery(
+    params: { draft?: boolean; versionId?: string },
+    intent: ReadIntent = 'read'
+  ): OperationQuery | undefined {
+    return versionsReadQuery({ config: this.config, params, intent });
+  }
 
-      return event.locals.rime.cache.get(cacheKey, read);
-    }
-  };
-};
+  /** Read through the API cache when it is on and this is not a system call. */
+  cached<T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T> {
+    if (!this.event.locals.cacheEnabled || this.isSystemOperation) return read();
 
-/**
- * Adds `.system()`: the same API over an escalated context.
- *
- * It has to *re-enter* the builder — a system call is the same API over a different context, not a
- * mutable flag on a shared object — so it cannot be a plain member. `system(false)` hands back the
- * API it was called on, which is what lets `system(someBoolean)` read as "escalate if needed".
- */
-const build = <Doc extends RegisterCollection[CollectionSlug]>(
-  args: CollectionApiArgs,
-  isSystemOperation = false
-): CollectionApi<Doc> => {
-  const api = shape<Doc>(context({ ...args, isSystemOperation })) as CollectionApi<Doc>;
-  api.system = (isSystem = true) => (isSystem ? build<Doc>(args, true) : api);
-  return api;
-};
+    const cacheKey = this.event.locals.rime.cache.createKey(operation, {
+      slug: this.config.slug,
+      userEmail: this.event.locals.user?.email,
+      userRoles: this.event.locals.user?.roles,
+      ...key
+    });
 
-/**
- * Everything `rime.collection('pages')` hands back, declared here in the collection's own folder,
- * next to the operations that implement it.
- *
- * **Its whole surface**, `config` and `blank` included. Those used to be appended by a shared
- * `buildPrototypeApi`, which meant no single file said what a collection's API actually was.
- * `system` is the one exception, and it is composed rather than appended — see `build` below.
- */
-const shape = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
-  /** The built config this API acts on. */
-  config: ctx.config,
-
-  /** A document of this collection's shape with every default applied, and no id. */
-  blank: ctx.blank as () => Doc,
+    return this.event.locals.rime.cache.get(cacheKey, read);
+  }
 
   /**
    * Creates a new document in the collection
@@ -114,11 +117,11 @@ const shape = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
    */
   create(args: CreateArgs<Doc>): Promise<Doc> {
     return create<Doc>({
-      ctx,
+      ctx: this,
       data: args.data,
-      locale: ctx.fallbackLocale(args.locale)
+      locale: this.fallbackLocale(args.locale)
     });
-  },
+  }
 
   /**
    * Duplicate a document in the collection
@@ -127,8 +130,8 @@ const shape = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
    * const post = await rime.collection('posts').duplicate({ id: '1234' });
    */
   duplicate(args: DuplicateArgs): Promise<string> {
-    return duplicate({ ctx, id: args.id });
-  },
+    return duplicate({ ctx: this, id: args.id });
+  }
 
   /**
    * Finds documents in the collection matching the query
@@ -147,12 +150,12 @@ const shape = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
     // The key holds the locale as the *caller* gave it, not the resolved one — preserved from
     // the class this replaces. Reachable only from a local-API call that omits `locale` while
     // the API cache is on, which the REST layer never does: it always passes rime.getLocale().
-    return ctx.cached(
+    return this.cached(
       'collection.find',
       { select, sort, depth, limit, offset, locale, draft, query },
       () =>
         find<Doc>({
-          ctx,
+          ctx: this,
           select,
           query,
           sort,
@@ -160,10 +163,10 @@ const shape = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
           limit,
           offset,
           draft,
-          locale: ctx.fallbackLocale(locale)
+          locale: this.fallbackLocale(locale)
         })
     );
-  },
+  }
 
   /**
    * Finds a document in the collection by ID
@@ -197,18 +200,18 @@ const shape = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
       throw new RimeError(RimeError.NOT_FOUND);
     }
 
-    return ctx.cached('collection.findById', { id, versionId, select, depth, draft, locale }, () =>
+    return this.cached('collection.findById', { id, versionId, select, depth, draft, locale }, () =>
       findById<Doc>({
-        ctx,
+        ctx: this,
         id,
         versionId,
         select,
         depth,
         draft,
-        locale: ctx.fallbackLocale(locale)
+        locale: this.fallbackLocale(locale)
       })
     );
-  },
+  }
 
   /**
    * Updates a document in the collection by ID
@@ -241,10 +244,10 @@ const shape = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
   updateById(args: UpdateByIdArgs<Doc>): Promise<Doc> {
     return updateById<Doc>({
       ...args,
-      ctx,
-      locale: ctx.fallbackLocale(args.locale)
+      ctx: this,
+      locale: this.fallbackLocale(args.locale)
     });
-  },
+  }
 
   /**
    * Deletes a document in the collection by ID
@@ -253,8 +256,8 @@ const shape = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
    * const post = await rime.collection('posts').deleteById({ id: '12345' });
    */
   deleteById(args: DeleteByIdArgs): Promise<string> {
-    return deleteById({ ctx, id: args.id });
-  },
+    return deleteById({ ctx: this, id: args.id });
+  }
 
   /**
    * Deletes multiple documents in the collection. No query means no filter —
@@ -267,28 +270,40 @@ const shape = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
    * });
    */
   delete(args: DeleteArgs = {}): Promise<string[]> {
-    return deleteDocs({ ctx, ...args });
+    return deleteDocs({ ctx: this, ...args });
   }
-});
+}
 
 /** Builds a collection's API for one request. What `rime.collection(slug)` calls. */
 export const collectionApi = <Doc extends RegisterCollection[CollectionSlug]>(
   args: CollectionApiArgs
-): CollectionApi<Doc> => build<Doc>(args);
+): CollectionApi<Doc> => new CollectionAPI<Doc>(args);
 
 /**
- * What `rime.collection(slug)` hands back.
+ * What `rime.collection(slug)` hands back — **written out**, not read off the class.
  *
- * Read off the factory above rather than written out again — but note what the factory's
- * signatures deliberately do *not* mention: the context. `event.locals.rime` is typed as this
- * accessor's owner, so an API surface that named `PrototypeApiContext` (and through it
- * `RequestEvent`) would be defined in terms of itself, and every `rime.collection(...)` call in
- * the repo would resolve to `never`. Each operation exports its caller-facing arguments
- * separately for that reason.
+ * The class also carries the plumbing its operations reach for (`event`, `cached`,
+ * `versionQuery`, `fallbackLocale`, `isSystemOperation`); none of that is a caller's business, and
+ * naming `RequestEvent` in this type would be worse than untidy. `event.locals.rime` is typed as
+ * this accessor's owner, so a surface that reached `RequestEvent` would be defined in terms of
+ * itself and every `rime.collection(...)` in the repo would resolve to `never`. Each operation
+ * exports its caller-facing arguments separately for the same reason.
  */
 export type CollectionApi<
   Doc extends RegisterCollection[CollectionSlug] = RegisterCollection[CollectionSlug]
-> = ReturnType<typeof shape<Doc>> & { system(isSystem?: boolean): CollectionApi<Doc> };
+> = Pick<
+  CollectionAPI<Doc>,
+  | 'config'
+  | 'blank'
+  | 'create'
+  | 'duplicate'
+  | 'find'
+  | 'findById'
+  | 'updateById'
+  | 'deleteById'
+  | 'delete'
+  | 'system'
+>;
 
 export type CollectionAccessor = <Slug extends keyof RegisterCollection>(
   slug: Slug
