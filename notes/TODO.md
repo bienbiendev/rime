@@ -41,8 +41,9 @@
 [x] More tests
 [x] configurable config path
 [x] configurable panel route
-[ ] Change edited_by that should be currently_edited_by, and add last_edited_by, created_by for less confusion.
+[x] Change edited_by that should be currently_edited_by, and add last_edited_by, created_by for less confusion.
 [ ] Handle auto-save / confirm dialog if version not enabled.
+[ ] Auto-claim the edit lock on open (needs a write path that moves neither updatedAt nor lastEditedBy)
 [x] Add select feature to findById collection
 [ ] Type `select` against the document's own paths (narrow the return type)
 [ ] Batch offset/update

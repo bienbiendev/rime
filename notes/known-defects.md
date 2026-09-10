@@ -31,7 +31,7 @@ false.
 
 ```ts
 operation === VERSIONS_OPERATIONS.UPDATE_VERSION ||
-operation === VERSIONS_OPERATIONS.NEW_VERSION_FROM_LATEST
+  operation === VERSIONS_OPERATIONS.NEW_VERSION_FROM_LATEST;
 ```
 
 `getOriginalDocument` — `core/pipeline/hooks/get-original-document.server.ts` — passes that as its

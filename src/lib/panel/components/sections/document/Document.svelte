@@ -1,6 +1,7 @@
 <script lang="ts">
   import { beforeNavigate, goto } from '$app/navigation';
   import { isAuthConfig } from '$lib/core/auth/util';
+  import { EDIT_LOCK_TTL_MS } from '$lib/core/prototype/shared/metas/constant.js';
   import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
   import { t__ } from '$lib/core/i18n/index.js';
   import type { GenericDoc } from '$lib/core/prototype/types';
@@ -18,6 +19,7 @@
   import AuthFooter from './AuthFooter.svelte';
   import CurrentlyEdited from './CurrentlyEdited.svelte';
   import Header from './Header.svelte';
+  import StaffName from '../../ui/staff-name/StaffName.svelte';
   import UploadHeader from './upload-header/UploadHeader.svelte';
 
   type Props = {
@@ -64,6 +66,23 @@
 
   // This is used to show the API key after creating a document in a collection with API key auth
   let apiKey = $state<string | null>('');
+
+  /**
+   * Somebody else has this document open, recently enough to still mean it.
+   *
+   * The staleness test is the whole point: a claim is only ever released by the next person taking
+   * control, so without an expiry the first person to press *Take control* holds the document for
+   * good. A claim with no timestamp predates `currentlyEditedAt` and is treated as expired.
+   */
+  const isLockedByOther = $derived.by(() => {
+    const by = form.values.currentlyEditedBy;
+    if (!by || by === user.attributes.id) return false;
+
+    const since = form.values.currentlyEditedAt;
+    if (!since) return false;
+
+    return Date.now() - new Date(since).getTime() < EDIT_LOCK_TTL_MS;
+  });
 
   // Intercept navigation when there are unsaved changes in the form
   beforeNavigate(async ({ cancel, to }) => {
@@ -131,6 +150,13 @@
   </p>
 {/snippet}
 
+{#snippet metaUser(label: string, id: string)}
+  <p class="rz-document__metas">
+    <span>{label} : </span>
+    <StaffName {id} />
+  </p>
+{/snippet}
+
 <form
   class="rz-document {className}"
   bind:this={formElement}
@@ -140,8 +166,8 @@
 >
   <Header {form} {config} {onClose}></Header>
 
-  {#if form.values.editedBy && form.values.editedBy !== user.attributes.id}
-    <CurrentlyEdited by={form.values.editedBy} doc={form.values} user={user.attributes} />
+  {#if isLockedByOther}
+    <CurrentlyEdited by={form.values.currentlyEditedBy} doc={form.values} user={user.attributes} />
   {/if}
 
   <div class="rz-document__fields">
@@ -159,11 +185,14 @@
     {#if form.values.createdAt}
       {@render meta(t__('common.created_at'), locale.dateFormat(form.values.createdAt))}
     {/if}
+    {#if form.values.createdBy}
+      {@render metaUser(t__('common.created_by'), form.values.createdBy)}
+    {/if}
     {#if form.values.updatedAt}
       {@render meta(t__('common.last_update'), locale.dateFormat(form.values.updatedAt))}
     {/if}
-    {#if form.values.editedBy}
-      {@render meta(t__('common.edited_by'), locale.dateFormat(form.values.editedBy))}
+    {#if form.values.lastEditedBy}
+      {@render metaUser(t__('common.last_edited_by'), form.values.lastEditedBy)}
     {/if}
     {#if form.values.id}
       {@render meta('id', form.values.id)}

@@ -28,7 +28,7 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
     withBlank?: boolean;
     /**
      * Keep a child row's own bookkeeping on it — `position`, `path`, `ownerId`, `locale` — and
-     * `editedBy` on the document. An API read wants the document; an editor that writes blocks
+     * the edit lock on the document. An API read wants the document; an editor that writes blocks
      * back in place wants the bookkeeping too.
      */
     withRowMeta?: boolean;
@@ -86,8 +86,12 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
 
   let doc: Dic = cleanEmptyElementsInArrays(unflatten<Dic, Dic>(flatDoc));
 
-  // `editedBy` is who last touched the row, which only an editor that shows it has any use for.
-  const keysToDelete = !withRowMeta || !event.locals.user ? ['editedBy'] : [];
+  // The edit lock is panel state, not document data: who has this open *right now*, and since
+  // when. Only an editor that draws the overlay has any use for it, and nothing outside the panel
+  // should be able to read who is at their desk. `createdBy` and `lastEditedBy` are the opposite —
+  // they answer questions about the document, so every read gets them.
+  const keysToDelete =
+    !withRowMeta || !event.locals.user ? ['currentlyEditedBy', 'currentlyEditedAt'] : [];
 
   if (withBlank) {
     const blank = rime.config.isCollection(config.slug)

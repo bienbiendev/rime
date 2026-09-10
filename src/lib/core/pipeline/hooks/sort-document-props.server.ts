@@ -21,6 +21,8 @@ function sortDocumentKeys<T extends Dic>(obj: T): T {
     'path',
     'position',
     'ownerId',
+    'createdBy',
+    'lastEditedBy',
     'createdAt',
     'updatedAt',
     '_type',

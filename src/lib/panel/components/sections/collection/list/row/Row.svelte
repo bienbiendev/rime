@@ -5,6 +5,7 @@
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import { panelUrl } from '$lib/panel/util/url.js';
   import { getValueAtPath } from '$lib/util/object';
+  import StaffName from '$lib/panel/components/ui/staff-name/StaffName.svelte';
   import StatusDot from '../../StatusDot.svelte';
   import UploadThumbCell from '../../upload-thumb-cell/UploadThumbCell.svelte';
 
@@ -26,7 +27,8 @@
   let gridTemplateColumn = $state('grid-template-columns: 2fr repeat(1, minmax(0, 1fr));');
 
   $effect(() => {
-    const columnLength = (columns?.length ?? 0) + 2;
+    // +3 — see the note in Header.svelte, which counts the same columns.
+    const columnLength = (columns?.length ?? 0) + 3;
     gridTemplateColumn = `grid-template-columns: 2fr repeat(${columnLength - 1}, minmax(0, 1fr));`;
   });
 
@@ -86,6 +88,10 @@
       {/if}
     </div>
   {/each}
+
+  <div class="rz-list-row__cell">
+    <StaffName id={doc.lastEditedBy} fallback="" />
+  </div>
 
   <div class="rz-list-row__cell">
     {formattedDate}

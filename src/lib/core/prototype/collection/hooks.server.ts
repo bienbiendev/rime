@@ -5,6 +5,7 @@ import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
 import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
 import { when } from '$lib/core/prototype/when.js';
 import * as auth from '$lib/core/auth/hooks/index.server.js';
+import * as metas from '$lib/core/prototype/shared/metas/hooks/index.server.js';
 import * as nested from '$lib/core/prototype/collection/nested/hooks/index.server.js';
 import * as thumbnail from '$lib/core/prototype/collection/thumbnail/hooks/index.server.js';
 import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
@@ -74,6 +75,10 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     mergeWithBlankDocument,
     // After the merge: it appends the password field, and the config map below has to see it.
     when(isAuth, auth.augmentFieldsPassword),
+    // Above `buildDataConfigMap`: that map is what the write turns into `incomingPaths`, the set
+    // of paths the request is allowed to touch, so a field added to `data` below it is dropped
+    // without a word.
+    metas.stampCreatedBy,
     buildDataConfigMap,
     setDefaultValues,
     validateFields,
@@ -100,6 +105,10 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     // Also reads the submission as sent, and overrides the content row core resolved above.
     when(isVersioned, versions.defineVersionOperation),
     when(isVersioned, versions.handleNewVersion),
+    // Between the two: below `handleNewVersion`, which reads the submission *as sent* to work out
+    // what the previous version did not carry, and above `buildDataConfigMap`, whose keys are the
+    // paths the write is allowed to touch — a stamp below that is dropped without a word.
+    metas.stampLastEditedBy,
     buildDataConfigMap,
     setDefaultValues,
     validateFields,

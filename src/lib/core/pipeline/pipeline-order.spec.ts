@@ -48,6 +48,8 @@ describe('a collection runs its hooks in this order', () => {
     expect(order(hooks, 'beforeCreate')).toEqual([
       'mergeWithBlankDocument',
       'augmentFieldsPassword',
+      // Above `buildDataConfigMap`, whose keys are the paths the write may touch.
+      'stampCreatedBy',
       'buildDataConfigMap',
       'setDefaultValues',
       'validateFields',
@@ -69,6 +71,8 @@ describe('a collection runs its hooks in this order', () => {
       'forwardRolesToBetterAuth',
       'defineVersionOperation',
       'handleNewVersion',
+      // Below `handleNewVersion`, which reads the submission as sent; above `buildDataConfigMap`.
+      'stampLastEditedBy',
       'buildDataConfigMap',
       'setDefaultValues',
       'validateFields',
@@ -109,6 +113,7 @@ describe('an area runs fewer, in the same relative order', () => {
       'resolveContentOwner',
       'defineVersionOperation',
       'handleNewVersion',
+      'stampLastEditedBy',
       'buildDataConfigMap',
       'setDefaultValues',
       'validateFields',

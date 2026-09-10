@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t__ } from '$lib/core/i18n/index.js';
   import type { FormField } from '$lib/fields/types.js';
   import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
   import { capitalize } from '$lib/util/string.js';
@@ -10,7 +11,9 @@
   let gridTemplateColumn = $state('grid-template-columns: 2fr repeat(1, minmax(0, 1fr));');
 
   $effect(() => {
-    const columnLength = collection.columns.length + 2;
+    // +3, not +2: the title, the config's own columns, then the two fixed meta columns —
+    // who last edited, and when. Row.svelte counts the same way and the two have to agree.
+    const columnLength = collection.columns.length + 3;
     gridTemplateColumn = `grid-template-columns: 2fr repeat(${columnLength - 1}, minmax(0, 1fr));`;
   });
 </script>
@@ -50,6 +53,9 @@
       {@render columnHeader(column.label || column.name)}
     {/if}
   {/each}
+
+  <!-- Not sortable: the column holds user ids, so ordering by it orders by nothing a reader can see. -->
+  {@render columnHeader(t__('common.last_edited_by'))}
 
   {@render sortableColumnHeader({ name: 'updatedAt' })}
 </div>

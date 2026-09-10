@@ -59,6 +59,7 @@ test('Login should be successfull', async ({ request }) => {
 
 let homeId: string;
 let pageId: string;
+let editorUserId: string;
 
 /**
  * Offset limit
@@ -790,6 +791,7 @@ test('Should create a staff editor', async ({ request }) => {
   expect(response.status()).toBe(200);
   expect(data.doc).toBeDefined();
   expect(data.doc.id).toBeDefined();
+  editorUserId = data.doc.id;
 });
 
 test('Should not update Home', async ({ request }) => {
@@ -1501,6 +1503,49 @@ test('Editor should update home', async ({ request }) => {
   expect(response.status()).toBe(200);
   const data = await response.json();
   expect(data.doc.attributes.title).toBe('Home edited by editor');
+});
+
+/****************************************************
+/* Authorship metas
+/*
+/* `createdBy` answers who made the document and is never rewritten; `lastEditedBy` answers who
+/* wrote the revision being read. Home was created by the super admin in this file's first tests
+/* and has just been updated by the editor, so the two must now disagree.
+/****************************************************/
+
+test('Should keep createdBy and move lastEditedBy to whoever wrote last', async ({ request }) => {
+  const { doc } = await request
+    .get(`${API_BASE_URL}/pages/${homeId}`)
+    .then((response) => response.json());
+
+  expect(doc.createdBy).toBe(adminUserId);
+  expect(doc.lastEditedBy).toBe(editorUserId);
+});
+
+test('Should not expose the edit lock outside the panel', async ({ request }) => {
+  const { doc } = await request
+    .get(`${API_BASE_URL}/pages/${homeId}`, { headers: await signInSuperAdmin(request) })
+    .then((response) => response.json());
+
+  expect(doc.currentlyEditedBy).toBeUndefined();
+  expect(doc.currentlyEditedAt).toBeUndefined();
+});
+
+test('Should claim the edit lock without becoming the last editor', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/pages/${homeId}`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      currentlyEditedBy: adminUserId,
+      currentlyEditedAt: new Date()
+    }
+  });
+  expect(response.status()).toBe(200);
+
+  const { doc } = await request.get(`${API_BASE_URL}/pages/${homeId}`).then((r) => r.json());
+
+  // The lock write is not an edit: the editor who wrote the content is still the last editor.
+  expect(doc.lastEditedBy).toBe(editorUserId);
+  expect(doc.createdBy).toBe(adminUserId);
 });
 
 test('Should logout editor', async ({ request }) => {

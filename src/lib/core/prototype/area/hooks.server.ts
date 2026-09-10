@@ -1,6 +1,7 @@
 import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
 import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
 import { when } from '$lib/core/prototype/when.js';
+import * as metas from '$lib/core/prototype/shared/metas/hooks/index.server.js';
 import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
 import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
 import * as versions from '$lib/core/prototype/shared/versions/hooks/index.server.js';
@@ -50,6 +51,8 @@ export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     resolveContentOwner,
     when(isVersioned, versions.defineVersionOperation),
     when(isVersioned, versions.handleNewVersion),
+    // Between the two, for the reasons the collection's list gives.
+    metas.stampLastEditedBy,
     buildDataConfigMap,
     setDefaultValues,
     validateFields,

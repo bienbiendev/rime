@@ -13,9 +13,7 @@ the line), then the work. The last section arbitrates between them.
 collection and area:
 
 ```ts
-text('editedBy').hidden(),
-date('createdAt').hidden(),
-date('updatedAt').hidden()
+(text('editedBy').hidden(), date('createdAt').hidden(), date('updatedAt').hidden());
 ```
 
 `editedBy` holds a **user id**, and it is written in exactly one place: the `takeControl()` PATCH in
@@ -43,10 +41,10 @@ so the API never sees it.
 The rename is mechanical: six call sites. What the TODO is really asking for is **three values with
 three different lifetimes**, currently collapsed into one:
 
-| value | written when | read by |
-| --- | --- | --- |
-| `createdBy` | once, on create | list column, audit |
-| `lastEditedBy` | every successful write | list column, audit |
+| value               | written when                        | read by               |
+| ------------------- | ----------------------------------- | --------------------- |
+| `createdBy`         | once, on create                     | list column, audit    |
+| `lastEditedBy`      | every successful write              | list column, audit    |
 | `currentlyEditedBy` | on open, released on leave/save/TTL | the lock overlay only |
 
 Only the third is ephemeral. Keeping it in the same shape as the other two is what makes the current
@@ -95,6 +93,32 @@ migrated documents with whoever's request happened to trigger them.
 
 ---
 
+> **Landed**, except step 3's auto-claim. `augmentMetas` now declares `createdBy`,
+> `lastEditedBy`, `currentlyEditedBy` and `currentlyEditedAt`; two hooks stamp authorship;
+> `build-document.server.ts` keeps the lock inside the panel and lets the two authorship fields
+> out; the panel resolves an id to a name through `ui/staff-name/StaffName.svelte` and shows
+> "last edited by" as a fixed list column beside `updatedAt`.
+>
+> Two things came out different from the plan above, and both were forced by the code:
+>
+> - **They are `text`, not relations to `staff`.** The base table is built from
+>   `fields.filter(f => f.get.root)` in a `buildRootTable` call whose `relationFieldsMap` is
+>   discarded, so a `._root()` relation generates no junction table and silently stores nothing.
+>   The lock has to be `._root()` — otherwise claiming it writes to the versions table, which is
+>   why `takeControl`'s PATCH used to spawn a revision — so text it is, and the panel resolves the
+>   name.
+> - **The lock is not auto-claimed on open yet.** Claiming on load means an ordinary
+>   `updateById`, which moves `updatedAt` and would stamp whoever opened the document as its last
+>   editor. `stampLastEditedBy` already stands down on a write of nothing but lock fields, so half
+>   of that is solved; `updatedAt` is not, and `write.server.ts:163-165` shows the shape of the fix
+>   (a targeted column write that leaves `updatedAt` alone). Left as its own TODO line.
+>
+> What is fixed regardless: the lock now expires. `currentlyEditedAt` plus `EDIT_LOCK_TTL_MS`
+> means a claim goes stale after five minutes, so the overlay can no longer strand a document
+> behind whoever pressed _Take control_ first.
+
+---
+
 ## 2. Auto-save, and the confirm dialog when versions are off
 
 ### What is there today
@@ -125,7 +149,7 @@ Auto-save is only safe where a save is **non-destructive**. That is exactly the 
   untouched, and `maxVersions` pruning already exists to stop the table growing
   (`handle-new-version.server.ts:66-72`, which prunes `status != published` by `-updatedAt` beyond
   the cap). **This is where auto-save belongs.**
-- `versions: { draft: false }` — every save is a new *published* version. Auto-save here publishes
+- `versions: { draft: false }` — every save is a new _published_ version. Auto-save here publishes
   half-finished edits to the live site. Wrong by default.
 - no `versions` — every save overwrites the only row there is. Auto-save is straightforwardly
   destructive: no undo, and the confirm dialog exists precisely because of that.
@@ -178,6 +202,10 @@ that landed during the round trip). Step 6 changes what the version list means.
 
 ## 3. `select` on `findById`
 
+> **Landed.** `selectWithTitle` in `shared/title/select.ts`, called from all three REST endpoints;
+> a unit spec and three by-id cases in `tests/multilang/api.test.ts`. Typing `select` against the
+> document's own paths is its own TODO line.
+
 ### What is there today
 
 **This is largely already built.** The parameter flows end to end:
@@ -216,7 +244,7 @@ gaps remain.
    `?select=attributes.title` by id, `?select=` on a nested path, `?select=title` asserting the
    asTitle resolution from step 1, and one on a versioned collection asserting the select applies to
    the version row and not just the base row.
-3. *(optional, separate commit)* Type it: `select?: Array<DocPaths<Doc>>` with the paths generated
+3. _(optional, separate commit)_ Type it: `select?: Array<DocPaths<Doc>>` with the paths generated
    the way codegen already generates doc types, and a return of `Pick<Doc, …>`. This is the only
    part with any real cost, and it is a developer-experience change rather than a capability.
 
@@ -253,7 +281,7 @@ It also fixes three things that are broken right now rather than merely absent:
 - a lock that never engages on its own and never releases once it does.
 
 That last one matters more than the rename. As shipped, the "currently editing" overlay is not a
-soft lock — it is a permanent one that only appears after someone presses *Take control*. Any
+soft lock — it is a permanent one that only appears after someone presses _Take control_. Any
 multi-editor install either never sees it or gets stuck behind it. Fixing that is not polish.
 
 And it is a prerequisite for 2: auto-save and an edit lock write to the same document on the same
@@ -281,8 +309,8 @@ not. That is a ten-line commit and it should not wait for the feature.
 
 ### Summary
 
-| | value | cost | risk | verdict |
-| --- | --- | --- | --- | --- |
-| 3 — `select` on findById | low | ~1h | none | do now, closes a stale line |
-| 1 — user metas | **high** | ~1d | low | **the pick** — table columns come free |
-| 2 — auto-save | **high** | ~3d + a design call | data loss | after 1; land the validation guard now |
+|                          | value    | cost                | risk      | verdict                                |
+| ------------------------ | -------- | ------------------- | --------- | -------------------------------------- |
+| 3 — `select` on findById | low      | ~1h                 | none      | do now, closes a stale line            |
+| 1 — user metas           | **high** | ~1d                 | low       | **the pick** — table columns come free |
+| 2 — auto-save            | **high** | ~3d + a design call | data loss | after 1; land the validation guard now |

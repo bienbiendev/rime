@@ -3,33 +3,35 @@
   import type { GenericDoc } from '$lib/core/prototype/types.js';
   import { apiUrl } from '$lib/util/index.js';
   import { toKebabCase } from '$lib/util/string.js';
-  import { onMount } from 'svelte';
   import { Button } from '../../ui/button/index.js';
+  import StaffName from '../../ui/staff-name/StaffName.svelte';
   type Props = { by: string; user: User; doc: GenericDoc };
   const { by, user, doc }: Props = $props();
 
+  /**
+   * Claim the document.
+   *
+   * Both fields, always: `currentlyEditedAt` is what makes the claim expire, so a claim written
+   * without one is a permanent lock — which is what the single `editedBy` field this replaces was.
+   * `stampLastEditedBy` recognises a write of nothing but these two and stands down, so taking
+   * control does not make you the document's last editor.
+   */
   async function takeControl() {
     const fetchURl = `${apiUrl(toKebabCase(doc._type))}/${doc._prototype === 'collection' ? doc.id : ''}`;
 
     await fetch(fetchURl, {
       method: 'PATCH',
       body: JSON.stringify({
-        editedBy: user.id
+        currentlyEditedBy: user.id,
+        currentlyEditedAt: new Date()
       })
     });
     window.location.reload();
   }
-
-  let email = $state();
-
-  onMount(async () => {
-    const { doc } = await fetch(apiUrl('staff', by)).then((r) => r.json());
-    email = doc.email;
-  });
 </script>
 
 <div class="rz-document-read-only">
-  <p><strong>{email}</strong> is editing the document</p>
+  <p><StaffName id={by} /> is editing the document</p>
   <Button variant="outline" onclick={takeControl}>Take control</Button>
 </div>
 
