@@ -2,9 +2,7 @@ import type { BuiltConfig } from '$lib/core/config/types.js';
 import { authColumns } from '$lib/core/auth/tables.js';
 import { baseTableName, declaredTableProperty, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
-import { toPascalCase } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
-import { generateRelationshipDefinitions } from './relations/definition.server.js';
 import { generateJunctionTableDefinition } from './relations/junction.server.js';
 import buildRootTable from './root.server.js';
 import {
@@ -14,8 +12,7 @@ import {
   templateExportTables,
   templateHead,
   templateImports,
-  templateRelationMany,
-  templateRelationOne
+  templateRelations
 } from './templates.server.js';
 import write from './write.server.js';
 
@@ -32,7 +29,8 @@ export async function generateSchemaString(config: BuiltConfig) {
 
   const schema: string[] = [templateImports];
   let enumTables: string[] = [];
-  let enumRelations: string[] = [];
+  /** parent table -> its child tables, for the one `defineRelations` at the end. */
+  const relationTree: Record<string, string[]> = {};
   let relationFieldsExportDic: Dic = {};
   const blocksRegister: string[] = [];
 
@@ -48,7 +46,6 @@ export async function generateSchemaString(config: BuiltConfig) {
     // a derived slug like `$someChild` has to lose its `$` and snake-case its segments.
     const baseName = baseTableName(prototype.slug);
     let rootTableName: TableName = baseName;
-    let versionsRelationsDefinitions: string[] = [];
 
     schema.push(templateHead(baseName));
 
@@ -74,24 +71,8 @@ export async function generateSchemaString(config: BuiltConfig) {
       // From here on, "root" means the versions table: its blocks, tree and relations tables hang off it.
       rootTableName = baseTableName(versions.slug);
 
-      const manyVersionsToOneName = `rel_${rootTableName}HasOne${toPascalCase(baseName)}`;
-      const oneToManyVersionsName = `rel_${baseName}HasMany${toPascalCase(rootTableName)}`;
-
-      versionsRelationsDefinitions = [
-        templateRelationOne({
-          name: manyVersionsToOneName,
-          table: rootTableName,
-          parent: baseName
-        }),
-        templateRelationMany({
-          name: oneToManyVersionsName,
-          table: baseName,
-          many: [rootTableName]
-        })
-      ];
-
       enumTables = [...enumTables, baseName];
-      enumRelations = [...enumRelations, manyVersionsToOneName, oneToManyVersionsName];
+      (relationTree[baseName] ??= []).push(rootTableName);
     }
 
     const {
@@ -120,25 +101,18 @@ export async function generateSchemaString(config: BuiltConfig) {
       relationsDic[rootTableName].push(junctionTableName);
     }
 
-    const { relationsDefinitions, relationsNames } = generateRelationshipDefinitions({
-      relationsDic
-    });
-
     const relationsTableNames = Object.values(relationsDic).flat();
 
     enumTables = Array.from(new Set([...enumTables, rootTableName, ...relationsTableNames]));
-    enumRelations = [...enumRelations, ...relationsNames];
+    for (const [parent, children] of Object.entries(relationsDic)) {
+      (relationTree[parent] ??= []).push(...children);
+    }
     relationFieldsExportDic = {
       ...relationFieldsExportDic,
       [rootTableName]: relationFieldsMap
     };
 
-    schema.push(
-      prototypeSchema,
-      junctionTable,
-      ...versionsRelationsDefinitions,
-      relationsDefinitions
-    );
+    schema.push(prototypeSchema, junctionTable);
   }
 
   // Tables no prototype declares — better-auth's own, plus whatever a plugin added during the
@@ -149,8 +123,10 @@ export async function generateSchemaString(config: BuiltConfig) {
   }
 
   schema.push(templateExportTables(enumTables));
+  // After `tables`, which `defineRelations` takes as its first argument.
+  schema.push(templateRelations(relationTree));
   schema.push(templateExportRelationsFieldsToTable(relationFieldsExportDic));
-  schema.push(templateExportSchema({ enumTables, enumRelations }));
+  schema.push(templateExportSchema({ enumTables }));
 
   return schema.join('\n').replace(/\n{3,}/g, '\n\n');
 }

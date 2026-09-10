@@ -1,10 +1,10 @@
 import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';
+import { getColumns } from 'drizzle-orm';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
-import { asc, eq, getTableColumns, or, SQL } from 'drizzle-orm';
 import { childTableNames, tableName, type TableName } from './naming.server.js';
 
 export const buildWithParam = (args: {
@@ -45,13 +45,12 @@ export const buildWithParam = (args: {
       const blocksTables = childTableNames(table, 'blocks', tables);
       for (const blocksTable of blocksTables) {
         if (!withParam[blocksTable]) {
-          const blocksTableObj = tables[blocksTable];
-          let params: Dic = { orderBy: [asc(blocksTableObj.position)] };
-          const columns = getTableColumns(blocksTableObj);
+          let params: Dic = { orderBy: { position: 'asc' } };
+          const columns = getColumns(tables[blocksTable]);
           const hasLocale = Object.keys(columns).includes('locale');
 
           if (locale && hasLocale) {
-            params = { ...params, where: eq(blocksTableObj.locale, locale) };
+            params = { ...params, where: { locale } };
           }
 
           withParam[blocksTable] = params;
@@ -63,7 +62,7 @@ export const buildWithParam = (args: {
               ...withParam[blocksTable],
               with: {
                 [localesBlockTable]: {
-                  where: eq(tables[localesBlockTable].locale, locale)
+                  where: { locale }
                 }
               }
             };
@@ -76,13 +75,12 @@ export const buildWithParam = (args: {
       const treeTables = childTableNames(table, 'tree', tables);
       for (const treeTable of treeTables) {
         if (!withParam[treeTable]) {
-          const treeTableObj = tables[treeTable];
-          let params: Dic = { orderBy: [asc(treeTableObj.position)] };
-          const columns = getTableColumns(treeTableObj);
+          let params: Dic = { orderBy: { position: 'asc' } };
+          const columns = getColumns(tables[treeTable]);
           const hasLocale = Object.keys(columns).includes('locale');
 
           if (locale && hasLocale) {
-            params = { ...params, where: eq(treeTableObj.locale, locale) };
+            params = { ...params, where: { locale } };
           }
 
           withParam[treeTable] = params;
@@ -94,7 +92,7 @@ export const buildWithParam = (args: {
               ...withParam[treeTable],
               with: {
                 [localesTreeTables]: {
-                  where: eq(tables[localesTreeTables].locale, locale)
+                  where: { locale }
                 }
               }
             };
@@ -106,7 +104,6 @@ export const buildWithParam = (args: {
       if (fieldConfig.get.localized && locale) {
         const localesTableName = tableName({ owner: table, branch: 'locales' });
         if (localesTableName in tables) {
-          const tableLocales = tables[localesTableName];
           if (withParam[localesTableName]) {
             withParam[localesTableName].columns = {
               ...withParam[localesTableName].columns,
@@ -114,7 +111,7 @@ export const buildWithParam = (args: {
             };
           } else {
             withParam[localesTableName] = {
-              where: eq(tableLocales.locale, locale),
+              where: { locale },
               columns: { [sqlPath]: true }
             };
           }
@@ -127,15 +124,8 @@ export const buildWithParam = (args: {
   // this ensure we only fetch the necessary relations
   if (directRelationPaths.length) {
     withParam[tableName({ owner: table, child: { kind: 'rels' } })] = {
-      where: or(
-        ...directRelationPaths.map((path) =>
-          eq(tables[tableName({ owner: table, child: { kind: 'rels' } })].path, path)
-        )
-      ),
-      orderBy: [
-        asc(tables[tableName({ owner: table, child: { kind: 'rels' } })].path),
-        asc(tables[tableName({ owner: table, child: { kind: 'rels' } })].position)
-      ]
+      where: { OR: directRelationPaths.map((path) => ({ path })) },
+      orderBy: { path: 'asc', position: 'asc' }
     };
   }
 
@@ -148,32 +138,17 @@ export const buildWithParam = (args: {
     (blockPaths.length > 0 || treePaths.length > 0) &&
     tableName({ owner: table, child: { kind: 'rels' } }) in tables
   ) {
-    const relsTable = tables[tableName({ owner: table, child: { kind: 'rels' } })];
-
     // Create a where condition that matches relations within any of the container paths,
     // and include direct relation paths as exact matches.
     withParam[tableName({ owner: table, child: { kind: 'rels' } })] = {
-      where: (relation: any, { like, or }: any) => {
-        const conditions = [];
-
-        // Add conditions for block paths
-        for (const path of blockPaths) {
-          conditions.push(like(relation.path, `${path}__%`));
-        }
-
-        // Add conditions for tree paths
-        for (const path of treePaths) {
-          conditions.push(like(relation.path, `${path}__%`));
-        }
-
-        // Add direct relation paths if any (exact match via like)
-        for (const path of directRelationPaths) {
-          conditions.push(eq(relation.path, path));
-        }
-
-        return or(...conditions);
+      where: {
+        OR: [
+          // A container's rows sit under its path; a direct relation is the path itself.
+          ...[...blockPaths, ...treePaths].map((path) => ({ path: { like: `${path}__%` } })),
+          ...directRelationPaths.map((path) => ({ path }))
+        ]
       },
-      orderBy: [asc(relsTable.path), asc(relsTable.position)]
+      orderBy: { path: 'asc', position: 'asc' }
     };
   }
 
@@ -182,16 +157,9 @@ export const buildWithParam = (args: {
     const treeTables = childTableNames(table, 'tree', tables);
     for (const treeTable of treeTables) {
       if (!withParam[treeTable]) {
-        const treeTableObj = tables[treeTable];
-
         withParam[treeTable] = {
-          where: (tree: any, { like, or }: any) => {
-            const conditions = blockPaths.map((path) => {
-              return like(tree.path, `${path}__%`);
-            });
-            return or(...conditions);
-          },
-          orderBy: [asc(treeTableObj.position)]
+          where: { OR: blockPaths.map((path) => ({ path: { like: `${path}__%` } })) },
+          orderBy: { position: 'asc' }
         };
 
         // Handle localized trees
@@ -201,7 +169,7 @@ export const buildWithParam = (args: {
             ...withParam[treeTable],
             with: {
               [localesTreeTable]: {
-                where: eq(tables[localesTreeTable].locale, locale)
+                where: { locale }
               }
             }
           };
@@ -215,16 +183,9 @@ export const buildWithParam = (args: {
     const blocksTables = childTableNames(table, 'blocks', tables);
     for (const blocksTable of blocksTables) {
       if (!withParam[blocksTable]) {
-        const blocksTableObj = tables[blocksTable];
-
         withParam[blocksTable] = {
-          where: (block: any, { like, or }: any) => {
-            const conditions = treePaths.map((path) => {
-              return like(block.path, `${path}__%`);
-            });
-            return or(...conditions);
-          },
-          orderBy: [asc(blocksTableObj.position)]
+          where: { OR: treePaths.map((path) => ({ path: { like: `${path}__%` } })) },
+          orderBy: { position: 'asc' }
         };
 
         // Handle localized blocks
@@ -234,7 +195,7 @@ export const buildWithParam = (args: {
             ...withParam[blocksTable],
             with: {
               [localesBlockTable]: {
-                where: eq(tables[localesBlockTable].locale, locale)
+                where: { locale }
               }
             }
           };
@@ -266,12 +227,12 @@ const buildFullWithParam = ({
   const withParam: Dic = Object.fromEntries(
     [...blocksTables, ...treeTables].map((key) => {
       const blockOrTreeTable = tables[key];
-      type Params = { orderBy: SQL[]; where?: SQL };
-      let params: Params = { orderBy: [asc(blockOrTreeTable.position)] };
-      const columns = getTableColumns(blockOrTreeTable);
+      type Params = { orderBy: Dic; where?: Dic };
+      let params: Params = { orderBy: { position: 'asc' } };
+      const columns = getColumns(blockOrTreeTable);
       const hasLocale = Object.keys(columns).includes('locale');
       if (locale && hasLocale) {
-        params = { ...params, where: eq(blockOrTreeTable.locale, locale) };
+        params = { ...params, where: { locale } };
       }
       return [key, params];
     })
@@ -280,8 +241,7 @@ const buildFullWithParam = ({
   if (locale) {
     const localesTableName = tableName({ owner: table, branch: 'locales' });
     if (localesTableName in tables) {
-      const tableLocales = tables[localesTableName];
-      withParam[localesTableName] = { where: eq(tableLocales.locale, locale) };
+      withParam[localesTableName] = { where: { locale } };
     }
     for (const blocksTable of blocksTables) {
       const localesBlockTable = tableName({ owner: blocksTable, branch: 'locales' });
@@ -290,7 +250,7 @@ const buildFullWithParam = ({
           ...withParam[blocksTable],
           with: {
             [localesBlockTable]: {
-              where: eq(tables[localesBlockTable].locale, locale)
+              where: { locale }
             }
           }
         };
@@ -303,7 +263,7 @@ const buildFullWithParam = ({
           ...withParam[treeTable],
           with: {
             [localesTreeTable]: {
-              where: eq(tables[localesTreeTable].locale, locale)
+              where: { locale }
             }
           }
         };
@@ -313,9 +273,8 @@ const buildFullWithParam = ({
 
   if (tableName({ owner: table, child: { kind: 'rels' } }) in tables) {
     const tableNameRelationFields = tableName({ owner: table, child: { kind: 'rels' } });
-    const tableRelationFields = tables[tableNameRelationFields];
     withParam[tableNameRelationFields] = {
-      orderBy: [asc(tableRelationFields.path), asc(tableRelationFields.position)]
+      orderBy: { path: 'asc', position: 'asc' }
     };
   }
 

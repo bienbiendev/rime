@@ -22,8 +22,13 @@ type PMConfig = Record<
   }
 >;
 
-const deps = ['drizzle-orm', '@libsql/client', '@lucide/svelte', 'sharp'];
-const devDeps = ['@sveltejs/adapter-node', 'drizzle-kit'];
+// Drizzle is pinned to the exact release rime is built against. `@rc` is a moving tag and a
+// prerelease range drifts across API changes — an app on a different rc than the rimecms it
+// installed is the split that made every sign-in fail when better-auth did the same thing.
+const DRIZZLE = '1.0.0-rc.4';
+
+const deps = [`drizzle-orm@${DRIZZLE}`, '@libsql/client', '@lucide/svelte', 'sharp'];
+const devDeps = ['@sveltejs/adapter-node', `drizzle-kit@${DRIZZLE}`];
 
 const packageManagerConfigs: PMConfig = {
   yarn: {

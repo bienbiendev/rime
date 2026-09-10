@@ -1,6 +1,6 @@
 import { tableName as buildTableName } from '../../naming.server.js';
-import { templateRelationFieldsTable, templateRelationMany } from '../templates.server.js';
-import type { RelationFieldsMap } from './definition.server.js';
+import { templateRelationFieldsTable } from '../templates.server.js';
+import type { RelationFieldsMap } from '../root.server.js';
 import type { TableName } from '../../naming.server.js';
 
 /**
@@ -26,18 +26,18 @@ export function generateJunctionTableDefinition(args: Args): Return {
   const { tableName, relationFieldsMap, hasLocale } = args;
   let junctionTable = '';
   const relsTableName = buildTableName({ owner: tableName, child: { kind: 'rels' } });
-  const relationName = `rel_${relsTableName}`;
   const tablesRelationsTo = [...new Set(Object.values(relationFieldsMap).map((r) => r.to))];
   if (tablesRelationsTo.length) {
-    junctionTable = [
-      templateRelationFieldsTable({
-        table: tableName,
-        junctionTable: relsTableName,
-        relations: tablesRelationsTo,
-        hasLocale
-      }),
-      templateRelationMany({ name: relationName, table: tableName, many: tablesRelationsTo })
-    ].join('\n');
+    // The table only. There was a `relations(pages, ({ many }) => ({ medias: many(medias) }))`
+    // beside it, and nothing ever traversed it — every `with` a read builds names a child table
+    // (blocks, tree, locales, rels), never a target collection. Relation *fields* are resolved by
+    // `relations.server.ts` with its own selects against this junction.
+    junctionTable = templateRelationFieldsTable({
+      table: tableName,
+      junctionTable: relsTableName,
+      relations: tablesRelationsTo,
+      hasLocale
+    });
   }
   return {
     junctionTable,
