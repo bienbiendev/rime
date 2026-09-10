@@ -1,5 +1,5 @@
 import type { VersionsConfig } from '$lib/core/config/types.js';
-import type { VersionsTable } from '$lib/core/features/define.js';
+import type { VersionsTable } from '$lib/core/adapter.js';
 import { withVersionsSuffix } from './naming.js';
 import { VERSIONS_STATUS } from '$lib/core/versions/constant.js';
 import { text } from '$lib/fields/text/index.js';

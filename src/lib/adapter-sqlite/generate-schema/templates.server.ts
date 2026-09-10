@@ -1,5 +1,5 @@
 import type { FieldReference } from '$lib/core/fields/builders/form-field-builder.js';
-import type { ColumnDeclaration, ColumnType, TableDeclaration } from '$lib/core/features/tables.js';
+import type { ColumnDeclaration, ColumnType, TableDeclaration } from '$lib/core/adapter.js';
 import { toSnakeCase } from '$lib/util/string.js';
 import { baseTableName, declaredTableProperty, getSchemaColumnNames } from '../naming.server.js';
 import dedent from 'dedent';

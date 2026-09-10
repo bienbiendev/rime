@@ -1,9 +1,9 @@
-import { collection, create } from '$lib/core/prototype/collection/definition.js';
+import { create } from '$lib/core/prototype/collection/definition.js';
 import { createBlankDocument } from '$lib/core/prototype/doc.js';
 import { group } from '$lib/fields/group/index.js';
 import { text } from '$lib/fields/text/index.js';
 import { describe, expect, it } from 'vitest';
-import { blankWithFeatures } from '$lib/core/features/fold.js';
+import { shapeBlank } from '$lib/core/prototype/doc.js';
 import { blankAuthDocument } from './blank.server.js';
 
 /**
@@ -34,12 +34,9 @@ describe('blankAuthDocument', () => {
   });
 });
 
-describe('blankWithFeatures', () => {
+describe('shapeBlank', () => {
   const blankFor = (config: Parameters<typeof createBlankDocument>[0]) =>
-    blankWithFeatures(collection.features, createBlankDocument(config), config, 'create') as Record<
-      string,
-      unknown
-    >;
+    shapeBlank(createBlankDocument(config), config, 'create') as Record<string, unknown>;
 
   it('strips an auth collection through the feature list', () => {
     const built = create('spec_blank_users', { auth: true, fields: [text('bio')] });

@@ -1,5 +1,5 @@
 import { splitRootData } from '$lib/core/fields/util.js';
-import type { WritePlan } from '$lib/core/features/define.js';
+import type { WritePlan } from '$lib/core/adapter.js';
 import type { OperationContext } from '$lib/core/pipeline/types.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { VersionOperations } from './strategy.js';

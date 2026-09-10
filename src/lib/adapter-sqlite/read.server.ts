@@ -1,5 +1,5 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import type { VersionsTable } from '$lib/core/features/define.js';
+import type { VersionsTable } from '$lib/core/adapter.js';
 import { normalizeQuery } from '$lib/core/pipeline/query.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';

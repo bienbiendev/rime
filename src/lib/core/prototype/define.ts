@@ -1,6 +1,5 @@
 import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/config/types.js';
-import type { FeatureDefinition } from '$lib/core/features/define.js';
 import { isStaff } from '$lib/core/auth/access.js';
 import type { AnyHook, HookTiming, OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
 import type { Dic } from '$lib/util/types.js';
@@ -41,22 +40,20 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype> = {
   singleton: boolean;
 
   /**
-   * The features that extend this prototype, **in the order their augments run** — which is the
-   * order their fields land in, and therefore column order.
-   *
-   * By value, and declared here rather than each feature declaring `extends`: the prototype owns
-   * its table, so it says what may add to it. Read `as const`, this is also the type fold's source,
-   * so there is no second tuple to keep in step.
-   */
-  features: FeatureDefinition[];
-
-  /**
    * **Every** augment this prototype runs, in order — its own and its features', one written list.
+   *
+   * A **function returning** the list, and that is rule 3 rather than style. Several of the steps
+   * are imported from `$rime/modules`, and a feature reached through the barrel imports `create`
+   * back out of this prototype's definition — `auth/staff/augment.ts` and
+   * `versions/derive.server.ts` both do. Entered from the feature's side, an array literal here
+   * would capture bindings the barrel had not initialised yet, and the config would build without
+   * those fields: no error, no type change, just a document with no title. Building the list on
+   * first `create` reads every binding after every module has finished.
    *
    * `any` for the reason each augment is typed loosely: each names the shape it needs, and a list
    * holding several cannot promise any of them that shape. A guarded entry is `when(pred, fn)`.
    */
-  augments?: readonly ((config: any) => any)[];
+  augments?: () => readonly ((config: any) => any)[];
 
   /**
    * Every hook this prototype can run, in the order it runs them — including its features'.
@@ -95,11 +92,6 @@ export type PrototypeBootArgs<C extends BuiltPrototype = BuiltPrototype> = {
   config: C;
   adapter: Adapter;
   defaultLocale?: string;
-  /**
-   * Handed down rather than read off the definition: `boot` is written inside the object literal
-   * that defines it, so it cannot name itself.
-   */
-  features: FeatureDefinition[];
 };
 
 /**
@@ -140,14 +132,6 @@ export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
   ): OperationQuery | undefined;
 
   /**
-   * The features extending this prototype.
-   *
-   * Exposed rather than folded into a capability, unlike `blank()`, because its one consumer folds
-   * it at a point only `runUpdate` can pick — after the data hooks, before the write.
-   */
-  readonly features: FeatureDefinition[];
-
-  /**
    * Read through the API cache when it is on and this is not a system call. `key` is merged on top
    * of what every read shares — the slug and who is asking.
    */
@@ -162,8 +146,7 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
   const name = options.name ?? '';
   // Defaulted rather than optional: `buildPipeline` filters it on every config, and a prototype
   // with no features is a real case. `hooks` stays optional — a missing timing is already none.
-  const features = options.features ?? [];
-  const augments = options.augments ?? [];
+  const augments = options.augments ?? (() => []);
 
   /**
    * One chain, stated once for every prototype: `_titleFallback` first, then every augment the
@@ -182,7 +165,7 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
    */
   const create = (slug: string, incomingConfig: Dic): C => {
     const initial: Dic = { ...incomingConfig, slug, _titleFallback: 'id' };
-    const augmented = augments.reduce((current, augment) => augment(current), initial) as Dic;
+    const augmented = augments().reduce((current, augment) => augment(current), initial) as Dic;
 
     return {
       ...augmented,
@@ -213,7 +196,6 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
   return {
     name,
     singleton: options.singleton ?? false,
-    features,
     augments,
     create,
     hooks: options.hooks,

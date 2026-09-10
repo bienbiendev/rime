@@ -1,11 +1,9 @@
 import type { Dic } from '$lib/util/types.js';
-import type { FeatureDefinition } from '$lib/core/features/define.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { BuiltPrototype, PrototypeApiContext } from './define.js';
 import type { GenericDoc } from './types.js';
-import { blankWithFeatures } from '../features/fold.js';
 import { versionsReadQuery } from '$lib/core/versions/read-query.js';
-import { createBlankDocument } from './doc.js';
+import { createBlankDocument, shapeBlank } from './doc.js';
 
 /**
  * The two pieces a prototype's local API is composed from. **Not a base it is fitted into.**
@@ -23,8 +21,6 @@ import { createBlankDocument } from './doc.js';
 /** What building a prototype's API for one request needs. */
 export type PrototypeApiArgs<C extends BuiltPrototype> = {
   config: C;
-  /** The features extending this prototype — the definition's own list, passed by the caller. */
-  features: FeatureDefinition[];
   event: RequestEvent;
   defaultLocale: string | undefined;
 };
@@ -62,14 +58,13 @@ export const withSystem = <C extends BuiltPrototype, A extends Dic>(
 export const prototypeContext = <C extends BuiltPrototype>(
   args: PrototypeApiArgs<C> & { isSystemOperation: boolean }
 ): PrototypeApiContext<C> => {
-  const { config, features, event, defaultLocale, isSystemOperation } = args;
+  const { config, event, defaultLocale, isSystemOperation } = args;
 
   return {
     config,
     event,
     defaultLocale,
     isSystemOperation,
-    features,
 
     fallbackLocale: (locale?: string) => locale || event.locals.locale || defaultLocale,
 
@@ -79,16 +74,10 @@ export const prototypeContext = <C extends BuiltPrototype>(
      * A blank document of this config's shape, after the features it enables have shaped it.
      *
      * The auth case used to be written out here, behind an `isAuthConfig` test and a comment
-     * saying it belonged to the feature — it does now, through `FeatureDefinition.blank`, and
-     * nothing here names a feature or asks what a config declares.
+     * saying it belonged to the feature — it does, in `prototype/doc.ts`, where the two steps
+     * that shape a blank are written out.
      */
-    blank: () =>
-      blankWithFeatures(
-        features,
-        createBlankDocument(config, event),
-        config,
-        'create'
-      ) as GenericDoc,
+    blank: () => shapeBlank(createBlankDocument(config, event), config, 'create') as GenericDoc,
 
     cached: <T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T> => {
       if (!event.locals.cacheEnabled || isSystemOperation) return read();

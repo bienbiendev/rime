@@ -1,3 +1,9 @@
+/** Which blank is being shaped — see `shapeBlank` at the foot of this file. */
+export type BlankIntent = 'create' | 'seed';
+
+import { blankAuthDocument } from '$rime/modules';
+import { isAuth } from '$lib/core/auth/enabled.js';
+import { blankVersion } from '$lib/core/versions/blank.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
@@ -135,4 +141,20 @@ export const toNestedStructure = (documents: GenericDoc[]) => {
 
   // Filter to get root documents and process them
   return output;
+};
+
+/**
+ * A blank document, after everything that shapes one has.
+ *
+ * Two steps, and they are the whole list: `auth` strips its private members from what the local
+ * API hands out, `versions` publishes the row `boot` writes for a singleton that has none yet.
+ * `intent` says which blank this is.
+ *
+ * Was `blankWithFeatures`, a fold over every feature calling `FeatureDefinition.blank` on the two
+ * that had one — and `blankAuthDocument` comes through `$rime/modules`, so it is `undefined` on a
+ * client build, which is where the guard comes from.
+ */
+export const shapeBlank = (doc: Dic, config: Dic, intent: BlankIntent): Dic => {
+  const withoutPrivateFields = isAuth(config) && blankAuthDocument ? blankAuthDocument(doc) : doc;
+  return blankVersion(withoutPrivateFields, config, intent);
 };

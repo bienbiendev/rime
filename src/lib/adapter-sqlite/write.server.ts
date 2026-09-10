@@ -1,4 +1,4 @@
-import type { VersionsTable } from '$lib/core/features/define.js';
+import type { VersionsTable } from '$lib/core/adapter.js';
 import { normalizeQuery } from '$lib/core/pipeline/query.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { PrototypeSlug } from '$lib/core/prototype/types.js';

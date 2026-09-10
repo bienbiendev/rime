@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { area } from '$lib/core/prototype/area/definition.server.js';
-import { collection as collectionPrototype } from '$lib/core/prototype/collection/definition.server.js';
+import { areaHooks } from '$lib/core/prototype/area/hooks.server.js';
+import { collectionHooks } from '$lib/core/prototype/collection/hooks.server.js';
 import { augmentHooks } from './build.server.js';
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
@@ -23,11 +23,14 @@ const order = (hooks: unknown, timing: string): string[] =>
   ((hooks as Record<string, { name: string }[]>)[timing] ?? []).map((hook) => hook.name);
 
 const collection = (config: object): unknown =>
-  augmentHooks(collectionPrototype, {
-    type: 'collection',
-    slug: 'test',
-    ...config
-  }).$hooks;
+  augmentHooks(
+    { hooks: collectionHooks },
+    {
+      type: 'collection',
+      slug: 'test',
+      ...config
+    }
+  ).$hooks;
 
 describe('resolved pipeline order', () => {
   describe('a plain collection', () => {
@@ -233,7 +236,7 @@ describe('resolved pipeline order', () => {
 
   describe('an area with a url', () => {
     const hooks = (
-      augmentHooks(area, { type: 'area', slug: 'settings', $url: () => '/s' }) as {
+      augmentHooks({ hooks: areaHooks }, { type: 'area', slug: 'settings', $url: () => '/s' }) as {
         $hooks: unknown;
       }
     ).$hooks;

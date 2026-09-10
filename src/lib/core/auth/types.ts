@@ -12,7 +12,7 @@ export type GenericAuthDoc = BaseDoc & {
   roles?: string[];
 } & Dic;
 
-declare module '$lib/core/features/register.js' {
+declare module '$lib/core/prototype/types.js' {
   interface FeatureDocTypes {
     auth: GenericAuthDoc;
   }

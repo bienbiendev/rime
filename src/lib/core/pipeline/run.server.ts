@@ -1,7 +1,7 @@
 import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import type { FeatureDefinition, WritePlan } from '$lib/core/features/define.js';
+import type { WritePlan } from '$lib/core/adapter.js';
 import { versionsWritePlan } from '$lib/core/versions/write-plan.js';
 import type { DocType, GenericDoc, PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
@@ -278,11 +278,6 @@ export const runUpdate = async <
   where: string;
   /** Passed explicitly rather than read off the context, matching what both callers did. */
   locale?: string | undefined;
-  /**
-   * The features extending this prototype, for the write plan below. Handed down rather than
-   * looked up: the pipeline importing the prototype registry would close a cycle.
-   */
-  features: FeatureDefinition[];
   /** Persists the write plan. Returns whatever `reread` needs to find the document again. */
   write: (ctx: { plan: UpdateWritePlan; config: C; context: OperationContext<S> }) => Promise<any>;
   /** Fetches the saved document back, for the afterUpdate hooks and the caller. */

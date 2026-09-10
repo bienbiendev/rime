@@ -1,5 +1,4 @@
-import { configureWithFeatures, distinctFeatures } from '../features/fold.js';
-import { area, collection } from '$lib/core/prototype/index.js';
+import { configureConfig } from './configure.js';
 import type { BuiltArea, BuiltCollection, SanitizedConfigClient } from './types.js';
 import { augmentPlugins } from './augment-plugins.js';
 
@@ -24,7 +23,7 @@ export const withPrototypeLists = <
 /** The client chain, same three layers as build.server.ts — see the note there. */
 export const buildConfigClient = <C extends SanitizedConfigClient>(config: C) => {
   const withPrototypes = withPrototypeLists(config);
-  const withFeatures = configureWithFeatures(distinctFeatures([collection, area]), withPrototypes);
+  const withFeatures = configureConfig(withPrototypes);
   const output = augmentPlugins(withFeatures);
   return output;
 };

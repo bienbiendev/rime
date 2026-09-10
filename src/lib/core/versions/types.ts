@@ -11,7 +11,7 @@ export type VersionDoc = BaseDoc & {
   status: VersionsStatus;
 };
 
-declare module '$lib/core/features/register.js' {
+declare module '$lib/core/prototype/types.js' {
   interface FeatureDocTypes {
     version: VersionDoc;
   }

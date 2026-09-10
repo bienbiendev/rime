@@ -1,4 +1,4 @@
-import type { DocTypeContribution } from '$lib/core/features/doc-type.js';
+import type { DocTypeContribution } from '$lib/core/dev/codegen/types/contributions.server.js';
 
 /**
  * A versioned document carries the id of the version it was read as.

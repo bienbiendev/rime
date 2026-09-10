@@ -46,7 +46,6 @@ export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T
     context,
     locale,
     where: 'updateById',
-    features: ctx.features,
 
     // The plan says which rows this write touches; the adapter writes what it is handed.
     write: ({ plan, config }) =>

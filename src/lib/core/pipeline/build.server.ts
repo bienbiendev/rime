@@ -1,8 +1,7 @@
+import { featureRuns } from './feature-guards.server.js';
 import type { PrototypeDefinition } from '$lib/core/prototype/define.js';
 import type { Dic } from '$lib/util/types.js';
-import { area } from '../prototype/area/index.js';
 import { areaHooks } from '../prototype/area/hooks.server.js';
-import { collection } from '../prototype/collection/index.js';
 import { collectionHooks } from '../prototype/collection/hooks.server.js';
 import { sortDocumentProps } from './hooks/sort-document-props.server.js';
 import type { HookTiming } from './types.js';
@@ -29,30 +28,19 @@ const TIMINGS: HookTiming[] = [
  * of the placed hooks this config runs.
  */
 const buildPipeline = (
-  definition: Pick<PrototypeDefinition, 'features' | 'hooks'>,
+  definition: Pick<PrototypeDefinition, 'hooks'>,
   config: Dic,
   consumer: Dic | undefined
 ): Dic => {
   const pipeline: Dic = {};
 
-  /**
-   * Whether each feature is on for this config.
-   *
-   * A hook says whose it is — `feature: 'auth'` beside its name — so this is the only lookup
-   * needed. It used to be a map built by walking `FeatureDefinition.hooks`, a per-timing list
-   * every feature kept and every prototype had to agree with; the timing is the prototype's
-   * business and the ownership is the hook's, so neither wanted to live on the feature.
-   */
-  const enabled = new Map(definition.features.map((f) => [f.name, f.enabled(config)]));
-
   for (const timing of TIMINGS) {
     pipeline[timing] = [
       // A hook belonging to a feature runs only where that feature is enabled; a hook belonging
       // to none is the prototype's own and always runs.
-      ...(definition.hooks?.[timing] ?? []).filter((hook) => {
-        const owner = (hook as { feature?: string }).feature;
-        return owner === undefined || enabled.get(owner) === true;
-      }),
+      ...(definition.hooks?.[timing] ?? []).filter((hook) =>
+        featureRuns((hook as { feature?: string }).feature, config)
+      ),
       // A consumer's hooks are appended. They cannot interleave with the placed ones, which is
       // the cost of a written order.
       ...((consumer?.[timing] as unknown[]) ?? []),
@@ -72,7 +60,7 @@ const buildPipeline = (
 
 /** One config, with its `$hooks` resolved: the authored hooks going in, the pipeline coming out. */
 export const augmentHooks = <T extends Dic>(
-  definition: Pick<PrototypeDefinition, 'features' | 'hooks'>,
+  definition: Pick<PrototypeDefinition, 'hooks'>,
   config: T
 ): T & { $hooks: Dic } => ({
   ...config,
@@ -96,17 +84,12 @@ export const augmentHooks = <T extends Dic>(
  * at module scope. See rule 3 in CONTRIBUTING.md; the failure has no symptom but a missing title.
  */
 export const resolvePipelines = <T extends Dic>(config: T): T => {
-  const resolve = (
-    definition: Pick<PrototypeDefinition, 'features' | 'hooks'>,
-    configs: unknown
-  ): Dic[] => ((configs as Dic[] | undefined) ?? []).map((c) => augmentHooks(definition, c));
+  const resolve = (definition: Pick<PrototypeDefinition, 'hooks'>, configs: unknown): Dic[] =>
+    ((configs as Dic[] | undefined) ?? []).map((c) => augmentHooks(definition, c));
 
   return {
     ...config,
-    collections: resolve(
-      { features: collection.features, hooks: collectionHooks },
-      config.collections
-    ),
-    areas: resolve({ features: area.features, hooks: areaHooks }, config.areas)
+    collections: resolve({ hooks: collectionHooks }, config.collections),
+    areas: resolve({ hooks: areaHooks }, config.areas)
   } as T;
 };

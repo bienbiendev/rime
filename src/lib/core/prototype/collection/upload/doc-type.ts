@@ -1,6 +1,7 @@
+import type { Dic } from '$lib/util/types.js';
 import type { ImageSizesConfig } from '$lib/core/config/types.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DocTypeContribution } from '$lib/core/features/doc-type.js';
+import type { DocTypeContribution } from '$lib/core/dev/codegen/types/contributions.server.js';
 
 /**
  * What an upload document's type carries, and which of its fields describe themselves.
@@ -8,8 +9,9 @@ import type { DocTypeContribution } from '$lib/core/features/doc-type.js';
  * Three reads of `collection.upload` in `dev/codegen/types` — the `UploadDoc` intersection, the
  * `sizes` object, and the filter that keeps the per-size fields from appearing twice.
  */
-export const uploadDocType = (config: { upload?: { imageSizes?: ImageSizesConfig[] } }) => {
-  const sizes = config.upload?.imageSizes ?? [];
+export const uploadDocType = (config: { upload?: { imageSizes?: ImageSizesConfig[] } } | Dic) => {
+  const sizes =
+    (config.upload as { imageSizes?: ImageSizesConfig[] } | undefined)?.imageSizes ?? [];
 
   const contribution: DocTypeContribution = { extends: ['UploadDoc'] };
   if (!sizes.length) return contribution;

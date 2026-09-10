@@ -1,5 +1,4 @@
 import type { Config } from '$lib/core/config/types.js';
-import { area, collection } from '$lib/core/prototype/index.js';
 import { authColumns, authTables } from '$lib/core/auth/tables.js';
 import { baseTableName, declaredTableProperty, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
@@ -26,8 +25,8 @@ export async function generateSchemaString<T extends Config>(config: T) {
   // One list rather than a loop per kind: the body below is two hundred lines and identical
   // for either.
   const allEntries = [
-    ...(config.collections ?? []).map((c) => ({ features: collection.features, config: c })),
-    ...(config.areas ?? []).map((a) => ({ features: area.features, config: a }))
+    ...(config.collections ?? []).map((config) => ({ config })),
+    ...(config.areas ?? []).map((config) => ({ config }))
   ];
   const entries = allEntries.filter((entry) => entry.config._generateSchema !== false);
 

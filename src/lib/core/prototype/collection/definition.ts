@@ -11,16 +11,6 @@ import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
 import { augmentUrl } from '$lib/core/prototype/shared/url/augment.js';
 import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
 import { augmentVersions } from '$lib/core/versions/augment.js';
-import { auth } from '$lib/core/auth/index.js';
-import { cors } from '$lib/core/cors/index.js';
-import { metas } from '$lib/core/metas/index.js';
-import { nested } from '$lib/core/prototype/collection/nested/index.js';
-import { panel } from '$lib/core/panel/index.js';
-import { thumbnail } from '$lib/core/prototype/collection/thumbnail/index.js';
-import { title } from '$lib/core/prototype/shared/title/index.js';
-import { upload } from '$lib/core/prototype/collection/upload/index.js';
-import { url } from '$lib/core/prototype/shared/url/index.js';
-import { versions } from '$lib/core/versions/index.js';
 import { when } from '../when.js';
 import { definePrototype } from '../define.js';
 import { augmentLabel } from './augment-label.js';
@@ -58,7 +48,7 @@ export const collection = definePrototype({
    * `panel` and `cors` are not here: neither has an augment. They shape the whole config and are
    * called by the config chain — see `config/build.ts`.
    */
-  augments: [
+  augments: () => [
     augmentLabel,
     when(isAuth, augmentAuth),
     when(isUpload, augmentUpload),
@@ -68,13 +58,7 @@ export const collection = definePrototype({
     augmentTitle,
     augmentThumbnail,
     augmentMetas
-  ],
-
-  /**
-   * The features this collection enables, still listed for the three whole-config folds that read
-   * it — `configure`, `blank` and `docType`. The augment chain above no longer does.
-   */
-  features: [auth, panel, upload, nested, versions, url, title, thumbnail, metas, cors]
+  ]
 });
 
 /**

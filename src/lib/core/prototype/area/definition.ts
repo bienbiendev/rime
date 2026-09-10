@@ -1,9 +1,3 @@
-import { cors } from '$lib/core/cors/index.js';
-import { metas } from '$lib/core/metas/index.js';
-import { panel } from '$lib/core/panel/index.js';
-import { title } from '$lib/core/prototype/shared/title/index.js';
-import { url } from '$lib/core/prototype/shared/url/index.js';
-import { versions } from '$lib/core/versions/index.js';
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { augmentMetas } from '$lib/core/metas/augment.js';
 import { augmentTitle } from '$lib/core/prototype/shared/title/augment.js';
@@ -36,19 +30,13 @@ export const area = definePrototype({
    * in — it simply does not list them. That is what the two lists say that a shared
    * implementation with a flag could not.
    */
-  augments: [
+  augments: () => [
     augmentAreaLabel,
     augmentVersions,
     when(hasUrl, augmentUrl),
     augmentTitle,
     augmentMetas
-  ],
-
-  /**
-   * The features this area enables, still listed for the three whole-config folds that read it —
-   * `configure`, `blank` and `docType`. The augment chain above no longer does.
-   */
-  features: [panel, versions, url, title, metas, cors]
+  ]
 });
 
 /**

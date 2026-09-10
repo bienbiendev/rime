@@ -42,7 +42,6 @@ export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) =
     context,
     locale,
     where: 'update',
-    features: ctx.features,
 
     // No `id`: an area's handle resolves its single row. See the collection's for the plan.
     write: ({ plan, config }) => rime.adapter.prototype(config.slug).update({ ...plan, locale }),

@@ -26,7 +26,7 @@ export type DirectoryDoc = {
   updatedAt: Date;
 };
 
-declare module '$lib/core/features/register.js' {
+declare module '$lib/core/prototype/types.js' {
   interface FeatureDocTypes {
     upload: UploadDoc;
     directory: DirectoryDoc;

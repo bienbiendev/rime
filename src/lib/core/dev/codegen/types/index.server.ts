@@ -1,9 +1,7 @@
+import { contributionsFor } from './contributions.server.js';
 import { IS_RIME_REPO, PACKAGE_NAME } from '$lib/core/constants.server.js';
 import cache from '$lib/core/dev/cache.server.js';
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
-import type { FeatureDefinition } from '$lib/core/features/define.js';
-import { docTypeWithFeatures } from '$lib/core/features/fold.js';
-import { area, collection } from '$lib/core/prototype/index.js';
 
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { logger } from '$lib/core/logger.server.js';
@@ -49,11 +47,8 @@ export async function generateTypesString<T extends Config>(config: T) {
    * `if (collection.versions)` once. Both are `docType` contributions now, so what is left is the
    * same for either kind — which is why there is one function.
    */
-  const processPrototype = async (
-    features: FeatureDefinition[],
-    config: BuiltArea | BuiltCollection
-  ) => {
-    const contribution = docTypeWithFeatures(features, config);
+  const processPrototype = async (config: BuiltArea | BuiltCollection) => {
+    const contribution = contributionsFor(config);
 
     const fieldsTypesList = await buildFieldsTypes(config.fields.filter(contribution.fields));
     contribution.extends.forEach(addImport);
@@ -69,12 +64,10 @@ export async function generateTypesString<T extends Config>(config: T) {
     (configs ?? []).filter((c) => c._generateTypes !== false);
 
   const collectionsTypes = (
-    await Promise.all(
-      generated(config.collections).map((c) => processPrototype(collection.features, c))
-    )
+    await Promise.all(generated(config.collections).map((c) => processPrototype(c)))
   ).join('\n');
   const areasTypes = (
-    await Promise.all(generated(config.areas).map((a) => processPrototype(area.features, a)))
+    await Promise.all(generated(config.areas).map((a) => processPrototype(a)))
   ).join('\n');
   const typeImports = `import type { ${Array.from(imports).join(', ')} } from '${PACKAGE_NAME}/types'`;
   // app.generated.d.ts always sits at src/app.generated.d.ts (see generateTypes() below).

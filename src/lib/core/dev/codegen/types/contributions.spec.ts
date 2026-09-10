@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { collection, create } from '$lib/core/prototype/collection/definition.js';
+import { create } from '$lib/core/prototype/collection/definition.js';
 import { text } from '$lib/fields/text/index.js';
-import { docTypeWithFeatures } from './fold.js';
+import { contributionsFor } from './contributions.server.js';
 
 /**
  * What each feature adds to a generated document type.
@@ -13,10 +13,11 @@ import { docTypeWithFeatures } from './fold.js';
  * type-checks at 0, because nothing in it reads `doc.versionId` in a typed position. A consumer
  * would find out, at their own compile, whenever they next upgraded.
  *
- * So the contributions are asserted through the same fold codegen uses, on real built configs.
+ * So the contributions are asserted through the very function codegen calls, on real built
+ * configs.
  */
-const contributionFor = (config: Parameters<typeof docTypeWithFeatures>[1]) =>
-  docTypeWithFeatures(collection.features, config);
+const contributionFor = (config: Parameters<typeof contributionsFor>[0]) =>
+  contributionsFor(config);
 
 describe('docType contributions', () => {
   it('adds nothing for a config whose features contribute nothing', () => {

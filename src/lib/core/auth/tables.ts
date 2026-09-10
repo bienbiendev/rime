@@ -1,4 +1,4 @@
-import type { ColumnDeclaration, TableDeclaration } from '$lib/core/features/tables.js';
+import type { ColumnDeclaration, TableDeclaration } from '$lib/core/adapter.js';
 
 /**
  * The storage auth needs, said by auth.

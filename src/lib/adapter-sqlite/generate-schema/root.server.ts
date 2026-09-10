@@ -17,7 +17,7 @@ import {
   templateParent,
   templateTable
 } from './templates.server.js';
-import type { ColumnDeclaration } from '$lib/core/features/tables.js';
+import type { ColumnDeclaration } from '$lib/core/adapter.js';
 
 type Args = {
   fields: FieldBuilder<Field>[];

@@ -1,7 +1,6 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
-import { blankWithFeatures } from '$lib/core/features/fold.js';
-import { createBlankDocument } from '../doc.js';
+import { createBlankDocument, shapeBlank } from '../doc.js';
 import { area as base } from './definition.js';
 import { areaHooks } from './hooks.server.js';
 import { rest } from './rest/index.server.js';
@@ -25,7 +24,7 @@ export const area = definePrototype<BuiltArea>({
    */
   hooks: areaHooks,
 
-  boot: async ({ config, adapter, defaultLocale, features }) => {
+  boot: async ({ config, adapter, defaultLocale }) => {
     /**
      * No request event: boot has no request. `createBlankDocument` takes one only to pass to a
      * field's `defaultValue({ event })`, which already declares it optional — so a default that
@@ -38,7 +37,7 @@ export const area = definePrototype<BuiltArea>({
       // Intent `'seed'`, not `'create'`: a feature that gives this prototype a versions may need
       // the first row to differ from what an author's create starts with. See
       // FeatureDefinition.blank.
-      blank: blankWithFeatures(features, createBlankDocument(config), config, 'seed'),
+      blank: shapeBlank(createBlankDocument(config), config, 'seed'),
       locale: defaultLocale
     });
   }

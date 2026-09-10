@@ -6,9 +6,7 @@ import type { ConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
 import type { RimeAuth } from '$lib/core/auth/better-auth/instance.server.js';
 import { logger } from './logger.server.js';
-import { area } from './prototype/area/definition.server.js';
 import { areaApi, type AreaAccessor } from './prototype/area/api.server.js';
-import { collection } from './prototype/collection/definition.server.js';
 import { collectionApi, type CollectionAccessor } from './prototype/collection/api.server.js';
 
 // Declared in core/config/context.server.ts, beside `createConfigContext`, and re-exported
@@ -128,14 +126,12 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
       collection: (slug: string) =>
         collectionApi({
           config: configCtx.getCollection(slug),
-          features: collection.features,
           event,
           defaultLocale: configCtx.getDefaultLocale()
         }),
       area: (slug: string) =>
         areaApi({
           config: configCtx.getArea(slug),
-          features: area.features,
           event,
           defaultLocale: configCtx.getDefaultLocale()
         })
