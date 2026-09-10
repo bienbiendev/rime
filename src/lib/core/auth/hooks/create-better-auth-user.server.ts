@@ -1,6 +1,6 @@
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { dev } from '$app/environment';
 import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { access } from '$lib/core/auth/access.js';
 import { t__ } from '$lib/core/i18n/index.js';
 import { BETTER_AUTH_ROLES } from '$lib/core/auth/constant.server.js';
@@ -8,10 +8,8 @@ import { BETTER_AUTH_ROLES } from '$lib/core/auth/constant.server.js';
 /**
  * Create a better-auth user before a document creation
  */
-export const createBetterAuthUser = Hooks.beforeCreate<'auth'>({
-  name: 'createBetterAuthUser',
-  feature: 'auth',
-  run: async (args) => {
+export const createBetterAuthUser = Hooks.beforeCreate<'auth'>(
+  async function createBetterAuthUser(args) {
     const { config, event } = args;
     const { rime } = event.locals;
 
@@ -239,4 +237,4 @@ export const createBetterAuthUser = Hooks.beforeCreate<'auth'>({
       }
     };
   }
-});
+);

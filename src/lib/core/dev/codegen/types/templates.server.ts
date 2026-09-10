@@ -47,12 +47,7 @@ export const templateRegister = <T extends Config>(config: T): string => {
    * Collections only: a versions is registered as a collection in its own right, and this map is
    * read nowhere but in `RegisterCollection` below.
    */
-  const versionsSlugs = new Map(
-    (config.collections ?? []).map((c) => [
-      c.slug,
-      c._versions?.slug
-    ])
-  );
+  const versionsSlugs = new Map((config.collections ?? []).map((c) => [c.slug, c._versions?.slug]));
 
   const registerCollections = collections.length
     ? [

@@ -1,3 +1,9 @@
+import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
+import { isAuth } from '$lib/core/auth/enabled.js';
+import { isNested } from '$lib/core/prototype/collection/nested/enabled.js';
+import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
+import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
+import { when } from '$lib/core/prototype/when.js';
 import * as auth from '$lib/core/auth/hooks/index.server.js';
 import * as nested from '$lib/core/prototype/collection/nested/hooks/index.server.js';
 import * as thumbnail from '$lib/core/prototype/collection/thumbnail/hooks/index.server.js';
@@ -54,17 +60,17 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
 
   beforeRead: [
     // First, so nothing deriving from the document can copy a private value into derived data.
-    auth.removePrivateFields,
+    when(isAuth, auth.removePrivateFields),
     processDocumentFields,
     setDocumentLocale,
     setDocumentType,
-    upload.populateSizes,
-    nested.addChildrenProperty,
-    versions.exposeVersionId,
+    when(isUpload, upload.populateSizes),
+    when(isNested, nested.addChildrenProperty),
+    when(isVersioned, versions.exposeVersionId),
     title.setDocumentTitle,
     // After the title: `config.$url(document)` is the author's own function, and a slug built
     // from the title is the ordinary case.
-    url.populateURL,
+    when(hasUrl, url.populateURL),
     // After the sizes: it takes the thumbnail `upload.populateSizes` derived when there is one.
     thumbnail.setDocumentThumbnail
   ],
@@ -72,44 +78,47 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   beforeCreate: [
     mergeWithBlankDocument,
     // After the merge: it appends the password field, and the config map below has to see it.
-    auth.augmentFieldsPassword,
+    when(isAuth, auth.augmentFieldsPassword),
     buildDataConfigMap,
     setDefaultValues,
     validateFields,
-    auth.createBetterAuthUser,
-    upload.handlePathCreation,
-    upload.castBase64ToFile,
-    upload.processFileUpload
+    when(isAuth, auth.createBetterAuthUser),
+    when(isUpload, upload.handlePathCreation),
+    when(isUpload, upload.castBase64ToFile),
+    when(isUpload, upload.processFileUpload)
   ],
 
-  afterCreate: [auth.populateAPIKey, auth.signInNewUser],
+  afterCreate: [when(isAuth, auth.populateAPIKey), when(isAuth, auth.signInNewUser)],
 
   beforeUpdate: [
     getOriginalDocument,
     buildOriginalDocConfigMap,
     resolveContentOwner,
-    auth.augmentFieldsPassword,
+    when(isAuth, auth.augmentFieldsPassword),
     // The three guards read the caller's submission *as sent*, so they run before anything adds
     // to it. `auth.preventUserMutations` rejects on `'name' in args.data` and
     // `auth.preventSuperAdminMutation` on `'isSuperAdmin' in args.data` — a default filled in above
     // either of them turns an ordinary update into a 401.
-    auth.preventSuperAdminMutation,
-    auth.preventUserMutations,
-    auth.forwardRolesToBetterAuth,
+    when(isAuth, auth.preventSuperAdminMutation),
+    when(isAuth, auth.preventUserMutations),
+    when(isAuth, auth.forwardRolesToBetterAuth),
     // Also reads the submission as sent, and overrides the content row core resolved above.
-    versions.defineVersionOperation,
-    versions.handleNewVersion,
+    when(isVersioned, versions.defineVersionOperation),
+    when(isVersioned, versions.handleNewVersion),
     buildDataConfigMap,
     setDefaultValues,
     validateFields,
-    upload.handlePathCreation,
-    upload.castBase64ToFile,
-    upload.processFileUpload,
+    when(isUpload, upload.handlePathCreation),
+    when(isUpload, upload.castBase64ToFile),
+    when(isUpload, upload.processFileUpload),
     // Last: it demotes the other versions once this one is known to be valid and published.
-    versions.demoteOtherVersions
+    when(isVersioned, versions.demoteOtherVersions)
   ],
 
-  beforeDelete: [auth.preventSupperAdminDeletion, upload.cleanUpFiles],
+  beforeDelete: [
+    when(isAuth, auth.preventSupperAdminDeletion),
+    when(isUpload, upload.cleanUpFiles)
+  ],
 
-  afterDelete: [auth.deleteBetterAuthUser]
+  afterDelete: [when(isAuth, auth.deleteBetterAuthUser)]
 };

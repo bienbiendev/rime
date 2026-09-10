@@ -17,9 +17,8 @@ import { makeVersionsCollectionsAliases } from './derive.server.js';
  * core steps twice when the parent is an area.
  */
 describe('a versions versions', () => {
-  const authorHook = Hooks.beforeRead({
-    name: 'authorBeforeRead',
-    run: async (args) => args
+  const authorHook = Hooks.beforeRead(async function authorBeforeRead(args) {
+    return args;
   });
 
   const parent = create('derive_spec_pages', {
@@ -38,15 +37,26 @@ describe('a versions versions', () => {
     (c) => c.slug === '$derive_spec_pages__versions'
   ) as unknown as { $hooks?: Record<string, unknown[]> };
 
-  const beforeRead = (versions.$hooks?.beforeRead ?? []).map((hook) => hookName(hook));
+  const entries = (versions.$hooks?.beforeRead ?? []) as ((args: unknown) => unknown)[];
+  const beforeRead = entries.map((hook) => hookName(hook));
 
   it('runs the author’s own hooks', () => {
     expect(beforeRead).toContain('authorBeforeRead');
   });
 
-  it('runs no hook of a feature it does not enable', () => {
-    // `nested` is on the parent, never on the versions: the base row owns the hierarchy.
-    expect(beforeRead).not.toContain('addChildrenProperty');
+  /**
+   * `nested` is on the parent, never on the versions table: the base row owns the hierarchy.
+   *
+   * The list *places* `addChildrenProperty` — every config's pipeline is the same sequence — so
+   * what has to hold is that the guard beside it says no. Asserted by running the entry: a guard
+   * that does not apply hands its argument straight back, untouched and unawaited.
+   */
+  it('does not run a hook whose guard this config fails', () => {
+    const index = beforeRead.indexOf('addChildrenProperty');
+    expect(index).toBeGreaterThan(-1);
+
+    const args = { config: versions, doc: {} };
+    expect(entries[index](args)).toBe(args);
   });
 
   it('runs each core step once', () => {

@@ -2,488 +2,684 @@
 
 One table per timing, in the order the hooks actually run.
 
-**The order itself is written down**, in each prototype's `hooks.server.ts`. What this adds
-is the one thing that file cannot show: which of those hooks **this** config runs, after
-`buildPipeline` filters out the features it does not enable.
+**The order is written down**, in each prototype's `hooks.server.ts`. What this adds is what
+that file cannot show: your own hooks, appended after the prototype's and before the
+finaliser, and the hooks of any collection a feature derived.
 
-`from` is the prototype, or the feature that owns the hook. `anonymous` is a hook your
-config contributed without naming it — every rime-owned hook is named, and a consumer's are
-appended after the prototype's, before the finaliser.
+Every hook a prototype places is listed, whether or not it applies here: a hook belonging to
+a feature is written `when(isAuth, …)` in that list and asks at the call. `anonymous` is a
+hook you contributed without naming it — every rime-owned hook is a named function.
 
 ## pages (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       |
-| --- | ----------- | ---------- |
-| 1   | `authorize` | collection |
+| #   | hook        |
+| --- | ----------- |
+| 1   | `authorize` |
 
 ### beforeRead
 
-| #   | hook                    | from       |
-| --- | ----------------------- | ---------- |
-| 1   | `processDocumentFields` | collection |
-| 2   | `setDocumentLocale`     | collection |
-| 3   | `setDocumentType`       | collection |
-| 4   | `addChildrenProperty`   | nested     |
-| 5   | `setDocumentTitle`      | title      |
-| 6   | `populateURL`           | url        |
-| 7   | `setDocumentThumbnail`  | thumbnail  |
-| 8   | `anonymous`             | collection |
-| 9   | `sortDocumentProps`     | collection |
+| #   | hook                    |
+| --- | ----------------------- |
+| 1   | `removePrivateFields`   |
+| 2   | `processDocumentFields` |
+| 3   | `setDocumentLocale`     |
+| 4   | `setDocumentType`       |
+| 5   | `populateSizes`         |
+| 6   | `addChildrenProperty`   |
+| 7   | `exposeVersionId`       |
+| 8   | `setDocumentTitle`      |
+| 9   | `populateURL`           |
+| 10  | `setDocumentThumbnail`  |
+| 11  | `anonymous`             |
+| 12  | `sortDocumentProps`     |
 
 ### beforeCreate
 
-| #   | hook                     | from       |
-| --- | ------------------------ | ---------- |
-| 1   | `mergeWithBlankDocument` | collection |
-| 2   | `buildDataConfigMap`     | collection |
-| 3   | `setDefaultValues`       | collection |
-| 4   | `validateFields`         | collection |
-| 5   | `anonymous`              | collection |
+| #   | hook                     |
+| --- | ------------------------ |
+| 1   | `mergeWithBlankDocument` |
+| 2   | `augmentFieldsPassword`  |
+| 3   | `buildDataConfigMap`     |
+| 4   | `setDefaultValues`       |
+| 5   | `validateFields`         |
+| 6   | `createBetterAuthUser`   |
+| 7   | `handlePathCreation`     |
+| 8   | `castBase64ToFile`       |
+| 9   | `processFileUpload`      |
+| 10  | `anonymous`              |
 
 ### afterCreate
 
-| #   | hook        | from       |
-| --- | ----------- | ---------- |
-| 1   | `anonymous` | collection |
+| #   | hook             |
+| --- | ---------------- |
+| 1   | `populateAPIKey` |
+| 2   | `signInNewUser`  |
+| 3   | `anonymous`      |
 
 ### beforeUpdate
 
-| #   | hook                        | from       |
-| --- | --------------------------- | ---------- |
-| 1   | `getOriginalDocument`       | collection |
-| 2   | `buildOriginalDocConfigMap` | collection |
-| 3   | `resolveContentOwner`       | collection |
-| 4   | `buildDataConfigMap`        | collection |
-| 5   | `setDefaultValues`          | collection |
-| 6   | `validateFields`            | collection |
-| 7   | `anonymous`                 | collection |
+| #   | hook                        |
+| --- | --------------------------- |
+| 1   | `getOriginalDocument`       |
+| 2   | `buildOriginalDocConfigMap` |
+| 3   | `resolveContentOwner`       |
+| 4   | `augmentFieldsPassword`     |
+| 5   | `preventSuperAdminMutation` |
+| 6   | `preventUserMutations`      |
+| 7   | `forwardRolesToBetterAuth`  |
+| 8   | `defineVersionOperation`    |
+| 9   | `handleNewVersion`          |
+| 10  | `buildDataConfigMap`        |
+| 11  | `setDefaultValues`          |
+| 12  | `validateFields`            |
+| 13  | `handlePathCreation`        |
+| 14  | `castBase64ToFile`          |
+| 15  | `processFileUpload`         |
+| 16  | `demoteOtherVersions`       |
+| 17  | `anonymous`                 |
 
 ### afterUpdate
 
-| #   | hook        | from       |
-| --- | ----------- | ---------- |
-| 1   | `anonymous` | collection |
+| #   | hook        |
+| --- | ----------- |
+| 1   | `anonymous` |
+
+### beforeDelete
+
+| #   | hook                         |
+| --- | ---------------------------- |
+| 1   | `preventSupperAdminDeletion` |
+| 2   | `cleanUpFiles`               |
+
+### afterDelete
+
+| #   | hook                   |
+| --- | ---------------------- |
+| 1   | `deleteBetterAuthUser` |
 
 ## medias (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       |
-| --- | ----------- | ---------- |
-| 1   | `authorize` | collection |
+| #   | hook        |
+| --- | ----------- |
+| 1   | `authorize` |
 
 ### beforeRead
 
-| #   | hook                    | from       |
-| --- | ----------------------- | ---------- |
-| 1   | `processDocumentFields` | collection |
-| 2   | `setDocumentLocale`     | collection |
-| 3   | `setDocumentType`       | collection |
-| 4   | `populateSizes`         | upload     |
-| 5   | `setDocumentTitle`      | title      |
-| 6   | `setDocumentThumbnail`  | thumbnail  |
-| 7   | `sortDocumentProps`     | collection |
+| #   | hook                    |
+| --- | ----------------------- |
+| 1   | `removePrivateFields`   |
+| 2   | `processDocumentFields` |
+| 3   | `setDocumentLocale`     |
+| 4   | `setDocumentType`       |
+| 5   | `populateSizes`         |
+| 6   | `addChildrenProperty`   |
+| 7   | `exposeVersionId`       |
+| 8   | `setDocumentTitle`      |
+| 9   | `populateURL`           |
+| 10  | `setDocumentThumbnail`  |
+| 11  | `sortDocumentProps`     |
 
 ### beforeCreate
 
-| #   | hook                     | from       |
-| --- | ------------------------ | ---------- |
-| 1   | `mergeWithBlankDocument` | collection |
-| 2   | `buildDataConfigMap`     | collection |
-| 3   | `setDefaultValues`       | collection |
-| 4   | `validateFields`         | collection |
-| 5   | `handlePathCreation`     | upload     |
-| 6   | `castBase64ToFile`       | upload     |
-| 7   | `processFileUpload`      | upload     |
+| #   | hook                     |
+| --- | ------------------------ |
+| 1   | `mergeWithBlankDocument` |
+| 2   | `augmentFieldsPassword`  |
+| 3   | `buildDataConfigMap`     |
+| 4   | `setDefaultValues`       |
+| 5   | `validateFields`         |
+| 6   | `createBetterAuthUser`   |
+| 7   | `handlePathCreation`     |
+| 8   | `castBase64ToFile`       |
+| 9   | `processFileUpload`      |
+
+### afterCreate
+
+| #   | hook             |
+| --- | ---------------- |
+| 1   | `populateAPIKey` |
+| 2   | `signInNewUser`  |
 
 ### beforeUpdate
 
-| #   | hook                        | from       |
-| --- | --------------------------- | ---------- |
-| 1   | `getOriginalDocument`       | collection |
-| 2   | `buildOriginalDocConfigMap` | collection |
-| 3   | `resolveContentOwner`       | collection |
-| 4   | `buildDataConfigMap`        | collection |
-| 5   | `setDefaultValues`          | collection |
-| 6   | `validateFields`            | collection |
-| 7   | `handlePathCreation`        | upload     |
-| 8   | `castBase64ToFile`          | upload     |
-| 9   | `processFileUpload`         | upload     |
+| #   | hook                        |
+| --- | --------------------------- |
+| 1   | `getOriginalDocument`       |
+| 2   | `buildOriginalDocConfigMap` |
+| 3   | `resolveContentOwner`       |
+| 4   | `augmentFieldsPassword`     |
+| 5   | `preventSuperAdminMutation` |
+| 6   | `preventUserMutations`      |
+| 7   | `forwardRolesToBetterAuth`  |
+| 8   | `defineVersionOperation`    |
+| 9   | `handleNewVersion`          |
+| 10  | `buildDataConfigMap`        |
+| 11  | `setDefaultValues`          |
+| 12  | `validateFields`            |
+| 13  | `handlePathCreation`        |
+| 14  | `castBase64ToFile`          |
+| 15  | `processFileUpload`         |
+| 16  | `demoteOtherVersions`       |
 
 ### beforeDelete
 
-| #   | hook           | from   |
-| --- | -------------- | ------ |
-| 1   | `cleanUpFiles` | upload |
+| #   | hook                         |
+| --- | ---------------------------- |
+| 1   | `preventSupperAdminDeletion` |
+| 2   | `cleanUpFiles`               |
+
+### afterDelete
+
+| #   | hook                   |
+| --- | ---------------------- |
+| 1   | `deleteBetterAuthUser` |
 
 ## news (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       |
-| --- | ----------- | ---------- |
-| 1   | `authorize` | collection |
+| #   | hook        |
+| --- | ----------- |
+| 1   | `authorize` |
 
 ### beforeRead
 
-| #   | hook                    | from       |
-| --- | ----------------------- | ---------- |
-| 1   | `processDocumentFields` | collection |
-| 2   | `setDocumentLocale`     | collection |
-| 3   | `setDocumentType`       | collection |
-| 4   | `setDocumentTitle`      | title      |
-| 5   | `populateURL`           | url        |
-| 6   | `setDocumentThumbnail`  | thumbnail  |
-| 7   | `sortDocumentProps`     | collection |
+| #   | hook                    |
+| --- | ----------------------- |
+| 1   | `removePrivateFields`   |
+| 2   | `processDocumentFields` |
+| 3   | `setDocumentLocale`     |
+| 4   | `setDocumentType`       |
+| 5   | `populateSizes`         |
+| 6   | `addChildrenProperty`   |
+| 7   | `exposeVersionId`       |
+| 8   | `setDocumentTitle`      |
+| 9   | `populateURL`           |
+| 10  | `setDocumentThumbnail`  |
+| 11  | `sortDocumentProps`     |
 
 ### beforeCreate
 
-| #   | hook                     | from       |
-| --- | ------------------------ | ---------- |
-| 1   | `mergeWithBlankDocument` | collection |
-| 2   | `buildDataConfigMap`     | collection |
-| 3   | `setDefaultValues`       | collection |
-| 4   | `validateFields`         | collection |
+| #   | hook                     |
+| --- | ------------------------ |
+| 1   | `mergeWithBlankDocument` |
+| 2   | `augmentFieldsPassword`  |
+| 3   | `buildDataConfigMap`     |
+| 4   | `setDefaultValues`       |
+| 5   | `validateFields`         |
+| 6   | `createBetterAuthUser`   |
+| 7   | `handlePathCreation`     |
+| 8   | `castBase64ToFile`       |
+| 9   | `processFileUpload`      |
+
+### afterCreate
+
+| #   | hook             |
+| --- | ---------------- |
+| 1   | `populateAPIKey` |
+| 2   | `signInNewUser`  |
 
 ### beforeUpdate
 
-| #   | hook                        | from       |
-| --- | --------------------------- | ---------- |
-| 1   | `getOriginalDocument`       | collection |
-| 2   | `buildOriginalDocConfigMap` | collection |
-| 3   | `resolveContentOwner`       | collection |
-| 4   | `buildDataConfigMap`        | collection |
-| 5   | `setDefaultValues`          | collection |
-| 6   | `validateFields`            | collection |
+| #   | hook                        |
+| --- | --------------------------- |
+| 1   | `getOriginalDocument`       |
+| 2   | `buildOriginalDocConfigMap` |
+| 3   | `resolveContentOwner`       |
+| 4   | `augmentFieldsPassword`     |
+| 5   | `preventSuperAdminMutation` |
+| 6   | `preventUserMutations`      |
+| 7   | `forwardRolesToBetterAuth`  |
+| 8   | `defineVersionOperation`    |
+| 9   | `handleNewVersion`          |
+| 10  | `buildDataConfigMap`        |
+| 11  | `setDefaultValues`          |
+| 12  | `validateFields`            |
+| 13  | `handlePathCreation`        |
+| 14  | `castBase64ToFile`          |
+| 15  | `processFileUpload`         |
+| 16  | `demoteOtherVersions`       |
+
+### beforeDelete
+
+| #   | hook                         |
+| --- | ---------------------------- |
+| 1   | `preventSupperAdminDeletion` |
+| 2   | `cleanUpFiles`               |
+
+### afterDelete
+
+| #   | hook                   |
+| --- | ---------------------- |
+| 1   | `deleteBetterAuthUser` |
 
 ## users (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       |
-| --- | ----------- | ---------- |
-| 1   | `authorize` | collection |
+| #   | hook        |
+| --- | ----------- |
+| 1   | `authorize` |
 
 ### beforeRead
 
-| #   | hook                    | from       |
-| --- | ----------------------- | ---------- |
-| 1   | `removePrivateFields`   | auth       |
-| 2   | `processDocumentFields` | collection |
-| 3   | `setDocumentLocale`     | collection |
-| 4   | `setDocumentType`       | collection |
-| 5   | `setDocumentTitle`      | title      |
-| 6   | `setDocumentThumbnail`  | thumbnail  |
-| 7   | `sortDocumentProps`     | collection |
+| #   | hook                    |
+| --- | ----------------------- |
+| 1   | `removePrivateFields`   |
+| 2   | `processDocumentFields` |
+| 3   | `setDocumentLocale`     |
+| 4   | `setDocumentType`       |
+| 5   | `populateSizes`         |
+| 6   | `addChildrenProperty`   |
+| 7   | `exposeVersionId`       |
+| 8   | `setDocumentTitle`      |
+| 9   | `populateURL`           |
+| 10  | `setDocumentThumbnail`  |
+| 11  | `sortDocumentProps`     |
 
 ### beforeCreate
 
-| #   | hook                     | from       |
-| --- | ------------------------ | ---------- |
-| 1   | `mergeWithBlankDocument` | collection |
-| 2   | `augmentFieldsPassword`  | auth       |
-| 3   | `buildDataConfigMap`     | collection |
-| 4   | `setDefaultValues`       | collection |
-| 5   | `validateFields`         | collection |
-| 6   | `createBetterAuthUser`   | auth       |
+| #   | hook                     |
+| --- | ------------------------ |
+| 1   | `mergeWithBlankDocument` |
+| 2   | `augmentFieldsPassword`  |
+| 3   | `buildDataConfigMap`     |
+| 4   | `setDefaultValues`       |
+| 5   | `validateFields`         |
+| 6   | `createBetterAuthUser`   |
+| 7   | `handlePathCreation`     |
+| 8   | `castBase64ToFile`       |
+| 9   | `processFileUpload`      |
 
 ### afterCreate
 
-| #   | hook             | from |
-| --- | ---------------- | ---- |
-| 1   | `populateAPIKey` | auth |
-| 2   | `signInNewUser`  | auth |
+| #   | hook             |
+| --- | ---------------- |
+| 1   | `populateAPIKey` |
+| 2   | `signInNewUser`  |
 
 ### beforeUpdate
 
-| #   | hook                        | from       |
-| --- | --------------------------- | ---------- |
-| 1   | `getOriginalDocument`       | collection |
-| 2   | `buildOriginalDocConfigMap` | collection |
-| 3   | `resolveContentOwner`       | collection |
-| 4   | `augmentFieldsPassword`     | auth       |
-| 5   | `preventSuperAdminMutation` | auth       |
-| 6   | `preventUserMutations`      | auth       |
-| 7   | `forwardRolesToBetterAuth`  | auth       |
-| 8   | `buildDataConfigMap`        | collection |
-| 9   | `setDefaultValues`          | collection |
-| 10  | `validateFields`            | collection |
+| #   | hook                        |
+| --- | --------------------------- |
+| 1   | `getOriginalDocument`       |
+| 2   | `buildOriginalDocConfigMap` |
+| 3   | `resolveContentOwner`       |
+| 4   | `augmentFieldsPassword`     |
+| 5   | `preventSuperAdminMutation` |
+| 6   | `preventUserMutations`      |
+| 7   | `forwardRolesToBetterAuth`  |
+| 8   | `defineVersionOperation`    |
+| 9   | `handleNewVersion`          |
+| 10  | `buildDataConfigMap`        |
+| 11  | `setDefaultValues`          |
+| 12  | `validateFields`            |
+| 13  | `handlePathCreation`        |
+| 14  | `castBase64ToFile`          |
+| 15  | `processFileUpload`         |
+| 16  | `demoteOtherVersions`       |
 
 ### beforeDelete
 
-| #   | hook                         | from |
-| --- | ---------------------------- | ---- |
-| 1   | `preventSupperAdminDeletion` | auth |
+| #   | hook                         |
+| --- | ---------------------------- |
+| 1   | `preventSupperAdminDeletion` |
+| 2   | `cleanUpFiles`               |
 
 ### afterDelete
 
-| #   | hook                   | from |
-| --- | ---------------------- | ---- |
-| 1   | `deleteBetterAuthUser` | auth |
+| #   | hook                   |
+| --- | ---------------------- |
+| 1   | `deleteBetterAuthUser` |
 
 ## apps (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       |
-| --- | ----------- | ---------- |
-| 1   | `authorize` | collection |
+| #   | hook        |
+| --- | ----------- |
+| 1   | `authorize` |
 
 ### beforeRead
 
-| #   | hook                    | from       |
-| --- | ----------------------- | ---------- |
-| 1   | `removePrivateFields`   | auth       |
-| 2   | `processDocumentFields` | collection |
-| 3   | `setDocumentLocale`     | collection |
-| 4   | `setDocumentType`       | collection |
-| 5   | `setDocumentTitle`      | title      |
-| 6   | `setDocumentThumbnail`  | thumbnail  |
-| 7   | `sortDocumentProps`     | collection |
+| #   | hook                    |
+| --- | ----------------------- |
+| 1   | `removePrivateFields`   |
+| 2   | `processDocumentFields` |
+| 3   | `setDocumentLocale`     |
+| 4   | `setDocumentType`       |
+| 5   | `populateSizes`         |
+| 6   | `addChildrenProperty`   |
+| 7   | `exposeVersionId`       |
+| 8   | `setDocumentTitle`      |
+| 9   | `populateURL`           |
+| 10  | `setDocumentThumbnail`  |
+| 11  | `sortDocumentProps`     |
 
 ### beforeCreate
 
-| #   | hook                     | from       |
-| --- | ------------------------ | ---------- |
-| 1   | `mergeWithBlankDocument` | collection |
-| 2   | `augmentFieldsPassword`  | auth       |
-| 3   | `buildDataConfigMap`     | collection |
-| 4   | `setDefaultValues`       | collection |
-| 5   | `validateFields`         | collection |
-| 6   | `createBetterAuthUser`   | auth       |
+| #   | hook                     |
+| --- | ------------------------ |
+| 1   | `mergeWithBlankDocument` |
+| 2   | `augmentFieldsPassword`  |
+| 3   | `buildDataConfigMap`     |
+| 4   | `setDefaultValues`       |
+| 5   | `validateFields`         |
+| 6   | `createBetterAuthUser`   |
+| 7   | `handlePathCreation`     |
+| 8   | `castBase64ToFile`       |
+| 9   | `processFileUpload`      |
 
 ### afterCreate
 
-| #   | hook             | from |
-| --- | ---------------- | ---- |
-| 1   | `populateAPIKey` | auth |
-| 2   | `signInNewUser`  | auth |
+| #   | hook             |
+| --- | ---------------- |
+| 1   | `populateAPIKey` |
+| 2   | `signInNewUser`  |
 
 ### beforeUpdate
 
-| #   | hook                        | from       |
-| --- | --------------------------- | ---------- |
-| 1   | `getOriginalDocument`       | collection |
-| 2   | `buildOriginalDocConfigMap` | collection |
-| 3   | `resolveContentOwner`       | collection |
-| 4   | `augmentFieldsPassword`     | auth       |
-| 5   | `preventSuperAdminMutation` | auth       |
-| 6   | `preventUserMutations`      | auth       |
-| 7   | `forwardRolesToBetterAuth`  | auth       |
-| 8   | `buildDataConfigMap`        | collection |
-| 9   | `setDefaultValues`          | collection |
-| 10  | `validateFields`            | collection |
+| #   | hook                        |
+| --- | --------------------------- |
+| 1   | `getOriginalDocument`       |
+| 2   | `buildOriginalDocConfigMap` |
+| 3   | `resolveContentOwner`       |
+| 4   | `augmentFieldsPassword`     |
+| 5   | `preventSuperAdminMutation` |
+| 6   | `preventUserMutations`      |
+| 7   | `forwardRolesToBetterAuth`  |
+| 8   | `defineVersionOperation`    |
+| 9   | `handleNewVersion`          |
+| 10  | `buildDataConfigMap`        |
+| 11  | `setDefaultValues`          |
+| 12  | `validateFields`            |
+| 13  | `handlePathCreation`        |
+| 14  | `castBase64ToFile`          |
+| 15  | `processFileUpload`         |
+| 16  | `demoteOtherVersions`       |
 
 ### beforeDelete
 
-| #   | hook                         | from |
-| --- | ---------------------------- | ---- |
-| 1   | `preventSupperAdminDeletion` | auth |
+| #   | hook                         |
+| --- | ---------------------------- |
+| 1   | `preventSupperAdminDeletion` |
+| 2   | `cleanUpFiles`               |
 
 ### afterDelete
 
-| #   | hook                   | from |
-| --- | ---------------------- | ---- |
-| 1   | `deleteBetterAuthUser` | auth |
+| #   | hook                   |
+| --- | ---------------------- |
+| 1   | `deleteBetterAuthUser` |
 
 ## staff (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       |
-| --- | ----------- | ---------- |
-| 1   | `authorize` | collection |
+| #   | hook        |
+| --- | ----------- |
+| 1   | `authorize` |
 
 ### beforeRead
 
-| #   | hook                    | from       |
-| --- | ----------------------- | ---------- |
-| 1   | `removePrivateFields`   | auth       |
-| 2   | `processDocumentFields` | collection |
-| 3   | `setDocumentLocale`     | collection |
-| 4   | `setDocumentType`       | collection |
-| 5   | `setDocumentTitle`      | title      |
-| 6   | `setDocumentThumbnail`  | thumbnail  |
-| 7   | `sortDocumentProps`     | collection |
+| #   | hook                    |
+| --- | ----------------------- |
+| 1   | `removePrivateFields`   |
+| 2   | `processDocumentFields` |
+| 3   | `setDocumentLocale`     |
+| 4   | `setDocumentType`       |
+| 5   | `populateSizes`         |
+| 6   | `addChildrenProperty`   |
+| 7   | `exposeVersionId`       |
+| 8   | `setDocumentTitle`      |
+| 9   | `populateURL`           |
+| 10  | `setDocumentThumbnail`  |
+| 11  | `sortDocumentProps`     |
 
 ### beforeCreate
 
-| #   | hook                     | from       |
-| --- | ------------------------ | ---------- |
-| 1   | `mergeWithBlankDocument` | collection |
-| 2   | `augmentFieldsPassword`  | auth       |
-| 3   | `buildDataConfigMap`     | collection |
-| 4   | `setDefaultValues`       | collection |
-| 5   | `validateFields`         | collection |
-| 6   | `createBetterAuthUser`   | auth       |
+| #   | hook                     |
+| --- | ------------------------ |
+| 1   | `mergeWithBlankDocument` |
+| 2   | `augmentFieldsPassword`  |
+| 3   | `buildDataConfigMap`     |
+| 4   | `setDefaultValues`       |
+| 5   | `validateFields`         |
+| 6   | `createBetterAuthUser`   |
+| 7   | `handlePathCreation`     |
+| 8   | `castBase64ToFile`       |
+| 9   | `processFileUpload`      |
 
 ### afterCreate
 
-| #   | hook             | from |
-| --- | ---------------- | ---- |
-| 1   | `populateAPIKey` | auth |
-| 2   | `signInNewUser`  | auth |
+| #   | hook             |
+| --- | ---------------- |
+| 1   | `populateAPIKey` |
+| 2   | `signInNewUser`  |
 
 ### beforeUpdate
 
-| #   | hook                        | from       |
-| --- | --------------------------- | ---------- |
-| 1   | `getOriginalDocument`       | collection |
-| 2   | `buildOriginalDocConfigMap` | collection |
-| 3   | `resolveContentOwner`       | collection |
-| 4   | `augmentFieldsPassword`     | auth       |
-| 5   | `preventSuperAdminMutation` | auth       |
-| 6   | `preventUserMutations`      | auth       |
-| 7   | `forwardRolesToBetterAuth`  | auth       |
-| 8   | `buildDataConfigMap`        | collection |
-| 9   | `setDefaultValues`          | collection |
-| 10  | `validateFields`            | collection |
+| #   | hook                        |
+| --- | --------------------------- |
+| 1   | `getOriginalDocument`       |
+| 2   | `buildOriginalDocConfigMap` |
+| 3   | `resolveContentOwner`       |
+| 4   | `augmentFieldsPassword`     |
+| 5   | `preventSuperAdminMutation` |
+| 6   | `preventUserMutations`      |
+| 7   | `forwardRolesToBetterAuth`  |
+| 8   | `defineVersionOperation`    |
+| 9   | `handleNewVersion`          |
+| 10  | `buildDataConfigMap`        |
+| 11  | `setDefaultValues`          |
+| 12  | `validateFields`            |
+| 13  | `handlePathCreation`        |
+| 14  | `castBase64ToFile`          |
+| 15  | `processFileUpload`         |
+| 16  | `demoteOtherVersions`       |
 
 ### beforeDelete
 
-| #   | hook                         | from |
-| --- | ---------------------------- | ---- |
-| 1   | `preventSupperAdminDeletion` | auth |
+| #   | hook                         |
+| --- | ---------------------------- |
+| 1   | `preventSupperAdminDeletion` |
+| 2   | `cleanUpFiles`               |
 
 ### afterDelete
 
-| #   | hook                   | from |
-| --- | ---------------------- | ---- |
-| 1   | `deleteBetterAuthUser` | auth |
+| #   | hook                   |
+| --- | ---------------------- |
+| 1   | `deleteBetterAuthUser` |
 
 ## $mediasDirectories (collection)
 
 ### beforeOperation
 
-| #   | hook        | from       |
-| --- | ----------- | ---------- |
-| 1   | `authorize` | collection |
+| #   | hook        |
+| --- | ----------- |
+| 1   | `authorize` |
 
 ### beforeRead
 
-| #   | hook                    | from       |
-| --- | ----------------------- | ---------- |
-| 1   | `processDocumentFields` | collection |
-| 2   | `setDocumentLocale`     | collection |
-| 3   | `setDocumentType`       | collection |
-| 4   | `setDocumentTitle`      | title      |
-| 5   | `setDocumentThumbnail`  | thumbnail  |
-| 6   | `sortDocumentProps`     | collection |
+| #   | hook                    |
+| --- | ----------------------- |
+| 1   | `removePrivateFields`   |
+| 2   | `processDocumentFields` |
+| 3   | `setDocumentLocale`     |
+| 4   | `setDocumentType`       |
+| 5   | `populateSizes`         |
+| 6   | `addChildrenProperty`   |
+| 7   | `exposeVersionId`       |
+| 8   | `setDocumentTitle`      |
+| 9   | `populateURL`           |
+| 10  | `setDocumentThumbnail`  |
+| 11  | `sortDocumentProps`     |
 
 ### beforeCreate
 
-| #   | hook                     | from       |
-| --- | ------------------------ | ---------- |
-| 1   | `mergeWithBlankDocument` | collection |
-| 2   | `buildDataConfigMap`     | collection |
-| 3   | `setDefaultValues`       | collection |
-| 4   | `validateFields`         | collection |
-| 5   | `exctractPath`           | upload     |
+| #   | hook                     |
+| --- | ------------------------ |
+| 1   | `mergeWithBlankDocument` |
+| 2   | `augmentFieldsPassword`  |
+| 3   | `buildDataConfigMap`     |
+| 4   | `setDefaultValues`       |
+| 5   | `validateFields`         |
+| 6   | `createBetterAuthUser`   |
+| 7   | `handlePathCreation`     |
+| 8   | `castBase64ToFile`       |
+| 9   | `processFileUpload`      |
+| 10  | `exctractPath`           |
+
+### afterCreate
+
+| #   | hook             |
+| --- | ---------------- |
+| 1   | `populateAPIKey` |
+| 2   | `signInNewUser`  |
 
 ### beforeUpdate
 
-| #   | hook                        | from       |
-| --- | --------------------------- | ---------- |
-| 1   | `getOriginalDocument`       | collection |
-| 2   | `buildOriginalDocConfigMap` | collection |
-| 3   | `resolveContentOwner`       | collection |
-| 4   | `buildDataConfigMap`        | collection |
-| 5   | `setDefaultValues`          | collection |
-| 6   | `validateFields`            | collection |
-| 7   | `exctractPath`              | upload     |
-| 8   | `prepareDirectoryChildren`  | upload     |
+| #   | hook                        |
+| --- | --------------------------- |
+| 1   | `getOriginalDocument`       |
+| 2   | `buildOriginalDocConfigMap` |
+| 3   | `resolveContentOwner`       |
+| 4   | `augmentFieldsPassword`     |
+| 5   | `preventSuperAdminMutation` |
+| 6   | `preventUserMutations`      |
+| 7   | `forwardRolesToBetterAuth`  |
+| 8   | `defineVersionOperation`    |
+| 9   | `handleNewVersion`          |
+| 10  | `buildDataConfigMap`        |
+| 11  | `setDefaultValues`          |
+| 12  | `validateFields`            |
+| 13  | `handlePathCreation`        |
+| 14  | `castBase64ToFile`          |
+| 15  | `processFileUpload`         |
+| 16  | `demoteOtherVersions`       |
+| 17  | `exctractPath`              |
+| 18  | `prepareDirectoryChildren`  |
 
 ### afterUpdate
 
-| #   | hook                      | from       |
-| --- | ------------------------- | ---------- |
-| 1   | `updateDirectoryChildren` | collection |
+| #   | hook                      |
+| --- | ------------------------- |
+| 1   | `updateDirectoryChildren` |
+
+### beforeDelete
+
+| #   | hook                         |
+| --- | ---------------------------- |
+| 1   | `preventSupperAdminDeletion` |
+| 2   | `cleanUpFiles`               |
+
+### afterDelete
+
+| #   | hook                   |
+| --- | ---------------------- |
+| 1   | `deleteBetterAuthUser` |
 
 ## settings (area)
 
 ### beforeOperation
 
-| #   | hook        | from |
-| --- | ----------- | ---- |
-| 1   | `authorize` | area |
+| #   | hook        |
+| --- | ----------- |
+| 1   | `authorize` |
 
 ### beforeRead
 
-| #   | hook                    | from  |
-| --- | ----------------------- | ----- |
-| 1   | `processDocumentFields` | area  |
-| 2   | `setDocumentLocale`     | area  |
-| 3   | `setDocumentType`       | area  |
-| 4   | `setDocumentTitle`      | title |
-| 5   | `sortDocumentProps`     | area  |
+| #   | hook                    |
+| --- | ----------------------- |
+| 1   | `processDocumentFields` |
+| 2   | `setDocumentLocale`     |
+| 3   | `setDocumentType`       |
+| 4   | `exposeVersionId`       |
+| 5   | `setDocumentTitle`      |
+| 6   | `populateURL`           |
+| 7   | `sortDocumentProps`     |
 
 ### beforeUpdate
 
-| #   | hook                        | from |
-| --- | --------------------------- | ---- |
-| 1   | `getOriginalDocument`       | area |
-| 2   | `buildOriginalDocConfigMap` | area |
-| 3   | `resolveContentOwner`       | area |
-| 4   | `buildDataConfigMap`        | area |
-| 5   | `setDefaultValues`          | area |
-| 6   | `validateFields`            | area |
+| #   | hook                        |
+| --- | --------------------------- |
+| 1   | `getOriginalDocument`       |
+| 2   | `buildOriginalDocConfigMap` |
+| 3   | `resolveContentOwner`       |
+| 4   | `defineVersionOperation`    |
+| 5   | `handleNewVersion`          |
+| 6   | `buildDataConfigMap`        |
+| 7   | `setDefaultValues`          |
+| 8   | `validateFields`            |
+| 9   | `demoteOtherVersions`       |
 
 ## navigation (area)
 
 ### beforeOperation
 
-| #   | hook        | from |
-| --- | ----------- | ---- |
-| 1   | `authorize` | area |
+| #   | hook        |
+| --- | ----------- |
+| 1   | `authorize` |
 
 ### beforeRead
 
-| #   | hook                    | from  |
-| --- | ----------------------- | ----- |
-| 1   | `processDocumentFields` | area  |
-| 2   | `setDocumentLocale`     | area  |
-| 3   | `setDocumentType`       | area  |
-| 4   | `setDocumentTitle`      | title |
-| 5   | `sortDocumentProps`     | area  |
+| #   | hook                    |
+| --- | ----------------------- |
+| 1   | `processDocumentFields` |
+| 2   | `setDocumentLocale`     |
+| 3   | `setDocumentType`       |
+| 4   | `exposeVersionId`       |
+| 5   | `setDocumentTitle`      |
+| 6   | `populateURL`           |
+| 7   | `sortDocumentProps`     |
 
 ### beforeUpdate
 
-| #   | hook                        | from |
-| --- | --------------------------- | ---- |
-| 1   | `getOriginalDocument`       | area |
-| 2   | `buildOriginalDocConfigMap` | area |
-| 3   | `resolveContentOwner`       | area |
-| 4   | `buildDataConfigMap`        | area |
-| 5   | `setDefaultValues`          | area |
-| 6   | `validateFields`            | area |
+| #   | hook                        |
+| --- | --------------------------- |
+| 1   | `getOriginalDocument`       |
+| 2   | `buildOriginalDocConfigMap` |
+| 3   | `resolveContentOwner`       |
+| 4   | `defineVersionOperation`    |
+| 5   | `handleNewVersion`          |
+| 6   | `buildDataConfigMap`        |
+| 7   | `setDefaultValues`          |
+| 8   | `validateFields`            |
+| 9   | `demoteOtherVersions`       |
 
 ## infos (area)
 
 ### beforeOperation
 
-| #   | hook        | from |
-| --- | ----------- | ---- |
-| 1   | `authorize` | area |
+| #   | hook        |
+| --- | ----------- |
+| 1   | `authorize` |
 
 ### beforeRead
 
-| #   | hook                    | from  |
-| --- | ----------------------- | ----- |
-| 1   | `processDocumentFields` | area  |
-| 2   | `setDocumentLocale`     | area  |
-| 3   | `setDocumentType`       | area  |
-| 4   | `setDocumentTitle`      | title |
-| 5   | `sortDocumentProps`     | area  |
+| #   | hook                    |
+| --- | ----------------------- |
+| 1   | `processDocumentFields` |
+| 2   | `setDocumentLocale`     |
+| 3   | `setDocumentType`       |
+| 4   | `exposeVersionId`       |
+| 5   | `setDocumentTitle`      |
+| 6   | `populateURL`           |
+| 7   | `sortDocumentProps`     |
 
 ### beforeUpdate
 
-| #   | hook                        | from |
-| --- | --------------------------- | ---- |
-| 1   | `getOriginalDocument`       | area |
-| 2   | `buildOriginalDocConfigMap` | area |
-| 3   | `resolveContentOwner`       | area |
-| 4   | `buildDataConfigMap`        | area |
-| 5   | `setDefaultValues`          | area |
-| 6   | `validateFields`            | area |
+| #   | hook                        |
+| --- | --------------------------- |
+| 1   | `getOriginalDocument`       |
+| 2   | `buildOriginalDocConfigMap` |
+| 3   | `resolveContentOwner`       |
+| 4   | `defineVersionOperation`    |
+| 5   | `handleNewVersion`          |
+| 6   | `buildDataConfigMap`        |
+| 7   | `setDefaultValues`          |
+| 8   | `validateFields`            |
+| 9   | `demoteOtherVersions`       |

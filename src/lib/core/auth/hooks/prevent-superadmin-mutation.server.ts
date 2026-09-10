@@ -1,16 +1,13 @@
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { isSuperAdmin } from '$lib/core/auth/user.server.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
 /**
  * Before update :
  * - prevent superadmin to be changed by someone else
  */
-export const preventSuperAdminMutation = Hooks.beforeUpdate({
-  name: 'preventSuperAdminMutation',
-  feature: 'auth',
-  // Runs before anything adds to `data`: this reads the caller's submission as sent.
-  run: async (args) => {
+export const preventSuperAdminMutation = Hooks.beforeUpdate(
+  async function preventSuperAdminMutation(args) {
     const { event, context } = args;
     const originalDoc = context.originalDoc;
 
@@ -40,4 +37,4 @@ export const preventSuperAdminMutation = Hooks.beforeUpdate({
 
     return args;
   }
-});
+);

@@ -1,4 +1,3 @@
-import { featureRuns } from './feature-guards.server.js';
 import type { PrototypeDefinition } from '$lib/core/prototype/define.js';
 import type { Dic } from '$lib/util/types.js';
 import { areaHooks } from '../prototype/area/hooks.server.js';
@@ -22,10 +21,11 @@ const TIMINGS: HookTiming[] = [
 /**
  * Composes one config's pipeline out of the two layers that contribute to it, and orders it.
  *
- * **The list order is the run order.** It used to be a tie-break, with a resolver deciding the
- * rest from `requires`/`provides` each hook declared — see the note in
- * `prototype/collection/hooks.server.ts` for why that went. All that is decided here is *which*
- * of the placed hooks this config runs.
+ * **The list order is the run order**, and that is now the whole of it. It used to be a tie-break,
+ * with a resolver deciding the rest from `requires`/`provides` each hook declared; then a filter,
+ * keeping the hooks whose owning feature this config enables. The guard is beside the hook in the
+ * list now — see `prototype/collection/hooks.server.ts` — so this appends the consumer's and the
+ * finaliser and nothing else.
  */
 const buildPipeline = (
   definition: Pick<PrototypeDefinition, 'hooks'>,
@@ -38,9 +38,10 @@ const buildPipeline = (
     pipeline[timing] = [
       // A hook belonging to a feature runs only where that feature is enabled; a hook belonging
       // to none is the prototype's own and always runs.
-      ...(definition.hooks?.[timing] ?? []).filter((hook) =>
-        featureRuns((hook as { feature?: string }).feature, config)
-      ),
+      // Every placed hook. Which of them *applies* to this config is the guard beside it in the
+      // list — `when(isAuth, …)` — asked when the hook runs rather than filtered here, so a
+      // config and its pipeline are the same list.
+      ...(definition.hooks?.[timing] ?? []),
       // A consumer's hooks are appended. They cannot interleave with the placed ones, which is
       // the cost of a written order.
       ...((consumer?.[timing] as unknown[]) ?? []),

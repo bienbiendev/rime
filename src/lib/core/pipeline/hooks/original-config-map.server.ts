@@ -1,10 +1,9 @@
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { buildConfigMap } from '../config-map/index.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
-export const buildOriginalDocConfigMap = Hooks.beforeUpsert({
-  name: 'buildOriginalDocConfigMap',
-  run: async (args) => {
+export const buildOriginalDocConfigMap = Hooks.beforeUpsert(
+  async function buildOriginalDocConfigMap(args) {
     const { originalDoc } = args.context;
 
     if (!originalDoc)
@@ -20,4 +19,4 @@ export const buildOriginalDocConfigMap = Hooks.beforeUpsert({
       }
     };
   }
-});
+);

@@ -1,3 +1,4 @@
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { fileForDocument } from '$lib/core/prototype/collection/upload/util/converter.server.js';
 import { VersionOperations } from '$lib/core/prototype/shared/versions/strategy.js';
 import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
@@ -8,7 +9,6 @@ import type { Dic } from '$lib/util/types.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { ConfigMap } from '$lib/core/pipeline/config-map/types.js';
 import { fallbackDataFromOriginal } from './fallback-data-from-original.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
 /**
  * Where a versioned document's content lives for *this* update — overriding the default.
@@ -39,58 +39,54 @@ import { Hooks } from '$lib/core/pipeline/define-hook.js';
  *   instead of carrying it forward. That is what the mark means, and it is what pins this ahead
  *   of `buildDataConfigMap` now that no list does.
  */
-export const handleNewVersion = Hooks.beforeUpsert({
-  name: 'handleNewVersion',
-  feature: 'versions',
-  run: async (args) => {
-    const { config, event } = args;
-    const { rime } = event.locals;
+export const handleNewVersion = Hooks.beforeUpsert(async function handleNewVersion(args) {
+  const { config, event } = args;
+  const { rime } = event.locals;
 
-    const { versionOperation, originalDoc, originalConfigMap, params } = args.context;
+  const { versionOperation, originalDoc, originalConfigMap, params } = args.context;
 
-    if (!originalConfigMap)
-      throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalConfigMap @handleNewVersion');
-    if (!originalDoc)
-      throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @handleNewVersion');
-    if (!versionOperation)
-      throw new RimeError(RimeError.OPERATION_ERROR, 'missing versionOperation @handleNewVersion');
+  if (!originalConfigMap)
+    throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalConfigMap @handleNewVersion');
+  if (!originalDoc)
+    throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @handleNewVersion');
+  if (!versionOperation)
+    throw new RimeError(RimeError.OPERATION_ERROR, 'missing versionOperation @handleNewVersion');
 
-    if (VersionOperations.isSpecificVersionUpdate(versionOperation)) {
-      return {
-        ...args,
-        context: { ...args.context, contentOwnerId: originalDoc.versionId }
-      };
-    }
-
-    if (VersionOperations.isNewVersionCreation(versionOperation)) {
-      const data = await prepareDataForNewVersion({
-        data: args.data,
-        originalDoc,
-        config,
-        originalConfigMap
-      });
-      const versionsSlug = withVersionsSuffix(config.slug);
-
-      const document = await rime.collection(versionsSlug).create({
-        data,
-        locale: params.locale
-      });
-
-      if (config.versions && config.versions.maxVersions) {
-        await rime.collection(versionsSlug).delete({
-          sort: '-updatedAt',
-          query: 'where[status][not_equals]=published',
-          offset: config.versions.maxVersions
-        });
-      }
-
-      return { ...args, context: { ...args.context, contentOwnerId: document.id } };
-    }
-
-    // Versioned, but this update writes neither a named version nor a new one — the default
-    // `resolveContentOwner` set stands.
-    return args;
+  if (VersionOperations.isSpecificVersionUpdate(versionOperation)) {
+    return {
+      ...args,
+      context: { ...args.context, contentOwnerId: originalDoc.versionId }
+    };
   }
+
+  if (VersionOperations.isNewVersionCreation(versionOperation)) {
+    const data = await prepareDataForNewVersion({
+      data: args.data,
+      originalDoc,
+      config,
+      originalConfigMap
+    });
+    const versionsSlug = withVersionsSuffix(config.slug);
+
+    const document = await rime.collection(versionsSlug).create({
+      data,
+      locale: params.locale
+    });
+
+    if (config.versions && config.versions.maxVersions) {
+      await rime.collection(versionsSlug).delete({
+        sort: '-updatedAt',
+        query: 'where[status][not_equals]=published',
+        offset: config.versions.maxVersions
+      });
+    }
+
+    return { ...args, context: { ...args.context, contentOwnerId: document.id } };
+  }
+
+  // Versioned, but this update writes neither a named version nor a new one — the default
+  // `resolveContentOwner` set stands.
+  return args;
 });
 
 async function prepareDataForNewVersion(args: {

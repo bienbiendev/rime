@@ -1,3 +1,6 @@
+import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
+import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
+import { when } from '$lib/core/prototype/when.js';
 import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
 import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
 import * as versions from '$lib/core/prototype/shared/versions/hooks/index.server.js';
@@ -35,21 +38,21 @@ export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     processDocumentFields,
     setDocumentLocale,
     setDocumentType,
-    versions.exposeVersionId,
+    when(isVersioned, versions.exposeVersionId),
     title.setDocumentTitle,
     // After the title, for the reason the collection's list gives.
-    url.populateURL
+    when(hasUrl, url.populateURL)
   ],
 
   beforeUpdate: [
     getOriginalDocument,
     buildOriginalDocConfigMap,
     resolveContentOwner,
-    versions.defineVersionOperation,
-    versions.handleNewVersion,
+    when(isVersioned, versions.defineVersionOperation),
+    when(isVersioned, versions.handleNewVersion),
     buildDataConfigMap,
     setDefaultValues,
     validateFields,
-    versions.demoteOtherVersions
+    when(isVersioned, versions.demoteOtherVersions)
   ]
 };

@@ -1,7 +1,7 @@
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
 import { logger } from '$lib/core/logger.server.js';
 import { directoriesOf } from '$lib/core/prototype/collection/upload/naming.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { trycatch } from '$lib/util/function.js';
 import { getSegments } from '$lib/core/prototype/collection/upload/util/path.js';
 
@@ -10,10 +10,8 @@ import { getSegments } from '$lib/core/prototype/collection/upload/util/path.js'
  * the function get the document _path and check if it exists,
  * if it doesn't it create {upload_slug}_directories entries recursively
  */
-export const handlePathCreation = Hooks.beforeUpsert<'upload'>({
-  name: 'handlePathCreation',
-  feature: 'upload',
-  run: async (args) => {
+export const handlePathCreation = Hooks.beforeUpsert<'upload'>(
+  async function handlePathCreation(args) {
     const { rime } = args.event.locals;
     const data = args.data;
 
@@ -101,4 +99,4 @@ export const handlePathCreation = Hooks.beforeUpsert<'upload'>({
 
     return args;
   }
-});
+);

@@ -1,13 +1,11 @@
-import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import { RimeError } from '$lib/core/errors/index.js';
 import { trycatch } from '$lib/util/function.js';
 
 type Update = { id: string; data: { parent: string } };
 
-export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>({
-  name: 'prepareDirectoryChildren',
-  feature: 'upload',
-  run: async (args) => {
+export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>(
+  async function prepareDirectoryChildren(args) {
     const data = args.data;
     const { event, config, context } = args;
     const originalDoc = context.originalDoc;
@@ -38,11 +36,10 @@ export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>({
 
     return args;
   }
-});
+);
 
-export const updateDirectoryChildren = Hooks.afterUpdate<'directory'>({
-  name: 'updateDirectoryChildren',
-  run: async (args) => {
+export const updateDirectoryChildren = Hooks.afterUpdate<'directory'>(
+  async function updateDirectoryChildren(args) {
     const { event, config } = args;
     const collection = event.locals.rime.collection(config.slug);
     const updates: Update[] = args.context.directoriesUpdates || [];
@@ -56,4 +53,4 @@ export const updateDirectoryChildren = Hooks.afterUpdate<'directory'>({
 
     return args;
   }
-});
+);

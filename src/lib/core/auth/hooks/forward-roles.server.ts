@@ -1,5 +1,5 @@
-import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import { RimeError } from '$lib/core/errors/index.js';
 import { access } from '$lib/core/auth/access.js';
 import { BETTER_AUTH_ROLES } from '$lib/core/auth/constant.server.js';
 import { betterAuthUserId } from '$lib/core/auth/user.server.js';
@@ -15,11 +15,8 @@ import { betterAuthUserId } from '$lib/core/auth/user.server.js';
  * Only the 'staff' collection can end up admin or staff.
  * Every other collection always gets 'user'.
  */
-export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>({
-  name: 'forwardRolesToBetterAuth',
-  feature: 'auth',
-  // Runs before anything adds to `data`: this reads the caller's submission as sent.
-  run: async (args) => {
+export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>(
+  async function forwardRolesToBetterAuth(args) {
     const { event, config, context } = args;
     const { rime } = event.locals;
 
@@ -78,4 +75,4 @@ export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>({
 
     return args;
   }
-});
+);

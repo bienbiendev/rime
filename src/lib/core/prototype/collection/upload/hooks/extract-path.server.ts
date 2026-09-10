@@ -1,5 +1,5 @@
-import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import { RimeError } from '$lib/core/errors/index.js';
 import { trycatchSync } from '$lib/util/function.js';
 import { getSegments } from '$lib/core/prototype/collection/upload/util/path.js';
 
@@ -8,25 +8,21 @@ import { getSegments } from '$lib/core/prototype/collection/upload/util/path.js'
  * the function normalize and validate path ({slug}_directories.id).
  * Then extract parent, name from the given path.
  */
-export const exctractPath = Hooks.beforeUpsert<'directory'>({
-  name: 'exctractPath',
-  feature: 'upload',
-  run: async (args) => {
-    let data = args.data;
+export const exctractPath = Hooks.beforeUpsert<'directory'>(async function exctractPath(args) {
+  let data = args.data;
 
-    if (data?.id) {
-      const [error, segments] = trycatchSync(() => getSegments(data.id));
-      if (error) {
-        throw new RimeError(RimeError.INVALID_DATA, error.message);
-      }
-      data = {
-        ...data,
-        id: segments.path,
-        name: segments.name,
-        parent: segments.parent
-      };
+  if (data?.id) {
+    const [error, segments] = trycatchSync(() => getSegments(data.id));
+    if (error) {
+      throw new RimeError(RimeError.INVALID_DATA, error.message);
     }
-
-    return { ...args, data };
+    data = {
+      ...data,
+      id: segments.path,
+      name: segments.name,
+      parent: segments.parent
+    };
   }
+
+  return { ...args, data };
 });

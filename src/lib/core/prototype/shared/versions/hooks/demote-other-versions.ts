@@ -1,6 +1,6 @@
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
 import { VersionOperations } from '$lib/core/prototype/shared/versions/strategy.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 
 /**
@@ -20,23 +20,19 @@ import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.j
  * Isomorphic: it reaches the adapter through `event.locals`, so it imports nothing server-only and
  * needs no `$rime/modules` pair — the feature can carry it directly.
  */
-export const demoteOtherVersions = Hooks.beforeUpdate({
-  name: 'demoteOtherVersions',
-  feature: 'versions',
-  run: async (args) => {
-    const { config, data, event, context } = args;
+export const demoteOtherVersions = Hooks.beforeUpdate(async function demoteOtherVersions(args) {
+  const { config, data, event, context } = args;
 
-    // Only a config with drafts has a published version to be the only one of.
-    if (!config.versions || !config.versions.draft) return args;
-    // A new version's row is written by handleNewVersion as a draft; nothing to demote.
-    if (!VersionOperations.isSpecificVersionUpdate(context.versionOperation!)) return args;
-    if (data.status !== VERSIONS_STATUS.PUBLISHED) return args;
+  // Only a config with drafts has a published version to be the only one of.
+  if (!config.versions || !config.versions.draft) return args;
+  // A new version's row is written by handleNewVersion as a draft; nothing to demote.
+  if (!VersionOperations.isSpecificVersionUpdate(context.versionOperation!)) return args;
+  if (data.status !== VERSIONS_STATUS.PUBLISHED) return args;
 
-    await event.locals.rime.adapter.collection(withVersionsSuffix(config.slug)).updateWhere({
-      query: `where[ownerId][equals]=${context.originalDoc!.id}`,
-      data: { status: VERSIONS_STATUS.DRAFT }
-    });
+  await event.locals.rime.adapter.collection(withVersionsSuffix(config.slug)).updateWhere({
+    query: `where[ownerId][equals]=${context.originalDoc!.id}`,
+    data: { status: VERSIONS_STATUS.DRAFT }
+  });
 
-    return args;
-  }
+  return args;
 });

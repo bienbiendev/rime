@@ -200,41 +200,9 @@ export type ParsedOperationQuery = {
 };
 
 /**
- * What a hook declares about itself. Attached to the function, not wrapped around it, so every
- * call site keeps invoking it directly.
- *
- * Only a name, now. It used to carry `requires`/`provides` and a resolver computed the order from
- * them; the order is written down in each prototype's `hooks.server.ts` instead — see the note
- * there for why.
- */
-export type HookMarks = {
-  /**
-   * Identifies the hook in the generated pipeline and the order fixture.
-   *
-   * Cannot be inferred: these hooks are written `export const x = Hooks.beforeRead(fn)`, where
-   * the function is an *argument*, so JS never gives it a name and `fn.name` is `''`.
-   */
-  name: string;
-
-  /**
-   * The feature this hook belongs to, when it belongs to one.
-   *
-   * Absent means core's — a prototype's own step, which always runs. Named means
-   * `buildPipeline` runs it only where that feature is enabled, which is what stops a versioned
-   * hook firing on a config with no versions.
-   *
-   * Said on the hook rather than collected on the feature. `FeatureDefinition.hooks` used to be
-   * that list, mirrored per timing, reached through `$rime/modules` because a feature's
-   * `index.ts` is client-reachable — three indirections for one word, and a second list that had
-   * to agree with the prototype's.
-   */
-  feature?: string;
-};
-
-/**
  * A hook's name lives on the function at runtime and deliberately **not** in its type.
  *
- * Putting it in the type (`Hook<S, …> & HookMarks`) breaks every consumer: intersecting a
+ * Putting the name in the type breaks every consumer: intersecting a
  * function type with an object loses the assignability that lets a `Hook<'raw', 'read', 'before'>`
  * — what `Hooks.beforeRead(fn)` infers when the handler carries no explicit slug — land in a
  * `CollectionHooks<'pages'>`. Nothing needs it there: only the pipeline chart reads it, through

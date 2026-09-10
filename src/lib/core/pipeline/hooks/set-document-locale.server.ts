@@ -1,8 +1,7 @@
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
-export const setDocumentLocale = Hooks.beforeRead<'generic'>({
-  name: 'setDocumentLocale',
-  run: async (args) => {
+export const setDocumentLocale = Hooks.beforeRead<'generic'>(
+  async function setDocumentLocale(args) {
     let doc = args.doc;
 
     // Set doc.locale only if :
@@ -21,4 +20,4 @@ export const setDocumentLocale = Hooks.beforeRead<'generic'>({
 
     return { ...args, doc };
   }
-});
+);

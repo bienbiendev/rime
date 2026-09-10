@@ -1,5 +1,5 @@
-import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import { RimeError } from '$lib/core/errors/index.js';
 import { userAttributes } from '../user.server.js';
 
 /**
@@ -17,27 +17,23 @@ import { userAttributes } from '../user.server.js';
  * the caller supplies it. `createBetterAuthUser` puts it on `data` in every case, and that is what
  * this reads.
  */
-export const signInNewUser = Hooks.afterCreate<'auth'>({
-  name: 'signInNewUser',
-  feature: 'auth',
-  run: async (args) => {
-    const { config, event, data } = args;
+export const signInNewUser = Hooks.afterCreate<'auth'>(async function signInNewUser(args) {
+  const { config, event, data } = args;
 
-    if (!event.locals.isAutoSignIn) return args;
+  if (!event.locals.isAutoSignIn) return args;
 
-    if (
-      typeof data.name !== 'string' ||
-      typeof data.email !== 'string' ||
-      typeof data.authUserId !== 'string'
-    ) {
-      throw new RimeError(RimeError.OPERATION_ERROR, 'unable to signin user');
-    }
-
-    event.locals.user = await userAttributes(event.locals.rime.adapter, {
-      authUserId: data.authUserId,
-      slug: config.slug
-    });
-
-    return args;
+  if (
+    typeof data.name !== 'string' ||
+    typeof data.email !== 'string' ||
+    typeof data.authUserId !== 'string'
+  ) {
+    throw new RimeError(RimeError.OPERATION_ERROR, 'unable to signin user');
   }
+
+  event.locals.user = await userAttributes(event.locals.rime.adapter, {
+    authUserId: data.authUserId,
+    slug: config.slug
+  });
+
+  return args;
 });

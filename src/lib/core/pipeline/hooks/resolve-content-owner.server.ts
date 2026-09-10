@@ -17,14 +17,11 @@ import { RimeError } from '$lib/core/errors/index.js';
  * What reads it: `runUpdate` step 5 hangs blocks, tree nodes and relations off it, and both
  * prototypes' `reread` fetches back the row the write went to.
  */
-export const resolveContentOwner = Hooks.beforeUpdate({
-  name: 'resolveContentOwner',
-  run: async (args) => {
-    const { originalDoc } = args.context;
+export const resolveContentOwner = Hooks.beforeUpdate(async function resolveContentOwner(args) {
+  const { originalDoc } = args.context;
 
-    if (!originalDoc)
-      throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @resolveContentOwner');
+  if (!originalDoc)
+    throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @resolveContentOwner');
 
-    return { ...args, context: { ...args.context, contentOwnerId: originalDoc.id } };
-  }
+  return { ...args, context: { ...args.context, contentOwnerId: originalDoc.id } };
 });

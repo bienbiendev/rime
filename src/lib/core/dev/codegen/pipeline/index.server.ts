@@ -44,9 +44,9 @@ const table = (header: string[], rows: string[][]) => {
  * runs across all eight" — and one table per prototype would put four unrelated sequences in one
  * column of numbers.
  *
- * The order itself is written down, in each prototype's `hooks.server.ts`. What this adds is the
- * one thing the source cannot show: which of those hooks **this** config actually runs, after
- * `buildPipeline` filters by whether each owning feature is enabled.
+ * The order is written down, in each prototype's `hooks.server.ts`. What this adds is what that
+ * file cannot show: a config's own `$hooks`, and the pipeline of every collection a feature
+ * derived — `$pages__versions` and `mediasDirectories` are here and are written nowhere.
  */
 const tablesFor = (prototype: Dic): string => {
   const timings = Object.entries((prototype.$hooks as Dic | undefined) ?? {}).filter(
@@ -58,15 +58,10 @@ const tablesFor = (prototype: Dic): string => {
   return timings
     .map(([timing, hooks]) => {
       const rows = hooks.map((hook, index) => {
-        // A hook says whose it is — `feature: 'auth'` beside its name. Anything that says nothing
-        // is the prototype's own. It used to be recovered by identity against
-        // `FeatureDefinition.hooks`, which no longer exists.
-        const from = (hook as { feature?: string }).feature ?? prototype.type;
-
-        return [String(index + 1), `\`${hookName(hook)}\``, String(from)];
+        return [String(index + 1), `\`${hookName(hook)}\``];
       });
 
-      return [`### ${timing}`, '', table(['#', 'hook', 'from'], rows), ''].join('\n');
+      return [`### ${timing}`, '', table(['#', 'hook'], rows), ''].join('\n');
     })
     .join('\n');
 };
@@ -85,12 +80,12 @@ export default function generatePipelineDoc(config: Dic): void {
   const contents =
     `# Pipelines\n\n` +
     `One table per timing, in the order the hooks actually run.\n\n` +
-    `**The order itself is written down**, in each prototype's \`hooks.server.ts\`. What this adds\n` +
-    `is the one thing that file cannot show: which of those hooks **this** config runs, after\n` +
-    `\`buildPipeline\` filters out the features it does not enable.\n\n` +
-    `\`from\` is the prototype, or the feature that owns the hook. \`anonymous\` is a hook your\n` +
-    `config contributed without naming it — every rime-owned hook is named, and a consumer's are\n` +
-    `appended after the prototype's, before the finaliser.\n\n` +
+    `**The order is written down**, in each prototype's \`hooks.server.ts\`. What this adds is what\n` +
+    `that file cannot show: your own hooks, appended after the prototype's and before the\n` +
+    `finaliser, and the hooks of any collection a feature derived.\n\n` +
+    `Every hook a prototype places is listed, whether or not it applies here: a hook belonging to\n` +
+    `a feature is written \`when(isAuth, …)\` in that list and asks at the call. \`anonymous\` is a\n` +
+    `hook you contributed without naming it — every rime-owned hook is a named function.\n\n` +
     body;
 
   const chartPath = path.resolve(process.cwd(), 'hooks.generated.md');

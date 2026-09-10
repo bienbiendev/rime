@@ -15,12 +15,8 @@ import { Hooks } from '$lib/core/pipeline/define-hook.js';
  * Additive — `contentId` stays. Core code that needs the row rather than the name reads that one
  * (`features/url`, `features/upload`), which is why neither of them has to run after this.
  */
-export const exposeVersionId = Hooks.beforeRead({
-  name: 'exposeVersionId',
-  feature: 'versions',
-  run: async (args) => {
-    if (!args.doc.contentId) return args;
+export const exposeVersionId = Hooks.beforeRead(async function exposeVersionId(args) {
+  if (!args.doc.contentId) return args;
 
-    return { ...args, doc: { ...args.doc, versionId: args.doc.contentId } };
-  }
+  return { ...args, doc: { ...args.doc, versionId: args.doc.contentId } };
 });

@@ -21,6 +21,10 @@ import { collectionHooks } from '$lib/core/prototype/collection/hooks.server.js'
  * read — it is what `collection/hooks.server.ts` imports to place them — so the set of hooks a
  * feature owns is exactly what that file exports.
  *
+ * It is also the only thing left that knows a hook belongs to a feature. A hook used to say so
+ * itself, as `feature: 'auth'` beside its name, and `buildPipeline` filtered on it; a hook is a
+ * plain function now and the guard sits beside it in the prototype's list.
+ *
  * An unplaced hook never runs, silently. In `beforeUpdate` that is a security question:
  * `preventUserMutations` and `preventSuperAdminMutation` are auth's, and a hook that is written,
  * exported and never placed looks exactly like one that is enforcing something.
@@ -38,10 +42,16 @@ const barrels = { auth, nested, thumbnail, title, upload, url, versions };
  */
 const unplaced: Record<string, string> = {};
 
+/**
+ * Every step either list places — and the step a `when(…)` guards counts as placed.
+ *
+ * `when` keeps the guarded function on `.step` for exactly this: a list entry is the guard, and
+ * what this spec is about is whether the *hook* is in the list at all.
+ */
 const placed = new Set(
-  [collectionHooks, areaHooks].flatMap((byTiming) =>
-    Object.values(byTiming).flatMap((hooks) => hooks ?? [])
-  )
+  [collectionHooks, areaHooks]
+    .flatMap((byTiming) => Object.values(byTiming).flatMap((hooks) => hooks ?? []))
+    .flatMap((entry) => [entry, (entry as { step?: unknown }).step])
 );
 
 describe('every feature hook is placed by a prototype', () => {

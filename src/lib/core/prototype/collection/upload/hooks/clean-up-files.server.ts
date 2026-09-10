@@ -1,6 +1,6 @@
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { cleanUpDocumentFile } from '$lib/core/prototype/collection/upload/disk/delete.server.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import type { WithUpload } from '$lib/core/prototype/collection/upload/util/config.js';
 
 /**
@@ -12,13 +12,9 @@ import type { WithUpload } from '$lib/core/prototype/collection/upload/util/conf
  * 3. Ensures no orphaned files remain after document deletion
  *
  */
-export const cleanUpFiles = Hooks.beforeDelete({
-  name: 'cleanUpFiles',
-  feature: 'upload',
-  run: async (args) => {
-    const config = args.config as WithUpload<BuiltCollection>;
-    const id = args.context.params.id || '';
-    await cleanUpDocumentFile({ config, rime: args.event.locals.rime, id });
-    return args;
-  }
+export const cleanUpFiles = Hooks.beforeDelete(async function cleanUpFiles(args) {
+  const config = args.config as WithUpload<BuiltCollection>;
+  const id = args.context.params.id || '';
+  await cleanUpDocumentFile({ config, rime: args.event.locals.rime, id });
+  return args;
 });

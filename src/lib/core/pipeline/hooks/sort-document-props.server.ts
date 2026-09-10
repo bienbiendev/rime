@@ -1,13 +1,12 @@
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { isObjectLiteral } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
-export const sortDocumentProps = Hooks.beforeRead<'generic'>({
-  name: 'sortDocumentProps',
-  run: async (args) => {
+export const sortDocumentProps = Hooks.beforeRead<'generic'>(
+  async function sortDocumentProps(args) {
     return { ...args, doc: sortDocumentKeys(args.doc) };
   }
-});
+);
 
 function sortDocumentKeys<T extends Dic>(obj: T): T {
   const specificOrder = ['id', 'title', 'status'];

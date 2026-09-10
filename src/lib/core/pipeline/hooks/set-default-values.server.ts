@@ -1,15 +1,13 @@
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { getRequestEvent } from '$app/server';
 import type { Adapter } from '$lib/core/adapter.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { logger } from '$lib/core/logger.server.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 
-export const setDefaultValues = Hooks.beforeUpsert({
-  name: 'setDefaultValues',
-  run: async (args) => {
+export const setDefaultValues = Hooks.beforeUpsert(async function setDefaultValues(args) {
     const { operation, event } = args;
     const { rime } = event.locals;
 
@@ -42,7 +40,6 @@ export const setDefaultValues = Hooks.beforeUpsert({
       ...args,
       data: output
     };
-  }
 });
 
 type GetDefaultValue = (args: {

@@ -1,5 +1,5 @@
-import { RimeError } from '$lib/core/errors/index.js';
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import { RimeError } from '$lib/core/errors/index.js';
 
 /**
  * Loads the document an update is about to change.
@@ -17,46 +17,43 @@ import { Hooks } from '$lib/core/pipeline/define-hook.js';
  * What is left here is the part that is genuinely core's: load the original, of whichever
  * prototype this is.
  */
-export const getOriginalDocument = Hooks.beforeUpdate({
-  name: 'getOriginalDocument',
-  run: async (args) => {
-    const { event, config, context } = args;
-    const { rime } = event.locals;
+export const getOriginalDocument = Hooks.beforeUpdate(async function getOriginalDocument(args) {
+  const { event, config, context } = args;
+  const { rime } = event.locals;
 
-    let original;
+  let original;
 
-    switch (config.type) {
-      //
-      case 'collection':
-        if (!context.params.id)
-          throw new RimeError(RimeError.OPERATION_ERROR, 'missing id @getOriginalDocument');
+  switch (config.type) {
+    //
+    case 'collection':
+      if (!context.params.id)
+        throw new RimeError(RimeError.OPERATION_ERROR, 'missing id @getOriginalDocument');
 
-        original = await rime.collection(config.slug).findById({
-          locale: context.params.locale,
-          id: context.params.id,
-          versionId: context.params.versionId,
-          draft: context.params.draft,
-          intent: 'original'
-        });
+      original = await rime.collection(config.slug).findById({
+        locale: context.params.locale,
+        id: context.params.id,
+        versionId: context.params.versionId,
+        draft: context.params.draft,
+        intent: 'original'
+      });
 
-        break;
+      break;
 
-      case 'area':
-        original = await rime.area(config.slug).find({
-          locale: context.params.locale,
-          versionId: context.params.versionId,
-          draft: context.params.draft,
-          intent: 'original'
-        });
-        break;
-    }
-
-    return {
-      ...args,
-      context: {
-        ...args.context,
-        originalDoc: original
-      }
-    };
+    case 'area':
+      original = await rime.area(config.slug).find({
+        locale: context.params.locale,
+        versionId: context.params.versionId,
+        draft: context.params.draft,
+        intent: 'original'
+      });
+      break;
   }
+
+  return {
+    ...args,
+    context: {
+      ...args.context,
+      originalDoc: original
+    }
+  };
 });

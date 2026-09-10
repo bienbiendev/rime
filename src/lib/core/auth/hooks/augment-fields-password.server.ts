@@ -1,5 +1,5 @@
-import validate from '$lib/core/fields/validate.js';
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import validate from '$lib/core/fields/validate.js';
 import { text } from '$lib/fields/text/index.js';
 
 const passwordField = text('password')
@@ -30,10 +30,8 @@ const passwordField = text('password')
  * twice. The panel enforces the match in AuthFooter.svelte, where a mistyped password can
  * still be corrected.
  */
-export const augmentFieldsPassword = Hooks.beforeUpsert<'auth'>({
-  name: 'augmentFieldsPassword',
-  feature: 'auth',
-  run: async (args) => {
+export const augmentFieldsPassword = Hooks.beforeUpsert<'auth'>(
+  async function augmentFieldsPassword(args) {
     let { config } = args;
 
     const IS_PASSWORD_AUTH =
@@ -51,4 +49,4 @@ export const augmentFieldsPassword = Hooks.beforeUpsert<'auth'>({
       config
     };
   }
-});
+);

@@ -1,6 +1,6 @@
+import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { cleanUpDocumentFile } from '$lib/core/prototype/collection/upload/disk/delete.server.js';
 import { saveFile } from '$lib/core/prototype/collection/upload/disk/save.server.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { omit } from '$lib/util/object.js';
 import { toCamelCase } from '$lib/util/string.js';
 import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config.js';
@@ -24,10 +24,8 @@ import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/confi
  *    - Cleans up image variations
  *    - Nullifies related document fields
  */
-export const processFileUpload = Hooks.beforeUpsert<'upload'>({
-  name: 'processFileUpload',
-  feature: 'upload',
-  run: async (args) => {
+export const processFileUpload = Hooks.beforeUpsert<'upload'>(
+  async function processFileUpload(args) {
     const { operation, config, event } = args;
     const { rime } = event.locals;
 
@@ -67,4 +65,4 @@ export const processFileUpload = Hooks.beforeUpsert<'upload'>({
 
     return { ...args, data };
   }
-});
+);
