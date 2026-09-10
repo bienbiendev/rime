@@ -77,10 +77,13 @@ that means "this is who made it".
    `created_by` / `last_edited_by` to both `common.js` files. Give the two relation fields
    `.table(n)` so they can be shown as list columns — the column list is built from any field
    carrying `table` (`panel/context/collection.svelte.ts:92-103`), so this is the entire cost of
-   "user metas on the table".
-6. **Migration.** The column rename is a schema change on every prototype table. Existing `editedBy`
-   values are stale locks, not history — dropping the column and adding the three new ones is
-   honest; backfilling `lastEditedBy` from it would invent a fact.
+   "user metas on the table". A relation column costs nothing extra on the list query either:
+   `fields/relation/component/Cell.svelte` resolves the related document client-side through the
+   API proxy, so the `find()` at `panel/pages/collection/load.server.ts:43` stays at depth 0.
+6. **Migration.** Cheaper than it looks: a config change already triggers `drizzle-kit generate`
+   then `drizzle-kit migrate` — `adapter-sqlite/generate-schema/write.server.ts:59-65` — so the
+   column drop and the three additions are generated, not hand-written. Existing `editedBy` values
+   are stale locks, not history; backfilling `lastEditedBy` from one would invent a fact.
 7. **Test.** `tests/basic` — create as user A, assert `createdBy`; update as user B, assert
    `lastEditedBy` moved and `createdBy` did not; assert a stale lock is takeable after the TTL.
 
