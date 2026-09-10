@@ -39,7 +39,7 @@ export const versionsWritePlan = (
 
   const { versionOperation, contentOwnerId } = args.context;
 
-  // The `._root()` fields stay on the base row; a versions has no column for them.
+  // The `._root()` fields stay on the base row; a versions table has no column for them.
   const { base, content } = splitRootData(plan.data, args.config);
 
   // No row to name: this document has no version yet, and the adapter makes the first one.

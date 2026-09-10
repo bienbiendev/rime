@@ -261,11 +261,11 @@ export function getFieldListAtPath(
 }
 
 /**
- * The fields a config keeps on its base row rather than on its versions — whatever is marked
+ * The fields a config keeps on its base row rather than on its versions table — whatever is marked
  * `._root()`.
  *
  * Read off the config, never a list of names, because the schema generator splits the two tables
- * by the same flag: the base table gets `filter((f) => f.get.root)`, the versions gets the rest. A
+ * by the same flag: the base table gets `filter((f) => f.get.root)`, the versions table gets the rest. A
  * name-matching list would silently drop any field marked by something other than the two features
  * whose names happened to be in it — there is no versions column to fall back to.
  *

@@ -41,7 +41,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
 
     // Whether this config's content lives on its own row or on a second table, asked of the
     // features that extend the prototype rather than of a member the adapter recognises by name.
-    // A feature declaring a versions is the only thing that makes two tables here.
+    // A feature declaring a versions table is the only thing that makes two tables here.
     const versions = prototype._versions;
 
     // The prototype's own table, resolved from its slug rather than case-converted here —
@@ -71,7 +71,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
       });
       schema.push(baseSchema);
 
-      // From here on, "root" means the versions: its blocks, tree and relations tables hang off it.
+      // From here on, "root" means the versions table: its blocks, tree and relations tables hang off it.
       rootTableName = baseTableName(versions.slug);
 
       const manyVersionsToOneName = `rel_${rootTableName}HasOne${toPascalCase(baseName)}`;

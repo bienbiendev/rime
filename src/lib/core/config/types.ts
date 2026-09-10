@@ -220,17 +220,16 @@ export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'up
   _generateSchema?: false;
   _generateRoutes?: false;
   /**
-   * The config this one version tables, when it is a versions — the inverse of
-   * `RegisterPrototypeArgs.versions`, in slug space.
+   * Whose content this config holds, in slug space — the inverse of `_versions`.
    *
-   * A versions carries its owner's members, so anything asking "whose content am I?" used to answer
-   * by string surgery on the slug: `withDirectoriesSuffix` stripped **versions'** own suffix so a
-   * versions's directories resolved to its parent's, which is why `features/upload/naming.ts`
-   * imported from `features/versions`. Whichever feature derives a versions knows the answer, so it
-   * says it.
+   * ```
+   * pages              _shadowOf: undefined
+   * $pages__versions   _shadowOf: 'pages'
+   * ```
    *
-   * `undefined` on every config an author wrote, which is what makes `config._shadowOf ?? config.slug`
-   * read as "the document this row belongs to".
+   * Set by whichever feature derived the second table, so nothing has to read it off how the slug
+   * is spelled. `undefined` on every config an author wrote, which makes
+   * `config._shadowOf ?? config.slug` read as "the document this row belongs to".
    */
   _shadowOf?: string;
 };

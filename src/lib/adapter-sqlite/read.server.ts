@@ -30,7 +30,7 @@ import { buildWithParam } from './select.server.js';
 
 type ReadArgs = {
   slug: string;
-  /** Where the content lives, when not on the base row — see `RegisterPrototypeArgs.versions`. */
+  /** Where the content lives, when not on the base row — `config._versions`. */
   versions?: VersionsTable;
   /** Restrict to one root row. Omitted for a singleton, which has exactly one. */
   id?: string;
@@ -75,7 +75,7 @@ export const readPrototype = async (
     });
   }
 
-  // See findManyPrototypes for why the versions's slug is castable.
+  // See findManyPrototypes for why the versions table's slug is castable.
   const versionsSlug = versions.slug as PrototypeSlug;
   const contentTable = baseTableName(versionsSlug);
 
@@ -166,7 +166,7 @@ export const findManyPrototypes = async (
   // against the config, so it takes a slug.
   // `VersionsTable.slug` is a plain string on purpose — a feature names a slug, and only the
   // registry knows which slugs exist. The cast is the same one `slug` above takes, and sound for
-  // the same reason: a versions is a registered prototype in its own right (the feature that
+  // the same reason: a versions table is a registered prototype in its own right (the feature that
   // declares one also derives its config), so `buildWhereParam` can resolve fields against it.
   const versionsSlug = versions.slug as PrototypeSlug;
   const contentTable = baseTableName(versionsSlug);
@@ -174,7 +174,7 @@ export const findManyPrototypes = async (
     buildWithParam({ table: contentTable, select, tables, config, locale }) || undefined;
 
   // The caller's own filter, and the one saying which content row each document shows. Both
-  // resolve against the versions, so they are two wheres to `and` rather than two query objects to
+  // resolve against the versions table, so they are two wheres to `and` rather than two query objects to
   // splice — which is what this was, a condition spliced into somebody else's `where` by hand
   // behind a config read.
   const wheres = [query, content && normalizeQuery(content)]
@@ -191,7 +191,7 @@ export const findManyPrototypes = async (
   const params: Dic = {
     limit: limit || (typeof offset === 'number' ? 1000000 : undefined),
     offset: offset,
-    // The sortable columns are on the versions, so the sort builder is handed it by name.
+    // The sortable columns are on the versions table, so the sort builder is handed it by name.
     orderBy: buildOrderByParam({ slug, locale, tables, by: sort, versions: contentTable })
   };
   Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);

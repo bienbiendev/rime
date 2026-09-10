@@ -21,9 +21,9 @@ type BuildWhereArgs = {
   tables: GetRegisterType<'Tables'>;
   configCtx: ConfigContext;
   /**
-   * The prototype `slug` is the versions of, when it is one.
+   * The prototype `slug` is the versions table of, when it is one.
    *
-   * Two conditions are resolved differently against a versions: `id` means the base row rather than
+   * Two conditions are resolved differently against a versions table: `id` means the base row rather than
    * the content row, and the hierarchy columns (`_parent`, `_position`, `_path`) live on the base
    * table and have to be reached through it.
    *
@@ -445,10 +445,10 @@ function isHierarchyColumn(sqlColumn: string) {
 
 // Normalize condition object for versioned collections
 /**
- * Retargets the two id conditions when the table being queried is a versions.
+ * Retargets the two id conditions when the table being queried is a versions table.
  *
- * A caller filtering by `id` means the document, which is the base row — on a versions that is
- * `ownerId`. `versionId` means the content row itself, which is the versions's own `id`.
+ * A caller filtering by `id` means the document, which is the base row — on a versions table that is
+ * `ownerId`. `versionId` means the content row itself, which is the versions table's own `id`.
  */
 function normalizedForShadow(conditionObject: Dic, isShadow: boolean): Dic {
   if (!isShadow) return conditionObject;

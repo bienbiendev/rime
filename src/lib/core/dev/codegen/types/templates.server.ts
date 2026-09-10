@@ -42,9 +42,9 @@ export const templateRegister = <T extends Config>(config: T): string => {
    * Asked of the features that extend a collection, the way the schema generator asks. It was
    * `collection.versions` plus the versions feature's own `withVersionsSuffix`, which is codegen
    * naming a feature's table for it — and which would have registered nothing for a second
-   * feature that declared a versions.
+   * feature that declared a versions table.
    *
-   * Collections only: a versions is registered as a collection in its own right, and this map is
+   * Collections only: a versions table is registered as a collection in its own right, and this map is
    * read nowhere but in `RegisterCollection` below.
    */
   const versionsSlugs = new Map((config.collections ?? []).map((c) => [c.slug, c._versions?.slug]));

@@ -1,7 +1,7 @@
 import type { CollectionSlug } from '$lib/types.js';
 
 /**
- * The versions versions naming convention, in slug space.
+ * The versions table naming convention, in slug space.
  *
  * A derived slug is `$` + the base + `__` + the marker:
  *

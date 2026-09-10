@@ -8,7 +8,7 @@ import { generatePK, transformDataToSchema } from './columns.server.js';
 
 const createBlocksHandle = ({ db, tables }: AdapterDeps) => {
   /**
-   * Callers name the owner by slug — the prototype's own, or its versions's — and the
+   * Callers name the owner by slug — the prototype's own, or its versions table's — and the
    * mapping to a table happens here, so that a table name never travels in a parameter that
    * names a slug.
    */

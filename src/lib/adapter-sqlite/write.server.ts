@@ -94,7 +94,7 @@ type Deps = {
  * `FeatureDefinition.writePlan` refines it). What was left is the same two writes in every case,
  * so there is one path.
  *
- * The content row's *table* is still the adapter's to know: registration carries the versions, and
+ * The content row's *table* is still the adapter's to know: registration carries the versions table, and
  * where rows live is storage. Which row, and whether to touch it, is the caller's.
  *
  * Returns `{ id: data.id || id }`. For an area the two always agree — it is a single row, so any
@@ -111,7 +111,7 @@ export const updatePrototype = async (
 
   if (content) {
     // `versions!` — a plan names a content row only for a prototype that has one, and registration
-    // answered with the versions for exactly those.
+    // answered with the versions table for exactly those.
     await writeRow(
       { db, tables },
       {

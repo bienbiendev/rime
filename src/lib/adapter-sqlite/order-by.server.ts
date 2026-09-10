@@ -12,7 +12,7 @@ type Args = {
   tables: any;
   /**
    * The table this prototype's content lives in, when it is not the base row — resolved by the
-   * caller from the versions it was registered with.
+   * caller from the versions table it was registered with.
    *
    * The question here is "are this prototype's sortable columns on the base row or somewhere
    * else", which is about tables — so it is answered with a table name, not a config member.
@@ -52,7 +52,7 @@ export const buildOrderByParam = ({ slug, locale, tables, by, versions }: Args) 
   const columnStr = by.replace(/^-/, '');
 
   /**
-   * A column on the prototype's own table, whether or not it also has a versions.
+   * A column on the prototype's own table, whether or not it also has a versions table.
    *
    * Checked for a versioned prototype too, which is what lets `?sort=_position` work on one: the
    * hierarchy and path columns are `._root()` fields and live on the base row.
@@ -115,7 +115,7 @@ export const buildOrderByParam = ({ slug, locale, tables, by, versions }: Args) 
       ];
     }
 
-    // Check if it's a localized field on the versions
+    // Check if it's a localized field on the versions table
     if (locale) {
       const versionsLocaleTableName = tableName({
         owner: versionsTableName,

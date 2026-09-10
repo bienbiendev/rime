@@ -8,12 +8,12 @@ import { text } from '$lib/fields/text/index.js';
 import { configureVersions } from './configure.server.js';
 
 /**
- * What a versions versions's pipeline is made of.
+ * What a versions table versions's pipeline is made of.
  *
  * A versions is a collection, so it resolves like one: the prototype's own hooks, the hooks of the
  * features **its own** config enables, and the author's `$hooks`. Inheriting the parent's resolved
- * `_pipeline` instead runs hooks for features the versions does not enable — a versioned + nested
- * collection queries `_parent` on a versions whose table has never had that column — and stacks the
+ * `_pipeline` instead runs hooks for features the versions table does not enable — a versioned + nested
+ * collection queries `_parent` on a versions table whose table has never had that column — and stacks the
  * core steps twice when the parent is an area.
  */
 describe('a versions versions', () => {
@@ -69,7 +69,7 @@ describe('a versions versions', () => {
  * A versions says whose content it holds.
  *
  * `upload`'s naming used to answer that question by string surgery — `withoutVersionsSuffix(slug)`,
- * so a versions's directories resolved to its parent's. It was the only feature-to-feature import in
+ * so a versions table's directories resolved to its parent's. It was the only feature-to-feature import in
  * the registry, and it could only ever know about the one feature whose suffix it stripped.
  *
  * What upload does with the answer is asserted in `upload/naming.spec.ts`, against a plain object

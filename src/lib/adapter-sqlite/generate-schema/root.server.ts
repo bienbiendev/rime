@@ -34,9 +34,9 @@ type Args = {
    */
   featureColumns?: ColumnDeclaration[];
   /**
-   * The base table this one version tables, when it is a versions — it gets an `ownerId` pointing back at
+   * The base table this one holds the content of, when it is a versions table — it gets an `ownerId` pointing back at
    * it. Named after the relationship rather than after the feature that asks for one: what makes
-   * a versions is a feature declaring one, never a config member this module recognises.
+   * a versions table is a feature declaring one, never a config member this module recognises.
    */
   versionsOf?: string | false;
   blocksRegister: string[];

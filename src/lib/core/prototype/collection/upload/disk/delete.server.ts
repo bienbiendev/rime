@@ -11,9 +11,9 @@ import type { WithUpload } from '$lib/core/prototype/collection/upload/util/conf
  * Whether this collection's **own table** holds `name` — which is the only question this file has
  * about where a filename can be.
  *
- * A config with a versions keeps only its `._root()` fields on its own table; everything else is the
- * versions's, and the versions is a registered collection in its own right. `filename` is not a root
- * field (only `_path` is, on upload), so on a versioned upload collection it lives on the versions
+ * A config with a versions table keeps only its `._root()` fields on its own table; everything else is the
+ * versions's, and the versions table is a registered collection in its own right. `filename` is not a root
+ * field (only `_path` is, on upload), so on a versioned upload collection it lives on the versions table
  * and the base table has no such column at all.
  *
  * This replaces a pair of tests that named the versions feature — `!hasVersionsSuffix(slug)` to
@@ -37,13 +37,13 @@ const ownsField = <C extends Config>(
  * collections — saveFile dedupes any byte-identical upload to a single file (see isSameFile).
  *
  * The scan goes table by table, not collection by collection, and that distinction is load-bearing
- * for a collection whose content lives on a versions: querying the *collection* returns one row per
+ * for a collection whose content lives on a versions table: querying the *collection* returns one row per
  * document (the read joins in a single content row), so a filename referenced only by an older
- * revision would be missed and the file deleted out from under it. Querying the versions directly
+ * revision would be missed and the file deleted out from under it. Querying the versions table directly
  * sees every revision. `ownsField` above is what picks the right table without knowing why there
  * are two.
  *
- * `selfId` must already be in whichever id-space `selfSlug` resolves to — a versions row's own id,
+ * `selfId` must already be in whichever id-space `selfSlug` resolves to — a versions table row's own id,
  * not the base row's (see `contentId` in mergeContentRow).
  *
  * Every configured locale is checked since a localized collection's query can otherwise miss rows

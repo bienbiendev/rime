@@ -26,7 +26,7 @@ export interface Adapter {
    * The adapter resolves its base, versions, children and branches once here, rather than working
    * them out from a slug on every request, and refuses loudly if the tables are not there.
    */
-  registerPrototype(args: RegisterPrototypeArgs): void;
+  registerPrototype(config: BuiltArea | BuiltCollection): void;
 
   /** The handle for a registered prototype. */
   collection(slug: string): CollectionHandle;
@@ -35,15 +35,12 @@ export interface Adapter {
   area(slug: string): AreaHandle;
 
   /**
-   * The handle for a table a feature declared — see `FeatureDefinition.tables`.
+   * The handle for a table a feature declared — see `TableDeclaration`.
    *
-   * Separate from `prototype` because a declared table is not one: no fields, no pipeline, no
-   * access rules, nothing to merge a blank into. Passing one to `prototype()` would ask the
-   * adapter to look up a config that does not exist.
-   *
-   * Deliberately three verbs and a flat filter. A feature that declares a table already knows its
-   * columns, so there is nothing here to resolve against a config — which is the whole difference
-   * between this and `PrototypeHandle`, and the reason this can stay small.
+   * Separate from the two above because a declared table is not a prototype: no fields, no
+   * pipeline, no access rules, nothing to merge a blank into. Three verbs and a flat filter,
+   * because whoever declared it already knows its columns and there is nothing to resolve
+   * against a config.
    */
   table(slug: string): TableHandle;
 
@@ -54,31 +51,6 @@ export interface Adapter {
   auth: AuthHandle;
 }
 
-export type RegisterPrototypeArgs = {
-  config: BuiltArea | BuiltCollection;
-  /**
-   * Where this config's content lives, when it does not live on the config's own row.
-   *
-   * ```ts
-   * { slug: '$pages__versions' }   // versioned
-   * undefined                      // the content is on the base row
-   * ```
-   *
-   * Stamped on the config by `augmentVersions` and handed down at boot, so the adapter is told
-   * rather than working it out. A slug, not a table name: how a slug is spelled in the database
-   * stays the adapter's business.
-   */
-  versions?: VersionsTable;
-};
-
-/**
- * What the adapter can do to one registered prototype.
- *
- * A uniform toolbox: find, findMany, insert, update, delete over a base and its versions. Which of
- * these a caller may actually reach is decided by the prototype definition in core/prototype/,
- * not here — except for the two a singleton refuses outright, which the adapter enforces at the
- * database boundary because that is where the guarantee has to hold.
- */
 /**
  * What every prototype handle carries, whatever kind it is.
  *
@@ -88,7 +60,7 @@ export type RegisterPrototypeArgs = {
 interface BaseHandle {
   readonly slug: string;
   readonly config: BuiltArea | BuiltCollection;
-  /** What it was registered with — see `RegisterPrototypeArgs.versions`. */
+  /** Where this config's content lives, when not on its own row — `config._versions`. */
   readonly versions?: VersionsTable;
 
   findMany(args?: {

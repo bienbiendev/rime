@@ -70,7 +70,7 @@ export type TableParts = {
   /**
    * The base or versions table this hangs off, already resolved.
    *
-   * Everything below is named relative to it, which is what makes a config gaining a versions move
+   * Everything below is named relative to it, which is what makes a config gaining a versions table move
    * a whole subtree of children onto it.
    */
   owner: TableName;

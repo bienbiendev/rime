@@ -71,7 +71,7 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
   });
 
   // Blocks, trees and relations hang off the row the content landed on, which is the document's
-  // own row unless something gave it a versions.
+  // own row unless it is versioned.
   await persistRelational({
     context,
     ownerId: created.contentId,

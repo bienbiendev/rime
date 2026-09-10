@@ -6,7 +6,7 @@ import type { BuiltCollection, Config } from '$lib/core/config/types.js';
 /**
  * The versions holds the content half of a document, so it carries the content half of the fields:
  * everything except what the base row keeps (`._root()`). The schema generator splits the two
- * tables by the same flag, so a versions config claiming a base field would name a column its table
+ * tables by the same flag, so a versions table config claiming a base field would name a column its table
  * does not have.
  */
 const contentFields = (config: { fields: BuiltCollection['fields'] }) =>
@@ -37,7 +37,7 @@ export function configureVersions<C extends Config>(config: C) {
         panel: false,
         _generateTypes: false,
         _generateSchema: false,
-        // Whose content this holds. The feature that derives a versions is the only thing that knows,
+        // Whose content this holds. The feature that derives a versions table is the only thing that knows,
         // and saying it is what stops anything downstream working it out from the slug.
         _shadowOf: collection.slug
       } as const;

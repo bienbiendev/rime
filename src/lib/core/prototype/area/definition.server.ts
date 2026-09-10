@@ -35,7 +35,7 @@ export const area = definePrototype<BuiltArea>({
      * is a property of the config, not of its first reader.
      */
     await adapter.area(config.slug).ensureExists({
-      // Intent `'seed'`, not `'create'`: a feature that gives this prototype a versions may need
+      // Intent `'seed'`, not `'create'`: a feature that gives this prototype a versions table may need
       // the first row to differ from what an author's create starts with. See
       // FeatureDefinition.blank.
       blank: blankVersion(createBlankDocument(config), config),

@@ -7,7 +7,7 @@ import { prototypeKebab } from '$lib/core/prototype/naming.js';
  *   medias  ->  $mediasDirectories  ->  table medias_directories  ->  url medias-directories
  *
  * `$` marks it rime-derived, but there is deliberately **no `__`**: a directories collection is
- * a sibling, not a versions or a child, and holds no schema relationship to its parent. So its
+ * a sibling, not a versions table or a child, and holds no schema relationship to its parent. So its
  * table name carries no relationship marker and stays exactly what it is today. Telling a
  * directories collection apart is the upload feature's job — by this convention — not something
  * the table name can answer.
@@ -29,7 +29,7 @@ export const withDirectoriesSuffix = (slug: string) =>
  * versions.
  *
  * The one call site that has a config rather than a bare slug should use this. `_shadowOf` is
- * core's answer to "whose content is this", set by whichever feature derived the versions.
+ * core's answer to "whose content is this", set by whichever feature derived the versions table.
  */
 export const directoriesOf = (config: { slug: string; _shadowOf?: string }) =>
   withDirectoriesSuffix(config._shadowOf ?? config.slug);

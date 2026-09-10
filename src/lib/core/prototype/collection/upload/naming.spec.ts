@@ -22,7 +22,7 @@ describe('directoriesOf', () => {
   });
 
   it('works for a versions named by any convention, not just one suffix', () => {
-    // The whole point of asking rather than stripping: a second feature declaring a versions needs
+    // The whole point of asking rather than stripping: a second feature declaring a versions table needs
     // no change here, whatever it calls the slug.
     expect(directoriesOf({ slug: 'medias--anything', _shadowOf: 'medias' })).toBe(
       '$mediasDirectories'

@@ -1,4 +1,5 @@
-import type { AreaHandle, CollectionHandle, RegisterPrototypeArgs } from '$lib/core/adapter.js';
+import type { AreaHandle, CollectionHandle } from '$lib/core/adapter.js';
+import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { Dic } from '$lib/util/types.js';
@@ -35,7 +36,7 @@ export const createPrototypeRegistry = (deps: {
   };
 
   return {
-    registerPrototype: ({ config, versions }: RegisterPrototypeArgs) => {
+    registerPrototype: (config: BuiltArea | BuiltCollection) => {
       const table = baseTableName(config.slug);
 
       // The point of registering rather than resolving per request: a missing table is a
@@ -47,7 +48,7 @@ export const createPrototypeRegistry = (deps: {
         );
       }
 
-      const args = { db, tables, configCtx, config, versions };
+      const args = { db, tables, configCtx, config, versions: config._versions };
 
       handles.set(
         config.slug,

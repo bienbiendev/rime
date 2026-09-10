@@ -133,7 +133,7 @@ export function prepareSchemaData(
 /**
  * Folds a base row and its content row into one document.
  *
- * A prototype whose content lives on a versions reads as two rows; a document is one. This is the
+ * A prototype whose content lives on a versions table reads as two rows; a document is one. This is the
  * fold, and it is structural — the adapter is the only thing that knows there were two.
  *
  * It was `mergeRawDocumentWithVersion`, with `versionTableName`/`versionData`/`versionFields`
