@@ -19,7 +19,7 @@ export const addChildrenProperty = Hooks.beforeRead(async function addChildrenPr
   const { rime } = args.event.locals;
 
   /**
-   * What `childrenIds` on the adapter used to be: a filter and an order, both over columns this
+   * A filter and an order, both over columns this
    * feature put on the row. The adapter had a method named after the question.
    *
    * The ordinary document read, projected to ids — not a raw-row primitive. Everything on

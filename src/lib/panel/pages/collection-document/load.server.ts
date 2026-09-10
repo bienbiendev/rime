@@ -1,4 +1,7 @@
-import { buildUploadAria, type UploadPath } from '$lib/core/prototype/collection/upload/util/path.js';
+import {
+  buildUploadAria,
+  type UploadPath
+} from '$lib/core/prototype/collection/upload/util/path.js';
 import { PARAMS } from '$lib/core/constants.js';
 import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';

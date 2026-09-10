@@ -14,10 +14,11 @@ import { baseTableName } from './naming.server.js';
  * It also means a prototype whose tables are missing fails at boot, loudly, in a place that names
  * it — instead of on whichever request first happened to touch it.
  *
- * **The kind decides the handle, and `config.type` is the kind.** It used to be a `singleton`
- * boolean, because the adapter was not allowed the word "area" — so the difference lived on inside
- * every verb instead. It is allowed the word now, the same as `locale` and `auth`, and the
- * difference lives in two files: `collection.server.ts` and `area.server.ts`.
+ * `config.type` decides which handle a slug gets:
+ *
+ * ```ts
+ * config.type === 'area' ? createAreaHandle(args) : createCollectionHandle(args)
+ * ```
  */
 export const createPrototypeRegistry = (deps: {
   db: any;

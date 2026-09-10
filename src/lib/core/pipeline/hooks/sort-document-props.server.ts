@@ -2,6 +2,12 @@ import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { isObjectLiteral } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 
+/**
+ * Sorts every key of the document, at every depth, so a response is stable to diff.
+ *
+ * The finaliser: `buildPipeline` appends it after the consumer's own hooks, so nothing can run
+ * after it and unsort what it just sorted.
+ */
 export const sortDocumentProps = Hooks.beforeRead<'generic'>(
   async function sortDocumentProps(args) {
     return { ...args, doc: sortDocumentKeys(args.doc) };

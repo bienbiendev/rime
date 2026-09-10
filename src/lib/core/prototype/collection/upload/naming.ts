@@ -12,11 +12,9 @@ import { prototypeKebab } from '$lib/core/prototype/naming.js';
  * directories collection apart is the upload feature's job — by this convention — not something
  * the table name can answer.
  *
- * A folder tree belongs to the **document**, not to a revision of it, so a versions's directories
- * are its owner's. That used to be spelled `withoutVersionsSuffix(slug)` here — this feature
- * stripping another feature's suffix, and the only feature-to-feature import in the whole
- * registry. `directoriesOf` below asks the config whose it is instead, and a second feature
- * declaring a versions works with no change.
+ * A folder tree belongs to the **document**, not to a revision of it, so a versions table's
+ * directories are its owner's. `directoriesOf` below asks the config whose content it holds,
+ * rather than reading it off how the slug is spelled.
  */
 
 const DERIVED = '$';

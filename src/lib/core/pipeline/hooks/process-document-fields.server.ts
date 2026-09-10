@@ -5,6 +5,10 @@ import { deleteValueAtPath, getValueAtPath, setValueAtPath } from '$lib/util/obj
 import { buildConfigMap } from '../config-map/index.js';
 import { getDefaultValue } from './set-default-values.server.js';
 
+/**
+ * Walks every field of the document on the way out: drops what the reader may not see, fills an
+ * empty one from its default, and hands each value to the field's own `hooks.beforeRead`.
+ */
 export const processDocumentFields = Hooks.beforeRead(async function processDocumentFields(args) {
   const { event } = args;
   let doc = args.doc;

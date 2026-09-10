@@ -27,26 +27,21 @@ import { mergeWithBlankDocument } from './hooks/merge-with-blank.server.js';
 /**
  * Every hook a collection can run, in the order it runs them.
  *
- * **The order is written here, not computed.** It used to be derived: each hook declared
- * `requires`/`provides` and a resolver sorted them. That bought a generality nothing used —
- * thirteen marks encoding four real dependencies — and paid for it in a failure mode with no
- * symptom: a mark nothing provides is satisfied *vacuously*, so a misspelling did not disable a
- * hook, it hoisted it to the front of the timing. In `beforeUpdate` that is a security question.
- * `preventUserMutations` rejects on `'name' in args.data`, so a default filled in before it turns
- * an ordinary update into a 401 — a constraint that should be two adjacent lines you can read,
- * not an emergent property of nine declarations.
+ * **The order is written here, not computed**, and in `beforeUpdate` that is a security question:
+ * `preventUserMutations` rejects on `'name' in args.data`, so a default filled in above it turns
+ * an ordinary update into a 401. Two adjacent lines you can read.
  *
- * A feature still **owns** its hooks; this says when they run. `buildPipeline` filters the list by
- * `feature.enabled(config)`, so a collection without `auth` runs none of auth's.
+ * ```ts
+ * when(isAuth, auth.removePrivateFields)   // runs only on a collection that declares `auth`
+ * processDocumentFields                    // runs always
+ * ```
  *
- * The other direction — a hook a feature owns and this list does not place — never runs and throws
- * nothing. `buildPipeline` cannot see it: a feature carries no hook list any more.
- * `pipeline/hook-placement.spec.ts` checks it off the feature barrels instead, and fails naming
- * the hook.
+ * A feature owns its hooks; this says when they run and what they run on.
  *
- * A consumer's hooks are appended after these, per timing. That is the cost of a written order and
- * it is also a fix: under the resolver, a consumer hook that forgot to declare `provides` landed
- * *after* `sortDocumentProps` and its keys came out unsorted, silently.
+ * A hook a feature owns and this list does not place never runs, and nothing throws.
+ * `pipeline/hook-placement.spec.ts` reads the feature barrels and fails naming the hook.
+ *
+ * A consumer's hooks are appended after these, per timing, and before the finaliser.
  *
  * **In its own file rather than in `definition.server.ts`, and that is load-bearing.** A derived
  * collection needs the same list — `upload` derives a `<slug>Directories`, `versions` one per

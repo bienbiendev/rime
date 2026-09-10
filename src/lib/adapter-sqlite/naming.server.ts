@@ -1,28 +1,36 @@
 import { mapSegments, toCamelCase, toSnakeCase } from '$lib/util/string.js';
 
 /**
- * How a table is named, in one place.
+ * How a table is named, in one place. Names are built from parts, never concatenated at the call
+ * site.
  *
- * Before this module the convention was written out wherever a name was needed: `Blocks<Name>`
- * four times, `Tree<Name>` four times, `` `${slug}Rels` `` thirteen times, and three copies of a
- * "list the child tables of X" filter — one of which, in tree.server.ts, was a copy of the blocks
- * version still called `getBlocksTableNames`. Nothing compared those copies, so the convention
- * could drift silently between codegen and runtime.
+ * Four words, and every table in a generated schema is one of them:
  *
- * Names are built from **parts**, not by concatenation at the call site. That is the point: the
- * assembly rule lives here, so changing it is one edit rather than twenty-one.
+ * ```
+ * base      pages                                a prototype's own rows
+ * versions  pages__versions                      the second table its content lives in
+ * child     pages__$relations                    hangs off an owner by `ownerId`
+ *           pages__$blocks_hero                  one per block type
+ *           pages__$tree_facts                   one per tree field
+ * branch    pages__$blocks_hero__$$locales       the localized half of whatever it hangs off
+ * ```
  *
- * The vocabulary follows docs/decoupling.md, appendix A:
+ * `owner` is the base or the versions table, resolved before a name is wanted — which is what
+ * moves a config's whole subtree of children onto the second table when it gains versions:
  *
- * - **base**   — a prototype's own table (`pages`)
- * - **versions** — a second table standing in for the base, declared by whichever feature deviates
- *                the prototype (`VersionsTable`). Callers pass an already-resolved `owner`,
- *                because which of base or versions owns a subtree is decided before a name is
- *                needed.
- * - **child**  — hangs off an owner by `ownerId`: blocks, tree, and the relations junction
- * - **branch** — splits an owner in two: the localized half
+ * ```ts
+ * tableName({ owner: baseTableName('pages') })
+ * // 'pages'
  *
- * A `TableName` is branded so it cannot be confused with a prototype slug — see the type below.
+ * tableName({ owner: baseTableName('$pages__versions'), child: { kind: 'blocks', name: 'hero' } })
+ * // 'pages__versions__$blocks_hero'
+ *
+ * tableName({ owner: baseTableName('pages'), child: { kind: 'rels' }, branch: 'locales' })
+ * // 'pages__$relations__$$locales'
+ * ```
+ *
+ * A slug and a table name are both strings and are not interchangeable — `$a__b` lives in `a__b`,
+ * `camelProbe` in `camel_probe`. `TableName` is branded so the compiler catches the mix-up.
  */
 
 declare const TABLE_NAME_BRAND: unique symbol;
@@ -30,13 +38,8 @@ declare const TABLE_NAME_BRAND: unique symbol;
 /**
  * A resolved table name, as opposed to a prototype slug.
  *
- * Both are strings, which is why the two got confused for as long as they happened to be the
- * same string. Since the naming convention changed they are not — a derived collection `$a__b`
- * lives in the table `a__b`, and `camelProbe` in `camel_probe` — and passing one where
- * the other is wanted produces `undefined` at the schema lookup, never a type error.
- *
- * The brand is what makes the compiler catch it: a plain string does not satisfy a table-name
- * parameter, so a slug reaching one is a build error rather than a failing request.
+ * A slug reaching a table-name parameter would look up `undefined` in the generated schema and
+ * fail at the request. The brand makes it a build error instead.
  */
 export type TableName = string & { readonly [TABLE_NAME_BRAND]: true };
 
@@ -48,15 +51,15 @@ export const baseTableName = (slug: string): TableName =>
   mapSegments(slug.replace(/^\$/, ''), toSnakeCase, '__') as TableName;
 
 /**
- * The name a **declared** table is exported under: its slug, minus the `$` marking it derived.
+ * The name a declared table is exported under, minus the `$` marking it derived.
  *
- * A prototype's table is exported under its SQL name, because a prototype's slug is authored and
- * the table name is derived from it — one string, two roles, and `toSqlTableName` is the identity
- * to say so.
+ * ```
+ * $someTable   ->  exported as `someTable`, lives in `some_table`
+ * ```
  *
- * A declared table is the other way round. The feature that owns it chose the name, and reaches
- * its rows through the generated schema object by that name, so the identifier is the fixed half
- * and the SQL name is derived. `$someTable` exports as `someTable` and lives in `some_table`.
+ * The reverse of a prototype's table, where the slug is authored and the SQL name derived from it.
+ * Here the identifier is fixed — whoever declared the table reaches its rows by that name — and
+ * the SQL name is derived.
  */
 export const declaredTableProperty = (slug: string): TableName =>
   slug.replace(/^\$/, '') as TableName;

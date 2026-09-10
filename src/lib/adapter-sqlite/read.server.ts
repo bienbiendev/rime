@@ -16,7 +16,7 @@ import { buildWithParam } from './select.server.js';
 /**
  * Reading a prototype's rows.
  *
- * The adapter's vocabulary is docs/decoupling.md appendix A: **base**, **versions** (a second table
+ * The adapter's vocabulary is in `naming.server.ts`: **base**, **versions** (a second table
  * holding the content), **child** (blocks, tree, the relations junction) and **branch** (the
  * localized half). "Collection" and "area" are not adapter words. They were, in the two facades
  * this replaces, and that was the mistake: a whole parallel implementation existed because the

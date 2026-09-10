@@ -21,11 +21,9 @@ const TIMINGS: HookTiming[] = [
 /**
  * Composes one config's pipeline out of the two layers that contribute to it, and orders it.
  *
- * **The list order is the run order**, and that is now the whole of it. It used to be a tie-break,
- * with a resolver deciding the rest from `requires`/`provides` each hook declared; then a filter,
- * keeping the hooks whose owning feature this config enables. The guard is beside the hook in the
- * list now — see `prototype/collection/hooks.server.ts` — so this appends the consumer's and the
- * finaliser and nothing else.
+ * **The list order is the run order**, and that is the whole of it. Whether a hook applies to this
+ * config is the guard beside it in the list — `when(isAuth, …)` — so all this adds is the
+ * consumer's own hooks and the finaliser.
  */
 const buildPipeline = (
   definition: Pick<PrototypeDefinition, 'hooks'>,

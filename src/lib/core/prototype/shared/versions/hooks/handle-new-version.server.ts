@@ -21,23 +21,14 @@ import { fallbackDataFromOriginal } from './fallback-data-from-original.js';
  * - **a new version** — the row this hook creates, through the public API, which is what makes
  *   the write plan's third case ("already written") true.
  *
- * The third branch it used to have — "not versioned: the content is on the document's own row" —
- * is gone, because that is the default now. It was the only reason both prototypes had to list
- * this hook by name: gating it behind `enabled` used to leave `contentOwnerId` unset on every
- * non-versioned config.
+ * **Two things pin where it sits in the list**, and both are silent if broken:
  *
- * Its marks had to be completed to survive the move. Both prototypes listed it by hand between
- * `buildOriginalDocConfigMap` and `buildDataConfigMap`, so two constraints it depends on were
- * being met by that hand-written position rather than by anything it declared:
- *
- * - **`requires: 'original-config-map'`** — `prepareDataForNewVersion` reads `originalConfigMap`,
- *   and the throw below has always said so. Only `original-doc` was declared.
- * - **`provides: 'data-inspected'`** — it reads the caller's submission *as sent*. Whatever the
- *   caller did not send, `fallbackDataFromOriginal` fills from the previous version. Let
- *   `setDefaultValues` run first and those fields arrive already filled with their config
- *   defaults, so editing one field of a document would reset every unsent field to its default
- *   instead of carrying it forward. That is what the mark means, and it is what pins this ahead
- *   of `buildDataConfigMap` now that no list does.
+ * - It runs after `buildOriginalDocConfigMap`, because `prepareDataForNewVersion` reads
+ *   `originalConfigMap` — the throw below says so.
+ * - It runs before `setDefaultValues`, because it reads the caller's submission *as sent*:
+ *   whatever was not sent, `fallbackDataFromOriginal` fills from the previous version. Let the
+ *   defaults land first and editing one field resets every unsent field to its default instead of
+ *   carrying it forward.
  */
 export const handleNewVersion = Hooks.beforeUpsert(async function handleNewVersion(args) {
   const { config, event } = args;
@@ -105,7 +96,7 @@ async function prepareDataForNewVersion(args: {
    *
    * This asked `upload` for two things: where it keeps its files, and how to turn a path into a
    * `File`. It asks for one now. The remaining import is the genuine cross-feature dependency
-   * docs/decoupling.md § 4.6 names — what a new content row inherits is a question this feature
+   * what a new content row inherits is a question this feature
    * has and only that one can answer — and it is one call rather than a copy of a convention.
    */
   if (config.type === 'collection' && config.upload && !data.file) {

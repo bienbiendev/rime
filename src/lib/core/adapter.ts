@@ -59,13 +59,14 @@ export type RegisterPrototypeArgs = {
   /**
    * Where this config's content lives, when it does not live on the config's own row.
    *
-   * Answered by whichever feature deviates it — `versions` today — and folded by `versionsTableOf` in
-   * `core/features/registry.ts`, so boot hands the adapter an answer rather than the adapter
-   * working one out. It used to derive the table by appending a suffix to the slug, which meant
-   * the database layer knew a feature's naming convention and could only ever know that one.
+   * ```ts
+   * { slug: '$pages__versions' }   // versioned
+   * undefined                      // the content is on the base row
+   * ```
    *
-   * `undefined` means the content is on the base row. The declaration carries a slug, not a table
-   * name: how a slug is spelled in the database stays the adapter's business.
+   * Stamped on the config by `augmentVersions` and handed down at boot, so the adapter is told
+   * rather than working it out. A slug, not a table name: how a slug is spelled in the database
+   * stays the adapter's business.
    */
   versions?: VersionsTable;
 };
@@ -118,10 +119,8 @@ interface BaseHandle {
  * What the adapter can do to one registered **collection**.
  *
  * Many documents, addressed by id: `find`, `update` and `delete` each take one, and `insert` makes
- * a new one. That is the whole difference from an area, and it is said in the type now rather than
- * refused at runtime — `singleton` used to carry it, as `id: singleton ? undefined : args.id` on
- * every read, a `resolveSingletonId()` on every write, and two `refuseOnSingleton` throws nothing
- * ever exercised, because the area *definition* already exposed neither verb.
+ * a new one. That is the whole difference from an area, and the type says it — an `AreaHandle` has
+ * no `insert` and no `delete` to reach for.
  */
 export interface CollectionHandle extends BaseHandle {
   /**
@@ -271,12 +270,12 @@ export interface TransformHandle {
   /**
    * The rows one document is stored across, unflattened and grouped by what they are.
    *
-   * This used to return the finished document, which meant the database layer merged the blank,
-   * decided which bookkeeping to keep, assembled relations into document properties, and read a
-   * route parameter to work out who was asking. None of that needs a table. What does: resolving
-   * which tables hang off this document, merging each locales branch, and turning column names
-   * back into document paths — so that is all this does now. `buildDocument` in
-   * `core/pipeline/build-document.server.ts` takes it from here.
+   * Three things, and each of them needs a table: resolving which tables hang off this document,
+   * merging each locales branch, and turning column names back into document paths.
+   *
+   * `buildDocument` in `core/pipeline/build-document.server.ts` takes it from here — merging the
+   * blank, keeping the bookkeeping the caller asked for, and assembling relations into document
+   * properties are core's, and none of them needs a table.
    */
   rows(args: { doc: RawDoc; slug: PrototypeSlug; locale?: string }): Promise<DocumentRows>;
 }
@@ -324,20 +323,16 @@ export interface TableHandle {
 }
 
 /**
- * What is left of a whole facade that existed for one feature.
+ * Better-auth's own database adapter, and nothing else.
  *
- * Six methods went. Three — `isSuperAdmin`, `getBetterAuthUserId`, `getUserAttributes` — were each
- * `select … from <a prototype's table> where <a column> = ?`, which is `prototype(slug).findMany`;
- * they looked like adapter work only because all three named a collection called `staff`. The
- * other three read and wrote Better-auth's own tables, which are declared tables now, so
- * `table(slug)` reaches them.
+ * Reads of a collection's rows are `collection(slug).findMany`; reads and writes of Better-auth's
+ * own tables are `table(slug)`, since those are declared tables.
  *
- * **Better-auth's admin API cannot replace those three**, which `docs/decoupling-auth.md` § 2.2
- * left open. `listUsers`, `setRole` and `removeUser` all sit behind `adminMiddleware`, and every
- * caller here runs where no admin session exists: `hasAuthUser` gates the init route, which only
- * runs when there is no user at all; `setAuthUserRole` promotes the very first signup; and
- * `deleteAuthUser` rolls back a failed signup, which `removeUser` refuses outright with
- * `YOU_CANNOT_REMOVE_YOURSELF`.
+ * **Better-auth's admin API cannot stand in for the latter.** `listUsers`, `setRole` and
+ * `removeUser` all sit behind `adminMiddleware`, and every caller runs where no admin session
+ * exists: `hasAuthUser` gates the init route, which only runs when there is no user at all;
+ * `setAuthUserRole` promotes the first signup; and `deleteAuthUser` rolls back a failed one,
+ * which `removeUser` refuses outright with `YOU_CANNOT_REMOVE_YOURSELF`.
  */
 export interface AuthHandle {
   /** The Better-auth database adapter. Opaque to core, which only hands it to Better-auth. */
@@ -364,7 +359,7 @@ export type WritePlan = {
  *
  * Only `slug` for now, and deliberately: it is what the schema needs, and an unread member is
  * exactly the mistake this declaration replaces. The read selector and the owner column join it
- * when there is something reading them (docs/decoupling.md § 4.4).
+ * when there is something reading them.
  */
 export type VersionsTable = {
   /**

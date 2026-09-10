@@ -10,16 +10,14 @@ import type { Hook, HookBeforeOperation, Operation } from './types.js';
  * });
  * ```
  *
- * It used to take `{ name, feature, run }`, and set `name` on the function and `feature` beside
- * it. Both are gone: `feature` was how `buildPipeline` decided which hooks a config runs, and the
- * guard sits beside the hook in the prototype's list now (`when(isAuth, …)`); `name` was needed
- * because an arrow passed as an argument gets none — a **named function expression** gets its
- * own, which is what the hooks are written as.
+ * A **named function expression**, not an arrow: the chart and the order specs read `fn.name`, and
+ * an arrow passed as an argument has none.
  *
- * Each timing returns the function untouched. `run.server.ts` invokes hooks directly
- * (`await hook({…})`), so anything returning a wrapper here would break every call site.
+ * Each timing returns the function untouched — `run.server.ts` calls hooks directly, so a wrapper
+ * here would break every call site.
  *
- * Where a hook runs is not said here — a prototype's `hooks.server.ts` places it.
+ * Where a hook runs, and whether it applies, are both said where it is placed: a prototype's
+ * `hooks.server.ts`.
  */
 
 export const Hooks = {

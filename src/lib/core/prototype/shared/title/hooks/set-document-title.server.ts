@@ -2,6 +2,9 @@ import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { richTextJSONToText } from '$lib/fields/rich-text/index.js';
 import { getValueAtPath, isObjectLiteral } from '$lib/util/object.js';
 
+/**
+ * Puts `title` on the document, read from whichever field `asTitle` resolved to.
+ */
 export const setDocumentTitle = Hooks.beforeRead(async function setDocumentTitle(args) {
   const config = args.config;
   let doc = args.doc;

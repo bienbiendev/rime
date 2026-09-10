@@ -4,15 +4,10 @@ import { RimeError } from '$lib/core/errors/index.js';
 /**
  * Loads the document an update is about to change.
  *
- * Every prototype has one, so this is core's; *which row* it is, is not. That used to be decided
- * here, with
- *
- *     draft: VersionOperations.shouldRetrieveDraft(context.versionOperation)
- *
- * — a core step importing a feature's enum and its helper to apply a feature's rule. The rule
- * underneath is real: on an update `?draft=true` means "branch a new draft *from the published
- * version*", the opposite of what `draft` means on a read. It is stated once now, by the feature
- * that owns it, and reached through `intent: 'original'` (see `ReadIntent`).
+ * Every prototype has one, so this step is core's. *Which row* it is, is not: on an update
+ * `?draft=true` means "branch a new draft from the published version", the opposite of what
+ * `draft` means on a read. Versions states that rule, and this reaches it through
+ * `intent: 'original'` — see `ReadIntent`.
  *
  * What is left here is the part that is genuinely core's: load the original, of whichever
  * prototype this is.

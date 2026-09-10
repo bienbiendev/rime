@@ -13,10 +13,7 @@ export type Timing = 'before' | 'after';
 /**
  * The points a document hook can run at.
  *
- * Here rather than on `FeatureDefinition`, where it used to live: a timing is the pipeline's own
- * vocabulary. It was a feature's while features carried their own hook lists; they do not any
- * more — each prototype's `hooks.server.ts` writes the order — so the only readers left are
- * `buildPipeline` and the two lists it folds.
+ * The pipeline's own vocabulary: `buildPipeline` and the two prototype lists are what read it.
  */
 export type HookTiming =
   | 'beforeOperation'

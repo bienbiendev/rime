@@ -8,6 +8,6 @@ import { ensureMedias } from '$lib/core/prototype/collection/upload/ensure.serve
  * name only the server half declares is *not exported* on a client build rather than `undefined`
  * — which fails at link time with "does not provide an export named" the moment `index.ts`, which
  * is client-reachable, imports it. Boot rejected this file's first home for exactly that reason.
- * See docs/rime-modules-resolution.md, cases B and C.
+ * See `core/dev/codegen/runtime/index.server.ts`.
  */
 export const bootUpload = (config: { collections?: BuiltCollection[] }) => ensureMedias(config);

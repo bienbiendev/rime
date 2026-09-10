@@ -18,4 +18,3 @@ export const normalizeFieldPath = (path: string) => {
   const regExpBlockType = /:[a-zA-Z0-9]+/g;
   return path.replace(regExpBlockType, '');
 };
-

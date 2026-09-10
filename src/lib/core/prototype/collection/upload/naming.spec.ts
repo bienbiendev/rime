@@ -5,13 +5,10 @@ import { directoriesOf, withDirectoriesSuffix } from './naming.js';
  * Which directories collection a config's files live under.
  *
  * A folder tree belongs to the document, not to a revision of it, so a config whose rows are the
- * content of another one uses that one's directories. This used to be spelled
- * `withoutVersionsSuffix(slug)` — this feature stripping **versions'** own suffix, the only
- * feature-to-feature import in the registry, and an answer that could only ever be right for the
- * one feature whose convention it knew.
+ * content of another one uses that one's directories.
  *
- * `_shadowOf` is core's answer, set by whichever feature derived the versions. Asserted here against
- * a plain object on purpose: nothing in this file knows that `versions` exists.
+ * `_shadowOf` is the answer, set by whichever feature derived the second table. Asserted against a
+ * plain object on purpose: nothing in this file knows that `versions` exists.
  */
 describe('directoriesOf', () => {
   it('is a config’s own directories when it version tables nothing', () => {

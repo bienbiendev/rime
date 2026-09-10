@@ -14,11 +14,8 @@ type Args = {
    * The table this prototype's content lives in, when it is not the base row — resolved by the
    * caller from the versions it was registered with.
    *
-   * This used to be read off a config member, with the versions's name rebuilt here from a
-   * feature's own suffix. Two things wrong with that: the adapter named a feature, and it asked a
-   * config a question the schema already answers. The question the sort builder actually has is
-   * "are this prototype's sortable columns on the base row or somewhere else", which is about
-   * tables, so it is asked of `tables`.
+   * The question here is "are this prototype's sortable columns on the base row or somewhere
+   * else", which is about tables — so it is answered with a table name, not a config member.
    */
   versions?: TableName;
 };
@@ -57,11 +54,8 @@ export const buildOrderByParam = ({ slug, locale, tables, by, versions }: Args) 
   /**
    * A column on the prototype's own table, whether or not it also has a versions.
    *
-   * This used to be inside the `!hasShadow` branch, and the versions branch never looked at the base
-   * table at all — so a versioned prototype could not sort by any of its **base-row** columns. Those
-   * are exactly the `._root()` ones — the hierarchy and path columns features put on a base row.
-   * `?sort=_position` on a versioned prototype warned "not a property" and silently ordered by
-   * `createdAt` instead.
+   * Checked for a versioned prototype too, which is what lets `?sort=_position` work on one: the
+   * hierarchy and path columns are `._root()` fields and live on the base row.
    *
    * Safe in both branches because the two tables' columns are disjoint by construction — the
    * schema generator sends `._root()` fields to one and everything else to the other — and the

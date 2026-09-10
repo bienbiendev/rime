@@ -1,6 +1,12 @@
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { defineVersionUpdateOperation } from '$lib/core/prototype/shared/versions/strategy.js';
 
+/**
+ * Decides which of the five version operations this update is, from `draft`, `versionId` and the
+ * config's own `versions.draft`, and puts it on `context.versionOperation`.
+ *
+ * @TODO explain each of the five, and what picks between them.
+ */
 export const defineVersionOperation = Hooks.beforeUpdate(
   async function defineVersionOperation(args) {
     const { config } = args;

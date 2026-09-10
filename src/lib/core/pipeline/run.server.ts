@@ -242,7 +242,7 @@ export const readDocument = async <S extends DocType, T extends GenericDoc>(args
      *
      * The adapter used to work this out for itself, by testing `event.params.panel`. Core naming
      * the panel here is the last of that coupling (core letting go of `src/lib/panel/`), and it
-     * is one line rather than four `if`s in the database layer. See docs/decoupling.md § 4.5.
+     * is one line rather than four `if`s in the database layer.
      */
     withRowMeta: event.params.panel !== undefined
   });

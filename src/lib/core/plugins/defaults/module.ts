@@ -8,7 +8,7 @@ import type { PluginHost } from './types.js';
  * `cache` is the only one with a client side — it contributes the panel's clear-cache button — so
  * it is the only one here. `sse`, `apiInit` and `mailer` are server-only, and a client build
  * importing them resolves to `undefined` rather than to nothing (see
- * docs/rime-modules-resolution.md, case C), which is why this is a pair rather than one isomorphic
+ * `core/dev/codegen/runtime/index.server.ts`), which is why this is a pair rather than one isomorphic
  * array with a `dev`/`$smtp` filter.
  */
 // The config is what the server half branches on ($cache, $smtp); this side has nothing to read

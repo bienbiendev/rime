@@ -6,6 +6,17 @@ import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { FormErrors } from '$lib/panel/types.js';
 import { deleteValueAtPath, getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 
+/**
+ * Runs each field's `validate` and its write access check, and throws a `RimeFormError` carrying
+ * every message at once.
+ *
+ * A field the caller may not write is deleted from **both** the data and `context.configMap`.
+ * Leaving its path in the map would make the dropped write look like an explicit "nothing here
+ * any more" and delete the existing rows.
+ *
+ * `?skipValidation=true` skips it, as does the locale-fallback pass, which is re-writing a
+ * document that has already been through this once.
+ */
 export const validateFields = Hooks.beforeUpsert(async function validateFields(args) {
   const errors: FormErrors = {};
   const { event, operation } = args;

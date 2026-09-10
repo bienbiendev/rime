@@ -27,11 +27,8 @@ type BuildWhereArgs = {
    * the content row, and the hierarchy columns (`_parent`, `_position`, `_path`) live on the base
    * table and have to be reached through it.
    *
-   * This used to be a suffix test — the adapter recognising a versions by matching one feature's
-   * own naming convention, which meant a second feature declaring a versions would silently get
-   * neither behaviour. The caller knows: it read the versions off registration to pick this slug
-   * in the first place, so it says so rather than leaving the where builder to infer it from a
-   * naming convention it does not own.
+   * Named by the caller, which read it off registration to pick this slug in the first place —
+   * never inferred here from how a slug happens to be spelled.
    */
   base?: PrototypeSlug;
 };

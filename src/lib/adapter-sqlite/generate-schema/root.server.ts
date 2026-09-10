@@ -28,11 +28,9 @@ type Args = {
   relationFieldsMap?: RelationFieldsMap;
   relationsDic?: Record<string, string[]>;
   /**
-   * Storage-only columns the features this config enables put on its table, folded by `columnsOf`.
+   * Storage-only columns to append to this config's table, in order.
    *
-   * Was `hasAuth: boolean`, a flag threaded down two files so that one line could push
-   * `templateHasAuth(rootName)` — the generator carrying a feature's question in its parameter
-   * list. It appends whatever it is handed, in order, and knows nothing about what asked.
+   * Appended as given; nothing here knows what asked for them.
    */
   featureColumns?: ColumnDeclaration[];
   /**

@@ -1,5 +1,9 @@
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
+/**
+ * Puts `locale` on the document, when the config is localized and the caller did not `select`
+ * their way out of it.
+ */
 export const setDocumentLocale = Hooks.beforeRead<'generic'>(
   async function setDocumentLocale(args) {
     let doc = args.doc;

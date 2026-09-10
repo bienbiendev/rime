@@ -3,12 +3,11 @@ import { text } from '$lib/fields/text/index.js';
 import { create } from './definition.js';
 
 /**
- * What `create` leaves on a built collection, for the two things that used to be decided by the
- * prototype testing `config.upload`.
+ * What `create` leaves on a built collection for the dashboard to read.
  *
- * The dashboard layout is offered by the feature that has an opinion — `upload` sets
- * `_dashboardLayout`, the same device as `_titleFallback` — and defaulted by the dashboard, its
- * only reader. Nothing between the two names a feature.
+ * The layout is offered by whichever feature has an opinion — `upload` sets `_dashboardLayout`,
+ * the same device as `_titleFallback` — and defaulted by the dashboard, its only reader. Nothing
+ * between the two names a feature.
  */
 describe('create and the dashboard layout', () => {
   it('leaves a plain collection with no layout preference', () => {

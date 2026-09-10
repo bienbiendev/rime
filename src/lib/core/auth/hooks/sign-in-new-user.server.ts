@@ -10,12 +10,8 @@ import { userAttributes } from '../user.server.js';
  * already authenticated. Only the public sign-up path sets that flag — an admin creating a user
  * from the panel must not be signed in as them.
  *
- * **This lived in `collection/operations/create.ts`**, twenty lines after the insert, behind
- * `if (config.auth && event.locals.isAutoSignIn)` — the last place core's create branched on a
- * feature's config member. It also read `authUserId` off the *incoming* data rather than what the
- * hooks produced, which happened to work because the one path that reaches it is the one where
- * the caller supplies it. `createBetterAuthUser` puts it on `data` in every case, and that is what
- * this reads.
+ * `authUserId` comes off `data`, which `createBetterAuthUser` set — not off the caller's incoming
+ * data, where it is only present on the public sign-up path.
  */
 export const signInNewUser = Hooks.afterCreate<'auth'>(async function signInNewUser(args) {
   const { config, event, data } = args;

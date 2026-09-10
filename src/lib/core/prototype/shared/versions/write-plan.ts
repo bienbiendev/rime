@@ -11,18 +11,15 @@ import { VersionOperations } from './strategy.js';
  * This is the three-way branch `updatePrototype` used to decode out of `versionOperation`, stated
  * once, above the adapter, in the feature that owns the distinction:
  *
- * - **not versioned** — returns the plan untouched, so the base row holds everything. It was
- *   `enabled` that used to gate this, through a `FeatureDefinition.writePlan` seam only this
- *   feature ever implemented; the guard is the first line now.
- * - **a specific version** (`UPDATE_VERSION`, `UPDATE_PUBLISHED`) — split, and name the row.
- * - **a new version** (`NEW_VERSION_FROM_LATEST`, `NEW_DRAFT_FROM_PUBLISHED`) — split, and name no
- *   row: `handleNewVersion` already wrote it, through the public API, before this ran.
+ * ```
+ * not versioned        the plan untouched — the base row holds everything
+ * a specific version   split, and name the row
+ * a new version        split, and name no row: handleNewVersion already wrote it
+ * a create             split, and name no row: none exists yet
+ * ```
  *
- * A **create** is the fourth case and the simplest: split, and name no row because none exists —
- * the adapter writes the first version and answers with its id. The split used to happen inside
- * `insertPrototype`, which meant the adapter knew that a versioned config keeps its `._root()`
- * fields on the base row. It is the same `splitRootData` call, made by whoever declared the
- * versions.
+ * `splitRootData` is what makes a versioned config keep its `._root()` fields on the base row, and
+ * it is this feature's rule to apply, not the adapter's.
  *
  * `context.contentOwnerId` is the row, and it is not the same question as this plan's `content`.
  * That one is "where do this document's blocks, tree nodes and relations hang", which has an

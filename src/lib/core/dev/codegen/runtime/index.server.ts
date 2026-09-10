@@ -2,6 +2,41 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { OUTPUT_DIR } from '../../constants.server.js';
 
+/**
+ * `$rime/modules` — one name, two files, resolved per build.
+ *
+ * A folder declares a pair and the barrel re-exports whichever half the current build wants:
+ *
+ * ```
+ * upload/module.ts          the client half
+ * upload/module.server.ts   the server half
+ * ```
+ *
+ * Only files named exactly `module.ts` or `module.server.ts` are collected, which is why a
+ * `hooks/index.server.ts` beside one is invisible to the mechanism.
+ *
+ * **Three shapes, and only the middle one bites:**
+ *
+ * ```
+ * both halves, same names        resolves per build            ← what you want
+ * both halves, name in server    NOT EXPORTED on a client build
+ * server half only               `undefined` on a client build
+ * ```
+ *
+ * The middle one fails at link time with `does not provide an export named 'x'`, and nothing
+ * static sees it — the failure is a 500 on every module request, with a message that names
+ * nothing. So a server-only name goes in a folder with **no `module.ts` beside it**, and the
+ * caller guards it:
+ *
+ * ```ts
+ * await bootUpload?.(config);
+ * ```
+ *
+ * Never move a constant to make an isomorphic file reach it. `.server` is what keeps
+ * `PRIVATE_FIELDS` out of a browser bundle; what crosses the barrel is the function, and on a
+ * client build it is `undefined` and never called.
+ */
+
 export type RuntimeRegistryEntry = { client: string; server: string };
 export type RuntimeRegistry = Map<string, RuntimeRegistryEntry>;
 

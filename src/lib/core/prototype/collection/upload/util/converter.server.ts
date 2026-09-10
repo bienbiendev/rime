@@ -121,11 +121,8 @@ export async function filePathToFile(filePath: string): Promise<File> {
 /**
  * The file a stored document already has, as a `File`.
  *
- * One call rather than two things a caller has to know. It used to be spelled out at the call
- * site — `path.resolve(process.cwd(), 'static', 'medias', doc.filename)` and then
- * `filePathToFile(...)` — which meant a *second* feature carried a copy of where this one keeps
- * its files. That is the convention `disk/save.server.ts` and `disk/delete.server.ts` follow, and
- * it lives on this side of the line.
+ * One call, so a caller never spells out where upload keeps its files —
+ * `disk/save.server.ts` and `disk/delete.server.ts` own that convention.
  *
  * `undefined` when the document has no file, so a caller asking "does it have one?" and "give it
  * to me" makes one call, not two.

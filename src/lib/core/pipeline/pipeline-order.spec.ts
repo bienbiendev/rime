@@ -13,11 +13,9 @@ import { augmentHooks } from './build.server.js';
  * In `beforeUpdate` the stakes are higher than order: auth's three guards read the caller's
  * submission *as sent*, and a default filled in above them turns an ordinary update into a 401.
  *
- * **One order, not one per shape.** This used to assert three — a plain collection, a versioned
- * one, an auth one — because `buildPipeline` filtered the list by which feature each hook belonged
- * to. A hook is a plain function now and the guard sits beside it in the list, so every config's
- * pipeline is the same sequence and `when(isAuth, …)` decides at the call. That a feature's hook
- * *is* guarded is asserted in `hook-placement.spec.ts`.
+ * **One order, not one per config shape.** Every config's pipeline is the same sequence, and
+ * `when(isAuth, …)` decides at the call whether a hook applies. That a feature's hook *is* guarded
+ * is asserted in `hook-placement.spec.ts`.
  */
 
 const order = (hooks: unknown, timing: string): string[] =>

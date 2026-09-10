@@ -70,18 +70,13 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   //    whose tables are missing now fails at boot, naming itself, instead of on whichever
   //    request first happened to reach it.
   //
-  //    Written out per prototype rather than folded over a registry: what a prototype is called
-  //    and where its configs are authored are two things core does know, and reading them off a
-  //    registry only hid which was which.
-  //
   //    Registration takes the config and nothing else: the adapter reads `config.type` and builds
-  //    a collection handle or an area handle. It used to be told `singleton`, which is the same
-  //    fact under a name the adapter was not allowed to use.
+  //    a collection handle or an area handle.
   //
   //    `registered` is annotated, not inferred. A definition is written against its own config
   //    kind — area's `boot` takes a `BuiltArea` — so the two entries have conflicting `slug` types
-  //    and an inferred literal reduces the pair to `never`. Sound for the reason it always was:
-  //    each definition is only ever handed configs of the kind it is registered under.
+  //    and an inferred literal reduces the pair to `never`. The cast is sound: each definition is
+  //    only ever handed configs of the kind it is registered under.
   const registered: { prototype: PrototypeDefinition; configs: BuiltPrototype[] }[] = [
     { prototype: collection as PrototypeDefinition, configs: config.collections },
     { prototype: area as PrototypeDefinition, configs: config.areas }

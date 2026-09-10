@@ -31,18 +31,21 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype> = {
   name: string;
 
   /**
-   * **Every** augment this prototype runs, in order — its own and its features', one written list.
+   * Every augment this prototype runs, in order — its own and its features', one written list.
    *
-   * A **function returning** the list, and that is rule 3 rather than style. Several of the steps
-   * are imported from `$rime/modules`, and a feature reached through the barrel imports `create`
-   * back out of this prototype's definition — `auth/staff/configure.ts` and
-   * `versions/configure.server.ts` both do. Entered from the feature's side, an array literal here
-   * would capture bindings the barrel had not initialised yet, and the config would build without
-   * those fields: no error, no type change, just a document with no title. Building the list on
-   * first `create` reads every binding after every module has finished.
+   * ```ts
+   * augments: () => [augmentLabel, when(isAuth, augmentAuth), augmentTitle]
+   * ```
    *
-   * `any` for the reason each augment is typed loosely: each names the shape it needs, and a list
-   * holding several cannot promise any of them that shape. A guarded entry is `when(pred, fn)`.
+   * **A function returning the list, not the list.** Several steps come from `$rime/modules`, and
+   * a feature reached through the barrel imports `create` back out of this definition —
+   * `auth/staff/configure.ts` and `versions/configure.server.ts` both do. Entered from the
+   * feature's side, an array literal captures bindings the barrel has not initialised, and the
+   * config builds without those fields: no error, no type change, just a document with no title.
+   * Building the list on first `create` reads every binding after every module has finished.
+   *
+   * `any` because each augment names the shape it needs, and a list holding several cannot
+   * promise any of them that shape.
    */
   augments?: () => readonly ((config: any) => any)[];
 
@@ -113,9 +116,6 @@ export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
    * Pass `intent: 'original'` when loading what an update is about to change — `?draft=true` on an
    * update means "branch a new draft *from what is published*", the opposite of what it means on a
    * read. Defaults to `'read'`.
-   *
-   * Was `versionQuery`, answered by folding every feature for the one that owns the difference.
-   * Only `versions` ever did.
    */
   versionQuery(
     params: { draft?: boolean; versionId?: string },
@@ -143,16 +143,11 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
    * One chain, stated once for every prototype: `_titleFallback` first, then every augment the
    * prototype lists, in the order it lists them — which is column order.
    *
-   * It used to be two: the prototype's own augments, then `applyAugments` folding each feature's
-   * out of the `features` list and gating it on `FeatureDefinition.enabled`. The list is written
-   * out now, guards included — see `prototype/collection/definition.ts`.
+   * `_titleFallback` seeds `'id'`; `auth` and `upload` override it in their own augments, which is
+   * where a preference about what names a document belongs.
    *
-   * `_titleFallback` is seeded as `'id'` for every prototype — it was a `titleFallback` field on
-   * the definition and both of them answered `'id'`. `auth` and `upload` override it in their own
-   * augments, which is where a real preference belongs.
-   *
-   * No hooks step. A config's pipeline is resolved once the *whole* config exists (see
-   * pipelines.server.ts), so a derived config resolves by the same line as an authored one.
+   * No hooks step. A config's pipeline is resolved once the whole config exists — see
+   * `pipeline/build.server.ts` — so a derived config resolves by the same line as an authored one.
    */
   const create = (slug: string, incomingConfig: Dic): C => {
     const initial: Dic = { ...incomingConfig, slug, _titleFallback: 'id' };
@@ -167,12 +162,7 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
       icon: augmented.icon || FileText,
       live: augmented.live || false,
       /**
-       * Staff-only until the author says otherwise, and `isStaff` is **auth's**.
-       *
-       * There used to be a copy of it here, typed on the one member it reads, with a comment
-       * saying a prototype does not know what a feature is. But defaulting to staff-only *is*
-       * knowing — the copy duplicated the dependency rather than removing it. Removing it means
-       * the default coming from whichever feature owns the policy, which is a real change.
+       * Staff-only until the author says otherwise, and the policy is auth's own `isStaff`.
        */
       access: {
         create: isStaff,

@@ -13,8 +13,6 @@ import { uploadDocType } from '$lib/core/prototype/collection/upload/doc-type.js
  * The `fields` predicates are **ANDed** — each says which fields it still wants generated, and
  * a field has to survive both.
  *
- * Was `docTypeWithFeatures`, folding a `FeatureDefinition.docType` seam over every feature to
- * reach those two.
  */
 export const contributionsFor = (
   config: BuiltArea | BuiltCollection

@@ -2,6 +2,9 @@ import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import type { WithUpload } from '$lib/core/prototype/collection/upload/util/config.js';
 
+/**
+ * Puts `sizes` on an upload document — the URL of each generated image size, keyed by its name.
+ */
 export const populateSizes = Hooks.beforeRead(async function populateSizes(args) {
   const config = args.config as WithUpload<BuiltCollection>;
   const doc = args.doc;

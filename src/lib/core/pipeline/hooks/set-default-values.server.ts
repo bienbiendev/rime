@@ -7,39 +7,45 @@ import { logger } from '$lib/core/logger.server.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 
+/**
+ * Fills in each field's `defaultValue` where the incoming data left it empty.
+ *
+ * A relation's default is one id or a list of them, and only the ids that name a document that
+ * exists survive — see `defaultRelationValue`.
+ */
 export const setDefaultValues = Hooks.beforeUpsert(async function setDefaultValues(args) {
-    const { operation, event } = args;
-    const { rime } = event.locals;
+  const { operation, event } = args;
+  const { rime } = event.locals;
 
-    const configMap = args.context.configMap;
+  const configMap = args.context.configMap;
 
-    if (!configMap)
-      throw new RimeError(RimeError.OPERATION_ERROR, 'missing configMap @setDefaultValues');
+  if (!configMap)
+    throw new RimeError(RimeError.OPERATION_ERROR, 'missing configMap @setDefaultValues');
 
-    let output = { ...args.data };
-    for (const [key, config] of Object.entries(configMap)) {
-      let value = getValueAtPath(key, output);
+  let output = { ...args.data };
+  for (const [key, config] of Object.entries(configMap)) {
+    let value = getValueAtPath(key, output);
 
-      let isEmpty;
-      const shouldAddDefault =
-        operation === 'create' || (operation === 'update' && config.get.required);
+    let isEmpty;
+    const shouldAddDefault =
+      operation === 'create' || (operation === 'update' && config.get.required);
 
-      try {
-        isEmpty = config.use.isEmpty(value);
-      } catch {
-        isEmpty = false;
-        logger.warn(`Error in config.isEmpty for field ${key}`);
-      }
-      if (shouldAddDefault && isEmpty && config.get.defaultValue !== undefined) {
-        value = await getDefaultValue({ key, config, adapter: rime.adapter });
-        output = setValueAtPath(key, output, value);
-      }
+    try {
+      isEmpty = config.use.isEmpty(value);
+    } catch {
+      isEmpty = false;
+      logger.warn(`Error in config.isEmpty for field ${key}`);
     }
+    if (shouldAddDefault && isEmpty && config.get.defaultValue !== undefined) {
+      value = await getDefaultValue({ key, config, adapter: rime.adapter });
+      output = setValueAtPath(key, output, value);
+    }
+  }
 
-    return {
-      ...args,
-      data: output
-    };
+  return {
+    ...args,
+    data: output
+  };
 });
 
 type GetDefaultValue = (args: {
@@ -70,9 +76,8 @@ const defaultRelationValue = async (
     // `existingIds` on the adapter, written out: which of these ids name a document that exists.
     // The ordinary read, projected — see collection/nested/hooks/add-children.server.ts.
     //
-    // `collection` and not the kind-agnostic accessor there used to be: `relationTo` is typed
-    // `CollectionSlug` by `RelationFieldBuilder.to`, so a relation names a collection by
-    // construction.
+    // `relationTo` is typed `CollectionSlug` by `RelationFieldBuilder.to`, so a relation names a
+    // collection by construction.
     const existing = ids.length
       ? await adapter
           .collection(config.get.relationTo)

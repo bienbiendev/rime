@@ -4,6 +4,10 @@ import { trycatch } from '$lib/util/function.js';
 
 type Update = { id: string; data: { parent: string } };
 
+/**
+ * @TODO explain — reads the directory's children before the write, for `updateDirectoryChildren`
+ * below to re-parent afterwards.
+ */
 export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>(
   async function prepareDirectoryChildren(args) {
     const data = args.data;
@@ -38,6 +42,10 @@ export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>(
   }
 );
 
+/**
+ * @TODO explain — re-parents what `prepareDirectoryChildren` collected, once the directory's own
+ * row has been written.
+ */
 export const updateDirectoryChildren = Hooks.afterUpdate<'directory'>(
   async function updateDirectoryChildren(args) {
     const { event, config } = args;

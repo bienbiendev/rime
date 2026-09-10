@@ -9,6 +9,12 @@ import {
 } from '$lib/types.js';
 import { getValueAtPath } from '$lib/util/object.js';
 
+/**
+ * Puts `_thumbnail` on the document — the URL the panel shows for it in a list.
+ *
+ * Runs after `populateSizes`, so it can take the thumbnail size an upload collection generated
+ * rather than the original file.
+ */
 export const setDocumentThumbnail = Hooks.beforeRead(async function setDocumentThumbnail(args) {
   const config = args.config;
   let doc = args.doc;

@@ -167,9 +167,7 @@ const writeRow = async (
  *
  * With `locale`, a localized column lands on the `__$$locales` branch instead — resolved by
  * `prepareSchemaData`, the same split every other write goes through, so a caller says "set this
- * field" and does not have to know which of the two tables the field is in. That is what a
- * computed column written back on read needs — localized on a localized config and not otherwise
- * — and the adapter used to carry a whole method with a four-way branch for exactly that.
+ * field" without knowing which of the two tables it is in.
  *
  * It goes through `buildWhereParam`, so the filter is the same REST-shaped query every other
  * operation takes rather than a second dialect.
@@ -221,10 +219,9 @@ export const updateWherePrototype = async (
 /**
  * Writes a new document: the rows the plan names.
  *
- * The insert half of `updatePrototype`, and it reads the same way now — the caller says which
- * rows this write touches and this executes. It used to call `splitRootData` itself, which meant
- * the database layer knew that a versioned config keeps its `._root()` fields on the base row; that
- * is the versions-declaring feature's rule, and it states it in `writePlan` (docs/decoupling.md § 4.4).
+ * The insert half of `updatePrototype`, and it reads the same way: the caller says which rows this
+ * write touches, and this executes. Where a versioned config's `._root()` fields go is
+ * `versionsWritePlan`'s statement, made before the call.
  *
  * `contentId` names the row the content landed on — the versions row when there is one, the base row
  * otherwise — which is what the caller hangs blocks, tree nodes and relations off.

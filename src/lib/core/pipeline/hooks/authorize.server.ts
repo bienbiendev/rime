@@ -2,6 +2,11 @@ import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { logger } from '$lib/core/logger.server.js';
 
+/**
+ * Runs the config's own access check for this operation, and throws `UNAUTHORIZED` if it says no.
+ *
+ * A system call stands down — `rime.collection('x').system()` is rime asking itself.
+ */
 export const authorize = Hooks.beforeOperation(async function authorize(args) {
   const { config, event, operation, context } = args;
   let authorized = false;

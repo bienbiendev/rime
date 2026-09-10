@@ -1,17 +1,12 @@
 import type { Adapter } from '$lib/core/adapter.js';
 
 /**
- * The three writes and one read auth makes against Better-auth's own tables.
+ * The three writes and one read auth makes against Better-auth's own tables, through
+ * `adapter.table(slug)`.
  *
- * They were the last three methods on `AuthHandle`, and they were there because core had no way
- * to name a table that is not a prototype. `FeatureDefinition.tables` made these declared tables
- * and `adapter.table(slug)` reaches them, so the facade collapses to Better-auth's own adapter.
- *
- * **Better-auth's admin API cannot do any of this**, which `docs/decoupling-auth.md` § 2.2 left
- * open as the better option. `listUsers`, `setRole` and `removeUser` all sit behind
- * `adminMiddleware`, and all three callers here run where no admin session exists — see each
- * function. `hooks.server.ts` already said so in a comment: "would be cleaner to do it with the
- * admin plugin, not possible at the moment".
+ * **Better-auth's admin API cannot do any of this.** `listUsers`, `setRole` and `removeUser` all
+ * sit behind `adminMiddleware`, and every caller here runs where no admin session exists — see
+ * each function.
  */
 
 const USERS = '$authUsers';
