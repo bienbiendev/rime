@@ -53,7 +53,7 @@ export function createPlaywrightConfig({ name }: Args): PlaywrightTestConfig {
     workers: 1,
     reporter: 'line',
     webServer: {
-      command: `bun run rime:use ${name} && bunx vite dev`,
+      command: `echo "==========================================\n# Running rime:use ${name}\n" && bun run rime:use ${name} && bunx vite dev`,
       cwd: process.cwd(),
       // `url`, not `port`: a port check passes the moment vite binds the socket, while the
       // first request still has to pull the whole SSR module graph through vite — tens of
