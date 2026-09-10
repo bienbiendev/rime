@@ -1,5 +1,5 @@
 import { VERSIONS_STATUS } from './constant.js';
-import type { BlankIntent } from '$lib/core/prototype/doc.js';
+import type { BlankIntent } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 
 /**

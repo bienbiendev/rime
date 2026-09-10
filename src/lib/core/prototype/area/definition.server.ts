@@ -1,6 +1,7 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
-import { createBlankDocument, shapeBlank } from '../doc.js';
+import { createBlankDocument } from '../doc.js';
+import { shapeBlank } from '../blank.server.js';
 import { area as base } from './definition.js';
 import { areaHooks } from './hooks.server.js';
 import { rest } from './rest/index.server.js';

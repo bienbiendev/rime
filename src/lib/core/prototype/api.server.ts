@@ -3,7 +3,8 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { BuiltPrototype, PrototypeApiContext } from './define.js';
 import type { GenericDoc } from './types.js';
 import { versionsReadQuery } from '$lib/core/versions/read-query.js';
-import { createBlankDocument, shapeBlank } from './doc.js';
+import { createBlankDocument } from './doc.js';
+import { shapeBlank } from './blank.server.js';
 
 /**
  * The two pieces a prototype's local API is composed from. **Not a base it is fitted into.**
