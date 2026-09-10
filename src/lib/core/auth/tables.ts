@@ -78,7 +78,9 @@ export const authTables = (config: {
       columns: [
         { name: 'id', type: 'text', primary: true },
         { name: 'accountId', type: 'text', notNull: true },
-        { name: 'issuer', type: 'text', notNull: true },
+        // Nullable: only an OAuth account has an issuer. Better-auth writes `null` here for a
+        // credential sign-up, which is every account rime's own `/api/init` creates.
+        { name: 'issuer', type: 'text' },
         { name: 'providerId', type: 'text', notNull: true },
         { name: 'userId', type: 'text', notNull: true, references: authUserRef },
         { name: 'accessToken', type: 'text' },
