@@ -280,6 +280,23 @@ test('Should get only the layout page prop', async ({ request }) => {
   expect(doc.layout.components.at(1).legend).toBe('legend');
 });
 
+/**
+ * The same select, on the by-id endpoint rather than the list one. It reaches `findById` and the
+ * adapter the same way, and has to narrow the document identically.
+ */
+test('Should get only the layout page prop by id', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/pages/${pageId}?select=layout.components`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(Object.keys(doc).length).toBe(2);
+  expect(doc.id).toBe(pageId);
+  expect(doc.layout.components.length).toBe(2);
+  expect(doc.layout.components.at(0).text).toBe('Foo');
+  expect(doc.layout.components.at(1).legend).toBe('legend');
+});
+
 test('Should return the home page', async ({ request }) => {
   const response = await request.get(`${API_BASE_URL}/pages/${homeId}`).then((response) => {
     return response.json();
@@ -497,6 +514,34 @@ test('Should return 2 pages with only attributes slug, title and id prop', async
   expect(response.docs[1].attributes.title).toBeDefined();
   expect(response.docs[1].attributes.template).toBeUndefined();
   expect(response.docs[1]._parent).toBeUndefined();
+});
+
+/**
+ * The same `select` on the by-id endpoint. It reaches `findById` and the adapter the same way,
+ * but `restGetById` used to skip the `title` -> `asTitle` correction that the list endpoint made,
+ * so `?select=title` answered differently on `/pages` and on `/pages/<id>`.
+ */
+
+test('Should return one page by id with only attributes.slug and id prop', async ({ request }) => {
+  const response = await request
+    .get(`${API_BASE_URL}/pages/${homeId}?select=attributes.slug`)
+    .then((response) => response.json());
+  expect(response.doc).toBeDefined();
+  expect(response.doc.id).toBe(homeId);
+  expect(response.doc.attributes.slug).toBeDefined();
+  expect(response.doc.attributes.title).toBeUndefined();
+  expect(response.doc.attributes.template).toBeUndefined();
+});
+
+test('Should resolve title from asTitle when selecting title by id', async ({ request }) => {
+  const response = await request
+    .get(`${API_BASE_URL}/pages/${homeId}?select=title`)
+    .then((response) => response.json());
+  expect(response.doc).toBeDefined();
+  // Not the document id: the fallback in setDocumentTitle when the asTitle
+  // column was narrowed out of the read.
+  expect(response.doc.title).not.toBe(homeId);
+  expect(response.doc.title).toBe('Accueil');
 });
 
 /****************************************************

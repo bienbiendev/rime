@@ -43,7 +43,8 @@
 [x] configurable panel route
 [ ] Change edited_by that should be currently_edited_by, and add last_edited_by, created_by for less confusion.
 [ ] Handle auto-save / confirm dialog if version not enabled.
-[ ] Add select feature to findById collection
+[x] Add select feature to findById collection
+[ ] Type `select` against the document's own paths (narrow the return type)
 [ ] Batch offset/update
 [ ] configurable medias path
 [ ] Put bin commands in a separate package ex: @rime/kit ?

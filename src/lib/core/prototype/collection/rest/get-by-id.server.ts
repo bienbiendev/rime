@@ -1,6 +1,7 @@
 import { PARAMS } from '$lib/core/constants.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
+import { selectWithTitle } from '$lib/core/prototype/shared/title/select.js';
 import { trycatch } from '$lib/util/function.js';
 import { json } from '@sveltejs/kit';
 import { endpoint } from './endpoint.server.js';
@@ -22,7 +23,10 @@ export const restGetById = endpoint(async ({ event, collection }) => {
   const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
   const draft = paramDraft ? paramDraft === 'true' : undefined;
   const depth = typeof paramDepth === 'string' ? parseInt(paramDepth) : 0;
-  const select = event.url.searchParams.get(PARAMS.SELECT)?.split(',') || undefined;
+  const select = selectWithTitle(
+    event.url.searchParams.get(PARAMS.SELECT),
+    collection.config.asTitle
+  );
 
   const [error, document] = await trycatch(() =>
     collection.findById({
