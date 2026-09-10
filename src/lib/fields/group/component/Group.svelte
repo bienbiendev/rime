@@ -1,7 +1,7 @@
 <script lang="ts">
   import { FormFieldBuilder } from '$lib/core/fields/builders';
   import { isFormField } from '$lib/core/fields/util.js';
-  import type { GenericDoc } from '$lib/core/types/doc.js';
+  import type { GenericDoc } from '$lib/core/prototype/types.js';
   import type { GroupFieldBuilder } from '$lib/fields/group/index.js';
   import { TabsBuilder } from '$lib/fields/tabs';
   import FieldsPreview from '$lib/panel/components/fields/FieldsPreview.svelte';

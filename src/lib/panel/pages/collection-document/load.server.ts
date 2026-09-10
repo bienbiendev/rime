@@ -1,9 +1,13 @@
-import { buildUploadAria, type UploadPath } from '$lib/core/collections/upload/util/path.js';
-import { PARAMS, UPLOAD_PATH } from '$lib/core/constant.js';
+import {
+  buildUploadAria,
+  type UploadPath
+} from '$lib/core/prototype/collection/upload/util/path.js';
+import { PARAMS } from '$lib/core/constants.js';
+import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { withVersionsSuffix } from '$lib/core/naming.js';
-import type { GenericDoc } from '$lib/core/types/doc.js';
+import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
+import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { CollectionDocData } from '$lib/panel/index.js';
 import type { Route } from '$lib/panel/types.js';
 import { panelUrlFor } from '$lib/panel/util/url.js';
@@ -11,6 +15,7 @@ import { trycatch } from '$lib/util/function.js';
 import { apiUrl } from '$lib/util/index.js';
 import { toKebabCase } from '$lib/util/string.js';
 import { error, type ServerLoadEvent } from '@sveltejs/kit';
+import { prototypeKebab } from '$lib/core/prototype/naming.js';
 
 /**
  * Load function for the collection document page in the panel.
@@ -106,7 +111,7 @@ export async function documentLoad<V extends boolean = boolean>(
   };
 
   if (withVersion) {
-    const url = `${apiUrl(withVersionsSuffix(toKebabCase(doc._type)))}?where[ownerId][equals]=${doc.id}&sort=-updatedAt&select=updatedAt,status`;
+    const url = `${apiUrl(prototypeKebab(withVersionsSuffix(doc._type)))}?where[ownerId][equals]=${doc.id}&sort=-updatedAt&select=updatedAt,status`;
     const promise = event.fetch(url).then((r) => r.json());
     const [error, result] = await trycatch(() => promise);
     if (error || !Array.isArray(result.docs)) {

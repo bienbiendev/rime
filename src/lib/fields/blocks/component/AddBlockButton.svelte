@@ -2,7 +2,7 @@
   import { env } from '$env/dynamic/public';
   import { emptyValuesFromFieldConfig, isFormField } from '$lib/core/fields/util.js';
   import { t__ } from '$lib/core/i18n/index.js';
-  import type { GenericBlock } from '$lib/core/types/doc.js';
+  import type { GenericBlock } from '$lib/core/prototype/types.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import * as Command from '$lib/panel/components/ui/command/index.js';
   import { capitalize } from '$lib/util/string.js';

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
-  import type { GenericBlock } from '$lib/core/types/doc.js';
+  import type { GenericBlock } from '$lib/core/prototype/types.js';
   import type { BlocksFieldBlock } from '$lib/fields/types';
   import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';

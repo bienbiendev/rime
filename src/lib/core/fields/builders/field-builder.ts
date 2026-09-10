@@ -1,6 +1,27 @@
-import type { WithoutBuilders } from '$lib/util/types.js';
 import type { Component } from 'svelte';
 import type { Field, FieldAccess } from '../../../fields/types.js';
+
+/**
+ * Strips FieldBuilder wrappers off a config tree, yielding the compiled field shape.
+ *
+ * Defined here rather than in ../types.ts because it is mutually recursive with FieldBuilder
+ * below — separating them would only mean the two files importing each other. ../types.ts
+ * re-exports it, so the concept still has one public entry point.
+ */
+export type WithoutBuilders<T> =
+  T extends FieldBuilder<infer F>
+    ? WithoutBuilders<F>
+    : T extends Array<infer U>
+      ? U extends FieldBuilder<infer F>
+        ? F[]
+        : U extends { compile(): infer R }
+          ? R[]
+          : Array<WithoutBuilders<U>>
+      : T extends object
+        ? T extends Function
+          ? T
+          : { [K in keyof T]: WithoutBuilders<T[K]> }
+        : T;
 
 /** Method-syntax (not `foo: () => ...` property syntax) so subtype checks
  *  like `FormFieldBuilder<SlugField> -> FormFieldBuilder<FormField>` — used

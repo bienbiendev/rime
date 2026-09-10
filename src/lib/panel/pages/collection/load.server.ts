@@ -1,16 +1,16 @@
-import type { Directory } from '$lib/core/collections/upload/upload.js';
+import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
 import {
   buildUploadAria,
   getParentPath,
   removePathFromLastAria,
   type UploadPath
-} from '$lib/core/collections/upload/util/path.js';
-import { UPLOAD_PATH } from '$lib/core/constant.js';
+} from '$lib/core/prototype/collection/upload/util/path.js';
+import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { logger } from '$lib/core/logger/index.server.js';
-import { withDirectoriesSuffix } from '$lib/core/naming.js';
-import type { GenericDoc } from '$lib/core/types/doc.js';
+import { logger } from '$lib/core/logger.server.js';
+import { withDirectoriesSuffix } from '$lib/core/prototype/collection/upload/naming.js';
+import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { Route } from '$lib/panel/types.js';
 import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';

@@ -1,96 +1,83 @@
-// import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
-import { dev } from '$app/environment';
+import type { RimeAuth } from '$lib/core/auth/better-auth/instance.server.js';
 import type { Config } from '$lib/core/config/types.js';
-import devCache from '$lib/core/dev/cache/index.server.js';
-import type { RegisterArea, RegisterCollection } from '$lib/index.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { betterAuth } from 'better-auth';
-import { AreaAPI } from './areas/local-api.server.js';
-import { CollectionAPI } from './collections/local-api.server.js';
-import { getBaseAuthConfig } from './config/auth/better-auth.server.js';
-import { createConfigContext } from './config/config-context.server.js';
-import type { BuildConfig } from './config/server/index.server.js';
-import validate from './config/server/validate.server.js';
-import writeMemo from './config/server/write.server.js';
-import { regenerateDrizzleConfig, regenerateHooks } from './dev/cli/init/templates.js';
-import generateRoutes from './dev/generate/routes/index.server.js';
-import generateTypes from './dev/generate/types/index.server.js';
-import { RimeError } from './errors/index.js';
-import i18n from './i18n/index.js';
-import { registerTranslation } from './i18n/register.server.js';
-import { logger } from './logger/index.server.js';
+import type { Adapter } from './adapter.js';
+import { bootRime } from './boot.server.js';
+import type { ConfigContext } from './config/context.server.js';
+import type { BuildConfig } from './config/index.server.js';
+import { logger } from './logger.server.js';
+import { areaApi, type AreaAccessor } from './prototype/area/api.server.js';
+import { collectionApi, type CollectionAccessor } from './prototype/collection/api.server.js';
 
-export type Rime<C extends Config = Config> = Awaited<ReturnType<typeof createRime<C>>>;
-export type RimeContext<C extends Config = Config> = ReturnType<Rime<C>['createRimeContext']>;
-export type ConfigContext<C extends Config = Config> = ReturnType<typeof createConfigContext<C>>;
+// Declared in core/config/context.server.ts, beside `createConfigContext`, and re-exported
+// here because this is where consumers have always imported it from.
+export type { ConfigContext };
+
+/**
+ * What a request gets: `event.locals.rime`.
+ *
+ * **Declared, not inferred, and that is the whole point of this shape.** Inferring it from
+ * `createRime` would make `App.Locals['rime']` depend on everything that function transitively
+ * imports; every hook is typed through `HookContext → event: RequestEvent → App.Locals`, so
+ * anything in that graph typed in terms of `rime` references itself and TypeScript answers `any`
+ * for every hook in the repo — silently.
+ *
+ * The rule to keep when adding a member: **take types from declared config phantoms, never from
+ * `createRime` or `bootRime`.** `$InferPluginsServer` and `RimeAuth` are declared *about* a
+ * config, so naming them costs nothing; naming a function that imports the prototype registry puts
+ * every hook back in the loop.
+ */
+export type RimeContext<C extends Config = Config> = {
+  /**
+   * `rime.collection(slug)` / `rime.area(slug)`.
+   *
+   * **Named from each prototype's `api.server.ts`, never off its definition**, and that is a
+   * correctness requirement rather than a preference. Every hook is typed through `HookContext` →
+   * `event.locals.rime` → this, so reading an accessor off a definition — which carries hooks —
+   * would make every hook's type depend on itself and TypeScript would answer `any` for all of
+   * them. Each `api.server.ts` imports no hooks, so it cuts the loop.
+   *
+   * These two lines were a `PrototypeAccessors` alias in a file of its own, so that this one did
+   * not name a kind. It names two, they are both core's, and the file it took them from is the
+   * file it now names.
+   */
+  collection: CollectionAccessor;
+  area: AreaAccessor;
+} &
+  // A consumer's own plugins, spread at the top level under their own names — `rime.myPlugin.doThing()`.
+  // Comes off the config's declared phantom, so a plugin's `actions` stay typed per plugin.
+  BuildConfig<C>['$InferPluginsServer'] & {
+    logger: typeof logger;
+    /** The Better-auth instance, carrying whatever plugins this config declared. */
+    auth: RimeAuth<C>;
+    /** The drizzle instance and the low-level surface. */
+    adapter: Adapter;
+    /** The configuration interface. */
+    config: ConfigContext<C>;
+    /** Overrides `event.locals.locale`. */
+    setLocale(locale: string | undefined): void;
+    /** The current `event.locals.locale`. */
+    getLocale(): string | undefined;
+  };
+
+/** The process-wide object. One per boot; `createRimeContext` makes the per-request one above. */
+export type Rime<C extends Config = Config> = {
+  defineLocale(event: RequestEvent): void;
+  auth: RimeAuth<C>;
+  adapter: Adapter;
+  config: ConfigContext<C>;
+  plugins: BuildConfig<C>['$InferPluginsServer'];
+  createRimeContext(event: RequestEvent): RimeContext<C>;
+};
 
 /**
  * Creates the main Rime object
  * that provides access to cms API
  */
-export async function createRime<const C extends Config>(config: BuildConfig<C>) {
-  // Normalize plugins to a simple name->actions map
-  const serverPlugins = config.$plugins;
-  const plugins = Object.fromEntries(
-    serverPlugins.map((plugin) => [plugin.name, plugin.actions ?? {}])
-  ) as typeof config.$InferPluginsServer;
-
-  // Creat config interface
-  const configCtx = createConfigContext(config);
-
-  // Init adapter to get the generateSchema
-  const { createAdapter, generateSchema } = config.$adapter;
-
-  // Generate schema, types, routes
-  if (dev) {
-    // A `rime generate` CLI run may be regenerating the same .rime cache
-    // concurrently (e.g. a running dev server reloading off the CLI's file
-    // writes). Skip our own generation this cycle instead of racing it or
-    // blocking this request on it — the next natural reload will pick up
-    // what the CLI produced.
-    if (process.env.RIME_CLI !== 'true' && devCache.get('.cli')) {
-      logger.debug('Skipping generation, `rime generate` is already running');
-    } else {
-      const changed = writeMemo(config);
-      const valid = validate(config);
-      if (!valid) {
-        throw new RimeError('Config not valid');
-      }
-      if (changed) {
-        generateRoutes(config);
-        // Before generateSchema(): it shells out to drizzle-kit generate/migrate, which read
-        // drizzle.config.ts's schema path straight off disk — stale here means the wrong (or
-        // missing) schema file.
-        regenerateDrizzleConfig();
-        await generateSchema(config);
-        await generateTypes(config);
-        regenerateHooks();
-      } else {
-        logger.debug('Nothing to generate');
-      }
-    }
-  }
-
-  // Create adapter, consume the generated schema
-  const adapter = await createAdapter(configCtx);
-
-  // Create auth
-  const baseAuthconfig = getBaseAuthConfig({ mailer: plugins.mailer, config: configCtx });
-  type BetterAuthPlugins = typeof config.$InferAuthPlugins;
-  const betterAuthPlugins = Array.isArray(config.$auth?.plugins)
-    ? [...baseAuthconfig.plugins, ...(config.$auth.plugins as BetterAuthPlugins)]
-    : baseAuthconfig.plugins;
-
-  const auth = betterAuth({
-    ...baseAuthconfig,
-    plugins: betterAuthPlugins,
-    database: adapter.auth.betterAuthAdapter
-  });
-
-  // Register translation
-  // Register dictionaries for panel Language
-  const dictionnaries = await registerTranslation(config.panel.language);
-  i18n.init(dictionnaries);
+export async function createRime<const C extends Config>(config: BuildConfig<C>): Promise<Rime<C>> {
+  // Phases 1 and 2 — codegen (dev only) then boot, in that order, written out in
+  // boot.server.ts. Everything below is phase 3: what a request gets.
+  const { plugins, configCtx, adapter, auth } = await bootRime(config);
 
   /**
    * Function that define the locale to use in a request event
@@ -127,6 +114,29 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
     return (event.locals.locale = defaultLocale);
   }
 
+  /**
+   * Builds `rime.collection(slug)` / `rime.area(slug)`.
+   *
+   * The cast is what makes writing it out safe: these types cannot be derived from the values —
+   * each accessor carries its own slug literals and document types — so they are declared, on
+   * `RimeContext` above, from each prototype's `api.server.ts`. That is rule 1's boundary.
+   */
+  const buildAccessors = (event: RequestEvent) =>
+    ({
+      collection: (slug: string) =>
+        collectionApi({
+          config: configCtx.getCollection(slug),
+          event,
+          defaultLocale: configCtx.getDefaultLocale()
+        }),
+      area: (slug: string) =>
+        areaApi({
+          config: configCtx.getArea(slug),
+          event,
+          defaultLocale: configCtx.getDefaultLocale()
+        })
+    }) as Pick<RimeContext, 'collection' | 'area'>;
+
   return {
     defineLocale,
 
@@ -146,8 +156,14 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
       return plugins;
     },
 
-    createRimeContext(event: RequestEvent) {
+    createRimeContext(event: RequestEvent): RimeContext<C> {
       defineLocale(event);
+
+      // The cast covers the plugin spread only. `plugins` is already `as
+      // typeof config.$InferPluginsServer` where bootRime builds it — a runtime
+      // `Object.fromEntries` cannot be checked against a mapped type — so re-deriving the same
+      // relationship here would only restate that cast, not verify it. Every other member is
+      // checked against the declaration above.
       return {
         logger,
 
@@ -164,7 +180,7 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
          *
          * @example
          * rime.adapter.db.query.pages.findFirst()
-         * rime.adatpter.auth.getUserAttributes({ authUserId: '12345', slug: 'users' })
+         * rime.adapter.collection('users').findMany({ query: { where: { id: { equals: '1' } } } })
          */
         get adapter() {
           return adapter;
@@ -197,33 +213,15 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
         },
 
         /**
-         * Get a collection api
-         * @example
+         * One accessor per registered prototype, each handing back that prototype's own local
+         * API for this request.
          *
+         * @example
          * rime.collection('pages').find({ query: 'where[isHome][equals]=true' })
-         */
-        collection<Slug extends keyof RegisterCollection>(slug: Slug) {
-          const collectionConfig = configCtx.collections[slug];
-          return new CollectionAPI<RegisterCollection[Slug]>({
-            event,
-            config: collectionConfig,
-            defaultLocale: configCtx.getDefaultLocale()
-          });
-        },
-
-        /**
-         * Get an area api
          * rime.area('settings').find()
          */
-        area<Slug extends keyof RegisterArea>(slug: Slug) {
-          const areaConfig = configCtx.areas[slug];
-          return new AreaAPI<RegisterArea[Slug]>({
-            event,
-            config: areaConfig,
-            defaultLocale: configCtx.getDefaultLocale()
-          });
-        }
-      };
+        ...buildAccessors(event)
+      } as unknown as RimeContext<C>;
     }
-  } as const;
+  };
 }

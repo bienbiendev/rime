@@ -1,15 +1,22 @@
-import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
-import { withLocalesSuffix } from '$lib/core/naming.js';
-import type { GenericBlock } from '$lib/core/types/doc.js';
+import type { AdapterDeps } from '$lib/adapter-sqlite/types.server.js';
+import { baseTableName, tableName as buildTableName } from './naming.server.js';
+import type { GenericBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
 import type { WithOptional } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
 import { omit } from '../util/object.js';
-import { toPascalCase } from '../util/string.js';
-import { generatePK, transformDataToSchema } from './util.server.js';
+import { generatePK, transformDataToSchema } from './columns.server.js';
 
-const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
-  const buildBlockTableName = (slug: string, blockName: string) =>
-    `${slug}Blocks${toPascalCase(blockName)}`;
+const createBlocksHandle = ({ db, tables }: AdapterDeps) => {
+  /**
+   * Callers name the owner by slug — the prototype's own, or its versions table's — and the
+   * mapping to a table happens here, so that a table name never travels in a parameter that
+   * names a slug.
+   */
+  const buildBlockTableName = (parentSlug: PrototypeSlug, blockName: string) =>
+    buildTableName({
+      owner: baseTableName(parentSlug),
+      child: { kind: 'blocks', name: blockName }
+    });
 
   const update: UpdateBlock = async ({ parentSlug, block, locale }) => {
     const table = buildBlockTableName(parentSlug, block.type);
@@ -20,7 +27,7 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
       await db.update(tables[table]).set(values).where(eq(tables[table].id, block.id));
     }
 
-    const keyTableLocales = withLocalesSuffix(table);
+    const keyTableLocales = buildTableName({ owner: table, branch: 'locales' });
     if (locale && keyTableLocales in tables) {
       const tableLocales = tables[keyTableLocales];
       const localizedColumns = getTableColumns(tableLocales);
@@ -31,7 +38,7 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
 
       if (!Object.keys(localizedValues).length) return true;
 
-      //@ts-expect-error keyTableLocales is key of db.query
+      // @ts-expect-error suck
       const localizedRow = await db.query[keyTableLocales].findFirst({
         where: and(eq(tableLocales.ownerId, block.id), eq(tableLocales.locale, locale))
       });
@@ -62,7 +69,7 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   const create: CreateBlock = async ({ parentSlug, block, ownerId, locale }) => {
     const tableName = buildBlockTableName(parentSlug, block.type);
     const blockId = generatePK();
-    const tableNameLocales = withLocalesSuffix(tableName);
+    const tableNameLocales = buildTableName({ owner: tableName, branch: 'locales' });
 
     if (locale && tableNameLocales in tables) {
       const unlocalizedColumns = getTableColumns(tables[tableName]);
@@ -97,36 +104,30 @@ const createBlocksFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
     return true;
   };
 
-  const getBlocksTableNames = (slug: string): string[] =>
-    Object.keys(tables).filter(
-      (key) => key.startsWith(`${slug}Blocks`) && !key.endsWith('Locales')
-    );
-
   return {
-    getBlocksTableNames,
     delete: deleteBlock,
     create,
     update
   };
 };
 
-export default createBlocksFacade;
+export default createBlocksHandle;
 
 /****************************************************/
 /* Types
 /****************************************************/
 
 type UpdateBlock = (args: {
-  parentSlug: string;
+  parentSlug: PrototypeSlug;
   block: GenericBlock;
   locale?: string;
 }) => Promise<boolean>;
 
 type CreateBlock = (args: {
-  parentSlug: string;
+  parentSlug: PrototypeSlug;
   block: WithOptional<GenericBlock, 'id'>;
   ownerId: string;
   locale?: string;
 }) => Promise<boolean>;
 
-type DeleteBlock = (args: { parentSlug: string; block: GenericBlock }) => Promise<boolean>;
+type DeleteBlock = (args: { parentSlug: PrototypeSlug; block: GenericBlock }) => Promise<boolean>;

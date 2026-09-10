@@ -28,7 +28,7 @@ vite.config.ts.timestamp-*
 .cache
 debug.md
 /logs
-db/*
+/db
 static
 src/hooks.server.ts
 src/routes
@@ -44,12 +44,9 @@ test-results
 bun.lock
 
 .auto
-/consumer-app-test
 src/params
 src/lib/site
-/.zed
 rime.code-workspace
-
-/db
+/CLAUDE.md
 # rime
 +rime.generated

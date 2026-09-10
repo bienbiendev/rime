@@ -1,4 +1,4 @@
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import path from 'path';

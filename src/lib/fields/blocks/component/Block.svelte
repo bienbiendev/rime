@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { GenericBlock } from '$lib/core/types/doc.js';
+  import type { GenericBlock } from '$lib/core/prototype/types.js';
   import type { BlocksFieldBlock } from '$lib/fields/types';
   import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
   import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';

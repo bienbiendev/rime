@@ -1,12 +1,13 @@
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { CollectionSlug, GenericDoc } from '$lib/core/types/doc.js';
+import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
 import type { DefaultValueFn, FormField, RelationRef, RelationValue } from '$lib/fields/types.js';
 import type { RegisterCollection } from '$lib/index.js';
 import { hasProps, isObjectLiteral } from '$lib/util/object.js';
 import { capitalize } from '$lib/util/string.js';
 import type { WithOptional } from '$lib/util/types.js';
-import { ensureRelationExists } from '$rime/modules';
+import { ensureRelationExists } from '$rime/modules:fields/relation';
+import dedent from 'dedent';
 import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
 
@@ -62,7 +63,17 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
   }
 
   protected override generateType(): string {
-    return `${this.name}${this.get.required ? '' : '?'}: RelationValue<${capitalize(this.get.relationTo)}Doc>`;
+    const relationValueType = dedent`
+    //@shared:start RelationValue
+    export type RelationValue<T> =
+      | T[] // When depth > 0, fully populated docs
+      | { id?: string; relationTo: string; documentId: string }[] // When depth = 0, relation objects
+      | string[]
+      | string; // When sending data to update
+    //@shared:end
+    `;
+    const fieldType = `${this.name}${this.get.required ? '' : '?'}: RelationValue<${capitalize(this.get.relationTo)}Doc>`;
+    return [relationValueType, fieldType].join('\n');
   }
 }
 
@@ -169,5 +180,14 @@ export type Relation = {
   locale?: string;
   livePreview?: GenericDoc;
 };
+
+/**
+ * A relation before it is written, when the row it hangs off does not exist yet.
+ *
+ * The only difference from `Relation` is that `ownerId` is not known — a create resolves it
+ * after inserting the owner. Declared in the sqlite adapter until now, which meant core's
+ * relation diffing imported a type from an adapter to describe its own intermediate value.
+ */
+export type BeforeOperationRelation = Omit<Relation, 'ownerId'> & { ownerId?: string };
 
 type QueryResolver<Doc extends GenericDoc = GenericDoc> = (doc: WithOptional<Doc, 'id'>) => string;

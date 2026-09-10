@@ -1,8 +1,9 @@
-import { filePathToBase64 } from '$lib/core/collections/upload/util/converter.server.js';
-import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant';
+import { filePathToBase64 } from '$lib/core/prototype/collection/upload/util/converter.server.js';
+import { PARAMS } from '$lib/core/constants';
+import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant';
 import test, { expect } from '@playwright/test';
 import path from 'path';
-import { API_BASE_URL, signIn } from '../util.js';
+import { API_BASE_URL, BASE_URL, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -250,7 +251,7 @@ test('Should update a specific infos version', async ({ request }) => {
 });
 
 test('Should return 2 versions of infos', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/infos_versions`, {
+  const response = await request.get(`${API_BASE_URL}/infos--versions`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
@@ -262,7 +263,7 @@ test('Should return 2 versions of infos', async ({ request }) => {
 });
 
 test('Should not return infos versions without credentials', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/infos_versions`);
+  const response = await request.get(`${API_BASE_URL}/infos--versions`);
   expect(response.status()).toBe(403);
 });
 
@@ -405,7 +406,7 @@ test('Should get the initial settings as a draft', async ({ request }) => {
 });
 
 test('Should return 2 versions of settings', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings_versions`, {
+  const response = await request.get(`${API_BASE_URL}/settings--versions`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
@@ -419,7 +420,7 @@ test('Should return 2 versions of settings', async ({ request }) => {
 });
 
 test('Should not return settings versions without credentials', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings_versions`);
+  const response = await request.get(`${API_BASE_URL}/settings--versions`);
   expect(response.status()).toBe(403);
 });
 
@@ -560,7 +561,7 @@ test('Should not return any news (collection query)', async ({ request }) => {
 });
 
 test('News should have 2 versions', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/news_versions`, {
+  const response = await request.get(`${API_BASE_URL}/news--versions`, {
     headers: await signInSuperAdmin(request)
   });
   const status = response.status();
@@ -719,6 +720,50 @@ test('Should publish the child page and then find it by parent', async ({ reques
   const { docs } = await response.json();
   expect(docs).toHaveLength(1);
   expect(docs[0].attributes.title).toBe('Child page');
+
+  /**
+   * And the other direction: the parent lists the child on `_children`.
+   *
+   * `nested` populates it on every read, and nothing asserted it — so the read it does could be
+   * replaced with an empty array and the whole suite would stay green. It is a filter and an
+   * order over columns the feature itself put on the row (`_parent`, `_position`), which is why
+   * it can be an ordinary query rather than a method on the adapter named after the question.
+   */
+  const parent = await request.get(`${API_BASE_URL}/pages/${parentPageId}`, { headers });
+  expect(parent.status()).toBe(200);
+  const { doc: parentDoc } = await parent.json();
+  expect(parentDoc._children).toEqual([childPageId]);
+});
+
+/**
+ * Sorting a versioned collection by one of its **base-row** columns.
+ *
+ * `pages` is versioned and nested, so `_position` is on `pages` and every content column is on
+ * `pages__versions`. `buildOrderByParam` only looked at the shadow's columns once a prototype had
+ * one, so this warned `"_position" is not a property of pages` and silently ordered by `createdAt`
+ * — which for two documents created in order is the same answer, and is why nothing caught it.
+ *
+ * Asserted in both directions for that reason: ascending agrees with creation order, descending
+ * does not, so only a real sort passes both.
+ */
+test('Should sort a versioned collection by a base-row column', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  // The parent was created first and the child second; give them the opposite `_position`.
+  await request.patch(`${API_BASE_URL}/pages/${parentPageId}`, { headers, data: { _position: 2 } });
+  await request.patch(`${API_BASE_URL}/pages/${childPageId}`, { headers, data: { _position: 1 } });
+
+  const idsSortedBy = async (sort: string) => {
+    const response = await request.get(`${API_BASE_URL}/pages?sort=${sort}`, { headers });
+    expect(response.status()).toBe(200);
+    const { docs } = await response.json();
+    return docs
+      .map((doc: { id: string }) => doc.id)
+      .filter((id: string) => id === parentPageId || id === childPageId);
+  };
+
+  expect(await idsSortedBy('_position')).toEqual([childPageId, parentPageId]);
+  expect(await idsSortedBy('-_position')).toEqual([parentPageId, childPageId]);
 });
 
 /*********************************************************
@@ -938,7 +983,7 @@ test('Should create a Pdf and exceed maxVersions with draft updates', async ({ r
   }
 
   const versionsResponse = await request.get(
-    `${API_BASE_URL}/pdf_versions?where[and][0][ownerId][equals]=${pdfId}&where[and][1][status][not_equals]=published&sort=-updatedAt`,
+    `${API_BASE_URL}/pdf--versions?where[and][0][ownerId][equals]=${pdfId}&where[and][1][status][not_equals]=published&sort=-updatedAt`,
     { headers }
   );
   expect(versionsResponse.status()).toBe(200);
@@ -958,7 +1003,7 @@ test('Should create a Pdf and exceed maxVersions with draft updates', async ({ r
 });
 
 /*********************************************************
-/* Delete cascades to _versions
+/* Delete cascades to versions
 /*********************************************************/
 
 test('Should remove all versions when the owning document is deleted', async ({ request }) => {
@@ -968,7 +1013,7 @@ test('Should remove all versions when the owning document is deleted', async ({ 
   expect(deleteResponse.status()).toBe(200);
 
   const versionsResponse = await request.get(
-    `${API_BASE_URL}/pdf_versions?where[ownerId][equals]=${pdfId}`,
+    `${API_BASE_URL}/pdf--versions?where[ownerId][equals]=${pdfId}`,
     { headers }
   );
   expect(versionsResponse.status()).toBe(200);
@@ -979,4 +1024,141 @@ test('Should remove all versions when the owning document is deleted', async ({ 
     headers
   });
   expect(getResponse.status()).toBe(404);
+});
+
+/*********************************************************
+/* Sorting a versioned list by a column that lives on the shadow
+/*********************************************************/
+
+/**
+ * A versioned collection's sortable columns are not on the row being listed.
+ *
+ * `findMany` queries the base table and pulls the content in through a `with`, so ordering by a
+ * content column has to go through a correlated subquery against the shadow — and, for a localized
+ * one, a second subquery through the shadow's locales branch. `buildOrderByParam` used to decide
+ * which of those to build by asking `config.versions` and then rebuilding the shadow's name with
+ * the versions feature's own `withVersionsSuffix`; it is handed the table name now, and a wrong
+ * one is silent: the sort simply falls back to `createdAt` and the list still returns 200.
+ *
+ * `attributes.slug` is localized, so this covers the deeper of the two branches.
+ */
+test('Should sort a versioned list by a localized content column', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  // Two published news whose slugs sort the opposite way round from their creation order, so a
+  // fallback to createdAt cannot pass by accident.
+  for (const slug of ['sort-probe-b', 'sort-probe-a']) {
+    const response = await request.post(`${API_BASE_URL}/news`, {
+      headers,
+      data: {
+        attributes: { title: slug, slug },
+        status: VERSIONS_STATUS.PUBLISHED
+      }
+    });
+    expect(response.status()).toBe(200);
+  }
+
+  const positions = async (sort: string) => {
+    const response = await request.get(`${API_BASE_URL}/news?sort=${sort}`, { headers });
+    expect(response.status()).toBe(200);
+    const { docs } = await response.json();
+    const slugs = docs.map((doc: { attributes: { slug: string } }) => doc.attributes.slug);
+    return [slugs.indexOf('sort-probe-a'), slugs.indexOf('sort-probe-b')];
+  };
+
+  const [ascA, ascB] = await positions('attributes.slug');
+  expect(ascA).toBeGreaterThanOrEqual(0);
+  expect(ascA).toBeLessThan(ascB);
+
+  const [descA, descB] = await positions('-attributes.slug');
+  expect(descB).toBeLessThan(descA);
+});
+
+/*********************************************************
+/* The file is actually removed when nothing references it
+/*********************************************************/
+
+/**
+ * The other half of the duplicate test above, and the one that was missing.
+ *
+ * That test proves a shared file **survives** a delete; nothing proved an unshared one is
+ * **removed**. The difference matters because the failure is one-sided: `cleanUpDocumentFile` asks
+ * `isFilenameStillReferenced`, and every way of getting that wrong answers "yes, still referenced"
+ * — so the file is silently kept forever and every assertion in the suite still passes.
+ *
+ * That is exactly what happens if the scan looks at the *base* table of a versioned upload
+ * collection as well as its shadow: the base row comes back under a different slug than `selfSlug`,
+ * counts as somebody else, and the document protects its own file from deletion. The scan is built
+ * to hit one table per collection for that reason.
+ *
+ * Bytes unique to this test, so `saveFile`'s dedup cannot point it at a file another test owns.
+ */
+test('Should delete the file from disk when the last document referencing it is deleted', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+
+  const filename = 'cleanup-probe.txt';
+  // A data URI, which is what filePathToBase64 hands the API elsewhere in this file.
+  const payload = Buffer.from(`unique-to-this-test-${Date.now()}`).toString('base64');
+  const base64 = `data:text/plain;base64,${payload}`;
+
+  const createResponse = await request.post(`${API_BASE_URL}/pdf`, {
+    headers,
+    data: {
+      file: { base64, filename },
+      alt: 'cleanup probe',
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(createResponse.status()).toBe(200);
+  const { doc } = await createResponse.json();
+  expect(doc.filename).toBe(filename);
+
+  // On disk, and served.
+  const beforeDelete = await request.get(`${BASE_URL}/medias/${filename}`);
+  expect(beforeDelete.status()).toBe(200);
+
+  const deleteResponse = await request.delete(`${API_BASE_URL}/pdf/${doc.id}`, { headers });
+  expect(deleteResponse.status()).toBe(200);
+
+  const afterDelete = await request.get(`${BASE_URL}/medias/${filename}`);
+  expect(afterDelete.status()).toBe(404);
+});
+
+/*********************************************************
+/* The computed url is stored, on the row that holds the content
+/*********************************************************/
+
+/**
+ * `populateURL` computes `$url` on every read and puts it on the document — so every assertion
+ * about `doc.url` passes whether or not the value was ever written to the database.
+ *
+ * The write is what this asserts, by filtering on the column: a `where[url]` query reads the
+ * stored value and nothing else does. Nothing covered it before, which is how the whole
+ * `updateDocumentUrl` branch could be replaced with a silent no-op and stay green — writing `url`
+ * to a versioned collection's *base* table simply finds no such column and writes nothing.
+ */
+test('Should store the computed url on the version row', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const slug = 'url-probe';
+  const createResponse = await request.post(`${API_BASE_URL}/news`, {
+    headers,
+    data: { attributes: { title: 'url probe', slug }, status: VERSIONS_STATUS.PUBLISHED }
+  });
+  expect(createResponse.status()).toBe(200);
+  const { doc } = await createResponse.json();
+
+  const url = `${process.env.PUBLIC_RIME_URL}/actualites/${slug}`;
+  expect(doc.url).toBe(url);
+
+  // The document is found by the *stored* url, not the computed one.
+  const found = await request.get(
+    `${API_BASE_URL}/news?where[url][equals]=${encodeURIComponent(url)}`,
+    { headers }
+  );
+  expect(found.status()).toBe(200);
+  const { docs } = await found.json();
+  expect(docs.map((one: { id: string }) => one.id)).toContain(doc.id);
 });

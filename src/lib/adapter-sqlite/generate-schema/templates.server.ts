@@ -1,6 +1,7 @@
 import type { FieldReference } from '$lib/core/fields/builders/form-field-builder.js';
-import { withDirectoriesSuffix } from '$lib/core/naming.js';
+import type { ColumnDeclaration, ColumnType, TableDeclaration } from '$lib/core/adapter.js';
 import { toSnakeCase } from '$lib/util/string.js';
+import { baseTableName, declaredTableProperty, getSchemaColumnNames } from '../naming.server.js';
 import dedent from 'dedent';
 
 const s = toSnakeCase;
@@ -33,7 +34,7 @@ export const templateTable = (table: string, content: string): string => {
   if (!content.includes('id:')) {
     content = `id: pk(),\n${content}`;
   }
-  return `export const ${table} = sqliteTable( '${s(table)}', {
+  return `export const ${table} = sqliteTable( '${table}', {
 		${content}
 	})
 	`;
@@ -78,29 +79,73 @@ export const templateReferences = ({
   onUpdate,
   selfReferencing
 }: FieldReference) => {
+  // `table` is a prototype *slug* — every $references caller passes one (auth: 'staff',
+  // the prototype's own slug, or a derived one). Resolving it here keeps
+  // features out of table naming, which is the adapter's business.
+  const referenced = baseTableName(table);
   const arrow = selfReferencing ? '(): any =>' : '() =>';
   const opts = [
     onDelete ? `onDelete: '${onDelete}'` : '',
     onUpdate ? `onUpdate: '${onUpdate}'` : ''
   ].filter(Boolean);
   const optsStr = opts.length ? `, { ${opts.join(', ')} }` : '';
-  return `.references(${arrow} ${table}.id${optsStr})`;
+  return `.references(${arrow} ${referenced}.id${optsStr})`;
 };
 
 /**
- * Generates authentication-related fields for a table
- * Adds super admin flag for the panel users table
+ * How a declared `ColumnType` is spelled in drizzle. The whole of what the adapter knows about a
+ * feature's storage: six shapes, none of them named after anything.
+ */
+const COLUMN_EXPR: Record<ColumnType, (snake: string) => string> = {
+  text: (snake) => `text('${snake}')`,
+  integer: (snake) => `integer('${snake}')`,
+  real: (snake) => `real('${snake}')`,
+  boolean: (snake) => `integer('${snake}', { mode: 'boolean' })`,
+  timestamp: (snake) => `integer('${snake}', { mode: 'timestamp' })`,
+  timestampMs: (snake) => `integer('${snake}', { mode: 'timestamp_ms' })`,
+  json: (snake) => `text('${snake}', { mode: 'json' })`
+};
+
+/**
+ * One column of a `TableDeclaration`, or one a feature puts on a prototype's own table.
+ *
+ * A `references` names a slug, so it resolves here — the same rule `templateReferences` follows
+ * for a field-level foreign key, and for the same reason: which table a slug lives in is the
+ * adapter's business.
  *
  * @example
  * ```typescript
- * authUserId: text("auth_user_id").references(() => authUsers.id).notNull(),
+ * authUserId: text('auth_user_id').notNull().references(() => authUsers.id, { onDelete: 'cascade' })
  * ```
  */
-export const templateHasAuth = (slug: string) => {
-  return `authUserId: text("auth_user_id").references(() => authUsers.id, { onDelete: 'cascade' }).notNull(),
-${slug === 'staff' ? `isSuperAdmin: integer('is_super_admin', { mode: 'boolean' }),` : ''}
-`;
+export const templateDeclaredColumn = (column: ColumnDeclaration): string => {
+  const { camel, snake } = getSchemaColumnNames({ name: column.name });
+  const references = column.references
+    ? `.references(() => ${declaredTableProperty(column.references.table)}.${column.references.column ?? 'id'}, { onDelete: '${column.references.onDelete ?? 'cascade'}' })`
+    : '';
+
+  return [
+    `${camel}: ${COLUMN_EXPR[column.type](snake)}`,
+    column.primary ? '.primaryKey()' : '',
+    column.notNull ? '.notNull()' : '',
+    column.unique ? '.unique()' : '',
+    column.defaultValue !== undefined ? `.default(${JSON.stringify(column.defaultValue)})` : '',
+    references
+  ].join('');
 };
+
+/**
+ * A table a feature declared: `templateAuth`, `templateAPIKey` and `templateDirectories` were
+ * three hand-written copies of this, and the schema generator had to know each by name to push it.
+ *
+ * Exported under the slug's own name and stored under the snake-cased one — see
+ * `declaredTableProperty`. No `pk()` default: a declaration says which column is the primary key.
+ */
+export const templateDeclaredTable = (table: TableDeclaration): string => `
+export const ${declaredTableProperty(table.slug)} = sqliteTable('${baseTableName(table.slug)}', {
+  ${table.columns.map(templateDeclaredColumn).join(',\n  ')}
+});
+`;
 
 /**
  * Generates unique and required modifiers for a field
@@ -136,9 +181,9 @@ export const templateUniqueRequired = (
  *
  * @example
  * ```typescript
- * export const rel_pagesVersionsHasOnePages = relations(pagesVersions, ({ one }) => ({
+ * export const rel_pagesShadowHasOnePages = relations(pagesShadow, ({ one }) => ({
  *   pages: one(pages, {
- *     fields: [pagesVersions.ownerId],
+ *     fields: [pagesShadow.ownerId],
  *     references: [pages.id],
  *   }),
  * }))
@@ -205,10 +250,11 @@ export const templateFieldRelationColumn = (table: string) => {
  */
 export const templateRelationFieldsTable = ({
   table,
+  junctionTable,
   relations,
   hasLocale
 }: FieldsRelationTableArgs) => `
-export const ${table}Rels = sqliteTable('${s(table)}_rels', {
+export const ${junctionTable} = sqliteTable('${junctionTable}', {
   id: pk(),
   path: text('path'),
   position: integer('position'),
@@ -252,113 +298,15 @@ export const templateExportRelationsFieldsToTable = (relationFieldsDic: Record<s
  * export const tables = {
  *   pages,
  *   pagesBlocksParagraph,
- *   pagesBlocksImage,
- *   authUsers,
- *   authAccounts,
- *   authVerifications,
- *   authSessions
+ *   pagesBlocksImage
  * }
  * ```
  */
 export const templateExportTables = (tables: string[]): string => dedent`
 
   export const tables = {
-    ${tables.join(',\n    ')},
-    authUsers,
-    authAccounts,
-    authVerifications,
-    authSessions
+    ${tables.join(',\n    ')}
   }
-`;
-
-/**
- * Generates authentication tables for the schema
- * Creates tables for users, sessions, accounts, and verifications
- */
-export const templateAuth = `
-export const authUsers = sqliteTable('auth_users', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	email: text('email').notNull().unique(),
-	emailVerified: integer('email_verified', { mode: 'boolean' }).notNull(),
-	image: text('image'),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
-	role: text('role'),
-	banned: integer('banned', { mode: 'boolean' }),
-	banReason: text('ban_reason'),
-	banExpires: integer('ban_expires', { mode: 'timestamp_ms' }),
-	type: text('type').notNull()
-  });
-
-export const authSessions = sqliteTable('auth_sessions', {
-	id: text('id').primaryKey(),
-	expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
-	token: text('token').notNull().unique(),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
-	ipAddress: text('ip_address'),
-	userAgent: text('user_agent'),
-	userId: text('user_id')
-		.notNull()
-		.references(() => authUsers.id, { onDelete: 'cascade' }),
-	impersonatedBy: text('impersonated_by')
-  });
-
-export const authAccounts = sqliteTable('auth_accounts', {
-	id: text('id').primaryKey(),
-	accountId: text('account_id').notNull(),
-	issuer: text('issuer').notNull(),
-	providerId: text('provider_id').notNull(),
-	userId: text('user_id')
-		.notNull()
-		.references(() => authUsers.id, { onDelete: 'cascade' }),
-	accessToken: text('access_token'),
-	refreshToken: text('refresh_token'),
-	idToken: text('id_token'),
-	accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'timestamp_ms' }),
-	refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'timestamp_ms' }),
-	scope: text('scope'),
-	password: text('password'),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull()
-  });
-
-export const authVerifications = sqliteTable('auth_verifications', {
-	id: text('id').primaryKey(),
-	identifier: text('identifier').notNull(),
-	value: text('value').notNull(),
-	expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-  });
-`;
-
-export const templateAPIKey = `
-export const apikey = sqliteTable("apikey", {
-	id: text('id').primaryKey(),
-	name: text('name'),
-	start: text('start'),
-	prefix: text('prefix'),
-	key: text('key').notNull(),
-	referenceId: text('reference_id').notNull().references(()=> authUsers.id, { onDelete: 'cascade' }),
-	configId: text('config_id').notNull().default('default'),
-	refillInterval: integer('refill_interval'),
-	refillAmount: integer('refill_amount'),
-	lastRefillAt: integer('last_refill_at', { mode: 'timestamp' }),
-	enabled: integer('enabled', { mode: 'boolean' }).default(true),
-	rateLimitEnabled: integer('rate_limit_enabled', { mode: 'boolean' }).default(true),
-	rateLimitTimeWindow: integer('rate_limit_time_window').default(86400000),
-	rateLimitMax: integer('rate_limit_max').default(10),
-	requestCount: integer('request_count'),
-	remaining: integer('remaining'),
-	lastRequest: integer('last_request', { mode: 'timestamp' }),
-	expiresAt: integer('expires_at', { mode: 'timestamp' }),
-	createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-	permissions: text('permissions'),
-	metadata: text('metadata')
-});
 `;
 
 /**
@@ -369,13 +317,9 @@ export const apikey = sqliteTable("apikey", {
  * ```typescript
  * const schema = {
  *   pages,
- *   pagesVersions,
- *   rel_pagesVersionsHasOnePages,
- *   rel_pagesHasManyVersions,
- *   authUsers,
- *   authAccounts,
- *   authVerifications,
- *   authSessions
+ *   pagesShadow,
+ *   rel_pagesShadowHasOnePages,
+ *   rel_pagesHasManyShadow
  * }
  *
  * declare module 'rimecms' {
@@ -388,12 +332,7 @@ export const apikey = sqliteTable("apikey", {
  */
 export const templateExportSchema = ({ enumTables, enumRelations }: TemplateExportSchemaArgs) => `
 const schema = {
-	${enumTables.join(',\n      ')},
-	${enumRelations.length ? enumRelations.join(',\n      ') + ',' : ''}
-	authUsers,
-	authAccounts,
-	authVerifications,
-	authSessions
+	${enumTables.join(',\n      ')}${enumRelations.length ? ',\n      ' + enumRelations.join(',\n      ') : ''}
 }
 
 declare module 'rimecms' {
@@ -412,19 +351,6 @@ export default schema
 export const templateHead = (slug: string) => dedent`
   /** ${slug} ============================================== **/`;
 
-export const templateDirectories = (slug: string) => `
-export const ${withDirectoriesSuffix(slug)} = sqliteTable('${s(withDirectoriesSuffix(slug))}', {
-  id: text('id').notNull().primaryKey(),
-  parent: text('parent').references(():any => ${withDirectoriesSuffix(slug)}.id, {
-		onDelete : 'cascade',
-		onUpdate : 'cascade',
-	}),
-  name: text('name').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-})
-`;
-
 type RelationOneArgs = {
   name: string;
   table: string;
@@ -437,6 +363,7 @@ type RelationManyArgs = {
 };
 type FieldsRelationTableArgs = {
   table: string;
+  junctionTable: string;
   relations: string[];
   hasLocale?: boolean;
 };

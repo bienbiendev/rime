@@ -1,0 +1,63 @@
+import type { BuiltCollection } from '$lib/core/config/types.js';
+import { RimeError } from '$lib/core/errors/index.js';
+import { runBeforeOperation, runDocHooks } from '$lib/core/pipeline/run.server.js';
+import type { OperationContext } from '$lib/core/pipeline/types.js';
+import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
+import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
+
+export type DeleteByIdArgs = {
+  id: string;
+};
+
+type Args = DeleteByIdArgs & { ctx: PrototypeApiContext<BuiltCollection> };
+
+export const deleteById = async <T extends GenericDoc>(args: Args): Promise<string> => {
+  const { ctx, id } = args;
+  const { config, event, isSystemOperation } = ctx;
+  const { rime } = event.locals;
+
+  let context: OperationContext<CollectionSlug> = {
+    params: { id },
+    isSystemOperation
+  };
+
+  context = await runBeforeOperation<CollectionSlug>({
+    config,
+    event,
+    operation: 'delete',
+    context
+  });
+
+  // No `content`: a delete means the document, so it reads whichever row is newest. That is what
+  // `draft: true` said here before there was a way to say "no narrowing".
+  const document = (await rime.adapter.collection(config.slug).find({ id })) as T;
+
+  if (!document) {
+    throw new RimeError(RimeError.NOT_FOUND);
+  }
+
+  const before = await runDocHooks<CollectionSlug, T>({
+    hooks: config.$hooks?.beforeDelete,
+    doc: document,
+    config,
+    event,
+    operation: 'delete',
+    context
+  });
+  context = before.context;
+
+  await rime.adapter.collection(config.slug).delete({ id });
+
+  // Deliberately the pre-hook document, matching the previous implementation: beforeDelete's
+  // returned doc was never carried into afterDelete.
+  await runDocHooks<CollectionSlug, T>({
+    hooks: config.$hooks?.afterDelete,
+    doc: document,
+    config,
+    event,
+    operation: 'delete',
+    context
+  });
+
+  return id;
+};

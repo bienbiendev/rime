@@ -1,6 +1,6 @@
 import { getRequestEvent } from '$app/server';
 import { env } from '$env/dynamic/public';
-import { PARAMS } from '$lib/core/constant.js';
+import { PARAMS } from '$lib/core/constants.js';
 import type { FieldHookShared, RelationValue } from '$lib/fields/types.js';
 import { trycatchFetch } from '$lib/util/function.js';
 import { toKebabCase } from '$lib/util/string.js';

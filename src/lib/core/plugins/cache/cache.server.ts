@@ -1,6 +1,6 @@
 import { getRequestEvent } from '$app/server';
 import { RimeError } from '$lib/core/errors/index.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import fs from 'fs';
 import path from 'path';
 

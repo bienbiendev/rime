@@ -1,5 +1,7 @@
+import { tableName as buildTableName } from '../../naming.server.js';
 import { templateRelationFieldsTable, templateRelationMany } from '../templates.server.js';
 import type { RelationFieldsMap } from './definition.server.js';
+import type { TableName } from '../../naming.server.js';
 
 /**
  * Generates a junction table definition for many-to-many relationships
@@ -23,22 +25,28 @@ import type { RelationFieldsMap } from './definition.server.js';
 export function generateJunctionTableDefinition(args: Args): Return {
   const { tableName, relationFieldsMap, hasLocale } = args;
   let junctionTable = '';
-  const relationName = `rel_${tableName}Rels`;
+  const relsTableName = buildTableName({ owner: tableName, child: { kind: 'rels' } });
+  const relationName = `rel_${relsTableName}`;
   const tablesRelationsTo = [...new Set(Object.values(relationFieldsMap).map((r) => r.to))];
   if (tablesRelationsTo.length) {
     junctionTable = [
-      templateRelationFieldsTable({ table: tableName, relations: tablesRelationsTo, hasLocale }),
+      templateRelationFieldsTable({
+        table: tableName,
+        junctionTable: relsTableName,
+        relations: tablesRelationsTo,
+        hasLocale
+      }),
       templateRelationMany({ name: relationName, table: tableName, many: tablesRelationsTo })
     ].join('\n');
   }
   return {
     junctionTable,
-    junctionTableName: `${tableName}Rels`
+    junctionTableName: relsTableName
   };
 }
 
 type Args = {
-  tableName: string;
+  tableName: TableName;
   relationFieldsMap: RelationFieldsMap;
   hasLocale: boolean;
 };

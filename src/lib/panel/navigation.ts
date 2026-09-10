@@ -1,5 +1,5 @@
-import type { User } from '$lib/core/collections/auth/types.js';
-import type { BuildConfig } from '$lib/core/config/server/index.server.js';
+import type { User } from '$lib/core/auth/types.js';
+import type { BuildConfig } from '$lib/core/config/index.server.js';
 import type { Config } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { Route } from './types.js';

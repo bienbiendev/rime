@@ -1,6 +1,6 @@
 import type { WithRequired } from 'better-auth/svelte';
 import type { Component, Snippet } from 'svelte';
-import type { GenericDoc } from '../core/types/doc.js';
+import type { GenericDoc } from '../core/prototype/types.js';
 export type { Navigation } from './navigation.js';
 
 export type Route = {

@@ -2,7 +2,7 @@
   import { browser } from '$app/environment';
   import { page } from '$app/state';
   import { getLiveContext } from '$lib/panel/context/live.svelte.js';
-  import { normalizeFieldPath } from '$lib/util/doc.js';
+  import { normalizeFieldPath } from '$lib/util/path.js';
   import { onDestroy, type Snippet } from 'svelte';
 
   type Props = {
