@@ -2,7 +2,13 @@ import { RimeError } from '$lib/core/errors/index.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import type { RegisterCollection } from '$lib/index.js';
 import type { PrototypeApiContext } from '../define.js';
-import { withSystem, type PrototypeApiArgs } from '../api.server.js';
+import type { RequestEvent } from '@sveltejs/kit';
+import type { Dic } from '$lib/util/types.js';
+import type { GenericDoc } from '../types.js';
+import { blankAuthDocument } from '$lib/core/auth/blank.server.js';
+import { isAuth } from '$lib/core/auth/enabled.js';
+import { createBlankDocument } from '../doc.js';
+import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
 import type { CollectionSlug } from '../types.js';
 import { create, type CreateArgs } from './operations/create.js';
 import { deleteById, type DeleteByIdArgs } from './operations/delete-by-id.js';
@@ -14,13 +20,81 @@ import { updateById, type UpdateByIdArgs } from './operations/update-by-id.js';
 
 type Ctx = PrototypeApiContext<BuiltCollection>;
 
+/** What building a collection's API for one request needs. */
+export type CollectionApiArgs = {
+  config: BuiltCollection;
+  event: RequestEvent;
+  defaultLocale: string | undefined;
+};
+
+/**
+ * The per-call plumbing this collection's operations are handed.
+ *
+ * Written out here rather than shared with the area's. The two contexts were one
+ * `prototypeContext` and they are not the same object: a collection's `blank()` strips auth's private members, because only a collection
+ * signs in; an area's publishes its first version, because only an area is booted. Neither step
+ * was ever reachable from the other kind, and a shared `shapeBlank` with an `intent` parameter
+ * existed to say so.
+ *
+ * Per-call, not per-process — `isSystemOperation` is part of it, so `.system()` is a second
+ * context rather than a flag anybody has to remember to forward.
+ */
+const context = (args: CollectionApiArgs & { isSystemOperation: boolean }): Ctx => {
+  const { config, event, defaultLocale, isSystemOperation } = args;
+
+  return {
+    config,
+    event,
+    defaultLocale,
+    isSystemOperation,
+
+    fallbackLocale: (locale?: string) => locale || event.locals.locale || defaultLocale,
+
+    versionQuery: (params, intent = 'read') => versionsReadQuery({ config, params, intent }),
+
+    blank: () =>
+      (isAuth(config)
+        ? blankAuthDocument(createBlankDocument(config, event))
+        : createBlankDocument(config, event)) as GenericDoc,
+
+    cached: <T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T> => {
+      if (!event.locals.cacheEnabled || isSystemOperation) return read();
+
+      const cacheKey = event.locals.rime.cache.createKey(operation, {
+        slug: config.slug,
+        userEmail: event.locals.user?.email,
+        userRoles: event.locals.user?.roles,
+        ...key
+      });
+
+      return event.locals.rime.cache.get(cacheKey, read);
+    }
+  };
+};
+
+/**
+ * Adds `.system()`: the same API over an escalated context.
+ *
+ * It has to *re-enter* the builder — a system call is the same API over a different context, not a
+ * mutable flag on a shared object — so it cannot be a plain member. `system(false)` hands back the
+ * API it was called on, which is what lets `system(someBoolean)` read as "escalate if needed".
+ */
+const build = <Doc extends RegisterCollection[CollectionSlug]>(
+  args: CollectionApiArgs,
+  isSystemOperation = false
+): CollectionApi<Doc> => {
+  const api = shape<Doc>(context({ ...args, isSystemOperation })) as CollectionApi<Doc>;
+  api.system = (isSystem = true) => (isSystem ? build<Doc>(args, true) : api);
+  return api;
+};
+
 /**
  * Everything `rime.collection('pages')` hands back, declared here in the collection's own folder,
  * next to the operations that implement it.
  *
  * **Its whole surface**, `config` and `blank` included. Those used to be appended by a shared
  * `buildPrototypeApi`, which meant no single file said what a collection's API actually was.
- * `system` is the one exception, and it is composed rather than appended — see `withSystem`.
+ * `system` is the one exception, and it is composed rather than appended — see `build` below.
  */
 const shape = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
   /** The built config this API acts on. */
@@ -199,8 +273,8 @@ const shape = <Doc extends RegisterCollection[CollectionSlug]>(ctx: Ctx) => ({
 
 /** Builds a collection's API for one request. What `rime.collection(slug)` calls. */
 export const collectionApi = <Doc extends RegisterCollection[CollectionSlug]>(
-  args: PrototypeApiArgs<BuiltCollection>
-): CollectionApi<Doc> => withSystem(args, shape<Doc>) as CollectionApi<Doc>;
+  args: CollectionApiArgs
+): CollectionApi<Doc> => build<Doc>(args);
 
 /**
  * What `rime.collection(slug)` hands back.

@@ -1,12 +1,80 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
 import type { RegisterArea } from '$lib/index.js';
 import type { PrototypeApiContext } from '../define.js';
-import { withSystem, type PrototypeApiArgs } from '../api.server.js';
+import type { RequestEvent } from '@sveltejs/kit';
+import type { Dic } from '$lib/util/types.js';
+import { createBlankDocument } from '../doc.js';
+import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
 import type { GenericDoc } from '../types.js';
 import { find, type FindArgs } from './operations/find.js';
 import { update, type UpdateArgs } from './operations/update.js';
 
 type Ctx = PrototypeApiContext<BuiltArea>;
+
+/** What building an area's API for one request needs. */
+export type AreaApiArgs = {
+  config: BuiltArea;
+  event: RequestEvent;
+  defaultLocale: string | undefined;
+};
+
+/**
+ * The per-call plumbing this area's operations are handed.
+ *
+ * Written out here rather than shared with the collection's. The two contexts were one
+ * `prototypeContext` and they are not the same object: an area's `blank()` is the document as its
+ * fields default it, full stop — no auth step, because an area lists no `auth`. The collection's
+ * strips auth's private members. Neither was ever reachable from the other kind, and a shared
+ * `shapeBlank` with an `intent` parameter existed to say so.
+ *
+ * Per-call, not per-process — `isSystemOperation` is part of it, so `.system()` is a second
+ * context rather than a flag anybody has to remember to forward.
+ */
+const context = (args: AreaApiArgs & { isSystemOperation: boolean }): Ctx => {
+  const { config, event, defaultLocale, isSystemOperation } = args;
+
+  return {
+    config,
+    event,
+    defaultLocale,
+    isSystemOperation,
+
+    fallbackLocale: (locale?: string) => locale || event.locals.locale || defaultLocale,
+
+    versionQuery: (params, intent = 'read') => versionsReadQuery({ config, params, intent }),
+
+    blank: () => createBlankDocument(config, event),
+
+    cached: <T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T> => {
+      if (!event.locals.cacheEnabled || isSystemOperation) return read();
+
+      const cacheKey = event.locals.rime.cache.createKey(operation, {
+        slug: config.slug,
+        userEmail: event.locals.user?.email,
+        userRoles: event.locals.user?.roles,
+        ...key
+      });
+
+      return event.locals.rime.cache.get(cacheKey, read);
+    }
+  };
+};
+
+/**
+ * Adds `.system()`: the same API over an escalated context.
+ *
+ * It has to *re-enter* this builder — a system call is the same API over a different context, not
+ * a mutable flag on a shared object. `system(false)` hands back the API it was called on, which is
+ * what lets `system(someBoolean)` read as "escalate if needed".
+ */
+const build = <Doc extends GenericDoc>(
+  args: AreaApiArgs,
+  isSystemOperation = false
+): AreaApi<Doc> => {
+  const api = shape<Doc>(context({ ...args, isSystemOperation })) as AreaApi<Doc>;
+  api.system = (isSystem = true) => (isSystem ? build<Doc>(args, true) : api);
+  return api;
+};
 
 /**
  * Everything `rime.area('settings')` hands back: two operations, a config and a blank.
@@ -17,7 +85,7 @@ type Ctx = PrototypeApiContext<BuiltArea>;
  * is why this is a separate definition rather than a collection with a flag.
  *
  * The whole surface is here, `config` and `blank` included; only `system` is composed on, by
- * `withSystem`, because it has to re-enter this builder.
+ * `system` is composed on by `build` below, because it has to re-enter that builder.
  */
 const shape = <Doc extends GenericDoc>(ctx: Ctx) => ({
   /** The built config this API acts on. */
@@ -87,8 +155,8 @@ const shape = <Doc extends GenericDoc>(ctx: Ctx) => ({
 });
 
 /** Builds an area's API for one request. What `rime.area(slug)` calls. */
-export const areaApi = <Doc extends GenericDoc>(args: PrototypeApiArgs<BuiltArea>): AreaApi<Doc> =>
-  withSystem(args, shape<Doc>) as AreaApi<Doc>;
+export const areaApi = <Doc extends GenericDoc>(args: AreaApiArgs): AreaApi<Doc> =>
+  build<Doc>(args);
 
 /** What `rime.area(slug)` hands back. See the note on `CollectionApi` about the context. */
 export type AreaApi<Doc extends GenericDoc = GenericDoc> = ReturnType<typeof shape<Doc>> & {

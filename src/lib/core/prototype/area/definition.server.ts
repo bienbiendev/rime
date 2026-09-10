@@ -1,7 +1,7 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
 import { createBlankDocument } from '../doc.js';
-import { shapeBlank } from '../blank.server.js';
+import { blankVersion } from '$lib/core/prototype/shared/versions/blank.js';
 import { area as base } from './definition.js';
 import { areaHooks } from './hooks.server.js';
 import { rest } from './rest/index.server.js';
@@ -38,7 +38,7 @@ export const area = definePrototype<BuiltArea>({
       // Intent `'seed'`, not `'create'`: a feature that gives this prototype a versions may need
       // the first row to differ from what an author's create starts with. See
       // FeatureDefinition.blank.
-      blank: shapeBlank(createBlankDocument(config), config, 'seed'),
+      blank: blankVersion(createBlankDocument(config), config),
       locale: defaultLocale
     });
   }

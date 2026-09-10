@@ -3,7 +3,7 @@ import { createBlankDocument } from '$lib/core/prototype/doc.js';
 import { group } from '$lib/fields/group/index.js';
 import { text } from '$lib/fields/text/index.js';
 import { describe, expect, it } from 'vitest';
-import { shapeBlank } from '$lib/core/prototype/blank.server.js';
+import { isAuth } from './enabled.js';
 import { blankAuthDocument } from './blank.server.js';
 
 /**
@@ -34,9 +34,11 @@ describe('blankAuthDocument', () => {
   });
 });
 
-describe('shapeBlank', () => {
+describe("a collection's blank()", () => {
   const blankFor = (config: Parameters<typeof createBlankDocument>[0]) =>
-    shapeBlank(createBlankDocument(config), config, 'create') as Record<string, unknown>;
+    (isAuth(config)
+      ? blankAuthDocument(createBlankDocument(config))
+      : createBlankDocument(config)) as Record<string, unknown>;
 
   it('strips an auth collection through the feature list', () => {
     const built = create('spec_blank_users', { auth: true, fields: [text('bio')] });

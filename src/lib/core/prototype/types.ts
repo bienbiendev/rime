@@ -8,9 +8,6 @@ import type { Dic } from '$lib/util/types.js';
 
 export type Prototype = 'area' | 'collection';
 
-/** Which blank is being shaped — see `prototype/blank.server.ts`. */
-export type BlankIntent = 'create' | 'seed';
-
 export type RawDoc = Dic & { id: string };
 
 export type BaseDoc = {
