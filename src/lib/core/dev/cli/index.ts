@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { spawnSync } from 'node:child_process';
 import { program } from 'commander';
 import { existsSync, writeFileSync } from 'fs';
-import { envProduction } from './build/templates.js';
+import { envProduction } from './templates/build.js';
 
 program.version('0.1').description('CMS utilities');
 
@@ -15,7 +15,7 @@ program
   .option('-f, --force', 'Force init with default package name', false)
   .option('-s, --skip-install', 'Do not install dependencies', false)
   .action(async (args) => {
-    const init = await import('./init/index.server.js').then((m) => m.init);
+    const init = await import('./commands/init.server.js').then((m) => m.init);
     init(args);
   });
 
@@ -25,7 +25,7 @@ program
   .option('-e, --with-env', 'Create the /app/.env file from the production template', false)
   .option('-s, --with-static', 'Copy the current static directory', false)
   .action(async (args) => {
-    const build = await import('./build/index.js').then((m) => m.build);
+    const build = await import('./commands/build.js').then((m) => m.build);
     build(args);
   });
 
@@ -33,7 +33,7 @@ program
   .command('clear')
   .option('-f, --force', 'Force clear without prompt', false)
   .action(async (args) => {
-    const clear = await import('./clear/index.server.js').then((m) => m.clear);
+    const clear = await import('./commands/clear.server.js').then((m) => m.clear);
     clear(args);
   });
 
@@ -41,7 +41,7 @@ program
   .command('generate')
   .option('-f, --force', 'Force generation, ignore cache, overwrite routes', false)
   .action(async (args) => {
-    const generate = await import('./generate/index.server.js').then((m) => m.generate);
+    const generate = await import('./commands/generate.server.js').then((m) => m.generate);
     try {
       await generate({
         force: args.force
@@ -54,8 +54,8 @@ program
 program
   .command('package')
   .description(
-    "Builds a rime plugin/field package for publish: svelte-kit sync, svelte-package, then " +
-      'generate-manifest — makes any $rime/modules splits it exports consumable by anyone who ' +
+    'Builds a rime plugin/field package for publish: svelte-kit sync, svelte-package, then ' +
+      'generate-exports — makes any $rime/modules: splits it declares resolvable by anyone who ' +
       'installs it. Equivalent to chaining those three yourself.'
   )
   .action(() => {
@@ -71,9 +71,9 @@ program
       return;
     }
 
-    import('./generate-manifest/index.server.js').then(({ generateManifest }) => {
+    import('./commands/generate-exports.server.js').then(({ generateExports }) => {
       try {
-        generateManifest();
+        generateExports();
       } catch (error: any) {
         logger.error(error.message);
         process.exitCode = 1;
@@ -82,18 +82,18 @@ program
   });
 
 program
-  .command('generate-manifest')
+  .command('generate-exports')
   .description(
-    "Run after svelte-package, before publish — makes this package's own $rime/modules " +
-      'splits consumable by anyone who installs it (rewrites the barrel into qualified ' +
-      'imports in dist/, writes dist/.rime-modules.json + .d.ts).'
+    "Run after svelte-package, before publish — makes this package's own $rime/modules: " +
+      'splits resolvable by anyone who installs it (rewrites them to package subpaths in ' +
+      'dist/, writes the matching exports entries into package.json).'
   )
   .action(async () => {
-    const generateManifest = await import('./generate-manifest/index.server.js').then(
-      (m) => m.generateManifest
+    const generateExports = await import('./commands/generate-exports.server.js').then(
+      (m) => m.generateExports
     );
     try {
-      generateManifest();
+      generateExports();
     } catch (error: any) {
       logger.error(error.message);
       process.exitCode = 1;

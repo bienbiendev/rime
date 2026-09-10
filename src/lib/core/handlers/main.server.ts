@@ -1,5 +1,5 @@
 import { building } from '$app/environment';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import { type Handle } from '@sveltejs/kit';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import type { Config } from '../config/types.js';

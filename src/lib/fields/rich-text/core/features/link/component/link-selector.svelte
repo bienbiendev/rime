@@ -8,7 +8,7 @@
   import { getAPIProxyContext, type Resource } from '$lib/panel/context/api-proxy.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import { apiUrl } from '$lib/util/index.js';
-  import validate from '$lib/util/validate.js';
+  import validate from '$lib/core/fields/validate.js';
   import { CornerDownLeft, ExternalLink, Link2, Newspaper, Trash } from '@lucide/svelte';
   import type { Editor } from '@tiptap/core';
   import { watch } from 'runed';

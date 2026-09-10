@@ -1,18 +1,18 @@
 import { invalidateAll } from '$app/navigation';
-import type { Directory } from '$lib/core/collections/upload/upload.js';
-import { isUploadConfig } from '$lib/core/collections/upload/util/config.js';
+import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
+import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { PARAMS } from '$lib/core/constant.js';
+import { PARAMS } from '$lib/core/constants.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/index.js';
 import { isFormField } from '$lib/core/fields/util.js';
-import { withDirectoriesSuffix } from '$lib/core/naming.js';
-import type { GenericDoc, GenericNestedDoc } from '$lib/core/types/doc.js';
+import { directoriesKebab } from '$lib/core/prototype/collection/upload/naming.js';
+import type { GenericDoc, GenericNestedDoc } from '$lib/core/prototype/types.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import type { FormField } from '$lib/fields/types.js';
 import type { FieldPanelTableConfig } from '$lib/panel/types.js';
 import { panelUrl } from '$lib/panel/util/url.js';
-import { toNestedStructure } from '$lib/util/doc.js';
+import { toNestedStructure } from '$lib/core/prototype/doc.js';
 import { trycatch, trycatchFetch } from '$lib/util/function.js';
 import { apiUrl } from '$lib/util/index.js';
 import { getValueAtPath, hasProp } from '$lib/util/object.js';
@@ -373,7 +373,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
 
     get apiDirectoriesUrl() {
       if (!config.upload) throw new Error(`${config.slug} is not an upload collection`);
-      return apiUrl(withDirectoriesSuffix(config.kebab));
+      return apiUrl(directoriesKebab(config.slug));
     },
 
     config,

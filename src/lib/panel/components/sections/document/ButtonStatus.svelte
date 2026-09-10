@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
-  import { PARAMS, VERSIONS_STATUS } from '$lib/core/constant.js';
+  import { PARAMS } from '$lib/core/constants.js';
+  import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import * as Radio from '$lib/panel/components/ui/radio-group/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';

@@ -1,5 +1,5 @@
 import type { Dic, WithRequired } from '$lib/util/types.js';
-import { normalizeFieldPath } from './doc.js';
+import { normalizeFieldPath } from './path.js';
 
 /**
  * Creates a new object with only the specified keys from the original object.
@@ -381,3 +381,17 @@ type RemoveKeysDeep<T, K extends string> = T extends (infer U)[]
         [P in keyof T as P extends K ? never : P]: RemoveKeysDeep<T[P], K>;
       }
     : T;
+
+/**
+ * Ensure path exists, meaning the path hold anything else than undefined.
+ *
+ * @example
+ * const obj = { foo: { baz: null }, bar: 1 };
+ * ensurePathExists('foo.bar', obj); // false
+ * ensurePathExists('foo.baz', obj); // true
+ * ensurePathExists('bar', obj); // true
+ */
+export const ensurePathExists = (path: string, obj: Dic): boolean => {
+  const value = getValueAtPath(path, obj);
+  return value !== undefined;
+};

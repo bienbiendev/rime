@@ -1,11 +1,11 @@
 <script lang="ts">
-  import type { GenericDoc } from '$lib/core/types/doc.js';
+  import type { GenericDoc } from '$lib/core/prototype/types.js';
   import Doc from '$lib/panel/components/sections/document/Document.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import CardResource from '$lib/panel/components/ui/card-resource/card-resource.svelte';
   import * as Sheet from '$lib/panel/components/ui/sheet/index.js';
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import { createBlankDocument } from '$lib/util/doc.js';
+  import { createBlankDocument } from '$lib/core/prototype/doc.js';
   import { Plus } from '@lucide/svelte';
   import Sortable from 'sortablejs';
   import { onDestroy } from 'svelte';

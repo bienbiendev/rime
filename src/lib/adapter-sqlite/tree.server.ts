@@ -1,18 +1,21 @@
-import type { GenericAdapteFacadeArgs } from '$lib/adapter-sqlite/types.server.js';
-import { withLocalesSuffix } from '$lib/core/naming.js';
-import type { TreeBlock } from '$lib/core/types/doc.js';
+import type { AdapterDeps } from '$lib/adapter-sqlite/types.server.js';
+import { baseTableName, tableName as buildTableName } from './naming.server.js';
+import type { PrototypeSlug, TreeBlock } from '$lib/core/prototype/types.js';
 import { extractFieldName } from '$lib/fields/tree/util.js';
 import type { WithRequired } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
 import { omit } from '../util/object.js';
-import { toPascalCase } from '../util/string.js';
-import { generatePK, transformDataToSchema } from './util.server.js';
+import { generatePK, transformDataToSchema } from './columns.server.js';
 
-const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
+const createTreeHandle = ({ db, tables }: AdapterDeps) => {
   //
-  const buildBlockTableName = (slug: string, blockPath: string) => {
+  /** As in the blocks facade: callers name the owner by slug, the table is derived here. */
+  const buildBlockTableName = (parentSlug: PrototypeSlug, blockPath: string) => {
     const [fieldName] = extractFieldName(blockPath);
-    return `${slug}Tree${toPascalCase(fieldName)}`;
+    return buildTableName({
+      owner: baseTableName(parentSlug),
+      child: { kind: 'tree', name: fieldName }
+    });
   };
 
   const update: UpdateBlock = async ({ parentSlug, block, locale }) => {
@@ -24,7 +27,7 @@ const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
       await db.update(tables[tableName]).set(values).where(eq(tables[tableName].id, block.id));
     }
 
-    const tableLocalesName = withLocalesSuffix(tableName);
+    const tableLocalesName = buildTableName({ owner: tableName, branch: 'locales' });
     if (locale && tableLocalesName in tables) {
       const tableLocales = tables[tableLocalesName];
       const localizedColumns = getTableColumns(tableLocales);
@@ -66,7 +69,7 @@ const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
   const create: CreateBlock = async ({ parentSlug, block, ownerId, locale }) => {
     const table = buildBlockTableName(parentSlug, block.path);
     const blockId = generatePK();
-    const tableLocales = withLocalesSuffix(table);
+    const tableLocales = buildTableName({ owner: table, branch: 'locales' });
 
     if (locale && tableLocales in tables) {
       const unlocalizedColumns = getTableColumns(tables[table]);
@@ -101,37 +104,33 @@ const createTreeFacade = ({ db, tables }: GenericAdapteFacadeArgs) => {
     return true;
   };
 
-  const getBlocksTableNames = (slug: string): string[] =>
-    Object.keys(tables).filter((key) => key.startsWith(`${slug}Tree`) && !key.endsWith('Locales'));
-
   return {
-    getBlocksTableNames,
     delete: deleteBlock,
     create,
     update
   };
 };
 
-export default createTreeFacade;
+export default createTreeHandle;
 
 /****************************************************/
 /* Types
 /****************************************************/
 
 type UpdateBlock = (args: {
-  parentSlug: string;
+  parentSlug: PrototypeSlug;
   block: WithRequired<TreeBlock, 'path'>;
   locale?: string;
 }) => Promise<boolean>;
 
 type CreateBlock = (args: {
-  parentSlug: string;
+  parentSlug: PrototypeSlug;
   block: WithRequired<TreeBlock, 'path'>;
   ownerId: string;
   locale?: string;
 }) => Promise<boolean>;
 
 type DeleteBlock = (args: {
-  parentSlug: string;
+  parentSlug: PrototypeSlug;
   block: WithRequired<TreeBlock, 'path'>;
 }) => Promise<boolean>;

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { Directory } from '$lib/core/collections/upload/upload';
+  import type { Directory } from '$lib/core/prototype/collection/upload/types';
   import { t__ } from '$lib/core/i18n/index.js';
-  import { withDirectoriesSuffix } from '$lib/core/naming.js';
+  import { directoriesKebab } from '$lib/core/prototype/collection/upload/naming.js';
   import Empty from '$lib/panel/components/sections/collection/Empty.svelte';
   import Folder from '$lib/panel/components/sections/collection/folder/Folder.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
@@ -59,7 +59,7 @@
   });
 
   const foldersURL = $derived.by(() => {
-    return `${apiUrl(withDirectoriesSuffix(config.kebab))}?where[parent][equals]=${path}`;
+    return `${apiUrl(directoriesKebab(config.slug))}?where[parent][equals]=${path}`;
   });
 
   const APIProxy = getAPIProxyContext();

@@ -16,17 +16,16 @@ import {
   tree
 } from '$lib/fields/index.js';
 import { bold } from '$lib/fields/rich-text/client.js';
-import { normalizeFieldPath } from '$lib/util/doc.js';
+import { normalizeFieldPath } from '$lib/util/path.js';
 import { Images, Text } from '@lucide/svelte';
 import { expect, test } from 'vitest';
 import { FormFieldBuilder } from './builders/form-field-builder.js';
 import { getFieldAtPath, getFieldListAtPath, isFormField } from './util.js';
 
-// Builder-equivalent of the old raw-data fixture — getFieldAtPath now
-// operates on FieldBuilder[] like getFieldListAtPath does, not plain Field[].
-// Kept separate from the `builders` tree below (used by getFieldListAtPath
-// tests) since that one's field counts are asserted exactly and don't
-// include this fixture's group-inside-attributes / tree-inside-slider-block.
+// getFieldAtPath operates on FieldBuilder[], like getFieldListAtPath. Kept separate from the
+// `builders` tree below (used by the getFieldListAtPath tests) because that one's field counts
+// are asserted exactly and do not include this fixture's group-inside-attributes and
+// tree-inside-slider-block.
 const configByPathFields = [
   tabs(
     tab('hero').fields(

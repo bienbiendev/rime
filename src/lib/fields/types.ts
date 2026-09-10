@@ -1,10 +1,10 @@
-import type { OperationContext } from '$lib/core/operations/hooks/index.server.js';
+import type { OperationContext } from '$lib/core/pipeline/types.js';
 import type { DocumentFormContext } from '$lib/panel/index.js';
 import type { Dic } from '$lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Component } from 'svelte';
-import type { User } from '../core/collections/auth/types.js';
+import type { User } from '$lib/core/auth/types.js';
 import type { FieldPanelTableConfig } from '../panel/types.js';
 
 export type { BlocksField, BlocksFieldBlock } from './blocks/index.js';

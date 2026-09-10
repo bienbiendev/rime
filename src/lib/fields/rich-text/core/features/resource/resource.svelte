@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { GenericDoc } from '$lib/core/types/doc.js';
+  import type { GenericDoc } from '$lib/core/prototype/types.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import CardResource from '$lib/panel/components/ui/card-resource/card-resource.svelte';
   import * as Command from '$lib/panel/components/ui/command/index.js';

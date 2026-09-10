@@ -145,10 +145,11 @@ verify_plugin_mounted() {
   (
     cd "$WORK_DIR"
 
-    # Schema always lands here.
+    # Schema always lands here. A prototype's table is exported under its SQL name, so the
+    # `pluginVisits` collection is `plugin_visits` — see adapter-sqlite/naming.server.ts.
     SCHEMA_FILE="$config_dir.generated/schema.server.ts"
-    grep -q "pluginVisits" "$SCHEMA_FILE" || {
-      echo "generated schema is missing the plugin's pluginVisits table"
+    grep -q "sqliteTable( *'plugin_visits'" "$SCHEMA_FILE" || {
+      echo "generated schema is missing the plugin's plugin_visits table"
       cat "$SCHEMA_FILE"
       exit 1
     }
