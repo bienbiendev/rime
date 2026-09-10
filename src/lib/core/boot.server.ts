@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 import { createAuthInstance } from '$lib/core/auth/better-auth/instance.server.js';
 import type { Config } from '$lib/core/config/types.js';
-import { bootUpload } from '$rime/modules';
+import { bootUpload } from './prototype/collection/upload/boot/index.server.js';
 import { createConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
 import i18n from './i18n/index.js';
@@ -29,9 +29,8 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   // 2. The config interface — every lookup by slug, the locale list, the raw config.
   const configCtx = createConfigContext(config);
 
-  // 3. Upload makes sure the static directory it writes into exists. `undefined` on a client
-  //    build, where nothing boots.
-  bootUpload?.(config);
+  // 3. Upload makes sure the static directory it writes into exists.
+  bootUpload(config);
 
   // 4. Phase 1, in dev only: write routes, schema and types. Before the adapter, which imports
   //    the schema this produces.

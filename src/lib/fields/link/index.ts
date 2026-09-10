@@ -6,7 +6,7 @@ import validate from '$lib/core/fields/validate.js';
 import Cell from './component/Cell.svelte';
 import LinkComp from './component/Link.svelte';
 import type { Link, LinkType } from './types.js';
-import { populateRessourceURL } from '$rime/modules';
+import { populateRessourceURL } from '$rime/modules:fields/link';
 
 export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
   constructor(name: string) {

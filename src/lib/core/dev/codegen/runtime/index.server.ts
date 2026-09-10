@@ -98,7 +98,7 @@ export function findModulePair(root: string, name: string): RuntimeRegistryEntry
  * Recursively finds every `module`/`module.server` folder under `root`, registered under the
  * containing folder's path relative to `root` — e.g. `fields/relation/module.ts` under a
  * `src/lib`-rooted scan registers as `fields/relation`. Used by the `$rime/modules` barrel
- * (live, dev-mode only) and by `generate-manifest` (once, at prepack, scanning `dist/`).
+ * (live, dev-mode only) and by `generate-exports` (once, at prepack, scanning `dist/`).
  *
  * A pair sitting directly in `root` itself (e.g. `src/lib/module.ts`, no subfolder) registers
  * under the key `.` — same convention `package.json`'s own `exports` map uses for a package's

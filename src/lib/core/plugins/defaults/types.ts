@@ -1,6 +1,6 @@
 import type { RouteConfig } from '$lib/core/config/types.js';
 import type { CacheConfig } from '$lib/core/plugins/cache/types.js';
-import type { SMTPConfig } from '../mailer/module.server.js';
+import type { SMTPConfig } from '../mailer/index.server.js';
 import type { Plugin } from '../index.js';
 
 /**

@@ -1,12 +1,12 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { augmentAuth } from '$rime/modules';
+import { augmentAuth } from '$rime/modules:core/auth';
 import { isAuth } from '$lib/core/auth/enabled.js';
 import { augmentMetas } from '$lib/core/prototype/shared/metas/augment.js';
-import { augmentNested } from '$rime/modules';
+import { augmentNested } from '$rime/modules:core/prototype/collection/nested';
 import { isNested } from '$lib/core/prototype/collection/nested/enabled.js';
 import { augmentThumbnail } from '$lib/core/prototype/collection/thumbnail/augment.js';
 import { augmentTitle } from '$lib/core/prototype/shared/title/augment.js';
-import { augmentUpload } from '$rime/modules';
+import { augmentUpload } from '$rime/modules:core/prototype/collection/upload';
 import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
 import { augmentUrl } from '$lib/core/prototype/shared/url/augment.js';
 import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';

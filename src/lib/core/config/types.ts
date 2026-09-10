@@ -14,7 +14,7 @@ import type { VersionsConfig } from '$lib/core/prototype/shared/versions/types.j
 import type { Adapter } from '$lib/core/adapter.js';
 import type { Hook, HookBeforeOperation } from '$lib/core/pipeline/types.js';
 import type { Plugin } from '$lib/core/plugins/index.js';
-import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
+import type { SMTPConfig } from '$lib/core/plugins/mailer/index.server.js';
 import type { Field } from '$lib/fields/types.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
 import type { DashboardEntry } from '$lib/panel/pages/dashboard/types.js';

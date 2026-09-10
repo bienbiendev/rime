@@ -1,5 +1,7 @@
-import { configureCors, configureStaff, configureUploadDirectories } from '$rime/modules';
-import { configureVersions } from '$rime/modules';
+import { configureCors } from '$rime/modules:core/cors';
+import { configureStaff } from '$rime/modules:core/auth';
+import { configureUploadDirectories } from '$rime/modules:core/prototype/collection/upload';
+import { configureVersions } from '$rime/modules:core/prototype/shared/versions';
 import { configureAuthTables } from '$lib/core/auth/configure.js';
 import { configurePanel } from '$lib/core/panel/configure.js';
 import type { BuiltConfig } from './types.js';

@@ -55,7 +55,7 @@ program
   .command('package')
   .description(
     'Builds a rime plugin/field package for publish: svelte-kit sync, svelte-package, then ' +
-      'generate-manifest — makes any $rime/modules splits it exports consumable by anyone who ' +
+      'generate-exports — makes any $rime/modules: splits it declares resolvable by anyone who ' +
       'installs it. Equivalent to chaining those three yourself.'
   )
   .action(() => {
@@ -71,9 +71,9 @@ program
       return;
     }
 
-    import('./commands/generate-manifest.server.js').then(({ generateManifest }) => {
+    import('./commands/generate-exports.server.js').then(({ generateExports }) => {
       try {
-        generateManifest();
+        generateExports();
       } catch (error: any) {
         logger.error(error.message);
         process.exitCode = 1;
@@ -82,18 +82,18 @@ program
   });
 
 program
-  .command('generate-manifest')
+  .command('generate-exports')
   .description(
-    "Run after svelte-package, before publish — makes this package's own $rime/modules " +
-      'splits consumable by anyone who installs it (rewrites the barrel into qualified ' +
-      'imports in dist/, writes dist/.rime-modules.json + .d.ts).'
+    "Run after svelte-package, before publish — makes this package's own $rime/modules: " +
+      'splits resolvable by anyone who installs it (rewrites them to package subpaths in ' +
+      'dist/, writes the matching exports entries into package.json).'
   )
   .action(async () => {
-    const generateManifest = await import('./commands/generate-manifest.server.js').then(
-      (m) => m.generateManifest
+    const generateExports = await import('./commands/generate-exports.server.js').then(
+      (m) => m.generateExports
     );
     try {
-      generateManifest();
+      generateExports();
     } catch (error: any) {
       logger.error(error.message);
       process.exitCode = 1;

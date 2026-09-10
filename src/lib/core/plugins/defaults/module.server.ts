@@ -1,9 +1,9 @@
 import { dev } from '$app/environment';
-import { apiInit } from '../api-init/index.js';
+import { apiInit } from '../api-init/index.server.js';
 import { cache } from '../cache/index.js';
 import type { Plugin } from '../index.js';
-import { mailer } from '../mailer/index.js';
-import { sse } from '../sse/index.js';
+import { mailer } from '../mailer/index.server.js';
+import { sse } from '../sse/index.server.js';
 import type { PluginHost } from './types.js';
 
 /** The plugins rime adds to every config, server half. Two of the four are conditional. */

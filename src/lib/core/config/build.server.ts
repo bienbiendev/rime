@@ -1,4 +1,4 @@
-import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
+import type { SMTPConfig } from '$lib/core/plugins/mailer/index.server.js';
 import { configureConfig } from './configure.js';
 import { withPrototypeLists } from './build.js';
 import { resolvePipelines } from '$lib/core/pipeline/build.server.js';
@@ -75,9 +75,9 @@ type InferAreasSlug<C> = C extends { areas?: readonly any[] }
 
 type InferCorePlugins<C extends Config> = {
   cache: import('$lib/core/plugins/cache/module.server.js').CacheActions;
-  sse: import('$lib/core/plugins/sse/module.server.js').SSEActions;
+  sse: import('$lib/core/plugins/sse/index.server.js').SSEActions;
 } & (C['$smtp'] extends SMTPConfig
-  ? { mailer: import('$lib/core/plugins/mailer/module.server.js').MailerActions }
+  ? { mailer: import('$lib/core/plugins/mailer/index.server.js').MailerActions }
   : Record<string, never>);
 
 // Helper type to extract custom plugins from original config

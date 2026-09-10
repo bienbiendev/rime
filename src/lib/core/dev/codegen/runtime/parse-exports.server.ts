@@ -3,9 +3,9 @@ import * as t from '@babel/types';
 import fs from 'node:fs';
 
 /**
- * Top-level named + default export identifiers of a module — the export-name index every
- * `$rime/modules` mechanism is built on: the Vite plugin's per-name rewrite, its `exportFrom()`
- * stubbing of a side that wasn't authored, and `generate-manifest`'s prepack rewrite.
+ * Top-level named + default export identifiers of a module — the names a half pair's missing side
+ * has to declare as `undefined`. Read by the Vite plugin in dev and by `generate-exports` at
+ * prepack, which writes the same stub out as a file.
  *
  * **Values only.** A type export has no runtime existence, so collecting one is never right: it
  * would be stubbed as `export const Foo = undefined` on a missing side, and indexed as a name a
