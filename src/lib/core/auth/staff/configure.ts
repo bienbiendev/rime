@@ -9,7 +9,7 @@ import { getStaffCollection } from './derive.js';
 // prototype's `definition.server.ts`, which spreads `{ ...base }` at module scope.
 import { create } from '$lib/core/prototype/collection/definition.js';
 
-export const augmentStaff = <
+export const configureStaff = <
   T extends { collections?: BuiltCollection[]; staff?: Config['staff'] }
 >(
   config: T

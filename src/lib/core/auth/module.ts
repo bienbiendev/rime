@@ -1,2 +1,2 @@
 export { augmentAuth } from './augment.js';
-export { augmentStaff } from './staff/augment.js';
+export { configureStaff } from './staff/configure.js';

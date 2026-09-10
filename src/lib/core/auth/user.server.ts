@@ -13,7 +13,7 @@ import type { User } from './types.js';
  * the database layer was the only place that name appeared.
  *
  * It appears here instead, once, as `STAFF_SLUG` — and it belongs here because this feature is
- * what derives that collection (`staff/augment.ts`).
+ * what derives that collection (`staff/configure.ts`).
  *
  * > **These read rows, not documents.** `adapter.collection(slug).findMany` runs no hooks and no
  * > access checks, which is deliberate and load-bearing: all three run *during* authentication,

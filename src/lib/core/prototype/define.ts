@@ -35,8 +35,8 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype> = {
    *
    * A **function returning** the list, and that is rule 3 rather than style. Several of the steps
    * are imported from `$rime/modules`, and a feature reached through the barrel imports `create`
-   * back out of this prototype's definition — `auth/staff/augment.ts` and
-   * `versions/derive.server.ts` both do. Entered from the feature's side, an array literal here
+   * back out of this prototype's definition — `auth/staff/configure.ts` and
+   * `versions/configure.server.ts` both do. Entered from the feature's side, an array literal here
    * would capture bindings the barrel had not initialised yet, and the config would build without
    * those fields: no error, no type change, just a document with no title. Building the list on
    * first `create` reads every binding after every module has finished.

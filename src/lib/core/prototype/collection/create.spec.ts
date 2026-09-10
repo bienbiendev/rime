@@ -24,7 +24,7 @@ describe('create and the dashboard layout', () => {
   });
 
   /**
-   * `augmentPanel` spread `config.panel || {}`, and `false || {}` is `{}` — so a collection that
+   * `configurePanel` spread `config.panel || {}`, and `false || {}` is `{}` — so a collection that
    * asked to be hidden came out with a `panel` object instead, and every `panel !== false` reader
    * (the dashboard's filter, `panel/navigation.ts`) saw it as visible. The derived collections
    * upload and versions add were unaffected: they are built as plain objects, never through here.

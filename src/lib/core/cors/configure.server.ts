@@ -8,7 +8,7 @@ import { hasProp } from '$lib/util/object.js';
  * declared in index.ts — `$trustedOrigins` is optional as an author writes it, and the handler
  * beside this file reads it as a list that is always there.
  */
-export const augmentCORS = <const T extends Config>(config: T) => {
+export const configureCors = <const T extends Config>(config: T) => {
   const trustedOrigins =
     hasProp('$trustedOrigins', config) && Array.isArray(config.$trustedOrigins)
       ? config.$trustedOrigins

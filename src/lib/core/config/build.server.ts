@@ -12,21 +12,23 @@ export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>>
 };
 
 /**
- * The config chain: one step per layer, in the order they apply — prototypes define, features
- * augment and extend, plugins augment. Nothing here names a feature: the feature step folds
- * whatever the two prototypes list, and what each feature contributes to the config's *type* is
- * declared beside it (features/register.ts). The prototype step names both kinds, because there
- * are two and they are both core's.
+ * The config chain, one named step at a time:
+ *
+ * 1. `withPrototypeLists` — `collections` and `areas` exist, empty if the author named none.
+ * 2. `configureConfig` — the five whole-config steps, in `config/configure.ts`.
+ * 3. `resolvePipelines` — every prototype config's `$hooks`, last, so a derived config is
+ *    resolved by the same line as an authored one.
+ * 4. `configurePlugins` — the plugin layer, over the config the rest of rime will see.
  *
  * A literal sequence rather than a loop, which `inference.spec.ts` guards: the narrowing at each
  * step is what carries the slug literals through to `event.locals.rime`.
  */
 function augmentConfig<T extends Config>(config: T) {
-  const withPrototypes = withPrototypeLists(config);
-  const withFeatures = configureConfig(withPrototypes);
+  const withLists = withPrototypeLists(config);
+  const configured = configureConfig(withLists);
   // Last, and after the features: every prototype config that exists by now — authored or derived
   // — has its pipeline resolved by the same step.
-  const withPipelines = resolvePipelines(withFeatures);
+  const withPipelines = resolvePipelines(configured);
   const output = configurePlugins(withPipelines);
   return output;
 }

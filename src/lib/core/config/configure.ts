@@ -1,7 +1,6 @@
-import { augmentCORS, augmentStaff, configureUploadDirectories } from '$rime/modules';
-import { makeVersionsCollectionsAliases } from '$rime/modules';
-import { augmentIcons } from '$lib/core/panel/icons.js';
-import { augmentPanel } from '$lib/core/panel/augment.js';
+import { configureCors, configureStaff, configureUploadDirectories } from '$rime/modules';
+import { configureVersions } from '$rime/modules';
+import { configurePanel } from '$lib/core/panel/configure.js';
 import type { BuiltConfig } from './types.js';
 import type { Dic } from '$lib/util/types.js';
 
@@ -32,12 +31,11 @@ export const configureConfig = <T extends Dic>(
   config: T
 ): T & Pick<BuiltConfig, 'panel' | 'icons' | '$trustedOrigins'> =>
   [
-    augmentStaff,
-    augmentIcons,
-    augmentPanel,
+    configureStaff,
+    configurePanel,
     configureUploadDirectories,
-    makeVersionsCollectionsAliases,
-    augmentCORS
+    configureVersions,
+    configureCors
   ].reduce(
     // `any` for the same reason a prototype's augments list is: each step names the shape it
     // needs, and a list holding several cannot promise any of them that shape.

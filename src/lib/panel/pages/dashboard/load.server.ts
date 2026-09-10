@@ -18,7 +18,7 @@ export const dashboardLoad = async (event: ServerLoadEvent) => {
    * collection, then what a feature offered through `_dashboardLayout` (`upload` asks for a grid),
    * then rows.
    *
-   * The collection prototype used to seed all of this in an `augmentPanel`, which meant `panel`
+   * The collection prototype used to seed all of this in an `configurePanel`, which meant `panel`
    * was always an object by the time it got here — so `panel: false` never survived to be read,
    * and these defaults ran twice.
    */
@@ -67,7 +67,7 @@ export const dashboardLoad = async (event: ServerLoadEvent) => {
     .filter((collection) => collection.panel !== false && collection.panel?.dashboard !== false)
     // No `if (collection.panel)` branch: the filter above has already dropped the collections that
     // switched the panel or the dashboard off, so everything reaching here wants its documents
-    // listed. The branch existed because `augmentPanel` made `panel` unconditionally truthy, which
+    // listed. The branch existed because `configurePanel` made `panel` unconditionally truthy, which
     // made its `else` unreachable — take the augment away and it would have started silently
     // emptying every collection that authored no `panel` at all.
     .map(async (collection) =>

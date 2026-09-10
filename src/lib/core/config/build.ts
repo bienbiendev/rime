@@ -22,8 +22,8 @@ export const withPrototypeLists = <
 
 /** The client chain, same three layers as build.server.ts — see the note there. */
 export const buildConfigClient = <C extends SanitizedConfigClient>(config: C) => {
-  const withPrototypes = withPrototypeLists(config);
-  const withFeatures = configureConfig(withPrototypes);
-  const output = configurePlugins(withFeatures);
+  const withLists = withPrototypeLists(config);
+  const configured = configureConfig(withLists);
+  const output = configurePlugins(configured);
   return output;
 };

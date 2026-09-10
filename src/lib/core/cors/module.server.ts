@@ -4,4 +4,4 @@
 //
 // The handler is not here: `handlers/index.ts` imports it directly, because that file is
 // server-only and a feature no longer carries its handler as a property.
-export { augmentCORS } from './augment.server.js';
+export { configureCors } from './configure.server.js';

@@ -134,4 +134,4 @@ export const augmentAuth = <T extends Input>(config: T): WithNormalizedAuth<T> =
 
 // The staff collection every config gets. Client-side it goes first (the panel lists it
 // first), server-side last — the one thing the two halves genuinely disagree on.
-export { augmentStaff } from './staff/augment.js';
+export { configureStaff } from './staff/configure.js';

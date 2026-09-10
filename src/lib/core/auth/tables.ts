@@ -18,7 +18,7 @@ import type { ColumnDeclaration, TableDeclaration } from '$lib/core/adapter.js';
  *
  * The literal was in the schema generator, which is what made the database layer know a `staff`
  * collection exists and is the one with a super-admin flag. It is auth's, because auth is what
- * creates it — see `staff/augment.ts`.
+ * creates it — see `staff/configure.ts`.
  */
 export const STAFF_SLUG = 'staff';
 

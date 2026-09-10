@@ -17,7 +17,7 @@ const contentFields = (config: { fields: BuiltCollection['fields'] }) =>
  * `pages`, and one per versioned area, which is a collection because a single document still has
  * many revisions.
  */
-export function makeVersionsCollectionsAliases<C extends Config>(config: C) {
+export function configureVersions<C extends Config>(config: C) {
   for (const collection of config.collections || []) {
     if (collection.versions) {
       const versionedCollection: BuiltCollection = {

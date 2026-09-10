@@ -10,7 +10,7 @@ import { getStaffCollection } from './derive.js';
 // `definition.server.ts` anyway.
 import { create } from '$lib/core/prototype/collection/definition.js';
 
-export const augmentStaff = <
+export const configureStaff = <
   const T extends { collections?: BuiltCollection[]; staff?: Config['staff'] }
 >(
   config: T

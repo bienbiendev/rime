@@ -104,3 +104,12 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
     _dashboardLayout: 'grid' as const
   };
 };
+
+/**
+ * The derived `<slug>Directories` collections, re-exported so `$rime/modules` collects them.
+ *
+ * They live in `directories/configure.ts` — the file says the phase — and only a file named
+ * `module.ts` or `module.server.ts` is collected by the barrel, so the pair re-exports rather
+ * than holding the code.
+ */
+export { configureUploadDirectories } from './directories/configure.js';

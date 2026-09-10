@@ -5,7 +5,7 @@ import { resolvePipelines } from '$lib/core/pipeline/build.server.js';
 import type { Dic } from '$lib/util/types.js';
 import { create } from '$lib/core/prototype/collection/definition.js';
 import { text } from '$lib/fields/text/index.js';
-import { makeVersionsCollectionsAliases } from './derive.server.js';
+import { configureVersions } from './configure.server.js';
 
 /**
  * What a versions versions's pipeline is made of.
@@ -30,7 +30,7 @@ describe('a versions versions', () => {
 
   // The real order: derive first, resolve every pipeline after — as the config chain does.
   const config = { collections: [parent] } as never;
-  makeVersionsCollectionsAliases(config);
+  configureVersions(config);
   const built = resolvePipelines(config as { collections: Dic[] });
 
   const versions = built.collections.find(
@@ -83,7 +83,7 @@ describe('_shadowOf', () => {
   });
 
   const shadowOfVersioned = () => {
-    const config = makeVersionsCollectionsAliases({ collections: [versionedUpload] } as any);
+    const config = configureVersions({ collections: [versionedUpload] } as any);
     return config.collections!.find((c: Dic) => c.slug !== versionedUpload.slug)!;
   };
 
