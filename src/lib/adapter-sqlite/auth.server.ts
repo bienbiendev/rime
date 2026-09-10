@@ -13,7 +13,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
  * because those are declared tables rather than a hand-written template.
  */
 const createAuthHandle = (args: {
-  db: LibSQLDatabase<GetRegisterType<'Schema'>>;
+  db: LibSQLDatabase<GetRegisterType<'Relations'>>;
   schema: GetRegisterType<'Schema'>;
 }) => {
   const { db, schema } = args;

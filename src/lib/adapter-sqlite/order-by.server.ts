@@ -1,7 +1,6 @@
 import { logger } from '$lib/core/logger.server.js';
 import type { PrototypeSlug } from '$lib/core/prototype/types.js';
 import { asc, desc, getTableColumns, sql } from 'drizzle-orm';
-import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import { pathToDatabaseColumn } from './columns.server.js';
 import { baseTableName, tableName, type TableName } from './naming.server.js';
 
@@ -18,9 +17,24 @@ type Args = {
    * else", which is about tables — so it is answered with a table name, not a config member.
    */
   versions?: TableName;
+  /**
+   * The table the ordering is built against.
+   *
+   * A relational query renames the table it selects from — `from "pages" as "d0"` — so both a
+   * plain column and the correlated subqueries below have to name what the caller was handed,
+   * not the imported object. `update` and `delete` do not alias and pass nothing.
+   */
+  rootTable?: any;
 };
 
-export const buildOrderByParam = ({ slug, locale, tables, by, versions }: Args) => {
+export const buildOrderByParam = ({
+  slug,
+  locale,
+  tables,
+  by,
+  versions,
+  rootTable: aliasedRoot
+}: Args) => {
   // Presence in the schema, not a config member: a declared versions with no table is not one.
   const hasShadow = !!versions && versions in tables;
 
@@ -29,8 +43,8 @@ export const buildOrderByParam = ({ slug, locale, tables, by, versions }: Args) 
     return str.charAt(0) === '-' ? desc : asc;
   };
 
-  // Get the root table
-  const rootTable = tables[baseTableName(slug)];
+  // Get the root table — the caller's alias where there is one.
+  const rootTable = aliasedRoot ?? tables[baseTableName(slug)];
   by = by ? pathToDatabaseColumn(by) : by;
 
   // Default case: no sort parameter provided
@@ -79,13 +93,12 @@ export const buildOrderByParam = ({ slug, locale, tables, by, versions }: Args) 
         const localizedColumns = getTableColumns(localeTable);
 
         if (Object.keys(localizedColumns).includes(columnStr)) {
-          const { name: sqlLocaleTableName } = getTableConfig(localeTable);
-          const { name: sqlTableName } = getTableConfig(rootTable);
+          // Interpolated, not `sql.raw`: the outer table may be an alias, so its id has to come
+          // from the column object rather than from a name read off the schema. Parameterises
+          // `locale` on the way past.
           return [
             orderFunc(
-              sql.raw(
-                `(SELECT DISTINCT ${sqlLocaleTableName}."${localizedColumns[columnStr].name}" FROM ${sqlLocaleTableName} WHERE ${sqlLocaleTableName}."owner_id" = ${sqlTableName}."id" AND ${sqlLocaleTableName}."locale" = '${locale}')`
-              )
+              sql`(SELECT DISTINCT ${localeTable[columnStr]} FROM ${localeTable} WHERE ${localeTable.ownerId} = ${rootTable.id} AND ${localeTable.locale} = ${locale})`
             )
           ];
         }
@@ -102,15 +115,10 @@ export const buildOrderByParam = ({ slug, locale, tables, by, versions }: Args) 
       columnStr !== 'createdAt' &&
       columnStr !== 'updatedAt'
     ) {
-      const { name: sqlShadowTableName } = getTableConfig(versionsTable);
-      const { name: sqlRootTableName } = getTableConfig(rootTable);
-
-      // Use a subquery to get the value from the newest content row for ordering
+      // The value from the newest content row.
       return [
         orderFunc(
-          sql.raw(
-            `(SELECT DISTINCT ${sqlShadowTableName}."${columnStr}" FROM ${sqlShadowTableName} WHERE ${sqlShadowTableName}."owner_id" = ${sqlRootTableName}."id" ORDER BY ${sqlShadowTableName}."updated_at" DESC LIMIT 1)`
-          )
+          sql`(SELECT DISTINCT ${versionsTable[columnStr]} FROM ${versionsTable} WHERE ${versionsTable.ownerId} = ${rootTable.id} ORDER BY ${versionsTable.updatedAt} DESC LIMIT 1)`
         )
       ];
     }
@@ -126,24 +134,18 @@ export const buildOrderByParam = ({ slug, locale, tables, by, versions }: Args) 
         const localizedColumns = getTableColumns(localeTable);
 
         if (Object.keys(localizedColumns).includes(columnStr)) {
-          const { name: sqlLocaleTableName } = getTableConfig(localeTable);
-          const { name: sqlShadowTableName } = getTableConfig(versionsTable);
-          const { name: sqlRootTableName } = getTableConfig(rootTable);
-
-          // Nested subquery: first get the newest content row, then get the localized value
+          // Two hops: the newest content row, then its localized value.
           return [
             orderFunc(
-              sql.raw(
-                `(SELECT ${sqlLocaleTableName}."${localizedColumns[columnStr].name}"
-								  FROM ${sqlLocaleTableName}
-								  WHERE ${sqlLocaleTableName}."owner_id" IN
-								    (SELECT ${sqlShadowTableName}."id"
-									 FROM ${sqlShadowTableName}
-									 WHERE ${sqlShadowTableName}."owner_id" = ${sqlRootTableName}."id"
-									 ORDER BY ${sqlShadowTableName}."updated_at" DESC LIMIT 1)
-								  AND ${sqlLocaleTableName}."locale" = '${locale}'
-								  LIMIT 1)`
-              )
+              sql`(SELECT ${localeTable[columnStr]}
+                     FROM ${localeTable}
+                    WHERE ${localeTable.ownerId} IN
+                          (SELECT ${versionsTable.id}
+                             FROM ${versionsTable}
+                            WHERE ${versionsTable.ownerId} = ${rootTable.id}
+                            ORDER BY ${versionsTable.updatedAt} DESC LIMIT 1)
+                      AND ${localeTable.locale} = ${locale}
+                    LIMIT 1)`
             )
           ];
         }

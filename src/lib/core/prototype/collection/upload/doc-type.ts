@@ -27,7 +27,7 @@ export const uploadDocType = (config: { upload?: { imageSizes?: ImageSizesConfig
      * wrong: it drops blocks, tabs, groups, tree and relation fields from the generated type of
      * any upload collection that declares image sizes. It has been that way since the filter was
      * written and no fixture has one, so changing it here would be an untested fix inside an
-     * untested move. See docs/known-defects.md.
+     * untested move. See notes/known-defects.md.
      */
     fields: (field) =>
       field instanceof FormFieldBuilder && !sizes.some((s) => s.name === field.name)

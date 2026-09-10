@@ -8,14 +8,11 @@ import type { SQLiteColumn, SQLiteTableWithColumns } from 'drizzle-orm/sqlite-co
  * What every facade in this folder is built from: the connection and the generated tables.
  */
 export type AdapterDeps = {
-  db: LibSQLDatabase<GetRegisterType<'Schema'>>;
+  db: LibSQLDatabase<GetRegisterType<'Relations'>>;
   tables: GenericTables;
 };
 
-type GenericColumn = SQLiteColumn<
-  ColumnBaseConfig<ColumnDataType, string>,
-  Record<string, unknown>
->;
+type GenericColumn = SQLiteColumn<ColumnBaseConfig<ColumnDataType>, Record<string, unknown>>;
 type GenericColumns = {
   [x: string]: GenericColumn;
 };

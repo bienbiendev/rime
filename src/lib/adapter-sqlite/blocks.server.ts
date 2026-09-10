@@ -40,7 +40,7 @@ const createBlocksHandle = ({ db, tables }: AdapterDeps) => {
 
       // @ts-expect-error suck
       const localizedRow = await db.query[keyTableLocales].findFirst({
-        where: and(eq(tableLocales.ownerId, block.id), eq(tableLocales.locale, locale))
+        where: { ownerId: block.id, locale }
       });
 
       if (!localizedRow) {

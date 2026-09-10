@@ -30,7 +30,7 @@ import { buildWhereParam } from './where.server.js';
  * The pair appeared four times across the two facades this module replaces; they now all go
  * through here or through `ensurePrototypeExists`, which guards identically.
  *
- * The guard on `data` does not catch the empty locales row in docs/known-defects.md §2: a
+ * The guard on `data` does not catch the empty locales row in notes/known-defects.md §2: a
  * bootstrap prepares its data with `fillNotNull`, which seeds the primary key, so the object is
  * never empty even when every localized value is null.
  *
@@ -381,7 +381,7 @@ export const ensurePrototypeExists = async (
   const createId = await adapterUtil.insertTableRecord(db, tables, table, { ...mainData });
 
   // Guarded on the data as well as on `isLocalized`, matching insertRowWithLocales. Note this
-  // does not currently prevent the empty locales row described in docs/known-defects.md §2:
+  // does not currently prevent the empty locales row described in notes/known-defects.md §2:
   // `fillNotNull` seeds a primary key, so `localizedData` is never empty here even when every
   // localized value is null. Fixing that means not counting the seeded id, and belongs in its
   // own commit — see the doc.

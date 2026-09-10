@@ -9,7 +9,6 @@ import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field, FormField } from '$lib/fields/types.js';
 import { tableName as buildTableName } from '../naming.server.js';
 import { toSchemaColumn } from './column.server.js';
-import type { RelationFieldsMap } from './relations/definition.server.js';
 import type { TableName } from '../naming.server.js';
 import {
   templateDeclaredColumn,
@@ -18,6 +17,9 @@ import {
   templateTable
 } from './templates.server.js';
 import type { ColumnDeclaration } from '$lib/core/adapter.js';
+
+/** A relation field on a prototype: which collection it points at, and whether it is localized. */
+export type RelationFieldsMap = Record<string, { to: string; localized?: boolean }>;
 
 type Args = {
   fields: FieldBuilder<Field>[];

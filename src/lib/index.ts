@@ -23,6 +23,7 @@ declare module 'rimecms' {
     AreaSlug: keyof RegisterArea;
     Schema: RegisterSchema['schema'];
     Tables: RegisterSchema['tables'];
+    Relations: RegisterSchema['relations'];
   }
 }
 

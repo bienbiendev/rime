@@ -30,7 +30,7 @@ const SPECIFIER = '$rime/modules:';
  * A subpath written into a real `dist` file is followed by esbuild while it pre-bundles the
  * package, so the half it picks lands *inside* that bundle. The absolute `node_modules` path this
  * replaces did not — it left half of rime's client graph outside the bundler, CommonJS and all
- * (see docs/isomorphic-module.md).
+ * (see notes/isomorphic-module.md).
  */
 export const generateExports = () => {
   const pkgName = getPackageInfoByKey('name');
