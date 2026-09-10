@@ -164,20 +164,19 @@ export const persistRelational = async (args: {
   /**
    * Whose children these are, in slug space.
    *
-   * All three writers asked `contentOwnerSlug(config)` for this — a helper in
-   * `features/versions/naming.ts` that read `config.versions` and appended the feature's own
-   * suffix. Three files in the pipeline importing a feature to name a table.
+   * Read off the config, which `augmentVersions` stamped. It was a round trip —
+   * `adapter.prototype(config.slug).versions?.slug` — asking the database layer for something the
+   * config already carries, and before that a `contentOwnerSlug(config)` helper in versions'
+   * own folder that three pipeline files imported to name a table.
    *
-   * Registration already answered it: `versions` is what the feature declared and the adapter was
-   * handed at boot (stage 2), so the handle knows, and a second feature declaring a versions works
-   * here with no change. `ownerId` is the row; this is the table it is in.
+   * `ownerId` is the row; this is the table it is in.
    *
    * The cast is the one `findManyPrototypes` takes, and sound for the same reason:
-   * `VersionsTable.slug` is a plain `string` because a feature names a slug and only the
-   * registry knows which exist — but a versions *is* a registered prototype, since the feature that
-   * declares one also derives its config. `contentOwnerSlug` cast to `CollectionSlug` here too.
+   * `VersionsTable.slug` is a plain `string` because the feature names a slug and only the
+   * registry knows which exist — but a versions table *is* a registered prototype, since the
+   * feature that declares one also derives its config.
    */
-  const ownerSlug = (adapter.prototype(config.slug).versions?.slug ?? config.slug) as PrototypeSlug;
+  const ownerSlug = (config._versions?.slug ?? config.slug) as PrototypeSlug;
 
   const blocksDiff = await saveBlocks({
     context,

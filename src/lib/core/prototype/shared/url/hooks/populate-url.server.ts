@@ -127,9 +127,8 @@ export const populateURL = Hooks.beforeRead<'generic'>({
            * to a different handle. `updateWhere` rather than `update` because a url is computed on
            * read: it must not move `updatedAt`.
            */
-          const handle = args.event.locals.rime.adapter.prototype(config.slug);
-          const contentSlug = handle.versions?.slug ?? config.slug;
-          const contentId = handle.versions ? args.doc.contentId : args.doc.id;
+          const contentSlug = config._versions?.slug ?? config.slug;
+          const contentId = config._versions ? args.doc.contentId : args.doc.id;
 
           if (contentId) {
             args.event.locals.rime.adapter.prototype(contentSlug).updateWhere({

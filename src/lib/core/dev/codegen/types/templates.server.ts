@@ -50,7 +50,7 @@ export const templateRegister = <T extends Config>(config: T): string => {
   const versionsSlugs = new Map(
     (config.collections ?? []).map((c) => [
       c.slug,
-      (c as { _versions?: { slug: string } })._versions?.slug
+      c._versions?.slug
     ])
   );
 

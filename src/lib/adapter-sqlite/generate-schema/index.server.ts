@@ -42,7 +42,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
     // Whether this config's content lives on its own row or on a second table, asked of the
     // features that extend the prototype rather than of a member the adapter recognises by name.
     // A feature declaring a versions is the only thing that makes two tables here.
-    const versions = (prototype as { _versions?: { slug: string } })._versions;
+    const versions = prototype._versions;
 
     // The prototype's own table, resolved from its slug rather than case-converted here —
     // a derived slug like `$someChild` has to lose its `$` and snake-case its segments.

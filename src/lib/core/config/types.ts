@@ -1,3 +1,4 @@
+import type { VersionsTable } from '$lib/core/adapter.js';
 import type { LocalizationConfig } from '$lib/core/locale/types.js';
 import type {
   PanelConfig,
@@ -8,9 +9,7 @@ import type {
 import type { CacheConfig } from '$lib/core/plugins/cache/types.js';
 import type { CollectionAuthConfig, AdditionalStaffConfig } from '$lib/core/auth/types.js';
 import type { CollectionLabel } from '$lib/core/prototype/collection/types.js';
-import type {
-  UploadConfig,
-} from '$lib/core/prototype/collection/upload/types.js';
+import type { UploadConfig } from '$lib/core/prototype/collection/upload/types.js';
 import type { VersionsConfig } from '$lib/core/prototype/shared/versions/types.js';
 import type { Adapter } from '$lib/core/adapter.js';
 import type { Hook, HookBeforeOperation } from '$lib/core/pipeline/types.js';
@@ -193,6 +192,15 @@ export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'up
   asThumbnail: string | null;
   auth?: CollectionAuthConfig;
   versions?: Required<VersionsConfig>;
+  /**
+   * Where this config's content lives, when it is not its own row.
+   *
+   * Stamped by `augmentVersions` on a versioned config; `undefined` otherwise, which reads as
+   * "the document's own row". Declared here beside `versions` because it is the same statement,
+   * and because five callers read it — two of them in `adapter-sqlite/`, which is what keeps the
+   * adapter reading data rather than calling a feature.
+   */
+  _versions?: VersionsTable;
   upload?: UploadConfig;
   icon: Component<IconProps>;
   access: WithRequired<Access, 'create' | 'read' | 'update' | 'delete'>;
@@ -246,6 +254,15 @@ export type BuiltArea = Omit<Area<string>, 'versions'> & {
   label: string;
   asTitle: string;
   versions?: Required<VersionsConfig>;
+  /**
+   * Where this config's content lives, when it is not its own row.
+   *
+   * Stamped by `augmentVersions` on a versioned config; `undefined` otherwise, which reads as
+   * "the document's own row". Declared here beside `versions` because it is the same statement,
+   * and because five callers read it — two of them in `adapter-sqlite/`, which is what keeps the
+   * adapter reading data rather than calling a feature.
+   */
+  _versions?: VersionsTable;
   icon: Component<IconProps>;
   access: WithRequired<Access, 'create' | 'read' | 'update' | 'delete'>;
   _generateTypes?: false;

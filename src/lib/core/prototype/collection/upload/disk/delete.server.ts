@@ -29,7 +29,7 @@ const ownsField = <C extends Config>(
   const field = config.fields.filter(isFormField).find((one) => one.name === name);
   if (!field) return false;
 
-  return rime.adapter.prototype(config.slug).versions ? !!field.get.root : true;
+  return config._versions ? !!field.get.root : true;
 };
 
 /**
@@ -97,8 +97,8 @@ export const cleanUpDocumentFile = async <C extends Config>(args: {
       rime,
       filename: doc.filename,
       // The table this document's own filename is in — the same expression `persistRelational`
-      // uses, off what registration was handed.
-      selfSlug: rime.adapter.prototype(config.slug).versions?.slug ?? config.slug,
+      // uses, read off the config rather than asked of the adapter.
+      selfSlug: config._versions?.slug ?? config.slug,
       // The content row's id — `contentId` rather than `versionId`, so upload names no
       // other feature. See mergeContentRow.
       selfId: doc.contentId ?? doc.id
