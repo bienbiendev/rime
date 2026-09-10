@@ -7,7 +7,7 @@ import type { Dic } from '$lib/util/types.js';
 import { and, eq, getTableColumns, inArray, isNull, or, type SQLWrapper } from 'drizzle-orm';
 import { transformDataToSchema } from './columns.server.js';
 
-const createRelationsAdapter = ({ db, tables }: AdapterDeps) => {
+const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
   //
   const deleteFromPaths: DeleteFromPaths = async ({ parentSlug, ownerId, paths, locale }) => {
     if (paths.length === 0) return true;
@@ -166,7 +166,7 @@ const createRelationsAdapter = ({ db, tables }: AdapterDeps) => {
   };
 };
 
-export default createRelationsAdapter;
+export default createRelationsHandle;
 
 type DeleteFromPaths = (args: {
   parentSlug: PrototypeSlug;

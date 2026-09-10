@@ -30,7 +30,6 @@ import type { CollectionWithoutSlug } from './types.js';
 export const collection = definePrototype({
   /** The name it is exported under, and the `type` every collection config carries. */
   name: 'collection',
-  singleton: false,
   /**
    * **Everything that shapes a collection config, in the order it runs** — which is the order the
    * fields land in, and therefore column order (CONTRIBUTING rule 2).

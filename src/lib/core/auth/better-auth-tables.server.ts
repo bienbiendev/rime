@@ -3,7 +3,7 @@ import type { Adapter } from '$lib/core/adapter.js';
 /**
  * The three writes and one read auth makes against Better-auth's own tables.
  *
- * They were the last three methods on `AuthAdapter`, and they were there because core had no way
+ * They were the last three methods on `AuthHandle`, and they were there because core had no way
  * to name a table that is not a prototype. `FeatureDefinition.tables` made these declared tables
  * and `adapter.table(slug)` reaches them, so the facade collapses to Better-auth's own adapter.
  *

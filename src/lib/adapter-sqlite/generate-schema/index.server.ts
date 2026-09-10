@@ -143,7 +143,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
 
   // Better-auth's tables, which no prototype declares. Named here rather than folded out of a
   // `FeatureDefinition.tables` seam that only auth ever implemented — this file already carries an
-  // `AuthAdapter` sibling, and auth is one of the three concepts the adapter may name. It answers
+  // `AuthHandle` sibling, and auth is one of the three concepts the adapter may name. It answers
   // `[]` for a config where nothing signs in, which is the test `enabled` used to make.
   for (const table of authTables(config)) {
     schema.push(templateDeclaredTable(table));

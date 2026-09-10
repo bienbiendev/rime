@@ -47,11 +47,11 @@ export interface Adapter {
    */
   table(slug: string): TableHandle;
 
-  blocks: BlocksAdapter;
-  tree: TreeAdapter;
-  relations: RelationsAdapter;
-  transform: TransformAdapter;
-  auth: AuthAdapter;
+  blocks: BlocksHandle;
+  tree: TreeHandle;
+  relations: RelationsHandle;
+  transform: TransformHandle;
+  auth: AuthHandle;
 }
 
 export type RegisterPrototypeArgs = {
@@ -68,14 +68,6 @@ export type RegisterPrototypeArgs = {
    * name: how a slug is spelled in the database stays the adapter's business.
    */
   versions?: VersionsTable;
-  /**
-   * Whether this prototype holds exactly one document.
-   *
-   * The only shape fact the adapter needs, and it is about the *data* — how many rows — not
-   * about a kind. It decides whether a read needs an id, and it is what `insert` and `delete`
-   * refuse on. The adapter does not know the word "area".
-   */
-  singleton: boolean;
 };
 
 /**
@@ -221,7 +213,7 @@ export interface AreaHandle extends BaseHandle {
  * prototype itself when not. `pipeline/run.server.ts` resolves it off `PrototypeHandle.versions`,
  * which is what registration was handed; nothing works it out from a config member.
  */
-export interface BlocksAdapter {
+export interface BlocksHandle {
   create(args: {
     parentSlug: PrototypeSlug;
     block: WithOptional<GenericBlock, 'id'>;
@@ -236,7 +228,7 @@ export interface BlocksAdapter {
   delete(args: { parentSlug: PrototypeSlug; block: GenericBlock }): Promise<boolean>;
 }
 
-export interface TreeAdapter {
+export interface TreeHandle {
   create(args: {
     parentSlug: PrototypeSlug;
     block: WithOptional<WithRequired<TreeBlock, 'path'>, 'id'>;
@@ -254,7 +246,7 @@ export interface TreeAdapter {
   }): Promise<boolean>;
 }
 
-export interface RelationsAdapter {
+export interface RelationsHandle {
   create(args: {
     parentSlug: PrototypeSlug;
     ownerId: string;
@@ -275,7 +267,7 @@ export interface RelationsAdapter {
   }): Promise<Relation[]>;
 }
 
-export interface TransformAdapter {
+export interface TransformHandle {
   /**
    * The rows one document is stored across, unflattened and grouped by what they are.
    *
@@ -347,7 +339,7 @@ export interface TableHandle {
  * `deleteAuthUser` rolls back a failed signup, which `removeUser` refuses outright with
  * `YOU_CANNOT_REMOVE_YOURSELF`.
  */
-export interface AuthAdapter {
+export interface AuthHandle {
   /** The Better-auth database adapter. Opaque to core, which only hands it to Better-auth. */
   betterAuthAdapter: unknown;
 }

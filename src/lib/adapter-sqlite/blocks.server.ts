@@ -6,7 +6,7 @@ import { and, eq, getTableColumns } from 'drizzle-orm';
 import { omit } from '../util/object.js';
 import { generatePK, transformDataToSchema } from './columns.server.js';
 
-const createBlocksAdapter = ({ db, tables }: AdapterDeps) => {
+const createBlocksHandle = ({ db, tables }: AdapterDeps) => {
   /**
    * Callers name the owner by slug — the prototype's own, or its versions's — and the
    * mapping to a table happens here, so that a table name never travels in a parameter that
@@ -111,7 +111,7 @@ const createBlocksAdapter = ({ db, tables }: AdapterDeps) => {
   };
 };
 
-export default createBlocksAdapter;
+export default createBlocksHandle;
 
 /****************************************************/
 /* Types

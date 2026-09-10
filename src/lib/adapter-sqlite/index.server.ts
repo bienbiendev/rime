@@ -4,16 +4,16 @@ import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { GetRegisterType } from '$lib/index.js';
 import { drizzle, LibSQLDatabase } from 'drizzle-orm/libsql';
 import path from 'path';
-import createAuthAdapter from './auth.server.js';
-import createBlocksAdapter from './blocks.server.js';
+import createAuthHandle from './auth.server.js';
+import createBlocksHandle from './blocks.server.js';
 import generateSchema from './generate-schema/index.server.js';
 import type { RelationFieldsMap } from './generate-schema/relations/definition.server.js';
 import { baseTableName } from './naming.server.js';
-import { createPrototypeHandles } from './handles.server.js';
-import createRelationsAdapter from './relations.server.js';
+import { createPrototypeRegistry } from './registry.server.js';
+import createRelationsHandle from './relations.server.js';
 import { createTableHandles } from './table.server.js';
-import { createTransformAdapter } from './transform.server.js';
-import createTreeAdapter from './tree.server.js';
+import { createTransformHandle } from './transform.server.js';
+import createTreeHandle from './tree.server.js';
 import type { GenericTable } from './types.server.js';
 
 type Schema = GetRegisterType<'Schema'>;
@@ -47,21 +47,21 @@ const createAdapter = async <const C extends Config>(args: {
   const db = drizzle('file:' + dbPath, { schema: schema.default });
   const tables = schema.tables;
 
-  // Two words, and each is the contract's own. `core/adapter.ts` declares `BlocksAdapter`,
-  // `TreeAdapter`, `RelationsAdapter`, `TransformAdapter` and `AuthAdapter` — one object of verbs
+  // Two words, and each is the contract's own. `core/adapter.ts` declares `BlocksHandle`,
+  // `TreeHandle`, `RelationsHandle`, `TransformHandle` and `AuthHandle` — one object of verbs
   // each — and `PrototypeHandle` / `TableHandle`, which are looked up by slug. The factories are
   // named for what they build, so a name here can be checked against a type there. It was three
   // words for the same idea: Facade, Registry and Handles.
-  const blocks = createBlocksAdapter({ db, tables });
-  const tree = createTreeAdapter({ db, tables });
-  const relations = createRelationsAdapter({ db, tables });
-  const auth = createAuthAdapter({
+  const blocks = createBlocksHandle({ db, tables });
+  const tree = createTreeHandle({ db, tables });
+  const relations = createRelationsHandle({ db, tables });
+  const auth = createAuthHandle({
     db,
     schema: schema.default
   });
-  const prototypes = createPrototypeHandles({ db, tables, configCtx });
+  const prototypes = createPrototypeRegistry({ db, tables, configCtx });
   const table = createTableHandles({ db, tables });
-  const transform = createTransformAdapter({
+  const transform = createTransformHandle({
     tables,
     configCtx
   });

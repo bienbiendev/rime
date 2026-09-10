@@ -74,26 +74,26 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   //    and where its configs are authored are two things core does know, and reading them off a
   //    registry only hid which was which.
   //
-  //    Annotated, not inferred. A definition is written against its own config kind — area's
-  //    `boot` takes a `BuiltArea` — so the two entries have conflicting `slug` types and an
-  //    inferred literal reduces the pair to `never`. The erasure is the one the registry used to
-  //    make, and sound for the same reason: each definition is only ever handed configs of the
-  //    kind it was registered under, which is what the two lines below say.
+  //    Registration takes the config and nothing else: the adapter reads `config.type` and builds
+  //    a collection handle or an area handle. It used to be told `singleton`, which is the same
+  //    fact under a name the adapter was not allowed to use.
+  //
+  //    `registered` is annotated, not inferred. A definition is written against its own config
+  //    kind — area's `boot` takes a `BuiltArea` — so the two entries have conflicting `slug` types
+  //    and an inferred literal reduces the pair to `never`. Sound for the reason it always was:
+  //    each definition is only ever handed configs of the kind it is registered under.
   const registered: { prototype: PrototypeDefinition; configs: BuiltPrototype[] }[] = [
     { prototype: collection as PrototypeDefinition, configs: config.collections },
     { prototype: area as PrototypeDefinition, configs: config.areas }
   ];
 
-  for (const { prototype, configs } of registered) {
-    for (const prototypeConfig of configs) {
-      adapter.registerPrototype({
-        config: prototypeConfig,
-        singleton: prototype.singleton,
-        // Where this config's content lives, asked of the features that extend it rather than
-        // worked out by the adapter from the slug. `undefined` for a config nothing deviates.
-        versions: prototypeConfig._versions
-      });
-    }
+  for (const prototypeConfig of [...config.collections, ...config.areas]) {
+    adapter.registerPrototype({
+      config: prototypeConfig,
+      // Where this config's content lives, stated by `augmentVersions` rather than worked out by
+      // the adapter from the slug. `undefined` for a config nothing deviates.
+      versions: prototypeConfig._versions
+    });
   }
 
   for (const { prototype, configs } of registered) {

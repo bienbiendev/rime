@@ -12,7 +12,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
  * `core/features/auth/better-auth-tables.server.ts`, reaching them through `adapter.table(slug)`
  * because those are declared tables rather than a hand-written template.
  */
-const createAuthAdapter = (args: {
+const createAuthHandle = (args: {
   db: LibSQLDatabase<GetRegisterType<'Schema'>>;
   schema: GetRegisterType<'Schema'>;
 }) => {
@@ -32,4 +32,4 @@ const createAuthAdapter = (args: {
   };
 };
 
-export default createAuthAdapter;
+export default createAuthHandle;

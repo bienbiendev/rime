@@ -7,7 +7,7 @@ import { and, eq, getTableColumns } from 'drizzle-orm';
 import { omit } from '../util/object.js';
 import { generatePK, transformDataToSchema } from './columns.server.js';
 
-const createTreeAdapter = ({ db, tables }: AdapterDeps) => {
+const createTreeHandle = ({ db, tables }: AdapterDeps) => {
   //
   /** As in the blocks facade: callers name the owner by slug, the table is derived here. */
   const buildBlockTableName = (parentSlug: PrototypeSlug, blockPath: string) => {
@@ -111,7 +111,7 @@ const createTreeAdapter = ({ db, tables }: AdapterDeps) => {
   };
 };
 
-export default createTreeAdapter;
+export default createTreeHandle;
 
 /****************************************************/
 /* Types

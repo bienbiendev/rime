@@ -10,8 +10,12 @@ import { augmentAreaLabel } from './augment-label.js';
 import type { AreaWithoutSlug } from './types.js';
 
 /**
- * An area is a prototype with the singleton flag on: exactly one document, so create and delete
- * are off, and reads and updates need no id to say which one they mean.
+ * An area holds exactly one document, so create and delete are off and reads and updates need no
+ * id to say which one they mean.
+ *
+ * That used to be a `singleton: true` flag the adapter was handed at registration, and it carried
+ * the difference through every verb. The adapter reads `config.type` now and builds one of two
+ * handles — `adapter-sqlite/area.server.ts` — so the flag had no reader left.
  *
  * The client half of the pair — what an area *is*. `api`, `rest` and `boot` are server-only and
  * live in `definition.server.ts`.
@@ -19,8 +23,6 @@ import type { AreaWithoutSlug } from './types.js';
 export const area = definePrototype({
   /** The name it is exported under, and the `type` every area config carries. */
   name: 'area',
-
-  singleton: true,
 
   /**
    * Everything that shapes an area config, in the order it runs — which is column order.

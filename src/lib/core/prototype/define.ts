@@ -31,15 +31,6 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype> = {
   name: string;
 
   /**
-   * Whether exactly one document exists.
-   *
-   * On: no create, no delete, reads and updates take no id, and the row must exist before runtime
-   * — hence `boot`. A fact about the data rather than the kind, which is why it is the one shape
-   * fact the adapter is told.
-   */
-  singleton: boolean;
-
-  /**
    * **Every** augment this prototype runs, in order — its own and its features', one written list.
    *
    * A **function returning** the list, and that is rule 3 rather than style. Several of the steps
@@ -195,7 +186,6 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
 
   return {
     name,
-    singleton: options.singleton ?? false,
     augments,
     create,
     hooks: options.hooks,

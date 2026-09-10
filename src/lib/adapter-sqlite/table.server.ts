@@ -14,7 +14,7 @@ import type { GenericTable } from './types.server.js';
  * no config behind it. Nothing to resolve a path against, no locales branch, no children, no
  * blank to merge. So the filter is a flat column-to-value map and the verbs are three.
  *
- * This is what let `AuthAdapter` collapse to Better-auth's own adapter. Its last three methods
+ * This is what let `AuthHandle` collapse to Better-auth's own adapter. Its last three methods
  * read and wrote `auth_users`, `auth_sessions` and `auth_accounts` — real tables that core simply
  * had no way to name until a feature could declare one.
  */
