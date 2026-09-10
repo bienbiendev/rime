@@ -16,9 +16,8 @@ export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>>
  *
  * 1. `withPrototypeLists` — `collections` and `areas` exist, empty if the author named none.
  * 2. `configureConfig` — the five whole-config steps, in `config/configure.ts`.
- * 3. `resolvePipelines` — every prototype config's `$hooks`, last, so a derived config is
- *    resolved by the same line as an authored one.
- * 4. `configurePlugins` — the plugin layer, over the config the rest of rime will see.
+ * 3. `configurePlugins` — the plugin layer, which can add collections of its own.
+ * 4. `resolvePipelines` — every prototype config's `$hooks`, last.
  *
  * A literal sequence rather than a loop, which `inference.spec.ts` guards: the narrowing at each
  * step is what carries the slug literals through to `event.locals.rime`.
@@ -26,10 +25,14 @@ export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>>
 function augmentConfig<T extends Config>(config: T) {
   const withLists = withPrototypeLists(config);
   const configured = configureConfig(withLists);
-  // Last, and after the features: every prototype config that exists by now — authored or derived
-  // — has its pipeline resolved by the same step.
-  const withPipelines = resolvePipelines(configured);
-  const output = configurePlugins(withPipelines);
+  const withPlugins = configurePlugins(configured);
+  // Last, so *every* prototype config gets its pipeline from the same line — authored, derived by
+  // a feature, or added by a plugin. A plugin's own collection used to arrive after this ran and
+  // so carried no pipeline at all: its first create failed on `missing configMap @create`.
+  //
+  // A plugin appending to a collection's `$hooks` still lands where it should — `buildPipeline`
+  // reads `$hooks` as the consumer layer and appends it after the placed hooks either way.
+  const output = resolvePipelines(withPlugins);
   return output;
 }
 
