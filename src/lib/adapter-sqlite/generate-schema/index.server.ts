@@ -1,5 +1,5 @@
-import type { Config } from '$lib/core/config/types.js';
-import { authColumns, authTables } from '$lib/core/auth/tables.js';
+import type { BuiltConfig } from '$lib/core/config/types.js';
+import { authColumns } from '$lib/core/auth/tables.js';
 import { baseTableName, declaredTableProperty, type TableName } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
 import { toPascalCase } from '$lib/util/string.js';
@@ -19,14 +19,14 @@ import {
 } from './templates.server.js';
 import write from './write.server.js';
 
-export async function generateSchemaString<T extends Config>(config: T) {
+export async function generateSchemaString(config: BuiltConfig) {
   // Every prototype config in the build, each paired with the features that extend its kind —
   // which is what says whether the config's content lives somewhere other than its own row.
   // One list rather than a loop per kind: the body below is two hundred lines and identical
   // for either.
   const allEntries = [
-    ...(config.collections ?? []).map((config) => ({ config })),
-    ...(config.areas ?? []).map((config) => ({ config }))
+    ...config.collections.map((config) => ({ config })),
+    ...config.areas.map((config) => ({ config }))
   ];
   const entries = allEntries.filter((entry) => entry.config._generateSchema !== false);
 
@@ -141,11 +141,9 @@ export async function generateSchemaString<T extends Config>(config: T) {
     );
   }
 
-  // Better-auth's tables, which no prototype declares. Named here rather than folded out of a
-  // `FeatureDefinition.tables` seam that only auth ever implemented — this file already carries an
-  // `AuthHandle` sibling, and auth is one of the three concepts the adapter may name. It answers
-  // `[]` for a config where nothing signs in, which is the test `enabled` used to make.
-  for (const table of authTables(config)) {
+  // Tables no prototype declares — better-auth's own, plus whatever a plugin added during the
+  // configure phase. Nothing here knows who asked for one.
+  for (const table of config.$tables) {
     schema.push(templateDeclaredTable(table));
     enumTables.push(declaredTableProperty(table.slug));
   }
@@ -157,7 +155,7 @@ export async function generateSchemaString<T extends Config>(config: T) {
   return schema.join('\n').replace(/\n{3,}/g, '\n\n');
 }
 
-const generateSchema = async <T extends Config>(config: T) => {
+const generateSchema = async (config: BuiltConfig) => {
   const result = await generateSchemaString(config);
   write(result);
 };

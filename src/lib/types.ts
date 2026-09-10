@@ -63,3 +63,6 @@ export type {
   RichTextFeatureMark,
   RichTextFeatureNode
 } from './fields/rich-text/core/types.js';
+
+/** What a plugin declares when it needs a table of its own — see `BuiltConfig.$tables`. */
+export type { TableDeclaration, ColumnDeclaration, ColumnType } from './core/adapter.js';

@@ -1,5 +1,6 @@
 import { configureCors, configureStaff, configureUploadDirectories } from '$rime/modules';
 import { configureVersions } from '$rime/modules';
+import { configureAuthTables } from '$lib/core/auth/configure.js';
 import { configurePanel } from '$lib/core/panel/configure.js';
 import type { BuiltConfig } from './types.js';
 import type { Dic } from '$lib/util/types.js';
@@ -29,9 +30,10 @@ import type { Dic } from '$lib/util/types.js';
  */
 export const configureConfig = <T extends Dic>(
   config: T
-): T & Pick<BuiltConfig, 'panel' | 'icons' | '$trustedOrigins'> =>
+): T & Pick<BuiltConfig, 'panel' | 'icons' | '$trustedOrigins' | '$tables'> =>
   [
     configureStaff,
+    configureAuthTables,
     configurePanel,
     configureUploadDirectories,
     configureVersions,
@@ -41,4 +43,4 @@ export const configureConfig = <T extends Dic>(
     // needs, and a list holding several cannot promise any of them that shape.
     (current: Dic, step: ((config: any) => any) | undefined) => (step ? step(current) : current),
     config
-  ) as unknown as T & Pick<BuiltConfig, 'panel' | 'icons' | '$trustedOrigins'>;
+  ) as unknown as T & Pick<BuiltConfig, 'panel' | 'icons' | '$trustedOrigins' | '$tables'>;

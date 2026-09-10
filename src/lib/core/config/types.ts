@@ -1,4 +1,4 @@
-import type { VersionsTable } from '$lib/core/adapter.js';
+import type { TableDeclaration, VersionsTable } from '$lib/core/adapter.js';
 import type { LocalizationConfig } from '$lib/core/locale/types.js';
 import type {
   PanelConfig,
@@ -288,6 +288,13 @@ export type BuiltConfig = {
   localization?: LocalizationConfig;
   icons: Record<string, any>;
   $trustedOrigins: string[];
+  /**
+   * Tables no prototype declares — better-auth's own, and whatever a plugin adds.
+   *
+   * Filled during the configure phase and appended to, so a consumer adding a better-auth plugin
+   * can declare that plugin's storage. The schema generator emits exactly what is here.
+   */
+  $tables: TableDeclaration[];
   $routes?: Record<string, RouteConfig>;
   plugins?: Plugin[];
   panel: {
@@ -312,7 +319,14 @@ export type BuiltConfig = {
 };
 
 export type ServerConfigProps =
-  '$adapter' | '$database' | '$trustedOrigins' | '$routes' | '$smtp' | '$custom' | '$auth';
+  | '$adapter'
+  | '$database'
+  | '$trustedOrigins'
+  | '$tables'
+  | '$routes'
+  | '$smtp'
+  | '$custom'
+  | '$auth';
 
 // The prototype lists are not omitted and re-added: `BuiltCollectionClient` and `BuiltAreaClient`
 // are aliases of the server types (see the note on `BuiltAreaClient`), so re-stating them named
