@@ -2,7 +2,7 @@ import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { BuiltPrototype, PrototypeApiContext } from './define.js';
 import type { GenericDoc } from './types.js';
-import { versionsReadQuery } from '$lib/core/versions/read-query.js';
+import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
 import { createBlankDocument } from './doc.js';
 import { shapeBlank } from './blank.server.js';
 

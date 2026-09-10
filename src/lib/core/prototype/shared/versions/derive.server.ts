@@ -1,4 +1,4 @@
-import { withVersionsSuffix } from '$lib/core/versions/naming.js';
+import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import type { BuiltCollection, Config } from '$lib/core/config/types.js';

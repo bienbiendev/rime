@@ -1,8 +1,8 @@
 import { fileForDocument } from '$lib/core/prototype/collection/upload/util/converter.server.js';
-import { VersionOperations } from '$lib/core/versions/strategy.js';
-import { VERSIONS_STATUS } from '$lib/core/versions/constant.js';
+import { VersionOperations } from '$lib/core/prototype/shared/versions/strategy.js';
+import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { withVersionsSuffix } from '$lib/core/versions/naming.js';
+import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 import { recursiveRemoveKeys } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';

@@ -1,7 +1,7 @@
-import { VERSIONS_STATUS } from '$lib/core/versions/constant.js';
-import { VersionOperations } from '$lib/core/versions/strategy.js';
+import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
+import { VersionOperations } from '$lib/core/prototype/shared/versions/strategy.js';
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { withVersionsSuffix } from '$lib/core/versions/naming.js';
+import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 
 /**
  * Exactly one version of a document is published at a time, so publishing one steps the others

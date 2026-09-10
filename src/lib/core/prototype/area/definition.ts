@@ -1,9 +1,9 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
-import { augmentMetas } from '$lib/core/metas/augment.js';
+import { augmentMetas } from '$lib/core/prototype/shared/metas/augment.js';
 import { augmentTitle } from '$lib/core/prototype/shared/title/augment.js';
 import { augmentUrl } from '$lib/core/prototype/shared/url/augment.js';
 import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
-import { augmentVersions } from '$lib/core/versions/augment.js';
+import { augmentVersions } from '$lib/core/prototype/shared/versions/augment.js';
 import { when } from '../when.js';
 import { definePrototype } from '../define.js';
 import { augmentAreaLabel } from './augment-label.js';

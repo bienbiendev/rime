@@ -2,7 +2,7 @@ import { isAuth } from '$lib/core/auth/enabled.js';
 import { isNested } from '$lib/core/prototype/collection/nested/enabled.js';
 import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
 import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
-import { isVersioned } from '$lib/core/versions/enabled.js';
+import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
 import type { Dic } from '$lib/util/types.js';
 
 /**

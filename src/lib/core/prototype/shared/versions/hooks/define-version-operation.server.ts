@@ -1,4 +1,4 @@
-import { defineVersionUpdateOperation } from '$lib/core/versions/strategy.js';
+import { defineVersionUpdateOperation } from '$lib/core/prototype/shared/versions/strategy.js';
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
 
 export const defineVersionOperation = Hooks.beforeUpdate({

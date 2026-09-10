@@ -5,7 +5,7 @@ import * as thumbnail from '$lib/core/prototype/collection/thumbnail/hooks/index
 import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
 import * as upload from '$lib/core/prototype/collection/upload/hooks/index.server.js';
 import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
-import * as versions from '$lib/core/versions/hooks/index.server.js';
+import * as versions from '$lib/core/prototype/shared/versions/hooks/index.server.js';
 import { areaHooks } from '$lib/core/prototype/area/hooks.server.js';
 import { collectionHooks } from '$lib/core/prototype/collection/hooks.server.js';
 

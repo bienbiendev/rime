@@ -1,6 +1,6 @@
 import { blankAuthDocument } from '$rime/modules';
 import { isAuth } from '$lib/core/auth/enabled.js';
-import { blankVersion } from '$lib/core/versions/blank.js';
+import { blankVersion } from '$lib/core/prototype/shared/versions/blank.js';
 import type { BlankIntent } from './types.js';
 import type { Dic } from '$lib/util/types.js';
 

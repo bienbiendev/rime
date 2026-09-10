@@ -2,7 +2,7 @@ import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { WritePlan } from '$lib/core/adapter.js';
-import { versionsWritePlan } from '$lib/core/versions/write-plan.js';
+import { versionsWritePlan } from '$lib/core/prototype/shared/versions/write-plan.js';
 import type { DocType, GenericDoc, PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
@@ -325,7 +325,7 @@ export const runUpdate = async <
    * hook that rewrote `data` would have been silently split around.
    *
    * The default is the whole story for a config with one row: everything goes on it. `versions`
-   * is what refines it (core/versions/write-plan.ts), and it is why `versionOperation` no longer
+   * is what refines it (core/prototype/shared/versions/write-plan.ts), and it is why `versionOperation` no longer
    * travels to the adapter — the enum was only ever a way of saying which rows to write.
    */
   const plan = versionsWritePlan({ data }, { config, context, operation: 'update' });

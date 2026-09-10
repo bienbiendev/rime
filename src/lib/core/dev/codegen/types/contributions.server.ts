@@ -1,7 +1,7 @@
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import { isVersioned } from '$lib/core/versions/enabled.js';
-import { versionsDocType } from '$lib/core/versions/doc-type.js';
+import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
+import { versionsDocType } from '$lib/core/prototype/shared/versions/doc-type.js';
 import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
 import { uploadDocType } from '$lib/core/prototype/collection/upload/doc-type.js';
 

@@ -1,7 +1,7 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { userAttributes } from '$lib/core/auth/user.server.js';
-import { versionsWritePlan } from '$lib/core/versions/write-plan.js';
+import { versionsWritePlan } from '$lib/core/prototype/shared/versions/write-plan.js';
 import {
   assertUpsertContext,
   persistRelational,
