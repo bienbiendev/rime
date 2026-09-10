@@ -13,9 +13,9 @@ import { validatePath } from './util/path.js';
  * the two halves share the export name `augmentUpload` and only the file differs. The server half
  * adds a foreign key the client config must not carry; everything else is here.
  *
- * Export names are unique across the whole package by necessity — they all land in one virtual
- * barrel — hence `augmentUpload` rather than a bare `augment`, and hence the type lives in
- * types.ts: a type exported here would be stubbed as a value on the client.
+ * A name only has to be unique within this pair — `$rime/modules:core/prototype/collection/upload`
+ * names the folder. The type still lives in types.ts: a type exported here would be stubbed as a
+ * value on the client.
  */
 
 const withNormalizedUpload = <T extends { upload?: boolean | UploadConfig }>(
@@ -109,7 +109,7 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
  * The derived `<slug>Directories` collections, re-exported so `$rime/modules` collects them.
  *
  * They live in `directories/configure.ts` — the file says the phase — and only a file named
- * `module.ts` or `module.server.ts` is collected by the barrel, so the pair re-exports rather
- * than holding the code.
+ * `module.ts` or `module.server.ts` is a pair half, so this one re-exports rather than holding
+ * the code.
  */
 export { configureUploadDirectories } from './directories/configure.js';

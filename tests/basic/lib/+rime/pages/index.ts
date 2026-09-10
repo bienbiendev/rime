@@ -13,7 +13,7 @@ import {
   toggle
 } from '$lib/fields/index.js';
 import { access } from '$lib/core/auth/access.js';
-import { buildPagesUrl, hooks } from '$rime/modules';
+import { buildPagesUrl, hooks } from '$rime/modules:+rime/pages';
 import { Collection } from '$rime/config';
 import { Newspaper } from '@lucide/svelte';
 import URL from '../components/URL.svelte';

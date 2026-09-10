@@ -37,7 +37,7 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
  * The derived `<slug>Directories` collections, re-exported so `$rime/modules` collects them.
  *
  * They live in `directories/configure.server.ts` — the file says the phase — and only a file named
- * `module.ts` or `module.server.ts` is collected by the barrel, so the pair re-exports rather
- * than holding the code.
+ * `module.ts` or `module.server.ts` is a pair half, so this one re-exports rather than holding
+ * the code.
  */
 export { configureUploadDirectories } from './directories/configure.server.js';

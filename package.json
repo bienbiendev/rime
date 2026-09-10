@@ -36,53 +36,110 @@
     ".": {
       "types": "./dist/index.d.ts",
       "svelte": "./dist/index.js",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./server": {
       "types": "./dist/server.d.ts",
-      "import": "./dist/server.js"
+      "import": "./dist/server.js",
+      "default": "./dist/server.js"
     },
     "./adapter-sqlite": {
       "types": "./dist/adapter-sqlite/index.server.d.ts",
-      "import": "./dist/adapter-sqlite/index.server.js"
+      "import": "./dist/adapter-sqlite/index.server.js",
+      "default": "./dist/adapter-sqlite/index.server.js"
     },
     "./config": {
       "types": "./dist/core/config/index.d.ts",
-      "import": "./dist/core/config/index.js"
+      "import": "./dist/core/config/index.js",
+      "default": "./dist/core/config/index.js"
     },
     "./config/server": {
       "types": "./dist/core/config/index.server.d.ts",
-      "import": "./dist/core/config/index.server.js"
+      "import": "./dist/core/config/index.server.js",
+      "default": "./dist/core/config/index.server.js"
     },
     "./fields": {
       "types": "./dist/fields/index.d.ts",
-      "import": "./dist/fields/index.js"
+      "import": "./dist/fields/index.js",
+      "default": "./dist/fields/index.js"
     },
     "./fields/rich-text": {
       "types": "./dist/fields/rich-text/client.d.ts",
-      "import": "./dist/fields/rich-text/client.js"
+      "import": "./dist/fields/rich-text/client.js",
+      "default": "./dist/fields/rich-text/client.js"
     },
     "./fields/relation": {
       "types": "./dist/fields/relation/client.d.ts",
-      "import": "./dist/fields/relation/client.js"
+      "import": "./dist/fields/relation/client.js",
+      "default": "./dist/fields/relation/client.js"
     },
     "./panel": {
       "types": "./dist/panel/index.d.ts",
-      "import": "./dist/panel/index.js"
+      "import": "./dist/panel/index.js",
+      "default": "./dist/panel/index.js"
     },
     "./panel/style/index.css": {
-      "import": "./dist/panel/style/index.css"
+      "import": "./dist/panel/style/index.css",
+      "default": "./dist/panel/style/index.css"
     },
     "./types": {
       "types": "./dist/types.d.ts"
     },
     "./util": {
       "types": "./dist/util/index.d.ts",
-      "import": "./dist/util/index.js"
+      "import": "./dist/util/index.js",
+      "default": "./dist/util/index.js"
     },
     "./vite": {
       "types": "./dist/core/dev/vite.server.d.ts",
-      "import": "./dist/core/dev/vite.server.js"
+      "import": "./dist/core/dev/vite.server.js",
+      "default": "./dist/core/dev/vite.server.js"
+    },
+    "./core/auth/module": {
+      "types": "./dist/core/auth/module.server.d.ts",
+      "browser": "./dist/core/auth/module.js",
+      "default": "./dist/core/auth/module.server.js"
+    },
+    "./core/plugins/cache/module": {
+      "types": "./dist/core/plugins/cache/module.server.d.ts",
+      "browser": "./dist/core/plugins/cache/module.js",
+      "default": "./dist/core/plugins/cache/module.server.js"
+    },
+    "./core/plugins/defaults/module": {
+      "types": "./dist/core/plugins/defaults/module.server.d.ts",
+      "browser": "./dist/core/plugins/defaults/module.js",
+      "default": "./dist/core/plugins/defaults/module.server.js"
+    },
+    "./core/prototype/collection/nested/module": {
+      "types": "./dist/core/prototype/collection/nested/module.server.d.ts",
+      "browser": "./dist/core/prototype/collection/nested/module.js",
+      "default": "./dist/core/prototype/collection/nested/module.server.js"
+    },
+    "./core/prototype/collection/upload/module": {
+      "types": "./dist/core/prototype/collection/upload/module.server.d.ts",
+      "browser": "./dist/core/prototype/collection/upload/module.js",
+      "default": "./dist/core/prototype/collection/upload/module.server.js"
+    },
+    "./core/prototype/shared/versions/module": {
+      "types": "./dist/core/prototype/shared/versions/module.server.d.ts",
+      "browser": "./dist/core/prototype/shared/versions/module.browser.js",
+      "default": "./dist/core/prototype/shared/versions/module.server.js"
+    },
+    "./core/cors/module": {
+      "types": "./dist/core/cors/module.server.d.ts",
+      "browser": "./dist/core/cors/module.browser.js",
+      "default": "./dist/core/cors/module.server.js"
+    },
+    "./fields/relation/module": {
+      "types": "./dist/fields/relation/module.server.d.ts",
+      "browser": "./dist/fields/relation/module.js",
+      "default": "./dist/fields/relation/module.server.js"
+    },
+    "./fields/link/module": {
+      "types": "./dist/fields/link/module.server.d.ts",
+      "browser": "./dist/fields/link/module.js",
+      "default": "./dist/fields/link/module.server.js"
     }
   },
   "files": [

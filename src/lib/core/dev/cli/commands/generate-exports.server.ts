@@ -100,13 +100,17 @@ function rewriteSpecifiers(distDir: string, pkgName: string, pairs: RuntimeRegis
   };
   walk(distDir);
 
-  const pattern = new RegExp(`(['"])\\$rime/modules:([^'"]*)\\1`, 'g');
+  // Anchored to a statement, not just the string: a doc comment's example line starts with `*`,
+  // and `declare module '$rime/modules:…'` in a generated .d.ts starts with `declare` — neither
+  // is an import, and rewriting either would be wrong.
+  const pattern =
+    /^([ \t]*(?:import|export)\b[^;\n]*?from[ \t]*)(['"])\$rime\/modules:([^'"]*)\2/gm;
 
   for (const file of files) {
     const code = fs.readFileSync(file, 'utf-8');
     if (!code.includes(SPECIFIER)) continue;
 
-    const rewritten = code.replace(pattern, (_match, quote: string, spec: string) => {
+    const rewritten = code.replace(pattern, (_match, head: string, quote: string, spec: string) => {
       const base = spec.startsWith('.')
         ? path.resolve(path.dirname(file), spec)
         : path.resolve(distDir, spec);
@@ -117,8 +121,21 @@ function rewriteSpecifiers(distDir: string, pkgName: string, pairs: RuntimeRegis
             `nothing at dist/${subpath}/module(.server).js`
         );
       }
-      return `${quote}${pkgName}/${subpath}/module${quote}`;
+      return `${head}${quote}${pkgName}/${subpath}/module${quote}`;
     });
+
+    // Anything left in an import position is a shape the pattern above does not handle — a
+    // dynamic `import()`, a bare side-effect import. Better to stop here than to ship a
+    // specifier no consumer can resolve.
+    const missed = rewritten
+      .split('\n')
+      .find((line) => /^[ \t]*(?:import|export)\b/.test(line) && line.includes(SPECIFIER));
+    if (missed) {
+      throw new Error(
+        `${path.relative(distDir, file)}: \`${missed.trim()}\` was not rewritten — ` +
+          'only static `from` imports are supported'
+      );
+    }
 
     fs.writeFileSync(file, rewritten);
   }

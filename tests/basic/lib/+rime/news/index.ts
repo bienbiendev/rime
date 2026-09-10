@@ -7,7 +7,7 @@ import {
   resource,
   upload
 } from '$lib/fields/rich-text/client.js';
-import { buildNewsUrl } from '$rime/modules';
+import { buildNewsUrl } from '$rime/modules:+rime/news';
 import { Collection } from '$rime/config';
 import LoremFeature from '../lorem-fill.js';
 
