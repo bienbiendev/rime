@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { sanitize } from './string.js';
+import { describe, expect, it, test } from 'vitest';
+import { mapSegments, sanitize, toKebabCase, toSnakeCase } from './string.js';
 
 describe('sanitize', () => {
   describe('XSS Prevention', () => {
@@ -293,5 +293,41 @@ describe('sanitize', () => {
       const result = sanitize(encoded);
       expect(result).toBe('<strong>Bold</strong><em>Italic</em>');
     });
+  });
+});
+
+describe('mapSegments', () => {
+  test('keeps a segment boundary distinct from a word break', () => {
+    // The whole naming scheme rests on this: `__` marks "shadow of", camelCase marks a word.
+    // Plain toSnakeCase collapses the two, so `someSlug__versions` and `someSlugVersions` both
+    // become `some_slug_versions` and a user collection can forge a shadow table.
+    expect(mapSegments('someSlug__versions', toSnakeCase, '__')).toBe('some_slug__versions');
+    expect(mapSegments('someSlugVersions', toSnakeCase, '__')).toBe('some_slug_versions');
+    expect(mapSegments('someSlug__versions', toSnakeCase, '__')).not.toBe(
+      mapSegments('someSlugVersions', toSnakeCase, '__')
+    );
+  });
+
+  test('produces the url form from the same canonical slug', () => {
+    expect(mapSegments('someSlug__versions', toKebabCase, '--')).toBe('some-slug--versions');
+    expect(mapSegments('someSlugDirectories', toKebabCase, '--')).toBe('some-slug-directories');
+    expect(mapSegments('pages', toKebabCase, '--')).toBe('pages');
+  });
+
+  test('a directories slug is one segment, so it snake-cases straight through', () => {
+    // No `__`: directories is a sibling collection, not a shadow, so its table name carries no
+    // relationship marker — and stays what it is today.
+    expect(mapSegments('mediasDirectories', toSnakeCase, '__')).toBe('medias_directories');
+  });
+
+  test('preserves a leading underscore rather than reading it as a boundary', () => {
+    expect(mapSegments('_path', toSnakeCase, '__')).toBe('_path');
+    expect(mapSegments('_someField', toSnakeCase, '__')).toBe('_some_field');
+  });
+
+  test('round-trips a multi-segment name through both forms', () => {
+    const slug = 'someSlug__versions';
+    expect(mapSegments(slug, toSnakeCase, '__')).toBe('some_slug__versions');
+    expect(mapSegments(slug, toKebabCase, '--')).toBe('some-slug--versions');
   });
 });

@@ -7,7 +7,7 @@ import { panelUrl, panelUrlRe } from '../util.js';
 // Both @bienbien/rime-consumer-plugin and @bienbien/rime-consumer-field are real, separately
 // packed npm packages installed into the scaffolded app — this is the one place their
 // $rime/modules resolution (see findInstalledPackageRoot in
-// core/dev/generate/runtime/index.server.ts) gets exercised as an *installed* dependency
+// core/dev/codegen/runtime/index.server.ts) gets exercised as an *installed* dependency
 // rather than a package's own dev sandbox.
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';

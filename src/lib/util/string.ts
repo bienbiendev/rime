@@ -98,6 +98,42 @@ export const toPascalCase = (str: string): string => camelCase(str, { pascalCase
  * // Returns "_hello_world"
  * toSnakeCase("_helloWorld");
  */
+/**
+ * The separator that marks a *segment boundary* inside a rime name, as opposed to a word break.
+ *
+ * `pages__versions` is two segments; `someSlug` is one segment of two words. Every case
+ * conversion has to keep that distinction, because plain `toSnakeCase('someSlug__versions')`
+ * yields `some_slug_versions` — which not only loses the marker but collides with the user
+ * collection `someSlugVersions`.
+ */
+export const SEGMENT_SEPARATOR = '__';
+
+/**
+ * Applies a case conversion to each segment of a `__`-separated name and rejoins them.
+ *
+ * This is the rule that lets one canonical slug produce every other representation by pure
+ * transform — `$someSlug__versions` → table `some_slug__versions`, url `some-slug--versions` —
+ * so nothing outside a feature has to know what `__versions` means.
+ *
+ * A leading underscore is preserved rather than treated as a separator: `_path` is a field name
+ * rime owns, not a segment boundary.
+ *
+ * @example
+ * mapSegments('someSlug__versions', toSnakeCase, '__') // 'some_slug__versions'
+ * mapSegments('someSlug__versions', toKebabCase, '--') // 'some-slug--versions'
+ * mapSegments('someSlugDirectories', toSnakeCase, '__') // 'some_slug_directories'
+ */
+export const mapSegments = (
+  name: string,
+  format: (segment: string) => string,
+  join: string
+): string => {
+  const hasLeadingUnderscore = name.startsWith('_');
+  const body = hasLeadingUnderscore ? name.slice(1) : name;
+  const converted = body.split(SEGMENT_SEPARATOR).map(format).join(join);
+  return hasLeadingUnderscore ? `_${converted}` : converted;
+};
+
 export const toSnakeCase = (str: string): string => {
   // Preserve leading underscore if present
   const hasLeadingUnderscore = str.startsWith('_');

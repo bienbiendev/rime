@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
-  import type { GenericDoc } from '$lib/core/types/doc.js';
+  import type { GenericDoc } from '$lib/core/prototype/types.js';
   import * as Command from '$lib/panel/components/ui/command/index.js';
   import Tag from '$lib/panel/components/ui/tag/tag.svelte';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';

@@ -1,20 +1,45 @@
-import type { Adapter } from '$lib/adapter-sqlite/index.server.js';
-import type { PanelLanguage } from '$lib/core/i18n/index.js';
-import type { Hook, HookBeforeOperation } from '$lib/core/operations/hooks/index.server.js';
+import type { TableDeclaration, VersionsTable } from '$lib/core/adapter.js';
+import type { LocalizationConfig } from '$lib/core/locale/types.js';
+import type {
+  PanelConfig,
+  CollectionPanelConfig,
+  CustomPanelRoute,
+  NavigationConfig
+} from '$lib/core/panel/types.js';
+import type { CacheConfig } from '$lib/core/plugins/cache/types.js';
+import type { CollectionAuthConfig, AdditionalStaffConfig } from '$lib/core/auth/types.js';
+import type { CollectionLabel } from '$lib/core/prototype/collection/types.js';
+import type { UploadConfig } from '$lib/core/prototype/collection/upload/types.js';
+import type { VersionsConfig } from '$lib/core/prototype/shared/versions/types.js';
+import type { Adapter } from '$lib/core/adapter.js';
+import type { Hook, HookBeforeOperation } from '$lib/core/pipeline/types.js';
 import type { Plugin } from '$lib/core/plugins/index.js';
-import type { SMTPConfig } from '$lib/core/plugins/mailer/module.server.js';
-import type { Field, Option } from '$lib/fields/types.js';
+import type { SMTPConfig } from '$lib/core/plugins/mailer/index.server.js';
+import type { Field } from '$lib/fields/types.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
 import type { DashboardEntry } from '$lib/panel/pages/dashboard/types.js';
 import type { AreaSlug, CollectionSlug, User } from '$lib/types.js';
-import type { AtLeastOne, Dic, WithRequired } from '$lib/util/types.js';
+import type { Dic, WithRequired } from '$lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';
 import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
 import type { Component } from 'svelte';
 import type { FieldBuilder } from '../fields/builders/index.js';
-import type { BaseDoc, DocType } from '../types/doc.js';
+import type { DocType } from '../prototype/types.js';
 
+/**
+ * What an author writes.
+ *
+ * The two prototype lists were merged in from beside each definition, through a
+ * `PrototypeMembers` interface this extended. That kept core from naming a kind and made the
+ * authoring surface of every config in the repo depend on a declaration-merging target whose
+ * failure mode is silence: an augmentation that stops being reachable leaves the interface empty
+ * and `config.collections` starts reading `any`, far from the cause.
+ */
 export interface Config {
+  /** The collections an author writes. Optional here, defaulted to `[]` by the config chain. */
+  collections?: BuiltCollection[];
+  /** The areas an author writes. Same. */
+  areas?: BuiltArea[];
   /** If config.siteUrl is defined, a preview button is added
 	on the panel dahsboard, pointing to this url  */
   siteUrl?: string;
@@ -35,10 +60,6 @@ export interface Config {
     // configure?: AuthConfigure;
     // configurePlugins?: (...args: any[]) => any;
   };
-  /** List of Collection  */
-  collections?: BuiltCollection[];
-  /** List of Area  */
-  areas?: BuiltArea[];
   /** List of locales for document i18£n
    * @example
    * localization: {
@@ -103,74 +124,12 @@ export type Access = {
   delete?: (user: User | undefined, options: AccessOptions) => boolean;
 };
 
-export type AdditionalStaffConfig = {
-  roles?: (string | Option)[];
-  panel?: {
-    group?: string;
-  };
-  access?: Access;
-  label?: CollectionLabel;
-  fields?: FieldBuilder<Field>[];
-};
-
-export type PanelConfig = {
-  /** who can accesss the panel */
-  $access?: (user: User | undefined) => boolean;
-  /** Custom panel routes that render a given component */
-  routes?: Record<string, CustomPanelRoute>;
-  /** The panel language, "en" or "fr" supports only */
-  language?: PanelLanguage;
-  /** Sidebar navigation groups labels and icons */
-  navigation?: NavigationConfig;
-  /** Specific components */
-  components?: {
-    /** Dashboard header */
-    header?: Component[];
-    /** Collection header */
-    collectionHeader?: Component<{ config: BuiltCollectionClient }>[];
-    /** Full dashboard component */
-    dashboard?: Component<{ entries: DashboardEntry[]; user?: User }>;
-  };
-  /** a relative path from the "static" directory or an external url
-   * @example
-   * // for static/assets/custom.css
-   * css : '/assets/custom.css'
-   */
-  css?: string;
-};
-
-export type CacheConfig = { isEnabled?: (event: RequestEvent) => boolean };
-
 export type RouteConfig = {
   POST?: RequestHandler;
   GET?: RequestHandler;
   PATCH?: RequestHandler;
   DELETE?: RequestHandler;
 };
-
-export type LocalizationConfig = {
-  locales: LocaleConfig[];
-  default: string;
-};
-
-export type LocaleConfig = {
-  code: string;
-  label: string;
-};
-
-export type CollectionLabel = {
-  singular: string;
-  plural: string;
-  /** Label to search document, ex: Search for pages... */
-  search?: string;
-  /** Label for creation ex: New page */
-  create?: string;
-  /** Label when no document found, ex: No pages found */
-  none?: string;
-};
-
-export type VersionsConfig = { draft?: boolean; autoSave?: boolean; maxVersions?: number };
-export type UrlDefinition<T extends BaseDoc = BaseDoc> = (document: T) => string;
 
 type PrototypeConfig<S extends string = string> = {
   slug: S;
@@ -184,71 +143,6 @@ type PrototypeConfig<S extends string = string> = {
   /** If the document can be edited live, if enabled the url prop must be set also. */
   live?: boolean;
 };
-
-export type UploadConfig = {
-  /**
-   * Define image sizes that will be generated when an image is uploaded.
-   * A 'thumbnail' size will be added, if none provided with this name.
-   * @example
-   * ```typescript
-   * imageSizes: [
-   *   {
-   *     name: 'thumbnail',
-   *     width: 200,
-   *     height: 200,
-   *     out: ['jpg', 'webp'],
-   *     compression: 80
-   *   },
-   *   {
-   *     name: 'medium',
-   *     width: 800,
-   *     compression: 85
-   *   }
-   * ]
-   * ```
-   */
-  imageSizes?: ImageSizesConfig[];
-  /**
-   * Allowed mimeTypes
-   * @example
-   * ```typescript
-   * accept: ['image/jpeg', 'image/svg']
-   * ```
-   */
-  accept?: string[];
-  /** Directories */
-  directories?: {
-    fields: FieldBuilder<Field>[];
-    access?: Access;
-    // @TODO better types
-    $hooks?: CollectionHooks<any>;
-  };
-};
-
-export type CollectionAuthConfig = (
-  | {
-      type: 'password';
-    }
-  | { type: 'apiKey' }
-) & {
-  roles?: (string | Option)[];
-};
-
-export type CollectionPanelConfig =
-  | false
-  | {
-      /** Description for the collection/area, basically displayed on the dashboard */
-      description?: string;
-      /** Sidebar navigation group */
-      group?: string;
-      /** Dashboard settings */
-      dashboard?:
-        | {
-            layout?: 'rows' | 'grid';
-            maxEntries?: number;
-          }
-        | false;
-    };
 
 export type Collection<S> = {
   slug: S;
@@ -286,26 +180,6 @@ export type Area<S> = PrototypeConfig & {
       };
 };
 
-type NavigationConfig = { groups: Array<{ label: string; icon: Component<IconProps> }> };
-
-export type CustomPanelRoute = {
-  group?: string;
-  label: string;
-  icon?: Component<IconProps>;
-  component: Component;
-};
-
-export type ImageSizesConfig = {
-  name: string;
-  /** If none provided, will fallback to original file extesion */
-  out?: Array<'jpg' | 'webp'>;
-  /** Default compression: 60 */
-  compression?: number;
-} & AtLeastOne<{
-  width: number;
-  height: number;
-}>;
-
 export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'upload' | 'auth'> & {
   slug: CollectionSlug;
   type: 'collection';
@@ -318,12 +192,46 @@ export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'up
   asThumbnail: string | null;
   auth?: CollectionAuthConfig;
   versions?: Required<VersionsConfig>;
+  /**
+   * Where this config's content lives, when it is not its own row.
+   *
+   * Stamped by `augmentVersions` on a versioned config; `undefined` otherwise, which reads as
+   * "the document's own row". Declared here beside `versions` because it is the same statement,
+   * and because five callers read it — two of them in `adapter-sqlite/`, which is what keeps the
+   * adapter reading data rather than calling a feature.
+   */
+  _versions?: VersionsTable;
   upload?: UploadConfig;
   icon: Component<IconProps>;
   access: WithRequired<Access, 'create' | 'read' | 'update' | 'delete'>;
+  /**
+   * How the panel's dashboard should list this collection, when a feature has an opinion.
+   *
+   * Off the authoring surface — a config author writes `panel.dashboard.layout` — and the same
+   * device as `_titleFallback`: the feature that knows states its preference, and whoever renders
+   * reads it. `upload` sets `'grid'`, because a collection of files reads better as thumbnails.
+   * The dashboard's own default is `'rows'`, and what an author wrote beats both.
+   *
+   * It replaced `augment-panel.ts`, where the collection prototype tested `config.upload` to pick
+   * this — a prototype knowing what a feature is, and the whole reason this member exists.
+   */
+  _dashboardLayout?: 'rows' | 'grid';
   _generateTypes?: false;
   _generateSchema?: false;
   _generateRoutes?: false;
+  /**
+   * Whose content this config holds, in slug space — the inverse of `_versions`.
+   *
+   * ```
+   * pages              _shadowOf: undefined
+   * $pages__versions   _shadowOf: 'pages'
+   * ```
+   *
+   * Set by whichever feature derived the second table, so nothing has to read it off how the slug
+   * is spelled. `undefined` on every config an author wrote, which makes
+   * `config._shadowOf ?? config.slug` read as "the document this row belongs to".
+   */
+  _shadowOf?: string;
 };
 
 // Same shape as BuiltArea, not a narrower Omit — $url/$hooks are already optional on Area<S>,
@@ -345,6 +253,15 @@ export type BuiltArea = Omit<Area<string>, 'versions'> & {
   label: string;
   asTitle: string;
   versions?: Required<VersionsConfig>;
+  /**
+   * Where this config's content lives, when it is not its own row.
+   *
+   * Stamped by `augmentVersions` on a versioned config; `undefined` otherwise, which reads as
+   * "the document's own row". Declared here beside `versions` because it is the same statement,
+   * and because five callers read it — two of them in `adapter-sqlite/`, which is what keeps the
+   * adapter reading data rather than calling a feature.
+   */
+  _versions?: VersionsTable;
   icon: Component<IconProps>;
   access: WithRequired<Access, 'create' | 'read' | 'update' | 'delete'>;
   _generateTypes?: false;
@@ -354,28 +271,31 @@ export type BuiltArea = Omit<Area<string>, 'versions'> & {
 // See BuiltAreaClient just above for why this isn't a narrowing Omit.
 export type BuiltCollectionClient = BuiltCollection;
 
-// export type Config = Omit<Config, 'collections' | 'areas'> & {
-// 	collections?: BuiltCollection[];
-// 	areas?: BuiltArea[];
-// };
-
+/**
+ * What the config chain produced.
+ *
+ * The two lists with the optionality gone — which is what the chain guarantees by defaulting each
+ * to `[]`, so downstream reads `config.collections` without a guard.
+ */
 export type BuiltConfig = {
+  collections: BuiltCollection[];
+  areas: BuiltArea[];
   /** Database location relative to the root project ex: ./db/my-app.sqlite */
   $database: string;
   /** The database location */
   siteUrl?: string;
-  /** list of collections */
-  collections: BuiltCollection[];
-  /** list of areas */
-  areas: BuiltArea[];
   /** Define wich language the cms support */
   localization?: LocalizationConfig;
   icons: Record<string, any>;
   $trustedOrigins: string[];
+  /**
+   * Tables no prototype declares — better-auth's own, and whatever a plugin adds.
+   *
+   * Filled during the configure phase and appended to, so a consumer adding a better-auth plugin
+   * can declare that plugin's storage. The schema generator emits exactly what is here.
+   */
+  $tables: TableDeclaration[];
   $routes?: Record<string, RouteConfig>;
-  /** Fully-resolved plugin list, computed by augmentPluginsServer — internal, not the
-   * consumer-facing config key (that's just `plugins`) */
-  $plugins?: Plugin[];
   plugins?: Plugin[];
   panel: {
     routes: Record<string, CustomPanelRoute>;
@@ -402,21 +322,18 @@ export type ServerConfigProps =
   | '$adapter'
   | '$database'
   | '$trustedOrigins'
+  | '$tables'
   | '$routes'
   | '$smtp'
   | '$custom'
   | '$auth';
 
-export type SanitizedConfigClient = Omit<Config, ServerConfigProps | 'collections' | 'areas'> & {
-  collections?: BuiltCollectionClient[];
-  areas?: BuiltAreaClient[];
-};
-export type BuiltConfigClient = Omit<
-  BuiltConfig,
-  ServerConfigProps | '$plugins' | 'panel' | 'collections' | 'areas'
-> & {
-  collections: BuiltCollectionClient[];
-  areas: BuiltAreaClient[];
+// The prototype lists are not omitted and re-added: `BuiltCollectionClient` and `BuiltAreaClient`
+// are aliases of the server types (see the note on `BuiltAreaClient`), so re-stating them named
+// two kinds to say nothing. What the client build drops is the server-only config members.
+export type SanitizedConfigClient = Omit<Config, ServerConfigProps>;
+
+export type BuiltConfigClient = Omit<BuiltConfig, ServerConfigProps | 'panel'> & {
   icons: Dic<Component<IconProps>>;
   panel: {
     routes: Record<string, CustomPanelRoute>;

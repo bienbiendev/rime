@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { GenericDoc } from '$lib/core/types/doc.js';
+  import type { GenericDoc } from '$lib/core/prototype/types.js';
   import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
   import { panelUrl } from '$lib/panel/util/url.js';
   import { GripVertical } from '@lucide/svelte';

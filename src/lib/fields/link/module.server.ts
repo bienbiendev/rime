@@ -1,5 +1,5 @@
 import { RimeError } from '$lib/core/errors/index.js';
-import { logger } from '$lib/core/logger/index.server.js';
+import { logger } from '$lib/core/logger.server.js';
 import type { AreaSlug, CollectionSlug, PrototypeSlug } from '$lib/types.js';
 import { trycatch } from '$lib/util/function.js';
 import type { FieldHook, LinkField } from '../types.js';

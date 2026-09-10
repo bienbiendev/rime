@@ -2,11 +2,11 @@ import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
 import { sanitize } from '$lib/util/string.js';
-import validate from '$lib/util/validate.js';
+import validate from '$lib/core/fields/validate.js';
 import Cell from './component/Cell.svelte';
 import LinkComp from './component/Link.svelte';
 import type { Link, LinkType } from './types.js';
-import { populateRessourceURL } from '$rime/modules';
+import { populateRessourceURL } from '$rime/modules:fields/link';
 
 export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
   constructor(name: string) {

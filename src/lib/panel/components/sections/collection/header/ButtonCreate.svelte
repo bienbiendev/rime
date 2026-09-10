@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { PARAMS } from '$lib/core/constant.js';
+  import { PARAMS } from '$lib/core/constants.js';
   import { t__ } from '$lib/core/i18n/index.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import { panelUrl } from '$lib/panel/util/url';

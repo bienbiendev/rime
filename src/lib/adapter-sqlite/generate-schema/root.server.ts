@@ -1,34 +1,44 @@
-import type { LocaleConfig } from '$lib/core/config/types.js';
+import type { LocaleConfig } from '$lib/core/locale/types.js';
 import { type FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { withLocalesSuffix } from '$lib/core/naming.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field, FormField } from '$lib/fields/types.js';
-import { toPascalCase } from '$lib/util/string.js';
+import { tableName as buildTableName } from '../naming.server.js';
 import { toSchemaColumn } from './column.server.js';
 import type { RelationFieldsMap } from './relations/definition.server.js';
+import type { TableName } from '../naming.server.js';
 import {
-  templateHasAuth,
+  templateDeclaredColumn,
   templateLocale,
   templateParent,
   templateTable
 } from './templates.server.js';
-const p = toPascalCase;
+import type { ColumnDeclaration } from '$lib/core/adapter.js';
 
 type Args = {
   fields: FieldBuilder<Field>[];
-  tableName: string;
-  rootName: string;
+  tableName: TableName;
+  rootName: TableName;
   locales?: LocaleConfig[];
   hasParent?: boolean;
   relationFieldsMap?: RelationFieldsMap;
   relationsDic?: Record<string, string[]>;
-  hasAuth?: boolean;
-  versionsFrom?: string | false;
+  /**
+   * Storage-only columns to append to this config's table, in order.
+   *
+   * Appended as given; nothing here knows what asked for them.
+   */
+  featureColumns?: ColumnDeclaration[];
+  /**
+   * The base table this one holds the content of, when it is a versions table — it gets an `ownerId` pointing back at
+   * it. Named after the relationship rather than after the feature that asks for one: what makes
+   * a versions table is a feature declaring one, never a config member this module recognises.
+   */
+  versionsOf?: string | false;
   blocksRegister: string[];
 };
 
@@ -52,8 +62,8 @@ const buildRootTable = async ({
   locales,
   relationFieldsMap = {},
   relationsDic = {},
-  hasAuth,
-  versionsFrom,
+  featureColumns = [],
+  versionsOf,
   blocksRegister
 }: Args): Promise<Return> => {
   const blocksTables: string[] = [];
@@ -102,7 +112,10 @@ const buildRootTable = async ({
         };
       } else if (field instanceof BlocksBuilder) {
         for (const block of field.get.blocks) {
-          const blockTableName = `${rootName}Blocks${p(block.name)}`;
+          const blockTableName = buildTableName({
+            owner: rootName,
+            child: { kind: 'blocks', name: block.name }
+          });
           if (!blocksRegister.includes(blockTableName)) {
             // Add the blocks as a relation of the root collection
             relationsDic = {
@@ -133,7 +146,10 @@ const buildRootTable = async ({
           }
         }
       } else if (field instanceof TreeBuilder) {
-        const treeTableName = `${rootName}Tree${p(field.name)}`;
+        const treeTableName = buildTableName({
+          owner: rootName,
+          child: { kind: 'tree', name: field.name }
+        });
         if (!blocksRegister.includes(treeTableName)) {
           // Add the tree table as relation of the root collection
           relationsDic = {
@@ -173,18 +189,18 @@ const buildRootTable = async ({
   let table: string;
 
   if (locales && locales.length && hasLocalizedField(incomingFields)) {
-    const tableNameLocales = withLocalesSuffix(tableName);
+    const tableNameLocales = buildTableName({ owner: tableName, branch: 'locales' });
     const strLocalizedFields = await generateFieldsTemplates(incomingFields, true);
     relationsDic[tableName] = [...(relationsDic[tableName] || []), tableNameLocales];
     const strUnlocalizedFields = await generateFieldsTemplates(incomingFields, false);
     if (hasParent) {
       strUnlocalizedFields.push(templateParent(rootName));
     }
-    if (versionsFrom) {
-      strUnlocalizedFields.push(templateParent(versionsFrom));
+    if (versionsOf) {
+      strUnlocalizedFields.push(templateParent(versionsOf));
     }
-    if (hasAuth) {
-      strUnlocalizedFields.push(templateHasAuth(rootName));
+    for (const column of featureColumns) {
+      strUnlocalizedFields.push(templateDeclaredColumn(column) + ',');
     }
     table = templateTable(tableName, strUnlocalizedFields.join('\n  '));
     table += templateTable(
@@ -196,11 +212,11 @@ const buildRootTable = async ({
     if (hasParent) {
       strFields.push(templateParent(rootName));
     }
-    if (versionsFrom) {
-      strFields.push(templateParent(versionsFrom));
+    if (versionsOf) {
+      strFields.push(templateParent(versionsOf));
     }
-    if (hasAuth) {
-      strFields.push(templateHasAuth(rootName));
+    for (const column of featureColumns) {
+      strFields.push(templateDeclaredColumn(column) + ',');
     }
     table = templateTable(tableName, strFields.join('\n  '));
   }

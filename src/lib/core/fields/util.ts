@@ -3,7 +3,7 @@ import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field, FormField, SeparatorField } from '$lib/fields/types.js';
-import { normalizeFieldPath } from '$lib/util/doc.js';
+import { normalizeFieldPath } from '$lib/util/path.js';
 import type { Dic } from '$lib/util/types.js';
 import type { FormFieldBuilder } from './builders/form-field-builder.js';
 import type { FieldBuilder } from './builders/index.js';
@@ -259,3 +259,48 @@ export function getFieldListAtPath(
   console.warn(`[LiveEditPanel] fieldPath "${fieldPath}" not found in config fields`);
   return { fields, path: parentPath };
 }
+
+/**
+ * The fields a config keeps on its base row rather than on its versions table — whatever is marked
+ * `._root()`.
+ *
+ * Read off the config, never a list of names, because the schema generator splits the two tables
+ * by the same flag: the base table gets `filter((f) => f.get.root)`, the versions table gets the rest. A
+ * name-matching list would silently drop any field marked by something other than the two features
+ * whose names happened to be in it — there is no versions column to fall back to.
+ *
+ * Top-level only, matching the generator: a nested field cannot be split off its parent.
+ */
+export const baseFieldNames = (config: { fields: FieldBuilder[] }): string[] =>
+  config.fields
+    .filter(isFormField)
+    .filter((field) => field.get.root)
+    .map((field) => field.name);
+
+/**
+ * Splits a write into the half that belongs on the base row and the half that belongs on the
+ * content row.
+ *
+ * Lived in `adapter-sqlite/util.server.ts` as `extractRootData`, which is one layer too low: which
+ * fields are base fields is a fact about the field configs, and every adapter would have to
+ * re-derive it. It is also where the write plan needs it (core/pipeline/write-plan.ts), which is
+ * above any adapter.
+ *
+ * Non-mutating, unlike the version it replaces — that one deleted the base keys out of the
+ * caller's own `data`, which `runUpdate` then went on to hand to `persistRelational`. Nothing
+ * depended on that (blocks, tree and relations resolve against `incomingPaths`, and no base field
+ * is one), but a write that quietly empties its argument is a trap either way.
+ */
+export const splitRootData = (data: Dic, config: { fields: FieldBuilder[] }) => {
+  const base: Dic = {};
+  const content: Dic = { ...data };
+
+  for (const name of baseFieldNames(config)) {
+    if (name in content) {
+      base[name] = content[name];
+      delete content[name];
+    }
+  }
+
+  return { base, content };
+};

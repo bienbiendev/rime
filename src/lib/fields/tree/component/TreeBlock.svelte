@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { TreeBlock } from '$lib/core/types/doc.js';
+  import type { TreeBlock } from '$lib/core/prototype/types.js';
   import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
   import { useOnce } from '$lib/panel/util/once.svelte.js';
   import { GripVertical } from '@lucide/svelte';

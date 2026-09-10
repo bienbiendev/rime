@@ -1,4 +1,4 @@
-import { PANEL_AUTH_IMAGE } from '$lib/core/constant.server.js';
+import { PANEL_AUTH_IMAGE } from '$lib/core/constants.server.js';
 import { error, redirect, type ServerLoadEvent } from '@sveltejs/kit';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
