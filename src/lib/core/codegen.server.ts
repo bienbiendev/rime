@@ -1,7 +1,6 @@
 import devCache from '$lib/core/dev/cache.server.js';
 import type { Config } from '$lib/core/config/types.js';
 import { regenerateDrizzleConfig, regenerateHooks } from './dev/cli/templates/init.js';
-import generatePipelineDoc from './dev/codegen/pipeline/index.server.js';
 import generateRoutes from './dev/codegen/routes/index.server.js';
 import generateTypes from './dev/codegen/types/index.server.js';
 import { RimeError } from './errors/index.js';
@@ -71,7 +70,4 @@ export const runCodegen = async <const C extends Config>(args: {
 
   // 7. src/hooks.server.ts, if the consumer has not written one.
   regenerateHooks();
-
-  // 8. hooks.generated.md — the resolved hook order.
-  generatePipelineDoc(config);
 };
