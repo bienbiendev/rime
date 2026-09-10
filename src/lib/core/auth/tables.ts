@@ -103,16 +103,20 @@ export const authTables = (config: {
     }
   ];
 
-  // The api-key store, when any collection asks for that kind of auth. Its slug has no camel hump
-  // on purpose: better-auth's api-key plugin looks the table up as `apikey`.
-  if (
-    collections.some(
-      (collection) =>
-        !!collection.auth &&
-        typeof collection.auth === 'object' &&
-        (collection.auth as { type?: string }).type === 'apiKey'
-    )
-  ) {
+  // The api-key store. Unconditional, because `configurePlugins` registers better-auth's api-key
+  // plugin unconditionally, and 1.7.4 checks at startup that every registered plugin has its
+  // table:
+  //
+  // ```
+  // ERROR [Better Auth]: Drizzle schema mismatch
+  //   Missing tables
+  //     apikey
+  // ```
+  //
+  // Making the *plugin* conditional instead would make `rime.auth`'s inferred type depend on
+  // whether a config happens to declare an apiKey collection. Its slug has no camel hump on
+  // purpose: the plugin looks the table up as `apikey`.
+  {
     tables.push({
       slug: '$apikey',
       columns: [
