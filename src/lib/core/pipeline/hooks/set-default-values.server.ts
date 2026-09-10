@@ -71,10 +71,14 @@ const defaultRelationValue = async (
           : [];
 
     // `existingIds` on the adapter, written out: which of these ids name a document that exists.
-    // The ordinary read, projected — see features/nested/hooks/add-children.server.ts.
+    // The ordinary read, projected — see collection/nested/hooks/add-children.server.ts.
+    //
+    // `collection` and not the kind-agnostic accessor there used to be: `relationTo` is typed
+    // `CollectionSlug` by `RelationFieldBuilder.to`, so a relation names a collection by
+    // construction.
     const existing = ids.length
       ? await adapter
-          .prototype(config.get.relationTo)
+          .collection(config.get.relationTo)
           .findMany({ query: { where: { id: { in_array: ids } } }, select: ['id'] })
       : [];
 

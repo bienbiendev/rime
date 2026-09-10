@@ -1,4 +1,4 @@
-import type { PrototypeHandle, RegisterPrototypeArgs } from '$lib/core/adapter.js';
+import type { AreaHandle, CollectionHandle, RegisterPrototypeArgs } from '$lib/core/adapter.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { RawDoc } from '$lib/core/prototype/types.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
@@ -40,9 +40,9 @@ export const createPrototypeHandles = (deps: {
   configCtx: ConfigContext;
 }) => {
   const { db, tables, configCtx } = deps;
-  const handles = new Map<string, PrototypeHandle>();
+  const handles = new Map<string, AreaHandle | CollectionHandle>();
 
-  const buildHandle = ({ config, singleton, versions }: RegisterPrototypeArgs): PrototypeHandle => {
+  const buildHandle = ({ config, singleton, versions }: RegisterPrototypeArgs) => {
     const { slug } = config;
 
     // What every call below re-stated: the connection, and which prototype this handle is.
@@ -51,8 +51,9 @@ export const createPrototypeHandles = (deps: {
     const self = { slug, config, versions };
 
     /**
-     * A singleton has no id to be given, so it looks its one row up. This is the *only* place
-     * the difference shows in a write, and it is why an area needed no `id` parameter.
+     * A singleton has no id to be given, so it looks its one row up. The **only** place the
+     * difference shows, now that the two kinds have separate handles: an area's verbs take no id,
+     * so this is where the one it needs comes from.
      */
     const resolveSingletonId = async () => {
       const table = tables[baseTableName(slug)];
@@ -68,49 +69,43 @@ export const createPrototypeHandles = (deps: {
       return row.id as string;
     };
 
-    /** What a singleton refuses, and why, in one place. */
-    const refuseOnSingleton = (operation: string) => {
-      throw new RimeError(
-        RimeError.OPERATION_ERROR,
-        `${operation} is not available on ${slug}: it holds exactly one document`
-      );
-    };
-
-    return {
+    const shared = {
       slug,
-      singleton,
       config,
       versions,
 
-      find: (args = {}) =>
-        readPrototype(read, {
-          ...args,
-          ...self,
-          // A singleton ignores an id it was never meant to be given.
-          id: singleton ? undefined : args.id
-        }) as Promise<RawDoc | undefined>,
-
       findMany: (args = {}) => findManyPrototypes(read, { ...args, ...self }),
 
-      insert: (args) => {
-        if (singleton) refuseOnSingleton('insert');
-        return insertPrototype(write, { ...args, slug, versions });
-      },
+      updateWhere: (args: Parameters<CollectionHandle['updateWhere']>[0]) =>
+        updateWherePrototype(read, { ...args, slug })
+    };
 
-      update: async (args) => {
-        const id = singleton ? await resolveSingletonId() : args.id!;
-        return updatePrototype(write, { ...args, slug, id, versions });
-      },
+    const collectionHandle: CollectionHandle = {
+      ...shared,
 
-      updateWhere: (args) => updateWherePrototype(read, { ...args, slug }),
+      find: (args) => readPrototype(read, { ...args, ...self }) as Promise<RawDoc | undefined>,
 
-      delete: (args) => {
-        if (singleton) refuseOnSingleton('delete');
-        return deletePrototype(write, { slug, id: args.id });
-      },
+      insert: (args) => insertPrototype(write, { ...args, slug, versions }),
+
+      update: (args) => updatePrototype(write, { ...args, slug, versions }),
+
+      delete: (args) => deletePrototype(write, { slug, id: args.id })
+    };
+
+    const areaHandle: AreaHandle = {
+      ...shared,
+
+      // No id in, and no id out to the caller: the row is looked up here.
+      find: (args = {}) =>
+        readPrototype(read, { ...args, ...self, id: undefined }) as Promise<RawDoc | undefined>,
+
+      update: async (args) =>
+        updatePrototype(write, { ...args, slug, versions, id: await resolveSingletonId() }),
 
       ensureExists: (args) => ensurePrototypeExists(write, { ...args, slug, versions })
     };
+
+    return singleton ? areaHandle : collectionHandle;
   };
 
   /**
@@ -118,6 +113,12 @@ export const createPrototypeHandles = (deps: {
    * a spread rather than a rename. They were `register` and `get`, and nothing in `get` said it
    * was `adapter.prototype`.
    */
+  const lookup = (slug: string) => {
+    const handle = handles.get(slug);
+    if (!handle) throw new RimeError(RimeError.INIT, `\`${slug}\` is not a registered prototype`);
+    return handle;
+  };
+
   return {
     registerPrototype: (args: RegisterPrototypeArgs) => {
       const table = baseTableName(args.config.slug);
@@ -134,14 +135,14 @@ export const createPrototypeHandles = (deps: {
       handles.set(args.config.slug, buildHandle(args));
     },
 
-    prototype: (slug: string): PrototypeHandle => {
-      const handle = handles.get(slug);
+    /**
+     * The two typed lookups. A caller that holds a `BuiltCollection` asks for a collection and a
+     * caller that holds a `BuiltArea` asks for an area; the cast is the erasure registration
+     * already makes, and sound for the same reason — a slug is registered under exactly one kind,
+     * and `singleton` is what picked the handle above.
+     */
+    collection: (slug: string): CollectionHandle => lookup(slug) as CollectionHandle,
 
-      if (!handle) {
-        throw new RimeError(RimeError.INIT, `\`${slug}\` is not a registered prototype`);
-      }
-
-      return handle;
-    }
+    area: (slug: string): AreaHandle => lookup(slug) as AreaHandle
   };
 };

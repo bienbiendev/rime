@@ -180,7 +180,7 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
          *
          * @example
          * rime.adapter.db.query.pages.findFirst()
-         * rime.adapter.prototype('users').findMany({ query: { where: { id: { equals: '1' } } } })
+         * rime.adapter.collection('users').findMany({ query: { where: { id: { equals: '1' } } } })
          */
         get adapter() {
           return adapter;

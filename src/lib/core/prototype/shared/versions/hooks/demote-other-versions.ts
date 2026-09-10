@@ -32,7 +32,7 @@ export const demoteOtherVersions = Hooks.beforeUpdate({
     if (!VersionOperations.isSpecificVersionUpdate(context.versionOperation!)) return args;
     if (data.status !== VERSIONS_STATUS.PUBLISHED) return args;
 
-    await event.locals.rime.adapter.prototype(withVersionsSuffix(config.slug)).updateWhere({
+    await event.locals.rime.adapter.collection(withVersionsSuffix(config.slug)).updateWhere({
       query: `where[ownerId][equals]=${context.originalDoc!.id}`,
       data: { status: VERSIONS_STATUS.DRAFT }
     });

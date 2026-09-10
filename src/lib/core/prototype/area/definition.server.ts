@@ -34,7 +34,7 @@ export const area = definePrototype<BuiltArea>({
      * The locale is the config's default for the same reason: the locale of an area's first row
      * is a property of the config, not of its first reader.
      */
-    await adapter.prototype(config.slug).ensureExists({
+    await adapter.area(config.slug).ensureExists({
       // Intent `'seed'`, not `'create'`: a feature that gives this prototype a versions may need
       // the first row to differ from what an author's create starts with. See
       // FeatureDefinition.blank.

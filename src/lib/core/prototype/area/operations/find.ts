@@ -40,7 +40,7 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T> => {
   });
 
   // No id: a singleton has exactly one row, and the handle knows it.
-  const documentRaw = await event.locals.rime.adapter.prototype(config.slug).find({
+  const documentRaw = await event.locals.rime.adapter.area(config.slug).find({
     locale,
     select,
     // See the collection's findById.

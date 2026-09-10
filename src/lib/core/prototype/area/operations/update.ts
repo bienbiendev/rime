@@ -44,7 +44,7 @@ export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) =
     where: 'update',
 
     // No `id`: an area's handle resolves its single row. See the collection's for the plan.
-    write: ({ plan, config }) => rime.adapter.prototype(config.slug).update({ ...plan, locale }),
+    write: ({ plan, config }) => rime.adapter.area(config.slug).update({ ...plan, locale }),
 
     /**
      * Read back **the row the write went to** — see the collection's `reread` for the full note.

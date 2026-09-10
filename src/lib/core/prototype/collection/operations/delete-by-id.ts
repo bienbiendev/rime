@@ -30,7 +30,7 @@ export const deleteById = async <T extends GenericDoc>(args: Args): Promise<stri
 
   // No `content`: a delete means the document, so it reads whichever row is newest. That is what
   // `draft: true` said here before there was a way to say "no narrowing".
-  const document = (await rime.adapter.prototype(config.slug).find({ id })) as T;
+  const document = (await rime.adapter.collection(config.slug).find({ id })) as T;
 
   if (!document) {
     throw new RimeError(RimeError.NOT_FOUND);
@@ -46,7 +46,7 @@ export const deleteById = async <T extends GenericDoc>(args: Args): Promise<stri
   });
   context = before.context;
 
-  await rime.adapter.prototype(config.slug).delete({ id });
+  await rime.adapter.collection(config.slug).delete({ id });
 
   // Deliberately the pre-hook document, matching the previous implementation: beforeDelete's
   // returned doc was never carried into afterDelete.

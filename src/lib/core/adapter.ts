@@ -29,7 +29,10 @@ export interface Adapter {
   registerPrototype(args: RegisterPrototypeArgs): void;
 
   /** The handle for a registered prototype. */
-  prototype(slug: string): PrototypeHandle;
+  collection(slug: string): CollectionHandle;
+
+  /** The handle for a registered area. */
+  area(slug: string): AreaHandle;
 
   /**
    * The handle for a table a feature declared — see `FeatureDefinition.tables`.
@@ -83,35 +86,17 @@ export type RegisterPrototypeArgs = {
  * not here — except for the two a singleton refuses outright, which the adapter enforces at the
  * database boundary because that is where the guarantee has to hold.
  */
-export interface PrototypeHandle {
+/**
+ * What every prototype handle carries, whatever kind it is.
+ *
+ * `slug` and `config` are what it was registered with; `versions` is where this config's content
+ * lives when that is not its own row.
+ */
+interface BaseHandle {
   readonly slug: string;
-  readonly singleton: boolean;
   readonly config: BuiltArea | BuiltCollection;
   /** What it was registered with — see `RegisterPrototypeArgs.versions`. */
   readonly versions?: VersionsTable;
-
-  /**
-   * One document, merged with the version it should show. `undefined` when nothing matches —
-   * the caller decides whether that is a 404.
-   *
-   * `id` is required to mean anything on a non-singleton, and ignored on a singleton, which has
-   * only one row to return.
-   */
-  find(args?: {
-    id?: string;
-    select?: string[];
-    locale?: string;
-    /**
-     * Narrows which content row this read means, for a prototype that has one. The newest when
-     * omitted, which is what "the content of this document" means with nothing else said.
-     *
-     * This is what `draft` and `versionId` were. They were request parameters the adapter decoded
-     * against `config.versions.draft`; the caller decodes them now
-     * (`FeatureDefinition.readQuery`) and hands down a filter, so the adapter applies one rather
-     * than choosing one.
-     */
-    content?: OperationQuery;
-  }): Promise<RawDoc | undefined>;
 
   findMany(args?: {
     select?: string[];
@@ -125,46 +110,6 @@ export interface PrototypeHandle {
   }): Promise<RawDoc[]>;
 
   /**
-   * Throws on a singleton: there is no second document to make.
-   *
-   * Takes a `WritePlan`, like `update` — the caller decides which rows a write touches, and the
-   * adapter executes. The difference from an update is the one an insert has by definition:
-   * `content` carries no `id`, because the row does not exist yet. The adapter makes it and
-   * answers with it.
-   *
-   * A prototype with a versions **requires** `content`. Its base row has no columns for the content,
-   * so a plan that names no content half would write half a document and hang its blocks off the
-   * wrong row; the adapter refuses instead.
-   *
-   * Returns the document's id and `contentId` — the row its content landed on, which is what its
-   * blocks, tree nodes and relations hang off. The two are the same when the prototype has no
-   * versions.
-   */
-  insert(args: {
-    data: Dic;
-    content?: { data: Dic };
-    locale?: string;
-  }): Promise<{ id: string; contentId: string }>;
-
-  /**
-   * Writes the rows a `WritePlan` names: the prototype's own row always, and the content row when
-   * the caller names one.
-   *
-   * `id` is required on a non-singleton; a singleton resolves its own row.
-   *
-   * There is no `versionOperation` and no `versionId` here any more. The caller decided which rows
-   * this write touches before calling — `core/pipeline/run.server.ts` builds the plan, and
-   * `FeatureDefinition.writePlan` is where a feature says its half — so the adapter has a plan to
-   * execute rather than an enum to decode into three branches.
-   */
-  update(args: {
-    id?: string;
-    data: Dic;
-    content?: { id: string; data: Dic };
-    locale?: string;
-  }): Promise<{ id: string }>;
-
-  /**
    * Sets columns on every row this prototype owns that `query` matches.
    *
    * The bulk half of `update`: no pipeline, no children, and it writes exactly the columns given
@@ -175,9 +120,97 @@ export interface PrototypeHandle {
    * field and a locale; which table that is, is the adapter's business.
    */
   updateWhere(args: { query: OperationQuery; data: Dic; locale?: string }): Promise<void>;
+}
 
-  /** Throws on a singleton: removing the only document leaves nothing to read. */
+/**
+ * What the adapter can do to one registered **collection**.
+ *
+ * Many documents, addressed by id: `find`, `update` and `delete` each take one, and `insert` makes
+ * a new one. That is the whole difference from an area, and it is said in the type now rather than
+ * refused at runtime — `singleton` used to carry it, as `id: singleton ? undefined : args.id` on
+ * every read, a `resolveSingletonId()` on every write, and two `refuseOnSingleton` throws nothing
+ * ever exercised, because the area *definition* already exposed neither verb.
+ */
+export interface CollectionHandle extends BaseHandle {
+  /**
+   * One document, merged with the version it should show. `undefined` when nothing matches — the
+   * caller decides whether that is a 404.
+   */
+  find(args: {
+    id: string;
+    select?: string[];
+    locale?: string;
+    /**
+     * Narrows which content row this read means, for a config that has one. The newest when
+     * omitted, which is what "the content of this document" means with nothing else said.
+     *
+     * This is what `draft` and `versionId` were. They were request parameters the adapter decoded
+     * against `config.versions.draft`; the caller decodes them now (`versionsReadQuery`) and hands
+     * down a filter, so the adapter applies one rather than choosing one.
+     */
+    content?: OperationQuery;
+  }): Promise<RawDoc | undefined>;
+
+  /**
+   * Makes a document. The difference from `update` is the one an insert has by definition:
+   * `content` carries no `id`, because the row does not exist yet — the adapter makes it and
+   * answers with it.
+   *
+   * A versioned config **requires** `content`. Its base row has no columns for the content, so a
+   * plan naming no content half would write half a document and hang its blocks off the wrong row;
+   * the adapter refuses instead.
+   *
+   * Returns the document's id and `contentId` — the row its content landed on, which is what its
+   * blocks, tree nodes and relations hang off. The two are the same when the config is not
+   * versioned.
+   */
+  insert(args: {
+    data: Dic;
+    content?: { data: Dic };
+    locale?: string;
+  }): Promise<{ id: string; contentId: string }>;
+
+  /**
+   * Writes the rows a write plan names: the document's own row always, and the content row when
+   * the caller names one.
+   *
+   * There is no `versionOperation` and no `versionId` here. The caller decided which rows this
+   * write touches before calling — `pipeline/run.server.ts` builds the plan and
+   * `versionsWritePlan` refines it — so the adapter executes a plan rather than decoding an enum
+   * into three branches.
+   */
+  update(args: {
+    id: string;
+    data: Dic;
+    content?: { id: string; data: Dic };
+    locale?: string;
+  }): Promise<{ id: string }>;
+
+  /** Removes one document. */
   delete(args: { id: string }): Promise<string | undefined>;
+}
+
+/**
+ * What the adapter can do to one registered **area**.
+ *
+ * Exactly one document, so nothing here takes an id — the handle resolves which row it is. There
+ * is no `insert` and no `delete`: not switched off, absent. `ensureExists` is the consequence, and
+ * it is boot's: the row has to be there before a request can read it.
+ */
+export interface AreaHandle extends BaseHandle {
+  /** The document, merged with the version it should show. See `CollectionHandle.find`. */
+  find(args?: {
+    select?: string[];
+    locale?: string;
+    content?: OperationQuery;
+  }): Promise<RawDoc | undefined>;
+
+  /** Writes the rows a write plan names. See `CollectionHandle.update`. */
+  update(args: {
+    data: Dic;
+    content?: { id: string; data: Dic };
+    locale?: string;
+  }): Promise<{ id: string }>;
 
   /** Boot only. Writes the row if absent; a no-op if not. */
   ensureExists(args: { blank: Dic; locale?: string }): Promise<void>;

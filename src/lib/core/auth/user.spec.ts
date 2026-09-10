@@ -7,7 +7,7 @@ import { betterAuthUserId, isSuperAdmin, userAttributes } from './user.server.js
  * What these three reads ask for, pinned.
  *
  * They moved off the `Adapter` interface, where they were hand-written SQL, onto
- * `prototype(slug).findMany`. The queries are the whole of what changed, and two of the three are
+ * `collection(slug).findMany`. The queries are the whole of what changed, and two of the three are
  * access decisions: a wrong `isSuperAdmin` is a privilege escalation, and it fails *open* — the
  * caller only ever asks "is this the super-admin?", so a query that matches nothing reads as "no"
  * and a query that matches too much reads as "yes". Neither is visible in a passing suite.
@@ -21,7 +21,7 @@ type Call = { slug: string; args: any };
 const stubAdapter = (rows: any[]) => {
   const calls: Call[] = [];
   const adapter = {
-    prototype: (slug: string) => ({
+    collection: (slug: string) => ({
       findMany: async (args: any) => {
         calls.push({ slug, args });
         return rows;

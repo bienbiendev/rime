@@ -131,7 +131,12 @@ export const populateURL = Hooks.beforeRead<'generic'>({
           const contentId = config._versions ? args.doc.contentId : args.doc.id;
 
           if (contentId) {
-            args.event.locals.rime.adapter.prototype(contentSlug).updateWhere({
+            const target =
+              config._versions || config.type === 'collection'
+                ? args.event.locals.rime.adapter.collection(contentSlug)
+                : args.event.locals.rime.adapter.area(contentSlug);
+
+            target.updateWhere({
               query: { where: { id: { equals: contentId } } },
               data: { url },
               locale

@@ -49,7 +49,7 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
     context
   });
 
-  const documentRaw = await rime.adapter.prototype(config.slug).find({
+  const documentRaw = await rime.adapter.collection(config.slug).find({
     id,
     locale,
     select,

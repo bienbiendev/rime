@@ -15,7 +15,7 @@ import type { User } from './types.js';
  * It appears here instead, once, as `STAFF_SLUG` — and it belongs here because this feature is
  * what derives that collection (`staff/augment.ts`).
  *
- * > **These read rows, not documents.** `adapter.prototype(slug).findMany` runs no hooks and no
+ * > **These read rows, not documents.** `adapter.collection(slug).findMany` runs no hooks and no
  * > access checks, which is deliberate and load-bearing: all three run *during* authentication,
  * > before there is a user to check anything against. Going through `rime.collection(slug).find()`
  * > would recurse — the access check needs the user this call is resolving.
@@ -28,7 +28,7 @@ import type { User } from './types.js';
  * flag together: no row matching *both* means no.
  */
 export const isSuperAdmin = async (adapter: Adapter, userId: string): Promise<boolean> => {
-  const [found] = await adapter.prototype(STAFF_SLUG).findMany({
+  const [found] = await adapter.collection(STAFF_SLUG).findMany({
     query: {
       where: { and: [{ id: { equals: userId } }, { isSuperAdmin: { equals: true } }] }
     },
@@ -44,7 +44,7 @@ export const betterAuthUserId = async (
   adapter: Adapter,
   args: { slug: CollectionSlug; id: string }
 ): Promise<string | null> => {
-  const [row] = await adapter.prototype(args.slug).findMany({
+  const [row] = await adapter.collection(args.slug).findMany({
     query: { where: { id: { equals: args.id } } },
     select: ['authUserId'],
     limit: 1
@@ -66,7 +66,7 @@ export const userAttributes = async (
 ): Promise<User | undefined> => {
   const isStaff = args.slug === STAFF_SLUG;
 
-  const [row] = await adapter.prototype(args.slug).findMany({
+  const [row] = await adapter.collection(args.slug).findMany({
     query: { where: { authUserId: { equals: args.authUserId } } },
     // `isSuperAdmin` is only a column on the collection this feature derives. A `select` naming a
     // column the table does not have is dropped, so asking for it everywhere would also work —

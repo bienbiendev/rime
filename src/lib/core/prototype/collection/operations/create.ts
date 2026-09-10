@@ -66,7 +66,7 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
    */
   const plan = versionsWritePlan({ data: data as Dic }, { config, context, operation: 'create' });
 
-  const created = await rime.adapter.prototype(config.slug).insert({
+  const created = await rime.adapter.collection(config.slug).insert({
     data: plan.data,
     content: plan.content && { data: plan.content.data },
     locale

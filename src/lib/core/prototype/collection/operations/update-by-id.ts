@@ -49,7 +49,7 @@ export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T
 
     // The plan says which rows this write touches; the adapter writes what it is handed.
     write: ({ plan, config }) =>
-      rime.adapter.prototype(config.slug).update({ id, ...plan, locale }),
+      rime.adapter.collection(config.slug).update({ id, ...plan, locale }),
 
     /**
      * Read back **the row the write went to**, not the one the caller asked for.
