@@ -194,6 +194,7 @@ appended after the prototype's, before the finaliser.
 | #   | hook             | from |
 | --- | ---------------- | ---- |
 | 1   | `populateAPIKey` | auth |
+| 2   | `signInNewUser`  | auth |
 
 ### beforeUpdate
 
@@ -258,6 +259,7 @@ appended after the prototype's, before the finaliser.
 | #   | hook             | from |
 | --- | ---------------- | ---- |
 | 1   | `populateAPIKey` | auth |
+| 2   | `signInNewUser`  | auth |
 
 ### beforeUpdate
 
@@ -322,6 +324,7 @@ appended after the prototype's, before the finaliser.
 | #   | hook             | from |
 | --- | ---------------- | ---- |
 | 1   | `populateAPIKey` | auth |
+| 2   | `signInNewUser`  | auth |
 
 ### beforeUpdate
 

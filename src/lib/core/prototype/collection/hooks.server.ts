@@ -82,7 +82,7 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     upload.processFileUpload
   ],
 
-  afterCreate: [auth.populateAPIKey],
+  afterCreate: [auth.populateAPIKey, auth.signInNewUser],
 
   beforeUpdate: [
     getOriginalDocument,

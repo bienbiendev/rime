@@ -1,6 +1,4 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { userAttributes } from '$lib/core/auth/user.server.js';
 import { versionsWritePlan } from '$lib/core/prototype/shared/versions/write-plan.js';
 import {
   assertUpsertContext,
@@ -83,24 +81,6 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
     config,
     locale
   });
-
-  /**
-   * Auto sign-in user after a success sign-up
-   */
-  if (config.auth && event.locals.isAutoSignIn) {
-    if (
-      typeof data.name !== 'string' ||
-      typeof data.email !== 'string' ||
-      typeof args.data.authUserId !== 'string'
-    ) {
-      throw new RimeError(RimeError.OPERATION_ERROR, 'unable to signin user');
-    }
-
-    event.locals.user = await userAttributes(rime.adapter, {
-      authUserId: args.data.authUserId,
-      slug: config.slug
-    });
-  }
 
   // Use the document ID to find the created document
   let document = (await rime

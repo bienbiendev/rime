@@ -15,3 +15,4 @@ export { preventSuperAdminMutation } from './prevent-superadmin-mutation.server.
 export { preventSupperAdminDeletion } from './prevent-superadmin-deletion.server.js';
 export { preventUserMutations } from './prevent-user-mutations.server.js';
 export { removePrivateFields } from './remove-private-fields.server.js';
+export { signInNewUser } from './sign-in-new-user.server.js';

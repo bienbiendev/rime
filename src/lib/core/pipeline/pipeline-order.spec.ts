@@ -179,7 +179,7 @@ describe('resolved pipeline order', () => {
         'setDefaultValues',
         'validateFields'
       ]);
-      expect(order(hooks, 'afterCreate')).toEqual(['populateAPIKey']);
+      expect(order(hooks, 'afterCreate')).toEqual(['populateAPIKey', 'signInNewUser']);
       expect(order(hooks, 'beforeDelete')).toEqual(['preventSupperAdminDeletion']);
       expect(order(hooks, 'afterDelete')).toEqual(['deleteBetterAuthUser']);
     });
