@@ -1,8 +1,8 @@
 import { dev } from '$app/environment';
 import { getRequestEvent } from '$app/server';
+import { deleteAuthUser, setAuthUserRole } from '$lib/core/auth/better-auth-tables.server.js';
 import { BETTER_AUTH_ROLES } from '$lib/core/auth/constant.server.js';
 import { userAttributes } from '$lib/core/auth/user.server.js';
-import { deleteAuthUser, setAuthUserRole } from '$lib/core/auth/better-auth-tables.server.js';
 import { logger } from '$lib/core/logger.server.js';
 import { trycatch } from '$lib/util/function.js';
 import { omit } from '$lib/util/object.js';
@@ -82,11 +82,11 @@ const handleUserCreation = async (ctx: CTX) => {
   }
 
   /**
-   * Set isAutoSignIn flag to true to auto-populate the user document
+   * Set pendingSignInAfterSignUp flag to true to auto-populate the user document
    * after creation on event.locals.user, this tell the operation that
    * the creation is initiate by a better-auth sign-up
    */
-  event.locals.isAutoSignIn = true;
+  event.locals.pendingSignInAfterSignUp = true;
 
   /**
    * Create the collection document

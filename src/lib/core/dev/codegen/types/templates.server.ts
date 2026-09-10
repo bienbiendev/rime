@@ -1,5 +1,5 @@
-import { IS_RIME_REPO, PACKAGE_NAME } from '$lib/core/constants.server.js';
 import type { Config } from '$lib/core/config/types.js';
+import { IS_RIME_REPO, PACKAGE_NAME } from '$lib/core/constants.server.js';
 import { capitalize } from '$lib/util/string.js';
 
 /**
@@ -104,7 +104,7 @@ export const templateLocals = (rimeConfigServerPath: string) => `declare global 
 			 * Flag enabled when a create operation is triggered
 			 * by a auth/sign-up api call.
 			 */
-			isAutoSignIn?: boolean;
+			pendingSignInAfterSignUp?: boolean;
 			/** The full better-auth user */
 			betterAuthUser:
 			| {
