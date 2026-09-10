@@ -12,7 +12,7 @@ const s = toSnakeCase;
  */
 export const templateImports = `
 import { text, integer, sqliteTable, real } from "drizzle-orm/sqlite-core";
-import { relations } from 'drizzle-orm';
+import { defineRelations } from 'drizzle-orm';
 
 const pk = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 `;
@@ -176,45 +176,51 @@ export const templateUniqueRequired = (
 /** Template rows Relation */
 
 /**
- * Generates a one-to-one or many-to-one relationship definition
- * Creates a relation where the table has one parent
+ * The whole schema's relations, in one declaration.
  *
- * @example
- * ```typescript
- * export const rel_pagesShadowHasOnePages = relations(pagesShadow, ({ one }) => ({
- *   pages: one(pages, {
- *     fields: [pagesShadow.ownerId],
- *     references: [pages.id],
- *   }),
- * }))
+ * Every relation rime generates is the same shape — a child row points at its owner through
+ * `ownerId` — so the tree is `parent -> children` and both directions fall out of it:
+ *
+ * ```ts
+ * export const relations = defineRelations(tables, (r) => ({
+ *   pages: {
+ *     pages__$blocks_paragraph: r.many.pages__$blocks_paragraph({
+ *       from: r.pages.id, to: r.pages__$blocks_paragraph.ownerId
+ *     })
+ *   },
+ *   pages__$blocks_paragraph: {
+ *     pages: r.one.pages({ from: r.pages__$blocks_paragraph.ownerId, to: r.pages.id })
+ *   }
+ * }));
  * ```
+ *
+ * A relation is keyed by the table on the other end, which is what `buildWithParam` names when it
+ * builds a `with`.
  */
-export const templateRelationOne = ({ name, table, parent }: RelationOneArgs): string => `
-export const ${name} = relations(${table}, ({ one }) => ({
-  ${parent} : one(${parent}, {
-    fields: [${table}.ownerId],
-    references: [${parent}.id],
-  }),
-}))
-`;
+export const templateRelations = (tree: Record<string, string[]>): string => {
+  /** table -> its relation lines. A table is often both a parent and a child. */
+  const lines: Record<string, Map<string, string>> = {};
+  const add = (table: string, key: string, line: string) => {
+    (lines[table] ??= new Map()).set(key, line);
+  };
 
-/**
- * Generates a one-to-many relationship definition
- * Creates a relation where the table has many children
- *
- * @example
- * ```typescript
- * export const rel_pagesHasManyBlocks = relations(pages, ({ many }) => ({
- *   pagesBlocksParagraph: many(pagesBlocksParagraph),
- *   pagesBlocksImage: many(pagesBlocksImage),
- * }))
- * ```
- */
-export const templateRelationMany = ({ name, table, many }: RelationManyArgs): string => `
-export const ${name} = relations(${table}, ({ many }) => ({
-  ${many.map((child) => `${child}: many(${child}),`).join('\n')}
-}))
+  for (const [parent, children] of Object.entries(tree)) {
+    for (const child of children) {
+      add(parent, child, `${child}: r.many.${child}({ from: r.${parent}.id, to: r.${child}.ownerId })`);
+      add(child, parent, `${parent}: r.one.${parent}({ from: r.${child}.ownerId, to: r.${parent}.id })`);
+    }
+  }
+
+  const entries = Object.entries(lines).map(
+    ([table, rels]) => `  ${table}: {\n    ${[...rels.values()].join(',\n    ')}\n  }`
+  );
+
+  return `
+export const relations = defineRelations(tables, (r) => ({
+${entries.join(',\n')}
+}));
 `;
+};
 
 /** Templates Field Relations */
 
@@ -330,15 +336,16 @@ export const templateExportTables = (tables: string[]): string => dedent`
  * export default schema
  * ```
  */
-export const templateExportSchema = ({ enumTables, enumRelations }: TemplateExportSchemaArgs) => `
+export const templateExportSchema = ({ enumTables }: TemplateExportSchemaArgs) => `
 const schema = {
-	${enumTables.join(',\n      ')}${enumRelations.length ? ',\n      ' + enumRelations.join(',\n      ') : ''}
+	${enumTables.join(',\n      ')}
 }
 
 declare module 'rimecms' {
 	export interface RegisterSchema {
 			schema: typeof schema;
 			tables: typeof tables;
+			relations: typeof relations;
 	}
 }
 export default schema
@@ -351,20 +358,10 @@ export default schema
 export const templateHead = (slug: string) => dedent`
   /** ${slug} ============================================== **/`;
 
-type RelationOneArgs = {
-  name: string;
-  table: string;
-  parent: string;
-};
-type RelationManyArgs = {
-  name: string;
-  table: string;
-  many: string[];
-};
 type FieldsRelationTableArgs = {
   table: string;
   junctionTable: string;
   relations: string[];
   hasLocale?: boolean;
 };
-type TemplateExportSchemaArgs = { enumTables: string[]; enumRelations: string[] };
+type TemplateExportSchemaArgs = { enumTables: string[] };

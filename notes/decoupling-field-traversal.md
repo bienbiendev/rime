@@ -1,6 +1,6 @@
 # Decoupling field traversal
 
-The staged plan for `docs/decouple-field-type-from-parsing.md`. That file is the sketch — the idea
+The staged plan for `notes/decouple-field-type-from-parsing.md`. That file is the sketch — the idea
 of a `nodes` getter and a path-contribution function. This one is the audit behind it, the contract
 that came out of the audit, and the order to build it in.
 

@@ -40,7 +40,7 @@ const createTreeHandle = ({ db, tables }: AdapterDeps) => {
 
       //@ts-expect-error tableLocalesName is key of db.query
       const localizedRow = await db.query[tableLocalesName].findFirst({
-        where: and(eq(tableLocales.ownerId, block.id), eq(tableLocales.locale, locale))
+        where: { ownerId: block.id, locale }
       });
 
       if (!localizedRow) {

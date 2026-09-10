@@ -40,6 +40,22 @@ const write = (schema: string) => {
   const command = commandMap[pm];
 
   logger.info(`[✓] Schema: generated at ${outputFile}`);
+
+  // Drizzle 1.0 restructured the migrations folder: `meta/_journal.json` is gone and each
+  // migration's snapshot moved beside its SQL. Kit refuses to read the old shape at all, so an
+  // app whose `db/` predates the upgrade cannot generate or migrate until it is converted.
+  //
+  // Converted here rather than left to the app, because rime is what runs kit — the alternative
+  // is a first `rime dev` after upgrading that fails on a message about a command the app never
+  // calls itself. Said out loud, because it rewrites files git is tracking.
+  if (fs.existsSync(path.resolve(process.cwd(), 'db', 'meta', '_journal.json'))) {
+    logger.info('Migrations folder predates drizzle 1.0 — converting with `drizzle-kit up`.');
+    const upResult = spawnSync(command, ['drizzle-kit', 'up'], { stdio: 'inherit' });
+    if (upResult.error || upResult.status !== 0) {
+      throw new Error('drizzle-kit up failed — the migrations folder could not be converted');
+    }
+  }
+
   console.log(`\n ⚡︎ ${command} drizzle-kit generate \n`);
   const generateResult = spawnSync(command, ['drizzle-kit', 'generate'], { stdio: 'inherit' });
   if (generateResult.error || generateResult.status !== 0) {

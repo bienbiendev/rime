@@ -61,7 +61,7 @@ export function rime(): Plugin {
    * This hook only ever answers for *this* project's own `src/lib`. A dependency's halves were
    * rewritten to real package subpaths by its own prepack, so nothing here crosses into
    * `node_modules` — which is what used to put a raw file path in the browser's module graph
-   * (see docs/isomorphic-module.md).
+   * (see notes/isomorphic-module.md).
    */
   const VModulesPrefix = '$rime/modules:';
   const libDir = () => path.resolve(process.cwd(), 'src/lib');

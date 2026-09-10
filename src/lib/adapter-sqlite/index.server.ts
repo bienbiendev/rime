@@ -7,7 +7,7 @@ import path from 'path';
 import createAuthHandle from './auth.server.js';
 import createBlocksHandle from './blocks.server.js';
 import generateSchema from './generate-schema/index.server.js';
-import type { RelationFieldsMap } from './generate-schema/relations/definition.server.js';
+import type { RelationFieldsMap } from './generate-schema/root.server.js';
 import { baseTableName } from './naming.server.js';
 import { createPrototypeRegistry } from './registry.server.js';
 import createRelationsHandle from './relations.server.js';
@@ -40,11 +40,14 @@ const createAdapter = async <const C extends Config>(args: {
   const schema = (await import('$rime/schema')) as {
     tables: Tables;
     default: Schema;
+    relations: any;
     relationFieldsMap: any;
   };
 
   const dbPath = path.join(process.cwd(), 'db', database);
-  const db = drizzle('file:' + dbPath, { schema: schema.default });
+  // `relations`, not `schema`: a relational query resolves through the one `defineRelations`
+  // block the generator emits. `tables` is still read straight off the module everywhere else.
+  const db = drizzle('file:' + dbPath, { relations: schema.relations });
   const tables = schema.tables;
 
   // Two words, and each is the contract's own. `core/adapter.ts` declares `BlocksHandle`,
@@ -113,7 +116,7 @@ const createAdapter = async <const C extends Config>(args: {
  * that drifts from the contract is a build error rather than a runtime surprise.
  */
 export type SqliteAdapter = Adapter & {
-  db: LibSQLDatabase<Schema>;
+  db: LibSQLDatabase<GetRegisterType<'Relations'>>;
   tables: GetRegisterType<'Tables'>;
   getTable<T>(key: string): T extends any ? GenericTable : T;
   tableForSlug<T>(slug: string): T extends any ? GenericTable : T;

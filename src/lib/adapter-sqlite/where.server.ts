@@ -17,7 +17,7 @@ type BuildWhereArgs = {
   query: ParsedQs;
   slug: PrototypeSlug;
   locale?: string;
-  db: LibSQLDatabase<GetRegisterType<'Schema'>>;
+  db: LibSQLDatabase<GetRegisterType<'Relations'>>;
   tables: GetRegisterType<'Tables'>;
   configCtx: ConfigContext;
   /**
@@ -31,6 +31,17 @@ type BuildWhereArgs = {
    * never inferred here from how a slug happens to be spelled.
    */
   base?: PrototypeSlug;
+  /**
+   * The table the outer condition is built against.
+   *
+   * A relational query renames the table it selects from — `from "pages" as "d0"` — so a
+   * condition naming `pages` matches nothing. Those callers pass what the `RAW` callback handed
+   * them; `update` and `delete` do not alias and pass nothing.
+   *
+   * Only the outer reference. Every subquery below reaches other tables, which are not aliased,
+   * and keeps using the real objects out of `tables`.
+   */
+  rootTable?: GenericTable;
 };
 
 export const buildWhereParam = ({
@@ -40,7 +51,8 @@ export const buildWhereParam = ({
   locale,
   tables,
   configCtx,
-  base
+  base,
+  rootTable
 }: BuildWhereArgs) => {
   /** `slug` names a content table standing in for `base`, not a prototype's own rows. */
   const isShadow = !!base;
@@ -65,11 +77,14 @@ export const buildWhereParam = ({
 
   const {
     // Get main table and localized table if applicable
-    table,
+    table: ownTable,
     tableLocales,
     localizedColumns,
     unlocalizedColumns
   } = getTablesAndColumns(slug);
+
+  /** What the outer condition names — the caller's alias where there is one. */
+  const table = (rootTable as typeof ownTable) ?? ownTable;
 
   const buildCondition = (conditionObject: Dic): any | false => {
     // Handle nested AND conditions
@@ -105,11 +120,11 @@ export const buildWhereParam = ({
       // `baseTableName`, not the bare slug: the two were the same string until the naming
       // convention changed, and a camelCase slug resolved to `undefined` here rather than to a
       // table.
-      const rootTable = getTable(baseTableName(base!));
-      // Query the root table for the hierarchy field
+      const baseTable = getTable(baseTableName(base!));
+      // Query the base table for the hierarchy field
       return inArray(
         table.ownerId,
-        db.select({ ownerId: rootTable.id }).from(rootTable).where(fn(rootTable[sqlColumn], value))
+        db.select({ ownerId: baseTable.id }).from(baseTable).where(fn(baseTable[sqlColumn], value))
       );
     }
 

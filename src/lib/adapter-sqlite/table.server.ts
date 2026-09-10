@@ -19,7 +19,7 @@ import type { GenericTable } from './types.server.js';
  * had no way to name until a feature could declare one.
  */
 export const createTableHandles = (args: {
-  db: LibSQLDatabase<GetRegisterType<'Schema'>>;
+  db: LibSQLDatabase<GetRegisterType<'Relations'>>;
   tables: GetRegisterType<'Tables'>;
 }) => {
   const { db, tables } = args;

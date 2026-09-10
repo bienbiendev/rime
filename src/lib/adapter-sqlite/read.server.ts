@@ -5,8 +5,9 @@ import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { Dic } from '$lib/util/types.js';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { RimeError } from '../core/errors/index.js';
+import type { GenericTable } from './types.server.js';
 import { baseTableName } from './naming.server.js';
 import { buildOrderByParam } from './order-by.server.js';
 import * as adapterUtil from './columns.server.js';
@@ -64,7 +65,7 @@ export const readPrototype = async (
   // Cast because with a single registered area the slug type collapses to one literal and
   // Drizzle infers an over-precise per-table shape instead of the general one.
   const queryTable = (db.query as Record<string, any>)[table];
-  const byId = id ? { where: eq(rootTable.id, id) } : {};
+  const byId = id ? { where: { RAW: (t: GenericTable) => eq(t.id, id) } } : {};
 
   // No versions: the content is on the base row and there is nothing to merge.
   if (!versions) {
@@ -95,18 +96,22 @@ export const readPrototype = async (
         // the default sort. A filter narrows within that, it does not replace it.
         ...(content
           ? {
-              where: buildWhereParam({
-                query: normalizeQuery(content),
-                slug: versionsSlug,
-                base: slug as PrototypeSlug,
-                locale,
-                db,
-                configCtx,
-                tables
-              })
+              where: {
+                RAW: (t: GenericTable) =>
+                  buildWhereParam({
+                    query: normalizeQuery(content),
+                    slug: versionsSlug,
+                    base: slug as PrototypeSlug,
+                    locale,
+                    db,
+                    configCtx,
+                    tables,
+                    rootTable: t
+                  })
+              }
             }
           : {}),
-        orderBy: [desc(tables[contentTable].updatedAt)],
+        orderBy: { updatedAt: 'desc' },
         limit: 1
       }
     }
@@ -143,14 +148,18 @@ export const findManyPrototypes = async (
   if (!versions) {
     const params: Dic = {
       with: buildWithParam({ table, select, tables, config, locale }) || undefined,
-      orderBy: buildOrderByParam({ slug, locale, tables, by: sort }),
+      orderBy: (t: GenericTable) =>
+        buildOrderByParam({ slug, locale, tables, by: sort, rootTable: t }),
       // sqlite requires a limit when an offset is present.
       limit: limit || (typeof offset === 'number' ? 1000000 : undefined),
       offset: offset || undefined
     };
 
     if (query) {
-      params.where = buildWhereParam({ query, slug, locale, db, configCtx, tables });
+      params.where = {
+        RAW: (t: GenericTable) =>
+          buildWhereParam({ query, slug, locale, db, configCtx, tables, rootTable: t })
+      };
     }
 
     Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);
@@ -177,22 +186,34 @@ export const findManyPrototypes = async (
   // resolve against the versions table, so they are two wheres to `and` rather than two query objects to
   // splice — which is what this was, a condition spliced into somebody else's `where` by hand
   // behind a config read.
-  const wheres = [query, content && normalizeQuery(content)]
-    .filter((one) => !!one)
-    .map((one) =>
-      buildWhereParam({ query: one, slug: versionsSlug, base: slug, locale, db, configCtx, tables })
-    )
-    // Only `undefined` drops out. `buildWhereParam` answers `false` for a degenerate query (an
-    // empty `and`/`or`), and that was passed straight to drizzle before; it still is.
-    .filter((one) => one !== undefined);
+  const contentWhere = (rootTable: GenericTable) => {
+    const wheres = [query, content && normalizeQuery(content)]
+      .filter((one) => !!one)
+      .map((one) =>
+        buildWhereParam({
+          query: one,
+          slug: versionsSlug,
+          base: slug,
+          locale,
+          db,
+          configCtx,
+          tables,
+          rootTable
+        })
+      )
+      // Only `undefined` drops out. `buildWhereParam` answers `false` for a degenerate query (an
+      // empty `and`/`or`), and that was passed straight to drizzle before; it still is.
+      .filter((one) => one !== undefined);
 
-  const whereParam = wheres.length > 1 ? and(...wheres) : wheres[0];
+    return wheres.length > 1 ? and(...wheres) : wheres[0];
+  };
 
   const params: Dic = {
     limit: limit || (typeof offset === 'number' ? 1000000 : undefined),
     offset: offset,
     // The sortable columns are on the versions table, so the sort builder is handed it by name.
-    orderBy: buildOrderByParam({ slug, locale, tables, by: sort, versions: contentTable })
+    orderBy: (t: GenericTable) =>
+      buildOrderByParam({ slug, locale, tables, by: sort, versions: contentTable, rootTable: t })
   };
   Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);
 
@@ -202,8 +223,8 @@ export const findManyPrototypes = async (
     with: {
       [contentTable]: {
         with: withParam,
-        where: whereParam,
-        orderBy: [desc(tables[contentTable].updatedAt)],
+        where: { RAW: contentWhere },
+        orderBy: { updatedAt: 'desc' },
         limit: 1,
         columns: adapterUtil.columnsParams({ table: tables[contentTable], select })
       }

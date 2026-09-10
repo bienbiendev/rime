@@ -67,7 +67,7 @@ export async function upsertLocalizedData(
   if (Object.keys(data).length) {
     const tableLocales = tables[tableLocalesName];
     const localizedRow = await db.query[tableLocalesName].findFirst({
-      where: and(eq(tableLocales.ownerId, ownerId), eq(tableLocales.locale, locale))
+      where: { ownerId, locale }
     });
 
     if (localizedRow) {
