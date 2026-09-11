@@ -41,7 +41,7 @@ const cacheIsPresent: IsNever<Rime['cache']> = false;
 const cacheClearIsCallable: IsAny<Rime['cache']['clear']> = false;
 const sseIsTyped: IsAny<Rime['sse']> = false;
 const sseIsPresent: IsNever<Rime['sse']> = false;
-const sseBroadcastIsCallable: IsAny<Rime['sse']['broadcast']> = false;
+const sseEmitIsCallable: IsAny<Rime['sse']['emit']> = false;
 
 // mailer only exists when the config declares $smtp — asserted conditionally so this holds for
 // the fixtures that do (basic, fields) and the ones that do not (versions, empty) alike.
@@ -61,6 +61,6 @@ test('the rime context and its core plugins are still typed, not any', () => {
     false
   ]);
   expect([cacheIsTyped, cacheIsPresent, cacheClearIsCallable]).toEqual([false, false, false]);
-  expect([sseIsTyped, sseIsPresent, sseBroadcastIsCallable]).toEqual([false, false, false]);
+  expect([sseIsTyped, sseIsPresent, sseEmitIsCallable]).toEqual([false, false, false]);
   expect(mailerIsTyped).toBe(false);
 });
