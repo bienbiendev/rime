@@ -131,3 +131,5 @@ still compiles.
 Drop the `field instanceof FormFieldBuilder` clause. The gate is a fixture: an upload collection
 with `imageSizes` **and** a blocks field, asserting the block type appears in
 `app.generated.d.ts`.
+
+## 4. A relation field with _root() doesn't declare a relation in the generated schema
