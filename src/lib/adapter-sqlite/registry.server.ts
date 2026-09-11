@@ -1,4 +1,4 @@
-import type { AreaHandle, CollectionHandle } from '$lib/core/adapter.js';
+import type { AreaHandle, BaseHandle, CollectionHandle } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
@@ -66,6 +66,20 @@ export const createPrototypeRegistry = (deps: {
      */
     collection: (slug: string): CollectionHandle => lookup(slug) as CollectionHandle,
 
-    area: (slug: string): AreaHandle => lookup(slug) as AreaHandle
+    area: (slug: string): AreaHandle => lookup(slug) as AreaHandle,
+
+    /**
+     * Where this prototype's content lives — its versions table where it has one, itself
+     * otherwise.
+     *
+     * Follows the `versions` each handle was registered with rather than rebuilding the slug from
+     * the naming convention, so the suffix stays the versions feature's to spell. A versioned
+     * prototype whose versions table never registered reaches `lookup` and throws, instead of
+     * falling back to the base table and writing content columns to a table that has none.
+     */
+    contentOwner: (slug: string): BaseHandle => {
+      const handle = lookup(slug);
+      return handle.versions ? lookup(handle.versions.slug) : handle;
+    }
   };
 };

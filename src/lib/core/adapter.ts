@@ -35,6 +35,20 @@ export interface Adapter {
   area(slug: string): AreaHandle;
 
   /**
+   * The handle for the table holding a prototype's content — its versions table where it has one,
+   * its own otherwise.
+   *
+   * The table half of `contentOwnerId`: that names the row, this names what the row is in. For a
+   * write that sets columns on wherever the content is and does not care which kind of prototype
+   * that turned out to be — which is why it answers `BaseHandle` rather than one of the two above.
+   *
+   * Only the registry can answer it. A versioned area's versions table is registered as a
+   * *collection*, so the kind a caller starts from does not survive the hop, and the config says
+   * which slug but not which handle.
+   */
+  contentOwner(slug: string): BaseHandle;
+
+  /**
    * The handle for a table a feature declared — see `TableDeclaration`.
    *
    * Separate from the two above because a declared table is not a prototype: no fields, no
@@ -57,7 +71,7 @@ export interface Adapter {
  * `slug` and `config` are what it was registered with; `versions` is where this config's content
  * lives when that is not its own row.
  */
-interface BaseHandle {
+export interface BaseHandle {
   readonly slug: string;
   readonly config: BuiltArea | BuiltCollection;
   /** Where this config's content lives, when not on its own row — `config._versions`. */

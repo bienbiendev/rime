@@ -1,7 +1,6 @@
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
 import { VersionOperations } from '$lib/core/prototype/shared/versions/strategy.js';
-import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 
 /**
  * Exactly one version of a document is published at a time, so publishing one steps the others
@@ -29,7 +28,7 @@ export const demoteOtherVersions = Hooks.beforeUpdate(async function demoteOther
   if (!VersionOperations.isSpecificVersionUpdate(context.versionOperation!)) return args;
   if (data.status !== VERSIONS_STATUS.PUBLISHED) return args;
 
-  await event.locals.rime.adapter.collection(withVersionsSuffix(config.slug)).updateWhere({
+  await event.locals.rime.adapter.contentOwner(config.slug).updateWhere({
     query: `where[ownerId][equals]=${context.originalDoc!.id}`,
     data: { status: VERSIONS_STATUS.DRAFT }
   });
