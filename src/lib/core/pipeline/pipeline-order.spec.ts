@@ -72,7 +72,7 @@ describe('a collection runs its hooks in this order', () => {
       'defineVersionOperation',
       'handleNewVersion',
       // Below `handleNewVersion`, which reads the submission as sent; above `buildDataConfigMap`.
-      'stampLastEditedBy',
+      'stampUpdatedBy',
       'buildDataConfigMap',
       'setDefaultValues',
       'validateFields',
@@ -113,7 +113,7 @@ describe('an area runs fewer, in the same relative order', () => {
       'resolveContentOwner',
       'defineVersionOperation',
       'handleNewVersion',
-      'stampLastEditedBy',
+      'stampUpdatedBy',
       'buildDataConfigMap',
       'setDefaultValues',
       'validateFields',

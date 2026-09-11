@@ -11,7 +11,7 @@ export default {
   create_new: 'Créer {un|une} $1',
   created_at: 'Création',
   created_by: 'Créé par',
-  last_edited_by: 'Modifié par',
+  updated_by: 'Modifié par',
   create_folder: 'Nouveau dossier',
   create: 'Créer',
   delete: 'Supprimer $1',

@@ -14,7 +14,7 @@ export default {
   create: 'Create',
   created_at: 'Created',
   created_by: 'Created by',
-  last_edited_by: 'Last edited by',
+  updated_by: 'Updated by',
   delete: 'Delete $1',
   delete_dialog_title: 'Delete $1',
   delete_dialog_text: 'You are about to delete $1, press delete to confirm the operation.',

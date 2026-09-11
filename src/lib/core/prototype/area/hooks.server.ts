@@ -52,7 +52,7 @@ export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     when(isVersioned, versions.defineVersionOperation),
     when(isVersioned, versions.handleNewVersion),
     // Between the two, for the reasons the collection's list gives.
-    metas.stampLastEditedBy,
+    metas.stampUpdatedBy,
     buildDataConfigMap,
     setDefaultValues,
     validateFields,

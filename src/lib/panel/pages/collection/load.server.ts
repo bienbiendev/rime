@@ -1,3 +1,4 @@
+import { withStaffNames } from '$lib/core/prototype/shared/metas/staff-names.server.js';
 import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
 import {
   buildUploadAria,
@@ -40,10 +41,13 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
   const collection = rime.collection(slug);
   const authorizedCreate = collection.config.access.create(user, {});
 
-  const docs = await collection.find({
-    locale,
-    draft: true
-  });
+  const docs = await withStaffNames(
+    event,
+    await collection.find({
+      locale,
+      draft: true
+    })
+  );
 
   let aria: Partial<Route>[] = [
     { title: 'Dashboard', url: panelUrlFor(panelSegment) },

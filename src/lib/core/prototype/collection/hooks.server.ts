@@ -107,7 +107,7 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     // Between the two: below `handleNewVersion`, which reads the submission *as sent* to work out
     // what the previous version did not carry, and above `buildDataConfigMap`, whose keys are the
     // paths the write may touch — a stamp below that is dropped in silence.
-    metas.stampLastEditedBy,
+    metas.stampUpdatedBy,
     buildDataConfigMap,
     setDefaultValues,
     validateFields,

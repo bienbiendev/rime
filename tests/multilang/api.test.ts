@@ -1508,18 +1508,18 @@ test('Editor should update home', async ({ request }) => {
 /****************************************************
 /* Authorship metas
 /*
-/* `createdBy` answers who made the document and is never rewritten; `lastEditedBy` answers who
+/* `createdBy` answers who made the document and is never rewritten; `updatedBy` answers who
 /* wrote the revision being read. Home is created by the super admin in this file's first tests
 /* and updated by the editor just above, so the two must disagree here.
 /****************************************************/
 
-test('Should keep createdBy and move lastEditedBy to whoever wrote last', async ({ request }) => {
+test('Should keep createdBy and move updatedBy to whoever wrote last', async ({ request }) => {
   const { doc } = await request
     .get(`${API_BASE_URL}/pages/${homeId}`)
     .then((response) => response.json());
 
   expect(doc.createdBy).toBe(adminUserId);
-  expect(doc.lastEditedBy).toBe(editorUserId);
+  expect(doc.updatedBy).toBe(editorUserId);
 });
 
 test('Should not expose the edit lock outside the panel', async ({ request }) => {
@@ -1544,7 +1544,7 @@ test('Should claim the edit lock without becoming the last editor', async ({ req
   const { doc } = await request.get(`${API_BASE_URL}/pages/${homeId}`).then((r) => r.json());
 
   // The lock write is not an edit: the editor who wrote the content is still the last editor.
-  expect(doc.lastEditedBy).toBe(editorUserId);
+  expect(doc.updatedBy).toBe(editorUserId);
   expect(doc.createdBy).toBe(adminUserId);
 });
 

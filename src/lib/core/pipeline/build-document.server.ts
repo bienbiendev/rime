@@ -86,13 +86,6 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
 
   let doc: Dic = cleanEmptyElementsInArrays(unflatten<Dic, Dic>(flatDoc));
 
-  // The edit lock is panel state, not document data: who has this open *right now*, and since
-  // when. Only an editor that draws the overlay has any use for it, and nothing outside the panel
-  // should be able to read who is at their desk. `createdBy` and `lastEditedBy` are the opposite —
-  // they answer questions about the document itself, so every read gets them.
-  const keysToDelete =
-    !withRowMeta || !event.locals.user ? ['currentlyEditedBy', 'currentlyEditedAt'] : [];
-
   if (withBlank) {
     const blank = rime.config.isCollection(config.slug)
       ? rime.collection(config.slug).blank()
@@ -101,7 +94,7 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
     doc = deepmerge(blank, doc, { arrayMerge: (_, incoming) => incoming });
   }
 
-  return omit(keysToDelete, doc) as T;
+  return doc as T;
 };
 
 /**

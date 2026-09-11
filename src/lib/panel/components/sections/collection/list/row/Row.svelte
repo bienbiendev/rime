@@ -90,7 +90,7 @@
   {/each}
 
   <div class="rz-list-row__cell">
-    <StaffName id={doc.lastEditedBy} fallback="" />
+    <StaffName name={doc._updatedByName} fallback="" />
   </div>
 
   <div class="rz-list-row__cell">

@@ -1,6 +1,7 @@
 import { PARAMS } from '$lib/core/constants.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { extractData } from '$lib/core/pipeline/extract-data.server.js';
+import { editLockActions } from '../shared/edit-lock-actions.server.js';
 import type { AreaSlug } from '$lib/core/prototype/types.js';
 import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
@@ -9,6 +10,17 @@ import { redirect, type Actions, type RequestEvent } from '@sveltejs/kit';
 import { t__ } from '../../../core/i18n/index.js';
 
 export const areaFormActions: Actions = {
+  /** Hold and release the edit lock on this area — see `editLockActions`. */
+  ...editLockActions((event) => {
+    const { rime } = event.locals;
+    const slug = (event.params.slug || '') as AreaSlug;
+
+    return {
+      config: rime.area(slug).config,
+      read: () => rime.area(slug).system().find({ draft: true })
+    };
+  }),
+
   update: async (event: RequestEvent) => {
     const { rime, locale } = event.locals;
     const slug = (event.params.slug || '') as AreaSlug;

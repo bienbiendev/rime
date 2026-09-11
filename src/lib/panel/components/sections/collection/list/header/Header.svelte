@@ -55,7 +55,7 @@
   {/each}
 
   <!-- Not sortable: the column holds user ids, so ordering by it orders by nothing a reader can see. -->
-  {@render columnHeader(t__('common.last_edited_by'))}
+  {@render columnHeader(t__('common.updated_by'))}
 
   {@render sortableColumnHeader({ name: 'updatedAt' })}
 </div>

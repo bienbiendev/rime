@@ -2,6 +2,8 @@
   import { beforeNavigate, goto } from '$app/navigation';
   import { isAuthConfig } from '$lib/core/auth/util';
   import { EDIT_LOCK_TTL_MS } from '$lib/core/prototype/shared/metas/constant.js';
+  import { isLockHeldByOther } from '$lib/core/prototype/shared/metas/lock.js';
+  import { page } from '$app/state';
   import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
   import { t__ } from '$lib/core/i18n/index.js';
   import type { GenericDoc } from '$lib/core/prototype/types';
@@ -67,25 +69,12 @@
   // This is used to show the API key after creating a document in a collection with API key auth
   let apiKey = $state<string | null>('');
 
-  /**
-   * Somebody else has this document open, recently enough to still mean it.
-   *
-   * The staleness test carries the feature: nothing releases a claim when its holder walks away,
-   * so `EDIT_LOCK_TTL_MS` is the only thing that ever frees the document. A claim carrying no
-   * timestamp cannot be aged, and counts as expired.
-   */
-  const isLockedByOther = $derived.by(() => {
-    const by = form.values.currentlyEditedBy;
-    if (!by || by === user.attributes.id) return false;
-
-    const since = form.values.currentlyEditedAt;
-    if (!since) return false;
-
-    return Date.now() - new Date(since).getTime() < EDIT_LOCK_TTL_MS;
-  });
-
   // Intercept navigation when there are unsaved changes in the form
   beforeNavigate(async ({ cancel, to }) => {
+    // Leaving the document releases it, whether or not the form is dirty — the confirm dialog
+    // below can still cancel the navigation, and the next beat re-claims it.
+    if (!readOnly && operation === 'update') editLock('unlock');
+
     const hasCHanges = Object.keys(form.changes).length > 0;
     if (!hasCHanges) return;
     if (isRedirect) return;
@@ -105,6 +94,65 @@
     key: `${initial._type}_${nestedLevel}`,
     beforeRedirect: beforeRedirect
   });
+
+  /**
+   * Somebody else has this document open, recently enough to still mean it.
+   *
+   * A claim carrying no timestamp cannot be aged, and counts as expired. The same test runs
+   * server-side in `isLockHeldByOther`, which is where the claim is actually refused — this one
+   * only decides whether to draw the overlay.
+   */
+  const isLockedByOther = $derived(isLockHeldByOther(form.values, user.attributes.id));
+
+  /**
+   * Hold the document for as long as it is open.
+   *
+   * The claim made when the page loaded expires after `EDIT_LOCK_TTL_MS`, and an editor typing
+   * into one document for half an hour never reloads it — so without this the lock would go stale
+   * under its own holder and the next person in would see no overlay. Renewing at half the TTL
+   * leaves room for one missed beat.
+   *
+   * Not while the document is read-only, being created (there is no row to lock yet), or already
+   * held by somebody else.
+   */
+  $effect(() => {
+    if (readOnly || operation === 'create' || isLockedByOther) return;
+
+    const interval = setInterval(() => editLock('lock'), EDIT_LOCK_TTL_MS / 2);
+    return () => clearInterval(interval);
+  });
+
+  /**
+   * Hand the document back when the tab goes away.
+   *
+   * `pagehide` rather than `beforeunload`, and `sendBeacon` rather than `fetch`: a close is the
+   * one exit that gets no chance to await anything, and a beacon is handed to the browser to
+   * deliver after the page is gone. A release that does not make it is not a failure — the claim
+   * ages out instead, just more slowly.
+   */
+  $effect(() => {
+    if (readOnly || operation === 'create') return;
+
+    const release = () => {
+      const body = new FormData();
+      navigator.sendBeacon(`${page.url.pathname}?/unlock`, body);
+    };
+
+    window.addEventListener('pagehide', release);
+    return () => window.removeEventListener('pagehide', release);
+  });
+
+  /** Claim or release, through the panel action. A missed beat just lets the claim age out. */
+  async function editLock(action: 'lock' | 'unlock', force = false) {
+    const body = new FormData();
+    if (force) body.set('force', 'true');
+
+    try {
+      await fetch(`${page.url.pathname}?/${action}`, { method: 'POST', body });
+    } catch {
+      /* empty */
+    }
+  }
 
   function handleKeyDown(event: KeyboardEvent) {
     if (!formElement) throw Error('formElement is not defined');
@@ -150,10 +198,10 @@
   </p>
 {/snippet}
 
-{#snippet metaUser(label: string, id: string)}
+{#snippet metaUser(label: string, name: string)}
   <p class="rz-document__metas">
     <span>{label} : </span>
-    <StaffName {id} />
+    <StaffName {name} />
   </p>
 {/snippet}
 
@@ -167,7 +215,10 @@
   <Header {form} {config} {onClose}></Header>
 
   {#if isLockedByOther}
-    <CurrentlyEdited by={form.values.currentlyEditedBy} doc={form.values} user={user.attributes} />
+    <CurrentlyEdited
+      name={form.values._currentlyEditedByName}
+      takeControl={() => editLock('lock', true).then(() => window.location.reload())}
+    />
   {/if}
 
   <div class="rz-document__fields">
@@ -186,13 +237,13 @@
       {@render meta(t__('common.created_at'), locale.dateFormat(form.values.createdAt))}
     {/if}
     {#if form.values.createdBy}
-      {@render metaUser(t__('common.created_by'), form.values.createdBy)}
+      {@render metaUser(t__('common.created_by'), form.values._createdByName)}
     {/if}
     {#if form.values.updatedAt}
       {@render meta(t__('common.last_update'), locale.dateFormat(form.values.updatedAt))}
     {/if}
-    {#if form.values.lastEditedBy}
-      {@render metaUser(t__('common.last_edited_by'), form.values.lastEditedBy)}
+    {#if form.values.updatedBy}
+      {@render metaUser(t__('common.updated_by'), form.values._updatedByName)}
     {/if}
     {#if form.values.id}
       {@render meta('id', form.values.id)}

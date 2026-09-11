@@ -1,7 +1,7 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { augmentAuth } from '$rime/modules:core/auth';
 import { isAuth } from '$lib/core/auth/enabled.js';
-import { augmentMetas } from '$lib/core/prototype/shared/metas/augment.js';
+import { augmentMetas } from '$rime/modules:core/prototype/shared/metas';
 import { augmentNested } from '$rime/modules:core/prototype/collection/nested';
 import { isNested } from '$lib/core/prototype/collection/nested/enabled.js';
 import { augmentThumbnail } from '$lib/core/prototype/collection/thumbnail/augment.js';

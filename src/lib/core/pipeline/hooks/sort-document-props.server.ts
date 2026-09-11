@@ -22,7 +22,7 @@ function sortDocumentKeys<T extends Dic>(obj: T): T {
     'position',
     'ownerId',
     'createdBy',
-    'lastEditedBy',
+    'updatedBy',
     'createdAt',
     'updatedAt',
     '_type',

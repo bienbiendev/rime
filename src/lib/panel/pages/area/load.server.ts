@@ -1,6 +1,8 @@
 import { PARAMS } from '$lib/core/constants.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
+import { claimEditLock } from '$lib/core/prototype/shared/metas/lock.server.js';
+import { withStaffNames } from '$lib/core/prototype/shared/metas/staff-names.server.js';
 import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 import type { AreaSlug } from '$lib/core/prototype/types.js';
 import type { AreaDocData } from '$lib/panel/index.js';
@@ -39,7 +41,22 @@ export async function areaLoad<V extends boolean = boolean>(
   const draft = url.searchParams.get(PARAMS.DRAFT)
     ? url.searchParams.get(PARAMS.DRAFT) === 'true'
     : undefined;
-  const doc = await area.find({ locale, versionId, draft });
+  let doc = await area.find({ locale, versionId, draft });
+
+  /** Take the document — see the note on the collection's load, which claims the same way. */
+  if (locals.user && authorizedUpdate) {
+    const claimed = await claimEditLock({
+      event,
+      config: area.config,
+      userId: locals.user.id,
+      doc
+    });
+    if (claimed) {
+      doc = { ...doc, currentlyEditedBy: locals.user.id, currentlyEditedAt: new Date() };
+    }
+  }
+
+  doc = await withStaffNames(event, doc);
 
   let data: Partial<AreaDocData> = {
     aria,
