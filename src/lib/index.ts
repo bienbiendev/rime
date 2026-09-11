@@ -1,12 +1,14 @@
 import i18n, { t__ } from '$lib/core/i18n/index.js';
 import { cache } from '$lib/core/plugins/cache/index.js';
+import { openSse } from '$lib/core/plugins/sse/index.js';
 import LiveConsumer from '$lib/panel/components/sections/live/Consumer.svelte';
 import LiveEdit from '$lib/panel/components/sections/live/LiveEdit.svelte';
 import LiveProvider from '$lib/panel/components/sections/live/Provider.svelte';
 
 export { definePlugin } from '$lib/core/plugins/index.js';
-export { cache, i18n, LiveConsumer, LiveEdit, LiveProvider, t__ };
+export { cache, i18n, LiveConsumer, LiveEdit, LiveProvider, openSse, t__ };
 export type { Dictionaries, PanelLanguage } from '$lib/core/i18n/index.js';
+export type { SSEEvent, SSEHandler } from '$lib/core/plugins/sse/index.js';
 
 declare module 'rimecms' {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
