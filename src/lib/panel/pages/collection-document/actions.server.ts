@@ -3,7 +3,6 @@ import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { extractData } from '$lib/core/pipeline/extract-data.server.js';
-import { editLockActions } from '../shared/edit-lock-actions.server.js';
 import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
 import { toKebabCase } from '$lib/util/string.js';
@@ -11,23 +10,6 @@ import { type Actions, type RequestEvent } from '@sveltejs/kit';
 import { t__ } from '../../../core/i18n/index.js';
 
 export const collectionFormActions: Actions = {
-  /**
-   * Hold and release the edit lock on this document — see `editLockActions`. The id comes from the
-   * route, and `system()` reads the row past the access check the action makes for itself.
-   */
-  ...editLockActions((event) => {
-    const { rime } = event.locals;
-    const slug = event.params.slug;
-    const id = event.params.id;
-
-    if (!rime.config.isCollection(slug) || !id) throw new RimeError(RimeError.NOT_FOUND);
-
-    return {
-      config: rime.collection(slug).config,
-      read: () => rime.collection(slug).system().findById({ id, draft: true })
-    };
-  }),
-
   /**
    * Create a document.
    * Action called when posting a form from the panel :

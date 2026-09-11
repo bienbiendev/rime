@@ -1,6 +1,7 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
+import { logger } from '$lib/core/logger.server.js';
 import { isLockHeldByOther } from './lock.js';
 
 type LockArgs = {
@@ -29,15 +30,23 @@ const writeLock = async (args: LockArgs, data: { currentlyEditedBy: string | nul
   const { rime } = event.locals;
 
   const versionsSlug = config._versions?.slug;
-  const target =
-    versionsSlug && doc.versionId
-      ? { handle: rime.adapter.collection(versionsSlug), id: doc.versionId }
-      : {
-          handle: rime.config.isCollection(config.slug)
-            ? rime.adapter.collection(config.slug)
-            : rime.adapter.area(config.slug),
-          id: doc.id
-        };
+
+  // A versioned config keeps these columns on its versions table and nowhere else — they are not
+  // `._root()`. Writing to the base row would target columns that table does not have, so a
+  // versioned document with no `versionId` is a caller bug, not a row to guess at.
+  if (versionsSlug && !doc.versionId) {
+    logger.warn(`edit lock on ${config.slug}: versioned document with no versionId, ignored`);
+    return;
+  }
+
+  const target = versionsSlug
+    ? { handle: rime.adapter.collection(versionsSlug), id: doc.versionId! }
+    : {
+        handle: rime.config.isCollection(config.slug)
+          ? rime.adapter.collection(config.slug)
+          : rime.adapter.area(config.slug),
+        id: doc.id
+      };
 
   await target.handle.updateWhere({
     query: `where[id][equals]=${target.id}`,

@@ -1,5 +1,4 @@
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { EDIT_LOCK_FIELDS } from '../constant.js';
 
 /**
  * Records who made a document, and who last wrote to it.
@@ -27,21 +26,9 @@ export const stampCreatedBy = Hooks.beforeCreate(async function stampCreatedBy(a
   return { ...args, data: { ...args.data, createdBy: by, updatedBy: by } };
 });
 
-/**
- * Claiming or releasing the edit lock is not editing: `takeControl` PATCHes nothing but the lock,
- * and stamping that would name whoever opened the document as its last author.
- */
-const isLockOnlyWrite = (data: object) => {
-  const keys = Object.keys(data);
-  return (
-    keys.length > 0 && keys.every((key) => (EDIT_LOCK_FIELDS as readonly string[]).includes(key))
-  );
-};
-
 export const stampUpdatedBy = Hooks.beforeUpdate(async function stampUpdatedBy(args) {
   const by = editor(args);
   if (!by) return args;
-  if (isLockOnlyWrite(args.data)) return args;
 
   return { ...args, data: { ...args.data, updatedBy: by } };
 });

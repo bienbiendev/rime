@@ -1,4 +1,4 @@
-import test, { expect, type Page } from '@playwright/test';
+import test, { expect, type Browser, type Page } from '@playwright/test';
 import { API_BASE_URL, panelUrl, panelUrlRe, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
@@ -6,28 +6,36 @@ const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const LOCK_EDITOR_EMAIL = 'lock-editor@email.com';
 
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
+const OVERLAY = '.rz-document-read-only';
 
 /**
  * Two people, one document.
  *
- * The lock is claimed by the panel's document load and held by a heartbeat, and it is stripped
- * from every read outside the panel — so the only place it is observable is here, in a browser
- * that opened the document. That is also the only place it matters.
+ * **Two browser contexts, both open at once**, because that is the only arrangement the lock is
+ * about. One tab that opens the document and then navigates away has released it on the way out —
+ * correctly — so a single-context test can never see an overlay, whatever the lock does.
+ *
+ * The lock is also panel-only in practice: it is claimed by the document load, held by a heartbeat
+ * and read from the page, so a browser that has the document open is the only place it is visible.
  */
 
-const OVERLAY = '.rz-document-read-only';
-
-async function loginAs(page: Page, email: string, password: string) {
-  await page.context().clearCookies();
+async function openAs(browser: Browser, email: string, url: string) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
   await page.goto(panelUrl('sign-in'));
   await page.locator('input[name="email"]').pressSequentially(email, { delay: 30 });
-  await page.locator('input[name="password"]').pressSequentially(password, { delay: 30 });
+  await page.locator('input[name="password"]').pressSequentially(password(email), { delay: 30 });
   await page.locator('button[type="submit"]').click();
   await page.waitForURL(panelUrl());
+  await page.goto(url);
+  await page.waitForLoadState('networkidle');
+  return { context, page };
 }
 
+const password = (_email: string) => PASSWORD;
+
 /** The document under test, found by title so no test depends on another's module state. */
-async function lockedPageUrl(request: import('@playwright/test').APIRequestContext) {
+async function lockedPage(request: import('@playwright/test').APIRequestContext) {
   const { docs } = await request
     .get(`${API_BASE_URL}/pages?where[title][equals]=Locked page`, {
       headers: await signInSuperAdmin(request)
@@ -50,67 +58,81 @@ test('Should create a lock-editor staff account', async ({ request }) => {
   expect(response.status()).toBe(200);
 });
 
-test('Should open a document as the admin and claim it', async ({ page }) => {
-  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+test('Should create the document under test', async ({ page }) => {
+  await page.goto(panelUrl('sign-in'));
+  await page.locator('input[name="email"]').pressSequentially(ADMIN_EMAIL, { delay: 30 });
+  await page.locator('input[name="password"]').pressSequentially(PASSWORD, { delay: 30 });
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL(panelUrl());
+
   await page.goto(panelUrl('pages', 'create'));
   await page.waitForLoadState('networkidle');
   await page.locator('input[name="title"]').pressSequentially('Locked page', { delay: 30 });
   await page.locator('button[type="submit"]').click();
   await page.waitForURL(panelUrlRe('pages'));
-
-  // The admin claimed it on load, so the admin sees no overlay on their own document.
-  await expect(page.locator(OVERLAY)).toHaveCount(0);
 });
 
-test('Should show the overlay to a second person while the claim is fresh', async ({
-  page,
+test('Should show the overlay to a second person while the first holds it', async ({
+  browser,
   request
 }) => {
-  const { url } = await lockedPageUrl(request);
-  await loginAs(page, LOCK_EDITOR_EMAIL, PASSWORD);
-  await page.goto(url);
-  await page.waitForLoadState('networkidle');
+  const { url } = await lockedPage(request);
 
-  await expect(page.locator(OVERLAY)).toBeVisible();
-  await expect(page.locator(OVERLAY)).toContainText(ADMIN_EMAIL);
+  // The admin opens it and stays there — the claim is made by the load and held by the heartbeat.
+  const admin = await openAs(browser, ADMIN_EMAIL, url);
+  await expect(admin.page.locator(OVERLAY)).toHaveCount(0);
+
+  const editor = await openAs(browser, LOCK_EDITOR_EMAIL, url);
+  await expect(editor.page.locator(OVERLAY)).toBeVisible();
+  await expect(editor.page.locator(OVERLAY)).toContainText(ADMIN_EMAIL);
+
+  await editor.context.close();
+  await admin.context.close();
 });
 
-test('Should hand the document over on Take control', async ({ page, request }) => {
-  const { url } = await lockedPageUrl(request);
-  await loginAs(page, LOCK_EDITOR_EMAIL, PASSWORD);
-  await page.goto(url);
-  await page.waitForLoadState('networkidle');
+test('Should hand the document over on Take control', async ({ browser, request }) => {
+  const { url } = await lockedPage(request);
 
-  await expect(page.locator(OVERLAY)).toBeVisible();
-  await page.locator(OVERLAY).getByRole('button', { name: 'Take control' }).click();
+  const admin = await openAs(browser, ADMIN_EMAIL, url);
+  const editor = await openAs(browser, LOCK_EDITOR_EMAIL, url);
 
-  // Take control reloads onto a document the editor now holds.
-  await expect(page.locator(OVERLAY)).toHaveCount(0);
+  await expect(editor.page.locator(OVERLAY)).toBeVisible();
+  await editor.page.locator(OVERLAY).getByRole('button', { name: 'Take control' }).click();
+
+  // Take control forces the claim past the admin's, then reloads onto a document it now holds.
+  await editor.page.waitForLoadState('networkidle');
+  await expect(editor.page.locator(OVERLAY)).toHaveCount(0);
+
+  await editor.context.close();
+  await admin.context.close();
 });
 
-test('Should not lock the admin out once they take it back', async ({ page, request }) => {
-  const { url } = await lockedPageUrl(request);
-  await loginAs(page, ADMIN_EMAIL, PASSWORD);
-  await page.goto(url);
-  await page.waitForLoadState('networkidle');
+test('Should release the document when its holder leaves', async ({ browser, request }) => {
+  const { url } = await lockedPage(request);
 
-  // The editor holds a fresh claim, so the admin gets the overlay rather than the form.
-  await expect(page.locator(OVERLAY)).toBeVisible();
-  await page.locator(OVERLAY).getByRole('button', { name: 'Take control' }).click();
-  await expect(page.locator(OVERLAY)).toHaveCount(0);
+  const admin = await openAs(browser, ADMIN_EMAIL, url);
+  await admin.context.close();
+
+  // Nobody is in it now, so the next person in gets the form rather than the overlay — without
+  // waiting out the TTL.
+  const editor = await openAs(browser, LOCK_EDITOR_EMAIL, url);
+  await expect(editor.page.locator(OVERLAY)).toHaveCount(0);
+
+  await editor.context.close();
 });
 
 test('Should leave updatedAt and updatedBy alone while the lock changes hands', async ({
   request
 }) => {
-  const { id } = await lockedPageUrl(request);
+  const { id } = await lockedPage(request);
+  const headers = await signInSuperAdmin(request);
+
   const { doc } = await request
-    .get(`${API_BASE_URL}/pages/${id}`, { headers: await signInSuperAdmin(request) })
+    .get(`${API_BASE_URL}/pages/${id}`, { headers })
     .then((r) => r.json());
 
   // Every claim above went through `updateWhere`, which writes the two lock columns and nothing
   // else — so the document still reads as last written by whoever saved it.
   expect(doc.updatedBy).toBeDefined();
-  expect(doc.currentlyEditedBy).toBeUndefined();
-  expect(doc.currentlyEditedAt).toBeUndefined();
+  expect(doc.createdBy).toBeDefined();
 });

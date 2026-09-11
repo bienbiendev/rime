@@ -3,9 +3,9 @@
   import { isAuthConfig } from '$lib/core/auth/util';
   import { EDIT_LOCK_TTL_MS } from '$lib/core/prototype/shared/metas/constant.js';
   import { isLockHeldByOther } from '$lib/core/prototype/shared/metas/lock.js';
-  import { page } from '$app/state';
   import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
   import { t__ } from '$lib/core/i18n/index.js';
+  import { apiUrl } from '$lib/util/index.js';
   import type { GenericDoc } from '$lib/core/prototype/types';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
@@ -73,7 +73,7 @@
   beforeNavigate(async ({ cancel, to }) => {
     // Leaving the document releases it, whether or not the form is dirty — the confirm dialog
     // below can still cancel the navigation, and the next beat re-claims it.
-    if (!readOnly && operation === 'update') editLock('unlock');
+    if (!readOnly && operation === 'update') editLock('release');
 
     const hasCHanges = Object.keys(form.changes).length > 0;
     if (!hasCHanges) return;
@@ -105,12 +105,42 @@
   const isLockedByOther = $derived(isLockHeldByOther(form.values, user.attributes.id));
 
   /**
+   * This document's lock: POST takes it, DELETE gives it back.
+   *
+   * A route rather than a panel form action — a form action has to be listed by name in the
+   * generated `+page.server.ts`, and one that is not answers 404, which makes every claim quietly
+   * do nothing and leaves the TTL as the only thing that ever frees a document.
+   */
+  const lockUrl = $derived(
+    initial._prototype === 'collection'
+      ? `${apiUrl(config.kebab, form.values.id)}/lock`
+      : `${apiUrl(config.kebab)}/lock`
+  );
+
+  /**
+   * Claim or release.
+   *
+   * The failure is logged rather than swallowed: a lock that silently does nothing looks exactly
+   * like one that works and then ages out.
+   */
+  async function editLock(intent: 'claim' | 'release', force = false) {
+    try {
+      const response = await fetch(`${lockUrl}${force ? '?force=true' : ''}`, {
+        method: intent === 'claim' ? 'POST' : 'DELETE'
+      });
+      if (!response.ok) console.error(`edit lock: ${intent} answered ${response.status}`);
+    } catch (error) {
+      console.error(`edit lock: ${intent} failed`, error);
+    }
+  }
+
+  /**
    * Hold the document for as long as it is open.
    *
-   * The claim made when the page loaded expires after `EDIT_LOCK_TTL_MS`, and an editor typing
-   * into one document for half an hour never reloads it — so without this the lock would go stale
-   * under its own holder and the next person in would see no overlay. Renewing at half the TTL
-   * leaves room for one missed beat.
+   * Claimed on mount and renewed at half the TTL. The load does not claim: opening a document is
+   * a read, and a read that writes is a read that has to explain itself in every caller. Here it
+   * is one effect — take it when the editor arrives, keep it while they stay, and the renewal is
+   * the same call as the claim. Half the TTL leaves room for one missed beat.
    *
    * Not while the document is read-only, being created (there is no row to lock yet), or already
    * held by somebody else.
@@ -118,7 +148,8 @@
   $effect(() => {
     if (readOnly || operation === 'create' || isLockedByOther) return;
 
-    const interval = setInterval(() => editLock('lock'), EDIT_LOCK_TTL_MS / 2);
+    editLock('claim');
+    const interval = setInterval(() => editLock('claim'), EDIT_LOCK_TTL_MS / 2);
     return () => clearInterval(interval);
   });
 
@@ -127,32 +158,18 @@
    *
    * `pagehide` rather than `beforeunload`, and `sendBeacon` rather than `fetch`: a close is the
    * one exit that gets no chance to await anything, and a beacon is handed to the browser to
-   * deliver after the page is gone. A release that does not make it is not a failure — the claim
-   * ages out instead, just more slowly.
+   * deliver after the page is gone. A beacon can only POST, so the release it sends carries the
+   * intent in the query rather than in the method. A release that does not make it is not a
+   * failure — the claim ages out instead, just more slowly.
    */
   $effect(() => {
     if (readOnly || operation === 'create') return;
 
-    const release = () => {
-      const body = new FormData();
-      navigator.sendBeacon(`${page.url.pathname}?/unlock`, body);
-    };
+    const release = () => navigator.sendBeacon(`${lockUrl}?release=true`);
 
     window.addEventListener('pagehide', release);
     return () => window.removeEventListener('pagehide', release);
   });
-
-  /** Claim or release, through the panel action. A missed beat just lets the claim age out. */
-  async function editLock(action: 'lock' | 'unlock', force = false) {
-    const body = new FormData();
-    if (force) body.set('force', 'true');
-
-    try {
-      await fetch(`${page.url.pathname}?/${action}`, { method: 'POST', body });
-    } catch {
-      /* empty */
-    }
-  }
 
   function handleKeyDown(event: KeyboardEvent) {
     if (!formElement) throw Error('formElement is not defined');
@@ -217,7 +234,7 @@
   {#if isLockedByOther}
     <CurrentlyEdited
       name={form.values._currentlyEditedByName}
-      takeControl={() => editLock('lock', true).then(() => window.location.reload())}
+      takeControl={() => editLock('claim', true).then(() => window.location.reload())}
     />
   {/if}
 

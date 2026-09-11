@@ -6,7 +6,6 @@ import { PARAMS } from '$lib/core/constants.js';
 import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { claimEditLock } from '$lib/core/prototype/shared/metas/lock.server.js';
 import { withStaffNames } from '$lib/core/prototype/shared/metas/staff-names.server.js';
 import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
@@ -74,26 +73,6 @@ export async function documentLoad<V extends boolean = boolean>(
     /** If update not allowed set doc as readOnly  */
     if (authorizedRead && !authorizedUpdate) {
       readOnly = true;
-    }
-
-    /**
-     * Take the document, unless somebody else is in it.
-     *
-     * Only for a user who could write to it — a read-only viewer is not competing for it. The
-     * claim is also the renewal, so re-opening a document you already hold pushes its expiry out.
-     * `claimEditLock` writes the two lock columns and nothing else, so this does not move
-     * `updatedAt`, stamp `updatedBy`, or cut a version.
-     */
-    if (user && !readOnly) {
-      const claimed = await claimEditLock({
-        event,
-        config: collection.config,
-        userId: user.id,
-        doc
-      });
-      if (claimed) {
-        doc = { ...doc, currentlyEditedBy: user.id, currentlyEditedAt: new Date() };
-      }
     }
 
     doc = await withStaffNames(event, doc);

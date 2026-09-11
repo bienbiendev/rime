@@ -6,6 +6,3 @@
  * stranding the document behind whoever opened it.
  */
 export const EDIT_LOCK_TTL_MS = 5 * 60 * 1000;
-
-/** The fields that hold the claim, and nothing else. */
-export const EDIT_LOCK_FIELDS = ['currentlyEditedBy', 'currentlyEditedAt'] as const;

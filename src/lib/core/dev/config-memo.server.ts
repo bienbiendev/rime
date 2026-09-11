@@ -2,6 +2,7 @@ import type { Dic } from '$lib/util/types.js';
 import { flatten } from 'flat';
 import cache from '../dev/cache.server.js';
 import { CONFIG_DIR } from '../dev/constants.server.js';
+import { rimeVersion } from '../dev/version.server.js';
 
 /**
  * We actually need to serialize config values that will trigger
@@ -66,6 +67,12 @@ const writeMemo = <T extends object>(config: T) => {
     // relative to it — a RIME_CONFIG_DIR change must invalidate the memo just like a config
     // change does, even when the config content itself is byte-identical.
     .concat(`CONFIG_DIR:${CONFIG_DIR}`)
+    // Nor is rime's own version, and generated output belongs to it as much as to the config:
+    // routes, the drizzle schema and app.generated.d.ts are all written from templates that ship
+    // with the package. Without this an upgrade that changes one of them regenerates nothing for
+    // a project whose config did not also change, and the new code runs against the old files —
+    // a panel calling a form action the generated route never exported, and no error saying so.
+    .concat(`RIME_VERSION:${rimeVersion()}`)
     .join('\n');
 
   const cached = cache.get('config');
