@@ -41,7 +41,8 @@
 
   <div class="rz-card-resource__info">
     <p class="rz-card-resource__title">
-      {resource.title} <a href={panelUrl(resource._type, resource.id)}><Edit size="12" /></a>
+      <span>{resource.title}</span>
+      <a href={panelUrl(resource._type, resource.id)}><Edit size="12" /></a>
     </p>
     {#if isUpload}
       <p class="rz-card-resource__info-text">{resource.filesize}</p>
@@ -103,6 +104,13 @@
     @mixin font-semibold;
     display: flex;
     align-items: center;
+    margin-bottom: var(--rz-size-2);
+
+    span {
+      @mixin line-clamp 2;
+      word-break: break-all;
+    }
+
     a {
       display: inline-block;
       padding: 0.3rem;
