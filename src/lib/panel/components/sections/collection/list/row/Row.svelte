@@ -2,10 +2,10 @@
   import type { BuiltCollection } from '$lib/core/config/types.js';
   import type { GenericDoc } from '$lib/core/prototype/types.js';
   import Checkbox from '$lib/panel/components/ui/checkbox/checkbox.svelte';
+  import StaffName from '$lib/panel/components/ui/staff-name/StaffName.svelte';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import { panelUrl } from '$lib/panel/util/url.js';
   import { getValueAtPath } from '$lib/util/object';
-  import StaffName from '$lib/panel/components/ui/staff-name/StaffName.svelte';
   import StatusDot from '../../StatusDot.svelte';
   import UploadThumbCell from '../../upload-thumb-cell/UploadThumbCell.svelte';
 
@@ -90,7 +90,7 @@
   {/each}
 
   <div class="rz-list-row__cell">
-    <StaffName id={doc.lastEditedBy} fallback="" />
+    <StaffName id={doc.updatedBy} fallback="" />
   </div>
 
   <div class="rz-list-row__cell">

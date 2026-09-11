@@ -53,7 +53,7 @@ const configByPathFields = [
   ),
   text('status').defaultValue('draft').hidden(),
   text('createdBy').hidden(),
-  text('lastEditedBy').hidden(),
+  text('updatedBy').hidden(),
   text('currentlyEditedBy').hidden(),
   date('currentlyEditedAt').hidden(),
   date('createdAt').hidden(),

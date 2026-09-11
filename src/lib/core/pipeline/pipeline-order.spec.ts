@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
 import { areaHooks } from '$lib/core/prototype/area/hooks.server.js';
 import { collectionHooks } from '$lib/core/prototype/collection/hooks.server.js';
+import { describe, expect, it } from 'vitest';
 import { augmentHooks } from './build.server.js';
 
 /**
@@ -72,7 +72,7 @@ describe('a collection runs its hooks in this order', () => {
       'defineVersionOperation',
       'handleNewVersion',
       // Below `handleNewVersion`, which reads the submission as sent; above `buildDataConfigMap`.
-      'stampLastEditedBy',
+      'stampupdatedBy',
       'buildDataConfigMap',
       'setDefaultValues',
       'validateFields',
@@ -113,7 +113,7 @@ describe('an area runs fewer, in the same relative order', () => {
       'resolveContentOwner',
       'defineVersionOperation',
       'handleNewVersion',
-      'stampLastEditedBy',
+      'stampupdatedBy',
       'buildDataConfigMap',
       'setDefaultValues',
       'validateFields',

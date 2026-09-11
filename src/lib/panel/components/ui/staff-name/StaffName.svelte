@@ -6,7 +6,7 @@
   /**
    * The name behind a user id.
    *
-   * `createdBy`, `lastEditedBy` and the edit lock all store a staff id — a `._root()` relation has
+   * `createdBy`, `updatedBy` and the edit lock all store a staff id — a `._root()` relation has
    * no junction table to hold anything richer — so resolving one to something a person can read is
    * the panel's job, and it happens here rather than in each of the three places that show one.
    *

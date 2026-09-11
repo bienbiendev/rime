@@ -6,7 +6,7 @@ import { EDIT_LOCK_FIELDS } from '../constant.js';
  *
  * Two hooks rather than one `beforeUpsert`, because they do not write the same fields: a create
  * answers both questions at once, an update only the second. `createdBy` is never rewritten —
- * that is the whole difference between it and `lastEditedBy`.
+ * that is the whole difference between it and `updatedBy`.
  *
  * **Both stand down without a user, and on a system operation.** Rime writes as itself when it
  * bootstraps a singleton, propagates a document into the other locales, or migrates. None of
@@ -24,7 +24,7 @@ export const stampCreatedBy = Hooks.beforeCreate(async function stampCreatedBy(a
   const by = editor(args);
   if (!by) return args;
 
-  return { ...args, data: { ...args.data, createdBy: by, lastEditedBy: by } };
+  return { ...args, data: { ...args.data, createdBy: by, updatedBy: by } };
 });
 
 /**
@@ -38,10 +38,10 @@ const isLockOnlyWrite = (data: object) => {
   );
 };
 
-export const stampLastEditedBy = Hooks.beforeUpdate(async function stampLastEditedBy(args) {
+export const stampupdatedBy = Hooks.beforeUpdate(async function stampupdatedBy(args) {
   const by = editor(args);
   if (!by) return args;
   if (isLockOnlyWrite(args.data)) return args;
 
-  return { ...args, data: { ...args.data, lastEditedBy: by } };
+  return { ...args, data: { ...args.data, updatedBy: by } };
 });

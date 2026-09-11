@@ -3,4 +3,4 @@
  *
  * A barrel and nothing else — see the note on `title/hooks/index.server.ts`.
  */
-export { stampCreatedBy, stampLastEditedBy } from './stamp-authorship.server.js';
+export { stampCreatedBy, stampupdatedBy } from './stamp-authorship.server.js';

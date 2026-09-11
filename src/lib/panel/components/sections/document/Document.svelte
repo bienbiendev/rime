@@ -1,9 +1,9 @@
 <script lang="ts">
   import { beforeNavigate, goto } from '$app/navigation';
   import { isAuthConfig } from '$lib/core/auth/util';
-  import { EDIT_LOCK_TTL_MS } from '$lib/core/prototype/shared/metas/constant.js';
-  import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
   import { t__ } from '$lib/core/i18n/index.js';
+  import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
+  import { EDIT_LOCK_TTL_MS } from '$lib/core/prototype/shared/metas/constant.js';
   import type { GenericDoc } from '$lib/core/prototype/types';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
@@ -15,11 +15,11 @@
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
   import RenderFields from '../../fields/RenderFields.svelte';
   import Button from '../../ui/button/button.svelte';
+  import StaffName from '../../ui/staff-name/StaffName.svelte';
   import AuthApiKeyDialog from './AuthAPIKeyDialog.svelte';
   import AuthFooter from './AuthFooter.svelte';
   import CurrentlyEdited from './CurrentlyEdited.svelte';
   import Header from './Header.svelte';
-  import StaffName from '../../ui/staff-name/StaffName.svelte';
   import UploadHeader from './upload-header/UploadHeader.svelte';
 
   type Props = {
@@ -191,8 +191,8 @@
     {#if form.values.updatedAt}
       {@render meta(t__('common.last_update'), locale.dateFormat(form.values.updatedAt))}
     {/if}
-    {#if form.values.lastEditedBy}
-      {@render metaUser(t__('common.last_edited_by'), form.values.lastEditedBy)}
+    {#if form.values.updatedBy}
+      {@render metaUser(t__('common.last_edited_by'), form.values.updatedBy)}
     {/if}
     {#if form.values.id}
       {@render meta('id', form.values.id)}

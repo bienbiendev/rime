@@ -42,9 +42,9 @@
 [x] configurable config path
 [x] configurable panel route
 [x] Change edited_by that should be currently_edited_by, and add last_edited_by, created_by for less confusion.
-[ ] Handle auto-save / confirm dialog if version not enabled.
-[ ] Auto-claim the edit lock on open (needs a write path that moves neither updatedAt nor lastEditedBy)
 [x] Add select feature to findById collection
+[ ] Handle auto-save / confirm dialog if version not enabled.
+[ ] Auto-claim the edit lock on open (needs a write path that moves neither updatedAt nor updatedBy)
 [ ] Type `select` against the document's own paths (narrow the return type)
 [ ] Batch offset/update
 [ ] configurable medias path

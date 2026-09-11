@@ -1,6 +1,6 @@
+import type { Collection } from '$lib/core/config/types.js';
 import { date } from '$lib/fields/date/index.js';
 import { text } from '$lib/fields/text/index.js';
-import type { Collection } from '$lib/core/config/types.js';
 
 type Input = { fields?: Collection<any>['fields'] };
 
@@ -11,7 +11,7 @@ type Input = { fields?: Collection<any>['fields'] };
  * one on every write, and one is ephemeral:
  *
  * - `createdBy` — who made *the document*. One answer, whatever its revision history.
- * - `lastEditedBy` — who wrote *this revision*.
+ * - `updatedBy` — who wrote *this revision*.
  * - `currentlyEditedBy` / `currentlyEditedAt` — who holds the document open, and since when.
  *
  * **Which of them are `._root()`.** On a versioned config the schema generator sends `._root()`
@@ -19,7 +19,7 @@ type Input = { fields?: Collection<any>['fields'] };
  * (`adapter-sqlite/generate-schema/index.server.ts`), so each lands where the question it answers
  * belongs. `createdBy` and the lock are properties of the document, so they sit on the base row —
  * which also means claiming the lock is a write to the document and not a new version of it.
- * `lastEditedBy` is a property of the revision, so it rides with the content; on an unversioned
+ * `updatedBy` is a property of the revision, so it rides with the content; on an unversioned
  * config there is one row and it reads the same either way.
  *
  * **Why `text` and not relations to `staff`.** The base table is built from
@@ -32,7 +32,7 @@ export const augmentMetas = <T extends Input>(config: T): T => {
   fields.push(
     //
     text('createdBy').hidden()._root(),
-    text('lastEditedBy').hidden(),
+    text('updatedBy').hidden(),
     text('currentlyEditedBy').hidden()._root(),
     date('currentlyEditedAt').hidden()._root(),
     date('createdAt').hidden(),

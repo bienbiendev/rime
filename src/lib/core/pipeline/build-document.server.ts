@@ -88,7 +88,7 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
 
   // The edit lock is panel state, not document data: who has this open *right now*, and since
   // when. Only an editor that draws the overlay has any use for it, and nothing outside the panel
-  // should be able to read who is at their desk. `createdBy` and `lastEditedBy` are the opposite —
+  // should be able to read who is at their desk. `createdBy` and `updatedBy` are the opposite —
   // they answer questions about the document itself, so every read gets them.
   const keysToDelete =
     !withRowMeta || !event.locals.user ? ['currentlyEditedBy', 'currentlyEditedAt'] : [];

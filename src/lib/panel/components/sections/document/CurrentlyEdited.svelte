@@ -12,7 +12,7 @@
    * Claim the document.
    *
    * Both fields, always: `currentlyEditedAt` is what lets the claim expire, so one written without
-   * it locks the document for good. `stampLastEditedBy` recognises a write of nothing but these
+   * it locks the document for good. `stampupdatedBy` recognises a write of nothing but these
    * two and stands down, so taking control does not make you the document's last editor.
    */
   async function takeControl() {
