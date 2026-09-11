@@ -4,7 +4,7 @@ import type { RegisterCollection } from '$lib/index.js';
 import type { PrototypeApiContext } from '../define.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
-import { blankAuthDocument } from '$lib/core/auth/blank.server.js';
+import { withoutPrivateFields } from '$lib/core/auth/constant.server.js';
 import { isAuth } from '$lib/core/auth/enabled.js';
 import { createBlankDocument } from '../doc.js';
 import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
@@ -76,7 +76,7 @@ class CollectionAPI<
    */
   blank(): Doc {
     const doc = createBlankDocument(this.config, this.event);
-    return (isAuth(this.config) ? blankAuthDocument(doc) : doc) as Doc;
+    return (isAuth(this.config) ? withoutPrivateFields(doc) : doc) as Doc;
   }
 
   /** The locale to act in: the one asked for, else the request's, else the config's default. */
