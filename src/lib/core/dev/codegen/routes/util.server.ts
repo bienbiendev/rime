@@ -1,5 +1,7 @@
 import cache from '$lib/core/dev/cache.server.js';
 import { CONFIG_DIR, PANEL_ROUTE } from '$lib/core/dev/constants.server.js';
+import { restSurface } from '$lib/core/dev/prototype-routes.server.js';
+import { rimeVersion } from '$lib/core/dev/version.server.js';
 import type { Config } from '$lib/core/config/types.js';
 import { slugify } from '$lib/util/string.js';
 import fs from 'fs';
@@ -13,20 +15,22 @@ export type RouteDefinition = Record<string, RouteTemplateFunction>;
 export type Routes = Record<string, RouteDefinition>;
 
 /**
- * Check if routes need to be regenerated based on config changes.
- * Panel/API routes are a fixed set of dynamic-segment files (file count never
- * grows with schema size), but the [panel=panel]/[slug=<prototype>] param
- * matchers under src/params/ bake in the actual accepted value(s), so
- * changing RIME_PANEL_ROUTE or RIME_CONFIG_DIR, or adding/removing/renaming a
- * prototype, still needs a regen to keep those matchers in sync — same
- * trigger as custom routes and panel CSS. Both PANEL_ROUTE and CONFIG_DIR must
- * stay in this memo: they're read once at process start, so a changed value
- * only takes effect after a restart, and only if the restart's regen actually
- * notices the change. CONFIG_DIR specifically is baked into the panel/live
- * layout's config import path (see configImportPaths() calls in
- * common.server.ts) — leaving it out would silently keep that import stale
- * instead of erroring, the same failure mode RIME_CONFIG_DIR hit once for
- * hooks.server.ts (see regenerateHooks() in cli/init/templates.ts).
+ * Whether the generated route tree still matches what the config and the package would produce.
+ *
+ * Everything `generateRoutes` reads has to appear here, or a change to it writes nothing and the
+ * app runs against the previous tree — a route that answers 404 with no error saying why.
+ *
+ * ```
+ * panel, config   baked into the param matchers and the layouts' config import path
+ * custom, css     written straight from config.panel
+ * prototypes      the slug lists the [slug=<name>] matchers accept
+ * rest            one +server.ts per prototype route path, and the methods it exports
+ * version         the templates every file above is written from ship with the package
+ * ```
+ *
+ * `PANEL_ROUTE` and `CONFIG_DIR` are read once at process start, so a changed value only takes
+ * effect after a restart — and only if that restart's regen notices it.
+ *
  * @returns true if routes should be regenerated, false otherwise
  */
 export function shouldRegenerateRoutes<T extends Config>(config: T): boolean {
@@ -44,15 +48,13 @@ export function shouldRegenerateRoutes<T extends Config>(config: T): boolean {
     prototypes:${[...(config.collections || []), ...(config.areas || [])]
       .map((p) => `${p.type}:${p.slug}`)
       .join(',')}
+    rest:${restSurface()}
+    version:${rimeVersion()}
   `;
 
-  const cachedMemo = cache.get('routes');
+  if (cache.matches('routes', memo)) return false;
 
-  if (cachedMemo && cachedMemo === memo) {
-    return false;
-  }
-
-  cache.set('routes', memo);
+  cache.remember('routes', memo);
   return true;
 }
 

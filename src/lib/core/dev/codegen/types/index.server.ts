@@ -135,13 +135,8 @@ export async function generateTypesString<T extends Config>(config: T) {
  * @param content The string containing all type definitions
  */
 function write(key: string, content: string, filePath: string) {
-  const cachedTypes = cache.get(key);
-
-  if (cachedTypes && cachedTypes === content) {
-    return;
-  } else {
-    cache.set(key, content);
-  }
+  if (cache.matches(key, content)) return;
+  cache.remember(key, content);
 
   const [error] = trycatchSync(() => fs.writeFileSync(filePath, content));
   if (error) {

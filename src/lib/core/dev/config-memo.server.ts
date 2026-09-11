@@ -1,8 +1,9 @@
 import type { Dic } from '$lib/util/types.js';
 import { flatten } from 'flat';
-import cache from '../dev/cache.server.js';
-import { CONFIG_DIR } from '../dev/constants.server.js';
-import { rimeVersion } from '../dev/version.server.js';
+import cache from './cache.server.js';
+import { CONFIG_DIR } from './constants.server.js';
+import { restSurface } from './prototype-routes.server.js';
+import { rimeVersion } from './version.server.js';
 
 /**
  * We actually need to serialize config values that will trigger
@@ -73,17 +74,16 @@ const writeMemo = <T extends object>(config: T) => {
     // a project whose config did not also change, and the new code runs against the old files —
     // a panel calling a form action the generated route never exported, and no error saying so.
     .concat(`RIME_VERSION:${rimeVersion()}`)
+    // Nor are the /api routes the prototypes declare. This gate runs before every codegen step,
+    // `generateRoutes` included, so a route added to a prototype has to move it — a version bump
+    // does not, inside this repo, and the config never mentions those paths at all.
+    .concat(`REST_SURFACE:${restSurface()}`)
     .join('\n');
 
-  const cached = cache.get('config');
+  if (cache.matches('config', memoStr)) return false;
 
-  if (cached !== memoStr) {
-    cache.set('config', memoStr);
-
-    return true;
-  } else {
-    return false;
-  }
+  cache.remember('config', memoStr);
+  return true;
 };
 
 export default writeMemo;
