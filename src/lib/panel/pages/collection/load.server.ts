@@ -1,4 +1,8 @@
-import { withStaffNames } from '$lib/core/prototype/shared/metas/staff-names.server.js';
+import { handleError } from '$lib/core/errors/handler.server.js';
+import { RimeError } from '$lib/core/errors/index.js';
+import { logger } from '$lib/core/logger.server.js';
+import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
+import { withDirectoriesSuffix } from '$lib/core/prototype/collection/upload/naming.js';
 import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
 import {
   buildUploadAria,
@@ -6,11 +10,6 @@ import {
   removePathFromLastAria,
   type UploadPath
 } from '$lib/core/prototype/collection/upload/util/path.js';
-import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
-import { handleError } from '$lib/core/errors/handler.server.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { logger } from '$lib/core/logger.server.js';
-import { withDirectoriesSuffix } from '$lib/core/prototype/collection/upload/naming.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { Route } from '$lib/panel/types.js';
 import { panelUrlFor } from '$lib/panel/util/url.js';
@@ -41,13 +40,10 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
   const collection = rime.collection(slug);
   const authorizedCreate = collection.config.access.create(user, {});
 
-  const docs = await withStaffNames(
-    event,
-    await collection.find({
-      locale,
-      draft: true
-    })
-  );
+  const docs = await collection.find({
+    locale,
+    draft: true
+  });
 
   let aria: Partial<Route>[] = [
     { title: 'Dashboard', url: panelUrlFor(panelSegment) },

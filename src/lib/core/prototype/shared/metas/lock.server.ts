@@ -1,7 +1,8 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
+import { logger } from '$lib/core/logger.server.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { logger } from '$lib/core/logger.server.js';
+import { EDIT_LOCK_TTL_AFTER_CLOSE_MS, EDIT_LOCK_TTL_MS } from './constant.js';
 import { isLockHeldByOther } from './lock.js';
 
 type LockArgs = {
@@ -25,7 +26,10 @@ type LockArgs = {
  * it is and never runs the pipeline — which would stamp `updatedBy` and cut a revision whose only
  * change is who is looking at it.
  */
-const writeLock = async (args: LockArgs, data: { currentlyEditedBy: string | null }) => {
+const writeLock = async (
+  args: LockArgs,
+  data: { currentlyEditedBy: string | null; currentlyEditedAt: Date | null }
+) => {
   const { event, config, doc } = args;
   const { rime } = event.locals;
 
@@ -39,22 +43,20 @@ const writeLock = async (args: LockArgs, data: { currentlyEditedBy: string | nul
     return;
   }
 
-  const target = versionsSlug
-    ? { handle: rime.adapter.collection(versionsSlug), id: doc.versionId! }
-    : {
-        handle: rime.config.isCollection(config.slug)
-          ? rime.adapter.collection(config.slug)
-          : rime.adapter.area(config.slug),
-        id: doc.id
-      };
+  const id = versionsSlug ? doc.versionId! : doc.id;
 
-  await target.handle.updateWhere({
-    query: `where[id][equals]=${target.id}`,
-    data: {
-      ...data,
-      currentlyEditedAt: data.currentlyEditedBy ? new Date() : null
-    }
+  await rime.adapter.contentOwner(config.slug).updateWhere({
+    query: `where[id][equals]=${id}`,
+    data
   });
+
+  // Tell whoever else has the document open, so they reload — for the overlay, and for the
+  // content, which the holder has usually just changed. Only when the lock actually changed
+  // hands: a claim is also the renewal, and those would reach every client twice a TTL.
+  if ((doc.currentlyEditedBy ?? null) !== data.currentlyEditedBy) {
+    // Keyed on the document's own id, not the version row's — it is what the panel subscribed to.
+    rime.sse.emit(`rime:${config.slug}:${doc.id}`, 'rime:lock');
+  }
 };
 
 /**
@@ -70,12 +72,16 @@ const writeLock = async (args: LockArgs, data: { currentlyEditedBy: string | nul
 export const claimEditLock = async (args: LockArgs & { force?: boolean }) => {
   if (!args.force && isLockHeldByOther(args.doc, args.userId)) return false;
 
-  await writeLock(args, { currentlyEditedBy: args.userId });
+  await writeLock(args, { currentlyEditedBy: args.userId, currentlyEditedAt: new Date() });
   return true;
 };
 
 /**
- * Give the document back, if it is ours to give.
+ * Give the document back, if it is ours to give — as a short lease rather than a hand-back.
+ *
+ * The claim keeps our name and is back-dated to expire in `EDIT_LOCK_TTL_AFTER_CLOSE_MS`, so a
+ * refresh has time to reclaim it. Clearing it outright is what let another tab's renewal take the
+ * document from someone who only reloaded.
  *
  * The `doc` guard matters: a release racing somebody else's claim would otherwise hand them a
  * document with no lock on it a moment after they took it.
@@ -83,6 +89,9 @@ export const claimEditLock = async (args: LockArgs & { force?: boolean }) => {
 export const releaseEditLock = async (args: LockArgs) => {
   if (args.doc.currentlyEditedBy !== args.userId) return false;
 
-  await writeLock(args, { currentlyEditedBy: null });
+  await writeLock(args, {
+    currentlyEditedBy: args.userId,
+    currentlyEditedAt: new Date(Date.now() - EDIT_LOCK_TTL_MS + EDIT_LOCK_TTL_AFTER_CLOSE_MS)
+  });
   return true;
 };

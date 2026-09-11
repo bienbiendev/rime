@@ -1,7 +1,7 @@
 import { PARAMS } from '$lib/core/constants.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { withStaffNames } from '$lib/core/prototype/shared/metas/staff-names.server.js';
+import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 import type { AreaSlug } from '$lib/core/prototype/types.js';
 import type { AreaDocData } from '$lib/panel/index.js';
@@ -9,9 +9,7 @@ import type { Route } from '$lib/panel/types.js';
 import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
 import { apiUrl } from '$lib/util/index.js';
-import { toKebabCase } from '$lib/util/string.js';
 import type { ServerLoadEvent } from '@sveltejs/kit';
-import { prototypeKebab } from '$lib/core/prototype/naming.js';
 
 export async function areaLoad<V extends boolean = boolean>(
   event: ServerLoadEvent,
@@ -40,9 +38,7 @@ export async function areaLoad<V extends boolean = boolean>(
   const draft = url.searchParams.get(PARAMS.DRAFT)
     ? url.searchParams.get(PARAMS.DRAFT) === 'true'
     : undefined;
-  let doc = await area.find({ locale, versionId, draft });
-
-  doc = await withStaffNames(event, doc);
+  const doc = await area.find({ locale, versionId, draft });
 
   let data: Partial<AreaDocData> = {
     aria,

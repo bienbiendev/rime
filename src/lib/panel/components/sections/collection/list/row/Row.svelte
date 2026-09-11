@@ -5,7 +5,6 @@
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import { panelUrl } from '$lib/panel/util/url.js';
   import { getValueAtPath } from '$lib/util/object';
-  import StaffName from '$lib/panel/components/ui/staff-name/StaffName.svelte';
   import StatusDot from '../../StatusDot.svelte';
   import UploadThumbCell from '../../upload-thumb-cell/UploadThumbCell.svelte';
 
@@ -90,7 +89,7 @@
   {/each}
 
   <div class="rz-list-row__cell">
-    <StaffName name={doc._updatedByName} fallback="" />
+    {doc._updatedByName ?? ''}
   </div>
 
   <div class="rz-list-row__cell">

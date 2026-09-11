@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { beforeNavigate, goto } from '$app/navigation';
+  import { beforeNavigate, goto, invalidateAll } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import { isAuthConfig } from '$lib/core/auth/util';
+  import { t__ } from '$lib/core/i18n/index.js';
+  import { openSse } from '$lib/core/plugins/sse/index.js';
+  import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
   import { EDIT_LOCK_TTL_MS } from '$lib/core/prototype/shared/metas/constant.js';
   import { isLockHeldByOther } from '$lib/core/prototype/shared/metas/lock.js';
-  import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { apiUrl } from '$lib/util/index.js';
   import type { GenericDoc } from '$lib/core/prototype/types';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
@@ -15,13 +16,13 @@
   } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
+  import { apiUrl } from '$lib/util/index.js';
   import RenderFields from '../../fields/RenderFields.svelte';
   import Button from '../../ui/button/button.svelte';
   import AuthApiKeyDialog from './AuthAPIKeyDialog.svelte';
   import AuthFooter from './AuthFooter.svelte';
   import CurrentlyEdited from './CurrentlyEdited.svelte';
   import Header from './Header.svelte';
-  import StaffName from '../../ui/staff-name/StaffName.svelte';
   import UploadHeader from './upload-header/UploadHeader.svelte';
 
   type Props = {
@@ -98,11 +99,42 @@
   /**
    * Somebody else has this document open, recently enough to still mean it.
    *
+   * Read off `initial`, which the reload below refreshes — `form.values` is seeded from it once
+   * and then belongs to whoever is typing.
+   *
    * A claim carrying no timestamp cannot be aged, and counts as expired. The same test runs
-   * server-side in `isLockHeldByOther`, which is where the claim is actually refused — this one
-   * only decides whether to draw the overlay.
+   * server-side in `isLockHeldByOther`, which is where the claim is actually refused.
    */
-  const isLockedByOther = $derived(isLockHeldByOther(form.values, user.attributes.id));
+  const isLockedByOther = $derived(isLockHeldByOther(initial, user.attributes.id));
+
+  /**
+   * Reload when this document's lock changes hands.
+   *
+   * The lock and the content move together: whoever was holding it was editing, and by the time
+   * they hand it back the document on screen is a version behind. Taking the claim and the fresh
+   * content in one reload is what stops the next editor saving over the last one's work.
+   *
+   * The page keys this component on `id + versionId + locale`, so a reload that brings a new
+   * version remounts the form rather than leaving stale values in it.
+   *
+   * `lockKey` is a string so this re-runs only when it names a different document — `config` and
+   * `initial` are both new objects after every load, and depending on them would drop the
+   * connection and rebuild it each time, losing whatever was sent in between.
+   */
+  const lockKey = $derived(`rime:${config.slug}:${initial.id}`);
+
+  $effect(() => {
+    if (operation === 'create') return;
+
+    return openSse(lockKey, ({ event }) => {
+      if (event === 'rime:lock') invalidateAll();
+    });
+  });
+
+  /** Nobody saves through the overlay: `canSubmit` is what the save buttons and ctrl-s read. */
+  $effect(() => {
+    form.isDisabled = isLockedByOther;
+  });
 
   /**
    * This document's lock: POST takes it, DELETE gives it back.
@@ -218,7 +250,7 @@
 {#snippet metaUser(label: string, name: string)}
   <p class="rz-document__metas">
     <span>{label} : </span>
-    <StaffName {name} />
+    {name || '—'}
   </p>
 {/snippet}
 
@@ -233,7 +265,7 @@
 
   {#if isLockedByOther}
     <CurrentlyEdited
-      name={form.values._currentlyEditedByName}
+      name={initial._currentlyEditedByName}
       takeControl={() => editLock('claim', true).then(() => window.location.reload())}
     />
   {/if}
@@ -287,7 +319,7 @@
       <p>{t__('common.leave_confirm_text')}</p>
       <!--  -->
       <Dialog.Footer --rz-justify-content="space-between">
-        <Button onclick={() => interceptedLeave && goto(interceptedLeave.url)}>
+        <Button onclick={() => interceptedLeave && goto(resolve(interceptedLeave.url))}>
           {t__('common.confirm')}
         </Button>
         <Button onclick={() => (interceptedLeave = null)} variant="secondary">
