@@ -7,8 +7,8 @@
  * hook cannot see, `getValueAtPath(config.asTitle, doc)` comes back undefined, and the document is
  * titled with its own id.
  *
- * Three REST endpoints parse this param. Two made this correction inline and `restGetById` did
- * not, which is why `?select=title` answered differently on `/pages` and on `/pages/<id>`.
+ * Every REST endpoint that parses this param goes through here, so `?select=title` means the same
+ * thing on `/pages` and on `/pages/<id>`.
  *
  * @param raw The `select` search param as sent — comma separated, or null when absent.
  * @param asTitle The config's resolved title path (`BuiltCollection`/`BuiltArea`).

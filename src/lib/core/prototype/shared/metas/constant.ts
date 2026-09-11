@@ -1,10 +1,9 @@
 /**
  * How long a claim on a document stays good without being renewed.
  *
- * The lock exists to stop two people overwriting each other, not to reserve a document — so it has
- * to expire. `editedBy` had no expiry and no release: whoever pressed *Take control* held the
- * document until somebody else pressed it, which on a real install means either nobody ever sees
- * the overlay or nobody can get past it.
+ * The lock stops two people overwriting each other; it does not reserve a document. Nothing
+ * releases a claim when an editor walks away, so the expiry is what keeps an abandoned one from
+ * stranding the document behind whoever opened it.
  */
 export const EDIT_LOCK_TTL_MS = 5 * 60 * 1000;
 

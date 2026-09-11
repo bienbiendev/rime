@@ -70,9 +70,9 @@
   /**
    * Somebody else has this document open, recently enough to still mean it.
    *
-   * The staleness test is the whole point: a claim is only ever released by the next person taking
-   * control, so without an expiry the first person to press *Take control* holds the document for
-   * good. A claim with no timestamp predates `currentlyEditedAt` and is treated as expired.
+   * The staleness test carries the feature: nothing releases a claim when its holder walks away,
+   * so `EDIT_LOCK_TTL_MS` is the only thing that ever frees the document. A claim carrying no
+   * timestamp cannot be aged, and counts as expired.
    */
   const isLockedByOther = $derived.by(() => {
     const by = form.values.currentlyEditedBy;

@@ -76,8 +76,7 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     // After the merge: it appends the password field, and the config map below has to see it.
     when(isAuth, auth.augmentFieldsPassword),
     // Above `buildDataConfigMap`: that map is what the write turns into `incomingPaths`, the set
-    // of paths the request is allowed to touch, so a field added to `data` below it is dropped
-    // without a word.
+    // of paths the request may touch, so a field added to `data` below it is dropped in silence.
     metas.stampCreatedBy,
     buildDataConfigMap,
     setDefaultValues,
@@ -107,7 +106,7 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     when(isVersioned, versions.handleNewVersion),
     // Between the two: below `handleNewVersion`, which reads the submission *as sent* to work out
     // what the previous version did not carry, and above `buildDataConfigMap`, whose keys are the
-    // paths the write is allowed to touch — a stamp below that is dropped without a word.
+    // paths the write may touch — a stamp below that is dropped in silence.
     metas.stampLastEditedBy,
     buildDataConfigMap,
     setDefaultValues,

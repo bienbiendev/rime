@@ -11,10 +11,9 @@
   /**
    * Claim the document.
    *
-   * Both fields, always: `currentlyEditedAt` is what makes the claim expire, so a claim written
-   * without one is a permanent lock — which is what the single `editedBy` field this replaces was.
-   * `stampLastEditedBy` recognises a write of nothing but these two and stands down, so taking
-   * control does not make you the document's last editor.
+   * Both fields, always: `currentlyEditedAt` is what lets the claim expire, so one written without
+   * it locks the document for good. `stampLastEditedBy` recognises a write of nothing but these
+   * two and stands down, so taking control does not make you the document's last editor.
    */
   async function takeControl() {
     const fetchURl = `${apiUrl(toKebabCase(doc._type))}/${doc._prototype === 'collection' ? doc.id : ''}`;

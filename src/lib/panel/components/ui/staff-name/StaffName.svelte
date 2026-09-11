@@ -6,10 +6,9 @@
   /**
    * The name behind a user id.
    *
-   * `createdBy`, `lastEditedBy` and the edit lock all store a staff id, because a `._root()`
-   * relation has no junction table to store anything else in — so resolving one to something a
-   * person can read is the panel's job, and this is where it happens rather than in each of the
-   * three places that show one.
+   * `createdBy`, `lastEditedBy` and the edit lock all store a staff id — a `._root()` relation has
+   * no junction table to hold anything richer — so resolving one to something a person can read is
+   * the panel's job, and it happens here rather than in each of the three places that show one.
    *
    * Through the API proxy, which caches by URL: a list of fifty documents edited by the same two
    * people makes two requests, not fifty. `select=title` because that is all that is drawn, and on

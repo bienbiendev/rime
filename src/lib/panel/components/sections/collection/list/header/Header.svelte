@@ -11,8 +11,8 @@
   let gridTemplateColumn = $state('grid-template-columns: 2fr repeat(1, minmax(0, 1fr));');
 
   $effect(() => {
-    // +3, not +2: the title, the config's own columns, then the two fixed meta columns —
-    // who last edited, and when. Row.svelte counts the same way and the two have to agree.
+    // The title, the config's own columns, then the two fixed meta columns — who last edited,
+    // and when. Row.svelte counts the same way, and the two have to agree.
     const columnLength = collection.columns.length + 3;
     gridTemplateColumn = `grid-template-columns: 2fr repeat(${columnLength - 1}, minmax(0, 1fr));`;
   });

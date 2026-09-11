@@ -9,7 +9,7 @@ import { EDIT_LOCK_FIELDS } from '../constant.js';
  * that is the whole difference between it and `lastEditedBy`.
  *
  * **Both stand down without a user, and on a system operation.** Rime writes as itself when it
- * bootstraps a singleton, propagates a document into the other locales, or migrates — none of
+ * bootstraps a singleton, propagates a document into the other locales, or migrates. None of
  * those is somebody editing, and stamping them would name whoever's request happened to trigger
  * the work as the author of documents they never touched.
  */
@@ -28,8 +28,8 @@ export const stampCreatedBy = Hooks.beforeCreate(async function stampCreatedBy(a
 });
 
 /**
- * Claiming or releasing the edit lock is not editing. `takeControl` PATCHes nothing but the lock,
- * and stamping that as an edit would name whoever opened the document as its last author.
+ * Claiming or releasing the edit lock is not editing: `takeControl` PATCHes nothing but the lock,
+ * and stamping that would name whoever opened the document as its last author.
  */
 const isLockOnlyWrite = (data: object) => {
   const keys = Object.keys(data);

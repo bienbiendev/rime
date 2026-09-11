@@ -518,9 +518,9 @@ test('Should return 2 pages with only attributes slug, title and id prop', async
 });
 
 /**
- * The same `select` on the by-id endpoint. It reaches `findById` and the adapter the same way,
- * but `restGetById` used to skip the `title` -> `asTitle` correction that the list endpoint made,
- * so `?select=title` answered differently on `/pages` and on `/pages/<id>`.
+ * `select` on the by-id endpoint, alongside the list-endpoint cases above. The `title` case is the
+ * one worth having: `title` is derived from `asTitle`, so a narrowed read that drops that field
+ * hands back a document titled with its own id.
  */
 
 test('Should return one page by id with only attributes.slug and id prop', async ({ request }) => {
@@ -1509,8 +1509,8 @@ test('Editor should update home', async ({ request }) => {
 /* Authorship metas
 /*
 /* `createdBy` answers who made the document and is never rewritten; `lastEditedBy` answers who
-/* wrote the revision being read. Home was created by the super admin in this file's first tests
-/* and has just been updated by the editor, so the two must now disagree.
+/* wrote the revision being read. Home is created by the super admin in this file's first tests
+/* and updated by the editor just above, so the two must disagree here.
 /****************************************************/
 
 test('Should keep createdBy and move lastEditedBy to whoever wrote last', async ({ request }) => {

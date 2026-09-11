@@ -7,28 +7,25 @@ type Input = { fields?: Collection<any>['fields'] };
 /**
  * The bookkeeping every document carries: when it was written, and by whom.
  *
- * `editedBy` was one field doing three jobs — it held a user id, was named as if it held a date,
- * and meant "someone has this document open right now" while sitting in the same shape as a value
- * that means "this is who made it". The three are separated here, and only one of them is
- * ephemeral.
- *
- * **Why `createdBy` and the lock are `._root()` and `lastEditedBy` is not.** On a versioned config
- * the schema generator sends `._root()` fields to the base row and everything else to the versions
- * table (`adapter-sqlite/generate-schema/index.server.ts`). Each of these lands where the question
- * it answers belongs:
+ * Three separate questions about who, because each has its own lifetime — one is written once,
+ * one on every write, and one is ephemeral:
  *
  * - `createdBy` — who made *the document*. One answer, whatever its revision history.
- * - `currentlyEditedBy` / `currentlyEditedAt` — who holds the document open, and since when. On
- *   the base row so that claiming or releasing a lock is a write to the document rather than a new
- *   version of it: `editedBy` was a content field, so `takeControl`'s PATCH spawned a revision
- *   whose only change was who was looking at it.
- * - `lastEditedBy` — who wrote *this revision*. Per version, and on an unversioned config there is
- *   only one row, so it reads the same either way.
+ * - `lastEditedBy` — who wrote *this revision*.
+ * - `currentlyEditedBy` / `currentlyEditedAt` — who holds the document open, and since when.
  *
- * They are `text`, not relations to `staff`, and that is not a preference: the base table is built
- * from `fields.filter(field => field.get.root)` in a call whose `relationFieldsMap` is discarded,
- * so a `._root()` relation generates no junction table and silently stores nothing. The panel
- * resolves an id to a name where it shows one.
+ * **Which of them are `._root()`.** On a versioned config the schema generator sends `._root()`
+ * fields to the base row and everything else to the versions table
+ * (`adapter-sqlite/generate-schema/index.server.ts`), so each lands where the question it answers
+ * belongs. `createdBy` and the lock are properties of the document, so they sit on the base row —
+ * which also means claiming the lock is a write to the document and not a new version of it.
+ * `lastEditedBy` is a property of the revision, so it rides with the content; on an unversioned
+ * config there is one row and it reads the same either way.
+ *
+ * **Why `text` and not relations to `staff`.** The base table is built from
+ * `fields.filter(field => field.get.root)` in a `buildRootTable` call whose `relationFieldsMap`
+ * the caller discards, so a `._root()` relation generates no junction table and silently stores
+ * nothing. The panel resolves an id to a name where it shows one.
  */
 export const augmentMetas = <T extends Input>(config: T): T => {
   const fields = [...(config.fields || [])];

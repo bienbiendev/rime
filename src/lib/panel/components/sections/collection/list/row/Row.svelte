@@ -27,7 +27,7 @@
   let gridTemplateColumn = $state('grid-template-columns: 2fr repeat(1, minmax(0, 1fr));');
 
   $effect(() => {
-    // +3 — see the note in Header.svelte, which counts the same columns.
+    // See the note in Header.svelte, which counts the same columns.
     const columnLength = (columns?.length ?? 0) + 3;
     gridTemplateColumn = `grid-template-columns: 2fr repeat(${columnLength - 1}, minmax(0, 1fr));`;
   });
