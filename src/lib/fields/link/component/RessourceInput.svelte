@@ -1,11 +1,11 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
   import type { GenericDoc } from '$lib/core/prototype/types.js';
+  import { apiUrl } from '$lib/core/routes/util.js';
   import * as Command from '$lib/panel/components/ui/command/index.js';
   import Tag from '$lib/panel/components/ui/tag/tag.svelte';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import type { PrototypeSlug } from '$lib/types';
-  import { apiUrl } from '$lib/util/index.js';
   import { toKebabCase } from '$lib/util/string';
 
   type Ressource = {

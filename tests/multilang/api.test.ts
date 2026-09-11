@@ -1515,7 +1515,9 @@ test('Editor should update home', async ({ request }) => {
 
 test('Should keep createdBy and move updatedBy to whoever wrote last', async ({ request }) => {
   const { doc } = await request
-    .get(`${API_BASE_URL}/pages/${homeId}`)
+    .get(`${API_BASE_URL}/pages/${homeId}`, {
+      headers: await signInEditor(request)
+    })
     .then((response) => response.json());
 
   expect(doc.createdBy).toBe(adminUserId);
@@ -1532,20 +1534,37 @@ test('Should not expose the edit lock outside the panel', async ({ request }) =>
 });
 
 test('Should claim the edit lock without becoming the last editor', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/pages/${homeId}`, {
-    headers: await signInSuperAdmin(request),
-    data: {
-      currentlyEditedBy: adminUserId,
-      currentlyEditedAt: new Date()
-    }
+  const response = await request.post(`${API_BASE_URL}/pages/${homeId}/lock`, {
+    headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
 
-  const { doc } = await request.get(`${API_BASE_URL}/pages/${homeId}`).then((r) => r.json());
+  // Authenticated: the stamps are `.access({ read: isStaff })`.
+  const { doc } = await request
+    .get(`${API_BASE_URL}/pages/${homeId}`, { headers: await signInSuperAdmin(request) })
+    .then((r) => r.json());
 
   // The lock write is not an edit: the editor who wrote the content is still the last editor.
   expect(doc.updatedBy).toBe(editorUserId);
   expect(doc.createdBy).toBe(adminUserId);
+});
+
+test('Should not claim the edit lock without credentials', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/pages/${homeId}/lock`);
+  expect(response.status()).toBe(403);
+});
+
+test('Should not release the edit lock without credentials', async ({ request }) => {
+  const response = await request.delete(`${API_BASE_URL}/pages/${homeId}/lock`);
+  expect(response.status()).toBe(403);
+});
+
+test('An unauthenticated claim leaves the holder alone', async ({ request }) => {
+  // The super admin still holds it from the test above.
+  const { doc } = await request
+    .get(`${API_BASE_URL}/pages/${homeId}`, { headers: await signInSuperAdmin(request) })
+    .then((r) => r.json());
+  expect(doc.updatedBy).toBe(editorUserId);
 });
 
 test('Should logout editor', async ({ request }) => {

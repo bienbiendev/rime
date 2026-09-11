@@ -15,7 +15,7 @@ import { getValueAtPath } from '$lib/util/object.js';
  * Runs after `populateSizes`, so it can take the thumbnail size an upload collection generated
  * rather than the original file.
  */
-export const setDocumentThumbnail = Hooks.beforeRead(async function setDocumentThumbnail(args) {
+export const setDocumentThumbnail = Hooks.beforeRead(async (args) => {
   const config = args.config;
   let doc = args.doc;
 
@@ -41,7 +41,7 @@ export const setDocumentThumbnail = Hooks.beforeRead(async function setDocumentT
     const unwraped = Array.isArray(relationValue) ? relationValue[0] : relationValue;
     if (typeof unwraped === 'string') return args;
 
-    const relationResolved = isRelationResolved<GenericDoc>(unwraped)
+    const relationResolved: GenericDoc = isRelationResolved<GenericDoc>(unwraped)
       ? unwraped
       : await args.event.locals.rime
           .collection(unwraped.relationTo as CollectionSlug)

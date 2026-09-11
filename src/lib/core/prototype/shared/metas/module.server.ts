@@ -1,8 +1,7 @@
-import { isStaff } from '$lib/core/auth/access.js';
 import { STAFF_SLUG } from '$lib/core/auth/tables.js';
-import { date } from '$lib/fields/date/index.js';
-import { text } from '$lib/fields/text/index.js';
+import type { text } from '$lib/fields/text/index.js';
 import type { Collection } from '$lib/core/config/types.js';
+import { metasFields } from './fields.js';
 
 type Input = { slug?: string; fields?: Collection<any>['fields'] };
 
@@ -36,17 +35,14 @@ export const augmentMetas = <T extends Input>(config: T): T => {
       ? field.$references(STAFF_SLUG, { onDelete: 'set null', selfReferencing: true })
       : field.$references(STAFF_SLUG, { onDelete: 'set null' });
 
-  const lockAccess = { read: (user: any) => isStaff(user), update: (user: any) => isStaff(user) };
-
   fields.push(
-    //
-    staffRef(text('createdBy')).hidden()._root(),
-    staffRef(text('updatedBy')).hidden(),
-    staffRef(text('currentlyEditedBy')).hidden().access(lockAccess),
-    date('currentlyEditedAt').hidden().access(lockAccess)
+    staffRef(metasFields.createdBy()),
+    staffRef(metasFields.updatedBy()),
+    staffRef(metasFields.currentlyEditedBy()),
+    metasFields.currentlyEditedAt(),
+    metasFields.createdAt(),
+    metasFields.updatedAt()
   );
-
-  fields.push(date('createdAt').hidden(), date('updatedAt').hidden());
 
   return { ...config, fields };
 };

@@ -4,11 +4,10 @@ import { RimeError } from '$lib/core/errors/index.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 import type { AreaSlug } from '$lib/core/prototype/types.js';
+import { apiUrl } from '$lib/core/routes/util.js';
 import type { AreaDocData } from '$lib/panel/index.js';
 import type { Route } from '$lib/panel/types.js';
-import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
-import { apiUrl } from '$lib/util/index.js';
 import type { ServerLoadEvent } from '@sveltejs/kit';
 
 export async function areaLoad<V extends boolean = boolean>(
@@ -19,7 +18,6 @@ export async function areaLoad<V extends boolean = boolean>(
   const { locals, url, fetch } = event;
   const { rime, locale } = locals;
   const slug = (event.params.slug || '') as AreaSlug;
-  const panelSegment = event.params.panel;
 
   const area = rime.area(slug);
   const authorizedRead = area.config.access.read(locals.user, {});
@@ -30,7 +28,7 @@ export async function areaLoad<V extends boolean = boolean>(
   }
 
   const aria: Partial<Route>[] = [
-    { title: 'Dashboard', icon: 'dashboard', url: panelUrlFor(panelSegment) },
+    { title: 'Dashboard', icon: 'dashboard', url: rime.routes.panelUrl() },
     { title: area.config.label }
   ];
 

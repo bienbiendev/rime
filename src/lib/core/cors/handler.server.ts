@@ -54,12 +54,12 @@ export const handleCORS: Handle = async ({ event, resolve }) => {
   // declares what it does to the type.
   const trustedOrigins = rime.config.raw.$trustedOrigins || [];
 
-  const IS_API_ROUTE = event.url.pathname.startsWith('/api');
+  const { isAPI } = event.locals.rime.routes;
   const IS_OPTIONS_REQUEST = event.request.method === 'OPTIONS';
   const origin = event.request.headers.get('origin');
 
   // Only handle CORS for API routes
-  if (!IS_API_ROUTE) {
+  if (!isAPI) {
     return resolve(event);
   }
 

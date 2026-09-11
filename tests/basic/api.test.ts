@@ -1310,3 +1310,264 @@ test('A deleted api key should no longer authenticate', async ({ request }) => {
   });
   expect(response.status()).toBe(401);
 });
+
+/****************************************************/
+/* Authorship — createdBy / updatedBy
+/****************************************************/
+
+const signInAuthor = signIn('author@email.com', PASSWORD);
+const signInReviser = signIn('reviser@email.com', PASSWORD);
+
+let authorId: string;
+let reviserId: string;
+let authoredPageId: string;
+
+test('Should create the two authorship users', async ({ request }) => {
+  const author = await request.post(`${API_BASE_URL}/staff`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      email: 'author@email.com',
+      name: 'Author',
+      roles: ['admin'],
+      password: PASSWORD
+    }
+  });
+  expect(author.status()).toBe(200);
+  authorId = (await author.json()).doc.id;
+
+  const reviser = await request.post(`${API_BASE_URL}/staff`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      email: 'reviser@email.com',
+      name: 'Reviser',
+      roles: ['editor'],
+      password: PASSWORD
+    }
+  });
+  expect(reviser.status()).toBe(200);
+  reviserId = (await reviser.json()).doc.id;
+});
+
+test('A staff document carries the user that created it', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/staff/${authorId}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.createdBy).toBe(superAdminId);
+  expect(doc.updatedBy).toBe(superAdminId);
+});
+
+test('Create stamps createdBy and updatedBy with the same user', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signInAuthor(request),
+    data: {
+      attributes: {
+        title: 'Authored page',
+        slug: 'authored-page'
+      }
+    }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.createdBy).toBe(authorId);
+  expect(doc.updatedBy).toBe(authorId);
+  authoredPageId = doc.id;
+});
+
+test('Update moves updatedBy and leaves createdBy alone', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/pages/${authoredPageId}`, {
+    headers: await signInReviser(request),
+    data: {
+      attributes: {
+        title: 'Authored page, revised'
+      }
+    }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.createdBy).toBe(authorId);
+  expect(doc.updatedBy).toBe(reviserId);
+});
+
+test('A read leaves both stamps untouched', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/pages/${authoredPageId}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.createdBy).toBe(authorId);
+  expect(doc.updatedBy).toBe(reviserId);
+});
+
+test('A second update by the original author moves updatedBy back', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/pages/${authoredPageId}`, {
+    headers: await signInAuthor(request),
+    data: {
+      attributes: {
+        title: 'Authored page, revised twice'
+      }
+    }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.createdBy).toBe(authorId);
+  expect(doc.updatedBy).toBe(authorId);
+});
+
+test('Deleting the author nulls createdBy and leaves the document', async ({ request }) => {
+  // One last write by the reviser, so the two columns hold different users going in.
+  const update = await request.patch(`${API_BASE_URL}/pages/${authoredPageId}`, {
+    headers: await signInReviser(request),
+    data: { attributes: { title: 'Authored page, last revision' } }
+  });
+  expect(update.status()).toBe(200);
+
+  const remove = await request.delete(`${API_BASE_URL}/staff/${authorId}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(remove.status()).toBe(200);
+
+  // `onDelete: 'set null'` — the document outlives its author and loses the attribution.
+  const response = await request.get(`${API_BASE_URL}/pages/${authoredPageId}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.createdBy).toBeFalsy();
+  expect(doc.updatedBy).toBe(reviserId);
+});
+
+/****************************************************/
+/* Field exposure — auth fields and metas
+/****************************************************/
+
+test('An editor can read a staff document', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/staff/${superAdminId}`, {
+    headers: await signInReviser(request)
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.name).toBeDefined();
+  expect(doc.email).toBe(ADMIN_EMAIL);
+});
+
+test('An editor does not get roles back', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/staff/${superAdminId}`, {
+    headers: await signInReviser(request)
+  });
+  const { doc } = await response.json();
+  // The collection is readable by any staff member, the `roles` field only by an admin.
+  expect(doc.roles).toBeUndefined();
+});
+
+test('An admin does get roles back', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/staff/${superAdminId}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  const { doc } = await response.json();
+  expect(Array.isArray(doc.roles)).toBe(true);
+});
+
+test('Private auth fields never leave the server', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/staff/${superAdminId}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  const { doc } = await response.json();
+  // PRIVATE_FIELDS, core/auth/constant.server.ts — stripped for everyone, superadmin included.
+  expect(doc.password).toBeUndefined();
+  expect(doc.token).toBeUndefined();
+  expect(doc.isSuperAdmin).toBeUndefined();
+  expect(doc.apiKeyId).toBeUndefined();
+  expect(doc.authUserId).toBeUndefined();
+  expect(doc.isStaff).toBeUndefined();
+});
+
+test('An anonymous read of a public collection carries no lock metas', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/pages/${authoredPageId}`);
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  // `currentlyEditedBy` / `currentlyEditedAt` are `.access({ read: isStaff })`.
+  expect(doc.currentlyEditedBy).toBeUndefined();
+  expect(doc.currentlyEditedAt).toBeUndefined();
+});
+
+test('An anonymous read carries no authorship stamps', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/pages/${authoredPageId}`);
+  const { doc } = await response.json();
+  // Staff user ids, on a collection anybody can read.
+  expect(doc.createdBy).toBeUndefined();
+  expect(doc.updatedBy).toBeUndefined();
+});
+
+test('A staff read carries the authorship stamps', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/pages/${authoredPageId}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  const { doc } = await response.json();
+  expect(doc.updatedBy).toBe(reviserId);
+});
+
+test('A staff user can claim the edit lock', async ({ request }) => {
+  const claim = await request.post(`${API_BASE_URL}/pages/${authoredPageId}/lock`, {
+    headers: await signInReviser(request)
+  });
+  expect(claim.status()).toBe(200);
+  expect((await claim.json()).held).toBe(true);
+});
+
+test('Claiming a document somebody else holds answers held: false', async ({ request }) => {
+  const claim = await request.post(`${API_BASE_URL}/pages/${authoredPageId}/lock`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(claim.status()).toBe(200);
+  expect((await claim.json()).held).toBe(false);
+});
+
+test('The lock never reaches an API read, staff or not', async ({ request }) => {
+  // `deletePanelLockMetas` drops both fields off every read that is not a panel read, so a
+  // superadmin over REST sees no more than an anonymous visitor.
+  const asStaff = await request
+    .get(`${API_BASE_URL}/pages/${authoredPageId}`, { headers: await signInSuperAdmin(request) })
+    .then((r) => r.json());
+  expect(asStaff.doc.currentlyEditedBy).toBeUndefined();
+  expect(asStaff.doc.currentlyEditedAt).toBeUndefined();
+
+  const anonymous = await request
+    .get(`${API_BASE_URL}/pages/${authoredPageId}`)
+    .then((r) => r.json());
+  expect(anonymous.doc.currentlyEditedBy).toBeUndefined();
+  expect(anonymous.doc.currentlyEditedAt).toBeUndefined();
+});
+
+test('Neither claim nor release works without credentials', async ({ request }) => {
+  const claim = await request.post(`${API_BASE_URL}/pages/${authoredPageId}/lock`);
+  expect(claim.status()).toBe(403);
+
+  const release = await request.delete(`${API_BASE_URL}/pages/${authoredPageId}/lock`);
+  expect(release.status()).toBe(403);
+});
+
+test('Releasing frees the document for somebody else', async ({ request }) => {
+  const release = await request.delete(`${API_BASE_URL}/pages/${authoredPageId}/lock`, {
+    headers: await signInReviser(request)
+  });
+  expect(release.status()).toBe(200);
+
+  // The release is a short lease rather than a hand-back — EDIT_LOCK_TTL_AFTER_CLOSE_MS — so the
+  // proof it worked is that the next claim takes it.
+  const claim = await request.post(`${API_BASE_URL}/pages/${authoredPageId}/lock?force=true`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(claim.status()).toBe(200);
+  expect((await claim.json()).held).toBe(true);
+});
+
+test('None of that moved updatedBy', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/pages/${authoredPageId}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  const { doc } = await response.json();
+  // The lock endpoint writes through `updateWhere`, so it cuts no version and stamps nobody.
+  expect(doc.updatedBy).toBe(reviserId);
+});

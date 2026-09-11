@@ -1,9 +1,8 @@
-import type { User } from '$lib/core/auth/types.js';
 import type { BuildConfig } from '$lib/core/config/index.server.js';
 import type { Config } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
-import type { Route } from './types.js';
-import { panelUrlFor } from './util/url.js';
+import type { RequestEvent } from '@sveltejs/kit';
+import type { Route } from '../../panel/types.js';
 
 /**
  * Builds navigation structure based on config and user permissions. Called
@@ -16,13 +15,9 @@ import { panelUrlFor } from './util/url.js';
  * @param panelSegment - The resolved [panel=panel] segment for this request
  * @returns Dictionary of navigation groups
  */
-const buildNavigation = <C extends Config>(
-  config: BuildConfig<C>,
-  user: User | undefined,
-  panelSegment: string | undefined
-): Dic => {
+const buildNavigation = <C extends Config>(config: BuildConfig<C>, event: RequestEvent): Dic => {
   const groups: Dic = {};
-
+  const { user, rime } = event.locals;
   /**
    * Adds a route to the appropriate navigation group
    */
@@ -45,7 +40,7 @@ const buildNavigation = <C extends Config>(
         const route: Route = {
           title: collection.label.plural,
           icon: collection.slug,
-          url: panelUrlFor(panelSegment, collection.kebab)
+          url: rime.routes.panelUrl(collection.kebab)
         };
         addRouteToGroup(route, (collection.panel && collection.panel?.group) || 'collections');
       }
@@ -57,7 +52,7 @@ const buildNavigation = <C extends Config>(
       const route: Route = {
         title: area.label,
         icon: area.slug,
-        url: panelUrlFor(panelSegment, area.kebab)
+        url: rime.routes.panelUrl(area.kebab)
       };
       addRouteToGroup(route, (area.panel && area.panel?.group) || 'areas');
     }
@@ -68,7 +63,7 @@ const buildNavigation = <C extends Config>(
     const route: Route = {
       title: routeConfig.label,
       icon: `custom-${routePath}`,
-      url: panelUrlFor(panelSegment, routePath)
+      url: rime.routes.panelUrl(routePath)
     };
     addRouteToGroup(route, routeConfig.group);
   });

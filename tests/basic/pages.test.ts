@@ -1,6 +1,6 @@
 import { toKebabCase } from '$lib/util/string';
 import test, { expect } from '@playwright/test';
-import { panelUrl } from '../util.js';
+import { panelPath, panelUrl } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -86,7 +86,7 @@ test.describe('Admin panel', () => {
     ];
 
     for (const { slug, plural } of collections) {
-      const navButton = page.locator(`a.rz-button-nav[href="${panelUrl(toKebabCase(slug))}"]`);
+      const navButton = page.locator(`a.rz-button-nav[href="${panelPath(toKebabCase(slug))}"]`);
       expect(await navButton.innerText()).toBe(plural);
 
       const response = await page.goto(panelUrl(toKebabCase(slug)));
@@ -94,12 +94,13 @@ test.describe('Admin panel', () => {
       await page.waitForLoadState('networkidle');
 
       const suffix = slug === 'medias' ? `?uploadPath=root` : '';
-      const href = `${panelUrl(toKebabCase(slug))}/create${suffix}`;
+      // The panel renders a path; waitForURL compares against the resolved location.
+      const href = `${panelPath(toKebabCase(slug))}/create${suffix}`;
       const createButton = page.locator(`a[href="${href}"]`);
 
       await expect(createButton).toBeEnabled();
       await createButton.click();
-      await page.waitForURL(href);
+      await page.waitForURL(`${panelUrl(toKebabCase(slug))}/create${suffix}`);
       await page.waitForLoadState('networkidle');
 
       const saveButton = page.locator('.rz-page-header__row button[type="submit"]');
@@ -152,7 +153,7 @@ test.describe('Admin panel', () => {
     const globals = [{ slug: 'settings', label: 'Settings' }];
 
     for (const { slug, label } of globals) {
-      const navButton = page.locator(`a.rz-button-nav[href="${panelUrl(toKebabCase(slug))}"]`);
+      const navButton = page.locator(`a.rz-button-nav[href="${panelPath(toKebabCase(slug))}"]`);
       expect(await navButton.innerText()).toBe(label);
 
       const response = await page.goto(panelUrl(toKebabCase(slug)));

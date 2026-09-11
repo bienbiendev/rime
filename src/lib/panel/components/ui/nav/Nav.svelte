@@ -1,7 +1,7 @@
 <script lang="ts">
+  import { panelPath } from '$lib/core/routes/util.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import type { Route } from '$lib/panel/types';
-  import { panelUrl } from '$lib/panel/util/url.js';
   import { PanelsTopLeft } from '@lucide/svelte';
   import ScrollArea from '../scroll-area/scroll-area.svelte';
   import NavGroup from './NavGroup.svelte';
@@ -29,7 +29,7 @@
 
   const dashBoardRoute: Route = {
     title: 'Dashboard',
-    url: panelUrl(),
+    url: panelPath(),
     icon: PanelsTopLeft
   };
 </script>
@@ -37,7 +37,7 @@
 <div class:rz-nav--collapsed={isCollapsed} class="rz-nav">
   <div class="rz-nav__content">
     <div class="rz-nav__header" class:rz-nav__header--collapsed={isCollapsed}>
-      <NavItem href={panelUrl()} {isCollapsed} route={dashBoardRoute} />
+      <NavItem href={panelPath()} {isCollapsed} route={dashBoardRoute} />
     </div>
 
     <div class="rz-nav__body">

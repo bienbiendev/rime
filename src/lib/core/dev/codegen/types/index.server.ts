@@ -80,30 +80,49 @@ export async function generateTypesString<T extends Config>(config: T) {
     content: string;
     shared: string;
   } {
-    // Field builders emit reusable type definitions (e.g. BlocksBuilder's per-block
-    // types) wrapped between `//@shared:start <name>` and `//@shared:end`, each on
-    // its own line. Extracted once per name, deduped, and hoisted above the doc
-    // types that reference them.
-    const regex =
-      /^[ \t]*\/\/@shared:start[ \t]+(\S+)[ \t]*\r?\n([\s\S]*?)^[ \t]*\/\/@shared:end[ \t]*$/gm;
+    // Field builders emit reusable type definitions wrapped between `//@shared:start <name>` and
+    // `//@shared:end`, each on its own line. Extracted once per name, deduped, and hoisted above
+    // the doc types that reference them.
+    //
+    // One pair can sit inside another — a relation field inside a block emits its own:
+    //
+    //   //@shared:start BlockImage
+    //   export type BlockImage = {
+    //     //@shared:start RelationValue
+    //     ...
+    //     //@shared:end
+    //   }
+    //   //@shared:end
+    //
+    // So the innermost pair is taken first and the pass repeats until none is left. Matching the
+    // outer start against the first `//@shared:end` would hoist half of BlockImage and leave the
+    // other half inline in the doc type. Innermost-first also emits RelationValue above the block
+    // that names it.
+    //
+    // Neither marker is anchored to the start of a line, because a start marker does not always
+    // get one — a blocks field inside a group emits `layout: {//@shared:start BlockParagraph`.
+    // Only the text from the marker to its `//@shared:end` is taken, so whatever sits in front of
+    // it stays where it is.
+    const innermost =
+      /\/\/@shared:start[ \t]+(\S+)[ \t]*\r?\n((?:(?!\/\/@shared:start[ \t])[\s\S])*?)\r?\n[ \t]*\/\/@shared:end[ \t]*(?=\r?\n|$)/;
 
     const seen = new Set<string>();
     const shared: string[] = [];
+    let remaining = content;
 
-    const remainingContent = content.replace(regex, (_match, group1: string, group2: string) => {
-      const key = group1;
-      const value = group2.trim();
+    for (let match = innermost.exec(remaining); match; match = innermost.exec(remaining)) {
+      const [whole, name, body] = match;
 
-      if (!seen.has(key)) {
-        seen.add(key);
-        shared.push(value);
+      if (!seen.has(name)) {
+        seen.add(name);
+        shared.push(body.trim());
       }
 
-      return '';
-    });
+      remaining = remaining.slice(0, match.index) + remaining.slice(match.index + whole.length);
+    }
 
     return {
-      content: remainingContent,
+      content: remaining,
       shared: shared.join('\n\n')
     };
   }

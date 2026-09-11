@@ -12,7 +12,6 @@ import {
 } from '$lib/core/prototype/collection/upload/util/path.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { Route } from '$lib/panel/types.js';
-import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
 import { redirect, type ServerLoadEvent } from '@sveltejs/kit';
 
@@ -30,7 +29,6 @@ type Data = {
 export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
   //
   const { rime, locale, user } = event.locals;
-  const panelSegment = event.params.panel;
 
   const slug = event.params.slug || '';
   if (!rime.config.isCollection(slug)) {
@@ -46,7 +44,7 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
   });
 
   let aria: Partial<Route>[] = [
-    { title: 'Dashboard', url: panelUrlFor(panelSegment) },
+    { title: 'Dashboard', url: rime.routes.panelUrl() },
     { title: collection.config.label.plural }
   ];
 
@@ -101,13 +99,13 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
 
       const collectionAria = {
         title: collection.config.label.plural,
-        url: panelUrlFor(panelSegment, collection.config.kebab)
+        url: rime.routes.panelUrl(collection.config.kebab)
       };
       aria = [...aria].slice(0, -1);
       aria = [
         ...aria,
         collectionAria,
-        ...buildUploadAria({ path: currentDirectoryPath, slug, panelSegment })
+        ...buildUploadAria({ path: currentDirectoryPath, slug, panelSegment: rime.routes.panel })
       ];
       data.aria = removePathFromLastAria(aria);
     }

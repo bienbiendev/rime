@@ -3,14 +3,13 @@
   import { page } from '$app/state';
   import { PARAMS } from '$lib/core/constants.js';
   import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
+  import { apiUrl, panelUrl } from '$lib/core/routes/util.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { panelUrl } from '$lib/panel/util/url.js';
   import type { GenericDoc } from '$lib/types.js';
   import { trycatchFetch } from '$lib/util/function.js';
-  import { apiUrl } from '$lib/util/index.js';
   import { Copy, History, Import, Pickaxe, Settings, Trash2 } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
   import { t__ } from '../../../../core/i18n/index.js';

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { GenericDoc } from '$lib/core/prototype/types.js';
+  import { panelUrl } from '$lib/core/routes/util.js';
   import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
-  import { panelUrl } from '$lib/panel/util/url.js';
   import { GripVertical } from '@lucide/svelte';
   import StatusDot from '../StatusDot.svelte';
   import CollectionTreeNode from './CollectionTreeNode.svelte';

@@ -2,17 +2,17 @@ import { applyAction, deserialize } from '$app/forms';
 import { page } from '$app/state';
 import type { BuiltAreaClient, BuiltCollectionClient } from '$lib/core/config/types.js';
 import { PARAMS } from '$lib/core/constants.js';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
 import type { FormFieldBuilder } from '$lib/core/fields/builders/index.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { buildConfigMap } from '$lib/core/pipeline/config-map/index.js';
+import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
 import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '$lib/core/prototype/types.js';
+import { apiUrl, panelUrl } from '$lib/core/routes/util.js';
 import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
-import { panelUrl } from '$lib/panel/util/url.js';
 import type { FormField } from '$lib/types.js';
-import { normalizeFieldPath } from '$lib/util/path.js';
-import { apiUrl, random } from '$lib/util/index.js';
 import { isObjectLiteral, omit } from '$lib/util/object.js';
+import { normalizeFieldPath } from '$lib/util/path.js';
+import { randomId } from '$lib/util/random.js';
 import type { Dic, WithOptional } from '$lib/util/types.js';
 import type { ActionResult } from '@sveltejs/kit';
 import cloneDeep from 'clone-deep';
@@ -377,7 +377,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     if (typeof data === 'object' && data !== null) {
       // First omit the id and locale properties
       const withoutId = omit(['id', 'locale'], data as Dic);
-      const result: Dic = { ...withoutId, id: 'temp-' + random.randomId(8) };
+      const result: Dic = { ...withoutId, id: 'temp-' + randomId(8) };
       // Replace with the current locale if present
       if (locale.code && 'locale' in data) {
         result.locale = locale.code;

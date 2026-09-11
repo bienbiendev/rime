@@ -1,9 +1,8 @@
 import { PARAMS } from '$lib/core/constants.js';
-import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { extractData } from '$lib/core/pipeline/extract-data.server.js';
-import { panelUrlFor } from '$lib/panel/util/url.js';
+import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
 import { trycatch } from '$lib/util/function.js';
 import { toKebabCase } from '$lib/util/string.js';
 import { type Actions, type RequestEvent } from '@sveltejs/kit';
@@ -17,7 +16,6 @@ export const collectionFormActions: Actions = {
    */
   create: async (event: RequestEvent) => {
     const { rime, locale } = event.locals;
-    const panelSegment = event.params.panel;
 
     const slug = event.params.slug;
     if (!rime.config.isCollection(slug)) {
@@ -55,7 +53,7 @@ export const collectionFormActions: Actions = {
     const params = collection.config.upload
       ? `?${PARAMS.UPLOAD_PATH}=${data._path || UPLOAD_PATH.ROOT_NAME}`
       : '';
-    const redirectUrl = `${panelUrlFor(panelSegment, toKebabCase(slug), document.id)}${params}`;
+    const redirectUrl = rime.routes.panelUrl(toKebabCase(slug), document.id) + params;
 
     return {
       redirectUrl,
@@ -71,7 +69,6 @@ export const collectionFormActions: Actions = {
    */
   update: async (event: RequestEvent) => {
     const { rime, locale } = event.locals;
-    const panelSegment = event.params.panel;
     const slug = event.params.slug || '';
     const id = event.params.id || '';
     const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
@@ -104,7 +101,7 @@ export const collectionFormActions: Actions = {
       return {
         document,
         message: t__('common.version_created'),
-        redirectUrl: `${panelUrlFor(panelSegment, toKebabCase(slug), document.id)}/versions?versionId=${document.versionId}`
+        redirectUrl: `${rime.routes.panelUrl(toKebabCase(slug), document.id)}/versions?versionId=${document.versionId}`
       };
     }
 

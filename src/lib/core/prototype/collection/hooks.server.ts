@@ -1,18 +1,5 @@
-import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
 import { isAuth } from '$lib/core/auth/enabled.js';
-import { isNested } from '$lib/core/prototype/collection/nested/enabled.js';
-import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
-import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
-import { when } from '$lib/core/prototype/when.js';
 import * as auth from '$lib/core/auth/hooks/index.server.js';
-import * as metas from '$lib/core/prototype/shared/metas/hooks/index.server.js';
-import * as nested from '$lib/core/prototype/collection/nested/hooks/index.server.js';
-import * as thumbnail from '$lib/core/prototype/collection/thumbnail/hooks/index.server.js';
-import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
-import * as upload from '$lib/core/prototype/collection/upload/hooks/index.server.js';
-import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
-import * as versions from '$lib/core/prototype/shared/versions/hooks/index.server.js';
-import type { AnyHook, HookTiming } from '$lib/core/pipeline/types.js';
 import { authorize } from '$lib/core/pipeline/hooks/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/hooks/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/pipeline/hooks/get-original-document.server.js';
@@ -23,6 +10,19 @@ import { setDefaultValues } from '$lib/core/pipeline/hooks/set-default-values.se
 import { setDocumentLocale } from '$lib/core/pipeline/hooks/set-document-locale.server.js';
 import { setDocumentType } from '$lib/core/pipeline/hooks/set-document-type.server.js';
 import { validateFields } from '$lib/core/pipeline/hooks/validate-fields.server.js';
+import type { AnyHook, HookTiming } from '$lib/core/pipeline/types.js';
+import { isNested } from '$lib/core/prototype/collection/nested/enabled.js';
+import * as nested from '$lib/core/prototype/collection/nested/hooks/index.server.js';
+import * as thumbnail from '$lib/core/prototype/collection/thumbnail/hooks/index.server.js';
+import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
+import * as upload from '$lib/core/prototype/collection/upload/hooks/index.server.js';
+import * as metas from '$lib/core/prototype/shared/metas/hooks/index.server.js';
+import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
+import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
+import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
+import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
+import * as versions from '$lib/core/prototype/shared/versions/hooks/index.server.js';
+import { when } from '$lib/core/prototype/when.js';
 import { mergeWithBlankDocument } from './hooks/merge-with-blank.server.js';
 
 /**
@@ -68,7 +68,8 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     // from the title is the ordinary case.
     when(hasUrl, url.populateURL),
     // After the sizes: it takes the thumbnail `upload.populateSizes` derived when there is one.
-    thumbnail.setDocumentThumbnail
+    thumbnail.setDocumentThumbnail,
+    metas.deletePanelLockMetas
   ],
 
   beforeCreate: [

@@ -1,8 +1,9 @@
+import type { Config } from '$lib/core/config/types.js';
 import cache from '$lib/core/dev/cache.server.js';
-import { CONFIG_DIR, PANEL_ROUTE } from '$lib/core/dev/constants.server.js';
+import { CONFIG_DIR } from '$lib/core/dev/constants.server.js';
 import { restSurface } from '$lib/core/dev/prototype-routes.server.js';
 import { rimeVersion } from '$lib/core/dev/version.server.js';
-import type { Config } from '$lib/core/config/types.js';
+import { PANEL_ROUTE } from '$lib/core/routes/constants.server.js';
 import { slugify } from '$lib/util/string.js';
 import fs from 'fs';
 import path from 'path';

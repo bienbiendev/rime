@@ -1,7 +1,5 @@
-import { isStaff } from '$lib/core/auth/access.js';
-import { date } from '$lib/fields/date/index.js';
-import { text } from '$lib/fields/text/index.js';
 import type { Collection } from '$lib/core/config/types.js';
+import { metasFields } from './fields.js';
 
 type Input = { fields?: Collection<any>['fields'] };
 
@@ -39,17 +37,12 @@ type Input = { fields?: Collection<any>['fields'] };
 export const augmentMetas = <T extends Input>(config: T): T => {
   const fields = [...(config.fields || [])];
   fields.push(
-    //
-    text('createdBy').hidden()._root(),
-    text('updatedBy').hidden(),
-    text('currentlyEditedBy')
-      .hidden()
-      .access({ read: (user) => isStaff(user), update: (user) => isStaff(user) }),
-    date('currentlyEditedAt')
-      .hidden()
-      .access({ read: (user) => isStaff(user), update: (user) => isStaff(user) }),
-    date('createdAt').hidden(),
-    date('updatedAt').hidden()
+    metasFields.createdBy(),
+    metasFields.updatedBy(),
+    metasFields.currentlyEditedBy(),
+    metasFields.currentlyEditedAt(),
+    metasFields.createdAt(),
+    metasFields.updatedAt()
   );
   return { ...config, fields };
 };

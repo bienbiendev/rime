@@ -1,8 +1,10 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { buildConfigMap } from '$lib/core/pipeline/config-map/index.js';
+import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
+import type { GenericDoc } from '$lib/types';
 import {
   getValueAtPath,
   isObjectLiteral,
@@ -10,7 +12,6 @@ import {
   omitId,
   setValueAtPath
 } from '$lib/util/object.js';
-import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { Dic } from '$lib/util/types.js';
 
 export type DuplicateArgs = {
@@ -93,7 +94,7 @@ export const duplicate = async (args: Args): Promise<string> => {
   const data = prepareDuplicate(document, defaultLocale, false);
 
   // Create document
-  const newDocument = await collection.create({ data, locale: defaultLocale });
+  const newDocument = (await collection.create({ data, locale: defaultLocale })) as GenericDoc;
 
   // Now update the created document with other locales data
   // Get all locales
@@ -180,7 +181,7 @@ const normalizeProps = (value: any, locale: string | undefined, keepIds: boolean
     return value;
   }
 
-  const unwantedProps = ['ownerId', 'createdAt', 'updatedAt'];
+  const unwantedProps = ['ownerId', 'createdAt', 'updatedAt', 'createBy', 'updatedBy'];
   if (!keepIds) unwantedProps.push('id');
 
   return Object.entries(value)

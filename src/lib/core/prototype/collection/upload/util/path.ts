@@ -1,9 +1,9 @@
 import { PARAMS } from '$lib/core/constants.js';
-import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
 import { RimeError } from '$lib/core/errors/index.js';
+import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
+import { joinPath } from '$lib/core/routes/util.js';
 import type { Route } from '$lib/panel/types.js';
-import { panelUrlFor } from '$lib/panel/util/url.js';
 import { toKebabCase } from '$lib/util/string.js';
 import type { WithRequired } from '$lib/util/types.js';
 
@@ -85,14 +85,17 @@ export function getParentPath(path: UploadPath) {
 }
 
 /**
- * Build an array of route based on the path param
- * for a given collection slug.
- * This omiting the root path wich is the collection path and do not add the path to the last
+ * One breadcrumb per folder in the path, each linking to the collection list filtered to that
+ * folder. The root segment is dropped — it is the collection itself.
+ *
+ * Every entry carries a url, the last one included. `removePathFromLastAria` strips it.
+ *
  * @example
- * buildUploadAria('root:foo')
- * // return [{ title: 'foo' }]
- * buildUploadAria('root:foo:bar')
- * // return [{ title: 'foo', path: '/panel/{slug}?=root:foo' }, { title: 'bar' }]
+ * buildUploadAria({ path: 'root:foo:bar', slug: 'medias', panelSegment: 'panel' })
+ * // [
+ * //   { title: 'foo', url: '/panel/medias?uploadPath=root:foo' },
+ * //   { title: 'bar', url: '/panel/medias?uploadPath=root:foo:bar' }
+ * // ]
  */
 export function buildUploadAria({
   path,
@@ -101,7 +104,7 @@ export function buildUploadAria({
 }: {
   path: UploadPath;
   slug: CollectionSlug;
-  panelSegment: string | undefined;
+  panelSegment: string;
 }): Partial<Route>[] {
   const segments = path.split(':');
   const result: Aria[] = [];
@@ -113,7 +116,7 @@ export function buildUploadAria({
     if (currentPath !== segments[0]) {
       result.push({
         title: segment,
-        url: `${panelUrlFor(panelSegment, toKebabCase(slug))}?${PARAMS.UPLOAD_PATH}=${currentPath}`
+        url: `${joinPath(panelSegment, toKebabCase(slug))}?${PARAMS.UPLOAD_PATH}=${currentPath}`
       });
     }
   }

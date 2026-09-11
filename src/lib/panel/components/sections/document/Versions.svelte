@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import type { VersionsStatus } from '$lib/core/prototype/shared/versions/constant.js';
   import type { GenericDoc } from '$lib/core/prototype/types.js';
+  import { panelPath, panelUrl } from '$lib/core/routes/util.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { panelUrl } from '$lib/panel/util/url.js';
   import { toKebabCase } from '$lib/util/string.js';
   import { X } from '@lucide/svelte';
   import { t__ } from '../../../../core/i18n/index.js';
@@ -18,12 +19,12 @@
 
   const locale = getLocaleContext();
 
-  const makeVersionUrl = (version: Props['versions'][number]) => {
+  const versionPath = (version: Props['versions'][number]) => {
     const kebabSlug = toKebabCase(doc._type);
     if (doc._prototype === 'collection') {
-      return `${panelUrl(kebabSlug, doc.id)}/versions?versionId=${version.id}`;
+      return `${panelPath(kebabSlug, doc.id)}/versions?versionId=${version.id}`;
     } else {
-      return `${panelUrl(kebabSlug)}/versions?versionId=${version.id}`;
+      return `${panelPath(kebabSlug)}/versions?versionId=${version.id}`;
     }
   };
 
@@ -49,7 +50,7 @@
         <a
           class="rz-document-versions__list-item"
           class:rz-document-versions__list--active={doc.versionId === version.id}
-          href={makeVersionUrl(version)}
+          href={resolve(versionPath(version))}
         >
           <span>{locale.dateFormat(version.updatedAt!, { short: true, withTime: true })}</span>
           <StatusDot --rz-dot-size="0.5rem" status={version.status} />

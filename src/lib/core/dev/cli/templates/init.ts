@@ -1,12 +1,8 @@
+import { PANEL_ROUTE } from '$lib/core/routes/constants.server.js';
 import { randomId } from '$lib/util/random.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import {
-  CONFIG_DIR,
-  GENERATED_DIR,
-  PANEL_ROUTE,
-  configImportPaths
-} from '../../constants.server.js';
+import { CONFIG_DIR, GENERATED_DIR, configImportPaths } from '../../constants.server.js';
 
 const PACKAGE = 'rimecms';
 

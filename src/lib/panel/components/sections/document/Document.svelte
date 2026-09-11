@@ -1,6 +1,6 @@
 <script lang="ts">
   import { beforeNavigate, goto, invalidateAll } from '$app/navigation';
-  import { resolve } from '$app/paths';
+  import type { ResolvedPathname } from '$app/types';
   import { isAuthConfig } from '$lib/core/auth/util';
   import { t__ } from '$lib/core/i18n/index.js';
   import { openSse } from '$lib/core/plugins/sse/index.js';
@@ -8,6 +8,7 @@
   import { EDIT_LOCK_TTL_MS } from '$lib/core/prototype/shared/metas/constant.js';
   import { isLockHeldByOther } from '$lib/core/prototype/shared/metas/lock.js';
   import type { GenericDoc } from '$lib/core/prototype/types';
+  import { apiUrl } from '$lib/core/routes/util.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import {
@@ -16,7 +17,6 @@
   } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import { apiUrl } from '$lib/util/index.js';
   import RenderFields from '../../fields/RenderFields.svelte';
   import Button from '../../ui/button/button.svelte';
   import AuthApiKeyDialog from './AuthAPIKeyDialog.svelte';
@@ -60,7 +60,7 @@
   let formElement = $state<HTMLFormElement>();
   // This is used to intercept navigation when there are unsaved changes in the form
   // It stores the URL the user is trying to navigate to, so we can redirect them there after they confirm they want to leave
-  let interceptedLeave = $state<{ url: string } | null>(null);
+  let interceptedLeave = $state<{ url: ResolvedPathname } | null>(null);
   // This is used to prevent the beforeNavigate from triggering when we programmatically navigate
   let isRedirect = $state(false);
   // Dialog for unsaved changes confirmation
@@ -82,8 +82,13 @@
     if (interceptedLeave) return;
     if (!to) return;
     cancel();
-    interceptedLeave = { url: to.url.href };
+    interceptedLeave = { url: to.url.href as ResolvedPathname };
   });
+
+  function confirmLeave() {
+    if (!interceptedLeave) return;
+    goto(interceptedLeave.url);
+  }
 
   // svelte-ignore state_referenced_locally
   const form = setDocumentFormContext({
@@ -265,7 +270,7 @@
 
   {#if isLockedByOther}
     <CurrentlyEdited
-      name={initial._currentlyEditedByName}
+      id={initial.currentlyEditedBy}
       takeControl={() => editLock('claim', true).then(() => window.location.reload())}
     />
   {/if}
@@ -319,7 +324,7 @@
       <p>{t__('common.leave_confirm_text')}</p>
       <!--  -->
       <Dialog.Footer --rz-justify-content="space-between">
-        <Button onclick={() => interceptedLeave && goto(resolve(interceptedLeave.url))}>
+        <Button onclick={confirmLeave}>
           {t__('common.confirm')}
         </Button>
         <Button onclick={() => (interceptedLeave = null)} variant="secondary">

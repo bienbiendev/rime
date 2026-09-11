@@ -16,6 +16,11 @@ export function panelUrl(...args: string[]) {
     : `${BASE_URL}/${PANEL_SEGMENT}`;
 }
 
+/** The same, as a same-origin path — what the panel actually renders into an `href`. */
+export function panelPath(...args: string[]) {
+  return args.length ? `/${PANEL_SEGMENT}/${args.join('/')}` : `/${PANEL_SEGMENT}`;
+}
+
 /** Matches the URL a create action redirects to for a document in the given collection,
  * e.g. panelUrlRe('pages') matches `/panel/pages/abc123` but not `/panel/pages/create`. */
 export function panelUrlRe(collection: string): RegExp {

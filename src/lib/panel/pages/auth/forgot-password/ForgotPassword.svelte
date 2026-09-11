@@ -1,12 +1,12 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
+  import { panelUrl } from '$lib/core/routes/util.js';
   import Email from '$lib/fields/email/component/Email.svelte';
   import AuthForm from '$lib/panel/components/sections/auth/AuthForm.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import { setFormContext } from '$lib/panel/context/form.svelte';
   import { emailField } from '$lib/panel/pages/auth/fields.js';
   import { authClient } from '$lib/panel/util/auth';
-  import { panelUrl } from '$lib/panel/util/url.js';
   import { toast } from 'svelte-sonner';
 
   type Props = {

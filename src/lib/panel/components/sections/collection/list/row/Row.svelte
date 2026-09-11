@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { BuiltCollection } from '$lib/core/config/types.js';
   import type { GenericDoc } from '$lib/core/prototype/types.js';
+  import { panelPath } from '$lib/core/routes/util.js';
   import Checkbox from '$lib/panel/components/ui/checkbox/checkbox.svelte';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
-  import { panelUrl } from '$lib/panel/util/url.js';
   import { getValueAtPath } from '$lib/util/object';
   import StatusDot from '../../StatusDot.svelte';
   import UploadThumbCell from '../../upload-thumb-cell/UploadThumbCell.svelte';
@@ -61,7 +61,7 @@
       {/if}
       <label for="checkbox-{doc.id}" class="rz-list-row__title">{doc.title || '[untitled]'}</label>
     {:else}
-      <a class="rz-list-row__link" href={panelUrl(config.kebab, doc.id)}>
+      <a class="rz-list-row__link" href={panelPath(config.kebab, doc.id)}>
         {#if doc._thumbnail}
           <UploadThumbCell url={doc._thumbnail} mimeType={doc.mimeType} />
         {:else}
