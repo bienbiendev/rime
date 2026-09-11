@@ -5,7 +5,7 @@ the line), then the work. The last section arbitrates between them.
 
 ---
 
-## 1. `editedBy` → `currentlyEditedBy`, plus `lastEditedBy` / `createdBy`
+## 1. `editedBy` → `currentlyEditedBy`, plus `updatedBy` / `createdBy`
 
 ### What is there today
 
@@ -44,7 +44,7 @@ three different lifetimes**, currently collapsed into one:
 | value               | written when                        | read by               |
 | ------------------- | ----------------------------------- | --------------------- |
 | `createdBy`         | once, on create                     | list column, audit    |
-| `lastEditedBy`      | every successful write              | list column, audit    |
+| `updatedBy`         | every successful write              | list column, audit    |
 | `currentlyEditedBy` | on open, released on leave/save/TTL | the lock overlay only |
 
 Only the third is ephemeral. Keeping it in the same shape as the other two is what makes the current
@@ -54,13 +54,13 @@ that means "this is who made it".
 ### Plan
 
 1. **Fields.** In `augmentMetas`, replace `text('editedBy')` with three fields. `createdBy` and
-   `lastEditedBy` are relations to `STAFF_SLUG` (`core/auth/tables.ts:23`), not text — that is what
+   `updatedBy` are relations to `STAFF_SLUG` (`core/auth/tables.ts:23`), not text — that is what
    lets the panel render an email without `CurrentlyEdited`'s ad-hoc `fetch(apiUrl('staff', by))`,
    and what lets `depth=1` populate them for API consumers. `currentlyEditedBy` stays `text`,
    hidden, and gains a sibling `currentlyEditedAt` date so the lock can expire.
 2. **Writers.** Two hooks, both in `core/prototype/shared/metas/`:
-   - `beforeCreate`: set `createdBy` and `lastEditedBy` from `event.locals.user.id`.
-   - `beforeUpdate`: set `lastEditedBy`, and clear `currentlyEditedBy` — saving is the natural
+   - `beforeCreate`: set `createdBy` and `updatedBy` from `event.locals.user.id`.
+   - `beforeUpdate`: set `updatedBy`, and clear `currentlyEditedBy` — saving is the natural
      release point. Guard both on `event.locals.user` (system operations and public writes have
      none) and on `isSystemOperation`, or seeding writes an owner nobody chose.
 3. **Lock lifecycle.** Claim on document load (`panel/pages/collection-document/load.server.ts`)
@@ -70,7 +70,7 @@ that means "this is who made it".
    expired". `takeControl()` stays as the manual override, and drops its `staff` fetch.
 4. **Read exposure.** `build-document.server.ts:90` currently deletes `editedBy` outside the panel.
    Keep that for `currentlyEditedBy` — it is UI state, not document data — and let `createdBy` /
-   `lastEditedBy` through, which is the whole point of having them.
+   `updatedBy` through, which is the whole point of having them.
 5. **Panel.** Fix the two bugs at `Document.svelte:165-167`: no `dateFormat` on an id, and add
    `created_by` / `last_edited_by` to both `common.js` files. Give the two relation fields
    `.table(n)` so they can be shown as list columns — the column list is built from any field
@@ -81,20 +81,20 @@ that means "this is who made it".
 6. **Migration.** Cheaper than it looks: a config change already triggers `drizzle-kit generate`
    then `drizzle-kit migrate` — `adapter-sqlite/generate-schema/write.server.ts:59-65` — so the
    column drop and the three additions are generated, not hand-written. Existing `editedBy` values
-   are stale locks, not history; backfilling `lastEditedBy` from one would invent a fact.
+   are stale locks, not history; backfilling `updatedBy` from one would invent a fact.
 7. **Test.** `tests/basic` — create as user A, assert `createdBy`; update as user B, assert
-   `lastEditedBy` moved and `createdBy` did not; assert a stale lock is takeable after the TTL.
+   `updatedBy` moved and `createdBy` did not; assert a stale lock is takeable after the TTL.
 
 ### Cost
 
 Moderate and almost entirely mechanical. The one real decision is the TTL, and the one real risk is
-step 2's guards — a hook that writes `lastEditedBy` on a system operation will stamp seeded and
+step 2's guards — a hook that writes `updatedBy` on a system operation will stamp seeded and
 migrated documents with whoever's request happened to trigger them.
 
 ---
 
 > **Landed**, except step 3's auto-claim. `augmentMetas` now declares `createdBy`,
-> `lastEditedBy`, `currentlyEditedBy` and `currentlyEditedAt`; two hooks stamp authorship;
+> `updatedBy`, `currentlyEditedBy` and `currentlyEditedAt`; two hooks stamp authorship;
 > `build-document.server.ts` keeps the lock inside the panel and lets the two authorship fields
 > out; the panel resolves an id to a name through `ui/staff-name/StaffName.svelte` and shows
 > "last edited by" as a fixed list column beside `updatedAt`.
@@ -109,7 +109,7 @@ migrated documents with whoever's request happened to trigger them.
 >   name.
 > - **The lock is not auto-claimed on open yet.** Claiming on load means an ordinary
 >   `updateById`, which moves `updatedAt` and would stamp whoever opened the document as its last
->   editor. `stampLastEditedBy` already stands down on a write of nothing but lock fields, so half
+>   editor. `stampupdatedBy` already stands down on a write of nothing but lock fields, so half
 >   of that is solved; `updatedAt` is not, and `write.server.ts:163-165` shows the shape of the fix
 >   (a targeted column write that leaves `updatedAt` alone). Left as its own TODO line.
 >
@@ -270,7 +270,7 @@ Skip the typing (step 3) for now.
 
 Your instinct is right, and there is a concrete reason it is right beyond "users want it": the
 panel's list already renders any field carrying `.table(n)`
-(`panel/context/collection.svelte.ts:92-103`). So once `createdBy` and `lastEditedBy` are real
+(`panel/context/collection.svelte.ts:92-103`). So once `createdBy` and `updatedBy` are real
 relation fields, **a "who made this / who last touched this" column is one chained call, not a
 feature**. The infrastructure to display them is already paid for; only the values are missing.
 
