@@ -280,9 +280,27 @@ name, email } } }` for every column-backed relation on the table (the `select` b
 - **Panel.** `Row.svelte` and `Document.svelte` read `doc.updatedBy?.name`; the `_*Name` props go.
   `staff` carries `name` and `email` from better-auth; the join projects those two and `id`.
 
+**`$column()` and `._root()` are two axes.** `._root()` says which table a field's column is on
+(base row or version row) and every field type accepts it; `$column()` says how a relation is
+stored (an FK column instead of junction rows). They compose:
+
+```ts
+relation("createdBy").to("staff").$column()._root(); // FK column on the base row
+relation("updatedBy").to("staff").$column(); // FK column on the version row
+relation("image").to("medias"); // junction rows on the content table, as today
+relation("image").to("medias")._root(); // config error — a junction cannot sit on the base row
+```
+
+`._root()` on a junction relation is the inconsistency behind known-defects §4: the builder
+accepts a flag the storage cannot honour, and the field stores nothing. Column storage is what
+makes `._root()` meaningful for a relation, so the fix is a rule rather than a base-table
+junction: `._root()` without `$column()` is a config error, and so is `$column()` with `.many()`
+or `.localized()`. They go in `validateRelationField` in `config/validate.server.ts`, beside the
+unknown-collection rule already there.
+
 This replaces C2c below. It is a field-builder feature with a schema generator half, so it is
 its own commit ahead of the auto-save work, and it is the one that makes every "by X" in this
-plan real.
+plan real. Section 8 has the file-by-file edits from the first attempt.
 
 **Later — a hidden select, not a `beforeRead` cleanup.** `deletePanelLockMetas` and the
 `access.read` check in `processDocumentFields` fetch a value and then delete it; with a joined
@@ -559,8 +577,16 @@ Each: what happens under the design, and the decision it rests on.
 
 - **C0 — docs (this branch).** The three `@TODO`s: `PARAMS.DRAFT`, the five operations on
   `defineVersionOperation`, `isSystemOperation`. Done.
-- **C1 — validation.** `validateVersions` in `core/config/validate.server.ts`: `autoSave` needs
-  `draft`; `autoSave` on an `upload` collection refused (D7). Spec beside it.
+- **C0 — two renames, no behaviour.** (a) `_root()` → `$root()` on the field builder, raw prop
+  `_root` → `root` (matches the compiled `get.root`); the only fluent method with an underscore,
+  beside `$references`/`$beforeRead`/`$beforeSave`, which are the same kind of thing. Twenty
+  files, all call sites and comments, the validation message. (b) `core/auth/validate.ts` →
+  `validate-config.ts`, spec with it, one importer in `config/validate.server.ts`.
+- **C1 — validation.** `validateVersions` in
+  `core/prototype/shared/versions/validate-config.server.ts`, the shape of auth's: a built config
+  in, its own not-versioned guard first, messages out; `config/validate.server.ts`'s
+  `validateFeatures` folds it in beside `validateAuth`, over collections and areas. Rules:
+  `autoSave` needs `draft`; `autoSave` on an `upload` collection refused (D7). Spec beside it.
 - **C2 — metas.** (a) `mergeContentRow` keeps the version row's `updatedAt`; spec on
   `columns.server.ts`; e2e expectations on `updatedAt` reviewed. (b) Lock fields `._root()`,
   `writeLock` on the base handle, `lock.server.ts` without `versionId`; `metas/module.ts` rewritten
@@ -623,4 +649,134 @@ Unit: `strategy.spec.ts`, `read-query.spec.ts` rows, `augment.spec.ts`, `validat
 | D10 | Auto-saving from another version replaces the existing own row                                     | refuse until resumed or discarded               |
 | D11 | The derived versions collection reads `isStaff` by default                                         | filter auto-saved rows for non-staff only       |
 
-All eleven decided in review; the table is the record.
+All eleven decided in review; the table is the record. On D6 the question "why move the lock"
+came up during implementation; the answer stands in §3 and in §8, C2b, and the move is one
+commit to drop if the answer stops convincing.
+
+---
+
+## 8. First implementation pass — what was done, what it found
+
+C0 through C2c were written once on this branch and then reverted (`git log` of this file has
+the commits), because the environment the e2e suites ran in had no valid baseline: no SMTP, a
+Chromium older than the one this Playwright wants, file logging off. `develop` gives **0 failures**
+in a proper environment; here the untouched base commit gave 30 (5 are the mail paths, 8 are
+`pages.test.ts` failing to launch a browser, the rest cascade from those). Nothing below is to be
+judged until a run of the untouched base is green. The edits, so the redo is mechanical:
+
+### C0 — renames
+
+- `form-field-builder.ts`: `_root()` → `$root()`, `this.field._root` → `this.field.root`;
+  `fields/types.ts` `_root?: boolean` → `root?: boolean`; every `._root()` call and comment
+  (`metas/fields.ts`, `nested/module.ts`, `nested/module.server.ts`, `upload/module.ts`, the
+  schema generator, `write-plan.ts` and its spec, `configure.server.ts`, `lock.server.ts`,
+  `upload/disk/delete.server.ts`, both notes, the versions e2e comment); the validation message
+  "with `_root = true`" → "with `$root()`". Every reader of the flag is server-side; the method
+  stays on the isomorphic builder because the client halves build the same field lists.
+- `git mv core/auth/validate.ts core/auth/validate-config.ts` (+ spec); the import and the
+  comment in `config/validate.server.ts`.
+
+Verified: the 40 versions and auth specs, prettier, eslint.
+
+### C1 — `validateVersions`
+
+`core/prototype/shared/versions/validate-config.server.ts` (no server-only import, the suffix is
+a naming choice): `if (!config.versions) return []`; then the two rules with the slug in the
+message. `validateFeatures` becomes
+`[...collections.flatMap(validateAuth), ...[...collections, ...areas].flatMap(validateVersions)]`.
+Spec: plain config → `[]`; drafts + autoSave → `[]`; autoSave without draft on a collection and
+on an area → the message; autoSave on `upload: true` → the message. Verified: spec green.
+
+### C2a — `updatedAt` from the version row
+
+`adapter-sqlite/columns.server.ts` `mergeContentRow`: default branch omits
+`['id', 'ownerId', 'createdAt']` from the content row (no longer `updatedAt`); select branch's
+`rootProps` is `['createdAt', 'id', ...baseFieldNames(config)]` (no longer `updatedAt`).
+Docblock states which row each timestamp comes from. New `columns.spec.ts`: base `createdAt`,
+content `updatedAt`, `contentId`, no `ownerId`; same under a select; NOT_FOUND on no content
+row. Verified: spec green, versions e2e 61/61.
+
+### C2b — the lock on the base row
+
+`metas/fields.ts`: `currentlyEditedBy`/`currentlyEditedAt` gain `.$root()`. `lock.server.ts`
+`writeLock`: drop the `versionId` guard; `const handle = config.type === 'collection' ?
+rime.adapter.collection(config.slug) : rime.adapter.area(config.slug)`;
+`handle.updateWhere({ query: \`where[id][equals]=${doc.id}\`, data })`. Endpoints unchanged (they
+still read `findById({ draft: true })` for `isLockHeldByOther`). `metas/module.ts` paragraph on
+which fields are `$root()` rewritten. Verified: versions e2e 61/61. Migration: two columns move.
+
+### C2c — column-backed relations
+
+- `fields/relation/index.ts`: `$column()` sets `field.column = true`, `defaultValue = null`,
+  `isEmpty = v => v == null || v === ''`, drops `ensureRelationExists` from `beforeValidate`;
+  `dataType` answers `'text'` when column; `generateType` emits a `ColumnRelationValue<T>` shared
+  block (`(Pick<T,'id'> & Partial<T>) | string | null`) instead of `RelationValue`;
+  `RelationField.column?: boolean`.
+- `core/fields/util.ts`: `columnRelationsOf(fields)` walks tabs and groups (not blocks/tree),
+  structurally (`field.type === 'relation' && get.column`) to keep the import one-way; answers
+  `{ path, column, root, to }`.
+- `adapter-sqlite/naming.server.ts`: `JOIN_SUFFIX = '__$doc'`, `joinName(column)`.
+- `generate-schema/root.server.ts`: a `RelationFieldBuilder && field.get.column` branch before the
+  junction one: sets `$references(relationTo, { onDelete: 'set null', selfReferencing: to ===
+tableName })` when none is set, pushes `toSchemaColumn(field, parentPath)`, records
+  `{ table, column: camel, to }`; `Return.columnRelations`. `index.server.ts` collects from both
+  `buildRootTable` calls and passes them to `templateRelations(tree, columnRelations)`, which adds
+  `<column>__$doc: r.one.<to>({ from: r.<table>.<column>, to: r.<to>.id })` per entry. Verified:
+  the versions fixture generates 14 such lines and migrates.
+- `adapter-sqlite/select.server.ts`: `columnRelationJoins({ table, tables, config, select? })`
+  — side is base / content / all from `config._versions` and `table === baseTableName(slug)`;
+  joins `id` plus whichever of `name`, `email`, `title`, `filename` the target table has (the
+  panel reads `.name`). `buildWithParam` merges it into the full `with` and seeds the select-mode
+  `with`; the select loop `continue`s on a column relation instead of pushing it to
+  `directRelationPaths`. `read.server.ts`: the versioned `findFirst`/`findMany` spread
+  `columnRelationJoins({ table: baseTable, … })` beside the content `with` (base-row joins,
+  `createdBy`).
+- `adapter-sqlite/transform.server.ts` `rows()`: for each `columnRelationsOf(config.fields)`,
+  `doc[column] = doc[joinName(column)] ?? null`, delete the join key — before the `flatten`, so
+  the document reads `updatedBy: { id, name }` on the column's path.
+  `columns.server.ts` `mergeContentRow` select branch also picks `doc` keys ending in
+  `JOIN_SUFFIX`.
+- `adapter-sqlite/where.server.ts`, relation branch, before the property handler: on
+  `fieldConfig.get.column`, a property query (`updatedBy.name`) becomes
+  `inArray(table[column], select id from target where …)`; a `$root()` column asked of the
+  content table goes through `inArray(table.ownerId, select id from base where …)`; a plain
+  equality never reaches here (the column matched as a regular column above).
+- `core/pipeline/hooks/normalize-column-relations.server.ts` (`beforeUpsert`): for every column
+  relation in `configMap`, `toColumnRelationId(value)` — a string, `{ id }`, `{ documentId }`, or
+  the first of a list, else `null`. **Placed after `setDefaultValues` and before
+  `validateFields`** in both `beforeCreate` and `beforeUpdate` (collection) and `beforeUpdate`
+  (area). A pipeline hook, not a field `$beforeSave`: field hooks are skipped on the
+  locale-fallback pass and under `?skipValidation`.
+- `set-default-values.server.ts` `getDefaultValue`: `defaultRelationValue` only for
+  `!config.get.column` — **the bug the first e2e hit**: the column relation's `null` default was
+  resolved through the junction-row shape and the first `staff` insert died on "SQLite3 can only
+  bind numbers, strings, bigints, buffers, and null".
+- `prototype/doc.ts` blank document: a column relation is `null`, not `[]`.
+- `persist/relations/extract.server.ts`: skip column relations.
+- `config/validate.server.ts` `validateRelationField`: the three rules from §3.
+- `metas/fields.ts`: `staffRelation(name) = relation(name).to(STAFF_SLUG as
+CollectionSlug).$column()`; `createdBy`/`updatedBy` built from it, `.hidden()`, `.$root()` on
+  `createdBy`, `.access(staffOnly)`. `metas/module.server.ts`: `staffRef` typed over
+  `FormFieldBuilder<any>`, docblock rewritten (a column-backed relation with a reference).
+- Panel: `Document.svelte` footer reads `form.values.createdBy?.name` / `updatedBy?.name`;
+  `Row.svelte` reads `doc.updatedBy?.name`; the `_*Name` props are gone.
+- `collection/operations/duplicate.ts`: `createBy` → `createdBy` in `normalizeProps`.
+- e2e: every `expect(doc.createdBy).toBe(id)` / `updatedBy` in `tests/basic` and `tests/versions`
+  becomes `?.id`.
+
+Verified: unit suite green apart from `collection/pipeline.spec.ts`, which fails identically on
+the untouched base in this environment (`setDocumentThumbnail` missing from the named
+`beforeRead` list — check it on a clean checkout before reading anything into it). The
+versions e2e was not reached after C2c; the basic e2e first died at init on the default-value bug
+above, then ran again with the fix and was stopped before finishing.
+
+### Environment, for the next run
+
+- `.env` as CONTRIBUTING: `RIME_LOG_TO_FILE=true` (one test reads the day's log),
+  `RIME_LOG_LEVEL=TRACE`, `RIME_CONFIG_DIR=src/lib/+rime`, `RIME_PANEL_ROUTE=panel`.
+- SMTP reachable, or accept 5 mail failures in `basic`.
+- A Chromium matching `@playwright/test`'s pin, or `pages.test.ts` cannot launch.
+- Run the untouched base first and get 0. `clear --force` wipes `db/`, so every suite starts on
+  a fresh database; a stale dev cache once made `rime:use` fail with "GroupFieldBuilder does not
+  implement dataType" and passed on the next run.
+- `pkill -f 'vite dev'` kills the shell that issued it; use `pkill -f '[v]ite dev'`.
