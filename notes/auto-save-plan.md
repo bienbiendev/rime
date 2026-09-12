@@ -239,8 +239,58 @@ anything: the panel of the person on their auto-saved row and the panel of the p
 row must see the same claim. That reverses the per-revision rationale in `metas/module.ts`; the
 rationale changes because the rows do. It is a migration (two columns move), landed on its own.
 
-Also part of this step: a `beforeRead` hook on panel reads that resolves `createdBy`/`updatedBy`
-to `_createdByName`/`_updatedByName` from `staff`. The banner says "by X", and today X is blank.
+### Names: the author columns become relation fields, joined in the read
+
+The banner and the history list say "by X", and today X is blank: `_updatedByName` is read by
+the panel and written by nothing. The metas are `text` columns with a `$references` to `staff`
+(`metas/module.server.ts` argues against a relation field: junction storage, one join per row).
+A relation field answers "who" with a document instead of an id, and the join can be one query.
+
+What a relation field is today, and why the plain kind does not fit here:
+
+- A relation is stored as rows of `<table>__$rels` (`path`, `position`, `ownerId`, `<target>Id`,
+  `locale`), read through the `with` on that junction, and turned into
+  `{ relationTo, documentId }` by `buildDocument`. At `depth > 0` each one is expanded by its own
+  `findById` (`build-document.server.ts:74`) — N+1, and the target is never joined.
+- A `._root()` relation stores nothing: the base table's `buildRootTable` call discards its
+  `relationFieldsMap`, so no junction is generated for the base row (known-defects §4, which
+  has a title and no body — this is the body). `createdBy` is `._root()`.
+- Writes go through `saveRelations` from `incomingPaths`; the lock is written by `updateWhere`,
+  a column write, and `stampUpdatedBy` puts an id in `data`.
+
+So: a **column-backed relation** — a relation field whose storage is the FK column that exists
+today, not a junction. `relation('updatedBy').to('staff').$column()` (name to taste):
+
+- **Schema.** `buildRootTable` emits `text('updated_by').references(() => staff.id, { onDelete:
+'set null' })` for it — what `module.server.ts` writes by hand now — plus a drizzle `one`
+  relation in the `defineRelations` block the templates already generate for owner links. On
+  the base table as easily as on the versions table, so `createdBy` needs no junction and §4
+  stays out of the way.
+- **Read.** `buildFullWithParam` and `buildWithParam` add `with: { updatedBy: { columns: { id,
+name, email } } }` for every column-backed relation on the table (the `select` branch when the
+  path is selected). One query; `buildDocument` leaves the value as the joined document instead
+  of a `{ relationTo, documentId }` reference. The document reads `updatedBy: { id, name, email }`
+  at every depth; the generated type says so (a single object, not the `T[] | ref[]` union).
+- **Write.** Unchanged: `stampCreatedBy`/`stampUpdatedBy` set an id, `writeLock` sets a column.
+  `validateFields`/`saveRelations` must treat a column-backed relation as a scalar — `persistRelational`
+  skips it, the config map keeps it. A submitted value may be an id or `{ id }`.
+- **Where.** `buildCondition`'s relation branch resolves through the junction; a column-backed
+  relation resolves to its column, which is what `retireAutoSaves` needs for
+  `where[updatedBy][equals]=<user>`.
+- **Panel.** `Row.svelte` and `Document.svelte` read `doc.updatedBy?.name`; the `_*Name` props go.
+  `staff` carries `name` and `email` from better-auth; the join projects those two and `id`.
+
+This replaces C2c below. It is a field-builder feature with a schema generator half, so it is
+its own commit ahead of the auto-save work, and it is the one that makes every "by X" in this
+plan real.
+
+**Later — a hidden select, not a `beforeRead` cleanup.** `deletePanelLockMetas` and the
+`access.read` check in `processDocumentFields` fetch a value and then delete it; with a joined
+relation that is a join done for nothing. The next step is a request-level exclusion the adapter
+honours before querying — an internal `omit`/`without` beside `select`, or `select: ['-currentlyEditedBy']`
+— resolved in `columnsParams` and `buildWithParam` so the column and its `with` are never asked
+for. Field access still has to be enforced for whatever _is_ fetched; the exclusion only saves
+the work. Not in this pass; noted so the join lands with a way to switch it off.
 
 ---
 
@@ -343,7 +393,7 @@ row, or the URL's `versionId`). When the config opts in, also query
 ```ts
 autoSaves: {
   own?: { id; createdAt; updatedAt; outdated: boolean };
-  others: { id; updatedAt; updatedBy; _updatedByName }[];
+  others: { id; updatedAt; updatedBy: { id; name; email } }[];
 }
 ```
 
@@ -500,7 +550,8 @@ Each: what happens under the design, and the decision it rests on.
 26. **Relation "create" dialogs** are nested creates: never auto-saved.
 27. **Uploads on a resumed row** — excluded by D7 for now.
 28. **The panel list** shows the newest real row; an in-progress auto-save never appears in a
-    list or a card, and `_updatedByName` there stays blank until §3's resolver lands.
+    list or a card; the "by" column there reads `updatedBy.name` once §3's column-backed
+    relation lands.
 
 ---
 
@@ -513,8 +564,11 @@ Each: what happens under the design, and the decision it rests on.
 - **C2 — metas.** (a) `mergeContentRow` keeps the version row's `updatedAt`; spec on
   `columns.server.ts`; e2e expectations on `updatedAt` reviewed. (b) Lock fields `._root()`,
   `writeLock` on the base handle, `lock.server.ts` without `versionId`; `metas/module.ts` rewritten
-  to say why. (c) `resolveAuthorNames` `beforeRead` for panel reads → `_createdByName`,
-  `_updatedByName`. Three commits; (b) is the migration.
+  to say why. (c) Column-backed relation fields (§3 "Names"): builder flag, schema generator
+  emits the FK column plus a `one` relation, `with` builders join the target, `buildDocument`
+  keeps the joined document, the where builder resolves the column; `createdBy`, `updatedBy`
+  and `currentlyEditedBy` become `relation().to('staff')` with it; `Row.svelte`/`Document.svelte`
+  read `.name`; known-defects §4 gets its body. Three commits; (b) and (c) are migrations.
 - **C3 — the column and its guards.** `augment.ts` pushes `isAutoSave`; generator emits not null
   default false; `doc-type.ts` contribution; `stripAutoSaveFlag`, `guardAutoSaveOwner` placed in
   both hook lists; `augment.spec.ts`. Fixtures: `news` opts in (`pdf` stays out — upload).
