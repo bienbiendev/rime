@@ -1,3 +1,4 @@
+import { PARAMS } from '$lib/core/constants.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { claimEditLock, releaseEditLock } from '$lib/core/prototype/shared/metas/lock.server.js';
@@ -31,8 +32,12 @@ const run = (intent: 'claim' | 'release') =>
 
     // Past the access check above, so `system()`: the lock sits on a document this caller may
     // write, and reading it back is not a second permission question.
+    //
+    // The row on the caller's screen when they name one, else the newest: a lock is held on the
+    // version being edited, and an auto-saved row is only ever reached by its `versionId`.
+    const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
     const [readError, doc] = await trycatch(() =>
-      collection.system().findById({ id, draft: true })
+      collection.system().findById({ id, versionId, draft: true })
     );
     if (readError) return handleError(readError, { context: 'api' });
 

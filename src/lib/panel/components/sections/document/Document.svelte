@@ -2,6 +2,7 @@
   import { beforeNavigate, goto, invalidateAll } from '$app/navigation';
   import type { ResolvedPathname } from '$app/types';
   import { isAuthConfig } from '$lib/core/auth/util';
+  import { PARAMS } from '$lib/core/constants.js';
   import { t__ } from '$lib/core/i18n/index.js';
   import { openSse } from '$lib/core/plugins/sse/index.js';
   import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
@@ -147,12 +148,20 @@
    * A route rather than a panel form action — a form action has to be listed by name in the
    * generated `+page.server.ts`, and one that is not answers 404, which makes every claim quietly
    * do nothing and leaves the TTL as the only thing that ever frees a document.
+   *
+   * The claim names the version on screen: the lock is held on the row being edited.
    */
-  const lockUrl = $derived(
-    initial._prototype === 'collection'
-      ? `${apiUrl(config.kebab, form.values.id)}/lock`
-      : `${apiUrl(config.kebab)}/lock`
-  );
+  const lockUrl = (params: Record<string, string> = {}) => {
+    const base =
+      initial._prototype === 'collection'
+        ? `${apiUrl(config.kebab, form.values.id)}/lock`
+        : `${apiUrl(config.kebab)}/lock`;
+    const search = new URLSearchParams({
+      ...(initial.versionId ? { [PARAMS.VERSION_ID]: initial.versionId } : {}),
+      ...params
+    }).toString();
+    return search ? `${base}?${search}` : base;
+  };
 
   /**
    * Claim or release.
@@ -162,7 +171,7 @@
    */
   async function editLock(intent: 'claim' | 'release', force = false) {
     try {
-      const response = await fetch(`${lockUrl}${force ? '?force=true' : ''}`, {
+      const response = await fetch(lockUrl(force ? { force: 'true' } : {}), {
         method: intent === 'claim' ? 'POST' : 'DELETE'
       });
       if (!response.ok) console.error(`edit lock: ${intent} answered ${response.status}`);
@@ -202,7 +211,7 @@
   $effect(() => {
     if (readOnly || operation === 'create') return;
 
-    const release = () => navigator.sendBeacon(`${lockUrl}?release=true`);
+    const release = () => navigator.sendBeacon(lockUrl({ release: 'true' }));
 
     window.addEventListener('pagehide', release);
     return () => window.removeEventListener('pagehide', release);

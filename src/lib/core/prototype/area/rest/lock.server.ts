@@ -1,3 +1,4 @@
+import { PARAMS } from '$lib/core/constants.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { claimEditLock, releaseEditLock } from '$lib/core/prototype/shared/metas/lock.server.js';
@@ -15,7 +16,9 @@ const run = (intent: 'claim' | 'release') =>
       return handleError(new RimeError(RimeError.UNAUTHORIZED), { context: 'api' });
     }
 
-    const [readError, doc] = await trycatch(() => area.system().find({ draft: true }));
+    // The row on the caller's screen when they name one, else the newest — see the collection's.
+    const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
+    const [readError, doc] = await trycatch(() => area.system().find({ versionId, draft: true }));
     if (readError) return handleError(readError, { context: 'api' });
 
     // A `pagehide` beacon can only POST, so a release arriving that way says so in the query.
