@@ -143,11 +143,12 @@
   });
 
   /**
-   * This document's lock: POST takes it, DELETE gives it back.
+   * This document's lock: POST takes it (claim), DELETE gives it back (release).
    *
-   * A route rather than a panel form action — a form action has to be listed by name in the
-   * generated `+page.server.ts`, and one that is not answers 404, which makes every claim quietly
-   * do nothing and leaves the TTL as the only thing that ever frees a document.
+   * A REST route, not a panel form action. Form actions live in the generated `+page.server.ts`
+   * and each one has to be listed there by name. A `?/lock` action left off that list answers
+   * 404, the claims fail quietly, and nothing but the TTL ever frees a document. A route declared
+   * in the prototype's `rest` is written by codegen and cannot be left out.
    *
    * The claim names the version on screen: the lock is held on the row being edited.
    */
