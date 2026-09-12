@@ -1,5 +1,6 @@
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
 import { validateAuth } from '$lib/core/auth/validate-config.js';
+import { validateVersions } from '$lib/core/prototype/shared/versions/validate-config.server.js';
 import cache from '$lib/core/dev/cache.server.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { isFormField } from '$lib/core/fields/util.js';
@@ -223,14 +224,22 @@ const hasDatabase = <T extends Config>(config: T) => {
 };
 
 /**
- * What auth requires of a collection that declares it — see `core/auth/validate-config.ts`.
+ * What each feature requires of a config that declares it. Every rule set guards its own
+ * not-declared case, so this only says which kinds of config each one is asked of.
  *
- * These rules lived here, and needed `isAuthConfig` to find the collections they applied to. They
- * are auth's now, and auth guards its own not-an-auth-collection case, which is what a
- * `FeatureDefinition.validate` seam and a fold over ten features used to do for one implementer.
+ * ```
+ * validateAuth       core/auth/validate-config.ts                        collections
+ * validateVersions   core/prototype/shared/versions/validate-config.server.ts   collections and areas
+ * ```
  */
 function validateFeatures(config: Config) {
-  return (config.collections || []).flatMap((c) => validateAuth(c));
+  const collections = config.collections || [];
+  const areas = config.areas || [];
+
+  return [
+    ...collections.flatMap((c) => validateAuth(c)),
+    ...[...collections, ...areas].flatMap((c) => validateVersions(c))
+  ];
 }
 
 /**
