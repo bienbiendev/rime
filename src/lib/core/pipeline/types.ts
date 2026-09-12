@@ -167,7 +167,20 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
   originalConfigMap?: ConfigMap;
   /** An map to get a field config by path on incoming data */
   configMap?: ConfigMap;
-  /** @TODO explain what it does */
+  /**
+   * True when rime is the caller rather than a request's user — `rime.collection('x').system()`
+   * and `rime.area('x').system()` set it on every operation they run.
+   *
+   * What stands down for it: `authorize` (no access check), the API read cache (`cached` reads
+   * through), `stampCreatedBy`/`stampUpdatedBy` (rime is not a person, so no author is recorded),
+   * the per-field write-access check in `validateFields`, and `deletePanelLockMetas` (the lock
+   * fields stay on the document). Validation itself still runs.
+   *
+   * Who sets it: the edit-lock endpoints reading the document they are about to mark, the
+   * locale-fallback pass a create runs for the other locales, and any feature doing bookkeeping
+   * the requesting user holds no permission for. It travels on one operation's context only —
+   * a call that operation makes through the plain accessor starts without it.
+   */
   isSystemOperation?: boolean;
 };
 

@@ -3,7 +3,33 @@ export const PARAMS = {
   DEPTH: 'depth',
 
   /**
-   * @TODO add documentation here for the draft param
+   * Which version row a request means, on a config with `versions: { draft: true }`. Ignored
+   * everywhere else: a config without drafts has no published/draft distinction to pick from.
+   *
+   * On a **read** (`GET /api/<slug>`, `GET /api/<slug>/<id>`, an area's `GET`):
+   *
+   * ```
+   * absent or false   the published row — a document with none is a 404 by id, and is dropped
+   *                   from a list
+   * true              the newest row by `updatedAt`, whatever its status
+   * with versionId    that row, whatever its status; `draft` is not read
+   * ```
+   *
+   * On an **update** (`PATCH`) without a `versionId` it says which row to write *from*, and the
+   * meaning flips:
+   *
+   * ```
+   * true              branch a new draft version from the **published** row (404 when there is
+   *                   none — see notes/known-defects.md §1)
+   * absent or false   write the published row in place
+   * with versionId    write that row in place; `draft` is not read
+   * ```
+   *
+   * Never read on a create, a delete or a duplicate. Gated by the config's `access.read` alone,
+   * so a public collection answers `?draft=true` to anyone. The decision tables are
+   * `core/prototype/shared/versions/read-query.ts` and `strategy.ts`.
+   *
+   * @example ?draft=true
    */
   DRAFT: 'draft',
 
