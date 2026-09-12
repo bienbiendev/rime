@@ -39,6 +39,15 @@ describe('isLockHeldByOther', () => {
     expect(isLockHeldByOther(doc('you', ago(1000)), 'me', NOW)).toBe(true);
   });
 
+  it('reads the holder off the joined staff document a read hands back', () => {
+    expect(isLockHeldByOther(doc({ id: 'you', name: 'You' } as any, ago(1000)), 'me', NOW)).toBe(
+      true
+    );
+    expect(isLockHeldByOther(doc({ id: 'me', name: 'Me' } as any, ago(1000)), 'me', NOW)).toBe(
+      false
+    );
+  });
+
   it('is free again once their claim ages out', () => {
     expect(isLockHeldByOther(doc('you', ago(EDIT_LOCK_TTL_MS + 1)), 'me', NOW)).toBe(false);
   });

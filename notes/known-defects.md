@@ -134,20 +134,17 @@ with `imageSizes` **and** a blocks field, asserting the block type appears in
 
 ## 4. A relation field with $root() doesn't declare a relation in the generated schema
 
-**Status:** identified. No fixture reaches it: nothing in `src/lib` or `tests/` puts `$root()`
-on a relation.
+**Status:** fixed — a config error.
 
 `$root()` is defined on `FormFieldBuilder`, so a relation accepts it. A relation is stored as
 rows of `<table>__$rels`, and only the content table gets that junction: the base table's
-`buildRootTable` call (`adapter-sqlite/generate-schema/index.server.ts:56`) discards the
-`relationFieldsMap` it returns. So `relation('x').to('y').$root()` type-checks, generates no
-junction for the base row, `saveRelations` has no table to write to, and the value is silently
-gone.
+`buildRootTable` call discards the `relationFieldsMap` it returns. So
+`relation('x').to('y').$root()` used to type-check, generate no junction for the base row, and
+store nothing.
 
-### Where to fix
+### The fix
 
-Not by generating a base-table junction — a many-relation on the base row has no use case. The
-plan in `notes/auto-save-plan.md` §3 adds a column-backed single relation (`$column()`: an FK
-column on the owner row, joined in the read), which is the form that can live on either table.
-With it, the rule is: `$root()` on a relation requires `$column()`, and `$column()` excludes
-`.many()` and `.localized()`; all config errors, checked in `validateRelationField`.
+`validateRelationField` refuses `$root()` on a relation. A reference that has to sit on the base
+row is a text column with `$references(slug, { resolve: true })`: the adapter joins the target on
+read and the document carries it on the same key, `{ id, name, email }` for `staff`; a write takes
+that object or the id. `createdBy` is one.

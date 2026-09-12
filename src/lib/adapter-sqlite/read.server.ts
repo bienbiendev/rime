@@ -12,7 +12,7 @@ import { baseTableName } from './naming.server.js';
 import { buildOrderByParam } from './order-by.server.js';
 import * as adapterUtil from './columns.server.js';
 import { buildWhereParam } from './where.server.js';
-import { buildWithParam } from './select.server.js';
+import { buildWithParam, resolvedReferenceJoins } from './select.server.js';
 
 /**
  * Reading a prototype's rows.
@@ -84,6 +84,8 @@ export const readPrototype = async (
     columns: adapterUtil.columnsParams({ table: rootTable, select }),
     ...byId,
     with: {
+      // The base row's own resolved references; the content row's come with `buildWithParam`.
+      ...resolvedReferenceJoins({ table, tables, config, select }),
       [contentTable]: {
         columns: adapterUtil.columnsParams({ table: tables[contentTable], select }),
         with: buildWithParam({ table: contentTable, select, locale, tables, config }),
@@ -221,6 +223,7 @@ export const findManyPrototypes = async (
     ...params,
     columns: adapterUtil.columnsParams({ table: tables[table], select }),
     with: {
+      ...resolvedReferenceJoins({ table, tables, config, select }),
       [contentTable]: {
         with: withParam,
         where: { RAW: contentWhere },

@@ -6,6 +6,7 @@ import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { baseFieldNames } from '$lib/core/fields/util.js';
 import type { Dic } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
+import { JOIN_SUFFIX } from './naming.server.js';
 
 /**
  * Main function to generated primaryKeys
@@ -167,11 +168,13 @@ export function mergeContentRow(
     // latter is how `_path` came to be missing from this list while being a base field.
     const rootProps = ['createdAt', 'id', ...baseFieldNames(config)];
     const hasRootSelectColumn = rootProps.some((column) => select.includes(column));
+    // A resolved reference's target, joined only when its column was selected.
+    const joined = Object.keys(doc).filter((key) => key.endsWith(JOIN_SUFFIX));
 
     // Pick the selected base columns on doc, or only the "id"
     const docFields = hasRootSelectColumn
-      ? pick([...select.filter((field) => rootProps.includes(field as any)), 'id'], doc)
-      : pick(['id'], doc);
+      ? pick([...select.filter((field) => rootProps.includes(field as any)), 'id', ...joined], doc)
+      : pick(['id', ...joined], doc);
 
     // Filter out root props as they should come from the doc,
     // plus the ownerId wich is equals to doc.id
@@ -183,7 +186,7 @@ export function mergeContentRow(
       ...docFields,
       ...contentFields,
       contentId: contentRow.id
-    } as RawDoc;
+    } as unknown as RawDoc;
   }
 
   // Default case - return all fields

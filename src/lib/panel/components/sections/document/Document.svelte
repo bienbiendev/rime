@@ -270,7 +270,7 @@
 
   {#if isLockedByOther}
     <CurrentlyEdited
-      id={initial.currentlyEditedBy}
+      holder={initial.currentlyEditedBy}
       takeControl={() => editLock('claim', true).then(() => window.location.reload())}
     />
   {/if}
@@ -291,13 +291,13 @@
       {@render meta(t__('common.created_at'), locale.dateFormat(form.values.createdAt))}
     {/if}
     {#if form.values.createdBy}
-      {@render metaUser(t__('common.created_by'), form.values._createdByName)}
+      {@render metaUser(t__('common.created_by'), form.values.createdBy?.name)}
     {/if}
     {#if form.values.updatedAt}
       {@render meta(t__('common.last_update'), locale.dateFormat(form.values.updatedAt))}
     {/if}
     {#if form.values.updatedBy}
-      {@render metaUser(t__('common.updated_by'), form.values._updatedByName)}
+      {@render metaUser(t__('common.updated_by'), form.values.updatedBy?.name)}
     {/if}
     {#if form.values.id}
       {@render meta('id', form.values.id)}

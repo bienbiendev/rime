@@ -89,7 +89,7 @@
   {/each}
 
   <div class="rz-list-row__cell">
-    {doc._updatedByName ?? ''}
+    {doc.updatedBy?.name ?? ''}
   </div>
 
   <div class="rz-list-row__cell">

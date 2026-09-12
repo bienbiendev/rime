@@ -126,6 +126,14 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
         `Relation field ${field.name} references unknown collection ${field.get.relationTo}, in ${documentConfig.type} ${documentConfig.slug}`
       );
     }
+
+    // A relation is junction rows, and the base row has no junction. A reference that must sit
+    // there is a text column with `$references(slug, { resolve: true })`.
+    if (field.get.root) {
+      errors.push(
+        `Relation field ${field.name} can't be $root(), in ${documentConfig.type} ${documentConfig.slug}`
+      );
+    }
   };
 
   const validateFields = (fields: FieldBuilder[]) => {
@@ -172,6 +180,14 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
       if (field.get.root && field.get.localized) {
         errors.push(
           `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with $root(), can't be localized`
+        );
+      }
+
+      // A resolved reference is joined from a column of the row; a localized column is on the
+      // locales branch, where no join reaches it.
+      if (field._references?.resolve && field.get.localized) {
+        errors.push(
+          `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with a resolved reference, can't be localized`
         );
       }
 

@@ -1354,8 +1354,8 @@ test('A staff document carries the user that created it', async ({ request }) =>
   });
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
-  expect(doc.createdBy).toBe(superAdminId);
-  expect(doc.updatedBy).toBe(superAdminId);
+  expect(doc.createdBy?.id).toBe(superAdminId);
+  expect(doc.updatedBy?.id).toBe(superAdminId);
 });
 
 test('Create stamps createdBy and updatedBy with the same user', async ({ request }) => {
@@ -1370,8 +1370,8 @@ test('Create stamps createdBy and updatedBy with the same user', async ({ reques
   });
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
-  expect(doc.createdBy).toBe(authorId);
-  expect(doc.updatedBy).toBe(authorId);
+  expect(doc.createdBy?.id).toBe(authorId);
+  expect(doc.updatedBy?.id).toBe(authorId);
   authoredPageId = doc.id;
 });
 
@@ -1386,8 +1386,8 @@ test('Update moves updatedBy and leaves createdBy alone', async ({ request }) =>
   });
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
-  expect(doc.createdBy).toBe(authorId);
-  expect(doc.updatedBy).toBe(reviserId);
+  expect(doc.createdBy?.id).toBe(authorId);
+  expect(doc.updatedBy?.id).toBe(reviserId);
 });
 
 test('A read leaves both stamps untouched', async ({ request }) => {
@@ -1396,8 +1396,8 @@ test('A read leaves both stamps untouched', async ({ request }) => {
   });
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
-  expect(doc.createdBy).toBe(authorId);
-  expect(doc.updatedBy).toBe(reviserId);
+  expect(doc.createdBy?.id).toBe(authorId);
+  expect(doc.updatedBy?.id).toBe(reviserId);
 });
 
 test('A second update by the original author moves updatedBy back', async ({ request }) => {
@@ -1411,8 +1411,8 @@ test('A second update by the original author moves updatedBy back', async ({ req
   });
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
-  expect(doc.createdBy).toBe(authorId);
-  expect(doc.updatedBy).toBe(authorId);
+  expect(doc.createdBy?.id).toBe(authorId);
+  expect(doc.updatedBy?.id).toBe(authorId);
 });
 
 test('Deleting the author nulls createdBy and leaves the document', async ({ request }) => {
@@ -1435,7 +1435,7 @@ test('Deleting the author nulls createdBy and leaves the document', async ({ req
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
   expect(doc.createdBy).toBeFalsy();
-  expect(doc.updatedBy).toBe(reviserId);
+  expect(doc.updatedBy?.id).toBe(reviserId);
 });
 
 /****************************************************/
@@ -1505,7 +1505,7 @@ test('A staff read carries the authorship stamps', async ({ request }) => {
     headers: await signInSuperAdmin(request)
   });
   const { doc } = await response.json();
-  expect(doc.updatedBy).toBe(reviserId);
+  expect(doc.updatedBy?.id).toBe(reviserId);
 });
 
 test('A staff user can claim the edit lock', async ({ request }) => {
@@ -1569,5 +1569,5 @@ test('None of that moved updatedBy', async ({ request }) => {
   });
   const { doc } = await response.json();
   // The lock endpoint writes through `updateWhere`, so it cuts no version and stamps nobody.
-  expect(doc.updatedBy).toBe(reviserId);
+  expect(doc.updatedBy?.id).toBe(reviserId);
 });

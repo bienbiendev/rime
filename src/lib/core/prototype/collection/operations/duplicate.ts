@@ -181,7 +181,7 @@ const normalizeProps = (value: any, locale: string | undefined, keepIds: boolean
     return value;
   }
 
-  const unwantedProps = ['ownerId', 'createdAt', 'updatedAt', 'createBy', 'updatedBy'];
+  const unwantedProps = ['ownerId', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'];
   if (!keepIds) unwantedProps.push('id');
 
   return Object.entries(value)

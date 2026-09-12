@@ -12,9 +12,11 @@ import {
   baseTableName,
   tableName as buildTableName,
   childTableNames,
+  joinName,
   type TableName
 } from './naming.server.js';
 import { transformDatabaseColumnsToPaths } from './columns.server.js';
+import { resolvedReferencesOf } from '$lib/core/fields/util.js';
 
 /**
  * Turns the rows a read returned into the four piles core builds a document from.
@@ -127,6 +129,16 @@ export const createTransformHandle = <const C extends Config>(args: {
     /****************************************************/
     // The document's own columns
     /****************************************************/
+
+    // A resolved reference came back twice: the id in its column, and the referenced document
+    // under `<column>__$doc`. The document carries the referenced one on the column's path;
+    // nobody is null. Left alone when the read did not ask for it.
+    for (const { column } of resolvedReferencesOf(configCtx.getBySlug(slug).fields)) {
+      const key = joinName(column);
+      if (!(key in doc)) continue;
+      doc[column] = doc[key] ?? null;
+      delete doc[key];
+    }
 
     // The child tables came back on the same row; they are their own piles now. Left on, they
     // flatten into `pages__$blocks_hero.0.id` keys that survive every step to be stripped by name

@@ -47,6 +47,17 @@ export type FieldReferenceOptions = {
   /** Referenced table is this field's own table (self-FK); adapters need this
    *  to emit a `(): any =>` accessor and avoid a TS circular-declaration error. */
   selfReferencing?: boolean;
+  /**
+   * Read back as the referenced document instead of its id, joined by the adapter. Written as
+   * the id either way: a save may send the document back as it came.
+   *
+   * ```ts
+   * text('updatedBy').$references('staff', { resolve: true });
+   * // reads  { updatedBy: { id: 'abc', name: 'Ann', email: 'ann@x.io' } }
+   * // writes { updatedBy: 'abc' }
+   * ```
+   */
+  resolve?: boolean;
 };
 
 export type FieldReference = FieldReferenceOptions & { table: string };
@@ -224,8 +235,23 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
         const value = this.field.defaultValue;
         return typeof value === 'function' ? (value as DefaultValueFn<unknown>)(context) : value;
       },
-      generateType: (): string => this.generateType()
+      generateType: (): string =>
+        this._references?.resolve ? this.resolvedReferenceType() : this.generateType()
     };
+  }
+
+  /** The document a resolved reference reads as, whatever the field's own type says. */
+  private resolvedReferenceType(): string {
+    const shared = [
+      '//@shared:start ResolvedReference',
+      "export type ResolvedReference<T> = (Pick<T, 'id'> & Partial<T>) | null;",
+      '//@shared:end'
+    ].join('\n');
+    const target = `${capitalize(this._references!.table)}Doc`;
+    return [
+      shared,
+      `${this.field.name}${this.get.required ? '' : '?'}: ResolvedReference<${target}>`
+    ].join('\n');
   }
 
   hint(hint: string) {

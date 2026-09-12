@@ -277,6 +277,67 @@ export const baseFieldNames = (config: { fields: FieldBuilder[] }): string[] =>
     .filter((field) => field.get.root)
     .map((field) => field.name);
 
+export type ResolvedReference = {
+  /** The document path: `meta.owner`. */
+  path: string;
+  /** The column it is stored in: `meta__owner`. */
+  column: string;
+  /** Whether the column sits on the base row of a versioned config. */
+  root: boolean;
+  /** The collection it points at. */
+  to: string;
+};
+
+/**
+ * The fields a read resolves into the document they reference, with the column each one is
+ * stored in. A field opts in with `$references(slug, { resolve: true })`.
+ *
+ * ```
+ * text('updatedBy').$references('staff', { resolve: true })
+ * // { path: 'updatedBy', column: 'updatedBy', root: false, to: 'staff' }
+ *
+ * group('meta').fields(text('owner').$references('staff', { resolve: true }))
+ * // { path: 'meta.owner', column: 'meta__owner', root: false, to: 'staff' }
+ * ```
+ *
+ * Walks tabs and groups, whose columns sit on the owner's row. Blocks and tree rows are their
+ * own tables and are not walked.
+ */
+export const resolvedReferencesOf = (
+  fields: FieldBuilder[],
+  parentPath = ''
+): ResolvedReference[] => {
+  const prefix = parentPath ? `${parentPath}.` : '';
+  const found: ResolvedReference[] = [];
+
+  for (const field of fields) {
+    if (field instanceof TabsBuilder) {
+      for (const tab of field.get.tabs) {
+        found.push(...resolvedReferencesOf(tab.get.fields, `${prefix}${tab.name}`));
+      }
+      continue;
+    }
+    if (!isFormField(field)) continue;
+
+    if (field instanceof GroupFieldBuilder) {
+      found.push(...resolvedReferencesOf(field.get.fields, `${prefix}${field.name}`));
+      continue;
+    }
+
+    if (field._references?.resolve) {
+      const path = `${prefix}${field.name}`;
+      found.push({
+        path,
+        column: path.replace(/\./g, '__'),
+        root: field.get.root,
+        to: field._references.table
+      });
+    }
+  }
+
+  return found;
+};
+
 /**
  * Splits a write into the half that belongs on the base row and the half that belongs on the
  * content row.

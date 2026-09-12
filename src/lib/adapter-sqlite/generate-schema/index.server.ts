@@ -4,7 +4,7 @@ import { baseTableName, declaredTableProperty, type TableName } from '../naming.
 import { date } from '$lib/fields/date/index.js';
 import type { Dic } from '$lib/util/types.js';
 import { generateJunctionTableDefinition } from './relations/junction.server.js';
-import buildRootTable from './root.server.js';
+import buildRootTable, { type ReferenceJoin } from './root.server.js';
 import {
   templateDeclaredTable,
   templateExportRelationsFieldsToTable,
@@ -33,6 +33,8 @@ export async function generateSchemaString(config: BuiltConfig) {
   const relationTree: Record<string, string[]> = {};
   let relationFieldsExportDic: Dic = {};
   const blocksRegister: string[] = [];
+  /** Every resolved reference, joined onto its owner in the same `defineRelations`. */
+  const referenceJoins: ReferenceJoin[] = [];
 
   for (const entry of entries) {
     const prototype = entry.config;
@@ -53,7 +55,7 @@ export async function generateSchemaString(config: BuiltConfig) {
       // A versioned prototype is two tables: the base row keeps its own columns — `createdAt`,
       // `updatedAt` and whatever the config marks `$root()` — and everything else moves onto the
       // versions, which is what the rest of this iteration then builds.
-      const { schema: baseSchema } = await buildRootTable({
+      const { schema: baseSchema, referenceJoins: baseReferenceJoins } = await buildRootTable({
         blocksRegister: [],
         fields: [
           ...prototype.fields.filter((field) => field.get.root),
@@ -67,6 +69,7 @@ export async function generateSchemaString(config: BuiltConfig) {
         tableName: baseName
       });
       schema.push(baseSchema);
+      referenceJoins.push(...baseReferenceJoins);
 
       // From here on, "root" means the versions table: its blocks, tree and relations tables hang off it.
       rootTableName = baseTableName(versions.slug);
@@ -79,7 +82,8 @@ export async function generateSchemaString(config: BuiltConfig) {
       schema: prototypeSchema,
       relationsDic,
       relationFieldsMap,
-      relationFieldsHasLocale
+      relationFieldsHasLocale,
+      referenceJoins: contentReferenceJoins
     } = await buildRootTable({
       blocksRegister,
       fields: versions ? prototype.fields.filter((field) => !field.get.root) : prototype.fields,
@@ -89,6 +93,7 @@ export async function generateSchemaString(config: BuiltConfig) {
       versionsOf: versions ? baseName : false,
       tableName: rootTableName
     });
+    referenceJoins.push(...contentReferenceJoins);
 
     const { junctionTable, junctionTableName } = generateJunctionTableDefinition({
       tableName: rootTableName,
@@ -124,7 +129,7 @@ export async function generateSchemaString(config: BuiltConfig) {
 
   schema.push(templateExportTables(enumTables));
   // After `tables`, which `defineRelations` takes as its first argument.
-  schema.push(templateRelations(relationTree));
+  schema.push(templateRelations(relationTree, referenceJoins));
   schema.push(templateExportRelationsFieldsToTable(relationFieldsExportDic));
   schema.push(templateExportSchema({ enumTables }));
 

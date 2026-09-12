@@ -3,7 +3,7 @@ import { logger } from '$lib/core/logger.server.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { EDIT_LOCK_TTL_AFTER_CLOSE_MS, EDIT_LOCK_TTL_MS } from './constant.js';
-import { isLockHeldByOther } from './lock.js';
+import { isLockHeldByOther, lockHolderId } from './lock.js';
 
 type LockArgs = {
   event: RequestEvent;
@@ -53,7 +53,7 @@ const writeLock = async (
   // Tell whoever else has the document open, so they reload — for the overlay, and for the
   // content, which the holder has usually just changed. Only when the lock actually changed
   // hands: a claim is also the renewal, and those would reach every client twice a TTL.
-  if ((doc.currentlyEditedBy ?? null) !== data.currentlyEditedBy) {
+  if (lockHolderId(doc) !== data.currentlyEditedBy) {
     // Keyed on the document's own id, not the version row's — it is what the panel subscribed to.
     rime.sse.emit(`rime:${config.slug}:${doc.id}`, 'rime:lock');
   }
@@ -87,7 +87,7 @@ export const claimEditLock = async (args: LockArgs & { force?: boolean }) => {
  * document with no lock on it a moment after they took it.
  */
 export const releaseEditLock = async (args: LockArgs) => {
-  if (args.doc.currentlyEditedBy !== args.userId) return false;
+  if (lockHolderId(args.doc) !== args.userId) return false;
 
   await writeLock(args, {
     currentlyEditedBy: args.userId,

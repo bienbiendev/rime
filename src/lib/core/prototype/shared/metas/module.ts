@@ -21,17 +21,18 @@ type Input = { fields?: Collection<any>['fields'] };
  * two people on two different versions are not editing the same thing, so locking one must not
  * lock the other.
  *
- * **Why `text` and not relations to `staff`.** The base table is built from
- * `fields.filter(field => field.get.root)` in a `buildRootTable` call whose `relationFieldsMap`
- * the caller discards, so a `$root()` relation generates no junction table and silently stores
- * nothing. The panel resolves an id to a name where it shows one.
+ * **Text columns, read back as the staff member.** Each of the three ids is a `text` column the
+ * server half marks `$references('staff', { resolve: true })`: the adapter joins the target on
+ * read, so the document carries `{ id, name, email }` on the same key and the panel has a name to
+ * show. A write takes that object or the id. A text column is also what can be `$root()`, which
+ * a relation field cannot.
  *
  * **The lock is staff-only, said on the field.** `.access({ read, update })` is enforced by the
  * pipeline for every caller — `processDocumentFields` drops what a reader may not see,
  * `validateFields` drops what a writer may not set — so who can see and claim a lock is one
  * declaration here rather than a rule each read path has to remember.
  *
- * The client half. `module.server.ts` adds the foreign key to `staff` on the three id columns,
+ * The client half. `module.server.ts` adds the reference to `staff` on the three id columns,
  * which is what decides what happens to a document whose author is deleted.
  */
 export const augmentMetas = <T extends Input>(config: T): T => {

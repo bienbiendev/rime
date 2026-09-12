@@ -14,8 +14,19 @@ export const isLockStale = (at: unknown, now = Date.now()) => {
   return Number.isNaN(since) || now - since >= EDIT_LOCK_TTL_MS;
 };
 
+/**
+ * The id a claim names. A read hands the holder back joined, `{ id, name, email }`; a write and
+ * an older row carry the bare id.
+ */
+export const lockHolderId = (doc: Partial<GenericDoc>): string | null => {
+  const by = doc.currentlyEditedBy;
+  if (typeof by === 'string') return by;
+  if (by && typeof by === 'object' && typeof by.id === 'string') return by.id;
+  return null;
+};
+
 /** Somebody other than `userId` is in this document, recently enough to still mean it. */
 export const isLockHeldByOther = (doc: Partial<GenericDoc>, userId: string, now = Date.now()) => {
-  const by = doc.currentlyEditedBy;
+  const by = lockHolderId(doc);
   return !!by && by !== userId && !isLockStale(doc.currentlyEditedAt, now);
 };

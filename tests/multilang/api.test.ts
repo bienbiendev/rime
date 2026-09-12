@@ -1520,8 +1520,8 @@ test('Should keep createdBy and move updatedBy to whoever wrote last', async ({ 
     })
     .then((response) => response.json());
 
-  expect(doc.createdBy).toBe(adminUserId);
-  expect(doc.updatedBy).toBe(editorUserId);
+  expect(doc.createdBy?.id).toBe(adminUserId);
+  expect(doc.updatedBy?.id).toBe(editorUserId);
 });
 
 test('Should not expose the edit lock outside the panel', async ({ request }) => {
@@ -1545,8 +1545,8 @@ test('Should claim the edit lock without becoming the last editor', async ({ req
     .then((r) => r.json());
 
   // The lock write is not an edit: the editor who wrote the content is still the last editor.
-  expect(doc.updatedBy).toBe(editorUserId);
-  expect(doc.createdBy).toBe(adminUserId);
+  expect(doc.updatedBy?.id).toBe(editorUserId);
+  expect(doc.createdBy?.id).toBe(adminUserId);
 });
 
 test('Should not claim the edit lock without credentials', async ({ request }) => {
@@ -1564,7 +1564,7 @@ test('An unauthenticated claim leaves the holder alone', async ({ request }) => 
   const { doc } = await request
     .get(`${API_BASE_URL}/pages/${homeId}`, { headers: await signInSuperAdmin(request) })
     .then((r) => r.json());
-  expect(doc.updatedBy).toBe(editorUserId);
+  expect(doc.updatedBy?.id).toBe(editorUserId);
 });
 
 test('Should logout editor', async ({ request }) => {

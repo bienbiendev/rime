@@ -1,25 +1,14 @@
 <script lang="ts">
-  import { PARAMS } from '$lib/core/constants.js';
-  import { apiUrl } from '$lib/core/routes/util.js';
-  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import { Button } from '../../ui/button/index.js';
 
-  type Props = { id?: string | null; takeControl: () => void };
-  const { id, takeControl }: Props = $props();
+  type Props = {
+    /** The staff member holding the lock, as the read joined them. */
+    holder?: { name?: string | null; email?: string | null } | null;
+    takeControl: () => void;
+  };
+  const { holder, takeControl }: Props = $props();
 
-  const APIProxy = getAPIProxyContext();
-
-  // Resolved here rather than joined onto every read. The proxy caches by url, so the same
-  // holder asked for twice costs one request.
-  const holder = $derived(
-    id
-      ? APIProxy.getRessource<{ doc: { name?: string; email?: string } }>(
-          `${apiUrl('staff', id)}?${PARAMS.SELECT}=name,email`
-        )
-      : null
-  );
-
-  const label = $derived(holder?.data?.doc.email ?? holder?.data?.doc.name ?? 'Someone');
+  const label = $derived(holder?.email ?? holder?.name ?? 'Someone');
 </script>
 
 <div class="rz-document-read-only">

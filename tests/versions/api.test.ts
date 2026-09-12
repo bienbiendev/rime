@@ -1209,8 +1209,8 @@ test('Creating a News stamps both columns with the author', async ({ request }) 
   });
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
-  expect(doc.createdBy).toBe(authorshipSuperAdminId);
-  expect(doc.updatedBy).toBe(authorshipSuperAdminId);
+  expect(doc.createdBy?.id).toBe(authorshipSuperAdminId);
+  expect(doc.updatedBy?.id).toBe(authorshipSuperAdminId);
   authoredNewsId = doc.id;
   authoredNewsFirstVersionId = doc.versionId;
 });
@@ -1237,9 +1237,9 @@ test('A new version keeps createdBy and stamps updatedBy with the reviser', asyn
   expect(doc.status).toBe(VERSIONS_STATUS.DRAFT);
   expect(doc.versionId).not.toBe(authoredNewsFirstVersionId);
   // Base row, shared by every version.
-  expect(doc.createdBy).toBe(authorshipSuperAdminId);
+  expect(doc.createdBy?.id).toBe(authorshipSuperAdminId);
   // Version row, written by whoever branched it.
-  expect(doc.updatedBy).toBe(reviserId);
+  expect(doc.updatedBy?.id).toBe(reviserId);
 });
 
 test('The first version still reports its own writer', async ({ request }) => {
@@ -1251,9 +1251,9 @@ test('The first version still reports its own writer', async ({ request }) => {
   const { doc } = await response.json();
   expect(doc.versionId).toBe(authoredNewsFirstVersionId);
   // Shared with every other version — it hangs off the root row.
-  expect(doc.createdBy).toBe(authorshipSuperAdminId);
+  expect(doc.createdBy?.id).toBe(authorshipSuperAdminId);
   // Per version — this one predates the reviser's write.
-  expect(doc.updatedBy).toBe(authorshipSuperAdminId);
+  expect(doc.updatedBy?.id).toBe(authorshipSuperAdminId);
 });
 
 test('The draft version reports the reviser', async ({ request }) => {
@@ -1263,8 +1263,8 @@ test('The draft version reports the reviser', async ({ request }) => {
   );
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
-  expect(doc.createdBy).toBe(authorshipSuperAdminId);
-  expect(doc.updatedBy).toBe(reviserId);
+  expect(doc.createdBy?.id).toBe(authorshipSuperAdminId);
+  expect(doc.updatedBy?.id).toBe(reviserId);
 });
 
 let authorshipInfosVersionId: string;
@@ -1276,7 +1276,7 @@ test('An area version records the user that wrote it', async ({ request }) => {
   });
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
-  expect(doc.updatedBy).toBe(authorshipSuperAdminId);
+  expect(doc.updatedBy?.id).toBe(authorshipSuperAdminId);
   authorshipInfosVersionId = doc.versionId;
 });
 
@@ -1290,7 +1290,7 @@ test('The next area version records the next user, the previous one is unchanged
   expect(update.status()).toBe(200);
   const updated = await update.json();
   expect(updated.doc.versionId).not.toBe(authorshipInfosVersionId);
-  expect(updated.doc.updatedBy).toBe(reviserId);
+  expect(updated.doc.updatedBy?.id).toBe(reviserId);
 
   const previous = await request.get(
     `${API_BASE_URL}/infos?${PARAMS.VERSION_ID}=${authorshipInfosVersionId}`,
@@ -1299,5 +1299,5 @@ test('The next area version records the next user, the previous one is unchanged
   expect(previous.status()).toBe(200);
   const { doc } = await previous.json();
   expect(doc.title).toBe('authorship-1');
-  expect(doc.updatedBy).toBe(authorshipSuperAdminId);
+  expect(doc.updatedBy?.id).toBe(authorshipSuperAdminId);
 });

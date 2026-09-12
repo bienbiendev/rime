@@ -14,6 +14,10 @@ type Input = { slug?: string; fields?: Collection<any>['fields'] };
  * join the panel's list does per row. A `text` column with `$references` puts the id in the row
  * itself and still gets referential integrity out of the database.
  *
+ * **`resolve: true` is what puts a name in the panel.** The adapter joins the staff member on
+ * read and the document carries `{ id, name, email }` where the id column is; the pipeline
+ * writes the id back.
+ *
  * **`onDelete: 'set null'` is the policy for a deleted user**, and it is the reason this half
  * exists at all. Without a reference, deleting a staff member leaves their id behind on every
  * document they touched, pointing at nothing — the panel renders a dash and the database cannot
@@ -31,9 +35,11 @@ export const augmentMetas = <T extends Input>(config: T): T => {
   // self-referencing accessor; it is also the one collection where "who made this user" is
   // answered by the bootstrap rather than a person.
   const staffRef = (field: ReturnType<typeof text>) =>
-    config.slug === STAFF_SLUG
-      ? field.$references(STAFF_SLUG, { onDelete: 'set null', selfReferencing: true })
-      : field.$references(STAFF_SLUG, { onDelete: 'set null' });
+    field.$references(STAFF_SLUG, {
+      onDelete: 'set null',
+      resolve: true,
+      selfReferencing: config.slug === STAFF_SLUG
+    });
 
   fields.push(
     staffRef(metasFields.createdBy()),

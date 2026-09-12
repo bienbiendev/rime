@@ -86,6 +86,11 @@ export const buildWhereParam = ({
   /** What the outer condition names — the caller's alias where there is one. */
   const table = (rootTable as typeof ownTable) ?? ownTable;
 
+  // The base row a versions table hangs off, and its columns. `baseTableName`, not the bare
+  // slug: a camelCase slug is not a table name.
+  const baseTable = isShadow ? getTable(baseTableName(base!)) : undefined;
+  const baseColumns = baseTable ? Object.keys(getTableColumns(baseTable)) : [];
+
   const buildCondition = (conditionObject: Dic): any | false => {
     // Handle nested AND conditions
     if ('and' in conditionObject && Array.isArray(conditionObject.and)) {
@@ -115,19 +120,6 @@ export const buildWhereParam = ({
       value
     } = getConditionMembers(conditionObject);
 
-    // Handle hierarchy fields (_parent, _position), which stay on the base row
-    if (isShadow && isHierarchyColumn(sqlColumn)) {
-      // `baseTableName`, not the bare slug: the two were the same string until the naming
-      // convention changed, and a camelCase slug resolved to `undefined` here rather than to a
-      // table.
-      const baseTable = getTable(baseTableName(base!));
-      // Query the base table for the hierarchy field
-      return inArray(
-        table.ownerId,
-        db.select({ ownerId: baseTable.id }).from(baseTable).where(fn(baseTable[sqlColumn], value))
-      );
-    }
-
     // Handle regular fields
     if (unlocalizedColumns.includes(sqlColumn)) {
       return fn(table[sqlColumn], value);
@@ -141,6 +133,15 @@ export const buildWhereParam = ({
           .select({ id: tableLocales.ownerId })
           .from(tableLocales)
           .where(and(fn(tableLocales[sqlColumn], value), eq(tableLocales.locale, locale)))
+      );
+    }
+
+    // A column the base row keeps — the hierarchy columns, and any `$root()` field — reached
+    // through `ownerId` when the table queried is the versions table.
+    if (baseTable && baseColumns.includes(sqlColumn)) {
+      return inArray(
+        table.ownerId,
+        db.select({ ownerId: baseTable.id }).from(baseTable).where(fn(baseTable[sqlColumn], value))
       );
     }
 
@@ -450,12 +451,6 @@ function getConditionMembers(obj: Dic) {
   // Format compared value to support Date, Arrays,...
   const value = formatValue({ operator, value: rawValue });
   return { column, sqlColumn, fn, operator, rawValue, value };
-}
-
-// Determine if we should handle versioned hierarchy fields
-/** The hierarchy columns, which stay on a base row wherever the content lives. */
-function isHierarchyColumn(sqlColumn: string) {
-  return sqlColumn === '_parent' || sqlColumn === '_position' || sqlColumn === '_path';
 }
 
 // Normalize condition object for versioned collections

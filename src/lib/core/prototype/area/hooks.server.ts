@@ -1,6 +1,7 @@
 import { authorize } from '$lib/core/pipeline/hooks/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/hooks/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/pipeline/hooks/get-original-document.server.js';
+import { normalizeResolvedReferences } from '$lib/core/pipeline/hooks/normalize-resolved-references.server.js';
 import { buildOriginalDocConfigMap } from '$lib/core/pipeline/hooks/original-config-map.server.js';
 import { processDocumentFields } from '$lib/core/pipeline/hooks/process-document-fields.server.js';
 import { resolveContentOwner } from '$lib/core/pipeline/hooks/resolve-content-owner.server.js';
@@ -56,6 +57,7 @@ export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     metas.stampUpdatedBy,
     buildDataConfigMap,
     setDefaultValues,
+    normalizeResolvedReferences,
     validateFields,
     when(isVersioned, versions.demoteOtherVersions)
   ]

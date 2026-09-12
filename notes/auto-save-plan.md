@@ -239,7 +239,18 @@ anything: the panel of the person on their auto-saved row and the panel of the p
 row must see the same claim. That reverses the per-revision rationale in `metas/module.ts`; the
 rationale changes because the rows do. It is a migration (two columns move), landed on its own.
 
+**Decided at implementation (2026-09-12): the lock move is dropped.** `currentlyEditedBy` and
+`currentlyEditedAt` stay on the version row and do not become `$root()`. A is applied to
+`updatedAt` only.
+
 ### Names: the author columns become relation fields, joined in the read
+
+**Decided at implementation (2026-09-12): not a relation field.** The metas stay `text` with
+`$references('staff', { onDelete: 'set null', resolve: true })`. The adapter joins the target on
+read and the document carries it on the same key, `{ id, name, email }`; a write takes that object
+or the id, normalised by one pipeline hook. The `$column()` design below is kept as the record of
+what was considered; the branching it put on the relation field, the blank document, defaults,
+relation persistence and validation is what it cost.
 
 The banner and the history list say "by X", and today X is blank: `_updatedByName` is read by
 the panel and written by nothing. The metas are `text` columns with a `$references` to `staff`
@@ -588,13 +599,14 @@ Each: what happens under the design, and the decision it rests on.
   `validateFeatures` folds it in beside `validateAuth`, over collections and areas. Rules:
   `autoSave` needs `draft`; `autoSave` on an `upload` collection refused (D7). Spec beside it.
 - **C2 — metas.** (a) `mergeContentRow` keeps the version row's `updatedAt`; spec on
-  `columns.server.ts`; e2e expectations on `updatedAt` reviewed. (b) Lock fields `$root()`,
-  `writeLock` on the base handle, `lock.server.ts` without `versionId`; `metas/module.ts` rewritten
-  to say why. (c) Column-backed relation fields (§3 "Names"): builder flag, schema generator
-  emits the FK column plus a `one` relation, `with` builders join the target, `buildDocument`
-  keeps the joined document, the where builder resolves the column; `createdBy`, `updatedBy`
-  and `currentlyEditedBy` become `relation().to('staff')` with it; `Row.svelte`/`Document.svelte`
-  read `.name`; known-defects §4 gets its body. Three commits; (b) and (c) are migrations.
+  `columns.server.ts`; e2e expectations on `updatedAt` reviewed. Done. (b) Lock fields `$root()`,
+  `writeLock` on the base handle, `lock.server.ts` without `versionId`. **Dropped** — the lock
+  stays per version (§3). (c) Column-backed relation fields (§3 "Names"): builder flag, schema
+  generator emits the FK column plus a `one` relation, `with` builders join the target, the
+  transform keeps the joined document, the where builder resolves the column; `createdBy`,
+  `updatedBy` and `currentlyEditedBy` become `relation().to('staff')` with it;
+  `Row.svelte`/`Document.svelte` read `.name`; known-defects §4 gets its body. Done; (c) is a
+  migration.
 - **C3 — the column and its guards.** `augment.ts` pushes `isAutoSave`; generator emits not null
   default false; `doc-type.ts` contribution; `stripAutoSaveFlag`, `guardAutoSaveOwner` placed in
   both hook lists; `augment.spec.ts`. Fixtures: `news` opts in (`pdf` stays out — upload).
@@ -642,7 +654,7 @@ Unit: `strategy.spec.ts`, `read-query.spec.ts` rows, `augment.spec.ts`, `validat
 | D3  | Listed in the versions history, dimmed, labelled _auto-save by {name}_; the banner is the shortcut | hidden from the list                            |
 | D4  | Retirement = the saver's own rows, from the panel form actions only                                | every row; from any update                      |
 | D5  | Opening a document shows the real document plus a banner                                           | land the owner on their auto-saved row directly |
-| D6  | Metas: `created*` on the document, `updated*` on the version, lock on the document                 | all on the versions table; expose both dates    |
+| D6  | Metas: `created*` on the document, `updated*` and the lock on the version                          | all on the versions table; expose both dates    |
 | D7  | Upload collections cannot opt in yet                                                               | include, and extend the file-reference check    |
 | D8  | Never pruned on a timer; discard, edit-over, save and document deletion are the exits              | 7 days, on save and at boot                     |
 | D9  | Live edit auto-saves by the same rule                                                              | gate on `!isLiveEdit`                           |
@@ -650,8 +662,8 @@ Unit: `strategy.spec.ts`, `read-query.spec.ts` rows, `augment.spec.ts`, `validat
 | D11 | The derived versions collection reads `isStaff` by default                                         | filter auto-saved rows for non-staff only       |
 
 All eleven decided in review; the table is the record. On D6 the question "why move the lock"
-came up during implementation; the answer stands in §3 and in §8, C2b, and the move is one
-commit to drop if the answer stops convincing.
+came up during implementation, and the move was dropped (2026-09-12): the lock stays on the
+version row. §3 keeps the argument for moving it, should auto-save need one claim per document.
 
 ---
 
