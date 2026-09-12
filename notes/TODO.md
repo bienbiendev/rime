@@ -45,7 +45,7 @@
 [x] Add select feature to findById collection
 [x] Add leave confirm dialog
 [x] Auto-claim the edit lock on open (needs a write path that moves neither updatedAt nor updatedBy)
-[ ] Handle auto-save if version not enabled.
+[ ] Handle auto-save if version enabled.
 [ ] Type `select` against the document's own paths (narrow the return type)
 [ ] Batch offset/update
 [-] configurable medias path
