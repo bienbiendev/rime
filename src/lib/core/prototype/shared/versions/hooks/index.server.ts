@@ -8,6 +8,7 @@
  */
 export { defineVersionOperation } from './define-version-operation.server.js';
 export { demoteOtherVersions } from './demote-other-versions.js';
+export { discardAutoSavesOf } from './discard-auto-saves-of.server.js';
 export { exposeVersionId } from './expose-version-id.js';
 export { guardAutoSaveOwner } from './guard-auto-save-owner.server.js';
 export { handleNewVersion } from './handle-new-version.server.js';

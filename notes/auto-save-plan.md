@@ -241,7 +241,9 @@ rationale changes because the rows do. It is a migration (two columns move), lan
 
 **Decided at implementation (2026-09-12): the lock move is dropped.** `currentlyEditedBy` and
 `currentlyEditedAt` stay on the version row and do not become `$root()`. A is applied to
-`updatedAt` only.
+`updatedAt` only. Instead, the lock endpoints take the `versionId` on screen
+(`POST /api/<slug>/<id>/lock?versionId=`), so the claim sits on the row being edited — an
+auto-saved row included — rather than on the newest real row.
 
 ### Names: the author columns become relation fields, joined in the read
 
@@ -409,8 +411,9 @@ invariant bounds the table at one row per user per document, and a row goes away
 - its owner **edits over it** — the first auto-save from another base row replaces it (4.2);
 - its owner **saves** — promotion, or retirement of the others (4.4);
 - the **document is deleted** — cascade;
-- a staff member with `access.delete` discards it from the history list — the only exit for a row
-  whose owner was deleted (`updatedBy` set null by the FK).
+- its **owner is deleted** — `discardAutoSavesOf` runs on the staff collection's delete and takes
+  every auto-saved row of that user with them (decided 2026-09-12; the FK's `set null` never
+  gets to apply to one).
 
 ### 4.6 The panel
 
@@ -560,9 +563,8 @@ Each: what happens under the design, and the decision it rests on.
 20. **Somebody opens another user's auto-saved row by URL.** The read succeeds (versions are
     readable); the load marks it `readOnly` when `doc.isAutoSave && doc.updatedBy !== user.id`,
     so no auto-save is attempted and none would be accepted.
-21. **The owner is deleted.** `updatedBy` is `set null` by the FK; the row is nobody's, reads as
-    "someone" in others' banners and in the history list, and stays until a staff member with
-    `access.delete` discards it there (4.5).
+21. **The owner is deleted.** Their auto-saved rows are deleted with them, before the FK's
+    `set null` would make them nobody's (4.5). Nothing to show, nothing to discard.
 22. **Access.** Ordinary reads filter auto-saved rows, but `GET /api/<slug>--versions` lists them
     and `?versionId=` reads them, both behind `access.read` — which on a public collection is
     everyone, and already exposes every draft (§1.6). Two fixes, either before or with this: the

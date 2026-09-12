@@ -1,4 +1,4 @@
-import { isAuth } from '$lib/core/auth/enabled.js';
+import { isAuth, isStaffCollection } from '$lib/core/auth/enabled.js';
 import * as auth from '$lib/core/auth/hooks/index.server.js';
 import { authorize } from '$lib/core/pipeline/hooks/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/hooks/data-config-map.server.js';
@@ -134,6 +134,8 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     // a delete means the whole document, whichever row was read for it.
     when(isVersionsCollection, versions.guardAutoSaveOwner),
     when(isAuth, auth.preventSupperAdminDeletion),
+    // After the refusal above: a user who cannot be deleted keeps their auto-saves.
+    when(isStaffCollection, versions.discardAutoSavesOf),
     when(isUpload, upload.cleanUpFiles)
   ],
 
