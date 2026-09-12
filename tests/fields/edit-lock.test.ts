@@ -1,3 +1,4 @@
+import { EDIT_LOCK_TTL_AFTER_CLOSE_MS } from '$lib/core/prototype/shared/metas/constant';
 import test, { expect, type Browser, type Page } from '@playwright/test';
 import { API_BASE_URL, panelUrl, panelUrlRe, signIn } from '../util.js';
 
@@ -7,6 +8,9 @@ const LOCK_EDITOR_EMAIL = 'lock-editor@email.com';
 
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 const OVERLAY = '.rz-document-read-only';
+
+// A closed tab keeps its claim for EDIT_LOCK_TTL_AFTER_CLOSE_MS, and the checks below wait it out.
+test.describe.configure({ timeout: 90_000 });
 
 /**
  * Two people, one document.
@@ -24,7 +28,7 @@ async function openAs(browser: Browser, email: string, url: string) {
   const page = await context.newPage();
   await page.goto(panelUrl('sign-in'));
   await page.locator('input[name="email"]').pressSequentially(email, { delay: 30 });
-  await page.locator('input[name="password"]').pressSequentially(password(email), { delay: 30 });
+  await page.locator('input[name="password"]').pressSequentially(PASSWORD, { delay: 30 });
   await page.locator('button[type="submit"]').click();
   await page.waitForURL(panelUrl());
   await page.goto(url);
@@ -32,7 +36,25 @@ async function openAs(browser: Browser, email: string, url: string) {
   return { context, page };
 }
 
-const password = (_email: string) => PASSWORD;
+/**
+ * Whether the overlay is up, reloading until the answer settles.
+ *
+ * A tab that closes keeps its claim as a short lease, and the page only re-reads the lock on a
+ * load — so a document somebody left a moment ago reads as held until the lease runs out, and one
+ * somebody just opened reads as free until their claim lands. Polling through reloads covers both.
+ */
+async function expectOverlay(page: Page, visible: boolean) {
+  await expect
+    .poll(
+      async () => {
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+        return page.locator(OVERLAY).count();
+      },
+      { timeout: EDIT_LOCK_TTL_AFTER_CLOSE_MS * 2, intervals: [500, 1000, 2000] }
+    )
+    .toBe(visible ? 1 : 0);
+}
 
 /** The document under test, found by title so no test depends on another's module state. */
 async function lockedPage(request: import('@playwright/test').APIRequestContext) {
@@ -80,10 +102,10 @@ test('Should show the overlay to a second person while the first holds it', asyn
 
   // The admin opens it and stays there — the claim is made by the load and held by the heartbeat.
   const admin = await openAs(browser, ADMIN_EMAIL, url);
-  await expect(admin.page.locator(OVERLAY)).toHaveCount(0);
+  await expectOverlay(admin.page, false);
 
   const editor = await openAs(browser, LOCK_EDITOR_EMAIL, url);
-  await expect(editor.page.locator(OVERLAY)).toBeVisible();
+  await expectOverlay(editor.page, true);
   await expect(editor.page.locator(OVERLAY)).toContainText(ADMIN_EMAIL);
 
   await editor.context.close();
@@ -94,14 +116,15 @@ test('Should hand the document over on Take control', async ({ browser, request 
   const { url } = await lockedPage(request);
 
   const admin = await openAs(browser, ADMIN_EMAIL, url);
-  const editor = await openAs(browser, LOCK_EDITOR_EMAIL, url);
+  await expectOverlay(admin.page, false);
 
-  await expect(editor.page.locator(OVERLAY)).toBeVisible();
+  const editor = await openAs(browser, LOCK_EDITOR_EMAIL, url);
+  await expectOverlay(editor.page, true);
   await editor.page.locator(OVERLAY).getByRole('button', { name: 'Take control' }).click();
 
   // Take control forces the claim past the admin's, then reloads onto a document it now holds.
   await editor.page.waitForLoadState('networkidle');
-  await expect(editor.page.locator(OVERLAY)).toHaveCount(0);
+  await expectOverlay(editor.page, false);
 
   await editor.context.close();
   await admin.context.close();
@@ -111,12 +134,12 @@ test('Should release the document when its holder leaves', async ({ browser, req
   const { url } = await lockedPage(request);
 
   const admin = await openAs(browser, ADMIN_EMAIL, url);
+  await expectOverlay(admin.page, false);
   await admin.context.close();
 
-  // Nobody is in it now, so the next person in gets the form rather than the overlay — without
-  // waiting out the TTL.
+  // Free again once the lease a closing tab keeps has run out — long before the TTL.
   const editor = await openAs(browser, LOCK_EDITOR_EMAIL, url);
-  await expect(editor.page.locator(OVERLAY)).toHaveCount(0);
+  await expectOverlay(editor.page, false);
 
   await editor.context.close();
 });
