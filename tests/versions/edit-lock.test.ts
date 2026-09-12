@@ -40,12 +40,13 @@ const versionUrl = (versionId: string) =>
   `${panelUrl('news', newsId)}?${PARAMS.VERSION_ID}=${versionId}`;
 
 test('Should create a lock-editor staff account', async ({ request }) => {
+  // An admin: this fixture sets no `panel.$access`, so the panel itself admits admins only.
   const response = await request.post(`${API_BASE_URL}/staff`, {
     headers: await signInSuperAdmin(request),
     data: {
       email: LOCK_EDITOR_EMAIL,
       name: 'Lock Editor',
-      roles: ['editor'],
+      roles: ['admin'],
       password: PASSWORD
     }
   });
