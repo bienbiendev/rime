@@ -3,6 +3,7 @@ import type { VersionsTable } from '$lib/core/adapter.js';
 import { withVersionsSuffix } from './naming.js';
 import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
 import { text } from '$lib/fields/text/index.js';
+import { toggle } from '$lib/fields/toggle/index.js';
 import type { Collection } from '$lib/core/config/types.js';
 
 type Input = {
@@ -16,8 +17,8 @@ export type WithVersionsConfig<T> = Omit<T, 'versions'> & {
 };
 
 /**
- * Normalises `versions`, adds the `status` field when drafts are on, and — when this config is
- * versioned — states **where its content lives**.
+ * Normalises `versions`, adds the `status` field when drafts are on and `isAutoSave` when
+ * auto-save is, and — when this config is versioned — states **where its content lives**.
  *
  * `_versions` is the answer five callers used to fold the feature list for, through a
  * `FeatureDefinition.shadow` seam that only this feature ever implemented. Two of those callers
@@ -39,6 +40,13 @@ export const augmentVersions = <T extends Input>(config: T): WithVersionsConfig<
 
     if (normalizedVersions.draft) {
       fields.push(text('status').defaultValue(VERSIONS_STATUS.DRAFT).hidden());
+    }
+
+    // `required()` makes the column not null with a default, so a migration backfills every
+    // existing row as `false`. Reads filter on `isAutoSave != true`, and SQLite does not count a
+    // null row as passing that.
+    if (normalizedVersions.draft && normalizedVersions.autoSave) {
+      fields.push(toggle('isAutoSave').defaultValue(false).required().hidden());
     }
   } else {
     normalizedVersions = undefined;

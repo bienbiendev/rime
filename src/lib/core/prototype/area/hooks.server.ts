@@ -48,7 +48,9 @@ export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   ],
 
   beforeUpdate: [
+    versions.stripAutoSaveFlag,
     getOriginalDocument,
+    versions.guardAutoSaveOwner,
     buildOriginalDocConfigMap,
     resolveContentOwner,
     when(isVersioned, versions.defineVersionOperation),

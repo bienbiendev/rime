@@ -7,3 +7,6 @@ import type { Dic } from '$lib/util/types.js';
  * a step here holds one config or the other.
  */
 export const isVersioned = (config: Dic): boolean => !!config.versions;
+
+/** A config whose documents are the version rows of another — the derived `$<slug>__versions`. */
+export const isVersionsCollection = (config: Dic): boolean => !!config._shadowOf;

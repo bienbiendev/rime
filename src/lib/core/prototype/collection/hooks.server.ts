@@ -21,7 +21,7 @@ import * as metas from '$lib/core/prototype/shared/metas/hooks/index.server.js';
 import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
 import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
 import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
-import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
+import { isVersioned, isVersionsCollection } from '$lib/core/prototype/shared/versions/enabled.js';
 import * as versions from '$lib/core/prototype/shared/versions/hooks/index.server.js';
 import { when } from '$lib/core/prototype/when.js';
 import { mergeWithBlankDocument } from './hooks/merge-with-blank.server.js';
@@ -74,6 +74,9 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   ],
 
   beforeCreate: [
+    // First, on the submission as sent. Unconditional: the derived versions collection carries
+    // the flag and is not itself versioned.
+    versions.stripAutoSaveFlag,
     mergeWithBlankDocument,
     // After the merge: it appends the password field, and the config map below has to see it.
     when(isAuth, auth.augmentFieldsPassword),
@@ -94,7 +97,10 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   afterCreate: [when(isAuth, auth.populateAPIKey), when(isAuth, auth.signInNewUser)],
 
   beforeUpdate: [
+    versions.stripAutoSaveFlag,
     getOriginalDocument,
+    // Right after the original is known: it is the row this write lands on.
+    versions.guardAutoSaveOwner,
     buildOriginalDocConfigMap,
     resolveContentOwner,
     when(isAuth, auth.augmentFieldsPassword),
@@ -124,6 +130,9 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   ],
 
   beforeDelete: [
+    // On the versions collection only, where the document *is* the row. On the base collection
+    // a delete means the whole document, whichever row was read for it.
+    when(isVersionsCollection, versions.guardAutoSaveOwner),
     when(isAuth, auth.preventSupperAdminDeletion),
     when(isUpload, upload.cleanUpFiles)
   ],

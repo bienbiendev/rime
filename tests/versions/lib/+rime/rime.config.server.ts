@@ -72,7 +72,7 @@ const News = Collection.create('news', {
     create: (user) => access.isAdmin(user),
     update: (user) => access.hasRoles(user, 'admin', 'editor')
   },
-  versions: { draft: true }
+  versions: { draft: true, autoSave: true }
 });
 
 const Medias = Collection.create('medias', {
