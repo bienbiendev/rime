@@ -1,7 +1,7 @@
 import { PARAMS } from '$lib/core/constants';
 import { EDIT_LOCK_TTL_AFTER_CLOSE_MS } from '$lib/core/prototype/shared/metas/constant';
 import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant';
-import test, { expect, type Browser, type Page } from '@playwright/test';
+import test, { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { API_BASE_URL, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
@@ -63,6 +63,20 @@ let draftVersionId: string;
 const versionUrl = (versionId: string) =>
   `${panelUrl('news', newsId)}?${PARAMS.VERSION_ID}=${versionId}`;
 
+/**
+ * Close a tab the way a real one closes.
+ *
+ * A closing tab hands its version back with a `pagehide` beacon, and a context Playwright tears
+ * down never delivers one — the claim would stay for the whole TTL. The same release is sent
+ * from here, with the page's cookies, for the version the page is on.
+ */
+async function leave({ context, page }: { context: BrowserContext; page: Page }) {
+  const versionId = new URL(page.url()).searchParams.get(PARAMS.VERSION_ID);
+  const query = versionId ? `${PARAMS.VERSION_ID}=${versionId}&release=true` : 'release=true';
+  await page.request.post(`${API_BASE_URL}/news/${newsId}/lock?${query}`);
+  await context.close();
+}
+
 test('Should create a lock-editor staff account', async ({ request }) => {
   // An admin: this fixture sets no `panel.$access`, so the panel itself admits admins only.
   const response = await request.post(`${API_BASE_URL}/staff`, {
@@ -113,8 +127,8 @@ test('Should show the overlay to a second person on the same version', async ({ 
   await expectOverlay(editor.page, true);
   await expect(editor.page.locator(OVERLAY)).toContainText(ADMIN_EMAIL);
 
-  await editor.context.close();
-  await admin.context.close();
+  await leave(editor);
+  await leave(admin);
 });
 
 test('Should not lock one version because somebody holds another', async ({ browser }) => {
@@ -130,8 +144,8 @@ test('Should not lock one version because somebody holds another', async ({ brow
   await expectOverlay(editor.page, true);
   await expect(editor.page.locator(OVERLAY)).toContainText(ADMIN_EMAIL);
 
-  await editor.context.close();
-  await admin.context.close();
+  await leave(editor);
+  await leave(admin);
 });
 
 test('Should open the newest real version by default, and lock that one', async ({ browser }) => {
@@ -145,8 +159,8 @@ test('Should open the newest real version by default, and lock that one', async 
   await editor.page.goto(versionUrl(publishedVersionId));
   await expectOverlay(editor.page, false);
 
-  await editor.context.close();
-  await admin.context.close();
+  await leave(editor);
+  await leave(admin);
 });
 
 test('Should hand a version over on Take control', async ({ browser }) => {
@@ -160,20 +174,20 @@ test('Should hand a version over on Take control', async ({ browser }) => {
   await editor.page.waitForLoadState('networkidle');
   await expectOverlay(editor.page, false);
 
-  await editor.context.close();
-  await admin.context.close();
+  await leave(editor);
+  await leave(admin);
 });
 
 test('Should release a version when its holder leaves', async ({ browser }) => {
   const admin = await openAs(browser, ADMIN_EMAIL, versionUrl(publishedVersionId));
   await expectOverlay(admin.page, false);
-  await admin.context.close();
+  await leave(admin);
 
   // Free again once the lease a closing tab keeps has run out.
   const editor = await openAs(browser, LOCK_EDITOR_EMAIL, versionUrl(publishedVersionId));
   await expectOverlay(editor.page, false);
 
-  await editor.context.close();
+  await leave(editor);
 });
 
 test('Should leave updatedAt and updatedBy alone while the lock changes hands', async ({

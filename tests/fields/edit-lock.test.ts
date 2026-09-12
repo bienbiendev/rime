@@ -1,5 +1,5 @@
 import { EDIT_LOCK_TTL_AFTER_CLOSE_MS } from '$lib/core/prototype/shared/metas/constant';
-import test, { expect, type Browser, type Page } from '@playwright/test';
+import test, { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { API_BASE_URL, panelUrl, panelUrlRe, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
@@ -56,6 +56,18 @@ async function expectOverlay(page: Page, visible: boolean) {
     .toBe(visible ? 1 : 0);
 }
 
+/**
+ * Close a tab the way a real one closes.
+ *
+ * A closing tab hands the document back with a `pagehide` beacon, and a context Playwright tears
+ * down never delivers one — the claim would stay for the whole TTL. The same release is sent from
+ * here, with the page's cookies.
+ */
+async function leave({ context, page }: { context: BrowserContext; page: Page }, id: string) {
+  await page.request.post(`${API_BASE_URL}/pages/${id}/lock?release=true`);
+  await context.close();
+}
+
 /** The document under test, found by title so no test depends on another's module state. */
 async function lockedPage(request: import('@playwright/test').APIRequestContext) {
   const { docs } = await request
@@ -98,7 +110,7 @@ test('Should show the overlay to a second person while the first holds it', asyn
   browser,
   request
 }) => {
-  const { url } = await lockedPage(request);
+  const { id, url } = await lockedPage(request);
 
   // The admin opens it and stays there — the claim is made by the load and held by the heartbeat.
   const admin = await openAs(browser, ADMIN_EMAIL, url);
@@ -108,12 +120,12 @@ test('Should show the overlay to a second person while the first holds it', asyn
   await expectOverlay(editor.page, true);
   await expect(editor.page.locator(OVERLAY)).toContainText(ADMIN_EMAIL);
 
-  await editor.context.close();
-  await admin.context.close();
+  await leave(editor, id);
+  await leave(admin, id);
 });
 
 test('Should hand the document over on Take control', async ({ browser, request }) => {
-  const { url } = await lockedPage(request);
+  const { id, url } = await lockedPage(request);
 
   const admin = await openAs(browser, ADMIN_EMAIL, url);
   await expectOverlay(admin.page, false);
@@ -126,22 +138,22 @@ test('Should hand the document over on Take control', async ({ browser, request 
   await editor.page.waitForLoadState('networkidle');
   await expectOverlay(editor.page, false);
 
-  await editor.context.close();
-  await admin.context.close();
+  await leave(editor, id);
+  await leave(admin, id);
 });
 
 test('Should release the document when its holder leaves', async ({ browser, request }) => {
-  const { url } = await lockedPage(request);
+  const { id, url } = await lockedPage(request);
 
   const admin = await openAs(browser, ADMIN_EMAIL, url);
   await expectOverlay(admin.page, false);
-  await admin.context.close();
+  await leave(admin, id);
 
   // Free again once the lease a closing tab keeps has run out — long before the TTL.
   const editor = await openAs(browser, LOCK_EDITOR_EMAIL, url);
   await expectOverlay(editor.page, false);
 
-  await editor.context.close();
+  await leave(editor, id);
 });
 
 test('Should leave updatedAt and updatedBy alone while the lock changes hands', async ({
