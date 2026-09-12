@@ -80,7 +80,7 @@ Harmless — reads tolerate it — but it is a meaningless row per locale per si
 seeds a not-null column that has no value:
 
 ```ts
-result["id"] = randomId(32);
+result['id'] = randomId(32);
 ```
 
 The locales table's `id` is `text('id').primaryKey()`, so it is not-null, so `localizedData`
@@ -132,15 +132,15 @@ Drop the `field instanceof FormFieldBuilder` clause. The gate is a fixture: an u
 with `imageSizes` **and** a blocks field, asserting the block type appears in
 `app.generated.d.ts`.
 
-## 4. A relation field with _root() doesn't declare a relation in the generated schema
+## 4. A relation field with $root() doesn't declare a relation in the generated schema
 
-**Status:** identified. No fixture reaches it: nothing in `src/lib` or `tests/` puts `._root()`
+**Status:** identified. No fixture reaches it: nothing in `src/lib` or `tests/` puts `$root()`
 on a relation.
 
-`._root()` is defined on `FormFieldBuilder`, so a relation accepts it. A relation is stored as
+`$root()` is defined on `FormFieldBuilder`, so a relation accepts it. A relation is stored as
 rows of `<table>__$rels`, and only the content table gets that junction: the base table's
 `buildRootTable` call (`adapter-sqlite/generate-schema/index.server.ts:56`) discards the
-`relationFieldsMap` it returns. So `relation('x').to('y')._root()` type-checks, generates no
+`relationFieldsMap` it returns. So `relation('x').to('y').$root()` type-checks, generates no
 junction for the base row, `saveRelations` has no table to write to, and the value is silently
 gone.
 
@@ -149,5 +149,5 @@ gone.
 Not by generating a base-table junction — a many-relation on the base row has no use case. The
 plan in `notes/auto-save-plan.md` §3 adds a column-backed single relation (`$column()`: an FK
 column on the owner row, joined in the read), which is the form that can live on either table.
-With it, the rule is: `._root()` on a relation requires `$column()`, and `$column()` excludes
+With it, the rule is: `$root()` on a relation requires `$column()`, and `$column()` excludes
 `.many()` and `.localized()`; all config errors, checked in `validateRelationField`.

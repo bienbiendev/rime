@@ -44,10 +44,10 @@ of what `draft` means, and every scenario found that touches the design.
 ### 1.2 Versions, as stored
 
 - A versioned config derives a collection `$<slug>__versions` (`configure.server.ts`) whose
-  fields are the base config's non-`._root()` fields. Its slug is stamped on the base config as
+  fields are the base config's non-`$root()` fields. Its slug is stamped on the base config as
   `_versions.slug` (`augment.ts`); the adapter and the pipeline find the second table through it.
 - The schema generator (`adapter-sqlite/generate-schema/index.server.ts:52-89`) builds two
-  tables: the base keeps `createdAt`, `updatedAt` and every `._root()` field; the versions table
+  tables: the base keeps `createdAt`, `updatedAt` and every `$root()` field; the versions table
   gets everything else plus `ownerId → base.id` (cascade). Blocks, tree and relations hang off
   the versions table.
 - `augmentVersions` normalises `versions` to `{ draft, autoSave, maxVersions }` and, when
@@ -209,7 +209,7 @@ rows demoted. Unsent fields of a new row come from the original; sent fields win
 | ---------------------- | --------------------- | --------------------------------------------- | -------------------------------------- |
 | `createdAt`            | base **and** versions | base: once; versions: once per row            | base's (merge drops the version's)     |
 | `updatedAt`            | base **and** versions | base: every write; versions: that row's write | **base's** (merge drops the version's) |
-| `createdBy`            | base (`._root()`)     | once, `stampCreatedBy`                        | base's                                 |
+| `createdBy`            | base (`$root()`)      | once, `stampCreatedBy`                        | base's                                 |
 | `updatedBy`            | versions              | per row, `stampUpdatedBy`                     | **the version row's**                  |
 | `currentlyEditedBy/At` | versions              | `updateWhere` on the newest row               | the row read                           |
 
@@ -225,14 +225,14 @@ newest row.
   the content row's `updatedAt` and drops the base's. The base `updatedAt` remains an internal
   "last touched" column the default list sort uses, never merged into a document. One line in the
   merge, one spec, a handful of e2e expectations. Cost: none on disk.
-- **B. All on the versions table.** `createdBy` loses `._root()`; each row says who cut it and
+- **B. All on the versions table.** `createdBy` loses `$root()`; each row says who cut it and
   when; the document's creation is its oldest row. Consistent, but "who made this document" stops
   being one column, `A new version keeps createdBy` (e2e) inverts, the FK moves, and every merged
   read still needs a base `updatedAt` for the list sort or a correlated subquery instead.
 - **C. Keep both and expose both.** `updatedAt` (version) and `_touchedAt` (base). Two dates on
   a document is the oddness you pointed at.
 
-**Recommendation: A**, and move the lock to the base row while at it (`._root()` on both lock
+**Recommendation: A**, and move the lock to the base row while at it (`$root()` on both lock
 fields, `writeLock` through the base handle, `lock.server.ts` no longer needs a `versionId`).
 With one auto-saved row per user the lock has to be one per document or it stops meaning
 anything: the panel of the person on their auto-saved row and the panel of the person on the real
@@ -252,9 +252,9 @@ What a relation field is today, and why the plain kind does not fit here:
   `locale`), read through the `with` on that junction, and turned into
   `{ relationTo, documentId }` by `buildDocument`. At `depth > 0` each one is expanded by its own
   `findById` (`build-document.server.ts:74`) — N+1, and the target is never joined.
-- A `._root()` relation stores nothing: the base table's `buildRootTable` call discards its
+- A `$root()` relation stores nothing: the base table's `buildRootTable` call discards its
   `relationFieldsMap`, so no junction is generated for the base row (known-defects §4, which
-  has a title and no body — this is the body). `createdBy` is `._root()`.
+  has a title and no body — this is the body). `createdBy` is `$root()`.
 - Writes go through `saveRelations` from `incomingPaths`; the lock is written by `updateWhere`,
   a column write, and `stampUpdatedBy` puts an id in `data`.
 
@@ -280,21 +280,21 @@ name, email } } }` for every column-backed relation on the table (the `select` b
 - **Panel.** `Row.svelte` and `Document.svelte` read `doc.updatedBy?.name`; the `_*Name` props go.
   `staff` carries `name` and `email` from better-auth; the join projects those two and `id`.
 
-**`$column()` and `._root()` are two axes.** `._root()` says which table a field's column is on
+**`$column()` and `$root()` are two axes.** `$root()` says which table a field's column is on
 (base row or version row) and every field type accepts it; `$column()` says how a relation is
 stored (an FK column instead of junction rows). They compose:
 
 ```ts
-relation("createdBy").to("staff").$column()._root(); // FK column on the base row
+relation("createdBy").to("staff").$column()$root(); // FK column on the base row
 relation("updatedBy").to("staff").$column(); // FK column on the version row
 relation("image").to("medias"); // junction rows on the content table, as today
-relation("image").to("medias")._root(); // config error — a junction cannot sit on the base row
+relation("image").to("medias")$root(); // config error — a junction cannot sit on the base row
 ```
 
-`._root()` on a junction relation is the inconsistency behind known-defects §4: the builder
+`$root()` on a junction relation is the inconsistency behind known-defects §4: the builder
 accepts a flag the storage cannot honour, and the field stores nothing. Column storage is what
-makes `._root()` meaningful for a relation, so the fix is a rule rather than a base-table
-junction: `._root()` without `$column()` is a config error, and so is `$column()` with `.many()`
+makes `$root()` meaningful for a relation, so the fix is a rule rather than a base-table
+junction: `$root()` without `$column()` is a config error, and so is `$column()` with `.many()`
 or `.localized()`. They go in `validateRelationField` in `config/validate.server.ts`, beside the
 unknown-collection rule already there.
 
@@ -524,7 +524,7 @@ Each: what happens under the design, and the decision it rests on.
     teaching `isFilenameStillReferenced` to include auto-saved rows.
 12. **Duplicate.** Reads the newest real row; never copies an auto-save.
 13. **Tree reorder from the list** while A_U exists. `PATCH ?versionId=R { _parent, _position }`
-    — REST, so no retirement; `_parent`/`_position` are `._root()` and not on version rows at
+    — REST, so no retirement; `_parent`/`_position` are `$root()` and not on version rows at
     all. A_U reads as outdated next time; a later promotion of A_U does not touch hierarchy.
 14. **`maxVersions`.** Auto-saved rows are neither counted nor pruned. A promotion adds one real
     draft, and the next new-version write prunes as today.
@@ -588,7 +588,7 @@ Each: what happens under the design, and the decision it rests on.
   `validateFeatures` folds it in beside `validateAuth`, over collections and areas. Rules:
   `autoSave` needs `draft`; `autoSave` on an `upload` collection refused (D7). Spec beside it.
 - **C2 — metas.** (a) `mergeContentRow` keeps the version row's `updatedAt`; spec on
-  `columns.server.ts`; e2e expectations on `updatedAt` reviewed. (b) Lock fields `._root()`,
+  `columns.server.ts`; e2e expectations on `updatedAt` reviewed. (b) Lock fields `$root()`,
   `writeLock` on the base handle, `lock.server.ts` without `versionId`; `metas/module.ts` rewritten
   to say why. (c) Column-backed relation fields (§3 "Names"): builder flag, schema generator
   emits the FK column plus a `one` relation, `with` builders join the target, `buildDocument`
@@ -667,7 +667,7 @@ judged until a run of the untouched base is green. The edits, so the redo is mec
 ### C0 — renames
 
 - `form-field-builder.ts`: `_root()` → `$root()`, `this.field._root` → `this.field.root`;
-  `fields/types.ts` `_root?: boolean` → `root?: boolean`; every `._root()` call and comment
+  `fields/types.ts` `_root?: boolean` → `root?: boolean`; every `$root()` call and comment
   (`metas/fields.ts`, `nested/module.ts`, `nested/module.server.ts`, `upload/module.ts`, the
   schema generator, `write-plan.ts` and its spec, `configure.server.ts`, `lock.server.ts`,
   `upload/disk/delete.server.ts`, both notes, the versions e2e comment); the validation message

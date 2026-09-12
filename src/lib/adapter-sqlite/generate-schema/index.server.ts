@@ -51,7 +51,7 @@ export async function generateSchemaString(config: BuiltConfig) {
 
     if (versions) {
       // A versioned prototype is two tables: the base row keeps its own columns — `createdAt`,
-      // `updatedAt` and whatever the config marks `._root()` — and everything else moves onto the
+      // `updatedAt` and whatever the config marks `$root()` — and everything else moves onto the
       // versions, which is what the rest of this iteration then builds.
       const { schema: baseSchema } = await buildRootTable({
         blocksRegister: [],

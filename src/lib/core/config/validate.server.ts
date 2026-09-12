@@ -1,5 +1,5 @@
 import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
-import { validateAuth } from '$lib/core/auth/validate.js';
+import { validateAuth } from '$lib/core/auth/validate-config.js';
 import cache from '$lib/core/dev/cache.server.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { isFormField } from '$lib/core/fields/util.js';
@@ -167,10 +167,10 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
         continue;
       }
 
-      // Check that a field wich has field._root = true is not localized
+      // A `$root()` field sits on the base row, which has no locales branch.
       if (field.get.root && field.get.localized) {
         errors.push(
-          `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with _root = true, can't be localized`
+          `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with $root(), can't be localized`
         );
       }
 
@@ -223,7 +223,7 @@ const hasDatabase = <T extends Config>(config: T) => {
 };
 
 /**
- * What auth requires of a collection that declares it — see `core/auth/validate.ts`.
+ * What auth requires of a collection that declares it — see `core/auth/validate-config.ts`.
  *
  * These rules lived here, and needed `isAuthConfig` to find the collections they applied to. They
  * are auth's now, and auth guards its own not-an-auth-collection case, which is what a

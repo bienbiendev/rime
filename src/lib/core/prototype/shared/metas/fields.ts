@@ -22,7 +22,7 @@ const staffOnly: { read: FieldAccess; update: FieldAccess } = {
 };
 
 export const metasFields = {
-  createdBy: () => text('createdBy').hidden()._root().access(staffOnly),
+  createdBy: () => text('createdBy').hidden().$root().access(staffOnly),
   updatedBy: () => text('updatedBy').hidden().access(staffOnly),
   currentlyEditedBy: () => text('currentlyEditedBy').hidden().access(staffOnly),
   currentlyEditedAt: () => date('currentlyEditedAt').hidden().access(staffOnly),

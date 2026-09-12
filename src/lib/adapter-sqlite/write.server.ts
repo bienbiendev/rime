@@ -20,7 +20,7 @@ import { buildWhereParam } from './where.server.js';
  * Two apparent differences between the collection and area facades this replaces turned out to be
  * nothing: an area's update reset every content row's status with no `where` while a collection
  * scoped it to `ownerId = id` — the same set for a single row; and a collection split off its
- * `._root()` fields before writing while an area did not — `splitRootData` returns an empty half
+ * `$root()` fields before writing while an area did not — `splitRootData` returns an empty half
  * when a config marks none. Both are core's now, and this is handed both halves.
  */
 
@@ -220,7 +220,7 @@ export const updateWherePrototype = async (
  * Writes a new document: the rows the plan names.
  *
  * The insert half of `updatePrototype`, and it reads the same way: the caller says which rows this
- * write touches, and this executes. Where a versioned config's `._root()` fields go is
+ * write touches, and this executes. Where a versioned config's `$root()` fields go is
  * `versionsWritePlan`'s statement, made before the call.
  *
  * `contentId` names the row the content landed on — the versions row when there is one, the base row

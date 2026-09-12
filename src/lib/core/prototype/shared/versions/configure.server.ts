@@ -5,7 +5,7 @@ import type { BuiltCollection, Config } from '$lib/core/config/types.js';
 
 /**
  * The versions holds the content half of a document, so it carries the content half of the fields:
- * everything except what the base row keeps (`._root()`). The schema generator splits the two
+ * everything except what the base row keeps (`$root()`). The schema generator splits the two
  * tables by the same flag, so a versions table config claiming a base field would name a column its table
  * does not have.
  */

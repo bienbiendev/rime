@@ -15,7 +15,7 @@ export const augmentNested = <T extends IncomingConfig>(config: T): T => ({
   ...config,
   fields: [
     ...(config.fields || []),
-    text('_parent').hidden()._root(),
-    number('_position').defaultValue(0).hidden()._root()
+    text('_parent').hidden().$root(),
+    number('_position').defaultValue(0).hidden().$root()
   ]
 });

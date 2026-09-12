@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { text } from '$lib/fields/text/index.js';
 import { create } from '$lib/core/prototype/collection/definition.js';
-import { validateAuth } from './validate.js';
+import { validateAuth } from './validate-config.js';
 
 /**
  * Auth's config rules, and the contract member that now carries them.

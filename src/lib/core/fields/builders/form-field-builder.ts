@@ -121,13 +121,11 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
   }
 
   /**
-   * Force the field to be on the root table — usefull for fields that
-   * should not be versioned (ex: _parent for nested structures should
-   * always be on the root table to prevent different versions from having
-   * different parents).
+   * Keeps the field on the base row of a versioned config, so every version shares it.
+   * `_parent` on a nested collection is the typical case: the site tree must not fork per version.
    */
-  _root() {
-    this.field._root = true;
+  $root() {
+    this.field.root = true;
     return this;
   }
 
@@ -145,7 +143,7 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return {
       ...this.field,
       localized: !!this.field.localized,
-      root: !!this.field._root,
+      root: !!this.field.root,
       label: this.field.label || capitalize(this.field.name),
       required: !!this.field.required
     } as T & { localized: boolean; root: boolean; label: string; required: boolean };

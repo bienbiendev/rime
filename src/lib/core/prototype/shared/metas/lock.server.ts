@@ -16,7 +16,7 @@ type LockArgs = {
 /**
  * Write the lock fields and nothing else, on the row being edited.
  *
- * **Which row.** The lock is not `._root()`, so on a versioned config it lives with the content —
+ * **Which row.** The lock is not `$root()`, so on a versioned config it lives with the content —
  * one claim per revision. Two people on two different versions are not editing the same thing, and
  * locking one must not lock the other. Where there are no versions there is one row and this
  * resolves to it.
@@ -36,7 +36,7 @@ const writeLock = async (
   const versionsSlug = config._versions?.slug;
 
   // A versioned config keeps these columns on its versions table and nowhere else — they are not
-  // `._root()`. Writing to the base row would target columns that table does not have, so a
+  // `$root()`. Writing to the base row would target columns that table does not have, so a
   // versioned document with no `versionId` is a caller bug, not a row to guess at.
   if (versionsSlug && !doc.versionId) {
     logger.warn(`edit lock on ${config.slug}: versioned document with no versionId, ignored`);

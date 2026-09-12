@@ -46,12 +46,12 @@ describe('the write plan', () => {
       { versionOperation: VERSIONS_OPERATIONS.UPDATE_VERSION, contentOwnerId: 'v1' }
     );
 
-    // `_parent`/`_position`/`_path` are the `._root()` fields; this config marks none, so the
+    // `_parent`/`_position`/`_path` are the `$root()` fields; this config marks none, so the
     // base half is empty and everything is content. The point is the shape, and the row named.
     expect(plan.content).toEqual({ id: 'v1', data: { title: 'a', body: 'b' } });
   });
 
-  it('keeps a ._root() field on the base row', () => {
+  it('keeps a $root() field on the base row', () => {
     const nested = create('spec_plan_nested', {
       versions: true,
       nested: true,
@@ -92,7 +92,7 @@ describe('the write plan', () => {
     expect(plan.content?.id).toBeUndefined();
   });
 
-  it('keeps a ._root() field on the base row on a create too', () => {
+  it('keeps a $root() field on the base row on a create too', () => {
     const nested = create('spec_plan_nested_create', {
       versions: true,
       nested: true,

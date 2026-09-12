@@ -13,7 +13,7 @@ type Input = { fields?: Collection<any>['fields'] };
  * - `updatedBy` — who wrote *this revision*.
  * - `currentlyEditedBy` / `currentlyEditedAt` — who holds the document open, and since when.
  *
- * **Which of them are `._root()`.** On a versioned config the schema generator sends `._root()`
+ * **Which of them are `$root()`.** On a versioned config the schema generator sends `$root()`
  * fields to the base row and everything else to the versions table
  * (`adapter-sqlite/generate-schema/index.server.ts`), so each lands where the question it answers
  * belongs. `createdBy` is a property of the document — one answer per document, whatever its
@@ -23,7 +23,7 @@ type Input = { fields?: Collection<any>['fields'] };
  *
  * **Why `text` and not relations to `staff`.** The base table is built from
  * `fields.filter(field => field.get.root)` in a `buildRootTable` call whose `relationFieldsMap`
- * the caller discards, so a `._root()` relation generates no junction table and silently stores
+ * the caller discards, so a `$root()` relation generates no junction table and silently stores
  * nothing. The panel resolves an id to a name where it shows one.
  *
  * **The lock is staff-only, said on the field.** `.access({ read, update })` is enforced by the

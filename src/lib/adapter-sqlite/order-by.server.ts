@@ -69,10 +69,10 @@ export const buildOrderByParam = ({
    * A column on the prototype's own table, whether or not it also has a versions table.
    *
    * Checked for a versioned prototype too, which is what lets `?sort=_position` work on one: the
-   * hierarchy and path columns are `._root()` fields and live on the base row.
+   * hierarchy and path columns are `$root()` fields and live on the base row.
    *
    * Safe in both branches because the two tables' columns are disjoint by construction — the
-   * schema generator sends `._root()` fields to one and everything else to the other — and the
+   * schema generator sends `$root()` fields to one and everything else to the other — and the
    * system fields they share (`createdAt`, `updatedAt`) are answered above this.
    */
   const rootTableColumns = Object.keys(getTableColumns(rootTable));

@@ -262,7 +262,7 @@ export function getFieldListAtPath(
 
 /**
  * The fields a config keeps on its base row rather than on its versions table — whatever is marked
- * `._root()`.
+ * `$root()`.
  *
  * Read off the config, never a list of names, because the schema generator splits the two tables
  * by the same flag: the base table gets `filter((f) => f.get.root)`, the versions table gets the rest. A

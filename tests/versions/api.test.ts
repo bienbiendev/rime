@@ -1167,7 +1167,7 @@ test('Should store the computed url on the version row', async ({ request }) => 
 /* Authorship across versions — createdBy / updatedBy
 /*********************************************************
 
-`createdBy` is declared `._root()`, so it lives on the document's root row and reads the same
+`createdBy` is declared `$root()`, so it lives on the document's root row and reads the same
 from every version. `updatedBy` is a plain field, so it lives on the version row and answers
 "who wrote *this* version". These tests pin that difference. */
 
