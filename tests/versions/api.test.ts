@@ -1301,3 +1301,64 @@ test('The next area version records the next user, the previous one is unchanged
   expect(doc.title).toBe('authorship-1');
   expect(doc.updatedBy?.id).toBe(authorshipSuperAdminId);
 });
+
+/*********************************************************
+/* Auto-save — the column, the guards, the reads (news opts in)
+/*********************************************************/
+
+test('A version reports the time it was written, not the time the document was', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const first = await request
+    .get(
+      `${API_BASE_URL}/news/${authoredNewsId}?${PARAMS.VERSION_ID}=${authoredNewsFirstVersionId}`,
+      {
+        headers
+      }
+    )
+    .then((r) => r.json());
+  const draft = await request
+    .get(`${API_BASE_URL}/news/${authoredNewsId}?${PARAMS.DRAFT}=true`, { headers })
+    .then((r) => r.json());
+
+  // The draft was branched after the first version was last written.
+  expect(new Date(first.doc.updatedAt).getTime()).toBeLessThan(
+    new Date(draft.doc.updatedAt).getTime()
+  );
+});
+
+test('A PATCH cannot set isAutoSave', async ({ request }) => {
+  const response = await request.patch(
+    `${API_BASE_URL}/news/${authoredNewsId}?${PARAMS.VERSION_ID}=${authoredNewsFirstVersionId}`,
+    { headers: await signInSuperAdmin(request), data: { isAutoSave: true } }
+  );
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.isAutoSave).toBe(false);
+});
+
+test('?autoSave=true on the REST API is an ordinary update', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const versionsUrl = `${API_BASE_URL}/news--versions?where[ownerId][equals]=${authoredNewsId}`;
+  const before = await request.get(versionsUrl, { headers }).then((r) => r.json());
+
+  const response = await request.patch(
+    `${API_BASE_URL}/news/${authoredNewsId}?${PARAMS.VERSION_ID}=${authoredNewsFirstVersionId}&autoSave=true`,
+    { headers, data: { attributes: { title: 'Authored news, via REST' } } }
+  );
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.isAutoSave).toBe(false);
+  expect(doc.versionId).toBe(authoredNewsFirstVersionId);
+
+  const after = await request.get(versionsUrl, { headers }).then((r) => r.json());
+  expect(after.docs).toHaveLength(before.docs.length);
+});
+
+test('The versions of a public collection are not readable without credentials', async ({
+  request
+}) => {
+  const response = await request.get(`${API_BASE_URL}/news--versions`);
+  expect(response.status()).toBe(403);
+});

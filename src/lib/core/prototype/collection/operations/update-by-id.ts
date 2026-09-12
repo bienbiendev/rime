@@ -9,6 +9,8 @@ export type UpdateByIdArgs<T> = {
   id: string;
   versionId?: string;
   draft?: boolean;
+  /** Write the caller's auto-saved row of the version `versionId` names. Panel only. */
+  autoSave?: boolean;
   data: DeepPartial<T>;
   locale?: string | undefined;
   isFallbackLocale?: string | undefined;
@@ -33,6 +35,7 @@ export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T
       id,
       versionId: args.versionId,
       draft,
+      autoSave: args.autoSave,
       locale
     },
     isSystemOperation,

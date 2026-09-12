@@ -148,6 +148,8 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
     select?: string[];
     query?: OperationQuery;
     draft?: boolean;
+    /** The panel typing over a document. Set by the panel form actions only, never by REST. */
+    autoSave?: boolean;
   };
   /**
    * The row this document's content lives on, which is what its blocks, tree nodes and relations

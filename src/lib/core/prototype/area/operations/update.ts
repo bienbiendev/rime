@@ -10,6 +10,8 @@ export type UpdateArgs<T> = {
   locale?: string | undefined;
   versionId?: string;
   draft?: boolean;
+  /** Write the caller's auto-saved row of the version `versionId` names. Panel only. */
+  autoSave?: boolean;
 };
 
 type Args<T> = UpdateArgs<T> & { ctx: PrototypeApiContext<BuiltArea> };
@@ -22,7 +24,7 @@ type Args<T> = UpdateArgs<T> & { ctx: PrototypeApiContext<BuiltArea> };
  * root row, and how the saved document is read back.
  */
 export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) => {
-  const { ctx, locale, draft, versionId } = args;
+  const { ctx, locale, draft, versionId, autoSave } = args;
   const { config, event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
@@ -30,7 +32,8 @@ export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) =
     params: {
       locale,
       versionId,
-      draft
+      draft,
+      autoSave
     },
     isSystemOperation
   };

@@ -1,7 +1,8 @@
 import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
-import type { BuiltCollection, Config } from '$lib/core/config/types.js';
+import type { Access, BuiltCollection, Config } from '$lib/core/config/types.js';
+import { isStaff } from '$lib/core/auth/access.js';
 
 /**
  * The versions holds the content half of a document, so it carries the content half of the fields:
@@ -11,6 +12,16 @@ import type { BuiltCollection, Config } from '$lib/core/config/types.js';
  */
 const contentFields = (config: { fields: BuiltCollection['fields'] }) =>
   config.fields.filter((field) => !field.get.root);
+
+/**
+ * Version rows are the panel's history, and a document's auto-saved rows live among them. They
+ * read for staff who may read the document, and for nobody else — a public collection's drafts
+ * are not public.
+ */
+const versionsAccess = <A extends Access>(access: A): A => ({
+  ...access,
+  read: (user, options) => isStaff(user) && !!access.read?.(user, options)
+});
 
 /**
  * Derives the versions collection behind every versioned config — `$pages__versions` for a versioned
@@ -24,7 +35,7 @@ export function configureVersions<C extends Config>(config: C) {
         slug: withVersionsSuffix(collection.slug) as CollectionSlug,
         kebab: prototypeKebab(withVersionsSuffix(collection.slug)),
         versions: undefined,
-        access: collection.access,
+        access: versionsAccess(collection.access),
         $hooks: collection.$hooks,
         fields: contentFields(collection),
         auth: collection.auth,
@@ -52,7 +63,7 @@ export function configureVersions<C extends Config>(config: C) {
         kebab: prototypeKebab(withVersionsSuffix(area.slug)),
         icon: area.icon,
         versions: undefined,
-        access: area.access,
+        access: versionsAccess(area.access),
         asTitle: area.asTitle,
         asThumbnail: null,
         $hooks: area.$hooks,

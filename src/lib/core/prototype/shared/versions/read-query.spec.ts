@@ -61,6 +61,39 @@ describe('versionsReadQuery', () => {
   });
 
   /**
+   * An auto-saved row is one user's typing. Every ordinary read skips it; only its `versionId`
+   * reaches it, which is what the panel's resume does.
+   */
+  describe('with auto-save', () => {
+    const autoSave = create('spec_read_auto', {
+      versions: { draft: true, autoSave: true },
+      fields: [text('title').isTitle()]
+    });
+    const notAutoSaved = { isAutoSave: { not_equals: true } };
+    const published = { status: { equals: VERSIONS_STATUS.PUBLISHED } };
+
+    it('skips auto-saved rows on top of the published filter', () => {
+      expect(queryFor(autoSave, {})).toEqual({ where: { and: [notAutoSaved, published] } });
+    });
+
+    it('skips auto-saved rows when drafts are asked for: the newest real row', () => {
+      expect(queryFor(autoSave, { draft: true })).toEqual({ where: notAutoSaved });
+    });
+
+    it('skips them as an update original too', () => {
+      expect(queryFor(autoSave, { draft: true }, 'original')).toEqual({
+        where: { and: [notAutoSaved, published] }
+      });
+    });
+
+    it('reaches one by its versionId', () => {
+      expect(queryFor(autoSave, { versionId: 'a1', draft: true })).toEqual({
+        where: { versionId: { equals: 'a1' } }
+      });
+    });
+  });
+
+  /**
    * `intent: 'original'` is the update pipeline loading what it is about to change, and it flips
    * the meaning of `draft`. These four reproduce `VersionOperations.shouldRetrieveDraft`, which
    * `getOriginalDocument` used to call — the table it encoded is the reason `ReadIntent` exists,

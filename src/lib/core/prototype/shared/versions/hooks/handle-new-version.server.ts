@@ -9,6 +9,7 @@ import type { Dic } from '$lib/util/types.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { ConfigMap } from '$lib/core/pipeline/config-map/types.js';
 import { fallbackDataFromOriginal } from './fallback-data-from-original.js';
+import { retireAutoSaves } from '../retire-auto-saves.server.js';
 
 /**
  * Where a versioned document's content lives for *this* update — overriding the default.
@@ -20,6 +21,12 @@ import { fallbackDataFromOriginal } from './fallback-data-from-original.js';
  * - **a specific version** — that row.
  * - **a new version** — the row this hook creates, through the public API, which is what makes
  *   the write plan's third case ("already written") true.
+ *
+ * On a config that auto-saves it also says what the row is. An auto-save keeps its row an
+ * auto-saved draft; any other write on a specific version clears the flag, which is how an
+ * auto-save becomes a version. A new auto-save replaces the caller's previous one on the document
+ * — one per user and document — and the flag is set on the row after the insert, because
+ * `stripAutoSaveFlag` takes it out of every submission, this create's included.
  *
  * **Two things pin where it sits in the list**, and both are silent if broken:
  *
@@ -43,33 +50,66 @@ export const handleNewVersion = Hooks.beforeUpsert(async function handleNewVersi
   if (!versionOperation)
     throw new RimeError(RimeError.OPERATION_ERROR, 'missing versionOperation @handleNewVersion');
 
+  const autoSaves = !!config.versions?.autoSave;
+
   if (VersionOperations.isSpecificVersionUpdate(versionOperation)) {
+    const data = !autoSaves
+      ? args.data
+      : params.autoSave
+        ? { ...args.data, status: VERSIONS_STATUS.DRAFT, isAutoSave: true }
+        : { ...args.data, isAutoSave: false };
+
     return {
       ...args,
+      data,
       context: { ...args.context, contentOwnerId: originalDoc.versionId }
     };
   }
 
   if (VersionOperations.isNewVersionCreation(versionOperation)) {
+    const isAutoSave = VersionOperations.isAutoSaveCreation(versionOperation);
+    const userId = event.locals.user?.id;
+
+    if (isAutoSave && !userId) {
+      throw new RimeError(RimeError.UNAUTHORIZED, 'an auto-save belongs to a user');
+    }
+
     const data = await prepareDataForNewVersion({
       data: args.data,
       originalDoc,
       config,
       originalConfigMap
     });
+    if (isAutoSave) data.status = VERSIONS_STATUS.DRAFT;
+
     const versionsSlug = withVersionsSuffix(config.slug);
+
+    if (isAutoSave) {
+      await retireAutoSaves({ event, config, docId: originalDoc.id, userId: userId! });
+    }
 
     const document = await rime.collection(versionsSlug).create({
       data,
       locale: params.locale
     });
 
-    if (config.versions && config.versions.maxVersions) {
-      await rime.collection(versionsSlug).delete({
-        sort: '-updatedAt',
-        query: 'where[status][not_equals]=published',
-        offset: config.versions.maxVersions
+    if (isAutoSave) {
+      await rime.adapter.contentOwner(config.slug).updateWhere({
+        query: `where[id][equals]=${document.id}`,
+        data: { isAutoSave: true }
       });
+    } else if (config.versions && config.versions.maxVersions) {
+      // Bookkeeping, as rime itself: the editor writing a version need not hold `access.delete`.
+      await rime
+        .collection(versionsSlug)
+        .system()
+        .delete({
+          sort: '-updatedAt',
+          query: autoSaves
+            ? 'where[and][0][status][not_equals]=published&where[and][1][isAutoSave][not_equals]=true'
+            : 'where[status][not_equals]=published',
+          offset: config.versions.maxVersions
+        });
     }
 
     return { ...args, context: { ...args.context, contentOwnerId: document.id } };

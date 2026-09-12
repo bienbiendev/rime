@@ -138,13 +138,14 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
    * rime.area('settings').update({ data, locale })
    */
   update(args: UpdateArgs<Doc>): Promise<Doc> {
-    const { data, locale, versionId, draft } = args;
+    const { data, locale, versionId, draft, autoSave } = args;
 
     return update<Doc>({
       ctx: this,
       data,
       versionId,
       draft,
+      autoSave,
       locale: this.fallbackLocale(locale)
     });
   }
