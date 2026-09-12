@@ -19,7 +19,8 @@ of what `draft` means, and every scenario found that touches the design.
   version from …_ (resume / discard) or _X has an auto-saved version_.
 - A save from the document form promotes the row it lands on (`isAutoSave: false`) and retires
   the saver's own auto-saved rows. REST updates do neither, and are not filtered by any of it.
-- Rows nobody came back for are pruned by age.
+- Nothing is pruned on a timer. A row lives until its owner discards it, edits over it, saves,
+  or the document is deleted. The versions history lists it, labelled _auto-save by {name}_.
 
 ---
 
@@ -290,21 +291,21 @@ The rule is one clause in `versionsReadQuery`, for an opted-in config with no `v
 `isAutoSave != true`, `and`ed with the published filter where one applies. Every reader below
 goes through it, so none of them needs to know the feature exists:
 
-| reader                                                   | today                   | with auto-save                                                                            |
-| -------------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------- |
-| `findById` / area `find`, no `draft`                     | published               | published — unchanged, auto-saved rows are drafts                                         |
-| `findById` / area `find`, `draft: true`                  | newest                  | newest **real** row                                                                       |
-| `findById` / area `find`, `versionId`                    | that row                | that row, even auto-saved — the panel's resume                                            |
-| `find` lists, panel list, nested children                | per document            | newest real row per document                                                              |
-| `getOriginalDocument` (intent `original`)                | published / `versionId` | unchanged                                                                                 |
-| `duplicate`                                              | newest                  | newest real row — never copies an auto-save                                               |
-| lock endpoints (`draft: true`, system)                   | newest                  | newest real row (moot once the lock is on base)                                           |
-| upload file-reference check (`draft: true`)              | newest                  | newest real row — see scenario 11                                                         |
-| `deleteById`'s pre-read (`adapter.find`, no filter)      | newest                  | may be an auto-saved row; only its `filename` is read, cascade takes all rows             |
-| `maxVersions` prune in `handleNewVersion`                | `status != published`   | `and` `isAutoSave != true`                                                                |
-| `demoteOtherVersions`                                    | all other rows          | unchanged — they are drafts already                                                       |
-| `/api/<slug>--versions` (the versions collection itself) | all rows                | all rows — the panel adds `isAutoSave != true` to the history query; see §5.22 for access |
-| API cache                                                | keyed per user          | unchanged: filtered responses never contain one                                           |
+| reader                                                   | today                   | with auto-save                                                                                                      |
+| -------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `findById` / area `find`, no `draft`                     | published               | published — unchanged, auto-saved rows are drafts                                                                   |
+| `findById` / area `find`, `draft: true`                  | newest                  | newest **real** row                                                                                                 |
+| `findById` / area `find`, `versionId`                    | that row                | that row, even auto-saved — the panel's resume                                                                      |
+| `find` lists, panel list, nested children                | per document            | newest real row per document                                                                                        |
+| `getOriginalDocument` (intent `original`)                | published / `versionId` | unchanged                                                                                                           |
+| `duplicate`                                              | newest                  | newest real row — never copies an auto-save                                                                         |
+| lock endpoints (`draft: true`, system)                   | newest                  | newest real row (moot once the lock is on base)                                                                     |
+| upload file-reference check (`draft: true`)              | newest                  | newest real row — see scenario 11                                                                                   |
+| `deleteById`'s pre-read (`adapter.find`, no filter)      | newest                  | may be an auto-saved row; only its `filename` is read, cascade takes all rows                                       |
+| `maxVersions` prune in `handleNewVersion`                | `status != published`   | `and` `isAutoSave != true`                                                                                          |
+| `demoteOtherVersions`                                    | all other rows          | unchanged — they are drafts already                                                                                 |
+| `/api/<slug>--versions` (the versions collection itself) | all rows                | all rows — the panel's history list shows them labelled _auto-save by {name}_; the collection reads `isStaff` (D11) |
+| API cache                                                | keyed per user          | unchanged: filtered responses never contain one                                                                     |
 
 `isAutoSave` is exposed on the document (`versionsDocType` adds `isAutoSave?: boolean`) so the
 panel can tell a resumed row from a real one.
@@ -320,19 +321,17 @@ panel can tell a resumed row from a real one.
   through `system()` (bookkeeping, not a permission the editor holds). REST cannot reach it, and
   a panel list reorder or a status PATCH — REST calls — does not trigger it either.
 
-### 4.5 Prune
+### 4.5 Lifetime
 
-No scheduler exists in rime (the only `setInterval` is the SSE keep-alive). Two opportunistic
-points:
+No timer, no scheduler (rime has none; the only `setInterval` is the SSE keep-alive). The
+invariant bounds the table at one row per user per document, and a row goes away when:
 
-- `retireAutoSaves` also deletes this document's auto-saved rows older than
-  `versions.autoSaveMaxAge` (new config member, default 7 days, normalised in `augmentVersions`),
-  whoever owns them.
-- A versions **boot step** (the upload feature has one in `upload/boot/`) deletes every
-  auto-saved row older than the max age, per opted-in config.
-
-Between the two, the table holds at most one row per user per document and nothing older than
-the max age.
+- its owner **discards** it — the banner, or the history list entry;
+- its owner **edits over it** — the first auto-save from another base row replaces it (4.2);
+- its owner **saves** — promotion, or retirement of the others (4.4);
+- the **document is deleted** — cascade;
+- a staff member with `access.delete` discards it from the history list — the only exit for a row
+  whose owner was deleted (`updatedBy` set null by the FK).
 
 ### 4.6 The panel
 
@@ -358,6 +357,8 @@ autoSaves: {
 - others: _{name} has an auto-saved version from {time}._ (no action)
 - on a resumed row: replaces the banner with a header tag _Auto-saved draft — not a version yet._
   and a link back to the document.
+- the banner goes away as soon as the form has `changes`: the user chose to start over, and the
+  first auto-save replaces the old row by the invariant. No confirmation.
 
 Resume → `goto(?versionId=<own.id>)`. Discard → `DELETE /api/<slug>--versions/<id>` (the owner
 guard in 4.2 covers it) then `invalidateAll`. A resumed row loaded by somebody who is not its
@@ -366,7 +367,10 @@ owner is served `readOnly`.
 **Form** (`documentForm.svelte.ts`):
 
 - `isAutoSave = config.versions?.draft && config.versions?.autoSave && operation === 'update'
-&& !readOnly`. Never on create, never on a nested (relation) form.
+&& !readOnly`. Never on create, never on a nested (relation) form. Live edit included: it is the
+  same form context, one rule (D9). The live preview builds its URL from `doc.versionId`
+  (`live.svelte.ts:201`), so once an auto-saved row exists the iframe follows it on the next
+  rebuild.
 - One `send(action, formData, { silent })` plus a one-slot queue: a manual submit during an
   auto-save waits, then runs. `processing` stays for manual saves; new
   `autoSaveState: 'idle' | 'saving' | 'saved' | 'paused'` and `lastAutoSavedAt`.
@@ -397,8 +401,11 @@ owner is served `readOnly`.
 and let the navigation through; on failure fall back to the dialog. `pagehide` → `sendBeacon` of
 the same form data to the auto-save action (optional; a lost beacon costs one debounce window).
 
-**Versions history**: the sidebar query adds `where[isAutoSave][not_equals]=true`. Auto-saved rows
-are not history; the banner is where they surface.
+**Versions history** (`Versions.svelte`): the query selects `updatedAt,status,isAutoSave,updatedBy`
+and the rows render dimmed with the label _auto-save by {name}_ (own: _your auto-save_). Opening
+one is the same as Resume; for somebody else's row the document is `readOnly`. The owner, or a
+staff member with `access.delete`, gets a discard control on the entry. `DocVersion` in
+`panel/index.ts` gains `isAutoSave` and `updatedBy`.
 
 **i18n** `en`/`fr` `common`: `auto_saving`, `auto_saved_at`, `auto_save_paused`,
 `auto_saved_draft`, `auto_save_banner_own`, `auto_save_banner_own_outdated`,
@@ -459,22 +466,24 @@ Each: what happens under the design, and the decision it rests on.
     the page; the banner is per document, not per locale.
 16. **Areas.** Same path through `area/load.server.ts` and `area/actions.server.ts`. The
     bootstrap row has `isAutoSave: false` by default.
-17. **Live edit** shares the form context; the same effect would auto-save while the iframe
-    updates. Gate `isAutoSave` on `!isLiveEdit` for this pass (D9).
+17. **Live edit** shares the form context and auto-saves by the same rule (D9). The iframe
+    already pushes every change through `onDataChange`; the auto-save is a second, slower
+    channel and does not touch the preview. The preview URL carries `doc.versionId`, which
+    becomes the auto-saved row's id after the first auto-save.
 18. **Lock lost silently** (tab asleep past the TTL, another editor claims). The next SSE lock
     event reloads the tab into `isLockedByOther`; the auto-save guard stops with it. Until then
     an auto-save from a lock-less tab is accepted — the server checks ownership of the row, not
     the lock, which is the same as a manual save today.
 19. **Auto-saving while looking at an older version** (`?versionId=v1` from the history page).
     The first auto-save creates A_U from v1 and, by the invariant, deletes the A_U that was based
-    on R. The banner on that page already says an auto-save exists; it gains _editing here
-    replaces it_. Alternative: refuse to auto-save while another own row exists until it is
-    resumed or discarded (D10).
+    on R. The banner on that page already says an auto-save exists and gains _editing here
+    replaces it_; it disappears on the first change (D10).
 20. **Somebody opens another user's auto-saved row by URL.** The read succeeds (versions are
     readable); the load marks it `readOnly` when `doc.isAutoSave && doc.updatedBy !== user.id`,
     so no auto-save is attempted and none would be accepted.
 21. **The owner is deleted.** `updatedBy` is `set null` by the FK; the row is nobody's, reads as
-    "someone" in others' banners, and is pruned by age.
+    "someone" in others' banners and in the history list, and stays until a staff member with
+    `access.delete` discards it there (4.5).
 22. **Access.** Ordinary reads filter auto-saved rows, but `GET /api/<slug>--versions` lists them
     and `?versionId=` reads them, both behind `access.read` — which on a public collection is
     everyone, and already exposes every draft (§1.6). Two fixes, either before or with this: the
@@ -511,13 +520,12 @@ Each: what happens under the design, and the decision it rests on.
   both hook lists; `augment.spec.ts`. Fixtures: `news` opts in (`pdf` stays out — upload).
 - **C4 — server operations.** `strategy.ts` (+ `strategy.spec.ts` table); `handleNewVersion`
   (replace / in place / promotion / no prune); `read-query.ts` clause (+ spec rows); `maxVersions`
-  query uses `where[and]`; `retireAutoSaves` and `pruneStaleAutoSaves` helpers; versions boot
-  step; `autoSaveMaxAge` normalised; `OperationContext.params.autoSave`; `updateById` / area
-  `update` args; api forwarding. Also the versions collection `read: isStaff` default (§5.22),
+  query uses `where[and]`; `retireAutoSaves` helper; `OperationContext.params.autoSave`;
+  `updateById` / area `update` args; api forwarding. Also the versions collection `read: isStaff` default (§5.22),
   with its own changeset line.
 - **C5 — panel actions.** `PARAMS.AUTO_SAVE`; parse, forward, silent response; `retireAutoSaves`
   after a manual save; both loads return `autoSaves`; resumed rows of another owner `readOnly`.
-- **C6 — form and banner.** Everything in 4.6; i18n both locales.
+- **C6 — form, banner, history.** Everything in 4.6, live edit included; i18n both locales.
 - **C7 — changeset, `notes/TODO.md`, rime-doc.**
 
 e2e, `tests/versions/api.test.ts`, driving the panel actions over HTTP with the suite's cookie
@@ -535,7 +543,9 @@ e2e, `tests/versions/api.test.ts`, driving the panel actions over HTTP with the 
 8. another user's `PATCH ?versionId=<someone's auto-save>` → 401.
 9. `?draft=true` reads, list reads and `duplicate` never return or copy an auto-saved row.
 10. `maxVersions` on a fixture with `autoSave` (a non-upload one, e.g. `pages`) ignores the rows.
-11. a row older than `autoSaveMaxAge` is gone after the next manual save.
+11. `DELETE /api/<slug>--versions/<id>` on an auto-saved row: 200 for its owner, 401 for another
+    editor; `GET /api/<slug>--versions` answers 401 without staff credentials on a public
+    collection (D11).
 12. `updatedAt` on a `?versionId=v1` read equals v1's own write time (C2a).
 
 Unit: `strategy.spec.ts`, `read-query.spec.ts` rows, `augment.spec.ts`, `validate` spec,
@@ -545,18 +555,18 @@ Unit: `strategy.spec.ts`, `read-query.spec.ts` rows, `augment.spec.ts`, `validat
 
 ## 7. Decisions
 
-| #   | Choice                                                                             | Alternative                                     |
-| --- | ---------------------------------------------------------------------------------- | ----------------------------------------------- |
-| D1  | One auto-saved row per (document, user), updated in place                          | one per document; one per tick                  |
-| D2  | Ordinary reads exclude auto-saved rows; `versionId` reaches them                   | `draft: true` surfaces them as newest           |
-| D3  | Not listed in the versions history; the banner is the entry point                  | listed, dimmed                                  |
-| D4  | Retirement = the saver's own rows, from the panel form actions only                | every row; from any update                      |
-| D5  | Opening a document shows the real document plus a banner                           | land the owner on their auto-saved row directly |
-| D6  | Metas: `created*` on the document, `updated*` on the version, lock on the document | all on the versions table; expose both dates    |
-| D7  | Upload collections cannot opt in yet                                               | include, and extend the file-reference check    |
-| D8  | Stale rows pruned after 7 days, on retirement and at boot                          | never; a CLI command                            |
-| D9  | Live edit does not auto-save in this pass                                          | same behaviour as the document page             |
-| D10 | Auto-saving from another version replaces the existing own row                     | refuse until resumed or discarded               |
-| D11 | The derived versions collection reads `isStaff` by default                         | filter auto-saved rows for non-staff only       |
+| #   | Choice                                                                                             | Alternative                                     |
+| --- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| D1  | One auto-saved row per (document, user), updated in place                                          | one per document; one per tick                  |
+| D2  | Ordinary reads exclude auto-saved rows; `versionId` reaches them                                   | `draft: true` surfaces them as newest           |
+| D3  | Listed in the versions history, dimmed, labelled _auto-save by {name}_; the banner is the shortcut | hidden from the list                            |
+| D4  | Retirement = the saver's own rows, from the panel form actions only                                | every row; from any update                      |
+| D5  | Opening a document shows the real document plus a banner                                           | land the owner on their auto-saved row directly |
+| D6  | Metas: `created*` on the document, `updated*` on the version, lock on the document                 | all on the versions table; expose both dates    |
+| D7  | Upload collections cannot opt in yet                                                               | include, and extend the file-reference check    |
+| D8  | Never pruned on a timer; discard, edit-over, save and document deletion are the exits              | 7 days, on save and at boot                     |
+| D9  | Live edit auto-saves by the same rule                                                              | gate on `!isLiveEdit`                           |
+| D10 | Auto-saving from another version replaces the existing own row                                     | refuse until resumed or discarded               |
+| D11 | The derived versions collection reads `isStaff` by default                                         | filter auto-saved rows for non-staff only       |
 
-Open for you: D5, D7, D9, D10, D11 — the rest I would land as written.
+All eleven decided in review; the table is the record.
