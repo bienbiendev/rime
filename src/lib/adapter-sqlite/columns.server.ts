@@ -133,15 +133,20 @@ export function prepareSchemaData(
 /**
  * Folds a base row and its content row into one document.
  *
- * A prototype whose content lives on a versions table reads as two rows; a document is one. This is the
- * fold, and it is structural — the adapter is the only thing that knows there were two.
+ * A prototype whose content lives on a versions table reads as two rows; a document is one. This
+ * is the fold, and only the adapter knows there were two. The content row's id goes out as
+ * `contentId`; whichever feature declared the versions names it on the document, in a hook.
  *
- * It was `mergeRawDocumentWithVersion`, with `versionTableName`/`versionData`/`versionFields`
- * locals, and it emitted `versionId`. The name was the feature's word for the adapter's own
- * concept; the emitted key was worse than that — a method that has to name a feature in its
- * *return value* is that feature's method, wherever it lives. So the id of the content row goes
- * out as `contentId`, which is what `insert` already returns and what `find` already takes, and
- * whichever feature declared the versions names that row on the document itself, in a hook.
+ * Which row answers what:
+ *
+ * ```
+ * id, createdAt, $root() fields   the base row — the document
+ * updatedAt, everything else      the content row — the version being read
+ * ```
+ *
+ * The base row's own `updatedAt` is not merged. It moves on every write to any version and is
+ * what the default list sort orders by; the document reports when the version it shows was
+ * written.
  */
 export function mergeContentRow(
   doc: RawDoc,
@@ -160,10 +165,10 @@ export function mergeContentRow(
   if (select && Array.isArray(select) && select.length) {
     // The row's own columns, plus whatever the config keeps on the base row. Hardcoding the
     // latter is how `_path` came to be missing from this list while being a base field.
-    const rootProps = ['createdAt', 'updatedAt', 'id', ...baseFieldNames(config)];
+    const rootProps = ['createdAt', 'id', ...baseFieldNames(config)];
     const hasRootSelectColumn = rootProps.some((column) => select.includes(column));
 
-    // Pick "createdAt" and "updatedAt" on doc if they are in select, or only the "id"
+    // Pick the selected base columns on doc, or only the "id"
     const docFields = hasRootSelectColumn
       ? pick([...select.filter((field) => rootProps.includes(field as any)), 'id'], doc)
       : pick(['id'], doc);
@@ -188,7 +193,7 @@ export function mergeContentRow(
   // type collapses, hence the double cast through `unknown`.
   return {
     ...omit([contentTable], doc),
-    ...omit(['id', 'ownerId', 'createdAt', 'updatedAt'], contentRow),
+    ...omit(['id', 'ownerId', 'createdAt'], contentRow),
     contentId: contentRow.id
   } as unknown as RawDoc;
 }
