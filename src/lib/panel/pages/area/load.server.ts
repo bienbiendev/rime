@@ -2,6 +2,7 @@ import { PARAMS } from '$lib/core/constants.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
+import { autoSavesOf } from '$lib/core/prototype/shared/versions/auto-saves.server.js';
 import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 import type { AreaSlug } from '$lib/core/prototype/types.js';
 import { apiUrl } from '$lib/core/routes/util.js';
@@ -38,12 +39,17 @@ export async function areaLoad<V extends boolean = boolean>(
     : undefined;
   const doc = await area.find({ locale, versionId, draft });
 
+  // An auto-saved row is its owner's. Anybody else reaching it by its versionId can look.
+  const owner = doc.updatedBy as { id?: string } | null | undefined;
+  const isOthersAutoSave = !!doc.isAutoSave && owner?.id !== locals.user?.id;
+
   let data: Partial<AreaDocData> = {
     aria,
     doc,
     operation: 'update',
     status: 200,
-    readOnly: !authorizedUpdate
+    readOnly: !authorizedUpdate || isOthersAutoSave,
+    autoSaves: await autoSavesOf({ event, config: area.config, doc })
   };
 
   if (withVersions) {

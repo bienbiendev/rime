@@ -1,4 +1,5 @@
 import type { VersionsStatus } from '$lib/core/prototype/shared/versions/constant.js';
+import type { AutoSaves } from '$lib/core/prototype/shared/versions/types.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { Snippet } from 'svelte';
 import { Field } from './components/fields/index.js';
@@ -74,6 +75,8 @@ type BaseDocData =
       doc: GenericDoc;
       status: 200;
       readOnly: boolean;
+      /** The document's auto-saved rows. Absent on a config that does not auto-save. */
+      autoSaves?: AutoSaves;
     }
   | {
       aria: Partial<Route>[];

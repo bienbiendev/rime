@@ -7,7 +7,9 @@ import {
   type UploadPath
 } from '$lib/core/prototype/collection/upload/util/path.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
+import { autoSavesOf } from '$lib/core/prototype/shared/versions/auto-saves.server.js';
 import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
+import type { AutoSaves } from '$lib/core/prototype/shared/versions/types.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import { apiUrl } from '$lib/core/routes/util.js';
 import type { CollectionDocData } from '$lib/panel/index.js';
@@ -31,6 +33,7 @@ export async function documentLoad<V extends boolean = boolean>(
 
   let doc: GenericDoc;
   let readOnly = false;
+  let autoSaves: AutoSaves | undefined;
 
   if (!rime.config.isCollection(slug)) {
     throw handleError(new RimeError(RimeError.NOT_FOUND), { context: 'load' });
@@ -70,6 +73,13 @@ export async function documentLoad<V extends boolean = boolean>(
     if (authorizedRead && !authorizedUpdate) {
       readOnly = true;
     }
+
+    // An auto-saved row is its owner's. Anybody else reaching it by its versionId can look.
+    if (doc.isAutoSave && doc.updatedBy?.id !== user?.id) {
+      readOnly = true;
+    }
+
+    autoSaves = await autoSavesOf({ event, config: collection.config, doc });
   }
 
   let aria: Partial<Route>[];
@@ -104,7 +114,8 @@ export async function documentLoad<V extends boolean = boolean>(
     operation,
     status: 200,
     hasMailer: 'mailer' in rime,
-    readOnly
+    readOnly,
+    autoSaves
   };
 
   if (withVersion) {

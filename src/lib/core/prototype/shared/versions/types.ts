@@ -22,3 +22,17 @@ declare module '$lib/core/prototype/types.js' {
  * core own the shape of a thing only this folder reads.
  */
 export type VersionsConfig = { draft?: boolean; autoSave?: boolean; maxVersions?: number };
+
+/**
+ * A document's auto-saved rows, as the panel load hands them to the page: the caller's own, and
+ * everybody else's. `outdated` says the row on screen was written after the caller's auto-save
+ * started.
+ */
+export type AutoSaves = {
+  own?: { id: string; createdAt: Date; updatedAt: Date; outdated: boolean };
+  others: {
+    id: string;
+    updatedAt: Date;
+    updatedBy: { id: string; name?: string; email?: string } | null;
+  }[];
+};

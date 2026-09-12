@@ -1,4 +1,13 @@
 export const PARAMS = {
+  /**
+   * The panel typing over a document: the update lands on the caller's own auto-saved row of the
+   * version `versionId` names, on a config with `versions: { draft: true, autoSave: true }`.
+   * Read by the panel form actions only; the REST API ignores it.
+   *
+   * @example ?/update&autoSave=true&versionId=abc
+   */
+  AUTO_SAVE: 'autoSave',
+
   /** Fetch nested documents in relation / link at a specific depth */
   DEPTH: 'depth',
 
