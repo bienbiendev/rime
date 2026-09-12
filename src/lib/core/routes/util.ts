@@ -38,6 +38,10 @@ export function isPublicPanelAuthRoute(routeId: string | null): boolean {
  * Panel-only. Reads `page.params.panel`, which is undefined server-side
  */
 export function panelPath(...args: string[]): ResolvedPathname {
+  if (!page.params.panel)
+    throw new Error(
+      'panelPath called outside of component environment, page.params.panel is not defined'
+    );
   return joinPath(page.params.panel, ...args) as ResolvedPathname;
 }
 
