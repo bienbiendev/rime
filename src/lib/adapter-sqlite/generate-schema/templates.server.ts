@@ -256,16 +256,19 @@ ${entries.join(',\n')}
 /** Templates Field Relations */
 
 /**
- * Generates a foreign key column for a relation field
- * Creates a reference to another table's primary key with cascade delete
+ * The junction column pointing at one target collection. The property is keyed by the slug, which
+ * is how the adapter reads it back; the SQL column and the referenced table carry the table name.
  *
- * @example
- * ```typescript
+ * ```ts
+ * // 'medias'
  * mediasId: text('medias_id').references(() => medias.id, { onDelete: 'cascade' })
+ * // 'eventsCategories'
+ * eventsCategoriesId: text('events_categories_id').references(() => events_categories.id, { onDelete: 'cascade' })
  * ```
  */
-export const templateFieldRelationColumn = (table: string) => {
-  return `${table}Id:  text('${s(table)}_id').references(() => ${table}.id, { onDelete: 'cascade' })`;
+export const templateFieldRelationColumn = (slug: string) => {
+  const table = baseTableName(slug);
+  return `${slug}Id: text('${table}_id').references(() => ${table}.id, { onDelete: 'cascade' })`;
 };
 
 /**
