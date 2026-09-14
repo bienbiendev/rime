@@ -108,7 +108,7 @@
   }
 
   :global([data-live-panel-trigger][data-is-active]) {
-    outline-offset: 5px;
+    outline-offset: -2px;
     outline: 2px solid var(--rz-color-live-panel-spot);
   }
 </style>
