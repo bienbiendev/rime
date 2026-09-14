@@ -17,3 +17,9 @@ export type SSEHandler = (event: SSEEvent) => void | Promise<void>;
  * point of naming keys up front rather than filtering in the browser.
  */
 export type SSEAccess = (key: string, user?: User) => boolean;
+
+/** The `$sse` key of the config. */
+export type SSEConfig = {
+  /** Which keys, besides the panel's own, a caller may listen to. None without it. */
+  access?: SSEAccess;
+};

@@ -56,6 +56,7 @@ export type { WithRelationPopulated } from '$lib/core/fields/types.js';
 
 export type { RouteHandlers } from './core/routes/handler.server.js';
 export type { Plugin } from './core/plugins/index.js';
+export type { SSEAccess, SSEConfig } from './core/plugins/sse/types.js';
 export type { Rime, RimeContext } from './core/rime.server.js';
 export type { BlocksFieldBlockRenderTitle } from './fields/blocks/index.js';
 export type {

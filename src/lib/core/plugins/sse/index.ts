@@ -7,4 +7,4 @@
  * - The client's handler is called with that event.
  */
 export { openSse } from './client.js';
-export type { SSEAccess, SSEEvent, SSEHandler } from './types.js';
+export type { SSEAccess, SSEConfig, SSEEvent, SSEHandler } from './types.js';

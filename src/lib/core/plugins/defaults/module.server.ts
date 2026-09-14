@@ -8,8 +8,8 @@ import type { PluginHost } from './types.js';
 
 /** The plugins rime adds to every config, server half. Two of the four are conditional. */
 export const defaultPlugins = (config: PluginHost): Plugin[] => [
-  // Server Sent Events
-  sse(),
+  // The event stream, `$sse` says which keys an app opens
+  sse(config.$sse),
   // Cache plugin, with default isEnabled: event => !event.locals.user
   cache(config.$cache || {}),
   // Init endpoint, dev only

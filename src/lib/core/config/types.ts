@@ -15,6 +15,7 @@ import type { Adapter } from '$lib/core/adapter.js';
 import type { Hook, HookBeforeOperation } from '$lib/core/pipeline/types.js';
 import type { Plugin } from '$lib/core/plugins/index.js';
 import type { SMTPConfig } from '$lib/core/plugins/mailer/index.server.js';
+import type { SSEConfig } from '$lib/core/plugins/sse/types.js';
 import type { Field } from '$lib/fields/types.js';
 import type { RegisterArea, RegisterCollection } from '$lib/index.js';
 import type { DashboardEntry } from '$lib/panel/pages/dashboard/types.js';
@@ -93,6 +94,15 @@ export interface Config {
   $cache?: CacheConfig;
   /** SMTP config */
   $smtp?: SMTPConfig;
+  /**
+   * The event stream at `/api/sse`: which keys a caller may listen to.
+   *
+   * @example
+   * ```typescript
+   * $sse: { access: (key, user) => key.startsWith('public:') || (key === `user:${user?.id}`) }
+   * ```
+   */
+  $sse?: SSEConfig;
   /** Custom API routes
    * @example
    * routes: {
