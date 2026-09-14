@@ -1,5 +1,11 @@
 # rimecms
 
+## 0.32.1
+
+### Patch Changes
+
+- [`6cbf29a`](https://github.com/bienbiendev/rime/commit/6cbf29ae0d5c274e914bb0218cd30b1ec619d1ea) - Fixed: the generated schema referenced a relation target by its slug, so a camelCase collection (`eventsCategories`) produced a junction column pointing at an undeclared `eventsCategories` table instead of `events_categories`.
+
 ## 0.32.0
 
 ### Minor Changes
