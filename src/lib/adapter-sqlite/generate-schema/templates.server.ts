@@ -174,9 +174,21 @@ export const templateUniqueRequired = (
 ) => {
   const { unique, required } = field;
   const defaultStr =
-    required && defaultValue !== undefined ? `.default(${JSON.stringify(defaultValue)})` : '';
+    required && defaultValue !== undefined ? `.default(${templateDefault(defaultValue)})` : '';
   return `${unique ? '.unique()' : ''}${required ? `.notNull()${defaultStr}` : ''}`;
 };
+
+/**
+ * A default value as drizzle wants it written. A timestamp column takes a `Date`, which
+ * drizzle-kit stores as the same integer a number would have been.
+ *
+ * ```ts
+ * templateDefault('')            // ""
+ * templateDefault(new Date(0))   // new Date(0)
+ * ```
+ */
+const templateDefault = (value: unknown): string =>
+  value instanceof Date ? `new Date(${value.getTime()})` : JSON.stringify(value);
 
 /** Template rows Relation */
 
