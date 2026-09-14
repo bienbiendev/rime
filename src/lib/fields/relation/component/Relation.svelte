@@ -1,15 +1,14 @@
 <script lang="ts">
   import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config.js';
   import type { GenericDoc } from '$lib/core/prototype/types.js';
+  import { apiUrl, panelPath } from '$lib/core/routes/util.js';
   import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import type { FormContext } from '$lib/panel/context/form.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
-  import { panelUrl } from '$lib/panel/util/url.js';
   import { moveItem } from '$lib/util/array.js';
-  import { apiUrl } from '$lib/util/index.js';
   import { snapshot } from '$lib/util/state.js';
   import { getAPIProxyContext } from '../../../panel/context/api-proxy.svelte.js';
   import type { Relation, RelationFieldBuilder } from '../index.js';
@@ -63,7 +62,7 @@
     const item: RelationFieldItem = {
       documentId: doc.id,
       title: doc.title,
-      editUrl: panelUrl(relationConfig.kebab, doc.id),
+      editUrl: panelPath(relationConfig.kebab, doc.id),
       _type: doc._type,
       _prototype: doc._prototype
     };
@@ -88,31 +87,23 @@
 
   // Build the API URL for fetching the collection
   function makeRessourceURL() {
-    const url = new URL(apiUrl(relationConfig.kebab));
+    const params: [string, string][] = [];
 
     // Add depth parameter if in live context
     if ('isLive' in form && form.isLive) {
-      url.searchParams.append('depth', '1');
+      params.push(['depth', '1']);
     }
 
     // Add custom query parameters if provided
     if (config.get.query) {
-      if (typeof config.get.query === 'string') {
-        // Parse the query string and add each parameter
-        const queryParams = new URLSearchParams(config.get.query);
-        queryParams.forEach((value, key) => {
-          url.searchParams.append(key, value);
-        });
-      } else if (typeof config.get.query === 'function') {
-        // Parse the function result and add each parameter
-        const queryString = config.get.query(form.values);
-        const queryParams = new URLSearchParams(queryString);
-        queryParams.forEach((value, key) => {
-          url.searchParams.append(key, value);
-        });
-      }
+      const query =
+        typeof config.get.query === 'function' ? config.get.query(form.values) : config.get.query;
+      new URLSearchParams(query).forEach((value, key) => params.push([key, value]));
     }
-    return url.href;
+
+    const path = apiUrl(relationConfig.kebab);
+    const search = new URLSearchParams(params).toString();
+    return search ? `${path}?${search}` : path;
   }
 
   const ressourceURL = makeRessourceURL();

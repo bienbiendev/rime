@@ -147,7 +147,12 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
     depth?: number;
     select?: string[];
     query?: OperationQuery;
-    draft?: boolean;
+    /** The newest version rather than the published one — `PARAMS.LATEST`. */
+    latest?: boolean;
+    /** Make a new version from the selected row rather than write it — `PARAMS.FORK`. */
+    fork?: boolean;
+    /** The panel typing over a document. Set by the panel form actions only, never by REST. */
+    autoSave?: boolean;
   };
   /**
    * The row this document's content lives on, which is what its blocks, tree nodes and relations
@@ -159,34 +164,34 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
    * caller asked for; this is where the answer goes.
    */
   contentOwnerId?: string;
-  /** Parameter passed to an update operation when creating locale document fallback */
-  isFallbackLocale?: string | undefined;
+  /**
+   * The write copies one locale's rows onto another row — `copyLocales`. What it writes was
+   * validated and hooked where it came from, so validation, field hooks and field access stand
+   * down: a required field a locale never filled stays empty on the copy too.
+   */
+  isLocaleCopy?: boolean;
   /** The original document if on an update operation */
   originalDoc?: DocTypeForSlugs<S>;
   /** An map to get a field config by path on the original doc */
   originalConfigMap?: ConfigMap;
   /** An map to get a field config by path on incoming data */
   configMap?: ConfigMap;
-  /** @TODO explain what it does */
+  /**
+   * True when rime is the caller rather than a request's user — `rime.collection('x').system()`
+   * and `rime.area('x').system()` set it on every operation they run.
+   *
+   * What stands down for it: `authorize` (no access check), the API read cache (`cached` reads
+   * through), `stampCreatedBy`/`stampUpdatedBy` (rime is not a person, so no author is recorded),
+   * the per-field write-access check in `validateFields`, and `deletePanelLockMetas` (the lock
+   * fields stay on the document). Validation itself still runs.
+   *
+   * Who sets it: the edit-lock endpoints reading the document they are about to mark, the
+   * locale-fallback pass a create runs for the other locales, and any feature doing bookkeeping
+   * the requesting user holds no permission for. It travels on one operation's context only —
+   * a call that operation makes through the plain accessor starts without it.
+   */
   isSystemOperation?: boolean;
 };
-
-/**
- * Why a read is happening, which can change which row it means.
- *
- * - `'read'` — return this document. What every API read is.
- * - `'original'` — load what an update is about to change, so it can be diffed against and fallen
- *   back to.
- *
- * They are not the same question, and `versions` is where they diverge: on a read `?draft=true`
- * means "show me the newest revision", while on an update it means "branch a new draft **from the
- * published one**". That rule used to live in core, as
- * `VersionOperations.shouldRetrieveDraft(context.versionOperation)` inside `getOriginalDocument` —
- * a core step importing a feature's enum to decide a feature's policy. Core states that the two
- * intents exist, because both do for every prototype; `FeatureDefinition.readQuery` says what each
- * selects.
- */
-export type ReadIntent = 'read' | 'original';
 
 /** A REST-style query string, or its parsed form. Lives here because an operation's params
  *  carry it; the adapter consumes it from there. */

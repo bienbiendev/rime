@@ -1,5 +1,5 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
-import { augmentMetas } from '$lib/core/prototype/shared/metas/augment.js';
+import { augmentMetas } from '$rime/modules:core/prototype/shared/metas';
 import { augmentTitle } from '$lib/core/prototype/shared/title/augment.js';
 import { augmentUrl } from '$lib/core/prototype/shared/url/augment.js';
 import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';

@@ -73,13 +73,8 @@ export type FormField = Field & {
   hooks?: FieldHooks;
   defaultValue?: DefaultValueFn<any> | unknown;
   isEmpty: (value: unknown) => boolean;
-  /**
-   * Force the field to be on the root table
-   * usefull for fields that should not be versioned
-   * ex: _parent for nested structures should always be on the root table to prevent
-   * different versions to have different parents
-   */
-  _root?: boolean;
+  /** Kept on the base row of a versioned config, shared by every version. Set by `$root()`. */
+  root?: boolean;
 };
 
 export type DefaultValueFn<T> = ({ event }: { event?: RequestEvent }) => T;

@@ -13,14 +13,28 @@ export type FindArgs = {
   limit?: number;
   offset?: number;
   select?: string[];
-  draft?: boolean;
+  /** The newest version of each, whatever its status; the published one otherwise. */
+  latest?: boolean;
+  /** See the collection's findById. */
+  localeFallback?: boolean;
 };
 
 type Args = FindArgs & { ctx: PrototypeApiContext<BuiltCollection> };
 
 export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
   //
-  const { ctx, locale, sort, limit, offset, depth, query, draft, select = [] } = args;
+  const {
+    ctx,
+    locale,
+    sort,
+    limit,
+    offset,
+    depth,
+    query,
+    latest,
+    select = [],
+    localeFallback
+  } = args;
   const { config, event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
@@ -33,7 +47,7 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
       offset,
       locale,
       select,
-      draft,
+      latest,
       depth
     }
   };
@@ -51,10 +65,11 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
     limit,
     offset,
     locale,
+    localeFallback,
     select,
     // Which content row each document shows. `and`ed with `query` by the adapter, rather than
     // spliced into it — see the collection's findById for where the answer comes from.
-    content: ctx.versionQuery({ draft })
+    content: ctx.versionQuery({ latest })
   });
 
   async function processDocument(documentRaw: RawDoc) {
@@ -65,6 +80,7 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
         event,
         context,
         locale,
+        localeFallback,
         depth,
         select
       });

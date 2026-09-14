@@ -28,7 +28,7 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
     withBlank?: boolean;
     /**
      * Keep a child row's own bookkeeping on it — `position`, `path`, `ownerId`, `locale` — and
-     * `editedBy` on the document. An API read wants the document; an editor that writes blocks
+     * the edit lock on the document. An API read wants the document; an editor that writes blocks
      * back in place wants the bookkeeping too.
      */
     withRowMeta?: boolean;
@@ -86,9 +86,6 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
 
   let doc: Dic = cleanEmptyElementsInArrays(unflatten<Dic, Dic>(flatDoc));
 
-  // `editedBy` is who last touched the row, which only an editor that shows it has any use for.
-  const keysToDelete = !withRowMeta || !event.locals.user ? ['editedBy'] : [];
-
   if (withBlank) {
     const blank = rime.config.isCollection(config.slug)
       ? rime.collection(config.slug).blank()
@@ -97,7 +94,7 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
     doc = deepmerge(blank, doc, { arrayMerge: (_, incoming) => incoming });
   }
 
-  return omit(keysToDelete, doc) as T;
+  return doc as T;
 };
 
 /**

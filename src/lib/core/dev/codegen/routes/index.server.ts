@@ -1,10 +1,10 @@
-import { PANEL_ROUTE } from '$lib/core/dev/constants.server.js';
 import { logger } from '$lib/core/logger.server.js';
+import { area } from '$lib/core/prototype/area/definition.server.js';
+import { collection } from '$lib/core/prototype/collection/definition.server.js';
+import { PANEL_ROUTE } from '$lib/core/routes/constants.server.js';
 import type { Config } from '$lib/types.js';
 import fs from 'fs';
 import path from 'path';
-import { area } from '$lib/core/prototype/area/definition.server.js';
-import { collection } from '$lib/core/prototype/collection/definition.server.js';
 import { commonRoutes, customRoute, paramMatcher, prototypeApiServer } from './common.server.js';
 import { injectCustomCSS, removeCustomCSS } from './custom-css.server.js';
 import { ensureDir, shouldRegenerateRoutes, writeRouteFile } from './util.server.js';

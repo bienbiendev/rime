@@ -1,7 +1,12 @@
 import type { FieldReference } from '$lib/core/fields/builders/form-field-builder.js';
 import type { ColumnDeclaration, ColumnType, TableDeclaration } from '$lib/core/adapter.js';
 import { toSnakeCase } from '$lib/util/string.js';
-import { baseTableName, declaredTableProperty, getSchemaColumnNames } from '../naming.server.js';
+import {
+  baseTableName,
+  declaredTableProperty,
+  getSchemaColumnNames,
+  joinName
+} from '../naming.server.js';
 import dedent from 'dedent';
 
 const s = toSnakeCase;
@@ -196,8 +201,20 @@ export const templateUniqueRequired = (
  *
  * A relation is keyed by the table on the other end, which is what `buildWithParam` names when it
  * builds a `with`.
+ *
+ * A reference the read resolves is the other shape: the owner's row points at its target through
+ * the field's own column, one direction, keyed by `joinName(column)`:
+ *
+ * ```ts
+ * pages: {
+ *   updatedBy__$doc: r.one.staff({ from: r.pages.updatedBy, to: r.staff.id })
+ * }
+ * ```
  */
-export const templateRelations = (tree: Record<string, string[]>): string => {
+export const templateRelations = (
+  tree: Record<string, string[]>,
+  referenceJoins: { table: string; column: string; to: string }[] = []
+): string => {
   /** table -> its relation lines. A table is often both a parent and a child. */
   const lines: Record<string, Map<string, string>> = {};
   const add = (table: string, key: string, line: string) => {
@@ -206,9 +223,23 @@ export const templateRelations = (tree: Record<string, string[]>): string => {
 
   for (const [parent, children] of Object.entries(tree)) {
     for (const child of children) {
-      add(parent, child, `${child}: r.many.${child}({ from: r.${parent}.id, to: r.${child}.ownerId })`);
-      add(child, parent, `${parent}: r.one.${parent}({ from: r.${child}.ownerId, to: r.${parent}.id })`);
+      add(
+        parent,
+        child,
+        `${child}: r.many.${child}({ from: r.${parent}.id, to: r.${child}.ownerId })`
+      );
+      add(
+        child,
+        parent,
+        `${parent}: r.one.${parent}({ from: r.${child}.ownerId, to: r.${parent}.id })`
+      );
     }
+  }
+
+  for (const { table, column, to } of referenceJoins) {
+    const target = baseTableName(to);
+    const key = joinName(column);
+    add(table, key, `${key}: r.one.${target}({ from: r.${table}.${column}, to: r.${target}.id })`);
   }
 
   const entries = Object.entries(lines).map(

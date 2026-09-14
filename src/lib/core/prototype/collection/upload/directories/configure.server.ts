@@ -1,9 +1,6 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { makeUploadDirectoriesCollectionClient } from '$lib/core/prototype/collection/upload/derive.js';
-import {
-  isUploadConfig,
-  type WithUpload
-} from '$lib/core/prototype/collection/upload/util/config.js';
+import { isUploadConfig, type WithUpload } from '../util/config.js';
+import { makeUploadDirectoriesCollectionClient } from './derive.js';
 import { directoriesPipeline } from './pipeline.server.js';
 
 /**

@@ -1,9 +1,9 @@
 import { PARAMS } from '$lib/core/constants.js';
-import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import { extractData } from '$lib/core/pipeline/extract-data.server.js';
-import { panelUrlFor } from '$lib/panel/util/url.js';
+import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
+import { retireAutoSaves } from '$lib/core/prototype/shared/versions/retire-auto-saves.server.js';
 import { trycatch } from '$lib/util/function.js';
 import { toKebabCase } from '$lib/util/string.js';
 import { type Actions, type RequestEvent } from '@sveltejs/kit';
@@ -17,7 +17,6 @@ export const collectionFormActions: Actions = {
    */
   create: async (event: RequestEvent) => {
     const { rime, locale } = event.locals;
-    const panelSegment = event.params.panel;
 
     const slug = event.params.slug;
     if (!rime.config.isCollection(slug)) {
@@ -55,7 +54,7 @@ export const collectionFormActions: Actions = {
     const params = collection.config.upload
       ? `?${PARAMS.UPLOAD_PATH}=${data._path || UPLOAD_PATH.ROOT_NAME}`
       : '';
-    const redirectUrl = `${panelUrlFor(panelSegment, toKebabCase(slug), document.id)}${params}`;
+    const redirectUrl = rime.routes.panelUrl(toKebabCase(slug), document.id) + params;
 
     return {
       redirectUrl,
@@ -70,12 +69,12 @@ export const collectionFormActions: Actions = {
    * /panel/{slug}/{documentId}
    */
   update: async (event: RequestEvent) => {
-    const { rime, locale } = event.locals;
-    const panelSegment = event.params.panel;
+    const { rime, locale, user } = event.locals;
     const slug = event.params.slug || '';
     const id = event.params.id || '';
     const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
-    const draft = event.url.searchParams.get(PARAMS.DRAFT) === 'true';
+    const fork = event.url.searchParams.get(PARAMS.FORK) === 'true';
+    const autoSave = event.url.searchParams.get(PARAMS.AUTO_SAVE) === 'true';
 
     if (!rime.config.isCollection(slug)) {
       throw handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.ACTION });
@@ -86,12 +85,15 @@ export const collectionFormActions: Actions = {
       return handleError(extractError, { context: ERROR_CONTEXT.ACTION });
     }
 
+    const collection = rime.collection(slug);
+
     const [error, document] = await trycatch(() =>
-      rime.collection(slug).updateById({
+      collection.updateById({
         id,
         data,
         versionId,
-        draft,
+        fork,
+        autoSave,
         locale
       })
     );
@@ -100,11 +102,27 @@ export const collectionFormActions: Actions = {
       return handleError(error, { context: ERROR_CONTEXT.ACTION });
     }
 
-    if (draft && 'versionId' in document) {
+    // An auto-save is silent: the form merges the document back and nothing else moves.
+    if (autoSave) {
+      return { document };
+    }
+
+    // A save is where the saver's auto-saves of the document end, except the row it landed on.
+    if (user) {
+      await retireAutoSaves({
+        event,
+        config: collection.config,
+        docId: document.id,
+        userId: user.id,
+        keep: document.versionId as string | undefined
+      });
+    }
+
+    if (fork && 'versionId' in document) {
       return {
         document,
         message: t__('common.version_created'),
-        redirectUrl: `${panelUrlFor(panelSegment, toKebabCase(slug), document.id)}/versions?versionId=${document.versionId}`
+        redirectUrl: `${rime.routes.panelUrl(toKebabCase(slug), document.id)}?${PARAMS.VERSION_ID}=${document.versionId}`
       };
     }
 

@@ -8,7 +8,7 @@ export const load = async (event: ServerLoadEvent) => {
   const locale = parentSlug === 'news' ? 'en' : 'fr';
 
   const query = `where[attributes.slug][equals]=${slug}`;
-  const docs = await rime.collection('news').find({ query, locale, depth: 2, draft: true });
+  const docs = await rime.collection('news').find({ query, locale, depth: 2, latest: true });
 
   if (!docs.length) {
     throw error(404, 'Not found');

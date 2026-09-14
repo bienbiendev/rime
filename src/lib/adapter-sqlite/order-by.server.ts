@@ -1,14 +1,29 @@
 import { logger } from '$lib/core/logger.server.js';
 import type { PrototypeSlug } from '$lib/core/prototype/types.js';
-import { asc, desc, getTableColumns, sql } from 'drizzle-orm';
+import type { ConfigContext } from '$lib/core/rime.server.js';
+import { asc, desc, getTableColumns, sql, type SQL } from 'drizzle-orm';
 import { pathToDatabaseColumn } from './columns.server.js';
+import { localeOrder } from './locales.server.js';
 import { baseTableName, tableName, type TableName } from './naming.server.js';
+
+/**
+ * A localized value as a read shows it: the first locale in the fallback order that holds one,
+ * `''` counting as none. `valueIn` is the subquery for one locale.
+ */
+const resolvedValue = (order: string[], valueIn: (code: string) => SQL) =>
+  order.length > 1
+    ? sql`COALESCE(${sql.join(
+        order.map((code) => sql`NULLIF(${valueIn(code)}, '')`),
+        sql`, `
+      )})`
+    : valueIn(order[0]);
 
 type Args = {
   slug: PrototypeSlug;
   locale?: string;
   by?: string;
   tables: any;
+  configCtx: ConfigContext;
   /**
    * The table this prototype's content lives in, when it is not the base row — resolved by the
    * caller from the versions table it was registered with.
@@ -31,6 +46,7 @@ export const buildOrderByParam = ({
   slug,
   locale,
   tables,
+  configCtx,
   by,
   versions,
   rootTable: aliasedRoot
@@ -69,10 +85,10 @@ export const buildOrderByParam = ({
    * A column on the prototype's own table, whether or not it also has a versions table.
    *
    * Checked for a versioned prototype too, which is what lets `?sort=_position` work on one: the
-   * hierarchy and path columns are `._root()` fields and live on the base row.
+   * hierarchy and path columns are `$root()` fields and live on the base row.
    *
    * Safe in both branches because the two tables' columns are disjoint by construction — the
-   * schema generator sends `._root()` fields to one and everything else to the other — and the
+   * schema generator sends `$root()` fields to one and everything else to the other — and the
    * system fields they share (`createdAt`, `updatedAt`) are answered above this.
    */
   const rootTableColumns = Object.keys(getTableColumns(rootTable));
@@ -95,12 +111,10 @@ export const buildOrderByParam = ({
         if (Object.keys(localizedColumns).includes(columnStr)) {
           // Interpolated, not `sql.raw`: the outer table may be an alias, so its id has to come
           // from the column object rather than from a name read off the schema. Parameterises
-          // `locale` on the way past.
-          return [
-            orderFunc(
-              sql`(SELECT DISTINCT ${localeTable[columnStr]} FROM ${localeTable} WHERE ${localeTable.ownerId} = ${rootTable.id} AND ${localeTable.locale} = ${locale})`
-            )
-          ];
+          // each locale on the way past.
+          const valueIn = (code: string) =>
+            sql`(SELECT DISTINCT ${localeTable[columnStr]} FROM ${localeTable} WHERE ${localeTable.ownerId} = ${rootTable.id} AND ${localeTable.locale} = ${code})`;
+          return [orderFunc(resolvedValue(localeOrder(configCtx, locale) ?? [locale], valueIn))];
         }
       }
     }
@@ -135,19 +149,17 @@ export const buildOrderByParam = ({
 
         if (Object.keys(localizedColumns).includes(columnStr)) {
           // Two hops: the newest content row, then its localized value.
-          return [
-            orderFunc(
-              sql`(SELECT ${localeTable[columnStr]}
-                     FROM ${localeTable}
-                    WHERE ${localeTable.ownerId} IN
-                          (SELECT ${versionsTable.id}
-                             FROM ${versionsTable}
-                            WHERE ${versionsTable.ownerId} = ${rootTable.id}
-                            ORDER BY ${versionsTable.updatedAt} DESC LIMIT 1)
-                      AND ${localeTable.locale} = ${locale}
-                    LIMIT 1)`
-            )
-          ];
+          const valueIn = (code: string) =>
+            sql`(SELECT ${localeTable[columnStr]}
+                   FROM ${localeTable}
+                  WHERE ${localeTable.ownerId} IN
+                        (SELECT ${versionsTable.id}
+                           FROM ${versionsTable}
+                          WHERE ${versionsTable.ownerId} = ${rootTable.id}
+                          ORDER BY ${versionsTable.updatedAt} DESC LIMIT 1)
+                    AND ${localeTable.locale} = ${code}
+                  LIMIT 1)`;
+          return [orderFunc(resolvedValue(localeOrder(configCtx, locale) ?? [locale], valueIn))];
         }
       }
     }

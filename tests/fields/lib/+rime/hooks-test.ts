@@ -1,3 +1,4 @@
+import { access } from '$lib/core/auth/access.js';
 import {
   checkbox,
   combobox,
@@ -16,7 +17,6 @@ import {
   time,
   toggle
 } from '$lib/fields/index.js';
-import { access } from '$lib/core/auth/access.js';
 import { Collection } from '$rime/config';
 
 export const HooksTest = Collection.create('hooksTest', {

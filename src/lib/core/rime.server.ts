@@ -8,6 +8,7 @@ import type { BuildConfig } from './config/index.server.js';
 import { logger } from './logger.server.js';
 import { areaApi, type AreaAccessor } from './prototype/area/api.server.js';
 import { collectionApi, type CollectionAccessor } from './prototype/collection/api.server.js';
+import { createRoutesContext } from './routes/context.server.js';
 
 // Declared in core/config/context.server.ts, beside `createConfigContext`, and re-exported
 // here because this is where consumers have always imported it from.
@@ -54,6 +55,8 @@ export type RimeContext<C extends Config = Config> = {
     adapter: Adapter;
     /** The configuration interface. */
     config: ConfigContext<C>;
+    /** What this request knows about its own route. */
+    routes: ReturnType<typeof createRoutesContext>;
     /** Overrides `event.locals.locale`. */
     setLocale(locale: string | undefined): void;
     /** The current `event.locals.locale`. */
@@ -166,7 +169,6 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
       // checked against the declaration above.
       return {
         logger,
-
         ...plugins,
 
         /** The Better-auth instance */
@@ -197,6 +199,15 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
         get config() {
           return configCtx;
         },
+
+        /**
+         * Route facts for this request — which surface it is on, and the paths that go with it.
+         *
+         * @example
+         * rime.routes.isAPI
+         * rime.routes.panelUrl('pages', id)
+         */
+        routes: createRoutesContext(event),
 
         /**
          * This overrides the event.locals.locale.

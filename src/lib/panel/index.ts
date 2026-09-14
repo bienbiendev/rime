@@ -1,4 +1,5 @@
 import type { VersionsStatus } from '$lib/core/prototype/shared/versions/constant.js';
+import type { AutoSaves } from '$lib/core/prototype/shared/versions/types.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { Snippet } from 'svelte';
 import { Field } from './components/fields/index.js';
@@ -15,12 +16,10 @@ import { USER_CTX } from './context/user.svelte.js';
 
 import { TITLE_CTX } from './context/title.js';
 import Area from './pages/area/Area.svelte';
-import AreaVersionsDoc from './pages/area/AreaVersionsDoc.svelte';
 import ForgotPassword from './pages/auth/forgot-password/ForgotPassword.svelte';
 import ResetPassword from './pages/auth/reset-password/ResetPassword.svelte';
 import SignIn from './pages/auth/sign-in/SignIn.svelte';
 import CollectionDoc from './pages/collection-document/CollectionDocument.svelte';
-import CollectionDocVersions from './pages/collection-document/CollectionDocVersions.svelte';
 import Collection from './pages/collection/Collection.svelte';
 import Dashboard from './pages/dashboard/Dashboard.svelte';
 import Live from './pages/live/Live.svelte';
@@ -29,11 +28,9 @@ import type { Route } from './types.js';
 export {
   // Components
   Area,
-  AreaVersionsDoc,
   Button,
   Collection,
   CollectionDoc,
-  CollectionDocVersions,
   Dashboard,
   Doc,
   Field,
@@ -66,7 +63,14 @@ export type CollectionProps = {
   };
   children: Snippet;
 };
-export type DocVersion = { id: string; updatedAt: Date; status: VersionsStatus };
+export type DocVersion = {
+  id: string;
+  updatedAt: Date;
+  status: VersionsStatus;
+  /** One user's typing, not a version yet. Only on a config that auto-saves. */
+  isAutoSave?: boolean;
+  updatedBy?: { id: string; name?: string; email?: string } | null;
+};
 
 type BaseDocData =
   | {
@@ -74,6 +78,8 @@ type BaseDocData =
       doc: GenericDoc;
       status: 200;
       readOnly: boolean;
+      /** The document's auto-saved rows. Absent on a config that does not auto-save. */
+      autoSaves?: AutoSaves;
     }
   | {
       aria: Partial<Route>[];
@@ -83,16 +89,8 @@ type BaseDocData =
       readOnly: true;
     };
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-type DocVersions<V> = V extends true ? { versions: DocVersion[] } : {};
-
-export type CollectionDocData<V extends boolean = boolean> = DocVersions<V> &
-  BaseDocData & {
-    operation: 'create' | 'update';
-    hasMailer?: boolean;
-  };
-export type AreaDocData<V extends boolean = boolean> = DocVersions<V> &
-  BaseDocData & { operation: 'update' };
-
-export type CollectionDocumentDataWithVersions = CollectionDocData<true>;
-export type AreaDataWithVersions = AreaDocData<true>;
+export type CollectionDocData = BaseDocData & {
+  operation: 'create' | 'update';
+  hasMailer?: boolean;
+};
+export type AreaDocData = BaseDocData & { operation: 'update' };

@@ -22,7 +22,8 @@
   let pathname = $derived(page.url.pathname);
 
   let active = $derived.by(() => {
-    const routePathname = new URL(route.url).pathname;
+    // Nav urls are same-origin paths — `/panel/pages`, not `http://host/panel/pages`.
+    const routePathname = route.url;
     const panelRoot = `/${page.params.panel}`;
     if (routePathname === panelRoot) {
       return pathname === panelRoot;

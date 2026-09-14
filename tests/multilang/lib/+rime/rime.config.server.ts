@@ -182,15 +182,8 @@ const tabAttributes = tab('attributes').fields(
   relation('ambassadors').to('staff').many().localized(),
   date('published'),
 
-  // Deliberately NOT .localized() — regression guard for the
-  // locale-fallback double-hook-application bug: creating a doc in one
-  // locale reads the just-created (already-processed) document back and
-  // propagates it into every other configured locale via updateById. A
-  // non-idempotent $beforeSave used to re-run on that propagation write,
-  // and since this field isn't localized (single shared column, not
-  // per-locale storage), that second application clobbered the value the
-  // primary locale had just written. See validate-fields.server.ts's
-  // skipHooks.
+  // Not localized, with a hook that is not idempotent: a create runs it once, and a read in
+  // any locale sees that one application.
   text('createMarker').$beforeSave((value) => (value ? `${value}-created` : value))
 );
 

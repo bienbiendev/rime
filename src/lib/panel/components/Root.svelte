@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { page } from '$app/state';
   import type { User } from '$lib/core/auth/types.js';
   import type { BuiltConfigClient } from '$lib/core/config/types.js';
   import Nav from '$lib/panel/components/ui/nav/Nav.svelte';
@@ -31,7 +30,14 @@
   setTitleContext('[untitled]');
   setAPIProxyContext();
 
-  const locale = $derived(setLocaleContext(initialeLocale));
+  // svelte-ignore state_referenced_locally
+  const locale = setLocaleContext(initialeLocale);
+
+  // The layout reloads the locale after a switch; the store follows it in place, and whatever
+  // shows locale-dependent content is keyed on it where it stands.
+  $effect(() => {
+    locale.code = initialeLocale;
+  });
 
   function onResize() {
     if (window.innerWidth < 1024) {
@@ -65,11 +71,9 @@
 
 <div class="rz-panel-root">
   <Nav {setCollapsed} {routes} {isCollapsed} />
-  {#key `${page.url}${locale.code || ''}`}
-    <div class="rz-panel-root__right" class:rz-panel-root__right--navCollapsed={isCollapsed}>
-      {@render children()}
-    </div>
-  {/key}
+  <div class="rz-panel-root__right" class:rz-panel-root__right--navCollapsed={isCollapsed}>
+    {@render children()}
+  </div>
 </div>
 
 <style>

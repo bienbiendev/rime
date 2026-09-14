@@ -1,4 +1,4 @@
-import { PANEL_ROUTE } from '$lib/core/dev/constants.server.js';
+import { PANEL_ROUTE } from '$lib/core/routes/constants.server.js';
 import { randomId } from '$lib/util/random.js';
 
 export const envProduction = () => `# BETTER-AUTH

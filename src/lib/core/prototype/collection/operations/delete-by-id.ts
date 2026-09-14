@@ -29,7 +29,7 @@ export const deleteById = async <T extends GenericDoc>(args: Args): Promise<stri
   });
 
   // No `content`: a delete means the document, so it reads whichever row is newest. That is what
-  // `draft: true` said here before there was a way to say "no narrowing".
+  // `latest: true` said here before there was a way to say "no narrowing".
   const document = (await rime.adapter.collection(config.slug).find({ id })) as T;
 
   if (!document) {

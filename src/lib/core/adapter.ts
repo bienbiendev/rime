@@ -35,6 +35,20 @@ export interface Adapter {
   area(slug: string): AreaHandle;
 
   /**
+   * The handle for the table holding a prototype's content — its versions table where it has one,
+   * its own otherwise.
+   *
+   * The table half of `contentOwnerId`: that names the row, this names what the row is in. For a
+   * write that sets columns on wherever the content is and does not care which kind of prototype
+   * that turned out to be — which is why it answers `BaseHandle` rather than one of the two above.
+   *
+   * Only the registry can answer it. A versioned area's versions table is registered as a
+   * *collection*, so the kind a caller starts from does not survive the hop, and the config says
+   * which slug but not which handle.
+   */
+  contentOwner(slug: string): BaseHandle;
+
+  /**
    * The handle for a table a feature declared — see `TableDeclaration`.
    *
    * Separate from the two above because a declared table is not a prototype: no fields, no
@@ -57,7 +71,7 @@ export interface Adapter {
  * `slug` and `config` are what it was registered with; `versions` is where this config's content
  * lives when that is not its own row.
  */
-interface BaseHandle {
+export interface BaseHandle {
   readonly slug: string;
   readonly config: BuiltArea | BuiltCollection;
   /** Where this config's content lives, when not on its own row — `config._versions`. */
@@ -70,6 +84,8 @@ interface BaseHandle {
     limit?: number;
     offset?: number;
     locale?: string;
+    /** See `find`. */
+    localeFallback?: boolean;
     /** Per document, which content row — see `find`. Filters the list as well as picking rows. */
     content?: OperationQuery;
   }): Promise<RawDoc[]>;
@@ -103,6 +119,12 @@ export interface CollectionHandle extends BaseHandle {
     id: string;
     select?: string[];
     locale?: string;
+    /**
+     * Whether a field the locale has not written reads from the other locales, in the order the
+     * config gives. `true` unless said otherwise; `false` is the locale's own rows and nothing
+     * else, which is what a copy from one row to another reads.
+     */
+    localeFallback?: boolean;
     /**
      * Narrows which content row this read means, for a config that has one. The newest when
      * omitted, which is what "the content of this document" means with nothing else said.
@@ -165,6 +187,8 @@ export interface AreaHandle extends BaseHandle {
   find(args?: {
     select?: string[];
     locale?: string;
+    /** See `CollectionHandle.find`. */
+    localeFallback?: boolean;
     content?: OperationQuery;
   }): Promise<RawDoc | undefined>;
 
@@ -249,7 +273,13 @@ export interface TransformHandle {
    * blank, keeping the bookkeeping the caller asked for, and assembling relations into document
    * properties are core's, and none of them needs a table.
    */
-  rows(args: { doc: RawDoc; slug: PrototypeSlug; locale?: string }): Promise<DocumentRows>;
+  rows(args: {
+    doc: RawDoc;
+    slug: PrototypeSlug;
+    locale?: string;
+    /** See `CollectionHandle.find`. */
+    localeFallback?: boolean;
+  }): Promise<DocumentRows>;
 }
 
 /**

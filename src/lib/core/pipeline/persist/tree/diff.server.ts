@@ -35,20 +35,6 @@ export function defineTreeBlocksDiff({
   if (!configMap)
     throw new RimeError(RimeError.OPERATION_ERROR, 'missing configMap @defineBlocksDiff');
 
-  // On fallback locale :
-  // - If a block is localized, it should not keep its id so a new one is created
-  // - If a block is not localized than it should keep its id so block is updated
-  if (context.isFallbackLocale) {
-    incomingBlocks = incomingBlocks.map((block) => {
-      const isLocalized: boolean = configMap[block.path]?.get.localized || false;
-      if (isLocalized) {
-        delete block.id;
-        block.locale = context.isFallbackLocale;
-      }
-      return block;
-    });
-  }
-
   // Consider blocks as new if they have temp ID OR no ID at all
   const toAdd = incomingBlocks.filter((block) => !block.id || block.id.startsWith('temp-'));
 

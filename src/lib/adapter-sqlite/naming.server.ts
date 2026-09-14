@@ -142,6 +142,19 @@ export const childTableNames = (
 };
 
 /**
+ * The relation key a resolved reference's target is joined under.
+ *
+ * ```
+ * updatedBy  ->  updatedBy__$doc
+ * ```
+ *
+ * `__$` marks it structural, like a child table, so nothing converts it to a document path.
+ */
+export const JOIN_SUFFIX = '__$doc';
+
+export const joinName = (column: string) => `${column}${JOIN_SUFFIX}`;
+
+/**
  * Generate the column and property names for a field given its name and its parent path.
  * Snake case is used for the sqlite column name and Camel case is used for the drizzle column
  * property name.

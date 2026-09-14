@@ -440,7 +440,8 @@ test('Should return 2 versions of infos (EN)', async ({ request }) => {
   const data = await response.json();
   expect(data.docs).toBeDefined();
   expect(data.docs).toHaveLength(2);
-  expect(data.docs.at(0).title).toBe(null);
+  // Never written in EN, the first version reads the French title by fallback.
+  expect(data.docs.at(0).title).toBe('newer than latest (FR)');
   expect(data.docs.at(1).title).toBe('latest');
 });
 
@@ -531,6 +532,8 @@ test('Should update infos (creating a new version) (FR)', async ({ request }) =>
   expect(responseData.doc).toBeDefined();
   expect(responseData.doc.title).toBe('newer than newer');
 
+  // The new version keeps the French title the previous one had: a save in one locale leaves
+  // the translations of the others alone.
   const verify = await request.get(`${API_BASE_URL}/infos?locale=fr`, {
     headers: await signInSuperAdmin(request)
   });
@@ -541,8 +544,13 @@ test('Should update infos (creating a new version) (FR)', async ({ request }) =>
   expect(verifyData.doc.id).toBe(infosId);
   expect(verifyData.doc.versionId).toBeDefined();
   expect(verifyData.doc.versionId).not.toBe(infoVersionId);
-  expect(verifyData.doc.title).toBeDefined();
-  expect(verifyData.doc.title).toBe('newer than newer');
+  expect(verifyData.doc.title).toBe('newer than latest (FR)');
+
+  const en = await request
+    .get(`${API_BASE_URL}/infos`, { headers: await signInSuperAdmin(request) })
+    .then((r) => r.json());
+  expect(en.doc.versionId).toBe(verifyData.doc.versionId);
+  expect(en.doc.title).toBe('newer than newer');
 });
 
 /****************************************************
@@ -594,7 +602,7 @@ test('Should update the published settings', async ({ request }) => {
 });
 
 test('Should update the settings and create a second settings version', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/settings?${PARAMS.DRAFT}=true`, {
+  const response = await request.patch(`${API_BASE_URL}/settings?${PARAMS.FORK}=true`, {
     headers: await signInSuperAdmin(request),
     data: {
       title: 'second settings version'
@@ -623,7 +631,7 @@ test('Should get the published settings', async ({ request }) => {
 });
 
 test('Should get the latest settings draft and publish it', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings?${PARAMS.DRAFT}=true`, {
+  const response = await request.get(`${API_BASE_URL}/settings?${PARAMS.LATEST}=true`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
@@ -741,7 +749,7 @@ test('Should create a News and publish it', async ({ request }) => {
 });
 
 test('Should update the initial News by creating a new version', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/news/${newsId}?${PARAMS.DRAFT}=true`, {
+  const response = await request.patch(`${API_BASE_URL}/news/${newsId}?${PARAMS.FORK}=true`, {
     headers: await signInSuperAdmin(request),
     data: {
       attributes: {
@@ -774,7 +782,7 @@ test('Should get the published news', async ({ request }) => {
 });
 
 test('Should get the draft news', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/news/${newsId}?${PARAMS.DRAFT}=true`, {
+  const response = await request.get(`${API_BASE_URL}/news/${newsId}?${PARAMS.LATEST}=true`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
@@ -842,7 +850,7 @@ test('None should be published and 404 should be returned', async ({ request }) 
 
 test('Should get second news version and publish it', async ({ request }) => {
   const response = await request.patch(
-    `${API_BASE_URL}/news/${newsId}?${PARAMS.VERSION_ID}=${secondNewsVersionId}&{PARAMS.DRAFT}=true`,
+    `${API_BASE_URL}/news/${newsId}?${PARAMS.VERSION_ID}=${secondNewsVersionId}`,
     {
       headers: await signInSuperAdmin(request),
       data: {
@@ -938,7 +946,7 @@ test('Should duplicate a News keeping each locale’s own title, as drafts', asy
   ];
   for (const [locale, expectedTitle] of expectedTitles) {
     const draftResponse = await request.get(
-      `${API_BASE_URL}/news/${duplicateId}?locale=${locale}&${PARAMS.DRAFT}=true`,
+      `${API_BASE_URL}/news/${duplicateId}?locale=${locale}&${PARAMS.LATEST}=true`,
       { headers }
     );
     expect(draftResponse.status()).toBe(200);
@@ -963,7 +971,7 @@ test('Should duplicate a never-published News across every locale', async ({ req
 
   // No status supplied -> draft-only, no published version at all, in any
   // locale. Combines both duplicate.ts gaps: the initial default-locale
-  // fetch needs draft: true (no published row to fall back to), and the
+  // fetch needs latest: true (no published row to fall back to), and the
   // per-locale loop needs newDocument's own versionId (no published row to
   // update either).
   const createResponse = await request.post(`${API_BASE_URL}/news`, {
@@ -974,7 +982,7 @@ test('Should duplicate a never-published News across every locale', async ({ req
   expect(original.status).toBe(VERSIONS_STATUS.DRAFT);
   expect(original.versionId).toBeDefined();
 
-  // ?draft=true means "branch a new draft from the published version" —
+  // ?fork=true means "branch a new draft from the published version" —
   // there isn't one here (draft-only from create), so it would 404. Target
   // the existing draft version directly instead, same pattern as the
   // maxVersions test above.
@@ -1010,7 +1018,7 @@ test('Should duplicate a never-published News across every locale', async ({ req
   ];
   for (const [locale, expectedTitle] of expectedTitles) {
     const draftResponse = await request.get(
-      `${API_BASE_URL}/news/${duplicateId}?locale=${locale}&${PARAMS.DRAFT}=true`,
+      `${API_BASE_URL}/news/${duplicateId}?locale=${locale}&${PARAMS.LATEST}=true`,
       { headers }
     );
     expect(draftResponse.status()).toBe(200);
@@ -1062,7 +1070,7 @@ test('Should duplicate a nested child Page, keeping it under the same parent', a
   const { id: duplicateId } = await dupResponse.json();
 
   const draftResponse = await request.get(
-    `${API_BASE_URL}/pages/${duplicateId}?${PARAMS.DRAFT}=true`,
+    `${API_BASE_URL}/pages/${duplicateId}?${PARAMS.LATEST}=true`,
     { headers }
   );
   expect(draftResponse.status()).toBe(200);
@@ -1104,7 +1112,7 @@ test('Should keep draft/published status independent per locale', async ({ reque
   });
 
   // A new EN draft (not published) must not touch FR at all.
-  await request.patch(`${API_BASE_URL}/news/${doc.id}?locale=en&${PARAMS.DRAFT}=true`, {
+  await request.patch(`${API_BASE_URL}/news/${doc.id}?locale=en&${PARAMS.FORK}=true`, {
     headers,
     data: { attributes: { title: 'Independence EN draft' } }
   });

@@ -1,24 +1,30 @@
 import { applyAction, deserialize } from '$app/forms';
+import { replaceState } from '$app/navigation';
+import { resolve } from '$app/paths';
 import { page } from '$app/state';
 import type { BuiltAreaClient, BuiltCollectionClient } from '$lib/core/config/types.js';
 import { PARAMS } from '$lib/core/constants.js';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
 import type { FormFieldBuilder } from '$lib/core/fields/builders/index.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { buildConfigMap } from '$lib/core/pipeline/config-map/index.js';
+import {
+  AUTO_SAVE_DELAY_MS,
+  VERSIONS_STATUS
+} from '$lib/core/prototype/shared/versions/constant.js';
 import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '$lib/core/prototype/types.js';
+import { apiUrl, panelUrl } from '$lib/core/routes/util.js';
 import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
-import { panelUrl } from '$lib/panel/util/url.js';
 import type { FormField } from '$lib/types.js';
-import { normalizeFieldPath } from '$lib/util/path.js';
-import { apiUrl, random } from '$lib/util/index.js';
 import { isObjectLiteral, omit } from '$lib/util/object.js';
+import { normalizeFieldPath } from '$lib/util/path.js';
+import { randomId } from '$lib/util/random.js';
 import type { Dic, WithOptional } from '$lib/util/types.js';
 import type { ActionResult } from '@sveltejs/kit';
 import cloneDeep from 'clone-deep';
 import { diff } from 'deep-object-diff';
 import { flatten } from 'flat';
 import { getContext, setContext } from 'svelte';
+import { SvelteURLSearchParams } from 'svelte/reactivity';
 import { toast } from 'svelte-sonner';
 import { t__ } from '../../core/i18n/index.js';
 import { moveItem } from '../../util/array.js';
@@ -50,17 +56,38 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   const changes = $derived<Partial<GenericDoc>>(diff(initialDoc, doc));
   let isDisabled = $state(readOnly);
   let processing = $state(false);
-  const operation = $derived(doc.id ? 'update' : 'create');
+  /**
+   * Read off `initialDoc`, not the live `doc`: a create form may write `id` as a field before the
+   * row exists — an upload directory's id is its path, typed in as its name — and that does not
+   * make it an update. `initialDoc` gains an id when the server answers with the created row.
+   */
+  const operation = $derived(initialDoc.id ? 'update' : 'create');
   const user = getUserContext();
   const errors = setErrorsContext(key);
   const isCollection = documentConfig.type === 'collection';
   const hasError = $derived(errors.length);
-  const canSubmit = $derived(
-    !isDisabled && !readOnly && Object.keys(changes).length > 0 && !hasError
-  );
+  const hasChanges = $derived(Object.keys(changes).length > 0);
+  /** `status` is a save's business: an auto-save is always a draft, so it never carries one. */
+  const autoSavable = $derived(Object.keys(changes).some((key) => key !== 'status'));
   const nestedLevel = initLevel();
   /** onDataChange is only used to trigger action on live-edit so determine if this is a live-edit form */
   const isLiveEdit = !!onDataChange;
+  /**
+   * Whether typing here lands in the user's own auto-saved row: a config that opts in, an
+   * existing document, a writable form, and the root form — a relation's nested create is never
+   * auto-saved. Live edit is the same form and follows the same rule.
+   */
+  const isAutoSave = $derived(
+    !!documentConfig.versions?.draft &&
+      !!documentConfig.versions?.autoSave &&
+      operation === 'update' &&
+      !readOnly &&
+      nestedLevel === 0
+  );
+  /** After an auto-save `changes` is empty, and Save must still turn the row into a version. */
+  const canSubmit = $derived(
+    !isDisabled && !readOnly && (hasChanges || !!doc.isAutoSave) && !hasError
+  );
   const locale = getLocaleContext();
   const titleContext = getTitleContext();
   const initialTitle = initTitle();
@@ -135,6 +162,12 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   function setValue(path: string, value: any) {
     doc = setValueAtPath(path, doc, value);
     if (onDataChange) onDataChange({ path, value });
+  }
+
+  /** Takes a value the server already holds: sets it without making the form dirty. */
+  function sync(path: string, value: unknown) {
+    doc = setValueAtPath(path, doc, value);
+    initialDoc = setValueAtPath(path, initialDoc, value);
   }
 
   /**
@@ -377,7 +410,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     if (typeof data === 'object' && data !== null) {
       // First omit the id and locale properties
       const withoutId = omit(['id', 'locale'], data as Dic);
-      const result: Dic = { ...withoutId, id: 'temp-' + random.randomId(8) };
+      const result: Dic = { ...withoutId, id: 'temp-' + randomId(8) };
       // Replace with the current locale if present
       if (locale.code && 'locale' in data) {
         result.locale = locale.code;
@@ -426,8 +459,8 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       const validated = config.use.validate(value, {
         data: doc,
         locale: locale.code,
-        id: doc.id ?? undefined,
-        operation: doc.id ? 'update' : 'create',
+        id: initialDoc.id ?? undefined,
+        operation,
         user: user.attributes,
         config: config.get
       });
@@ -455,7 +488,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     const setValueFromDefaultLocale = async () => {
       const BASE_API_URL = apiUrl(documentConfig.kebab);
       let fetchURL: string = BASE_API_URL;
-      const draftParam = doc.status === VERSIONS_STATUS.DRAFT ? '&draft=true' : '';
+      const draftParam = doc.status === VERSIONS_STATUS.DRAFT ? `&${PARAMS.LATEST}=true` : '';
       if (isCollection) {
         fetchURL += `?where[id][equals]=${doc.id}&locale=${locale.defaultCode}${draftParam}`;
       } else {
@@ -534,22 +567,17 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     };
   }
 
-  /**
-   * Prepare the form data for submission.
-   * This function collects the changed fields from the document,
-   * applies any beforeSubmit hooks, and constructs a FormData object
-   * to be sent in the request body.
-   */
-  const prepareData = async () => {
-    let data: Dic = {};
+  /** The changed top-level keys, as the document holds them now. */
+  const changedData = (except: string[] = []) => {
+    const data: Dic = {};
     for (const key of Object.keys(changes)) {
-      data[key] = doc[key];
+      if (!except.includes(key)) data[key] = doc[key];
     }
+    return data;
+  };
 
-    if (beforeSubmit) {
-      data = await beforeSubmit(data);
-    }
-
+  /** Flattened into form fields, one per leaf: `attributes.title`. */
+  const toFormData = (data: Dic) => {
     const flatData: Dic = flatten(data);
 
     const formData = new FormData();
@@ -571,16 +599,34 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   };
 
   /**
+   * Prepare the form data for submission.
+   * This function collects the changed fields from the document,
+   * applies any beforeSubmit hooks, and constructs a FormData object
+   * to be sent in the request body.
+   */
+  const prepareData = async (data: Dic = changedData()) => {
+    if (beforeSubmit) {
+      data = await beforeSubmit(data);
+    }
+    return toFormData(data);
+  };
+
+  /** One POST to a panel action, read back as the action's result. */
+  const send = (action: string, body: FormData): Promise<ActionResult<FormSuccessData>> =>
+    fetch(action, { method: 'POST', body }).then(async (r) => deserialize(await r.text()));
+
+  /**
    * Submit the form data to the server.
+   *
+   * An auto-save in flight is waited for rather than raced: both write the same row, and the
+   * save is the one whose answer replaces the document.
    */
   const submit = async (action: string) => {
     if (processing) return;
     processing = true;
+    if (autoSaveInFlight) await autoSaveInFlight;
 
-    const result: ActionResult<FormSuccessData> = await fetch(action, {
-      method: 'POST',
-      body: await prepareData()
-    }).then(async (r) => deserialize(await r.text()));
+    const result = await send(action, await prepareData());
 
     async function handleSuccess(data?: FormSuccessData) {
       const redirect = data?.redirectUrl || false;
@@ -600,6 +646,9 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       // Assign documents returned from the server to the form state
       doc = (data?.document || doc) as T;
       initialDoc = doc;
+      // A save ends the auto-save story: the row is a version now, or the changes are in one.
+      autoSaveState = 'idle';
+      lastAutoSavedAt = null;
       toast.success(message);
 
       // Callbacks
@@ -628,10 +677,134 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       case 'failure':
         handleError(result.data);
         break;
+      case 'redirect':
+        await applyAction(result);
+        break;
+      // A `RimeError` out of an action arrives here: `handleError` answers it with `error(status)`.
+      case 'error':
+        toast.error(result.error?.message || t__('error.generic'));
+        break;
     }
 
     processing = false;
   };
+
+  /****************************************************/
+  /* Auto-save
+  /****************************************************/
+
+  let autoSaveState = $state<AutoSaveState>('idle');
+  let lastAutoSavedAt = $state<Date | null>(null);
+  let autoSaveReason = $state<string | null>(null);
+  let autoSaveInFlight: Promise<boolean> | null = null;
+  /** What the last failed auto-save carried, so nothing retries until the changes move again. */
+  let pausedFor: string | null = null;
+
+  const autoSaveAction = () =>
+    `${buildPanelActionUrl()}&${PARAMS.AUTO_SAVE}=true&${PARAMS.VERSION_ID}=${doc.versionId}`;
+
+  /**
+   * Fold the row the server wrote back into the form without losing what was typed meanwhile.
+   *
+   * `sent` is the document as it was when the request left. Whatever differs between `sent` and
+   * the document now was typed during the round trip, and goes back on top of the server's row —
+   * which brings `versionId`, `isAutoSave`, `updatedAt` and the children's ids.
+   */
+  const mergeServerDoc = (server: T, sent: T) => {
+    const typedSince: Dic = flatten(diff(sent, snapshot(doc) as T));
+    let next = server;
+    for (const path of Object.keys(typedSince)) {
+      next = setValueAtPath(path, next, getValueAtPath(path, doc));
+    }
+    initialDoc = server;
+    doc = next;
+  };
+
+  const failureReason = (result: ActionResult<Dic>): string => {
+    const data = result.type === 'failure' ? result.data : undefined;
+    if (data?.errors && isObjectLiteral(data.errors)) {
+      const [field, error] = Object.entries(data.errors as Dic)[0] ?? [];
+      if (field) return `${field}: ${error}`;
+    }
+    if (data?.message) return String(data.message);
+    return t__('error.generic');
+  };
+
+  /**
+   * Write what has changed into the user's auto-saved row, and answer whether it landed.
+   *
+   * On success the URL takes the row's `versionId` when it is a new one, with `replaceState`
+   * rather than a navigation: a reload would remount the form and drop the focus. On failure
+   * the state is `paused` with the reason, and nothing retries until the changes move again.
+   */
+  const runAutoSave = async (): Promise<boolean> => {
+    if (autoSaveInFlight) return autoSaveInFlight;
+    if (!autoSavable) return true;
+
+    const sent = snapshot(doc) as T;
+    const sentChanges = JSON.stringify(changes);
+    autoSaveState = 'saving';
+
+    autoSaveInFlight = (async () => {
+      const result = await send(autoSaveAction(), await prepareData(changedData(['status'])));
+
+      if (result.type !== 'success') {
+        autoSaveState = 'paused';
+        autoSaveReason = failureReason(result as ActionResult<Dic>);
+        pausedFor = sentChanges;
+        return false;
+      }
+
+      const server = result.data?.document as T | undefined;
+      if (server) {
+        const isNewRow = server.versionId !== sent.versionId;
+        mergeServerDoc(server, sent);
+        if (isNewRow) {
+          // The address follows the row without a load. `replaceState` leaves `page.url` and
+          // `page.data` on the row that was loaded: whatever needs the row on screen reads the
+          // form, never the URL.
+          const params = new SvelteURLSearchParams(page.url.search);
+          params.set(PARAMS.VERSION_ID, String(server.versionId));
+          replaceState(resolve(`${page.url.pathname}?${params}`), page.state);
+        }
+      }
+      autoSaveState = 'saved';
+      lastAutoSavedAt = new Date();
+      autoSaveReason = null;
+      pausedFor = null;
+      // The versions history lists the row now; whoever shows it re-reads.
+      apiProxy.invalidate(documentConfig.slug);
+      return true;
+    })();
+
+    const landed = await autoSaveInFlight;
+    autoSaveInFlight = null;
+    return landed;
+  };
+
+  /** Send what is pending now, before leaving. Answers whether it landed. */
+  const flushAutoSave = async () => {
+    if (!isAutoSave || !autoSavable) return true;
+    return runAutoSave();
+  };
+
+  /** The same write, handed to the browser to deliver after the tab is gone. */
+  const beaconAutoSave = () => {
+    if (!isAutoSave || !autoSavable || hasError) return;
+    navigator.sendBeacon(autoSaveAction(), toFormData(changedData(['status'])));
+  };
+
+  // A quiet moment after the last change, then the write. Every dependency is read up front so
+  // the timer resets when any of them moves, and a manual save cancels it through `processing`.
+  $effect(() => {
+    const armed = isAutoSave && !isDisabled && !hasError && autoSavable && !processing;
+    const key = JSON.stringify(changes);
+    const paused = autoSaveState === 'paused' && key === pausedFor;
+    if (!armed || paused) return;
+
+    const timer = setTimeout(() => void runAutoSave(), AUTO_SAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  });
 
   /**
    * Enhance the form element to handle submission.
@@ -649,18 +822,17 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
         setValue('status', submitter?.dataset.status);
       }
     };
-    // Build full action URL with query params based on submitter attributes (draft, versionId)
+    // The action names the row on screen, and says `fork` when the button asked for a new version.
+    // Not on an auto-saved row: saving that row promotes it into the version the button meant,
+    // and forking it would leave what it holds behind.
     const enhanceAction = (submitter: SubmitEvent['submitter']) => {
       let actionUrl = buildPanelActionUrl();
-      const SUBMITER_HAS_DATA_DRAFT = !!submitter?.dataset.draft;
+      const SUBMITER_FORKS = !!submitter?.dataset.fork && !doc.isAutoSave;
       const DOC_HAS_VERSION = documentConfig.versions && !!doc.versionId;
-      const { DRAFT, VERSION_ID } = PARAMS;
+      const { FORK, VERSION_ID } = PARAMS;
 
-      if (SUBMITER_HAS_DATA_DRAFT) {
-        actionUrl += `&${DRAFT}=true`;
-      } else if (DOC_HAS_VERSION) {
-        actionUrl += `&${VERSION_ID}=${doc.versionId}`;
-      }
+      if (DOC_HAS_VERSION) actionUrl += `&${VERSION_ID}=${doc.versionId}`;
+      if (SUBMITER_FORKS) actionUrl += `&${FORK}=true`;
 
       return actionUrl;
     };
@@ -708,7 +880,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   const importDataFromDefaultLocale = async () => {
     const BASE_API_URL = `${apiUrl(documentConfig.kebab)}`;
     let fetchURL: string = BASE_API_URL;
-    const draftParam = doc.status === VERSIONS_STATUS.DRAFT ? '&draft=true' : '';
+    const draftParam = doc.status === VERSIONS_STATUS.DRAFT ? `&${PARAMS.LATEST}=true` : '';
     if (isCollection) {
       fetchURL += `?where[id][equals]=${doc.id}&locale=${locale.defaultCode}${draftParam}`;
     } else {
@@ -735,6 +907,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   return {
     key,
     setValue,
+    sync,
     getRawValue,
     enhance,
     useField,
@@ -745,6 +918,24 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     buildPanelActionUrl,
     readOnly,
     importDataFromDefaultLocale,
+    flushAutoSave,
+    beaconAutoSave,
+
+    get isAutoSave() {
+      return isAutoSave;
+    },
+
+    get autoSaveState() {
+      return autoSaveState;
+    },
+
+    get lastAutoSavedAt() {
+      return lastAutoSavedAt;
+    },
+
+    get autoSaveReason() {
+      return autoSaveReason;
+    },
 
     get isDisabled() {
       return isDisabled;
@@ -832,6 +1023,8 @@ export type DocumentFormContext<
 type AddBlock = (block: Omit<GenericBlock, 'id' | 'path'>) => void;
 type MoveBlock = (from: number, to: number) => void;
 export type FormSuccessData = { redirectUrl?: string; document?: GenericDoc; message?: string };
+/** `paused` is a failed auto-save waiting for the changes to move again. */
+export type AutoSaveState = 'idle' | 'saving' | 'saved' | 'paused';
 
 type Args<T> = {
   beforeSubmit?: (data: Dic) => Promise<Dic>;

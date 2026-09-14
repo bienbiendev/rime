@@ -4,8 +4,8 @@ The staged plan for `notes/decouple-field-type-from-parsing.md`. That file is th
 of a `nodes` getter and a path-contribution function. This one is the audit behind it, the contract
 that came out of the audit, and the order to build it in.
 
-**Scope decided:** traversal only. Every place that branches on a field type to answer *what is
-below me and what does it add to the path*. The places that branch to answer *how is this stored*
+**Scope decided:** traversal only. Every place that branches on a field type to answer _what is
+below me and what does it add to the path_. The places that branch to answer _how is this stored_
 are a different contract and are listed in §7 as out of scope, with the reason.
 
 **Measured at `291dbdfc`.** Re-run every grep; the greps are the contract, not the numbers.
@@ -35,17 +35,17 @@ if (field instanceof TabsBuilder) {
 
 Written nine times, they cover different containers:
 
-| walker | tabs | group | blocks | tree |
-| --- | :-: | :-: | :-: | :-: |
-| `getFieldAtPath` — `core/fields/util.ts:113` | ✔ | ✔ | ✔ | ✔ no `_children` |
-| `getFieldListAtPath` — `core/fields/util.ts:179` | ✔ | ✔ | ✔ | ✔ |
-| `buildConfigMap` — `core/pipeline/config-map/index.ts:13` | ✔ | ✔ | ✔ | ✔ |
-| `validateFields` — `core/config/validate.server.ts:131` | ✔ | ✔ | ✔ | ✔ |
-| `generateFieldsTemplates` — `adapter-sqlite/generate-schema/root.server.ts:66` | ✔ | ✔ | ✔ | ✔ |
-| `hasLocalizedField` — same file, `:226` | ✔ | ✔ | ✔ | ✔ |
-| `emptyValuesFromFieldConfig` — `core/fields/util.ts:51` | ✔ | ✔ | ✘ | ✘ |
-| `findTitleField` / `findThumbnailField` — `core/features/{title,thumbnail}/` | ✔ | ✔ | ✘ | ✘ |
-| `buildFieldColumns` — `panel/context/collection.svelte.ts:84` | ✔ | ✔ | ✘ | ✘ |
+| walker                                                                         | tabs | group | blocks |       tree       |
+| ------------------------------------------------------------------------------ | :--: | :---: | :----: | :--------------: |
+| `getFieldAtPath` — `core/fields/util.ts:113`                                   |  ✔   |   ✔   |   ✔    | ✔ no `_children` |
+| `getFieldListAtPath` — `core/fields/util.ts:179`                               |  ✔   |   ✔   |   ✔    |        ✔         |
+| `buildConfigMap` — `core/pipeline/config-map/index.ts:13`                      |  ✔   |   ✔   |   ✔    |        ✔         |
+| `validateFields` — `core/config/validate.server.ts:131`                        |  ✔   |   ✔   |   ✔    |        ✔         |
+| `generateFieldsTemplates` — `adapter-sqlite/generate-schema/root.server.ts:66` |  ✔   |   ✔   |   ✔    |        ✔         |
+| `hasLocalizedField` — same file, `:226`                                        |  ✔   |   ✔   |   ✔    |        ✔         |
+| `emptyValuesFromFieldConfig` — `core/fields/util.ts:51`                        |  ✔   |   ✔   |   ✘    |        ✘         |
+| `findTitleField` / `findThumbnailField` — `core/features/{title,thumbnail}/`   |  ✔   |   ✔   |   ✘    |        ✘         |
+| `buildFieldColumns` — `panel/context/collection.svelte.ts:84`                  |  ✔   |   ✔   |   ✘    |        ✘         |
 
 Two things follow from that, and only one of them is a defect.
 
@@ -79,7 +79,7 @@ access checks and validation never run. `getFieldAtPath` resolves the same path
 **The last three rows of the table are not drift.** A title, a thumbnail and a list column each need
 a path that can be named before any document exists, and `layout.<which one?>.title` has no such
 path — a `blocks` field is a repeater of several shapes and a `tree` field is a repeater of one, so
-neither has a determinate child path. Skipping them is correct. What is missing is a way to *say*
+neither has a determinate child path. Skipping them is correct. What is missing is a way to _say_
 that once, instead of nine walkers each deciding for themselves.
 
 ---
@@ -91,28 +91,28 @@ this plan removes. The rest is §7.
 
 ### 2.1 Traversal — the branch only needs "what is below me"
 
-| site | needs |
-| --- | --- |
-| `core/fields/util.ts:57,61` — `emptyValuesFromFieldConfig` | nested fields, tab name as a value key |
-| `core/fields/util.ts:126,141,146,158` — `getFieldAtPath` | nested fields, and how many segments each container consumes |
-| `core/fields/util.ts:195,209,217,242` — `getFieldListAtPath` | the same, plus the path prefix to return |
-| `core/pipeline/config-map/index.ts:25,42,56,59` | nested fields, per document value |
-| `core/pipeline/config-map/build-tree-map.ts:16,28` | tree rows and `_children` |
-| `core/config/validate.server.ts:159,201,204` | nested fields only |
-| `core/prototype/doc.ts:34,38,40` — `createBlankDocument` | nested fields, and the empty value at a leaf |
-| `core/features/title/find-title.ts:38,45` | nested fields, and a determinate path |
-| `core/features/thumbnail/find-thumbnail.ts:29,36` | same |
-| `panel/context/collection.svelte.ts:87,103` — `buildFieldColumns` | same |
-| `adapter-sqlite/generate-schema/root.server.ts:82,90` | nested fields, joined with `__` |
-| `adapter-sqlite/generate-schema/root.server.ts:230-266` — `hasLocalizedField` | nested fields only |
+| site                                                                          | needs                                                        |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `core/fields/util.ts:57,61` — `emptyValuesFromFieldConfig`                    | nested fields, tab name as a value key                       |
+| `core/fields/util.ts:126,141,146,158` — `getFieldAtPath`                      | nested fields, and how many segments each container consumes |
+| `core/fields/util.ts:195,209,217,242` — `getFieldListAtPath`                  | the same, plus the path prefix to return                     |
+| `core/pipeline/config-map/index.ts:25,42,56,59`                               | nested fields, per document value                            |
+| `core/pipeline/config-map/build-tree-map.ts:16,28`                            | tree rows and `_children`                                    |
+| `core/config/validate.server.ts:159,201,204`                                  | nested fields only                                           |
+| `core/prototype/doc.ts:34,38,40` — `createBlankDocument`                      | nested fields, and the empty value at a leaf                 |
+| `core/features/title/find-title.ts:38,45`                                     | nested fields, and a determinate path                        |
+| `core/features/thumbnail/find-thumbnail.ts:29,36`                             | same                                                         |
+| `panel/context/collection.svelte.ts:87,103` — `buildFieldColumns`             | same                                                         |
+| `adapter-sqlite/generate-schema/root.server.ts:82,90`                         | nested fields, joined with `__`                              |
+| `adapter-sqlite/generate-schema/root.server.ts:230-266` — `hasLocalizedField` | nested fields only                                           |
 
 ### 2.2 Three path grammars, converted by hand at every boundary
 
-| grammar | separator | container marker | produced by |
-| --- | --- | --- | --- |
-| panel / UI | `.` | `index:blockType`, `._children.n` | `fields/blocks/component/Blocks.svelte:114`, `fields/tree/component/TreeBlock.svelte:103` |
-| document / config-map | `.` | bare `index`, type stripped | `core/pipeline/config-map/index.ts:48` |
-| SQL column / relation row | `__` | none — containers become tables | `adapter-sqlite/generate-schema/root.server.ts:83,92`, `adapter-sqlite/with.server.ts:35` |
+| grammar                   | separator | container marker                  | produced by                                                                               |
+| ------------------------- | --------- | --------------------------------- | ----------------------------------------------------------------------------------------- |
+| panel / UI                | `.`       | `index:blockType`, `._children.n` | `fields/blocks/component/Blocks.svelte:114`, `fields/tree/component/TreeBlock.svelte:103` |
+| document / config-map     | `.`       | bare `index`, type stripped       | `core/pipeline/config-map/index.ts:48`                                                    |
+| SQL column / relation row | `__`      | none — containers become tables   | `adapter-sqlite/generate-schema/root.server.ts:83,92`, `adapter-sqlite/with.server.ts:35` |
 
 `normalizeFieldPath` (`util/path.ts:17`) is the single converter from the first to the second, and it
 is already called on the way into `getValueAtPath`, `setValueAtPath` and `deleteValueAtPath`
@@ -435,13 +435,13 @@ export function* walkValues(
 
 Against the four shapes:
 
-| field | its own path | node segments | resulting child paths |
-| --- | --- | --- | --- |
-| `text('title')` | `title` | — | — |
-| `group('attributes')` | `attributes` | `''` | `attributes.title` |
-| `tabs(tab('meta'))` | the parent's path | `meta` | `meta.title` |
-| `blocks('layout')` | `layout` | `#:hero` declared, `0:hero` with data | `layout.0:hero.title` |
-| `tree('nav')` | `nav` | `#` declared, `0` and `0._children.1` with data | `nav.0._children.1.label` |
+| field                 | its own path      | node segments                                   | resulting child paths     |
+| --------------------- | ----------------- | ----------------------------------------------- | ------------------------- |
+| `text('title')`       | `title`           | —                                               | —                         |
+| `group('attributes')` | `attributes`      | `''`                                            | `attributes.title`        |
+| `tabs(tab('meta'))`   | the parent's path | `meta`                                          | `meta.title`              |
+| `blocks('layout')`    | `layout`          | `#:hero` declared, `0:hero` with data           | `layout.0:hero.title`     |
+| `tree('nav')`         | `nav`             | `#` declared, `0` and `0._children.1` with data | `nav.0._children.1.label` |
 
 Tabs falls out of `field.name ? … : path`. A `TabsBuilder` has no name, so it contributes no
 segment and each tab contributes its own. That is the sketch's "PIA not considered as formField but

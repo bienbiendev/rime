@@ -1,6 +1,6 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { makeUploadDirectoriesCollectionClient } from '$lib/core/prototype/collection/upload/derive.js';
 import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config.js';
+import { makeUploadDirectoriesCollectionClient } from './derive.js';
 
 /**
  * Derives a `<slug>Directories` collection for every upload collection in the config.

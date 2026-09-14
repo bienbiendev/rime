@@ -9,7 +9,14 @@ export type UpdateArgs<T> = {
   data: DeepPartial<T>;
   locale?: string | undefined;
   versionId?: string;
-  draft?: boolean;
+  /** Start from the newest version rather than the published one. `PARAMS.LATEST`. */
+  latest?: boolean;
+  /** Make a new version from the selected row rather than write it. `PARAMS.FORK`. */
+  fork?: boolean;
+  /** Write the caller's auto-saved row of the version `versionId` names. Panel only. */
+  autoSave?: boolean;
+  /** This write copies another locale's rows onto the row — see `copyLocales`. */
+  isLocaleCopy?: boolean;
 };
 
 type Args<T> = UpdateArgs<T> & { ctx: PrototypeApiContext<BuiltArea> };
@@ -22,7 +29,7 @@ type Args<T> = UpdateArgs<T> & { ctx: PrototypeApiContext<BuiltArea> };
  * root row, and how the saved document is read back.
  */
 export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) => {
-  const { ctx, locale, draft, versionId } = args;
+  const { ctx, locale, latest, fork, versionId, autoSave, isLocaleCopy } = args;
   const { config, event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
@@ -30,9 +37,12 @@ export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) =
     params: {
       locale,
       versionId,
-      draft
+      latest,
+      fork,
+      autoSave
     },
-    isSystemOperation
+    isSystemOperation,
+    isLocaleCopy
   };
 
   return runUpdate<AreaSlug, T, BuiltArea>({
@@ -51,13 +61,11 @@ export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) =
      *
      * Not `versionId`, the caller's parameter: the hooks answer "which row holds the content" on
      * `context.contentOwnerId`, and on a new-version update that is a row the caller never named.
-     * Always draft:true.
      */
     reread: ({ config, context }) =>
       rime.area(config.slug).find({
         locale,
-        versionId: context.contentOwnerId,
-        draft: true
+        versionId: context.contentOwnerId
       }) as unknown as Promise<T>
   });
 };

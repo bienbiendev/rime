@@ -59,6 +59,7 @@ test('Login should be successfull', async ({ request }) => {
 
 let homeId: string;
 let pageId: string;
+let editorUserId: string;
 
 /**
  * Offset limit
@@ -275,6 +276,23 @@ test('Should get only the layout page prop', async ({ request }) => {
   expect(doc.id).toBeDefined();
   expect(doc.layout).toBeDefined();
   expect(doc.layout.components).toBeDefined();
+  expect(doc.layout.components.length).toBe(2);
+  expect(doc.layout.components.at(0).text).toBe('Foo');
+  expect(doc.layout.components.at(1).legend).toBe('legend');
+});
+
+/**
+ * The same select, on the by-id endpoint rather than the list one. It reaches `findById` and the
+ * adapter the same way, and has to narrow the document identically.
+ */
+test('Should get only the layout page prop by id', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/pages/${pageId}?select=layout.components`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(Object.keys(doc).length).toBe(2);
+  expect(doc.id).toBe(pageId);
   expect(doc.layout.components.length).toBe(2);
   expect(doc.layout.components.at(0).text).toBe('Foo');
   expect(doc.layout.components.at(1).legend).toBe('legend');
@@ -499,18 +517,44 @@ test('Should return 2 pages with only attributes slug, title and id prop', async
   expect(response.docs[1]._parent).toBeUndefined();
 });
 
+/**
+ * `select` on the by-id endpoint, alongside the list-endpoint cases above. The `title` case is the
+ * one worth having: `title` is derived from `asTitle`, so a narrowed read that drops that field
+ * hands back a document titled with its own id.
+ */
+
+test('Should return one page by id with only attributes.slug and id prop', async ({ request }) => {
+  const response = await request
+    .get(`${API_BASE_URL}/pages/${homeId}?select=attributes.slug`)
+    .then((response) => response.json());
+  expect(response.doc).toBeDefined();
+  expect(response.doc.id).toBe(homeId);
+  expect(response.doc.attributes.slug).toBeDefined();
+  expect(response.doc.attributes.title).toBeUndefined();
+  expect(response.doc.attributes.template).toBeUndefined();
+});
+
+test('Should resolve title from asTitle when selecting title by id', async ({ request }) => {
+  const response = await request
+    .get(`${API_BASE_URL}/pages/${homeId}?select=title`)
+    .then((response) => response.json());
+  expect(response.doc).toBeDefined();
+  // Not the document id: the fallback in setDocumentTitle when the asTitle
+  // column was narrowed out of the read.
+  expect(response.doc.title).not.toBe(homeId);
+  expect(response.doc.title).toBe('Accueil');
+});
+
 /****************************************************
 /* LOCALE-FALLBACK HOOK PROPAGATION (createMarker regression)
 /****************************************************/
 
-test('Should not double-apply a non-idempotent $beforeSave hook when propagating to other locales', async ({
+test('Should run a non-idempotent $beforeSave once, whatever locale reads it', async ({
   request
 }) => {
   const headers = await signInSuperAdmin(request);
 
-  // Default locale is 'fr' — creating without a locale param writes 'fr'
-  // and then propagates the already-processed document into every other
-  // configured locale (just 'en' here).
+  // Default locale is 'fr' — creating without a locale param writes 'fr' and nothing else.
   const response = await request.post(`${API_BASE_URL}/pages`, {
     headers,
     data: {
@@ -529,9 +573,7 @@ test('Should not double-apply a non-idempotent $beforeSave hook when propagating
 
   const enResponse = await request.get(`${API_BASE_URL}/pages/${doc.id}?locale=en`, { headers });
   const { doc: enDoc } = await enResponse.json();
-  // createMarker isn't .localized() — same underlying column as 'fr'. If the
-  // fallback-locale propagation re-ran $beforeSave on the already-tagged
-  // value, this would read 'seed-created-created' instead.
+  // createMarker isn't .localized() — same underlying column as 'fr', read as it was written.
   expect(enDoc.attributes.createMarker).toBe('seed-created');
 
   await request.delete(`${API_BASE_URL}/pages/${doc.id}`, { headers });
@@ -568,21 +610,16 @@ test('Should create a page with blocks', async ({ request }) => {
   pageWithBlockID = doc.id;
 });
 
-test('Should get the FR content of page with blocks (fallback)', async ({ request }) => {
+test('Should read the FR fields in EN by fallback, and no EN blocks', async ({ request }) => {
   const response = await request.get(`${API_BASE_URL}/pages/${pageWithBlockID}?locale=en`, {
     headers: await signInSuperAdmin(request)
   });
   const { doc } = await response.json();
+  // A localized field falls back to the locale that has it; a localized blocks field is the
+  // blocks written in this locale, and none were.
   expect(doc.attributes.title).toBe('Page with blocks');
   expect(doc.attributes.slug).toBe('page-with-blocks');
-  expect(doc.layout.components).toHaveLength(3);
-  expect(doc.layout.components[0].type).toBe('paragraph');
-  expect(doc.layout.components[0].text).toBe('paragraph text');
-  expect(doc.layout.components[1].type).toBe('slider');
-  expect(doc.layout.components[1].image).toBe('image value');
-  expect(doc.layout.components[2].type).toBe('image');
-  expect(doc.layout.components[2].legend).toBe('légende');
-  expect(doc.layout.components[2].image).toBeDefined();
+  expect(doc.layout.components).toHaveLength(0);
   expect(doc.locale).toBe('en');
 });
 
@@ -745,6 +782,7 @@ test('Should create a staff editor', async ({ request }) => {
   expect(response.status()).toBe(200);
   expect(data.doc).toBeDefined();
   expect(data.doc.id).toBeDefined();
+  editorUserId = data.doc.id;
 });
 
 test('Should not update Home', async ({ request }) => {
@@ -1456,6 +1494,68 @@ test('Editor should update home', async ({ request }) => {
   expect(response.status()).toBe(200);
   const data = await response.json();
   expect(data.doc.attributes.title).toBe('Home edited by editor');
+});
+
+/****************************************************
+/* Authorship metas
+/*
+/* `createdBy` answers who made the document and is never rewritten; `updatedBy` answers who
+/* wrote the revision being read. Home is created by the super admin in this file's first tests
+/* and updated by the editor just above, so the two must disagree here.
+/****************************************************/
+
+test('Should keep createdBy and move updatedBy to whoever wrote last', async ({ request }) => {
+  const { doc } = await request
+    .get(`${API_BASE_URL}/pages/${homeId}`, {
+      headers: await signInEditor(request)
+    })
+    .then((response) => response.json());
+
+  expect(doc.createdBy?.id).toBe(adminUserId);
+  expect(doc.updatedBy?.id).toBe(editorUserId);
+});
+
+test('Should not expose the edit lock outside the panel', async ({ request }) => {
+  const { doc } = await request
+    .get(`${API_BASE_URL}/pages/${homeId}`, { headers: await signInSuperAdmin(request) })
+    .then((response) => response.json());
+
+  expect(doc.currentlyEditedBy).toBeUndefined();
+  expect(doc.currentlyEditedAt).toBeUndefined();
+});
+
+test('Should claim the edit lock without becoming the last editor', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/pages/${homeId}/lock`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(response.status()).toBe(200);
+
+  // Authenticated: the stamps are `.access({ read: isStaff })`.
+  const { doc } = await request
+    .get(`${API_BASE_URL}/pages/${homeId}`, { headers: await signInSuperAdmin(request) })
+    .then((r) => r.json());
+
+  // The lock write is not an edit: the editor who wrote the content is still the last editor.
+  expect(doc.updatedBy?.id).toBe(editorUserId);
+  expect(doc.createdBy?.id).toBe(adminUserId);
+});
+
+test('Should not claim the edit lock without credentials', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/pages/${homeId}/lock`);
+  expect(response.status()).toBe(403);
+});
+
+test('Should not release the edit lock without credentials', async ({ request }) => {
+  const response = await request.delete(`${API_BASE_URL}/pages/${homeId}/lock`);
+  expect(response.status()).toBe(403);
+});
+
+test('An unauthenticated claim leaves the holder alone', async ({ request }) => {
+  // The super admin still holds it from the test above.
+  const { doc } = await request
+    .get(`${API_BASE_URL}/pages/${homeId}`, { headers: await signInSuperAdmin(request) })
+    .then((r) => r.json());
+  expect(doc.updatedBy?.id).toBe(editorUserId);
 });
 
 test('Should logout editor', async ({ request }) => {

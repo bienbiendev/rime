@@ -139,7 +139,7 @@ const Pages = Collection.create('pages', {
       )
     ])
   ],
-  $url: () => '/',
+  $url: () => `${process.env.PUBLIC_RIME_URL}/`,
   nested: true,
   access: {
     read: () => true

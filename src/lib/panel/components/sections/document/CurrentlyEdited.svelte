@@ -1,35 +1,18 @@
 <script lang="ts">
-  import type { User } from '$lib/core/auth/types.js';
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import { apiUrl } from '$lib/util/index.js';
-  import { toKebabCase } from '$lib/util/string.js';
-  import { onMount } from 'svelte';
   import { Button } from '../../ui/button/index.js';
-  type Props = { by: string; user: User; doc: GenericDoc };
-  const { by, user, doc }: Props = $props();
 
-  async function takeControl() {
-    const fetchURl = `${apiUrl(toKebabCase(doc._type))}/${doc._prototype === 'collection' ? doc.id : ''}`;
+  type Props = {
+    /** The staff member holding the lock, as the read joined them. */
+    holder?: { name?: string | null; email?: string | null } | null;
+    takeControl: () => void;
+  };
+  const { holder, takeControl }: Props = $props();
 
-    await fetch(fetchURl, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        editedBy: user.id
-      })
-    });
-    window.location.reload();
-  }
-
-  let email = $state();
-
-  onMount(async () => {
-    const { doc } = await fetch(apiUrl('staff', by)).then((r) => r.json());
-    email = doc.email;
-  });
+  const label = $derived(holder?.email ?? holder?.name ?? 'Someone');
 </script>
 
 <div class="rz-document-read-only">
-  <p><strong>{email}</strong> is editing the document</p>
+  <p>{label} is editing the document</p>
   <Button variant="outline" onclick={takeControl}>Take control</Button>
 </div>
 
@@ -38,10 +21,10 @@
     display: grid;
     gap: 1rem;
     place-content: center;
-    position: absolute;
+    position: fixed;
     inset: 0;
     z-index: 100;
-    background: hsl(var(--rz-gray-11) / 0.8);
+    background: light-dark(hsl(var(--rz-gray-12) / 0.8), hsl(var(--rz-gray-3) / 0.8));
     backdrop-filter: blur(2px);
   }
 </style>

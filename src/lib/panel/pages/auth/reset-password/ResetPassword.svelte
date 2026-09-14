@@ -1,12 +1,12 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n';
+  import { panelUrl } from '$lib/core/routes/util.js';
   import Text from '$lib/fields/text/component/Text.svelte';
   import AuthForm from '$lib/panel/components/sections/auth/AuthForm.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import { setFormContext } from '$lib/panel/context/form.svelte';
   import { confirmPasswordField, passwordField } from '$lib/panel/pages/auth/fields.js';
   import { authClient } from '$lib/panel/util/auth';
-  import { panelUrl } from '$lib/panel/util/url.js';
   import { toast } from 'svelte-sonner';
 
   let success = $state(false);

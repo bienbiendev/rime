@@ -329,47 +329,6 @@ export const actions = {
 };`;
 
 /**
- * Collection document versions page
- * (rime)/[panel=panel]/[slug=collection]/[id]/versions/+page.svelte
- */
-const collectionDocVersionsPage = () => `
-<script>
-  import { CollectionDocVersions } from '${PACKAGE_NAME}/panel';
-  const { data } = $props();
-</script>
-
-<CollectionDocVersions data={data} />`;
-
-/**
- * (rime)/[panel=panel]/[slug=collection]/[id]/versions/+page.server.ts
- */
-const collectionDocVersionsPageServer = () => `
-import { type ServerLoadEvent } from '@sveltejs/kit';
-
-export const load = (event: ServerLoadEvent) =>
-  event.locals.routes.panel.load.documentVersions(event);`;
-
-/**
- * Area document versions page
- * (rime)/[panel=panel]/[slug=area]/versions/+page.svelte
- */
-const areaVersionsPage = () => `
-<script>
-  import { AreaVersionsDoc } from '${PACKAGE_NAME}/panel';
-  const { data } = $props();
-</script>
-
-<AreaVersionsDoc data={data} />`;
-
-/**
- * (rime)/[panel=panel]/[slug=area]/versions/+page.server.ts
- */
-const areaVersionsPageServer = () => `
-import { type ServerLoadEvent } from '@sveltejs/kit';
-
-export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.areaVersions(event);`;
-
-/**
  * A prototype's REST endpoint, one file per declared sub-path.
  *
  * There is no per-kind template any more: `name`, `path` and `methods` all come from what the
@@ -502,17 +461,9 @@ export const commonRoutes: Routes = {
     page: collectionDocPage,
     pageServer: collectionDocPageServer
   },
-  '(rime)/[panel=panel]/[slug=collection]/[id]/versions': {
-    page: collectionDocVersionsPage,
-    pageServer: collectionDocVersionsPageServer
-  },
   '(rime)/[panel=panel]/[slug=area]': {
     page: areaDocPage,
     pageServer: areaDocPageServer
-  },
-  '(rime)/[panel=panel]/[slug=area]/versions': {
-    page: areaVersionsPage,
-    pageServer: areaVersionsPageServer
   },
   '(rime)/api/[...rest]': {
     server: apiCatchAllServer

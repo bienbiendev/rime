@@ -1,61 +1,25 @@
-import { error, type RequestHandler } from '@sveltejs/kit';
 import { definePlugin, type Plugin } from '../index.js';
-import { broadcast, registerWriter } from './broadcast.js';
+import { connect, emit } from './bus.server.js';
+import type { SSEAccess } from './types.js';
 
-export const sse = definePlugin(() => {
-  const requestHandler: RequestHandler = async ({ request, locals }) => {
-    if (!locals.user || !locals.user.isStaff) return error(404);
+/**
+ * The event stream, at `/api/sse`.
+ *
+ * Send with `rime.sse.emit(key, event, payload)`, listen with `openSse(keys, handler)`.
+ *
+ * `rime:` keys are the panel's and need staff; every other key is refused until `access` says
+ * otherwise, so an app opens its own deliberately rather than by leaving a default alone.
+ *
+ * @example
+ * sse({ access: (key) => key.startsWith('public:') })
+ */
+export const sse = definePlugin(
+  (options?: { access?: SSEAccess }) =>
+    ({
+      name: 'sse',
+      actions: { emit },
+      routes: { '/api/sse': { GET: connect(options?.access ?? (() => false)) } }
+    }) as const satisfies Plugin
+);
 
-    try {
-      const stream = new TransformStream();
-      const writer = stream.writable.getWriter();
-      const unregister = registerWriter(writer);
-
-      // Open the stream immediately
-      writer.write(`: connected ${new Date().toISOString()}\n\n`);
-
-      // Keep-alive ping to prevent timeouts
-      const keepAlive = setInterval(() => {
-        writer.write(`: keep-alive ${Date.now()}\n\n`).catch(() => {
-          clearInterval(keepAlive);
-          unregister();
-        });
-      }, 30000);
-
-      // Cleanup on client disconnect
-      request.signal.addEventListener('abort', () => {
-        console.log('[SSE] Client disconnected');
-        clearInterval(keepAlive);
-        unregister();
-        writer.close();
-      });
-
-      return new Response(stream.readable, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive'
-        }
-      });
-    } catch (error) {
-      console.error('[SSE] Error in GET handler:', error);
-      return new Response('Internal Server Error', { status: 500 });
-    }
-  };
-
-  return {
-    name: 'sse',
-    actions: {
-      broadcast
-    },
-    routes: {
-      '/api/sse': {
-        GET: requestHandler
-      }
-    }
-  } as const satisfies Plugin;
-});
-
-export type SSEActions = {
-  broadcast: typeof broadcast;
-};
+export type SSEActions = { emit: typeof emit };

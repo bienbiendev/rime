@@ -1,12 +1,11 @@
-import { env } from '$env/dynamic/public';
 import { access } from '$lib/core/auth/access.js';
 import * as validate from '$lib/core/fields/validate.js';
-import * as docBuilders from '$lib/core/prototype/doc.js';
 import * as upload from '$lib/core/prototype/collection/upload/util/client.js';
+import * as docBuilders from '$lib/core/prototype/doc.js';
 import * as array from './array.js';
-import * as docPath from './path.js';
 import * as file from './file.js';
 import * as object from './object.js';
+import * as docPath from './path.js';
 import * as random from './random.js';
 import * as state from './state.js';
 import * as string from './string.js';
@@ -23,15 +22,5 @@ import * as string from './string.js';
 
 /** `doc`'s two halves, each living with the concept it names. */
 const doc = { ...docBuilders, ...docPath };
-
-/**
- * Build the api full url for given segments
- * @example
- * apiUrl('some-collection') // -> http://localhost:5713/api/some-collection
- * apiUrl('some-collection', '12345') // -> http://localhost:5713/api/some-collection/12345
- */
-export function apiUrl(...args: string[]) {
-  return `${env.PUBLIC_RIME_URL}/api/${args.join('/')}`;
-}
 
 export { access, array, doc, file, object, random, state, string, upload, validate };

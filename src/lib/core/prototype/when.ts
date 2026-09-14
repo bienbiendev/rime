@@ -26,9 +26,9 @@ export const when = <T, R>(applies: (config: Dic) => boolean, step: (subject: T)
     applies(carriesConfig(subject) ? subject.config : (subject as Dic)) ? step(subject) : subject;
 
   // The guard is transparent to everything that looks at a step: the generated hooks chart reads
-  // `fn.name`, and `hook-placement.spec.ts` asks which step a list entry guards. A function's own
-  // `name` is non-writable but configurable, so it takes a defineProperty and not an assignment —
-  // and setting it means the step shows up under its real name in a stack trace too.
+  // `fn.name`, and `.step` says which step a list entry guards. A function's own `name` is
+  // non-writable but configurable, so it takes a defineProperty and not an assignment — and
+  // setting it means the step shows up under its real name in a stack trace too.
   Object.defineProperty(guarded, 'name', { value: step.name, configurable: true });
   return Object.assign(guarded, { step });
 };

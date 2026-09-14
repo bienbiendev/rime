@@ -82,7 +82,7 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
       });
     }
 
-    const _pathField = text('_path')._root().hidden().validate(validatePath);
+    const _pathField = text('_path').$root().hidden().validate(validatePath);
 
     // Add hidden fields
     fields.push(mimeType, text('filename').hidden(), text('filesize').hidden(), _pathField);

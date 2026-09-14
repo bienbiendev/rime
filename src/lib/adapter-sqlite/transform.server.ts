@@ -12,9 +12,12 @@ import {
   baseTableName,
   tableName as buildTableName,
   childTableNames,
+  joinName,
   type TableName
 } from './naming.server.js';
 import { transformDatabaseColumnsToPaths } from './columns.server.js';
+import { localeOrder, mergeLocaleRows } from './locales.server.js';
+import { resolvedReferencesOf } from '$lib/core/fields/util.js';
 
 /**
  * Turns the rows a read returned into the four piles core builds a document from.
@@ -31,13 +34,14 @@ export const createTransformHandle = <const C extends Config>(args: {
   const { configCtx, tables } = args;
 
   /**
-   * Merges a child row's locales branch onto it, and nulls the localized columns it has not
-   * saved yet — a localized block fetched in a locale it was never written in reads as absent
-   * columns otherwise, and absent is not null once the blank is merged.
+   * Merges a child row's locales branch onto it — the rows the read returned, one per locale in
+   * the fallback order, each column from the first that holds it — and nulls the localized
+   * columns no locale has saved yet: a localized block fetched in a locale it was never written
+   * in reads as absent columns otherwise, and absent is not null once the blank is merged.
    */
-  const withLocalesBranch = (row: Dic, branchTable: TableName): Dic => {
+  const withLocalesBranch = (row: Dic, branchTable: TableName, order: string[]): Dic => {
     const merged = {
-      ...((row[branchTable]?.[0] as Partial<GenericBlock>) || {}),
+      ...mergeLocaleRows(row[branchTable] as Partial<GenericBlock>[], order),
       ...row
     };
     const localesKeys = Object.keys(getTableColumns(tables[branchTable])).filter(
@@ -53,8 +57,10 @@ export const createTransformHandle = <const C extends Config>(args: {
     doc: RawDoc;
     slug: PrototypeSlug;
     locale?: string;
+    localeFallback?: boolean;
   }): Promise<DocumentRows> => {
-    const { slug, locale } = args;
+    const { slug, locale, localeFallback } = args;
+    const order = localeOrder(configCtx, locale, localeFallback) ?? [];
 
     let doc: Dic = args.doc;
 
@@ -64,9 +70,9 @@ export const createTransformHandle = <const C extends Config>(args: {
     const tableNameRelationFields = buildTableName({ owner: tableName, child: { kind: 'rels' } });
     const tableNameLocales = buildTableName({ owner: tableName, branch: 'locales' });
 
-    /** Add localized fields */
+    /** Add localized fields, each from the first locale in the fallback order that holds it. */
     if (locale && tableNameLocales in tables && doc[tableNameLocales]) {
-      doc = { ...doc[tableNameLocales][0], ...doc };
+      doc = { ...mergeLocaleRows(doc[tableNameLocales], order), ...doc };
       delete doc[tableNameLocales];
       delete doc.ownerId;
     }
@@ -85,7 +91,7 @@ export const createTransformHandle = <const C extends Config>(args: {
           branch: 'locales'
         });
 
-        if (locale && branchTable in tables) block = withLocalesBranch(block, branchTable);
+        if (locale && branchTable in tables) block = withLocalesBranch(block, branchTable, order);
 
         return omit([branchTable], transformDatabaseColumnsToPaths(block));
       });
@@ -107,7 +113,7 @@ export const createTransformHandle = <const C extends Config>(args: {
             branch: 'locales'
           });
 
-          if (locale && branchTable in tables) node = withLocalesBranch(node, branchTable);
+          if (locale && branchTable in tables) node = withLocalesBranch(node, branchTable, order);
 
           return [omit([branchTable], transformDatabaseColumnsToPaths(node))];
         } catch {
@@ -127,6 +133,16 @@ export const createTransformHandle = <const C extends Config>(args: {
     /****************************************************/
     // The document's own columns
     /****************************************************/
+
+    // A resolved reference came back twice: the id in its column, and the referenced document
+    // under `<column>__$doc`. The document carries the referenced one on the column's path;
+    // nobody is null. Left alone when the read did not ask for it.
+    for (const { column } of resolvedReferencesOf(configCtx.getBySlug(slug).fields)) {
+      const key = joinName(column);
+      if (!(key in doc)) continue;
+      doc[column] = doc[key] ?? null;
+      delete doc[key];
+    }
 
     // The child tables came back on the same row; they are their own piles now. Left on, they
     // flatten into `pages__$blocks_hero.0.id` keys that survive every step to be stripped by name

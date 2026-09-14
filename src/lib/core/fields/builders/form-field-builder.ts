@@ -47,6 +47,17 @@ export type FieldReferenceOptions = {
   /** Referenced table is this field's own table (self-FK); adapters need this
    *  to emit a `(): any =>` accessor and avoid a TS circular-declaration error. */
   selfReferencing?: boolean;
+  /**
+   * Read back as the referenced document instead of its id, joined by the adapter. Written as
+   * the id either way: a save may send the document back as it came.
+   *
+   * ```ts
+   * text('updatedBy').$references('staff', { resolve: true });
+   * // reads  { updatedBy: { id: 'abc', name: 'Ann', email: 'ann@x.io' } }
+   * // writes { updatedBy: 'abc' }
+   * ```
+   */
+  resolve?: boolean;
 };
 
 export type FieldReference = FieldReferenceOptions & { table: string };
@@ -121,13 +132,11 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
   }
 
   /**
-   * Force the field to be on the root table — usefull for fields that
-   * should not be versioned (ex: _parent for nested structures should
-   * always be on the root table to prevent different versions from having
-   * different parents).
+   * Keeps the field on the base row of a versioned config, so every version shares it.
+   * `_parent` on a nested collection is the typical case: the site tree must not fork per version.
    */
-  _root() {
-    this.field._root = true;
+  $root() {
+    this.field.root = true;
     return this;
   }
 
@@ -145,7 +154,7 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return {
       ...this.field,
       localized: !!this.field.localized,
-      root: !!this.field._root,
+      root: !!this.field.root,
       label: this.field.label || capitalize(this.field.name),
       required: !!this.field.required
     } as T & { localized: boolean; root: boolean; label: string; required: boolean };
@@ -226,8 +235,23 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
         const value = this.field.defaultValue;
         return typeof value === 'function' ? (value as DefaultValueFn<unknown>)(context) : value;
       },
-      generateType: (): string => this.generateType()
+      generateType: (): string =>
+        this._references?.resolve ? this.resolvedReferenceType() : this.generateType()
     };
+  }
+
+  /** The document a resolved reference reads as, whatever the field's own type says. */
+  private resolvedReferenceType(): string {
+    const shared = [
+      '//@shared:start ResolvedReference',
+      "export type ResolvedReference<T> = (Pick<T, 'id'> & Partial<T>) | null;",
+      '//@shared:end'
+    ].join('\n');
+    const target = `${capitalize(this._references!.table)}Doc`;
+    return [
+      shared,
+      `${this.field.name}${this.get.required ? '' : '?'}: ResolvedReference<${target}>`
+    ].join('\n');
   }
 
   hint(hint: string) {

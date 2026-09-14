@@ -1,7 +1,7 @@
 import type { Adapter } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/config/types.js';
 import { isStaff } from '$lib/core/auth/access.js';
-import type { AnyHook, HookTiming, OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
+import type { AnyHook, HookTiming, OperationQuery } from '$lib/core/pipeline/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { FileText } from '@lucide/svelte';
 import type { RequestEvent } from '@sveltejs/kit';
@@ -111,16 +111,9 @@ export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
 
   /**
    * Which **version row** a read means. `undefined` for a config that is not versioned, which is
-   * "the document's own row".
-   *
-   * Pass `intent: 'original'` when loading what an update is about to change — `?draft=true` on an
-   * update means "branch a new draft *from what is published*", the opposite of what it means on a
-   * read. Defaults to `'read'`.
+   * "the document's own row". See `versionsReadQuery`.
    */
-  versionQuery(
-    params: { draft?: boolean; versionId?: string },
-    intent?: ReadIntent
-  ): OperationQuery | undefined;
+  versionQuery(params: { latest?: boolean; versionId?: string }): OperationQuery | undefined;
 
   /**
    * Read through the API cache when it is on and this is not a system call. `key` is merged on top

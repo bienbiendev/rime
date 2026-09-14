@@ -20,19 +20,14 @@ import { buildWhereParam } from './where.server.js';
  * Two apparent differences between the collection and area facades this replaces turned out to be
  * nothing: an area's update reset every content row's status with no `where` while a collection
  * scoped it to `ownerId = id` — the same set for a single row; and a collection split off its
- * `._root()` fields before writing while an area did not — `splitRootData` returns an empty half
+ * `$root()` fields before writing while an area did not — `splitRootData` returns an empty half
  * when a config marks none. Both are core's now, and this is handed both halves.
  */
 
 /**
  * Writes a row and, when it has localized columns, its `__$$locales` half.
  *
- * The pair appeared four times across the two facades this module replaces; they now all go
- * through here or through `ensurePrototypeExists`, which guards identically.
- *
- * The guard on `data` does not catch the empty locales row in notes/known-defects.md §2: a
- * bootstrap prepares its data with `fillNotNull`, which seeds the primary key, so the object is
- * never empty even when every localized value is null.
+ * Every insert goes through here, a document's and a singleton's bootstrap alike.
  *
  * Returns the id actually written, which insertTableRecord derives from `row.id` or generates.
  */
@@ -51,8 +46,14 @@ export const insertRowWithLocales = async (
     updatedAt: args.now
   });
 
+  // A locales row says the locale was written. With nothing to say there is no row, and the
+  // first write in that locale makes one — the same for a document and for a singleton's
+  // bootstrap, whose seeded `id` is not a value.
   const { data, isLocalized, locale } = args.localized;
-  if (isLocalized && Object.keys(data).length) {
+  const written = Object.entries(data).some(
+    ([key, value]) => key !== 'id' && value !== null && value !== undefined
+  );
+  if (isLocalized && written) {
     await adapterUtil.insertTableRecord(
       db,
       tables,
@@ -220,7 +221,7 @@ export const updateWherePrototype = async (
  * Writes a new document: the rows the plan names.
  *
  * The insert half of `updatePrototype`, and it reads the same way: the caller says which rows this
- * write touches, and this executes. Where a versioned config's `._root()` fields go is
+ * write touches, and this executes. Where a versioned config's `$root()` fields go is
  * `versionsWritePlan`'s statement, made before the call.
  *
  * `contentId` names the row the content landed on — the versions row when there is one, the base row
@@ -378,20 +379,15 @@ export const ensurePrototypeExists = async (
     fillNotNull: true
   });
 
-  const createId = await adapterUtil.insertTableRecord(db, tables, table, { ...mainData });
-
-  // Guarded on the data as well as on `isLocalized`, matching insertRowWithLocales. Note this
-  // does not currently prevent the empty locales row described in notes/known-defects.md §2:
-  // `fillNotNull` seeds a primary key, so `localizedData` is never empty here even when every
-  // localized value is null. Fixing that means not counting the seeded id, and belongs in its
-  // own commit — see the doc.
-  if (isLocalized && Object.keys(localizedData).length) {
-    await adapterUtil.insertTableRecord(db, tables, localesTable, {
-      ...localizedData,
-      ownerId: createId,
-      locale
-    });
-  }
+  await insertRowWithLocales(
+    { db, tables },
+    {
+      table,
+      row: mainData,
+      now,
+      localized: { data: localizedData, isLocalized, locale }
+    }
+  );
 };
 
 type InsertArgs = {

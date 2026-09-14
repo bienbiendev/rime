@@ -1,6 +1,7 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import { t__ } from '$lib/core/i18n/index.js';
+  import { panelPath, panelUrl } from '$lib/core/routes/util.js';
   import Email from '$lib/fields/email/component/Email.svelte';
   import Text from '$lib/fields/text/component/Text.svelte';
   import AuthForm from '$lib/panel/components/sections/auth/AuthForm.svelte';
@@ -8,7 +9,6 @@
   import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
   import { setFormContext } from '$lib/panel/context/form.svelte';
   import { emailField, passwordField } from '$lib/panel/pages/auth/fields.js';
-  import { panelPath, panelUrl } from '$lib/panel/util/url.js';
   import type { FormErrors } from '$lib/types.js';
   import { KeyRound } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';

@@ -18,11 +18,11 @@ export const restUpdateById = endpoint(async ({ event, collection }) => {
     return handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.API });
   }
 
-  // Extract query parameters for versioning and draft status
+  // Which row: `versionId`, else the newest with `latest`, else the published one. `fork` makes
+  // a new version from it instead of writing it.
   const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
-  const draft = event.url.searchParams.get(PARAMS.DRAFT)
-    ? event.url.searchParams.get(PARAMS.DRAFT) === 'true'
-    : undefined;
+  const latest = event.url.searchParams.get(PARAMS.LATEST) === 'true' || undefined;
+  const fork = event.url.searchParams.get(PARAMS.FORK) === 'true' || undefined;
 
   // Extract data from the request body
   const [extractError, data] = await trycatch(() => extractData(event.request));
@@ -41,7 +41,8 @@ export const restUpdateById = endpoint(async ({ event, collection }) => {
       data,
       locale: rime.getLocale(),
       versionId,
-      draft
+      latest,
+      fork
     })
   );
 

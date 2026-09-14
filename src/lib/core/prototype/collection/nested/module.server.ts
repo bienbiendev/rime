@@ -19,7 +19,7 @@ export const augmentNested = <T extends IncomingConfig>(config: T): T => ({
     text('_parent')
       .$references(config.slug, { onDelete: 'set null', selfReferencing: true })
       .hidden()
-      ._root(),
-    number('_position').defaultValue(0).hidden()._root()
+      .$root(),
+    number('_position').defaultValue(0).hidden().$root()
   ]
 });
