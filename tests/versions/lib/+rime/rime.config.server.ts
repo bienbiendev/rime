@@ -131,5 +131,8 @@ export default rime({
   areas: [Settings, Infos],
   staff: {
     roles: [{ value: 'editor' }]
+  },
+  $sse: {
+    access: (key, user) => key.startsWith('public:') || key === `user:${user?.id}`
   }
 });

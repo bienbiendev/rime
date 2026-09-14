@@ -1,9 +1,9 @@
 import { definePlugin, type Plugin } from '../index.js';
 import { connect, emit } from './bus.server.js';
-import type { SSEAccess } from './types.js';
+import type { SSEConfig } from './types.js';
 
 /**
- * The event stream, at `/api/sse`.
+ * The event stream, at `/api/sse`. Added to every config, configured by its `$sse` key.
  *
  * Send with `rime.sse.emit(key, event, payload)`, listen with `openSse(keys, handler)`.
  *
@@ -11,10 +11,11 @@ import type { SSEAccess } from './types.js';
  * otherwise, so an app opens its own deliberately rather than by leaving a default alone.
  *
  * @example
- * sse({ access: (key) => key.startsWith('public:') })
+ * // rime.config.server.ts
+ * $sse: { access: (key) => key.startsWith('public:') }
  */
 export const sse = definePlugin(
-  (options?: { access?: SSEAccess }) =>
+  (options?: SSEConfig) =>
     ({
       name: 'sse',
       actions: { emit },
