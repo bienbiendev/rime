@@ -34,7 +34,10 @@ export function regenerateModulesDeclaration() {
     .filter((block) => block !== null)
     .join('\n\n');
 
-  writeFileSync(path.resolve(process.cwd(), 'src/rime.modules.generated.d.ts'), `${blocks}\n`);
+  // Nothing to declare, no file.
+  const file = path.resolve(process.cwd(), 'src/rime.modules.generated.d.ts');
+  if (blocks) writeFileSync(file, `${blocks}\n`);
+  else rmSync(file, { force: true });
 }
 
 export function rime(): Plugin {
