@@ -1,5 +1,15 @@
 # rimecms
 
+## 0.33.0
+
+### Minor Changes
+
+- [`78324b3`](https://github.com/bienbiendev/rime/commit/78324b36ed9ab47cb4174439494f255420d08165) - Added: `$sse` in the config takes the event stream's `access`, which says which keys a caller may listen to besides the panel's own. `SSEAccess` and `SSEConfig` are exported from `rimecms/types`.
+
+### Patch Changes
+
+- [`3217525`](https://github.com/bienbiendev/rime/commit/32175257874a2546ee584a1d61f241f1740583c1) - Fixed: a required date field generated `.default(0)` on a `timestamp_ms` column, which drizzle types as `Date`. The schema now writes `.default(new Date(0))`; drizzle-kit stores the same `0`, so no migration follows.
+
 ## 0.32.1
 
 ### Patch Changes
