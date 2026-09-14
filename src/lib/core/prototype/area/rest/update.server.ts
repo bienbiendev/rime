@@ -12,11 +12,11 @@ export const restUpdate = endpoint(async ({ event, area }) => {
   //
   const { rime } = event.locals;
 
-  // Extract versionId and draft parameters from the request URL
+  // Which row: `versionId`, else the newest with `latest`, else the published one. `fork` makes
+  // a new version from it instead of writing it.
   const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
-  const draft = event.url.searchParams.get(PARAMS.DRAFT)
-    ? event.url.searchParams.get(PARAMS.DRAFT) === 'true'
-    : undefined;
+  const latest = event.url.searchParams.get(PARAMS.LATEST) === 'true' || undefined;
+  const fork = event.url.searchParams.get(PARAMS.FORK) === 'true' || undefined;
 
   // Extract data from the request body
   const [extractError, data] = await trycatch(() => extractData(event.request));
@@ -29,12 +29,12 @@ export const restUpdate = endpoint(async ({ event, area }) => {
     rime.setLocale(data.locale);
   }
 
-  // Update the area with the extracted data, versionId, draft status, and current locale
   const [error, doc] = await trycatch(() =>
     area.update({
       data,
       versionId,
-      draft,
+      latest,
+      fork,
       locale: rime.getLocale()
     })
   );

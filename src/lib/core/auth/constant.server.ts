@@ -26,6 +26,15 @@ export const BETTER_AUTH_ROLES = {
   USER: 'user'
 } as const;
 
+/** Every member of `PRIVATE_FIELDS`, off a copy of the document. */
+export function withoutPrivateFields<T extends Dic>(doc: T): T {
+  const clean = { ...doc };
+  for (const key of PRIVATE_FIELDS) {
+    delete clean[key];
+  }
+  return clean;
+}
+
 /**
  * Strips PRIVATE_FIELDS off the session user. Call this only where a load() function is
  * about to hand `user` to the client (the public layouts in
@@ -35,9 +44,5 @@ export const BETTER_AUTH_ROLES = {
  */
 export function toPublicUser(user: User | undefined): User | undefined {
   if (!user) return undefined;
-  const clean: Dic = { ...user };
-  for (const key of PRIVATE_FIELDS) {
-    delete clean[key];
-  }
-  return clean as User;
+  return withoutPrivateFields(user as Dic) as User;
 }

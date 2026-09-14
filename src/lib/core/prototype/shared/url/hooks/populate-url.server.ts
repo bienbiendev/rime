@@ -105,27 +105,17 @@ export const populateURL = Hooks.beforeRead<'generic'>(async function populateUR
     if (url) {
       if (args.doc.url !== url) {
         /**
-         * The url is a field on the row the content is on, so this writes it there.
+         * The url is a field on the row the content is on, so this writes it there — which is
+         * what `contentOwner` resolves. The two tables a localized field lives across are
+         * `updateWhere`'s `locale` to sort out.
          *
-         * The adapter carried a whole `updateDocumentUrl` for this, with a four-way branch over
-         * `locale` × `config.versions` and an `OPERATION` enum. None of that was the database
-         * layer's: the row is the one this document is showing, and the two tables a localized
-         * field lives across are what `updateWhere`'s `locale` already resolves.
-         *
-         * A versions is a registered prototype in its own right, so writing to it is the same call
-         * to a different handle. `updateWhere` rather than `update` because a url is computed on
-         * read: it must not move `updatedAt`.
+         * `updateWhere` rather than `update` because a url is computed on read: it must not move
+         * `updatedAt`.
          */
-        const contentSlug = config._versions?.slug ?? config.slug;
         const contentId = config._versions ? args.doc.contentId : args.doc.id;
 
         if (contentId) {
-          const target =
-            config._versions || config.type === 'collection'
-              ? args.event.locals.rime.adapter.collection(contentSlug)
-              : args.event.locals.rime.adapter.area(contentSlug);
-
-          target.updateWhere({
+          args.event.locals.rime.adapter.contentOwner(config.slug).updateWhere({
             query: { where: { id: { equals: contentId } } },
             data: { url },
             locale

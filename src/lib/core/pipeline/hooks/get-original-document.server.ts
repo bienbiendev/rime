@@ -2,45 +2,30 @@ import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { RimeError } from '$lib/core/errors/index.js';
 
 /**
- * Loads the document an update is about to change.
+ * Loads the document an update is about to change: the row `versionId` names, else the newest
+ * one with `latest`, else the published one — selected exactly as a read selects, by
+ * `versionsReadQuery`. What is done to it is the next hook's, `defineVersionOperation`.
  *
- * Every prototype has one, so this step is core's. *Which row* it is, is not: on an update
- * `?draft=true` means "branch a new draft from the published version", the opposite of what
- * `draft` means on a read. Versions states that rule, and this reaches it through
- * `intent: 'original'` — see `ReadIntent`.
- *
- * What is left here is the part that is genuinely core's: load the original, of whichever
- * prototype this is.
+ * Every prototype has one, so this step is core's. A document with no published version answers
+ * `not_found` to an update that selects the published one; `latest` is how to write it.
  */
 export const getOriginalDocument = Hooks.beforeUpdate(async function getOriginalDocument(args) {
   const { event, config, context } = args;
   const { rime } = event.locals;
+  const { id, locale, versionId, latest } = context.params;
 
   let original;
 
   switch (config.type) {
     //
     case 'collection':
-      if (!context.params.id)
-        throw new RimeError(RimeError.OPERATION_ERROR, 'missing id @getOriginalDocument');
+      if (!id) throw new RimeError(RimeError.OPERATION_ERROR, 'missing id @getOriginalDocument');
 
-      original = await rime.collection(config.slug).findById({
-        locale: context.params.locale,
-        id: context.params.id,
-        versionId: context.params.versionId,
-        draft: context.params.draft,
-        intent: 'original'
-      });
-
+      original = await rime.collection(config.slug).findById({ locale, id, versionId, latest });
       break;
 
     case 'area':
-      original = await rime.area(config.slug).find({
-        locale: context.params.locale,
-        versionId: context.params.versionId,
-        draft: context.params.draft,
-        intent: 'original'
-      });
+      original = await rime.area(config.slug).find({ locale, versionId, latest });
       break;
   }
 

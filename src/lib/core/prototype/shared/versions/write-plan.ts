@@ -18,7 +18,7 @@ import { VersionOperations } from './strategy.js';
  * a create             split, and name no row: none exists yet
  * ```
  *
- * `splitRootData` is what makes a versioned config keep its `._root()` fields on the base row, and
+ * `splitRootData` is what makes a versioned config keep its `$root()` fields on the base row, and
  * it is this feature's rule to apply, not the adapter's.
  *
  * `context.contentOwnerId` is the row, and it is not the same question as this plan's `content`.
@@ -39,7 +39,7 @@ export const versionsWritePlan = (
 
   const { versionOperation, contentOwnerId } = args.context;
 
-  // The `._root()` fields stay on the base row; a versions table has no column for them.
+  // The `$root()` fields stay on the base row; a versions table has no column for them.
   const { base, content } = splitRootData(plan.data, args.config);
 
   // No row to name: this document has no version yet, and the adapter makes the first one.

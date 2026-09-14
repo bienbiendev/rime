@@ -2,10 +2,11 @@
   import { invalidateAll } from '$app/navigation';
   import { PARAMS } from '$lib/core/constants.js';
   import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
+  import { apiUrl } from '$lib/core/routes/util.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import * as Radio from '$lib/panel/components/ui/radio-group/index.js';
+  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { apiUrl } from '$lib/util/index.js';
   import { toKebabCase } from '$lib/util/string';
   import { toast } from 'svelte-sonner';
   import { t__ } from '../../../../core/i18n/index.js';
@@ -15,6 +16,7 @@
   type Props = { form: DocumentFormContext };
   const { form }: Props = $props();
 
+  const APIProxy = getAPIProxyContext();
   const statusList = Object.values(VERSIONS_STATUS);
 
   let dialogOpen = $state(false);
@@ -22,7 +24,7 @@
   async function handleValidateStatus() {
     const urlId = form.values._prototype === 'collection' ? `/${form.values.id}` : '/';
     await fetch(
-      `${apiUrl(toKebabCase(form.values._type))}${urlId}?draft=true&${PARAMS.VERSION_ID}=${form.values.versionId}`,
+      `${apiUrl(toKebabCase(form.values._type))}${urlId}?${PARAMS.VERSION_ID}=${form.values.versionId}`,
       {
         method: 'PATCH',
         body: JSON.stringify({
@@ -33,14 +35,18 @@
       .then((r) => {
         if (r.status === 200) {
           toast.success(t__('common.doc_updated'));
-          form.setValue('status', status);
+          // The server holds the new status already: the form takes it without getting dirty,
+          // so no auto-save follows a publish.
+          form.sync('status', status);
           dialogOpen = false;
           invalidateAll();
+          // The write went around the form: the version history re-reads its statuses.
+          APIProxy.invalidate(form.config.slug);
         } else {
           toast.error(t__('error.generic'));
         }
       })
-      .catch((err) => {
+      .catch(() => {
         toast.error(t__('error.generic'));
       });
   }

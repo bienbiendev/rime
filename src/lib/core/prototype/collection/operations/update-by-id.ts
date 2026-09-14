@@ -8,10 +8,16 @@ import type { DeepPartial } from '$lib/util/types.js';
 export type UpdateByIdArgs<T> = {
   id: string;
   versionId?: string;
-  draft?: boolean;
+  /** Start from the newest version rather than the published one. `PARAMS.LATEST`. */
+  latest?: boolean;
+  /** Make a new version from the selected row rather than write it. `PARAMS.FORK`. */
+  fork?: boolean;
+  /** Write the caller's auto-saved row of the version `versionId` names. Panel only. */
+  autoSave?: boolean;
   data: DeepPartial<T>;
   locale?: string | undefined;
-  isFallbackLocale?: string | undefined;
+  /** This write copies another locale's rows onto the row — see `copyLocales`. */
+  isLocaleCopy?: boolean;
 };
 
 type Args<T> = UpdateByIdArgs<T> & { ctx: PrototypeApiContext<BuiltCollection> };
@@ -24,7 +30,7 @@ type Args<T> = UpdateByIdArgs<T> & { ctx: PrototypeApiContext<BuiltCollection> }
  * how the saved document is read back.
  */
 export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T>) => {
-  const { ctx, locale, id, draft, isFallbackLocale = undefined } = args;
+  const { ctx, locale, id, latest, fork, isLocaleCopy } = args;
   const { event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
@@ -32,11 +38,13 @@ export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T
     params: {
       id,
       versionId: args.versionId,
-      draft,
+      latest,
+      fork,
+      autoSave: args.autoSave,
       locale
     },
     isSystemOperation,
-    isFallbackLocale
+    isLocaleCopy
   };
 
   return runUpdate<CollectionSlug, T, BuiltCollection>({
@@ -57,7 +65,7 @@ export const updateById = async <T extends GenericDoc = GenericDoc>(args: Args<T
      * `context.contentOwnerId` is what `handleNewVersion` answered and what step 4 wrote to, so on
      * a new-version update it is the version that was just created — which `params.versionId`
      * cannot be, since the caller did not name it. Reading `params.versionId` here returned the
-     * *published* version of a `?draft=true` update, unchanged, with a 200.
+     * *published* version of a `?fork=true` update, unchanged, with a 200.
      *
      * `runUpdate` asserts `contentOwnerId` before the write, so it is always set by now. A config
      * with no versions ignores the parameter entirely (see `readPrototype` in the adapter), where

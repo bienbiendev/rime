@@ -11,7 +11,6 @@ import type { OperationContext } from '$lib/core/pipeline/types.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { RegisterCollection } from '$lib/index.js';
-import { omitId } from '$lib/util/object.js';
 import type { DeepPartial, Dic } from '$lib/util/types.js';
 
 /**
@@ -82,34 +81,11 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
     locale
   });
 
-  // Use the document ID to find the created document
+  // The created document, in the one locale this create wrote. The other locales are not
+  // written: a read in one of them falls back field by field until it is translated.
   let document = (await rime
     .collection(config.slug)
     .findById({ id: created.id, locale, versionId: created.contentId })) as T;
-
-  if (locale) {
-    const locales = event.locals.rime.config.getLocalesCodes();
-
-    if (locales.length) {
-      // Get locales
-      const otherLocales = locales.filter((code) => code !== locale);
-      for (const otherLocale of otherLocales) {
-        rime.setLocale(otherLocale);
-        await rime
-          .collection(config.slug)
-          .system()
-          .updateById({
-            id: created.id,
-            versionId: created.contentId,
-            data: omitId(document) as DeepPartial<RegisterCollection[CollectionSlug]>,
-            locale: otherLocale,
-            isFallbackLocale: locale
-          });
-      }
-    }
-
-    rime.setLocale(locale);
-  }
 
   // Unlike afterUpdate, afterCreate's returned doc IS propagated — preserved as-is.
   const after = await runDocHooks<CollectionSlug, T>({

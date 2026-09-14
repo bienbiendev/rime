@@ -1,29 +1,76 @@
-import { getFieldAtPath } from '$lib/core/fields/util.js';
+import { getFieldAtPath, resolvedReferencesOf } from '$lib/core/fields/util.js';
 import { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { getColumns } from 'drizzle-orm';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
-import { childTableNames, tableName, type TableName } from './naming.server.js';
+import {
+  baseTableName,
+  childTableNames,
+  joinName,
+  tableName,
+  type TableName
+} from './naming.server.js';
+
+/** What a joined target is projected to, beside its `id`: whatever of these its table has. */
+const JOINED_COLUMNS = ['name', 'email', 'title', 'filename'];
+
+/**
+ * The `with` joining each resolved reference's target onto this table's rows.
+ *
+ * `table` is the base or the content table. A versioned config keeps its `$root()` references
+ * on the first and the rest on the second, so each table is asked only for its own. With a
+ * `select`, only the selected ones.
+ */
+export const resolvedReferenceJoins = (args: {
+  table: TableName;
+  tables: Dic;
+  config: BuiltCollection | BuiltArea;
+  select?: string[];
+}): Dic => {
+  const { table, tables, config, select } = args;
+  const isBase = table === baseTableName(config.slug);
+  const withParam: Dic = {};
+
+  for (const reference of resolvedReferencesOf(config.fields)) {
+    if (config._versions && reference.root !== isBase) continue;
+    if (select?.length && !select.includes(reference.path)) continue;
+
+    const target = tables[baseTableName(reference.to)];
+    if (!target) continue;
+
+    const targetColumns = Object.keys(getColumns(target));
+    const columns = ['id', ...JOINED_COLUMNS.filter((column) => targetColumns.includes(column))];
+    withParam[joinName(reference.column)] = {
+      columns: Object.fromEntries(columns.map((column) => [column, true]))
+    };
+  }
+
+  return withParam;
+};
 
 export const buildWithParam = (args: {
   table: TableName;
   select?: string[];
   locale?: string;
+  /** The locales a read draws on, first to last — `localeOrder`. The requested one alone if absent. */
+  fallback?: string[];
   tables: any;
   config: BuiltCollection | BuiltArea;
 }) => {
-  const { table, select = [], locale, tables, config: documentConfig } = args;
+  const { table, select = [], locale, fallback, tables, config: documentConfig } = args;
+  // A child row — a block, a tree node — belongs to one locale. Its locales branch, and the
+  // document's, are read for every locale in the order and merged in `transform`.
+  const branchWhere = branchFilter(locale, fallback);
   if (!select.length) {
-    return buildFullWithParam({
-      table,
-      locale,
-      tables
-    });
+    return {
+      ...buildFullWithParam({ table, locale, fallback, tables }),
+      ...resolvedReferenceJoins({ table, tables, config: documentConfig })
+    };
   }
 
-  const withParam: Dic = {};
+  const withParam: Dic = resolvedReferenceJoins({ table, tables, config: documentConfig, select });
 
   // Track paths for different field types
   const directRelationPaths: string[] = [];
@@ -62,7 +109,7 @@ export const buildWithParam = (args: {
               ...withParam[blocksTable],
               with: {
                 [localesBlockTable]: {
-                  where: { locale }
+                  where: branchWhere
                 }
               }
             };
@@ -92,7 +139,7 @@ export const buildWithParam = (args: {
               ...withParam[treeTable],
               with: {
                 [localesTreeTables]: {
-                  where: { locale }
+                  where: branchWhere
                 }
               }
             };
@@ -104,6 +151,7 @@ export const buildWithParam = (args: {
       if (fieldConfig.get.localized && locale) {
         const localesTableName = tableName({ owner: table, branch: 'locales' });
         if (localesTableName in tables) {
+          // `locale` too: the merge picks each column by the locale its row is for.
           if (withParam[localesTableName]) {
             withParam[localesTableName].columns = {
               ...withParam[localesTableName].columns,
@@ -111,8 +159,8 @@ export const buildWithParam = (args: {
             };
           } else {
             withParam[localesTableName] = {
-              where: { locale },
-              columns: { [sqlPath]: true }
+              where: branchWhere,
+              columns: { locale: true, [sqlPath]: true }
             };
           }
         }
@@ -169,7 +217,7 @@ export const buildWithParam = (args: {
             ...withParam[treeTable],
             with: {
               [localesTreeTable]: {
-                where: { locale }
+                where: branchWhere
               }
             }
           };
@@ -195,7 +243,7 @@ export const buildWithParam = (args: {
             ...withParam[blocksTable],
             with: {
               [localesBlockTable]: {
-                where: { locale }
+                where: branchWhere
               }
             }
           };
@@ -212,15 +260,22 @@ export const buildWithParam = (args: {
   return withParam;
 };
 
+/** The filter on a locales branch: every locale in the fallback order, else the one requested. */
+const branchFilter = (locale?: string, fallback?: string[]): Dic =>
+  fallback && fallback.length > 1 ? { locale: { in: fallback } } : { locale };
+
 const buildFullWithParam = ({
   table,
   locale,
+  fallback,
   tables
 }: {
   table: TableName;
   locale?: string;
+  fallback?: string[];
   tables: Dic;
 }): Dic => {
+  const branchWhere = branchFilter(locale, fallback);
   const blocksTables = childTableNames(table, 'blocks', tables);
   const treeTables = childTableNames(table, 'tree', tables);
 
@@ -241,7 +296,7 @@ const buildFullWithParam = ({
   if (locale) {
     const localesTableName = tableName({ owner: table, branch: 'locales' });
     if (localesTableName in tables) {
-      withParam[localesTableName] = { where: { locale } };
+      withParam[localesTableName] = { where: branchWhere };
     }
     for (const blocksTable of blocksTables) {
       const localesBlockTable = tableName({ owner: blocksTable, branch: 'locales' });
@@ -250,7 +305,7 @@ const buildFullWithParam = ({
           ...withParam[blocksTable],
           with: {
             [localesBlockTable]: {
-              where: { locale }
+              where: branchWhere
             }
           }
         };
@@ -263,7 +318,7 @@ const buildFullWithParam = ({
           ...withParam[treeTable],
           with: {
             [localesTreeTable]: {
-              where: { locale }
+              where: branchWhere
             }
           }
         };

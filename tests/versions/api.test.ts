@@ -1,5 +1,5 @@
-import { filePathToBase64 } from '$lib/core/prototype/collection/upload/util/converter.server.js';
 import { PARAMS } from '$lib/core/constants';
+import { filePathToBase64 } from '$lib/core/prototype/collection/upload/util/converter.server.js';
 import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant';
 import test, { expect } from '@playwright/test';
 import path from 'path';
@@ -337,7 +337,7 @@ test('Should update the published settings', async ({ request }) => {
 });
 
 test('Should update the settings and create a second settings version', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/settings?${PARAMS.DRAFT}=true`, {
+  const response = await request.patch(`${API_BASE_URL}/settings?${PARAMS.FORK}=true`, {
     headers: await signInSuperAdmin(request),
     data: {
       title: 'second settings version'
@@ -366,7 +366,7 @@ test('Should get the published settings', async ({ request }) => {
 });
 
 test('Should get the latest settings draft and publish it', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings?${PARAMS.DRAFT}=true`, {
+  const response = await request.get(`${API_BASE_URL}/settings?${PARAMS.LATEST}=true`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
@@ -484,7 +484,7 @@ test('Should create a News and publish it', async ({ request }) => {
 });
 
 test('Should update the initial News by creating a new version', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/news/${newsId}?${PARAMS.DRAFT}=true`, {
+  const response = await request.patch(`${API_BASE_URL}/news/${newsId}?${PARAMS.FORK}=true`, {
     headers: await signInSuperAdmin(request),
     data: {
       attributes: {
@@ -517,7 +517,7 @@ test('Should get the published news', async ({ request }) => {
 });
 
 test('Should get the draft news', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/news/${newsId}?${PARAMS.DRAFT}=true`, {
+  const response = await request.get(`${API_BASE_URL}/news/${newsId}?${PARAMS.LATEST}=true`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
@@ -585,7 +585,7 @@ test('None should be published and 404 should be returned', async ({ request }) 
 
 test('Should get second news version and publish it', async ({ request }) => {
   const response = await request.patch(
-    `${API_BASE_URL}/news/${newsId}?${PARAMS.VERSION_ID}=${secondNewsVersionId}&{PARAMS.DRAFT}=true`,
+    `${API_BASE_URL}/news/${newsId}?${PARAMS.VERSION_ID}=${secondNewsVersionId}`,
     {
       headers: await signInSuperAdmin(request),
       data: {
@@ -782,7 +782,7 @@ test('Should duplicate a published News as a draft copy with a new id', async ({
   // Draft, not published — duplicating a published doc must not
   // auto-publish the copy (see duplicate.ts's prepareDuplicate).
   const draftResponse = await request.get(
-    `${API_BASE_URL}/news/${duplicateId}?${PARAMS.DRAFT}=true`,
+    `${API_BASE_URL}/news/${duplicateId}?${PARAMS.LATEST}=true`,
     { headers }
   );
   expect(draftResponse.status()).toBe(200);
@@ -814,7 +814,7 @@ test('Should duplicate a News that was never published (draft-only source)', asy
   const headers = await signInSuperAdmin(request);
 
   // No status supplied -> created as a draft with no published version at
-  // all. duplicate.ts's initial fetch must pass draft: true or it 404s
+  // all. duplicate.ts's initial fetch must pass latest: true or it 404s
   // trying to read a published version that doesn't exist.
   const createResponse = await request.post(`${API_BASE_URL}/news`, {
     headers,
@@ -832,7 +832,7 @@ test('Should duplicate a News that was never published (draft-only source)', asy
   expect(duplicateId).not.toBe(source.id);
 
   const draftResponse = await request.get(
-    `${API_BASE_URL}/news/${duplicateId}?${PARAMS.DRAFT}=true`,
+    `${API_BASE_URL}/news/${duplicateId}?${PARAMS.LATEST}=true`,
     { headers }
   );
   expect(draftResponse.status()).toBe(200);
@@ -840,7 +840,7 @@ test('Should duplicate a News that was never published (draft-only source)', asy
   expect(draftDoc.status).toBe(VERSIONS_STATUS.DRAFT);
   expect(draftDoc.attributes.title).toBe('Never published (copy)');
 
-  const sourceAfter = await request.get(`${API_BASE_URL}/news/${source.id}?${PARAMS.DRAFT}=true`, {
+  const sourceAfter = await request.get(`${API_BASE_URL}/news/${source.id}?${PARAMS.LATEST}=true`, {
     headers
   });
   const { doc: sourceAfterDoc } = await sourceAfter.json();
@@ -860,7 +860,7 @@ test('Should duplicate a nested child Page, keeping it under the same parent', a
   expect(duplicateId).not.toBe(childPageId);
 
   const draftResponse = await request.get(
-    `${API_BASE_URL}/pages/${duplicateId}?${PARAMS.DRAFT}=true`,
+    `${API_BASE_URL}/pages/${duplicateId}?${PARAMS.LATEST}=true`,
     { headers }
   );
   expect(draftResponse.status()).toBe(200);
@@ -907,7 +907,7 @@ test('Should duplicate a Pdf, and the copy must survive deleting the original', 
   expect(duplicateId).not.toBe(source.id);
 
   const draftResponse = await request.get(
-    `${API_BASE_URL}/pdf/${duplicateId}?${PARAMS.DRAFT}=true`,
+    `${API_BASE_URL}/pdf/${duplicateId}?${PARAMS.LATEST}=true`,
     { headers }
   );
   expect(draftResponse.status()).toBe(200);
@@ -925,7 +925,7 @@ test('Should duplicate a Pdf, and the copy must survive deleting the original', 
   // The duplicate — a wholly separate document — must still be intact,
   // filename and all, after the original it shared a file with is gone.
   const afterDeleteResponse = await request.get(
-    `${API_BASE_URL}/pdf/${duplicateId}?${PARAMS.DRAFT}=true`,
+    `${API_BASE_URL}/pdf/${duplicateId}?${PARAMS.LATEST}=true`,
     { headers }
   );
   expect(afterDeleteResponse.status()).toBe(200);
@@ -950,9 +950,9 @@ test('Should create a Pdf and exceed maxVersions with draft updates', async ({ r
     path.resolve(process.cwd(), 'tests/versions/landscape.jpg')
   );
 
-  // Published from the start — ?draft=true means "branch a new draft from
+  // Published from the start — ?fork=true means "branch a new draft from
   // the currently published version" (see defineVersionUpdateOperation /
-  // NEW_DRAFT_FROM_PUBLISHED, which fetches with draft: false), so it 404s
+  // NEW_VERSION, which starts from the published row), so it 404s
   // with nothing to branch from unless a published version already exists.
   const createResponse = await request.post(`${API_BASE_URL}/pdf`, {
     headers,
@@ -975,7 +975,7 @@ test('Should create a Pdf and exceed maxVersions with draft updates', async ({ r
   // still-shared file (dedup means every version points at the same
   // landscape.jpg) out from under the versions that still reference it.
   for (let i = 1; i <= 5; i++) {
-    const response = await request.patch(`${API_BASE_URL}/pdf/${pdfId}?${PARAMS.DRAFT}=true`, {
+    const response = await request.patch(`${API_BASE_URL}/pdf/${pdfId}?${PARAMS.FORK}=true`, {
       headers,
       data: { alt: `v${i}` }
     });
@@ -1020,7 +1020,7 @@ test('Should remove all versions when the owning document is deleted', async ({ 
   const { docs } = await versionsResponse.json();
   expect(docs).toHaveLength(0);
 
-  const getResponse = await request.get(`${API_BASE_URL}/pdf/${pdfId}?${PARAMS.DRAFT}=true`, {
+  const getResponse = await request.get(`${API_BASE_URL}/pdf/${pdfId}?${PARAMS.LATEST}=true`, {
     headers
   });
   expect(getResponse.status()).toBe(404);
@@ -1161,4 +1161,204 @@ test('Should store the computed url on the version row', async ({ request }) => 
   expect(found.status()).toBe(200);
   const { docs } = await found.json();
   expect(docs.map((one: { id: string }) => one.id)).toContain(doc.id);
+});
+
+/*********************************************************
+/* Authorship across versions — createdBy / updatedBy
+/*********************************************************
+
+`createdBy` is declared `$root()`, so it lives on the document's root row and reads the same
+from every version. `updatedBy` is a plain field, so it lives on the version row and answers
+"who wrote *this* version". These tests pin that difference. */
+
+const signInReviser = signIn('reviser@email.com', PASSWORD);
+
+let authorshipSuperAdminId: string;
+let reviserId: string;
+
+let authoredNewsId: string;
+let authoredNewsFirstVersionId: string;
+
+test('Should capture the superadmin id and create a reviser', async ({ request }) => {
+  const login = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
+    data: { email: ADMIN_EMAIL, password: PASSWORD }
+  });
+  expect(login.status()).toBe(200);
+  authorshipSuperAdminId = (await login.json()).user.id;
+
+  const reviser = await request.post(`${API_BASE_URL}/staff`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      email: 'reviser@email.com',
+      name: 'Reviser',
+      roles: ['admin'],
+      password: PASSWORD
+    }
+  });
+  expect(reviser.status()).toBe(200);
+  reviserId = (await reviser.json()).doc.id;
+});
+
+test('Creating a News stamps both columns with the author', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/news`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      attributes: { title: 'Authored news', slug: 'authored-news' },
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.createdBy?.id).toBe(authorshipSuperAdminId);
+  expect(doc.updatedBy?.id).toBe(authorshipSuperAdminId);
+  authoredNewsId = doc.id;
+  authoredNewsFirstVersionId = doc.versionId;
+});
+
+test('A new version keeps createdBy and stamps updatedBy with the reviser', async ({ request }) => {
+  // `?fork=true` branches a new version off the published one. A plain PATCH rewrites the
+  // version in place and would leave `versionId` alone.
+  const response = await request.patch(
+    `${API_BASE_URL}/news/${authoredNewsId}?${PARAMS.FORK}=true`,
+    {
+      headers: await signInReviser(request),
+      data: { attributes: { title: 'Authored news, revised' } }
+    }
+  );
+  expect(response.status()).toBe(200);
+
+  // Read the draft back rather than trusting the PATCH response to report the row it branched.
+  const { doc } = await request
+    .get(`${API_BASE_URL}/news/${authoredNewsId}?${PARAMS.LATEST}=true`, {
+      headers: await signInSuperAdmin(request)
+    })
+    .then((r) => r.json());
+
+  expect(doc.status).toBe(VERSIONS_STATUS.DRAFT);
+  expect(doc.versionId).not.toBe(authoredNewsFirstVersionId);
+  // Base row, shared by every version.
+  expect(doc.createdBy?.id).toBe(authorshipSuperAdminId);
+  // Version row, written by whoever branched it.
+  expect(doc.updatedBy?.id).toBe(reviserId);
+});
+
+test('The first version still reports its own writer', async ({ request }) => {
+  const response = await request.get(
+    `${API_BASE_URL}/news/${authoredNewsId}?${PARAMS.VERSION_ID}=${authoredNewsFirstVersionId}`,
+    { headers: await signInSuperAdmin(request) }
+  );
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.versionId).toBe(authoredNewsFirstVersionId);
+  // Shared with every other version — it hangs off the root row.
+  expect(doc.createdBy?.id).toBe(authorshipSuperAdminId);
+  // Per version — this one predates the reviser's write.
+  expect(doc.updatedBy?.id).toBe(authorshipSuperAdminId);
+});
+
+test('The draft version reports the reviser', async ({ request }) => {
+  const response = await request.get(
+    `${API_BASE_URL}/news/${authoredNewsId}?${PARAMS.LATEST}=true`,
+    { headers: await signInSuperAdmin(request) }
+  );
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.createdBy?.id).toBe(authorshipSuperAdminId);
+  expect(doc.updatedBy?.id).toBe(reviserId);
+});
+
+let authorshipInfosVersionId: string;
+
+test('An area version records the user that wrote it', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/infos`, {
+    headers: await signInSuperAdmin(request),
+    data: { title: 'authorship-1' }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.updatedBy?.id).toBe(authorshipSuperAdminId);
+  authorshipInfosVersionId = doc.versionId;
+});
+
+test('The next area version records the next user, the previous one is unchanged', async ({
+  request
+}) => {
+  const update = await request.patch(`${API_BASE_URL}/infos`, {
+    headers: await signInReviser(request),
+    data: { title: 'authorship-2' }
+  });
+  expect(update.status()).toBe(200);
+  const updated = await update.json();
+  expect(updated.doc.versionId).not.toBe(authorshipInfosVersionId);
+  expect(updated.doc.updatedBy?.id).toBe(reviserId);
+
+  const previous = await request.get(
+    `${API_BASE_URL}/infos?${PARAMS.VERSION_ID}=${authorshipInfosVersionId}`,
+    { headers: await signInSuperAdmin(request) }
+  );
+  expect(previous.status()).toBe(200);
+  const { doc } = await previous.json();
+  expect(doc.title).toBe('authorship-1');
+  expect(doc.updatedBy?.id).toBe(authorshipSuperAdminId);
+});
+
+/*********************************************************
+/* Auto-save — the column, the guards, the reads (news opts in)
+/*********************************************************/
+
+test('A version reports the time it was written, not the time the document was', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const first = await request
+    .get(
+      `${API_BASE_URL}/news/${authoredNewsId}?${PARAMS.VERSION_ID}=${authoredNewsFirstVersionId}`,
+      {
+        headers
+      }
+    )
+    .then((r) => r.json());
+  const draft = await request
+    .get(`${API_BASE_URL}/news/${authoredNewsId}?${PARAMS.LATEST}=true`, { headers })
+    .then((r) => r.json());
+
+  // The draft was branched after the first version was last written.
+  expect(new Date(first.doc.updatedAt).getTime()).toBeLessThan(
+    new Date(draft.doc.updatedAt).getTime()
+  );
+});
+
+test('A PATCH cannot set isAutoSave', async ({ request }) => {
+  const response = await request.patch(
+    `${API_BASE_URL}/news/${authoredNewsId}?${PARAMS.VERSION_ID}=${authoredNewsFirstVersionId}`,
+    { headers: await signInSuperAdmin(request), data: { isAutoSave: true } }
+  );
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.isAutoSave).toBe(false);
+});
+
+test('?autoSave=true on the REST API is an ordinary update', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const versionsUrl = `${API_BASE_URL}/news--versions?where[ownerId][equals]=${authoredNewsId}`;
+  const before = await request.get(versionsUrl, { headers }).then((r) => r.json());
+
+  const response = await request.patch(
+    `${API_BASE_URL}/news/${authoredNewsId}?${PARAMS.VERSION_ID}=${authoredNewsFirstVersionId}&autoSave=true`,
+    { headers, data: { attributes: { title: 'Authored news, via REST' } } }
+  );
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.isAutoSave).toBe(false);
+  expect(doc.versionId).toBe(authoredNewsFirstVersionId);
+
+  const after = await request.get(versionsUrl, { headers }).then((r) => r.json());
+  expect(after.docs).toHaveLength(before.docs.length);
+});
+
+test('The versions of a public collection are not readable without credentials', async ({
+  request
+}) => {
+  const response = await request.get(`${API_BASE_URL}/news--versions`);
+  expect(response.status()).toBe(403);
 });

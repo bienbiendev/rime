@@ -12,7 +12,8 @@ import { baseTableName } from './naming.server.js';
 import { buildOrderByParam } from './order-by.server.js';
 import * as adapterUtil from './columns.server.js';
 import { buildWhereParam } from './where.server.js';
-import { buildWithParam } from './select.server.js';
+import { localeOrder } from './locales.server.js';
+import { buildWithParam, resolvedReferenceJoins } from './select.server.js';
 
 /**
  * Reading a prototype's rows.
@@ -37,6 +38,8 @@ type ReadArgs = {
   id?: string;
   select?: string[];
   locale?: string;
+  /** Whether an untranslated field reads from the other locales. `true` unless said otherwise. */
+  localeFallback?: boolean;
   /** Which content row, when the caller means a particular one. The newest otherwise. */
   content?: OperationQuery;
   config: BuiltCollection | BuiltArea;
@@ -58,10 +61,11 @@ type ReadArgs = {
  */
 export const readPrototype = async (
   { db, tables, configCtx }: DepsWithConfig,
-  { slug, id, select, locale, content, config, versions }: ReadArgs
+  { slug, id, select, locale, localeFallback, content, config, versions }: ReadArgs
 ): Promise<Dic | undefined> => {
   const table = baseTableName(slug);
   const rootTable = tables[table];
+  const fallback = localeOrder(configCtx, locale, localeFallback);
   // Cast because with a single registered area the slug type collapses to one literal and
   // Drizzle infers an over-precise per-table shape instead of the general one.
   const queryTable = (db.query as Record<string, any>)[table];
@@ -72,7 +76,7 @@ export const readPrototype = async (
     return queryTable.findFirst({
       columns: adapterUtil.columnsParams({ table: rootTable, select }),
       ...byId,
-      with: buildWithParam({ table, select, locale, tables, config }) || undefined
+      with: buildWithParam({ table, select, locale, fallback, tables, config }) || undefined
     });
   }
 
@@ -84,9 +88,11 @@ export const readPrototype = async (
     columns: adapterUtil.columnsParams({ table: rootTable, select }),
     ...byId,
     with: {
+      // The base row's own resolved references; the content row's come with `buildWithParam`.
+      ...resolvedReferenceJoins({ table, tables, config, select }),
       [contentTable]: {
         columns: adapterUtil.columnsParams({ table: tables[contentTable], select }),
-        with: buildWithParam({ table: contentTable, select, locale, tables, config }),
+        with: buildWithParam({ table: contentTable, select, locale, fallback, tables, config }),
         // The row the caller's filter names, else the newest — one query either way, and the
         // adapter chooses nothing. Which content row a request means is decided above this module
         // and arrives as an ordinary filter (`FeatureDefinition.readQuery`).
@@ -134,6 +140,7 @@ export const findManyPrototypes = async (
     limit,
     offset,
     locale,
+    localeFallback,
     content,
     config,
     versions
@@ -143,13 +150,14 @@ export const findManyPrototypes = async (
   const slug = args.slug as PrototypeSlug;
   const table = baseTableName(slug);
   const query = incomingQuery ? normalizeQuery(incomingQuery) : undefined;
+  const fallback = localeOrder(configCtx, locale, localeFallback);
 
   // No versions: everything is on the base table, so this is one plain query.
   if (!versions) {
     const params: Dic = {
-      with: buildWithParam({ table, select, tables, config, locale }) || undefined,
+      with: buildWithParam({ table, select, tables, config, locale, fallback }) || undefined,
       orderBy: (t: GenericTable) =>
-        buildOrderByParam({ slug, locale, tables, by: sort, rootTable: t }),
+        buildOrderByParam({ slug, locale, tables, configCtx, by: sort, rootTable: t }),
       // sqlite requires a limit when an offset is present.
       limit: limit || (typeof offset === 'number' ? 1000000 : undefined),
       offset: offset || undefined
@@ -180,7 +188,7 @@ export const findManyPrototypes = async (
   const versionsSlug = versions.slug as PrototypeSlug;
   const contentTable = baseTableName(versionsSlug);
   const withParam =
-    buildWithParam({ table: contentTable, select, tables, config, locale }) || undefined;
+    buildWithParam({ table: contentTable, select, tables, config, locale, fallback }) || undefined;
 
   // The caller's own filter, and the one saying which content row each document shows. Both
   // resolve against the versions table, so they are two wheres to `and` rather than two query objects to
@@ -213,7 +221,15 @@ export const findManyPrototypes = async (
     offset: offset,
     // The sortable columns are on the versions table, so the sort builder is handed it by name.
     orderBy: (t: GenericTable) =>
-      buildOrderByParam({ slug, locale, tables, by: sort, versions: contentTable, rootTable: t })
+      buildOrderByParam({
+        slug,
+        locale,
+        tables,
+        configCtx,
+        by: sort,
+        versions: contentTable,
+        rootTable: t
+      })
   };
   Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);
 
@@ -221,6 +237,7 @@ export const findManyPrototypes = async (
     ...params,
     columns: adapterUtil.columnsParams({ table: tables[table], select }),
     with: {
+      ...resolvedReferenceJoins({ table, tables, config, select }),
       [contentTable]: {
         with: withParam,
         where: { RAW: contentWhere },
@@ -256,6 +273,8 @@ type FindManyArgs = {
   limit?: number;
   offset?: number;
   locale?: string;
+  /** See `readPrototype`. */
+  localeFallback?: boolean;
   /** Per document, which content row — see `readPrototype`. */
   content?: OperationQuery;
   config: BuiltCollection | BuiltArea;

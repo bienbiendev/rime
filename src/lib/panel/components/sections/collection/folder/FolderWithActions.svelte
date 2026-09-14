@@ -1,18 +1,18 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
-  import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
+  import { resolve } from '$app/paths';
   import type { BuiltCollectionClient } from '$lib/core/config/types.js';
   import { PARAMS } from '$lib/core/constants.js';
   import { directoriesKebab } from '$lib/core/prototype/collection/upload/naming.js';
+  import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
   import type { GenericDoc } from '$lib/core/prototype/types.js';
+  import { apiUrl, panelPath } from '$lib/core/routes/util.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import ContextMenu from '$lib/panel/components/ui/context-menu/ContextMenu.svelte';
   import ContextMenuItem from '$lib/panel/components/ui/context-menu/ContextMenuItem.svelte';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
-  import { panelUrl } from '$lib/panel/util/url.js';
   import { trycatchFetch } from '$lib/util/function.js';
-  import { apiUrl } from '$lib/util/index.js';
   import { Pencil, Trash2 } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
   import { t__ } from '../../../../../core/i18n/index.js';
@@ -138,7 +138,7 @@
   }
 
   function handleGoToFolder() {
-    goto(`${panelUrl(collection.kebab)}?${PARAMS.UPLOAD_PATH}=${folder.id}`);
+    goto(resolve(`${panelPath(collection.kebab)}?${PARAMS.UPLOAD_PATH}=${folder.id}`));
   }
 
   function handleDragStart(e: DragEvent) {

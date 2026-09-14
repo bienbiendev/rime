@@ -54,7 +54,7 @@ export type { Link } from './fields/link/types.js';
 // Util
 export type { WithRelationPopulated } from '$lib/core/fields/types.js';
 
-export type { RouteHandlers } from './core/handlers/routes.server.js';
+export type { RouteHandlers } from './core/routes/handler.server.js';
 export type { Plugin } from './core/plugins/index.js';
 export type { Rime, RimeContext } from './core/rime.server.js';
 export type { BlocksFieldBlockRenderTitle } from './fields/blocks/index.js';

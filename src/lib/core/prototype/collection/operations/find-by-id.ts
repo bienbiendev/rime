@@ -1,7 +1,7 @@
 import { RimeError } from '$lib/core/errors/index.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { readDocument, runBeforeOperation } from '$lib/core/pipeline/run.server.js';
-import type { OperationContext, ReadIntent } from '$lib/core/pipeline/types.js';
+import type { OperationContext } from '$lib/core/pipeline/types.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
 
@@ -11,22 +11,19 @@ export type FindByIdArgs = {
   locale?: string | undefined;
   depth?: number;
   select?: string[];
-  draft?: boolean;
+  /** The newest version, whatever its status; the published one otherwise. `PARAMS.LATEST`. */
+  latest?: boolean;
   /**
-   * Why this read is happening. `'read'` unless the update pipeline is loading what it is about
-   * to change, which selects a different row for the same `draft` — see `ReadIntent`.
-   *
-   * Internal, in the same way `isSystemOperation` is: `getOriginalDocument` is the only caller
-   * that passes it. It is here rather than a `content` filter on the args so that resolving one
-   * stays behind `ctx.versionQuery` and no caller has to know what a version is.
+   * Whether a field the locale has not written reads from the other locales. `true` unless said
+   * otherwise; `false` is the locale's own rows, which is what a copy onto another row reads.
    */
-  intent?: ReadIntent;
+  localeFallback?: boolean;
 };
 
 type Args = FindByIdArgs & { ctx: PrototypeApiContext<BuiltCollection> };
 
 export const findById = async <T extends GenericDoc>(args: Args) => {
-  const { ctx, id, versionId, locale, depth, select, draft, intent } = args;
+  const { ctx, id, versionId, locale, depth, select, latest, localeFallback } = args;
   const { config, event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
@@ -36,7 +33,7 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
       versionId,
       locale,
       depth,
-      draft,
+      latest,
       select
     },
     isSystemOperation
@@ -52,9 +49,10 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
   const documentRaw = await rime.adapter.collection(config.slug).find({
     id,
     locale,
+    localeFallback,
     select,
     // `draft` and `versionId` are request parameters; which row they name is the feature's answer.
-    content: ctx.versionQuery({ draft, versionId }, intent)
+    content: ctx.versionQuery({ latest, versionId })
   });
 
   // The adapter reports "nothing matched" and leaves the meaning to the caller, so an HTTP-shaped
@@ -67,6 +65,7 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
     event,
     context,
     locale,
+    localeFallback,
     depth,
     select
   });

@@ -7,7 +7,7 @@ import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field, FormField } from '$lib/fields/types.js';
-import { tableName as buildTableName } from '../naming.server.js';
+import { tableName as buildTableName, getSchemaColumnNames } from '../naming.server.js';
 import { toSchemaColumn } from './column.server.js';
 import type { TableName } from '../naming.server.js';
 import {
@@ -20,6 +20,9 @@ import type { ColumnDeclaration } from '$lib/core/adapter.js';
 
 /** A relation field on a prototype: which collection it points at, and whether it is localized. */
 export type RelationFieldsMap = Record<string, { to: string; localized?: boolean }>;
+
+/** A reference the read resolves: the table and column holding the foreign key, and its target. */
+export type ReferenceJoin = { table: TableName; column: string; to: string };
 
 type Args = {
   fields: FieldBuilder<Field>[];
@@ -49,6 +52,8 @@ type Return = {
   relationFieldsMap: RelationFieldsMap;
   relationsDic: Record<string, string[]>;
   relationFieldsHasLocale: boolean;
+  /** Every resolved reference on this table and its blocks and tree tables. */
+  referenceJoins: ReferenceJoin[];
 };
 
 /**
@@ -69,6 +74,7 @@ const buildRootTable = async ({
   blocksRegister
 }: Args): Promise<Return> => {
   const blocksTables: string[] = [];
+  const referenceJoins: ReferenceJoin[] = [];
   let relationFieldsHasLocale = false;
 
   const generateFieldsTemplates = async (
@@ -129,7 +135,8 @@ const buildRootTable = async ({
               schema: blockTable,
               relationsDic: nestedRelationsDic,
               relationFieldsMap: nestedRelationFieldsDic,
-              relationFieldsHasLocale: nestedRelationFieldsHasLocale
+              relationFieldsHasLocale: nestedRelationFieldsHasLocale,
+              referenceJoins: nestedReferenceJoins
             } = await buildRootTable({
               blocksRegister,
               fields: block.get.fields,
@@ -143,6 +150,7 @@ const buildRootTable = async ({
             relationsDic = nestedRelationsDic;
             relationFieldsMap = nestedRelationFieldsDic;
             if (nestedRelationFieldsHasLocale) relationFieldsHasLocale = true;
+            referenceJoins.push(...nestedReferenceJoins);
             blocksRegister.push(blockTableName);
             blocksTables.push(blockTable);
           }
@@ -162,7 +170,8 @@ const buildRootTable = async ({
             schema: treeTable,
             relationsDic: nestedRelationsDic,
             relationFieldsMap: nestedRelationFieldsDic,
-            relationFieldsHasLocale: nestedRelationFieldsHasLocale
+            relationFieldsHasLocale: nestedRelationFieldsHasLocale,
+            referenceJoins: nestedReferenceJoins
           } = await buildRootTable({
             blocksRegister,
             fields: field.get.fields,
@@ -176,12 +185,21 @@ const buildRootTable = async ({
           relationsDic = nestedRelationsDic;
           relationFieldsMap = nestedRelationFieldsDic;
           if (nestedRelationFieldsHasLocale) relationFieldsHasLocale = true;
+          referenceJoins.push(...nestedReferenceJoins);
           blocksRegister.push(treeTableName);
           blocksTables.push(treeTable);
         }
       } else if (field instanceof FormFieldBuilder) {
         if (checkLocalized(field)) {
           templates.push(toSchemaColumn(field, parentPath) + ',');
+          // A reference the read resolves gets a relation to its target beside the column.
+          if (field._references?.resolve) {
+            referenceJoins.push({
+              table: tableName,
+              column: getSchemaColumnNames({ name: field.name, parentPath }).camel,
+              to: field._references.table
+            });
+          }
         }
       }
     }
@@ -227,7 +245,8 @@ const buildRootTable = async ({
     schema: [table, ...blocksTables].join('\n\n'),
     relationFieldsMap,
     relationFieldsHasLocale,
-    relationsDic
+    relationsDic,
+    referenceJoins
   };
 };
 

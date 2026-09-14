@@ -1,4 +1,6 @@
+import { isStaff } from '$lib/core/auth/access.js';
 import { normalizeQuery } from '$lib/core/pipeline/query.js';
+import { selectWithTitle } from '$lib/core/prototype/shared/title/select.js';
 import { PARAMS } from '$lib/core/constants.js';
 import { handleError } from '$lib/core/errors/handler.server.js';
 import { trycatch } from '$lib/util/function.js';
@@ -18,30 +20,18 @@ export const restGet = endpoint(async ({ event, collection }) => {
     .filter((key) => key.startsWith('where'))
     .toArray().length;
 
-  function buildSelect(params: typeof event.url.searchParams) {
-    const paramSelect = params.get(PARAMS.SELECT)
-      ? params.get(PARAMS.SELECT)!.split(',')
-      : undefined;
-    if (
-      paramSelect &&
-      paramSelect.includes('title') &&
-      !paramSelect.includes(collection.config.asTitle)
-    ) {
-      paramSelect.push(collection.config.asTitle);
-    }
-    return paramSelect;
-  }
-
   const query = hasQueryParams ? normalizeQuery(event.url.search.substring(1)) : undefined;
+  // A row other than the published one is staff's to see: from anyone else, `latest` reads as absent.
+  const staff = isStaff(event.locals.user);
   const apiParams = {
     locale: rime.getLocale(),
     sort: params.get(PARAMS.SORT) || undefined,
     depth: params.get(PARAMS.DEPTH) ? parseInt(params.get(PARAMS.DEPTH)!) : 0,
     limit: params.get(PARAMS.LIMIT) ? parseInt(params.get(PARAMS.LIMIT)!) : undefined,
     offset: params.get(PARAMS.OFFSET) ? parseInt(params.get(PARAMS.OFFSET)!) : undefined,
-    draft: params.get(PARAMS.DRAFT) ? params.get(PARAMS.DRAFT) === 'true' : undefined,
+    latest: staff && params.get(PARAMS.LATEST) ? params.get(PARAMS.LATEST) === 'true' : undefined,
     query,
-    select: buildSelect(params)
+    select: selectWithTitle(params.get(PARAMS.SELECT), collection.config.asTitle)
   };
 
   const [error, docs] = await trycatch(() => collection.find(apiParams));

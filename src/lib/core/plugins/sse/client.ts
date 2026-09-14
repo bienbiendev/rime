@@ -1,57 +1,60 @@
-import type { ContentUpdatePayload } from './types.js';
-
-export type SSEEvent = {
-  type: string;
-  details: ContentUpdatePayload;
-};
-
-type SSEHandler = (event: SSEEvent) => void | Promise<void>;
+import type { SSEEvent, SSEHandler } from './types.js';
 
 /**
- * Opens an SSE connection with a single event handler.
+ * Listen to the key, or keys, you name. Returns the unsubscribe.
+ *
+ * The keys go in the request, so the server decides once whether you may hear them and then
+ * sends you only those — nothing arrives that you did not ask for.
+ *
+ * Callers naming the same keys share one connection: a browser allows only a handful per origin,
+ * and the panel has a listener per open document. It opens on the first caller and closes when
+ * the last one leaves.
+ *
  * @example
- * const close = openSse(async (evt) => {
- *   if (evt.type === 'rime:update') {
- *     if (evt.details.documentType === 'pages') {
- *       await invalidateAll();
- *     }
- *   }
- * });
+ * $effect(() => openSse(`rime:pages:${id}`, ({ event }) => {
+ *   if (event === 'rime:lock') invalidateAll();
+ * }));
  */
-export const openSse = (handler: SSEHandler): (() => void) => {
-  const es = new EventSource('/api/sse');
-
-  console.log('[SSE] init client');
-
-  // Handle custom events (rime:*)
-  const handleCustomEvent = async (evt: MessageEvent) => {
-    console.log('[SSE Client] get custom event', evt.type, evt.data);
-
-    try {
-      const details = JSON.parse(evt.data) as ContentUpdatePayload;
-      await handler({
-        type: evt.type,
-        details
-      });
-    } catch (error) {
-      console.error('[SSE Client] Failed to parse event:', error, evt.data);
-    }
-  };
-
-  // Listen for all rime events
-  const eventTypes = ['rime:create', 'rime:update', 'rime:delete'];
-  eventTypes.forEach((eventType) => {
-    es.addEventListener(eventType, handleCustomEvent);
-  });
-
-  es.onopen = () => console.log('[SSE Client] Connection opened');
-  es.onerror = (e) => console.error('[SSE Client] Connection error:', e);
+export const openSse = (keys: string | string[], handler: SSEHandler): (() => void) => {
+  const connection = connect(keys);
+  connection.handlers.add(handler);
 
   return () => {
-    console.log('[SSE Client] Closing connection');
-    eventTypes.forEach((eventType) => {
-      es.removeEventListener(eventType, handleCustomEvent);
-    });
-    es.close();
+    connection.handlers.delete(handler);
+    if (connection.handlers.size === 0) {
+      connection.source.close();
+      shared.delete(connection.keys);
+    }
   };
+};
+
+/** One open stream, everyone listening on it, and the keys it was opened for. */
+type Connection = { source: EventSource; handlers: Set<SSEHandler>; keys: string };
+
+/** One entry per distinct set of keys — a different set is a different URL, so a new stream. */
+const shared = new Map<string, Connection>();
+
+const connect = (keys: string | string[]): Connection => {
+  // Sorted, so two callers naming the same keys in a different order share one stream.
+  const id = [...new Set(typeof keys === 'string' ? [keys] : keys)].sort().join(',');
+  const existing = shared.get(id);
+  if (existing) return existing;
+
+  const source = new EventSource(`/api/sse?keys=${encodeURIComponent(id)}`);
+  const connection: Connection = { source, handlers: new Set(), keys: id };
+
+  source.onerror = (error) => console.error('[sse] connection error', error);
+
+  source.onmessage = (message) => {
+    let event: SSEEvent;
+    try {
+      event = JSON.parse(message.data);
+    } catch (error) {
+      return console.error('[sse] unreadable event', error, message.data);
+    }
+    for (const handler of connection.handlers) void handler(event);
+  };
+
+  shared.set(id, connection);
+  return connection;
 };

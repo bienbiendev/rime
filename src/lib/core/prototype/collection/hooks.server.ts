@@ -1,20 +1,9 @@
-import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
-import { isAuth } from '$lib/core/auth/enabled.js';
-import { isNested } from '$lib/core/prototype/collection/nested/enabled.js';
-import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
-import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
-import { when } from '$lib/core/prototype/when.js';
+import { isAuth, isStaffCollection } from '$lib/core/auth/enabled.js';
 import * as auth from '$lib/core/auth/hooks/index.server.js';
-import * as nested from '$lib/core/prototype/collection/nested/hooks/index.server.js';
-import * as thumbnail from '$lib/core/prototype/collection/thumbnail/hooks/index.server.js';
-import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
-import * as upload from '$lib/core/prototype/collection/upload/hooks/index.server.js';
-import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
-import * as versions from '$lib/core/prototype/shared/versions/hooks/index.server.js';
-import type { AnyHook, HookTiming } from '$lib/core/pipeline/types.js';
 import { authorize } from '$lib/core/pipeline/hooks/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/hooks/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/pipeline/hooks/get-original-document.server.js';
+import { normalizeResolvedReferences } from '$lib/core/pipeline/hooks/normalize-resolved-references.server.js';
 import { buildOriginalDocConfigMap } from '$lib/core/pipeline/hooks/original-config-map.server.js';
 import { processDocumentFields } from '$lib/core/pipeline/hooks/process-document-fields.server.js';
 import { resolveContentOwner } from '$lib/core/pipeline/hooks/resolve-content-owner.server.js';
@@ -22,6 +11,19 @@ import { setDefaultValues } from '$lib/core/pipeline/hooks/set-default-values.se
 import { setDocumentLocale } from '$lib/core/pipeline/hooks/set-document-locale.server.js';
 import { setDocumentType } from '$lib/core/pipeline/hooks/set-document-type.server.js';
 import { validateFields } from '$lib/core/pipeline/hooks/validate-fields.server.js';
+import type { AnyHook, HookTiming } from '$lib/core/pipeline/types.js';
+import { isNested } from '$lib/core/prototype/collection/nested/enabled.js';
+import * as nested from '$lib/core/prototype/collection/nested/hooks/index.server.js';
+import * as thumbnail from '$lib/core/prototype/collection/thumbnail/hooks/index.server.js';
+import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
+import * as upload from '$lib/core/prototype/collection/upload/hooks/index.server.js';
+import * as metas from '$lib/core/prototype/shared/metas/hooks/index.server.js';
+import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
+import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
+import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
+import { isVersioned, isVersionsCollection } from '$lib/core/prototype/shared/versions/enabled.js';
+import * as versions from '$lib/core/prototype/shared/versions/hooks/index.server.js';
+import { when } from '$lib/core/prototype/when.js';
 import { mergeWithBlankDocument } from './hooks/merge-with-blank.server.js';
 
 /**
@@ -38,8 +40,8 @@ import { mergeWithBlankDocument } from './hooks/merge-with-blank.server.js';
  *
  * A feature owns its hooks; this says when they run and what they run on.
  *
- * A hook a feature owns and this list does not place never runs, and nothing throws.
- * `pipeline/hook-placement.spec.ts` reads the feature barrels and fails naming the hook.
+ * A hook a feature owns and this list does not place never runs, and nothing throws: placing it
+ * here is what runs it.
  *
  * A consumer's hooks are appended after these, per timing, and before the finaliser.
  *
@@ -67,15 +69,24 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     // from the title is the ordinary case.
     when(hasUrl, url.populateURL),
     // After the sizes: it takes the thumbnail `upload.populateSizes` derived when there is one.
-    thumbnail.setDocumentThumbnail
+    thumbnail.setDocumentThumbnail,
+    metas.deletePanelLockMetas
   ],
 
   beforeCreate: [
+    // First, on the submission as sent. Unconditional: the derived versions collection carries
+    // the flag and is not itself versioned.
+    versions.stripAutoSaveFlag,
     mergeWithBlankDocument,
     // After the merge: it appends the password field, and the config map below has to see it.
     when(isAuth, auth.augmentFieldsPassword),
+    // Above `buildDataConfigMap`: that map is what the write turns into `incomingPaths`, the set
+    // of paths the request may touch, so a field added to `data` below it is dropped in silence.
+    metas.stampCreatedBy,
     buildDataConfigMap,
     setDefaultValues,
+    // Above validation, which reads an id where a read handed back the document.
+    normalizeResolvedReferences,
     validateFields,
     when(isAuth, auth.createBetterAuthUser),
     when(isUpload, upload.handlePathCreation),
@@ -86,6 +97,7 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   afterCreate: [when(isAuth, auth.populateAPIKey), when(isAuth, auth.signInNewUser)],
 
   beforeUpdate: [
+    versions.stripAutoSaveFlag,
     getOriginalDocument,
     buildOriginalDocConfigMap,
     resolveContentOwner,
@@ -100,8 +112,13 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     // Also reads the submission as sent, and overrides the content row core resolved above.
     when(isVersioned, versions.defineVersionOperation),
     when(isVersioned, versions.handleNewVersion),
+    // Between the two: below `handleNewVersion`, which reads the submission *as sent* to work out
+    // what the previous version did not carry, and above `buildDataConfigMap`, whose keys are the
+    // paths the write may touch — a stamp below that is dropped in silence.
+    metas.stampUpdatedBy,
     buildDataConfigMap,
     setDefaultValues,
+    normalizeResolvedReferences,
     validateFields,
     when(isUpload, upload.handlePathCreation),
     when(isUpload, upload.castBase64ToFile),
@@ -111,7 +128,12 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   ],
 
   beforeDelete: [
+    // On the versions collection only, where the document *is* the row. On the base collection
+    // a delete means the whole document, whichever row was read for it.
+    when(isVersionsCollection, versions.preventLastVersionDeletion),
     when(isAuth, auth.preventSupperAdminDeletion),
+    // After the refusal above: a user who cannot be deleted keeps their auto-saves.
+    when(isStaffCollection, versions.discardAutoSavesOf),
     when(isUpload, upload.cleanUpFiles)
   ],
 

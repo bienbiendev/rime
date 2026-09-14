@@ -40,17 +40,12 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
   // Get the skip parameter from the url
   const paramSkip = event.url.searchParams.get(PARAMS.SKIP_VALIDATION) === 'true' || false;
 
-  // Skip validation/hooks on locale fallback — this data is `omitId(document)`
-  // read back from the just-created document (see create.ts's other-locales
-  // loop), already fully processed once. skipHooks gates validate() as well
-  // as beforeValidate/beforeSave: a non-idempotent hook (e.g. appending a
-  // suffix) would otherwise re-apply itself on every other locale and
-  // corrupt non-localized fields, which share the same underlying storage
-  // across locales.
-  const skipUnique = args.context.isFallbackLocale || paramSkip;
-  const skipHooks = args.context.isFallbackLocale || paramSkip;
-  const skipRequired = args.context.isFallbackLocale || paramSkip;
-  const skipAccess = args.context.isFallbackLocale || args.context.isSystemOperation;
+  // A locale copy writes values validated and hooked once already, where they came from.
+  const copy = !!args.context.isLocaleCopy;
+  const skipUnique = copy || paramSkip;
+  const skipHooks = copy || paramSkip;
+  const skipRequired = copy || paramSkip;
+  const skipAccess = copy || args.context.isSystemOperation;
 
   for (const [key, config] of Object.entries(configMap)) {
     let value: any = getValueAtPath(key, output);

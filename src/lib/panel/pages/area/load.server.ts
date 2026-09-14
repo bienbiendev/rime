@@ -1,26 +1,17 @@
 import { PARAMS } from '$lib/core/constants.js';
 import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
-import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
+import { autoSavesOf } from '$lib/core/prototype/shared/versions/auto-saves.server.js';
 import type { AreaSlug } from '$lib/core/prototype/types.js';
 import type { AreaDocData } from '$lib/panel/index.js';
 import type { Route } from '$lib/panel/types.js';
-import { panelUrlFor } from '$lib/panel/util/url.js';
-import { trycatch } from '$lib/util/function.js';
-import { apiUrl } from '$lib/util/index.js';
-import { toKebabCase } from '$lib/util/string.js';
 import type { ServerLoadEvent } from '@sveltejs/kit';
-import { prototypeKebab } from '$lib/core/prototype/naming.js';
 
-export async function areaLoad<V extends boolean = boolean>(
-  event: ServerLoadEvent,
-  withVersions?: V
-) {
+export async function areaLoad(event: ServerLoadEvent) {
   //
-  const { locals, url, fetch } = event;
+  const { locals, url } = event;
   const { rime, locale } = locals;
   const slug = (event.params.slug || '') as AreaSlug;
-  const panelSegment = event.params.panel;
 
   const area = rime.area(slug);
   const authorizedRead = area.config.access.read(locals.user, {});
@@ -31,33 +22,22 @@ export async function areaLoad<V extends boolean = boolean>(
   }
 
   const aria: Partial<Route>[] = [
-    { title: 'Dashboard', icon: 'dashboard', url: panelUrlFor(panelSegment) },
+    { title: 'Dashboard', icon: 'dashboard', url: rime.routes.panelUrl() },
     { title: area.config.label }
   ];
 
   const versionId = url.searchParams.get(PARAMS.VERSION_ID) || undefined;
-  const draft = url.searchParams.get(PARAMS.DRAFT)
-    ? url.searchParams.get(PARAMS.DRAFT) === 'true'
-    : undefined;
-  const doc = await area.find({ locale, versionId, draft });
+  const latest = url.searchParams.get(PARAMS.LATEST) === 'true' || undefined;
+  const doc = await area.find({ locale, versionId, latest });
 
-  let data: Partial<AreaDocData> = {
+  const data: Partial<AreaDocData> = {
     aria,
     doc,
     operation: 'update',
     status: 200,
-    readOnly: !authorizedUpdate
+    readOnly: !authorizedUpdate,
+    autoSaves: await autoSavesOf({ event, config: area.config, doc })
   };
 
-  if (withVersions) {
-    const url = `${apiUrl(prototypeKebab(withVersionsSuffix(doc._type)))}?where[ownerId][equals]=${doc.id}&sort=-updatedAt&select=updatedAt,status`;
-    const promise = fetch(url).then((r) => r.json());
-    const [error, result] = await trycatch(promise);
-    if (error || !Array.isArray(result.docs)) {
-      throw new RimeError(RimeError.OPERATION_ERROR, 'while getting versions');
-    }
-    data = { ...data, versions: result.docs };
-  }
-
-  return data as AreaDocData<V>;
+  return data as AreaDocData;
 }

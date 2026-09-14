@@ -6,13 +6,10 @@
 
   const collection = getCollectionContext();
   const showSelectUI = $derived(!collection.isNested());
-  const showDisplayMode = $derived(collection.isUpload || collection.config.nested);
 </script>
 
-{#if showDisplayMode}
-  <Separator />
-  <DisplayMode />
-{/if}
+<Separator />
+<DisplayMode />
 
 {#if showSelectUI}
   <Separator />

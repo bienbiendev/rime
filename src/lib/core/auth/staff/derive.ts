@@ -20,7 +20,10 @@ export const staffCollection = {
   icon: UsersRound,
   fields: [] as FieldBuilder<Field>[],
   access: {
-    read: (user) => access.isAdmin(user),
+    // Any staff member, not just an admin: the panel shows who made a document and who is
+    // holding its edit lock, and that name has to be readable by whoever is looking at it.
+    // `roles` keeps its own admin-only read (auth/augment.ts).
+    read: (user) => access.isStaff(user),
     create: (user) => access.isAdmin(user),
     delete: (user) => access.isAdmin(user),
     update: (user, { id }) => access.isAdminOrMe(user, id)

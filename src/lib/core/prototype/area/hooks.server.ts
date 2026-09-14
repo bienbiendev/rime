@@ -1,12 +1,7 @@
-import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
-import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
-import { when } from '$lib/core/prototype/when.js';
-import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
-import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
-import * as versions from '$lib/core/prototype/shared/versions/hooks/index.server.js';
 import { authorize } from '$lib/core/pipeline/hooks/authorize.server.js';
 import { buildDataConfigMap } from '$lib/core/pipeline/hooks/data-config-map.server.js';
 import { getOriginalDocument } from '$lib/core/pipeline/hooks/get-original-document.server.js';
+import { normalizeResolvedReferences } from '$lib/core/pipeline/hooks/normalize-resolved-references.server.js';
 import { buildOriginalDocConfigMap } from '$lib/core/pipeline/hooks/original-config-map.server.js';
 import { processDocumentFields } from '$lib/core/pipeline/hooks/process-document-fields.server.js';
 import { resolveContentOwner } from '$lib/core/pipeline/hooks/resolve-content-owner.server.js';
@@ -15,6 +10,13 @@ import { setDocumentLocale } from '$lib/core/pipeline/hooks/set-document-locale.
 import { setDocumentType } from '$lib/core/pipeline/hooks/set-document-type.server.js';
 import { validateFields } from '$lib/core/pipeline/hooks/validate-fields.server.js';
 import type { AnyHook, HookTiming } from '$lib/core/pipeline/types.js';
+import * as metas from '$lib/core/prototype/shared/metas/hooks/index.server.js';
+import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
+import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
+import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
+import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
+import * as versions from '$lib/core/prototype/shared/versions/hooks/index.server.js';
+import { when } from '$lib/core/prototype/when.js';
 
 /**
  * The area prototype's *own* document hooks — the ones that are its, unconditionally.
@@ -41,17 +43,22 @@ export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     when(isVersioned, versions.exposeVersionId),
     title.setDocumentTitle,
     // After the title, for the reason the collection's list gives.
-    when(hasUrl, url.populateURL)
+    when(hasUrl, url.populateURL),
+    metas.deletePanelLockMetas
   ],
 
   beforeUpdate: [
+    versions.stripAutoSaveFlag,
     getOriginalDocument,
     buildOriginalDocConfigMap,
     resolveContentOwner,
     when(isVersioned, versions.defineVersionOperation),
     when(isVersioned, versions.handleNewVersion),
+    // Between the two, for the reasons the collection's list gives.
+    metas.stampUpdatedBy,
     buildDataConfigMap,
     setDefaultValues,
+    normalizeResolvedReferences,
     validateFields,
     when(isVersioned, versions.demoteOtherVersions)
   ]

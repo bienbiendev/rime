@@ -20,9 +20,6 @@ export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>(
     const { event, config, context } = args;
     const { rime } = event.locals;
 
-    // Fallback-locale writes are internal, not a real user action — skip.
-    if (args.context.isFallbackLocale) return args;
-
     const IS_ROLES_MUTATION = 'roles' in args.data && Array.isArray(args.data.roles);
     const IS_API_KEY_MUTATION = config.auth?.type === 'apiKey';
 

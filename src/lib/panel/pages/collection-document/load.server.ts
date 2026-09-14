@@ -1,39 +1,33 @@
+import { PARAMS } from '$lib/core/constants.js';
+import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
+import { RimeError } from '$lib/core/errors/index.js';
+import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
 import {
   buildUploadAria,
   type UploadPath
 } from '$lib/core/prototype/collection/upload/util/path.js';
-import { PARAMS } from '$lib/core/constants.js';
-import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
-import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
+import { autoSavesOf } from '$lib/core/prototype/shared/versions/auto-saves.server.js';
+import type { AutoSaves } from '$lib/core/prototype/shared/versions/types.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { CollectionDocData } from '$lib/panel/index.js';
 import type { Route } from '$lib/panel/types.js';
-import { panelUrlFor } from '$lib/panel/util/url.js';
 import { trycatch } from '$lib/util/function.js';
-import { apiUrl } from '$lib/util/index.js';
-import { toKebabCase } from '$lib/util/string.js';
 import { error, type ServerLoadEvent } from '@sveltejs/kit';
-import { prototypeKebab } from '$lib/core/prototype/naming.js';
 
 /**
  * Load function for the collection document page in the panel.
  */
-export async function documentLoad<V extends boolean = boolean>(
-  event: ServerLoadEvent,
-  withVersion?: V
-) {
+export async function documentLoad(event: ServerLoadEvent) {
   //
   const { locale, user, rime } = event.locals;
   const { id } = event.params;
   const slug = event.params.slug || '';
-  const panelSegment = event.params.panel;
 
   if (!id) throw error(404, 'Not found');
 
   let doc: GenericDoc;
   let readOnly = false;
+  let autoSaves: AutoSaves | undefined;
 
   if (!rime.config.isCollection(slug)) {
     throw handleError(new RimeError(RimeError.NOT_FOUND), { context: 'load' });
@@ -61,7 +55,7 @@ export async function documentLoad<V extends boolean = boolean>(
 
     /** Get doc */
     const [error, document] = await trycatch(() =>
-      collection.findById({ id, locale, versionId, draft: true })
+      collection.findById({ id, locale, versionId, latest: true })
     );
     doc = document;
 
@@ -73,52 +67,45 @@ export async function documentLoad<V extends boolean = boolean>(
     if (authorizedRead && !authorizedUpdate) {
       readOnly = true;
     }
+
+    autoSaves = await autoSavesOf({ event, config: collection.config, doc });
   }
 
   let aria: Partial<Route>[];
 
   const collectionAria = {
     title: collection.config.label.plural,
-    url: panelUrlFor(panelSegment, collection.config.kebab)
+    url: rime.routes.panelUrl(collection.config.kebab)
   };
   if (collection.config.upload) {
     const paramUploadPath = event.url.searchParams.get('uploadPath') as UploadPath | null;
     const currentDirectoryPath = paramUploadPath || UPLOAD_PATH.ROOT_NAME;
     aria = [
-      { title: 'Dashboard', icon: 'dashboard', url: panelUrlFor(panelSegment) },
+      { title: 'Dashboard', icon: 'dashboard', url: rime.routes.panelUrl() },
       collectionAria,
-      ...buildUploadAria({ path: currentDirectoryPath, slug, panelSegment }),
+      ...buildUploadAria({ path: currentDirectoryPath, slug, panelSegment: rime.routes.panel }),
       { title: undefined } // Will be populated by title context
     ];
   } else {
     aria = [
-      { title: 'Dashboard', icon: 'dashboard', url: panelUrlFor(panelSegment) },
+      { title: 'Dashboard', icon: 'dashboard', url: rime.routes.panelUrl() },
       {
         title: collection.config.label.plural,
-        url: panelUrlFor(panelSegment, collection.config.kebab)
+        url: rime.routes.panelUrl(collection.config.kebab)
       },
       { title: undefined } // Will be populated by title context
     ];
   }
 
-  let data: Partial<CollectionDocData> = {
+  const data: Partial<CollectionDocData> = {
     aria,
     doc,
     operation,
     status: 200,
     hasMailer: 'mailer' in rime,
-    readOnly
+    readOnly,
+    autoSaves
   };
 
-  if (withVersion) {
-    const url = `${apiUrl(prototypeKebab(withVersionsSuffix(doc._type)))}?where[ownerId][equals]=${doc.id}&sort=-updatedAt&select=updatedAt,status`;
-    const promise = event.fetch(url).then((r) => r.json());
-    const [error, result] = await trycatch(() => promise);
-    if (error || !Array.isArray(result.docs)) {
-      throw new RimeError(RimeError.OPERATION_ERROR, 'while getting versions');
-    }
-    data = { ...data, versions: result.docs };
-  }
-
-  return data as CollectionDocData<V>;
+  return data as CollectionDocData;
 }

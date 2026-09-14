@@ -218,16 +218,18 @@ export const readDocument = async <S extends DocType, T extends GenericDoc>(args
   event: RequestEvent;
   context: OperationContext<S>;
   locale?: string | undefined;
+  localeFallback?: boolean;
   depth?: number;
   select?: string[];
 }): Promise<{ doc: T; context: OperationContext<S> }> => {
-  const { raw, config, event, locale, depth, select } = args;
+  const { raw, config, event, locale, localeFallback, depth, select } = args;
   const hasSelect = !!select && Array.isArray(select) && !!select.length;
 
   const rows = await event.locals.rime.adapter.transform.rows({
     doc: raw,
     slug: config.slug,
-    locale
+    locale,
+    localeFallback
   });
 
   const document = await buildDocument(rows, {

@@ -1,7 +1,6 @@
-import type { Dic } from '$lib/util/types.js';
-import type { ImageSizesConfig } from '$lib/core/prototype/collection/upload/types.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DocTypeContribution } from '$lib/core/dev/codegen/types/contributions.server.js';
+import type { ImageSizesConfig } from '$lib/core/prototype/collection/upload/types.js';
+import type { Dic } from '$lib/util/types.js';
 
 /**
  * What an upload document's type carries, and which of its fields describe themselves.
@@ -22,15 +21,9 @@ export const uploadDocType = (config: { upload?: { imageSizes?: ImageSizesConfig
     /**
      * Each image size becomes a column named after it, and its type comes from the `sizes` object
      * above rather than from the field's own builder — so the field itself generates nothing.
-     *
-     * The `instanceof FormFieldBuilder` half is carried over verbatim and is almost certainly
-     * wrong: it drops blocks, tabs, groups, tree and relation fields from the generated type of
-     * any upload collection that declares image sizes. It has been that way since the filter was
-     * written and no fixture has one, so changing it here would be an untested fix inside an
-     * untested move. See notes/known-defects.md.
+     * Every other field, blocks and tabs included, generates its type as on any collection.
      */
-    fields: (field) =>
-      field instanceof FormFieldBuilder && !sizes.some((s) => s.name === field.name)
+    fields: (field) => !sizes.some((s) => s.name === field.name)
   } satisfies DocTypeContribution;
 };
 

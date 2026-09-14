@@ -11,7 +11,7 @@ import type { WithUpload } from '$lib/core/prototype/collection/upload/util/conf
  * Whether this collection's **own table** holds `name` — which is the only question this file has
  * about where a filename can be.
  *
- * A config with a versions table keeps only its `._root()` fields on its own table; everything else is the
+ * A config with a versions table keeps only its `$root()` fields on its own table; everything else is the
  * versions's, and the versions table is a registered collection in its own right. `filename` is not a root
  * field (only `_path` is, on upload), so on a versioned upload collection it lives on the versions table
  * and the base table has no such column at all.
@@ -70,7 +70,7 @@ const isFilenameStillReferenced = async <C extends Config>(args: {
     for (const locale of localesToQuery) {
       const docs = await rime.collection(slug).find({
         query: `where[filename][equals]=${filename}`,
-        draft: true,
+        latest: true,
         locale,
         limit: slug === selfSlug ? 2 : 1
       });
@@ -88,7 +88,7 @@ export const cleanUpDocumentFile = async <C extends Config>(args: {
 }): Promise<GenericDoc> => {
   //
   const { config, rime, id } = args;
-  const doc = await rime.collection<any>(config.slug).findById({ id, draft: true });
+  const doc = await rime.collection<any>(config.slug).findById({ id, latest: true });
 
   try {
     if (!doc.filename) return doc;

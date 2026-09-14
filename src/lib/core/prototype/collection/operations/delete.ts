@@ -39,8 +39,14 @@ export const deleteDocs = async (args: Args): Promise<string[]> => {
     // No `content`: see deleteById.
   });
 
+  // Each row is deleted as this operation was asked: a system delete stays a system delete,
+  // through to each row's access check and hooks.
+  const collection = isSystemOperation
+    ? rime.collection(config.slug).system()
+    : rime.collection(config.slug);
+
   const promisesDelete = documentsToDelete.map(({ id }) => {
-    return rime.collection(config.slug).deleteById({ id });
+    return collection.deleteById({ id });
   });
 
   const ids = await Promise.all(promisesDelete);

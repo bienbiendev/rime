@@ -4,7 +4,7 @@ import type { PrototypeApiContext } from '../define.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
 import type { GenericDoc } from '../types.js';
-import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
+import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import { createBlankDocument } from '../doc.js';
 import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
 import { find, type FindArgs } from './operations/find.js';
@@ -69,11 +69,8 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
   }
 
   /** Which version row a read means — see `versionsReadQuery`. */
-  versionQuery(
-    params: { draft?: boolean; versionId?: string },
-    intent: ReadIntent = 'read'
-  ): OperationQuery | undefined {
-    return versionsReadQuery({ config: this.config, params, intent });
+  versionQuery(params: { latest?: boolean; versionId?: string }): OperationQuery | undefined {
+    return versionsReadQuery({ config: this.config, params });
   }
 
   /** Read through the API cache when it is on and this is not a system call. */
@@ -98,53 +95,53 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
    *   specific version if versionId is provided
    * - For versioned areas with draft support:
    *   - If versionId is provided: Returns that specific version
-   *   - If draft=true: Returns the latest version (regardless of status)
+   *   - If latest=true: Returns the newest version (regardless of status)
    *   - If draft=false: Returns the published version
    *
    * @example
    * const doc = await rime.area('settings').find({ locale })
    * const doc = await rime.area('settings').find({ versionId: '123' })
-   * const doc = await rime.area('settings').find({ draft: true })
+   * const doc = await rime.area('settings').find({ latest: true })
    */
   find(args: FindArgs = {}): Promise<Doc> {
-    const { locale, select = [], depth = 0, versionId, draft } = args;
+    const { locale, select = [], depth = 0, versionId, latest, localeFallback } = args;
 
     // As on a collection's find: the key holds the caller's locale, not the resolved one.
-    return this.cached('area.find', { select, versionId, depth, draft, locale }, () =>
-      find<Doc>({
-        ctx: this,
-        select,
-        versionId,
-        depth,
-        draft,
-        locale: this.fallbackLocale(locale)
-      })
+    return this.cached(
+      'area.find',
+      { select, versionId, depth, latest, locale, localeFallback },
+      () =>
+        find<Doc>({
+          ctx: this,
+          select,
+          versionId,
+          depth,
+          latest,
+          localeFallback,
+          locale: this.fallbackLocale(locale)
+        })
     );
   }
 
   /**
    * Updates the area's document
    *
-   * - For non-versioned areas: Simply updates the document
-   * - For versioned areas without draft support:
-   *   - If versionId is provided: Updates that specific version
-   *   - If no versionId is provided: Creates a new version based on the latest
-   * - For versioned areas with draft support:
-   *   - If versionId is provided: Updates that specific version
-   *   - If no versionId and draft !== true: Updates the published version
-   *   - If no versionId and draft === true: Creates a new draft from the published version
+   * `versionId`, else `latest`, else the published version selects the row; `fork` makes a new
+   * version from it instead of writing it. See the collection's `updateById`.
    *
    * @example
    * rime.area('settings').update({ data, locale })
    */
   update(args: UpdateArgs<Doc>): Promise<Doc> {
-    const { data, locale, versionId, draft } = args;
+    const { data, locale, versionId, latest, fork, autoSave } = args;
 
     return update<Doc>({
       ctx: this,
       data,
       versionId,
-      draft,
+      latest,
+      fork,
+      autoSave,
       locale: this.fallbackLocale(locale)
     });
   }

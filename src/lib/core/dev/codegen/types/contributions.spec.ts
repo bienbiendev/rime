@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { create } from '$lib/core/prototype/collection/definition.js';
 import { text } from '$lib/fields/text/index.js';
+import { block, blocks } from '$lib/fields/blocks/index.js';
 import { contributionsFor } from './contributions.server.js';
 
 /**
@@ -73,6 +74,10 @@ describe('docType contributions', () => {
     expect(contribution.fields(text('sm'))).toBe(false);
     expect(contribution.fields(text('lg'))).toBe(false);
     expect(contribution.fields(text('alt'))).toBe(true);
+    // A field that is not a column of its own is generated as on any collection.
+    expect(contribution.fields(blocks('sections', [block('caption').fields(text('text'))]))).toBe(
+      true
+    );
   });
 
   it('names one member per output format when a size has several', () => {

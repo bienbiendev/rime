@@ -10,6 +10,7 @@ import { and, eq, getTableColumns, inArray, or } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { ParsedQs } from 'qs';
 import type { PrototypeSlug } from '../types.js';
+import { localeOrder } from './locales.server.js';
 import { baseTableName, tableName } from './naming.server.js';
 import type { GenericTable } from './types.server.js';
 
@@ -86,6 +87,11 @@ export const buildWhereParam = ({
   /** What the outer condition names — the caller's alias where there is one. */
   const table = (rootTable as typeof ownTable) ?? ownTable;
 
+  // The base row a versions table hangs off, and its columns. `baseTableName`, not the bare
+  // slug: a camelCase slug is not a table name.
+  const baseTable = isShadow ? getTable(baseTableName(base!)) : undefined;
+  const baseColumns = baseTable ? Object.keys(getTableColumns(baseTable)) : [];
+
   const buildCondition = (conditionObject: Dic): any | false => {
     // Handle nested AND conditions
     if ('and' in conditionObject && Array.isArray(conditionObject.and)) {
@@ -115,32 +121,32 @@ export const buildWhereParam = ({
       value
     } = getConditionMembers(conditionObject);
 
-    // Handle hierarchy fields (_parent, _position), which stay on the base row
-    if (isShadow && isHierarchyColumn(sqlColumn)) {
-      // `baseTableName`, not the bare slug: the two were the same string until the naming
-      // convention changed, and a camelCase slug resolved to `undefined` here rather than to a
-      // table.
-      const baseTable = getTable(baseTableName(base!));
-      // Query the base table for the hierarchy field
-      return inArray(
-        table.ownerId,
-        db.select({ ownerId: baseTable.id }).from(baseTable).where(fn(baseTable[sqlColumn], value))
-      );
-    }
-
     // Handle regular fields
     if (unlocalizedColumns.includes(sqlColumn)) {
       return fn(table[sqlColumn], value);
     }
 
-    // Handle localized fields
+    // A localized column is compared as a read would show it: the first locale in the fallback
+    // order that holds a value, `''` counting as none — so a page found by its slug in one locale
+    // is found by the same slug in a locale it was not translated to yet.
     if (locale && localizedColumns.includes(sqlColumn)) {
+      const { sql } = drizzleORM;
+      const order = localeOrder(configCtx, locale) ?? [locale];
+      const valueIn = (code: string) =>
+        sql`NULLIF((SELECT ${tableLocales[sqlColumn]} FROM ${tableLocales} WHERE ${tableLocales.ownerId} = ${table.id} AND ${tableLocales.locale} = ${code}), '')`;
+      const resolved =
+        order.length > 1
+          ? sql`COALESCE(${sql.join(order.map(valueIn), sql`, `)})`
+          : valueIn(order[0]);
+      return fn(resolved, value);
+    }
+
+    // A column the base row keeps — the hierarchy columns, and any `$root()` field — reached
+    // through `ownerId` when the table queried is the versions table.
+    if (baseTable && baseColumns.includes(sqlColumn)) {
       return inArray(
-        table.id,
-        db
-          .select({ id: tableLocales.ownerId })
-          .from(tableLocales)
-          .where(and(fn(tableLocales[sqlColumn], value), eq(tableLocales.locale, locale)))
+        table.ownerId,
+        db.select({ ownerId: baseTable.id }).from(baseTable).where(fn(baseTable[sqlColumn], value))
       );
     }
 
@@ -450,12 +456,6 @@ function getConditionMembers(obj: Dic) {
   // Format compared value to support Date, Arrays,...
   const value = formatValue({ operator, value: rawValue });
   return { column, sqlColumn, fn, operator, rawValue, value };
-}
-
-// Determine if we should handle versioned hierarchy fields
-/** The hierarchy columns, which stay on a base row wherever the content lives. */
-function isHierarchyColumn(sqlColumn: string) {
-  return sqlColumn === '_parent' || sqlColumn === '_position' || sqlColumn === '_path';
 }
 
 // Normalize condition object for versioned collections

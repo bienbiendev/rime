@@ -1,20 +1,15 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { buildConfigMap } from '$lib/core/pipeline/config-map/index.js';
-import { BlocksBuilder } from '$lib/fields/blocks/index.js';
-import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
-import { TreeBuilder } from '$lib/fields/tree/index.js';
-import {
-  getValueAtPath,
-  isObjectLiteral,
-  matchStructure,
-  omitId,
-  setValueAtPath
-} from '$lib/util/object.js';
+import { copyLocales } from '$lib/core/locale/copy.server.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
+import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
+import type { GenericDoc } from '$lib/types';
+import { getValueAtPath, isObjectLiteral, setValueAtPath } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 
 export type DuplicateArgs = {
   id: string;
+  /** The row to copy. Without it, the newest real version; with it, that row, auto-saved or not. */
+  versionId?: string;
 };
 
 type Args = DuplicateArgs & { ctx: PrototypeApiContext<BuiltCollection> };
@@ -23,7 +18,7 @@ type Args = DuplicateArgs & { ctx: PrototypeApiContext<BuiltCollection> };
 // If block is not localized than it should keep its id so block is updated
 
 export const duplicate = async (args: Args): Promise<string> => {
-  const { ctx, id } = args;
+  const { ctx, id, versionId } = args;
   const { config, event } = ctx;
   const { rime } = event.locals;
 
@@ -55,9 +50,9 @@ export const duplicate = async (args: Args): Promise<string> => {
    * - drop what a copy does not inherit
    * - normalize properties
    */
-  function prepareDuplicate(doc: Dic, locale: string | undefined, keepIds: boolean) {
+  function prepareDuplicate(doc: Dic, locale: string | undefined) {
     let data = setCopyTitle(doc);
-    data = normalizeProps(data, locale, keepIds);
+    data = normalizeProps(data, locale);
     delete data.id;
     /**
      * A copy is a new document, so it starts where a new document starts.
@@ -84,86 +79,35 @@ export const duplicate = async (args: Args): Promise<string> => {
   // Set locale to the default one
   if (defaultLocale) rime.setLocale(defaultLocale);
 
-  // Fetch document to copy — draft: true, since the source document may
-  // never have been published (buildPublishedOrLatestVersionParams treats a
-  // missing draft flag as "published only" for versioned-with-draft
-  // collections, which would 404 on a draft-only source).
-  const document = await collection.findById({ id, locale: defaultLocale, draft: true });
+  // The row asked for, or the newest real one — `latest`, since the source may never have been
+  // published.
+  const document = await collection.findById({
+    id,
+    locale: defaultLocale,
+    versionId,
+    latest: true,
+    localeFallback: false
+  });
   // Prepare data
-  const data = prepareDuplicate(document, defaultLocale, false);
+  const data = prepareDuplicate(document, defaultLocale);
 
   // Create document
-  const newDocument = await collection.create({ data, locale: defaultLocale });
+  const newDocument = (await collection.create({ data, locale: defaultLocale })) as GenericDoc;
 
-  // Now update the created document with other locales data
-  // Get all locales
-  const allLocales = rime.config.getLocalesCodes();
-  const otherLocales = allLocales.filter((l) => l !== defaultLocale);
-
-  for (const locale of otherLocales) {
-    // set the event locale for next operations
-    rime.setLocale(locale);
-
-    // Get localized document
-    let source = await collection.findById({ id, locale, draft: true });
-    const configMap = buildConfigMap(source, config.fields);
-
-    // Id mapping
-    for (const [key, field] of Object.entries(configMap)) {
-      // Process only tree and blocks
-      if (!(field instanceof BlocksBuilder) && !(field instanceof TreeBuilder)) continue;
-
-      const handleField = {
-        // For localized blocks just remove the id so a new one will be created
-        localized: () => {
-          let value = getValueAtPath<Dic[]>(key, source) ?? [];
-          value = value.map((block) => omitId(block));
-          source = setValueAtPath(key, source, value);
-        },
-
-        // For non localized blocks map original ids in oreder to update incoming blocks
-        unlocalized: () => {
-          // Function to check block type matching
-          const matchBlockType = (a: Dic, b: Dic, f: BlocksBuilder | TreeBuilder) =>
-            f.type === 'tree' ? true : a.type === b.type;
-
-          // Get original version blocks
-          const defaultLocaleBlocks = getValueAtPath<Dic[]>(key, newDocument) ?? [];
-
-          // loop over blocks
-          defaultLocaleBlocks.forEach((block, index) => {
-            // get source block at same path
-            const sourceBlock = getValueAtPath<Dic>(`${key}.${index}`, source);
-
-            // If structure and type match then copy the original id into source block
-            const match =
-              sourceBlock &&
-              sourceBlock.id &&
-              matchStructure(block, sourceBlock) &&
-              matchBlockType(sourceBlock, block, field);
-
-            source = match ? setValueAtPath(`${key}.${index}.id`, source, block.id) : source;
-          });
-        }
-      };
-
-      handleField[field.get.localized ? 'localized' : 'unlocalized']();
-    }
-
-    // Prepare data
-    const data = prepareDuplicate(source, locale, true);
-
-    // Update document for this locale — target newDocument's own version
-    // directly (versionId, not draft: true). draft: true with no versionId
-    // resolves to NEW_DRAFT_FROM_PUBLISHED, which still fetches the
-    // *published* original to branch from; newDocument was just created as
-    // a draft copy with no published version yet, so that 404s the same way
-    // an unqualified update would.
-    await collection.updateById({
-      id: newDocument.id,
-      data,
-      locale,
-      versionId: newDocument.versionId as string | undefined
+  // The other locales, copied from the source onto the new document.
+  const otherLocales = rime.config.getLocalesCodes().filter((l) => l !== defaultLocale);
+  if (otherLocales.length) {
+    await copyLocales({
+      event,
+      config,
+      source: { id, versionId, latest: true },
+      target: {
+        id: newDocument.id,
+        versionId: newDocument.versionId as string | undefined,
+        doc: newDocument
+      },
+      locales: otherLocales,
+      prepare: (data) => setCopyTitle(data)
     });
   }
   // Reset event locale
@@ -172,23 +116,22 @@ export const duplicate = async (args: Args): Promise<string> => {
   return newDocument.id;
 };
 
-const normalizeProps = (value: any, locale: string | undefined, keepIds: boolean): any => {
+const normalizeProps = (value: any, locale: string | undefined): any => {
   if (Array.isArray(value)) {
-    return value.map((item) => normalizeProps(item, locale, keepIds));
+    return value.map((item) => normalizeProps(item, locale));
   }
   if (!isObjectLiteral(value)) {
     return value;
   }
 
-  const unwantedProps = ['ownerId', 'createdAt', 'updatedAt'];
-  if (!keepIds) unwantedProps.push('id');
+  const unwantedProps = ['id', 'ownerId', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'];
 
   return Object.entries(value)
     .filter(([key]) => !unwantedProps.includes(key))
     .reduce(
       (acc, [key, value]) => ({
         ...acc,
-        [key]: normalizeProps(value, locale, keepIds)
+        [key]: normalizeProps(value, locale)
       }),
       {}
     );

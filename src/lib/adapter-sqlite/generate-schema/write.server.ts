@@ -12,9 +12,8 @@ const write = (schema: string) => {
   // RIME_CONFIG_DIR change can leave the schema content byte-identical while the file it needs
   // to land at moves, and drizzle-kit still needs to re-run against the new location.
   const cacheValue = `${outputFile}\n${schema}`;
-  const cachedSchema = cache.get('schema');
 
-  if (cachedSchema && cachedSchema === cacheValue) {
+  if (cache.matches('schema', cacheValue)) {
     return;
   }
 
@@ -70,7 +69,7 @@ const write = (schema: string) => {
   // Only mark the schema as in sync once generate + migrate both actually
   // succeeded — otherwise a future run with an unchanged schema string would
   // skip re-running drizzle-kit and the DB would stay silently out of sync.
-  cache.set('schema', cacheValue);
+  cache.remember('schema', cacheValue);
 };
 
 export default write;

@@ -1,8 +1,8 @@
 <script lang="ts">
+  import { panelUrl } from '$lib/core/routes/util.js';
   import * as Tooltip from '$lib/panel/components/ui/tooltip';
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
   import { authClient } from '$lib/panel/util/auth.js';
-  import { panelUrl } from '$lib/panel/util/url.js';
   import { LogOut } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
   import Button from '../button/button.svelte';

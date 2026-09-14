@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
 import path from 'node:path';
-import { isValidSlug } from '../../util/string.js';
 
 // Must run before RIME_CONFIG_DIR is read below. ES import hoisting evaluates this module's
 // top-level code before any *importing* file's own top-level statements — including a
@@ -18,18 +17,6 @@ export const CONFIG_DIR = process.env.RIME_CONFIG_DIR || 'src/+rime';
 export const GENERATED_DIR = `${CONFIG_DIR}.generated`;
 export const INPUT_DIR = path.basename(CONFIG_DIR);
 export const OUTPUT_DIR = `${INPUT_DIR}.generated`;
-
-/** The panel's URL segment (e.g. "panel" -> /panel/...). Kept as a bare segment, never a
- * PUBLIC_-prefixed env var: SvelteKit ships every PUBLIC_ value into the JS bundle of every
- * page (including the public site), which would defeat the point of letting an operator hide
- * this path from automated CMS-admin scanners. */
-export const PANEL_ROUTE = (process.env.RIME_PANEL_ROUTE || 'panel').replace(/^\/+|\/+$/g, '');
-
-if (!isValidSlug(PANEL_ROUTE)) {
-  throw new Error(
-    `RIME_PANEL_ROUTE must be a single URL segment (letters, numbers, "_"/"-", starting with a letter) — got "${PANEL_ROUTE}"`
-  );
-}
 
 // Reserved SvelteKit folders where config should never lands inside.
 const RESERVED_DIRS = new Set(

@@ -5,6 +5,7 @@ import { restDeleteById } from './delete-by-id.server.js';
 import { restDuplicate } from './duplicate.server.js';
 import { restGet } from './get.server.js';
 import { restGetById } from './get-by-id.server.js';
+import { restLock, restUnlock } from './lock.server.js';
 import { restUpdateById } from './update-by-id.server.js';
 
 /**
@@ -20,5 +21,6 @@ import { restUpdateById } from './update-by-id.server.js';
 export const rest: Record<string, RouteConfig> = {
   '': { GET: restGet, POST: restCreate, DELETE: restDelete },
   '[id]': { GET: restGetById, PATCH: restUpdateById, DELETE: restDeleteById },
-  '[id]/duplicate': { POST: restDuplicate }
+  '[id]/duplicate': { POST: restDuplicate },
+  '[id]/lock': { POST: restLock, DELETE: restUnlock }
 };

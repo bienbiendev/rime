@@ -75,6 +75,7 @@ const handleUserCreation = async (ctx: CTX) => {
       name: 'system',
       email: 'admin@system.com',
       roles: ['admin'],
+      isStaff: true,
       isSuperAdmin: true
     };
 

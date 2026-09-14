@@ -2,7 +2,7 @@
 'rimecms': minor
 ---
 
-Drizzle ORM and Kit move to 1.0.0-rc.4.
+Breaking Change: Drizzle ORM and Kit move to 1.0.0-rc.4.
 
 **Your `db/` folder needs converting.** Drizzle 1.0 restructured it — `meta/_journal.json` is
 gone and each migration's snapshot now sits beside its SQL. Rime detects the old shape and runs

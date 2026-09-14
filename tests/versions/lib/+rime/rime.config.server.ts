@@ -1,5 +1,8 @@
 import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
+import { access } from '$lib/core/auth/access.js';
 import {
+  block,
+  blocks,
   date,
   group,
   relation,
@@ -17,7 +20,6 @@ import {
   link as linkFeature,
   upload
 } from '$lib/fields/rich-text/client.js';
-import { access } from '$lib/core/auth/access.js';
 import { Area, Collection, rime } from '$rime/config';
 
 const Settings = Area.create('settings', {
@@ -72,7 +74,7 @@ const News = Collection.create('news', {
     create: (user) => access.isAdmin(user),
     update: (user) => access.hasRoles(user, 'admin', 'editor')
   },
-  versions: { draft: true }
+  versions: { draft: true, autoSave: true }
 });
 
 const Medias = Collection.create('medias', {
@@ -87,7 +89,8 @@ const Medias = Collection.create('medias', {
       { name: 'large', width: 1080, out: ['webp'] }
     ]
   },
-  fields: [text('alt').required()],
+  // A non-leaf field beside the sizes: the generated type must keep it.
+  fields: [text('alt').required(), blocks('sections', [block('caption').fields(text('text'))])],
   access: {
     read: () => true
   },
@@ -114,7 +117,7 @@ const Pages = Collection.create('pages', {
     group: 'content'
   },
   fields: [group('attributes').fields(text('title').isTitle(), slug('slug'), toggle('isHome'))],
-  $url: () => '/',
+  $url: () => `${process.env.PUBLIC_RIME_URL}/`,
   nested: true,
   access: {
     read: () => true

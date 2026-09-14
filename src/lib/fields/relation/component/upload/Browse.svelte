@@ -1,7 +1,8 @@
 <script lang="ts">
-  import type { Directory } from '$lib/core/prototype/collection/upload/types';
   import { t__ } from '$lib/core/i18n/index.js';
   import { directoriesKebab } from '$lib/core/prototype/collection/upload/naming.js';
+  import type { Directory } from '$lib/core/prototype/collection/upload/types';
+  import { apiUrl } from '$lib/core/routes/util.js';
   import Empty from '$lib/panel/components/sections/collection/Empty.svelte';
   import Folder from '$lib/panel/components/sections/collection/folder/Folder.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
@@ -11,7 +12,6 @@
   import Input from '$lib/panel/components/ui/input/input.svelte';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import type { BuiltCollection, UploadDoc } from '$lib/types';
-  import { apiUrl } from '$lib/util/index.js';
   import { ListFilter, Search } from '@lucide/svelte';
 
   type Props = { open: boolean; addValue: (item: string) => void; config: BuiltCollection };

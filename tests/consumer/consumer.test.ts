@@ -1,7 +1,7 @@
 import test, { expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { panelUrl, panelUrlRe } from '../util.js';
+import { panelUrl, panelUrlRe, panelPath } from '../util.js';
 
 // Reused from tests/basic rather than adding a new binary fixture just for this suite.
 const FIXTURE_IMAGE = readFileSync(
@@ -67,11 +67,11 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   const nav = page.locator('.rz-nav__nav');
 
   // Create a page
-  await nav.locator(`a[href="${panelUrl('pages')}"]`).click();
+  await nav.locator(`a[href="${panelPath('pages')}"]`).click();
   await page.waitForLoadState('networkidle');
   // "^=" not "=": upload collections append ?uploadPath=... to their create link (see
   // ButtonCreate.svelte), so an exact match would miss medias' create button.
-  await page.locator(`a[href^="${panelUrl('pages', 'create')}"]`).click();
+  await page.locator(`a[href^="${panelPath('pages', 'create')}"]`).click();
   await page.waitForLoadState('networkidle');
   const title = `Home ${SUFFIX}`;
   await page.locator('input.rz-input[name="title"]').pressSequentially(title, { delay: 50 });
@@ -87,9 +87,9 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   await expect(page.locator('.rz-page-header__row h1')).toHaveText(title);
 
   // Create a staff member
-  await nav.locator(`a[href="${panelUrl('staff')}"]`).click();
+  await nav.locator(`a[href="${panelPath('staff')}"]`).click();
   await page.waitForLoadState('networkidle');
-  await page.locator(`a[href^="${panelUrl('staff', 'create')}"]`).click();
+  await page.locator(`a[href^="${panelPath('staff', 'create')}"]`).click();
   await page.waitForLoadState('networkidle');
   const staffEmail = `staff-${SUFFIX}@email.com`;
   await page.locator('input.rz-input[name="email"]').pressSequentially(staffEmail, { delay: 50 });
@@ -105,9 +105,9 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   await expect(page.locator('.rz-page-header__row h1')).toHaveText(staffEmail);
 
   // Create a media (exercises sharp processing + serve-static)
-  await nav.locator(`a[href="${panelUrl('medias')}"]`).click();
+  await nav.locator(`a[href="${panelPath('medias')}"]`).click();
   await page.waitForLoadState('networkidle');
-  await page.locator(`a[href^="${panelUrl('medias', 'create')}"]`).click();
+  await page.locator(`a[href^="${panelPath('medias', 'create')}"]`).click();
   await page.waitForLoadState('networkidle');
   const mediaFilename = `landscape-${SUFFIX}.jpg`;
   await page

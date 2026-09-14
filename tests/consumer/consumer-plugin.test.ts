@@ -1,5 +1,5 @@
 import test, { expect } from '@playwright/test';
-import { panelUrl, panelUrlRe } from '../util.js';
+import { panelUrl, panelUrlRe, panelPath } from '../util.js';
 
 // Exercises tests/consumer/lib/+rime/rime.config.server.ts, which local-pack-test.sh copies
 // into place *before* `rime init` runs (see copy_plugin_config in that script), so init's own
@@ -53,13 +53,13 @@ test('plugin route, handler, field and hook all mounted correctly', async ({ pag
 
   // Collection injection: the plugin's own `pluginVisits` collection shows up in the nav
   // exactly like a consumer-authored one.
-  await expect(nav.locator(`a[href="${panelUrl('plugin-visits')}"]`)).toBeVisible();
+  await expect(nav.locator(`a[href="${panelPath('plugin-visits')}"]`)).toBeVisible();
 
   // Field injection + field's own server hook: create a page with the third-party
   // `consumerField` filled in, and the plugin's `consumerPluginNote` field also present.
-  await nav.locator(`a[href="${panelUrl('pages')}"]`).click();
+  await nav.locator(`a[href="${panelPath('pages')}"]`).click();
   await page.waitForLoadState('networkidle');
-  await page.locator(`a[href^="${panelUrl('pages', 'create')}"]`).click();
+  await page.locator(`a[href^="${panelPath('pages', 'create')}"]`).click();
   await page.waitForLoadState('networkidle');
 
   const title = `Consumer plugin test ${SUFFIX}`;
@@ -86,7 +86,7 @@ test('plugin route, handler, field and hook all mounted correctly', async ({ pag
   await saveButton.click();
   await page.waitForLoadState('networkidle');
 
-  await nav.locator(`a[href="${panelUrl('plugin-visits')}"]`).click();
+  await nav.locator(`a[href="${panelPath('plugin-visits')}"]`).click();
   await page.waitForLoadState('networkidle');
   await expect(page.locator('.rz-list-row').first()).toBeVisible();
 

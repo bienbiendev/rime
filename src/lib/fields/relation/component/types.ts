@@ -11,6 +11,7 @@ export type RelationFieldItem = {
   isImage?: boolean;
   url?: string;
   livePreview?: GenericDoc;
+  /** A path, not a url — `resolve()`/`href` want it base-less. */
   editUrl: string;
   _type: string;
   _prototype: string;

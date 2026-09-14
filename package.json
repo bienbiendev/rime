@@ -126,6 +126,11 @@
       "browser": "./dist/core/prototype/shared/versions/module.browser.js",
       "default": "./dist/core/prototype/shared/versions/module.server.js"
     },
+    "./core/prototype/shared/metas/module": {
+      "types": "./dist/core/prototype/shared/metas/module.server.d.ts",
+      "browser": "./dist/core/prototype/shared/metas/module.js",
+      "default": "./dist/core/prototype/shared/metas/module.server.js"
+    },
     "./core/cors/module": {
       "types": "./dist/core/cors/module.server.d.ts",
       "browser": "./dist/core/cors/module.browser.js",

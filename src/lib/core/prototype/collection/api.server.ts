@@ -4,12 +4,12 @@ import type { RegisterCollection } from '$lib/index.js';
 import type { PrototypeApiContext } from '../define.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
-import { blankAuthDocument } from '$lib/core/auth/blank.server.js';
+import { withoutPrivateFields } from '$lib/core/auth/constant.server.js';
 import { isAuth } from '$lib/core/auth/enabled.js';
 import { createBlankDocument } from '../doc.js';
 import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
 import type { CollectionSlug } from '../types.js';
-import type { OperationQuery, ReadIntent } from '$lib/core/pipeline/types.js';
+import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import { create, type CreateArgs } from './operations/create.js';
 import { deleteById, type DeleteByIdArgs } from './operations/delete-by-id.js';
 import { deleteDocs, type DeleteArgs } from './operations/delete.js';
@@ -76,7 +76,7 @@ class CollectionAPI<
    */
   blank(): Doc {
     const doc = createBlankDocument(this.config, this.event);
-    return (isAuth(this.config) ? blankAuthDocument(doc) : doc) as Doc;
+    return (isAuth(this.config) ? withoutPrivateFields(doc) : doc) as Doc;
   }
 
   /** The locale to act in: the one asked for, else the request's, else the config's default. */
@@ -85,11 +85,8 @@ class CollectionAPI<
   }
 
   /** Which version row a read means — see `versionsReadQuery`. */
-  versionQuery(
-    params: { draft?: boolean; versionId?: string },
-    intent: ReadIntent = 'read'
-  ): OperationQuery | undefined {
-    return versionsReadQuery({ config: this.config, params, intent });
+  versionQuery(params: { latest?: boolean; versionId?: string }): OperationQuery | undefined {
+    return versionsReadQuery({ config: this.config, params });
   }
 
   /** Read through the API cache when it is on and this is not a system call. */
@@ -128,9 +125,11 @@ class CollectionAPI<
    *
    * @example
    * const post = await rime.collection('posts').duplicate({ id: '1234' });
+   * // A given row rather than the newest real version
+   * const copy = await rime.collection('posts').duplicate({ id: '1234', versionId: 'abcd' });
    */
   duplicate(args: DuplicateArgs): Promise<string> {
-    return duplicate({ ctx: this, id: args.id });
+    return duplicate({ ctx: this, id: args.id, versionId: args.versionId });
   }
 
   /**
@@ -145,14 +144,24 @@ class CollectionAPI<
    * });
    */
   find(args: FindArgs = {}): Promise<Doc[]> {
-    const { query, locale, sort = '-updatedAt', depth = 0, limit, offset, draft, select } = args;
+    const {
+      query,
+      locale,
+      sort = '-updatedAt',
+      depth = 0,
+      limit,
+      offset,
+      latest,
+      select,
+      localeFallback
+    } = args;
 
     // The key holds the locale as the *caller* gave it, not the resolved one — preserved from
     // the class this replaces. Reachable only from a local-API call that omits `locale` while
     // the API cache is on, which the REST layer never does: it always passes rime.getLocale().
     return this.cached(
       'collection.find',
-      { select, sort, depth, limit, offset, locale, draft, query },
+      { select, sort, depth, limit, offset, locale, latest, query, localeFallback },
       () =>
         find<Doc>({
           ctx: this,
@@ -162,7 +171,8 @@ class CollectionAPI<
           depth,
           limit,
           offset,
-          draft,
+          latest,
+          localeFallback,
           locale: this.fallbackLocale(locale)
         })
     );
@@ -173,7 +183,7 @@ class CollectionAPI<
    *
    * For collections with versioning:
    * - If versionId is provided: Retrieves that specific version
-   * - If no versionId and draft=true: Retrieves the latest draft if available
+   * - If no versionId and latest=true: Retrieves the newest version, whatever its status
    * - If no versionId and draft=false: Retrieves the published version
    *
    * @example
@@ -190,56 +200,49 @@ class CollectionAPI<
    * // Get latest draft version
    * const post = await rime.collection('posts').findById({
    *   id: '12345',
-   *   draft: true
+   *   latest: true
    * });
    */
   findById(args: FindByIdArgs): Promise<Doc> {
-    const { id, versionId, locale, select, draft, depth = 0 } = args;
+    const { id, versionId, locale, select, latest, depth = 0, localeFallback } = args;
 
     if (!id) {
       throw new RimeError(RimeError.NOT_FOUND);
     }
 
-    return this.cached('collection.findById', { id, versionId, select, depth, draft, locale }, () =>
-      findById<Doc>({
-        ctx: this,
-        id,
-        versionId,
-        select,
-        depth,
-        draft,
-        locale: this.fallbackLocale(locale)
-      })
+    return this.cached(
+      'collection.findById',
+      { id, versionId, select, depth, latest, locale, localeFallback },
+      () =>
+        findById<Doc>({
+          ctx: this,
+          id,
+          versionId,
+          select,
+          depth,
+          latest,
+          localeFallback,
+          locale: this.fallbackLocale(locale)
+        })
     );
   }
 
   /**
-   * Updates a document in the collection by ID
+   * Updates a document in the collection by ID.
    *
-   * For collections with versioning:
-   * - For non-versioned collections: Simply updates the document
-   * - For versioned collections without draft support:
-   *   - If versionId is provided: Updates that specific version
-   *   - If no versionId is provided: Creates a new version based on the latest
-   * - For versioned collections with draft support:
-   *   - If versionId is provided: Updates that specific version
-   *   - If no versionId and draft !== true: Updates the published version
-   *   - If no versionId and draft === true: Creates a new draft from the published version
+   * `versionId`, else `latest`, else the published version selects the row; `fork` makes a new
+   * version from it instead of writing it. A config with versions and no drafts keeps a version
+   * per save, so an update that names no row is a fork there.
    *
    * @example
-   * // Update published version
-   * const post = await rime.collection('posts').updateById({
-   *   id: '12345',
-   *   data: { title: 'New title' },
-   *   locale: 'en'
-   * });
+   * // Write the published version
+   * await rime.collection('posts').updateById({ id, data: { title: 'New title' } });
    *
-   * // Create or update draft version
-   * const post = await rime.collection('posts').updateById({
-   *   id: '12345',
-   *   data: { title: 'Draft title' },
-   *   draft: true
-   * });
+   * // Write the newest version, draft or not
+   * await rime.collection('posts').updateById({ id, data, latest: true });
+   *
+   * // A new draft from the published version
+   * await rime.collection('posts').updateById({ id, data, fork: true });
    */
   updateById(args: UpdateByIdArgs<Doc>): Promise<Doc> {
     return updateById<Doc>({

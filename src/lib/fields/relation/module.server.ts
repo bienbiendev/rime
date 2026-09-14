@@ -29,12 +29,8 @@ export const ensureRelationExists: FieldHookShared = async (
 
   if (value && Array.isArray(value)) {
     for (const relation of value) {
-      let documentId;
-      if (typeof relation === 'string') {
-        documentId = relation;
-      } else {
-        documentId = relation.documentId;
-      }
+      // A `null` element — what `[undefined]` becomes over JSON — names nothing, like an unknown id.
+      const documentId = typeof relation === 'string' ? relation : relation?.documentId;
       if (!documentId) {
         continue;
       }

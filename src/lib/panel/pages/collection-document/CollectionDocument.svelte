@@ -1,16 +1,20 @@
 <script lang="ts">
   import Document from '$lib/panel/components/sections/document/Document.svelte';
+  import Versions from '$lib/panel/components/sections/document/Versions.svelte';
   import Page from '$lib/panel/components/sections/page-layout/Page.svelte';
   import Unauthorized from '$lib/panel/components/sections/unauthorized/Unauthorized.svelte';
+  import { setVersionsContext } from '$lib/panel/context/versions.svelte.js';
   import type { CollectionDocData } from '$lib/panel/index.js';
 
-  const { data }: { data: CollectionDocData<false> } = $props();
+  const { data }: { data: CollectionDocData } = $props();
+
+  const versions = setVersionsContext();
 </script>
 
 {#if data.status === 200}
   <Page>
     {#snippet main()}
-      {#key data.doc.id + data.doc.versionId || '' + data.doc.locale || ''}
+      {#key `${data.doc.id}|${data.doc.versionId ?? ''}|${data.doc.locale ?? ''}`}
         <Document
           class="rz-collection-container__doc"
           doc={data.doc}
@@ -20,6 +24,7 @@
       {/key}
     {/snippet}
   </Page>
+  <Versions doc={data.doc} bind:open={versions.open} versionId={versions.versionId} />
 {:else}
   <Unauthorized />
 {/if}

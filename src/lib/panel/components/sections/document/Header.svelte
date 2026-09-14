@@ -4,10 +4,12 @@
   import { PARAMS } from '$lib/core/constants';
   import { t__ } from '$lib/core/i18n/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { ExternalLink, PencilRuler, X } from '@lucide/svelte';
   import { Button } from '../../ui/button';
   import LanguageSwitcher from '../../ui/language-switcher/LanguageSwitcher.svelte';
   import PageHeader from '../../ui/page-header/PageHeader.svelte';
+  import SpinLoader from '../../ui/spin-loader/SpinLoader.svelte';
   import ButtonSave from './ButtonSave.svelte';
   import ButtonStatus from './ButtonStatus.svelte';
   import Settings from './Settings.svelte';
@@ -17,11 +19,25 @@
     onClose?: any;
     form: DocumentFormContext;
     config: BuiltArea | BuiltCollection;
+    /** What a locale pick does; the document settles its unsaved changes before reloading. */
+    onLocaleSwitch?: () => unknown;
   };
-  const { form, onClose, config }: Props = $props();
+  const { form, onClose, config, onLocaleSwitch = invalidateAll }: Props = $props();
 
   const onCloseIsDefined = $derived(!!onClose);
   const buttonLabel = $derived(form.values.id ? t__('common.save') : t__('common.create'));
+  const locale = getLocaleContext();
+
+  /**
+   * A word on the auto-save, beside the buttons: a spinner while one is on its way, the reason
+   * when one failed, else when the row on screen was auto-saved — this session's last one, or the
+   * row's own time when it was resumed.
+   */
+  const showAutoSave = $derived(
+    form.isAutoSave &&
+      (form.autoSaveState === 'saving' || form.autoSaveState === 'paused' || form.values.isAutoSave)
+  );
+  const autoSavedAt = $derived(form.lastAutoSavedAt ?? form.values.updatedAt);
 
   function buildDocumentURL() {
     let url = form.values.url;
@@ -43,6 +59,21 @@
   {/snippet}
 
   {#snippet bottomRight()}
+    {#if showAutoSave}
+      <span class="rz-auto-save-state" data-auto-save-state={form.autoSaveState}>
+        {#if form.autoSaveState === 'saving'}
+          <SpinLoader />
+        {:else if form.autoSaveState === 'paused'}
+          {t__('common.auto_save_paused', form.autoSaveReason ?? '')}
+        {:else if autoSavedAt}
+          {t__(
+            'common.auto_saved_at',
+            locale.dateFormat(autoSavedAt, { short: true, withTime: true })
+          )}
+        {/if}
+      </span>
+    {/if}
+
     {#if form.values.url}
       <Button
         icon={ExternalLink}
@@ -78,13 +109,13 @@
         processing={form.processing}
       />
     {:else if form.config.versions && !form.config.versions.draft}
-      <!-- scenario 2: versions without draft -->
+      <!-- scenario 2: versions without draft, a version per save -->
       <ButtonSave
         size="sm"
         label={buttonLabel}
         disabled={!form.canSubmit}
         processing={form.processing}
-        data-draft
+        data-fork
         data-submit
       />
     {:else if form.config.versions && form.config.versions.draft && form.values.status === 'published'}
@@ -119,6 +150,19 @@
   {/snippet}
 
   {#snippet topRight()}
-    <LanguageSwitcher onLocalClick={invalidateAll} />
+    <LanguageSwitcher onLocalClick={onLocaleSwitch} />
   {/snippet}
 </PageHeader>
+
+<style lang="postcss">
+  .rz-auto-save-state {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--rz-text-xs);
+    color: hsl(var(--rz-gray-10));
+    white-space: nowrap;
+  }
+  .rz-auto-save-state[data-auto-save-state='paused'] {
+    color: hsl(var(--rz-color-warn));
+  }
+</style>

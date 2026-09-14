@@ -1,4 +1,3 @@
-import { isPublicPanelAuthRoute } from '$lib/core/constants.server.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { Config, User } from '$lib/types.js';
@@ -12,12 +11,6 @@ import type { ConfigContext, RimeContext } from '$lib/core/rime.server.js';
 
 const dev = process.env.NODE_ENV === 'development';
 
-interface RouteInfo {
-  isPublicAuthRoute: boolean;
-  isPanel: boolean;
-  isAPI: boolean;
-}
-
 interface AuthResult {
   session: any;
   user: any;
@@ -27,24 +20,6 @@ interface UserData {
   user: User;
   session: any;
   authUser: any;
-}
-
-/**
- * Analyzes the current route to determine authentication requirements.
- * isPanel/isPublicAuthRoute are derived from the matched route, not the
- * pathname — event.params.panel only resolves when the request matched the
- * [panel=panel] matcher, and event.route.id's literal folder names never
- * carry the configured RIME_PANEL_ROUTE value — so neither check needs to
- * know the actual (hideable) panel segment. sign-in/forgot-password/reset-password
- * all live under [panel=panel] too but must stay reachable without a session,
- * hence the isPublicAuthRoute carve-out.
- */
-function analyzeRoute(event: RequestEvent): RouteInfo {
-  const isPublicAuthRoute = isPublicPanelAuthRoute(event.route.id);
-  const isPanel = event.params.panel !== undefined && !isPublicAuthRoute;
-  const isAPI = event.url.pathname.startsWith('/api');
-
-  return { isPublicAuthRoute, isPanel, isAPI };
 }
 
 /**
@@ -75,9 +50,11 @@ async function authenticateRequest(
 /**
  * Handles unauthenticated users based on route requirements
  */
-function handleUnauthenticated(event: RequestEvent, resolve: any, routeInfo: RouteInfo): any {
-  if (routeInfo.isPanel) {
-    throw redirect(303, `/${event.params.panel}/sign-in`);
+function handleUnauthenticated(event: RequestEvent, resolve: any): any {
+  const { isPanel, panelUrl } = event.locals.rime.routes;
+
+  if (isPanel) {
+    throw redirect(303, panelUrl('sign-in'));
   }
 
   event.locals.user = undefined;
@@ -182,13 +159,13 @@ async function buildUserData<C extends Config>(
  */
 function authorizePanelUser<C extends Config>(
   userData: UserData,
-  routeInfo: RouteInfo,
+  isPanel: boolean,
   config: ConfigContext<C>
 ): void {
   const { user } = userData;
 
   // Panel-specific authorization
-  if (routeInfo.isPanel) {
+  if (isPanel) {
     // Do not allow non-staff user on panel
     if (!user.isStaff) {
       logger.error(RimeError.UNAUTHORIZED);
@@ -227,10 +204,10 @@ function setupLocalsAndResolve(event: any, resolve: any, userData: UserData): an
  */
 export const handleAuth: Handle = async ({ event, resolve }) => {
   const rime = event.locals.rime;
-  const routeInfo = analyzeRoute(event);
+  const { isPanel } = rime.routes;
 
   // Ensure auth is set up
-  if (routeInfo.isPanel) {
+  if (isPanel) {
     await ensureFirstAuthSetup(rime);
   }
 
@@ -239,14 +216,14 @@ export const handleAuth: Handle = async ({ event, resolve }) => {
 
   // Handle unauthenticated users
   if (!authResult) {
-    return handleUnauthenticated(event, resolve, routeInfo);
+    return handleUnauthenticated(event, resolve);
   }
 
   // Build complete user data
   const userData = await buildUserData(authResult, rime, event.request.headers);
 
   // Apply panel authorization rules
-  authorizePanelUser(userData, routeInfo, rime.config);
+  authorizePanelUser(userData, isPanel, rime.config);
 
   // Set up locals and resolve
   return setupLocalsAndResolve(event, resolve, userData);

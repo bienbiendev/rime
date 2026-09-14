@@ -2,7 +2,6 @@ import { create } from '$lib/core/prototype/collection/definition.js';
 import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
 import { text } from '$lib/fields/text/index.js';
 import { describe, expect, it } from 'vitest';
-import type { ReadIntent } from '$lib/core/pipeline/types.js';
 import { versionsReadQuery } from './read-query.js';
 
 /**
@@ -17,9 +16,8 @@ import { versionsReadQuery } from './read-query.js';
  */
 const queryFor = (
   config: Parameters<typeof versionsReadQuery>[0]['config'],
-  params: { draft?: boolean; versionId?: string },
-  intent: ReadIntent = 'read'
-) => versionsReadQuery({ config, params, intent });
+  params: { latest?: boolean; versionId?: string }
+) => versionsReadQuery({ config, params });
 
 describe('versionsReadQuery', () => {
   const drafts = create('spec_read_news', {
@@ -34,7 +32,7 @@ describe('versionsReadQuery', () => {
   });
 
   it('narrows to nothing when drafts are asked for, which the adapter reads as the newest', () => {
-    expect(queryFor(drafts, { draft: true })).toBeUndefined();
+    expect(queryFor(drafts, { latest: true })).toBeUndefined();
   });
 
   it('names the row when the caller named a version, whatever its status', () => {
@@ -45,7 +43,7 @@ describe('versionsReadQuery', () => {
 
   it('prefers a named version over the published filter', () => {
     // Both parameters arrive together on `?versionId=v9` requests from the panel.
-    expect(queryFor(drafts, { versionId: 'v9', draft: false })).toEqual({
+    expect(queryFor(drafts, { versionId: 'v9', latest: false })).toEqual({
       where: { versionId: { equals: 'v9' } }
     });
   });
@@ -61,46 +59,63 @@ describe('versionsReadQuery', () => {
   });
 
   /**
-   * `intent: 'original'` is the update pipeline loading what it is about to change, and it flips
-   * the meaning of `draft`. These four reproduce `VersionOperations.shouldRetrieveDraft`, which
-   * `getOriginalDocument` used to call — the table it encoded is the reason `ReadIntent` exists,
-   * so it is asserted here rather than trusted.
+   * An auto-saved row is one user's typing. Every ordinary read skips it; only its `versionId`
+   * reaches it, which is what the panel's resume does.
+   */
+  describe('with auto-save', () => {
+    const autoSave = create('spec_read_auto', {
+      versions: { draft: true, autoSave: true },
+      fields: [text('title').isTitle()]
+    });
+    const notAutoSaved = { isAutoSave: { not_equals: true } };
+    const published = { status: { equals: VERSIONS_STATUS.PUBLISHED } };
+
+    it('skips auto-saved rows on top of the published filter', () => {
+      expect(queryFor(autoSave, {})).toEqual({ where: { and: [notAutoSaved, published] } });
+    });
+
+    it('skips auto-saved rows when the latest is asked for: the newest real row', () => {
+      expect(queryFor(autoSave, { latest: true })).toEqual({ where: notAutoSaved });
+    });
+
+    it('skips them as an update original too', () => {
+      expect(queryFor(autoSave, { latest: false })).toEqual({
+        where: { and: [notAutoSaved, published] }
+      });
+    });
+
+    it('reaches one by its versionId', () => {
+      expect(queryFor(autoSave, { versionId: 'a1', latest: true })).toEqual({
+        where: { versionId: { equals: 'a1' } }
+      });
+    });
+  });
+
+  /**
+   * What `getOriginalDocument` asks for: the row an update starts from. It reads with
+   * `latest: false` whatever the request said, so on a draft config that is the published row,
+   * and a named version is that row.
    */
   describe("as an update's original", () => {
-    it('branches from the published version even when drafts were asked for', () => {
-      // The one case that differs from a read: `?draft=true` on an update means NEW_DRAFT_FROM_
-      // PUBLISHED, which fetched with `draft: false`. A read with the same parameter wants the
-      // newest row.
-      expect(queryFor(drafts, { draft: true }, 'original')).toEqual({
-        where: { status: { equals: VERSIONS_STATUS.PUBLISHED } }
-      });
-      expect(queryFor(drafts, { draft: true }, 'read')).toBeUndefined();
-    });
-
-    it('branches from the published version by default', () => {
-      // UPDATE_PUBLISHED, which also fetched with `draft: false`.
-      expect(queryFor(drafts, {}, 'original')).toEqual({
+    it('is the published version on a draft config', () => {
+      expect(queryFor(drafts, { latest: false })).toEqual({
         where: { status: { equals: VERSIONS_STATUS.PUBLISHED } }
       });
     });
 
-    it('takes the named version when one was named', () => {
-      // UPDATE_VERSION fetched with `draft: true`, but also passed the versionId through, so the
-      // row was named either way.
-      expect(queryFor(drafts, { versionId: 'v9' }, 'original')).toEqual({
+    it('is the named version when one was named', () => {
+      expect(queryFor(drafts, { versionId: 'v9', latest: false })).toEqual({
         where: { versionId: { equals: 'v9' } }
       });
     });
 
-    it('takes the newest row on a versioned config with no drafts', () => {
-      // NEW_VERSION_FROM_LATEST, which fetched with `draft: true` — and with no status column to
-      // filter on, "the newest" is what that meant.
+    it('is the newest row on a versioned config with no drafts', () => {
       const versioned = create('spec_read_original_medias', {
         versions: true,
         fields: [text('alt')]
       });
 
-      expect(queryFor(versioned, {}, 'original')).toBeUndefined();
+      expect(queryFor(versioned, { latest: false })).toBeUndefined();
     });
   });
 
@@ -108,6 +123,6 @@ describe('versionsReadQuery', () => {
     const plain = create('spec_read_pages', { fields: [text('title').isTitle()] });
 
     expect(queryFor(plain, {})).toBeUndefined();
-    expect(queryFor(plain, { draft: true })).toBeUndefined();
+    expect(queryFor(plain, { latest: true })).toBeUndefined();
   });
 });
