@@ -348,3 +348,29 @@ export const sanitize = (value?: string): string => {
 
   return decode(restoreWhitespace(sanitized));
 };
+
+/**
+ * The members of a generated type literal, one per line. A container's own type ends with a
+ * comma and a leaf's does not, so each is stripped before the join.
+ *
+ * ```ts
+ * joinMemberTypes(['title: string', 'facts: Array<TreeFacts>,']) // 'title: string,\nfacts: Array<TreeFacts>'
+ * ```
+ */
+export const joinMemberTypes = (types: string[]): string =>
+  types
+    .map((type) => type.trim().replace(/,$/, ''))
+    .filter(Boolean)
+    .join(',\n');
+
+/**
+ * Removes the block type from a field path.
+ *
+ * ```ts
+ * normalizeFieldPath('foo.bar.0:content.baz'); // 'foo.bar.0.baz'
+ * ```
+ */
+export const normalizeFieldPath = (path: string) => {
+  const regExpBlockType = /:[a-zA-Z0-9]+/g;
+  return path.replace(regExpBlockType, '');
+};

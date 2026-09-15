@@ -7,14 +7,21 @@
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import { useSortable } from '$lib/panel/util/Sortable.js';
-  import { Download } from '@lucide/svelte';
+  import { normalizeFieldPath } from '$lib/util/string.js';
+  import { Download, Maximize2 } from '@lucide/svelte';
   import Sortable from 'sortablejs';
   import { onDestroy } from 'svelte';
   import AddBlockButton from './AddBlockButton.svelte';
   import Block from './Block.svelte';
+  import { getBlocksFocusContext } from './focus/focus.svelte.js';
   import type { BlocksProps } from './props.js';
 
   const { path, config, form }: BlocksProps = $props();
+
+  /** The document's focus mode, absent in a nested form. */
+  const focus = getBlocksFocusContext();
+  const list = $derived(normalizeFieldPath(path));
+  const summary = $derived(!!config.get.summary && !!focus);
 
   let blockList: HTMLElement;
 
@@ -55,7 +62,7 @@
   const { sortable } = useSortable(sortableOptions);
 
   $effect(() => {
-    if (shouldInit) {
+    if (shouldInit && blockList) {
       sortableInstance = sortable(blockList);
       sortingInitialized = true;
     }
@@ -91,43 +98,65 @@
         {#if config.get.localized}
           <sup>{locale.code}</sup>
         {/if}
+        {#if focus}
+          <Button
+            onclick={() => focus.open(list)}
+            size="xs"
+            variant="outline"
+            icon={Maximize2}
+            data-focus-open={list}
+          >
+            {summary ? t__('fields.edit') : t__('fields.focus')}
+          </Button>
+        {/if}
       </h3>
       <Field.Hint {config} />
     </div>
-    {#if hasBlocks}
-      <div class="rz-blocks__actions">
-        <Button onclick={collapseAll} size="xs" variant="outline">Collapse all</Button>
-        <Button onclick={expandAll} size="xs" variant="outline">Expand all</Button>
-      </div>
-    {/if}
+    <div class="rz-blocks__actions">
+      {#if summary}
+        <span class="rz-blocks__count">
+          {blockState.blocks.length === 1
+            ? t__('fields.blocks_count', '1')
+            : t__('fields.blocks_count|m|p', String(blockState.blocks.length))}
+        </span>
+      {:else if hasBlocks}
+        <Button onclick={collapseAll} size="xs" variant="outline">
+          {t__('fields.collapse_all')}
+        </Button>
+        <Button onclick={expandAll} size="xs" variant="outline">{t__('fields.expand_all')}</Button>
+      {/if}
+    </div>
   </header>
 
-  <div class="rz-blocks__list" data-empty={!hasBlocks ? '' : null} bind:this={blockList}>
-    {#if hasBlocks}
-      {#each blockState.blocks as block, index (block.id)}
-        <Block
-          bind:this={blocksComponents[index]}
-          deleteBlock={() => blockState.deleteBlock(index)}
-          duplicateBlock={() => blockState.duplicateBlock(index)}
-          {form}
-          {sorting}
-          path="{path}.{index}:{block.type}"
-          config={getConfigByBlockType(block.type)}
-        />
-      {/each}
-    {/if}
-  </div>
+  {#if !summary}
+    <div class="rz-blocks__list" data-empty={!hasBlocks ? '' : null} bind:this={blockList}>
+      {#if hasBlocks}
+        {#each blockState.blocks as block, index (block.id)}
+          <Block
+            bind:this={blocksComponents[index]}
+            deleteBlock={() => blockState.deleteBlock(index)}
+            duplicateBlock={() => blockState.duplicateBlock(index)}
+            focusBlock={focus ? () => focus.open(list, `${list}.${index}`) : undefined}
+            {form}
+            {sorting}
+            path="{path}.{index}:{block.type}"
+            config={getConfigByBlockType(block.type)}
+          />
+        {/each}
+      {/if}
+    </div>
 
-  <div class="rz-blocks__actions-bottom">
-    <AddBlockButton addBlock={add} {config} />
+    <div class="rz-blocks__actions-bottom">
+      <AddBlockButton addBlock={add} {config} />
 
-    {#if locale && locale.code !== locale.defaultCode && config.get.localized}
-      <Button icon={Download} size="sm" onclick={field.setValueFromDefaultLocale} variant="text">
-        {t__('fields.get_data_from')}
-        {locale.defaultCode}
-      </Button>
-    {/if}
-  </div>
+      {#if locale && locale.code !== locale.defaultCode && config.get.localized}
+        <Button icon={Download} size="sm" onclick={field.setValueFromDefaultLocale} variant="text">
+          {t__('fields.get_data_from')}
+          {locale.defaultCode}
+        </Button>
+      {/if}
+    </div>
+  {/if}
 </fieldset>
 
 <style lang="postcss">
@@ -135,6 +164,9 @@
 
   .rz-blocks__title {
     @mixin font-medium;
+    :global(button) {
+      margin-left: var(--rz-size-2);
+    }
   }
 
   sup {
@@ -143,10 +175,15 @@
   }
 
   .rz-blocks__actions {
-    /* translate: 0 calc(-1 * var(--rz-size-2)); */
     display: flex;
-    align-items: end;
+    align-items: center;
     gap: var(--rz-size-2);
+  }
+
+  .rz-blocks__count {
+    font-size: var(--rz-text-xs);
+    color: hsl(var(--rz-color-fg) / 0.5);
+    margin-right: var(--rz-size-2);
   }
 
   .rz-blocks__list {

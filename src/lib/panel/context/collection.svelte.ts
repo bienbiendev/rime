@@ -6,7 +6,7 @@ import { isFormField } from '$lib/core/fields/util.js';
 import { directoriesKebab } from '$lib/core/prototype/collection/upload/naming.js';
 import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
 import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config.js';
-import { toNestedStructure } from '$lib/core/prototype/doc.js';
+import { toNestedStructure } from '$lib/core/prototype/collection/nested/tree.js';
 import type { GenericDoc, GenericNestedDoc } from '$lib/core/prototype/types.js';
 import { apiUrl, panelUrl } from '$lib/core/routes/util.js';
 import { GroupFieldBuilder } from '$lib/fields/group/index.js';

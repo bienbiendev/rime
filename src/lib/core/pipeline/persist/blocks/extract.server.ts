@@ -1,5 +1,5 @@
 import type { GenericBlock } from '$lib/core/prototype/types.js';
-import { normalizeFieldPath } from '$lib/util/path.js';
+import { normalizeFieldPath } from '$lib/util/string.js';
 import { getValueAtPath } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import type { ConfigMap } from '../../config-map/types.js';

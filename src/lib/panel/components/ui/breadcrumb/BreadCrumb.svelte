@@ -35,6 +35,7 @@
     > *,
     > :global(.rz-button) {
       opacity: 0.5;
+      max-width: 150px;
       transition: opacity 0.3s ease;
     }
     > *:hover,

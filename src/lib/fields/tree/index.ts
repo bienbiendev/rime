@@ -1,7 +1,7 @@
 import { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { Field, FormField } from '$lib/fields/types.js';
-import { toPascalCase } from '$lib/util/string.js';
+import { toPascalCase, joinMemberTypes } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import dedent from 'dedent';
 import { number } from '../number/index.js';
@@ -93,7 +93,7 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
 
   protected override generateType(): string {
     const blockTypeName = `Tree${toPascalCase(this.name)}`;
-    const fieldsType = this.get.fields.map((f) => f.use.generateType()).join(',\n');
+    const fieldsType = joinMemberTypes(this.get.fields.map((f) => f.use.generateType()));
     const treeType = dedent`
     //@shared:start ${blockTypeName}
      export type ${blockTypeName} = {

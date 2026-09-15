@@ -25,7 +25,7 @@ import type { IconProps } from '@lucide/svelte';
 import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
 import type { Component } from 'svelte';
 import type { FieldBuilder } from '../fields/builders/index.js';
-import type { DocType } from '../prototype/types.js';
+import type { DocType, GenericDoc } from '../prototype/types.js';
 
 /**
  * What an author writes.
@@ -193,6 +193,11 @@ export type Area<S> = PrototypeConfig & {
 export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'upload' | 'auth'> & {
   slug: CollectionSlug;
   type: 'collection';
+  /**
+   * A document of this config's shape with every default applied, and no id — see
+   * `prototype/blank.ts`, which every config carries as this method.
+   */
+  blank(event?: RequestEvent): GenericDoc;
   /** Make fields mandatory */
   fields: FieldBuilder<Field>[];
   /** The kebab-case version of the slug for urls */
@@ -256,6 +261,11 @@ export type BuiltAreaClient = BuiltArea;
 export type BuiltArea = Omit<Area<string>, 'versions'> & {
   slug: AreaSlug;
   type: 'area';
+  /**
+   * A document of this config's shape with every default applied, and no id — see
+   * `prototype/blank.ts`, which every config carries as this method.
+   */
+  blank(event?: RequestEvent): GenericDoc;
   /** Make fields mandatory */
   fields: FieldBuilder<Field>[];
   /** The kebab-case version of the slug for urls */

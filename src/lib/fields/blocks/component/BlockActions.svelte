@@ -1,15 +1,21 @@
 <script lang="ts">
-  import { CopyPlus, Trash2 } from '@lucide/svelte';
+  import { CopyPlus, Maximize2, Trash2 } from '@lucide/svelte';
 
   type Props = {
     deleteBlock: () => void;
     duplicateBlock: () => void;
+    focusBlock?: () => void;
   };
 
-  const { deleteBlock, duplicateBlock }: Props = $props();
+  const { deleteBlock, duplicateBlock, focusBlock }: Props = $props();
 </script>
 
 <div class="rz-block-actions">
+  {#if focusBlock}
+    <button class="rz-block-action" type="button" onclick={focusBlock} data-focus-block>
+      <Maximize2 size={11} />
+    </button>
+  {/if}
   <button class="rz-block-action" type="button" onclick={duplicateBlock}>
     <CopyPlus size={11} />
   </button>

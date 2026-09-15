@@ -1,4 +1,6 @@
+import type { Dic } from '$lib/util/types.js';
 import type { Component } from 'svelte';
+import type { BlankContext } from '../blank.js';
 import type { Field, FieldAccess } from '../../../fields/types.js';
 
 /**
@@ -34,6 +36,7 @@ export type FieldUse = {
   accessCreate(...args: Parameters<FieldAccess>): boolean;
   accessUpdate(...args: Parameters<FieldAccess>): boolean;
   generateType(): string;
+  blank(context?: BlankContext): Dic | undefined;
 };
 
 export class FieldBuilder<T extends Field = Field> {
@@ -111,7 +114,8 @@ export class FieldBuilder<T extends Field = Field> {
       accessCreate: (..._args: Parameters<FieldAccess>): boolean => true,
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       accessUpdate: (..._args: Parameters<FieldAccess>): boolean => true,
-      generateType: (): string => this.generateType()
+      generateType: (): string => this.generateType(),
+      blank: (context: BlankContext = {}): Dic | undefined => this.blank(context)
     };
   }
 
@@ -129,5 +133,12 @@ export class FieldBuilder<T extends Field = Field> {
    *  provide its own, unlike a private `#field` which can't be polymorphically overridden. */
   protected generateType(): string {
     return '';
+  }
+
+  /** What this field contributes to a blank document, `undefined` for a field that holds no data.
+   *  `protected` and reached through `.use.blank()`, same as `generateType`. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected blank(_context: BlankContext): Dic | undefined {
+    return undefined;
   }
 }

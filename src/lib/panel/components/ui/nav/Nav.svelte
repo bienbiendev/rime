@@ -1,6 +1,7 @@
 <script lang="ts">
   import { panelPath } from '$lib/core/routes/util.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
+  import { getNavContext } from '$lib/panel/context/nav.svelte.js';
   import type { Route } from '$lib/panel/types';
   import { PanelsTopLeft } from '@lucide/svelte';
   import ScrollArea from '../scroll-area/scroll-area.svelte';
@@ -8,12 +9,11 @@
   import NavItem from './NavItem.svelte';
   import UserButton from './UserButton.svelte';
 
-  type Props = {
-    isCollapsed: boolean;
-    setCollapsed: (value: boolean) => void;
-    routes: Record<string, Route[]>;
-  };
-  const { isCollapsed, setCollapsed, routes: routesGroups }: Props = $props();
+  type Props = { routes: Record<string, Route[]> };
+  const { routes: routesGroups }: Props = $props();
+
+  const nav = getNavContext()!;
+  const isCollapsed = $derived(nav.collapsed);
 
   const config = getConfigContext();
   const navigationGroupsConfig = config.raw.panel.navigation?.groups;
@@ -67,12 +67,7 @@
     </div>
   </div>
 
-  <button
-    class="rz-nav__toggle"
-    onclick={() => setCollapsed(!isCollapsed)}
-    aria-label="Toggle navigation"
-  >
-  </button>
+  <button class="rz-nav__toggle" onclick={nav.toggle} aria-label="Toggle navigation"> </button>
 </div>
 
 <style type="postcss">
@@ -87,7 +82,7 @@
 
   .rz-nav {
     position: fixed;
-    z-index: 100;
+    z-index: 300;
     bottom: 0;
     left: 0;
     top: 0;
@@ -116,8 +111,8 @@
     }
   }
   .rz-nav--collapsed {
-    width: var(--rz-size-14);
-    padding: var(--rz-size-3);
+    width: var(--rz-size-10);
+    padding: var(--rz-size-1);
     :global(.rz-button-nav) {
       justify-content: start;
     }
@@ -132,7 +127,7 @@
   }
   .rz-nav__header {
     display: flex;
-    height: var(--rz-size-14);
+    height: var(--rz-size-10);
     flex-shrink: 0;
     align-items: center;
     justify-content: space-between;

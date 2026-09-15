@@ -5,6 +5,7 @@ import type { AnyHook, HookTiming, OperationQuery } from '$lib/core/pipeline/typ
 import type { Dic } from '$lib/util/types.js';
 import { FileText } from '@lucide/svelte';
 import type { RequestEvent } from '@sveltejs/kit';
+import { blank } from './blank.js';
 import { prototypeKebab } from './naming.js';
 import type { GenericDoc } from './types.js';
 
@@ -150,6 +151,7 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
       ...augmented,
       type: name,
       slug,
+      blank,
       kebab: prototypeKebab(slug),
       fields: augmented.fields || [],
       icon: augmented.icon || FileText,

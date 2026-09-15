@@ -1,5 +1,4 @@
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { createBlankDocument } from '$lib/core/prototype/doc.js';
 import { omit, pick } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import deepmerge from 'deepmerge';
@@ -10,7 +9,7 @@ import deepmerge from 'deepmerge';
  */
 export const mergeWithBlankDocument = Hooks.beforeCreate(
   async function mergeWithBlankDocument(args) {
-    const blank = createBlankDocument(args.config, args.event) as Dic;
+    const blank = args.config.blank(args.event) as Dic;
     const known = Object.keys(blank);
     const data = args.data as Dic;
 

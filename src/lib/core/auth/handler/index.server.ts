@@ -2,7 +2,7 @@ import { RimeError } from '$lib/core/errors/index.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { Config, User } from '$lib/types.js';
 import { error, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
-import { access } from '$lib/util/index.js';
+import { access } from '$lib/core/auth/access.js';
 import { BETTER_AUTH_ROLES } from '$lib/core/auth/constant.server.js';
 import { userAttributes } from '$lib/core/auth/user.server.js';
 import { hasAuthUser } from '$lib/core/auth/better-auth-tables.server.js';

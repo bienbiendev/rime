@@ -10,6 +10,8 @@
   import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
   import { EDIT_LOCK_TTL_MS } from '$lib/core/prototype/shared/metas/constant.js';
   import { isLockHeldByOther } from '$lib/core/prototype/shared/metas/lock.js';
+  import BlocksFocus from '$lib/fields/blocks/component/focus/BlocksFocus.svelte';
+  import { setBlocksFocusContext } from '$lib/fields/blocks/component/focus/focus.svelte.js';
   import type { GenericDoc } from '$lib/core/prototype/types';
   import { apiUrl } from '$lib/core/routes/util.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
@@ -133,6 +135,9 @@
     key: `${initial._type}_${nestedLevel}`,
     beforeRedirect: beforeRedirect
   });
+
+  /** The blocks focus mode, on the document itself: a nested create has none. */
+  const focus = nestedLevel === 0 ? setBlocksFocusContext(form) : null;
 
   /**
    * Somebody else has this document open, recently enough to still mean it.
@@ -342,7 +347,11 @@
     {#if config.type === 'collection' && isUploadConfig(config)}
       <UploadHeader accept={config.upload.accept} create={operation === 'create'} {form} />
     {/if}
-    <RenderFields fields={config.fields} {form} />
+    {#if focus?.path}
+      <BlocksFocus {form} />
+    {:else}
+      <RenderFields fields={config.fields} {form} />
+    {/if}
     <!--  -->
     {#if config.type === 'collection' && isAuthConfig(config) && config.auth.type === 'password'}
       <AuthFooter collection={config} {operation} {form} />

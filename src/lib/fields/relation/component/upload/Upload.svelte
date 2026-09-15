@@ -5,7 +5,6 @@
   import CardResource from '$lib/panel/components/ui/card-resource/card-resource.svelte';
   import * as Sheet from '$lib/panel/components/ui/sheet/index.js';
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import { createBlankDocument } from '$lib/core/prototype/doc.js';
   import { Plus } from '@lucide/svelte';
   import Sortable from 'sortablejs';
   import { onDestroy } from 'svelte';
@@ -129,7 +128,7 @@
 >
   <Sheet.Content style="--rz-page-gutter:var(--rz-size-6)" showCloseButton={false} side="right">
     <Doc
-      doc={createBlankDocument(relationConfig)}
+      doc={relationConfig.blank()}
       readOnly={false}
       onClose={() => (create = false)}
       operation="create"

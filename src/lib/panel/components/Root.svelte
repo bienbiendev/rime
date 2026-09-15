@@ -5,9 +5,10 @@
   import { Toaster } from '$lib/panel/components/ui/sonner';
   import { setConfigContext } from '$lib/panel/context/config.svelte.js';
   import { setLocaleContext } from '$lib/panel/context/locale.svelte.js';
+  import { setNavContext } from '$lib/panel/context/nav.svelte.js';
   import { setUserContext } from '$lib/panel/context/user.svelte.js';
   import type { Route } from '$lib/panel/types.js';
-  import { onMount, type Snippet } from 'svelte';
+  import type { Snippet } from 'svelte';
   import { setAPIProxyContext } from '../context/api-proxy.svelte.js';
   import { setTitleContext } from '../context/title.js';
 
@@ -20,8 +21,7 @@
   };
   const { config, routes, children, locale: initialeLocale, user }: Props = $props();
 
-  let isCollapsed = $state(false);
-  let localeCollapsed = $state<string | null>(null);
+  const nav = setNavContext();
 
   // svelte-ignore state_referenced_locally
   setConfigContext(config);
@@ -38,40 +38,13 @@
   $effect(() => {
     locale.code = initialeLocale;
   });
-
-  function onResize() {
-    if (window.innerWidth < 1024) {
-      isCollapsed = true;
-    } else {
-      if (!localeCollapsed || localeCollapsed === 'false') {
-        isCollapsed = false;
-        localeCollapsed = 'false';
-      }
-    }
-  }
-
-  const setCollapsed = (bool: boolean) => {
-    isCollapsed = bool;
-    localeCollapsed = bool.toString();
-    localStorage.setItem('rz-panel-collapsed', bool.toString());
-  };
-
-  onMount(() => {
-    localeCollapsed = localStorage.getItem('rz-panel-collapsed');
-    if (localeCollapsed) {
-      setCollapsed(localeCollapsed === 'true');
-    }
-    onResize();
-  });
 </script>
-
-<svelte:window on:resize={onResize} />
 
 <Toaster />
 
 <div class="rz-panel-root">
-  <Nav {setCollapsed} {routes} {isCollapsed} />
-  <div class="rz-panel-root__right" class:rz-panel-root__right--navCollapsed={isCollapsed}>
+  <Nav {routes} />
+  <div class="rz-panel-root__right" class:rz-panel-root__right--navCollapsed={nav.collapsed}>
     {@render children()}
   </div>
 </div>

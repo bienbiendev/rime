@@ -1,3 +1,4 @@
+import type { BlankContext } from '$lib/core/fields/blank.js';
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
@@ -49,6 +50,13 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
   many() {
     this.field.many = true;
     return this;
+  }
+
+  /** An empty list, whatever `defaultValue` holds: a relation is written as its own rows, and a
+   *  blank document has none yet. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected override blank(_context: BlankContext) {
+    return { [this.name]: [] };
   }
 
   defaultValue(value: string | string[] | DefaultValueFn<string | string[]>) {

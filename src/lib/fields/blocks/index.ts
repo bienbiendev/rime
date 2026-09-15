@@ -2,7 +2,7 @@ import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { WithoutBuilders } from '$lib/core/fields/types.js';
 import type { Field, FormField } from '$lib/fields/types.js';
-import { toPascalCase } from '$lib/util/string.js';
+import { toPascalCase, joinMemberTypes } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';
 import dedent from 'dedent';
@@ -31,6 +31,15 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
   }
   get cell() {
     return Cell;
+  }
+
+  /**
+   * One row in the document form, `3 blocks · Edit`, with the blocks edited in focus mode.
+   * For a layout field, in place of the list of cards.
+   */
+  summary() {
+    this.field.summary = true;
+    return this;
   }
 
   localized() {
@@ -92,7 +101,7 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
       .map((block) => {
         const blockTypeName = `Block${toPascalCase(block.name)}`;
         blockNames.push(blockTypeName);
-        const fieldsType = block.get.fields.map((f) => f.use.generateType()).join(',');
+        const fieldsType = joinMemberTypes(block.get.fields.map((f) => f.use.generateType()));
 
         return dedent`
         //@shared:start ${blockTypeName}
@@ -178,6 +187,8 @@ class BlockBuilder {
 export type BlocksField = FormField & {
   type: 'blocks';
   tree?: boolean;
+  /** Rendered as one row in the form; the blocks are edited in focus mode. */
+  summary?: boolean;
   blocks: BlockBuilder[];
 };
 
@@ -196,5 +207,6 @@ export type BlocksFieldBlock = {
 export type BlocksFieldRaw = FormField & {
   type: 'blocks';
   tree?: boolean;
+  summary?: boolean;
   blocks: WithoutBuilders<BlocksFieldBlock>[];
 };

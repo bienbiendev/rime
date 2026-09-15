@@ -14,10 +14,20 @@
     sorting: boolean;
     deleteBlock: () => void;
     duplicateBlock: () => void;
+    /** Opens the document's focus mode on this block; absent in a nested form. */
+    focusBlock?: () => void;
     form: DocumentFormContext;
   };
 
-  const { config, path, deleteBlock, duplicateBlock, form, sorting = false }: Props = $props();
+  const {
+    config,
+    path,
+    deleteBlock,
+    duplicateBlock,
+    focusBlock,
+    form,
+    sorting = false
+  }: Props = $props();
 
   let isOpen = $state(true);
   const position = $derived(parseInt(path.split('.').pop() || '0'));
@@ -78,7 +88,7 @@
         </div>
       </button>
 
-      <BlockActions {duplicateBlock} {deleteBlock} />
+      <BlockActions {duplicateBlock} {deleteBlock} {focusBlock} />
 
       <div class="rz-block__grip">
         <GripVertical size={15} />
