@@ -1,7 +1,7 @@
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
-import { validate } from '$lib/util/index.js';
+import * as validate from '$lib/core/fields/validate.js';
 import { sanitize, slugify } from '$lib/util/string.js';
 import Cell from './component/Cell.svelte';
 import Slug from './component/Slug.svelte';

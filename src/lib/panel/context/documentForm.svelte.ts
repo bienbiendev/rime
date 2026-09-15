@@ -13,10 +13,11 @@ import {
 } from '$lib/core/prototype/shared/versions/constant.js';
 import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '$lib/core/prototype/types.js';
 import { apiUrl, panelUrl } from '$lib/core/routes/util.js';
+import type { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
 import type { FormField } from '$lib/types.js';
 import { isObjectLiteral, omit } from '$lib/util/object.js';
-import { normalizeFieldPath } from '$lib/util/path.js';
+import { normalizeFieldPath } from '$lib/util/string.js';
 import { randomId } from '$lib/util/random.js';
 import type { Dic, WithOptional } from '$lib/util/types.js';
 import type { ActionResult } from '@sveltejs/kit';
@@ -24,13 +25,27 @@ import cloneDeep from 'clone-deep';
 import { diff } from 'deep-object-diff';
 import { flatten } from 'flat';
 import { getContext, setContext } from 'svelte';
-import { SvelteURLSearchParams } from 'svelte/reactivity';
 import { toast } from 'svelte-sonner';
+import { SvelteURLSearchParams } from 'svelte/reactivity';
 import { t__ } from '../../core/i18n/index.js';
-import { moveItem } from '../../util/array.js';
 import { getValueAtPath, setValueAtPath } from '../../util/object.js';
 import { snapshot } from '../../util/state.js';
 import { getAPIProxyContext } from './api-proxy.svelte.js';
+import {
+  duplicateBlock as duplicateBlockIn,
+  fromClipboard,
+  insertBlock,
+  moveBlock as moveBlockIn,
+  parseBlockPath,
+  readList,
+  rebuildPaths,
+  removeBlock,
+  toClipboard,
+  withBlockTypes,
+  withFreshIds,
+  type BlockAt,
+  type NewBlock
+} from './blocks-ops.js';
 import { setErrorsContext } from './errors.svelte.js';
 import { getLocaleContext } from './locale.svelte.js';
 import { getTitleContext } from './title.js';
@@ -128,36 +143,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       return doc && initialTitle ? initialTitle : '[untitled]';
     }
   }
-
-  const rebuildPaths = (items: any[], basePath: string, parentPath: string = basePath) => {
-    return items.map((item, index) => {
-      // Clone the item
-      const newItem = cloneDeep(item);
-
-      // If item has a path property, update it with parent path
-      if ('path' in newItem) {
-        newItem.path = parentPath;
-      }
-
-      // If item is part of an array, update its position
-      newItem.position = index;
-
-      // Process all properties of the item
-      Object.keys(newItem).forEach((key) => {
-        // If property is an array of object, process it recursively
-        if (
-          Array.isArray(newItem[key]) &&
-          newItem[key].length &&
-          isObjectLiteral(newItem[key][0])
-        ) {
-          const newParentPath = `${parentPath}.${index}.${key}`;
-          newItem[key] = rebuildPaths(newItem[key], basePath, newParentPath);
-        }
-      });
-
-      return newItem;
-    });
-  };
 
   function setValue(path: string, value: any) {
     doc = setValueAtPath(path, doc, value);
@@ -288,86 +273,104 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     };
   }
 
+  /**
+   * The block operations, document-wide. Paths are normalized, without `:type`; a list path names
+   * the array, `sections` or `sections.0.items`. Every view of the blocks calls these.
+   */
+  const blocks = {
+    list(list: string): GenericBlock[] {
+      return readList(doc, list);
+    },
+
+    /** The `BlocksBuilder` a list path names, read through the document for the block types. */
+    builder(list: string) {
+      const field = getFieldAtPath(withBlockTypes(list, doc), documentConfig.fields);
+      return field && field.type === 'blocks' ? (field as BlocksBuilder) : undefined;
+    },
+
+    /** Whether the list's block set has this type. */
+    accepts(list: string, type: string): boolean {
+      return !!blocks.builder(list)?.get.blocks.some((block) => block.name === type);
+    },
+
+    insert(at: BlockAt, block: NewBlock): string {
+      const change = insertBlock(doc, at, block);
+      apply(change);
+      return change.id;
+    },
+
+    remove(path: string): void {
+      const at = parseBlockPath(path);
+      errors.deleteAllThatStartWith(`${at.list}.${at.index}.`);
+      apply(removeBlock(doc, path));
+    },
+
+    duplicate(path: string): string | null {
+      const change = duplicateBlockIn(doc, path);
+      apply(change);
+      return change.id;
+    },
+
+    move(from: string, to: BlockAt): void {
+      apply(moveBlockIn(doc, from, to));
+    },
+
+    /** Copies the block to the clipboard, and keeps it here for a browser that refuses to read back. */
+    async copy(path: string): Promise<void> {
+      const at = parseBlockPath(path);
+      const block = readList(doc, at.list)[at.index];
+      if (!block) return;
+      const data = toClipboard(block);
+      clipboard = data;
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(data));
+      } catch {
+        // The in-memory copy above is what paste reads then.
+      }
+    },
+
+    /** Pastes the copied block at `at`. `null` when there is none, or the list refuses its type. */
+    async paste(at: BlockAt): Promise<string | null> {
+      let data = clipboard;
+      try {
+        data = fromClipboard(await navigator.clipboard.readText()) ?? data;
+      } catch {
+        // Reading the clipboard needs a permission some browsers never give.
+      }
+      if (!data || !blocks.accepts(at.list, data.type)) return null;
+      const { id: _id, path: _path, position: _position, ...block } = withFreshIds(data.block);
+      return blocks.insert(at, block as NewBlock);
+    }
+  };
+
+  let clipboard: ReturnType<typeof toClipboard> | null = null;
+
+  function apply(change: { doc: T; lists: string[] }) {
+    if (!change.lists.length) return;
+    doc = change.doc;
+    if (onDataChange) {
+      for (const list of change.lists) {
+        onDataChange({ path: list, value: snapshot(getValueAtPath(list, doc)) });
+      }
+    }
+  }
+
+  /** One list's view of the operations above, for the inline cards. */
   function useBlocks(path: string) {
-    const generateTempId = () => 'temp-' + new Date().getTime().toString();
-
-    const getBlocks = (): GenericBlock[] => {
-      return cloneDeep(getValueAtPath(path, doc)) || [];
-    };
-
-    const assignBlocksToDoc = (blocks: GenericBlock[]) => {
-      blocks = rebuildPaths(blocks, path);
-      doc = setValueAtPath(path, doc, blocks);
-      if (onDataChange) onDataChange({ path, value: snapshot(blocks) });
-    };
+    const list = normalizeFieldPath(path);
 
     const addBlock: AddBlock = (block) => {
-      const blockWithPath: GenericBlock = {
-        ...block,
-        id: generateTempId(),
-        type: block.type,
-        path: path,
-        position: block.position
-      };
-      let blocks = [...getBlocks()];
-      blocks = blocks.toSpliced(block.position, 0, blockWithPath);
-      assignBlocksToDoc(blocks);
+      const { position, ...rest } = block;
+      const index = position ?? blocks.list(list).length;
+      blocks.insert({ list, index }, rest as NewBlock);
     };
 
-    const deleteBlock = (index: number) => {
-      const blocks = [...getBlocks()]
-        .filter((_, i) => i !== index)
-        .map((block, index) => ({ ...block, position: index }));
-      errors.deleteAllThatStartWith(`${path}.${index}.`);
-      assignBlocksToDoc(blocks);
-    };
+    const deleteBlock = (index: number) => blocks.remove(`${list}.${index}`);
 
-    const moveBlock: MoveBlock = (from, to) => {
-      let blocks = moveItem(getBlocks(), from, to);
-      blocks = blocks.map((block, index) => ({
-        ...block,
-        position: index
-      }));
-      assignBlocksToDoc(blocks);
-    };
+    const moveBlock: MoveBlock = (from, to) => blocks.move(`${list}.${from}`, { list, index: to });
 
     const duplicateBlock = (index: number) => {
-      // return;
-      let blocks = [...getBlocks()];
-
-      const cloneBlock = <T extends Record<string, any>>(block: T) => {
-        // First deep clone the block so duplicate origin
-        // is not impacted.
-        const clone = cloneDeep<T>(block);
-        // Function to reset all nested id properties
-        // so nested elements are threated as created elements
-        const resetIds = <O extends Record<string, any>>(obj: O) => {
-          if ('id' in obj) {
-            obj = { ...obj, id: generateTempId() };
-          }
-          for (const key of Object.keys(obj)) {
-            const value = obj[key];
-            if (Array.isArray(value) && value.length && isObjectLiteral(value[0])) {
-              obj = {
-                ...obj,
-                [key]: value.map((child) => resetIds(child))
-              };
-            }
-          }
-          return obj;
-        };
-        // set temp-ids for nested elements
-        return resetIds(clone);
-      };
-
-      const blockCopy = cloneBlock(blocks[index]);
-
-      blocks.splice(index + 1, 0, blockCopy);
-      blocks = blocks.map((block, index) => ({
-        ...block,
-        position: index
-      }));
-      assignBlocksToDoc(blocks);
+      blocks.duplicate(`${list}.${index}`);
     };
 
     return {
@@ -377,7 +380,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       duplicateBlock,
 
       get blocks() {
-        return getBlocks();
+        return blocks.list(list);
       }
     };
   }
@@ -914,6 +917,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     getValue,
     useBlocks,
     useTree,
+    blocks,
     nestedLevel,
     buildPanelActionUrl,
     readOnly,

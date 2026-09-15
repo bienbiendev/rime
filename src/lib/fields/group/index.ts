@@ -1,4 +1,6 @@
+import { blankFields, type BlankContext } from '$lib/core/fields/blank.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
+import { joinMemberTypes } from '$lib/util/string.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { Field, FieldsPreviewProps, FormField } from '$lib/fields/types.js';
 import type { Component } from 'svelte';
@@ -52,9 +54,14 @@ export class GroupFieldBuilder extends FormFieldBuilder<GroupField> {
     return { ...this.field, fields: this.field.fields.map((f) => f.compile()) };
   }
 
+  /** One member holding the group's own fields. */
+  protected override blank(context: BlankContext) {
+    return { [this.name]: blankFields(this.field.fields, context) };
+  }
+
   protected override generateType(): string {
-    const fieldsTypes = this.field.fields.map((field) => field.use.generateType()).filter(Boolean);
-    return this.field.fields.length ? `${this.name}: {${fieldsTypes.join(',\n\t')}}` : '';
+    const fieldsTypes = joinMemberTypes(this.field.fields.map((field) => field.use.generateType()));
+    return fieldsTypes ? `${this.name}: {${fieldsTypes}}` : '';
   }
 }
 

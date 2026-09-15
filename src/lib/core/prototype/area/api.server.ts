@@ -5,7 +5,6 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
 import type { GenericDoc } from '../types.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
-import { createBlankDocument } from '../doc.js';
 import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
 import { find, type FindArgs } from './operations/find.js';
 import { update, type UpdateArgs } from './operations/update.js';
@@ -60,7 +59,7 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
 
   /** The area's document with every default applied. */
   blank(): Doc {
-    return createBlankDocument(this.config, this.event) as Doc;
+    return this.config.blank(this.event) as Doc;
   }
 
   /** The locale to act in: the one asked for, else the request's, else the config's default. */

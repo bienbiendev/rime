@@ -25,7 +25,6 @@
   const { form, onClose, config, onLocaleSwitch = invalidateAll }: Props = $props();
 
   const onCloseIsDefined = $derived(!!onClose);
-  const buttonLabel = $derived(form.values.id ? t__('common.save') : t__('common.create'));
   const locale = getLocaleContext();
 
   /**
@@ -100,53 +99,10 @@
       <Settings {form} />
     {/if}
 
-    {#if !form.config.versions}
-      <!-- scenario 1: no versions -->
-      <ButtonSave
-        size="sm"
-        label={buttonLabel}
-        disabled={!form.canSubmit}
-        processing={form.processing}
-      />
-    {:else if form.config.versions && !form.config.versions.draft}
-      <!-- scenario 2: versions without draft, a version per save -->
-      <ButtonSave
-        size="sm"
-        label={buttonLabel}
-        disabled={!form.canSubmit}
-        processing={form.processing}
-        data-fork
-        data-submit
-      />
-    {:else if form.config.versions && form.config.versions.draft && form.values.status === 'published'}
-      {#if form.values.id}
-        <ButtonStatus {form} />
-      {/if}
-
-      <!-- scenario 3: versions and draft, on a published doc -->
-      <ButtonSave
-        size="sm"
-        disabled={!form.canSubmit}
-        processing={form.processing}
-        label={buttonLabel}
-        data-status="published"
-        data-submit
-      />
-    {:else if form.config.versions && form.config.versions.draft && form.values.status === 'draft'}
-      {#if form.values.id}
-        <ButtonStatus {form} />
-      {/if}
-      <!-- scenario 4: versions and draft, on a draft doc -->
-
-      <!-- PUBLISH -->
-      <ButtonSave
-        size="sm"
-        disabled={!form.canSubmit}
-        processing={form.processing}
-        label={buttonLabel}
-        data-submit
-      />
+    {#if form.config.versions?.draft && form.values.id}
+      <ButtonStatus {form} />
     {/if}
+    <ButtonSave {form} size="sm" />
   {/snippet}
 
   {#snippet topRight()}

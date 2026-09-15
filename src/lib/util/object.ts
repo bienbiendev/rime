@@ -1,5 +1,5 @@
 import type { Dic, WithRequired } from '$lib/util/types.js';
-import { normalizeFieldPath } from './path.js';
+import { normalizeFieldPath } from './string.js';
 
 /**
  * Creates a new object with only the specified keys from the original object.

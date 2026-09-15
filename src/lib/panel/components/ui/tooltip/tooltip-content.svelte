@@ -34,8 +34,18 @@
     color: var(--rz-tooltip-color-fg);
     padding: var(--rz-size-1-5) var(--rz-size-3);
     font-size: var(--rz-text-xs);
-    z-index: 200;
-    overflow: hidden;
+    z-index: 400;
     border-radius: var(--rz-radius-md);
+    position: relative;
+    &:before {
+      left: 0;
+      top: 12px;
+      content: '';
+      width: 6px;
+      background-color: var(--rz-tooltip-color-bg);
+      height: 6px;
+      transform: rotate(45deg) translateX(-3px);
+      position: absolute;
+    }
   }
 </style>

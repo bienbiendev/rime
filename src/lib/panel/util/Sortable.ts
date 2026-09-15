@@ -4,6 +4,7 @@ import type SortableType from 'sortablejs';
 export const useSortable = ({ ...sortableProps }: SortableType.Options) => {
   const sortable = (el: HTMLElement) => {
     let childNodes: HTMLElement[] = [];
+    let from: HTMLElement | null = null;
     const existing = Sortable.get(el);
     if (existing) {
       // Better safe than sorry. At least we know this ain't the case.
@@ -14,7 +15,8 @@ export const useSortable = ({ ...sortableProps }: SortableType.Options) => {
       ...sortableProps,
       onStart: function (e) {
         const node = e.item as Node;
-        // Remember the list of child nodes when drag started.
+        // Remember the list, and its child nodes, when drag started.
+        from = e.from;
         childNodes = Array.prototype.slice.call(node.parentNode!.childNodes);
         // Filter out the 'sortable-fallback' element used on mobile/old browsers.
         childNodes = childNodes.filter(
@@ -26,12 +28,13 @@ export const useSortable = ({ ...sortableProps }: SortableType.Options) => {
         }
       },
       onEnd: function (e) {
-        const node = e.item as Node;
-        const parentNode = node.parentNode!;
+        // Put the DOM back the way it was, in the list the drag started from — the item may have
+        // landed in another one — so the state change below is the only thing that reorders.
+        const parentNode = from ?? (e.item.parentNode as HTMLElement);
         for (const childNode of childNodes) {
           parentNode.appendChild(childNode);
         }
-        if (e.oldIndex == e.newIndex) return;
+        if (e.from === e.to && e.oldIndex == e.newIndex) return;
 
         if (sortableProps.onEnd) {
           sortableProps.onEnd(e);

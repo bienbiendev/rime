@@ -1,7 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import { t__ } from '$lib/core/i18n/index.js';
-  import { createBlankDocument } from '$lib/core/prototype/doc.js';
   import type { GenericDoc } from '$lib/core/prototype/types.js';
   import Document from '$lib/panel/components/sections/document/Document.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
@@ -144,7 +143,7 @@
       <Sheet.Trigger />
       <Sheet.Content style="--rz-page-gutter:var(--rz-size-6)" side="right" showCloseButton={false}>
         <Document
-          doc={createBlankDocument(relationConfig)}
+          doc={relationConfig.blank()}
           readOnly={false}
           onClose={() => (create = false)}
           operation="create"

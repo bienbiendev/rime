@@ -1,6 +1,7 @@
+import { blankFields, type BlankContext } from '$lib/core/fields/blank.js';
 import { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import type { Field } from '$lib/fields/types.js';
-import { isCamelCase } from '$lib/util/string.js';
+import { isCamelCase, joinMemberTypes } from '$lib/util/string.js';
 import type { WithoutBuilders } from '$lib/core/fields/types.js';
 import Tabs from './component/Tabs.svelte';
 
@@ -26,15 +27,22 @@ export class TabsBuilder extends FieldBuilder<TabsField> {
     };
   }
 
+  /** One member per tab, each holding that tab's fields. */
+  protected override blank(context: BlankContext) {
+    return Object.fromEntries(
+      this.field.tabs.map((tab) => [tab.name, blankFields(tab.get.fields, context)])
+    );
+  }
+
   protected override generateType(): string {
     const types: string[] = [];
     for (const tab of this.field.tabs) {
-      const fieldsTypes = tab.get.fields.map((field) => field.use.generateType()).filter(Boolean);
-      if (fieldsTypes.length) {
-        types.push(`${tab.name}: {${fieldsTypes.join(',\n\t\t')}}`);
+      const fieldsTypes = joinMemberTypes(tab.get.fields.map((field) => field.use.generateType()));
+      if (fieldsTypes) {
+        types.push(`${tab.name}: {${fieldsTypes}}`);
       }
     }
-    return types.length ? types.join(',\n\t').replaceAll(',,', ',') : '';
+    return types.join(',\n');
   }
 }
 

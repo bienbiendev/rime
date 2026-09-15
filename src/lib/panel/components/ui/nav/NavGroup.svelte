@@ -115,6 +115,7 @@
 
   .rz-nav-group--nav-collapsed {
     background-color: transparent;
+    margin-bottom: 0;
     .rz-nav-group__content {
       background-color: transparent;
       padding: 0 var(--rz-size-2);

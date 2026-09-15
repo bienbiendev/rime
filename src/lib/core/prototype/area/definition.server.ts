@@ -1,6 +1,5 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { definePrototype } from '../define.js';
-import { createBlankDocument } from '../doc.js';
 import { blankVersion } from '$lib/core/prototype/shared/versions/blank.js';
 import { area as base } from './definition.js';
 import { areaHooks } from './hooks.server.js';
@@ -27,9 +26,9 @@ export const area = definePrototype<BuiltArea>({
 
   boot: async ({ config, adapter, defaultLocale }) => {
     /**
-     * No request event: boot has no request. `createBlankDocument` takes one only to pass to a
-     * field's `defaultValue({ event })`, which already declares it optional — so a default that
-     * reads it gets `undefined` here rather than whichever request arrived first.
+     * No request event: boot has no request. `blank` takes one only to pass to a field's
+     * `defaultValue({ event })`, which already declares it optional — so a default that reads it
+     * gets `undefined` here rather than whichever request arrived first.
      *
      * The locale is the config's default for the same reason: the locale of an area's first row
      * is a property of the config, not of its first reader.
@@ -38,7 +37,7 @@ export const area = definePrototype<BuiltArea>({
       // Intent `'seed'`, not `'create'`: a feature that gives this prototype a versions table may need
       // the first row to differ from what an author's create starts with. See
       // FeatureDefinition.blank.
-      blank: blankVersion(createBlankDocument(config), config),
+      blank: blankVersion(config.blank(), config),
       locale: defaultLocale
     });
   }

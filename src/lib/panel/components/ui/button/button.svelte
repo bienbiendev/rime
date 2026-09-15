@@ -23,7 +23,7 @@
       </div>
     {:else}
       <div class="rz-button__icon">
-        <IconProp size="14" strokeWidth="2px" />
+        <IconProp size={size === 'xs' ? 10 : 14} strokeWidth="2px" />
       </div>
     {/if}
   {/if}
@@ -294,5 +294,13 @@
     border-radius: var(--rz-radius-sm);
     height: var(--rz-size-5);
     width: var(--rz-size-5);
+  }
+
+  .rz-button--size-xs .rz-button__icon {
+    display: grid;
+    place-content: center;
+    border-radius: var(--rz-radius-sm);
+    height: var(--rz-size-2);
+    width: var(--rz-size-2);
   }
 </style>

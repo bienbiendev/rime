@@ -1,7 +1,7 @@
 import type { CollectionWithoutSlug } from '$lib/core/prototype/collection/types.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import type { Field, Option } from '$lib/types.js';
-import { access } from '$lib/util/index.js';
+import { access } from '$lib/core/auth/access.js';
 import { UsersRound } from '@lucide/svelte';
 import cloneDeep from 'clone-deep';
 import type { Access } from '$lib/core/config/types.js';

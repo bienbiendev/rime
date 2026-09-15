@@ -34,6 +34,13 @@ const blockKeyFacts = block('keyFacts').fields(
     .renderTitle(({ values }) => values.label)
 );
 
+// A block holding a list of blocks: what the focus mode's layers nest, and what a block moves
+// into and out of.
+const blockGrid = block('grid').fields(
+  text('title'),
+  blocks('items', [blockParagraph, blockImage])
+);
+
 export const Pages = Collection.create('pages', {
   fields: [
     text('title').isTitle().required(),
@@ -115,7 +122,9 @@ export const Pages = Collection.create('pages', {
       number('metaPriority').min(0).max(10)
     ),
 
-    blocks('sections', [blockParagraph, blockImage, blockKeyFacts]),
+    blocks('sections', [blockParagraph, blockImage, blockKeyFacts, blockGrid]),
+    // One row in the form, edited in focus mode.
+    blocks('extras', [blockParagraph, blockImage]).summary(),
 
     tree('links').fields(text('label'), link('url').types('url'))
   ]

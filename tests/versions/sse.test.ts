@@ -18,24 +18,30 @@ const openStream = async (keys: string, cookie?: string) => {
   return { response, close: () => controller.abort() };
 };
 
-/** Reads the stream until `needle` shows up, or `timeoutMs` passes. */
-const readUntil = async (response: Response, needle: string, timeoutMs = 5000) => {
+/** One reader over an open stream; `until` reads on from where the last call stopped. */
+const streamReader = (response: Response) => {
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
-  const deadline = Date.now() + timeoutMs;
   let received = '';
-  while (Date.now() < deadline) {
-    const chunk = await Promise.race([
-      reader.read(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), deadline - Date.now())
-      )
-    ]);
-    if (chunk.done) break;
-    received += decoder.decode(chunk.value, { stream: true });
-    if (received.includes(needle)) return received;
-  }
-  throw new Error(`"${needle}" never arrived; received:\n${received}`);
+  return {
+    async until(needle: string, timeoutMs = 5000) {
+      const deadline = Date.now() + timeoutMs;
+      while (!received.includes(needle) && Date.now() < deadline) {
+        const chunk = await Promise.race([
+          reader.read(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), deadline - Date.now())
+          )
+        ]);
+        if (chunk.done) break;
+        received += decoder.decode(chunk.value, { stream: true });
+      }
+      if (!received.includes(needle)) {
+        throw new Error(`"${needle}" never arrived; received:\n${received}`);
+      }
+      return received;
+    }
+  };
 };
 
 const staffUser = async (request: APIRequestContext) => {
@@ -106,8 +112,9 @@ test('Taking the edit lock reaches whoever listens to the document', async ({ re
 
   const { response, close } = await openStream(`rime:news:${doc.id}`, headers.cookie);
   expect(response.status).toBe(200);
+  const stream = streamReader(response);
   // The comment frame the server writes first, so the claim below lands on an open stream.
-  await readUntil(response, ': open');
+  await stream.until(': open');
 
   const lock = await request.post(
     `${API_BASE_URL}/news/${doc.id}/lock?versionId=${doc.versionId}`,
@@ -117,7 +124,7 @@ test('Taking the edit lock reaches whoever listens to the document', async ({ re
   );
   expect(lock.status()).toBe(200);
 
-  const received = await readUntil(response, '"event":"rime:lock"');
+  const received = await stream.until('"event":"rime:lock"');
   expect(received).toContain('data: {"event":"rime:lock","payload":{}}');
   close();
 });

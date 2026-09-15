@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import { random } from '$lib/util/index.js';
+  import * as random from '$lib/util/random.js';
   import { Editor, type JSONContent } from '@tiptap/core';
   import { onMount } from 'svelte';
   import { buildEditorConfig } from '../core/build-editor-config.js';

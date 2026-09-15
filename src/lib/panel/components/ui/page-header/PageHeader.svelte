@@ -72,7 +72,7 @@
 
   h1 {
     @mixin line-clamp 1;
-    font-size: var(--rz-text-3xl);
+    font-size: var(--rz-text-5xl);
     @mixin font-semibold;
   }
 
@@ -91,7 +91,6 @@
     height: var(--rz-size-14);
     background: hsl(var(--rz-color-bg));
     align-items: flex-end;
-    border-bottom: var(--rz-border);
     padding-bottom: var(--rz-size-2);
   }
   .rz-page-header__row-top {

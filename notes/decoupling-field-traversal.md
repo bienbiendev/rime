@@ -8,11 +8,11 @@ that came out of the audit, and the order to build it in.
 below me and what does it add to the path_. The places that branch to answer _how is this stored_
 are a different contract and are listed in §7 as out of scope, with the reason.
 
-**Measured at `291dbdfc`.** Re-run every grep; the greps are the contract, not the numbers.
+**Measured at `10b33a49`.** Re-run every grep; the greps are the contract, not the numbers.
 
 ```bash
-grep -rn "instanceof .*Builder" src | grep -v node_modules | wc -l    # 74, in 25 files
-grep -rnE "type === '(blocks|tree|tabs|group|relation)'" src | wc -l  # 12, in 9 files
+grep -rn "instanceof .*Builder" src | grep -v node_modules | wc -l    # 73, in 23 files
+grep -rnE "type === '(blocks|tree|tabs|group|relation)'" src | wc -l  # 14, in 10 files
 ```
 
 ---
@@ -99,7 +99,6 @@ this plan removes. The rest is §7.
 | `core/pipeline/config-map/index.ts:25,42,56,59`                               | nested fields, per document value                            |
 | `core/pipeline/config-map/build-tree-map.ts:16,28`                            | tree rows and `_children`                                    |
 | `core/config/validate.server.ts:159,201,204`                                  | nested fields only                                           |
-| `core/prototype/doc.ts:34,38,40` — `createBlankDocument`                      | nested fields, and the empty value at a leaf                 |
 | `core/features/title/find-title.ts:38,45`                                     | nested fields, and a determinate path                        |
 | `core/features/thumbnail/find-thumbnail.ts:29,36`                             | same                                                         |
 | `panel/context/collection.svelte.ts:87,103` — `buildFieldColumns`             | same                                                         |
@@ -114,7 +113,7 @@ this plan removes. The rest is §7.
 | document / config-map     | `.`       | bare `index`, type stripped       | `core/pipeline/config-map/index.ts:48`                                                    |
 | SQL column / relation row | `__`      | none — containers become tables   | `adapter-sqlite/generate-schema/root.server.ts:83,92`, `adapter-sqlite/with.server.ts:35` |
 
-`normalizeFieldPath` (`util/path.ts:17`) is the single converter from the first to the second, and it
+`normalizeFieldPath` (`util/string.ts:373`) is the single converter from the first to the second, and it
 is already called on the way into `getValueAtPath`, `setValueAtPath` and `deleteValueAtPath`
 (`util/object.ts:218,247,309`).
 
@@ -152,6 +151,11 @@ const buildFieldsTypes = async (fields: FieldBuilder<Field>[]): Promise<string[]
 The dedupe is `//@shared:start <name>` / `//@shared:end`, extracted and hoisted by
 `parseSharedTypes` (`core/dev/codegen/types/index.server.ts:107-137`). The sketch calls it
 `@dedupe`; the built version calls it `@shared`. Nothing to build here.
+
+**The blank document, half of it.** `createBlankDocument` is gone: a config carries `blank()`
+(`core/prototype/blank.ts`), folding `blankFields` (`core/fields/blank.ts`) over its fields. The
+per-builder `blank()` overrides it runs on are scaffolding, and step 8 removes them once `nodes()`
+can answer the same question.
 
 ---
 
@@ -196,6 +200,13 @@ export type FieldUse = {
 
 `FieldBuilder.use` returns `nodes: () => []` and `nodesFor: () => []`, so every leaf field is
 correct without being touched, and so is every field a consumer ships in a package.
+
+### The shape an override takes
+
+`generateType()` and the `blank()` step 8 deletes are both `protected` methods the base declares and
+`.use` exposes. §4 below writes `nodes` as `override get use() { ...super.use, … }` instead. Either
+works; write all of them the same way. The protected form is the cheaper — no `super.use` spread,
+and the `.use` object literal stays declared in two places rather than six.
 
 ### Why `.use` and not `.get`
 
@@ -554,7 +565,7 @@ export const buildConfigMap = (
 };
 ```
 
-`normalizeFieldPath` (`util/path.ts:17`) strips the `:blockType` the blocks node emits, so keys stay
+`normalizeFieldPath` (`util/string.ts:373`) strips the `:blockType` the blocks node emits, so keys stay
 in the grammar §2.3 calls the document grammar and §2.4 requires. Delete
 `core/pipeline/config-map/build-tree-map.ts`.
 
@@ -563,21 +574,52 @@ in the grammar §2.3 calls the document grammar and §2.4 requires. Delete
 
 This is the one commit that changes behaviour. See §8.
 
-### 8 — `createBlankDocument`
+### 8 — the blank document — **fold it onto `nodes()`, deleting the overrides landed at `10b33a49`**
 
-`core/prototype/doc.ts:32-56` becomes `walkFields` plus `field.use.defaultValue({ event })` at each
-leaf, writing into a nested object keyed by the walk's path.
+`createBlankDocument` is already gone: a config carries `blank()`, and today each container answers
+with the members it owns through a `blank()` override of its own. Those overrides are scaffolding
+for `nodes()` not existing yet. Once step 2 lands they are duplication — group would declare its
+children once for paths and once for members — so this step deletes all three, drops `blank` from
+`FieldUse`, and leaves one function:
 
-Its `['blocks', 'relation', 'tree'].includes(curr.type) → []` branch (`doc.ts:38`) is redundant for
-blocks and tree — both constructors already set `this.field.defaultValue = []`
-(`fields/blocks/index.ts:23`, `fields/tree/index.ts:17`). **Check `RelationFieldBuilder`'s
-constructor before deleting the line.** If it has no default, give it `defaultValue = []` there
-rather than keeping the branch — a default belongs in the constructor, which runs before any
-consumer chaining.
+```ts
+// core/fields/blank.ts
+export const blankFields = (fields: FieldBuilder[], context: BlankContext = {}): Dic => {
+  const doc: Dic = {};
+  for (const field of fields) {
+    const nodes = field.use.nodes();
 
-Keep the comment at `doc.ts:43-46`: presentational fields are plain `FieldBuilder` with `name === ''`
-and must not be assigned, or the parent object goes array-like once flattened. The `isFormField`
-filter is what preserves that.
+    // A leaf, and a repeater with it: `#` means only a document can name the children, so a
+    // blank one holds the field's own default — `[]` for blocks and for tree.
+    if (!nodes.length || nodes.some((node) => node.segment.includes('#'))) {
+      if (isFormField(field)) doc[field.name] = field.use.defaultValue(context) ?? null;
+      continue;
+    }
+
+    // A container: its name opens an object, or it has none and its branches land on this one.
+    const target = field.name ? (doc[field.name] = {} as Dic) : doc;
+    for (const node of nodes) {
+      const bucket = node.segment ? (target[node.segment] = {} as Dic) : target;
+      Object.assign(bucket, blankFields(node.fields, context));
+    }
+  }
+  return doc;
+};
+```
+
+Every shape, with nothing said about any of them by name: group's single empty segment lands its
+children in its own key; tabs has no name, so its branches land on the parent, one per tab; blocks
+and tree hit the `#` rule and stop at `[]`; a separator has no name and no nodes and is skipped,
+which is what the `isFormField` filter used to buy.
+
+The `#` rule is `determinate` from §5 under another name — _a path with an index in it cannot be
+named from a config alone_ — so this step introduces no concept the plan did not already need.
+
+**One behaviour decision.** `RelationFieldBuilder` sets `defaultValue = []` in its constructor but
+also exposes a `.defaultValue()` setter. Its current `blank()` override forces `[]` regardless
+(`fields/relation/index.ts:56`); dropping the override lets an author's default reach a blank
+document. That is arguably the fix — a setter that does nothing is worse — but it is a change, so
+land it in this commit's message rather than discovering it later.
 
 ### 9 — config validation
 
@@ -643,7 +685,7 @@ That is a contract change reaching the `Adapter` interface, and it is its own pi
 `panel/components/fields/RenderFields.svelte:35-64` also stays. It dispatches to `field.component`,
 which is already polymorphic, and its `isTabsField` branch is a layout decision.
 
-Expected after step 11: **74 `instanceof` hits down to roughly 30**, all in the clusters above plus
+Expected after step 11: **73 `instanceof` hits down to roughly 30**, all in the clusters above plus
 the builders' own `localized()` overrides, which walk their own children to clone them and are not
 traversal by anyone else.
 
