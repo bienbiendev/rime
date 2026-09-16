@@ -40,6 +40,13 @@ type ReadArgs = {
   locale?: string;
   /** Whether an untranslated field reads from the other locales. `true` unless said otherwise. */
   localeFallback?: boolean;
+  /**
+   * The resolved references to join, by document path — a `$references(slug, { resolve: true })`
+   * field comes back as the document it points at only when its path is here. Every one when
+   * absent; `select` narrows further. The caller lists what its reader may see, so a row is never
+   * joined for a field the pipeline goes on to drop.
+   */
+  resolve?: string[];
   /** Which content row, when the caller means a particular one. The newest otherwise. */
   content?: OperationQuery;
   config: BuiltCollection | BuiltArea;
@@ -61,7 +68,7 @@ type ReadArgs = {
  */
 export const readPrototype = async (
   { db, tables, configCtx }: DepsWithConfig,
-  { slug, id, select, locale, localeFallback, content, config, versions }: ReadArgs
+  { slug, id, select, resolve, locale, localeFallback, content, config, versions }: ReadArgs
 ): Promise<Dic | undefined> => {
   const table = baseTableName(slug);
   const rootTable = tables[table];
@@ -76,7 +83,8 @@ export const readPrototype = async (
     return queryTable.findFirst({
       columns: adapterUtil.columnsParams({ table: rootTable, select }),
       ...byId,
-      with: buildWithParam({ table, select, locale, fallback, tables, config }) || undefined
+      with:
+        buildWithParam({ table, select, resolve, locale, fallback, tables, config }) || undefined
     });
   }
 
@@ -89,10 +97,18 @@ export const readPrototype = async (
     ...byId,
     with: {
       // The base row's own resolved references; the content row's come with `buildWithParam`.
-      ...resolvedReferenceJoins({ table, tables, config, select }),
+      ...resolvedReferenceJoins({ table, tables, config, select, resolve }),
       [contentTable]: {
         columns: adapterUtil.columnsParams({ table: tables[contentTable], select }),
-        with: buildWithParam({ table: contentTable, select, locale, fallback, tables, config }),
+        with: buildWithParam({
+          table: contentTable,
+          select,
+          resolve,
+          locale,
+          fallback,
+          tables,
+          config
+        }),
         // The row the caller's filter names, else the newest — one query either way, and the
         // adapter chooses nothing. Which content row a request means is decided above this module
         // and arrives as an ordinary filter (`FeatureDefinition.readQuery`).
@@ -135,6 +151,7 @@ export const findManyPrototypes = async (
 ): Promise<RawDoc[]> => {
   const {
     select,
+    resolve,
     query: incomingQuery,
     sort,
     limit,
@@ -155,7 +172,8 @@ export const findManyPrototypes = async (
   // No versions: everything is on the base table, so this is one plain query.
   if (!versions) {
     const params: Dic = {
-      with: buildWithParam({ table, select, tables, config, locale, fallback }) || undefined,
+      with:
+        buildWithParam({ table, select, resolve, tables, config, locale, fallback }) || undefined,
       orderBy: (t: GenericTable) =>
         buildOrderByParam({ slug, locale, tables, configCtx, by: sort, rootTable: t }),
       // sqlite requires a limit when an offset is present.
@@ -188,7 +206,8 @@ export const findManyPrototypes = async (
   const versionsSlug = versions.slug as PrototypeSlug;
   const contentTable = baseTableName(versionsSlug);
   const withParam =
-    buildWithParam({ table: contentTable, select, tables, config, locale, fallback }) || undefined;
+    buildWithParam({ table: contentTable, select, resolve, tables, config, locale, fallback }) ||
+    undefined;
 
   // The caller's own filter, and the one saying which content row each document shows. Both
   // resolve against the versions table, so they are two wheres to `and` rather than two query objects to
@@ -237,7 +256,7 @@ export const findManyPrototypes = async (
     ...params,
     columns: adapterUtil.columnsParams({ table: tables[table], select }),
     with: {
-      ...resolvedReferenceJoins({ table, tables, config, select }),
+      ...resolvedReferenceJoins({ table, tables, config, select, resolve }),
       [contentTable]: {
         with: withParam,
         where: { RAW: contentWhere },
@@ -275,6 +294,8 @@ type FindManyArgs = {
   locale?: string;
   /** See `readPrototype`. */
   localeFallback?: boolean;
+  /** See `readPrototype`. */
+  resolve?: string[];
   /** Per document, which content row — see `readPrototype`. */
   content?: OperationQuery;
   config: BuiltCollection | BuiltArea;

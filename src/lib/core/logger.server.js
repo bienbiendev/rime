@@ -43,8 +43,14 @@ const formatMessage = (args) => {
 /**
  * Clean up old log files that exceed the maximum retention period
  */
+// The cleanup lists the log directory; once an hour is plenty, once a line was every request.
+const CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+let lastCleanup = 0;
+
 const cleanupOldLogs = async () => {
   if (!LOG_TO_FILE) return;
+  if (Date.now() - lastCleanup < CLEANUP_INTERVAL_MS) return;
+  lastCleanup = Date.now();
 
   try {
     // Create logs directory if it doesn't exist
@@ -129,13 +135,16 @@ const isLevelEnabled = (level) => {
   return level >= currentLogLevel;
 };
 
+// One formatter, built once: `toLocaleTimeString` with options builds one per call.
+const localTime = new Intl.DateTimeFormat(undefined, {
+  hour: 'numeric',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: true
+});
+
 function getFormattedLocalTime(date) {
-  return date.toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true
-  });
+  return localTime.format(date);
 }
 
 const rimeFormatted = chalk.bold(chalk.gray('[rime]'));

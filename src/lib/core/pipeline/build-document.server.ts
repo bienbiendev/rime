@@ -2,10 +2,9 @@ import type { DocumentRows } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
 import type { Relation } from '$lib/fields/relation/index.js';
-import { isObjectLiteral, omit } from '$lib/util/object.js';
+import { isObjectLiteral, omit, withDefaults } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import deepmerge from 'deepmerge';
 import { unflatten } from 'flat';
 import { logger } from '../logger.server.js';
 
@@ -91,7 +90,7 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
       ? rime.collection(config.slug).blank()
       : rime.area(config.slug).blank();
 
-    doc = deepmerge(blank, doc, { arrayMerge: (_, incoming) => incoming });
+    doc = withDefaults(doc, blank);
   }
 
   return doc as T;

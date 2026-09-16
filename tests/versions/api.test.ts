@@ -1362,3 +1362,13 @@ test('The versions of a public collection are not readable without credentials',
   const response = await request.get(`${API_BASE_URL}/news--versions`);
   expect(response.status()).toBe(403);
 });
+
+test('Emptying the API cache takes a staff member', async ({ request }) => {
+  const anonymous = await request.post(`${API_BASE_URL}/clear-cache`);
+  expect(anonymous.status()).toBe(403);
+
+  const staff = await request.post(`${API_BASE_URL}/clear-cache`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(staff.status()).toBe(200);
+});

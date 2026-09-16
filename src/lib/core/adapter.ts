@@ -86,6 +86,12 @@ export interface BaseHandle {
     locale?: string;
     /** See `find`. */
     localeFallback?: boolean;
+    /**
+     * The resolved references to join, by document path. Absent, every one; `select` narrows
+     * further. A read hands down the ones its reader may see, so a join is never made for a
+     * field the pipeline goes on to drop.
+     */
+    resolve?: string[];
     /** Per document, which content row — see `find`. Filters the list as well as picking rows. */
     content?: OperationQuery;
   }): Promise<RawDoc[]>;
@@ -125,6 +131,8 @@ export interface CollectionHandle extends BaseHandle {
      * else, which is what a copy from one row to another reads.
      */
     localeFallback?: boolean;
+    /** See `findMany`. */
+    resolve?: string[];
     /**
      * Narrows which content row this read means, for a config that has one. The newest when
      * omitted, which is what "the content of this document" means with nothing else said.
@@ -189,6 +197,8 @@ export interface AreaHandle extends BaseHandle {
     locale?: string;
     /** See `CollectionHandle.find`. */
     localeFallback?: boolean;
+    /** See `CollectionHandle.findMany`. */
+    resolve?: string[];
     content?: OperationQuery;
   }): Promise<RawDoc | undefined>;
 
