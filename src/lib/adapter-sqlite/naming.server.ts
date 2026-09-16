@@ -129,16 +129,31 @@ export const toSqlTableName = (drizzleName: TableName) => drizzleName;
  * Excludes the `locales` branches, which are reached through their own owner rather than listed
  * alongside it. Replaces the three hand-written filters, one of which was misnamed.
  */
+const childTablesMemo = new WeakMap<object, Map<string, TableName[]>>();
+
 export const childTableNames = (
   owner: TableName,
   kind: ChildKind,
   tables: Record<string, unknown>
 ): TableName[] => {
-  const prefix = tableName({ owner, child: { kind } });
-  // Keys of the generated schema: table names by construction.
-  return Object.keys(tables).filter(
-    (key) => key.startsWith(prefix) && !key.endsWith(BRANCH_MARKER)
-  ) as TableName[];
+  // The schema does not change once loaded, and this is asked several times per query and twice
+  // per document read: answered once per schema, owner and kind.
+  let byOwner = childTablesMemo.get(tables);
+  if (!byOwner) {
+    byOwner = new Map();
+    childTablesMemo.set(tables, byOwner);
+  }
+  const key = `${owner}|${kind}`;
+  let names = byOwner.get(key);
+  if (!names) {
+    const prefix = tableName({ owner, child: { kind } });
+    // Keys of the generated schema: table names by construction.
+    names = Object.keys(tables).filter(
+      (key) => key.startsWith(prefix) && !key.endsWith(BRANCH_MARKER)
+    ) as TableName[];
+    byOwner.set(key, names);
+  }
+  return names;
 };
 
 /**

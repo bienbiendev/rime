@@ -7,7 +7,7 @@ import { getTableColumns } from 'drizzle-orm';
 import { flatten } from 'flat';
 import { logger } from '../core/logger.server.js';
 import { extractFieldName } from '../fields/tree/util.js';
-import { omit } from '../util/object.js';
+import { isObjectLiteral, omit } from '../util/object.js';
 import {
   baseTableName,
   tableName as buildTableName,
@@ -15,7 +15,7 @@ import {
   joinName,
   type TableName
 } from './naming.server.js';
-import { transformDatabaseColumnsToPaths } from './columns.server.js';
+import { databaseColumnToPath, transformDatabaseColumnsToPaths } from './columns.server.js';
 import { localeOrder, mergeLocaleRows } from './locales.server.js';
 import { resolvedReferencesOf } from '$lib/core/fields/util.js';
 
@@ -147,9 +147,20 @@ export const createTransformHandle = <const C extends Config>(args: {
     // The child tables came back on the same row; they are their own piles now. Left on, they
     // flatten into `pages__$blocks_hero.0.id` keys that survive every step to be stripped by name
     // at the very end.
-    const base = transformDatabaseColumnsToPaths(
-      flatten(omit([...blocksTables, ...treeTables, tableNameRelationFields], doc))
-    );
+    // One pass over the row: a child table's key is dropped, a column becomes its path, and a
+    // JSON value — an object or an array — is flattened under it, nothing else is walked.
+    const childTables = new Set<string>([...blocksTables, ...treeTables, tableNameRelationFields]);
+    const base: Dic = {};
+    for (const [key, value] of Object.entries(doc)) {
+      if (childTables.has(key)) continue;
+      if (isObjectLiteral(value) || Array.isArray(value)) {
+        for (const [flatKey, flatValue] of Object.entries(flatten<Dic, Dic>({ [key]: value }))) {
+          base[databaseColumnToPath(flatKey)] = flatValue;
+        }
+      } else {
+        base[databaseColumnToPath(key)] = value;
+      }
+    }
 
     return { base, blocks, tree, relations };
   };

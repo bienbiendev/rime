@@ -1,3 +1,4 @@
+import { readableReferences } from '$lib/core/fields/util.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { logger } from '$lib/core/logger.server.js';
 import { readDocument, runBeforeOperation } from '$lib/core/pipeline/run.server.js';
@@ -67,6 +68,7 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
     locale,
     localeFallback,
     select,
+    resolve: isSystemOperation ? undefined : readableReferences(config.fields, event.locals.user),
     // Which content row each document shows. `and`ed with `query` by the adapter, rather than
     // spliced into it — see the collection's findById for where the answer comes from.
     content: ctx.versionQuery({ latest })

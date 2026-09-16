@@ -1,4 +1,5 @@
-import { json, type RequestEvent, type RequestHandler } from '@sveltejs/kit';
+import { isStaff } from '$lib/core/auth/access.js';
+import { error, json, type RequestEvent, type RequestHandler } from '@sveltejs/kit';
 import { createHash } from 'node:crypto';
 import { definePlugin, type Plugin } from '../index.js';
 import { Cache } from './cache.server.js';
@@ -41,9 +42,7 @@ export const cache = definePlugin((options?: CacheOptions) => {
     return await Cache.get<T>(key, get);
   }
 
-  /**
-   * Empty the .cache folder
-   */
+  /** Empties the cache. A config's hook calls it as an action; the route below guards it. */
   const clearCache = () => {
     Cache.clear();
     return json({ message: 'Cache cleared' });
@@ -84,8 +83,9 @@ export const cache = definePlugin((options?: CacheOptions) => {
     },
 
     routes: {
+      // Staff only: the route is public, and an empty cache is a cost.
       '/api/clear-cache': {
-        POST: clearCache
+        POST: (event: RequestEvent) => (isStaff(event.locals.user) ? clearCache() : error(403))
       }
     },
 

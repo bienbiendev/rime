@@ -1,4 +1,4 @@
-import type { Field, FormField, SeparatorField } from '$lib/fields/types.js';
+import type { Field, FieldAccess, FormField, SeparatorField } from '$lib/fields/types.js';
 import { normalizeFieldPath } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import type { FormFieldBuilder } from './builders/form-field-builder.js';
@@ -249,6 +249,8 @@ export const baseFieldNames = (config: { fields: FieldBuilder[] }): string[] =>
   config.fields.filter((field) => field.get.root).map((field) => field.name);
 
 export type ResolvedReference = {
+  /** The field itself, for whoever must ask it something — who may read it, for one. */
+  field: FormFieldBuilder<FormField>;
   /** The document path: `meta.owner`. */
   path: string;
   /** The column it is stored in: `meta__owner`. */
@@ -274,14 +276,43 @@ export type ResolvedReference = {
  * Walks tabs and groups, whose columns sit on the owner's row. Blocks and tree rows are their
  * own tables and are not walked.
  */
+/**
+ * The resolved references a reader may see, by path — what a read asks the adapter to join. A
+ * reference the pipeline would drop for this reader is not joined for nothing.
+ */
+export const readableReferences = (
+  fields: FieldBuilder[],
+  user: Parameters<FieldAccess>[0]
+): string[] =>
+  resolvedReferencesOf(fields)
+    .filter((reference) => reference.field.use.accessRead(user))
+    .map((reference) => reference.path);
+
+const resolvedReferencesMemo = new WeakMap<FieldBuilder[], ResolvedReference[]>();
+
 export const resolvedReferencesOf = (
   fields: FieldBuilder[],
   parentPath = ''
 ): ResolvedReference[] => {
+  // A config's fields do not change once built, and this is asked once per query and once per
+  // document read: answered once per list of fields.
+  if (!parentPath) {
+    let found = resolvedReferencesMemo.get(fields);
+    if (!found) {
+      found = collectResolvedReferences(fields, '');
+      resolvedReferencesMemo.set(fields, found);
+    }
+    return found;
+  }
+  return collectResolvedReferences(fields, parentPath);
+};
+
+const collectResolvedReferences = (fields: FieldBuilder[], parentPath: string) => {
   const found: ResolvedReference[] = [];
   for (const { field, path } of walkFields(fields, { path: parentPath, determinate: true })) {
     if (!isFormField(field) || !field._references?.resolve) continue;
     found.push({
+      field,
       path,
       column: path.replace(/\./g, '__'),
       root: field.get.root,

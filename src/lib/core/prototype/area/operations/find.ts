@@ -1,3 +1,4 @@
+import { readableReferences } from '$lib/core/fields/util.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { readDocument, runBeforeOperation } from '$lib/core/pipeline/run.server.js';
@@ -45,6 +46,7 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T> => {
     locale,
     localeFallback,
     select,
+    resolve: isSystemOperation ? undefined : readableReferences(config.fields, event.locals.user),
     // See the collection's findById.
     content: ctx.versionQuery({ latest, versionId })
   });

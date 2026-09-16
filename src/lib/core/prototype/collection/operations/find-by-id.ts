@@ -1,3 +1,4 @@
+import { readableReferences } from '$lib/core/fields/util.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { readDocument, runBeforeOperation } from '$lib/core/pipeline/run.server.js';
@@ -51,6 +52,7 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
     locale,
     localeFallback,
     select,
+    resolve: isSystemOperation ? undefined : readableReferences(config.fields, event.locals.user),
     // `draft` and `versionId` are request parameters; which row they name is the feature's answer.
     content: ctx.versionQuery({ latest, versionId })
   });
