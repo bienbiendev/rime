@@ -3,6 +3,7 @@ import type { AutoSaves } from '$lib/core/prototype/shared/versions/types.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { Snippet } from 'svelte';
 import { Field } from './components/fields/index.js';
+import RenderFields from './components/fields/RenderFields.svelte';
 import Panel from './components/Root.svelte';
 import Doc from './components/sections/document/Document.svelte';
 import Button from './components/ui/button/button.svelte';
@@ -24,6 +25,7 @@ import Collection from './pages/collection/Collection.svelte';
 import Dashboard from './pages/dashboard/Dashboard.svelte';
 import Live from './pages/live/Live.svelte';
 import type { Route } from './types.js';
+import { populate } from './util/populate.js';
 
 export {
   // Components
@@ -38,9 +40,12 @@ export {
   Input,
   Live,
   Panel,
+  RenderFields,
   ResetPassword,
   SignIn,
-  SpinLoader
+  SpinLoader,
+  // A block render's relations, resolved as the API answers them
+  populate
 };
 
 // Context keys, for a plugin/field that needs to read a context rime's own panel sets

@@ -22,8 +22,9 @@ import {
 } from '$lib/fields/index.js';
 import { access } from '$lib/core/auth/access.js';
 import { Collection } from '$rime/config';
+import Paragraph from './renders/Paragraph.svelte';
 
-const blockParagraph = block('paragraph').fields(richText('text'));
+const blockParagraph = block('paragraph').fields(richText('text')).render(Paragraph);
 const blockImage = block('image').fields(relation('image').to('targets'));
 
 // A relation nested inside a tree nested inside a block — three levels

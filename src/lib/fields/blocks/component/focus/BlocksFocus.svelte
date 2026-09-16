@@ -6,12 +6,14 @@
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { getNavContext } from '$lib/panel/context/nav.svelte.js';
+  import { populate } from '$lib/panel/util/populate.js';
   import { Command, X } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
   import CommandPalette from './CommandPalette.svelte';
   import { getBlocksFocusContext } from './focus.svelte.js';
   import Layers from './Layers.svelte';
   import Palette from './Palette.svelte';
+  import Renders from './Renders.svelte';
   import Stage from './Stage.svelte';
 
   const { form }: { form: DocumentFormContext } = $props();
@@ -30,6 +32,9 @@
 
   let commandOpen = $state(false);
   let confirmRemove = $state(false);
+
+  // A focus session starts with fresh relations in the renders.
+  populate.clear();
 
   // The overlay owns the viewport while it is up; the document under it stays where it was.
   $effect(() => {
@@ -112,7 +117,12 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="rz-blocks-focus" data-focus={focus.path} style:left={nav?.width ?? '0'}>
+<div
+  class="rz-blocks-focus"
+  data-focus={focus.path}
+  data-layout={focus.hasRenders ? 'renders' : 'fields'}
+  style:left={nav?.width ?? '0'}
+>
   <header class="rz-blocks-focus__header">
     <nav class="rz-blocks-focus__crumbs" aria-label="breadcrumb">
       <button type="button" class="rz-blocks-focus__crumb" onclick={() => focus.close()}>
@@ -153,13 +163,22 @@
     <aside class="rz-blocks-focus__layers">
       <Layers {form} />
     </aside>
-    <section class="rz-blocks-focus__stage">
-      <Stage {form} onRemove={requestRemove} />
-    </section>
-    {#if !focus.locked}
-      <aside class="rz-blocks-focus__palette">
-        <Palette {form} />
+    {#if focus.hasRenders}
+      <section class="rz-blocks-focus__renders">
+        <Renders {form} list={focus.path ?? ''} />
+      </section>
+      <aside class="rz-blocks-focus__inspector">
+        <Stage {form} inspector onRemove={requestRemove} />
       </aside>
+    {:else}
+      <section class="rz-blocks-focus__stage">
+        <Stage {form} onRemove={requestRemove} />
+      </section>
+      {#if !focus.locked}
+        <aside class="rz-blocks-focus__palette">
+          <Palette {form} />
+        </aside>
+      {/if}
     {/if}
   </div>
 
@@ -281,9 +300,16 @@
     min-height: 0;
   }
 
+  /* With renders: layers, the stack of renders, the inspector. */
+  .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__body {
+    grid-template-columns: minmax(14rem, 1fr) minmax(0, 3fr) minmax(22rem, 1.5fr);
+  }
+
   .rz-blocks-focus__layers,
   .rz-blocks-focus__palette,
-  .rz-blocks-focus__stage {
+  .rz-blocks-focus__stage,
+  .rz-blocks-focus__renders,
+  .rz-blocks-focus__inspector {
     min-height: 0;
     overflow: auto;
   }
@@ -301,15 +327,27 @@
     border-left: var(--rz-border);
   }
 
-  .rz-blocks-focus__stage {
+  .rz-blocks-focus__stage,
+  .rz-blocks-focus__renders,
+  .rz-blocks-focus__inspector {
     min-width: 0;
   }
 
+  .rz-blocks-focus__renders {
+    padding: var(--rz-size-6);
+  }
+
+  .rz-blocks-focus__inspector {
+    border-left: var(--rz-border);
+  }
+
   @media (max-width: 60rem) {
-    .rz-blocks-focus__body {
+    .rz-blocks-focus__body,
+    .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__body {
       grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr);
     }
-    .rz-blocks-focus__palette {
+    .rz-blocks-focus__palette,
+    .rz-blocks-focus__renders {
       display: none;
     }
   }

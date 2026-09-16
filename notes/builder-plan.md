@@ -152,35 +152,9 @@ the browser focus; ⌘ combinations always, except ⌘K when a rich-text editor 
 
 ## 5. Render
 
-A block may declare a component drawn in the stage.
-
-```ts
-block('title').render(TitleRender);
-
-// BlocksFieldBlock
-render?: Component<{ path: string; config: BlocksFieldBlock; form: DocumentFormContext }>;
-```
-
-- `compile()` passes it through like `icon`. Components already travel in the config on both
-  sides; nothing to add to the sanitizer.
-- With at least one render in the field, the stage becomes the stack of renders, the selected one
-  outlined, click to select. The fields move to an inspector column on the right; the palette
-  becomes the ⌘K palette. A block without a render shows a placeholder card: icon and title.
-- A render reads values with `form.getValue(path)`. For an editable spot it mounts a panel field
-  with the same `path` and `form`, the rich-text component included:
-
-  ```svelte
-  <h2 class="site-title">{form.getValue(`${path}.title`)}</h2>
-  <RenderFields fields={[fieldOf(config, 'text')]} {path} {form} />
-  ```
-
-  `fieldOf` is a small lookup on the block's fields; `RenderFields` is exported from
-  `rimecms/panel` for this.
-
-- Relations in a render are `{ relationTo, documentId }`. The `populate` function in
-  `panel/context/live.svelte.ts` resolves them at depth 1; move it to `panel/util/populate.ts`,
-  cache by id, and let renders call it.
-- Tokens reach the panel through `panel.css`. Document it in the render section, nothing to build.
+Planned in `notes/render-plan.md`: `block(...).render(Component)`, drawn on the stage with the
+block value, its path, its fields and the form; the fields in an inspector column; `populate` for
+the relations; a `children` snippet for the nested lists.
 
 ---
 
@@ -240,7 +214,7 @@ A live-edit test comes with §6, on `tests/basic/pages.test.ts` where live is co
 | ----- | ------------------------------------------------------------ | ---- |
 | A     | §1 operations, unit tests, inline cards moved onto them      | S    |
 | B     | §3 shell, layers, stage fields, palette; §4 keys and ⌘K; e2e | L    |
-| C     | §5 render, inspector, populate, docs                         | M    |
+| C     | §5 render, the renders stage, inspector, `populate`         | M    |
 | D     | §6 live pane on the same components                          | M    |
 | E     | `.summary()`                                                 | S    |
 

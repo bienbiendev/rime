@@ -5,12 +5,14 @@ import type {
 } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { WithoutBuilders } from '$lib/core/fields/types.js';
+import type { GenericBlock } from '$lib/core/prototype/types.js';
 import type { Field, FormField } from '$lib/fields/types.js';
+import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 import { toPascalCase, joinMemberTypes } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';
 import dedent from 'dedent';
-import type { Component } from 'svelte';
+import type { Component, Snippet } from 'svelte';
 import { number } from '../number/index.js';
 import { text } from '../text/index.js';
 import Blocks from './component/Blocks.svelte';
@@ -152,7 +154,7 @@ export const isBlocksField = (field: Field): field is BlocksField => field.type 
  */
 export const isBlocksFieldRaw = (field: Field): field is BlocksFieldRaw => field.type === 'blocks';
 
-class BlockBuilder {
+export class BlockBuilder {
   block: BlocksFieldBlock;
 
   constructor(name: string) {
@@ -177,6 +179,17 @@ class BlockBuilder {
   }
   renderTitle(render: BlocksFieldBlockRenderTitle) {
     this.block.renderTitle = render;
+    return this;
+  }
+  /**
+   * The component drawn for the block on the stage of focus mode.
+   * It gets the block value, its path, its fields and the form, so it can show the value,
+   * resolve its relations with `populate` and mount panel fields with `RenderFields`.
+   * @example
+   * block('hero').fields(text('title'), richText('text')).render(HeroRender)
+   */
+  render(component: Component<BlockRenderProps>) {
+    this.block.render = component;
     return this;
   }
   description(description: string) {
@@ -218,6 +231,19 @@ export type BlocksField = FormField & {
 
 export type BlocksFieldBlockRenderTitle = (args: { values: Dic; position: number }) => string;
 
+/** What a block's render component receives. */
+export type BlockRenderProps = {
+  /** The block value, relations as `{ relationTo, documentId }`. */
+  block: GenericBlock;
+  /** `layout.sections.0` */
+  path: string;
+  /** The block's field builders, for `RenderFields`. */
+  fields: FieldBuilder<Field>[];
+  form: DocumentFormContext;
+  /** The block's nested lists, each block in its own selectable wrapper. `children('items')` for one list. */
+  children?: Snippet<[name?: string]>;
+};
+
 export type BlocksFieldBlock = {
   name: string;
   label?: string;
@@ -225,6 +251,7 @@ export type BlocksFieldBlock = {
   image?: string;
   icon?: Component<IconProps>;
   renderTitle?: BlocksFieldBlockRenderTitle;
+  render?: Component<BlockRenderProps>;
   fields: FieldBuilder<Field>[];
 };
 

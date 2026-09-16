@@ -60,6 +60,14 @@ async function save(page: Page) {
   await scope.locator('button[type="submit"]').first().click();
 }
 
+/** Adds a type through ⌘K: with a render in the list, there is no palette column. */
+async function addViaCommand(page: Page, type: RegExp) {
+  await page.keyboard.press('Control+k');
+  await expect(dialog(page)).toBeVisible();
+  await dialog(page).locator('.rz-blocks-command__item', { hasText: type }).click();
+  await expect(dialog(page)).toHaveCount(0);
+}
+
 test('Focus opens from the field, carries the address, and closes with the changes kept', async ({
   page,
   request
@@ -75,10 +83,10 @@ test('Focus opens from the field, carries the address, and closes with the chang
   // Three blocks at the root, one inside the grid, all unfolded.
   await expect(rows(page)).toHaveCount(4);
 
-  // The palette inserts after the selection.
+  // ⌘K inserts after the selection.
   await rows(page).first().click();
   await expect(rows(page).first()).toHaveClass(/rz-layers__row--selected/);
-  await page.locator('.rz-palette__item[data-type="image"]').click();
+  await addViaCommand(page, /Add\s*Image/);
   await expect(rows(page)).toHaveCount(5);
   await expect(rows(page).nth(1)).toHaveClass(/rz-layers__row--selected/);
   await expect(selectedRow(page)).toHaveText(/Image/);
@@ -198,9 +206,52 @@ test('A summary field is one row that opens focus', async ({ page, request }) =>
   await extras.locator('[data-focus-open="extras"]').click();
   await expect(page.locator('.rz-blocks-focus')).toBeVisible();
   await expect(page).toHaveURL(/[?&]focus=extras/);
-  await page.locator('.rz-palette__item[data-type="paragraph"]').click();
+  await addViaCommand(page, /Add\s*Paragraph/);
   await expect(rows(page)).toHaveCount(1);
   await page.locator('.rz-blocks-focus .rz-blocks-focus__crumb').first().click();
   await expect(page.locator('.rz-blocks-focus')).toHaveCount(0);
   await expect(extras.locator('.rz-blocks__count')).toHaveText(/1 block/);
+});
+
+test('A render draws the block, a click selects it, the inspector edits it', async ({
+  page,
+  request
+}) => {
+  const docId = await createPage(request);
+  await loginAs(page);
+  await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
+  await page.waitForLoadState('networkidle');
+
+  // `paragraph` has a render: the stack of renders, the inspector, no palette column.
+  const focus = page.locator('.rz-blocks-focus');
+  await expect(focus).toHaveAttribute('data-layout', 'renders');
+  await expect(focus.locator('.rz-blocks-focus__palette')).toHaveCount(0);
+  await expect(focus.locator('.rz-blocks-focus__inspector')).toContainText('Select a block');
+
+  const items = focus.locator('.rz-blocks-focus__renders > .rz-renders > .rz-renders__item');
+  await expect(items).toHaveCount(3);
+  await expect(items.nth(0).locator('.site-paragraph')).toHaveText('Alpha');
+  await expect(items.nth(0).locator('.site-paragraph')).toHaveCSS('color', 'rgb(200, 30, 30)');
+
+  // The grid has no render: a placeholder with its title, its paragraph in a wrapper of its own.
+  const grid = items.nth(1);
+  await expect(grid.locator('.rz-render-placeholder__title')).toHaveText(/Grid/);
+  const inner = grid.locator('.rz-renders__item');
+  await expect(inner.locator('.site-paragraph')).toHaveText('Inner');
+
+  // A click selects the block; the inspector shows its fields; typing updates the render.
+  await items.nth(2).click();
+  await expect(items.nth(2)).toHaveAttribute('data-selected', '');
+  await expect(selectedRow(page)).toHaveText(/Paragraph/);
+  const editor = focus.locator('.rz-blocks-focus__inspector .ProseMirror');
+  await editor.click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' plus');
+  await expect(items.nth(2).locator('.site-paragraph')).toHaveText('Beta plus');
+
+  // A click inside the grid selects the nested paragraph, not the grid.
+  await inner.click();
+  await expect(inner).toHaveAttribute('data-selected', '');
+  await expect(grid).not.toHaveAttribute('data-selected', '');
+  await expect(rows(page).nth(2)).toHaveClass(/rz-layers__row--selected/);
 });

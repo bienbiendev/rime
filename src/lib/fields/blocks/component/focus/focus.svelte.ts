@@ -363,6 +363,10 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     get locked() {
       return locked;
     },
+    /** The open list's block set has at least one render: the stage is the stack of renders. */
+    get hasRenders() {
+      return !!path && !!builderOf(path)?.get.blocks.some((block) => block.get.render);
+    },
     /** Nothing selected: the root node, and the whole list on the stage. */
     get rootSelected() {
       return selection.length === 0;
