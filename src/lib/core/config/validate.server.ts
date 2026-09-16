@@ -7,10 +7,8 @@ import { isFormField } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger.server.js';
 import type { PrototypeSlug } from '$lib/core/prototype/types.js';
 import { BlocksBuilder, type BlocksField } from '$lib/fields/blocks/index.js';
-import { GroupFieldBuilder } from '$lib/fields/group/index.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { TabsBuilder } from '$lib/fields/tabs/index.js';
-import { TreeBuilder } from '$lib/fields/tree/index.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import { isCamelCase } from '$lib/util/string.js';
 
@@ -108,12 +106,7 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
   const validateBlockField = (fields: FieldBuilder[], blockType: string) => {
     const reserved = ['path', 'type', 'ownerId', 'position', 'locale'];
     for (const key of reserved) {
-      if (
-        fields
-          .filter(isFormField)
-          .map((f) => f.name)
-          .filter((name) => name === key).length > 1
-      ) {
+      if (fields.filter((field) => field.name === key).length > 1) {
         errors.push(`${key} is a reserved field in blocks (block ${blockType})`);
       }
     }
@@ -163,65 +156,54 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
     }
 
     for (const field of fields) {
-      // Recursive check first into Tabs since tabs are not Formfields
-      if (field instanceof TabsBuilder) {
-        validateTabs(field);
-        for (const tab of field.get.tabs) {
-          validateFields(tab.get.fields);
+      // Tabs are not form fields, so their own rule runs before the form-field checks.
+      if (field instanceof TabsBuilder) validateTabs(field);
+
+      if (isFormField(field)) {
+        // A `$root()` field sits on the base row, which has no locales branch.
+        if (field.get.root && field.get.localized) {
+          errors.push(
+            `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with $root(), can't be localized`
+          );
         }
-      }
 
-      // If field is not a Formfield eg. Separator then continue
-      if (!isFormField(field)) {
-        continue;
-      }
+        // A resolved reference is joined from a column of the row; a localized column is on the
+        // locales branch, where no join reaches it.
+        if (field._references?.resolve && field.get.localized) {
+          errors.push(
+            `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with a resolved reference, can't be localized`
+          );
+        }
 
-      // A `$root()` field sits on the base row, which has no locales branch.
-      if (field.get.root && field.get.localized) {
-        errors.push(
-          `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with $root(), can't be localized`
-        );
-      }
+        // Check for malformed field.name
+        if (!validateFieldName(field.name)) {
+          errors.push(
+            `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} should be camelCase`
+          );
+        }
 
-      // A resolved reference is joined from a column of the row; a localized column is on the
-      // locales branch, where no join reaches it.
-      if (field._references?.resolve && field.get.localized) {
-        errors.push(
-          `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with a resolved reference, can't be localized`
-        );
-      }
-
-      // Check for malformed field.name
-      if (!validateFieldName(field.name)) {
-        errors.push(
-          `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} should be camelCase`
-        );
-      }
-
-      // Recursive check into Blocks
-      if (field instanceof BlocksBuilder) {
-        for (const block of field.get.blocks) {
-          if (block.name in registeredBlocks) {
-            const blockDefinedButDiffer =
-              JSON.stringify(registeredBlocks[block.name]) !== JSON.stringify(block);
-            if (blockDefinedButDiffer) {
-              errors.push(`Each block with same name should be identique (block ${block.name})`);
+        // A blocks rule, not a walk: it compares whole block builders, which a node does not carry.
+        if (field instanceof BlocksBuilder) {
+          for (const block of field.get.blocks) {
+            if (block.name in registeredBlocks) {
+              const blockDefinedButDiffer =
+                JSON.stringify(registeredBlocks[block.name]) !== JSON.stringify(block);
+              if (blockDefinedButDiffer) {
+                errors.push(`Each block with same name should be identique (block ${block.name})`);
+              }
+            } else {
+              registeredBlocks[block.name] = block;
             }
-          } else {
-            registeredBlocks[block.name] = block;
+            validateBlockField(block.get.fields, block.name);
           }
-          validateFields(block.get.fields.filter(isFormField));
-          validateBlockField(block.get.fields.filter(isFormField), block.name);
+        } else if (field instanceof RelationFieldBuilder) {
+          validateRelationField(field);
         }
-        // Recursive check into Tree
-      } else if (field instanceof TreeBuilder) {
-        validateFields(field.get.fields.filter(isFormField));
-        // Recursive check into Tabs
-      } else if (field instanceof GroupFieldBuilder) {
-        validateFields(field.get.fields.filter(isFormField));
-        // Check relation field
-      } else if (field instanceof RelationFieldBuilder) {
-        validateRelationField(field);
+      }
+
+      // Every block type, every tab, a group's and a tree row's fields: one level each.
+      for (const node of field.use.nodes()) {
+        validateFields(node.fields);
       }
     }
   };

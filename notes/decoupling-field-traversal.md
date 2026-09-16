@@ -8,12 +8,21 @@ that came out of the audit, and the order to build it in.
 below me and what does it add to the path_. The places that branch to answer _how is this stored_
 are a different contract and are listed in §7 as out of scope, with the reason.
 
-**Measured at `10b33a49`.** Re-run every grep; the greps are the contract, not the numbers.
+**Landed** on `feature/field-walker`: every step below, then `storage` on the node (§7) and the
+form-field checks a name already answered. The gates §9 names are green; the golden schema and
+the blank document are identical either side.
+
+**Measured at `516b1928`.** The grep that means something counts the four containers, since
+`instanceof FormFieldBuilder` is a type question a walk cannot answer:
 
 ```bash
-grep -rn "instanceof .*Builder" src | grep -v node_modules | wc -l    # 73, in 23 files
-grep -rnE "type === '(blocks|tree|tabs|group|relation)'" src | wc -l  # 14, in 10 files
+grep -rnE "instanceof (Blocks|Tree|Tabs|Group)(Field)?Builder" src | grep -v spec | wc -l   # 3, was 40
+grep -rn "instanceof .*Builder" src | grep -v node_modules | wc -l                            # 32, was 73
 ```
+
+The three: the duplicate-block-name rule and the duplicate-tab-name rule in
+`config/validate.server.ts`, and the group preview leaving tabs out. Rules and a layout choice,
+none of them traversal.
 
 ---
 
@@ -35,17 +44,17 @@ if (field instanceof TabsBuilder) {
 
 Written nine times, they cover different containers:
 
-| walker                                                                         | tabs | group | blocks |       tree       |
-| ------------------------------------------------------------------------------ | :--: | :---: | :----: | :--------------: |
-| `getFieldAtPath` — `core/fields/util.ts:113`                                   |  ✔   |   ✔   |   ✔    | ✔ no `_children` |
-| `getFieldListAtPath` — `core/fields/util.ts:179`                               |  ✔   |   ✔   |   ✔    |        ✔         |
-| `buildConfigMap` — `core/pipeline/config-map/index.ts:13`                      |  ✔   |   ✔   |   ✔    |        ✔         |
-| `validateFields` — `core/config/validate.server.ts:131`                        |  ✔   |   ✔   |   ✔    |        ✔         |
-| `generateFieldsTemplates` — `adapter-sqlite/generate-schema/root.server.ts:66` |  ✔   |   ✔   |   ✔    |        ✔         |
-| `hasLocalizedField` — same file, `:226`                                        |  ✔   |   ✔   |   ✔    |        ✔         |
-| `emptyValuesFromFieldConfig` — `core/fields/util.ts:51`                        |  ✔   |   ✔   |   ✘    |        ✘         |
-| `findTitleField` / `findThumbnailField` — `core/features/{title,thumbnail}/`   |  ✔   |   ✔   |   ✘    |        ✘         |
-| `buildFieldColumns` — `panel/context/collection.svelte.ts:84`                  |  ✔   |   ✔   |   ✘    |        ✘         |
+| walker                                                                                          | tabs | group | blocks |       tree       |
+| ----------------------------------------------------------------------------------------------- | :--: | :---: | :----: | :--------------: |
+| `getFieldAtPath` — `core/fields/util.ts:113`                                                    |  ✔   |   ✔   |   ✔    | ✔ no `_children` |
+| `getFieldListAtPath` — `core/fields/util.ts:179`                                                |  ✔   |   ✔   |   ✔    |        ✔         |
+| `buildConfigMap` — `core/pipeline/config-map/index.ts:13`                                       |  ✔   |   ✔   |   ✔    |        ✔         |
+| `validateFields` — `core/config/validate.server.ts:131`                                         |  ✔   |   ✔   |   ✔    |        ✔         |
+| `generateFieldsTemplates` — `adapter-sqlite/generate-schema/root.server.ts:66`                  |  ✔   |   ✔   |   ✔    |        ✔         |
+| `hasLocalizedField` — same file, `:226`                                                         |  ✔   |   ✔   |   ✔    |        ✔         |
+| `emptyValuesFromFieldConfig` — `core/fields/util.ts:51`                                         |  ✔   |   ✔   |   ✘    |        ✘         |
+| `findTitleField` / `findThumbnailField` — `core/prototype/{shared/title,collection/thumbnail}/` |  ✔   |   ✔   |   ✘    |        ✘         |
+| `buildFieldColumns` — `panel/context/collection.svelte.ts:84`                                   |  ✔   |   ✔   |   ✘    |        ✘         |
 
 Two things follow from that, and only one of them is a defect.
 
@@ -99,8 +108,8 @@ this plan removes. The rest is §7.
 | `core/pipeline/config-map/index.ts:25,42,56,59`                               | nested fields, per document value                            |
 | `core/pipeline/config-map/build-tree-map.ts:16,28`                            | tree rows and `_children`                                    |
 | `core/config/validate.server.ts:159,201,204`                                  | nested fields only                                           |
-| `core/features/title/find-title.ts:38,45`                                     | nested fields, and a determinate path                        |
-| `core/features/thumbnail/find-thumbnail.ts:29,36`                             | same                                                         |
+| `core/prototype/shared/title/find-title.ts:38,45`                             | nested fields, and a determinate path                        |
+| `core/prototype/collection/thumbnail/find-thumbnail.ts:29,36`                 | same                                                         |
 | `panel/context/collection.svelte.ts:87,103` — `buildFieldColumns`             | same                                                         |
 | `adapter-sqlite/generate-schema/root.server.ts:82,90`                         | nested fields, joined with `__`                              |
 | `adapter-sqlite/generate-schema/root.server.ts:230-266` — `hasLocalizedField` | nested fields only                                           |
@@ -181,6 +190,12 @@ export type FieldNode = {
    */
   repeatVia?: string;
   fields: FieldBuilder[];
+  /**
+   * The branch is stored as rows of its own, in a child table of the owner, not as its
+   * columns. `kind` is the table's marker on disk; `name` is what follows it. Absent means
+   * columns — a group, a tab.
+   */
+  storage?: { kind: 'blocks' | 'tree'; name: string };
 };
 
 /** A branch a real value has: a concrete segment, no '#', and the data under it. */
@@ -203,10 +218,9 @@ correct without being touched, and so is every field a consumer ships in a packa
 
 ### The shape an override takes
 
-`generateType()` and the `blank()` step 8 deletes are both `protected` methods the base declares and
-`.use` exposes. §4 below writes `nodes` as `override get use() { ...super.use, … }` instead. Either
-works; write all of them the same way. The protected form is the cheaper — no `super.use` spread,
-and the `.use` object literal stays declared in two places rather than six.
+`protected nodes()` and `protected nodesFor(value)` on the base, exposed by `.use` the way
+`generateType()` is. No `super.use` spread, and the `.use` object literal stays declared in two
+places rather than six.
 
 ### Why `.use` and not `.get`
 
@@ -265,22 +279,17 @@ attributes.use.nodesFor({ title: 'hello' });
 
 ## 4. The four containers
 
-Each is a `use` override. `super.use` inside an overridden getter is the shape
-`FormFieldBuilder.use` already uses to extend `FieldBuilder.use`
-(`core/fields/builders/form-field-builder.ts:167`).
+Each overrides the two protected methods.
 
 ### Group — the field's own name is the segment, the branch adds nothing
 
 ```ts
 // fields/group/index.ts
-override get use() {
-  return {
-    ...super.use,
-    nodes: (): FieldNode[] => [{ segment: '', fields: this.field.fields }],
-    nodesFor: (value: unknown): ValueNode[] => [
-      { segment: '', fields: this.field.fields, value }
-    ]
-  };
+protected override nodes(): FieldNode[] {
+  return [{ segment: '', fields: this.field.fields }];
+}
+protected override nodesFor(value: unknown): ValueNode[] {
+  return [{ segment: '', fields: this.field.fields, value }];
 }
 ```
 
@@ -294,16 +303,14 @@ group('attributes').fields(text('title'))
 
 ```ts
 // fields/tabs/index.ts
-override get use() {
-  return {
-    ...super.use,
-    nodes: (): FieldNode[] =>
-      this.field.tabs.map((t) => ({ segment: t.name, fields: t.get.fields })),
-    nodesFor: (value: unknown): ValueNode[] =>
-      this.field.tabs
-        .filter((t) => isObjectLiteral(value) && t.name in (value as Dic))
-        .map((t) => ({ segment: t.name, fields: t.get.fields, value: (value as Dic)[t.name] }))
-  };
+protected override nodes(): FieldNode[] {
+  return this.field.tabs.map((tab) => ({ segment: tab.name, fields: tab.get.fields }));
+}
+protected override nodesFor(value: unknown): ValueNode[] {
+  if (!isObjectLiteral(value)) return [];
+  return this.field.tabs
+    .filter((tab) => tab.name in value)
+    .map((tab) => ({ segment: tab.name, fields: tab.get.fields, value: value[tab.name] }));
 }
 ```
 
@@ -313,25 +320,25 @@ tabs(tab('meta').fields(text('title')), tab('seo').fields(text('description')))
   paths: meta.title  ·  seo.description        (no segment for the tabs field itself)
 ```
 
-### Blocks — `#` when declared, the real index when there is data
+### Blocks — `#` when declared, the real index when there is data, a table per type
 
 ```ts
 // fields/blocks/index.ts
-override get use() {
-  return {
-    ...super.use,
-    nodes: (): FieldNode[] =>
-      this.field.blocks.map((b) => ({ segment: `#:${b.name}`, fields: b.get.fields })),
-    nodesFor: (value: unknown): ValueNode[] =>
-      (Array.isArray(value) ? value : []).flatMap((item, index) => {
-        const block = this.field.blocks.find((b) => b.name === item?.type);
-        // Residual data for a block type that no longer exists. The current
-        // traverseData wraps this in a try/catch and warns; skipping is the
-        // same outcome without the throw.
-        if (!block) return [];
-        return [{ segment: `${index}:${block.name}`, fields: block.get.fields, value: item }];
-      })
-  };
+protected override nodes(): FieldNode[] {
+  return this.field.blocks.map((block) => ({
+    segment: `#:${block.name}`,
+    fields: block.get.fields,
+    storage: { kind: 'blocks', name: block.name }
+  }));
+}
+protected override nodesFor(value: unknown): ValueNode[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item, index) => {
+    const block = this.field.blocks.find((candidate) => candidate.name === item?.type);
+    // Residual data for a block type the config no longer declares.
+    if (!block) return [];
+    return [{ segment: `${index}:${block.name}`, fields: block.get.fields, storage: …, value: item }];
+  });
 }
 ```
 
@@ -341,30 +348,25 @@ blocks('layout', [block('hero').fields(text('title'))])
   paths: layout  ·  layout.0:hero.title      → normalized for the config map: layout.0.title
 ```
 
-### Tree — one declared branch; `nodesFor` flattens the `_children` recursion
+### Tree — one declared branch, one table; `nodesFor` flattens the `_children` recursion
 
 ```ts
 // fields/tree/index.ts
-override get use() {
-  return {
-    ...super.use,
-    nodes: (): FieldNode[] => [
-      { segment: '#', repeatVia: '_children', fields: this.field.fields }
-    ],
-    nodesFor: (value: unknown): ValueNode[] => {
-      const out: ValueNode[] = [];
-      const walk = (items: unknown, prefix: string) => {
-        if (!Array.isArray(items)) return;
-        items.forEach((item, index) => {
-          const segment = prefix ? `${prefix}._children.${index}` : `${index}`;
-          out.push({ segment, fields: this.field.fields, value: item });
-          walk(item?._children, segment);
-        });
-      };
-      walk(value, '');
-      return out;
-    }
+protected override nodes(): FieldNode[] {
+  return [{ segment: '#', repeatVia: '_children', fields: this.field.fields, storage: this.storage }];
+}
+protected override nodesFor(value: unknown): ValueNode[] {
+  const nodes: ValueNode[] = [];
+  const walk = (items: unknown, prefix: string) => {
+    if (!Array.isArray(items)) return;
+    items.forEach((item, index) => {
+      const segment = prefix ? `${prefix}._children.${index}` : `${index}`;
+      nodes.push({ segment, fields: this.field.fields, storage: this.storage, value: item });
+      walk(item?._children, segment);
+    });
   };
+  walk(value, '');
+  return nodes;
 }
 ```
 
@@ -416,11 +418,16 @@ export function* walkFields(
     yield { field, path: own, value: undefined };
     for (const node of field.use.nodes()) {
       if (determinate && node.segment.includes('#')) continue;
-      yield* walkFields(node.fields, { path: join(own, node.segment), join, determinate });
+      const below = node.segment ? join(own, node.segment) : own;
+      yield* walkFields(node.fields, { path: below, join, determinate });
     }
   }
 }
 ```
+
+**A joiner is never handed an empty part.** A branch that contributes no segment keeps its parent's
+path, so `joinPath` only guards the empty parent and step 11's `__` joiner needs no guard of its
+own. Handing the segment through unguarded makes a group under a tab read `attributes__group____ok`.
 
 ### `walkValues` — every field a document actually carries
 
@@ -438,7 +445,8 @@ export function* walkValues(
     const value = field.name ? (data as Dic)[field.name] : data;
     yield { field, path: own, value };
     for (const node of field.use.nodesFor(value)) {
-      yield* walkValues(node.fields, node.value, { path: join(own, node.segment), join });
+      const below = node.segment ? join(own, node.segment) : own;
+      yield* walkValues(node.fields, node.value, { path: below, join });
     }
   }
 }
@@ -462,7 +470,7 @@ holds data", answered without a special case.
 a path with an index in it cannot be named from a config — rather than three walkers each deciding
 to omit blocks and tree.
 
-### `matchPath` — resolving a path back to a field
+### `matchesSegment` — resolving a path back to a field
 
 `getFieldAtPath` and `getFieldListAtPath` run the other direction: they consume segments and match
 each against the declared nodes.
@@ -492,8 +500,8 @@ specification of both dialects, including the deliberate `undefined` for a block
 
 ## 6. The steps
 
-Eleven commits. The first two are additive and touch no caller, so every gate stays at baseline and
-the shape can be reviewed before anything moves.
+Landed as nine commits, `43ae50fb` to `650768e4`: steps 3, 4 and 6 share one, so do 5 and 11
+(same file). The first two are additive and touch no caller.
 
 ### 1 — the primitive
 
@@ -512,7 +520,7 @@ tree, which already has tabs, a group, blocks with two types, and a tree with a 
 ### 3 — `findTitleField`
 
 ```ts
-// core/features/title/find-title.ts   48 lines → 6
+// core/prototype/shared/title/find-title.ts   57 lines → 32
 export function findTitleField(fields: FieldBuilder<Field>[] = [], basePath = '') {
   for (const { field, path } of walkFields(fields, { path: basePath, determinate: true })) {
     if (isFormField(field) && hasMaybeTitle(field.get) && field.get.isTitle === true) {
@@ -528,8 +536,9 @@ blocks and tree, which is what the four `instanceof` branches did.
 
 ### 4 — `findThumbnailField`
 
-The same body with the `isThumbnail` predicate (`core/features/thumbnail/find-thumbnail.ts`). This
-is the sketch's own worked example.
+The same body with the `isThumbnail` predicate (`core/prototype/collection/thumbnail/find-thumbnail.ts`).
+This is the sketch's own worked example. `resolvedReferencesOf` (`core/fields/util.ts`) is the
+same shape again — the audit missed it, `59805330` folds it.
 
 ### 5 — `hasLocalizedField`
 
@@ -623,8 +632,10 @@ land it in this commit's message rather than discovering it later.
 
 ### 9 — config validation
 
-`core/config/validate.server.ts:157-210` folds `walkFields` with no `determinate` — it must reach
-every block type.
+`core/config/validate.server.ts:157-210` recurses on `field.use.nodes()`, one level per branch,
+rather than folding a flat `walkFields`: the duplicate-name check has to see a level at a time.
+A `tabs` nested in a group is validated as a result; the old `.filter(isFormField)` dropped it on
+the way down.
 
 Two of its branches are not traversal and stay:
 
@@ -659,42 +670,51 @@ nested loops do today. Nothing else catches a reorder.
 
 ---
 
-## 7. Out of scope, and why
+## 7. Storage — the half that fit on the node, and the half that did not
 
-Four clusters look like the same problem. They branch to answer **how a field is stored**, which
-`nodes` cannot answer:
+The branches left after step 11 answered **how a field is stored**, not what is below it. Half
+of that turned out to be a fact about a branch, and a branch already has a node.
 
+**Blocks and tree: `storage` on the node** (`f42d0a79`). The schema generator's two branches were
+the same 35 lines with a different table marker; `select`'s two `with` branches likewise. What
+differed was the marker and how many tables — one per block type, one per tree field — which is
+exactly what `nodes()` already fans out. So a node says it:
+
+```ts
+storage?: { kind: 'blocks' | 'tree'; name: string };
 ```
-adapter-sqlite/generate-schema/root.server.ts:96   relation → relationFieldsMap, no column
-adapter-sqlite/generate-schema/root.server.ts:107  blocks   → one child table per block type
-adapter-sqlite/generate-schema/root.server.ts:142  tree     → one child table for the field
-core/pipeline/persist/{blocks,tree,relations}/extract.server.ts   the same three, writing rows
-adapter-sqlite/with.server.ts:38,42,73             the `with` clause per storage kind
-core/prototype/collection/operations/duplicate.ts:103  "only tree and blocks" = "owns its own rows"
-```
 
-These want a second declaration — a field saying what it stores — which is
-`architecture-target.md` §6's unbuilt `type: 'child'`:
+and the generator is one `childTable(node.storage, node.fields)` where it had two branches;
+`select` builds its `with` clause per kind; the locale copy asks `nodes().some((n) => n.storage)`.
 
-> **`type: 'child'`** — a table owned by the prototype's rows, `{base}__$relation` […] Blocks and
-> relations are the two candidates; both are currently persisted by `core/pipeline/persist/` rather
-> than by a feature.
+`kind` stays two values, not one `'child'`, for one reason: it is the marker on disk,
+`__$blocks_<type>` against `__$tree_<field>`, and every existing database has it. The other
+differences — a tree row nests, a block row carries `type` — are already on the node as
+`repeatVia` and as several branches against one. Collapse the kind when there is a migration
+story, not before.
 
-That is a contract change reaching the `Adapter` interface, and it is its own piece of work.
+**Relation: not on a node.** A relation is a leaf; junction rows are a fact about the field. The
+six sites — `root.server.ts`, `select.server.ts`, `where.server.ts`, `persist/relations`,
+`set-default-values`, `find-thumbnail` — are in the layer whose job is to know. A field-level
+`storage()` absorbs them and `dataType` with them, as `{ kind: 'column', type }`, once a second
+junction-stored field exists. `RelationFieldBuilder.dataType` is `'json'` with a comment saying
+"documentation only"; that is the tell it will be needed.
 
-`panel/components/fields/RenderFields.svelte:35-64` also stays. It dispatches to `field.component`,
-which is already polymorphic, and its `isTabsField` branch is a layout decision.
+**Persist reads the type string.** `persist/{blocks,tree}/extract.server.ts`,
+`process-document-fields` and `copy.server.ts:81` say `type === 'blocks'` or `'tree'`. Same
+coupling as an `instanceof`, spelled so the grep does not see it. They would read `storage.kind`
+the same way; not worth a pass of their own.
 
-Expected after step 11: **73 `instanceof` hits down to roughly 30**, all in the clusters above plus
-the builders' own `localized()` overrides, which walk their own children to clone them and are not
-traversal by anyone else.
+`panel/components/fields/RenderFields.svelte` stays. It dispatches to `field.component`, which is
+already polymorphic, and its `isTabsField` branch is a layout decision.
 
 ---
 
 ## 8. What changes behaviour, and where
 
-Steps 3, 4, 5, 6 and 11 are byte-identical by construction. Step 7 is not, in two ways, and both
-are fixes:
+Steps 3, 4, 5, 6 and 11 are byte-identical by construction. Step 9 validates a `tabs` nested in a
+group where it did not. Step 8 lets a relation's `.defaultValue()` reach a blank document, which
+its `blank()` override used to override with `[]`. Step 7 is the real one, in three ways:
 
 1. A tab nested under a group or a block keys with its full prefix. `config-map/index.ts:28` drops
    the prefix today.
@@ -702,10 +722,31 @@ are fixes:
    its children's `beforeRead`, `beforeSave`, access checks, default values and validation now run.
    `build-tree-map.ts` mapped only the tree's own form fields.
 
-Land step 7 on its own, with the before and after key lists in the commit message.
+3. **A narrowing, and the one the audit missed.** `buildTreeFieldsMap` keyed every field a tree row
+   _declares_, present in the row or not. `walkValues` keys what the row _holds_, which is the rule
+   every other container already followed — `traverseData` skips `!(field.name in data)` for a
+   group's and a block's fields. So a tree row that omits a field loses that key, and with it the
+   default value and the required check `setDefaultValues` and `validateFields` run off the map:
 
-Step 10 also gains: `getFieldAtPath('nav.0._children.1.label', fields)` resolves, where today the
-blind `slice(2)` returns `undefined`.
+   ```
+   tree('nav').fields(text('label'), group('link').fields(text('href')))
+   value: [{ label: 'a' }]
+
+   before   nav.0.label · nav.0.link · nav.0.path · nav.0.position
+   after    nav.0.label
+   ```
+
+   Consistency is the argument for it; the counter-argument is that a tree row is built by
+   `blankFields`, so a row missing a field is an API write, not a panel one.
+
+`core/pipeline/config-map/index.spec.ts` holds the keys for all four containers. Land step 7 on its
+own, with the before and after key lists in the commit message.
+
+Step 10 also gains: `getFieldAtPath('nav.0._children.1.label', fields)` resolves, where the blind
+`slice(2)` returned `undefined`. `util.spec.ts` has it as its 12th path case.
+
+Blocks `nodesFor` drops the `console.warn` that `traverseData` printed for residual data of a
+deleted block type. Same outcome, no log.
 
 Two defects found during the audit and **not** fixed here, because neither is traversal:
 
@@ -720,37 +761,33 @@ Both belong in `known-defects.md` rather than in this plan.
 
 ## 9. Verification
 
-Baselines are per fixture (`probing.md` §1). Measure on the same one before and after.
+Baselines are per fixture. Measure on the same one before and after. `probing.md`, `cold-start.md`
+and `architecture-target.md`, cited by earlier drafts, are not in this repository.
 
 ```bash
 bun run rime:use versions && git checkout hooks.generated.md
-bun run check                 # 0 on versions · 13 on basic · 6 on versions-multilang
-bunx eslint src/lib           # 21
+bun run check                 # 0 errors, 2 warnings
+bunx eslint src/lib           # 12
 bun run check:circular-deps   # 3 — the list matters more than the count
-bunx vitest run               # 124 · util.spec.ts's 11 path cases gate step 10
+bunx vitest run               # 248 · util.spec.ts's path cases gate step 10
+bun run test                  # every fixture green; basic's 23 api-key failures are the no-SMTP cascade
 ```
 
 Three gates discriminate for this work specifically.
 
-**The golden schema diff**, around step 11 (`probing.md` §3). Capture per fixture before the change,
-repeat after, diff. A reordered column is the failure this catches and the only one that does.
+**The golden schema diff**, around step 11 and around `storage`.
+`adapter-sqlite/generate-schema/root.server.spec.ts` snapshots the columns a config generates;
+run it on both sides of a change and diff the snapshots. A reordered column is the failure this
+catches and the only one that does.
 
 **A config-map key diff**, around step 7. The keys are the on-disk path format (§2.3), so a changed
-key is a silently dropped field. Cheapest capture is a temporary log in the hook that builds it:
+key is a silently dropped field. `core/pipeline/config-map/index.spec.ts` holds them for all four
+containers; the `fields` e2e suite is the broader net.
 
-```ts
-// core/pipeline/hooks/data-config-map.server.ts — remove before committing
-console.log(JSON.stringify(Object.keys(map).sort(), null, 2));
-```
+**The blank document**, around step 8. `core/fields/blank.spec.ts` holds the shape.
 
-Run it against a document exercising all four containers — the `fields` fixture has one — before and
-after, and diff the two lists. Expect exactly the two additions §8 describes and nothing else. The
-`fields` e2e suite (72 passing in this container, 22 failing only on the Chromium revision) is the
-broader net.
-
-**`probing.md` §7**, once, after steps 6 and 10. `collection.svelte.ts` and `getFieldListAtPath` are
-panel and live-edit paths; no static gate sees them, and §7 drives Chromium 1194 through
-`playwright-core` directly.
+**The e2e suite**, once, after steps 6 and 10. `collection.svelte.ts` and `getFieldListAtPath` are
+panel and live-edit paths; no static gate sees them.
 
 ---
 
@@ -769,6 +806,9 @@ panel and live-edit paths; no static gate sees them, and §7 drives Chromium 119
   why `FieldBuilder.get` forces `localized: false, root: false`
   (`core/fields/builders/field-builder.ts:82-90`). Every consumer of a walk still filters with
   `isFormField` before reading a form-field member.
-- **Blocks `nodesFor` skips an unknown block type.** The current `traverseData` wraps the lookup in
-  a `try`/`catch` and warns (`config-map/index.ts:50-54`). Keep a warn if the log is wanted, but the
-  skip is the same outcome — residual data for a deleted block type gets no config entry either way.
+- **Blocks `nodesFor` skips an unknown block type, silently.** `traverseData` wrapped the lookup in
+  a `try`/`catch` and warned. The skip is the same outcome — residual data for a deleted block type
+  gets no config entry either way — and the warn went with the wrapper.
+- **`getFieldListAtPath` knows one piece of grammar.** At an endpoint with nothing left to pick a
+  branch, it tells a tree from a blocks field by `segment.includes(':')`. The one place the resolver
+  reads a segment's shape rather than matching it.

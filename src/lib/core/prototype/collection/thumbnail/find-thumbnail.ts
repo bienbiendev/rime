@@ -1,8 +1,7 @@
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { GroupFieldBuilder } from '$lib/fields/group/index.js';
+import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
+import { walkFields } from '$lib/core/fields/walk.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
-import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import type { Field, FormField } from '$lib/fields/types.js';
 
 interface ThumbnailFieldResult {
@@ -10,39 +9,15 @@ interface ThumbnailFieldResult {
   path: string;
 }
 
+/** The first relation marked `isThumbnail()`, at a path a config alone can name. */
 export function findThumbnailField(
   fields: FieldBuilder<Field>[] = [],
   basePath: string = ''
 ): ThumbnailFieldResult | null {
-  for (const field of fields) {
-    // Direct check for isThumbnail
-    if (
-      field instanceof RelationFieldBuilder &&
-      'isThumbnail' in field.get &&
-      field.get.isThumbnail === true
-    ) {
-      const path = basePath ? `${basePath}.${field.name}` : field.name;
+  for (const { field, path } of walkFields(fields, { path: basePath, determinate: true })) {
+    if (field instanceof RelationFieldBuilder && field.get.isThumbnail === true) {
       return { field, path };
     }
-
-    // Check in group
-    if (field instanceof GroupFieldBuilder && field.get.fields) {
-      const groupPath = basePath ? `${basePath}.${field.name}` : field.name;
-      const found = findThumbnailField(field.get.fields, groupPath);
-      if (found) return found;
-    }
-
-    // Check in tabs
-    if (field instanceof TabsBuilder && field.get.tabs) {
-      for (const tab of field.get.tabs) {
-        if (tab.get.fields) {
-          const tabPath = basePath ? `${basePath}.${tab.name}` : tab.name;
-          const found = findThumbnailField(tab.get.fields, tabPath);
-          if (found) return found;
-        }
-      }
-    }
   }
-
   return null;
 }

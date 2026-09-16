@@ -1,8 +1,6 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { buildConfigMap } from '$lib/core/pipeline/config-map/index.js';
 import type { AreaSlug, CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
-import { BlocksBuilder } from '$lib/fields/blocks/index.js';
-import { TreeBuilder } from '$lib/fields/tree/index.js';
 import {
   getValueAtPath,
   isObjectLiteral,
@@ -69,8 +67,9 @@ export const copyLocales = async (args: {
     );
     if (!written) continue;
 
+    // Only the fields stored as rows of their own carry ids to keep or drop.
     for (const [key, field] of Object.entries(configMap)) {
-      if (!(field instanceof BlocksBuilder) && !(field instanceof TreeBuilder)) continue;
+      if (!field.use.nodes().some((node) => node.storage)) continue;
 
       if (field.get.localized) {
         const value = (getValueAtPath<Dic[]>(key, data) ?? []).map((block) => omitId(block));
@@ -78,6 +77,7 @@ export const copyLocales = async (args: {
         continue;
       }
 
+      // A tree row has no type; a block keeps its id only across the same type.
       const sameType = (a: Dic, b: Dic) => field.type === 'tree' || a.type === b.type;
       const targetBlocks = getValueAtPath<Dic[]>(key, target.doc) ?? [];
       targetBlocks.forEach((block, index) => {

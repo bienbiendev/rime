@@ -1,6 +1,5 @@
 import type { BuiltCollection, Config } from '$lib/core/config/types.js';
 import { logger } from '$lib/core/logger.server.js';
-import { isFormField } from '$lib/core/fields/util.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { RimeContext } from '$lib/core/rime.server.js';
 import { existsSync, unlink, unlinkSync } from 'fs';
@@ -26,7 +25,7 @@ const ownsField = <C extends Config>(
   config: BuiltCollection,
   name: string
 ): boolean => {
-  const field = config.fields.filter(isFormField).find((one) => one.name === name);
+  const field = config.fields.find((one) => one.name === name);
   if (!field) return false;
 
   return config._versions ? !!field.get.root : true;

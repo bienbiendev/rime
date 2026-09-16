@@ -1,6 +1,4 @@
-import type { Dic } from '$lib/util/types.js';
 import type { Component } from 'svelte';
-import type { BlankContext } from '../blank.js';
 import type { Field, FieldAccess } from '../../../fields/types.js';
 
 /**
@@ -36,8 +34,52 @@ export type FieldUse = {
   accessCreate(...args: Parameters<FieldAccess>): boolean;
   accessUpdate(...args: Parameters<FieldAccess>): boolean;
   generateType(): string;
-  blank(context?: BlankContext): Dic | undefined;
+  /** Every branch this field can produce, from the config alone. */
+  nodes(): FieldNode[];
+  /** The branches this particular value has. */
+  nodesFor(value: unknown): ValueNode[];
 };
+
+/**
+ * One branch below a field: what it adds to the path, and the fields under it.
+ *
+ * ```
+ * group('attributes')  ->  { segment: '',        fields: [ text('title') ] }
+ * tabs(tab('meta'))    ->  { segment: 'meta',    fields: [ text('title') ] }
+ * blocks('layout')     ->  { segment: '#:hero',  fields: [ text('title') ] }
+ * tree('nav')          ->  { segment: '#', repeatVia: '_children', fields: [ text('label') ] }
+ * ```
+ */
+export type FieldNode = {
+  /**
+   * The segment this branch contributes below the field's own name. `''` when it contributes
+   * nothing — Group, whose own name is already the segment. `#` stands for an index that only a
+   * document can supply.
+   */
+  segment: string;
+  /**
+   * When set, the branch nests into itself through this segment, so `nav.0`, `nav.0._children.1`
+   * and deeper are all this same branch. Read when resolving a path; a value walk flattens the
+   * recursion itself.
+   */
+  repeatVia?: string;
+  fields: FieldBuilder[];
+  /**
+   * The branch is stored as rows of its own, in a child table of the owner, not as its columns.
+   * `kind` is the table's marker on disk; `name` is what follows it.
+   *
+   * ```
+   * blocks('layout', [block('hero')])   { kind: 'blocks', name: 'hero' }    pages__$blocks_hero
+   * tree('nav')                         { kind: 'tree', name: 'nav' }       pages__$tree_nav
+   * ```
+   */
+  storage?: NodeStorage;
+};
+
+export type NodeStorage = { kind: 'blocks' | 'tree'; name: string };
+
+/** A branch a real value has: a concrete segment, no `#`, and the data under it. */
+export type ValueNode = FieldNode & { value: unknown };
 
 export class FieldBuilder<T extends Field = Field> {
   field: T;
@@ -115,7 +157,8 @@ export class FieldBuilder<T extends Field = Field> {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       accessUpdate: (..._args: Parameters<FieldAccess>): boolean => true,
       generateType: (): string => this.generateType(),
-      blank: (context: BlankContext = {}): Dic | undefined => this.blank(context)
+      nodes: (): FieldNode[] => this.nodes(),
+      nodesFor: (value: unknown): ValueNode[] => this.nodesFor(value)
     };
   }
 
@@ -135,10 +178,16 @@ export class FieldBuilder<T extends Field = Field> {
     return '';
   }
 
-  /** What this field contributes to a blank document, `undefined` for a field that holds no data.
-   *  `protected` and reached through `.use.blank()`, same as `generateType`. */
+  /** The branches below this field, from the config alone. A leaf has none.
+   *  `protected` and reached through `.use.nodes()`, same as `generateType`. */
+  protected nodes(): FieldNode[] {
+    return [];
+  }
+
+  /** The branches below this field for one value. A leaf has none.
+   *  `protected` and reached through `.use.nodesFor()`, same as `generateType`. */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected blank(_context: BlankContext): Dic | undefined {
-    return undefined;
+  protected nodesFor(_value: unknown): ValueNode[] {
+    return [];
   }
 }

@@ -1,11 +1,8 @@
 import type { LocaleConfig } from '$lib/core/locale/types.js';
-import { type FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
+import type { FieldBuilder, NodeStorage } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { BlocksBuilder } from '$lib/fields/blocks/index.js';
-import { GroupFieldBuilder } from '$lib/fields/group/index.js';
+import { walkFields } from '$lib/core/fields/walk.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
-import { TabsBuilder } from '$lib/fields/tabs/index.js';
-import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field, FormField } from '$lib/fields/types.js';
 import { tableName as buildTableName, getSchemaColumnNames } from '../naming.server.js';
 import { toSchemaColumn } from './column.server.js';
@@ -56,10 +53,22 @@ type Return = {
   referenceJoins: ReferenceJoin[];
 };
 
+/** A container flattened into the owner's row: its name and the column's, joined. */
+const joinColumn = (parent: string, part: string) => (parent ? `${parent}__${part}` : part);
+
 /**
- * This function generates the root table schema for collection/areas, including its localized version if needed,
- * and also generates tables for blocks and tree fields.
- * It also keeps track of relation fields and their localization status to properly generate relations later on.
+ * The table of a collection or area, its locales branch when a field is localized, and one child
+ * table per block type and per tree field. Relation fields become no column; they are collected in
+ * `relationFieldsMap` for the junction table built later.
+ *
+ * The branches below decide where a field's rows are stored, not what is below it:
+ *
+ * ```
+ * relation                 junction rows      no column, an entry in relationFieldsMap
+ * a node with storage      a child table      blocks and tree, built by this function recursing
+ * a node without           the owner's row    group, tabs, and a container from a package
+ * leaf                     one column
+ * ```
  */
 const buildRootTable = async ({
   fields: incomingFields,
@@ -77,6 +86,33 @@ const buildRootTable = async ({
   const referenceJoins: ReferenceJoin[] = [];
   let relationFieldsHasLocale = false;
 
+  /**
+   * One child table under the root for a branch stored as rows of its own, built by recursing.
+   * Registered once: two blocks fields declaring the same type share the type's table.
+   */
+  const childTable = async (storage: NodeStorage, fields: FieldBuilder<Field>[]) => {
+    const name = buildTableName({ owner: rootName, child: storage });
+    if (blocksRegister.includes(name)) return;
+
+    relationsDic = { ...relationsDic, [rootName]: [...(relationsDic[rootName] || []), name] };
+    const nested = await buildRootTable({
+      blocksRegister,
+      fields,
+      tableName: name,
+      hasParent: true,
+      relationsDic,
+      relationFieldsMap,
+      locales,
+      rootName
+    });
+    relationsDic = nested.relationsDic;
+    relationFieldsMap = nested.relationFieldsMap;
+    if (nested.relationFieldsHasLocale) relationFieldsHasLocale = true;
+    referenceJoins.push(...nested.referenceJoins);
+    blocksRegister.push(name);
+    blocksTables.push(nested.schema);
+  };
+
   const generateFieldsTemplates = async (
     fields: FieldBuilder<Field>[],
     withLocalized?: boolean,
@@ -93,21 +129,8 @@ const buildRootTable = async ({
     };
 
     for (const field of fields) {
-      if (field instanceof GroupFieldBuilder) {
-        const groupPath = parentPath ? `${parentPath}__${field.name}` : field.name;
-        const groupFields = await generateFieldsTemplates(
-          field.get.fields,
-          withLocalized,
-          groupPath
-        );
-        templates = [...templates, ...groupFields];
-      } else if (field instanceof TabsBuilder) {
-        for (const tab of field.get.tabs) {
-          const tabPath = parentPath ? `${parentPath}__${tab.name}` : tab.name;
-          const tabFields = await generateFieldsTemplates(tab.get.fields, withLocalized, tabPath);
-          templates = [...templates, ...tabFields];
-        }
-      } else if (field instanceof RelationFieldBuilder) {
+      // Junction rows: no column here, and the relations table wants to know it exists.
+      if (field instanceof RelationFieldBuilder) {
         if (field.get.localized) {
           relationFieldsHasLocale = true;
         }
@@ -118,76 +141,20 @@ const buildRootTable = async ({
             localized: field.get.localized
           }
         };
-      } else if (field instanceof BlocksBuilder) {
-        for (const block of field.get.blocks) {
-          const blockTableName = buildTableName({
-            owner: rootName,
-            child: { kind: 'blocks', name: block.name }
-          });
-          if (!blocksRegister.includes(blockTableName)) {
-            // Add the blocks as a relation of the root collection
-            relationsDic = {
-              ...relationsDic,
-              [rootName]: [...(relationsDic[rootName] || []), blockTableName]
-            };
-            // Build the child blocks table
-            const {
-              schema: blockTable,
-              relationsDic: nestedRelationsDic,
-              relationFieldsMap: nestedRelationFieldsDic,
-              relationFieldsHasLocale: nestedRelationFieldsHasLocale,
-              referenceJoins: nestedReferenceJoins
-            } = await buildRootTable({
-              blocksRegister,
-              fields: block.get.fields,
-              tableName: blockTableName,
-              hasParent: true,
-              relationsDic,
-              relationFieldsMap,
-              locales,
-              rootName
-            });
-            relationsDic = nestedRelationsDic;
-            relationFieldsMap = nestedRelationFieldsDic;
-            if (nestedRelationFieldsHasLocale) relationFieldsHasLocale = true;
-            referenceJoins.push(...nestedReferenceJoins);
-            blocksRegister.push(blockTableName);
-            blocksTables.push(blockTable);
+      } else if (field.use.nodes().length) {
+        // A branch stored as rows of its own gets a child table; any other flattens into the
+        // owner's row, `attributes__seo__title`.
+        for (const node of field.use.nodes()) {
+          if (node.storage) {
+            await childTable(node.storage, node.fields);
+            continue;
           }
-        }
-      } else if (field instanceof TreeBuilder) {
-        const treeTableName = buildTableName({
-          owner: rootName,
-          child: { kind: 'tree', name: field.name }
-        });
-        if (!blocksRegister.includes(treeTableName)) {
-          // Add the tree table as relation of the root collection
-          relationsDic = {
-            ...relationsDic,
-            [rootName]: [...(relationsDic[rootName] || []), treeTableName]
-          };
-          const {
-            schema: treeTable,
-            relationsDic: nestedRelationsDic,
-            relationFieldsMap: nestedRelationFieldsDic,
-            relationFieldsHasLocale: nestedRelationFieldsHasLocale,
-            referenceJoins: nestedReferenceJoins
-          } = await buildRootTable({
-            blocksRegister,
-            fields: field.get.fields,
-            tableName: treeTableName,
-            hasParent: true,
-            relationsDic,
-            relationFieldsMap,
-            locales,
-            rootName
-          });
-          relationsDic = nestedRelationsDic;
-          relationFieldsMap = nestedRelationFieldsDic;
-          if (nestedRelationFieldsHasLocale) relationFieldsHasLocale = true;
-          referenceJoins.push(...nestedReferenceJoins);
-          blocksRegister.push(treeTableName);
-          blocksTables.push(treeTable);
+          const own = field.name ? joinColumn(parentPath, field.name) : parentPath;
+          const prefix = node.segment ? joinColumn(own, node.segment) : own;
+          templates = [
+            ...templates,
+            ...(await generateFieldsTemplates(node.fields, withLocalized, prefix))
+          ];
         }
       } else if (field instanceof FormFieldBuilder) {
         if (checkLocalized(field)) {
@@ -250,51 +217,8 @@ const buildRootTable = async ({
   };
 };
 
-function hasLocalizedField(fields: FieldBuilder<Field>[]): boolean {
-  // Iterate through each field in the array
-  for (const field of fields) {
-    // Case 1: If it's a group field, check all fields within the group
-    if (field instanceof GroupFieldBuilder) {
-      if (hasLocalizedField(field.get.fields)) {
-        return true;
-      }
-    }
-
-    // Case 2: If it's a tabs field, check all fields within each tab
-    else if (field instanceof TabsBuilder) {
-      for (const tab of field.get.tabs) {
-        if (hasLocalizedField(tab.get.fields)) {
-          return true;
-        }
-      }
-    }
-
-    // Case 3: If it's a blocks field, check all fields within each block
-    else if (field instanceof BlocksBuilder) {
-      if (field.get.localized) return true;
-      for (const block of field.get.blocks) {
-        if (hasLocalizedField(block.get.fields)) {
-          return true;
-        }
-      }
-    }
-
-    // Case 3: If it's a tree field, check all fields
-    else if (field instanceof TreeBuilder) {
-      if (field.get.localized) return true;
-      if (hasLocalizedField(field.get.fields)) {
-        return true;
-      }
-    }
-
-    // Case 4: For regular form fields, check if it's marked as localized
-    else if (field instanceof FormFieldBuilder && field.get.localized) {
-      return true;
-    }
-  }
-
-  // If no localized fields were found, return false
-  return false;
-}
+/** Whether anything in the tree is localized, container fields included. */
+const hasLocalizedField = (fields: FieldBuilder<Field>[]): boolean =>
+  [...walkFields(fields)].some((visit) => visit.field.get.localized);
 
 export default buildRootTable;

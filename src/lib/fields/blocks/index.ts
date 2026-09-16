@@ -1,4 +1,8 @@
-import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
+import type {
+  FieldBuilder,
+  FieldNode,
+  ValueNode
+} from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { WithoutBuilders } from '$lib/core/fields/types.js';
 import type { Field, FormField } from '$lib/fields/types.js';
@@ -51,20 +55,14 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
     // Set all descendant fields localized
     this.field.blocks = this.field.blocks.map((blockBuilder) => {
       // Add a locale prop in each block
-      const hasAlreadyLocale = !!blockBuilder.block.fields
-        .filter((field) => field instanceof FormFieldBuilder)
-        .find((field) => field.name === 'locale');
+      const hasAlreadyLocale = blockBuilder.block.fields.some((field) => field.name === 'locale');
       if (!hasAlreadyLocale) {
         blockBuilder.block.fields.push(text('locale').hidden());
       }
       // In each block process fields
       blockBuilder.block.fields = blockBuilder.block.fields.map((field) => {
-        // If type / position / path field do not set as localized
-        // as it's a block property
-        if (
-          field instanceof FormFieldBuilder &&
-          ['position', 'type', 'path', 'locale'].includes(field.name)
-        ) {
+        // A block's own members are not content: type, position, path and locale stay as they are.
+        if (['position', 'type', 'path', 'locale'].includes(field.name)) {
           return field;
         }
         // For all others fields set as localized
@@ -115,6 +113,32 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
       .join('\n');
 
     return `${blocksTypes}\n\n${this.name}: Array<${blockNames.join(' | ')}>,`;
+  }
+
+  /** One branch per block type, at an index only a document can name, each a table of its own. */
+  protected override nodes(): FieldNode[] {
+    return this.field.blocks.map((block) => ({
+      segment: `#:${block.name}`,
+      fields: block.get.fields,
+      storage: { kind: 'blocks', name: block.name }
+    }));
+  }
+
+  protected override nodesFor(value: unknown): ValueNode[] {
+    if (!Array.isArray(value)) return [];
+    return value.flatMap((item, index) => {
+      const block = this.field.blocks.find((candidate) => candidate.name === item?.type);
+      // Residual data for a block type the config no longer declares.
+      if (!block) return [];
+      return [
+        {
+          segment: `${index}:${block.name}`,
+          fields: block.get.fields,
+          storage: { kind: 'blocks', name: block.name },
+          value: item
+        }
+      ];
+    });
   }
 }
 
