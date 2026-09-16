@@ -143,6 +143,13 @@ test('should return correct field config inside blocks inside tree', () => {
   expect(field?.type).toBe('text');
 });
 
+test('should return correct field config deeper in a tree', () => {
+  const field = getFieldAtPath('footer.nav.0._children.1.label', configByPathFields);
+  expect(field).toBeDefined();
+  expect(field?.name).toBe('label');
+  expect(field?.type).toBe('text');
+});
+
 test('should not return field config inside blocks without param inBlockType', () => {
   const field = getFieldAtPath('layout.components.0.legends.0.legend', configByPathFields);
   expect(field).toBe(undefined);

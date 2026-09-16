@@ -96,6 +96,7 @@ const defaultRelationValue = async (
   return await buildRelation(config.use.defaultValue({ event: getRequestEvent() }));
 };
 
+/** A relation's default is ids; they become junction rows, checked against the collection. */
 export const getDefaultValue: GetDefaultValue = async ({ key, config, adapter }) => {
   if (config instanceof RelationFieldBuilder) {
     return await defaultRelationValue(config, key, adapter);

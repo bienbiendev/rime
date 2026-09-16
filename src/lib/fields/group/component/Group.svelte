@@ -40,6 +40,7 @@
 
   const user = getUserContext() || undefined;
 
+  // The preview shows the group's own values: a layout field has none, and tabs are one.
   const previewFields = $derived.by(() => {
     return config.get.fields
       .filter((field) => !(field instanceof TabsBuilder))

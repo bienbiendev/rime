@@ -1,6 +1,6 @@
 <script lang="ts">
   import { env } from '$env/dynamic/public';
-  import { emptyValuesFromFieldConfig, isFormField } from '$lib/core/fields/util.js';
+  import { emptyValuesFromFieldConfig } from '$lib/core/fields/util.js';
   import { t__ } from '$lib/core/i18n/index.js';
   import type { GenericBlock } from '$lib/core/prototype/types.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
@@ -22,7 +22,7 @@
   const add = (block: BlocksFieldBlock) => {
     open = false;
     const empty = {
-      ...emptyValuesFromFieldConfig(block.fields.filter(isFormField)),
+      ...emptyValuesFromFieldConfig(block.fields),
       type: block.name
     };
     addBlock(empty);

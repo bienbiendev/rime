@@ -14,6 +14,8 @@ type Args = {
 export const extractRelations = ({ ownerId, data, configMap, locale }: Args) => {
   const relations: BeforeOperationRelation[] = [];
 
+  // The config map keys every field the document holds; relations are the ones stored as junction
+  // rows, and the key is the `path` those rows carry.
   for (const [path, config] of Object.entries(configMap)) {
     if (config instanceof RelationFieldBuilder) {
       const value = getValueAtPath<BeforeOperationRelation[] | string | string[]>(path, data);

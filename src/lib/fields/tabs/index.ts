@@ -1,6 +1,10 @@
-import { blankFields, type BlankContext } from '$lib/core/fields/blank.js';
-import { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
+import {
+  FieldBuilder,
+  type FieldNode,
+  type ValueNode
+} from '$lib/core/fields/builders/field-builder.js';
 import type { Field } from '$lib/fields/types.js';
+import { isObjectLiteral } from '$lib/util/object.js';
 import { isCamelCase, joinMemberTypes } from '$lib/util/string.js';
 import type { WithoutBuilders } from '$lib/core/fields/types.js';
 import Tabs from './component/Tabs.svelte';
@@ -27,13 +31,6 @@ export class TabsBuilder extends FieldBuilder<TabsField> {
     };
   }
 
-  /** One member per tab, each holding that tab's fields. */
-  protected override blank(context: BlankContext) {
-    return Object.fromEntries(
-      this.field.tabs.map((tab) => [tab.name, blankFields(tab.get.fields, context)])
-    );
-  }
-
   protected override generateType(): string {
     const types: string[] = [];
     for (const tab of this.field.tabs) {
@@ -43,6 +40,18 @@ export class TabsBuilder extends FieldBuilder<TabsField> {
       }
     }
     return types.join(',\n');
+  }
+
+  /** The builder has no name of its own, so each tab's name is the whole segment. */
+  protected override nodes(): FieldNode[] {
+    return this.field.tabs.map((tab) => ({ segment: tab.name, fields: tab.get.fields }));
+  }
+
+  protected override nodesFor(value: unknown): ValueNode[] {
+    if (!isObjectLiteral(value)) return [];
+    return this.field.tabs
+      .filter((tab) => tab.name in value)
+      .map((tab) => ({ segment: tab.name, fields: tab.get.fields, value: value[tab.name] }));
   }
 }
 

@@ -1,0 +1,60 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the columns a config generates, in order 1`] = `
+"export const pages = sqliteTable( 'pages', {
+		id: pk(),
+hero__headline: text('hero__headline'),
+  hero__media__alt: text('hero__media__alt'),
+  attributes__isHome: integer('attributes__is_home', { mode: 'boolean' }),
+  attributes__seo__og__ogTitle: text('attributes__seo__og__og_title'),
+  status: text('status'),
+	})
+	export const pages__$$locales = sqliteTable( 'pages__$$locales', {
+		id: pk(),
+attributes__title: text('attributes__title'),
+  attributes__seo__metaTitle: text('attributes__seo__meta_title'),
+  locale: text("locale"),
+  ownerId: text("owner_id").references(() => pages.id, { onDelete: 'cascade' }),
+	})
+	
+
+export const pages__$blocks_hero = sqliteTable( 'pages__$blocks_hero', {
+		id: pk(),
+label: text('label'),
+  type: text('type'),
+  path: text('path'),
+  position: real('position'),
+  ownerId: text("owner_id").references(() => pages.id, { onDelete: 'cascade' }),
+	})
+	
+
+export const pages__$tree_nav = sqliteTable( 'pages__$tree_nav', {
+		id: pk(),
+path: text('path'),
+  position: real('position'),
+  label: text('label'),
+  ownerId: text("owner_id").references(() => pages.id, { onDelete: 'cascade' }),
+	})
+	"
+`;
+
+exports[`the columns a config generates, in order 2`] = `
+{
+  "image": {
+    "localized": false,
+    "to": "medias",
+  },
+}
+`;
+
+exports[`the columns a config generates, in order 3`] = `[]`;
+
+exports[`the columns a config generates, in order 4`] = `
+{
+  "pages": [
+    "pages__$blocks_hero",
+    "pages__$tree_nav",
+    "pages__$$locales",
+  ],
+}
+`;

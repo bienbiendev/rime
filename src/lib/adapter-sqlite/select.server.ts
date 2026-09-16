@@ -1,8 +1,8 @@
+import type { NodeStorage } from '$lib/core/fields/builders/field-builder.js';
+import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { getFieldAtPath, resolvedReferencesOf } from '$lib/core/fields/util.js';
-import { BlocksBuilder } from '$lib/fields/blocks/index.js';
 import { getColumns } from 'drizzle-orm';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
-import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
 import {
@@ -72,10 +72,15 @@ export const buildWithParam = (args: {
 
   const withParam: Dic = resolvedReferenceJoins({ table, tables, config: documentConfig, select });
 
-  // Track paths for different field types
   const directRelationPaths: string[] = [];
-  const blockPaths: string[] = [];
-  const treePaths: string[] = [];
+  /** The selected paths stored as child tables, by the tables' kind. */
+  const childPaths: Record<NodeStorage['kind'], string[]> = { blocks: [], tree: [] };
+  const allChildPaths = () => [...childPaths.blocks, ...childPaths.tree];
+
+  /** The kinds of child table a field's branches are stored in — none for a column. */
+  const storageKinds = (field: FormFieldBuilder) => [
+    ...new Set(field.use.nodes().flatMap((node) => (node.storage ? [node.storage.kind] : [])))
+  ];
 
   for (const path of select) {
     // Convert dot notation to double underscore notation for SQLite queries
@@ -83,71 +88,35 @@ export const buildWithParam = (args: {
 
     const fieldConfig = getFieldAtPath(path, documentConfig.fields);
 
+    // Each branch is where the field's rows are stored: the junction table, a child table, or a
+    // column of the row itself.
     if (fieldConfig instanceof RelationFieldBuilder) {
-      // Handle relation fields
       directRelationPaths.push(path);
-    } else if (fieldConfig instanceof BlocksBuilder) {
-      // Handle blocks fields
-      blockPaths.push(path);
-      const blocksTables = childTableNames(table, 'blocks', tables);
-      for (const blocksTable of blocksTables) {
-        if (!withParam[blocksTable]) {
-          let params: Dic = { orderBy: { position: 'asc' } };
-          const columns = getColumns(tables[blocksTable]);
-          const hasLocale = Object.keys(columns).includes('locale');
+    } else if (fieldConfig && storageKinds(fieldConfig).length) {
+      for (const kind of storageKinds(fieldConfig)) {
+        childPaths[kind].push(path);
+        for (const childTable of childTableNames(table, kind, tables)) {
+          if (withParam[childTable]) continue;
 
+          let params: Dic = { orderBy: { position: 'asc' } };
+          const columns = getColumns(tables[childTable]);
+          const hasLocale = Object.keys(columns).includes('locale');
           if (locale && hasLocale) {
             params = { ...params, where: { locale } };
           }
+          withParam[childTable] = params;
 
-          withParam[blocksTable] = params;
-
-          // Handle localized blocks
-          const localesBlockTable = tableName({ owner: blocksTable, branch: 'locales' });
-          if (locale && localesBlockTable in tables) {
-            withParam[blocksTable] = {
-              ...withParam[blocksTable],
-              with: {
-                [localesBlockTable]: {
-                  where: branchWhere
-                }
-              }
-            };
-          }
-        }
-      }
-    } else if (fieldConfig instanceof TreeBuilder) {
-      // Handle tree fields
-      treePaths.push(path);
-      const treeTables = childTableNames(table, 'tree', tables);
-      for (const treeTable of treeTables) {
-        if (!withParam[treeTable]) {
-          let params: Dic = { orderBy: { position: 'asc' } };
-          const columns = getColumns(tables[treeTable]);
-          const hasLocale = Object.keys(columns).includes('locale');
-
-          if (locale && hasLocale) {
-            params = { ...params, where: { locale } };
-          }
-
-          withParam[treeTable] = params;
-
-          // Handle localized trees
-          const localesTreeTables = tableName({ owner: treeTable, branch: 'locales' });
-          if (locale && localesTreeTables in tables) {
-            withParam[treeTable] = {
-              ...withParam[treeTable],
-              with: {
-                [localesTreeTables]: {
-                  where: branchWhere
-                }
-              }
+          // Its locales branch with it.
+          const localesTable = tableName({ owner: childTable, branch: 'locales' });
+          if (locale && localesTable in tables) {
+            withParam[childTable] = {
+              ...withParam[childTable],
+              with: { [localesTable]: { where: branchWhere } }
             };
           }
         }
       }
     } else if (fieldConfig) {
-      // Handle regular fields
       if (fieldConfig.get.localized && locale) {
         const localesTableName = tableName({ owner: table, branch: 'locales' });
         if (localesTableName in tables) {
@@ -183,7 +152,7 @@ export const buildWithParam = (args: {
   //    If container paths are present we include relations for those containers
   //    and also include any direct relation paths.
   if (
-    (blockPaths.length > 0 || treePaths.length > 0) &&
+    allChildPaths().length > 0 &&
     tableName({ owner: table, child: { kind: 'rels' } }) in tables
   ) {
     // Create a where condition that matches relations within any of the container paths,
@@ -192,7 +161,7 @@ export const buildWithParam = (args: {
       where: {
         OR: [
           // A container's rows sit under its path; a direct relation is the path itself.
-          ...[...blockPaths, ...treePaths].map((path) => ({ path: { like: `${path}__%` } })),
+          ...allChildPaths().map((path) => ({ path: { like: `${path}__%` } })),
           ...directRelationPaths.map((path) => ({ path }))
         ]
       },
@@ -201,12 +170,12 @@ export const buildWithParam = (args: {
   }
 
   // 2. Include tree tables for blocks that might contain trees
-  if (blockPaths.length > 0) {
+  if (childPaths.blocks.length > 0) {
     const treeTables = childTableNames(table, 'tree', tables);
     for (const treeTable of treeTables) {
       if (!withParam[treeTable]) {
         withParam[treeTable] = {
-          where: { OR: blockPaths.map((path) => ({ path: { like: `${path}__%` } })) },
+          where: { OR: childPaths.blocks.map((path) => ({ path: { like: `${path}__%` } })) },
           orderBy: { position: 'asc' }
         };
 
@@ -227,12 +196,12 @@ export const buildWithParam = (args: {
   }
 
   // 3. Include block tables for trees that might contain blocks
-  if (treePaths.length > 0) {
+  if (childPaths.tree.length > 0) {
     const blocksTables = childTableNames(table, 'blocks', tables);
     for (const blocksTable of blocksTables) {
       if (!withParam[blocksTable]) {
         withParam[blocksTable] = {
-          where: { OR: treePaths.map((path) => ({ path: { like: `${path}__%` } })) },
+          where: { OR: childPaths.tree.map((path) => ({ path: { like: `${path}__%` } })) },
           orderBy: { position: 'asc' }
         };
 

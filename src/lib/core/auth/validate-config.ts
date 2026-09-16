@@ -1,5 +1,4 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { isFormField } from '$lib/core/fields/util.js';
 import { SelectFieldBuilder } from '$lib/fields/select/index.js';
 
 /**
@@ -26,12 +25,11 @@ export const validateAuth = (config: BuiltCollection): string[] => {
     errors.push(`Auth collections can't be versionned (${config.slug})`);
   }
 
-  const formFields = config.fields.filter(isFormField);
-  const rolesField = formFields
+  const rolesField = config.fields
     .filter((f) => f.name === 'roles')
     .filter((f) => f instanceof SelectFieldBuilder)[0];
-  const nameField = formFields.filter((f) => f.name === 'name')[0];
-  const emailField = formFields.find((f) => f.name === 'email' && f.type === 'email');
+  const nameField = config.fields.filter((f) => f.name === 'name')[0];
+  const emailField = config.fields.find((f) => f.name === 'email' && f.type === 'email');
 
   if (!rolesField) errors.push(`Field roles is missing in collection ${config.slug}`);
   if (!emailField && config.auth?.type !== 'apiKey')

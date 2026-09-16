@@ -1,6 +1,6 @@
 import { pushState, replaceState } from '$app/navigation';
 import { page } from '$app/state';
-import { emptyValuesFromFieldConfig, isFormField } from '$lib/core/fields/util.js';
+import { emptyValuesFromFieldConfig } from '$lib/core/fields/util.js';
 import type { GenericBlock } from '$lib/core/prototype/types.js';
 import type { BlocksBuilder, BlocksFieldBlock } from '$lib/fields/blocks/index.js';
 import {
@@ -275,7 +275,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     if (locked || !at) return null;
     const config = builderOf(at.list)?.get.blocks.find((candidate) => candidate.name === type)?.get;
     if (!config) return null;
-    const empty = { ...emptyValuesFromFieldConfig(config.fields.filter(isFormField)), type };
+    const empty = { ...emptyValuesFromFieldConfig(config.fields), type };
     const id = form.blocks.insert(at, empty);
     select(blockPath(at));
     return id;

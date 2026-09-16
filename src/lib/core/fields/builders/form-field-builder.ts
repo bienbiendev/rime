@@ -14,8 +14,7 @@ import type {
   FieldWidth,
   FormField
 } from '../../../fields/types.js';
-import type { BlankContext } from '../blank.js';
-import { FieldBuilder, type FieldUse } from './field-builder.js';
+import { FieldBuilder, type FieldNode, type FieldUse, type ValueNode } from './field-builder.js';
 
 /** Adapter-agnostic storage primitive — column syntax only, not default-value semantics. */
 export type DataType = 'text' | 'boolean' | 'number' | 'timestamp' | 'json';
@@ -238,7 +237,8 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
       },
       generateType: (): string =>
         this._references?.resolve ? this.resolvedReferenceType() : this.generateType(),
-      blank: (context: BlankContext = {}): Dic => this.blank(context)
+      nodes: (): FieldNode[] => this.nodes(),
+      nodesFor: (value: unknown): ValueNode[] => this.nodesFor(value)
     };
   }
 
@@ -303,12 +303,5 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
    *  generated document type (as `any`) instead of silently vanishing from it. */
   protected override generateType(): string {
     return `${this.field.name}${this.get.required ? '' : '?'}: any`;
-  }
-
-  /** The field's own member, holding its default. `null` where it has none — never `undefined`,
-   *  which flattening reads as an absent key. */
-  protected override blank(context: BlankContext): Dic {
-    const defaultValue = this.use.defaultValue(context);
-    return { [this.field.name]: defaultValue !== undefined ? defaultValue : null };
   }
 }

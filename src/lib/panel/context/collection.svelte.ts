@@ -3,14 +3,13 @@ import type { BuiltCollection } from '$lib/core/config/types.js';
 import { PARAMS } from '$lib/core/constants.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/index.js';
 import { isFormField } from '$lib/core/fields/util.js';
+import { walkFields } from '$lib/core/fields/walk.js';
 import { directoriesKebab } from '$lib/core/prototype/collection/upload/naming.js';
 import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
 import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config.js';
 import { toNestedStructure } from '$lib/core/prototype/collection/nested/tree.js';
 import type { GenericDoc, GenericNestedDoc } from '$lib/core/prototype/types.js';
 import { apiUrl, panelUrl } from '$lib/core/routes/util.js';
-import { GroupFieldBuilder } from '$lib/fields/group/index.js';
-import { TabsBuilder } from '$lib/fields/tabs/index.js';
 import type { FormField } from '$lib/fields/types.js';
 import type { FieldPanelTableConfig } from '$lib/panel/types.js';
 import { trycatch, trycatchFetch } from '$lib/util/function.js';
@@ -80,31 +79,17 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     return toNestedStructure(docs);
   });
 
-  const buildFieldColumns = (fields: FieldBuilder[], parentPath: string = '') => {
-    let columns: TableColumn[] = [];
-    for (const field of fields) {
-      if (field instanceof GroupFieldBuilder) {
-        // For group fields, pass the current group name as parent path for nested fields
-        const groupPath = parentPath ? `${parentPath}.${field.name}` : field.name;
-        columns = [...columns, ...buildFieldColumns(field.get.fields, groupPath)];
-      }
+  /** Every field marked `table()`, at a path a config alone can name. */
+  const buildFieldColumns = (fields: FieldBuilder[]) => {
+    const columns: TableColumn[] = [];
+    for (const { field, path } of walkFields(fields, { determinate: true })) {
       if (isFormField(field) && hasProp('table', field.get)) {
-        // Create current field path
-        const path = parentPath ? `${parentPath}.${field.name}` : field.name;
-        // Create column
-        const column = {
+        columns.push({
           type: field.type,
           path,
           cell: field.get.table.cell || field.cell,
           table: field.get.table
-        };
-        columns.push(column);
-      } else if (field instanceof TabsBuilder) {
-        for (const tab of field.get.tabs) {
-          // For tab fields, create a path with the tab name
-          const path = parentPath ? `${parentPath}.${tab.name}` : tab.name;
-          columns = [...columns, ...buildFieldColumns(tab.get.fields, path)];
-        }
+        });
       }
     }
     return columns;

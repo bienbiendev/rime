@@ -1,12 +1,9 @@
-import { BlocksBuilder } from '$lib/fields/blocks/index.js';
-import { GroupFieldBuilder } from '$lib/fields/group/index.js';
-import { TabsBuilder } from '$lib/fields/tabs/index.js';
-import { TreeBuilder } from '$lib/fields/tree/index.js';
 import type { Field, FormField, SeparatorField } from '$lib/fields/types.js';
 import { normalizeFieldPath } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import type { FormFieldBuilder } from './builders/form-field-builder.js';
 import type { FieldBuilder } from './builders/index.js';
+import { matchesSegment, walkFields } from './walk.js';
 
 /**
  * Checks if a field is a presentative field (currently only separator fields).
@@ -48,35 +45,25 @@ export const isLiveField = (field: Field) => field.live;
  *   ]}
  * ]);
  */
-export const emptyValuesFromFieldConfig = <T extends FormFieldBuilder>(arr: T[]): Dic => {
-  return Object.fromEntries(
-    arr.map((config) => {
-      let emptyValue;
+export const emptyValuesFromFieldConfig = (fields: FieldBuilder[]): Dic =>
+  Object.fromEntries(
+    fields.filter(isFormField).map((config) => {
+      const nodes = config.use.nodes();
 
-      // Handle group fields - create nested object structure
-      if (config instanceof GroupFieldBuilder) {
-        emptyValue = emptyValuesFromFieldConfig(config.get.fields.filter(isFormField));
-      }
-      // Handle tabs fields - create nested object structure for each tab
-      else if (config instanceof TabsBuilder) {
-        const tabsValue: Dic = {};
-        const tabs = config.get.tabs;
-        for (const tab of tabs) {
-          if ('fields' in tab) {
-            tabsValue[tab.name] = emptyValuesFromFieldConfig(tab.get.fields.filter(isFormField));
-          }
-        }
-        emptyValue = tabsValue;
-      }
-      // Handle default values
-      else {
-        emptyValue = config.use.defaultValue();
+      // A leaf, and a repeater with it: `#` means only a document can name the children, so an
+      // empty one holds the field's own default.
+      if (!nodes.length || nodes.some((node) => node.segment.includes('#'))) {
+        return [config.name, config.use.defaultValue()];
       }
 
-      return [config.name, emptyValue];
+      const value: Dic = {};
+      for (const node of nodes) {
+        const bucket = node.segment ? (value[node.segment] = {} as Dic) : value;
+        Object.assign(bucket, emptyValuesFromFieldConfig(node.fields));
+      }
+      return [config.name, value];
     })
   );
-};
 
 /**
  * Converts a path with numeric indices to a regex pattern
@@ -111,61 +98,60 @@ export function pathToRegex(path: string): RegExp {
  *
  */
 export const getFieldAtPath = (path: string, fields: FieldBuilder[]) => {
-  const parts = path.split('.');
-
   const findInFields = (
     currentFields: FieldBuilder[],
-    remainingParts: string[]
+    parts: string[]
   ): FormFieldBuilder | undefined => {
-    if (remainingParts.length === 0) return undefined;
-
-    const currentPart = remainingParts[0];
+    if (!parts.length) return undefined;
 
     for (const field of currentFields) {
-      // Handle tabs
-      if (field instanceof TabsBuilder) {
-        const tab = field.get.tabs.find((t) => t.name === currentPart);
-        if (tab) {
-          return findInFields(tab.get.fields, remainingParts.slice(1));
+      const nodes = field.use.nodes();
+
+      // A container with no name of its own: its branches are the segment (tabs).
+      if (!field.name) {
+        for (const node of nodes) {
+          if (!matchesSegment(node.segment, parts[0])) continue;
+          const found = findInFields(node.fields, parts.slice(1));
+          if (found) return found;
         }
         continue;
       }
 
-      // Handle regular fields
-      if (isFormField(field)) {
-        if (field.name === currentPart) {
-          if (remainingParts.length === 1) {
-            return field;
-          }
+      if (field.name !== parts[0]) continue;
+      if (parts.length === 1) return field as FormFieldBuilder;
 
-          if (field instanceof GroupFieldBuilder) {
-            return findInFields(field.get.fields, remainingParts.slice(1));
-          }
-
-          // Handle blocks
-          if (field instanceof BlocksBuilder && remainingParts.length > 1) {
-            // const blockPartPattern = /:[a-zA-Z0-9]+/
-            const blockType = remainingParts[1].split(':')[1];
-
-            if (blockType) {
-              const block = field.get.blocks.find((b) => b.name === blockType);
-              if (block) {
-                return findInFields(block.get.fields, remainingParts.slice(2));
-              }
-            }
-          }
-
-          if (field instanceof TreeBuilder) {
-            return findInFields(field.get.fields, remainingParts.slice(2));
-          }
+      for (const node of nodes) {
+        // A branch that adds no segment: the rest of the path is already inside it.
+        if (!node.segment) {
+          const found = findInFields(node.fields, parts.slice(1));
+          if (found) return found;
+          continue;
         }
+
+        if (!matchesSegment(node.segment, parts[1])) continue;
+
+        // A repeating branch stays itself through `_children.<index>`, however deep.
+        let rest = parts.slice(2);
+        while (
+          node.repeatVia &&
+          rest[0] === node.repeatVia &&
+          rest[1] !== undefined &&
+          matchesSegment(node.segment, rest[1])
+        ) {
+          rest = rest.slice(2);
+        }
+
+        const found = findInFields(node.fields, rest);
+        if (found) return found;
       }
+
+      return undefined;
     }
 
     return undefined;
   };
 
-  return findInFields(fields, parts);
+  return findInFields(fields, path.split('.'));
 };
 
 /**
@@ -186,74 +172,62 @@ export function getFieldListAtPath(
   const dotIndex = fieldPath.indexOf('.');
   const head = dotIndex === -1 ? fieldPath : fieldPath.slice(0, dotIndex);
   const tail = dotIndex === -1 ? '' : fieldPath.slice(dotIndex + 1);
-  const isEndpoint = fieldPath.split('.').length === 1;
+  const isEndpoint = !tail;
 
-  const nextParentPath = normalizeFieldPath(`${parentPath}${parentPath ? '.' : ''}${head}`);
+  const below = (path: string, segment: string) =>
+    normalizeFieldPath(path ? `${path}.${segment}` : segment);
 
   for (const field of fields) {
-    // ── Tabs container: navigate into the matching tab
-    if (field instanceof TabsBuilder) {
-      const tab = field.field.tabs.find((t: any) => t.name === head);
-      if (!tab) continue;
+    const nodes = field.use.nodes();
 
-      if (isEndpoint) {
-        // Path targets the tab → return all its inner fields
-        return { fields: tab.get.fields, path: nextParentPath };
-      }
-      return getFieldListAtPath(tail, tab.get.fields, nextParentPath);
+    // A container with no name of its own: its branches are the segment (tabs).
+    if (!field.name) {
+      const node = nodes.find((candidate) => matchesSegment(candidate.segment, head));
+      if (!node) continue;
+      const path = below(parentPath, head);
+      return isEndpoint
+        ? { fields: node.fields, path }
+        : getFieldListAtPath(tail, node.fields, path);
     }
 
-    if (!isFormField(field)) continue;
+    if (field.name !== head) continue;
+    const own = below(parentPath, head);
 
-    // ── Group field: navigate into children
-    if (field instanceof GroupFieldBuilder && field.name === head) {
-      const children = field.get.fields;
-
-      if (isEndpoint) return { fields: children, path: nextParentPath };
-      return getFieldListAtPath(tail, children, nextParentPath);
+    // A branch that adds no segment: the rest of the path is already inside it (group).
+    const transparent = nodes.find((node) => !node.segment);
+    if (transparent) {
+      return isEndpoint
+        ? { fields: transparent.fields, path: own }
+        : getFieldListAtPath(tail, transparent.fields, own);
     }
 
-    // —— Blocks
-    if (field instanceof BlocksBuilder && field.name === head) {
-      const blockType = tail.split('.')[0]?.split(':')[1];
-      const isInnerBlockLookup = tail.split('.').length > 1;
-      const nextParentPathWithBlockIndex = `${nextParentPath}.${tail.split('.')[0]}`;
-
-      if (blockType) {
-        const block = field.get.blocks.find((b) => b.name === blockType);
-        if (!isInnerBlockLookup && block?.get.fields) {
-          return {
-            fields: block.get.fields,
-            path: normalizeFieldPath(nextParentPathWithBlockIndex)
-          };
-        }
-        if (block) {
-          return getFieldListAtPath(
-            tail.split('.').slice(1).join('.'),
-            block.get.fields,
-            normalizeFieldPath(nextParentPathWithBlockIndex)
-          );
-        }
-      }
-      return { fields: [field], path: parentPath };
+    if (isEndpoint) {
+      // Nothing left to pick a branch with. One unnamed branch is still the answer — a tree row;
+      // several named ones are not — a blocks field answers with itself.
+      const only = nodes.length === 1 && !nodes[0].segment.includes(':') ? nodes[0] : undefined;
+      return only ? { fields: only.fields, path: own } : { fields: [field], path: parentPath };
     }
 
-    // Tree
-    if (field instanceof TreeBuilder && field.name === head) {
-      const children = field.get.fields;
-      const nextParentPathWithIndex = `${nextParentPath}.${tail.split('.')[0]}`;
-      if (isEndpoint) return { fields: children, path: nextParentPath };
-      return getFieldListAtPath(
-        tail.split('.').slice(1).join('.'),
-        children,
-        nextParentPathWithIndex
-      );
+    const parts = tail.split('.');
+    const node = nodes.find((candidate) => matchesSegment(candidate.segment, parts[0]));
+    if (!node) return { fields: [field], path: parentPath };
+
+    // A repeating branch stays itself through `_children.<index>`, however deep.
+    let rest = parts.slice(1);
+    let path = below(own, parts[0]);
+    while (
+      node.repeatVia &&
+      rest[0] === node.repeatVia &&
+      rest[1] !== undefined &&
+      matchesSegment(node.segment, rest[1])
+    ) {
+      path = `${path}.${rest[0]}.${rest[1]}`;
+      rest = rest.slice(2);
     }
 
-    // Direct unique field match
-    if (isEndpoint && isFormField(field) && field.name === fieldPath) {
-      return { fields: [field], path: parentPath };
-    }
+    return rest.length
+      ? getFieldListAtPath(rest.join('.'), node.fields, path)
+      : { fields: node.fields, path };
   }
 
   console.warn(`[LiveEditPanel] fieldPath "${fieldPath}" not found in config fields`);
@@ -272,10 +246,7 @@ export function getFieldListAtPath(
  * Top-level only, matching the generator: a nested field cannot be split off its parent.
  */
 export const baseFieldNames = (config: { fields: FieldBuilder[] }): string[] =>
-  config.fields
-    .filter(isFormField)
-    .filter((field) => field.get.root)
-    .map((field) => field.name);
+  config.fields.filter((field) => field.get.root).map((field) => field.name);
 
 export type ResolvedReference = {
   /** The document path: `meta.owner`. */
@@ -307,34 +278,16 @@ export const resolvedReferencesOf = (
   fields: FieldBuilder[],
   parentPath = ''
 ): ResolvedReference[] => {
-  const prefix = parentPath ? `${parentPath}.` : '';
   const found: ResolvedReference[] = [];
-
-  for (const field of fields) {
-    if (field instanceof TabsBuilder) {
-      for (const tab of field.get.tabs) {
-        found.push(...resolvedReferencesOf(tab.get.fields, `${prefix}${tab.name}`));
-      }
-      continue;
-    }
-    if (!isFormField(field)) continue;
-
-    if (field instanceof GroupFieldBuilder) {
-      found.push(...resolvedReferencesOf(field.get.fields, `${prefix}${field.name}`));
-      continue;
-    }
-
-    if (field._references?.resolve) {
-      const path = `${prefix}${field.name}`;
-      found.push({
-        path,
-        column: path.replace(/\./g, '__'),
-        root: field.get.root,
-        to: field._references.table
-      });
-    }
+  for (const { field, path } of walkFields(fields, { path: parentPath, determinate: true })) {
+    if (!isFormField(field) || !field._references?.resolve) continue;
+    found.push({
+      path,
+      column: path.replace(/\./g, '__'),
+      root: field.get.root,
+      to: field._references.table
+    });
   }
-
   return found;
 };
 
