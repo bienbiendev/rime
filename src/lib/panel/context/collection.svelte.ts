@@ -15,10 +15,9 @@ import type { FieldPanelTableConfig } from '$lib/panel/types.js';
 import { trycatch, trycatchFetch } from '$lib/util/function.js';
 import { getValueAtPath, hasProp } from '$lib/util/object.js';
 import type { WithRequired } from '$lib/util/types.js';
+import { computeCommandScore } from 'bits-ui';
 import { getContext, onMount, setContext, type Component } from 'svelte';
 import { toast } from 'svelte-sonner';
-//@ts-expect-error command-score has no types
-import commandScore from 'command-score';
 
 type TableColumn = {
   type: string;
@@ -303,9 +302,9 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       isFiltered = true;
       const scores: any[] = [];
       for (const doc of initialDocs) {
-        const asTitle = getValueAtPath(config.asTitle, doc);
+        const asTitle = getValueAtPath<string>(config.asTitle, doc);
         if (!asTitle) continue;
-        const score = commandScore(asTitle, inputValue);
+        const score = computeCommandScore(asTitle, inputValue);
         if (score > 0) {
           scores.push({
             doc,
