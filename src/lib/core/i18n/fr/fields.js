@@ -11,7 +11,6 @@ export default {
   blocks_count: '$1 {bloc|bloc|blocs|blocs}',
   no_blocks_yet: 'Aucun bloc pour l’instant. Ajoutez-en un à droite, ou avec ⌘K.',
   no_blocks_yet_render: 'Aucun bloc pour l’instant. Ajoutez-en un avec ⌘K.',
-  pick_a_block: 'Sélectionnez un bloc pour le modifier.',
   render_failed: 'Le rendu de ce bloc a échoué.',
   go_to: 'Aller à',
   move_up: 'Monter',

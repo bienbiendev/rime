@@ -11,7 +11,6 @@ export default {
   blocks_count: '$1 {block|block|blocks|blocks}',
   no_blocks_yet: 'No block yet. Add one from the right, or with ⌘K.',
   no_blocks_yet_render: 'No block yet. Add one with ⌘K.',
-  pick_a_block: 'Select a block to edit it.',
   render_failed: 'The render of this block failed.',
   go_to: 'Go to',
   move_up: 'Move up',

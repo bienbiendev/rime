@@ -90,6 +90,10 @@ test('Focus opens from the field, carries the address, and closes with the chang
   await expect(rows(page)).toHaveCount(5);
   await expect(rows(page).nth(1)).toHaveClass(/rz-layers__row--selected/);
   await expect(selectedRow(page)).toHaveText(/Image/);
+  // No render for an image: a placeholder on the stage.
+  await expect(
+    page.locator('.rz-renders__item[data-type="image"] .rz-render-placeholder__title')
+  ).toHaveText(/Image/);
 
   // Escape leaves focus; the inserted block is in the form, unsaved.
   await selectedRow(page).press('Escape');
@@ -213,7 +217,7 @@ test('A summary field is one row that opens focus', async ({ page, request }) =>
   await expect(extras.locator('.rz-blocks__count')).toHaveText(/1 block/);
 });
 
-test('A render draws the block, a click selects it, the inspector edits it', async ({
+test('The renders draw the blocks, a click selects one, the inspector follows', async ({
   page,
   request
 }) => {
@@ -222,36 +226,56 @@ test('A render draws the block, a click selects it, the inspector edits it', asy
   await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
   await page.waitForLoadState('networkidle');
 
-  // `paragraph` has a render: the stack of renders, the inspector, no palette column.
+  // `paragraph` has a render: the stack of renders, the inspector, no palette column. Nothing
+  // selected, the inspector offers the types of the open list.
   const focus = page.locator('.rz-blocks-focus');
   await expect(focus).toHaveAttribute('data-layout', 'renders');
   await expect(focus.locator('.rz-blocks-focus__palette')).toHaveCount(0);
-  await expect(focus.locator('.rz-blocks-focus__inspector')).toContainText('Select a block');
+  const inspector = focus.locator('.rz-blocks-focus__inspector');
+  await expect(inspector.locator('.rz-palette__item')).toHaveCount(4);
 
+  // The paragraph's render mounts its rich-text field, in the render's own colour.
   const items = focus.locator('.rz-blocks-focus__renders > .rz-renders > .rz-renders__item');
   await expect(items).toHaveCount(3);
-  await expect(items.nth(0).locator('.site-paragraph')).toHaveText('Alpha');
+  await expect(items.nth(0).locator('.site-paragraph .ProseMirror')).toHaveText('Alpha');
   await expect(items.nth(0).locator('.site-paragraph')).toHaveCSS('color', 'rgb(200, 30, 30)');
 
-  // The grid has no render: a placeholder with its title, its paragraph in a wrapper of its own.
+  // The grid's render draws its items where it says, each in a wrapper of its own.
   const grid = items.nth(1);
-  await expect(grid.locator('.rz-render-placeholder__title')).toHaveText(/Grid/);
-  const inner = grid.locator('.rz-renders__item');
-  await expect(inner.locator('.site-paragraph')).toHaveText('Inner');
+  await expect(grid.locator('.site-grid__title')).toHaveText('Grid');
+  const inner = grid.locator('.site-grid__items .rz-renders__item');
+  await expect(inner.locator('.ProseMirror')).toHaveText('Inner');
 
-  // A click selects the block; the inspector shows its fields; typing updates the render.
+  // A click selects the block; the inspector shows its fields.
   await items.nth(2).click();
   await expect(items.nth(2)).toHaveAttribute('data-selected', '');
   await expect(selectedRow(page)).toHaveText(/Paragraph/);
-  const editor = focus.locator('.rz-blocks-focus__inspector .ProseMirror');
-  await editor.click();
-  await page.keyboard.press('End');
-  await page.keyboard.type(' plus');
-  await expect(items.nth(2).locator('.site-paragraph')).toHaveText('Beta plus');
+  await expect(inspector.locator('.ProseMirror')).toHaveText('Beta');
 
   // A click inside the grid selects the nested paragraph, not the grid.
   await inner.click();
   await expect(inner).toHaveAttribute('data-selected', '');
   await expect(grid).not.toHaveAttribute('data-selected', '');
   await expect(rows(page).nth(2)).toHaveClass(/rz-layers__row--selected/);
+
+  // The render's own field edits the form.
+  const editor = inner.locator('.ProseMirror');
+  await editor.click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' plus');
+
+  // A click beside the blocks selects the root again.
+  await focus.locator('.rz-blocks-focus__renders').click({ position: { x: 4, y: 4 } });
+  await expect(inner).not.toHaveAttribute('data-selected', '');
+  await expect(page.locator('.rz-layers__root')).toHaveClass(/rz-layers__root--selected/);
+  await expect(inspector.locator('.rz-palette__item')).toHaveCount(4);
+
+  await save(page);
+  await expect
+    .poll(async () => {
+      const sections = await readSections(page, docId);
+      const grid = sections.find((block) => block.type === 'grid');
+      return grid.items[0].text.content[0].content[0].text;
+    })
+    .toBe('Inner plus');
 });

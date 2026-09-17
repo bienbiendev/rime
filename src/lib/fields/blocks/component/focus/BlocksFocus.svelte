@@ -164,11 +164,16 @@
       <Layers {form} />
     </aside>
     {#if focus.hasRenders}
-      <section class="rz-blocks-focus__renders">
+      <!-- A click beside the blocks selects the root; the blocks stop their own clicks. -->
+      <section class="rz-blocks-focus__renders" role="presentation" onclick={focus.selectRoot}>
         <Renders {form} list={focus.path ?? ''} />
       </section>
       <aside class="rz-blocks-focus__inspector">
-        <Stage {form} inspector onRemove={requestRemove} />
+        {#if focus.current}
+          <Stage {form} onRemove={requestRemove} />
+        {:else if !focus.locked}
+          <div class="rz-blocks-focus__inspector-palette"><Palette {form} /></div>
+        {/if}
       </aside>
     {:else}
       <section class="rz-blocks-focus__stage">
@@ -339,6 +344,10 @@
 
   .rz-blocks-focus__inspector {
     border-left: var(--rz-border);
+  }
+
+  .rz-blocks-focus__inspector-palette {
+    padding: var(--rz-size-4);
   }
 
   @media (max-width: 60rem) {

@@ -8,22 +8,19 @@
   import { CopyPlus, ToyBrick, Trash2 } from '@lucide/svelte';
   import { getBlocksFocusContext, type LayerRow } from './focus.svelte.js';
 
-  type Props = { form: DocumentFormContext; onRemove: () => void; inspector?: boolean };
-  const { form, onRemove, inspector = false }: Props = $props();
+  type Props = { form: DocumentFormContext; onRemove: () => void };
+  const { form, onRemove }: Props = $props();
 
   const focus = getBlocksFocusContext()!;
   const current = $derived(focus.currentRow);
-  /** A block selected: that block alone. The root node: every block of the open list, or a hint
-   * beside the renders. */
-  const rows = $derived(
-    current ? [current] : inspector || !focus.path ? [] : focus.rowsOf(focus.path)
-  );
+  /** A block selected: that block alone. The root node: every block of the open list. */
+  const rows = $derived(current ? [current] : focus.path ? focus.rowsOf(focus.path) : []);
 
   const fieldsOf = (row: LayerRow) =>
     getFieldListAtPath(withBlockTypes(row.path, form.values), form.config.fields);
 </script>
 
-<div class="rz-stage" data-mode={current ? 'block' : inspector ? 'hint' : 'all'}>
+<div class="rz-stage" data-mode={current ? 'block' : 'all'}>
   {#each rows as row (row.block.id)}
     {@const Icon = row.config?.icon ?? ToyBrick}
     {@const rendered = fieldsOf(row)}
@@ -55,9 +52,7 @@
       </div>
     </article>
   {:else}
-    <p class="rz-stage__empty">
-      {inspector ? t__('fields.pick_a_block') : t__('fields.no_blocks_yet')}
-    </p>
+    <p class="rz-stage__empty">{t__('fields.no_blocks_yet')}</p>
   {/each}
 </div>
 

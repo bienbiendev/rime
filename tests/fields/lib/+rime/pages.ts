@@ -22,6 +22,7 @@ import {
 } from '$lib/fields/index.js';
 import { access } from '$lib/core/auth/access.js';
 import { Collection } from '$rime/config';
+import Grid from './renders/Grid.svelte';
 import Paragraph from './renders/Paragraph.svelte';
 
 const blockParagraph = block('paragraph').fields(richText('text')).render(Paragraph);
@@ -37,10 +38,9 @@ const blockKeyFacts = block('keyFacts').fields(
 
 // A block holding a list of blocks: what the focus mode's layers nest, and what a block moves
 // into and out of.
-const blockGrid = block('grid').fields(
-  text('title'),
-  blocks('items', [blockParagraph, blockImage])
-);
+const blockGrid = block('grid')
+  .fields(text('title'), blocks('items', [blockParagraph, blockImage]))
+  .render(Grid);
 
 export const Pages = Collection.create('pages', {
   fields: [

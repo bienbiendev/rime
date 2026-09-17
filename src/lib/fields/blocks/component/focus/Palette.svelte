@@ -2,6 +2,7 @@
   import { env } from '$env/dynamic/public';
   import { t__ } from '$lib/core/i18n/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+  import { useSortable } from '$lib/panel/util/Sortable.js';
   import { capitalize } from '$lib/util/string.js';
   import { ToyBrick } from '@lucide/svelte';
   import { getBlocksFocusContext } from './focus.svelte.js';
@@ -12,11 +13,28 @@
   /** The block types of the list the next insert goes to: the current block's, else the open one. */
   const list = $derived(focus.current?.list ?? focus.path ?? '');
   const types = $derived(list ? (form.blocks.builder(list)?.get.blocks ?? []) : []);
+
+  /**
+   * A type drags into the layers and the stage. The row stays here: it is cloned for the drag,
+   * and the clone is dropped once the list it landed in has inserted the block.
+   */
+  const { sortable } = useSortable({
+    group: { name: 'rz-blocks-layers', pull: 'clone', put: false },
+    sort: false,
+    animation: 150,
+    disabled: focus.locked,
+    onEnd: (event) => event.clone?.remove()
+  });
+
+  function dragSource(node: HTMLElement) {
+    const instance = sortable(node);
+    return { destroy: () => instance.destroy() };
+  }
 </script>
 
 <div class="rz-palette">
   <h3 class="rz-palette__heading">{t__('fields.add_block')}</h3>
-  <div class="rz-palette__list">
+  <div class="rz-palette__list" use:dragSource>
     {#each types as blockBuilder (blockBuilder.name)}
       {@const block = blockBuilder.block}
       {@const Icon = block.icon ?? ToyBrick}
@@ -67,6 +85,7 @@
     border: var(--rz-border);
     border-radius: var(--rz-radius-md);
     text-align: left;
+    cursor: grab;
     &:hover {
       background-color: hsl(var(--rz-color-fg) / 0.04);
     }

@@ -42,6 +42,13 @@
       const landed =
         fromList === toList ? toList : shiftListPath(toList, { list: fromList, index: oldIndex });
       focus.select(`${landed}.${newIndex}`);
+    },
+    /** A type dropped from the palette: a new block at the drop index. */
+    onAdd: (event: Sortable.SortableEvent) => {
+      if (!event.from.classList.contains('rz-palette__list')) return;
+      const type = event.item.dataset.type;
+      if (type === undefined || event.newIndex === undefined) return;
+      focus.insertType(type, { list, index: event.newIndex });
     }
   });
 

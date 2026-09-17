@@ -1,11 +1,15 @@
 <script lang="ts">
-  import { richTextJSONToText } from '$lib/fields/rich-text/client.js';
   import type { BlockRenderProps } from '$lib/fields/types.js';
+  import { RenderFields } from '$lib/panel/index.js';
 
-  const { block }: BlockRenderProps = $props();
+  const { path, fields, form }: BlockRenderProps = $props();
+  const text = $derived(fields.filter((field) => field.name === 'text'));
 </script>
 
-<p class="site-paragraph">{richTextJSONToText(block.text)}</p>
+<!-- The rich text edited in place. -->
+<div class="site-paragraph">
+  <RenderFields fields={text} {path} {form} />
+</div>
 
 <style>
   .site-paragraph {

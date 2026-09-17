@@ -156,7 +156,9 @@ get hasRenders() {
     <aside class="rz-blocks-focus__layers"><Layers {form} /></aside>
     {#if focus.hasRenders}
       <section class="rz-blocks-focus__renders"><Renders {form} /></section>
-      <aside class="rz-blocks-focus__inspector"><Stage {form} inspector onRemove={requestRemove} /></aside>
+      <aside class="rz-blocks-focus__inspector">
+        {#if focus.current}<Stage {form} onRemove={requestRemove} />{:else}<Palette {form} />{/if}
+      </aside>
     {:else}
       <section class="rz-blocks-focus__stage"><Stage {form} onRemove={requestRemove} /></section>
       {#if !focus.locked}<aside class="rz-blocks-focus__palette"><Palette {form} /></aside>{/if}
@@ -173,8 +175,14 @@ get hasRenders() {
 }
 ```
 
-`Stage.svelte` gets `inspector = false`: a block selected shows that block, as today; the root
-selected shows a hint (`fields.pick_a_block`) instead of every block.
+The inspector is `Stage` for the selected block; nothing selected, it is the `Palette`, listing
+the types the open list takes. A click on the stage beside the blocks selects the root.
+
+The palette rows drag: a sortable source with `pull: 'clone'`, the clone removed on drop. The layers
+lists and every `.rz-renders` list take the drop (`put` checks `form.blocks.accepts`) and call
+`focus.insertType(type, { list, index })` in `onAdd`. A `.rz-renders` list never drags its own
+blocks (`filter` on the items, `preventOnFilter: false`), so a field inside a render keeps the
+mouse.
 
 **`Renders.svelte`**, one list, recursive like `LayersList`: one wrapper per block. A block's
 nested lists are a `children` snippet handed to its render, which puts `{@render children()}`
@@ -188,9 +196,10 @@ row and stops there; the render's own links and buttons do nothing.
   const focus = getBlocksFocusContext()!;
   const rows = $derived(focus.rowsOf(list));
 
+  /** A click selects the row and stops there; a link inside a render does not navigate. */
   function select(event: MouseEvent, rowPath: string) {
-    event.preventDefault();
     event.stopPropagation();
+    if ((event.target as Element).closest('a[href]')) event.preventDefault();
     focus.select(rowPath, { extend: event.shiftKey });
   }
 </script>
@@ -233,7 +242,11 @@ row and stops there; the render's own links and buttons do nothing.
 ```svelte
 <!-- RenderPlaceholder.svelte -->
 <script lang="ts">
-  const { row, error, children }: { row: LayerRow; error?: unknown; children?: Snippet<[name?: string]> } = $props();
+  const {
+    row,
+    error,
+    children
+  }: { row: LayerRow; error?: unknown; children?: Snippet<[name?: string]> } = $props();
   const Icon = $derived(row.config?.icon ?? ToyBrick);
 </script>
 
@@ -306,8 +319,8 @@ Run: `bunx vitest run src/lib/panel/util`, `bun run check`, `bun run rime:use fi
 
 ## 6. Ship
 
-- i18n `en`/`fr` `fields.js`: `pick_a_block`, `render_failed`, `no_blocks_yet_render` (the
-  existing one says "from the right").
+- i18n `en`/`fr` `fields.js`: `render_failed`, `no_blocks_yet_render` (the existing one says
+  "from the right").
 - `notes/builder-plan.md` §5 becomes a pointer to this file; §9 row C reworded.
 - `.changeset/blocks-render.md`, `'rimecms': minor`, one bullet:
 
@@ -325,3 +338,76 @@ Run: `bunx vitest run src/lib/panel/util`, `bun run check`, `bun run rime:use fi
 - CSS variables injected into the panel for the renders.
 - The site's stylesheet scoped to the stage by the panel (`@scope`, a shadow root), if a
   render's own `<style>` turns out not to be enough.
+
+---
+
+## 8. Rich text in place
+
+A render edits its text where it draws it: the editor's controls over the text, no fieldset, no
+label. `feature/live-rich-text` (`d74e0e4d`) has the split; the iframe parts of it stay there.
+
+**`RichTextEditorCore.svelte`**, `fields/rich-text/core/`: the editor, the bubble menu, the drag
+handle and the suggestion, over a value and an `onUpdate`. `RichText.svelte` keeps the fieldset,
+the label, the error and the hint, and mounts the core.
+
+```ts
+type Props = {
+  path: string;
+  features?: RichTextFeature[];
+  value?: JSONContent;
+  editable?: boolean;
+  class?: string;
+  onUpdate?: (json: JSONContent) => void;
+};
+```
+
+The core re-applies `value` when it changes outside the editor and differs from its content,
+with `emitUpdate: false`: the editor's own updates come back equal and change nothing. Two
+editors on one path follow each other. (Already in `RichText.svelte` since `fa9bc2cd`; it moves
+into the core.)
+
+Not taken from the branch: `stripNonFlowNodeViews`, `disablePortals`, `RenderRichTextLive`. They
+serve the front page in an iframe, §6 of `builder-plan.md`.
+
+**`RichTextInline.svelte`**, exported from `rimecms/panel`: the core bound to the form, with the
+props every field component takes, `path`, `config`, `form`.
+
+```svelte
+<script lang="ts">
+  type Props = {
+    path: string;
+    config: RichTextFieldBuilder;
+    form: DocumentFormContext;
+    class?: string;
+  };
+  const { path, config, form, class: className }: Props = $props();
+  const field = $derived(form.useField<JSONContent>(path, config));
+</script>
+
+<RichTextEditorCore
+  {path}
+  features={config.get.features}
+  value={field.value}
+  editable={field.editable}
+  class={className}
+  onUpdate={(json) => (field.value = json)}
+/>
+```
+
+In a render:
+
+```svelte
+<script lang="ts">
+  import type { BlockRenderProps } from 'rimecms/fields';
+  import { RichTextInline } from 'rimecms/panel';
+  const { path, fields, form }: BlockRenderProps = $props();
+  const text = $derived(fields.find((field) => field.name === 'text') as RichTextFieldBuilder);
+</script>
+
+<RichTextInline path="{path}.text" config={text} {form} class="site-paragraph" />
+```
+
+The fixture's `Paragraph.svelte` moves onto it; the e2e keeps its assertions, on
+`.site-paragraph .ProseMirror`.
+
+The editor's ⌘K belongs to `notes/commands-plan.md`: one palette, the editor's items a group of it.
