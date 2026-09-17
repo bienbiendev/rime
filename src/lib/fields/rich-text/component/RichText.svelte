@@ -56,6 +56,15 @@
       field.value = editor.getJSON();
     });
   });
+
+  // The value changed outside this editor: another field on the same path, a paste of a block.
+  // The editor's own updates land here equal to its content and change nothing.
+  $effect(() => {
+    const value = field.value;
+    if (!editor) return;
+    if (JSON.stringify(value ?? null) === JSON.stringify(editor.getJSON())) return;
+    editor.commands.setContent(value?.content ? value : '', { emitUpdate: false });
+  });
 </script>
 
 <fieldset
