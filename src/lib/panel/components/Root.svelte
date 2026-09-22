@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { User } from '$lib/core/auth/types.js';
   import type { BuiltConfigClient } from '$lib/core/config/types.js';
+  import Commands from '$lib/panel/components/sections/commands/Commands.svelte';
   import Nav from '$lib/panel/components/ui/nav/Nav.svelte';
   import { Toaster } from '$lib/panel/components/ui/sonner';
   import { setConfigContext } from '$lib/panel/context/config.svelte.js';
@@ -42,12 +43,18 @@
 
 <Toaster />
 
-<div class="rz-panel-root">
-  <Nav {routes} />
-  <div class="rz-panel-root__right" class:rz-panel-root__right--navCollapsed={nav.collapsed}>
-    {@render children()}
+<Commands {routes}>
+  <div class="rz-panel-root">
+    <Nav {routes} />
+    <div
+      class="rz-panel-root__right"
+      style="margin-left:{nav.width}"
+      class:rz-panel-root__right--navCollapsed={nav.collapsed}
+    >
+      {@render children()}
+    </div>
   </div>
-</div>
+</Commands>
 
 <style>
   .rz-panel-root {
@@ -56,13 +63,5 @@
     font-family: var(--rz-font-sans);
     background-color: hsl(var(--rz-color-bg));
     min-height: 100vh;
-  }
-
-  .rz-panel-root__right {
-    margin-left: var(--rz-size-72);
-  }
-
-  .rz-panel-root__right--navCollapsed {
-    margin-left: var(--rz-size-14);
   }
 </style>

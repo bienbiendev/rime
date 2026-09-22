@@ -6,6 +6,7 @@
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import * as Radio from '$lib/panel/components/ui/radio-group/index.js';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { useCommands } from '$lib/panel/context/commands.svelte.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { toKebabCase } from '$lib/util/string';
   import { toast } from 'svelte-sonner';
@@ -21,14 +22,14 @@
 
   let dialogOpen = $state(false);
 
-  async function handleValidateStatus() {
+  async function handleValidateStatus(next: string = status) {
     const urlId = form.values._prototype === 'collection' ? `/${form.values.id}` : '/';
     await fetch(
       `${apiUrl(toKebabCase(form.values._type))}${urlId}?${PARAMS.VERSION_ID}=${form.values.versionId}`,
       {
         method: 'PATCH',
         body: JSON.stringify({
-          status: status
+          status: next
         })
       }
     )
@@ -37,7 +38,7 @@
           toast.success(t__('common.doc_updated'));
           // The server holds the new status already: the form takes it without getting dirty,
           // so no auto-save follows a publish.
-          form.sync('status', status);
+          form.sync('status', next);
           dialogOpen = false;
           invalidateAll();
           // The write went around the form: the version history re-reads its statuses.
@@ -52,6 +53,18 @@
   }
 
   let status = $derived(form.values.status);
+
+  /** The other statuses, one line each. */
+  useCommands(() =>
+    statusList
+      .filter((candidate) => candidate !== form.values.status)
+      .map((candidate) => ({
+        id: `document.status.${candidate}`,
+        label: t__('common.mark_as', t__(`common.${candidate}`)),
+        group: t__('common.document'),
+        run: () => handleValidateStatus(candidate)
+      }))
+  );
 </script>
 
 <Dialog.Root bind:open={dialogOpen}>
@@ -76,7 +89,7 @@
       {/each}
     </Radio.Root>
     <Dialog.Footer --rz-justify-content="space-between">
-      <Button onclick={handleValidateStatus} variant="outline">Validate</Button>
+      <Button onclick={() => handleValidateStatus()} variant="outline">Validate</Button>
       <Button onclick={() => (dialogOpen = false)} variant="secondary">Cancel</Button>
     </Dialog.Footer>
   </Dialog.Content>

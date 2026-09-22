@@ -3,6 +3,7 @@ import type { AutoSaves } from '$lib/core/prototype/shared/versions/types.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { Snippet } from 'svelte';
 import { Field } from './components/fields/index.js';
+import RichTextInline from '$lib/fields/rich-text/component/RichTextInline.svelte';
 import RenderFields from './components/fields/RenderFields.svelte';
 import Panel from './components/Root.svelte';
 import Doc from './components/sections/document/Document.svelte';
@@ -26,6 +27,7 @@ import Dashboard from './pages/dashboard/Dashboard.svelte';
 import Live from './pages/live/Live.svelte';
 import type { Route } from './types.js';
 import { populate } from './util/populate.js';
+import { useCommands } from './context/commands.svelte.js';
 
 export {
   // Components
@@ -42,10 +44,13 @@ export {
   Panel,
   RenderFields,
   ResetPassword,
+  RichTextInline,
   SignIn,
   SpinLoader,
   // A block render's relations, resolved as the API answers them
-  populate
+  populate,
+  // The commands a component offers while mounted: palette lines, keys
+  useCommands
 };
 
 // Context keys, for a plugin/field that needs to read a context rime's own panel sets
@@ -60,6 +65,7 @@ export const CONTEXT = {
 
 // Types used in generated routes
 export type { DocumentFormContext } from './context/documentForm.svelte.js';
+export type { Command } from './context/commands.svelte.js';
 export type CollectionProps = {
   data: {
     docs: GenericDoc[];

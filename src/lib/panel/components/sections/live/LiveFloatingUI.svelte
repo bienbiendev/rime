@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
+  import { useCommands } from '$lib/panel/context/commands.svelte.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import type { ActivePanel } from '$lib/panel/context/livePanel.svelte';
   import { ChevronLeft, Form, Laptop, Save, Smartphone, X } from '@lucide/svelte';
@@ -34,12 +35,17 @@
     }
   }
 
-  function handleKeyDown(event: KeyboardEvent) {
-    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-      event.preventDefault();
-      saveAll();
+  /** ⌘S saves every pane with changes. */
+  useCommands(() => [
+    {
+      id: 'live.save',
+      label: t__('common.save'),
+      keys: 'mod+s',
+      inField: true,
+      hidden: true,
+      run: saveAll
     }
-  }
+  ]);
 </script>
 
 <div class="rz-live-floating-ui">
@@ -80,8 +86,6 @@
     {t__('common.save')}
   </Button>
 </div>
-
-<svelte:window onkeydown={handleKeyDown} />
 
 <style>
   .rz-live-floating-ui {

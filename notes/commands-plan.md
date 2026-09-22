@@ -49,7 +49,7 @@ export type Command = {
   icon?: Component<IconProps>;
   /** `mod+s`, `mod+shift+p`, `alt+arrowup`, `backspace`, `/`. `mod` is ⌘ on a Mac, Ctrl elsewhere. */
   keys?: string;
-  /** Fires while typing in a field. Off, a single key stays the field's; a `mod` chord fires anyway. */
+  /** Fires while a field has the keyboard. Off, the field keeps the key. */
   inField?: boolean;
   /** Keys only, not a palette line: the arrows. */
   hidden?: boolean;
@@ -103,7 +103,7 @@ function dispatch(event: KeyboardEvent) {
   for (const scope of scopes.toReversed()) {
     for (const command of scope.get()) {
       if (!command.keys || !matches(event, parseKeys(command.keys))) continue;
-      if (typing && !command.inField && !parseKeys(command.keys).mod) continue;
+      if (typing && !command.inField) continue;
       if (command.when && !command.when()) continue;
       event.preventDefault();
       command.run(event);
@@ -154,36 +154,36 @@ it.
 `palette.open({ group })` opens on one group only: `/` in focus mode opens the `Add` group, as
 today.
 
-**A second page: search.** The palette has two pages, `commands` and `search`. The root command
-`search`, _Search…_ in `Go to`, icon `Search`, keys `mod+p`, turns the page: the input empties,
-the placeholder says so, and the list is what the query names: a collection's list page, an area,
-a document.
+**Two pages.** ⌘K is the context: what the page, its focus and its field offer, the innermost
+scope first, filtered by the input. ⌘⇧K is the whole panel: create a document in any collection,
+go to a collection or an area, and a search over the documents. A command says which page it is
+on with `global: true`; the root scope is the global page.
+
+On the global page the collections and the areas are scored on the client,
+`computeCommandScore(label, query)` from `bits-ui`, the score the collection filter uses since
+`fa9bc2cd`; from two characters on, the documents come from the API:
 
 ```ts
-// one request per collection the user can read, from two characters on, debounced 200ms
-const url = `${apiUrl(collection.kebab)}?where[${collection.asTitle}][ilike]=%${query}%&select=id,${collection.asTitle}&limit=5`;
+// one request per collection the user can read, debounced 200ms
+const url = `${apiUrl(collection.kebab)}?where[${collection.asTitle}][like]=%${query}%&select=${collection.asTitle}&limit=5`;
 ```
 
-The collections and the areas are scored on the client, `computeCommandScore(label, query)` from
-`bits-ui`, the score the collection filter uses since `fa9bc2cd`; the documents come back ranked by
-the same score on their title. One list, three groups: _Collections_, _Areas_, then one group per
-collection the documents came from, each line with the config's icon. Enter goes to
-`panelUrl(kebab)`, `panelUrl(kebab)` for an area, `panelUrl(kebab, id)` for a document. On this
-page `Command.Root` gets `shouldFilter={false}`: the page has filtered. Backspace on an empty
-input, or Escape, goes back to the commands page.
+ranked by the same score on their title, under their collection's heading. On this page
+`Command.Root` gets `shouldFilter={false}`: the page has filtered. Escape closes.
 
 ---
 
 ## 5. Who offers what
 
-| scope        | where                   | commands                                                                                                                                                                                                                                  |
-| ------------ | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| root         | `Root.svelte`           | ⌘K palette; _Go to_ one line per collection and area, from `routes`; _Search…_ (⌘P), the search page                                                                                                                                      |
-| document     | `Document.svelte`       | ⌘S save (`when: form.canSubmit`); later: duplicate, versions                                                                                                                                                                              |
-| folder       | `FolderEdit.svelte`     | ⌘S save                                                                                                                                                                                                                                   |
-| live         | `LiveFloatingUI.svelte` | ⌘S save                                                                                                                                                                                                                                   |
-| blocks focus | `BlocksFocus.svelte`    | §4 of `builder-plan.md` as is: `Add` one line per type, `Block` duplicate, move up, move down, move into…, copy, paste, remove, collapse all, expand all, `Go to` one line per row; the arrows hidden; Esc close (`when: no dialog open`) |
-| rich text    | `suggestion.svelte`     | `Text`: one line per suggestion item, `when: editor.isFocused`; no keys, no dialog of its own                                                                                                                                             |
+| scope        | where                                                       | commands                                                                                                                                                                                                                                  |
+| ------------ | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| root         | `Root.svelte`                                               | ⌘K, ⌘⇧K; global: _Create_ one line per collection the user can create in, _Go to_ one line per collection and area, from `routes`                                                                                                         |
+| document     | `Document.svelte`, `Settings.svelte`, `ButtonStatus.svelte` | ⌘S save; versions history, save in a new draft, duplicate, import from the default locale, delete version, delete document (with its confirm); mark as published, as draft                                                                |
+| collection   | `CollectionPage.svelte`                                     | new document, search in the list (focuses the input), new folder and bulk upload on an upload collection, show as a list, a grid, a tree                                                                                                  |
+| folder       | `FolderEdit.svelte`                                         | ⌘S save                                                                                                                                                                                                                                   |
+| live         | `LiveFloatingUI.svelte`                                     | ⌘S save                                                                                                                                                                                                                                   |
+| blocks focus | `BlocksFocus.svelte`                                        | §4 of `builder-plan.md` as is: `Add` one line per type, `Block` duplicate, move up, move down, move into…, copy, paste, remove, collapse all, expand all, `Go to` one line per row; the arrows hidden; Esc close (`when: no dialog open`) |
+| rich text    | `suggestion.svelte`                                         | `Text`: one line per suggestion item, `when: editor.isFocused`; no keys, no dialog of its own                                                                                                                                             |
 
 `BlocksFocus.svelte` loses `onKeyDown` and `isTyping`; `CommandPalette.svelte` next to it is
 deleted, its three groups are the scope above. `suggestion.svelte` loses its document listener and
@@ -213,8 +213,8 @@ in the root scope, same command.
 **E2e**, `tests/fields/blocks-focus.test.ts` stays green as it is: `Control+k` opens the palette,
 its lines carry the same text. One test more, `commands.test.ts` in `tests/fields`:
 
-- ⌘K, _Search…_, "pa" typed: _Pages_ under _Collections_ and _Focus mode_ under _Pages_; Enter on
-  the first opens the list, on the second the document; ⌘P opens the search page straight away;
+- ⌘⇧K, "pa" typed: _Pages_ under _Go to_ and _Palette page_ under _Pages_; Enter on the first
+  opens the list, on the second the document;
 
 - on a document, ⌘K lists `Document › Save` and `Go to › Pages`; Enter on _Go to Pages_ lands on
   the collection;

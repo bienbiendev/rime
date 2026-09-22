@@ -6,13 +6,10 @@
   import { FolderPlus } from '@lucide/svelte';
   import Empty from '../Empty.svelte';
   import Folder from '../folder/FolderWithActions.svelte';
-  import CreateDirectoryDialog from './create-directory-dialog/CreateDirectoryDialog.svelte';
   import GridItem from './grid-item/GridItem.svelte';
 
-  type Props = { collection: CollectionContext };
-  const { collection }: Props = $props();
-
-  let createDirectoryDialogOpen = $state(false);
+  type Props = { collection: CollectionContext; oncreatefolder: () => void };
+  const { collection, oncreatefolder }: Props = $props();
 
   const currentPathDocuments = $derived(
     collection.docs.filter((doc) =>
@@ -96,16 +93,12 @@
           <div class="rz-collection-grid__context-menu-trigger"></div>
         {/snippet}
         {#snippet content()}
-          <ContextMenuItem onclick={() => (createDirectoryDialogOpen = true)}>
+          <ContextMenuItem onclick={oncreatefolder}>
             <FolderPlus size="14" />
             {t__('common.create_folder')}
           </ContextMenuItem>
         {/snippet}
       </ContextMenu>
-
-      {#if collection.isUpload}
-        <CreateDirectoryDialog {collection} bind:open={createDirectoryDialogOpen} />
-      {/if}
     </div>
   </div>
 {:else}

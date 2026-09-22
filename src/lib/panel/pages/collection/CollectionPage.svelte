@@ -1,9 +1,14 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
+  import type { ResolvedPathname } from '$app/types';
+  import { PARAMS } from '$lib/core/constants.js';
+  import { t__ } from '$lib/core/i18n/index.js';
+  import { panelPath } from '$lib/core/routes/util.js';
   import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
   import type { GenericDoc } from '$lib/core/prototype/types';
   import BulkUploadDialog from '$lib/panel/components/sections/collection/bulk-upload/BulkUploadDialog.svelte';
   import CollectionGrid from '$lib/panel/components/sections/collection/grid/CollectionGrid.svelte';
+  import CreateDirectoryDialog from '$lib/panel/components/sections/collection/grid/create-directory-dialog/CreateDirectoryDialog.svelte';
   import ButtonCreate from '$lib/panel/components/sections/collection/header/ButtonCreate.svelte';
   import CollectionHeader from '$lib/panel/components/sections/collection/header/Header.svelte';
   import SearchInput from '$lib/panel/components/sections/collection/header/SearchInput.svelte';
@@ -15,10 +20,19 @@
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import LanguageSwitcher from '$lib/panel/components/ui/language-switcher/LanguageSwitcher.svelte';
   import PageHeader from '$lib/panel/components/ui/page-header/PageHeader.svelte';
-  import { setCollectionContext } from '$lib/panel/context/collection.svelte.js';
+  import { DISPLAY_MODE, setCollectionContext } from '$lib/panel/context/collection.svelte.js';
+  import { useCommands } from '$lib/panel/context/commands.svelte.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import { getTitleContext } from '$lib/panel/context/title';
-  import { CopyPlus } from '@lucide/svelte';
+  import {
+    CirclePlus,
+    CopyPlus,
+    FolderPlus,
+    LayoutGrid,
+    List,
+    Search,
+    TextQuote
+  } from '@lucide/svelte';
 
   type Props = {
     slug: string;
@@ -38,6 +52,7 @@
   const config = getConfigContext();
   const collectionConfig = $derived(config.getCollection(slug));
   let bulkDialogOpen = $state(false);
+  let folderDialogOpen = $state(false);
 
   // Created once: `Collection.svelte` keys this page on slug, locale and upload folder, so a
   // change that needs a new store remounts it. The effects below carry a reload into it.
@@ -65,6 +80,74 @@
 
   $effect(() => {
     titleContext.value = collection.config.label.plural;
+  });
+
+  const createPath = () => {
+    const path = panelPath(collection.config.kebab, 'create');
+    return collection.isUpload
+      ? (`${path}?${PARAMS.UPLOAD_PATH}=${collection.upload.currentPath}` as ResolvedPathname)
+      : path;
+  };
+
+  const searchInput = () =>
+    document.querySelector<HTMLInputElement>('.rz-header-search-input input');
+
+  /** What the list offers: a document, the search, the folders and uploads, the display. */
+  useCommands(() => {
+    const group = collection.title;
+    const label = collection.config.label;
+    const displays = [
+      { mode: DISPLAY_MODE.LIST, label: t__('common.show_as_list'), icon: List },
+      { mode: DISPLAY_MODE.GRID, label: t__('common.show_as_grid'), icon: LayoutGrid },
+      ...(collection.config.nested
+        ? [{ mode: DISPLAY_MODE.NESTED, label: t__('common.show_as_tree'), icon: TextQuote }]
+        : [])
+    ];
+    return [
+      {
+        id: 'collection.create',
+        label: label.create || t__('common.create_new', label.singular),
+        group,
+        icon: CirclePlus,
+        when: () => collection.canCreate,
+        run: () => goto(createPath())
+      },
+      {
+        id: 'collection.search',
+        label: t__('common.search_in', collection.title),
+        group,
+        icon: Search,
+        // The header hides its input on a narrow page.
+        when: () => !!searchInput()?.offsetParent,
+        run: () => searchInput()?.focus()
+      },
+      ...(collection.isUpload
+        ? [
+            {
+              id: 'collection.folder',
+              label: t__('common.create_folder'),
+              group,
+              icon: FolderPlus,
+              run: () => (folderDialogOpen = true)
+            },
+            {
+              id: 'collection.bulk_upload',
+              label: t__('common.bulk_upload_dialog_title'),
+              group,
+              icon: CopyPlus,
+              run: () => (bulkDialogOpen = true)
+            }
+          ]
+        : []),
+      ...displays.map((display) => ({
+        id: `collection.display.${display.mode}`,
+        label: display.label,
+        group,
+        icon: display.icon,
+        when: () => collection.display !== display.mode,
+        run: () => (collection.display = display.mode)
+      }))
+    ];
   });
 </script>
 
@@ -111,7 +194,7 @@
         {#if collection.isNested()}
           <CollectionTree {collection} />
         {:else if collection.isGrid()}
-          <CollectionGrid {collection} />
+          <CollectionGrid {collection} oncreatefolder={() => (folderDialogOpen = true)} />
         {:else}
           <CollectionList {collection} />
         {/if}
@@ -120,6 +203,9 @@
   </Page>
 
   <BulkUploadDialog {collection} bind:open={bulkDialogOpen} />
+  {#if collection.isUpload}
+    <CreateDirectoryDialog {collection} bind:open={folderDialogOpen} />
+  {/if}
 {:else}
   <Unauthorized />
 {/if}

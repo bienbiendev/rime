@@ -3,13 +3,14 @@
   import ButtonSave from '$lib/panel/components/sections/document/ButtonSave.svelte';
   import { Button } from '$lib/panel/components/ui/button/index.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
+  import { getCommandsContext, useCommands } from '$lib/panel/context/commands.svelte.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { getNavContext } from '$lib/panel/context/nav.svelte.js';
   import { populate } from '$lib/panel/util/populate.js';
-  import { Command, X } from '@lucide/svelte';
+  import { capitalize } from '$lib/util/string.js';
+  import { Command, ToyBrick, X } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
-  import CommandPalette from './CommandPalette.svelte';
   import { getBlocksFocusContext } from './focus.svelte.js';
   import Layers from './Layers.svelte';
   import Palette from './Palette.svelte';
@@ -20,6 +21,7 @@
 
   const focus = getBlocksFocusContext()!;
   const locale = getLocaleContext();
+  const commands = getCommandsContext();
   /** The overlay starts where the navigation ends, folded or not. */
   const nav = getNavContext();
 
@@ -30,7 +32,6 @@
     count === 1 ? t__('fields.blocks_count', '1') : t__('fields.blocks_count|m|p', String(count))
   );
 
-  let commandOpen = $state(false);
   let confirmRemove = $state(false);
 
   // A focus session starts with fresh relations in the renders.
@@ -44,14 +45,6 @@
       document.body.style.overflow = previous;
     };
   });
-
-  /** A field has the keyboard: single keys are its, ⌘ combinations are still the focus mode's. */
-  function isTyping(target: EventTarget | null) {
-    if (!(target instanceof HTMLElement)) return false;
-    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return true;
-    if (target instanceof HTMLSelectElement || target.isContentEditable) return true;
-    return !!target.closest('.ProseMirror');
-  }
 
   const dialogOpen = () => !!document.querySelector('[role="dialog"][data-state="open"]');
 
@@ -69,53 +62,184 @@
     if (!id) toast.warning(t__('fields.paste_refused'));
   }
 
-  function onKeyDown(event: KeyboardEvent) {
-    if (!focus.path) return;
-    const meta = event.metaKey || event.ctrlKey;
-    const key = event.key.toLowerCase();
+  const ADD = t__('fields.add');
+  const BLOCK = t__('fields.block');
+  const GO_TO = t__('fields.go_to');
 
-    if (meta && key === 'k') {
-      event.preventDefault();
-      commandOpen = true;
-      return;
-    }
-    if (event.key === 'Escape') {
-      if (dialogOpen() || isTyping(event.target)) return;
-      event.preventDefault();
-      return focus.close();
-    }
-    if (isTyping(event.target) || dialogOpen()) return;
-
-    if (meta && key === 'd') {
-      event.preventDefault();
-      return focus.duplicateSelection();
-    }
-    if (meta && key === 'c') return focus.copySelection();
-    if (meta && key === 'v') return paste();
-    if (meta) return;
-
-    switch (event.key) {
-      case 'ArrowDown':
-        event.preventDefault();
-        return event.altKey ? focus.moveSelection(1) : focus.selectRelative(1, event.shiftKey);
-      case 'ArrowUp':
-        event.preventDefault();
-        return event.altKey ? focus.moveSelection(-1) : focus.selectRelative(-1, event.shiftKey);
-      case 'ArrowRight':
-        if (focus.current) focus.setCollapsed(focus.selection[0], false);
-        return;
-      case 'ArrowLeft':
-        if (focus.current) focus.setCollapsed(focus.selection[0], true);
-        return;
-      case 'Backspace':
-      case 'Delete':
-        event.preventDefault();
-        return requestRemove();
-    }
-  }
+  /**
+   * What focus mode offers: the types of the list the next insert goes to, what a selected block
+   * can do, every row to go to, and the keys that move around. A dialog open keeps the keys.
+   */
+  useCommands(() => {
+    if (!focus.path) return [];
+    const list = focus.current?.list ?? focus.path;
+    const types = form.blocks.builder(list)?.get.blocks ?? [];
+    const row = focus.currentRow;
+    const editing = !focus.locked;
+    const free = () => !dialogOpen();
+    return [
+      ...(editing
+        ? types.map((builder) => ({
+            id: `blocks.add.${builder.name}`,
+            label: builder.block.label || capitalize(builder.name),
+            group: ADD,
+            icon: builder.block.icon ?? ToyBrick,
+            run: () => focus.insertType(builder.name)
+          }))
+        : []),
+      ...(editing && row
+        ? [
+            {
+              id: 'blocks.duplicate',
+              label: t__('common.duplicate'),
+              group: BLOCK,
+              keys: 'mod+d',
+              when: free,
+              run: focus.duplicateSelection
+            },
+            {
+              id: 'blocks.move_up',
+              label: t__('fields.move_up'),
+              group: BLOCK,
+              keys: 'alt+arrowup',
+              when: free,
+              run: () => focus.moveSelection(-1)
+            },
+            {
+              id: 'blocks.move_down',
+              label: t__('fields.move_down'),
+              group: BLOCK,
+              keys: 'alt+arrowdown',
+              when: free,
+              run: () => focus.moveSelection(1)
+            },
+            ...focus.moveTargets().map((target) => ({
+              id: `blocks.move_into.${target.list}`,
+              label: t__('fields.move_into', target.label),
+              group: BLOCK,
+              run: () => focus.moveSelectionInto(target.list)
+            })),
+            {
+              id: 'blocks.copy',
+              label: t__('fields.copy_block'),
+              group: BLOCK,
+              keys: 'mod+c',
+              when: free,
+              run: focus.copySelection
+            },
+            {
+              id: 'blocks.paste',
+              label: t__('fields.paste_after'),
+              group: BLOCK,
+              keys: 'mod+v',
+              when: free,
+              run: paste
+            },
+            {
+              id: 'blocks.remove',
+              label: t__('common.delete'),
+              group: BLOCK,
+              keys: 'backspace',
+              when: free,
+              run: requestRemove
+            },
+            {
+              id: 'blocks.remove.delete',
+              label: t__('common.delete'),
+              keys: 'delete',
+              hidden: true,
+              when: free,
+              run: requestRemove
+            }
+          ]
+        : []),
+      {
+        id: 'blocks.collapse_all',
+        label: t__('fields.collapse_all'),
+        group: BLOCK,
+        run: focus.collapseAll
+      },
+      {
+        id: 'blocks.expand_all',
+        label: t__('fields.expand_all'),
+        group: BLOCK,
+        run: focus.expandAll
+      },
+      ...focus.allRows().map((candidate) => ({
+        id: `blocks.go_to.${candidate.path}`,
+        label: candidate.title,
+        group: GO_TO,
+        icon: candidate.config?.icon ?? ToyBrick,
+        run: () => focus.select(candidate.path)
+      })),
+      // Keys only
+      {
+        id: 'blocks.next',
+        label: '',
+        keys: 'arrowdown',
+        hidden: true,
+        when: free,
+        run: () => focus.selectRelative(1)
+      },
+      {
+        id: 'blocks.next.extend',
+        label: '',
+        keys: 'shift+arrowdown',
+        hidden: true,
+        when: free,
+        run: () => focus.selectRelative(1, true)
+      },
+      {
+        id: 'blocks.previous',
+        label: '',
+        keys: 'arrowup',
+        hidden: true,
+        when: free,
+        run: () => focus.selectRelative(-1)
+      },
+      {
+        id: 'blocks.previous.extend',
+        label: '',
+        keys: 'shift+arrowup',
+        hidden: true,
+        when: free,
+        run: () => focus.selectRelative(-1, true)
+      },
+      {
+        id: 'blocks.expand',
+        label: '',
+        keys: 'arrowright',
+        hidden: true,
+        when: () => free() && !!row,
+        run: () => focus.setCollapsed(focus.selection[0], false)
+      },
+      {
+        id: 'blocks.collapse',
+        label: '',
+        keys: 'arrowleft',
+        hidden: true,
+        when: () => free() && !!row,
+        run: () => focus.setCollapsed(focus.selection[0], true)
+      },
+      {
+        id: 'blocks.add_palette',
+        label: '',
+        keys: '/',
+        hidden: true,
+        when: () => free() && editing,
+        run: () => commands?.palette.show({ group: ADD })
+      },
+      {
+        id: 'blocks.close',
+        label: '',
+        keys: 'escape',
+        hidden: true,
+        when: free,
+        run: () => focus.close()
+      }
+    ];
+  });
 </script>
-
-<svelte:window onkeydown={onKeyDown} />
 
 <div
   class="rz-blocks-focus"
@@ -151,7 +275,7 @@
     </nav>
 
     <div class="rz-blocks-focus__header-actions">
-      <button type="button" class="rz-blocks-focus__kbd" onclick={() => (commandOpen = true)}>
+      <button type="button" class="rz-blocks-focus__kbd" onclick={() => commands?.palette.show()}>
         <kbd><Command size="10" /> K</kbd>
       </button>
       <ButtonSave {form} size="sm" />
@@ -163,6 +287,7 @@
     <aside class="rz-blocks-focus__layers">
       <Layers {form} />
     </aside>
+
     {#if focus.hasRenders}
       <!-- A click beside the blocks selects the root; the blocks stop their own clicks. -->
       <section class="rz-blocks-focus__renders" role="presentation" onclick={focus.selectRoot}>
@@ -186,8 +311,6 @@
       {/if}
     {/if}
   </div>
-
-  <CommandPalette {form} bind:open={commandOpen} onRemove={requestRemove} />
 
   <Dialog.Root bind:open={confirmRemove}>
     <Dialog.Content>
@@ -336,6 +459,11 @@
   .rz-blocks-focus__renders,
   .rz-blocks-focus__inspector {
     min-width: 0;
+  }
+
+  .rz-blocks-focus__stage,
+  .rz-blocks-focus__renders {
+    background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-1)));
   }
 
   .rz-blocks-focus__renders {

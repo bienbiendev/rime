@@ -64,7 +64,10 @@ async function save(page: Page) {
 async function addViaCommand(page: Page, type: RegExp) {
   await page.keyboard.press('Control+k');
   await expect(dialog(page)).toBeVisible();
-  await dialog(page).locator('.rz-blocks-command__item', { hasText: type }).click();
+  await dialog(page)
+    .locator('.rz-command-group', { hasText: /^Add/ })
+    .locator('.rz-command-palette__item', { hasText: type })
+    .click();
   await expect(dialog(page)).toHaveCount(0);
 }
 
@@ -86,7 +89,7 @@ test('Focus opens from the field, carries the address, and closes with the chang
   // ⌘K inserts after the selection.
   await rows(page).first().click();
   await expect(rows(page).first()).toHaveClass(/rz-layers__row--selected/);
-  await addViaCommand(page, /Add\s*Image/);
+  await addViaCommand(page, /^Image$/);
   await expect(rows(page)).toHaveCount(5);
   await expect(rows(page).nth(1)).toHaveClass(/rz-layers__row--selected/);
   await expect(selectedRow(page)).toHaveText(/Image/);
@@ -210,7 +213,7 @@ test('A summary field is one row that opens focus', async ({ page, request }) =>
   await extras.locator('[data-focus-open="extras"]').click();
   await expect(page.locator('.rz-blocks-focus')).toBeVisible();
   await expect(page).toHaveURL(/[?&]focus=extras/);
-  await addViaCommand(page, /Add\s*Paragraph/);
+  await addViaCommand(page, /^Paragraph$/);
   await expect(rows(page)).toHaveCount(1);
   await page.locator('.rz-blocks-focus .rz-blocks-focus__crumb').first().click();
   await expect(page.locator('.rz-blocks-focus')).toHaveCount(0);

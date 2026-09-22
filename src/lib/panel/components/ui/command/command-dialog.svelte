@@ -14,17 +14,20 @@
     ref = $bindable(null),
     value = $bindable(''),
     preventScroll = true,
+    onCloseAutoFocus,
     children,
     ...restProps
   }: WithoutChildrenOrChild<DialogPrimitive.RootProps> &
     WithoutChildrenOrChild<CommandPrimitive.RootProps> & {
       children: Snippet;
       preventScroll?: boolean;
+      /** The dialog is giving the focus back to where it was. */
+      onCloseAutoFocus?: (event: Event) => void;
     } = $props();
 </script>
 
 <Dialog.Root bind:open {...restProps}>
-  <Dialog.Content class="rz-command-dialog-content" {preventScroll}>
+  <Dialog.Content class="rz-command-dialog-content" {preventScroll} {onCloseAutoFocus}>
     <Command
       class="rz-command-dialog-content__command"
       {...restProps}

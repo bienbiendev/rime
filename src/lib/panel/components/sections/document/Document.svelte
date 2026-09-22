@@ -1,7 +1,6 @@
 <script lang="ts">
   import { beforeNavigate, goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/state';
-  import { untrack } from 'svelte';
   import type { ResolvedPathname } from '$app/types';
   import { isAuthConfig } from '$lib/core/auth/util';
   import { PARAMS } from '$lib/core/constants.js';
@@ -10,11 +9,12 @@
   import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
   import { EDIT_LOCK_TTL_MS } from '$lib/core/prototype/shared/metas/constant.js';
   import { isLockHeldByOther } from '$lib/core/prototype/shared/metas/lock.js';
-  import BlocksFocus from '$lib/fields/blocks/component/focus/BlocksFocus.svelte';
-  import { setBlocksFocusContext } from '$lib/fields/blocks/component/focus/focus.svelte.js';
   import type { GenericDoc } from '$lib/core/prototype/types';
   import { apiUrl } from '$lib/core/routes/util.js';
+  import BlocksFocus from '$lib/fields/blocks/component/focus/BlocksFocus.svelte';
+  import { setBlocksFocusContext } from '$lib/fields/blocks/component/focus/focus.svelte.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
+  import { useCommands } from '$lib/panel/context/commands.svelte.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import {
     setDocumentFormContext,
@@ -23,6 +23,8 @@
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
   import { getVersionsContext } from '$lib/panel/context/versions.svelte.js';
+  import { Save } from '@lucide/svelte';
+  import { untrack } from 'svelte';
   import RenderFields from '../../fields/RenderFields.svelte';
   import Button from '../../ui/button/button.svelte';
   import AuthApiKeyDialog from './AuthAPIKeyDialog.svelte';
@@ -276,19 +278,25 @@
     return () => window.removeEventListener('pagehide', release);
   });
 
-  function handleKeyDown(event: KeyboardEvent) {
-    if (!formElement) throw Error('formElement is not defined');
-    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-      event.preventDefault();
-      if (!form.canSubmit) return;
-      const saveButton = formElement.querySelector('button[data-submit]');
-      if (saveButton) {
-        formElement.requestSubmit(saveButton as HTMLButtonElement);
-      } else {
-        // Fallback to default submit if no specific button found
-        formElement.requestSubmit();
-      }
+  /** ⌘S from anywhere in the document, a field included. */
+  useCommands(() => [
+    {
+      id: 'document.save',
+      label: t__('common.save'),
+      group: t__('common.document'),
+      icon: Save,
+      keys: 'mod+s',
+      inField: true,
+      run: submit
     }
+  ]);
+
+  function submit() {
+    if (!formElement) throw Error('formElement is not defined');
+    if (!form.canSubmit) return;
+    const saveButton = formElement.querySelector('button[data-submit]');
+    if (saveButton) formElement.requestSubmit(saveButton as HTMLButtonElement);
+    else formElement.requestSubmit();
   }
 
   async function beforeRedirect(data?: FormSuccessData) {
@@ -310,8 +318,6 @@
     return true;
   }
 </script>
-
-<svelte:window onkeydown={handleKeyDown} />
 
 {#snippet meta(label: string, value: string)}
   <p class="rz-document__metas">
@@ -417,7 +423,6 @@
 
   .rz-document {
     container: rz-document / inline-size;
-    /* min-height: 100vh; */
     position: relative;
     background-image: var(--thumbnail);
     background-size: cover;
@@ -426,21 +431,23 @@
   .rz-document__fields {
     display: grid;
     gap: var(--rz-size-4);
-    /* min-height: calc(100vh - var(--rz-size-14)); */
     align-content: flex-start;
     margin-left: calc(-1 * var(--rz-fields-padding));
     margin-right: calc(-1 * var(--rz-fields-padding));
     padding: var(--rz-size-5) var(--rz-page-gutter);
     padding-bottom: var(--rz-size-24);
   }
+
   .rz-document__infos {
     border-top: var(--rz-border);
     padding-inline: var(--rz-page-gutter);
     padding-block: var(--rz-size-6);
   }
+
   .rz-document__metas {
     font-size: var(--rz-text-xs);
   }
+
   .rz-document__metas span {
     @mixin font-semibold;
   }

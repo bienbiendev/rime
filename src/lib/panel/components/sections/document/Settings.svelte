@@ -7,6 +7,7 @@
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { useCommands } from '$lib/panel/context/commands.svelte.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { getVersionsContext } from '$lib/panel/context/versions.svelte.js';
@@ -119,6 +120,80 @@
     toast.success(t__('common.duplicate_success'));
     await goto(resolve(panelPath(form.config.kebab, id)));
   }
+
+  /** The menu's entries, in the palette as well. */
+  useCommands(() => {
+    const group = t__('common.document');
+    return [
+      ...(form.config.versions && history
+        ? [
+            {
+              id: 'document.versions',
+              label: t__('common.versions_history'),
+              group,
+              icon: History,
+              run: () => (history.open = true)
+            }
+          ]
+        : []),
+      ...(form.config.versions?.draft && form.values.status === VERSIONS_STATUS.PUBLISHED
+        ? [
+            {
+              id: 'document.new_draft',
+              label: t__('common.save_new_draft'),
+              group,
+              icon: Pickaxe,
+              run: handleNewDraft
+            }
+          ]
+        : []),
+      ...(allowDuplicate
+        ? [
+            {
+              id: 'document.duplicate',
+              label: t__('common.duplicate'),
+              group,
+              icon: Copy,
+              run: handleDuplicate
+            }
+          ]
+        : []),
+      ...(locale.defaultCode && locale.code !== locale.defaultCode
+        ? [
+            {
+              id: 'document.import_locale',
+              label: t__('common.import_default_locale', locale.defaultCode),
+              group,
+              icon: Import,
+              run: () => form.importDataFromDefaultLocale()
+            }
+          ]
+        : []),
+      ...(form.config.versions && form.values.versionId
+        ? [
+            {
+              id: 'document.delete_version',
+              label: t__('common.delete_version'),
+              group,
+              icon: Trash2,
+              when: () => canDeleteVersion,
+              run: () => (deleteVersionConfirmOpen = true)
+            }
+          ]
+        : []),
+      ...(isCollection
+        ? [
+            {
+              id: 'document.delete',
+              label: t__('common.delete_document'),
+              group,
+              icon: Trash2,
+              run: () => (deleteConfirmOpen = true)
+            }
+          ]
+        : [])
+    ];
+  });
 
   const shouldShowSettings = $derived.by(() => {
     if (form.config.versions) return true;
