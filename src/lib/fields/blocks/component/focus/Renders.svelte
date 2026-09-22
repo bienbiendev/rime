@@ -58,6 +58,7 @@
 <div class="rz-renders" data-list={list} data-empty={rows.length ? undefined : ''} use:dropTarget>
   {#each rows as row (row.block.id)}
     {@const config = row.config}
+    {@const Render = config?.render}
     {#snippet nested(name?: string)}
       {#each row.children.filter((child) => !name || child.builder.name === name) as child (child.list)}
         <Renders {form} list={child.list} />
@@ -65,6 +66,7 @@
     {/snippet}
     <div
       class="rz-renders__item"
+      data-placeholder={config?.render ? null : ''}
       data-path={row.path}
       data-type={row.block.type}
       data-selected={focus.isSelected(row.path) ? '' : undefined}
@@ -79,7 +81,6 @@
       }}
     >
       {#if config?.render}
-        {@const Render = config.render}
         <svelte:boundary>
           <Render
             block={row.block}
@@ -113,26 +114,28 @@
   /* An empty nested list: somewhere to drop a type. */
   .rz-renders[data-empty]:not([data-list='']) {
     border: 1px dashed hsl(var(--rz-color-fg) / 0.15);
-    border-radius: var(--rz-radius-sm);
+    border-radius: var(--rz-radius-md);
   }
 
   .rz-renders__item {
-    border-radius: var(--rz-radius-md);
     outline: 1px solid transparent;
     outline-offset: 3px;
     cursor: pointer;
 
     &:hover {
-      outline-color: hsl(var(--rz-color-fg) / 0.15);
+      outline-color: hsl(var(--rz-color-spot) / 0.15);
     }
     &:focus-visible {
-      outline-color: hsl(var(--rz-color-fg) / 0.3);
+      outline-color: hsl(var(--rz-color-spot) / 0.3);
+    }
+    &[data-placeholder] {
+      border-radius: var(--rz-radius-md);
     }
   }
 
   .rz-renders__item[data-selected],
   .rz-renders__item[data-selected]:hover {
-    outline: 2px solid hsl(var(--rz-color-fg) / 0.6);
+    outline: 2px solid hsl(var(--rz-color-spot) / 0.3);
   }
 
   .rz-renders__empty {
