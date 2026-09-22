@@ -64,4 +64,10 @@
       align-items: center;
     }
   }
+
+  .rz-field-radio :global {
+    .rz-radio-row-group {
+      width: 100%;
+    }
+  }
 </style>

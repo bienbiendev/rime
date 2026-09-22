@@ -73,7 +73,7 @@
   h1 {
     @mixin line-clamp 1;
     font-size: var(--rz-text-5xl);
-    @mixin font-semibold;
+    @mixin font-bold;
   }
 
   .rz-page-header__bottom-left,
@@ -86,7 +86,7 @@
 
   .rz-page-header__row-bottom {
     position: sticky;
-    top: 0;
+    top: var(--rz-size-14);
     z-index: 100;
     height: var(--rz-size-14);
     background: hsl(var(--rz-color-bg));
@@ -94,6 +94,9 @@
     padding-bottom: var(--rz-size-2);
   }
   .rz-page-header__row-top {
+    position: sticky;
+    top: 0;
+    z-index: 100;
     height: var(--rz-size-14);
     background: hsl(var(--rz-color-bg));
     margin-bottom: var(--rz-size-16);

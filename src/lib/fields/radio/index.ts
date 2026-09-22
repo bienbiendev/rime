@@ -6,7 +6,7 @@ export class RadioFieldBuilder extends PickOneFieldBuilder<RadioField> {
   constructor(name: string) {
     super(name, 'radio');
     this.field.many = false;
-    this.field.layout = 'default';
+    this.field.layout = 'row';
   }
 
   get component() {

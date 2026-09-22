@@ -67,7 +67,7 @@
 <style type="postcss">
   .rz-render-fields {
     position: relative;
-    gap: var(--rz-size-8);
+    gap: var(--rz-size-8) min(2%, var(--rz-size-8));
     display: grid;
     container-type: inline-size;
     grid-template-columns: repeat(12, 1fr);
