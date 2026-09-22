@@ -1,0 +1,112 @@
+/** What every editor draws, in a field or in place: the states, the placeholder, the text. */
+.rz-rich-text__editor {
+  position: relative;
+
+  .ProseMirror-trailingBreak {
+    content: '&nbsp;';
+    display: inline-block;
+  }
+
+  .ProseMirror-focused {
+    outline: none;
+  }
+
+  .ProseMirror .is-empty:not(table)::before {
+    content: attr(data-placeholder);
+    color: hsl(var(--rz-color-fg) / 0.3);
+    float: left;
+    pointer-events: none;
+    height: 0;
+  }
+}
+
+.rz-rich-text__editor > [contenteditable='false'] {
+  color: hsl(var(--rz-color-fg) / 0.5);
+  cursor: no-drop;
+  & * {
+    pointer-events: none;
+    opacity: 0.9;
+  }
+}
+
+/**
+ * The text: a variable behind each choice, the panel's default after it. Each element reads its
+ * own, so a value set on the editor reaches every element, one set on an element stays there.
+ *
+ *   .site-paragraph { --font-text: Georgia; --font-heading: 'Chivo'; --margin-bottom: 1em; }
+ *   .site-paragraph h1 { --font-size: 3rem; --font-weight: 700; }
+ */
+.rz-rich-text__editor .ProseMirror {
+  font-family: var(--font-text, var(--rz-font-sans));
+  font-size: var(--text-size, 1em);
+  line-height: var(--line-height, 1.5);
+  font-weight: var(--font-weight, 400);
+
+  > * {
+    margin-bottom: var(--margin-bottom, 0.5em);
+  }
+  > *:last-child {
+    margin-bottom: 0;
+  }
+
+  p,
+  li,
+  blockquote {
+    font-size: var(--font-size, inherit);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading, var(--rz-font-sans));
+    line-height: var(--line-height, 1.15);
+    font-weight: var(--font-weight, 600);
+  }
+  h1 {
+    font-size: var(--font-size, var(--rz-text-5xl));
+  }
+  h2 {
+    font-size: var(--font-size, var(--rz-text-4xl));
+  }
+  h3 {
+    font-size: var(--font-size, var(--rz-text-3xl));
+  }
+  h4 {
+    font-size: var(--font-size, var(--rz-text-xl));
+  }
+  h5 {
+    font-size: var(--font-size, var(--rz-text-lg));
+  }
+  h6 {
+    font-size: var(--font-size, 1em);
+  }
+
+  ol,
+  ul {
+    padding-left: var(--list-indent, var(--rz-size-5));
+  }
+  ol li {
+    list-style-type: decimal;
+  }
+  ul li {
+    list-style-type: disc;
+  }
+  li > p {
+    display: inline;
+    margin: 0;
+  }
+
+  blockquote p {
+    border-left: 3px solid var(--quote-border, hsl(var(--rz-color-border)));
+    padding-left: var(--quote-indent, var(--rz-size-4));
+    font-weight: var(--font-weight, 500);
+  }
+
+  a {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}

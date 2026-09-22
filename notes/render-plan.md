@@ -410,4 +410,13 @@ In a render:
 The fixture's `Paragraph.svelte` moves onto it; the e2e keeps its assertions, on
 `.site-paragraph .ProseMirror`.
 
+Two stylesheets. `styles/editor.css`, in the core, is what every editor draws: the states, the
+placeholder, and the text, each choice behind a plain variable with the panel's default as
+fallback: `--font-text`, `--font-heading`, `--text-size`, `--font-size`, `--font-weight`,
+`--line-height`, `--margin-bottom`, `--list-indent`, `--quote-border`, `--quote-indent`. Each
+element reads its own, so a value set on the editor reaches every element, one set on an
+element stays there. The bubble menu and the drag handle
+carry their own. `styles/field.css`, in the field, is the boxes under `.rz-field-rich-text`: one
+per node, room for the drag handle, a text size that follows the page, no gap.
+
 The editor's ⌘K belongs to `notes/commands-plan.md`: one palette, the editor's items a group of it.
