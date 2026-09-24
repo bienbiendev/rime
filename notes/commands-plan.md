@@ -154,22 +154,20 @@ it.
 `palette.open({ group })` opens on one group only: `/` in focus mode opens the `Add` group, as
 today.
 
-**Two pages.** ⌘K is the context: what the page, its focus and its field offer, the innermost
-scope first, filtered by the input. ⌘⇧K is the whole panel: create a document in any collection,
-go to a collection or an area, and a search over the documents. A command says which page it is
-on with `global: true`; the root scope is the global page.
-
-On the global page the collections and the areas are scored on the client,
-`computeCommandScore(label, query)` from `bits-ui`, the score the collection filter uses since
-`fa9bc2cd`; from two characters on, the documents come from the API:
+**One list, the page on top.** ⌘K opens it and lists every command on offer, the innermost scope
+first: what the field offers, then the block, the document, the collection list, and last what
+the panel offers wherever the user is, create a document, go to a collection or an area. Typing
+keeps that order, so the page's own lines stay above the panel's, and from two characters on the
+documents come from the API, under their collection's heading, at the end:
 
 ```ts
 // one request per collection the user can read, debounced 200ms
 const url = `${apiUrl(collection.kebab)}?where[${collection.asTitle}][like]=%${query}%&select=${collection.asTitle}&limit=5`;
 ```
 
-ranked by the same score on their title, under their collection's heading. On this page
-`Command.Root` gets `shouldFilter={false}`: the page has filtered. Escape closes.
+`Command.Root` gets `shouldFilter={false}`: bits-ui would sort the groups by their best score and
+lose the order. The palette scores the lines itself with `computeCommandScore` from `bits-ui`, the
+score the collection filter uses since `fa9bc2cd`, and drops what scores zero.
 
 ---
 
@@ -213,8 +211,9 @@ in the root scope, same command.
 **E2e**, `tests/fields/blocks-focus.test.ts` stays green as it is: `Control+k` opens the palette,
 its lines carry the same text. One test more, `commands.test.ts` in `tests/fields`:
 
-- ⌘⇧K, "pa" typed: _Pages_ under _Go to_ and _Palette page_ under _Pages_; Enter on the first
-  opens the list, on the second the document;
+- ⌘K on a document: the first heading is _Document_, the panel's _Go to_ below it; "pa" typed,
+  _Pages_ under _Go to_ and _Palette page_ under _Pages_; Enter on the first opens the list, on
+  the second the document;
 
 - on a document, ⌘K lists `Document › Save` and `Go to › Pages`; Enter on _Go to Pages_ lands on
   the collection;
@@ -229,7 +228,7 @@ its lines carry the same text. One test more, `commands.test.ts` in `tests/field
 
 1. `keys.ts` and its spec; `commands.svelte.ts`; `CommandPalette.svelte` in `Root.svelte`, with
    the root scope. Nothing else changes: ⌘K works everywhere, showing _Go to_.
-   Then the search page.
+   Then the documents search.
 2. The three ⌘S onto `useCommands`.
 3. `BlocksFocus` onto `useCommands`, its own palette deleted; `blocks-focus.test.ts` green.
 4. `suggestion.svelte` onto `useCommands`; `commands.test.ts`.

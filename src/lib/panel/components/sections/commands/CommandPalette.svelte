@@ -21,7 +21,7 @@
   type Props = { routes?: Record<string, Route[]> };
   const { routes = {} }: Props = $props();
 
-  /** One line of the palette, whatever page it is on. */
+  /** One line of the palette: a command, or a document the search found. */
   type Line = {
     id: string;
     label: string;
@@ -51,23 +51,18 @@
     return collection.upload ? (`${path}?${PARAMS.UPLOAD_PATH}=root` as ResolvedPathname) : path;
   };
 
-  /** The root scope: the two keys, and the global page: create a document, go to a page. */
+  /**
+   * The outermost scope, so its lines come last: ⌘K, then what the panel offers wherever the
+   * user is, create a document, go to a collection or an area.
+   */
   useCommands(() => [
     {
-      id: 'palette.context',
+      id: 'palette',
       label: t__('common.commands'),
       keys: 'mod+k',
       inField: true,
       hidden: true,
       run: () => commands.palette.toggle()
-    },
-    {
-      id: 'palette.global',
-      label: t__('common.search_all_placeholder'),
-      keys: 'mod+shift+k',
-      inField: true,
-      hidden: true,
-      run: () => commands.palette.show({ page: 'global' })
     },
     ...collections
       .filter((collection) => collection.access.create(user.attributes, {}))
@@ -76,7 +71,6 @@
         label: collection.label.create || t__('common.create_new', collection.label.singular),
         group: t__('common.create'),
         icon: config.raw.icons[collection.slug],
-        global: true,
         run: () => goto(createPath(collection))
       })),
     ...pages.map((route) => ({
@@ -84,7 +78,6 @@
       label: route.title,
       group: t__('common.go_to'),
       icon: config.raw.icons[route.icon],
-      global: true,
       run: () => goto(route.url as ResolvedPathname)
     }))
   ]);
@@ -98,23 +91,17 @@
     run: () => command.run()
   });
 
-  const contextLines = $derived(
+  const commandLines = $derived(
     commands.palette.commands
-      .filter((command) => !command.global)
       .filter((command) => !commands.palette.group || command.group === commands.palette.group)
       .map(toLine)
   );
 
-  const globalLines = $derived(commands.palette.commands.filter((c) => c.global).map(toLine));
-
   /* ------------------------------------------------------------- search */
 
-  const byScore = (lines: Line[], query: string) =>
-    lines
-      .map((line) => ({ line, score: computeCommandScore(line.label, query) }))
-      .filter((scored) => scored.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .map((scored) => scored.line);
+  /** What the query names, in the order the lines came: the page's own first. */
+  const matching = (lines: Line[], query: string) =>
+    query ? lines.filter((line) => computeCommandScore(line.label, query) > 0) : lines;
 
   /** The documents whose title says the query, five per collection the user can open. */
   async function searchDocuments(query: string): Promise<Line[]> {
@@ -134,13 +121,17 @@
         }));
       })
     );
-    return byScore(found.flat(), query);
+    return found
+      .flat()
+      .map((line) => ({ line, score: computeCommandScore(line.label, query) }))
+      .sort((a, b) => b.score - a.score)
+      .map((scored) => scored.line);
   }
 
   let found = $state.raw<Line[]>([]);
 
   $effect(() => {
-    if (commands.palette.page !== 'global') return;
+    if (!commands.palette.open) return;
     const query = commands.palette.query.trim();
     found = [];
     if (query.length < 2) return;
@@ -155,11 +146,8 @@
     };
   });
 
-  const lines = $derived.by(() => {
-    if (commands.palette.page === 'context') return contextLines;
-    const query = commands.palette.query.trim();
-    return [...(query ? byScore(globalLines, query) : globalLines), ...found];
-  });
+  /** The commands the query names, then the documents it found. */
+  const lines = $derived([...matching(commandLines, commands.palette.query.trim()), ...found]);
 
   /** The lines under their heading, in the order the headings first appear. */
   const groups = $derived.by(() => {
@@ -171,12 +159,6 @@
     }
     return out;
   });
-
-  const placeholder = $derived(
-    commands.palette.page === 'global'
-      ? t__('common.search_all_placeholder')
-      : t__('common.type_a_command')
-  );
 
   /**
    * The chosen line runs once the dialog has closed and given the focus back to where it was:
@@ -196,13 +178,12 @@
   }
 </script>
 
-<!-- ⌘K: what the page and its focus offer. ⌘⇧K: the whole panel, and a search over it. -->
-<Command.Dialog
-  bind:open={commands.palette.open}
-  shouldFilter={commands.palette.page === 'context'}
-  {onCloseAutoFocus}
->
-  <Command.Input {placeholder} bind:value={commands.palette.query} />
+<!--
+  One list: what the page offers on top, what the panel offers below, then the documents the
+  query found. The order is the scopes', so the list does its own filtering.
+-->
+<Command.Dialog bind:open={commands.palette.open} shouldFilter={false} {onCloseAutoFocus}>
+  <Command.Input placeholder={t__('common.type_a_command')} bind:value={commands.palette.query} />
   <Command.List class="rz-command-palette__list">
     <Command.Empty>{t__('common.nothing_found')}</Command.Empty>
     {#each groups as group (group.name)}

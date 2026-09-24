@@ -17,8 +17,6 @@ export type Command = {
   inField?: boolean;
   /** Keys only, not a palette line: the arrows. */
   hidden?: boolean;
-  /** On the global page (⌘⇧K) rather than the context one (⌘K): go somewhere, create something. */
-  global?: boolean;
   /** Offered right now. A command that is not is skipped, keys and palette alike. */
   when?: () => boolean;
   /** From a key, the event; from the palette, nothing. */
@@ -28,14 +26,12 @@ export type Command = {
 /** The commands a mounted component offers, read when a key comes or the palette opens. */
 type Scope = { get: () => Command[] };
 
-export type PalettePage = 'context' | 'global';
-
 const KEY = Symbol('rime.commands');
 
 /**
- * One dispatcher for every key of the panel, and one palette. Components stack their scopes
- * as they mount; a key goes to the innermost scope that claims it, the palette lists them all,
- * innermost first.
+ * One dispatcher for every key of the panel, and one palette. Components stack their scopes as
+ * they mount; a key goes to the innermost scope that claims it, and the palette lists them all,
+ * the innermost first, so what the page offers comes before what the panel offers.
  */
 export function setCommandsContext() {
   // Read on a key and when the palette opens, never by a derived: a plain array, so registering
@@ -44,7 +40,6 @@ export function setCommandsContext() {
   let open = $state(false);
   let query = $state('');
   let group = $state<string | null>(null);
-  let page = $state<PalettePage>('context');
   let listed = $state.raw<Command[]>([]);
 
   function register(scope: Scope) {
@@ -79,10 +74,7 @@ export function setCommandsContext() {
     },
     set open(value: boolean) {
       open = value;
-      if (!value) {
-        group = null;
-        page = 'context';
-      }
+      if (!value) group = null;
     },
     get query() {
       return query;
@@ -93,17 +85,13 @@ export function setCommandsContext() {
     get group() {
       return group;
     },
-    get page() {
-      return page;
-    },
     /** The commands on offer when the palette opened; the dialog takes the focus, they stay. */
     get commands() {
       return listed;
     },
-    show(options: { group?: string; page?: PalettePage } = {}) {
+    show(options: { group?: string } = {}) {
       listed = available().filter((command) => !command.hidden);
       group = options.group ?? null;
-      page = options.page ?? 'context';
       query = '';
       open = true;
     },

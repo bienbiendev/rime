@@ -6,9 +6,8 @@ const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
 /**
- * The command palette: ⌘K lists what the page and its focus offer, ⌘⇧K the whole panel and a
- * search over it, and the keys go to one place. On the `pages` fixture, whose `paragraph` block
- * has a render.
+ * The command palette: ⌘K lists what the page offers first, what the panel offers below, and the
+ * documents the query finds. On the `pages` fixture, whose `paragraph` block has a render.
  */
 
 const richTextOf = (text: string) => ({
