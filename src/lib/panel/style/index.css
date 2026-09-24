@@ -31,7 +31,7 @@
   --rz-color-ring: var(--rz-color-spot);
 
   /* Collapsible group, tree, blocks... */
-  --rz-collapse-fields-content-bg: light-dark(hsl(var(--rz-input-bg)), hsl(var(--rz-color-bg)));
+  --rz-collapse-fields-content-bg: hsl(var(--rz-color-bg));
 
   /* Popovers dropdown, dialog,... */
   --rz-popover-bg: hsl(var(--rz-color-bg));

@@ -29,7 +29,7 @@
   @import '../../../style/mixins/index.css';
 
   :root {
-    --rz-input-border-color: light-dark(hsl(var(--rz-gray-14)), hsl(var(--rz-gray-6) / 0.6));
+    --rz-input-border-color: light-dark(hsl(var(--rz-gray-15)), hsl(var(--rz-gray-6) / 0.6));
     --rz-input-padding-x: var(--rz-size-3);
     --rz-input-padding-y: var(--rz-size-1);
   }

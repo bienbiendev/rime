@@ -38,7 +38,6 @@
  */
 .rz-rich-text__editor .ProseMirror {
   font-family: var(--font-text, var(--rz-font-sans));
-  font-size: var(--text-size, 1em);
   line-height: var(--line-height, 1.5);
   font-weight: var(--font-weight, 400);
 

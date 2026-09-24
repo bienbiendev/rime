@@ -49,7 +49,7 @@
   .rz-number-field__input-wrapper {
     width: 6rem;
     display: flex;
-    height: var(--rz-size-11);
+    height: var(--rz-input-height);
     align-items: center;
     border-radius: var(--rz-radius-lg);
   }

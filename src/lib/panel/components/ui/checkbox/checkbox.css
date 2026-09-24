@@ -2,6 +2,7 @@
   --rz-checkbox-bg: hsl(var(--rz-input-bg));
   --rz-checkbox-fg: hsl(var(--rz-gray-19));
   --rz-checkbox-border: transparent;
+  --rz-checkbox--checked-fg: hsl(var(--rz-color-spot-fg));
   --rz-checkbox--checked-bg: hsl(var(--rz-color-spot));
   --rz-checkbox--focus-ring: hsl(var(--rz-color-ring));
   --rz-checkbox-size: var(--rz-size-4);
@@ -30,7 +31,7 @@
 
 .rz-checkbox[data-state='checked'] {
   background-color: var(--rz-checkbox--checked-bg);
-  color: hsl(var(--rz-color-fg));
+  color: var(--rz-checkbox--checked-fg);
 }
 
 .rz-checkbox__indicator {
