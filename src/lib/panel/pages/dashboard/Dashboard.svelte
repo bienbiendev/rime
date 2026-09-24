@@ -2,6 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import type { User } from '$lib/core/auth/types.js';
   import { t__ } from '$lib/core/i18n/index.js';
+  import CommandButton from '$lib/panel/components/sections/commands/CommandButton.svelte';
   import Page from '$lib/panel/components/sections/page-layout/Page.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import LanguageSwitcher from '$lib/panel/components/ui/language-switcher/LanguageSwitcher.svelte';
@@ -35,6 +36,7 @@
             <CustomHeaderComponent />
           {/each}
 
+          <CommandButton />
           <LanguageSwitcher onLocalClick={() => invalidateAll()} />
         {/snippet}
       </PageHeader>

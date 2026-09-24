@@ -7,6 +7,7 @@
   import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
   import type { GenericDoc } from '$lib/core/prototype/types';
   import BulkUploadDialog from '$lib/panel/components/sections/collection/bulk-upload/BulkUploadDialog.svelte';
+  import CommandButton from '$lib/panel/components/sections/commands/CommandButton.svelte';
   import CollectionGrid from '$lib/panel/components/sections/collection/grid/CollectionGrid.svelte';
   import CreateDirectoryDialog from '$lib/panel/components/sections/collection/grid/create-directory-dialog/CreateDirectoryDialog.svelte';
   import ButtonCreate from '$lib/panel/components/sections/collection/header/ButtonCreate.svelte';
@@ -182,6 +183,7 @@
             <CustomHeaderComponent config={collectionConfig} />
           {/each}
 
+          <CommandButton />
           <LanguageSwitcher onLocalClick={() => invalidateAll()} />
         {/snippet}
 

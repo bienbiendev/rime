@@ -7,6 +7,7 @@
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { ExternalLink, PencilRuler, X } from '@lucide/svelte';
   import { Button } from '../../ui/button';
+  import CommandButton from '$lib/panel/components/sections/commands/CommandButton.svelte';
   import LanguageSwitcher from '../../ui/language-switcher/LanguageSwitcher.svelte';
   import PageHeader from '../../ui/page-header/PageHeader.svelte';
   import SpinLoader from '../../ui/spin-loader/SpinLoader.svelte';
@@ -106,6 +107,7 @@
   {/snippet}
 
   {#snippet topRight()}
+    <CommandButton />
     <LanguageSwitcher onLocalClick={onLocaleSwitch} />
   {/snippet}
 </PageHeader>

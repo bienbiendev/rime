@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
+  import CommandButton from '$lib/panel/components/sections/commands/CommandButton.svelte';
   import ButtonSave from '$lib/panel/components/sections/document/ButtonSave.svelte';
   import { Button } from '$lib/panel/components/ui/button/index.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
@@ -9,7 +10,7 @@
   import { getNavContext } from '$lib/panel/context/nav.svelte.js';
   import { populate } from '$lib/panel/util/populate.js';
   import { capitalize } from '$lib/util/string.js';
-  import { Command, ToyBrick, X } from '@lucide/svelte';
+  import { ToyBrick, X } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
   import { getBlocksFocusContext } from './focus.svelte.js';
   import Layers from './Layers.svelte';
@@ -275,9 +276,7 @@
     </nav>
 
     <div class="rz-blocks-focus__header-actions">
-      <button type="button" class="rz-blocks-focus__kbd" onclick={() => commands?.palette.show()}>
-        <kbd><Command size="10" /> K</kbd>
-      </button>
+      <CommandButton />
       <ButtonSave {form} size="sm" />
       <Button variant="ghost" size="icon" icon={X} onclick={() => focus.close()} />
     </div>
@@ -403,23 +402,6 @@
     align-items: center;
     gap: var(--rz-size-3);
     flex-shrink: 0;
-  }
-
-  .rz-blocks-focus__kbd {
-    display: flex;
-    gap: var(--rz-size-1);
-    kbd {
-      display: flex;
-      gap: var(--rz-size-1);
-      align-items: center;
-      border: var(--rz-border);
-      border-radius: var(--rz-radius-sm);
-      padding: 0 var(--rz-size-2);
-      font-size: var(--rz-text-xs);
-      line-height: var(--rz-size-5);
-      min-width: var(--rz-size-5);
-      text-align: center;
-    }
   }
 
   .rz-blocks-focus__body {
