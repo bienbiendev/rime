@@ -1,3 +1,4 @@
+import type { ResolvedPathname } from '$app/types';
 import type { RequestEvent } from '@sveltejs/kit';
 import { PANEL_ROUTE } from './constants.server.js';
 import * as routes from './util.js';
@@ -26,8 +27,8 @@ export function createRoutesContext(event: RequestEvent) {
       return PANEL_ROUTE;
     },
 
-    panelUrl(...args: string[]) {
-      return routes.joinPath(PANEL_ROUTE, ...args);
+    panelUrl(...args: string[]): ResolvedPathname {
+      return routes.joinPath(PANEL_ROUTE, ...args) as ResolvedPathname;
     },
 
     apiUrl: routes.apiUrl,
