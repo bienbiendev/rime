@@ -55,10 +55,10 @@
   @import '../../../style/mixins/index.css';
 
   :root {
-    --rz-button-tl-radius: var(--rz-radius-md);
-    --rz-button-tr-radius: var(--rz-radius-md);
-    --rz-button-br-radius: var(--rz-radius-md);
-    --rz-button-bl-radius: var(--rz-radius-md);
+    --rz-button-tl-radius: var(--rz-radius-lg);
+    --rz-button-tr-radius: var(--rz-radius-lg);
+    --rz-button-br-radius: var(--rz-radius-lg);
+    --rz-button-bl-radius: var(--rz-radius-lg);
 
     /* Default variant */
     --rz-button-default-bg: light-dark(hsl(var(--rz-gray-0)), hsl(var(--rz-gray-15)));
@@ -149,28 +149,28 @@
     height: var(--rz-size-6);
     padding: var(--rz-size-1) var(--rz-size-2);
     font-size: var(--rz-text-2xs);
-    border-radius: var(--rz-radius-md);
+    border-radius: var(--rz-radius-lg);
   }
 
   .rz-button--size-sm {
     font-size: var(--rz-text-md);
     height: var(--rz-size-8);
     padding: var(--rz-size-2) var(--rz-size-3);
-    border-radius: var(--rz-radius-md);
+    border-radius: var(--rz-radius-lg);
   }
 
   .rz-button--size-lg {
     font-size: var(--rz-text-md);
     height: var(--rz-size-12);
     padding: var(--rz-size-2) var(--rz-size-8);
-    border-radius: var(--rz-radius-md);
+    border-radius: var(--rz-radius-lg);
   }
 
   .rz-button--size-xl {
     height: var(--rz-size-14);
     font-size: var(--rz-text-md);
     padding: var(--rz-size-2) var(--rz-size-8);
-    border-radius: var(--rz-radius-md);
+    border-radius: var(--rz-radius-lg);
   }
 
   .rz-button--size-icon {
@@ -227,7 +227,6 @@
     color: var(--rz-button-outline-fg);
 
     &:hover:not(:disabled) {
-      /* border-color: var(--rz-button-outline-border-hover); */
       background-color: var(--rz-button-outline-bg-hover);
     }
   }
@@ -237,7 +236,10 @@
     background-color: var(--rz-button-ghost-bg);
     color: var(--rz-button-ghost-fg);
 
-    &:hover:not(:disabled) {
+    &:hover:not(:disabled),
+    &:active:not(:disabled),
+    &[aria-expanded='true'],
+    &[data-state='open'] {
       background-color: var(--rz-button-ghost-bg-hover);
     }
   }

@@ -43,6 +43,11 @@
     <div class="rz-nav__body">
       <ScrollArea>
         <nav class="rz-nav__nav">
+          {#each routesGroups.none as route (route.url)}
+            <div class="rz-nav__group-none">
+              <NavItem href={route.url} {isCollapsed} {route} />
+            </div>
+          {/each}
           {#each Object.entries(routesGroups) as [groupName, routes], index (index)}
             {#if groupName !== 'none'}
               {@const icon = getGroupIcon(groupName)}
@@ -52,11 +57,6 @@
                 {/each}
               </NavGroup>
             {/if}
-          {/each}
-          {#each routesGroups.none as route (route.url)}
-            <div class="rz-nav__group-none">
-              <NavItem href={route.url} {isCollapsed} {route} />
-            </div>
           {/each}
         </nav>
       </ScrollArea>

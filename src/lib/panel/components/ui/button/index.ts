@@ -1,7 +1,6 @@
 import type { WithElementRef } from 'bits-ui';
+import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
 import Root from './button.svelte';
-import type { HTMLButtonAttributes } from 'svelte/elements';
-import type { HTMLAnchorAttributes } from 'svelte/elements';
 
 type PrimitiveAnchorAttributes = WithElementRef<HTMLAnchorAttributes>;
 type PrimitiveButtonAttributes = WithElementRef<HTMLButtonAttributes>;
@@ -19,9 +18,9 @@ type Props = PrimitiveButtonAttributes &
   };
 
 export {
-  Root,
-  type Props,
   //
   Root as Button,
-  type Props as ButtonProps
+  Root,
+  type Props as ButtonProps,
+  type Props
 };

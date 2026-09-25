@@ -92,7 +92,7 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    border-radius: var(--rz-radius-md);
+    border-radius: var(--rz-radius-full);
     font-size: var(--rz-text-xs);
     text-transform: uppercase;
   }

@@ -14,25 +14,25 @@
 </script>
 
 {#snippet keys()}
-  {#if mac}<Command size="10" />{:else}Ctrl{/if}
-  K
+  {#if mac}<Command size="10" />{:else}Ctrl{/if} K
 {/snippet}
 
 <!-- The key, and a way in for whoever does not know it. -->
 {#if variant === 'input'}
-  <button
+  <Button
     type="button"
-    class="rz-command-input"
+    class="rz-cmdk-input"
+    variant="outline"
     aria-label={t__('common.commands')}
     onclick={() => commands?.palette.show()}
   >
     <Search size="13" />
     <span class="rz-command-input__label">{t__('common.type_a_command')}</span>
     <kbd>{@render keys()}</kbd>
-  </button>
+  </Button>
 {:else}
   <Button
-    class="rz-command-button"
+    class="rz-cmdk"
     aria-label={t__('common.commands')}
     variant="outline"
     size="sm"
@@ -43,29 +43,18 @@
 {/if}
 
 <style lang="postcss">
-  .rz-command-input {
+  :global {
+    .rz-cmdk-input {
+      width: var(--rz-size-80);
+      max-width: 100%;
+    }
+  }
+
+  kbd {
     display: flex;
     align-items: center;
-    gap: var(--rz-size-2);
-    width: var(--rz-size-80);
-    max-width: 100%;
-    height: var(--rz-size-9);
-    padding-inline: var(--rz-size-3);
-    border: var(--rz-border);
-    border-radius: var(--rz-radius-md);
-    background-color: hsl(var(--rz-input-bg));
-    color: hsl(var(--rz-color-fg) / 0.5);
-
-    &:hover {
-      color: hsl(var(--rz-color-fg) / 0.7);
-    }
-
-    kbd {
-      display: flex;
-      align-items: center;
-      gap: var(--rz-size-1);
-      font-size: var(--rz-text-xs);
-    }
+    gap: var(--rz-size-1);
+    font-size: var(--rz-text-xs);
   }
 
   .rz-command-input__label {
