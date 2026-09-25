@@ -10,8 +10,6 @@
 :root {
   color-scheme: light dark;
 
-  --rz-border: 1px solid hsl(var(--rz-color-border));
-
   /* Inputs */
   --rz-input-height: var(--rz-size-11);
   --rz-input-bg: var(--rz-gray-19);
@@ -37,6 +35,9 @@
   --rz-popover-bg: hsl(var(--rz-color-bg));
   --rz-popover-highlight-bg: hsl(var(--rz-gray-15));
 
+  /* Border */
+  --rz-border: 1px solid hsl(var(--rz-color-border) / 0.9);
+
   @media (prefers-color-scheme: dark) {
     --rz-overlay-color: hsl(var(--rz-gray-0) / 0.7);
     --rz-color-fg: var(--rz-gray-17);
@@ -45,6 +46,7 @@
     --rz-input-bg: var(--rz-gray-4);
     --rz-row-bg: var(--rz-gray-3);
     --rz-popover-highlight-bg: hsl(var(--rz-gray-3));
+    --rz-border: 1px solid hsl(var(--rz-color-border) / 0.6);
   }
 }
 

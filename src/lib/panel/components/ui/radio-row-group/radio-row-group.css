@@ -39,4 +39,5 @@
 .rz-radio-row-group-item[data-state='checked'] {
   box-shadow: var(--rz-shadow-sm);
   background-color: hsl(var(--rz-input-bg));
+  border: var(--rz-border);
 }
