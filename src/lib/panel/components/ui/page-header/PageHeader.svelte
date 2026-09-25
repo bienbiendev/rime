@@ -9,9 +9,11 @@
     bottomRight?: Snippet;
     bottomLeft?: Snippet;
     topLeft?: Snippet;
+    topCenter?: Snippet;
     topRight?: Snippet;
   };
-  const { children, bottomRight, bottomLeft, topRight, topLeft, title }: Props = $props();
+  const { children, bottomRight, bottomLeft, topRight, topCenter, topLeft, title }: Props =
+    $props();
 
   //
 </script>
@@ -28,10 +30,12 @@
       {/if}
     </div>
 
-    <div>
-      {#if topRight}
-        {@render topRight()}
-      {/if}
+    <div class="rz-page-header__top-center">
+      {@render topCenter?.()}
+    </div>
+
+    <div class="rz-page-header__top-right">
+      {@render topRight?.()}
     </div>
   </div>
 
@@ -66,6 +70,20 @@
     padding-inline: var(--rz-page-gutter, var(--rz-size-6));
   }
 
+  /* Three columns, so the middle one sits in the middle whatever the sides hold. */
+  .rz-page-header__row-top {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+  }
+
+  .rz-page-header__top-center {
+    justify-content: center;
+  }
+
+  .rz-page-header__top-right {
+    justify-content: flex-end;
+  }
+
   .rz-page-header__row:first-child {
     height: var(--rz-size-16);
   }
@@ -78,6 +96,8 @@
 
   .rz-page-header__bottom-left,
   .rz-page-header__row-top > div,
+  .rz-page-header__top-center,
+  .rz-page-header__top-right,
   .rz-page-header__bottom-left > div,
   .rz-page-header__bottom-right {
     display: flex;

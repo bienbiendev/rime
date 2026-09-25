@@ -178,12 +178,15 @@
           <CollectionHeader />
         {/snippet}
 
+        {#snippet topCenter()}
+          <CommandButton variant="input" />
+        {/snippet}
+
         {#snippet topRight()}
           {#each config.raw.panel.components.collectionHeader || [] as CustomHeaderComponent, index (index)}
             <CustomHeaderComponent config={collectionConfig} />
           {/each}
 
-          <CommandButton />
           <LanguageSwitcher onLocalClick={() => invalidateAll()} />
         {/snippet}
 

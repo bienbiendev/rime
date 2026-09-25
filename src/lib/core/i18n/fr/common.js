@@ -69,6 +69,8 @@ export default {
   save: 'Enregistrer',
   search: 'Rechercher $1...',
   search_a: 'Rechercher {un|une} $1...',
+  language: 'Langue',
+  switch_to_language: 'Passer en $1',
   commands: 'Commandes',
   collection: 'Collection',
   search_in: 'Rechercher dans $1',

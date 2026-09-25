@@ -67,6 +67,8 @@ export default {
   save: 'Save',
   search_a: 'Search a $1...',
   search: 'Search $1...',
+  language: 'Language',
+  switch_to_language: 'Switch to $1',
   commands: 'Commands',
   collection: 'Collection',
   search_in: 'Search in $1',

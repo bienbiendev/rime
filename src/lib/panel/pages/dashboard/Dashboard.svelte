@@ -26,6 +26,10 @@
           {t__('common.welcome')} {user!.name}
         {/snippet}
 
+        {#snippet topCenter()}
+          <CommandButton variant="input" />
+        {/snippet}
+
         {#snippet topRight()}
           {#if config.raw.siteUrl}
             <Button variant="text" target="_blank" icon={Eye} href={config.raw.siteUrl}>
@@ -36,7 +40,6 @@
             <CustomHeaderComponent />
           {/each}
 
-          <CommandButton />
           <LanguageSwitcher onLocalClick={() => invalidateAll()} />
         {/snippet}
       </PageHeader>

@@ -53,12 +53,13 @@
   <Button onclick={() => onClose()} icon={X} variant="text">{t__('common.close')}</Button>
 {/snippet}
 
+<!-- The breadcrumb names the document, so the header has no title of its own. -->
 <PageHeader topLeft={onCloseIsDefined ? topLeft : undefined}>
-  {#snippet title()}
-    {form.title}
+  {#snippet topCenter()}
+    <CommandButton variant="input" />
   {/snippet}
 
-  {#snippet bottomRight()}
+  {#snippet topRight()}
     {#if showAutoSave}
       <span class="rz-auto-save-state" data-auto-save-state={form.autoSaveState}>
         {#if form.autoSaveState === 'saving'}
@@ -104,11 +105,7 @@
       <ButtonStatus {form} />
     {/if}
     <ButtonSave {form} size="sm" />
-  {/snippet}
-
-  {#snippet topRight()}
-    <CommandButton />
-    <LanguageSwitcher onLocalClick={onLocaleSwitch} />
+    <LanguageSwitcher onLocalClick={onLocaleSwitch} iconOnly />
   {/snippet}
 </PageHeader>
 
