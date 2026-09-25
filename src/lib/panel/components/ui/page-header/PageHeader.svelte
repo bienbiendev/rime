@@ -77,6 +77,7 @@
   }
 
   .rz-page-header__bottom-left,
+  .rz-page-header__row-top > div,
   .rz-page-header__bottom-left > div,
   .rz-page-header__bottom-right {
     display: flex;

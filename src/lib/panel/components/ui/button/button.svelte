@@ -125,7 +125,6 @@
   }
 
   .rz-button:focus-visible {
-    /* --rz-ring-offset: 1px; */
     outline: none;
     @mixin ring var(--rz-color-ring);
   }
