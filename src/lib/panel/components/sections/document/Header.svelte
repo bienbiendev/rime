@@ -3,11 +3,11 @@
   import type { BuiltArea, BuiltCollection } from '$lib/core/config/types';
   import { PARAMS } from '$lib/core/constants';
   import { t__ } from '$lib/core/i18n/index.js';
+  import CommandButton from '$lib/panel/components/sections/commands/CommandButton.svelte';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { ExternalLink, PencilRuler, X } from '@lucide/svelte';
   import { Button } from '../../ui/button';
-  import CommandButton from '$lib/panel/components/sections/commands/CommandButton.svelte';
   import LanguageSwitcher from '../../ui/language-switcher/LanguageSwitcher.svelte';
   import PageHeader from '../../ui/page-header/PageHeader.svelte';
   import SpinLoader from '../../ui/spin-loader/SpinLoader.svelte';
@@ -96,6 +96,8 @@
       ></Button>
     {/if}
 
+    <LanguageSwitcher onLocalClick={onLocaleSwitch} />
+
     {#if form.values.id}
       {/* @ts-ignore form doc is GenericDoc as form.values.id is defined */ null}
       <Settings {form} />
@@ -105,7 +107,6 @@
       <ButtonStatus {form} />
     {/if}
     <ButtonSave {form} size="sm" />
-    <LanguageSwitcher onLocalClick={onLocaleSwitch} iconOnly />
   {/snippet}
 </PageHeader>
 

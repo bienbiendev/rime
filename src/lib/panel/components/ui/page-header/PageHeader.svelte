@@ -120,6 +120,11 @@
     z-index: 100;
     height: var(--rz-size-14);
     background: hsl(var(--rz-color-bg));
+    margin-bottom: var(--rz-size-6);
+  }
+
+  /* Room above a title; without one, the page starts closer. */
+  .rz-page-header__row-top:has(+ .rz-page-header__row-bottom) {
     margin-bottom: var(--rz-size-16);
   }
 </style>

@@ -335,6 +335,7 @@
 
 <form
   class="rz-document {className}"
+  data-nested={nestedLevel > 0 ? '' : undefined}
   bind:this={formElement}
   use:form.enhance
   enctype="multipart/form-data"
@@ -424,8 +425,15 @@
   .rz-document {
     container: rz-document / inline-size;
     position: relative;
+    display: flex;
+    flex-direction: column;
     background-image: var(--thumbnail);
     background-size: cover;
+  }
+
+  /* A page of its own is at least the window's height, so the metas sit at its bottom. */
+  .rz-document:not([data-nested]) {
+    min-height: 100svh;
   }
 
   /**
@@ -448,6 +456,7 @@
   }
 
   .rz-document__infos {
+    margin-top: auto;
     border-top: var(--rz-border);
     padding-block: var(--rz-size-6);
   }

@@ -9,9 +9,8 @@
   import { Languages } from '@lucide/svelte';
   import Cookies from 'js-cookie';
 
-  /** `iconOnly` where the label would not fit: the document's header. */
-  type Props = { onLocalClick: (code: string) => void; iconOnly?: boolean };
-  const { onLocalClick, iconOnly = false }: Props = $props();
+  type Props = { onLocalClick: (code: string) => void };
+  const { onLocalClick }: Props = $props();
 
   const locale = getLocaleContext();
   const config = getConfigContext();
@@ -44,14 +43,8 @@
   <DropdownMenu.Root>
     <DropdownMenu.Trigger>
       {#snippet child({ props })}
-        <Button
-          icon={Languages}
-          size={iconOnly ? 'icon-sm' : 'sm'}
-          aria-label={locale.label}
-          variant={props['data-state'] === 'open' ? 'secondary' : 'ghost'}
-          {...props}
-        >
-          {#if !iconOnly}{locale.label}{/if}
+        <Button icon={Languages} size="sm" aria-label={locale.label} variant="secondary" {...props}>
+          {locale.code?.toUpperCase()}
         </Button>
       {/snippet}
     </DropdownMenu.Trigger>
