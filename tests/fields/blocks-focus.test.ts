@@ -291,7 +291,10 @@ test('The renders draw the blocks, a click selects one, the inspector follows', 
 test.describe('On a narrow screen', () => {
   test.use({ viewport: { width: 700, height: 900 } });
 
-  test('the stage stays, the layers and the inspector are drawers', async ({ page, request }) => {
+  test('the stage stays, the layers are a sheet, the inspector a drawer', async ({
+    page,
+    request
+  }) => {
     const docId = await createPage(request);
     await loginAs(page);
     await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
@@ -299,30 +302,30 @@ test.describe('On a narrow screen', () => {
 
     const focus = page.locator('.rz-blocks-focus');
     const renders = focus.locator('.rz-blocks-focus__renders');
-    const layers = focus.locator('.rz-blocks-focus__layers');
+    const layers = page.locator('.rz-blocks-focus__layers-sheet');
     const inspector = focus.locator('.rz-blocks-focus__inspector');
     await expect(renders).toBeVisible();
-    await expect(layers).toBeHidden();
+    await expect(layers).toHaveCount(0);
     await expect(inspector).toBeHidden();
 
-    // The toggle opens the layers; picking a row puts them away and opens the inspector.
+    // The header button opens the layers; picking a row puts them away and opens the inspector.
     await focus.locator('.rz-blocks-focus__layers-toggle').click();
     await expect(layers).toBeVisible();
-    await rows(page).first().click();
-    await expect(layers).toBeHidden();
+    await layers.locator('.rz-layers__row').first().click();
+    await expect(layers).toHaveCount(0);
     await expect(inspector).toBeVisible();
     await expect(renders).toBeVisible();
 
-    // Escape selects the root and puts it away; focus mode stays.
+    // Escape selects the root and puts the inspector away; focus mode stays.
     await page.keyboard.press('Escape');
     await expect(inspector).toBeHidden();
     await expect(focus).toBeVisible();
 
-    // Escape puts the layers away before anything else.
+    // Escape closes the sheet and nothing else.
     await focus.locator('.rz-blocks-focus__layers-toggle').click();
     await expect(layers).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(layers).toBeHidden();
+    await expect(layers).toHaveCount(0);
     await expect(focus).toBeVisible();
   });
 });

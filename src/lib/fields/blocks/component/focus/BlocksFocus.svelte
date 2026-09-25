@@ -4,6 +4,7 @@
   import ButtonSave from '$lib/panel/components/sections/document/ButtonSave.svelte';
   import { Button } from '$lib/panel/components/ui/button/index.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
+  import * as Sheet from '$lib/panel/components/ui/sheet/index.js';
   import { getCommandsContext, useCommands } from '$lib/panel/context/commands.svelte.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
@@ -36,8 +37,20 @@
 
   let confirmRemove = $state(false);
 
-  /** On a narrow screen the layers are a drawer; picking a row puts it away. */
+  /**
+   * Under 45rem the layers leave their column for a sheet, behind a button in the header. The
+   * width is the overlay's own, which starts after the nav; the stylesheet's container query
+   * reads the same one.
+   */
+  let width = $state(0);
+  const narrow = $derived(width > 0 && width < 45 * remPx());
   let layersOpen = $state(false);
+
+  function remPx() {
+    return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  }
+
+  // Picking a row puts the sheet away.
   $effect(() => {
     void focus.selection;
     untrack(() => (layersOpen = false));
@@ -66,10 +79,9 @@
     else focus.removeSelection();
   }
 
-  /** Escape goes back one step: the layers drawer, then the selection, then focus mode. */
+  /** Escape goes back one step: the selection, then focus mode. The sheet closes itself. */
   function back() {
-    if (layersOpen) layersOpen = false;
-    else if (!focus.rootSelected) focus.selectRoot();
+    if (!focus.rootSelected) focus.selectRoot();
     else focus.close();
   }
 
@@ -261,18 +273,10 @@
   class="rz-blocks-focus"
   data-focus={focus.path}
   data-layout={focus.hasRenders ? 'renders' : 'fields'}
-  data-layers-open={layersOpen ? '' : undefined}
   style:left={nav?.width ?? '0'}
+  bind:clientWidth={width}
 >
   <header class="rz-blocks-focus__header">
-    <Button
-      class="rz-blocks-focus__layers-toggle"
-      variant={layersOpen ? 'secondary' : 'ghost'}
-      size="icon-sm"
-      icon={ListTree}
-      aria-label={t__('fields.layers')}
-      onclick={() => (layersOpen = !layersOpen)}
-    />
     <nav class="rz-blocks-focus__crumbs" aria-label="breadcrumb">
       <button type="button" class="rz-blocks-focus__crumb" onclick={() => focus.close()}>
         {form.title}
@@ -300,6 +304,16 @@
     </nav>
 
     <div class="rz-blocks-focus__header-actions">
+      {#if narrow}
+        <Button
+          class="rz-blocks-focus__layers-toggle"
+          variant="ghost"
+          size="icon-sm"
+          icon={ListTree}
+          aria-label={t__('fields.layers')}
+          onclick={() => (layersOpen = true)}
+        />
+      {/if}
       <CommandButton />
       <ButtonSave {form} size="sm" />
       <Button variant="ghost" size="icon" icon={X} onclick={() => focus.close()} />
@@ -307,9 +321,17 @@
   </header>
 
   <div class="rz-blocks-focus__body">
-    <aside class="rz-blocks-focus__layers">
-      <Layers {form} />
-    </aside>
+    {#if narrow}
+      <Sheet.Root bind:open={layersOpen}>
+        <Sheet.Content side="left" size="sm" class="rz-blocks-focus__layers-sheet">
+          <Layers {form} />
+        </Sheet.Content>
+      </Sheet.Root>
+    {:else}
+      <aside class="rz-blocks-focus__layers">
+        <Layers {form} />
+      </aside>
+    {/if}
 
     {#if focus.hasRenders}
       <!-- A click beside the blocks selects the root; the blocks stop their own clicks. -->
@@ -496,9 +518,9 @@
     padding: var(--rz-size-4);
   }
 
-  /* Only on a narrow screen: the layers toggle. Escape puts a drawer away. */
-  .rz-blocks-focus :global(.rz-blocks-focus__layers-toggle) {
-    display: none;
+  :global(.rz-blocks-focus__layers-sheet) {
+    padding: var(--rz-size-4);
+    overflow: auto;
   }
 
   /*
@@ -506,7 +528,7 @@
    *
    *   fields, under 64rem    layers | stage, adding through ⌘K
    *   renders, under 74rem   layers | renders, the inspector a drawer while a block is selected
-   *   both, under 45rem      the stage alone, the layers a drawer behind the header's toggle
+   *   both, under 45rem      the stage alone, the layers in a sheet behind a header button
    */
   @container rz-focus (max-width: 64rem) {
     .rz-blocks-focus__body {
@@ -540,21 +562,6 @@
     .rz-blocks-focus__body,
     .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__body {
       grid-template-columns: minmax(0, 1fr);
-    }
-    .rz-blocks-focus__layers {
-      position: absolute;
-      inset-block: 0;
-      left: 0;
-      z-index: 10;
-      width: min(20rem, 100%);
-      background-color: hsl(var(--rz-color-bg));
-      box-shadow: 8px 0 24px hsl(0 0% 0% / 0.08);
-    }
-    .rz-blocks-focus:not([data-layers-open]) .rz-blocks-focus__layers {
-      display: none;
-    }
-    .rz-blocks-focus :global(.rz-blocks-focus__layers-toggle) {
-      display: flex;
     }
   }
 </style>
