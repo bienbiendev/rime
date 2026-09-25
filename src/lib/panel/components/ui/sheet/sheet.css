@@ -74,6 +74,48 @@
   border-left: var(--rz-border);
 }
 
+.rz-sheet-content--left {
+  height: 100%;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-right: var(--rz-border);
+
+  &[data-state='closed'] {
+    animation-name: exit-left;
+  }
+  &[data-state='open'] {
+    animation-name: enter-left;
+  }
+}
+
+/* Narrow, for a panel beside the page rather than a page of its own. */
+.rz-sheet-content--sm {
+  width: min(var(--rz-size-80), 100%);
+}
+
+@keyframes exit-left {
+  from {
+    opacity: 1;
+    transform: translate3d(0%, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@keyframes enter-left {
+  from {
+    opacity: 0;
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0%, 0, 0);
+  }
+}
+
 /**************************************/
 /* Description
 /**************************************/
@@ -125,7 +167,7 @@
   background-color: var(--rz-overlay-color);
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 1005;
   backdrop-filter: blur(var(--rz-overlay-blur));
 }
 
