@@ -323,7 +323,12 @@
   <div class="rz-blocks-focus__body">
     {#if narrow}
       <Sheet.Root bind:open={layersOpen}>
-        <Sheet.Content side="left" size="sm" class="rz-blocks-focus__layers-sheet">
+        <Sheet.Content
+          showCloseButton={false}
+          side="left"
+          size="sm"
+          class="rz-blocks-focus__layers-sheet"
+        >
           <Layers {form} />
         </Sheet.Content>
       </Sheet.Root>

@@ -14,9 +14,9 @@
   <header class="rz-layers__header">
     <h3>{t__('fields.layers')}</h3>
     <div class="rz-layers__actions">
-      <Button size="xs" variant="text" onclick={focus.collapseAll}
-        >{t__('fields.collapse_all')}</Button
-      >
+      <Button size="xs" variant="text" onclick={focus.collapseAll}>
+        {t__('fields.collapse_all')}
+      </Button>
       <Button size="xs" variant="text" onclick={focus.expandAll}>{t__('fields.expand_all')}</Button>
     </div>
   </header>
@@ -53,6 +53,7 @@
   }
   .rz-layers__actions {
     display: flex;
+    gap: var(--rz-size-2);
   }
 
   .rz-layers__root {
