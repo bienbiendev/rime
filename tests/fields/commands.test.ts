@@ -160,8 +160,10 @@ test('In focus mode, ⌘K in the editor lists the text first, and Escape closes 
     .poll(async () => (await readSections(page, docId))[0].text.content[0].content[0].text)
     .toBe('Alpha saved');
 
-  // Escape on a row closes focus mode.
+  // Escape on a row steps back: the selection, then focus mode.
   await row.click();
+  await page.keyboard.press('Escape');
+  await expect(focus).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(focus).toHaveCount(0);
 });

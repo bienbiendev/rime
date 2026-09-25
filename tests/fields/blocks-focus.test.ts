@@ -101,8 +101,10 @@ test('Focus opens from the field, carries the address, and closes with the chang
     page.locator('.rz-renders__item[data-type="image"] .rz-render-placeholder__title')
   ).toHaveText(/Image/);
 
-  // Escape leaves focus; the inserted block is in the form, unsaved.
+  // Escape steps back: the selection first, then focus; the inserted block is in the form, unsaved.
   await selectedRow(page).press('Escape');
+  await expect(page.locator('.rz-layers__root')).toHaveClass(/rz-layers__root--selected/);
+  await page.keyboard.press('Escape');
   await expect(page.locator('.rz-blocks-focus')).toHaveCount(0);
   await expect(page).not.toHaveURL(/focus=/);
   await expect(
@@ -311,8 +313,16 @@ test.describe('On a narrow screen', () => {
     await expect(inspector).toBeVisible();
     await expect(renders).toBeVisible();
 
-    // Its close button selects the root and puts it away.
-    await inspector.locator('.rz-blocks-focus__drawer-close').click();
+    // Escape selects the root and puts it away; focus mode stays.
+    await page.keyboard.press('Escape');
     await expect(inspector).toBeHidden();
+    await expect(focus).toBeVisible();
+
+    // Escape puts the layers away before anything else.
+    await focus.locator('.rz-blocks-focus__layers-toggle').click();
+    await expect(layers).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(layers).toBeHidden();
+    await expect(focus).toBeVisible();
   });
 });

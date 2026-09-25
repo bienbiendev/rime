@@ -66,6 +66,13 @@
     else focus.removeSelection();
   }
 
+  /** Escape goes back one step: the layers drawer, then the selection, then focus mode. */
+  function back() {
+    if (layersOpen) layersOpen = false;
+    else if (!focus.rootSelected) focus.selectRoot();
+    else focus.close();
+  }
+
   async function paste() {
     const id = await focus.pasteAfterSelection();
     if (!id) toast.warning(t__('fields.paste_refused'));
@@ -239,12 +246,12 @@
         run: () => commands?.palette.show({ group: ADD })
       },
       {
-        id: 'blocks.close',
+        id: 'blocks.back',
         label: '',
         keys: 'escape',
         hidden: true,
         when: free,
-        run: () => focus.close()
+        run: back
       }
     ];
   });
@@ -311,14 +318,6 @@
       </section>
       <aside class="rz-blocks-focus__inspector" data-open={focus.current ? '' : undefined}>
         {#if focus.current}
-          <Button
-            class="rz-blocks-focus__drawer-close"
-            variant="ghost"
-            size="icon-sm"
-            icon={X}
-            aria-label={t__('common.close')}
-            onclick={focus.selectRoot}
-          />
           <Stage {form} onRemove={requestRemove} />
         {:else if !focus.locked}
           <div class="rz-blocks-focus__inspector-palette"><Palette {form} /></div>
@@ -497,9 +496,8 @@
     padding: var(--rz-size-4);
   }
 
-  /* Only on a narrow screen: the layers toggle, and the inspector's close. */
-  .rz-blocks-focus :global(.rz-blocks-focus__layers-toggle),
-  .rz-blocks-focus :global(.rz-blocks-focus__drawer-close) {
+  /* Only on a narrow screen: the layers toggle. Escape puts a drawer away. */
+  .rz-blocks-focus :global(.rz-blocks-focus__layers-toggle) {
     display: none;
   }
 
@@ -535,10 +533,6 @@
     }
     .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__inspector:not([data-open]) {
       display: none;
-    }
-    .rz-blocks-focus[data-layout='renders'] :global(.rz-blocks-focus__drawer-close) {
-      display: flex;
-      margin: var(--rz-size-2) var(--rz-size-2) 0 auto;
     }
   }
 
