@@ -1,7 +1,9 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+  import { shiftListPath } from '$lib/panel/context/blocks-ops.js';
   import { useSortable } from '$lib/panel/util/Sortable.js';
+  import { GripVertical } from '@lucide/svelte';
   import type Sortable from 'sortablejs';
   import { getBlocksFocusContext } from './focus.svelte.js';
   import RenderPlaceholder from './RenderPlaceholder.svelte';
@@ -21,31 +23,44 @@
   }
 
   /**
-   * A drop target for the palette, never a source: a type dragged from it lands at the drop
-   * index. The blocks themselves do not drag, so a field inside a render keeps the mouse.
+   * The stage is in the same group as the layers: a block drags from one to the other, and a
+   * type drags in from the palette. Only the grip starts a drag, so a field inside a render
+   * keeps the mouse.
    */
   const { sortable } = useSortable({
     group: {
       name: 'rz-blocks-layers',
-      pull: false,
-      put: (_to, from, dragged) =>
-        from.el.classList.contains('rz-palette__list') &&
-        form.blocks.accepts(list, (dragged as HTMLElement).dataset.type ?? '')
+      pull: true,
+      put: (to, _from, dragged) =>
+        form.blocks.accepts(to.el.dataset.list ?? '', (dragged as HTMLElement).dataset.type ?? '')
     },
-    sort: false,
+    handle: '.rz-renders__grip',
     draggable: '.rz-renders__item',
-    filter: '.rz-renders__item',
-    preventOnFilter: false,
     animation: 150,
+    fallbackOnBody: true,
+    swapThreshold: 0.65,
     disabled: focus.locked,
+    /** A type dropped from the palette: a new block at the drop index. */
     onAdd: (event: Sortable.SortableEvent) => {
+      if (!event.from.classList.contains('rz-palette__list')) return;
       const type = event.item.dataset.type;
       if (type === undefined || event.newIndex === undefined) return;
       focus.insertType(type, { list, index: event.newIndex });
+    },
+    onEnd: (event: Sortable.SortableEvent) => {
+      const fromList = event.from.dataset.list;
+      const toList = event.to.dataset.list;
+      const { oldIndex, newIndex } = event;
+      if (fromList === undefined || toList === undefined) return;
+      if (oldIndex === undefined || newIndex === undefined) return;
+      form.blocks.move(`${fromList}.${oldIndex}`, { list: toList, index: newIndex });
+      const landed =
+        fromList === toList ? toList : shiftListPath(toList, { list: fromList, index: oldIndex });
+      focus.select(`${landed}.${newIndex}`);
     }
   });
 
-  function dropTarget(node: HTMLElement) {
+  function sortableList(node: HTMLElement) {
     const instance = sortable(node);
     return { destroy: () => instance.destroy() };
   }
@@ -55,7 +70,7 @@
   One list of blocks, one wrapper per block. A block's nested lists are the `nested` snippet its
   render puts where they go; a block without a render is a placeholder card with them below.
 -->
-<div class="rz-renders" data-list={list} data-empty={rows.length ? undefined : ''} use:dropTarget>
+<div class="rz-renders" data-list={list} data-empty={rows.length ? undefined : ''} use:sortableList>
   {#each rows as row (row.block.id)}
     {@const config = row.config}
     {@const Render = config?.render}
@@ -80,6 +95,9 @@
         }
       }}
     >
+      {#if !focus.locked}
+        <span class="rz-renders__grip" aria-hidden="true"><GripVertical size={14} /></span>
+      {/if}
       {#if config?.render}
         <svelte:boundary>
           <Render
@@ -118,6 +136,7 @@
   }
 
   .rz-renders__item {
+    position: relative;
     outline: 1px solid transparent;
     outline-offset: 3px;
     cursor: pointer;
@@ -136,6 +155,31 @@
   .rz-renders__item[data-selected],
   .rz-renders__item[data-selected]:hover {
     outline: 2px solid hsl(var(--rz-color-spot) / 0.3);
+  }
+
+  /** The one thing that drags: the block's own fields keep the mouse. */
+  .rz-renders__grip {
+    position: absolute;
+    top: 0;
+    left: calc(-1 * var(--rz-size-6));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--rz-size-5);
+    height: var(--rz-size-7);
+    border-radius: var(--rz-radius-sm);
+    opacity: 0;
+    cursor: grab;
+    color: hsl(var(--rz-color-fg) / 0.5);
+  }
+
+  .rz-renders__item:hover > .rz-renders__grip,
+  .rz-renders__item[data-selected] > .rz-renders__grip {
+    opacity: 1;
+  }
+
+  :global(.rz-renders__item.sortable-ghost) {
+    opacity: 0.4;
   }
 
   .rz-renders__empty {

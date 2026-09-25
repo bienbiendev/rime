@@ -178,11 +178,11 @@ get hasRenders() {
 The inspector is `Stage` for the selected block; nothing selected, it is the `Palette`, listing
 the types the open list takes. A click on the stage beside the blocks selects the root.
 
-The palette rows drag: a sortable source with `pull: 'clone'`, the clone removed on drop. The layers
-lists and every `.rz-renders` list take the drop (`put` checks `form.blocks.accepts`) and call
-`focus.insertType(type, { list, index })` in `onAdd`. A `.rz-renders` list never drags its own
-blocks (`filter` on the items, `preventOnFilter: false`), so a field inside a render keeps the
-mouse.
+The palette rows drag: a sortable source with `pull: 'clone'`, the clone removed on drop. The
+layers lists and every `.rz-renders` list take the drop (`put` checks `form.blocks.accepts`) and
+call `focus.insertType(type, { list, index })` in `onAdd`. The stage is in the same group as the
+layers, so a block drags from one to the other and between lists; only a grip on the left of a
+wrapper starts the drag (`handle`), so a field inside a render keeps the mouse.
 
 **`Renders.svelte`**, one list, recursive like `LayersList`: one wrapper per block. A block's
 nested lists are a `children` snippet handed to its render, which puts `{@render children()}`
