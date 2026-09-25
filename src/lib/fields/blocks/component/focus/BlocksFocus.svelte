@@ -404,15 +404,25 @@
     flex-shrink: 0;
   }
 
+  /*
+   * The two sides are the same width, so the stage sits in the middle of the page, where the
+   * document's centred column was when focus opened.
+   *
+   *   --rz-focus-side: 18rem, the renders layout's inspector 22rem
+   */
   .rz-blocks-focus__body {
+    --rz-focus-side: 18rem;
     display: grid;
-    grid-template-columns: minmax(14rem, 1fr) minmax(0, 3fr) minmax(12rem, 1fr);
+    grid-template-columns:
+      minmax(var(--rz-focus-side), 1fr)
+      minmax(0, 3fr)
+      minmax(var(--rz-focus-side), 1fr);
     min-height: 0;
   }
 
-  /* With renders: layers, the stack of renders, the inspector. */
+  /* With renders: layers, the stack of renders, the inspector, which wants room for fields. */
   .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__body {
-    grid-template-columns: minmax(14rem, 1fr) minmax(0, 3fr) minmax(22rem, 1.5fr);
+    --rz-focus-side: 22rem;
   }
 
   .rz-blocks-focus__layers,
