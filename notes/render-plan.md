@@ -181,8 +181,10 @@ the types the open list takes. A click on the stage beside the blocks selects th
 The palette rows drag: a sortable source with `pull: 'clone'`, the clone removed on drop. The
 layers lists and every `.rz-renders` list take the drop (`put` checks `form.blocks.accepts`) and
 call `focus.insertType(type, { list, index })` in `onAdd`. The stage is in the same group as the
-layers, so a block drags from one to the other and between lists; only a grip on the left of a
-wrapper starts the drag (`handle`), so a field inside a render keeps the mouse.
+layers, so a block drags from one to the other and between lists, a nested list included. The
+block drags by its body; an editable spot inside a render, an input, a `.ProseMirror`, a link,
+keeps the mouse (`filter`, `preventOnFilter: false`), and the rich text keeps its own drag
+handle.
 
 **`Renders.svelte`**, one list, recursive like `LayersList`: one wrapper per block. A block's
 nested lists are a `children` snippet handed to its render, which puts `{@render children()}`

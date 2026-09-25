@@ -3,7 +3,6 @@
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { shiftListPath } from '$lib/panel/context/blocks-ops.js';
   import { useSortable } from '$lib/panel/util/Sortable.js';
-  import { GripVertical } from '@lucide/svelte';
   import type Sortable from 'sortablejs';
   import { getBlocksFocusContext } from './focus.svelte.js';
   import RenderPlaceholder from './RenderPlaceholder.svelte';
@@ -22,10 +21,12 @@
     focus.select(rowPath, { extend: event.shiftKey });
   }
 
+  /** An editable spot inside a render keeps the mouse; the rest of the block drags. */
+  const EDITABLE = 'input, textarea, select, button, a[href], [contenteditable], .ProseMirror';
+
   /**
-   * The stage is in the same group as the layers: a block drags from one to the other, and a
-   * type drags in from the palette. Only the grip starts a drag, so a field inside a render
-   * keeps the mouse.
+   * The stage is in the same group as the layers: a block drags from one to the other, a type
+   * drags in from the palette, and a nested list is a target like any other.
    */
   const { sortable } = useSortable({
     group: {
@@ -34,8 +35,9 @@
       put: (to, _from, dragged) =>
         form.blocks.accepts(to.el.dataset.list ?? '', (dragged as HTMLElement).dataset.type ?? '')
     },
-    handle: '.rz-renders__grip',
     draggable: '.rz-renders__item',
+    filter: EDITABLE,
+    preventOnFilter: false,
     animation: 150,
     fallbackOnBody: true,
     swapThreshold: 0.65,
@@ -95,9 +97,6 @@
         }
       }}
     >
-      {#if !focus.locked}
-        <span class="rz-renders__grip" aria-hidden="true"><GripVertical size={14} /></span>
-      {/if}
       {#if config?.render}
         <svelte:boundary>
           <Render
@@ -136,7 +135,6 @@
   }
 
   .rz-renders__item {
-    position: relative;
     outline: 1px solid transparent;
     outline-offset: 3px;
     cursor: pointer;
@@ -155,27 +153,6 @@
   .rz-renders__item[data-selected],
   .rz-renders__item[data-selected]:hover {
     outline: 2px solid hsl(var(--rz-color-spot) / 0.3);
-  }
-
-  /** The one thing that drags: the block's own fields keep the mouse. */
-  .rz-renders__grip {
-    position: absolute;
-    top: 0;
-    left: calc(-1 * var(--rz-size-6));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--rz-size-5);
-    height: var(--rz-size-7);
-    border-radius: var(--rz-radius-sm);
-    opacity: 0;
-    cursor: grab;
-    color: hsl(var(--rz-color-fg) / 0.5);
-  }
-
-  .rz-renders__item:hover > .rz-renders__grip,
-  .rz-renders__item[data-selected] > .rz-renders__grip {
-    opacity: 1;
   }
 
   :global(.rz-renders__item.sortable-ghost) {
