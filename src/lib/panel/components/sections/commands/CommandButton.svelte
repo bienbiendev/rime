@@ -23,6 +23,7 @@
     type="button"
     class="rz-cmdk-input"
     variant="outline"
+    size="sm"
     aria-label={t__('common.commands')}
     onclick={() => commands?.palette.show()}
   >
