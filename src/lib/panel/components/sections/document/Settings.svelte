@@ -1,6 +1,5 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { resolve } from '$app/paths';
   import { PARAMS } from '$lib/core/constants.js';
   import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
   import { apiUrl, panelPath } from '$lib/core/routes/util.js';
@@ -60,7 +59,7 @@
     }
     toast.success(t__('common.version_deleted'));
     APIProxy.invalidate(form.config.slug);
-    await goto(resolve(documentPath));
+    await goto(documentPath);
   }
 
   function handleNewDraft() {
@@ -95,7 +94,7 @@
     }).then((response) => {
       if (response.ok) {
         toast.success(t__('common.doc_deleted'));
-        goto(resolve(panelPath(form.config.kebab)));
+        goto(panelPath(form.config.kebab));
       } else {
         toast.error(t__('error.generic'));
       }
@@ -118,7 +117,7 @@
     }
     const { id } = await success.json();
     toast.success(t__('common.duplicate_success'));
-    await goto(resolve(panelPath(form.config.kebab, id)));
+    await goto(panelPath(form.config.kebab, id));
   }
 
   /** The menu's entries, in the palette as well. */
