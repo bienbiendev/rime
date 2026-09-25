@@ -5,6 +5,9 @@ const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
+// Wide enough for focus mode's three columns; a narrow screen has its own test.
+test.use({ viewport: { width: 1600, height: 900 } });
+
 /**
  * The command palette: ⌘K lists what the page offers first, what the panel offers below, and the
  * documents the query finds. On the `pages` fixture, whose `paragraph` block has a render.

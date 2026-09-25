@@ -166,14 +166,15 @@ get hasRenders() {
   </div>
 ```
 
-```css
-[data-layout='renders'] .rz-blocks-focus__body {
-  grid-template-columns: minmax(14rem, 1fr) minmax(0, 3fr) minmax(22rem, 1.5fr);
-}
-@media (max-width: 60rem) {
-  /* the inspector stays, the renders column goes */
-}
-```
+The sides are the same width, so the stage sits where the document's column was. Narrower, the
+stage never goes; the sides do, as container queries on the overlay, which starts after the nav:
+
+| overlay width | fields layout                                               | renders layout                                                    |
+| ------------- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| wide          | layers, stage, palette                                      | layers, renders, inspector                                        |
+| under 64rem   | layers, stage; add with ⌘K                                  | as wide                                                           |
+| under 74rem   |                                                             | layers, renders; the inspector a drawer while a block is selected |
+| under 45rem   | the stage alone; the layers a drawer behind a header toggle | the same                                                          |
 
 The inspector is `Stage` for the selected block; nothing selected, it is the `Palette`, listing
 the types the open list takes. A click on the stage beside the blocks selects the root.

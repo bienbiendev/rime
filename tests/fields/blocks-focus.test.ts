@@ -5,6 +5,9 @@ const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
+// Wide enough for focus mode's three columns; a narrow screen has its own test.
+test.use({ viewport: { width: 1600, height: 900 } });
+
 /**
  * The blocks focus mode, on the `pages` fixture: `sections` takes paragraph, image, keyFacts and
  * grid, a grid holds `items` of paragraph and image, and `extras` is a summary field.
@@ -281,4 +284,35 @@ test('The renders draw the blocks, a click selects one, the inspector follows', 
       return grid.items[0].text.content[0].content[0].text;
     })
     .toBe('Inner plus');
+});
+
+test.describe('On a narrow screen', () => {
+  test.use({ viewport: { width: 700, height: 900 } });
+
+  test('the stage stays, the layers and the inspector are drawers', async ({ page, request }) => {
+    const docId = await createPage(request);
+    await loginAs(page);
+    await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
+    await page.waitForLoadState('networkidle');
+
+    const focus = page.locator('.rz-blocks-focus');
+    const renders = focus.locator('.rz-blocks-focus__renders');
+    const layers = focus.locator('.rz-blocks-focus__layers');
+    const inspector = focus.locator('.rz-blocks-focus__inspector');
+    await expect(renders).toBeVisible();
+    await expect(layers).toBeHidden();
+    await expect(inspector).toBeHidden();
+
+    // The toggle opens the layers; picking a row puts them away and opens the inspector.
+    await focus.locator('.rz-blocks-focus__layers-toggle').click();
+    await expect(layers).toBeVisible();
+    await rows(page).first().click();
+    await expect(layers).toBeHidden();
+    await expect(inspector).toBeVisible();
+    await expect(renders).toBeVisible();
+
+    // Its close button selects the root and puts it away.
+    await inspector.locator('.rz-blocks-focus__drawer-close').click();
+    await expect(inspector).toBeHidden();
+  });
 });

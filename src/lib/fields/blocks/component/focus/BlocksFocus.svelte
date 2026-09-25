@@ -10,7 +10,8 @@
   import { getNavContext } from '$lib/panel/context/nav.svelte.js';
   import { populate } from '$lib/panel/util/populate.js';
   import { capitalize } from '$lib/util/string.js';
-  import { ToyBrick, X } from '@lucide/svelte';
+  import { ListTree, ToyBrick, X } from '@lucide/svelte';
+  import { untrack } from 'svelte';
   import { toast } from 'svelte-sonner';
   import { getBlocksFocusContext } from './focus.svelte.js';
   import Layers from './Layers.svelte';
@@ -34,6 +35,13 @@
   );
 
   let confirmRemove = $state(false);
+
+  /** On a narrow screen the layers are a drawer; picking a row puts it away. */
+  let layersOpen = $state(false);
+  $effect(() => {
+    void focus.selection;
+    untrack(() => (layersOpen = false));
+  });
 
   // A focus session starts with fresh relations in the renders.
   populate.clear();
@@ -246,9 +254,18 @@
   class="rz-blocks-focus"
   data-focus={focus.path}
   data-layout={focus.hasRenders ? 'renders' : 'fields'}
+  data-layers-open={layersOpen ? '' : undefined}
   style:left={nav?.width ?? '0'}
 >
   <header class="rz-blocks-focus__header">
+    <Button
+      class="rz-blocks-focus__layers-toggle"
+      variant={layersOpen ? 'secondary' : 'ghost'}
+      size="icon-sm"
+      icon={ListTree}
+      aria-label={t__('fields.layers')}
+      onclick={() => (layersOpen = !layersOpen)}
+    />
     <nav class="rz-blocks-focus__crumbs" aria-label="breadcrumb">
       <button type="button" class="rz-blocks-focus__crumb" onclick={() => focus.close()}>
         {form.title}
@@ -292,8 +309,16 @@
       <section class="rz-blocks-focus__renders" role="presentation" onclick={focus.selectRoot}>
         <Renders {form} list={focus.path ?? ''} />
       </section>
-      <aside class="rz-blocks-focus__inspector">
+      <aside class="rz-blocks-focus__inspector" data-open={focus.current ? '' : undefined}>
         {#if focus.current}
+          <Button
+            class="rz-blocks-focus__drawer-close"
+            variant="ghost"
+            size="icon-sm"
+            icon={X}
+            aria-label={t__('common.close')}
+            onclick={focus.selectRoot}
+          />
           <Stage {form} onRemove={requestRemove} />
         {:else if !focus.locked}
           <div class="rz-blocks-focus__inspector-palette"><Palette {form} /></div>
@@ -339,6 +364,7 @@
      on its own. */
   .rz-blocks-focus {
     --rz-fields-padding: var(--rz-size-6);
+    container: rz-focus / inline-size;
     position: fixed;
     inset: 0;
     z-index: 200;
@@ -412,6 +438,7 @@
    */
   .rz-blocks-focus__body {
     --rz-focus-side: 18rem;
+    position: relative;
     display: grid;
     grid-template-columns:
       minmax(var(--rz-focus-side), 1fr)
@@ -470,14 +497,70 @@
     padding: var(--rz-size-4);
   }
 
-  @media (max-width: 60rem) {
+  /* Only on a narrow screen: the layers toggle, and the inspector's close. */
+  .rz-blocks-focus :global(.rz-blocks-focus__layers-toggle),
+  .rz-blocks-focus :global(.rz-blocks-focus__drawer-close) {
+    display: none;
+  }
+
+  /*
+   * Narrower, the stage never goes; the sides do, one after the other.
+   *
+   *   fields, under 64rem    layers | stage, adding through ⌘K
+   *   renders, under 74rem   layers | renders, the inspector a drawer while a block is selected
+   *   both, under 45rem      the stage alone, the layers a drawer behind the header's toggle
+   */
+  @container rz-focus (max-width: 64rem) {
+    .rz-blocks-focus__body {
+      grid-template-columns: minmax(var(--rz-focus-side), 1fr) minmax(0, 3fr);
+    }
+    .rz-blocks-focus__palette {
+      display: none;
+    }
+  }
+
+  @container rz-focus (max-width: 74rem) {
+    .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__body {
+      --rz-focus-side: 18rem;
+      grid-template-columns: minmax(var(--rz-focus-side), 1fr) minmax(0, 3fr);
+    }
+    .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__inspector {
+      position: absolute;
+      inset-block: 0;
+      right: 0;
+      z-index: 10;
+      width: min(26rem, 100%);
+      background-color: hsl(var(--rz-color-bg));
+      box-shadow: -8px 0 24px hsl(0 0% 0% / 0.08);
+    }
+    .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__inspector:not([data-open]) {
+      display: none;
+    }
+    .rz-blocks-focus[data-layout='renders'] :global(.rz-blocks-focus__drawer-close) {
+      display: flex;
+      margin: var(--rz-size-2) var(--rz-size-2) 0 auto;
+    }
+  }
+
+  @container rz-focus (max-width: 45rem) {
     .rz-blocks-focus__body,
     .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__body {
-      grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr);
+      grid-template-columns: minmax(0, 1fr);
     }
-    .rz-blocks-focus__palette,
-    .rz-blocks-focus__renders {
+    .rz-blocks-focus__layers {
+      position: absolute;
+      inset-block: 0;
+      left: 0;
+      z-index: 10;
+      width: min(20rem, 100%);
+      background-color: hsl(var(--rz-color-bg));
+      box-shadow: 8px 0 24px hsl(0 0% 0% / 0.08);
+    }
+    .rz-blocks-focus:not([data-layers-open]) .rz-blocks-focus__layers {
       display: none;
+    }
+    .rz-blocks-focus :global(.rz-blocks-focus__layers-toggle) {
+      display: flex;
     }
   }
 </style>
