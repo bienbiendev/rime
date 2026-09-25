@@ -93,7 +93,8 @@
     z-index: 10;
     display: grid;
     gap: var(--rz-size-2);
-    padding: var(--rz-size-3) var(--rz-page-gutter);
+    padding-block: var(--rz-size-3);
+    padding-inline: max(var(--rz-page-gutter), calc((100% - var(--rz-document-width, 60rem)) / 2));
     background-color: light-dark(hsl(var(--rz-gray-19)), hsl(var(--rz-gray-4)));
   }
   .rz-auto-save-banner {

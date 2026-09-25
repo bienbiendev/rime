@@ -428,19 +428,27 @@
     background-size: cover;
   }
 
+  /**
+   * The editor stops growing and centres itself; the gutter is the floor.
+   *
+   *   --rz-document-width: 60rem
+   */
+  .rz-document__fields,
+  .rz-document__infos {
+    padding-inline: max(var(--rz-page-gutter), calc((100% - var(--rz-document-width, 60rem)) / 2));
+  }
+
   .rz-document__fields {
     display: grid;
     gap: var(--rz-size-4);
     align-content: flex-start;
     margin-left: calc(-1 * var(--rz-fields-padding));
     margin-right: calc(-1 * var(--rz-fields-padding));
-    padding: var(--rz-size-5) var(--rz-page-gutter);
-    padding-bottom: var(--rz-size-24);
+    padding-block: var(--rz-size-5) var(--rz-size-24);
   }
 
   .rz-document__infos {
     border-top: var(--rz-border);
-    padding-inline: var(--rz-page-gutter);
     padding-block: var(--rz-size-6);
   }
 
