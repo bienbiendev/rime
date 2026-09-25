@@ -204,7 +204,7 @@ test('A summary field is one row that opens focus', async ({ page, request }) =>
   await page.goto(panelUrl('pages', docId));
   await page.waitForLoadState('networkidle');
 
-  // The list field keeps its cards; the summary field has none, only the count and Edit.
+  // The list field keeps its cards; the summary field has one row, the count and Edit.
   await expect(page.locator('fieldset[data-path="sections"] > .rz-blocks__list')).toBeVisible();
   const extras = page.locator('fieldset[data-path="extras"]');
   await expect(extras.locator('.rz-blocks__list')).toHaveCount(0);

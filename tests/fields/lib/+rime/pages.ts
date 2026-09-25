@@ -125,7 +125,7 @@ export const Pages = Collection.create('pages', {
 
     blocks('sections', [blockParagraph, blockImage, blockKeyFacts, blockGrid]),
     // One row in the form, edited in focus mode.
-    blocks('extras', [blockParagraph, blockImage]).summary(),
+    blocks('extras', [blockParagraph, blockImage]).layout('summary'),
 
     tree('links').fields(text('label'), link('url').types('url'))
   ]

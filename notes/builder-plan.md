@@ -175,7 +175,7 @@ instead of the flat field list. Same components, same operations over the pane's
 
 ```ts
 blocks('sections', [Diaporama, Title, ImagesGrid]); // inline cards + Focus button
-blocks('sections', [...]).summary();                // inline: "3 sections · Edit", Edit opens focus
+blocks('sections', [...]).layout('summary');        // inline: "3 sections · Edit", Edit opens focus
 block('title').render(TitleRender);                 // drawn in the stage
 ```
 
@@ -214,9 +214,9 @@ A live-edit test comes with §6, on `tests/basic/pages.test.ts` where live is co
 | ----- | ------------------------------------------------------------ | ---- |
 | A     | §1 operations, unit tests, inline cards moved onto them      | S    |
 | B     | §3 shell, layers, stage fields, palette; §4 keys and ⌘K; e2e | L    |
-| C     | §5 render, the renders stage, inspector, `populate`         | M    |
+| C     | §5 render, the renders stage, inspector, `populate`          | M    |
 | D     | §6 live pane on the same components                          | M    |
-| E     | `.summary()`                                                 | S    |
+| E     | `.layout('summary')`                                         | S    |
 
 Each stage ships on its own, one `Added:` changeset per stage. B does not wait for the traversal
 refactor in `notes/decoupling-field-traversal.md`: `accepts` and the stage both go through the
@@ -232,7 +232,7 @@ existing `getFieldAtPath` / `getFieldListAtPath`, and move onto the new contract
 - A form that is read-only (lock held by someone else): layers navigable, operations disabled,
   palette hidden.
 - Narrow screens: layers and palette as drawers over the stage.
-- `summary` on a localized field: where the locale badge and _copy from default locale_ go.
+- `layout('summary')` on a localized field: where the locale badge and _copy from default locale_ go.
 
 ## 11. Out of scope
 

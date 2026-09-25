@@ -40,11 +40,11 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
   }
 
   /**
-   * One row in the document form, `3 blocks · Edit`, with the blocks edited in focus mode.
-   * For a layout field, in place of the list of cards.
+   * `default`: the list of cards in the document form.
+   * `summary`: one row, `3 blocks · Edit`, with the blocks edited in focus mode.
    */
-  summary() {
-    this.field.summary = true;
+  layout(layout: 'default' | 'summary') {
+    this.field.layout = layout;
     return this;
   }
 
@@ -224,8 +224,8 @@ export class BlockBuilder {
 export type BlocksField = FormField & {
   type: 'blocks';
   tree?: boolean;
-  /** Rendered as one row in the form; the blocks are edited in focus mode. */
-  summary?: boolean;
+  /** `summary`: one row in the form, the blocks edited in focus mode. */
+  layout?: 'default' | 'summary';
   blocks: BlockBuilder[];
 };
 
@@ -258,6 +258,6 @@ export type BlocksFieldBlock = {
 export type BlocksFieldRaw = FormField & {
   type: 'blocks';
   tree?: boolean;
-  summary?: boolean;
+  layout?: 'default' | 'summary';
   blocks: WithoutBuilders<BlocksFieldBlock>[];
 };

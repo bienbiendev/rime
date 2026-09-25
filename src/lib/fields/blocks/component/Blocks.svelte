@@ -21,7 +21,7 @@
   /** The document's focus mode, absent in a nested form. */
   const focus = getBlocksFocusContext();
   const list = $derived(normalizeFieldPath(path));
-  const summary = $derived(!!config.get.summary && !!focus);
+  const summary = $derived(config.get.layout === 'summary' && !!focus);
 
   let blockList: HTMLElement;
 
@@ -98,7 +98,7 @@
         {#if config.get.localized}
           <sup>{locale.code}</sup>
         {/if}
-        {#if focus}
+        {#if focus && !summary}
           <Button
             onclick={() => focus.open(list)}
             size="xs"
@@ -106,20 +106,14 @@
             icon={Maximize2}
             data-focus-open={list}
           >
-            {summary ? t__('fields.edit') : t__('fields.focus')}
+            {t__('fields.focus')}
           </Button>
         {/if}
       </h3>
       <Field.Hint {config} />
     </div>
     <div class="rz-blocks__actions">
-      {#if summary}
-        <span class="rz-blocks__count">
-          {blockState.blocks.length === 1
-            ? t__('fields.blocks_count', '1')
-            : t__('fields.blocks_count|m|p', String(blockState.blocks.length))}
-        </span>
-      {:else if hasBlocks}
+      {#if !summary && hasBlocks}
         <Button onclick={collapseAll} size="xs" variant="outline">
           {t__('fields.collapse_all')}
         </Button>
@@ -128,7 +122,25 @@
     </div>
   </header>
 
-  {#if !summary}
+  {#if summary && focus}
+    <!-- One row: how many blocks, and the way into focus mode where they are edited. -->
+    <div class="rz-blocks__summary">
+      <span class="rz-blocks__count">
+        {blockState.blocks.length === 1
+          ? t__('fields.blocks_count', '1')
+          : t__('fields.blocks_count|m|p', String(blockState.blocks.length))}
+      </span>
+      <Button
+        onclick={() => focus.open(list)}
+        size="sm"
+        variant="outline"
+        icon={Maximize2}
+        data-focus-open={list}
+      >
+        {t__('fields.edit')}
+      </Button>
+    </div>
+  {:else}
     <div class="rz-blocks__list" data-empty={!hasBlocks ? '' : null} bind:this={blockList}>
       {#if hasBlocks}
         {#each blockState.blocks as block, index (block.id)}
@@ -180,10 +192,19 @@
     gap: var(--rz-size-2);
   }
 
+  .rz-blocks__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--rz-size-4);
+    padding: var(--rz-size-3) var(--rz-size-3) var(--rz-size-3) var(--rz-size-5);
+    border: var(--rz-border);
+    border-radius: var(--rz-radius-sm);
+  }
+
   .rz-blocks__count {
-    font-size: var(--rz-text-xs);
-    color: hsl(var(--rz-color-fg) / 0.5);
-    margin-right: var(--rz-size-2);
+    font-size: var(--rz-text-sm);
+    color: hsl(var(--rz-color-fg) / 0.6);
   }
 
   .rz-blocks__list {
