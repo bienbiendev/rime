@@ -23,15 +23,19 @@ export type Command = {
   run: (event?: KeyboardEvent) => unknown;
 };
 
-/** The commands a mounted component offers, read when a key comes or the palette opens. */
-type Scope = { get: () => Command[] };
+/**
+ * The commands a mounted component offers, read when a key comes or the palette opens. `depth`
+ * is how many scopes it sits inside; `order` breaks a tie, the latest mounted first.
+ */
+type Scope = { get: () => Command[]; depth: number; order: number };
 
 const KEY = Symbol('rime.commands');
+const DEPTH = Symbol('rime.commands.depth');
 
 /**
- * One dispatcher for every key of the panel, and one palette. Components stack their scopes as
- * they mount; a key goes to the innermost scope that claims it, and the palette lists them all,
- * the innermost first, so what the page offers comes before what the panel offers.
+ * One dispatcher for every key of the panel, and one palette. Components nest their scopes; a key
+ * goes to the innermost scope that claims it, and the palette lists them all, the innermost
+ * first, so what the page offers comes before what the panel offers.
  */
 export function setCommandsContext() {
   // Read on a key and when the palette opens, never by a derived: a plain array, so registering
@@ -41,18 +45,20 @@ export function setCommandsContext() {
   let query = $state('');
   let group = $state<string | null>(null);
   let listed = $state.raw<Command[]>([]);
+  let mounted = 0;
 
-  function register(scope: Scope) {
-    scopes = [...scopes, scope];
+  function register(scope: Omit<Scope, 'order'>) {
+    const entry = { ...scope, order: mounted++ };
+    scopes = [...scopes, entry];
     return () => {
-      scopes = scopes.filter((candidate) => candidate !== scope);
+      scopes = scopes.filter((candidate) => candidate !== entry);
     };
   }
 
   /** What is offered right now, innermost scope first. */
   function available(): Command[] {
     return scopes
-      .toReversed()
+      .toSorted((a, b) => b.depth - a.depth || b.order - a.order)
       .flatMap((scope) => scope.get())
       .filter((command) => !command.when || command.when());
   }
@@ -110,9 +116,23 @@ export function getCommandsContext() {
   return getContext<CommandsContext | undefined>(KEY);
 }
 
-/** The commands a component offers while it is mounted. Outside the panel, nothing listens. */
-export function useCommands(get: () => Command[]) {
+/**
+ * The commands a component offers while it is mounted. Outside the panel, nothing listens.
+ *
+ * Its depth is one more than the scope it sits in, and the components under it sit one deeper:
+ *
+ *   Document 1 > BlocksFocus 2 > RichText 3
+ *
+ * `depth: 0` puts it with the panel's own, below every page: the language, the navigation.
+ */
+export function useCommands(get: () => Command[], options: { depth?: number } = {}) {
   const commands = getCommandsContext();
   if (!commands) return;
-  $effect(() => commands.register({ get }));
+  let depth = options.depth;
+  if (depth === undefined) {
+    depth = (getContext<number>(DEPTH) ?? 0) + 1;
+    setContext(DEPTH, depth);
+  }
+  const scope = { get, depth };
+  $effect(() => commands.register(scope));
 }

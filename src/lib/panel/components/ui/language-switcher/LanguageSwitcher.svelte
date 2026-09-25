@@ -25,17 +25,19 @@
     onLocalClick(code);
   }
 
-  /** The other locales, in the palette. */
-  useCommands(() =>
-    locales
-      .filter((item) => !isActive(item.code))
-      .map((item) => ({
-        id: `locale.${item.code}`,
-        label: t__('common.switch_to_language', item.label),
-        group: t__('common.language'),
-        icon: Languages,
-        run: () => switchTo(item.code)
-      }))
+  /** The other locales, in the palette, with the panel's own commands below the page's. */
+  useCommands(
+    () =>
+      locales
+        .filter((item) => !isActive(item.code))
+        .map((item) => ({
+          id: `locale.${item.code}`,
+          label: t__('common.switch_to_language', item.label),
+          group: t__('common.language'),
+          icon: Languages,
+          run: () => switchTo(item.code)
+        })),
+    { depth: 0 }
   );
 </script>
 

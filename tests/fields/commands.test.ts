@@ -129,6 +129,13 @@ test('In focus mode, ⌘K in the editor lists the text first, and Escape closes 
   const focus = page.locator('.rz-blocks-focus');
   await expect(focus).toBeVisible();
 
+  // Nothing selected: the types to add come first, before the document's own.
+  await page.keyboard.press('Control+k');
+  await expect(dialog(page)).toBeVisible();
+  await expect(dialog(page).locator('.rz-command-group__heading').first()).toHaveText('Add');
+  await page.keyboard.press('Escape');
+  await expect(dialog(page)).toHaveCount(0);
+
   const row = page.locator('.rz-layers__row').first();
   await row.click();
   await expect(row).toHaveClass(/rz-layers__row--selected/);

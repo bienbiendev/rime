@@ -76,8 +76,17 @@ useCommands(() => [
 ]);
 ```
 
-`useCommands` registers on mount and unregisters on destroy, in an `$effect`. The stack is the
-registration order, which is the mount order, which is the nesting.
+`useCommands` registers on mount and unregisters on destroy, in an `$effect`. The order is the
+nesting, read from the component tree: each call takes one more than the scope it sits in and
+hands that to the components under it. A tie goes to the latest mounted. Svelte runs a child's
+effects before its parent's, so the mount order alone would put the document above its focus mode.
+
+```
+root, language   depth 0     useCommands(get, { depth: 0 })
+Document         1
+BlocksFocus      2           Settings 2, ButtonStatus 2, mounted before it
+RichText         3
+```
 
 ---
 

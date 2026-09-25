@@ -55,32 +55,35 @@
    * The outermost scope, so its lines come last: ⌘K, then what the panel offers wherever the
    * user is, create a document, go to a collection or an area.
    */
-  useCommands(() => [
-    {
-      id: 'palette',
-      label: t__('common.commands'),
-      keys: 'mod+k',
-      inField: true,
-      hidden: true,
-      run: () => commands.palette.toggle()
-    },
-    ...collections
-      .filter((collection) => collection.access.create(user.attributes, {}))
-      .map((collection) => ({
-        id: `create.${collection.slug}`,
-        label: collection.label.create || t__('common.create_new', collection.label.singular),
-        group: t__('common.create'),
-        icon: config.raw.icons[collection.slug],
-        run: () => goto(createPath(collection))
-      })),
-    ...pages.map((route) => ({
-      id: `go_to.${route.url}`,
-      label: route.title,
-      group: t__('common.go_to'),
-      icon: config.raw.icons[route.icon],
-      run: () => goto(route.url as ResolvedPathname)
-    }))
-  ]);
+  useCommands(
+    () => [
+      {
+        id: 'palette',
+        label: t__('common.commands'),
+        keys: 'mod+k',
+        inField: true,
+        hidden: true,
+        run: () => commands.palette.toggle()
+      },
+      ...collections
+        .filter((collection) => collection.access.create(user.attributes, {}))
+        .map((collection) => ({
+          id: `create.${collection.slug}`,
+          label: collection.label.create || t__('common.create_new', collection.label.singular),
+          group: t__('common.create'),
+          icon: config.raw.icons[collection.slug],
+          run: () => goto(createPath(collection))
+        })),
+      ...pages.map((route) => ({
+        id: `go_to.${route.url}`,
+        label: route.title,
+        group: t__('common.go_to'),
+        icon: config.raw.icons[route.icon],
+        run: () => goto(route.url as ResolvedPathname)
+      }))
+    ],
+    { depth: 0 }
+  );
 
   const toLine = (command: CommandType): Line => ({
     id: command.id,
