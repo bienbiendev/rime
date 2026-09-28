@@ -68,7 +68,7 @@
     {:else if user.attributes.isStaff && page.data?.hasMailer}
       {#if isAuthConfig(collection) && collection.auth.type === 'password'}
         <div>
-          <Button onclick={sendPasswordResetLink} variant="outline">
+          <Button onclick={sendPasswordResetLink} variant="secondary" size="sm">
             {t__('common.sendPasswordResetLink')}
           </Button>
         </div>
@@ -77,18 +77,22 @@
   </div>
 {/if}
 
-<style>
-  .rz-document-auth {
-    display: grid;
-    padding: var(--rz-size-5) var(--rz-size-5) var(--rz-size-6);
-    border-radius: var(--rz-radius-lg);
-    background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));
-    border: var(--rz-border);
-    gap: var(--rz-size-8);
-    margin-top: var(--rz-size-4);
+<style lang="postcss">
+  @import '../../../style/mixins/index.css';
 
-    & > :global(*) {
-      padding: 0 var(--rz-fields-padding);
-    }
+  /* A card like a group's body: the password fields, 20px apart, 14px from its sides. */
+  .rz-document-auth {
+    @mixin surface raised;
+    display: grid;
+    gap: var(--rz-size-5);
+    padding: var(--rz-size-4) var(--rz-size-3-5);
+    border-radius: var(--rz-radius-xl);
+  }
+
+  /* Updating: the reset link alone, no card. */
+  .rz-document-auth:not(:has(fieldset)) {
+    padding: 0;
+    background-color: transparent;
+    box-shadow: none;
   }
 </style>

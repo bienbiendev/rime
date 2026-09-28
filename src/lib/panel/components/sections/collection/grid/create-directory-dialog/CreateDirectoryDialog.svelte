@@ -43,11 +43,13 @@
       <form use:form.enhance bind:this={formElement} {...props}>
         <Dialog.Header>{t__('common.create_folder')}</Dialog.Header>
         <RenderFields {form} fields={directoriesConfig.fields} />
-        <Dialog.Footer --rz-justify-content="space-between">
-          <Button data-submit disabled={!form.canSubmit} type="submit">
+        <Dialog.Footer>
+          <Button data-submit disabled={!form.canSubmit} type="submit" kbd="enter">
             {t__('common.create')}
           </Button>
-          <Button variant="secondary" onclick={() => (open = false)}>Cancel</Button>
+          <Button variant="secondary" onclick={() => (open = false)} kbd="escape">
+            {t__('common.cancel')}
+          </Button>
         </Dialog.Footer>
       </form>
     {/snippet}

@@ -2,11 +2,10 @@ import { page } from '$app/state';
 import { env } from '$env/dynamic/public';
 import { PARAMS } from '$lib/core/constants.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
-import { apiUrl } from '$lib/core/routes/util.js';
-import { toKebabCase } from '$lib/util/string.js';
 import type { BeforeNavigate } from '@sveltejs/kit';
 import { getContext, setContext } from 'svelte';
-import { getValueAtPath, isObjectLiteral, setValueAtPath } from '../../util/object.js';
+import { getValueAtPath, setValueAtPath } from '../../util/object.js';
+import { populate } from '../util/populate.js';
 
 export const LIVE_KEY = Symbol('rime.live');
 
@@ -75,88 +74,6 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
     else if (e.data.path && e.data.value !== undefined) {
       await handleFieldUpdate(e.data);
     }
-  };
-
-  /**
-   * Recursively processes relation objects in any data structure
-   */
-  const populate = async (value: any): Promise<any> => {
-    // Base case: null or undefined
-    if (value === null || value === undefined) {
-      return value;
-    }
-
-    // Check if it's a resource link field value
-    if (
-      isObjectLiteral(value) &&
-      'value' in value &&
-      'target' in value &&
-      'type' in value &&
-      !['url', 'email', 'tel', 'anchor'].includes(value.type)
-    ) {
-      if (value.type && value.value) {
-        try {
-          const { type, value: id } = value;
-          const response = await fetch(`${apiUrl(toKebabCase(type), id)}?depth=1`).then((r) =>
-            r.json()
-          );
-
-          if (response && response.doc && response.doc.url) {
-            return {
-              ...value,
-              url: response.doc.url
-            };
-          }
-        } catch (err) {
-          console.error(err);
-          return value;
-        }
-      }
-
-      return value;
-    }
-
-    // Check if it's a relation object
-    if (isObjectLiteral(value) && 'documentId' in value && 'relationTo' in value) {
-      // Process single relation object
-      if ('livePreview' in value) {
-        return value.livePreview;
-      } else {
-        try {
-          const response = await fetch(
-            `${apiUrl(toKebabCase(value.relationTo), value.documentId)}?depth=1`
-          ).then((r) => r.json());
-
-          if (response && response.doc) {
-            return response.doc;
-          }
-        } catch (err) {
-          console.error(err);
-        }
-      }
-      return value;
-    }
-
-    // Process arrays
-    if (Array.isArray(value)) {
-      const result = [...value];
-      for (let i = 0; i < result.length; i++) {
-        result[i] = await populate(result[i]);
-      }
-      return result;
-    }
-
-    // Process objects (recursively)
-    if (isObjectLiteral(value)) {
-      const result = { ...value };
-      for (const key of Object.keys(result)) {
-        result[key] = await populate(result[key]);
-      }
-      return result;
-    }
-
-    // Return primitives as is
-    return value;
   };
 
   /**

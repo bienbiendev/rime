@@ -1,0 +1,141 @@
+/*
+ * Rows of a tree in one raised card: a nested collection's documents.
+ * A list sets the depth of its rows; a row moved into another list, while dragged, takes that
+ * list's depth at once.
+ *
+ *   ╭──────────────────────────────────────╮
+ *   │ ⠿ ⌄  About                        ⋯ │   depth 0
+ *   │ ⠿  │    Team                       ⋯ │   depth 1, the guide under About's chevron
+ *   │ ⠿ ›  Blog  3                      ⋯ │   folded, its count of children
+ *   ╰──────────────────────────────────────╯
+ *
+ *   [grip 24][20 × depth][chevron 16][8][title …]
+ */
+
+.rz-tree-rows {
+  position: relative;
+}
+
+/* The card around a tree: its rows, and whatever heads them. */
+.rz-tree-card:not([data-empty]) {
+  @mixin surface raised;
+  border-radius: var(--rz-radius-xl);
+  overflow: hidden;
+
+  /* A first row on the card's edge has no hairline above it. */
+  > :first-child > .rz-tree-row {
+    box-shadow: none;
+  }
+}
+
+/* Inside a group, a block, a tree item or a stage card: a hairline, no second fill. */
+:is(.rz-group-field__content, .rz-block__fields, .rz-tree-item__fields, .rz-stage__fields)
+  .rz-tree-card:not([data-empty]) {
+  background-color: transparent;
+  box-shadow: 0 0 0 1px var(--rz-border);
+}
+
+/* A nested list: the guide down from its parent's chevron, through every row under it. */
+.rz-tree-rows:not(.rz-tree-rows--root)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(--size(8) + (var(--rz-tree-depth, 1) - 1) * --size(5));
+  width: 1px;
+  background-color: var(--rz-border-strong);
+  pointer-events: none;
+}
+
+.rz-tree-rows:not(:has(> *))::before {
+  display: none;
+}
+
+.rz-tree-rows[hidden] {
+  display: none;
+}
+
+/* A row: flat, a hairline above it, pushed right by its depth. */
+.rz-tree-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--rz-size-2);
+  min-height: var(--rz-row-height);
+  padding-left: calc(--size(6) + var(--rz-tree-depth, 0) * --size(5));
+  padding-right: var(--rz-size-2);
+  box-shadow: inset 0 1px 0 var(--rz-border);
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: var(--rz-bg-hover);
+  }
+}
+
+/* The grip, at the row's left edge whatever its depth; faint, clear on hover. */
+.rz-tree-row__grip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: var(--rz-size-6);
+  color: var(--rz-fg-subtle);
+  opacity: 0.5;
+  cursor: grab;
+  transition: opacity 0.15s;
+}
+
+.rz-tree-row:hover .rz-tree-row__grip {
+  opacity: 1;
+}
+
+/* Folds the children, on a row that has some. */
+.rz-tree-row__fold {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: var(--rz-size-4);
+  height: var(--rz-size-4);
+  border-radius: var(--rz-radius-sm);
+  color: var(--rz-fg-subtle);
+
+  &:hover {
+    background-color: var(--rz-bg-hover);
+    color: var(--rz-fg);
+  }
+
+  &:focus-visible {
+    @mixin focus-ring;
+    outline-offset: 0;
+  }
+}
+
+.rz-tree-row__title {
+  @mixin font-medium;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+/* How many children a folded row holds. */
+.rz-tree-row__count {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  height: --size(4.5);
+  padding-inline: var(--rz-size-1-5);
+  border-radius: var(--rz-radius-full);
+  background-color: var(--rz-bg-well);
+  box-shadow: inset 0 0 0 1px var(--rz-border);
+  color: var(--rz-fg-subtle);
+  font-size: var(--rz-text-xs);
+}
+
+/* The row in hand stays faint where it will land. */
+.sortable-ghost > .rz-tree-row {
+  opacity: 0.4;
+}

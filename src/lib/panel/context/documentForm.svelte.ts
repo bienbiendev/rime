@@ -188,16 +188,27 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       stamp = new Date().getTime().toString();
     };
 
-    const addItem = (emptyFields: Dic) => {
-      let items = [...getItems()];
-      const itemWithPath: TreeBlock = {
+    /** A new item at the end of a list: the tree's own, or one inside an item, `links.0._children`. */
+    const addItem = (emptyFields: Dic, atPath: string = path) => {
+      let items = cloneDeep(snapshot(getItems()));
+      let target = items;
+      if (atPath !== path) {
+        const parent = getValueAtPath<TreeBlock>(
+          atPath.replace(`${path}.`, '').replace(/\._children$/, ''),
+          items
+        );
+        if (!parent) return;
+        parent._children ??= [];
+        target = parent._children;
+      }
+      target.push({
         ...emptyFields,
         id: generateTempId(),
-        path: path,
-        position: items.length,
+        path: atPath,
+        position: target.length,
         _children: []
-      };
-      items = items.toSpliced(items.length, 0, itemWithPath);
+      });
+      items = rebuildPaths(items, path);
       assignItemsToDoc(items);
     };
 

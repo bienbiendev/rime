@@ -1,10 +1,12 @@
 <script lang="ts">
   import { dev } from '$app/environment';
+  import { t__ } from '$lib/core/i18n/index.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
+  import { useCommands } from '$lib/panel/context/commands.svelte.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { Languages } from '@lucide/svelte';
+  import { ChevronDown, Languages } from '@lucide/svelte';
   import Cookies from 'js-cookie';
 
   type Props = { onLocalClick: (code: string) => void };
@@ -17,19 +19,35 @@
   function isActive(code: string) {
     return code === locale.code;
   }
+
+  function switchTo(code: string) {
+    Cookies.set('rime.locale', code, { sameSite: 'strict', secure: !dev });
+    onLocalClick(code);
+  }
+
+  /** The other locales, in the palette, with the panel's own commands below the page's. */
+  useCommands(
+    () =>
+      locales
+        .filter((item) => !isActive(item.code))
+        .map((item) => ({
+          id: `locale.${item.code}`,
+          label: t__('common.switch_to_language', item.label),
+          group: t__('common.language'),
+          icon: Languages,
+          run: () => switchTo(item.code)
+        })),
+    { depth: 0 }
+  );
 </script>
 
 {#if config.raw.localization?.locales.length}
   <DropdownMenu.Root>
     <DropdownMenu.Trigger>
       {#snippet child({ props })}
-        <Button
-          icon={Languages}
-          size="sm"
-          variant={props['data-state'] === 'open' ? 'secondary' : 'ghost'}
-          {...props}
-        >
-          {locale.label}
+        <Button size="sm" aria-label={locale.label} variant="ghost" {...props}>
+          {locale.code?.toUpperCase()}
+          <ChevronDown size="13" class="rz-language-switcher__chevron" />
         </Button>
       {/snippet}
     </DropdownMenu.Trigger>
@@ -40,13 +58,7 @@
           <DropdownMenu.Item
             disabled={isActive(item.code)}
             data-active={isActive(item.code) ? '' : null}
-            onclick={() => {
-              Cookies.set('rime.locale', item.code, {
-                sameSite: 'strict',
-                secure: !dev
-              });
-              onLocalClick(item.code);
-            }}
+            onclick={() => switchTo(item.code)}
           >
             <span>{item.label}</span>
           </DropdownMenu.Item>

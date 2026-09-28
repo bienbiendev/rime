@@ -49,18 +49,18 @@
         icon={copied ? Check : Copy}
       />
     </p>
-    <Dialog.Footer --rz-justify-content="space-between">
+    <Dialog.Footer>
       <Button onclick={() => (apiKey = null)}>{t__('common.close')}</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
 
 <style lang="postcss">
+  @import '../../../style/mixins/index.css';
+
   .rz-dialog-api__key {
-    --rz-button-ghost-bg-hover: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-5)));
     position: relative;
-    border: var(--rz-border);
-    background-color: hsl(var(--rz-input-bg));
+    @mixin well;
     min-height: var(--rz-input-height);
     align-items: center;
     display: flex;
@@ -73,7 +73,7 @@
         right: var(--rz-size-1);
       }
       .rz-dialog-api--copied {
-        color: hsl(var(--rz-color-success));
+        color: var(--rz-success);
       }
     }
   }

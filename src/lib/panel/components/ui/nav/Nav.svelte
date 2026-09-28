@@ -1,9 +1,10 @@
 <script lang="ts">
   import { panelPath } from '$lib/core/routes/util.js';
+  import CommandButton from '$lib/panel/components/sections/commands/CommandButton.svelte';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import { getNavContext } from '$lib/panel/context/nav.svelte.js';
   import type { Route } from '$lib/panel/types';
-  import { PanelsTopLeft } from '@lucide/svelte';
+  import { PanelLeft, PanelsTopLeft } from '@lucide/svelte';
   import ScrollArea from '../scroll-area/scroll-area.svelte';
   import NavGroup from './NavGroup.svelte';
   import NavItem from './NavItem.svelte';
@@ -17,6 +18,19 @@
 
   const config = getConfigContext();
   const navigationGroupsConfig = config.raw.panel.navigation?.groups;
+
+  /** The host of a url, or nothing when it does not parse. */
+  function hostOf(url?: string) {
+    if (!url) return undefined;
+    try {
+      return new URL(url).host;
+    } catch {
+      return undefined;
+    }
+  }
+
+  // config.siteName, else the host of config.siteUrl, else "rime"
+  const siteName = config.raw.siteName || hostOf(config.raw.siteUrl) || 'rime';
 
   const getGroupIcon = (groupName: string) => {
     if (!navigationGroupsConfig) return null;
@@ -34,129 +48,174 @@
   };
 </script>
 
-<div class:rz-nav--collapsed={isCollapsed} class="rz-nav">
-  <div class="rz-nav__content">
-    <div class="rz-nav__header" class:rz-nav__header--collapsed={isCollapsed}>
-      <NavItem href={panelPath()} {isCollapsed} route={dashBoardRoute} />
-    </div>
-
-    <div class="rz-nav__body">
-      <ScrollArea>
-        <nav class="rz-nav__nav">
-          {#each Object.entries(routesGroups) as [groupName, routes], index (index)}
-            {#if groupName !== 'none'}
-              {@const icon = getGroupIcon(groupName)}
-              <NavGroup name={groupName} {icon} navCollapsed={isCollapsed}>
-                {#each routes as route (route.url)}
-                  <NavItem href={route.url} {isCollapsed} {route} />
-                {/each}
-              </NavGroup>
-            {/if}
-          {/each}
-          {#each routesGroups.none as route (route.url)}
-            <div class="rz-nav__group-none">
-              <NavItem href={route.url} {isCollapsed} {route} />
-            </div>
-          {/each}
-        </nav>
-      </ScrollArea>
-
-      <div class="rz-nav__user">
-        <UserButton navCollapsed={isCollapsed} />
-      </div>
-    </div>
+<aside class="rz-nav" class:rz-nav--collapsed={isCollapsed}>
+  <div class="rz-nav__head">
+    {#if !isCollapsed}
+      <a class="rz-nav__brand" href={panelPath()}>
+        <span class="rz-nav__brand-mark">{siteName.charAt(0)}</span>
+        <span class="rz-nav__brand-name">{siteName}</span>
+      </a>
+    {/if}
+    <button
+      type="button"
+      class="rz-nav__toggle"
+      onclick={nav.toggle}
+      aria-label="Toggle navigation"
+      aria-expanded={!isCollapsed}
+    >
+      <PanelLeft size="15" />
+    </button>
   </div>
 
-  <button class="rz-nav__toggle" onclick={nav.toggle} aria-label="Toggle navigation"> </button>
-</div>
+  <CommandButton variant={isCollapsed ? 'icon' : 'input'} />
+
+  <div class="rz-nav__body">
+    <ScrollArea>
+      <nav class="rz-nav__nav">
+        <div class="rz-nav__group">
+          <NavItem href={panelPath()} {isCollapsed} route={dashBoardRoute} />
+          {#each routesGroups.none ?? [] as route (route.url)}
+            <NavItem href={route.url} {isCollapsed} {route} />
+          {/each}
+        </div>
+        {#each Object.entries(routesGroups) as [groupName, routes], index (index)}
+          {#if groupName !== 'none'}
+            {@const icon = getGroupIcon(groupName)}
+            <NavGroup name={groupName} {icon} navCollapsed={isCollapsed}>
+              {#each routes as route (route.url)}
+                <NavItem href={route.url} {isCollapsed} {route} />
+              {/each}
+            </NavGroup>
+          {/if}
+        {/each}
+      </nav>
+    </ScrollArea>
+  </div>
+
+  <UserButton navCollapsed={isCollapsed} />
+</aside>
 
 <style type="postcss">
-  :root {
-    --rz-nav-button-height: var(--rz-size-12);
-    --rz-nav-bg: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-0)));
-
-    --rz-nav-button-bg: light-dark(hsl(var(--rz-gray-19)), hsl(var(--rz-gray-2)));
-    --rz-nav-group-bg: light-dark(hsl(var(--rz-gray-17)), hsl(var(--rz-gray-1)));
-    --rz-nav-group-border-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-2)));
-  }
+  @import '../../../style/mixins/index.css';
 
   .rz-nav {
     position: fixed;
     z-index: 300;
+    top: 0;
     bottom: 0;
     left: 0;
-    top: 0;
-    padding: var(--rz-size-2) var(--rz-size-5);
-    background-color: var(--rz-nav-bg);
-    border-right: var(--rz-border);
-    width: var(--rz-size-72);
-
-    .rz-nav__toggle {
-      position: absolute;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      width: var(--rz-size-6);
-      height: 100vh;
-      right: 0;
-      translate: var(--rz-size-3) 0;
-      z-index: 10;
-      top: 0;
-      display: none;
-      cursor: w-resize;
-      padding: var(--rz-size-2);
-      @media (min-width: 1024px) {
-        display: flex;
-      }
-    }
-  }
-  .rz-nav--collapsed {
-    width: var(--rz-size-10);
-    padding: var(--rz-size-1);
-    :global(.rz-button-nav) {
-      justify-content: start;
-    }
-    .rz-nav__toggle {
-      cursor: e-resize;
-    }
-  }
-  .rz-nav__content {
     display: flex;
-    height: 100%;
     flex-direction: column;
+    gap: var(--rz-size-3);
+    width: var(--rz-size-60);
+    padding: var(--rz-size-3) var(--rz-size-2-5) var(--rz-size-2-5);
+    background-color: var(--rz-bg-base);
+    box-shadow: inset -1px 0 0 var(--rz-border);
+    font-size: var(--rz-text-md);
   }
-  .rz-nav__header {
+
+  .rz-nav--collapsed {
+    align-items: center;
+    width: var(--rz-size-12);
+
+    :global(.rz-nav-item) {
+      justify-content: center;
+      width: var(--rz-size-8);
+      padding: 0;
+    }
+  }
+
+  .rz-nav__head {
     display: flex;
-    height: var(--rz-size-10);
     flex-shrink: 0;
     align-items: center;
     justify-content: space-between;
-    padding-right: var(--rz-size-4);
-    padding-left: var(--rz-size-4);
+    gap: var(--rz-size-2);
+    width: 100%;
+    height: var(--rz-size-8);
+    padding-left: var(--rz-size-1-5);
+  }
 
-    &.rz-nav__header--collapsed {
-      justify-content: center;
+  .rz-nav--collapsed .rz-nav__head {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .rz-nav__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--rz-size-2-5);
+    min-width: 0;
+    color: var(--rz-fg);
+    font-size: var(--rz-text-lg);
+    letter-spacing: -0.01em;
+    @mixin font-semibold;
+  }
+
+  .rz-nav__brand-mark {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: var(--rz-size-6);
+    height: var(--rz-size-6);
+    border-radius: var(--rz-radius-sm);
+    font-size: var(--rz-text-xs);
+    text-transform: uppercase;
+    @mixin primary;
+  }
+
+  .rz-nav__brand-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rz-nav__toggle {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: var(--rz-size-7);
+    height: var(--rz-size-7);
+    border-radius: var(--rz-radius-md);
+    color: var(--rz-fg-subtle);
+    transition:
+      background-color 0.15s,
+      color 0.15s;
+
+    &:hover {
+      background-color: var(--rz-bg-hover);
+      color: var(--rz-fg);
+    }
+    &:focus-visible {
+      @mixin focus-ring;
     }
   }
+
+  .rz-nav--collapsed :global(.rz-cmdk-input) {
+    flex-shrink: 0;
+  }
+
   .rz-nav__body {
-    display: flex;
-    height: 100%;
-    flex-direction: column;
-    justify-content: space-between;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
   }
-  .rz-nav__group-none {
-    padding: 0 var(--rz-size-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--rz-size-2);
-  }
+
   .rz-nav__nav {
-    border-radius: var(--rz-radius-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--rz-size-5);
+    padding-top: var(--rz-size-2);
   }
+
   .rz-nav--collapsed .rz-nav__nav {
     align-items: center;
+    gap: var(--rz-size-1-5);
   }
-  .rz-nav__user {
-    padding-bottom: var(--rz-size-2);
+
+  .rz-nav__group {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
   }
 </style>

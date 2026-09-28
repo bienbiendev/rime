@@ -1,21 +1,21 @@
 .rz-toaster__toast[data-sonner-toast][data-sonner-toast][data-styled='true'] {
-  background-color: hsl(var(--rz-color-bg));
-  border: var(--rz-border);
-  color: var(--rz-gray-2);
+  @mixin surface float;
+  border: 0;
+  color: var(--rz-fg);
 
   &.rz-toaster__success svg {
-    fill: hsl(var(--rz-color-success));
+    fill: var(--rz-success);
   }
   &.rz-toaster__error svg {
-    fill: hsl(var(--rz-color-alert));
+    fill: var(--rz-danger);
   }
 }
 
 .rz-toaster__description {
-  color: hsl(var(--rz-color-fg));
+  color: var(--rz-fg);
 }
 
 .rz-toaster__cancel {
-  background-color: hsl(var(--rz-gray-5));
-  color: hsl(var(--rz-color-fg) / 0.7);
+  background-color: var(--rz-bg-active);
+  color: var(--rz-fg-muted);
 }

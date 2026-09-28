@@ -146,7 +146,7 @@
     open = false;
   }
 
-  /** Whenever the target change, update editor content */
+  /** The target changed: the link takes it. Not on mount, which would focus the editor. */
   watch(
     () => isTargetBlank,
     (current, previous) => {
@@ -157,7 +157,8 @@
           .setLink({ href: urlState.url, target: isTargetBlank ? '_blank' : '_self' })
           .run();
       }
-    }
+    },
+    { lazy: true }
   );
 
   function onDelete() {
@@ -198,9 +199,7 @@
       <div class="rz-link-selector__button">
         {#if editor.getAttributes('link').href}
           <Button
-            --rz-button-ghost-fg={isTargetBlank
-              ? 'hsl(var(--rz-color-spot))'
-              : 'hsl(var(--rz-color-fg))'}
+            --rz-button-ghost-fg={isTargetBlank ? 'var(--rz-accent-text)' : 'var(--rz-fg)'}
             onclick={() => (isTargetBlank = !isTargetBlank)}
             variant="ghost"
             size="icon-sm"
@@ -252,7 +251,9 @@
   </Command.List>
 </Command.Dialog>
 
-<style>
+<style lang="postcss">
+  @import '../../../../../../panel/style/mixins/index.css';
+
   .rz-link-selector {
     position: relative;
 
@@ -278,7 +279,7 @@
     margin-top: var(--rz-size-1);
     display: flex;
     width: 18rem;
-    box-shadow: var(--rz-shadow-xl);
+    @mixin surface float;
     animation: fadeInSlideFromTop 0.2s ease-out;
     border-radius: var(--rz-radius-lg);
   }

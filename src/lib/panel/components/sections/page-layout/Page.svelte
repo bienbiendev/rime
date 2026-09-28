@@ -23,11 +23,23 @@
 <style>
   main {
     container: main / inline-size;
-    --rz-page-gutter: var(--rz-size-20);
+    --rz-page-gutter: var(--rz-size-4);
   }
 
   .rz-page-with-aside {
     display: grid;
     grid-template-columns: 1fr var(--rz-size-xs);
+  }
+
+  @media (min-width: 640px) {
+    main {
+      --rz-page-gutter: var(--rz-size-8);
+    }
+  }
+
+  @media (min-width: 960px) {
+    main {
+      --rz-page-gutter: var(--rz-size-20);
+    }
   }
 </style>

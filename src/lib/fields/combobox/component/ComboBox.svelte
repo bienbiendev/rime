@@ -46,7 +46,7 @@
           {#if selected}
             {@render label(selected)}
           {:else}
-            {t__('fields.select')}
+            <span class="rz-combobox__placeholder">{t__('fields.select')}</span>
           {/if}
           <ChevronsUpDown class="rz-combobox__chevron" />
         </Button>
@@ -62,7 +62,7 @@
               class="rz-combobox__search"
             />
           {/if}
-          <Command.Empty>Nothing found.</Command.Empty>
+          <Command.Empty>{t__('common.nothing_found')}</Command.Empty>
           <Command.Group>
             {#each options as option, index (index)}
               <Command.Item
@@ -91,13 +91,24 @@
 </fieldset>
 
 <style lang="postcss">
+  @import '../../../panel/style/mixins/index.css';
+
+  /* A well like an input: the picked option, or a quiet placeholder, then the chevron. */
   .rz-combobox-field :global {
     .rz-combobox__trigger.rz-button {
-      min-width: 200px;
-      height: var(--rz-size-11);
+      min-width: var(--rz-size-52);
+      height: var(--rz-input-height);
+      padding-inline: var(--rz-size-3) var(--rz-size-2-5);
       justify-content: space-between;
-      border: 1px solid var(--rz-input-border-color);
-      background-color: hsl(var(--rz-input-bg));
+      color: var(--rz-fg);
+      @mixin well;
+      @mixin font-normal;
+      &:focus-visible {
+        @mixin focus-field;
+      }
+    }
+    .rz-combobox__placeholder {
+      color: var(--rz-fg-subtle);
     }
   }
 </style>

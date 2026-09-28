@@ -12,6 +12,8 @@ export const useSortable = ({ ...sortableProps }: SortableType.Options) => {
     }
 
     const sortableInstance = new Sortable(el, {
+      // No text in the drag: an editor under the pointer takes nothing from the drop.
+      setData: (dataTransfer) => dataTransfer.setData('application/x-rime-sortable', '1'),
       ...sortableProps,
       onStart: function (e) {
         const node = e.item as Node;

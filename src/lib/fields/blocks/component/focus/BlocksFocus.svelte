@@ -1,18 +1,27 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
+  import CommandButton from '$lib/panel/components/sections/commands/CommandButton.svelte';
   import ButtonSave from '$lib/panel/components/sections/document/ButtonSave.svelte';
   import { Button } from '$lib/panel/components/ui/button/index.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
+  import * as Sheet from '$lib/panel/components/ui/sheet/index.js';
+  import * as Tabs from '$lib/panel/components/ui/tabs/index.js';
+  import { useCommands } from '$lib/panel/context/commands.svelte.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { getNavContext } from '$lib/panel/context/nav.svelte.js';
-  import { Command, X } from '@lucide/svelte';
+  import { populate } from '$lib/panel/util/populate.js';
+  import { capitalize } from '$lib/util/string.js';
+  import { ChevronRight, PanelRight, ToyBrick, X } from '@lucide/svelte';
+  import { untrack } from 'svelte';
   import { toast } from 'svelte-sonner';
-  import CommandPalette from './CommandPalette.svelte';
-  import { getBlocksFocusContext } from './focus.svelte.js';
+  import BlockPicker from '../picker/BlockPicker.svelte';
+  import { getBlocksFocusContext, type SidebarTab } from './focus.svelte.js';
   import Layers from './Layers.svelte';
   import Palette from './Palette.svelte';
+  import Renders from './Renders.svelte';
   import Stage from './Stage.svelte';
+  import StagePlaceholder from './StagePlaceholder.svelte';
 
   const { form }: { form: DocumentFormContext } = $props();
 
@@ -22,14 +31,63 @@
   const nav = getNavContext();
 
   const builder = $derived(focus.path ? form.blocks.builder(focus.path) : undefined);
+  /** The types of the list the next insert goes to: the selected block's, else the open one. */
+  const addable = $derived.by(() => {
+    const list = focus.current?.list ?? focus.path;
+    return list ? (form.blocks.builder(list)?.get.blocks ?? []) : [];
+  });
   const crumbs = $derived(focus.breadcrumb());
   const count = $derived(focus.path ? form.blocks.list(focus.path).length : 0);
   const countLabel = $derived(
     count === 1 ? t__('fields.blocks_count', '1') : t__('fields.blocks_count|m|p', String(count))
   );
 
-  let commandOpen = $state(false);
   let confirmRemove = $state(false);
+
+  /**
+   * Under 52rem the panel leaves its column for a sheet, behind a button in the header. The
+   * width is the overlay's own, which starts after the nav; the stylesheet's container query
+   * reads the same one.
+   */
+  let width = $state(0);
+  const narrow = $derived(width > 0 && width < 52 * remPx());
+  let panelOpen = $state(false);
+
+  function remPx() {
+    return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  }
+
+  /** Fields to show: a render with nothing but fields of its own, beside the stack of renders. */
+  const inspectable = $derived(focus.hasRenders);
+
+  // The selection moved. Nothing left to inspect: the types to add. Picked from the layers in the
+  // sheet: put it away, to see the block.
+  $effect(() => {
+    const picked = !!focus.current;
+    untrack(() => {
+      if (focus.tab === 'inspector' && (!picked || !inspectable)) focus.tab = 'add';
+      if (focus.tab === 'layers') panelOpen = false;
+    });
+  });
+
+  // Arriving on an empty list: the types to add.
+  $effect(() => {
+    const list = focus.path;
+    untrack(() => {
+      if (list && !focus.locked && !form.blocks.list(list).length) focus.tab = 'add';
+    });
+  });
+
+  // Asked to show a block's fields: the sheet opens on them.
+  $effect(() => {
+    if (!focus.inspected) return;
+    untrack(() => {
+      if (narrow && inspectable) panelOpen = true;
+    });
+  });
+
+  // A focus session starts with fresh relations in the renders.
+  populate.clear();
 
   // The overlay owns the viewport while it is up; the document under it stays where it was.
   $effect(() => {
@@ -39,14 +97,6 @@
       document.body.style.overflow = previous;
     };
   });
-
-  /** A field has the keyboard: single keys are its, ⌘ combinations are still the focus mode's. */
-  function isTyping(target: EventTarget | null) {
-    if (!(target instanceof HTMLElement)) return false;
-    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return true;
-    if (target instanceof HTMLSelectElement || target.isContentEditable) return true;
-    return !!target.closest('.ProseMirror');
-  }
 
   const dialogOpen = () => !!document.querySelector('[role="dialog"][data-state="open"]');
 
@@ -59,67 +109,212 @@
     else focus.removeSelection();
   }
 
+  /** Escape goes back one step: the selection, then focus mode. The sheet closes itself. */
+  function back() {
+    if (!focus.rootSelected) focus.selectRoot();
+    else focus.close();
+  }
+
   async function paste() {
     const id = await focus.pasteAfterSelection();
     if (!id) toast.warning(t__('fields.paste_refused'));
   }
 
-  function onKeyDown(event: KeyboardEvent) {
-    if (!focus.path) return;
-    const meta = event.metaKey || event.ctrlKey;
-    const key = event.key.toLowerCase();
+  const ADD = t__('fields.add');
+  const BLOCK = t__('fields.block');
+  const GO_TO = t__('fields.go_to');
 
-    if (meta && key === 'k') {
-      event.preventDefault();
-      commandOpen = true;
-      return;
-    }
-    if (event.key === 'Escape') {
-      if (dialogOpen() || isTyping(event.target)) return;
-      event.preventDefault();
-      return focus.close();
-    }
-    if (isTyping(event.target) || dialogOpen()) return;
-
-    if (meta && key === 'd') {
-      event.preventDefault();
-      return focus.duplicateSelection();
-    }
-    if (meta && key === 'c') return focus.copySelection();
-    if (meta && key === 'v') return paste();
-    if (meta) return;
-
-    switch (event.key) {
-      case 'ArrowDown':
-        event.preventDefault();
-        return event.altKey ? focus.moveSelection(1) : focus.selectRelative(1, event.shiftKey);
-      case 'ArrowUp':
-        event.preventDefault();
-        return event.altKey ? focus.moveSelection(-1) : focus.selectRelative(-1, event.shiftKey);
-      case 'ArrowRight':
-        if (focus.current) focus.setCollapsed(focus.selection[0], false);
-        return;
-      case 'ArrowLeft':
-        if (focus.current) focus.setCollapsed(focus.selection[0], true);
-        return;
-      case 'Backspace':
-      case 'Delete':
-        event.preventDefault();
-        return requestRemove();
-    }
-  }
+  /**
+   * What focus mode offers: the types of the list the next insert goes to, what a selected block
+   * can do, every row to go to, and the keys that move around. A dialog open keeps the keys.
+   */
+  useCommands(() => {
+    if (!focus.path) return [];
+    const list = focus.current?.list ?? focus.path;
+    const types = form.blocks.builder(list)?.get.blocks ?? [];
+    const row = focus.currentRow;
+    const editing = !focus.locked;
+    const free = () => !dialogOpen();
+    return [
+      ...(editing
+        ? types.map((builder) => ({
+            id: `blocks.add.${builder.name}`,
+            label: builder.block.label || capitalize(builder.name),
+            group: ADD,
+            icon: builder.block.icon ?? ToyBrick,
+            run: () => focus.insertType(builder.name)
+          }))
+        : []),
+      ...(editing && row
+        ? [
+            {
+              id: 'blocks.duplicate',
+              label: t__('common.duplicate'),
+              group: BLOCK,
+              keys: 'mod+d',
+              when: free,
+              run: focus.duplicateSelection
+            },
+            {
+              id: 'blocks.move_up',
+              label: t__('fields.move_up'),
+              group: BLOCK,
+              keys: 'alt+arrowup',
+              when: free,
+              run: () => focus.moveSelection(-1)
+            },
+            {
+              id: 'blocks.move_down',
+              label: t__('fields.move_down'),
+              group: BLOCK,
+              keys: 'alt+arrowdown',
+              when: free,
+              run: () => focus.moveSelection(1)
+            },
+            ...focus.moveTargets().map((target) => ({
+              id: `blocks.move_into.${target.list}`,
+              label: t__('fields.move_into', target.label),
+              group: BLOCK,
+              run: () => focus.moveSelectionInto(target.list)
+            })),
+            {
+              id: 'blocks.copy',
+              label: t__('fields.copy_block'),
+              group: BLOCK,
+              keys: 'mod+c',
+              when: free,
+              run: focus.copySelection
+            },
+            {
+              id: 'blocks.paste',
+              label: t__('fields.paste_after'),
+              group: BLOCK,
+              keys: 'mod+v',
+              when: free,
+              run: paste
+            },
+            {
+              id: 'blocks.remove',
+              label: t__('common.delete'),
+              group: BLOCK,
+              keys: 'backspace',
+              when: free,
+              run: requestRemove
+            },
+            {
+              id: 'blocks.remove.delete',
+              label: t__('common.delete'),
+              keys: 'delete',
+              hidden: true,
+              when: free,
+              run: requestRemove
+            }
+          ]
+        : []),
+      {
+        id: 'blocks.collapse_all',
+        label: t__('fields.collapse_all'),
+        group: BLOCK,
+        run: focus.collapseAll
+      },
+      {
+        id: 'blocks.expand_all',
+        label: t__('fields.expand_all'),
+        group: BLOCK,
+        run: focus.expandAll
+      },
+      ...focus.allRows().map((candidate) => ({
+        id: `blocks.go_to.${candidate.path}`,
+        label: candidate.title,
+        group: GO_TO,
+        icon: candidate.config?.icon ?? ToyBrick,
+        run: () => focus.select(candidate.path)
+      })),
+      // Keys only
+      {
+        id: 'blocks.next',
+        label: '',
+        keys: 'arrowdown',
+        hidden: true,
+        when: free,
+        run: () => focus.selectRelative(1)
+      },
+      {
+        id: 'blocks.next.extend',
+        label: '',
+        keys: 'shift+arrowdown',
+        hidden: true,
+        when: free,
+        run: () => focus.selectRelative(1, true)
+      },
+      {
+        id: 'blocks.previous',
+        label: '',
+        keys: 'arrowup',
+        hidden: true,
+        when: free,
+        run: () => focus.selectRelative(-1)
+      },
+      {
+        id: 'blocks.previous.extend',
+        label: '',
+        keys: 'shift+arrowup',
+        hidden: true,
+        when: free,
+        run: () => focus.selectRelative(-1, true)
+      },
+      {
+        id: 'blocks.expand',
+        label: '',
+        keys: 'arrowright',
+        hidden: true,
+        when: () => free() && !!row,
+        run: () => focus.setCollapsed(focus.selection[0], false)
+      },
+      {
+        id: 'blocks.collapse',
+        label: '',
+        keys: 'arrowleft',
+        hidden: true,
+        when: () => free() && !!row,
+        run: () => focus.setCollapsed(focus.selection[0], true)
+      },
+      {
+        id: 'blocks.add_palette',
+        label: '',
+        keys: '/',
+        hidden: true,
+        when: () => free() && editing,
+        run: focus.pick
+      },
+      {
+        id: 'blocks.back',
+        label: '',
+        keys: 'escape',
+        hidden: true,
+        when: free,
+        run: back
+      }
+    ];
+  });
 </script>
 
-<svelte:window onkeydown={onKeyDown} />
-
-<div class="rz-blocks-focus" data-focus={focus.path} style:left={nav?.width ?? '0'}>
+<div
+  class="rz-blocks-focus"
+  data-focus={focus.path}
+  data-layout={focus.hasRenders ? 'renders' : 'fields'}
+  style:left={nav?.width ?? '0'}
+  bind:clientWidth={width}
+>
   <header class="rz-blocks-focus__header">
     <nav class="rz-blocks-focus__crumbs" aria-label="breadcrumb">
       <button type="button" class="rz-blocks-focus__crumb" onclick={() => focus.close()}>
         {form.title}
       </button>
       {#each crumbs as crumb, index (crumb.list + (crumb.block ?? ''))}
-        <span class="rz-blocks-focus__crumb-separator">›</span>
+        <span class="rz-blocks-focus__crumb-separator" aria-hidden="true">
+          <ChevronRight size={12} />
+        </span>
         {#if index === crumbs.length - 1}
           <span class="rz-blocks-focus__crumb rz-blocks-focus__crumb--current">
             {crumb.label}
@@ -141,44 +336,125 @@
     </nav>
 
     <div class="rz-blocks-focus__header-actions">
-      <button type="button" class="rz-blocks-focus__kbd" onclick={() => (commandOpen = true)}>
-        <kbd><Command size="10" /> K</kbd>
-      </button>
+      {#if narrow}
+        <Button
+          class="rz-blocks-focus__panel-toggle"
+          variant="ghost"
+          size="icon-sm"
+          icon={PanelRight}
+          aria-label={t__('fields.layers')}
+          onclick={() => (panelOpen = true)}
+        />
+      {/if}
+      <CommandButton />
       <ButtonSave {form} size="sm" />
-      <Button variant="ghost" size="icon" icon={X} onclick={() => focus.close()} />
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        icon={X}
+        title={t__('common.close')}
+        aria-label={t__('common.close')}
+        onclick={() => focus.close()}
+      />
     </div>
   </header>
 
+  <!-- One panel, three tabs: the tree of blocks, the selected block's fields, the types to add. -->
+  {#snippet panel()}
+    <Tabs.Root
+      value={focus.tab}
+      onValueChange={(value) => (focus.tab = value as SidebarTab)}
+      class="rz-blocks-focus__panel-tabs"
+    >
+      <Tabs.List class="rz-blocks-focus__panel-list">
+        <Tabs.Trigger value="layers" data-label={t__('fields.layers')}>
+          {t__('fields.layers')}
+        </Tabs.Trigger>
+        {#if inspectable}
+          <Tabs.Trigger value="inspector" data-label={t__('fields.inspector')}>
+            {t__('fields.inspector')}
+          </Tabs.Trigger>
+        {/if}
+        {#if !focus.locked}
+          <Tabs.Trigger value="add" data-label={t__('fields.blocks')}>
+            {t__('fields.blocks')}
+          </Tabs.Trigger>
+        {/if}
+      </Tabs.List>
+      <Tabs.Content value="layers" class="rz-blocks-focus__panel-content">
+        <div class="rz-blocks-focus__panel-pad rz-blocks-focus__panel-pad--layers">
+          <Layers {form} heading={false} />
+        </div>
+      </Tabs.Content>
+      {#if inspectable}
+        <Tabs.Content value="inspector" class="rz-blocks-focus__panel-content">
+          {#if focus.current}
+            <Stage {form} onRemove={requestRemove} />
+          {:else}
+            <p class="rz-blocks-focus__panel-hint">{t__('fields.pick_a_block')}</p>
+          {/if}
+        </Tabs.Content>
+      {/if}
+      {#if !focus.locked}
+        <Tabs.Content value="add" class="rz-blocks-focus__panel-content">
+          <div class="rz-blocks-focus__panel-pad"><Palette {form} heading={false} /></div>
+        </Tabs.Content>
+      {/if}
+    </Tabs.Root>
+  {/snippet}
+
   <div class="rz-blocks-focus__body">
-    <aside class="rz-blocks-focus__layers">
-      <Layers {form} />
-    </aside>
-    <section class="rz-blocks-focus__stage">
-      <Stage {form} onRemove={requestRemove} />
-    </section>
-    {#if !focus.locked}
-      <aside class="rz-blocks-focus__palette">
-        <Palette {form} />
-      </aside>
+    {#if focus.hasRenders}
+      <!-- A click beside the blocks selects the root; the blocks stop their own clicks. -->
+      <section class="rz-blocks-focus__renders" role="presentation" onclick={focus.selectRoot}>
+        <Renders {form} list={focus.path ?? ''} onRemove={requestRemove} />
+        {#if count && !focus.locked}
+          <StagePlaceholder />
+        {/if}
+      </section>
+    {:else}
+      <section class="rz-blocks-focus__stage">
+        <Stage {form} onRemove={requestRemove} />
+      </section>
+    {/if}
+
+    {#if narrow}
+      <Sheet.Root bind:open={panelOpen}>
+        <Sheet.Content
+          showCloseButton={false}
+          side="right"
+          size="sm"
+          class="rz-blocks-focus__panel-sheet"
+        >
+          {@render panel()}
+        </Sheet.Content>
+      </Sheet.Root>
+    {:else}
+      <aside class="rz-blocks-focus__panel">{@render panel()}</aside>
     {/if}
   </div>
 
-  <CommandPalette {form} bind:open={commandOpen} onRemove={requestRemove} />
+  <BlockPicker
+    bind:open={() => focus.picking, (open) => (focus.picking = open)}
+    types={addable}
+    onpick={(block) => focus.insertType(block.name)}
+  />
 
   <Dialog.Root bind:open={confirmRemove}>
     <Dialog.Content>
       <Dialog.Header>{t__('fields.remove_with_children_title')}</Dialog.Header>
       <p>{t__('fields.remove_with_children_text')}</p>
-      <Dialog.Footer --rz-justify-content="space-between">
+      <Dialog.Footer>
         <Button
           onclick={() => {
             confirmRemove = false;
             focus.removeSelection();
           }}
+          kbd="enter"
         >
           {t__('common.confirm')}
         </Button>
-        <Button onclick={() => (confirmRemove = false)} variant="secondary">
+        <Button onclick={() => (confirmRemove = false)} variant="secondary" kbd="escape">
           {t__('common.cancel')}
         </Button>
       </Dialog.Footer>
@@ -193,12 +469,13 @@
      on its own. */
   .rz-blocks-focus {
     --rz-fields-padding: var(--rz-size-6);
+    container: rz-focus / inline-size;
     position: fixed;
     inset: 0;
     z-index: 200;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    background-color: hsl(var(--rz-color-bg));
+    background-color: var(--rz-bg-page);
   }
 
   .rz-blocks-focus__header {
@@ -207,23 +484,23 @@
     justify-content: space-between;
     gap: var(--rz-size-4);
     height: var(--rz-size-12);
-    padding-inline: var(--rz-size-4);
-    border-bottom: var(--rz-border);
+    padding-inline: var(--rz-size-5) var(--rz-size-2-5);
+    border-bottom: 1px solid var(--rz-border);
   }
 
   .rz-blocks-focus__crumbs {
     display: flex;
     align-items: center;
-    gap: var(--rz-size-2);
+    gap: var(--rz-size-1-5);
     min-width: 0;
     font-size: var(--rz-text-sm);
   }
 
   .rz-blocks-focus__crumb {
     white-space: nowrap;
-    color: hsl(var(--rz-color-fg) / 0.6);
+    color: var(--rz-fg-subtle);
     &:is(button):hover {
-      color: hsl(var(--rz-color-fg));
+      color: var(--rz-fg);
     }
     &.rz-blocks-focus__crumb:first-child {
       max-width: 200px;
@@ -233,7 +510,7 @@
 
   .rz-blocks-focus__crumb--current {
     @mixin font-medium;
-    color: hsl(var(--rz-color-fg));
+    color: var(--rz-fg);
     sup {
       font-size: var(--rz-text-2xs);
       text-transform: uppercase;
@@ -241,76 +518,147 @@
   }
 
   .rz-blocks-focus__crumb-separator {
-    color: hsl(var(--rz-color-fg) / 0.3);
+    display: flex;
+    flex-shrink: 0;
+    color: var(--rz-fg-subtle);
   }
 
   .rz-blocks-focus__count {
-    margin-left: var(--rz-size-2);
+    margin-left: var(--rz-size-1);
     font-size: var(--rz-text-xs);
-    color: hsl(var(--rz-color-fg) / 0.5);
+    color: var(--rz-fg-subtle);
     white-space: nowrap;
   }
 
+  /* The ghost icon buttons, the panel's and the close one, are quiet until hovered. */
   .rz-blocks-focus__header-actions {
+    --rz-button-ghost-fg: var(--rz-fg-muted);
     display: flex;
     align-items: center;
-    gap: var(--rz-size-3);
+    gap: var(--rz-size-2);
     flex-shrink: 0;
-  }
-
-  .rz-blocks-focus__kbd {
-    display: flex;
-    gap: var(--rz-size-1);
-    kbd {
-      display: flex;
-      gap: var(--rz-size-1);
-      align-items: center;
-      border: var(--rz-border);
-      border-radius: var(--rz-radius-sm);
-      padding: 0 var(--rz-size-2);
-      font-size: var(--rz-text-xs);
-      line-height: var(--rz-size-5);
-      min-width: var(--rz-size-5);
-      text-align: center;
+    :global(.rz-button--ghost:hover) {
+      color: var(--rz-fg);
     }
   }
 
+  /*
+   * The stage, a canvas with the blocks centred on it as wide as the document's column at most,
+   * and the panel on the right.
+   *
+   *   --rz-focus-side: the panel, growing with the room; wider beside renders, where it holds a
+   *                    block's fields
+   *   --rz-document-width: the blocks' column, 60rem
+   */
   .rz-blocks-focus__body {
+    --rz-focus-side: clamp(20rem, 22cqi, 26rem);
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(14rem, 1fr) minmax(0, 3fr) minmax(12rem, 1fr);
+    grid-template-columns: minmax(0, 1fr) var(--rz-focus-side);
     min-height: 0;
   }
 
-  .rz-blocks-focus__layers,
-  .rz-blocks-focus__palette,
-  .rz-blocks-focus__stage {
+  .rz-blocks-focus__renders > :global(.rz-renders),
+  .rz-blocks-focus__renders > :global(.rz-stage-placeholder),
+  .rz-blocks-focus__stage > :global(.rz-stage) {
+    max-width: var(--rz-document-width, 60rem);
+    margin-inline: auto;
+  }
+
+  /* Under the blocks, one gap further down. */
+  .rz-blocks-focus__renders > :global(.rz-stage-placeholder) {
+    display: block;
+    margin-top: var(--rz-size-3);
+  }
+
+  /* With renders the panel holds a block's fields, which want room. */
+  .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__body {
+    --rz-focus-side: clamp(24rem, 30cqi, 36rem);
+  }
+
+  .rz-blocks-focus__panel,
+  .rz-blocks-focus__stage,
+  .rz-blocks-focus__renders {
+    min-width: 0;
     min-height: 0;
     overflow: auto;
   }
 
-  .rz-blocks-focus__layers,
-  .rz-blocks-focus__palette {
-    padding: var(--rz-size-4);
+  .rz-blocks-focus__panel {
+    background-color: var(--rz-bg-page);
+    border-left: 1px solid var(--rz-border);
   }
 
-  .rz-blocks-focus__layers {
-    border-right: var(--rz-border);
+  .rz-blocks-focus__stage,
+  .rz-blocks-focus__renders {
+    background-color: var(--rz-bg-well);
   }
 
-  .rz-blocks-focus__palette {
-    border-left: var(--rz-border);
+  /*
+   * Room around the blocks for the selected one's bar above, and below the last one so it does
+   * not sit on the window's edge.
+   */
+  .rz-blocks-focus__renders {
+    padding: var(--rz-size-14) var(--rz-size-8) var(--rz-size-32);
   }
 
   .rz-blocks-focus__stage {
-    min-width: 0;
+    padding-bottom: var(--rz-size-16);
   }
 
-  @media (max-width: 60rem) {
-    .rz-blocks-focus__body {
-      grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr);
-    }
-    .rz-blocks-focus__palette {
-      display: none;
+  /* The tabs on the panel's top edge, the content scrolling under them; in a column or a sheet. */
+  /* In a column or in a sheet, which sits outside the overlay: the padding its fields read. */
+  :global(.rz-blocks-focus__panel-tabs.rz-tabs[data-tabs-root]) {
+    /* Room on the left for a rich text's drag handle, which sits outside its field. */
+    --rz-fields-padding: var(--rz-size-10);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100%;
+    margin: 0;
+  }
+
+  /* A track across the panel, its tabs sharing the width. */
+  :global(.rz-blocks-focus__panel-list.rz-tabs-list) {
+    display: flex;
+    width: auto;
+    margin: var(--rz-size-2-5) var(--rz-size-3);
+  }
+  :global(.rz-blocks-focus__panel-list .rz-tabs-trigger) {
+    flex: 1;
+  }
+
+  /* A hairline between the tabs and what they show. */
+  :global(.rz-blocks-focus__panel-content.rz-tabs-content) {
+    min-height: 0;
+    margin: 0;
+    overflow: auto;
+    border-top: 1px solid var(--rz-border);
+  }
+
+  .rz-blocks-focus__panel-pad {
+    padding: var(--rz-size-3);
+  }
+
+  .rz-blocks-focus__panel-pad--layers {
+    padding: var(--rz-size-1-5);
+  }
+
+  .rz-blocks-focus__panel-hint {
+    padding: var(--rz-size-8) var(--rz-size-4);
+    text-align: center;
+    font-size: var(--rz-text-sm);
+    color: var(--rz-fg-subtle);
+  }
+
+  :global(.rz-blocks-focus__panel-sheet) {
+    overflow: hidden;
+  }
+
+  /* Narrow: the stage alone, the panel in a sheet from the right, behind the header's button. */
+  @container rz-focus (max-width: 52rem) {
+    .rz-blocks-focus__body,
+    .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__body {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 </style>

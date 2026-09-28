@@ -4,6 +4,7 @@
   import { t__ } from '$lib/core/i18n';
   import { panelPath } from '$lib/core/routes/util.js';
   import LiveEditPanel from '$lib/panel/components/sections/live/LiveEditPanel.svelte';
+  import Commands from '$lib/panel/components/sections/commands/Commands.svelte';
   import LiveFloatingUI from '$lib/panel/components/sections/live/LiveFloatingUI.svelte';
   import { Pane, PaneGroup, PaneResizer } from '$lib/panel/components/ui/pane/index.js';
   import { Toaster } from '$lib/panel/components/ui/sonner';
@@ -260,51 +261,53 @@
   }
 </script>
 
-<div class="rz-live-container">
-  {#if !sync}
-    <div out:fade={{ duration: 150 }} class="rz-live-container__overlay">
-      <div><SpinLoader /> {t__('common.live_in_sync')}</div>
-    </div>
-  {/if}
+<Commands>
+  <div class="rz-live-container">
+    {#if !sync}
+      <div out:fade={{ duration: 150 }} class="rz-live-container__overlay">
+        <div><SpinLoader /> {t__('common.live_in_sync')}</div>
+      </div>
+    {/if}
 
-  <Toaster />
+    <Toaster />
 
-  <LiveFloatingUI
-    bind:currentDevice
-    forms={panelForms}
-    onClose={closeActivePanel}
-    {activePanel}
-    toggleRootPanel={rootDocumentPanel ? toggleRootPanel : null}
-  />
+    <LiveFloatingUI
+      bind:currentDevice
+      forms={panelForms}
+      onClose={closeActivePanel}
+      {activePanel}
+      toggleRootPanel={rootDocumentPanel ? toggleRootPanel : null}
+    />
 
-  <PaneGroup direction="horizontal">
-    <Pane bind:this={paneLeft} collapsedSize={0} collapsible={true} defaultSize={30}>
-      {#if activePanel && panelContexts[activePanel.update]}
-        {#key activePanel.update}
-          <LiveEditPanel
-            doc={panelContexts[activePanel.update].doc}
-            onDataChange={makePanelOnDataChange(activePanel.update)}
-            afterSuccess={makeAfterSuccess(activePanel.update)}
-            onFormReady={(form) => {
-              panelForms[activePanel.update] = form;
-            }}
-          />
-        {/key}
-      {/if}
-    </Pane>
+    <PaneGroup direction="horizontal">
+      <Pane bind:this={paneLeft} collapsedSize={0} collapsible={true} defaultSize={30}>
+        {#if activePanel && panelContexts[activePanel.update]}
+          {#key activePanel.update}
+            <LiveEditPanel
+              doc={panelContexts[activePanel.update].doc}
+              onDataChange={makePanelOnDataChange(activePanel.update)}
+              afterSuccess={makeAfterSuccess(activePanel.update)}
+              onFormReady={(form) => {
+                panelForms[activePanel.update] = form;
+              }}
+            />
+          {/key}
+        {/if}
+      </Pane>
 
-    <PaneResizer />
-    <Pane class="rz-live-container__pane-right" defaultSize={70}>
-      <iframe
-        class={currentDevice}
-        bind:this={iframe}
-        title="edit"
-        src={data.src}
-        onerror={handleIFrameError}
-      ></iframe>
-    </Pane>
-  </PaneGroup>
-</div>
+      <PaneResizer />
+      <Pane class="rz-live-container__pane-right" defaultSize={70}>
+        <iframe
+          class={currentDevice}
+          bind:this={iframe}
+          title="edit"
+          src={data.src}
+          onerror={handleIFrameError}
+        ></iframe>
+      </Pane>
+    </PaneGroup>
+  </div>
+</Commands>
 
 <style>
   :global(.rz-scroll-area__viewport) {
@@ -318,14 +321,14 @@
     align-items: center;
     justify-content: flex-start;
     height: 100vh;
-    background-color: hsl(var(--rz-gray-3));
+    background-color: var(--rz-bg-page);
   }
 
   .rz-live-container__side-panel {
     width: 100%;
     flex-shrink: 0;
     flex-grow: 0;
-    border-right: var(--rz-border);
+    border-right: 1px solid var(--rz-border);
   }
 
   :global(.rz-live-hidden) {
@@ -356,9 +359,9 @@
   }
 
   .rz-live-container__overlay {
-    background-color: light-dark(hsl(var(--rz-gray-18)), hsl(var(--rz-gray-2)));
-    color: light-dark(hsl(var(--rz-gray-2)), hsl(var(--rz-gray-18)));
-    opacity: 0.93;
+    background-color: var(--rz-bg-overlay);
+    backdrop-filter: blur(var(--rz-overlay-blur));
+    color: var(--rz-fg);
     position: absolute;
     inset: 0;
     display: flex;

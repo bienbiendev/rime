@@ -26,6 +26,8 @@
 </div>
 
 <style type="postcss">
+  @import '../../../style/mixins/index.css';
+
   .rz-auth {
     display: grid;
     grid-template-columns: 1fr;
@@ -37,19 +39,12 @@
       0px 0px,
       0px 0px,
       0px 0px;
+    background-color: var(--rz-bg-base);
     background-image:
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='10.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.88'/%3E%3C/svg%3E"),
-      radial-gradient(113% 91% at 17% -2%, oklch(0.21 0.03 290) 1%, oklch(0 0 0 / 0) 99%),
-      radial-gradient(142% 91% at 83% 7%, oklch(0.21 0.12 80) 1%, oklch(0.85 0.23 155 / 0) 99%),
-      radial-gradient(142% 91% at 111% 84%, oklch(0.13 0.08 300) 0%, oklch(0.05 0.1 250) 100%);
-
-    @media (prefers-color-scheme: light) {
-      background-image:
-        url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='10.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.12'/%3E%3C/svg%3E"),
-        radial-gradient(113% 91% at 17% -2%, oklch(0.95 0 310) 1%, oklch(1 0 0 / 0) 99%),
-        radial-gradient(142% 91% at 83% 7%, oklch(0.92 0 90) 1%, oklch(1 0 0 / 0) 99%),
-        radial-gradient(142% 91% at 111% 84%, oklch(0.88 0 40) 0%, oklch(0.96 0 40) 100%);
-    }
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='10.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.12'/%3E%3C/svg%3E"),
+      radial-gradient(113% 91% at 17% -2%, var(--rz-accent-tint) 1%, transparent 99%),
+      radial-gradient(142% 91% at 83% 7%, var(--rz-bg-page) 1%, transparent 99%),
+      radial-gradient(142% 91% at 111% 84%, var(--rz-bg-active) 0%, transparent 100%);
 
     @media (min-width: 1024px) {
       grid-template-columns: 0.8fr 1.2fr;
@@ -57,19 +52,11 @@
 
     .rz-auth__right {
       --rz-input-height: var(--rz-size-14);
-      --rz-input-bg: 68deg 0 0 / 0;
-      --border-color: light-dark(hsl(68deg 100 100 / 0.6), hsl(68deg 100 100 / 0.1));
       border-radius: var(--rz-radius-xl);
-      background-color: hsl(var(--rz-color-bg) / 0.4);
-      backdrop-filter: blur(10px) brightness(180%);
-      @media (prefers-color-scheme: light) {
-        background-color: hsl(var(--rz-color-bg) / 0.1);
-        backdrop-filter: blur(4px) brightness(105%);
-      }
+      @mixin surface raised;
 
       @media (min-width: 1024px) {
         margin: 1rem;
-        border: 1px solid var(--border-color);
       }
 
       > div {
@@ -114,8 +101,5 @@
 
   .rz-auth.rz-auth--image {
     background-size: cover;
-    .rz-auth__right {
-      background-color: hsl(var(--rz-color-bg) / 0.9);
-    }
   }
 </style>

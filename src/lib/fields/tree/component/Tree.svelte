@@ -19,6 +19,7 @@
   const treeState = $derived(form.useTree(path));
   const field = $derived(form.useField(path, config));
   let sortingInitialized = $state(false);
+  let fieldElement = $state<HTMLFieldSetElement>();
   let sorting = $state(false);
   let sortableInstances = $state<ReturnType<typeof Sortable.create>[]>([]);
 
@@ -27,10 +28,21 @@
   const nested = $derived(path.split('.').length > 1);
   const shouldInit = $derived(!sortingInitialized && treeState.items.length > 0);
 
+  /**
+   * A card drags by its header, and shows only its header while it moves; where it lands is a
+   * line. Dropped in an open card's _Inside_ zone, it goes inside that item.
+   */
   const sortableOptions: Sortable.Options = {
     handle: '.rz-tree-item__grip',
+    draggable: '.rz-tree-item',
     animation: 150,
-    swapThreshold: 0.93,
+    forceFallback: true,
+    fallbackOnBody: true,
+    fallbackClass: 'rz-tree-item--floating',
+    ghostClass: 'rz-tree-item--landing',
+    swapThreshold: 0.65,
+    // An empty zone has little height: a drop this close lands in it.
+    emptyInsertThreshold: 12,
     group: {
       name: `list-${key}`,
       put: (to, _, el) => {
@@ -40,8 +52,14 @@
         return targetDepth + childrenCount <= config.get.maxDepth;
       }
     },
-    onStart: () => (sorting = true),
-    onUnchoose: () => (sorting = false),
+    onStart: () => {
+      sorting = true;
+      holdHeight(true);
+    },
+    onUnchoose: () => {
+      sorting = false;
+      holdHeight(false);
+    },
     onEnd: function (evt) {
       const { newIndex, to } = evt;
 
@@ -59,6 +77,15 @@
     }
   };
 
+  /**
+   * While a card moves, the field keeps its height: a card leaving the bottom of the page would
+   * scroll it, and the zone under the pointer with it.
+   */
+  function holdHeight(hold: boolean) {
+    if (!fieldElement) return;
+    fieldElement.style.minHeight = hold ? `${fieldElement.offsetHeight}px` : '';
+  }
+
   const resetSortable = () => {
     destroySortable();
     sortingInitialized = false;
@@ -70,9 +97,7 @@
   };
 
   const add = (emptyValues: Dic) => {
-    treeState.addItem({
-      ...emptyValues
-    });
+    treeState.addItem(emptyValues);
     resetSortable();
   };
 
@@ -93,7 +118,11 @@
   });
 </script>
 
-<fieldset class="rz-field-tree {config.get.className}" use:fieldset={field}>
+<fieldset
+  class="rz-field-tree {config.get.className}"
+  bind:this={fieldElement}
+  use:fieldset={field}
+>
   <Field.Error error={field.error} />
 
   <Field.Label {config} />
@@ -134,23 +163,23 @@
 </fieldset>
 
 <style lang="postcss">
-  .rz-tree__list :global(.rz-tree__list) {
-    margin-left: 2rem;
+  /* The items of the first level: one card each. */
+  .rz-tree__list--root {
+    display: flex;
+    flex-direction: column;
+    gap: var(--rz-size-2);
   }
 
-  .rz-field-tree {
-    :global(> .rz-label) {
-      margin-bottom: var(--rz-size-5);
-    }
-  }
-  .rz-tree__list {
-    display: grid;
-    margin-left: 1rem;
-  }
-
+  /* Under the cards: the add button, the locale import. */
   .rz-tree__actions {
     display: flex;
     align-items: center;
     gap: var(--rz-size-3);
+    margin-top: var(--rz-size-2-5);
+    margin-left: --size(-0.5);
+  }
+
+  .rz-tree__list--root[data-empty] + .rz-tree__actions {
+    margin-top: 0;
   }
 </style>

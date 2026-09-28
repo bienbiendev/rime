@@ -72,7 +72,7 @@ test('plugin route, handler, field and hook all mounted correctly', async ({ pag
   await saveButton.click();
   await page.waitForURL(panelUrlRe('pages'));
   await page.waitForLoadState('networkidle');
-  await expect(page.locator('.rz-page-header__row h1')).toHaveText(title);
+  await expect(page.locator('.rz-aria__last')).toHaveText(title);
 
   // module.server.ts's normalizeValue ran server-side, not the module.ts client no-op —
   // the saved+reloaded value carries its prefix.

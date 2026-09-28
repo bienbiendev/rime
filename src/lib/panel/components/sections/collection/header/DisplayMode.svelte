@@ -1,71 +1,68 @@
 <script lang="ts">
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import {
-    DISPLAY_MODE,
-    getCollectionContext,
-    type DisplayMode
-  } from '$lib/panel/context/collection.svelte.js';
-  import { LayoutGrid, List, TextQuote } from '@lucide/svelte';
+  import { t__ } from '$lib/core/i18n/index.js';
+  import { DISPLAY_MODE, getCollectionContext } from '$lib/panel/context/collection.svelte.js';
+  import { LayoutGrid, List, ListTree } from '@lucide/svelte';
 
   const collection = getCollectionContext();
-  const listIconClass = $derived(collection.isList() ? 'rz-header-display-mode__icon--active' : '');
-  const gridIconClass = $derived(collection.isGrid() ? 'rz-header-display-mode__icon--active' : '');
-  const nestedIconClass = $derived(
-    collection.isNested() ? 'rz-header-display-mode__icon--active' : ''
-  );
 
-  const setVariant = (mode: DisplayMode) => (mode === collection.display ? 'secondary' : 'ghost');
-  const isActive = (mode: DisplayMode) => mode === collection.display;
-
-  function handleListClick() {
-    collection.display = DISPLAY_MODE.LIST;
-  }
-  function handleGridClick() {
-    collection.display = DISPLAY_MODE.GRID;
-  }
-  function handleNestedClick() {
-    collection.display = DISPLAY_MODE.NESTED;
-  }
+  const modes = $derived([
+    { mode: DISPLAY_MODE.LIST, label: t__('common.show_as_list'), icon: List },
+    { mode: DISPLAY_MODE.GRID, label: t__('common.show_as_grid'), icon: LayoutGrid },
+    ...(collection.config.nested
+      ? [{ mode: DISPLAY_MODE.NESTED, label: t__('common.show_as_tree'), icon: ListTree }]
+      : [])
+  ]);
 </script>
 
-<div class="rz-header-display-mode">
-  <Button
-    size="icon-sm"
-    variant={setVariant(DISPLAY_MODE.LIST)}
-    inert={isActive(DISPLAY_MODE.LIST)}
-    onclick={handleListClick}
-  >
-    <List size={17} class="rz-header-display-mode__icon {listIconClass}" />
-  </Button>
-
-  <Button
-    size="icon-sm"
-    variant={setVariant(DISPLAY_MODE.GRID)}
-    inert={isActive(DISPLAY_MODE.GRID)}
-    onclick={handleGridClick}
-  >
-    <LayoutGrid size={17} class="rz-header-display-mode__icon {gridIconClass}" />
-  </Button>
-
-  {#if collection.config.nested}
-    <Button
-      size="icon-sm"
-      variant={setVariant(DISPLAY_MODE.NESTED)}
-      inert={isActive(DISPLAY_MODE.NESTED)}
-      onclick={handleNestedClick}
+<!-- A segmented control: a well track, the current mode a knob inside it. -->
+<div class="rz-header-display-mode" role="group" aria-label={t__('common.collection_display')}>
+  {#each modes as { mode, label, icon: Icon } (mode)}
+    <button
+      type="button"
+      class="rz-header-display-mode__button"
+      aria-label={label}
+      aria-pressed={collection.display === mode}
+      title={label}
+      onclick={() => (collection.display = mode)}
     >
-      <TextQuote size={17} class="rz-header-display-mode__icon {nestedIconClass}" />
-    </Button>
-  {/if}
+      <Icon size={14} />
+    </button>
+  {/each}
 </div>
 
-<style type="postcss" global>
-  .rz-header-display-mode {
-    display: flex;
-    gap: var(--rz-size-2);
+<style type="postcss">
+  @import '../../../../style/mixins/index.css';
 
-    :global(.rz-header-display-mode__icon--active) {
-      color: hsl(229, 89%, 60%);
+  .rz-header-display-mode {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: var(--rz-radius-lg);
+    background-color: var(--rz-bg-well);
+    box-shadow: inset 0 0 0 1px var(--rz-border);
+  }
+
+  .rz-header-display-mode__button {
+    display: grid;
+    place-items: center;
+    width: var(--rz-size-7);
+    height: var(--rz-size-6);
+    border-radius: var(--rz-radius-md);
+    color: var(--rz-fg-muted);
+    transition: color 0.15s;
+
+    &:hover {
+      color: var(--rz-fg);
+    }
+
+    &[aria-pressed='true'] {
+      @mixin knob;
+      color: var(--rz-fg);
+    }
+
+    &:focus-visible {
+      @mixin focus-ring;
+      outline-offset: 0;
     }
   }
 </style>

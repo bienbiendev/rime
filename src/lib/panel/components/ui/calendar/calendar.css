@@ -1,5 +1,5 @@
 .rz-calendar {
-  background-color: var(--rz-popover-bg);
+  background-color: var(--rz-bg-float);
   border-radius: var(--rz-radius-lg);
   padding: var(--rz-size-3);
 }
@@ -18,14 +18,14 @@
   text-align: center;
   font-size: var(--rz-text-sm);
   &:has([data-selected][data-outside-month]) {
-    background-color: hsl(var(--rz-color-spot) / 0.5);
+    background-color: var(--rz-accent-tint);
   }
   &:focus-within {
     position: relative;
     z-index: 20;
   }
   &:has([data-selected]) {
-    background-color: hsl(var(--rz-color-spot));
+    background-color: var(--rz-accent);
     border-radius: var(--rz-radius-md);
   }
 }
@@ -41,7 +41,9 @@
   font-size: var(--rz-text-sm);
   border-radius: var(--rz-radius-md);
   white-space: nowrap;
-  transition: colors 0.2s ease-in-out;
+  transition:
+    color 0.2s ease-in-out,
+    background-color 0.2s ease-in-out;
   width: var(--rz-size-8);
   height: var(--rz-size-8);
   padding: 0;
@@ -49,51 +51,50 @@
 }
 
 .rz-calendar-day:focus-visible {
-  outline: none;
-  @mixin ring var(--rz-color-ring);
+  @mixin focus-ring;
 }
 
 .rz-calendar-day:hover {
-  background-color: hsl(var(--rz-gray-13));
-  color: hsl(var(--rz-color-fg));
+  background-color: var(--rz-bg-hover);
+  color: var(--rz-fg);
 }
 
 .rz-calendar-day[data-today]:not([data-selected]) {
-  border: 1px solid hsl(var(--rz-color-border));
-  color: hsl(var(--rz-color-fg));
+  border: 1px solid var(--rz-border);
+  color: var(--rz-accent-text);
 }
 
 .rz-calendar-day[data-selected] {
-  background-color: hsl(var(--rz-color-spot));
-  color: hsl(var(--rz-color-spot-fg));
+  background-color: var(--rz-accent);
+  color: var(--rz-accent-fg);
   opacity: 1;
 }
 
 .rz-calendar-day[data-selected]:hover,
 .rz-calendar-day[data-selected]:focus {
-  background-color: hsl(var(--rz-color-spot));
-  color: hsl(var(--rz-color-spot-fg));
+  background-color: var(--rz-accent);
+  color: var(--rz-accent-fg);
 }
 
 .rz-calendar-day[data-disabled] {
-  color: hsl(var(--rz-color-fg) / 0.7);
+  color: var(--rz-fg-muted);
   opacity: 0.5;
 }
 
 .rz-calendar-day[data-unavailable] {
-  color: hsl(var(--rz-color-fg) / 0.5);
+  color: var(--rz-fg-subtle);
   text-decoration: line-through;
 }
 
 .rz-calendar-day[data-outside-month] {
-  color: hsl(var(--rz-color-fg) / 0.7);
+  color: var(--rz-fg-muted);
   pointer-events: none;
   opacity: 0.5;
 }
 
 .rz-calendar-day[data-outside-month][data-selected] {
-  background-color: hsl(var(--rz-color-spot) / 0.5);
-  color: hsl(var(--rz-color-fg));
+  background-color: var(--rz-accent-tint);
+  color: var(--rz-fg);
   opacity: 0.3;
 }
 
@@ -135,7 +136,7 @@
 /**************************************/
 
 .rz-calendar-head-cell {
-  color: hsl(var(--rz-color-fg) / 0.7);
+  color: var(--rz-fg-muted);
   flex: 1;
   font-size: var(--rz-text-xs);
   @mixin font-normal;
@@ -160,12 +161,12 @@
   width: var(--rz-size-7);
   background-color: transparent;
   padding: 0;
-  opacity: 0.5;
-  transition: opacity 0.2s ease;
+  color: var(--rz-fg-subtle);
+  transition: color 0.2s ease;
 }
 
 .rz-calendar-next-button:hover {
-  opacity: 1;
+  color: var(--rz-fg);
 }
 
 /** Prev */
@@ -174,9 +175,9 @@
   width: var(--rz-size-7);
   background-color: transparent;
   padding: 0;
-  opacity: 0.5;
+  color: var(--rz-fg-subtle);
 }
 
 .rz-calendar-prev-button:hover {
-  opacity: 1;
+  color: var(--rz-fg);
 }

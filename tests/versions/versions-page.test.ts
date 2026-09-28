@@ -34,7 +34,7 @@ async function loginAs(page: Page, email: string, password: string) {
 /** The history stays open across picks; a reload closes it. */
 async function openHistory(page: Page) {
   if (await page.locator(HISTORY).count()) return;
-  await page.locator('button[aria-haspopup="menu"]').first().click();
+  await page.getByRole('button', { name: 'Document actions' }).click();
   await page.getByRole('menuitem', { name: 'Versions history' }).click();
   await expect(page.locator(HISTORY)).toBeVisible();
 }
@@ -175,7 +175,7 @@ test('Should branch a new draft from the published version and land on it', asyn
   await page.waitForLoadState('networkidle');
 
   await page.locator(TITLE).fill('Versioned news, third');
-  await page.locator('button[aria-haspopup="menu"]').first().click();
+  await page.getByRole('button', { name: 'Document actions' }).click();
   await page.getByRole('menuitem', { name: 'Save in a new draft' }).click();
 
   // The action answers with a redirect to the new row on this same page.

@@ -7,6 +7,14 @@
   const collection = getCollectionContext();
   let searchValue = $state('');
 
+  // Search 24 documents...
+  const placeholder = $derived.by(() => {
+    if (collection.config.label.search) return collection.config.label.search;
+    const key = collection.isUpload ? 'common.collection_count_files' : 'common.collection_count';
+    const count = t__(collection.total === 1 ? key : `${key}|m|p`, String(collection.total));
+    return t__('common.search', count);
+  });
+
   $effect(() => {
     collection.filterBy(searchValue);
   });
@@ -16,39 +24,21 @@
   <Input
     name="search"
     icon={Search}
-    placeholder={t__('common.search', `${collection.length} document(s)`)}
+    {placeholder}
+    aria-label={placeholder}
     type="text"
     bind:value={searchValue}
   />
 </div>
 
 <style type="postcss">
-  @import '../../../../style/mixins/index.css';
-
   .rz-header-search-input {
-    position: relative;
-    display: none;
-    height: var(--rz-size-11);
-    align-items: center;
-    width: var(--rz-size-80);
+    flex: 1;
+    min-width: var(--rz-size-40);
+    max-width: var(--rz-size-80);
 
-    :global {
-      .rz-input {
-        height: var(--rz-size-9);
-        font-size: var(--rz-text-sm);
-      }
-      .rz-input-wrapper {
-        width: 100%;
-        &:focus-visible {
-          @mixin ring var(--rz-color-ring);
-        }
-      }
-    }
-  }
-
-  @container (min-width: 720px) {
-    .rz-header-search-input {
-      display: flex;
+    :global(.rz-input) {
+      height: var(--rz-size-8);
     }
   }
 </style>

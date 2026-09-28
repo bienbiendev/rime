@@ -35,11 +35,16 @@
 <style>
   .rz-time-field__input-wrapper {
     display: flex;
-    width: 200px;
+    width: var(--rz-size-52);
     position: relative;
     :global {
       .rz-input {
         display: block;
+      }
+      /* The browser's own clock stays clickable, unseen, under ours. */
+      .rz-input::-webkit-calendar-picker-indicator {
+        opacity: 0;
+        cursor: pointer;
       }
     }
   }
@@ -48,8 +53,10 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    right: var(--rz-size-4);
+    right: var(--rz-size-3);
     display: flex;
     align-items: center;
+    color: var(--rz-fg-subtle);
+    pointer-events: none;
   }
 </style>

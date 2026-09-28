@@ -10,18 +10,26 @@ import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/confi
 import { toNestedStructure } from '$lib/core/prototype/collection/nested/tree.js';
 import type { GenericDoc, GenericNestedDoc } from '$lib/core/prototype/types.js';
 import { apiUrl, panelUrl } from '$lib/core/routes/util.js';
+import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
 import type { FormField } from '$lib/fields/types.js';
 import type { FieldPanelTableConfig } from '$lib/panel/types.js';
+import {
+  fileSizeBytes,
+  mediaKind,
+  MEDIA_KINDS,
+  type MediaKind
+} from '$lib/panel/util/upload-file.js';
 import { trycatch, trycatchFetch } from '$lib/util/function.js';
 import { getValueAtPath, hasProp } from '$lib/util/object.js';
 import type { WithRequired } from '$lib/util/types.js';
-import { getContext, onMount, setContext, type Component } from 'svelte';
+import { computeCommandScore } from 'bits-ui';
+import { getContext, onMount, setContext, untrack, type Component } from 'svelte';
 import { toast } from 'svelte-sonner';
-//@ts-expect-error command-score has no types
-import commandScore from 'command-score';
 
 type TableColumn = {
   type: string;
+  name: string;
+  label: string;
   path: string;
   cell: null | Component<{ value: any }>;
   table: FieldPanelTableConfig;
@@ -29,6 +37,8 @@ type TableColumn = {
 
 type SortMode = 'asc' | 'dsc';
 export type DisplayMode = (typeof DISPLAY_MODE)[keyof typeof DISPLAY_MODE];
+export type StatusFilter = 'all' | typeof VERSIONS_STATUS.DRAFT | typeof VERSIONS_STATUS.PUBLISHED;
+export type KindFilter = 'all' | MediaKind;
 
 export const DISPLAY_MODE = {
   LIST: 'display_list',
@@ -39,12 +49,14 @@ export const DISPLAY_MODE = {
 function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>) {
   const { initial, config, canCreate, upload: incomingUpload } = args;
 
-  let initialDocs = $state.raw(initial);
-  let docs = $state(initial);
-  let sortingOrder = $state<SortMode>('asc');
+  // The latest edit first, until another order is picked.
+  let sortingOrder = $state<SortMode>('dsc');
   let sortingBy = $state<string>('updatedAt');
-  let selectMode = $state(false);
+  let initialDocs = $state.raw(initial);
+  let docs = $state(sorted([...initial]));
   let selected = $state<string[]>([]);
+  let statusFilter = $state<StatusFilter>('all');
+  let kindFilter = $state<KindFilter>('all');
   let displayMode = $state<DisplayMode>(DISPLAY_MODE.LIST);
   let upload = $state({
     directories: incomingUpload?.directories || [],
@@ -52,6 +64,8 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     parentDirectory: incomingUpload?.parentDirectory || null
   });
   let isFiltered = $state(false);
+  /** The search as typed. */
+  let query = '';
   let stamp = $state(Date.now()); // Timestamp to invalidate on changes
   const hasVersions = $derived(!!config.versions);
   const hasDraft = $derived(config.versions && config.versions.draft);
@@ -65,19 +79,64 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     const localSortBy = localStorage.getItem(`collection.${config.slug}.sortBy`);
     sortingBy = localSortBy || 'updatedAt';
     const localSortOrder = localStorage.getItem(`collection.${config.slug}.sortOrder`) as SortMode;
-    sortingOrder = localSortOrder || 'asc';
+    sortingOrder = localSortOrder || 'dsc';
     if (localSortBy) {
       sortBy(sortingBy, false);
     }
   });
 
-  $effect(() => {
-    if (!selectMode) selected = [];
-  });
-
   const nested = $derived.by(() => {
     return toNestedStructure(docs);
   });
+
+  /** An upload collection shows the files of the folder on screen; any other, all of them. */
+  const inFolder = (doc: GenericDoc) => !config.upload || doc._path === upload.currentPath;
+  const ofStatus = (doc: GenericDoc) => statusFilter === 'all' || doc.status === statusFilter;
+  const ofKind = (doc: GenericDoc) =>
+    kindFilter === 'all' || mediaKind(doc.mimeType) === kindFilter;
+
+  /** The documents on screen: the search's, in the folder, of the status and the kind picked. */
+  const shown = $derived(docs.filter((doc) => inFolder(doc) && ofStatus(doc) && ofKind(doc)));
+
+  /** The kinds of file the collection holds, in a fixed order. */
+  const kinds = $derived.by(() => {
+    const present = new Set(initialDocs.map((doc) => mediaKind(doc.mimeType)));
+    return MEDIA_KINDS.filter((kind) => present.has(kind));
+  });
+
+  const draftsCount = $derived(
+    hasDraft ? initialDocs.filter((doc) => doc.status === VERSIONS_STATUS.DRAFT).length : 0
+  );
+
+  /** What the files weigh together, in bytes. */
+  const totalSize = $derived(
+    initialDocs.reduce((sum, doc) => sum + (fileSizeBytes(doc.filesize) ?? 0), 0)
+  );
+
+  /** Where a slug field sits, when the collection has one. */
+  const slugPath = [...walkFields(config.fields, { determinate: true })].find(
+    ({ field }) => field.type === 'slug'
+  )?.path;
+
+  /**
+   * The path of a document, after its title: the pathname of its url, else its slug.
+   *
+   * ```ts
+   * pathOf({ url: 'https://site.com/studio' }) // '/studio'
+   * pathOf({ attributes: { slug: 'studio' } }) // 'studio'
+   * ```
+   */
+  function pathOf(doc: GenericDoc) {
+    if (!config.upload && typeof doc.url === 'string' && doc.url) {
+      try {
+        return new URL(doc.url, 'http://localhost').pathname;
+      } catch {
+        return doc.url;
+      }
+    }
+    const slug = slugPath ? getValueAtPath(slugPath, doc) : null;
+    return typeof slug === 'string' ? slug : '';
+  }
 
   /** Every field marked `table()`, at a path a config alone can name. */
   const buildFieldColumns = (fields: FieldBuilder[]) => {
@@ -86,6 +145,8 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       if (isFormField(field) && hasProp('table', field.get)) {
         columns.push({
           type: field.type,
+          name: field.name,
+          label: field.get.label,
           path,
           cell: field.get.table.cell || field.cell,
           table: field.get.table
@@ -108,6 +169,20 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     })
     .sort((a, b) => a.table.position - b.table.position);
 
+  /** The documents in the order picked, by `sortingBy` then `sortingOrder`. */
+  function sorted(list: T[]) {
+    const orderMult = sortingOrder === 'asc' ? 1 : -1;
+    return list.sort((a, b) => {
+      if (a[sortingBy] < b[sortingBy]) {
+        return -1 * orderMult;
+      }
+      if (a[sortingBy] > b[sortingBy]) {
+        return 1 * orderMult;
+      }
+      return 0;
+    });
+  }
+
   const sortBy = (fieldName: string, toggle: boolean = true) => {
     if (sortingBy === fieldName) {
       if (toggle) {
@@ -117,17 +192,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       // Else sort by field asc
       sortingBy = fieldName;
     }
-    // Do sorting logic
-    const orderMult = sortingOrder === 'asc' ? 1 : -1;
-    docs = docs.sort((a, b) => {
-      if (a[fieldName] < b[fieldName]) {
-        return -1 * orderMult;
-      }
-      if (a[fieldName] > b[fieldName]) {
-        return 1 * orderMult;
-      }
-      return 0;
-    });
+    docs = sorted(docs);
     // Save to local storage
     localStorage.setItem(`collection.${config.slug}.sortBy`, fieldName);
     localStorage.setItem(`collection.${config.slug}.sortOrder`, sortingOrder);
@@ -286,26 +351,24 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
   }
 
   function selectAll() {
-    if (config.upload) {
-      selected = docs.filter((doc) => doc._path === upload.currentPath).map((doc) => doc.id);
-    } else {
-      selected = docs.map((doc) => doc.id);
-    }
+    selected = shown.map((doc) => doc.id);
   }
 
   async function deleteSelection() {
-    deleteDocs(selected);
-    selectMode = false;
+    const ids = selected;
+    selected = [];
+    await deleteDocs(ids);
   }
 
   function filterBy(inputValue: string) {
+    query = inputValue;
     if (inputValue !== '') {
       isFiltered = true;
       const scores: any[] = [];
       for (const doc of initialDocs) {
-        const asTitle = getValueAtPath(config.asTitle, doc);
+        const asTitle = getValueAtPath<string>(config.asTitle, doc);
         if (!asTitle) continue;
-        const score = commandScore(asTitle, inputValue);
+        const score = computeCommandScore(asTitle, inputValue);
         if (score > 0) {
           scores.push({
             doc,
@@ -326,7 +389,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       docs = results.map((r) => r.doc);
     } else {
       isFiltered = false;
-      docs = [...initialDocs];
+      docs = sorted([...initialDocs]);
     }
   }
 
@@ -399,22 +462,60 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     set selected(value) {
       selected = value;
     },
+    /** On while a document is checked; turning it off drops the selection. */
     get selectMode() {
-      return selectMode;
+      return selected.length > 0;
     },
     set selectMode(bool) {
-      selectMode = bool;
+      if (!bool) selected = [];
     },
     get isAllSelected() {
-      if (config.upload) {
-        return selected.length === docs.filter((d) => d._path === upload.currentPath).length;
-      } else {
-        return selected.length === docs.length;
-      }
+      return shown.length > 0 && shown.every((doc) => selected.includes(doc.id));
     },
 
     deleteSelection,
     filterBy,
+
+    /** The documents on screen, after the search, the folder and the filters. */
+    get shown() {
+      return shown;
+    },
+
+    /** A filter change drops the selection, so no hidden document stays picked. */
+    get statusFilter() {
+      return statusFilter;
+    },
+    set statusFilter(value: StatusFilter) {
+      statusFilter = value;
+      selected = [];
+    },
+
+    get kindFilter() {
+      return kindFilter;
+    },
+    set kindFilter(value: KindFilter) {
+      kindFilter = value;
+      selected = [];
+    },
+
+    get kinds() {
+      return kinds;
+    },
+
+    get draftsCount() {
+      return draftsCount;
+    },
+
+    get totalSize() {
+      return totalSize;
+    },
+
+    /** Every document of the collection, whatever the search. */
+    get total() {
+      return initialDocs.length;
+    },
+
+    pathOf,
 
     get isUpload() {
       return isUploadConfig(config);
@@ -435,8 +536,10 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     get docs() {
       return docs;
     },
+    /** A reload: the search runs again over the new documents, in the order picked. */
     set docs(value) {
-      docs = value;
+      initialDocs = value;
+      untrack(() => filterBy(query));
       stamp = Date.now();
     },
     get length() {

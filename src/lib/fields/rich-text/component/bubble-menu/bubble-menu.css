@@ -4,10 +4,8 @@
   width: fit-content;
   gap: var(--rz-size-1);
   border-radius: var(--rz-radius-lg);
-  border: var(--rz-border);
-  background-color: hsl(var(--rz-color-bg));
+  @mixin surface float;
   padding: var(--rz-size-1);
-  box-shadow: var(--rz-shadow-xl);
   visibility: hidden;
   position: absolute;
   left: -9999px;

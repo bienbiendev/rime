@@ -46,71 +46,74 @@
 </fieldset>
 
 <style lang="postcss">
+  @import '../../../panel/style/mixins/index.css';
+
+  /* One well: the value, then the steppers. */
   .rz-number-field__input-wrapper {
     width: 6rem;
     display: flex;
-    height: var(--rz-size-11);
+    height: var(--rz-input-height);
     align-items: center;
     border-radius: var(--rz-radius-lg);
+    @mixin well;
+    &:focus-within {
+      @mixin focus-field;
+    }
   }
 
   .rz-number-field__input {
-    background-color: hsl(var(--rz-input-bg));
+    background-color: transparent;
     height: 100%;
     width: 100%;
     flex: 1;
     justify-content: center;
     border-top-left-radius: var(--rz-radius-lg);
     border-bottom-left-radius: var(--rz-radius-lg);
-    border: 1px solid var(--rz-input-border-color);
+    border: 0;
     text-align: center;
     transition: all 0.2s ease;
   }
 
   .rz-number-field__input:focus-visible {
-    position: relative;
-    z-index: 10;
-    @mixin ring var(--rz-color-ring);
     outline: none;
   }
 
+  /* The steppers: a column of their own, a hairline before it and between them. */
   .rz-number-field__controls {
     display: flex;
     flex-direction: column;
-    height: var(--rz-size-11);
+    height: 100%;
+    border-left: 1px solid var(--rz-border);
   }
 
   .rz-number-field__chevron {
-    background-color: hsl(var(--rz-input-bg));
     display: flex;
     align-items: center;
     justify-content: center;
     width: var(--rz-size-8);
     flex: 1;
-    border-right: 1px solid var(--rz-input-border-color);
+    color: var(--rz-fg-subtle);
     transition: all 0.2s ease;
   }
 
   .rz-number-field__chevron:hover {
-    background-color: hsl(var(--rz-gray-9));
+    background-color: var(--rz-bg-hover);
+    color: var(--rz-fg);
   }
 
   .rz-number-field__chevron:focus-visible {
-    @mixin ring var(--rz-color-ring);
+    @mixin focus-ring;
     position: relative;
     z-index: 10;
-    outline: none;
   }
 
   .rz-number-field__chevron--up {
-    border-top: 1px solid var(--rz-input-border-color);
     border-top-right-radius: var(--rz-radius-lg);
-    border-bottom: 1px solid var(--rz-input-border-color);
+    border-bottom: 1px solid var(--rz-border);
   }
 
   .rz-number-field__chevron--down {
     border-bottom-right-radius: var(--rz-radius-lg);
-    border-bottom: 1px solid var(--rz-input-border-color);
   }
 
   /* Chrome, Safari, Edge, Opera */

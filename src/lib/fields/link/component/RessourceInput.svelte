@@ -128,6 +128,8 @@
 </div>
 
 <style type="postcss">
+  @import '../../../panel/style/mixins/index.css';
+
   .rz-ressource-input {
     position: relative;
     width: 100%;
@@ -135,19 +137,20 @@
     :global {
       .rz-command {
         width: 100%;
+        height: 100%;
         border-radius: var(--rz-radius-md);
+        background-color: transparent;
       }
 
       .rz-command-list {
+        @mixin surface float;
         border-radius: var(--rz-radius-md);
         position: absolute;
         left: 0;
         right: 0;
-        top: var(--rz-size-12);
+        top: calc(100% + var(--rz-size-1-5));
         z-index: 20;
-        box-shadow: var(--rz-shadow-md);
         max-height: var(--rz-size-36);
-        border: var(--rz-border);
       }
 
       .rz-command-input-select {
@@ -160,28 +163,16 @@
     }
   }
 
+  /* Inside the link's well: the picked document, or the search for one. */
   .rz-ressource-input__wrapper {
-    background-color: hsl(var(--rz-input-bg));
     display: flex;
-    height: var(--rz-size-11);
-    flex-wrap: wrap;
+    height: 100%;
     align-items: center;
     gap: var(--rz-size-1);
-
-    border-top: 0;
-    padding: var(--rz-size-2) var(--rz-size-3);
+    padding: 0 var(--rz-size-1-5);
   }
 
   .rz-ressource-input__wrapper--readonly {
     cursor: no-drop;
-  }
-
-  .rz-ressource-input__wrapper:global([data-focused]) {
-    @mixin ring var(--rz-color-spot);
-    z-index: 20;
-  }
-
-  .rz-ressource-input__wrapper:global([data-error]) {
-    @mixin ring var(--rz-color-alert);
   }
 </style>

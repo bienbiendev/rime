@@ -1,9 +1,10 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
-  import * as Command from '$lib/panel/components/ui/command/index.js';
+  import { getCommandsContext, useCommands } from '$lib/panel/context/commands.svelte.js';
+  import * as random from '$lib/util/random.js';
   import { capitalize } from '$lib/util/string.js';
   import type { Editor } from '@tiptap/core';
-  import { onDestroy, onMount } from 'svelte';
+  import { Plugin, PluginKey } from '@tiptap/pm/state';
   import type { RichTextFeature } from '../../core/types.js';
 
   type Props = {
@@ -12,8 +13,6 @@
   };
 
   let { editor, features = [] }: Props = $props();
-
-  let isOpen = $state(false);
 
   const augmentFeatureName = (feature: RichTextFeature): RichTextFeature & { name?: string } => ({
     ...feature,
@@ -38,59 +37,45 @@
   // Combine all suggestion items
   const allSuggestionItems = $derived([...markItems, ...nodeItems]);
 
-  // Cmd+K handling
-  const onFocus = () => {
-    document.addEventListener('keydown', handleKeyDown);
-  };
-  const onBlur = () => {
-    document.removeEventListener('keydown', handleKeyDown);
-  };
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.code === 'KeyK' && event.metaKey) {
-      isOpen = true;
-    }
-  };
+  const group = t__('common.text');
+  const commands = getCommandsContext();
 
-  onMount(() => {
-    editor.on('focus', onFocus);
-    editor.on('blur', onBlur);
+  /**
+   * `/` typed on an empty line opens the palette on these, and is not written. It is the typed
+   * character, not a key, so it works on every keyboard.
+   */
+  $effect(() => {
+    if (!commands) return;
+    const key = new PluginKey(`rz-slash-${random.randomId(8)}`);
+    const plugin = new Plugin({
+      key,
+      props: {
+        handleTextInput(view, _from, _to, text) {
+          const { selection } = view.state;
+          const line = selection.$from.parent;
+          if (text !== '/' || !selection.empty || line.content.size > 0) return false;
+          commands.palette.show({ group });
+          return true;
+        }
+      }
+    });
+    editor.registerPlugin(plugin);
+    return () => editor.unregisterPlugin(key);
   });
 
-  onDestroy(() => {
-    editor.off('focus', onFocus);
-    editor.off('blur', onBlur);
-  });
+  /** The editor's marks and nodes, in the palette while the editor has the focus. */
+  useCommands(() =>
+    allSuggestionItems.map((item) => ({
+      id: `text.${item.name}`,
+      label: item.label || capitalize(item.name || ''),
+      group,
+      icon: item.icon,
+      when: () => editor.isFocused,
+      run: () =>
+        item.suggestion?.command?.({
+          editor,
+          range: { from: editor.state.selection.from, to: editor.state.selection.to }
+        })
+    }))
+  );
 </script>
-
-<Command.Dialog bind:open={isOpen}>
-  <Command.Input placeholder={t__('common.search')} />
-
-  <Command.List>
-    <Command.Empty>No results found.</Command.Empty>
-
-    {#each allSuggestionItems as item, index (index)}
-      {@const ItemIcon = item.icon}
-      <Command.Item
-        value={item.name}
-        onSelect={() => {
-          if (item.suggestion && item.suggestion.command) {
-            item.suggestion.command({
-              editor,
-              range: { from: editor.state.selection.from, to: editor.state.selection.to }
-            });
-          }
-          isOpen = false;
-        }}
-      >
-        <div>
-          <ItemIcon size={17} />
-        </div>
-        <div>
-          <p>
-            {item.label || capitalize(item.name || '')}
-          </p>
-        </div>
-      </Command.Item>
-    {/each}
-  </Command.List>
-</Command.Dialog>

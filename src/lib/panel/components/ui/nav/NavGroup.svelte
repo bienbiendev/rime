@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronUp, type IconProps } from '@lucide/svelte';
+  import { ChevronDown, type IconProps } from '@lucide/svelte';
   import type { Component, Snippet } from 'svelte';
 
   type Props = {
@@ -10,115 +10,114 @@
   };
   const { children, name, navCollapsed, icon }: Props = $props();
 
-  let groupCollapsed = $state(false);
+  let folded = $state(false);
 
-  const setCollapsed = () => {
-    groupCollapsed = !groupCollapsed;
-    localStorage.setItem(`NavGroupCollapsed:${name}`, groupCollapsed.toString());
+  const toggleFolded = () => {
+    folded = !folded;
+    localStorage.setItem(`NavGroupCollapsed:${name}`, folded.toString());
   };
 
   $effect(() => {
-    groupCollapsed = localStorage.getItem(`NavGroupCollapsed:${name}`) === 'true';
+    folded = localStorage.getItem(`NavGroupCollapsed:${name}`) === 'true';
   });
-
-  const navCollapsedClassModifier = $derived(navCollapsed ? 'rz-nav-group--nav-collapsed' : '');
-  const groupCollapsedClassModifier = $derived(groupCollapsed ? 'rz-nav-group--collapsed' : '');
 </script>
 
-<div class="rz-nav-group {navCollapsedClassModifier} {groupCollapsedClassModifier}">
+<div
+  class="rz-nav-group"
+  class:rz-nav-group--folded={folded && !navCollapsed}
+  class:rz-nav-group--nav-collapsed={navCollapsed}
+>
   {#if !navCollapsed}
-    <button onclick={setCollapsed} class="rz-nav-group__trigger">
-      <span>
-        {#if icon}
-          {@const IconComp = icon}
-          <IconComp size="15" />
-        {/if}
-        {name}
-      </span>
-      <ChevronUp class="rz-nav-group__chevron" size="12" />
+    <button type="button" class="rz-nav-group__label" onclick={toggleFolded} aria-expanded={!folded}>
+      {#if icon}
+        {@const IconComp = icon}
+        <IconComp size="12" />
+      {/if}
+      <span>{name}</span>
+      <ChevronDown class="rz-nav-group__chevron" size="11" />
     </button>
   {/if}
 
   <div class="rz-nav-group__content">
-    <div class="rz-nav-group__content-inner">
+    <div class="rz-nav-group__inner">
       {@render children()}
     </div>
   </div>
 </div>
 
-<style type="postcss" global>
-  .rz-nav-group {
-    width: 100%;
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    margin-bottom: var(--rz-size-2);
-    background-color: var(--rz-nav-button-bg);
-    border-radius: var(--rz-radius-lg);
+<style type="postcss">
+  @import '../../../style/mixins/index.css';
 
-    :global {
-      .rz-nav-group__chevron {
-        transition: transform 0.3s var(--ease-in-out-quart);
-      }
+  .rz-nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .rz-nav-group__label {
+    display: flex;
+    align-items: center;
+    gap: var(--rz-size-1-5);
+    height: var(--rz-size-7);
+    padding: 0 var(--rz-size-2-5);
+    border-radius: var(--rz-radius-md);
+    color: var(--rz-fg-subtle);
+    font-size: var(--rz-text-sm);
+    text-align: left;
+    text-transform: capitalize;
+    transition: color 0.15s;
+    @mixin font-medium;
+
+    &:hover {
+      color: var(--rz-fg-muted);
+    }
+    &:focus-visible {
+      @mixin focus-ring;
+    }
+
+    :global(.rz-nav-group__chevron) {
+      opacity: 0;
+      transition:
+        opacity 0.15s,
+        rotate 0.2s var(--ease-in-out-quart);
+    }
+    &:hover :global(.rz-nav-group__chevron),
+    &:focus-visible :global(.rz-nav-group__chevron) {
+      opacity: 1;
     }
   }
 
   .rz-nav-group__content {
     display: grid;
     grid-template-rows: 1fr;
-    padding: 0 var(--rz-size-4);
-    background-color: var(--rz-nav-group-bg);
-    border-bottom-left-radius: var(--rz-radius-lg);
-    border-bottom-right-radius: var(--rz-radius-lg);
     transition: grid-template-rows 0.3s var(--ease-in-out-quart);
   }
 
-  .rz-nav-group__content-inner {
-    overflow: hidden;
-    display: grid;
-  }
-
-  .rz-nav-group__trigger {
-    padding: var(--rz-size-3);
+  .rz-nav-group__inner {
     display: flex;
-    width: 100%;
-    height: var(--rz-input-height);
-    gap: var(--rz-size-2);
-    align-items: center;
-    text-transform: capitalize;
-    justify-content: space-between;
-    text-align: left;
-    border-bottom: 1px solid var(--rz-nav-group-border-color);
-    transition: border-color 0.3s var(--ease-in-out-quart);
-
-    span {
-      display: flex;
-      align-items: center;
-      gap: var(--rz-size-3);
-    }
+    flex-direction: column;
+    gap: 1px;
+    overflow: hidden;
   }
 
-  .rz-nav-group.rz-nav-group--collapsed:not(.rz-nav-group--nav-collapsed) {
-    .rz-nav-group__trigger {
-      border-color: transparent;
-    }
-
+  .rz-nav-group--folded {
     .rz-nav-group__content {
       grid-template-rows: 0fr;
     }
-    :global {
-      .rz-nav-group__chevron {
-        transform: rotate(180deg);
-      }
+    :global(.rz-nav-group__chevron) {
+      opacity: 1;
+      rotate: -90deg;
     }
   }
 
   .rz-nav-group--nav-collapsed {
-    background-color: transparent;
-    margin-bottom: 0;
-    .rz-nav-group__content {
-      background-color: transparent;
-      padding: 0 var(--rz-size-2);
+    align-items: center;
+    width: var(--rz-size-8);
+    padding-top: var(--rz-size-1-5);
+    border-top: 1px solid var(--rz-border);
+
+    .rz-nav-group__inner {
+      align-items: center;
     }
   }
 </style>

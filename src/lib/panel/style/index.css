@@ -4,48 +4,13 @@
 @import './font.css';
 @import './radius.css';
 @import './palette.css';
-@import './shadow.css';
+@import './scheme.css';
 @import './util.css';
 
 :root {
-  color-scheme: light dark;
-
-  --rz-border: 1px solid hsl(var(--rz-color-border));
-
-  /* Inputs */
-  --rz-input-height: var(--rz-size-11);
-  --rz-input-bg: var(--rz-gray-19);
-
-  /* Overlay */
-  --rz-overlay-color: hsl(var(--rz-gray-11) / 0.4);
-  --rz-overlay-blur: 6px;
-
-  /* Rows */
-  --rz-row-height: var(--rz-size-12);
-  --rz-row-bg: var(--rz-gray-18);
-
-  /* Colors */
-  --rz-color-fg: var(--rz-gray-0);
-  --rz-color-bg: var(--rz-gray-17);
-  --rz-color-border: var(--rz-gray-15);
-  --rz-color-ring: var(--rz-color-spot);
-
-  /* Collapsible group, tree, blocks... */
-  --rz-collapse-fields-content-bg: light-dark(hsl(var(--rz-input-bg)), hsl(var(--rz-color-bg)));
-
-  /* Popovers dropdown, dialog,... */
-  --rz-popover-bg: hsl(var(--rz-color-bg));
-  --rz-popover-highlight-bg: hsl(var(--rz-gray-15));
-
-  @media (prefers-color-scheme: dark) {
-    --rz-overlay-color: hsl(var(--rz-gray-0) / 0.7);
-    --rz-color-fg: var(--rz-gray-17);
-    --rz-color-border: var(--rz-gray-4);
-    --rz-color-bg: var(--rz-gray-2);
-    --rz-input-bg: var(--rz-gray-4);
-    --rz-row-bg: var(--rz-gray-3);
-    --rz-popover-highlight-bg: hsl(var(--rz-gray-3));
-  }
+  --rz-input-height: var(--rz-size-9);
+  --rz-row-height: var(--rz-size-10);
+  --rz-overlay-blur: 2px;
 }
 
 html:has(.rz-root),
@@ -55,17 +20,19 @@ body:has(.rz-root) {
 }
 
 .rz-root {
-  background-color: hsl(var(--rz-color-bg));
-  color: hsl(var(--rz-color-fg));
+  background-color: var(--rz-bg-page);
+  color: var(--rz-fg);
   font-size: var(--rz-text-md);
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   ::selection {
-    background-color: hsl(var(--rz-color-spot) / 0.5);
-    color: hsl(var(--rz-color-fg));
+    background-color: oklch(from var(--rz-accent-solid) l c h / 0.3);
+    color: var(--rz-fg);
   }
 
   hr {
-    border-color: hsl(var(--rz-color-border));
+    border-color: var(--rz-border);
     margin-top: var(--rz-size-4);
     margin-bottom: var(--rz-size-4);
   }
@@ -75,12 +42,14 @@ body:has(.rz-root) {
 .rz-dialog-content,
 [data-bits-floating-content-wrapper] {
   hr {
-    border-color: hsl(var(--rz-color-border));
+    border-color: var(--rz-border);
     margin-top: var(--rz-size-4);
     margin-bottom: var(--rz-size-4);
   }
-  color: hsl(var(--rz-color-fg));
+  color: var(--rz-fg);
   font-size: var(--rz-text-md);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .rz-sr-only {

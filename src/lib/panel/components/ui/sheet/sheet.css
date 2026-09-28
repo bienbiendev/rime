@@ -7,9 +7,8 @@
   position: fixed;
   z-index: 1010;
   gap: var(--rz-size-4);
-  background-color: hsl(var(--rz-color-bg));
+  @mixin surface float;
   padding: var(--rz-size-6);
-  box-shadow: var(--rz-shadow-xl);
   overflow-y: auto;
 
   &[data-state='closed'] {
@@ -60,10 +59,8 @@
 }
 
 .rz-sheet-content__close:focus-visible {
-  outline: none;
-  /* --rz-ring-offset: 2px; */
   border-radius: var(--rz-radius-sm);
-  @mixin ring var(--rz-color-ring);
+  @mixin focus-ring;
 }
 
 .rz-sheet-content--right {
@@ -71,7 +68,47 @@
   right: 0;
   top: 0;
   bottom: 0;
-  border-left: var(--rz-border);
+}
+
+.rz-sheet-content--left {
+  height: 100%;
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  &[data-state='closed'] {
+    animation-name: exit-left;
+  }
+  &[data-state='open'] {
+    animation-name: enter-left;
+  }
+}
+
+/* Narrow, for a panel beside the page rather than a page of its own. */
+.rz-sheet-content--sm {
+  width: min(var(--rz-size-80), 100%);
+}
+
+@keyframes exit-left {
+  from {
+    opacity: 1;
+    transform: translate3d(0%, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@keyframes enter-left {
+  from {
+    opacity: 0;
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0%, 0, 0);
+  }
 }
 
 /**************************************/
@@ -79,7 +116,7 @@
 /**************************************/
 
 .rz-sheet-description {
-  @mixin color color-fg, 0.7;
+  color: var(--rz-fg-muted);
   font-size: var(--rz-text-sm);
 }
 
@@ -122,10 +159,10 @@
 /**************************************/
 
 .rz-sheet-overlay {
-  background-color: var(--rz-overlay-color);
+  background-color: var(--rz-bg-overlay);
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 1010;
   backdrop-filter: blur(var(--rz-overlay-blur));
 }
 

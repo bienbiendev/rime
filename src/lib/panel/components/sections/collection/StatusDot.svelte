@@ -7,8 +7,8 @@
   type Props = { status: VersionsStatus };
 
   const { status }: Props = $props();
-  const colorDraft = 'var(--rz-color-warn)';
-  const colorPublished = 'var(--rz-color-success)';
+  const colorDraft = 'var(--rz-warn)';
+  const colorPublished = 'var(--rz-success)';
   const color = $derived(status === VERSIONS_STATUS.DRAFT ? colorDraft : colorPublished);
 </script>
 
@@ -19,7 +19,7 @@
     flex-shrink: 0;
     width: var(--rz-dot-size, 0.7rem);
     height: var(--rz-dot-size, 0.7rem);
-    background-color: hsl(var(--rz-status-color));
+    background-color: var(--rz-status-color);
     border-radius: 0.7rem;
   }
 </style>

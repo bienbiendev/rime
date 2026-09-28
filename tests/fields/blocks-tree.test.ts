@@ -1,4 +1,6 @@
+import { filePathToBase64 } from '$lib/core/prototype/collection/upload/util/converter.server.js';
 import test, { expect } from '@playwright/test';
+import path from 'path';
 import { API_BASE_URL, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
@@ -23,6 +25,8 @@ function richTextToString(json: any): string {
 
 let targetAId: string;
 let targetBId: string;
+let mediaAId: string;
+let mediaBId: string;
 let docId: string;
 
 test('Should create relation targets for block/tree fields', async ({ request }) => {
@@ -31,6 +35,22 @@ test('Should create relation targets for block/tree fields', async ({ request })
   targetAId = (await a.json()).doc.id;
   const b = await request.post(`${API_BASE_URL}/targets`, { headers, data: { title: 'Target B' } });
   targetBId = (await b.json()).doc.id;
+});
+
+/** The image block relates to `medias`, an upload collection: two images to tell apart. */
+test('Should create medias for the image blocks', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const base64 = await filePathToBase64(path.resolve(process.cwd(), 'tests/basic/landscape.jpg'));
+  const upload = async (filename: string) => {
+    const response = await request.post(`${API_BASE_URL}/medias`, {
+      headers,
+      data: { file: { base64, filename }, alt: filename }
+    });
+    expect(response.status()).toBe(200);
+    return (await response.json()).doc.id as string;
+  };
+  mediaAId = await upload('tree-a.jpg');
+  mediaBId = await upload('tree-b.jpg');
 });
 
 /****************************************************/
@@ -48,8 +68,8 @@ test('Should create a page with four blocks: two paragraphs and two images, each
       sections: [
         { type: 'paragraph', text: richTextOf('Alpha content') },
         { type: 'paragraph', text: richTextOf('Beta content') },
-        { type: 'image', image: targetAId },
-        { type: 'image', image: targetBId }
+        { type: 'image', image: mediaAId },
+        { type: 'image', image: mediaBId }
       ]
     }
   });
@@ -63,9 +83,9 @@ test('Should create a page with four blocks: two paragraphs and two images, each
   expect(doc.sections[1].type).toBe('paragraph');
   expect(richTextToString(doc.sections[1].text)).toBe('Beta content');
   expect(doc.sections[2].type).toBe('image');
-  expect(doc.sections[2].image.map((ref: any) => ref.documentId)).toContain(targetAId);
+  expect(doc.sections[2].image.map((ref: any) => ref.documentId)).toContain(mediaAId);
   expect(doc.sections[3].type).toBe('image');
-  expect(doc.sections[3].image.map((ref: any) => ref.documentId)).toContain(targetBId);
+  expect(doc.sections[3].image.map((ref: any) => ref.documentId)).toContain(mediaBId);
 });
 
 test('Should keep each block content attached to it after reordering', async ({ request }) => {
@@ -73,9 +93,9 @@ test('Should keep each block content attached to it after reordering', async ({ 
     headers: await signInSuperAdmin(request),
     data: {
       sections: [
-        { type: 'image', image: targetBId },
+        { type: 'image', image: mediaBId },
         { type: 'paragraph', text: richTextOf('Beta content') },
-        { type: 'image', image: targetAId },
+        { type: 'image', image: mediaAId },
         { type: 'paragraph', text: richTextOf('Alpha content') }
       ]
     }
@@ -90,11 +110,11 @@ test('Should keep each block content attached to it after reordering', async ({ 
   // same-typed pairs (paragraph/paragraph, image/image) with different
   // content, none of them left in their original slot.
   expect(doc.sections[0].type).toBe('image');
-  expect(doc.sections[0].image.map((ref: any) => ref.documentId)).toContain(targetBId);
+  expect(doc.sections[0].image.map((ref: any) => ref.documentId)).toContain(mediaBId);
   expect(doc.sections[1].type).toBe('paragraph');
   expect(richTextToString(doc.sections[1].text)).toBe('Beta content');
   expect(doc.sections[2].type).toBe('image');
-  expect(doc.sections[2].image.map((ref: any) => ref.documentId)).toContain(targetAId);
+  expect(doc.sections[2].image.map((ref: any) => ref.documentId)).toContain(mediaAId);
   expect(doc.sections[3].type).toBe('paragraph');
   expect(richTextToString(doc.sections[3].text)).toBe('Alpha content');
 });
@@ -106,7 +126,7 @@ test('Should keep the surviving blocks correct after removing two from the middl
     headers: await signInSuperAdmin(request),
     data: {
       sections: [
-        { type: 'image', image: targetBId },
+        { type: 'image', image: mediaBId },
         { type: 'paragraph', text: richTextOf('Alpha content') }
       ]
     }
@@ -116,7 +136,7 @@ test('Should keep the surviving blocks correct after removing two from the middl
 
   expect(doc.sections).toHaveLength(2);
   expect(doc.sections[0].type).toBe('image');
-  expect(doc.sections[0].image.map((ref: any) => ref.documentId)).toContain(targetBId);
+  expect(doc.sections[0].image.map((ref: any) => ref.documentId)).toContain(mediaBId);
   expect(doc.sections[1].type).toBe('paragraph');
   expect(richTextToString(doc.sections[1].text)).toBe('Alpha content');
 });
@@ -130,7 +150,7 @@ test('Should still have the correct block content after a fresh read', async ({ 
 
   expect(doc.sections).toHaveLength(2);
   expect(doc.sections[0].type).toBe('image');
-  expect(doc.sections[0].image.map((ref: any) => ref.documentId)).toContain(targetBId);
+  expect(doc.sections[0].image.map((ref: any) => ref.documentId)).toContain(mediaBId);
   expect(doc.sections[1].type).toBe('paragraph');
   expect(richTextToString(doc.sections[1].text)).toBe('Alpha content');
 });

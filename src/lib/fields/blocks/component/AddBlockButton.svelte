@@ -1,13 +1,11 @@
 <script lang="ts">
-  import { env } from '$env/dynamic/public';
   import { emptyValuesFromFieldConfig } from '$lib/core/fields/util.js';
   import { t__ } from '$lib/core/i18n/index.js';
   import type { GenericBlock } from '$lib/core/prototype/types.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
-  import * as Command from '$lib/panel/components/ui/command/index.js';
-  import { capitalize } from '$lib/util/string.js';
-  import { CirclePlus, ToyBrick } from '@lucide/svelte';
+  import { Plus } from '@lucide/svelte';
   import type { BlocksBuilder, BlocksFieldBlock } from '../index.js';
+  import BlockPicker from './picker/BlockPicker.svelte';
 
   type AddBlock = (options: Omit<GenericBlock, 'id' | 'path'>) => void;
   type Props = {
@@ -17,7 +15,9 @@
   const { config, addBlock }: Props = $props();
 
   let open = $state(false);
-  let ariaSelected = $state('');
+
+  /** The one type of a list that has one: the button adds it without a menu. */
+  const single = $derived(config.get.blocks.length === 1 ? config.get.blocks[0].block : null);
 
   const add = (block: BlocksFieldBlock) => {
     open = false;
@@ -29,141 +29,41 @@
   };
 </script>
 
-{#if config.get.blocks.length === 1}
-  <Button
-    onclick={() => add(config.get.blocks[0].block)}
-    variant="ghost"
-    icon={CirclePlus}
-    size="icon"
-  />
-{:else}
-  <Button onclick={() => (open = true)} variant="ghost" icon={CirclePlus} size="icon" />
+<!-- A ghost "+ Add a block" under the list: one type adds it, several open the picker. -->
+<Button
+  class="rz-add-block"
+  variant="ghost"
+  icon={Plus}
+  onclick={() => (single ? add(single) : (open = true))}
+>
+  {t__('fields.add_a_block')}
+</Button>
 
-  <Command.Dialog
-    onStateChange={(state) => {
-      ariaSelected = state.value;
-    }}
-    bind:open
-  >
-    <Command.Input class="rz-add-block-button__search" placeholder={t__('common.search')} />
-
-    <div class="rz-add-block-button__command-content">
-      <Command.List class="rz-add-block-button__list">
-        <Command.Empty>No results found.</Command.Empty>
-        <Command.Group heading="Component">
-          {#each config.get.blocks as blockBuilder, index (index)}
-            {@const blockConfig = blockBuilder.block}
-            {@const BlockIcon = blockConfig.icon || ToyBrick}
-            <Command.Item
-              class="rz-add-block-button__item"
-              value={blockConfig.name}
-              onSelect={() => {
-                add(blockConfig);
-                open = false;
-              }}
-            >
-              <div class="rz-add-block-button__icon-wrapper">
-                <BlockIcon size={17} />
-              </div>
-
-              <div class="rz-add-block-button__info">
-                <p class="rz-add-block-button__title">
-                  {blockConfig.label || capitalize(blockConfig.name)}
-                </p>
-                {#if blockConfig.description}
-                  <p class="rz-add-block-button__description">
-                    {blockConfig.description}
-                  </p>
-                {/if}
-              </div>
-            </Command.Item>
-          {/each}
-        </Command.Group>
-      </Command.List>
-
-      <div class="rz-add-block-button__preview-wrap">
-        {#each config.get.blocks as blockFieldBuilder, index (index)}
-          <div
-            class:rz-add-block-button__preview--active={ariaSelected === blockFieldBuilder.name}
-            class="rz-add-block-button__preview"
-          >
-            {#if blockFieldBuilder.block.image}
-              <img src="{env.PUBLIC_RIME_URL}{blockFieldBuilder.block.image}" alt="preview" />
-            {:else}
-              no preview
-            {/if}
-          </div>
-        {/each}
-      </div>
-    </div>
-  </Command.Dialog>
+{#if !single}
+  <BlockPicker bind:open types={config.get.blocks} onpick={add} />
 {/if}
 
 <style type="postcss">
-  :global {
-    .rz-add-block-button {
-      gap: var(--rz-size-2);
-    }
+  @import '../../../panel/style/mixins/index.css';
 
-    .rz-command-dialog-content {
-      width: 60vw;
-    }
-
-    .rz-add-block-button__command-content {
-      display: grid;
-      position: relative;
-      grid-template-columns: 3fr 2fr;
-    }
-    .rz-add-block-button__search {
-      border-radius: var(--rz-radius-xl);
-    }
-
-    .rz-add-block-button__list {
-      padding: var(--rz-size-2);
-      max-height: var(--rz-size-72);
-      border-right: var(--rz-border);
-    }
-
-    .rz-add-block-button__item {
-      display: flex;
-      gap: var(--rz-size-3);
-      border-radius: var(--rz-radius-md);
-    }
-
-    .rz-add-block-button__preview-wrap {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      img {
-        width: 200px;
-        height: auto;
-      }
-    }
-    .rz-add-block-button__preview.rz-add-block-button__preview--active {
-      display: block;
-    }
-    .rz-add-block-button__preview {
-      display: none;
-    }
+  /* Muted text and a plus, lit on hover. */
+  :global(.rz-button.rz-add-block) {
+    gap: var(--rz-size-1-5);
+    height: var(--rz-size-7);
+    padding: 0 var(--rz-size-2) 0 var(--rz-size-1-5);
+    border-radius: var(--rz-radius-lg);
+    color: var(--rz-fg-muted);
+    font-size: var(--rz-text-md);
   }
 
-  .rz-add-block-button__icon-wrapper {
-    display: flex;
-    width: var(--rz-size-12);
-    height: var(--rz-size-12);
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--rz-radius-xl);
+  :global(.rz-button.rz-add-block .rz-button__icon) {
+    width: auto;
+    height: auto;
+    color: var(--rz-fg-subtle);
   }
 
-  .rz-add-block-button__title {
-    font-size: var(--rz-text-lg);
-    @mixin font-medium;
-  }
-
-  .rz-add-block-button__description {
-    color: hsl(var(--rz-color-fg) / 0.5);
-    margin-top: var(--rz-size-1);
-    font-size: var(--rz-text-sm);
+  :global(.rz-button.rz-add-block:hover:not(:disabled)),
+  :global(.rz-button.rz-add-block:hover:not(:disabled) .rz-button__icon) {
+    color: var(--rz-fg);
   }
 </style>

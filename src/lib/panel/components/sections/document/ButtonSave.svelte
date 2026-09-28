@@ -1,7 +1,6 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { Save } from '@lucide/svelte';
   import Button from '../../ui/button/button.svelte';
   import type { ButtonSize, ButtonVariant } from '../../ui/button/index.js';
   import SpinLoader from '../../ui/spin-loader/SpinLoader.svelte';
@@ -47,8 +46,6 @@
 >
   {#if form.processing}
     <SpinLoader />
-  {:else}
-    <Save size="13" />
   {/if}
   {label}
 </Button>

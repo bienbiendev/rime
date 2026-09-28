@@ -11,7 +11,7 @@
   padding-inline: var(--rz-size-2);
 
   &[data-highlighted] {
-    background-color: var(--rz-popover-highlight-bg);
+    background-color: var(--rz-bg-active);
   }
 
   &[data-disabled] {

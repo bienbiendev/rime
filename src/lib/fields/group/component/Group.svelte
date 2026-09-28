@@ -9,7 +9,7 @@
   import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import { ChevronDown, FolderClosed, FolderOpen } from '@lucide/svelte';
+  import { ChevronDown } from '@lucide/svelte';
   import { onMount } from 'svelte';
 
   type Props = {
@@ -52,27 +52,28 @@
   const basePath = $derived(path ? `${path}.` : '');
 </script>
 
-<div class="rz-group-field__wrapper" class:rz-group-field__wrapper--hidden={!field.visible}>
+<!-- A card: its name and a chevron, then its fields, or a preview of their values when folded. -->
+<div
+  class="rz-group-field__wrapper"
+  class:rz-group-field__wrapper--hidden={!field.visible}
+  class:rz-group-field__wrapper--open={groupOpen}
+>
   <button
     onclick={handleClick}
     type="button"
+    aria-expanded={groupOpen}
     class:open={groupOpen}
     class:rz-group-field__trigger--live={form.isLive}
     class="rz-group-field__trigger"
   >
-    <span>
-      {#if groupOpen}
-        <FolderOpen size="12" />
-      {:else}
-        <FolderClosed size="12" />
-      {/if}
-      {config.get.label || config.name || 'Group'}
+    <span class="rz-group-field__title">{config.get.label || config.name || 'Group'}</span>
+    <span class="rz-group-field__chevron" aria-hidden="true">
+      <ChevronDown size="14" />
     </span>
-    <ChevronDown size="14" />
   </button>
 
   {#if !groupOpen}
-    <FieldsPreviewTrigger onclick={handleClick}>
+    <FieldsPreviewTrigger class="rz-group-field__preview" onclick={handleClick}>
       <FieldsPreview
         preview={config.get.preview}
         fields={previewFields}
@@ -89,56 +90,104 @@
 <style lang="postcss">
   @import '../../../panel/style/mixins/index.css';
 
-  :root {
-    --rz-group-trigger-bg: hsl(var(--rz-row-bg));
-    --rz-group-preview-bg: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));
-    --rz-group-content-bg: var(--rz-collapse-fields-content-bg);
+  .rz-group-field__wrapper {
+    @mixin surface raised;
+    border-radius: var(--rz-radius-xl);
   }
 
-  .rz-group-field__wrapper {
-    border: var(--rz-border);
-    border-radius: var(--rz-radius-md);
-    background-color: var(--rz-group-trigger-bg);
-    &:global(:has(.rz-field-error)) {
-      @mixin ring var(--rz-color-alert);
-    }
+  /* Inside a group, a block, a tree item or a stage card: a hairline, no second fill. */
+  :global(.rz-group-field__content) .rz-group-field__wrapper,
+  :global(.rz-block__fields) .rz-group-field__wrapper,
+  :global(.rz-tree-item__fields) .rz-group-field__wrapper,
+  :global(.rz-stage__fields) .rz-group-field__wrapper {
+    background-color: transparent;
+    box-shadow: 0 0 0 1px var(--rz-border);
+  }
+
+  /* The closed group's preview keeps to the card's rounded corners. */
+  :global(.rz-group-field__preview) {
+    overflow: hidden;
+    border-radius: 0 0 var(--rz-radius-xl) var(--rz-radius-xl);
+  }
+
+  .rz-group-field__wrapper:global(:has(.rz-field-error)) {
+    @mixin invalid-field;
   }
 
   .rz-group-field__wrapper--hidden {
     display: none;
   }
 
+  /* The fields, 14px from the card's sides, 20px apart. */
   .rz-group-field__content {
-    --rz-fields-padding: var(--rz-size-5);
-    padding-top: var(--rz-fields-padding);
-    padding-bottom: var(--rz-fields-padding);
-    background-color: var(--rz-group-content-bg);
+    --rz-fields-padding: var(--rz-size-3-5);
+    --rz-fields-gap: var(--rz-size-5);
+    padding-block: var(--rz-size-4);
   }
 
+  /* The card's head: its name, then a chevron; a hairline under it while the group is open. */
   .rz-group-field__trigger {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--rz-size-2);
-    padding: 0 var(--rz-size-4);
-    height: var(--rz-input-height);
-    position: relative;
     width: 100%;
+    height: var(--rz-size-10);
+    padding: 0 var(--rz-size-1-5) 0 var(--rz-size-3-5);
+    border-radius: var(--rz-radius-xl);
     text-align: left;
-    border-bottom: var(--rz-border);
-    background-color: var(--rz-group-trigger-bg);
-    @mixin font-semibold;
-    > span {
-      gap: var(--rz-size-2);
-      display: flex;
-      align-items: center;
-    }
+    @mixin font-medium;
 
-    &.open :global(.lucide-chevron-down) {
-      rotate: -180deg;
+    &:focus-visible {
+      @mixin focus-ring;
     }
   }
+
+  .rz-group-field__wrapper--open > .rz-group-field__trigger {
+    border-radius: var(--rz-radius-xl) var(--rz-radius-xl) 0 0;
+    box-shadow: inset 0 -1px 0 var(--rz-border);
+  }
+
+  .rz-group-field__title {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .rz-group-field__chevron {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: var(--rz-size-7);
+    height: var(--rz-size-7);
+    border-radius: var(--rz-radius-lg);
+    color: var(--rz-fg-subtle);
+    transition:
+      color 0.15s,
+      background-color 0.15s;
+
+    :global(svg) {
+      transition: rotate 0.2s ease;
+    }
+  }
+
+  .rz-group-field__trigger:hover .rz-group-field__chevron {
+    background-color: var(--rz-bg-hover);
+    color: var(--rz-fg);
+  }
+
+  .rz-group-field__trigger.open .rz-group-field__chevron :global(svg) {
+    rotate: -180deg;
+  }
+
   .rz-group-field__trigger--live {
     font-size: var(--rz-text-md);
+  }
+
+  /* Folded: the values under a hairline, the card's bottom corners kept. */
+  .rz-group-field__wrapper :global(.rz-group-field__preview) {
+    border-radius: 0 0 var(--rz-radius-xl) var(--rz-radius-xl);
+    box-shadow: inset 0 1px 0 var(--rz-border);
   }
 </style>

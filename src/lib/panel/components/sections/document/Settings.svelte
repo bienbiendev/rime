@@ -1,18 +1,18 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { resolve } from '$app/paths';
   import { PARAMS } from '$lib/core/constants.js';
   import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
   import { apiUrl, panelPath } from '$lib/core/routes/util.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import { useCommands } from '$lib/panel/context/commands.svelte.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { getVersionsContext } from '$lib/panel/context/versions.svelte.js';
   import type { GenericDoc } from '$lib/types.js';
   import { trycatchFetch } from '$lib/util/function.js';
-  import { Copy, History, Import, Pickaxe, Settings, Trash2 } from '@lucide/svelte';
+  import { Copy, Ellipsis, Hash, History, Import, Pickaxe, Trash2 } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
   import { t__ } from '../../../../core/i18n/index.js';
   import Button from '../../ui/button/button.svelte';
@@ -59,7 +59,7 @@
     }
     toast.success(t__('common.version_deleted'));
     APIProxy.invalidate(form.config.slug);
-    await goto(resolve(documentPath));
+    await goto(documentPath);
   }
 
   function handleNewDraft() {
@@ -94,7 +94,7 @@
     }).then((response) => {
       if (response.ok) {
         toast.success(t__('common.doc_deleted'));
-        goto(resolve(panelPath(form.config.kebab)));
+        goto(panelPath(form.config.kebab));
       } else {
         toast.error(t__('error.generic'));
       }
@@ -117,114 +117,259 @@
     }
     const { id } = await success.json();
     toast.success(t__('common.duplicate_success'));
-    await goto(resolve(panelPath(form.config.kebab, id)));
+    await goto(panelPath(form.config.kebab, id));
   }
 
-  const shouldShowSettings = $derived.by(() => {
-    if (form.config.versions) return true;
-    if (locale.defaultCode && locale.code !== locale.defaultCode) return true;
-    if (form.config.type === 'collection') return true;
+  /** The document's id, on the clipboard. */
+  async function copyId() {
+    try {
+      await navigator.clipboard.writeText(String(form.values.id));
+      toast.success(t__('common.id_copied'));
+    } catch {
+      toast.error(t__('error.generic'));
+    }
+  }
+
+  /** The menu's entries, in the palette as well. */
+  useCommands(() => {
+    const group = t__('common.document');
+    return [
+      ...(form.config.versions && history
+        ? [
+            {
+              id: 'document.versions',
+              label: t__('common.versions_history'),
+              group,
+              icon: History,
+              run: () => (history.open = true)
+            }
+          ]
+        : []),
+      ...(form.config.versions?.draft && form.values.status === VERSIONS_STATUS.PUBLISHED
+        ? [
+            {
+              id: 'document.new_draft',
+              label: t__('common.save_new_draft'),
+              group,
+              icon: Pickaxe,
+              run: handleNewDraft
+            }
+          ]
+        : []),
+      ...(allowDuplicate
+        ? [
+            {
+              id: 'document.duplicate',
+              label: t__('common.duplicate'),
+              group,
+              icon: Copy,
+              run: handleDuplicate
+            }
+          ]
+        : []),
+      {
+        id: 'document.copy_id',
+        label: t__('common.copy_id'),
+        group,
+        icon: Hash,
+        run: copyId
+      },
+      ...(locale.defaultCode && locale.code !== locale.defaultCode
+        ? [
+            {
+              id: 'document.import_locale',
+              label: t__('common.import_default_locale', locale.defaultCode),
+              group,
+              icon: Import,
+              run: () => form.importDataFromDefaultLocale()
+            }
+          ]
+        : []),
+      ...(form.config.versions && form.values.versionId
+        ? [
+            {
+              id: 'document.delete_version',
+              label: t__('common.delete_version'),
+              group,
+              icon: Trash2,
+              when: () => canDeleteVersion,
+              run: () => (deleteVersionConfirmOpen = true)
+            }
+          ]
+        : []),
+      ...(isCollection
+        ? [
+            {
+              id: 'document.delete',
+              label: t__('common.delete_document'),
+              group,
+              icon: Trash2,
+              run: () => (deleteConfirmOpen = true)
+            }
+          ]
+        : [])
+    ];
   });
+
+  /** Deletions sit last, under a separator. */
+  const canDeleteSomething = $derived(
+    (!!form.config.versions && !!form.values.versionId) || isCollection
+  );
 </script>
 
-{#if shouldShowSettings}
-  <DropdownMenu.Root>
-    <DropdownMenu.Trigger>
-      {#snippet child({ props })}
-        <Button icon={Settings} size="icon-sm" variant="secondary" {...props} />
-      {/snippet}
-    </DropdownMenu.Trigger>
+<!-- A ghost "⋯": the document's actions, the deletions last and in red. -->
+<DropdownMenu.Root>
+  <DropdownMenu.Trigger>
+    {#snippet child({ props })}
+      <Button
+        icon={Ellipsis}
+        size="icon-sm"
+        variant="ghost"
+        aria-label={t__('common.document_actions')}
+        {...props}
+      />
+    {/snippet}
+  </DropdownMenu.Trigger>
 
-    <DropdownMenu.Portal>
-      <DropdownMenu.Content align="end">
-        {#if form.config.versions && history}
-          <DropdownMenu.Item onclick={() => (history.open = true)}>
-            <History size="12" />
-            {t__('common.versions_history')}
-          </DropdownMenu.Item>
-        {/if}
+  <DropdownMenu.Portal>
+    <DropdownMenu.Content align="end" sideOffset={6} class="rz-document-menu">
+      {#if form.config.versions && history}
+        <DropdownMenu.Item onclick={() => (history.open = true)}>
+          <History size="14" />
+          {t__('common.versions_history')}
+        </DropdownMenu.Item>
+      {/if}
 
-        {#if form.config.versions && form.config.versions.draft && form.values.status === VERSIONS_STATUS.PUBLISHED}
-          <DropdownMenu.Item onclick={() => handleNewDraft()}>
-            <Pickaxe size="12" />
-            {t__('common.save_new_draft')}
-          </DropdownMenu.Item>
-        {/if}
+      {#if form.config.versions && form.config.versions.draft && form.values.status === VERSIONS_STATUS.PUBLISHED}
+        <DropdownMenu.Item onclick={() => handleNewDraft()}>
+          <Pickaxe size="14" />
+          {t__('common.save_new_draft')}
+        </DropdownMenu.Item>
+      {/if}
 
-        {#if form.config.type === 'collection'}
-          {#if allowDuplicate}
-            <DropdownMenu.Item onclick={handleDuplicate}>
-              <Copy size="12" />
-              {t__('common.duplicate')}
-            </DropdownMenu.Item>
-          {/if}
-        {/if}
+      {#if allowDuplicate}
+        <DropdownMenu.Item onclick={handleDuplicate}>
+          <Copy size="14" />
+          {t__('common.duplicate')}
+        </DropdownMenu.Item>
+      {/if}
 
-        {#if locale.defaultCode && locale.code !== locale.defaultCode}
-          <DropdownMenu.Item onclick={() => form.importDataFromDefaultLocale()}>
-            <Import size="12" />
-            {t__('common.import_default_locale', locale.defaultCode)}
-          </DropdownMenu.Item>
-        {/if}
+      <DropdownMenu.Item onclick={copyId}>
+        <Hash size="14" />
+        {t__('common.copy_id')}
+      </DropdownMenu.Item>
 
-        {#if form.config.versions && form.values.versionId}
-          <DropdownMenu.Item
-            disabled={!canDeleteVersion}
-            onclick={() => (deleteVersionConfirmOpen = true)}
-          >
-            <Trash2 size="12" />
-            {t__('common.delete_version')}
-          </DropdownMenu.Item>
-        {/if}
+      {#if locale.defaultCode && locale.code !== locale.defaultCode}
+        <DropdownMenu.Item onclick={() => form.importDataFromDefaultLocale()}>
+          <Import size="14" />
+          {t__('common.import_default_locale', locale.defaultCode)}
+        </DropdownMenu.Item>
+      {/if}
 
-        {#if form.config.type === 'collection'}
-          <DropdownMenu.Item onclick={() => (deleteConfirmOpen = true)}>
-            <Trash2 size="12" />
-            {t__('common.delete_document')}
-          </DropdownMenu.Item>
-        {/if}
-      </DropdownMenu.Content>
-    </DropdownMenu.Portal>
-  </DropdownMenu.Root>
+      {#if canDeleteSomething}
+        <DropdownMenu.Separator />
+      {/if}
 
-  <Dialog.Root bind:open={deleteConfirmOpen}>
-    <Dialog.Content>
-      <Dialog.Header>
-        {t__('common.delete_dialog_title')}
-      </Dialog.Header>
-      <p>{t__('common.delete_dialog_text')}</p>
-      <Dialog.Footer --rz-justify-content="space-between">
-        <Button onclick={handleDelete}>Delete</Button>
-        <Button onclick={() => (deleteConfirmOpen = false)} variant="secondary">Cancel</Button>
-      </Dialog.Footer>
-    </Dialog.Content>
-  </Dialog.Root>
+      {#if form.config.versions && form.values.versionId}
+        <DropdownMenu.Item
+          class="rz-document-menu__danger"
+          disabled={!canDeleteVersion}
+          onclick={() => (deleteVersionConfirmOpen = true)}
+        >
+          <Trash2 size="14" />
+          {t__('common.delete_version')}
+        </DropdownMenu.Item>
+      {/if}
 
-  <Dialog.Root bind:open={deleteVersionConfirmOpen}>
-    <Dialog.Content>
-      <Dialog.Header>
-        {t__('common.delete_version_dialog_title')}
-      </Dialog.Header>
-      <p>{t__('common.delete_version_dialog_text')}</p>
-      <Dialog.Footer --rz-justify-content="space-between">
-        <Button onclick={handleDeleteVersion}>Delete</Button>
-        <Button onclick={() => (deleteVersionConfirmOpen = false)} variant="secondary">
-          Cancel
-        </Button>
-      </Dialog.Footer>
-    </Dialog.Content>
-  </Dialog.Root>
+      {#if isCollection}
+        <DropdownMenu.Item
+          class="rz-document-menu__danger"
+          onclick={() => (deleteConfirmOpen = true)}
+        >
+          <Trash2 size="14" />
+          {t__('common.delete_document')}
+        </DropdownMenu.Item>
+      {/if}
+    </DropdownMenu.Content>
+  </DropdownMenu.Portal>
+</DropdownMenu.Root>
 
-  <Dialog.Root bind:open={dupplicateConfirmOpen}>
-    <Dialog.Content>
-      <Dialog.Header>
-        {t__('common.unsaved_dialog_title')}
-      </Dialog.Header>
-      <p>{t__('common.unsaved_dialog_text')}</p>
-      <Dialog.Footer --rz-justify-content="space-between">
-        <Button onclick={duplicate}>Duplicate</Button>
-        <Button onclick={() => (dupplicateConfirmOpen = false)} variant="secondary">Cancel</Button>
-      </Dialog.Footer>
-    </Dialog.Content>
-  </Dialog.Root>
-{/if}
+<Dialog.Root bind:open={deleteConfirmOpen}>
+  <Dialog.Content>
+    <Dialog.Header>
+      {t__('common.delete_dialog_title')}
+    </Dialog.Header>
+    <p>{t__('common.delete_dialog_text')}</p>
+    <Dialog.Footer>
+      <Button onclick={handleDelete} kbd="enter">Delete</Button>
+      <Button onclick={() => (deleteConfirmOpen = false)} variant="secondary" kbd="escape">
+        {t__('common.cancel')}
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={deleteVersionConfirmOpen}>
+  <Dialog.Content>
+    <Dialog.Header>
+      {t__('common.delete_version_dialog_title')}
+    </Dialog.Header>
+    <p>{t__('common.delete_version_dialog_text')}</p>
+    <Dialog.Footer>
+      <Button onclick={handleDeleteVersion} kbd="enter">Delete</Button>
+      <Button onclick={() => (deleteVersionConfirmOpen = false)} variant="secondary" kbd="escape">
+        {t__('common.cancel')}
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={dupplicateConfirmOpen}>
+  <Dialog.Content>
+    <Dialog.Header>
+      {t__('common.unsaved_dialog_title')}
+    </Dialog.Header>
+    <p>{t__('common.unsaved_dialog_text')}</p>
+    <Dialog.Footer>
+      <Button onclick={duplicate} kbd="enter">{t__('common.duplicate')}</Button>
+      <Button onclick={() => (dupplicateConfirmOpen = false)} variant="secondary" kbd="escape">
+        {t__('common.cancel')}
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
+<style lang="postcss">
+  /* A floating card of 28px rows, each with a subtle icon; a deletion in red. */
+  :global(.rz-document-menu.rz-dropdown-content) {
+    min-width: var(--rz-size-52);
+    padding: var(--rz-size-1);
+    border-radius: var(--rz-radius-xl);
+  }
+
+  :global(.rz-document-menu .rz-dropdown-item) {
+    gap: var(--rz-size-2);
+    height: var(--rz-size-7);
+    padding-block: 0;
+    padding-inline: var(--rz-size-2);
+    white-space: nowrap;
+  }
+
+  :global(.rz-document-menu .rz-dropdown-item svg) {
+    flex-shrink: 0;
+    color: var(--rz-fg-subtle);
+  }
+
+  :global(.rz-document-menu .rz-dropdown-item[data-highlighted]) {
+    background-color: var(--rz-bg-hover);
+  }
+
+  :global(.rz-document-menu .rz-document-menu__danger),
+  :global(.rz-document-menu .rz-document-menu__danger svg) {
+    color: var(--rz-danger);
+  }
+
+  :global(.rz-document-menu .rz-dropdown-separator) {
+    margin-inline: --size(-1);
+  }
+</style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Kbd from '../kbd/Kbd.svelte';
   import type { Props } from './index.js';
 
   let {
@@ -9,10 +10,17 @@
     href = undefined,
     type = 'button',
     icon,
+    kbd,
     children,
     ...restProps
   }: Props = $props();
 </script>
+
+{#snippet kbdProp()}
+  {#if kbd}
+    <span class="rz-button__kbd"><Kbd keys={kbd} plain /></span>
+  {/if}
+{/snippet}
 
 {#snippet iconProp()}
   {#if icon}
@@ -44,10 +52,12 @@
     bind:this={ref}
     class="rz-button rz-button--size-{size} rz-button--{variant} {className}"
     {type}
+    data-kbd={kbd}
     {...restProps}
   >
     {@render iconProp()}
     {@render children?.()}
+    {@render kbdProp()}
   </button>
 {/if}
 
@@ -55,28 +65,20 @@
   @import '../../../style/mixins/index.css';
 
   :root {
-    --rz-button-tl-radius: var(--rz-radius-md);
-    --rz-button-tr-radius: var(--rz-radius-md);
-    --rz-button-br-radius: var(--rz-radius-md);
-    --rz-button-bl-radius: var(--rz-radius-md);
-
-    /* Default variant */
-    --rz-button-default-bg: light-dark(hsl(var(--rz-gray-0)), hsl(var(--rz-gray-15)));
-    --rz-button-default-bg-hover: light-dark(hsl(var(--rz-gray-2)), hsl(var(--rz-gray-19)));
-    --rz-button-default-bg-disabled: light-dark(hsl(var(--rz-gray-3)), hsl(var(--rz-gray-12)));
-    --rz-button-default-fg: light-dark(hsl(var(--rz-gray-13)), hsl(var(--rz-gray-2)));
+    --rz-button-tl-radius: var(--rz-radius-lg);
+    --rz-button-tr-radius: var(--rz-radius-lg);
+    --rz-button-br-radius: var(--rz-radius-lg);
+    --rz-button-bl-radius: var(--rz-radius-lg);
 
     /* Success variant */
-    --rz-button-success-bg: hsl(var(--rz-color-spot) / 1);
-    --rz-button-success-bg-hover: hsl(var(--rz-color-spot) / 0.6);
-    --rz-button-success-bg-disabled: hsl(var(--rz-color-spot) / 0.3);
-    --rz-button-success-fg: hsl(var(--rz-color-spot-fg) / 1);
+    --rz-button-success-bg: var(--rz-accent);
+    --rz-button-success-fg: var(--rz-accent-fg);
 
     /* Outline variant */
     --rz-button-outline-bg: transparent;
-    --rz-button-outline-fg: light-dark(hsl(var(--rz-gray-4)), hsl(var(--rz-gray-12)));
-    --rz-button-outline-border: light-dark(hsl(var(--rz-gray-14)), hsl(var(--rz-gray-8)));
-    --rz-button-outline-bg-hover: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-4)));
+    --rz-button-outline-fg: var(--rz-fg);
+    --rz-button-outline-border: var(--rz-border-strong);
+    --rz-button-outline-bg-hover: var(--rz-bg-hover);
     /* border-width */
     --rz-button-outline-border-left-width: 1px;
     --rz-button-outline-border-top-width: 1px;
@@ -85,27 +87,23 @@
 
     /* Ghost variant */
     --rz-button-ghost-bg: transparent;
-    --rz-button-ghost-bg-hover: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-4)));
-    --rz-button-ghost-fg: hsl(var(--rz-color-fg));
+    --rz-button-ghost-bg-hover: var(--rz-bg-hover);
+    --rz-button-ghost-fg: var(--rz-fg);
 
     /* Secondary variant */
-    --rz-button-secondary-bg: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));
-    --rz-button-secondary-bg-hover: light-dark(
-      hsl(var(--rz-gray-16)),
-      color-mix(in hsl, white 3%, hsl(var(--rz-gray-3)))
-    );
-    --rz-button-secondary-fg: hsl(var(--rz-color-fg));
+    --rz-button-secondary-bg: var(--rz-bg-raised);
+    --rz-button-secondary-fg: var(--rz-fg);
 
     /* Link variant */
     --rz-button-link-bg: transparent;
     --rz-button-link-bg-hover: transparent;
-    --rz-button-link-fg: hsl(var(--rz-color-fg));
+    --rz-button-link-fg: var(--rz-fg);
 
     /* Text variant */
     --rz-button-text-bg: transparent;
-    --rz-button-text-fg: hsl(var(--rz-color-fg) / 0.6);
-    --rz-button-text-fg-hover: hsl(var(--rz-color-fg) / 1);
-    --rz-button-text-fg-disabled: hsl(var(--rz-color-fg) / 0.4);
+    --rz-button-text-fg: var(--rz-fg-muted);
+    --rz-button-text-fg-hover: var(--rz-fg);
+    --rz-button-text-fg-disabled: var(--rz-fg-subtle);
   }
 
   .rz-button {
@@ -118,16 +116,15 @@
     white-space: nowrap;
     @mixin font-medium;
     transition-property:
-      box-shadow, color, background-color, border-color, text-decoration-color, fill, stroke;
+      box-shadow, color, background-color, border-color, text-decoration-color, fill, stroke,
+      filter;
     transition-duration: 0.25s;
     gap: var(--rz-size-2);
     fill: currentColor;
   }
 
   .rz-button:focus-visible {
-    /* --rz-ring-offset: 1px; */
-    outline: none;
-    @mixin ring var(--rz-color-ring);
+    @mixin focus-ring;
   }
 
   .rz-button:disabled,
@@ -150,28 +147,28 @@
     height: var(--rz-size-6);
     padding: var(--rz-size-1) var(--rz-size-2);
     font-size: var(--rz-text-2xs);
-    border-radius: var(--rz-radius-md);
+    border-radius: var(--rz-radius-lg);
   }
 
   .rz-button--size-sm {
     font-size: var(--rz-text-md);
     height: var(--rz-size-8);
     padding: var(--rz-size-2) var(--rz-size-3);
-    border-radius: var(--rz-radius-md);
+    border-radius: var(--rz-radius-lg);
   }
 
   .rz-button--size-lg {
     font-size: var(--rz-text-md);
     height: var(--rz-size-12);
     padding: var(--rz-size-2) var(--rz-size-8);
-    border-radius: var(--rz-radius-md);
+    border-radius: var(--rz-radius-lg);
   }
 
   .rz-button--size-xl {
     height: var(--rz-size-14);
     font-size: var(--rz-text-md);
     padding: var(--rz-size-2) var(--rz-size-8);
-    border-radius: var(--rz-radius-md);
+    border-radius: var(--rz-radius-lg);
   }
 
   .rz-button--size-icon {
@@ -192,13 +189,9 @@
 
   /** Default */
   .rz-button--default {
-    background-color: var(--rz-button-default-bg);
-    color: var(--rz-button-default-fg);
+    @mixin primary;
     &:hover:not(:disabled) {
-      background-color: var(--rz-button-default-bg-hover);
-    }
-    &:disabled {
-      background-color: var(--rz-button-default-bg-disabled);
+      filter: brightness(1.12);
     }
   }
 
@@ -206,11 +199,8 @@
   .rz-button--success {
     background-color: var(--rz-button-success-bg);
     color: var(--rz-button-success-fg);
-    &:hover {
-      background-color: var(--rz-button-success-bg-hover);
-    }
-    &:disabled:not(:disabled) {
-      background-color: var(--rz-button-success-bg-disabled);
+    &:hover:not(:disabled) {
+      filter: brightness(1.12);
     }
   }
 
@@ -228,7 +218,6 @@
     color: var(--rz-button-outline-fg);
 
     &:hover:not(:disabled) {
-      /* border-color: var(--rz-button-outline-border-hover); */
       background-color: var(--rz-button-outline-bg-hover);
     }
   }
@@ -238,18 +227,22 @@
     background-color: var(--rz-button-ghost-bg);
     color: var(--rz-button-ghost-fg);
 
-    &:hover:not(:disabled) {
+    &:hover:not(:disabled),
+    &:active:not(:disabled),
+    &[aria-expanded='true'],
+    &[data-state='open'] {
       background-color: var(--rz-button-ghost-bg-hover);
     }
   }
 
   /** Secondary */
   .rz-button--secondary {
+    @mixin surface raised;
     background-color: var(--rz-button-secondary-bg);
     color: var(--rz-button-secondary-fg);
 
     &:hover:not(:disabled) {
-      background-color: var(--rz-button-secondary-bg-hover);
+      @mixin hover;
     }
   }
 
@@ -302,5 +295,12 @@
     border-radius: var(--rz-radius-sm);
     height: var(--rz-size-2);
     width: var(--rz-size-2);
+  }
+
+  /* The key after the label, fainter: Confirm ↵ */
+  .rz-button__kbd {
+    display: inline-flex;
+    margin-left: var(--rz-size-1);
+    opacity: 0.5;
   }
 </style>

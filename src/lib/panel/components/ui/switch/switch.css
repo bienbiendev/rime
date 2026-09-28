@@ -1,20 +1,19 @@
 :root {
-  --rz-switch-color-thumb: light-dark(hsl(var(--rz-gray-19)), hsl(var(--rz-gray-16)));
-  --rz-switch-color-bg: light-dark(hsl(var(--rz-gray-13)), hsl(var(--rz-input-bg)));
-  --rz-switch-color-bg--active: hsl(var(--rz-color-spot));
+  --rz-switch-color-thumb: var(--rz-accent-fg);
+  --rz-switch-color-bg: var(--rz-border-strong);
+  --rz-switch-color-bg--active: var(--rz-accent);
 }
 
 .rz-switch {
-  /* --rz-ring-offset: 1px; */
   display: inline-flex;
-  height: 16px;
-  width: 26px;
+  height: var(--rz-size-4);
+  width: var(--rz-size-7);
   flex-shrink: 0;
   cursor: pointer;
   align-items: center;
   border-radius: var(--rz-radius-full);
   border: 2px solid transparent;
-  box-shadow: var(--rz-shadow-sm);
+  box-shadow: var(--rz-shadow-raised);
   transition: all 0.1s ease;
   outline: none;
 }
@@ -28,11 +27,11 @@
 }
 
 .rz-switch[data-error] {
-  background-color: hsl(var(--rz-color-alert));
+  background-color: var(--rz-danger);
 }
 
 .rz-switch:focus-visible {
-  @mixin ring var(--rz-color-ring);
+  @mixin focus-ring;
 }
 
 .rz-switch:disabled {
@@ -41,19 +40,18 @@
 }
 
 .rz-switch__thumb {
-  height: 12px;
-  width: 12px;
+  height: var(--rz-size-3);
+  width: var(--rz-size-3);
   pointer-events: none;
   display: block;
   transition: translate 0.25s ease;
   border-radius: var(--rz-radius-full);
-  box-shadow: var(--rz-shadow-lg);
+  box-shadow: var(--rz-shadow-knob);
   background-color: var(--rz-switch-color-thumb);
-  @mixin ring var(--rz-color-ring), 0;
 }
 
 .rz-switch__thumb[data-state='checked'] {
-  translate: 10px;
+  translate: var(--rz-size-3);
 }
 
 .rz-switch__thumb[data-state='unchecked'] {

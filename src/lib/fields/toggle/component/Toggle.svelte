@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
+  import '$lib/panel/components/fields/setting.css';
   import { Switch } from '$lib/panel/components/ui/switch/index.js';
   import { slugify } from '$lib/util/string.js';
   import type { ToggleProps } from './props.js';
@@ -14,36 +15,18 @@
   };
 </script>
 
-<fieldset class="rz-toggle-field {config.get.className || ''}" use:fieldset={field}>
-  <div class="rz-toggle-field-wrap">
+<!-- A row of a card: the name and the hint, then the switch. -->
+<fieldset class="rz-toggle-field rz-setting {config.get.className || ''}" use:fieldset={field}>
+  <div class="rz-setting__row">
+    <div class="rz-setting__text">
+      <Field.LabelFor {config} for={inputId} />
+      <Field.Hint {config} />
+    </div>
     <Switch
       data-error={field.error ? '' : null}
       checked={field.value}
       {onCheckedChange}
       id={inputId}
     />
-    <Field.LabelFor {config} for={inputId} />
   </div>
-  <Field.Hint {config} />
 </fieldset>
-
-<style lang="postcss">
-  .rz-toggle-field-wrap {
-    display: flex;
-    align-items: center;
-  }
-
-  .rz-toggle-field-wrap > :global(* + *) {
-    margin-left: var(--rz-size-2);
-  }
-
-  .rz-toggle-field {
-    margin-block: var(--rz-size-3);
-  }
-
-  .rz-toggle-field :global {
-    .rz-field-hint {
-      margin-left: var(--rz-size-8);
-    }
-  }
-</style>

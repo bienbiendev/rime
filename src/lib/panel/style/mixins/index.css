@@ -5,14 +5,59 @@
   -webkit-line-clamp: $(count);
 }
 
-@define-mixin color $color, $opacity: 1 {
-  color: hsl(var(--rz-$(color)) / $(opacity));
+/* A level: its fill, a hairline, its shadow. raised, float. */
+@define-mixin surface $level {
+  background-color: var(--rz-bg-$(level));
+  box-shadow:
+    0 0 0 1px var(--rz-border),
+    var(--rz-shadow-$(level));
 }
 
-@define-mixin ring $color, $size: 1px {
-  box-shadow:
-    0 0 0 var(--rz-ring-offset, 0px) hsl(var(--rz-ring-offset-bg, var(--rz-gray-6)) / 1),
-    0 0 0 calc(var(--rz-ring-offset, 0px) + $(size)) hsl($(color) / var(--rz-ring-opacity, 1));
+/* A well: an input, a track, a dropzone. Its edge shows on hover. */
+@define-mixin well {
+  background-color: var(--rz-bg-well);
+  border: 1px solid var(--rz-border);
+  &:hover {
+    border-color: var(--rz-border-strong);
+  }
+}
+
+/* The hover tint, laid over the element's own fill. */
+@define-mixin hover {
+  background-image: linear-gradient(var(--rz-bg-hover) 0 0);
+}
+
+/* The picked item of a segmented control. */
+@define-mixin knob {
+  background-color: var(--rz-bg-knob);
+  box-shadow: var(--rz-shadow-knob);
+}
+
+/* The primary button's face: black on light, white on dark. */
+@define-mixin primary {
+  background: var(--rz-gradient-primary);
+  color: var(--rz-fg-inverse);
+  box-shadow: var(--rz-shadow-primary);
+}
+
+/* Keyboard focus on a button, a tab, a link. */
+@define-mixin focus-ring {
+  outline: 2px solid var(--rz-accent-border);
+  outline-offset: 2px;
+}
+
+/* A focused input: an accent edge and a soft halo. */
+@define-mixin focus-field {
+  outline: none;
+  border-color: var(--rz-accent-border);
+  box-shadow: 0 0 0 3px var(--rz-ring);
+}
+
+/* An input with an error. */
+@define-mixin invalid-field {
+  outline: none;
+  border-color: var(--rz-danger);
+  box-shadow: 0 0 0 3px oklch(from var(--rz-danger) l c h / 0.15);
 }
 
 @define-mixin radius-left $size {

@@ -15,6 +15,7 @@
 </div>
 
 <style type="postcss">
+  /* The buttons share the width, side by side; stacked, the first at the bottom, on a phone. */
   .rz-dialog-footer {
     display: flex;
     gap: var(--rz-size-3);
@@ -24,7 +25,10 @@
   @media (min-width: 640px) {
     .rz-dialog-footer {
       flex-direction: row;
-      justify-content: var(--rz-justify-content, flex-end);
+    }
+
+    .rz-dialog-footer > :global(*) {
+      flex: 1;
     }
   }
 </style>

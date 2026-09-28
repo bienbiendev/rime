@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as random from '$lib/util/random.js';
   import type { Editor } from '@tiptap/core';
   import { BubbleMenuPlugin } from '@tiptap/extension-bubble-menu';
   import { onDestroy, onMount } from 'svelte';
@@ -59,7 +60,8 @@
     ...features.flatMap((feature) => getBubbleMenuItems(feature.nodes || [], feature))
   ]);
 
-  const pluginKey = $derived(path);
+  // One key for the menu's life: the path changes when the field moves, the plugin stays.
+  const pluginKey = `rz-bubble-menu-${random.randomId(8)}`;
   const updateDelay = 250;
 
   const shouldShow = ({ editor }: { editor: Editor }) => {

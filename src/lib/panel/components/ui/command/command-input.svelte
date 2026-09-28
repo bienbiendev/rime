@@ -1,28 +1,36 @@
 <script lang="ts">
   import { Search } from '@lucide/svelte';
   import { Command as CommandPrimitive } from 'bits-ui';
+  import type { Snippet } from 'svelte';
 
   let {
     ref = $bindable(null),
     class: className,
     value = $bindable(''),
+    end,
     ...restProps
-  }: CommandPrimitive.InputProps = $props();
+  }: CommandPrimitive.InputProps & {
+    /** Drawn after the input, on its right: a key hint. */
+    end?: Snippet;
+  } = $props();
 </script>
 
 <div class="rz-command-input" data-command-input-wrapper="">
-  <Search class="rz-command-input__icon" size={12} />
+  <Search class="rz-command-input__icon" size={14} />
   <CommandPrimitive.Input
     class="rz-command-input__input {className}"
     bind:ref
     {...restProps}
     bind:value
   />
+  {@render end?.()}
 </div>
 
 <style type="postcss">
+  @import '../../../style/mixins/index.css';
+
   .rz-command-input {
-    background-color: hsl(var(--rz-input-bg));
+    @mixin well;
     display: flex;
     align-items: center;
     border-top-left-radius: var(--rz-radius-md);
@@ -31,17 +39,17 @@
     padding-block: var(--rz-size-1);
 
     &:global([data-focused]) {
-      @mixin ring var(--rz-color-ring);
+      @mixin focus-field;
     }
 
     &:global([data-error]) {
-      @mixin ring var(--rz-color-alert);
+      @mixin invalid-field;
     }
 
     & :global(.rz-command-input__icon) {
       margin-right: var(--rz-size-2);
       flex-shrink: 0;
-      opacity: 0.5;
+      color: var(--rz-fg-subtle);
     }
 
     & :global(.rz-command-input__input) {
@@ -54,7 +62,7 @@
     }
 
     & :global(.rz-command-input__input::placeholder) {
-      @mixin color color-fg, 0.7;
+      color: var(--rz-fg-subtle);
     }
 
     & :global(.rz-command-input__input:disabled) {

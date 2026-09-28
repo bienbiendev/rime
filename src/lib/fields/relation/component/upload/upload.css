@@ -1,82 +1,4 @@
-.rz-relation-upload__list {
-  container: relation-upload-list / inline-size;
-
-  .rz-card-resource {
-    --rz-thumbnail-size: var(--rz-size-20);
-    --rz-card-padding: var(--rz-size-1);
-    width: calc(var(--rz-thumbnail-size) + 2.5 * var(--rz-card-padding));
-
-    @container relation-upload-list (min-width: 425px) {
-      --rz-thumbnail-size: var(--rz-size-28);
-    }
-
-    .rz-card-resource__info {
-      display: none;
-    }
-    .rz-card-resource__filesize,
-    .rz-card-resource__mimetype {
-      display: none;
-    }
-  }
-}
-.rz-relation-upload__list[data-many] {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--rz-size-4);
-}
-
-.rz-relation-upload__list:not(.rz-relation-upload__list[data-many]) {
-  @container relation-upload-list (min-width: 285px) {
-    .rz-card-resource {
-      width: min(310px, 100%);
-      .rz-card-resource__info {
-        display: block;
-      }
-    }
-  }
-  @container relation-upload-list (min-width: 425px) {
-    .rz-card-resource__filesize,
-    .rz-card-resource__mimetype {
-      display: block;
-    }
-  }
-}
-
-.rz-relation-upload__actions {
-  display: flex;
-  margin-top: var(--rz-size-3);
-  :first-child {
-    --rz-button-tr-radius: 0;
-    --rz-button-br-radius: 0;
-    --rz-button-outline-border-right-width: 0;
-  }
-  :last-child {
-    --rz-button-tl-radius: 0;
-    --rz-button-bl-radius: 0;
-  }
-}
-.rz-relation-upload__actions.rz-relation-upload__actions--list-empty {
-  margin-top: 0;
-}
-
-.rz-relation-upload__search {
-  height: var(--rz-size-10);
-  align-items: center;
-  border-top-left-radius: var(--rz-radius-xl);
-  border-top-right-radius: var(--rz-radius-xl);
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.rz-relation-upload__command-list {
-  padding: var(--rz-size-2);
-}
-
-.rz-relation-upload__command-item[aria-selected='true'] {
-  /* background-color: hsl(var(--rz-gray-5)); */
-  background-color: var(--rz-popover-high-light-bg);
-}
-
+/* A media as a row: its thumbnail, then its name, size and type. */
 .rz-relation-upload__grid-item {
   display: flex;
   gap: var(--rz-size-4);
@@ -99,10 +21,12 @@
   overflow: hidden;
   word-break: break-all;
   text-align: left;
-  @mixin font-semibold;
+  @mixin font-medium;
 }
 
 .rz-relation-upload__grid-filesize,
 .rz-relation-upload__grid-mimetype {
   text-align: left;
+  color: var(--rz-fg-subtle);
+  font-size: var(--rz-text-sm);
 }

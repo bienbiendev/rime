@@ -1,0 +1,109 @@
+/*
+ * The Claude app colour system (Figma, MCP-Apps-for-Claude, node 467:20293), converted to rime's
+ * shape: a palette of colours, tokens as light-dark() pairs of palette entries, a number that is
+ * lightness order in light mode, and one pair per role per meaning.
+ *
+ * Light halves are the file's values. Dark halves are proposed: the file's node carries one mode,
+ * so every dark value below is a mirror on rime's scale, to be checked against the file.
+ *
+ * Alpha never lives in a token. Where the file has one — Background/Disabled, Text/Ghost, every
+ * Border, every Ring — the use site says it: hsl(from var(--rz-fg-20) h s l / 0.5).
+ */
+
+/* ---------------------------------------------------------------------------------------------
+ * Palette. The file's grays land on rime's own steps almost exactly; the steps are kept and the
+ * ones the file names take its values. The scale is warm now: #f5f4ed, not #f5f5f5.
+ * ------------------------------------------------------------------------------------------- */
+:root {
+  --rz-gray-0: hsl(60 3% 2%);
+  --rz-gray-1: hsl(60 3% 4.5%);
+  --rz-gray-2: #141413;   /* Text/Primary        L 7.6  */
+  --rz-gray-3: hsl(60 3% 12%);
+  --rz-gray-4: hsl(60 3% 17%);
+  --rz-gray-5: #3d3d3a;   /* Text/Secondary      L 23.3 */
+  --rz-gray-6: hsl(60 3% 29%);
+  --rz-gray-7: hsl(60 3% 36%);
+  --rz-gray-8: #73726c;   /* Text/Tertiary       L 43.7 */
+  --rz-gray-9: hsl(50 3% 50%);
+  --rz-gray-10: hsl(50 3% 57%);
+  --rz-gray-11: #a5a5a5;  /* Border/Primary      #1f1e1d at 40% on white, L 64.7 */
+  --rz-gray-12: #bbbbbb;  /* Border/Secondary    at 30%, L 73.3 */
+  --rz-gray-13: hsl(50 5% 77%);
+  --rz-gray-14: hsl(50 8% 83%);
+  --rz-gray-15: #dedddd;  /* Border/Tertiary     at 15%, L 86.9 */
+  --rz-gray-16: #e8e8e8;  /* Border/Disabled     at 10%, L 91.0 */
+  --rz-gray-17: #f5f4ed;  /* Background/Secondary L 94.5 */
+  --rz-gray-18: #faf9f5;  /* Background/Tertiary  L 97.1 */
+  --rz-gray-19: #ffffff;  /* Background/Primary   L 100  */
+
+  /* info: 0 the surface, 10 the line, 20 the text — the file's three, plus a dark surface */
+  --rz-info-0: #d6e4f6;   --rz-info-10: #4682d5;   --rz-info-20: #3266ad;   --rz-info-30: #102137; /* 30 derived */
+  /* success: 0 the surface, 10 the line, 20 the text — the file's three, plus a dark surface */
+  --rz-success-0: #e9f1dc;   --rz-success-10: #437426;   --rz-success-20: #265b19;   --rz-success-30: #17380f; /* 30 derived */
+  /* warning: 0 the surface, 10 the line, 20 the text — the file's three, plus a dark surface */
+  --rz-warning-0: #f6eedf;   --rz-warning-10: #805c1f;   --rz-warning-20: #5a4815;   --rz-warning-30: #3a2e0e; /* 30 derived */
+  /* danger: 0 the surface, 10 the line, 20 the text — the file's three, plus a dark surface */
+  --rz-danger-0: #b53333;   --rz-danger-10: #a73d39;   --rz-danger-20: #7f2c28;   --rz-danger-30: #581919; /* 30 derived */
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Tokens. bg / fg / border, a number that is lightness order in light mode, an inverse each, and
+ * the four meanings, one pair per role.
+ * ------------------------------------------------------------------------------------------- */
+:root {
+  color-scheme: light dark;
+
+  /* Background/Secondary · Tertiary · Primary */
+  --rz-bg-0:  light-dark(var(--rz-gray-17), var(--rz-gray-3));   /* the sidebar, a well */
+  --rz-bg-10: light-dark(var(--rz-gray-18), var(--rz-gray-4));   /* a card, a row */
+  --rz-bg-20: light-dark(var(--rz-gray-19), var(--rz-gray-5));   /* the page */
+  --rz-bg-inverse: light-dark(var(--rz-gray-2), var(--rz-gray-19));
+  --rz-bg-ghost: transparent;
+  /* Background/Disabled is Primary at 50%: hsl(from var(--rz-bg-20) h s l / 0.5) */
+
+  /* Text/Primary · Secondary · Tertiary */
+  --rz-fg-0:  light-dark(var(--rz-gray-2),  var(--rz-gray-18));
+  --rz-fg-10: light-dark(var(--rz-gray-5),  var(--rz-gray-13));
+  --rz-fg-20: light-dark(var(--rz-gray-8),  var(--rz-gray-10));
+  --rz-fg-inverse: light-dark(var(--rz-gray-19), var(--rz-gray-2));
+  /* Text/Ghost is Tertiary at 50%: hsl(from var(--rz-fg-20) h s l / 0.5) */
+
+  /* Border/Primary · Secondary · Tertiary · Disabled — the file's ink-at-alpha, flattened */
+  --rz-border-0:  light-dark(var(--rz-gray-11), var(--rz-gray-8));
+  --rz-border-10: light-dark(var(--rz-gray-12), var(--rz-gray-7));
+  --rz-border-20: light-dark(var(--rz-gray-15), var(--rz-gray-4));
+  --rz-border-30: light-dark(var(--rz-gray-16), var(--rz-gray-3));
+  --rz-border-inverse: light-dark(#5b5b5a, var(--rz-gray-12));   /* Border/Inverse, white at 30% on #141413 */
+  --rz-border-ghost: transparent;
+
+  /* Ring/* are fg-0 at 70% (Primary), fg-10 at 70% (Secondary), the meaning's -20 at 50%:
+     outline-color: hsl(from var(--rz-fg-0) h s l / 0.7) */
+
+  --rz-bg-info:     light-dark(var(--rz-info-0),  var(--rz-info-30));
+  --rz-fg-info:     light-dark(var(--rz-info-20), var(--rz-info-10));
+  --rz-border-info: light-dark(var(--rz-info-10), var(--rz-info-10));
+
+  --rz-bg-success:     light-dark(var(--rz-success-0),  var(--rz-success-30));
+  --rz-fg-success:     light-dark(var(--rz-success-20), var(--rz-success-10));
+  --rz-border-success: light-dark(var(--rz-success-10), var(--rz-success-10));
+
+  --rz-bg-warning:     light-dark(var(--rz-warning-0),  var(--rz-warning-30));
+  --rz-fg-warning:     light-dark(var(--rz-warning-20), var(--rz-warning-10));
+  --rz-border-warning: light-dark(var(--rz-warning-10), var(--rz-warning-10));
+
+  --rz-bg-danger:     light-dark(var(--rz-danger-0),  var(--rz-danger-30));
+  --rz-fg-danger:     light-dark(var(--rz-danger-20), var(--rz-danger-10));
+  --rz-border-danger: light-dark(var(--rz-danger-10), var(--rz-danger-10));
+
+  /* Background/Danger in the file is the solid #b53333 rather than a tint like the other three —
+     a destructive button's face. Kept as the file has it; a tinted danger surface is not in it. */
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Where index.css's tokens go.
+ *
+ *   --rz-color-bg      -> --rz-bg-20        --rz-row-bg               -> --rz-bg-10
+ *   --rz-color-fg      -> --rz-fg-0         --rz-input-bg             -> --rz-bg-20
+ *   --rz-color-border  -> --rz-border-20    --rz-popover-highlight-bg -> --rz-bg-0
+ *   --rz-overlay-color -> hsl(from var(--rz-fg-0) h s l / 0.4) at the use site
+ * ------------------------------------------------------------------------------------------- */

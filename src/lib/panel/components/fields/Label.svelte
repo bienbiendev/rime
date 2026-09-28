@@ -28,6 +28,8 @@
       display: block;
     }
     .rz-field-label sup {
+      margin-left: var(--rz-size-0-5);
+      color: var(--rz-fg-subtle);
       font-size: var(--rz-text-2xs);
       text-transform: uppercase;
     }

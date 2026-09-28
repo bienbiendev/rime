@@ -2,8 +2,6 @@
   z-index: 500000;
   position: relative;
   border-radius: var(--rz-radius-lg);
-  border: var(--rz-border);
-  box-shadow: var(--rz-shadow-md);
+  @mixin surface float;
   outline: none;
-  background-color: hsl(var(--rz-color-bg));
 }

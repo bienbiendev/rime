@@ -86,7 +86,7 @@ test.describe('Admin panel', () => {
     ];
 
     for (const { slug, plural } of collections) {
-      const navButton = page.locator(`a.rz-button-nav[href="${panelPath(toKebabCase(slug))}"]`);
+      const navButton = page.locator(`a.rz-nav-item[href="${panelPath(toKebabCase(slug))}"]`);
       expect(await navButton.innerText()).toBe(plural);
 
       const response = await page.goto(panelUrl(toKebabCase(slug)));
@@ -96,10 +96,14 @@ test.describe('Admin panel', () => {
       const suffix = slug === 'medias' ? `?uploadPath=root` : '';
       // The panel renders a path; waitForURL compares against the resolved location.
       const href = `${panelPath(toKebabCase(slug))}/create${suffix}`;
-      const createButton = page.locator(`a[href="${href}"]`);
-
-      await expect(createButton).toBeEnabled();
-      await createButton.click();
+      if (slug === 'medias') {
+        // An upload collection creates through its Upload button: the form is reached by url.
+        await page.goto(`${panelUrl(toKebabCase(slug))}/create${suffix}`);
+      } else {
+        const createButton = page.locator(`a[href="${href}"]`);
+        await expect(createButton).toBeEnabled();
+        await createButton.click();
+      }
       await page.waitForURL(`${panelUrl(toKebabCase(slug))}/create${suffix}`);
       await page.waitForLoadState('networkidle');
 
@@ -113,8 +117,8 @@ test.describe('Admin panel', () => {
         await saveButton.click();
         await page.waitForLoadState('networkidle');
 
-        const h1 = page.locator('.rz-page-header__row h1');
-        expect(await h1.innerText()).toBe('Home');
+        // A document's header has no title of its own; the breadcrumb names it.
+        await expect(page.locator('.rz-aria__last')).toHaveText('Home');
       }
 
       if (slug === 'staff') {
@@ -132,8 +136,7 @@ test.describe('Admin panel', () => {
         await saveButton.click();
         await page.waitForLoadState('networkidle');
 
-        const h1 = page.locator('.rz-page-header__row h1');
-        expect(await h1.innerText()).toBe('user@email.com');
+        await expect(page.locator('.rz-aria__last')).toHaveText('user@email.com');
       }
     }
   });
@@ -153,7 +156,7 @@ test.describe('Admin panel', () => {
     const globals = [{ slug: 'settings', label: 'Settings' }];
 
     for (const { slug, label } of globals) {
-      const navButton = page.locator(`a.rz-button-nav[href="${panelPath(toKebabCase(slug))}"]`);
+      const navButton = page.locator(`a.rz-nav-item[href="${panelPath(toKebabCase(slug))}"]`);
       expect(await navButton.innerText()).toBe(label);
 
       const response = await page.goto(panelUrl(toKebabCase(slug)));
@@ -175,7 +178,8 @@ test.describe('Admin panel', () => {
       await expect(saveButton).toBeDisabled();
     }
 
-    await page.click('.rz-signout button');
+    await page.click('button.rz-user');
+    await page.getByRole('menuitem', { name: 'Sign out' }).click();
     await page.waitForNavigation();
     expect(page.url()).toBe(panelUrl('sign-in'));
   });

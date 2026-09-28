@@ -30,8 +30,8 @@
 <style type="postcss">
   @import '../../style/mixins/index.css';
   .rz-field-error {
-    @mixin color ground-6;
-    background-color: hsl(var(--rz-color-alert));
+    color: var(--rz-accent-fg);
+    background-color: var(--rz-danger);
     position: absolute;
     right: 0;
     top: 0;

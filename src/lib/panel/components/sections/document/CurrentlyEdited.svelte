@@ -24,7 +24,7 @@
     position: fixed;
     inset: 0;
     z-index: 100;
-    background: light-dark(hsl(var(--rz-gray-12) / 0.8), hsl(var(--rz-gray-3) / 0.8));
-    backdrop-filter: blur(2px);
+    background: oklch(from var(--rz-bg-page) l c h / 0.8);
+    backdrop-filter: blur(var(--rz-overlay-blur));
   }
 </style>

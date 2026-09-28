@@ -1,9 +1,8 @@
 :root {
-  --rz-checkbox-bg: hsl(var(--rz-input-bg));
-  --rz-checkbox-fg: hsl(var(--rz-gray-19));
-  --rz-checkbox-border: transparent;
-  --rz-checkbox--checked-bg: hsl(var(--rz-color-spot));
-  --rz-checkbox--focus-ring: hsl(var(--rz-color-ring));
+  --rz-checkbox-bg: var(--rz-bg-well);
+  --rz-checkbox-border: var(--rz-border-strong);
+  --rz-checkbox--checked-fg: var(--rz-accent-fg);
+  --rz-checkbox--checked-bg: var(--rz-accent);
   --rz-checkbox-size: var(--rz-size-4);
 }
 
@@ -18,8 +17,7 @@
 }
 
 .rz-checkbox:focus-visible {
-  outline: none;
-  @mixin ring var(--rz-checkbox--focus-ring);
+  @mixin focus-ring;
 }
 
 .rz-checkbox:disabled,
@@ -30,7 +28,8 @@
 
 .rz-checkbox[data-state='checked'] {
   background-color: var(--rz-checkbox--checked-bg);
-  color: hsl(var(--rz-color-fg));
+  border-color: var(--rz-checkbox--checked-bg);
+  color: var(--rz-checkbox--checked-fg);
 }
 
 .rz-checkbox__indicator {
