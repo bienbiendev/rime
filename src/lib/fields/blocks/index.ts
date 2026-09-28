@@ -5,12 +5,14 @@ import type {
 } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { WithoutBuilders } from '$lib/core/fields/types.js';
+import type { GenericBlock } from '$lib/core/prototype/types.js';
 import type { Field, FormField } from '$lib/fields/types.js';
+import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 import { toPascalCase, joinMemberTypes } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';
 import dedent from 'dedent';
-import type { Component } from 'svelte';
+import type { Component, Snippet } from 'svelte';
 import { number } from '../number/index.js';
 import { text } from '../text/index.js';
 import Blocks from './component/Blocks.svelte';
@@ -38,11 +40,11 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
   }
 
   /**
-   * One row in the document form, `3 blocks · Edit`, with the blocks edited in focus mode.
-   * For a layout field, in place of the list of cards.
+   * `default`: the list of cards in the document form.
+   * `summary`: one row, `3 blocks · Edit`, with the blocks edited in focus mode.
    */
-  summary() {
-    this.field.summary = true;
+  layout(layout: 'default' | 'summary') {
+    this.field.layout = layout;
     return this;
   }
 
@@ -152,7 +154,7 @@ export const isBlocksField = (field: Field): field is BlocksField => field.type 
  */
 export const isBlocksFieldRaw = (field: Field): field is BlocksFieldRaw => field.type === 'blocks';
 
-class BlockBuilder {
+export class BlockBuilder {
   block: BlocksFieldBlock;
 
   constructor(name: string) {
@@ -171,12 +173,31 @@ class BlockBuilder {
     this.block.icon = component;
     return this;
   }
-  image(url: string) {
-    this.block.image = url;
+  /**
+   * The block's picture in the pickers of types to add: a component drawing an `<svg>`, which
+   * fills a 16:10 frame. It draws with `currentColor`, so it follows the light and dark themes.
+   * Without one, the pickers show the icon.
+   * @example
+   * import HeroThumbnail from './thumbnails/Hero.svelte'
+   * block('hero').thumbnail(HeroThumbnail)
+   */
+  thumbnail(component: Component) {
+    this.block.thumbnail = component;
     return this;
   }
   renderTitle(render: BlocksFieldBlockRenderTitle) {
     this.block.renderTitle = render;
+    return this;
+  }
+  /**
+   * The component drawn for the block on the stage of focus mode.
+   * It gets the block value, its path, its fields and the form, so it can show the value,
+   * resolve its relations with `populate` and mount panel fields with `RenderFields`.
+   * @example
+   * block('hero').fields(text('title'), richText('text')).render(HeroRender)
+   */
+  render(component: Component<BlockRenderProps>) {
+    this.block.render = component;
     return this;
   }
   description(description: string) {
@@ -211,26 +232,40 @@ class BlockBuilder {
 export type BlocksField = FormField & {
   type: 'blocks';
   tree?: boolean;
-  /** Rendered as one row in the form; the blocks are edited in focus mode. */
-  summary?: boolean;
+  /** `summary`: one row in the form, the blocks edited in focus mode. */
+  layout?: 'default' | 'summary';
   blocks: BlockBuilder[];
 };
 
 export type BlocksFieldBlockRenderTitle = (args: { values: Dic; position: number }) => string;
 
+/** What a block's render component receives. */
+export type BlockRenderProps = {
+  /** The block value, relations as `{ relationTo, documentId }`. */
+  block: GenericBlock;
+  /** `layout.sections.0` */
+  path: string;
+  /** The block's field builders, for `RenderFields`. */
+  fields: FieldBuilder<Field>[];
+  form: DocumentFormContext;
+  /** The block's nested lists, each block in its own selectable wrapper. `children('items')` for one list. */
+  children?: Snippet<[name?: string]>;
+};
+
 export type BlocksFieldBlock = {
   name: string;
   label?: string;
   description?: string;
-  image?: string;
   icon?: Component<IconProps>;
+  thumbnail?: Component;
   renderTitle?: BlocksFieldBlockRenderTitle;
+  render?: Component<BlockRenderProps>;
   fields: FieldBuilder<Field>[];
 };
 
 export type BlocksFieldRaw = FormField & {
   type: 'blocks';
   tree?: boolean;
-  summary?: boolean;
+  layout?: 'default' | 'summary';
   blocks: WithoutBuilders<BlocksFieldBlock>[];
 };

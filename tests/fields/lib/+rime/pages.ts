@@ -22,9 +22,28 @@ import {
 } from '$lib/fields/index.js';
 import { access } from '$lib/core/auth/access.js';
 import { Collection } from '$rime/config';
+import Gallery from './renders/Gallery.svelte';
+import Grid from './renders/Grid.svelte';
+import Image from './renders/Image.svelte';
+import Paragraph from './renders/Paragraph.svelte';
+import GalleryThumbnail from './thumbnails/Gallery.svelte';
+import GridThumbnail from './thumbnails/Grid.svelte';
+import ImageThumbnail from './thumbnails/Image.svelte';
+import ParagraphThumbnail from './thumbnails/Paragraph.svelte';
 
-const blockParagraph = block('paragraph').fields(richText('text'));
-const blockImage = block('image').fields(relation('image').to('targets'));
+const blockParagraph = block('paragraph')
+  .fields(richText('text'))
+  .render(Paragraph)
+  .thumbnail(ParagraphThumbnail);
+// Upload relations, one and many, each drawn by a render that picks them in place.
+const blockImage = block('image')
+  .fields(relation('image').to('medias'))
+  .render(Image)
+  .thumbnail(ImageThumbnail);
+const blockGallery = block('gallery')
+  .fields(relation('images').to('medias').many())
+  .render(Gallery)
+  .thumbnail(GalleryThumbnail);
 
 // A relation nested inside a tree nested inside a block — three levels
 // deep, mirroring the real keyFacts pattern used in +rime/pages/tab-layout.ts.
@@ -36,12 +55,14 @@ const blockKeyFacts = block('keyFacts').fields(
 
 // A block holding a list of blocks: what the focus mode's layers nest, and what a block moves
 // into and out of.
-const blockGrid = block('grid').fields(
-  text('title'),
-  blocks('items', [blockParagraph, blockImage])
-);
+const blockGrid = block('grid')
+  .fields(text('title'), blocks('items', [blockParagraph, blockImage]))
+  .render(Grid)
+  .thumbnail(GridThumbnail);
 
 export const Pages = Collection.create('pages', {
+  // Pages hang under one another: the list's tree view and the parent field.
+  nested: true,
   fields: [
     text('title').isTitle().required(),
 
@@ -96,6 +117,8 @@ export const Pages = Collection.create('pages', {
     text('priorityLabel'),
 
     relation('thumbnail').to('targets'),
+    // Many medias in the plain form: the picker's toggle, marks and sweep.
+    relation('photos').to('medias').many(),
     richText('intro'),
     date('publishDate'),
     time('publishTime'),
@@ -122,10 +145,13 @@ export const Pages = Collection.create('pages', {
       number('metaPriority').min(0).max(10)
     ),
 
-    blocks('sections', [blockParagraph, blockImage, blockKeyFacts, blockGrid]),
+    blocks('sections', [blockParagraph, blockImage, blockKeyFacts, blockGrid, blockGallery]),
     // One row in the form, edited in focus mode.
-    blocks('extras', [blockParagraph, blockImage]).summary(),
+    blocks('extras', [blockParagraph, blockImage]).layout('summary'),
 
-    tree('links').fields(text('label'), link('url').types('url'))
+    // Titled by their label; one without a label reads `Links 1.2`.
+    tree('links')
+      .fields(text('label'), link('url').types('url', 'email', 'pages'))
+      .renderTitle(({ values }) => values.label)
   ]
 });

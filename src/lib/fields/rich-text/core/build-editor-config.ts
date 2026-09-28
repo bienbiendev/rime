@@ -51,7 +51,7 @@ export function buildEditorConfig(args: BuildEditorConfigArgs): RichTextEditorCo
       Typography,
       Placeholder.configure({
         emptyEditorClass: 'empty-editor',
-        placeholder: t__('fields.write_something') + (withSuggestion ? ' / ⌘ + K' : '')
+        placeholder: withSuggestion ? t__('fields.write_or_slash') : t__('fields.write_something')
       })
     ]
   };

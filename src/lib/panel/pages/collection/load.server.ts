@@ -44,7 +44,7 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
   });
 
   let aria: Partial<Route>[] = [
-    { title: 'Dashboard', url: rime.routes.panelUrl() },
+    { title: 'Dashboard', icon: 'dashboard', url: rime.routes.panelUrl() },
     { title: collection.config.label.plural }
   ];
 

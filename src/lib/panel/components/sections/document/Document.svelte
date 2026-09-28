@@ -1,7 +1,6 @@
 <script lang="ts">
   import { beforeNavigate, goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/state';
-  import { untrack } from 'svelte';
   import type { ResolvedPathname } from '$app/types';
   import { isAuthConfig } from '$lib/core/auth/util';
   import { PARAMS } from '$lib/core/constants.js';
@@ -10,11 +9,12 @@
   import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
   import { EDIT_LOCK_TTL_MS } from '$lib/core/prototype/shared/metas/constant.js';
   import { isLockHeldByOther } from '$lib/core/prototype/shared/metas/lock.js';
-  import BlocksFocus from '$lib/fields/blocks/component/focus/BlocksFocus.svelte';
-  import { setBlocksFocusContext } from '$lib/fields/blocks/component/focus/focus.svelte.js';
   import type { GenericDoc } from '$lib/core/prototype/types';
   import { apiUrl } from '$lib/core/routes/util.js';
+  import BlocksFocus from '$lib/fields/blocks/component/focus/BlocksFocus.svelte';
+  import { setBlocksFocusContext } from '$lib/fields/blocks/component/focus/focus.svelte.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
+  import { useCommands } from '$lib/panel/context/commands.svelte.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import {
     setDocumentFormContext,
@@ -23,6 +23,8 @@
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
   import { getVersionsContext } from '$lib/panel/context/versions.svelte.js';
+  import { Save } from '@lucide/svelte';
+  import { untrack } from 'svelte';
   import RenderFields from '../../fields/RenderFields.svelte';
   import Button from '../../ui/button/button.svelte';
   import AuthApiKeyDialog from './AuthAPIKeyDialog.svelte';
@@ -276,19 +278,25 @@
     return () => window.removeEventListener('pagehide', release);
   });
 
-  function handleKeyDown(event: KeyboardEvent) {
-    if (!formElement) throw Error('formElement is not defined');
-    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-      event.preventDefault();
-      if (!form.canSubmit) return;
-      const saveButton = formElement.querySelector('button[data-submit]');
-      if (saveButton) {
-        formElement.requestSubmit(saveButton as HTMLButtonElement);
-      } else {
-        // Fallback to default submit if no specific button found
-        formElement.requestSubmit();
-      }
+  /** ⌘S from anywhere in the document, a field included. */
+  useCommands(() => [
+    {
+      id: 'document.save',
+      label: t__('common.save'),
+      group: t__('common.document'),
+      icon: Save,
+      keys: 'mod+s',
+      inField: true,
+      run: submit
     }
+  ]);
+
+  function submit() {
+    if (!formElement) throw Error('formElement is not defined');
+    if (!form.canSubmit) return;
+    const saveButton = formElement.querySelector('button[data-submit]');
+    if (saveButton) formElement.requestSubmit(saveButton as HTMLButtonElement);
+    else formElement.requestSubmit();
   }
 
   async function beforeRedirect(data?: FormSuccessData) {
@@ -311,24 +319,9 @@
   }
 </script>
 
-<svelte:window onkeydown={handleKeyDown} />
-
-{#snippet meta(label: string, value: string)}
-  <p class="rz-document__metas">
-    <span>{label} : </span>
-    {value}
-  </p>
-{/snippet}
-
-{#snippet metaUser(label: string, name: string)}
-  <p class="rz-document__metas">
-    <span>{label} : </span>
-    {name || '—'}
-  </p>
-{/snippet}
-
 <form
   class="rz-document {className}"
+  data-nested={nestedLevel > 0 ? '' : undefined}
   bind:this={formElement}
   use:form.enhance
   enctype="multipart/form-data"
@@ -358,23 +351,24 @@
     {/if}
   </div>
 
-  <div class="rz-document__infos">
-    {#if form.values.createdAt}
-      {@render meta(t__('common.created_at'), locale.dateFormat(form.values.createdAt))}
-    {/if}
-    {#if form.values.createdBy}
-      {@render metaUser(t__('common.created_by'), form.values.createdBy?.name)}
-    {/if}
-    {#if form.values.updatedAt}
-      {@render meta(t__('common.last_update'), locale.dateFormat(form.values.updatedAt))}
-    {/if}
-    {#if form.values.updatedBy}
-      {@render metaUser(t__('common.updated_by'), form.values.updatedBy?.name)}
-    {/if}
-    {#if form.values.id}
-      {@render meta('id', form.values.id)}
-    {/if}
-  </div>
+  <!-- Quiet lines at the bottom: created, updated, the id. -->
+  {#if form.values.id}
+    <div class="rz-document__infos">
+      {#if form.values.createdAt}
+        <p class="rz-document__metas">
+          {t__('common.created_on', locale.dateFormat(form.values.createdAt))}
+          {#if form.values.createdBy?.name}{t__('common.by_user', form.values.createdBy.name)}{/if}
+        </p>
+      {/if}
+      {#if form.values.updatedAt}
+        <p class="rz-document__metas">
+          {t__('common.updated_on', locale.dateFormat(form.values.updatedAt))}
+          {#if form.values.updatedBy?.name}{t__('common.by_user', form.values.updatedBy.name)}{/if}
+        </p>
+      {/if}
+      <p class="rz-document__metas">{t__('common.id')} {form.values.id}</p>
+    </div>
+  {/if}
 
   <!-- Last in the flow, so its sticky bottom holds it at the viewport's edge until the end. -->
   {#if nestedLevel === 0 && operation === 'update' && page.data.autoSaves}
@@ -400,11 +394,11 @@
       </Dialog.Header>
       <p>{t__('common.leave_confirm_text')}</p>
       <!--  -->
-      <Dialog.Footer --rz-justify-content="space-between">
-        <Button onclick={confirmLeave}>
+      <Dialog.Footer>
+        <Button onclick={confirmLeave} kbd="enter">
           {t__('common.confirm')}
         </Button>
-        <Button onclick={() => (interceptedLeave = null)} variant="secondary">
+        <Button onclick={() => (interceptedLeave = null)} variant="secondary" kbd="escape">
           {t__('common.cancel')}
         </Button>
       </Dialog.Footer>
@@ -413,35 +407,54 @@
 </form>
 
 <style type="postcss">
-  @import '../../../style/mixins/index.css';
-
+  /**
+   * The document: a centred column, its heading lined up with its fields.
+   *
+   *   --rz-document-width: the column, 40rem
+   */
   .rz-document {
+    --rz-page-width: var(--rz-document-width, 40rem);
     container: rz-document / inline-size;
-    /* min-height: 100vh; */
     position: relative;
-    background-image: var(--thumbnail);
-    background-size: cover;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* A page of its own is at least the window's height, so the metas sit at its bottom. Its top
+     edge glows, as tall as the window whatever the page's length. */
+  .rz-document:not([data-nested]) {
+    min-height: 100svh;
+    background-image: var(--rz-glow);
+    background-repeat: no-repeat;
+    background-size: 100% 100svh;
+  }
+
+  /* The column stops growing and centres itself; the gutter is the floor. */
+  .rz-document__fields,
+  .rz-document__infos {
+    padding-inline: max(var(--rz-page-gutter), calc((100% - var(--rz-page-width)) / 2));
   }
 
   .rz-document__fields {
     display: grid;
-    gap: var(--rz-size-4);
-    /* min-height: calc(100vh - var(--rz-size-14)); */
+    gap: var(--rz-size-6);
     align-content: flex-start;
     margin-left: calc(-1 * var(--rz-fields-padding));
     margin-right: calc(-1 * var(--rz-fields-padding));
-    padding: var(--rz-size-5) var(--rz-page-gutter);
-    padding-bottom: var(--rz-size-24);
+    padding-block: var(--rz-size-6) var(--rz-size-24);
   }
+
   .rz-document__infos {
-    border-top: var(--rz-border);
-    padding-inline: var(--rz-page-gutter);
-    padding-block: var(--rz-size-6);
+    display: grid;
+    gap: var(--rz-size-1);
+    margin-top: auto;
+    border-top: 1px solid var(--rz-border);
+    padding-block: var(--rz-size-5) var(--rz-size-6);
   }
+
   .rz-document__metas {
+    color: var(--rz-fg-subtle);
     font-size: var(--rz-text-xs);
-  }
-  .rz-document__metas span {
-    @mixin font-semibold;
+    font-variant-numeric: tabular-nums;
   }
 </style>

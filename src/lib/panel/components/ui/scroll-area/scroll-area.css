@@ -34,7 +34,7 @@
 }
 
 .rz-scroll-area-scroll-bar__thumb {
-  background-color: hsl(var(--rz-color-border));
+  background-color: var(--rz-border-strong);
   position: relative;
-  border-radius: var(--raidus-full);
+  border-radius: var(--rz-radius-full);
 }

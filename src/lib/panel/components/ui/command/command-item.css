@@ -14,8 +14,8 @@
 
 .rz-command-item[aria-selected='true'] {
   border-radius: var(--rz-radius-sm);
-  background-color: var(--rz-popover-highlight-bg);
-  color: hsl(var(--rz-color-fg));
+  background-color: var(--rz-bg-active);
+  color: var(--rz-fg);
 }
 
 .rz-command-item[data-disabled] {

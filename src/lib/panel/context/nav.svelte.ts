@@ -49,7 +49,7 @@ export function setNavContext() {
     },
     /** A CSS length: the navigation's width as it stands. */
     get width() {
-      return collapsed ? 'var(--rz-size-10)' : 'var(--rz-size-72)';
+      return collapsed ? 'var(--rz-size-12)' : 'var(--rz-size-60)';
     },
     setCollapsed,
     toggle: () => setCollapsed(!collapsed)

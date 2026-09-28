@@ -18,6 +18,6 @@
 <style type="postcss">
   .rz-card-description {
     font-size: var(--rz-text-sm);
-    @mixin color color-fr, 0.7;
+    color: var(--rz-fg-muted);
   }
 </style>

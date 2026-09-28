@@ -27,6 +27,10 @@ export type RelationComponentProps = {
   nothingToSelect: boolean;
   many: boolean;
   addValue: (relationToId: string) => void;
+  /** The whole selection, in order; `seen` are the docs the picker has shown. */
+  setValue: (ids: string[], seen: GenericDoc[]) => void;
+  /** Documents just made from files: added after the others, or in place of the one. */
+  addUploaded: (docs: GenericDoc[]) => void;
   removeValue: (relationToId: string) => void;
   availableItems: RelationFieldItem[];
   selectedItems: RelationFieldItem[];

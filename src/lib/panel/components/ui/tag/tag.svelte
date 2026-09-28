@@ -21,9 +21,11 @@
 </div>
 
 <style type="postcss" global>
+  @import '../../../style/mixins/index.css';
+
   :root {
-    --tag-color-bg: hsl(var(--rz-gray-0));
-    --tag-color-fg: hsl(var(--rz-gray-13));
+    --tag-color-bg: var(--rz-bg-active);
+    --tag-color-fg: var(--rz-fg-muted);
   }
 
   .rz-tag {
@@ -48,8 +50,7 @@
   }
 
   .rz-tag__button:focus-visible {
-    outline: none;
-    background-color: hsl(var(--rz-color-ring));
+    @mixin focus-ring;
   }
 
   .rz-tag__button--readonly {

@@ -1,9 +1,8 @@
 :root {
   --rz-radius-none: 0;
-  --rz-base-radius: 0.165rem;
-  --rz-radius-sm: calc(var(--rz-base-radius) * 1);
-  --rz-radius-md: calc(var(--rz-base-radius) * 1.5);
-  --rz-radius-lg: calc(var(--rz-base-radius) * 2);
-  --rz-radius-xl: calc(var(--rz-base-radius) * 4);
+  --rz-radius-sm: 0.25rem;
+  --rz-radius-md: 0.375rem;
+  --rz-radius-lg: 0.4375rem;
+  --rz-radius-xl: 0.625rem;
   --rz-radius-full: 999999px;
 }

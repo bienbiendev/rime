@@ -87,14 +87,17 @@
 {/if}
 
 <style lang="postcss">
+  @import '../../../style/mixins/index.css';
+
   .rz-auto-save-banners {
     position: sticky;
     bottom: 0;
     z-index: 10;
     display: grid;
     gap: var(--rz-size-2);
-    padding: var(--rz-size-3) var(--rz-page-gutter);
-    background-color: light-dark(hsl(var(--rz-gray-19)), hsl(var(--rz-gray-4)));
+    padding-block: var(--rz-size-3);
+    padding-inline: max(var(--rz-page-gutter), calc((100% - var(--rz-page-width, 40rem)) / 2));
+    background-color: var(--rz-bg-page);
   }
   .rz-auto-save-banner {
     display: flex;
@@ -102,10 +105,9 @@
     justify-content: space-between;
     gap: var(--rz-size-4);
     padding: var(--rz-size-3) var(--rz-size-4);
-    border: 1px solid hsl(var(--rz-color-warn) / 0.5);
-    border-radius: var(--rz-radius-lg);
+    border-radius: var(--rz-radius-xl);
     font-size: var(--rz-text-sm);
-    background-color: hsl(var(--rz-color-warn) / 0.12);
+    @mixin surface float;
   }
   .rz-auto-save-banner__actions {
     display: flex;

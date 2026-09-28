@@ -17,7 +17,7 @@
 }
 
 .rz-dropdown-radio[data-highlighted] {
-  background-color: var(--rz-popover-highlight-bg);
+  background-color: var(--rz-bg-active);
 }
 
 .rz-dropdown-radio__indicator {

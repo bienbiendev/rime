@@ -78,13 +78,13 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   const saveButton = page.locator('.rz-page-header__row button[type="submit"]');
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  // h1 reflects asTitle reactively off the *live* form state (see documentForm.svelte.ts's
-  // initTitle effect), so it already shows `title` the moment it was typed - it's not
-  // proof the create+redirect actually completed. Wait for the URL to actually move off
+  // The breadcrumb's last item reflects asTitle reactively off the *live* form state (see
+  // documentForm.svelte.ts's initTitle effect), so it already shows `title` the moment it was
+  // typed - it's not proof the create+redirect actually completed. Wait for the URL to actually move off
   // /create before doing anything else, or the next step can race ahead of the redirect.
   await page.waitForURL(panelUrlRe('pages'));
   await page.waitForLoadState('networkidle');
-  await expect(page.locator('.rz-page-header__row h1')).toHaveText(title);
+  await expect(page.locator('.rz-aria__last')).toHaveText(title);
 
   // Create a staff member
   await nav.locator(`a[href="${panelPath('staff')}"]`).click();
@@ -102,12 +102,14 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   await saveButton.click();
   await page.waitForURL(panelUrlRe('staff'));
   await page.waitForLoadState('networkidle');
-  await expect(page.locator('.rz-page-header__row h1')).toHaveText(staffEmail);
+  await expect(page.locator('.rz-aria__last')).toHaveText(staffEmail);
 
-  // Create a media (exercises sharp processing + serve-static)
+  // Create a media (exercises sharp processing + serve-static). An upload collection's page
+  // offers the bulk upload, no link to the single form: that form is reached by its address,
+  // once the list page has settled.
   await nav.locator(`a[href="${panelPath('medias')}"]`).click();
   await page.waitForLoadState('networkidle');
-  await page.locator(`a[href^="${panelPath('medias', 'create')}"]`).click();
+  await page.goto(`${panelUrl('medias', 'create')}?uploadPath=root`);
   await page.waitForLoadState('networkidle');
   const mediaFilename = `landscape-${SUFFIX}.jpg`;
   await page
@@ -122,7 +124,7 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   await saveButton.click();
   await page.waitForURL(panelUrlRe('medias'));
   await page.waitForLoadState('networkidle');
-  await expect(page.locator('.rz-page-header__row h1')).toHaveText(mediaFilename);
+  await expect(page.locator('.rz-aria__last')).toHaveText(mediaFilename);
 
   expect(pageErrors).toEqual([]);
 });

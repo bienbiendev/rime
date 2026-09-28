@@ -7,6 +7,7 @@
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { CopyPlus, ToyBrick, Trash2 } from '@lucide/svelte';
   import { getBlocksFocusContext, type LayerRow } from './focus.svelte.js';
+  import StagePlaceholder from './StagePlaceholder.svelte';
 
   type Props = { form: DocumentFormContext; onRemove: () => void };
   const { form, onRemove }: Props = $props();
@@ -38,12 +39,22 @@
         </button>
         {#if current && !focus.locked}
           <div class="rz-stage__actions">
-            <Button size="xs" variant="outline" icon={CopyPlus} onclick={focus.duplicateSelection}>
-              {t__('common.duplicate')}
-            </Button>
-            <Button size="xs" variant="outline" icon={Trash2} onclick={onRemove}>
-              {t__('common.delete')}
-            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              icon={CopyPlus}
+              title={t__('common.duplicate')}
+              aria-label={t__('common.duplicate')}
+              onclick={focus.duplicateSelection}
+            />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              icon={Trash2}
+              title={t__('fields.delete_block')}
+              aria-label={t__('fields.delete_block')}
+              onclick={onRemove}
+            />
           </div>
         {/if}
       </header>
@@ -54,6 +65,9 @@
   {:else}
     <p class="rz-stage__empty">{t__('fields.no_blocks_yet')}</p>
   {/each}
+  {#if !current && rows.length && !focus.locked}
+    <StagePlaceholder />
+  {/if}
 </div>
 
 <style lang="postcss">
@@ -72,26 +86,29 @@
   }
 
   .rz-stage[data-mode='all'] .rz-stage__card {
-    border: var(--rz-border);
+    @mixin surface raised;
     border-radius: var(--rz-radius-md);
     overflow: hidden;
   }
 
+  /* A block's head: its icon, its title, its path, and on the right what it can do. */
   .rz-stage__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--rz-size-4);
-    height: var(--rz-row-height);
-    padding-inline: var(--rz-size-6) var(--rz-size-3);
-    border-bottom: var(--rz-border);
-    background-color: hsl(var(--rz-row-bg));
+    gap: var(--rz-size-2);
+    height: --size(11.5);
+    padding-inline: var(--rz-size-3) var(--rz-size-1-5);
+    border-bottom: 1px solid var(--rz-border);
+    background-color: var(--rz-bg-raised);
   }
 
+  /* Alone, the head stays on top of the fields, on the page's own fill. */
   .rz-stage[data-mode='block'] .rz-stage__header {
     position: sticky;
     top: 0;
     z-index: 1;
+    background-color: var(--rz-bg-page);
   }
 
   .rz-stage__title {
@@ -101,7 +118,8 @@
     min-width: 0;
     h3 {
       @mixin font-medium;
-      font-size: var(--rz-text-sm);
+      font-size: var(--rz-text-md);
+      white-space: nowrap;
     }
     &:not(:disabled):hover h3 {
       text-decoration: underline;
@@ -109,22 +127,38 @@
   }
 
   .rz-stage__icon {
-    display: flex;
-    opacity: 0.7;
+    display: grid;
+    place-items: center;
+    width: var(--rz-size-6);
+    height: var(--rz-size-6);
+    flex-shrink: 0;
+    border-radius: var(--rz-radius-sm);
+    background-color: var(--rz-bg-well);
+    color: var(--rz-fg-muted);
   }
 
   .rz-stage__path {
-    font-size: var(--rz-text-2xs);
-    color: hsl(var(--rz-color-fg) / 0.4);
+    font-family: var(--rz-font-mono);
+    font-size: var(--rz-text-xs);
+    color: var(--rz-fg-subtle);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
+  /* Ghost icon buttons, quiet until hovered. */
   .rz-stage__actions {
+    --rz-button-ghost-fg: var(--rz-fg-muted);
     display: flex;
-    gap: var(--rz-size-2);
+    gap: var(--rz-size-0-5);
     flex-shrink: 0;
+    :global(.rz-button) {
+      width: var(--rz-size-7);
+      height: var(--rz-size-7);
+    }
+    :global(.rz-button:hover) {
+      color: var(--rz-fg);
+    }
   }
 
   .rz-stage__fields {
@@ -135,6 +169,6 @@
     padding: var(--rz-size-16) var(--rz-size-6);
     text-align: center;
     font-size: var(--rz-text-sm);
-    color: hsl(var(--rz-color-fg) / 0.5);
+    color: var(--rz-fg-subtle);
   }
 </style>

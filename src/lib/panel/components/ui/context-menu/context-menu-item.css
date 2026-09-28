@@ -7,11 +7,11 @@
   gap: var(--rz-size-2);
   border-radius: var(--rz-radius-md);
   outline: none;
-  color: hsl(var(--rz-color-fg));
+  color: var(--rz-fg);
   padding-block: var(--rz-size-2);
   padding-inline: var(--rz-size-3);
   &[data-highlighted] {
-    background-color: var(--rz-popover-highlight-bg);
+    background-color: var(--rz-bg-active);
   }
   &[data-disabled] {
     pointer-events: none;

@@ -17,13 +17,15 @@
 </div>
 
 <style type="postcss">
+  @import '../../../style/mixins/index.css';
+
   :root {
-    --rz-card-color-bg: hsl(var(--rz-color-bg));
+    --rz-card-color-bg: var(--rz-bg-raised);
   }
   .rz-card {
     width: var(--rz-card-width, auto);
+    @mixin surface raised;
     background-color: var(--rz-card-color-bg);
     border-radius: var(--rz-radius-lg);
-    border: var(--rz-border);
   }
 </style>

@@ -1,30 +1,39 @@
+/*
+ * The palette: grays and an accent in OKLCH, set by four numbers. 0 is the darkest gray.
+ * Only scheme.css reads it; components read the scheme's tokens.
+ */
 :root {
-  --rz-gray-0: 0 0% 2.03%;
-  --rz-gray-1: 0 0% 4.52%;
-  --rz-gray-2: 0 0% 7.94%;
-  --rz-gray-3: 0 0% 12.21%;
-  --rz-gray-4: 0 0% 17.26%;
-  --rz-gray-5: 0 0% 22.97%;
-  --rz-gray-6: 0 0% 29.23%;
-  --rz-gray-7: 0 0% 35.91%;
-  --rz-gray-8: 0 0% 42.88%;
-  --rz-gray-9: 0 0% 50%;
-  --rz-gray-10: 0 0% 57.12%;
-  --rz-gray-11: 0 0% 64.09%;
-  --rz-gray-12: 0 0% 70.77%;
-  --rz-gray-13: 0 0% 77.03%;
-  --rz-gray-14: 0 0% 82.74%;
-  --rz-gray-15: 0 0% 87.79%;
-  --rz-gray-16: 0 0% 92.06%;
-  --rz-gray-17: 0 0% 95.48%;
-  --rz-gray-18: 0 0% 97.97%;
-  --rz-gray-19: 0 0% 99.49%;
+  --rz-gray-hue: 0;
+  --rz-gray-chroma: 0;
+  --rz-gray-0: oklch(0.13 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-1: oklch(0.155 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-2: oklch(0.178 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-3: oklch(0.203 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-4: oklch(0.232 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-5: oklch(0.27 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-6: oklch(0.33 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-7: oklch(0.4 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-8: oklch(0.48 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-9: oklch(0.555 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-10: oklch(0.625 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-11: oklch(0.69 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-12: oklch(0.755 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-13: oklch(0.815 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-14: oklch(0.865 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-15: oklch(0.905 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-16: oklch(0.94 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-17: oklch(0.965 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-18: oklch(0.982 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-19: oklch(0.996 var(--rz-gray-chroma) var(--rz-gray-hue));
 
-  /* --rz-color-spot: 160deg 72% 49%; */
-  --rz-color-spot: 229deg 89% 60%;
-  --rz-color-spot-fg: 229deg 72% 19%;
+  --rz-accent-hue: 268;
+  --rz-accent-chroma: 0.19;
+  --rz-accent-strong: oklch(0.5 var(--rz-accent-chroma) var(--rz-accent-hue));
+  --rz-accent-solid: oklch(0.585 var(--rz-accent-chroma) var(--rz-accent-hue));
+  --rz-accent-soft: oklch(0.76 calc(var(--rz-accent-chroma) * 0.8) var(--rz-accent-hue));
+  --rz-accent-contrast: oklch(0.99 0 0);
 
-  --rz-color-success: 160deg 72% 49%;
-  --rz-color-warn: 14deg, 80%, 60%;
-  --rz-color-alert: 4deg 100% 69%;
+  --rz-success: oklch(0.64 0.14 155);
+  --rz-warn: oklch(0.76 0.15 70);
+  --rz-danger: oklch(0.62 0.19 25);
 }

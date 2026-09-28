@@ -21,6 +21,8 @@ export const FOCUS_PARAM = 'focus';
 
 type PageState = { blocksFocus?: string };
 
+export type SidebarTab = 'layers' | 'inspector' | 'add';
+
 /** One step of the way down to the open list: a blocks field, or the block an index names. */
 export type Crumb = { label: string; list: string; block?: string };
 
@@ -54,6 +56,13 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   let fromUrl = $state<string | null>(page.url.searchParams.get(FOCUS_PARAM));
   const path = $derived(((page.state as PageState).blocksFocus ?? fromUrl) || null);
   let selection = $state<string[]>([]);
+  /** The panel's tab: the tree of blocks, the selected block's fields, the types to add. */
+  let tab = $state<SidebarTab>('layers');
+  /** Counts the asks to show a block's fields, so a closed panel knows to open. */
+  let inspected = $state(0);
+  /** The picker of types to add is open. */
+  let picking = $state(false);
+  /** The folded rows, by block id: a fold stays on its block when the block moves. */
   const collapsed = new SvelteSet<string>();
   let openedHere = false;
 
@@ -153,7 +162,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     const walk = (list: string, depth: number) => {
       for (const row of rowsOf(list, depth)) {
         out.push(row);
-        if (collapsed.has(row.path)) continue;
+        if (collapsed.has(row.block.id)) continue;
         for (const child of row.children) walk(child.list, depth + 1);
       }
     };
@@ -337,11 +346,23 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
 
   /* ------------------------------------------------------------ folding */
 
-  const setCollapsed = (rowPath: string, value: boolean) =>
-    value ? collapsed.add(rowPath) : collapsed.delete(rowPath);
+  /** `sections.0.items.2` -> the id of the block there. */
+  const idAt = (rowPath: string) => {
+    const at = parseBlockPath(rowPath);
+    return form.blocks.list(at.list)[at.index]?.id;
+  };
+
+  const isCollapsed = (rowPath: string) => collapsed.has(idAt(rowPath) ?? '');
+
+  const setCollapsed = (rowPath: string, value: boolean) => {
+    const id = idAt(rowPath);
+    if (!id) return;
+    if (value) collapsed.add(id);
+    else collapsed.delete(id);
+  };
 
   const collapseAll = () => {
-    for (const row of allRows()) if (row.children.length) collapsed.add(row.path);
+    for (const row of allRows()) if (row.children.length) collapsed.add(row.block.id);
   };
 
   const store = {
@@ -363,6 +384,34 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     get locked() {
       return locked;
     },
+    get tab() {
+      return tab;
+    },
+    set tab(value: SidebarTab) {
+      tab = value;
+    },
+    get inspected() {
+      return inspected;
+    },
+    /** Turns the panel to the selected block's fields, and opens it where it is a sheet. */
+    inspect() {
+      tab = 'inspector';
+      inspected++;
+    },
+    get picking() {
+      return picking;
+    },
+    set picking(value: boolean) {
+      picking = value;
+    },
+    /** Opens the picker of types to add; the one picked goes after the selection. */
+    pick() {
+      if (!locked) picking = true;
+    },
+    /** The open list's block set has at least one render: the stage is the stack of renders. */
+    get hasRenders() {
+      return !!path && !!builderOf(path)?.get.blocks.some((block) => block.get.render);
+    },
     /** Nothing selected: the root node, and the whole list on the stage. */
     get rootSelected() {
       return selection.length === 0;
@@ -371,7 +420,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     selectRoot,
     breadcrumb,
     isSelected: (rowPath: string) => selection.includes(rowPath),
-    isCollapsed: (rowPath: string) => collapsed.has(rowPath),
+    isCollapsed,
     open,
     close,
     rowsOf,
@@ -389,7 +438,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     copySelection,
     pasteAfterSelection,
     setCollapsed,
-    toggleCollapsed: (rowPath: string) => setCollapsed(rowPath, !collapsed.has(rowPath)),
+    toggleCollapsed: (rowPath: string) => setCollapsed(rowPath, !isCollapsed(rowPath)),
     collapseAll,
     expandAll: () => collapsed.clear()
   };

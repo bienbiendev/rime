@@ -65,9 +65,15 @@
 </div>
 
 <style type="postcss">
+  /**
+   * A 12-column grid of fields.
+   *
+   *   --rz-fields-gap: between two rows of fields, 24px unless a container sets it; the yes/no
+   *                    rows read it to close it
+   */
   .rz-render-fields {
     position: relative;
-    gap: var(--rz-size-8);
+    gap: var(--rz-fields-gap, var(--rz-size-6)) min(2%, var(--rz-size-8));
     display: grid;
     container-type: inline-size;
     grid-template-columns: repeat(12, 1fr);
@@ -82,7 +88,7 @@
 
   /** minimize gap when all fields have no label **/
   .rz-render-fields:not(:has(> :not(.rz-render-fields__field[data-compact]))) {
-    gap: var(--rz-size-4);
+    row-gap: var(--rz-size-4);
   }
 
   /** hide fields that doesn't have any data-visible children */
@@ -99,7 +105,8 @@
     grid-column: span 12 / span 12;
   }
 
-  @container (min-width: 700px) {
+  /* Side by side from 36rem: the document's 40rem column holds halves and thirds. */
+  @container (min-width: 36rem) {
     .rz-render-fields__field--1\/3 {
       grid-column: span 4 / span 4;
     }

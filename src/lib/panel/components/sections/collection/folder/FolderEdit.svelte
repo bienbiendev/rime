@@ -6,6 +6,7 @@
   import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
+  import { useCommands } from '$lib/panel/context/commands.svelte.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import { setDocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getUserContext } from '$lib/panel/context/user.svelte.js';
@@ -31,33 +32,40 @@
     afterSuccess: () => (open = false)
   });
 
-  function handleKeyDown(event: KeyboardEvent) {
-    if (!open) return;
-    if (!formElement) throw Error('formElement is not defined');
-    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-      event.preventDefault();
-      if (!form.canSubmit) return;
-      const saveButton = formElement.querySelector('button[data-submit]');
-      if (saveButton) {
-        formElement.requestSubmit(saveButton as HTMLButtonElement);
-      } else {
-        // Fallback to default submit if no specific button found
-        formElement.requestSubmit();
-      }
+  /** ⌘S while the dialog is up. */
+  useCommands(() => [
+    {
+      id: 'folder.save',
+      label: t__('common.save'),
+      keys: 'mod+s',
+      inField: true,
+      hidden: true,
+      when: () => open,
+      run: submit
     }
+  ]);
+
+  function submit() {
+    if (!formElement) throw Error('formElement is not defined');
+    if (!form.canSubmit) return;
+    const saveButton = formElement.querySelector('button[data-submit]');
+    if (saveButton) formElement.requestSubmit(saveButton as HTMLButtonElement);
+    else formElement.requestSubmit();
   }
 </script>
-
-<svelte:window onkeydown={handleKeyDown} />
 
 <Dialog.Root bind:open>
   <Dialog.Content>
     {#snippet child({ props })}
       <form use:form.enhance bind:this={formElement} {...props}>
         <RenderFields {form} fields={config.fields} />
-        <Dialog.Footer --rz-justify-content="space-between">
-          <Button data-submit disabled={!form.canSubmit} type="submit">{t__('common.save')}</Button>
-          <Button onclick={() => (open = false)} variant="secondary">{t__('common.cancel')}</Button>
+        <Dialog.Footer>
+          <Button data-submit disabled={!form.canSubmit} type="submit" kbd="enter">
+            {t__('common.save')}
+          </Button>
+          <Button onclick={() => (open = false)} variant="secondary" kbd="escape">
+            {t__('common.cancel')}
+          </Button>
         </Dialog.Footer>
       </form>
     {/snippet}

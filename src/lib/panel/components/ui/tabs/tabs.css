@@ -1,8 +1,3 @@
-.rz-tabs[data-tabs-root] {
-  margin-left: calc(-1 * var(--rz-fields-padding));
-  margin-right: calc(-1 * var(--rz-fields-padding));
-}
-
 /**************************************/
 /* Trigger
 /**************************************/
@@ -15,31 +10,49 @@
   white-space: nowrap;
   text-transform: capitalize;
   transition: all 0.2s ease;
-  border-bottom: 2px solid transparent;
-  --rz-ring-opacity: 0;
-  @mixin ring var(--rz-color-ring);
-  @mixin font-semibold;
+  padding-inline: var(--rz-size-3);
+  border-radius: var(--rz-radius-md);
+  background-color: transparent;
+  color: var(--rz-fg-muted);
+  font-variation-settings: 'wght' 380;
+  font-weight: 380;
+}
+
+.rz-tabs-trigger:hover {
+  color: var(--rz-fg);
+}
+
+/* With a data-label, the trigger keeps the width of its bolder, active label. */
+.rz-tabs-trigger[data-label] {
+  flex-direction: column;
+}
+.rz-tabs-trigger[data-label]::after {
+  content: attr(data-label);
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-variation-settings: 'wght' 450;
+  font-weight: 450;
 }
 
 .rz-tabs-trigger[data-state='active'] {
-  border-color: hsl(var(--rz-color-fg));
+  @mixin knob;
   position: relative;
+  font-variation-settings: 'wght' 450;
+  font-weight: 450;
 }
 
 .rz-tabs-trigger[data-state='active']:not([data-error='true']) {
-  color: hsl(var(--rz-color-fg));
+  color: var(--rz-fg);
 }
 .rz-tabs-trigger[data-error='true'] {
-  @mixin color color-alert;
-}
-.rz-tabs-trigger[data-state='inactive'] {
-  opacity: 0.8;
+  color: var(--rz-danger);
 }
 
+/* The ring hugs the trigger: the track clips what overflows it. */
 .rz-tabs-trigger:focus-visible {
-  --rz-ring-opacity: 1;
-  @mixin ring var(--rz-color-ring);
-  outline: none;
+  @mixin focus-ring;
+  outline-offset: 0;
 }
 .rz-tabs-trigger:disabled {
   pointer-events: none;
@@ -54,11 +67,8 @@
   margin-top: var(--rz-size-2);
 }
 .rz-tabs-content:focus-visible {
-  outline: none;
   border-radius: var(--rz-radius-sm);
-  --rz-ring-offset: 8px;
-  --rz-ring-offset-bg: var(--rz-color-bg);
-  @mixin ring var(--rz-color-ring);
+  @mixin focus-ring;
 }
 
 /**************************************/
@@ -68,13 +78,15 @@
 .rz-tabs-list {
   overflow-x: auto;
   overflow-y: visible;
-  background-color: hsl(var(--rz-color-bg));
-  @mixin color ground-2;
-  height: var(--rz-size-10);
-  width: 100%;
+  background-color: var(--rz-bg-well);
+  box-shadow: inset 0 0 0 1px var(--rz-border);
+  border-radius: var(--rz-radius-lg);
+  padding: 3px;
+  height: var(--rz-size-9);
+  width: fit-content;
+  max-width: 100%;
   display: inline-flex;
   align-items: center;
-  gap: var(--rz-size-6);
+  gap: 2px;
   justify-content: flex-start;
-  /* border-bottom: 1px solid hsl(var(--rz-color-border)); */
 }

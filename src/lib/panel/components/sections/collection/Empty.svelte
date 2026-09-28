@@ -17,12 +17,12 @@
 <style lang="postcss">
   .rz-no-document {
     height: var(--rz-input-height);
-    background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-3)));
-    color: hsl(var(--rz-gray-10));
+    background-color: var(--rz-bg-well);
+    color: var(--rz-fg-subtle);
     display: flex;
     align-items: center;
     border-radius: var(--rz-radius-md);
     padding: var(--rz-size-3);
-    border: var(--rz-border);
+    border: 1px solid var(--rz-border);
   }
 </style>

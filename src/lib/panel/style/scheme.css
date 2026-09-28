@@ -1,0 +1,111 @@
+/*
+ * What each token is, in light and in dark. Nothing else names a gray.
+ *
+ * base → page → raised → float: each level sits on the one before it.
+ * The tints are translucent, so they shade whatever level is under them.
+ */
+:root {
+  color-scheme: light dark;
+
+  /* levels */
+  --rz-bg-base: var(--rz-gray-17);
+  --rz-bg-page: var(--rz-gray-19);
+  --rz-bg-raised: var(--rz-gray-19);
+  --rz-bg-float: var(--rz-gray-19);
+  --rz-bg-knob: var(--rz-gray-19);
+  --rz-bg-inverse: var(--rz-gray-2);
+
+  /* tints */
+  --rz-bg-well: oklch(from var(--rz-gray-0) l c h / 0.035);
+  --rz-bg-hover: oklch(from var(--rz-gray-0) l c h / 0.035);
+  --rz-bg-active: oklch(from var(--rz-gray-0) l c h / 0.06);
+  --rz-bg-overlay: oklch(from var(--rz-gray-0) l c h / 0.2);
+
+  /* borders */
+  --rz-border: oklch(from var(--rz-gray-0) l c h / 0.075);
+  --rz-border-strong: oklch(from var(--rz-gray-0) l c h / 0.13);
+
+  /* text */
+  --rz-fg: var(--rz-gray-2);
+  --rz-fg-muted: var(--rz-gray-8);
+  --rz-fg-subtle: var(--rz-gray-10);
+  --rz-fg-inverse: var(--rz-gray-18);
+
+  /* accent: focus, a selection, a link */
+  --rz-accent: var(--rz-accent-solid);
+  --rz-accent-fg: var(--rz-accent-contrast);
+  --rz-accent-text: var(--rz-accent-strong);
+  --rz-accent-tint: oklch(from var(--rz-accent-solid) l c h / 0.07);
+  --rz-accent-border: oklch(from var(--rz-accent-solid) l c h / 0.5);
+  --rz-ring: oklch(from var(--rz-accent-solid) l c h / 0.16);
+
+  /* shadows: light mode lifts with a shadow, dark mode with a lit top edge */
+  --rz-shadow-raised: 0 1px 2px oklch(from var(--rz-gray-0) l c h / 0.035);
+  --rz-shadow-float:
+    0 4px 12px -2px oklch(from var(--rz-gray-0) l c h / 0.06),
+    0 16px 36px -12px oklch(from var(--rz-gray-0) l c h / 0.16);
+  --rz-shadow-knob:
+    0 0 0 1px oklch(from var(--rz-gray-0) l c h / 0.06),
+    0 1px 2px oklch(from var(--rz-gray-0) l c h / 0.08);
+
+  /* gradients */
+  --rz-gradient-primary: linear-gradient(
+    180deg,
+    oklch(from var(--rz-bg-inverse) calc(l + 0.08) c h),
+    var(--rz-bg-inverse)
+  );
+  --rz-shadow-primary:
+    inset 0 1px 0 oklch(from var(--rz-gray-19) l c h / 0.12),
+    0 1px 2px oklch(from var(--rz-gray-0) l c h / 0.18);
+  --rz-glow: radial-gradient(
+    70% 38% at 50% 0%,
+    oklch(from var(--rz-accent-solid) l c h / 0.035),
+    transparent
+  );
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rz-bg-base: var(--rz-gray-1);
+    --rz-bg-page: var(--rz-gray-2);
+    --rz-bg-raised: var(--rz-gray-3);
+    --rz-bg-float: var(--rz-gray-4);
+    --rz-bg-knob: var(--rz-gray-5);
+    --rz-bg-inverse: var(--rz-gray-17);
+
+    --rz-bg-well: oklch(from var(--rz-gray-19) l c h / 0.035);
+    --rz-bg-hover: oklch(from var(--rz-gray-19) l c h / 0.04);
+    --rz-bg-active: oklch(from var(--rz-gray-19) l c h / 0.07);
+    --rz-bg-overlay: oklch(from var(--rz-gray-0) l c h / 0.55);
+
+    --rz-border: oklch(from var(--rz-gray-19) l c h / 0.07);
+    --rz-border-strong: oklch(from var(--rz-gray-19) l c h / 0.12);
+
+    --rz-fg: var(--rz-gray-17);
+    --rz-fg-muted: var(--rz-gray-12);
+    --rz-fg-subtle: var(--rz-gray-9);
+    --rz-fg-inverse: var(--rz-gray-2);
+
+    --rz-accent-text: var(--rz-accent-soft);
+    --rz-accent-tint: oklch(from var(--rz-accent-solid) l c h / 0.13);
+    --rz-accent-border: oklch(from var(--rz-accent-soft) l c h / 0.45);
+    --rz-ring: oklch(from var(--rz-accent-soft) l c h / 0.2);
+
+    --rz-shadow-raised: inset 0 1px 0 oklch(from var(--rz-gray-19) l c h / 0.03);
+    --rz-shadow-float:
+      inset 0 1px 0 oklch(from var(--rz-gray-19) l c h / 0.05),
+      0 16px 40px -12px oklch(from var(--rz-gray-0) l c h / 0.6);
+    --rz-shadow-knob:
+      inset 0 1px 0 oklch(from var(--rz-gray-19) l c h / 0.07),
+      0 1px 2px oklch(from var(--rz-gray-0) l c h / 0.5);
+
+    --rz-shadow-primary:
+      inset 0 1px 0 oklch(from var(--rz-gray-19) l c h / 0.5),
+      0 1px 2px oklch(from var(--rz-gray-0) l c h / 0.4);
+    --rz-glow: radial-gradient(
+      70% 38% at 50% 0%,
+      oklch(from var(--rz-accent-solid) l c h / 0.07),
+      transparent
+    );
+  }
+}

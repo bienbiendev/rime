@@ -6,10 +6,16 @@ type FieldState = {
   readonly error: string | false;
 };
 
-export function fieldset(node: HTMLElement, field: FieldState) {
+/** Marks a field's root with its path, visibility and editable state, and follows a new field. */
+export function fieldset(node: HTMLElement, initial: FieldState) {
+  let field = $state.raw(initial);
+
   node.classList.add('rz-field-root');
   node.setAttribute('style', 'position: relative; container: rz-field-root / inline-size');
-  node.setAttribute('data-path', field.path);
+
+  $effect(() => {
+    node.setAttribute('data-path', field.path);
+  });
 
   $effect(() => {
     if (field.visible) {
@@ -26,4 +32,8 @@ export function fieldset(node: HTMLElement, field: FieldState) {
       node.removeAttribute('disabled');
     }
   });
+
+  return {
+    update: (next: FieldState) => (field = next)
+  };
 }

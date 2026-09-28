@@ -21,7 +21,10 @@
 
   // Retrieve active tab from localStorage, if not found use the first tab.
   // If the stored active tab is not available in live mode, fallback to the first tab.
+  // The server has no storage: it renders the first tab. Node 25+ warns on any read of its
+  // `localStorage`, so the check is on `window`.
   let activeTabName = $derived.by(() => {
+    if (typeof window === 'undefined') return config.get.tabs[0].name;
     let storedActiveTab = localStorage.getItem(storageActiveKey);
     if (storedActiveTab && form.isLive) {
       const activeTab = config.get.tabs.find((tab) => tab.name === storedActiveTab);
@@ -60,18 +63,22 @@
 
 <div class="rz-tabs">
   <Tabs.Root onValueChange={onActiveTabChange} value={activeTabName}>
-    <Tabs.List>
-      {#each config.get.tabs as tab, index (index)}
-        {#if isTabVisible(tab)}
-          <Tabs.Trigger
-            data-error={errorTabs.includes(tabIds[index]) ? 'true' : null}
-            value={tab.name}
-          >
-            {tab.get.label || tab.name}
-          </Tabs.Trigger>
-        {/if}
-      {/each}
-    </Tabs.List>
+    <!-- A strip of page that stays under the header, so the fields scroll behind it. -->
+    <div class="rz-tabs__bar">
+      <Tabs.List>
+        {#each config.get.tabs as tab, index (index)}
+          {#if isTabVisible(tab)}
+            <Tabs.Trigger
+              data-error={errorTabs.includes(tabIds[index]) ? 'true' : null}
+              data-label={tab.get.label || tab.name}
+              value={tab.name}
+            >
+              {tab.get.label || tab.name}
+            </Tabs.Trigger>
+          {/if}
+        {/each}
+      </Tabs.List>
+    </div>
 
     {#each config.get.tabs as tab, index (index)}
       {#if isTabVisible(tab)}
@@ -96,18 +103,18 @@
 </div>
 
 <style type="postcss">
+  .rz-tabs__bar {
+    position: sticky;
+    top: var(--rz-tabs-list-top, var(--rz-size-11));
+    z-index: 40;
+    margin-inline: calc(-1 * var(--rz-fields-padding));
+    padding: var(--rz-size-2) var(--rz-fields-padding);
+    background-color: var(--rz-bg-page);
+  }
+
   .rz-tabs :global {
     .rz-tabs-content {
-      margin-top: var(--rz-size-8);
-    }
-
-    .rz-tabs-list {
-      padding-left: var(--rz-fields-padding);
-      padding-right: var(--rz-fields-padding);
-      position: sticky;
-      top: var(--rz-tabs-list-top, var(--rz-size-14));
-      margin-bottom: 0;
-      z-index: 40;
+      margin-top: var(--rz-size-6);
     }
   }
 </style>

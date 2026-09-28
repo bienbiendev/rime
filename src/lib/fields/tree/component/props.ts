@@ -13,7 +13,8 @@ export type TreeBlockProps = {
   path: string;
   sorting: boolean;
   treeState: {
-    addItem: (emptyValues: Dic) => void;
+    /** At the end of the tree, or of the list `atPath` names: `links.0._children`. */
+    addItem: (emptyValues: Dic, atPath?: string) => void;
     moveItem: (fromPath: string, toPath: string) => void;
     deleteItem: (path: string, index: number) => void;
     readonly path: string;

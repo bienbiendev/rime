@@ -2,7 +2,6 @@
   import { t__ } from '$lib/core/i18n/index.js';
   import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
   import { Input } from '$lib/panel/components/ui/input/index.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { slugify } from '$lib/util/string.js';
@@ -44,6 +43,9 @@
     field.value = inputElement.value;
   };
 
+  /** The field the slug is built from, by its last name: `attributes.title` → `title`. */
+  const sourceName = $derived(config.get.slugify?.split('.').at(-1) ?? '');
+
   const classNameCompact = $derived(
     config.get.layout === 'compact' ? 'rz-slug-field--compact' : ''
   );
@@ -53,71 +55,42 @@
 <fieldset class={classNames} use:fieldset={field}>
   <Field.Label {config} for={path || config.name} />
 
-  <div class="rz-slug">
-    <Input
-      id={path || config.name}
-      placeholder={config.get.placeholder}
-      data-error={field.error ? '' : null}
-      type="text"
-      icon={Hash}
-      value={field.value}
-      name={path || config.name}
-      oninput={onInput}
-      onfocus={() => (isFocused = true)}
-      onblur={() => (isFocused = false)}
-    />
+  <Input
+    id={path || config.name}
+    icon={Hash}
+    placeholder={config.get.placeholder}
+    data-error={field.error ? '' : null}
+    type="text"
+    value={field.value}
+    name={path || config.name}
+    oninput={onInput}
+    onfocus={() => (isFocused = true)}
+    onblur={() => (isFocused = false)}
+  />
 
+  <Field.Hint {config}>
+    {#if !config.get.hint}{t__('fields.slug_hint')}{/if}
     {#if config.get.slugify}
-      <Button
-        disabled={!field.editable}
-        onclick={() => (field.value = slugifiedValue)}
+      <button
         type="button"
-        size="sm"
-        variant="secondary"
+        disabled={!field.editable || !slugifiedValue}
+        onclick={() => (field.value = slugifiedValue)}
       >
-        {t__('fields.generate_from', config.get.slugify)}
-      </Button>
+        {t__('fields.build_from', sourceName)}
+      </button>
     {/if}
-  </div>
-  <Field.Hint {config} />
+  </Field.Hint>
   <Field.Error error={field.error} />
 </fieldset>
 
-<style>
-  .rz-slug {
-    position: relative;
-
-    :global(.rz-input) {
-      font-family: var(--rz-font-mono);
-    }
-
-    :global(.rz-button) {
-      position: absolute;
-      right: var(--rz-size-1-5);
-      top: var(--rz-size-1-5);
-    }
-
-    :global(.rz-slug__icon) {
-      opacity: 0.37;
-      position: absolute;
-      left: 0.75rem;
-      top: 1rem;
-    }
-  }
-
+<style lang="postcss">
   .rz-slug-field--compact {
-    :global(label) {
+    :global(.rz-field-label) {
       display: none;
     }
     :global(.rz-field-error) {
-      position: absolute;
-      top: var(--rz-size-3);
-      right: calc(var(--rz-fields-padding) + var(--rz-size-40));
-    }
-    :global(.rz-input) {
-      font-size: var(--rz-text-md);
-      padding: var(--rz-size-5) 0 var(--rz-size-5) var(--rz-size-8);
-      height: var(--rz-size-11);
+      top: var(--rz-size-1);
+      right: var(--rz-size-1);
     }
   }
 </style>

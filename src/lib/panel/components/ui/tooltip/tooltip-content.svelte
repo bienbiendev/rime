@@ -25,8 +25,8 @@
 
 <style lang="postcss">
   :root {
-    --rz-tooltip-color-fg: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-2)));
-    --rz-tooltip-color-bg: light-dark(hsl(var(--rz-gray-0)), hsl(var(--rz-gray-11)));
+    --rz-tooltip-color-fg: var(--rz-fg-inverse);
+    --rz-tooltip-color-bg: var(--rz-bg-inverse);
   }
 
   .rz-tooltip {

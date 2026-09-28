@@ -30,7 +30,7 @@
     & :global(.rz-command-input-select__icon) {
       margin-right: var(--rz-size-2);
       flex-shrink: 0;
-      opacity: 0.5;
+      color: var(--rz-fg-subtle);
     }
 
     & :global(.rz-command-input-select__input) {
@@ -43,7 +43,7 @@
     }
 
     & :global(.rz-command-input-select__input::placeholder) {
-      @mixin color color-fg, 0.4;
+      color: var(--rz-fg-subtle);
     }
 
     & :global(.rz-command-input-select__input:disabled) {

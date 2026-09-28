@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
+  import { useCommands } from '$lib/panel/context/commands.svelte.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import type { ActivePanel } from '$lib/panel/context/livePanel.svelte';
   import { ChevronLeft, Form, Laptop, Save, Smartphone, X } from '@lucide/svelte';
@@ -34,12 +35,17 @@
     }
   }
 
-  function handleKeyDown(event: KeyboardEvent) {
-    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-      event.preventDefault();
-      saveAll();
+  /** ⌘S saves every pane with changes. */
+  useCommands(() => [
+    {
+      id: 'live.save',
+      label: t__('common.save'),
+      keys: 'mod+s',
+      inField: true,
+      hidden: true,
+      run: saveAll
     }
-  }
+  ]);
 </script>
 
 <div class="rz-live-floating-ui">
@@ -81,9 +87,9 @@
   </Button>
 </div>
 
-<svelte:window onkeydown={handleKeyDown} />
+<style lang="postcss">
+  @import '../../../style/mixins/index.css';
 
-<style>
   .rz-live-floating-ui {
     position: fixed;
     bottom: var(--rz-size-2);
@@ -91,14 +97,12 @@
     margin-left: var(--rz-size-2);
     margin-right: var(--rz-size-2);
     height: var(--rz-size-14);
-    background-color: hsl(var(--rz-color-bg));
+    @mixin surface float;
     padding: var(--rz-size-2);
     border-radius: var(--rz-radius-md);
     z-index: 1000;
     display: flex;
     gap: var(--rz-size-2);
-    box-shadow: var(--rz-shadow-xl);
-    border: var(--rz-border);
     :global(.rz-live-floating-ui__save) {
       flex: 1;
     }

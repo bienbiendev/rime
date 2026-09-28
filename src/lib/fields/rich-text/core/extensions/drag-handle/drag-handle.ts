@@ -4,8 +4,9 @@ import type { Node } from '@tiptap/pm/model';
 
 import { DragHandlePlugin } from './drag-handle-plugin.js';
 
+/** Beside the node's first line, centred on it. */
 export const defaultComputePositionConfig: ComputePositionConfig = {
-  placement: 'left-start',
+  placement: 'left',
   strategy: 'absolute'
 };
 

@@ -42,7 +42,7 @@
 
 <style type="postcss">
   :root {
-    --rz-upload-preview-cell-bg: light-dark(hsl(var(--rz-gray-15)), hsl(var(--rz-gray-0)));
+    --rz-upload-preview-cell-bg: var(--rz-bg-well);
     --rz-upload-preview-cell-fit: contain;
   }
 

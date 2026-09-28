@@ -149,10 +149,12 @@
     display: flex;
     border-radius: var(--rz-radius-lg);
     align-items: center;
-    background-color: light-dark(hsl(var(--rz-gray-19)), hsl(var(--rz-gray-3)));
     justify-content: space-between;
+    &:hover {
+      background-color: var(--rz-bg-hover);
+    }
     &.rz-document-versions__list-item--active {
-      background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-4)));
+      background-color: var(--rz-bg-active);
     }
   }
 
@@ -169,7 +171,7 @@
   }
 
   .rz-document-versions__list-item--auto-save {
-    opacity: 0.7;
+    color: var(--rz-fg-muted);
     padding-right: var(--rz-size-3);
   }
 

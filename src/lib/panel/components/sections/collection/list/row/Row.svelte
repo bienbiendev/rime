@@ -3,82 +3,82 @@
   import type { GenericDoc } from '$lib/core/prototype/types.js';
   import { panelPath } from '$lib/core/routes/util.js';
   import Checkbox from '$lib/panel/components/ui/checkbox/checkbox.svelte';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte';
   import { getValueAtPath } from '$lib/util/object';
-  import StatusDot from '../../StatusDot.svelte';
+  import Avatar from '../../Avatar.svelte';
+  import DocStatus from '../../DocStatus.svelte';
   import UploadThumbCell from '../../upload-thumb-cell/UploadThumbCell.svelte';
+  import When from '../../When.svelte';
 
   type Props = {
     checked: boolean;
     doc: GenericDoc;
+    /** On while a row is checked: the title then picks its row. */
     isSelectMode?: boolean;
     config: BuiltCollection;
+    /** Given, the row has a checkbox: shown on hover, and always once a row is checked. */
     toggleSelectOf?: (id: string) => void;
     columns?: Array<{ path: string; cell?: any }>;
+    /** The document's path, after its title: `/studio`. */
+    path?: string;
     draggable?: 'true';
   };
 
-  const { checked, doc, config, isSelectMode, toggleSelectOf, columns, draggable }: Props =
+  const { checked, doc, config, isSelectMode, toggleSelectOf, columns, path, draggable }: Props =
     $props();
 
-  const locale = getLocaleContext();
-
-  let gridTemplateColumn = $state('grid-template-columns: 2fr repeat(1, minmax(0, 1fr));');
-
-  $effect(() => {
-    // See the note in Header.svelte, which counts the same columns.
-    const columnLength = (columns?.length ?? 0) + 3;
-    gridTemplateColumn = `grid-template-columns: 2fr repeat(${columnLength - 1}, minmax(0, 1fr));`;
-  });
-
-  const formattedDate = $derived(
-    doc.updatedAt ? locale.dateFormat(doc.updatedAt, { short: true }) : ''
-  );
+  const title = $derived(doc.title || '[untitled]');
+  const hasDraft = $derived(!!(config.versions && config.versions.draft));
+  const author = $derived<string>(doc.updatedBy?.name ?? '');
+  // "Anthony Ivol" -> "Anthony"
+  const firstName = $derived(author.split(/\s+/)[0]);
 
   function handleDragStart(e: DragEvent) {
     e.dataTransfer?.setData('text/plain', doc.id);
   }
 </script>
 
+<!-- The tracks come from the list: `--rz-list-tracks`. -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  style={gridTemplateColumn}
   class="rz-list-row"
+  class:rz-list-row--checked={checked}
+  class:rz-list-row--select-mode={isSelectMode}
   draggable={draggable || null}
   ondragstart={draggable ? handleDragStart : null}
 >
-  <div class="rz-list-row__main">
-    {#if isSelectMode}
-      <!-- On select mode show the checkbox  -->
-      <Checkbox
-        id="checkbox-{doc.id}"
-        class="rz-list-row__checkbox"
-        {checked}
-        onCheckedChange={() => toggleSelectOf?.(doc.id)}
-      />
-      {#if doc._thumbnail}
-        <UploadThumbCell url={doc._thumbnail} mimeType={doc.mimeType} />
-      {/if}
-      <label for="checkbox-{doc.id}" class="rz-list-row__title">{doc.title || '[untitled]'}</label>
-    {:else}
-      <a class="rz-list-row__link" href={panelPath(config.kebab, doc.id)}>
-        {#if doc._thumbnail}
-          <UploadThumbCell url={doc._thumbnail} mimeType={doc.mimeType} />
-        {:else}
-          {@const Icon = config.icon}
-          <div class="rz-list-row__icon"><Icon size="13" /></div>
-        {/if}
+  {#if toggleSelectOf}
+    <Checkbox
+      id="checkbox-{doc.id}"
+      class="rz-list-row__checkbox"
+      aria-label={title}
+      {checked}
+      onCheckedChange={() => toggleSelectOf(doc.id)}
+    />
+  {:else}
+    <span></span>
+  {/if}
 
-        <span class="rz-list-row__title">{doc.title || '[untitled]'}</span>
-        {#if config.versions && config.versions.draft}
-          <StatusDot --rz-dot-size="0.28rem" status={doc.status} />
-        {/if}
+  <div class="rz-list-row__main">
+    {#if config.upload || doc._thumbnail}
+      <UploadThumbCell url={doc._thumbnail} mimeType={doc.mimeType} />
+    {/if}
+
+    <!-- The title covers the whole row: a click opens the document, or picks it while selecting. -->
+    {#if isSelectMode}
+      <label for="checkbox-{doc.id}" class="rz-list-row__title">{title}</label>
+    {:else}
+      <a class="rz-list-row__link rz-list-row__title" href={panelPath(config.kebab, doc.id)}>
+        {title}
       </a>
+    {/if}
+
+    {#if path}
+      <span class="rz-list-row__path">{path}</span>
     {/if}
   </div>
 
-  {#each columns as column, index (index)}
-    <div class="rz-list-row__cell">
+  {#each columns as column (column.path)}
+    <div class="rz-list-row__cell" data-column="field">
       {#if column.cell}
         {@const ColumnTableCell = column.cell}
         <ColumnTableCell value={getValueAtPath(column.path, doc)} />
@@ -88,75 +88,141 @@
     </div>
   {/each}
 
-  <div class="rz-list-row__cell">
-    {doc.updatedBy?.name ?? ''}
+  {#if hasDraft}
+    <div class="rz-list-row__cell" data-column="status">
+      {#if doc.status}
+        <DocStatus status={doc.status} />
+      {/if}
+    </div>
+  {/if}
+
+  <div class="rz-list-row__cell rz-list-row__author" data-column="author" title={author}>
+    {#if author}
+      <Avatar size="xs" name={author} />
+      <span class="rz-list-row__author-name">{firstName}</span>
+    {/if}
   </div>
 
-  <div class="rz-list-row__cell">
-    {formattedDate}
+  <div class="rz-list-row__cell rz-list-row__cell--date">
+    {#if doc.updatedAt}
+      <When date={doc.updatedAt} />
+    {/if}
   </div>
 </div>
 
 <style type="postcss">
   @import '../../../../../style/mixins/index.css';
 
+  /* A flat row with a hairline on top; the card around the list draws the frame. */
   .rz-list-row {
     --rz-upload-preview-cell-fit: cover;
+    --rz-upload-preview-cell-size: var(--rz-size-6);
+    --rz-checkbox-size: var(--rz-size-3);
 
+    position: relative;
     display: grid;
-    height: var(--rz-row-height);
     align-items: center;
-    border: var(--rz-border);
-    border-radius: var(--rz-radius-md);
-    background-color: hsl(var(--rz-row-bg));
+    gap: var(--rz-size-3);
+    height: var(--rz-row-height);
+    padding-inline: var(--rz-size-3) var(--rz-size-3-5);
+    box-shadow: inset 0 1px 0 var(--rz-border);
+    transition: background-color 0.15s;
 
-    .rz-list-row__icon {
-      height: var(--rz-size-9);
-      width: var(--rz-size-9);
-      border-radius: var(--rz-radius-sm);
-      display: flex;
-      flex-shrink: 0;
-      flex-grow: 0;
-      align-items: center;
-      justify-content: center;
-      background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-1)));
-    }
-
-    :global {
-      .rz-list-row__checkbox {
-        margin-left: var(--rz-size-2);
-        background-color: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-0)));
-        border: var(--rz-border);
-      }
+    &:hover {
+      background-color: var(--rz-bg-hover);
     }
   }
 
+  .rz-list-row--checked,
+  .rz-list-row--checked:hover {
+    background-color: var(--rz-accent-tint);
+  }
+
+  /* Above the title's cover, and hidden until the row is hovered, focused or a row is checked. */
+  .rz-list-row :global(.rz-list-row__checkbox) {
+    position: relative;
+    z-index: 1;
+    justify-self: center;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .rz-list-row:is(:hover, :focus-within, .rz-list-row--select-mode, .rz-list-row--checked)
+    :global(.rz-list-row__checkbox) {
+    opacity: 1;
+  }
+
+  /* The title, then its path, which gives way first. */
   .rz-list-row__main {
     display: flex;
     align-items: center;
-    gap: var(--rz-size-3);
-    padding-left: var(--rz-size-1);
-    padding-right: var(--rz-size-5);
-  }
+    gap: var(--rz-size-2);
+    min-width: 0;
 
-  .rz-list-row__link {
-    display: flex;
-    align-items: center;
-    gap: var(--rz-size-4);
+    :global(.rz-upload-preview-cell) {
+      margin-right: var(--rz-size-0-5);
+    }
   }
 
   .rz-list-row__title {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
+    @mixin font-medium;
+    flex-shrink: 1;
+    min-width: 0;
     overflow: hidden;
-    word-break: break-all;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+    }
   }
+
   label.rz-list-row__title {
     cursor: pointer;
   }
 
+  .rz-list-row__link:focus-visible {
+    outline: none;
+
+    &::after {
+      @mixin focus-ring;
+      outline-offset: -2px;
+    }
+  }
+
+  .rz-list-row__path {
+    flex-shrink: 100;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--rz-fg-subtle);
+    font-size: var(--rz-text-sm);
+  }
+
   .rz-list-row__cell {
-    @mixin color foreground, 0.6;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--rz-fg-muted);
+  }
+
+  .rz-list-row__author {
+    display: flex;
+    align-items: center;
+    gap: var(--rz-size-1-5);
+  }
+
+  .rz-list-row__author-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .rz-list-row__cell--date {
+    text-align: right;
   }
 </style>

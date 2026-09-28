@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { mediaMeta } from '$lib/panel/util/upload-file.js';
   import type { GenericDoc } from '$lib/types';
   import StatusDot from '../../sections/collection/StatusDot.svelte';
   import UploadThumbCell from '../../sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
@@ -26,9 +27,7 @@
 
     {#if doc.filesize || doc.mimeType}
       <div class="rz-document-card__metadata">
-        {#each ['filesize', 'mimeType'] as key, index (index)}
-          <p>{doc[key]}</p>
-        {/each}
+        <p>{mediaMeta(doc as { filesize?: string; mimeType?: string })}</p>
       </div>
     {/if}
 
@@ -41,22 +40,17 @@
 <style lang="postcss">
   @import '../../../style/mixins/index.css';
 
-  :root {
-    --rz-card-hover-bg: light-dark(hsl(var(--rz-gray-19)), hsl(var(--rz-gray-4)));
-    --rz-card-bg: light-dark(hsl(var(--rz-gray-18)), hsl(var(--rz-gray-3)));
-  }
-
   .rz-document-card {
     --rz-dot-size: var(--rz-size-2);
-    border: var(--rz-border);
-    background-color: var(--rz-card-bg);
+    --rz-upload-preview-cell-bg: var(--rz-bg-well);
+    @mixin surface raised;
     border-radius: var(--rz-radius-lg);
     aspect-ratio: 4 / 5;
     width: 100%;
   }
 
   .rz-document-card:hover {
-    background-color: var(--rz-card-hover-bg);
+    @mixin hover;
   }
 
   .rz-document-card :global(.rz-upload-preview-cell) {
@@ -95,6 +89,6 @@
 
   .rz-document-card__metadata {
     font-size: var(--rz-text-xs);
-    opacity: 0.6;
+    color: var(--rz-fg-subtle);
   }
 </style>

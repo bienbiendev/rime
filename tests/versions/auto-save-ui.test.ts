@@ -37,7 +37,7 @@ async function loginAs(page: Page, email: string, password: string) {
 
 /** The version history, from the settings menu. */
 async function openHistory(page: Page) {
-  await page.locator('button[aria-haspopup="menu"]').first().click();
+  await page.getByRole('button', { name: 'Document actions' }).click();
   await page.getByRole('menuitem', { name: 'Versions history' }).click();
   await expect(page.locator(HISTORY)).toBeVisible();
 }
@@ -324,7 +324,7 @@ test('Deleting a version from the settings keeps the document', async ({ page, r
   await page.waitForLoadState('networkidle');
   const before = (await versionsOf(request)).length;
 
-  await page.locator('button[aria-haspopup="menu"]').first().click();
+  await page.getByRole('button', { name: 'Document actions' }).click();
   await page.getByRole('menuitem', { name: 'Delete this version' }).click();
   const removed = page.waitForResponse((response) => response.request().method() === 'DELETE');
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
@@ -353,7 +353,7 @@ test('The last version of a document cannot be deleted', async ({ page, request 
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('news', doc.id)}?${PARAMS.VERSION_ID}=${doc.versionId}`);
   await page.waitForLoadState('networkidle');
-  await page.locator('button[aria-haspopup="menu"]').first().click();
+  await page.getByRole('button', { name: 'Document actions' }).click();
   await expect(page.getByRole('menuitem', { name: 'Delete this version' })).toBeDisabled();
 
   const response = await request.delete(`${API_BASE_URL}/news--versions/${doc.versionId}`, {

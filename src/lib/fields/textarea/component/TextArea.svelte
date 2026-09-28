@@ -32,19 +32,17 @@
   @import '../../../panel/style/mixins/index.css';
   textarea {
     field-sizing: content;
-    border: 1px solid var(--rz-input-border-color);
-    background-color: hsl(var(--rz-input-bg));
+    @mixin well;
     display: flex;
     width: 100%;
-    border-radius: var(--rz-radius-md);
+    border-radius: var(--rz-radius-lg);
     line-height: 1.5em;
     min-height: var(--rz-size-20);
     padding-inline: var(--rz-size-3);
     padding-block: var(--rz-size-2);
 
     &:global([data-error]) {
-      outline: none;
-      @mixin ring var(--rz-color-alert);
+      @mixin invalid-field;
     }
   }
 
@@ -53,12 +51,10 @@
     cursor: not-allowed;
   }
   textarea::placeholder {
-    @mixin color color-fg, 0.5;
+    color: var(--rz-fg-subtle);
   }
 
   textarea:focus-visible {
-    outline: none;
-    /* --rz-ring-offset: 1px; */
-    @mixin ring var(--rz-color-ring);
+    @mixin focus-field;
   }
 </style>

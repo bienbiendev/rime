@@ -1,88 +1,104 @@
 <script lang="ts">
-  import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
   import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
   import Empty from '../Empty.svelte';
-  import Folder from '../folder/FolderWithActions.svelte';
+  import Folders from '../folder/Folders.svelte';
+  import { listColumns } from './columns.js';
+  import ListHeader from './header/Header.svelte';
   import Row from './row/Row.svelte';
 
   type Props = { collection: CollectionContext };
 
   const { collection }: Props = $props();
 
-  const documents = $derived.by(() => {
-    return collection.isUpload
-      ? collection.docs.filter((doc) => doc._path === collection.upload.currentPath)
-      : collection.docs;
-  });
+  const hasFolders = $derived(
+    collection.isUpload &&
+      !collection.isFiltered &&
+      !!(collection.upload.directories.length || collection.upload.parentDirectory)
+  );
 
-  function onDeleteFolder(path: string) {
-    collection.upload.directories = collection.upload.directories.filter((dir) => dir.id !== path);
+  // A row is dragged onto a folder only when there is one to drop it on.
+  const dragEnabled = $derived(
+    collection.isUpload &&
+      !!(collection.upload.directories.length || collection.upload.parentDirectory)
+  );
+
+  // The tracks, wide; then without the author; then the title and the date alone.
+  const columns = $derived(collection.columns.length);
+  const status = $derived(!!collection.hasDraft);
+  const wide = $derived(listColumns({ columns, status, author: true }));
+  const medium = $derived(listColumns({ columns, status }));
+  const narrow = listColumns({});
+</script>
+
+<div class="rz-page-collection__list-view">
+  <Folders {collection} />
+
+  {#if collection.shown.length}
+    <div
+      class="rz-page-collection__list"
+      style:--rz-list-tracks={wide}
+      style:--rz-list-tracks-md={medium}
+      style:--rz-list-tracks-sm={narrow}
+    >
+      <ListHeader />
+      {#each collection.shown as doc (doc.id)}
+        <Row
+          config={collection.config}
+          columns={collection.columns}
+          {doc}
+          path={collection.pathOf(doc)}
+          checked={collection.selected.includes(doc.id)}
+          draggable={dragEnabled ? 'true' : undefined}
+          isSelectMode={collection.selectMode}
+          toggleSelectOf={collection.toggleSelectOf}
+        />
+      {/each}
+    </div>
+  {:else if !hasFolders}
+    <Empty config={collection.config} />
+  {/if}
+</div>
+
+<style lang="postcss">
+  @import '../../../../style/mixins/index.css';
+
+  .rz-page-collection__list-view {
+    display: flex;
+    flex-direction: column;
+    gap: var(--rz-size-5);
   }
 
-  /**
-   * When a document is moved into a folder
-   * change the document path inside collection.docs
-   */
-  function onDocumentDrop(args: { documentId: string; path: string }) {
-    const { documentId, path } = args;
-    const docIndex = collection.docs.findIndex((doc) => doc.id === documentId);
-    if (docIndex > -1) {
-      collection.docs[docIndex]._path = path;
-    } else {
-      console.error("can't find " + documentId, collection.docs);
+  /* One raised card: the column labels, then the rows, a hairline between each. */
+  .rz-page-collection__list {
+    @mixin surface raised;
+    border-radius: var(--rz-radius-lg);
+    overflow: hidden;
+
+    :global(:is(.rz-list-row, .rz-list-header)) {
+      grid-template-columns: var(--rz-list-tracks);
     }
   }
 
-  const dragEnabled = $derived(
-    isUploadConfig(collection.config) &&
-      !!(collection.upload.directories.length || collection.upload.parentDirectory)
-  );
-</script>
+  /* A narrower list drops the author, then the status and the config's columns. */
+  @container collection-area (max-width: 44rem) {
+    .rz-page-collection__list {
+      :global(:is(.rz-list-row, .rz-list-header)) {
+        grid-template-columns: var(--rz-list-tracks-md);
+      }
+      :global([data-column='author']) {
+        display: none;
+      }
+    }
+  }
 
-{#if collection.docs.length}
-  <div class="rz-page-collection__list">
-    <!-- Parent directory -->
-    {#if collection.isUpload && collection.upload.parentDirectory && !collection.isFiltered}
-      <Folder
-        {onDocumentDrop}
-        folder={{ ...collection.upload.parentDirectory, name: '...' }}
-        display="list"
-        collection={collection.config}
-      />
-    {/if}
-
-    {#if !collection.isFiltered && collection.isUpload}
-      {#each collection.upload.directories as folder (folder.id)}
-        <Folder
-          draggable="true"
-          {onDocumentDrop}
-          {folder}
-          collection={collection.config}
-          display="list"
-          onDelete={onDeleteFolder}
-        />
-      {/each}
-    {/if}
-
-    {#each documents as doc, index (index)}
-      {@const checked = collection.selected.includes(doc.id)}
-      <Row
-        config={collection.config}
-        {doc}
-        {checked}
-        draggable={dragEnabled ? 'true' : undefined}
-        isSelectMode={collection.selectMode}
-        toggleSelectOf={(id) => collection.toggleSelectOf(id)}
-      />
-    {/each}
-  </div>
-{:else}
-  <Empty config={collection.config} />
-{/if}
-
-<style lang="postcss">
-  .rz-page-collection__list {
-    gap: var(--rz-size-2);
-    display: grid;
+  @container collection-area (max-width: 32rem) {
+    .rz-page-collection__list {
+      :global(:is(.rz-list-row, .rz-list-header)) {
+        grid-template-columns: var(--rz-list-tracks-sm);
+      }
+      :global(:is([data-column='status'], [data-column='field'])) {
+        display: none;
+      }
+    }
   }
 </style>

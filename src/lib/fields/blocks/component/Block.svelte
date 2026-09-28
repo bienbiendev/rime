@@ -3,7 +3,6 @@
   import type { BlocksFieldBlock } from '$lib/fields/types';
   import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
   import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { useOnce } from '$lib/panel/util/once.svelte.js';
   import { capitalize } from '$lib/util/string.js';
   import { GripVertical, ToyBrick } from '@lucide/svelte';
   import BlockActions from './BlockActions.svelte';
@@ -11,189 +10,202 @@
   type Props = {
     config: BlocksFieldBlock;
     path: string;
+    form: DocumentFormContext;
+    /** Its fields on show under its row. */
+    open: boolean;
     sorting: boolean;
+    toggle: () => void;
     deleteBlock: () => void;
     duplicateBlock: () => void;
+    /** Absent on the first block. */
+    moveUp?: () => void;
+    /** Absent on the last block. */
+    moveDown?: () => void;
     /** Opens the document's focus mode on this block; absent in a nested form. */
     focusBlock?: () => void;
-    form: DocumentFormContext;
   };
 
   const {
     config,
     path,
+    form,
+    open,
+    sorting = false,
+    toggle,
     deleteBlock,
     duplicateBlock,
-    focusBlock,
-    form,
-    sorting = false
+    moveUp,
+    moveDown,
+    focusBlock
   }: Props = $props();
 
-  let isOpen = $state(true);
   const position = $derived(parseInt(path.split('.').pop() || '0'));
   const blockValue = $derived(form.getValue<GenericBlock>(path));
 
-  const { once } = useOnce();
-
-  once(() => {
-    if (blockValue) {
-      isOpen = (localStorage.getItem(`${blockValue.id}:open`) || 'true') === 'true';
-    }
-  });
-
-  export const setCollapse = (bool: boolean) => {
-    isOpen = !bool;
-  };
-
-  export const toggleBlock = (e: MouseEvent) => {
-    if (e && e.stopPropagation) {
-      e.stopPropagation();
-    }
-    isOpen = !isOpen;
-  };
-
-  const renderBlockTitle = () => {
+  const title = $derived.by(() => {
     if (config.renderTitle) {
       try {
-        const title = config.renderTitle({ values: blockValue || {}, position });
-        if (title) return title;
+        const rendered = config.renderTitle({ values: blockValue || {}, position });
+        if (rendered) return rendered;
       } catch (err) {
         console.error(`Can't render title in block`, err);
       }
     }
-    const title = config.label ? config.label : capitalize(config.name);
-    return title;
-  };
-
-  $effect(() => {
-    if (blockValue) {
-      localStorage.setItem(`${blockValue.id}:open`, isOpen.toString());
-    }
+    return config.label ? config.label : capitalize(config.name);
   });
 
+  const fieldsId = $derived(`rz-block-fields-${blockValue?.id ?? path}`);
   const BlockIcon = $derived(config.icon || ToyBrick);
 </script>
 
-<div data-sorting={sorting} class="rz-block">
-  <div class="rz-block__content" class:rz-block__content--closed={!isOpen}>
-    <header class="rz-block__header">
-      <button type="button" onclick={toggleBlock} class="rz-block__title-button">
-        <div class="rz-block__title">
-          <div class="rz-block__icon">
-            <BlockIcon size={12} />
-          </div>
-          <h3 class="rz-block__heading">
-            {renderBlockTitle()}
-          </h3>
-        </div>
-      </button>
+<!-- A row: grip, icon, name, actions. A click on it shows its fields under it. -->
+<div class="rz-block" data-open={open ? '' : null} data-sorting={sorting}>
+  <div class="rz-block__header">
+    <span class="rz-block__grip" aria-hidden="true">
+      <GripVertical size={15} />
+    </span>
 
-      <BlockActions {duplicateBlock} {deleteBlock} {focusBlock} />
+    <button
+      type="button"
+      class="rz-block__title-button"
+      aria-expanded={open}
+      aria-controls={fieldsId}
+      onclick={toggle}
+    >
+      <span class="rz-block__icon"><BlockIcon size={14} /></span>
+      <span class="rz-block__heading">{title}</span>
+    </button>
 
-      <div class="rz-block__grip">
-        <GripVertical size={15} />
-      </div>
-    </header>
+    <BlockActions {duplicateBlock} {deleteBlock} {moveUp} {moveDown} {focusBlock} />
+  </div>
 
-    <div class="rz-block__fields" class:rz-block__fields--hidden={!isOpen}>
-      <RenderFields fields={config.fields} {path} {form} />
-    </div>
+  <div class="rz-block__fields" id={fieldsId} hidden={!open}>
+    <RenderFields fields={config.fields} {path} {form} />
   </div>
 </div>
 
 <style type="postcss">
   @import '../../../panel/style/mixins/index.css';
 
+  /*
+   * One row of the list's card. The list's radius, `--rz-blocks-radius`, rounds the first and the
+   * last row so their tint stays inside the card.
+   */
   .rz-block {
     --rz-fields-padding: var(--rz-size-5);
     position: relative;
-    border: var(--rz-border);
-    border-radius: var(--rz-radius-sm);
+
+    &:first-child,
+    &:first-child > .rz-block__header {
+      border-top-left-radius: var(--rz-blocks-radius, 0);
+      border-top-right-radius: var(--rz-blocks-radius, 0);
+    }
+    &:last-child,
+    &:last-child:not([data-open]) > .rz-block__header {
+      border-bottom-left-radius: var(--rz-blocks-radius, 0);
+      border-bottom-right-radius: var(--rz-blocks-radius, 0);
+    }
   }
 
-  .rz-block__grip {
-    cursor: grab;
+  /* Open, the row and its fields read as one: a hairline around both, another between them. */
+  .rz-block[data-open] {
+    outline: 1px solid var(--rz-border-strong);
+    outline-offset: -1px;
+
+    > .rz-block__header {
+      border-bottom: 1px solid var(--rz-border);
+    }
   }
 
-  .rz-block:hover > :global(.rz-block__content > .rz-block__header > .rz-block-actions) {
-    opacity: 1;
-    pointer-events: all;
-  }
-
-  .rz-block__content {
-    background-color: var(--rz-collapse-fields-content-bg);
+  /* Closed on a field with an error: a red edge, since the field itself is out of sight. */
+  .rz-block:not([data-open]):has(:global(.rz-field-error)) {
+    outline: 1px solid var(--rz-danger);
+    outline-offset: -1px;
   }
 
   .rz-block__header {
     display: flex;
-    position: relative;
     align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    border-bottom: var(--rz-border);
-    padding-right: var(--rz-size-2);
-    height: var(--rz-row-height);
-    background-color: hsl(var(--rz-row-bg));
+    gap: var(--rz-size-2);
+    min-height: var(--rz-size-11);
+    padding: 0 var(--rz-size-1-5) 0 var(--rz-size-1);
+    transition: background-color 0.15s;
+
+    &:hover {
+      background-color: var(--rz-bg-hover);
+    }
+  }
+
+  /* The handle the list drags by, shown with the row's hover. */
+  .rz-block__grip {
+    display: flex;
+    flex-shrink: 0;
+    color: var(--rz-fg-subtle);
+    cursor: grab;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .rz-block__header:is(:hover, :focus-within) .rz-block__grip {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    .rz-block__grip {
+      opacity: 1;
+    }
   }
 
   .rz-block__title-button {
-    flex: 1;
-    justify-content: flex-start;
-    flex-direction: row;
-    padding: var(--rz-size-3);
-  }
-
-  .rz-block__content--closed {
-    border-radius: var(--rz-radius-md);
-    .rz-block__header {
-      border-color: transparent;
-      width: 100%;
-    }
-
-    :global(.rz-block-actions) {
-      position: absolute;
-      opacity: 0;
-      pointer-events: none;
-      top: var(--rz-size-3);
-      right: var(--rz-size-11);
-    }
-    &:global(:has(.rz-field-error)) {
-      @mixin ring var(--rz-color-alert);
-    }
-  }
-
-  .rz-block__title {
     display: flex;
-    height: var(--rz-size-6);
+    flex: 1;
     align-items: center;
-    justify-content: flex-start;
-    gap: var(--rz-size-2);
-    padding: var(--rz-size-1);
-    font-size: var(--rz-text-xs);
+    gap: var(--rz-size-2-5);
+    min-width: 0;
+    align-self: stretch;
+    font-size: var(--rz-text-md);
+    text-align: left;
+
+    &:focus-visible {
+      @mixin focus-ring;
+      outline-offset: -2px;
+    }
+  }
+
+  .rz-block__icon {
+    display: grid;
+    place-items: center;
+    width: --size(6.5);
+    height: --size(6.5);
+    flex-shrink: 0;
+    border-radius: var(--rz-radius-sm);
+    background-color: var(--rz-bg-well);
+    color: var(--rz-fg-muted);
   }
 
   .rz-block__heading {
     @mixin font-medium;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--rz-fg);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .rz-block__fields {
-    flex: 1;
-    padding: var(--rz-size-6) 0;
+    padding: var(--rz-size-5) 0;
+
+    &[hidden] {
+      display: none;
+    }
   }
 
-  .rz-block__fields--hidden {
-    display: none;
+  /* While the list sorts, the rows show their name and nothing to click. */
+  .rz-block[data-sorting='true'] :global(.rz-block-actions) {
+    visibility: hidden;
   }
 
-  .rz-block[data-sorting='true'] .rz-block__grip {
-    display: none;
-  }
-
-  :global(.rz-block-actions) {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-    /*top: var(--rz-size-1);*/
-    right: var(--rz-size-11);
+  .rz-block:global(.sortable-ghost) > .rz-block__header {
+    opacity: 0.4;
   }
 </style>

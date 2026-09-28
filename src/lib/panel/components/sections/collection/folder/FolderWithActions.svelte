@@ -13,10 +13,9 @@
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import { trycatchFetch } from '$lib/util/function.js';
-  import { Pencil, Trash2 } from '@lucide/svelte';
+  import { Folder, FolderUp, Pencil, Trash2 } from '@lucide/svelte';
   import { toast } from 'svelte-sonner';
   import { t__ } from '../../../../../core/i18n/index.js';
-  import Folder from './Folder.svelte';
   import FolderEdit from './FolderEdit.svelte';
 
   type Props = {
@@ -25,16 +24,8 @@
     onDelete?: (path: string) => void;
     onDocumentDrop: (args: { documentId: string; path: string }) => void;
     draggable?: 'true';
-    display?: 'grid' | 'list';
   };
-  const {
-    folder,
-    collection,
-    onDelete,
-    onDocumentDrop,
-    draggable,
-    display = 'grid'
-  }: Props = $props();
+  const { folder, collection, onDelete, onDocumentDrop, draggable }: Props = $props();
 
   let deleteConfirmOpen = $state(false);
   let editFolderDialogOpen = $state(false);
@@ -54,6 +45,12 @@
   );
   const childFolders = $derived(APIProxy.getRessource<{ docs: GenericDoc[] }>(childFoldersURL));
   const childFoldersCount = $derived(childFolders.data?.docs?.length || 0);
+  // What the folder holds, files and folders, once both counts are in.
+  const itemsCount = $derived(
+    !isFolderUpperPath && childFiles.data && childFolders.data
+      ? childFilesCount + childFoldersCount
+      : null
+  );
 
   async function handleGetDeleteInfos() {
     message = t__(
@@ -150,10 +147,25 @@
   }
 </script>
 
+{#snippet tile()}
+  <span class="rz-folder__tile">
+    {#if isFolderUpperPath}
+      <FolderUp size={15} />
+    {:else}
+      <Folder size={15} />
+    {/if}
+    <span class="rz-folder__name">{folder.name}</span>
+    {#if itemsCount !== null}
+      <span class="rz-folder__count">{itemsCount}</span>
+    {/if}
+  </span>
+{/snippet}
+
 <button
   bind:this={rootElement}
+  type="button"
   onclick={handleGoToFolder}
-  class="rz-folder rz-folder--{display}"
+  class="rz-folder"
   class:rz-folder--dragging={isDragging}
   ondragleave={handleDragLeave}
   ondragover={!isDragging ? handleDragEnter : null}
@@ -164,11 +176,9 @@
 >
   {#if !isFolderUpperPath}
     <ContextMenu>
-      <!--  -->
       {#snippet trigger()}
-        <Folder>{folder.name}</Folder>
+        {@render tile()}
       {/snippet}
-      <!--  -->
       {#snippet content()}
         <ContextMenuItem onclick={handleGetDeleteInfos}>
           <Trash2 size="12" /> Delete
@@ -177,15 +187,10 @@
           <Pencil size="12" /> Edit
         </ContextMenuItem>
       {/snippet}
-      <!--  -->
     </ContextMenu>
   {:else}
-    <div>
-      <Folder>{folder.name}</Folder>
-    </div>
+    {@render tile()}
   {/if}
-
-  <span></span>
 </button>
 
 <Dialog.Root bind:open={deleteConfirmOpen}>
@@ -194,9 +199,11 @@
       {t__('common.delete_dialog_title', folder.name)}
     </Dialog.Header>
     <p>{message}</p>
-    <Dialog.Footer --rz-justify-content="space-between">
-      <Button onclick={handleDelete}>Delete</Button>
-      <Button onclick={() => (deleteConfirmOpen = false)} variant="secondary">Cancel</Button>
+    <Dialog.Footer>
+      <Button onclick={handleDelete} kbd="enter">Delete</Button>
+      <Button onclick={() => (deleteConfirmOpen = false)} variant="secondary" kbd="escape">
+        {t__('common.cancel')}
+      </Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
@@ -204,8 +211,38 @@
 <FolderEdit bind:open={editFolderDialogOpen} {folder} {collection} />
 
 <style lang="postcss">
-  :root {
-    --rz-folder-hover-bg: light-dark(hsl(var(--rz-gray-16)), hsl(var(--rz-gray-1)));
+  @import '../../../../style/mixins/index.css';
+
+  /* A small raised tile: the icon, the name, what it holds. */
+  .rz-folder {
+    @mixin surface raised;
+    display: flex;
+    width: 100%;
+    height: --size(10.5);
+    border-radius: var(--rz-radius-lg);
+    text-align: left;
+
+    &:hover {
+      @mixin hover;
+    }
+
+    &:focus-visible {
+      @mixin focus-ring;
+    }
+
+    /* The context menu's trigger fills the tile. */
+    > :global(div) {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+    }
+
+    :global {
+      &.rz-folder--dragover {
+        background-color: var(--rz-accent-tint);
+        box-shadow: 0 0 0 1px var(--rz-accent-border);
+      }
+    }
   }
 
   .rz-folder--dragging {
@@ -213,46 +250,32 @@
     opacity: 0.5;
   }
 
-  .rz-folder {
-    width: 100%;
-    padding: var(--rz-size-5);
-    border-radius: var(--rz-radius-lg);
+  .rz-folder__tile {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--rz-size-2-5);
+    min-width: 0;
+    padding-inline: var(--rz-size-3);
 
-    :global {
-      &.rz-folder--dragover {
-        background-color: var(--rz-folder-hover-bg);
-      }
+    :global(svg) {
+      flex-shrink: 0;
+      color: var(--rz-fg-subtle);
     }
   }
 
-  .rz-folder.rz-folder--grid {
-    aspect-ratio: 4 / 5;
-  }
-  .rz-folder.rz-folder--list {
-    height: var(--rz-row-height);
-    padding: var(--rz-size-1-5);
-
-    :global {
-      > div {
-        padding: 0;
-        display: flex;
-        gap: var(--rz-size-4);
-        align-items: center;
-        justify-content: flex-start;
-        h3 {
-          font-size: var(--rz-text-md);
-        }
-        svg {
-          display: block;
-          height: auto;
-          width: 2rem;
-          transform: translateY(-0.12em);
-        }
-      }
-    }
+  .rz-folder__name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    @mixin font-medium;
   }
 
-  .rz-folder.rz-folder--grid:hover {
-    background-color: var(--rz-folder-hover-bg);
+  .rz-folder__count {
+    color: var(--rz-fg-subtle);
+    font-size: var(--rz-text-sm);
+    font-variant-numeric: tabular-nums;
   }
 </style>

@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { t__ } from '$lib/core/i18n/index.js';
+  import '$lib/panel/components/ui/tree/tree-rows.css';
   import type { CollectionContext } from '$lib/panel/context/collection.svelte';
   import Sortable from 'sortablejs';
   import { onDestroy } from 'svelte';
   import { toast } from 'svelte-sonner';
   import Empty from '../Empty.svelte';
   import CollectionTreeNode from './CollectionTreeNode.svelte';
-  import { countRows } from './util';
 
   type Props = { collection: CollectionContext };
   const { collection }: Props = $props();
@@ -21,6 +22,8 @@
     handle: '.rz-collection-node__grip',
     animation: 150,
     swapThreshold: 0.93,
+    // A childless node's list has no height: a drop this close to it nests under that node.
+    emptyInsertThreshold: 8,
     group: {
       name: `list-nested`
     },
@@ -93,15 +96,26 @@
 
 {#key `${collectionStamp}`}
   {#if collection.docs.length}
-    <div
-      class="rz-collection-sortable rz-collection-sortable--root"
-      data-id="root"
-      style="--data-rows-count={countRows(collection.nested)}"
-      data-empty={collection.nested.length === 0 ? '' : null}
-    >
-      {#each collection.nested as doc, index (index)}
-        <CollectionTreeNode {collection} parentId="root" {doc} />
-      {/each}
+    <!-- One raised card, like the list: the column labels, then the rows. -->
+    <div class="rz-collection-tree rz-tree-card">
+      <div class="rz-collection-tree__head">
+        <span class="rz-collection-tree__head-title">{t__('common.title')}</span>
+        {#if collection.hasDraft}
+          <span data-column="status">{t__('common.status')}</span>
+        {/if}
+        <span data-column="author">{t__('common.author')}</span>
+        <span data-column="date">{t__('common.updated')}</span>
+      </div>
+
+      <div
+        class="rz-collection-sortable rz-tree-rows rz-tree-rows--root"
+        data-id="root"
+        style:--rz-tree-depth="0"
+      >
+        {#each collection.nested as doc, index (index)}
+          <CollectionTreeNode {collection} parentId="root" {doc} />
+        {/each}
+      </div>
     </div>
   {:else}
     <Empty config={collection.config} />
@@ -109,39 +123,60 @@
 {/key}
 
 <style lang="postcss">
-  .rz-collection-sortable {
-    --gap: var(--rz-size-2);
-    --h: var(--rz-row-height);
-    --half-h: calc(var(--rz-row-height) / 2);
+  @import '../../../../style/mixins/index.css';
 
-    height: 100%;
-    background-color: hsl(var(--rz-color-bg));
-    background-position: 0 0;
-    position: relative;
+  .rz-collection-tree {
+    border-radius: var(--rz-radius-lg);
+  }
 
-    & :global {
-      .rz-collection-sortable {
-        display: grid;
-        margin-left: var(--rz-size-12);
-        min-height: var(--gap);
-      }
-      .rz-collection-sortable:has(.rz-collection-node) {
-        --rows: var(--data-rows-count);
-        &::before {
-          border-bottom-left-radius: 1rem;
-          content: '';
-          border-left: var(--rz-border);
-          translate: calc(-1 * var(--rz-size-6)) calc(-1 * var(--gap));
-          position: absolute;
-          top: 0;
-          height: calc(
-            var(--gap) + var(--half-h) + (var(--rows) - 1) * calc(var(--h) + var(--gap))
-          );
-          left: 0;
-        }
-        margin-top: var(--gap);
-        position: relative;
-      }
+  /* The column labels: the list's, without sorting, the order being the tree's. */
+  .rz-collection-tree__head {
+    display: flex;
+    align-items: center;
+    gap: var(--rz-size-3);
+    height: --size(8.5);
+    padding-left: var(--rz-size-6);
+    padding-right: var(--rz-size-2);
+    color: var(--rz-fg-subtle);
+    font-size: var(--rz-text-sm);
+    @mixin font-medium;
+  }
+
+  .rz-collection-tree__head-title {
+    flex: 1;
+  }
+
+  /* The right columns share their widths with the rows. */
+  .rz-collection-tree :global([data-column]) {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--rz-size-2);
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .rz-collection-tree :global([data-column='status']) {
+    width: var(--rz-size-28);
+  }
+  .rz-collection-tree :global([data-column='author']) {
+    width: var(--rz-size-32);
+  }
+  .rz-collection-tree :global([data-column='date']) {
+    justify-content: flex-end;
+    width: var(--rz-size-24);
+  }
+
+  /* Narrower: without the author, then without the status. */
+  @container collection-area (max-width: 44rem) {
+    .rz-collection-tree :global([data-column='author']) {
+      display: none;
+    }
+  }
+
+  @container collection-area (max-width: 32rem) {
+    .rz-collection-tree :global([data-column='status']) {
+      display: none;
     }
   }
 </style>

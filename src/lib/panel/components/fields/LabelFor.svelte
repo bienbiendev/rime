@@ -18,6 +18,7 @@
 </Label>
 
 <style type="postcss">
+  /* The name beside a switch or a checkbox reads as a sentence, not as a field's title. */
   :global {
     fieldset:disabled .rz-field-label-for {
       cursor: no-drop;
@@ -25,9 +26,13 @@
     .rz-field-label-for {
       cursor: pointer;
       margin-bottom: 0;
-      @mixin font-semibold;
+      color: var(--rz-fg);
+      font-size: var(--rz-text-md);
+      @mixin font-normal;
     }
     .rz-field-label-for sup {
+      margin-left: var(--rz-size-0-5);
+      color: var(--rz-fg-subtle);
       font-size: var(--rz-text-2xs);
       text-transform: uppercase;
     }

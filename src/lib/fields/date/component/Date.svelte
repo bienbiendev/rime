@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t__ } from '$lib/core/i18n/index.js';
   import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '$lib/panel/components/fields/index.js';
   import { Button } from '$lib/panel/components/ui/button/index.js';
@@ -44,7 +45,7 @@
     }
   }
 
-  const dateLabel = $derived(date ? locale.dateFormat(date) : 'Select a date');
+  const dateLabel = $derived(date ? locale.dateFormat(date) : t__('fields.select_date'));
 </script>
 
 <fieldset class="rz-date-field {config.get.className || ''}" use:fieldset={field}>
@@ -78,34 +79,43 @@
 </fieldset>
 
 <style lang="postcss">
+  @import '../../../panel/style/mixins/index.css';
+
   .rz-date-field :global {
     .rz-dialog-content.rz-date__dialog-content {
       width: 100px;
       padding: 12rem;
     }
+    /* A well like an input: an icon, then the date or a quiet placeholder. */
     .rz-date__button.rz-button {
-      width: 200px;
+      width: var(--rz-size-52);
       justify-content: flex-start;
-      border: var(--rz-border);
+      gap: var(--rz-size-2);
+      @mixin well;
+      box-shadow: none;
       padding-left: var(--rz-size-3);
       padding-right: var(--rz-size-3);
       height: var(--rz-input-height);
       text-align: left;
-      font-weight: normal;
+      @mixin font-normal;
+      &:focus-visible {
+        @mixin focus-field;
+      }
     }
 
     .rz-date__button[data-empty] {
-      color: hsl(var(--rz-color-fg) / 0.7);
+      color: var(--rz-fg-subtle);
     }
 
-    .rz-date__button[data-error] {
-      border-color: var(--rz-color-alert);
+    .rz-date__button.rz-button[data-error] {
+      @mixin invalid-field;
     }
 
     .rz-date__icon {
-      margin-right: var(--rz-size-2);
-      height: var(--rz-size-4);
-      width: var(--rz-size-4);
+      flex-shrink: 0;
+      height: var(--rz-size-3-5);
+      width: var(--rz-size-3-5);
+      color: var(--rz-fg-subtle);
     }
   }
 </style>

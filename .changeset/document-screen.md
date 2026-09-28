@@ -1,0 +1,5 @@
+---
+'rimecms': minor
+---
+
+Changed: a document opens on its title as a heading, with a line under it naming the collection and who edited it last, and when. The bar's actions are quiet ghost buttons, the auto-save note, the page link, the locale, the status as a dot and its name, a _⋯_ menu, then _Save_; the menu's rows carry an icon, the deletions sit last in red, and _Copy the ID_ joins them. Field labels are small and muted, hints subtle, with links in the accent. A slug carries a _#_ before it, and _Build it from the title_ is a link under it. Toggles and checkboxes are rows of a card, the name on the left and the control on the right, and the ones that follow each other share one card. A group is a card with a hairline under its head; folded, it lists its values in two quiet columns. A relation lists its picks as chips in a well, with _Choose…_ and _Create new_ on the label's line; an upload relation fills its row of thumbnails with empty squares. The upload collection's drop zone matches the one of the relation fields. The dates and the id at the bottom are plain subtle lines.

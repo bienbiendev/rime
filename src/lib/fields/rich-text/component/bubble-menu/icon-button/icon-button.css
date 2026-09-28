@@ -6,10 +6,10 @@
   justify-content: center;
   border-radius: var(--rz-radius-lg);
   /* padding: var(--rz-size-2); */
-  color: hsl(var(--rz-color-fg));
+  color: var(--rz-fg);
 }
 
 .rz-icon-button__icon--active {
-  color: hsl(var(--rz-color-spot));
+  color: var(--rz-accent-text);
   opacity: 1;
 }

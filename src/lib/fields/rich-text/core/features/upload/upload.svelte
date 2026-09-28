@@ -2,6 +2,7 @@
   import type { UploadDoc } from '$lib/core/prototype/collection/upload/types.js';
   import { apiUrl } from '$lib/core/routes/util.js';
   import UploadThumbCell from '$lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
+  import { mediaMeta } from '$lib/panel/util/upload-file.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import * as Command from '$lib/panel/components/ui/command/index.js';
   import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
@@ -166,8 +167,7 @@
     </div>
     <div class="rz-relation-upload__grid-info">
       <p class="rz-relation-upload__grid-filename">{item.filename}</p>
-      <p class="rz-relation-upload__grid-filesize">{item.filesize}</p>
-      <p class="rz-relation-upload__grid-mimetype">{item.mimeType}</p>
+      <p class="rz-relation-upload__grid-filesize">{mediaMeta(item)}</p>
     </div>
   </div>
 {/snippet}
@@ -213,7 +213,7 @@
   :global(.ProseMirror-selectednode .rz-richtext-media) {
     .rz-richtext-media__media,
     :global(button.rz-richtext-media__add) {
-      @mixin ring var(--rz-color-spot);
+      @mixin focus-ring;
     }
     .rz-richtext-media__actions {
       display: flex;
@@ -242,8 +242,6 @@
         padding: 0;
       }
       .rz-richtext-media__button {
-        /*--foreground: light-dark(hsl(var(--rz-gray-15)), hsl(var(--rz-gray-8))) padding: 0 var(--rz-size-2);*/
-        /*--rz-button-default-bg: light-dark(hsl(var(--rz-gray-15)), hsl(var(--rz-gray-4)));*/
         border: 1px solid var(--foreground);
         /*color: var(--foreground);*/
         border-radius: 1rem;

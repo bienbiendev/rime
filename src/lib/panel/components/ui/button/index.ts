@@ -1,7 +1,6 @@
 import type { WithElementRef } from 'bits-ui';
+import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
 import Root from './button.svelte';
-import type { HTMLButtonAttributes } from 'svelte/elements';
-import type { HTMLAnchorAttributes } from 'svelte/elements';
 
 type PrimitiveAnchorAttributes = WithElementRef<HTMLAnchorAttributes>;
 type PrimitiveButtonAttributes = WithElementRef<HTMLButtonAttributes>;
@@ -16,12 +15,17 @@ type Props = PrimitiveButtonAttributes &
     size?: ButtonSize;
     icon?: any;
     disabled?: boolean;
+    /**
+     * The key that does what the button does, drawn after its label: `enter`, `escape`. In a
+     * dialog, Enter clicks the button that shows `enter`.
+     */
+    kbd?: string;
   };
 
 export {
-  Root,
-  type Props,
   //
   Root as Button,
-  type Props as ButtonProps
+  Root,
+  type Props as ButtonProps,
+  type Props
 };

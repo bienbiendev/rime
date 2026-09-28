@@ -55,13 +55,24 @@
       .rz-radio__input {
         margin-right: var(--rz-size-2);
       }
+      /* An option reads as plain text, not as a field's name. */
       .rz-radio__label {
         cursor: pointer;
+        color: var(--rz-fg);
+        font-size: var(--rz-text-md);
+        @mixin font-normal;
       }
     }
     .rz-radio__option {
       display: flex;
       align-items: center;
+      min-height: var(--rz-size-7);
+    }
+  }
+
+  .rz-field-radio :global {
+    .rz-radio-row-group {
+      width: 100%;
     }
   }
 </style>

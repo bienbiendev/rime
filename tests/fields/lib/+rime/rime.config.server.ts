@@ -2,6 +2,7 @@ import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
 import { access } from '$lib/core/auth/access.js';
 import { rime } from '$rime/config';
 import { HooksTest } from './hooks-test';
+import { Medias } from './medias';
 import { Pages } from './pages';
 import { Settings } from './settings';
 import { Targets } from './targets';
@@ -9,7 +10,7 @@ import { Targets } from './targets';
 export default rime({
   $adapter: adapterSqlite('fields.sqlite'),
 
-  collections: [HooksTest, Targets, Pages],
+  collections: [HooksTest, Targets, Medias, Pages],
   areas: [Settings],
 
   // Defaults to admin-only (features/panel/augment.server.ts) — relaxed to any

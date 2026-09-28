@@ -1,0 +1,79 @@
+/*
+ * A yes/no field as a row of a card: its name and hint on the left, the control on the right.
+ * Rows that follow each other share one card, a hairline between them.
+ *
+ *   ╭────────────────────────────────────╮
+ *   │ Show in the navigation        ━●  │
+ *   ├────────────────────────────────────┤
+ *   │ Hide from search engines      ●━  │
+ *   ╰────────────────────────────────────╯
+ */
+
+.rz-setting {
+  @mixin surface raised;
+  border-radius: var(--rz-radius-xl);
+}
+
+.rz-setting__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rz-size-4);
+  padding: var(--rz-size-3) var(--rz-size-3-5);
+}
+
+.rz-setting__text {
+  min-width: 0;
+}
+
+.rz-setting .rz-setting__text .rz-field-hint {
+  margin-top: var(--rz-size-0-5);
+}
+
+/* Inside a group, a block, a tree item or a stage card: a hairline, no second fill. */
+:is(.rz-group-field__content, .rz-block__fields, .rz-tree-item__fields, .rz-stage__fields)
+  .rz-setting {
+  background-color: transparent;
+  box-shadow: 0 0 0 1px var(--rz-border);
+}
+
+/*
+ * Rows that follow each other, visible and full width, close the gap between them and square
+ * the corners they share. The later row's hairline draws over the earlier one's edge.
+ */
+.rz-render-fields__field--full:is([data-type='toggle'], [data-type='checkbox']):has(
+    > .rz-setting[data-visible]
+  )
+  + .rz-render-fields__field--full:is([data-type='toggle'], [data-type='checkbox']):has(
+    > .rz-setting[data-visible]
+  ) {
+  margin-top: calc(-1 * var(--rz-fields-gap, var(--rz-size-6)));
+}
+
+.rz-render-fields__field--full:is([data-type='toggle'], [data-type='checkbox']):has(
+    > .rz-setting[data-visible]
+  )
+  + .rz-render-fields__field--full:is([data-type='toggle'], [data-type='checkbox'])
+  > .rz-setting[data-visible] {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.rz-render-fields__field--full:is([data-type='toggle'], [data-type='checkbox']):has(
+    + .rz-render-fields__field--full:is([data-type='toggle'], [data-type='checkbox'])
+      > .rz-setting[data-visible]
+  )
+  > .rz-setting[data-visible] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Without a fill, the earlier row's edge is the hairline: the later one hides its own. */
+:is(.rz-group-field__content, .rz-block__fields, .rz-tree-item__fields, .rz-stage__fields)
+  .rz-render-fields__field--full:is([data-type='toggle'], [data-type='checkbox']):has(
+    > .rz-setting[data-visible]
+  )
+  + .rz-render-fields__field--full:is([data-type='toggle'], [data-type='checkbox'])
+  > .rz-setting[data-visible] {
+  clip-path: inset(0 -1px -1px -1px);
+}

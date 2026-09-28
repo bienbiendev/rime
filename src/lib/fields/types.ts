@@ -7,7 +7,7 @@ import type { Component } from 'svelte';
 import type { User } from '$lib/core/auth/types.js';
 import type { FieldPanelTableConfig } from '../panel/types.js';
 
-export type { BlocksField, BlocksFieldBlock } from './blocks/index.js';
+export type { BlockRenderProps, BlocksField, BlocksFieldBlock } from './blocks/index.js';
 export type { CheckboxField } from './checkbox/index.js';
 export type { ComboBoxField } from './combobox/index.js';
 export type { ComponentField } from './component/index.js';

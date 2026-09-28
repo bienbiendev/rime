@@ -1,15 +1,39 @@
-.rz-command-dialog-content {
+/* The palette: a column near the top of the screen, its input a borderless line. */
+.rz-dialog-content.rz-command-dialog-content {
   overflow: hidden;
+  gap: 0;
+  width: min(38rem, calc(100% - 2 * var(--gutter)));
   padding: 0;
-  background-color: var(--rz-popover-bg);
+  border-radius: var(--rz-radius-xl);
+  background-color: var(--rz-bg-float);
   position: fixed;
   left: calc(50% - var(--gutter));
-  top: 20%;
+  top: 12vh;
   transform: translate(-50%, 0);
 }
 
+.rz-dialog-content.rz-command-dialog-content .rz-command-input {
+  height: var(--rz-size-12);
+  gap: var(--rz-size-2-5);
+  padding-inline: var(--rz-size-4) var(--rz-size-3-5);
+  border: 0;
+  border-bottom: 1px solid var(--rz-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+
+  .rz-command-input__icon {
+    margin: 0;
+  }
+
+  .rz-command-input__input {
+    height: 100%;
+    font-size: var(--rz-text-xl);
+  }
+}
+
 .rz-command-dialog-content__command [data-cmdk-group-heading] {
-  @mixin color color-fg, 0.7;
+  color: var(--rz-fg-subtle);
   padding-left: var(--rz-size-2);
   padding-right: var(--rz-size-2);
   @mixin font-medium;

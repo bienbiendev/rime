@@ -10,7 +10,7 @@
 
   const { path, config, form }: SelectFieldProps = $props();
 
-  let listHTMLElement: HTMLElement;
+  let listHTMLElement = $state<HTMLElement>();
   let initialized = false;
   let options = $derived(config.get.options);
   const validValues = $derived(config.get.options.map((o) => o.value));
@@ -36,10 +36,11 @@
     }
   });
 
+  /** The picked options reorder by drag; the instance goes with the list. */
   $effect(() => {
-    if (config.get.many) {
-      sortable(listHTMLElement);
-    }
+    if (!config.get.many || !listHTMLElement) return;
+    const instance = sortable(listHTMLElement);
+    return () => instance.destroy();
   });
 
   $effect(() => {
@@ -106,9 +107,11 @@
           {#each field.value || [] as val (val)}
             {@const option = config.get.options.find((o) => o.value === val)}
             {#if option}
-              <Tag onRemove={() => removeValue(option.value)} readOnly={form.readOnly}>
-                {option.label}
-              </Tag>
+              <div class="rz-select__option">
+                <Tag onRemove={() => removeValue(option.value)} readOnly={form.readOnly}>
+                  {option.label}
+                </Tag>
+              </div>
             {/if}
           {/each}
         {:else if field.value}
@@ -142,6 +145,7 @@
                   <span>{option.label}</span>
                 </Command.Item>
               {/each}
+              <Command.Empty>{t__('common.nothing_found')}</Command.Empty>
             </Command.List>
           {/if}
         {/if}
@@ -155,52 +159,65 @@
   @import '../../../panel/style/mixins/index.css';
 
   .rz-select {
-    margin-bottom: var(--rz-size-2);
     position: relative;
 
     :global(.rz-command) {
       width: 100%;
-      border-radius: var(--rz-radius-md);
+      border-radius: var(--rz-radius-lg);
     }
 
     :global(.rz-command-input-select) {
+      min-width: var(--rz-size-24);
+      padding-inline: var(--rz-size-2);
       cursor: text;
     }
 
     :global(.rz-command-list) {
-      background-color: hsl(var(--rz-input-bg));
-      border: var(--rz-border);
-      border-radius: var(--rz-radius-md);
+      @mixin surface float;
       position: absolute;
       left: 0;
       right: 0;
-      top: var(--rz-size-12);
+      top: calc(100% + var(--rz-size-1-5));
       z-index: 20;
-      box-shadow: var(--rz-shadow-md);
+      border-radius: var(--rz-radius-xl);
     }
 
     :global(.rz-command-item) {
-      height: var(--rz-size-10);
+      min-height: var(--rz-size-7);
+      border-radius: var(--rz-radius-md);
+      font-size: var(--rz-text-md);
+    }
+
+    :global(.rz-command-item[aria-selected='true']) {
+      background-color: var(--rz-bg-hover);
+    }
+
+    /* Nothing matches: one quiet line. */
+    :global(.rz-command-empty) {
+      padding: var(--rz-size-2) var(--rz-size-2-5);
+      color: var(--rz-fg-subtle);
+      font-size: var(--rz-text-sm);
     }
   }
 
+  /* One well: the picked options, then the search. */
   .rz-select__list {
-    background-color: hsl(var(--rz-input-bg));
-    border: var(--rz-border);
-    border-radius: var(--rz-radius-md);
+    @mixin well;
     display: flex;
     flex-wrap: wrap;
-    gap: var(--rz-size-2);
-    min-height: var(--rz-size-10);
-    padding: var(--rz-size-2) var(--rz-size-3);
+    align-items: center;
+    gap: var(--rz-size-1);
+    min-height: var(--rz-input-height);
+    padding: var(--rz-size-1);
+    border-radius: var(--rz-radius-lg);
   }
 
   .rz-select__list[data-focused] {
-    @mixin ring var(--rz-color-ring);
+    @mixin focus-field;
   }
 
   .rz-select__list[data-error] {
-    @mixin ring var(--rz-color-alert);
+    @mixin invalid-field;
   }
 
   .rz-select__list--readonly {

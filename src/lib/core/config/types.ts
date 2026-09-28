@@ -44,6 +44,8 @@ export interface Config {
   /** If config.siteUrl is defined, a preview button is added
 	on the panel dahsboard, pointing to this url  */
   siteUrl?: string;
+  /** The name at the top of the panel's sidebar. Without it, the host of `siteUrl`, then "rime". */
+  siteName?: string;
   /**
    * Database adapter
    * @example
@@ -304,6 +306,8 @@ export type BuiltConfig = {
   $database: string;
   /** The database location */
   siteUrl?: string;
+  /** The name at the top of the panel's sidebar. */
+  siteName?: string;
   /** Define wich language the cms support */
   localization?: LocalizationConfig;
   icons: Record<string, any>;

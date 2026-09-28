@@ -3,7 +3,7 @@
 }
 
 .ProseMirror-focused .ProseMirror-selectednode .rz-fields-preview__trigger {
-  @mixin ring var(--rz-color-spot);
+  @mixin focus-ring;
 }
 
 .rz-rich-text-sheet {

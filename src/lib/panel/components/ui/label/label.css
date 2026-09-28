@@ -1,7 +1,9 @@
+/* A field's name: small, medium, muted. */
 .rz-label {
   display: inline-block;
-  color: hsl(var(--rz-color-fg));
-  @mixin font-semibold;
+  color: var(--rz-fg-muted);
+  font-size: var(--rz-text-sm);
+  @mixin font-medium;
 }
 .rz-label ~ :disabled {
   opacity: 0.7;

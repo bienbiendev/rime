@@ -120,10 +120,38 @@ export const DragHandlePlugin = ({
     element.style.pointerEvents = 'auto';
   }
 
-  function repositionDragHandle(dom: Element) {
-    const virtualElement = getReferencedVirtualElement?.() || {
-      getBoundingClientRect: () => dom.getBoundingClientRect()
+  /**
+   * The first line of the node: under its top padding, one line high, whatever the node holds.
+   * The handle centres on it, so a paragraph and a media node get it at the same place.
+   */
+  function firstLineOf(dom: Element): VirtualElement {
+    return {
+      getBoundingClientRect: () => {
+        const rect = dom.getBoundingClientRect();
+        const style = getComputedStyle(dom);
+        const paddingTop = parseFloat(style.paddingTop) || 0;
+        const lineHeight =
+          style.lineHeight === 'normal'
+            ? parseFloat(style.fontSize) * 1.2
+            : parseFloat(style.lineHeight);
+        const height = Math.min(lineHeight || rect.height, rect.height);
+        const top = rect.top + paddingTop;
+        return {
+          x: rect.left,
+          y: top,
+          top,
+          left: rect.left,
+          right: rect.right,
+          bottom: top + height,
+          width: rect.width,
+          height
+        };
+      }
     };
+  }
+
+  function repositionDragHandle(dom: Element) {
+    const virtualElement = getReferencedVirtualElement?.() || firstLineOf(dom);
 
     computePosition(virtualElement, element, computePositionConfig).then((val) => {
       Object.assign(element.style, {

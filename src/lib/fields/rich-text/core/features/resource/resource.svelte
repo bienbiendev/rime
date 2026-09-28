@@ -133,13 +133,13 @@
   :global(.ProseMirror-focused .ProseMirror-selectednode .rz-richtext-resource) {
     :global(.rz-card-resource),
     :global(button.rz-richtext-resource__add) {
-      @mixin ring var(--rz-color-spot);
+      @mixin focus-ring;
     }
   }
   .rz-richtext-resource {
     position: relative;
     --rz-border-radius: var(--rz-radius-xl);
-    --rz-ressource-card-thumbnail-bg: light-dark(hsl(var(--rz-gray-15)), hsl(var(--rz-gray-3)));
-    --rz-ressource-card-bg: light-dark(hsl(var(--rz-gray-18)), hsl(var(--rz-gray-2)));
+    --rz-ressource-card-thumbnail-bg: var(--rz-bg-well);
+    --rz-ressource-card-bg: var(--rz-bg-raised);
   }
 </style>

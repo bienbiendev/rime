@@ -27,7 +27,7 @@
   icon={Plus}
   class="rz-add-item-button {className}"
   onclick={() => add()}
-  variant="outline"
+  variant="ghost"
   {size}
 >
   <span>
@@ -36,9 +36,22 @@
 </Button>
 
 <style type="postcss">
+  /* A ghost "+ Add": the muted ink, a subtle plus, both darkening on hover. */
   :global {
-    .rz-add-item-button {
-      gap: var(--rz-size-2);
+    .rz-add-item-button.rz-button {
+      gap: var(--rz-size-1-5);
+      height: var(--rz-size-7);
+      padding-inline: var(--rz-size-1-5) var(--rz-size-2);
+      color: var(--rz-fg-muted);
+    }
+    .rz-add-item-button .rz-button__icon {
+      width: auto;
+      height: auto;
+      color: var(--rz-fg-subtle);
+    }
+    .rz-add-item-button.rz-button:hover:not(:disabled),
+    .rz-add-item-button.rz-button:hover:not(:disabled) .rz-button__icon {
+      color: var(--rz-fg);
     }
   }
 </style>
