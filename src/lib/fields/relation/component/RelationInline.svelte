@@ -11,7 +11,7 @@
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { populate } from '$lib/fields/relation/populate.js';
   import { uploadFiles, type UploadProgress } from '$lib/panel/util/upload-file.js';
-  import { Image as ImageIcon } from '@lucide/svelte';
+  import { Image as ImageIcon, Trash2 } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import type { Relation, RelationFieldBuilder } from '../index.js';
@@ -122,17 +122,21 @@
     {#if !field.editable}
       <!-- Read-only: drawn, never picked. -->
     {:else}
+      <!-- One bar, bottom right: replace or edit the selection, then remove. -->
       <div class="rz-relation-inline__controls">
-        {#if many}
-          <button type="button" onclick={(event) => control(event, open)}>
-            {t__('fields.edit_selection')}
-          </button>
-        {:else}
-          <button type="button" onclick={(event) => control(event, open)}>
-            {t__('fields.replace')}
-          </button>
-          <button type="button" onclick={(event) => control(event, () => onChange([], []))}>
-            {t__('fields.remove')}
+        <button type="button" onclick={(event) => control(event, open)}>
+          {many ? t__('fields.edit_selection') : t__('fields.replace')}
+        </button>
+        {#if !many}
+          <span class="rz-relation-inline__separator" aria-hidden="true"></span>
+          <button
+            type="button"
+            class="rz-relation-inline__icon"
+            title={t__('fields.remove')}
+            aria-label={t__('fields.remove')}
+            onclick={(event) => control(event, () => onChange([], []))}
+          >
+            <Trash2 size={14} />
           </button>
         {/if}
       </div>
@@ -202,26 +206,49 @@
     position: relative;
   }
 
-  /* Over the drawn docs, top right: on a selected block, or under the pointer. */
+  /*
+   * Over the drawn docs, bottom right, clear of the block's own bar on top: on a selected block,
+   * or under the pointer.
+   */
   .rz-relation-inline__controls {
+    @mixin surface float;
     position: absolute;
-    top: var(--rz-size-2);
     right: var(--rz-size-2);
+    bottom: var(--rz-size-2);
     z-index: 2;
     display: none;
-    gap: var(--rz-size-1);
+    align-items: center;
+    gap: var(--rz-size-0-5);
+    padding: var(--rz-size-0-5);
+    border-radius: var(--rz-radius-lg);
 
     button {
       height: var(--rz-size-7);
-      padding-inline: var(--rz-size-3);
+      padding-inline: var(--rz-size-2-5);
       border-radius: var(--rz-radius-md);
-      background-color: var(--rz-bg-inverse);
-      color: var(--rz-fg-inverse);
+      color: var(--rz-fg-muted);
       font-size: var(--rz-text-xs);
       &:hover {
-        filter: brightness(1.12);
+        @mixin hover;
+        color: var(--rz-fg);
+      }
+      &:focus-visible {
+        @mixin focus-ring;
       }
     }
+  }
+
+  .rz-relation-inline__icon {
+    display: grid;
+    place-items: center;
+    width: var(--rz-size-7);
+    padding: 0;
+  }
+
+  .rz-relation-inline__separator {
+    width: 1px;
+    height: var(--rz-size-4);
+    background-color: var(--rz-border);
   }
 
   .rz-relation-inline:hover .rz-relation-inline__controls,
