@@ -1,10 +1,12 @@
 import { logger } from '$lib/core/logger.server.js';
 import { PANEL_ROUTE } from '$lib/core/routes/constants.server.js';
+import { trycatchSync } from '$lib/util/function.js';
 import { randomId } from '$lib/util/random.js';
 import { isValidSlug, slugify } from '$lib/util/string.js';
 import { generate as generateCode } from '@babel/generator';
 import * as t from '@babel/types';
 import { babelParse, getLang } from 'ast-kit';
+import { execSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { cp, mkdir } from 'fs/promises';
 import fs from 'node:fs';
@@ -12,8 +14,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { CONFIG_DIR, OUTPUT_DIR } from '../../constants.server.js';
 import * as templates from '../templates/init.js';
-import { installDependencies } from '../util/package-manager.server.js';
-import { getPackageInfoByKey } from '../util/package.server.js';
+import { installDependencies, SVELTEKIT_ADAPTER } from '../util/package-manager.server.js';
+import { getPackageInfoByKey, MIN_BUN, setBunScripts } from '../util/package.server.js';
 import { prompt } from '../util/prompt.server.js';
 import { generate } from './generate.server.js';
 
@@ -21,13 +23,15 @@ type Args = {
   force?: boolean;
   skipInstall?: boolean;
   name?: string;
+  bun?: boolean;
 };
 
 const PACKAGE = 'rimecms';
 const root = process.cwd();
 
-export const init = async ({ force, name: incomingName, skipInstall }: Args) => {
+export const init = async ({ force, name: incomingName, skipInstall, bun }: Args) => {
   const packageName = getPackageInfoByKey('name');
+  const driver = bun ? 'bun' : 'libsql';
 
   function setEnv() {
     const envPath = path.resolve(root, '.env');
@@ -77,7 +81,7 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
       if (!existsSync(configDirPath)) {
         mkdirSync(configDirPath);
       }
-      writeFileSync(configPath, templates.defaultConfig(name.toString()));
+      writeFileSync(configPath, templates.defaultConfig(name.toString(), driver));
       logger.info(`[✓] Config created at ${configDirPath}/rime.config.server.ts`);
     } else {
       logger.info('[✓] Config already exists (skip)');
@@ -141,14 +145,41 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
     );
   }
 
+  function setBun() {
+    if (!bun) return;
+    // init itself runs on Node (the bin's shebang): ask the bun on PATH
+    const version = trycatchSync(() => execSync('bun --version', { encoding: 'utf-8' }).trim())[1];
+    const [major, minor] = (version ?? '0.0').split('.').map(Number);
+    const [minMajor, minMinor] = MIN_BUN.split('.').map(Number);
+    if (major < minMajor || (major === minMajor && minor < minMinor)) {
+      logger.warn(
+        `Bun ${version ?? 'not found'}: the Bun pack needs >= ${MIN_BUN} (older versions boot dev ~2x slower). Run \`bun upgrade\`.`
+      );
+    }
+    logger.info(
+      setBunScripts()
+        ? '[✓] package.json scripts run vite with bun --bun'
+        : '[✓] package.json scripts already set (skip)'
+    );
+  }
+
+  function setAdapter() {
+    const adapter = SVELTEKIT_ADAPTER[bun ? 'bun' : 'node'];
+    const patched = templates.setSvelteKitAdapter(root, !!bun);
+    logger.info(
+      patched.length
+        ? `[✓] SvelteKit adapter set to ${adapter} in ${patched.join(', ')}`
+        : `[✓] SvelteKit adapter already set (skip)`
+    );
+  }
+
   function configureVite(): void {
     const configPath = path.resolve(root, 'vite.config.ts');
     if (!fs.existsSync(configPath)) {
       throw new Error("Can't find vite configuration file");
     }
 
-    let content = fs.readFileSync(configPath, 'utf-8');
-    content = content.replace("from '@sveltejs/adapter-auto'", "from '@sveltejs/adapter-node'");
+    const content = fs.readFileSync(configPath, 'utf-8');
     const program = babelParse(content, getLang(configPath));
     const programBody = program.body;
 
@@ -270,9 +301,11 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
     setConfig(name);
     setDatabase();
     setDrizzle(name);
+    setBun();
+    setAdapter();
     configureVite();
     await copyAssets();
-    !skipInstall && installDependencies();
+    !skipInstall && installDependencies({ bun });
     await generate({ force: true });
   } else {
     let name = '';
@@ -298,9 +331,11 @@ export const init = async ({ force, name: incomingName, skipInstall }: Args) => 
     setConfig(name);
     setDatabase();
     setDrizzle(name);
+    setBun();
+    setAdapter();
     configureVite();
     await copyAssets();
-    !skipInstall && installDependencies();
+    !skipInstall && installDependencies({ bun });
     await generate({ force: true });
     logger.info('[✓] done');
   }

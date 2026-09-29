@@ -419,6 +419,68 @@ test('Should return last created page with author depth', async ({ request }) =>
   expect(doc.attributes.author.at(0).name).toBe('Admin');
 });
 
+test('Should populate relations across a list', async ({ request }) => {
+  const { docs } = await request
+    .get(`${API_BASE_URL}/pages?depth=1`, { headers: await signInSuperAdmin(request) })
+    .then((response) => response.json());
+  const page = docs.find((doc: any) => doc.id === pageWithAuthorId);
+  expect(page.attributes.author.at(0).name).toBe('Admin');
+});
+
+test('Should leave out a related document the reader may not see', async ({
+  request,
+  playwright
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const { doc: note } = await request
+    .post(`${API_BASE_URL}/notes`, { headers, data: { body: 'Internal' } })
+    .then((response) => response.json());
+  const { doc: page } = await request
+    .post(`${API_BASE_URL}/pages`, {
+      headers,
+      data: { attributes: { title: 'With a note', slug: 'with-a-note', notes: [note.id] } }
+    })
+    .then((response) => response.json());
+
+  // An admin sees the note
+  const signedIn = await request
+    .get(`${API_BASE_URL}/pages/${page.id}?depth=1`, { headers })
+    .then((response) => response.json());
+  expect(signedIn.doc.attributes.notes.at(0).body).toBe('Internal');
+
+  // Signed out, the page reads, alone and in a list, without its note
+  const anonymous = await playwright.request.newContext();
+  const one = await anonymous.get(`${API_BASE_URL}/pages/${page.id}?depth=1`);
+  expect(one.status()).toBe(200);
+  expect((await one.json()).doc.attributes.notes).toEqual([]);
+  const { docs } = await anonymous
+    .get(`${API_BASE_URL}/pages?depth=1`)
+    .then((response) => response.json());
+  expect(docs.find((doc: any) => doc.id === page.id)?.attributes.notes).toEqual([]);
+  await anonymous.dispose();
+
+  await request.delete(`${API_BASE_URL}/pages/${page.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/notes/${note.id}`, { headers });
+});
+
+test('Should find a page by its url, in its own locale and through the fallback', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const { doc: page } = await request
+    .get(`${API_BASE_URL}/pages/${pageWithAuthorId}?locale=fr`, { headers })
+    .then((response) => response.json());
+  expect(page.url).toBeTruthy();
+
+  const query = `where[url][equals]=${encodeURIComponent(page.url)}`;
+  for (const locale of ['fr', 'en']) {
+    const { docs } = await request
+      .get(`${API_BASE_URL}/pages?${query}&locale=${locale}`, { headers })
+      .then((response) => response.json());
+    expect(docs.map((doc: any) => doc.id)).toEqual([pageWithAuthorId]);
+  }
+});
+
 // Relations queries: author (single) should work with equals and in_array
 test('Should find pages by author equals', async ({ request }) => {
   const url = `${API_BASE_URL}/pages?where[attributes.author][equals]=${adminUserId}`;

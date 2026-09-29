@@ -14,6 +14,7 @@ import { deleteById, type DeleteByIdArgs } from './operations/delete-by-id.js';
 import { deleteDocs, type DeleteArgs } from './operations/delete.js';
 import { duplicate, type DuplicateArgs } from './operations/duplicate.js';
 import { findById, type FindByIdArgs } from './operations/find-by-id.js';
+import { findByIds, type FindByIdsArgs } from './operations/find-by-ids.js';
 import { find, type FindArgs } from './operations/find.js';
 import { updateById, type UpdateByIdArgs } from './operations/update-by-id.js';
 
@@ -234,6 +235,28 @@ class CollectionAPI<
   }
 
   /**
+   * Finds the documents with these ids, in one read. Each id is checked against the read access
+   * as findById would check it; a missing or refused one is left out. The order is the list's
+   * default sort, not the order of `ids`.
+   *
+   * @example
+   * const medias = await rime.collection('medias').findByIds({ ids: ['a1', 'b2'] });
+   */
+  findByIds(args: FindByIdsArgs): Promise<Doc[]> {
+    const { ids, locale, depth = 0, localeFallback } = args;
+
+    if (!ids.length) return Promise.resolve([]);
+
+    return findByIds<Doc>({
+      ctx: this,
+      ids,
+      depth,
+      localeFallback,
+      locale: this.fallbackLocale(locale)
+    });
+  }
+
+  /**
    * Updates a document in the collection by ID.
    *
    * `versionId`, else `latest`, else the published version selects the row; `fork` makes a new
@@ -308,6 +331,7 @@ export type CollectionApi<
   | 'duplicate'
   | 'find'
   | 'findById'
+  | 'findByIds'
   | 'updateById'
   | 'deleteById'
   | 'delete'

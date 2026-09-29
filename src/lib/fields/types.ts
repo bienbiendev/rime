@@ -75,6 +75,8 @@ export type FormField = Field & {
   isEmpty: (value: unknown) => boolean;
   /** Kept on the base row of a versioned config, shared by every version. Set by `$root()`. */
   root?: boolean;
+  /** The column gets a database index. Set by `$index()`. */
+  index?: boolean;
 };
 
 export type DefaultValueFn<T> = ({ event }: { event?: RequestEvent }) => T;

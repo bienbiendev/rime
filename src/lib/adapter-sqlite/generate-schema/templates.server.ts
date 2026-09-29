@@ -16,7 +16,7 @@ const s = toSnakeCase;
  * Includes SQLite table definitions, relations, and a primary key helper function
  */
 export const templateImports = `
-import { text, integer, sqliteTable, real } from "drizzle-orm/sqlite-core";
+import { text, integer, sqliteTable, real, index } from "drizzle-orm/sqlite-core";
 import { defineRelations } from 'drizzle-orm';
 
 const pk = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
@@ -24,7 +24,7 @@ const pk = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 
 /**
  * Generates a basic table definition with a primary key
- * Takes a table name and optional content for additional columns
+ * Takes a table name, its columns, and the columns to index
  *
  * @example
  * ```typescript
@@ -32,18 +32,31 @@ const pk = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
  *   id: pk(),
  *   title: text('title'),
  *   content: text('content')
- * })
+ * }, (t) => [index('pages_updated_at_idx').on(t.updatedAt)])
  * ```
  */
-export const templateTable = (table: string, content: string): string => {
+export const templateTable = (table: string, content: string, indexed: string[] = []): string => {
   if (!content.includes('id:')) {
     content = `id: pk(),\n${content}`;
   }
   return `export const ${table} = sqliteTable( '${table}', {
 		${content}
-	})
+	}${templateIndexes(table, indexed)})
 	`;
 };
+
+/**
+ * One index per column, named after the table and the column.
+ *
+ * ```ts
+ * templateIndexes('pages__$rels', ['ownerId', 'mediasId'])
+ * // , (t) => [index('pages__$rels_owner_id_idx').on(t.ownerId), index('pages__$rels_medias_id_idx').on(t.mediasId)]
+ * ```
+ */
+export const templateIndexes = (table: string, columns: string[]): string =>
+  columns.length
+    ? `, (t) => [${columns.map((column) => `index('${table}_${s(column)}_idx').on(t.${column})`).join(', ')}]`
+    : '';
 
 /**
  * Generates a locale field for internationalized tables
@@ -285,7 +298,7 @@ export const templateFieldRelationColumn = (slug: string) => {
 
 /**
  * Generates a junction table for many-to-many relationships
- * Creates a table with references to the owner table and related tables
+ * Creates a table with references to the owner table and related tables, each one indexed
  * Includes path and position fields for ordering relationships
  *
  * @example
@@ -297,7 +310,7 @@ export const templateFieldRelationColumn = (slug: string) => {
  *   ownerId: text('owner_id').references(() => pages.id, { onDelete: 'cascade' }),
  *   mediasId: text('medias_id').references(() => medias.id, { onDelete: 'cascade' }),
  *   locale: text('locale'),
- * })
+ * }, (t) => [index('pages_rels_owner_id_idx').on(t.ownerId), index('pages_rels_medias_id_idx').on(t.mediasId)])
  * ```
  */
 export const templateRelationFieldsTable = ({
@@ -313,7 +326,7 @@ export const ${junctionTable} = sqliteTable('${junctionTable}', {
   ${templateParent(table)}
   ${relations.map((rel) => templateFieldRelationColumn(rel)).join(',\n')},
   ${hasLocale ? `locale: text('locale'),` : ''}
-})
+}${templateIndexes(junctionTable, ['ownerId', ...relations.map((rel) => `${rel}Id`)])})
 `;
 
 /**

@@ -3,6 +3,7 @@ import { randomId } from '$lib/util/random.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { CONFIG_DIR, GENERATED_DIR, configImportPaths } from '../../constants.server.js';
+import { SVELTEKIT_ADAPTER } from '../util/package-manager.server.js';
 
 const PACKAGE = 'rimecms';
 
@@ -29,7 +30,7 @@ RIME_LOG_TO_FILE=true
 RIME_LOG_TO_FILE_MAX_DAYS=1
 `;
 
-export const defaultConfig = (name: string) => `
+export const defaultConfig = (name: string, driver: 'libsql' | 'bun' = 'libsql') => `
 import { Collection, rime } from '$rime/config';
 import { text } from '${PACKAGE}/fields';
 import { adapterSqlite } from '${PACKAGE}/adapter-sqlite';
@@ -46,7 +47,7 @@ const Medias = Collection.create('medias', {
 });
 
 export default rime({
-  $adapter: adapterSqlite('${name}.sqlite'),
+  $adapter: adapterSqlite('${name}.sqlite'${driver === 'bun' ? ", { driver: 'bun' }" : ''}),
   collections: [Pages, Medias]
 });
 `;
@@ -129,4 +130,38 @@ export function regenerateDrizzleConfig(root: string = process.cwd()): boolean {
     return true;
   }
   return false;
+}
+
+const ADAPTER_CONFIG_FILES = [
+  'vite.config.ts',
+  'vite.config.js',
+  'svelte.config.js',
+  'svelte.config.ts',
+  'svelte.config.mjs'
+];
+
+/** Points the app's SvelteKit adapter at the one rime builds with, wherever it is declared:
+ * `vite.config.ts` in current sv templates, `svelte.config.js` in older ones. adapter-auto
+ * produces nothing for a plain Node or Bun server; `bun` also moves an app off adapter-node.
+ * Any other adapter is the app's choice and left alone. Returns the files it patched. */
+export function setSvelteKitAdapter(root: string, bun: boolean): string[] {
+  const adapter = SVELTEKIT_ADAPTER[bun ? 'bun' : 'node'];
+  const replaced = ['@sveltejs/adapter-auto', ...(bun ? [SVELTEKIT_ADAPTER.node] : [])];
+  const pattern = new RegExp(
+    `from\\s*(['"])(${replaced.map((name) => name.replace(/[/.-]/g, '\\$&')).join('|')})\\1`,
+    'g'
+  );
+
+  const patched: string[] = [];
+  for (const file of ADAPTER_CONFIG_FILES) {
+    const configPath = path.join(root, file);
+    if (!existsSync(configPath)) continue;
+    const content = readFileSync(configPath, 'utf-8');
+    const next = content.replace(pattern, (_, quote) => `from ${quote}${adapter}${quote}`);
+    if (next !== content) {
+      writeFileSync(configPath, next);
+      patched.push(file);
+    }
+  }
+  return patched;
 }

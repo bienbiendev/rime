@@ -3,52 +3,27 @@
 // `n` pages.
 //
 // Usage: bun src/scripts/perf-ops.ts --url http://localhost:5173 [--n 100] [--runs 5]
-//          [--email admin@email.com] [--password 'a&1Aa&1A']
+//          [--email admin@email.com] [--password 'a&1Aa&1A'] [--cache]
 //
 // Signs in, warms the routes up, then `runs` times over: creates `n` pages, reads each one,
 // reads each one again, lists 20 pages `n` times from `n` offsets, lists them again, does both
-// reads and lists once more without signing in, and updates each one. Prints the median total of each pass in ms. The "again" passes are where an API cache
-// shows: the cache is keyed per operation and parameters, so the first read of a page and the
-// first list at an offset miss, the second hit. The last line is `RESULT {json}` for a script to
-// pick up.
+// reads and lists once more without signing in, and updates each one. Prints each pass's median
+// total and its time per call: a call creates, reads or updates one page, or lists 20. The
+// "again" passes are where an API cache shows, named "(cache)" with --cache: the cache is keyed
+// per operation and parameters, so the first read of a page and the first list at an offset miss,
+// the second hit. The last line is `RESULT {json}` for a script to pick up.
 
-const args = Object.fromEntries(
-  process.argv
-    .slice(2)
-    .map((arg, index, all) => (arg.startsWith('--') ? [arg.slice(2), all[index + 1]] : null))
-    .filter((pair): pair is [string, string] => pair !== null)
-);
+import { createClient, fail, median, parseArgs, pass, printPasses } from './perf-util.js';
+
+const args = parseArgs();
 
 const BASE = args.url ?? 'http://localhost:5173';
 const N = Number(args.n ?? 100);
 const RUNS = Number(args.runs ?? 1);
 const EMAIL = args.email ?? 'admin@email.com';
 const PASSWORD = args.password ?? 'a&1Aa&1A';
-const API = `${BASE}/api`;
 
-const fail = (message: string): never => {
-  console.error(`[x] ${message}`);
-  process.exit(1);
-};
-
-let cookie = '';
-
-const call = async (method: string, path: string, body?: unknown, anonymous = false) => {
-  const response = await fetch(`${API}${path}`, {
-    method,
-    headers: { 'content-type': 'application/json', origin: BASE, cookie: anonymous ? '' : cookie },
-    body: body === undefined ? undefined : JSON.stringify(body)
-  });
-  if (!response.ok) fail(`${method} ${path} answered ${response.status}: ${await response.text()}`);
-  return response;
-};
-
-/** Runs `count` calls one after the other and answers how long the whole pass took, in ms. */
-const pass = async (count: number, run: (index: number) => Promise<unknown>) => {
-  const start = performance.now();
-  for (let index = 0; index < count; index++) await run(index);
-  return performance.now() - start;
-};
+const { call, signIn, clearCache } = createClient(BASE);
 
 /** A page, related to the two before it: two junction rows to write and to read back. */
 const page = (index: number, related: string[]) => ({
@@ -69,10 +44,7 @@ const create = async (index: number, related: string[] = []) => {
   return json.doc?.id ?? json.id ?? fail('create returned no id');
 };
 
-// Sign in. The admin exists: the driver posted /api/init before calling this.
-const signIn = await call('POST', '/auth/sign-in/email', { email: EMAIL, password: PASSWORD });
-cookie = (signIn.headers.get('set-cookie') ?? '').split(';')[0];
-if (!cookie) fail('sign-in returned no cookie');
+await signIn(EMAIL, PASSWORD);
 
 // Warm the routes up on a few pages that are not counted.
 for (let index = 0; index < 5; index++) {
@@ -81,12 +53,6 @@ for (let index = 0; index < 5; index++) {
   await call('GET', '/pages?limit=20');
   await call('PATCH', `/pages/${id}`, { views: 0 });
 }
-
-const median = (values: number[]) => {
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-};
 
 // Every run creates its own pages and reads and updates those; the collection grows by `n`
 // per run, which the list pass sees. A write does not empty the API cache, so each run empties
@@ -102,7 +68,7 @@ const totals = {
   update: [] as number[]
 };
 for (let run = 0; run < RUNS; run++) {
-  await fetch(`${API}/clear-cache`, { method: 'POST', headers: { origin: BASE, cookie } });
+  await clearCache();
   const ids: string[] = [];
   const at = (index: number) => run * N + index;
   totals.create.push(
@@ -138,17 +104,23 @@ const result = {
   update: median(totals.update)
 };
 
-const row = (name: string, ms: number) =>
-  `${name.padEnd(8)} ${Math.round(ms).toString().padStart(7)} ms`;
-console.log(`${N} pages, median of ${RUNS} runs`);
-console.log(row('create', result.create));
-console.log(row('read', result.read));
-console.log(row('read 2', result.readAgain));
-console.log(row('list', result.list));
-console.log(row('list 2', result.listAgain));
-console.log(row('read ~', result.readAnon));
-console.log(row('list ~', result.listAnon));
-console.log(row('update', result.update));
+// Each pass is `n` calls; a list call reads 20 pages. With --cache the second passes hit the
+// API cache, else they only repeat the first.
+const again = args.cache ? '(cache)' : 'again';
+printPasses(
+  [
+    ['create', 'POST, 1 page', result.create],
+    ['read', 'GET, 1 page', result.read],
+    [`read ${again}`, 'GET, 1 page, again', result.readAgain],
+    ['read anon', 'GET, 1 page, signed out', result.readAnon],
+    ['list', 'GET, 20 pages from an offset', result.list],
+    [`list ${again}`, 'GET, 20 pages, again', result.listAgain],
+    ['list anon', 'GET, 20 pages, signed out', result.listAnon],
+    ['update', 'PATCH, 1 page', result.update]
+  ],
+  N,
+  RUNS
+);
 console.log(`RESULT ${JSON.stringify(result)}`);
 
 export {};

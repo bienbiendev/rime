@@ -113,10 +113,14 @@ const buildRootTable = async ({
     blocksTables.push(nested.schema);
   };
 
+  /**
+   * The columns of one table, and in `indexed` the ones a field asked `$index()` for.
+   */
   const generateFieldsTemplates = async (
     fields: FieldBuilder<Field>[],
     withLocalized?: boolean,
-    parentPath: string = ''
+    parentPath: string = '',
+    indexed: string[] = []
   ): Promise<string[]> => {
     let templates: string[] = [];
 
@@ -153,12 +157,15 @@ const buildRootTable = async ({
           const prefix = node.segment ? joinColumn(own, node.segment) : own;
           templates = [
             ...templates,
-            ...(await generateFieldsTemplates(node.fields, withLocalized, prefix))
+            ...(await generateFieldsTemplates(node.fields, withLocalized, prefix, indexed))
           ];
         }
       } else if (field instanceof FormFieldBuilder) {
         if (checkLocalized(field)) {
           templates.push(toSchemaColumn(field, parentPath) + ',');
+          if (field.get.index) {
+            indexed.push(getSchemaColumnNames({ name: field.name, parentPath }).camel);
+          }
           // A reference the read resolves gets a relation to its target beside the column.
           if (field._references?.resolve) {
             referenceJoins.push({
@@ -173,13 +180,22 @@ const buildRootTable = async ({
     return templates;
   };
 
+  // A child row is read by its owner. A field's `$index()` adds its own column below.
+  const indexed = hasParent || versionsOf ? ['ownerId'] : [];
+
   let table: string;
 
   if (locales && locales.length && hasLocalizedField(incomingFields)) {
     const tableNameLocales = buildTableName({ owner: tableName, branch: 'locales' });
-    const strLocalizedFields = await generateFieldsTemplates(incomingFields, true);
+    const localizedIndexed: string[] = [];
+    const strLocalizedFields = await generateFieldsTemplates(
+      incomingFields,
+      true,
+      '',
+      localizedIndexed
+    );
     relationsDic[tableName] = [...(relationsDic[tableName] || []), tableNameLocales];
-    const strUnlocalizedFields = await generateFieldsTemplates(incomingFields, false);
+    const strUnlocalizedFields = await generateFieldsTemplates(incomingFields, false, '', indexed);
     if (hasParent) {
       strUnlocalizedFields.push(templateParent(rootName));
     }
@@ -189,13 +205,14 @@ const buildRootTable = async ({
     for (const column of featureColumns) {
       strUnlocalizedFields.push(templateDeclaredColumn(column) + ',');
     }
-    table = templateTable(tableName, strUnlocalizedFields.join('\n  '));
+    table = templateTable(tableName, strUnlocalizedFields.join('\n  '), indexed);
     table += templateTable(
       tableNameLocales,
-      [...strLocalizedFields, templateLocale(), templateParent(tableName)].join('\n  ')
+      [...strLocalizedFields, templateLocale(), templateParent(tableName)].join('\n  '),
+      ['ownerId', ...localizedIndexed]
     );
   } else {
-    const strFields = await generateFieldsTemplates(incomingFields);
+    const strFields = await generateFieldsTemplates(incomingFields, undefined, '', indexed);
     if (hasParent) {
       strFields.push(templateParent(rootName));
     }
@@ -205,7 +222,7 @@ const buildRootTable = async ({
     for (const column of featureColumns) {
       strFields.push(templateDeclaredColumn(column) + ',');
     }
-    table = templateTable(tableName, strFields.join('\n  '));
+    table = templateTable(tableName, strFields.join('\n  '), indexed);
   }
 
   return {

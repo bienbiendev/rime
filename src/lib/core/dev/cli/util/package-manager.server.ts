@@ -16,7 +16,7 @@ const packageManagersMap = {
 type PMConfig = Record<
   PackageManagerName,
   {
-    command: string;
+    command: (devDeps: string[]) => string;
     preInstall?: () => void;
     postInstall?: () => void;
   }
@@ -28,27 +28,32 @@ type PMConfig = Record<
 const DRIZZLE = '1.0.0-rc.4';
 
 const deps = [`drizzle-orm@${DRIZZLE}`, '@libsql/client', '@lucide/svelte', 'sharp'];
-const devDeps = ['@sveltejs/adapter-node', `drizzle-kit@${DRIZZLE}`];
+// The Bun pack builds with svelte-adapter-bun instead
+export const SVELTEKIT_ADAPTER = { node: '@sveltejs/adapter-node', bun: 'svelte-adapter-bun' };
+const devDeps = (bun: boolean) => [
+  SVELTEKIT_ADAPTER[bun ? 'bun' : 'node'],
+  `drizzle-kit@${DRIZZLE}`
+];
 
 const packageManagerConfigs: PMConfig = {
   yarn: {
-    command: 'echo "yarn is not supported, please use pnpm or npm" && exit 1'
+    command: () => 'echo "yarn is not supported, please use pnpm or npm" && exit 1'
   },
   pnpm: {
-    command: `pnpm add -D ${devDeps.join(' ')} && pnpm add ${deps.join(' ')}`,
+    command: (devDeps) => `pnpm add -D ${devDeps.join(' ')} && pnpm add ${deps.join(' ')}`,
     preInstall: configurePnpm,
     postInstall: () => {
       execSync('pnpm rebuild');
     }
   },
   bun: {
-    command: `bun add -D ${devDeps.join(' ')} && bun add ${deps.join(' ')}`
+    command: (devDeps) => `bun add -D ${devDeps.join(' ')} && bun add ${deps.join(' ')}`
   },
   npm: {
-    command: `npm install -D ${devDeps.join(' ')} && npm install ${deps.join(' ')}`
+    command: (devDeps) => `npm install -D ${devDeps.join(' ')} && npm install ${deps.join(' ')}`
   },
   deno: {
-    command: 'echo "deno is not supported, please use pnpm or npm" && exit 1'
+    command: () => 'echo "deno is not supported, please use pnpm or npm" && exit 1'
   }
 };
 
@@ -78,7 +83,7 @@ export function getInvokingPackageManager(): PackageManagerName {
   return 'npm';
 }
 
-export function installDependencies() {
+export function installDependencies({ bun = false }: { bun?: boolean } = {}) {
   const pm = getInvokingPackageManager();
 
   if (pm === 'deno' || pm === 'yarn') {
@@ -91,8 +96,9 @@ export function installDependencies() {
   config.preInstall?.();
 
   // Main installation
-  logger.info('exec : ' + config.command);
-  execSync(config.command);
+  const command = config.command(devDeps(bun));
+  logger.info('exec : ' + command);
+  execSync(command);
 
   // Post installation hooks
   config.postInstall?.();

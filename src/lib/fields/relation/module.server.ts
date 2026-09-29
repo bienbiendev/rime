@@ -15,11 +15,17 @@ export const ensureRelationExists: FieldHookShared = async (
   const output = [];
 
   const retrieveRelation = async (id: string) => {
+    // Forward auth, not the incoming body's headers: Bun's fetch keeps a `content-length` on a
+    // bodiless GET (Node's drops it), and the server then waits for a body that never comes.
+    const headers = new Headers(getRequestEvent().request.headers);
+    for (const name of ['content-length', 'content-type', 'transfer-encoding']) {
+      headers.delete(name);
+    }
     const [err, response] = await trycatchFetch(
       `${env.PUBLIC_RIME_URL}/api/${toKebabCase(config.relationTo)}/${id}?${PARAMS.SELECT}=id`,
       {
         method: 'GET',
-        headers: getRequestEvent().request.headers
+        headers
       }
     );
     if (err) return null;

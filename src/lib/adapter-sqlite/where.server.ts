@@ -7,18 +7,17 @@ import { type GetRegisterType } from '$lib/index.js';
 import type { Dic } from '$lib/util/types.js';
 import * as drizzleORM from 'drizzle-orm';
 import { and, eq, getTableColumns, inArray, or } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { ParsedQs } from 'qs';
 import type { PrototypeSlug } from '../types.js';
 import { localeOrder } from './locales.server.js';
 import { baseTableName, tableName } from './naming.server.js';
-import type { GenericTable } from './types.server.js';
+import type { GenericTable, SqliteDatabase } from './types.server.js';
 
 type BuildWhereArgs = {
   query: ParsedQs;
   slug: PrototypeSlug;
   locale?: string;
-  db: LibSQLDatabase<GetRegisterType<'Relations'>>;
+  db: SqliteDatabase;
   tables: GetRegisterType<'Tables'>;
   configCtx: ConfigContext;
   /**
@@ -138,7 +137,22 @@ export const buildWhereParam = ({
         order.length > 1
           ? sql`COALESCE(${sql.join(order.map(valueIn), sql`, `)})`
           : valueIn(order[0]);
-      return fn(resolved, value);
+
+      if (operator !== 'equals' && operator !== 'in_array') return fn(resolved, value);
+
+      // A document whose read value matches has a locales row holding it, so the documents with
+      // one are asked first: that is what an index on the column answers, and the comparison
+      // above then runs on those alone.
+      return and(
+        inArray(
+          table.id,
+          db
+            .select({ ownerId: tableLocales.ownerId })
+            .from(tableLocales)
+            .where(fn(tableLocales[sqlColumn], value))
+        ),
+        fn(resolved, value)
+      );
     }
 
     // A column the base row keeps — the hierarchy columns, and any `$root()` field — reached

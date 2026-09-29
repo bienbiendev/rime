@@ -2,10 +2,10 @@ import type { Adapter } from '$lib/core/adapter.js';
 import type { Config } from '$lib/core/config/types.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
 import type { GetRegisterType } from '$lib/index.js';
-import { drizzle, LibSQLDatabase } from 'drizzle-orm/libsql';
 import path from 'path';
 import createAuthHandle from './auth.server.js';
 import createBlocksHandle from './blocks.server.js';
+import { connect, type SqliteDriver } from './connect.server.js';
 import generateSchema from './generate-schema/index.server.js';
 import type { RelationFieldsMap } from './generate-schema/root.server.js';
 import { baseTableName } from './naming.server.js';
@@ -14,28 +14,43 @@ import createRelationsHandle from './relations.server.js';
 import { createTableHandles } from './table.server.js';
 import { createTransformHandle } from './transform.server.js';
 import createTreeHandle from './tree.server.js';
-import type { GenericTable } from './types.server.js';
+import type { GenericTable, SqliteDatabase } from './types.server.js';
 
 type Schema = GetRegisterType<'Schema'>;
 type Tables = GetRegisterType<'Tables'>;
 
-export function adapterSqlite(database: string): {
+export type { SqliteDriver };
+
+export type AdapterSqliteOptions = {
+  /**
+   * `'bun'` opens the file with `bun:sqlite` — the app must then run on Bun
+   * (`bun --bun vite dev`, `bun index.js`). Migrations still go through drizzle-kit.
+   * @default 'libsql'
+   */
+  driver?: SqliteDriver;
+};
+
+export function adapterSqlite(
+  database: string,
+  options: AdapterSqliteOptions = {}
+): {
   createAdapter: <C extends Config>(configCtx: ConfigContext<C>) => Promise<SqliteAdapter>;
   generateSchema: typeof generateSchema;
 } {
-  //
+  const driver = options.driver ?? 'libsql';
   return {
     createAdapter: <C extends Config>(configCtx: ConfigContext<C>) =>
-      createAdapter({ database, configCtx }),
+      createAdapter({ database, driver, configCtx }),
     generateSchema
   };
 }
 
 const createAdapter = async <const C extends Config>(args: {
   database: string;
+  driver: SqliteDriver;
   configCtx: ConfigContext<C>;
 }): Promise<SqliteAdapter> => {
-  const { database, configCtx } = args;
+  const { database, driver, configCtx } = args;
 
   const schema = (await import('$rime/schema')) as {
     tables: Tables;
@@ -47,7 +62,7 @@ const createAdapter = async <const C extends Config>(args: {
   const dbPath = path.join(process.cwd(), 'db', database);
   // `relations`, not `schema`: a relational query resolves through the one `defineRelations`
   // block the generator emits. `tables` is still read straight off the module everywhere else.
-  const db = drizzle('file:' + dbPath, { relations: schema.relations });
+  const db = await connect({ driver, dbPath, relations: schema.relations });
   const tables = schema.tables;
 
   // Two words, and each is the contract's own. `core/adapter.ts` declares `BlocksHandle`,
@@ -116,7 +131,7 @@ const createAdapter = async <const C extends Config>(args: {
  * that drifts from the contract is a build error rather than a runtime surprise.
  */
 export type SqliteAdapter = Adapter & {
-  db: LibSQLDatabase<GetRegisterType<'Relations'>>;
+  db: SqliteDatabase;
   tables: GetRegisterType<'Tables'>;
   getTable<T>(key: string): T extends any ? GenericTable : T;
   tableForSlug<T>(slug: string): T extends any ? GenericTable : T;

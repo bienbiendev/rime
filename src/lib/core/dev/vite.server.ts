@@ -170,16 +170,17 @@ export function rime(): Plugin {
 
     config(): UserConfig {
       return {
+        // `bun:sqlite` only exists at runtime under Bun (adapterSqlite driver 'bun').
         ssr: {
-          external: ['sharp']
+          external: ['sharp', 'bun:sqlite']
         },
         optimizeDeps: {
-          exclude: ['sharp'],
+          exclude: ['sharp', 'bun:sqlite'],
           include: ['@lucide/svelte']
         },
         build: {
           rollupOptions: {
-            external: ['sharp']
+            external: ['sharp', 'bun:sqlite']
           },
           target: 'es2022'
         },
