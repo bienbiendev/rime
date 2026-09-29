@@ -30,8 +30,8 @@ export const Resource = Node.create<ResourceFeatureExtensionOptions>({
         acc[key] = { default: null };
         return acc;
       },
-      // Fresh attributes allowing to show the dialog immediately after insertion
-      { _fresh: { default: true } }
+      // A node just inserted opens its dialog; one read from stored content does not.
+      { _fresh: { default: false } }
     );
   },
 
@@ -42,7 +42,7 @@ export const Resource = Node.create<ResourceFeatureExtensionOptions>({
         ({ commands }) => {
           return commands.insertContent({
             type: this.name,
-            attrs: attributes
+            attrs: { _fresh: true, ...attributes }
           });
         }
     };

@@ -54,8 +54,8 @@
     } else {
       selected = null;
     }
+    // A node just inserted opens its dialog.
     if (node.attrs._fresh) {
-      // If the resource is fresh, we want to open the dialog to select a resource
       isDialogOpen = true;
     }
   });
