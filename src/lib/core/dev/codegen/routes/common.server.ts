@@ -471,3 +471,11 @@ export const commonRoutes: Routes = {
 };
 
 export { customRoute, paramMatcher, prototypeApiServer };
+
+/** Every fixed route file as the templates write it: a template that changes regenerates them. */
+export const templatesSurface = (): string =>
+  Object.entries(commonRoutes)
+    .flatMap(([pattern, files]) =>
+      Object.entries(files).map(([type, render]) => `${pattern}/${type}:${render()}`)
+    )
+    .join('\n');
