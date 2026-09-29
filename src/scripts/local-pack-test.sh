@@ -6,7 +6,7 @@
 #   npm           npm, Node
 #   pnpm          pnpm, Node
 #   bun           the Bun pack: bun install, `rime init --bun` (bun:sqlite, vite on Bun),
-#                 `rime build --bun`, the built server on Bun.serve
+#                 `rime build`, the built server on Bun
 #   custom-route  npm, Node, dev only: RIME_PANEL_ROUTE and RIME_CONFIG_DIR set as
 #                 shell-prefixed env vars on `rime init` itself both take
 #
@@ -247,7 +247,7 @@ run_pass() {
   case "$pm" in
     npm) npx rime build -d -e -s ;;
     pnpm) pnpm exec rime build -d -e -s ;;
-    bun) bunx rime build --bun -d -e -s ;;
+    bun) bunx rime build -d -e -s ;;
   esac
   cd app
 
@@ -269,11 +269,10 @@ run_pass() {
     "
   fi
 
-  # The Bun entry serves ./static itself: no serve-static
   case "$pm" in
     npm) npm install serve-static sharp ;;
     pnpm) pnpm add serve-static sharp ;;
-    bun) bun add sharp ;;
+    bun) bun add serve-static sharp ;;
   esac
 
   # envProduction() must carry RIME_PANEL_ROUTE through, or _live preview URLs silently fall

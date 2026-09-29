@@ -183,7 +183,10 @@ const Categories = Collection.create('categories', {
 
 const Pages = Collection.create('pages', {
   nested: true,
-  \$url: (doc) => \`\${env.PUBLIC_RIME_URL}/[...parent.slug]/\${doc.slug}\`,
+  // Both signatures: a release with addresses passes { path, … }, an older one the document.
+  \$url: (arg) => arg.path
+    ? \`\${env.PUBLIC_RIME_URL}/\${arg.path.join('/')}\`
+    : \`\${env.PUBLIC_RIME_URL}/[...parent.slug]/\${arg.slug}\`,
   fields: [
     text('title').isTitle().required(),
     slug('slug').slugify('title'),
@@ -368,7 +371,7 @@ bench_one() {
     local rime_build=(npx rime build "${build_flags[@]}")
     local vite_build=(./node_modules/.bin/vite build)
     if [[ $runtime == "bun" ]]; then
-      rime_build=(bunx rime build --bun "${build_flags[@]}")
+      rime_build=(bunx rime build "${build_flags[@]}")
       vite_build=(bun --bun ./node_modules/.bin/vite build)
     fi
     local start; start=$(now_ms)
@@ -397,13 +400,13 @@ bench_one() {
       fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
     "
     # What this release's server needs, from its own next steps: polka and serve-static up to
-    # 0.29, serve-static since, nothing more than sharp on Bun.
+    # 0.29, serve-static since.
     local add_deps
     add_deps=$(grep -E '^[[:space:]]+(npm install|bun add) ' ../build.log | grep -v -e '--production' -e '--omit' | head -1 |
       sed -E 's/^[[:space:]]+//' || true)
     if [[ -z "$add_deps" ]]; then
       add_deps="npm install serve-static sharp"
-      [[ $runtime == "bun" ]] && add_deps="bun add sharp"
+      [[ $runtime == "bun" ]] && add_deps="bun add serve-static sharp"
     fi
     echo "    $add_deps"
     eval "$add_deps" > /dev/null

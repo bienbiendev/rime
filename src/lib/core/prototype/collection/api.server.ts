@@ -17,6 +17,7 @@ import { findById, type FindByIdArgs } from './operations/find-by-id.js';
 import { findByIds, type FindByIdsArgs } from './operations/find-by-ids.js';
 import { find, type FindArgs } from './operations/find.js';
 import { updateById, type UpdateByIdArgs } from './operations/update-by-id.js';
+import { updateSlugById, type UpdateSlugByIdArgs } from './operations/update-slug-by-id.js';
 
 /** What building a collection's API for one request needs. */
 export type CollectionApiArgs = {
@@ -257,6 +258,22 @@ class CollectionAPI<
   }
 
   /**
+   * Changes a page's slug in one locale, on the published page. Its address changes, and the pages
+   * under it follow. A collection with `$url` only.
+   *
+   * @example
+   * await rime.collection('pages').updateSlugById({ id: '12345', slug: 'web-design', locale: 'en' });
+   */
+  updateSlugById(args: UpdateSlugByIdArgs) {
+    return updateSlugById({
+      ctx: this,
+      id: args.id,
+      slug: args.slug,
+      locale: this.fallbackLocale(args.locale)
+    });
+  }
+
+  /**
    * Updates a document in the collection by ID.
    *
    * `versionId`, else `latest`, else the published version selects the row; `fork` makes a new
@@ -333,6 +350,7 @@ export type CollectionApi<
   | 'findById'
   | 'findByIds'
   | 'updateById'
+  | 'updateSlugById'
   | 'deleteById'
   | 'delete'
   | 'system'

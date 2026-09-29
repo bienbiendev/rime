@@ -142,5 +142,14 @@ export default {
   created_on: 'Created $1',
   updated_on: 'Updated $1',
   by_user: 'by $1',
-  id: 'ID'
+  id: 'ID',
+  change_url: 'Change url',
+  copy_url: 'Copy the url',
+  url_copied: 'Url copied',
+  url_changed: 'Url changed',
+  url_address: 'Address',
+  url_on_published: 'The url changes on the published version.',
+  url_slug_required: 'The address needs at least one letter or digit.',
+  url_slug_taken: 'Another page at this level already uses this address.',
+  under_this_page: 'Under this page'
 };

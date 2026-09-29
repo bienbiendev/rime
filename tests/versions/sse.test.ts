@@ -1,48 +1,9 @@
 import test, { expect, type APIRequestContext } from '@playwright/test';
-import { API_BASE_URL, signIn } from '../util.js';
+import { API_BASE_URL, openStream, signIn, streamReader } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
-
-/**
- * `GET /api/sse?keys=…` with Node's own fetch: Playwright's request context waits for the whole
- * body, and a stream never ends. The response is answered as soon as the headers are in.
- */
-const openStream = async (keys: string, cookie?: string) => {
-  const controller = new AbortController();
-  const response = await fetch(`${API_BASE_URL}/sse?keys=${encodeURIComponent(keys)}`, {
-    headers: cookie ? { cookie } : {},
-    signal: controller.signal
-  });
-  return { response, close: () => controller.abort() };
-};
-
-/** One reader over an open stream; `until` reads on from where the last call stopped. */
-const streamReader = (response: Response) => {
-  const reader = response.body!.getReader();
-  const decoder = new TextDecoder();
-  let received = '';
-  return {
-    async until(needle: string, timeoutMs = 5000) {
-      const deadline = Date.now() + timeoutMs;
-      while (!received.includes(needle) && Date.now() < deadline) {
-        const chunk = await Promise.race([
-          reader.read(),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('timeout')), deadline - Date.now())
-          )
-        ]);
-        if (chunk.done) break;
-        received += decoder.decode(chunk.value, { stream: true });
-      }
-      if (!received.includes(needle)) {
-        throw new Error(`"${needle}" never arrived; received:\n${received}`);
-      }
-      return received;
-    }
-  };
-};
 
 const staffUser = async (request: APIRequestContext) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {

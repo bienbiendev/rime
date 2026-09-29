@@ -164,11 +164,10 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
   }
 
   function setAdapter() {
-    const adapter = SVELTEKIT_ADAPTER[bun ? 'bun' : 'node'];
-    const patched = templates.setSvelteKitAdapter(root, !!bun);
+    const patched = templates.setSvelteKitAdapter(root);
     logger.info(
       patched.length
-        ? `[✓] SvelteKit adapter set to ${adapter} in ${patched.join(', ')}`
+        ? `[✓] SvelteKit adapter set to ${SVELTEKIT_ADAPTER} in ${patched.join(', ')}`
         : `[✓] SvelteKit adapter already set (skip)`
     );
   }
@@ -305,7 +304,7 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
     setAdapter();
     configureVite();
     await copyAssets();
-    !skipInstall && installDependencies({ bun });
+    !skipInstall && installDependencies();
     await generate({ force: true });
   } else {
     let name = '';
@@ -335,7 +334,7 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
     setAdapter();
     configureVite();
     await copyAssets();
-    !skipInstall && installDependencies({ bun });
+    !skipInstall && installDependencies();
     await generate({ force: true });
     logger.info('[✓] done');
   }

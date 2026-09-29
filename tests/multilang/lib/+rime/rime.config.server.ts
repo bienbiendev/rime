@@ -79,9 +79,7 @@ const Informations = Area.create('infos', {
   access: {
     read: () => true
   },
-  $url: (doc: any) => {
-    return `${env.PUBLIC_RIME_URL}/${doc.locale}/about`;
-  },
+  $url: ({ locale }) => `${env.PUBLIC_RIME_URL}/${locale}/about`,
   live: true
 });
 
@@ -205,9 +203,7 @@ const Pages = Collection.create('pages', {
     group: 'Content'
   },
   fields: [tabs(tabHero, tabContent, tabAttributes, tabSeo, tabFooter)],
-  $url: (doc) => {
-    return `${env.PUBLIC_RIME_URL}/${doc.locale}/${doc.attributes.slug}`;
-  },
+  $url: ({ locale, slug }) => `${env.PUBLIC_RIME_URL}/${locale}/${slug}`,
   live: true,
   access: {
     read: () => true,

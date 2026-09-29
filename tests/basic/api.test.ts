@@ -1571,3 +1571,51 @@ test('None of that moved updatedBy', async ({ request }) => {
   // The lock endpoint writes through `updateWhere`, so it cuts no version and stamps nobody.
   expect(doc.updatedBy?.id).toBe(reviserId);
 });
+
+/****************************************************/
+/* Urls
+/****************************************************/
+
+// $url puts the page marked isHome at the root, and leaves the `home` segment out of the others.
+test('The home page is at the root; its children have no home segment', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const BASE = process.env.PUBLIC_RIME_URL;
+
+  const marked = await request.patch(`${API_BASE_URL}/pages/${homeId}`, {
+    headers,
+    data: { attributes: { isHome: true } }
+  });
+  const { doc: home } = await marked.json();
+  expect(home._slug).toBe('home');
+  expect(home.url).toBe(`${BASE}/`);
+
+  const created = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { attributes: { title: 'About us', slug: 'about-us' }, _parent: homeId }
+  });
+  const { doc: about } = await created.json();
+  expect(about._urlPath).toBe('home/about-us');
+  expect(about.url).toBe(`${BASE}/about-us`);
+
+  const found = await request
+    .get(`${API_BASE_URL}/pages?where[url][equals]=${encodeURIComponent(`${BASE}/`)}`)
+    .then((response) => response.json());
+  expect(found.docs.map((doc: { id: string }) => doc.id)).toEqual([homeId]);
+
+  // A list answers the same urls as the pages read one by one.
+  const { docs } = await request
+    .get(`${API_BASE_URL}/pages?where[_parent][equals]=${homeId}`)
+    .then((response) => response.json());
+  for (const doc of docs) {
+    const { doc: one } = await request
+      .get(`${API_BASE_URL}/pages/${doc.id}`)
+      .then((response) => response.json());
+    expect(doc.url).toBe(one.url);
+  }
+
+  await request.delete(`${API_BASE_URL}/pages/${about.id}`, { headers });
+  await request.patch(`${API_BASE_URL}/pages/${homeId}`, {
+    headers,
+    data: { attributes: { isHome: false } }
+  });
+});

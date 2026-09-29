@@ -146,5 +146,14 @@ export default {
   created_on: 'Créé le $1',
   updated_on: 'Modifié le $1',
   by_user: 'par $1',
-  id: 'ID'
+  id: 'ID',
+  change_url: 'Changer l’url',
+  copy_url: 'Copier l’url',
+  url_copied: 'Url copiée',
+  url_changed: 'Url changée',
+  url_address: 'Adresse',
+  url_on_published: 'L’url se change sur la version publiée.',
+  url_slug_required: 'L’adresse doit contenir au moins une lettre ou un chiffre.',
+  url_slug_taken: 'Une autre page à ce niveau utilise déjà cette adresse.',
+  under_this_page: 'Sous cette page'
 };

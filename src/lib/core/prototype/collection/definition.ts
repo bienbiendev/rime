@@ -8,8 +8,6 @@ import { augmentThumbnail } from '$lib/core/prototype/collection/thumbnail/augme
 import { augmentTitle } from '$lib/core/prototype/shared/title/augment.js';
 import { augmentUpload } from '$rime/modules:core/prototype/collection/upload';
 import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
-import { augmentUrl } from '$lib/core/prototype/shared/url/augment.js';
-import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
 import { augmentVersions } from '$lib/core/prototype/shared/versions/augment.js';
 import { when } from '../when.js';
 import { definePrototype } from '../define.js';
@@ -53,7 +51,6 @@ export const collection = definePrototype({
     when(isUpload, augmentUpload),
     when(isNested, augmentNested),
     augmentVersions,
-    when(hasUrl, augmentUrl),
     augmentTitle,
     augmentThumbnail,
     augmentMetas

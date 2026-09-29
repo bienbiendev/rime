@@ -68,7 +68,7 @@ const tabNewsAttributes = tab('attributes').fields(
 const News = Collection.create('news', {
   fields: [tabs(tabNewsAttributes, tabWriter)],
   live: true,
-  $url: (doc) => `${process.env.PUBLIC_RIME_URL}/actualites/${doc.attributes.slug}`,
+  $url: ({ slug }) => `${process.env.PUBLIC_RIME_URL}/actualites/${slug}`,
   access: {
     read: () => true,
     create: (user) => access.isAdmin(user),
@@ -117,7 +117,7 @@ const Pages = Collection.create('pages', {
     group: 'content'
   },
   fields: [group('attributes').fields(text('title').isTitle(), slug('slug'), toggle('isHome'))],
-  $url: () => `${process.env.PUBLIC_RIME_URL}/`,
+  $url: ({ path }) => `${process.env.PUBLIC_RIME_URL}/${path.join('/')}`,
   nested: true,
   access: {
     read: () => true

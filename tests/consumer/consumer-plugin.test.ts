@@ -80,11 +80,12 @@ test('plugin route, handler, field and hook all mounted correctly', async ({ pag
 
   // Collection hook: the plugin's afterUpdate hook only fires on update, not the initial
   // create above — save again to trigger it, then confirm it wrote a pluginVisits document.
-  // Save is disabled on a pristine form, so dirty it first.
+  // Save is disabled on a pristine form, so dirty it first. The saved note carries a second
+  // prefix, which tells the save has landed before the nav link is clicked.
   await page.locator('input.rz-input[name="note"]').pressSequentially('!', { delay: 50 });
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await page.waitForLoadState('networkidle');
+  await expect(page.locator('input.rz-input[name="note"]')).toHaveValue(/server:.*server:/);
 
   await nav.locator(`a[href="${panelPath('plugin-visits')}"]`).click();
   await page.waitForLoadState('networkidle');

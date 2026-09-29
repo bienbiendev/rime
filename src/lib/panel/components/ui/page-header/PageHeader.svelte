@@ -8,6 +8,8 @@
     title?: Snippet;
     /** A line under the title: a count, a date. */
     meta?: Snippet;
+    /** Under the meta line: a document's url. */
+    aside?: Snippet;
     /** The toolbar under the title, its left side. */
     bottomLeft?: Snippet;
     /** The toolbar under the title, its right side. */
@@ -16,8 +18,17 @@
     topCenter?: Snippet;
     topRight?: Snippet;
   };
-  const { children, bottomRight, bottomLeft, topRight, topCenter, topLeft, title, meta }: Props =
-    $props();
+  const {
+    children,
+    bottomRight,
+    bottomLeft,
+    topRight,
+    topCenter,
+    topLeft,
+    title,
+    meta,
+    aside
+  }: Props = $props();
 </script>
 
 {#if children}
@@ -41,7 +52,7 @@
     </div>
   </div>
 
-  {#if title || meta}
+  {#if title || meta || aside}
     <div class="rz-page-header__head">
       {#if title}
         <h1 class="rz-page-header__title">{@render title()}</h1>
@@ -49,6 +60,7 @@
       {#if meta}
         <p class="rz-page-header__meta">{@render meta()}</p>
       {/if}
+      {@render aside?.()}
     </div>
   {/if}
 

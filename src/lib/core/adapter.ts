@@ -61,6 +61,7 @@ export interface Adapter {
   blocks: BlocksHandle;
   tree: TreeHandle;
   relations: RelationsHandle;
+  paths: PathsHandle;
   transform: TransformHandle;
   auth: AuthHandle;
 }
@@ -270,6 +271,74 @@ export interface RelationsHandle {
     ownerId: string;
     locale?: string;
   }): Promise<Relation[]>;
+}
+
+/**
+ * A page's address in one locale, as a collection with `$url` stores it.
+ *
+ * ```
+ * { ownerId: 'web', locale: 'en', slug: 'web', path: 'services/web', url: 'https://site.test/en/services/web' }
+ * ```
+ *
+ * `locale` is `''` when the config has no localization. `path` is the slugs from the top page down
+ * to this one; the adapter keeps it in step when a slug changes or a page moves.
+ */
+export type PathRow = {
+  ownerId: string;
+  locale: string;
+  slug: string;
+  path: string;
+  url: string | null;
+};
+
+/**
+ * The addresses of a collection's pages. Every verb names one page; the pages under it follow.
+ */
+export interface PathsHandle {
+  /** One row per locale for a new page, under its parent's row in each locale. */
+  insert(args: {
+    slug: PrototypeSlug;
+    ownerId: string;
+    parentId: string | null;
+    rows: { locale: string; slug: string }[];
+  }): Promise<PathRow[]>;
+  /** The page's rows, in every locale unless one is given. */
+  get(args: { slug: PrototypeSlug; ownerId: string; locale?: string }): Promise<PathRow[]>;
+  /** A new slug in one locale. Answers the row with its new path. */
+  setSlug(args: {
+    slug: PrototypeSlug;
+    ownerId: string;
+    locale: string;
+    value: string;
+  }): Promise<PathRow | undefined>;
+  /** Under another parent, or at the top, in every locale at once. Answers the page's rows. */
+  moveUnder(args: {
+    slug: PrototypeSlug;
+    ownerId: string;
+    parentId: string | null;
+  }): Promise<PathRow[]>;
+  /** Its children go to the top, before it is deleted. Answers their rows. */
+  detachChildren(args: { slug: PrototypeSlug; ownerId: string }): Promise<PathRow[]>;
+  /** The row at `path` and, with `withDescendants`, every row below it, in one locale. */
+  under(args: {
+    slug: PrototypeSlug;
+    locale: string;
+    path: string;
+    withDescendants?: boolean;
+  }): Promise<PathRow[]>;
+  /** The slugs the children of `parentId` hold in `locale`, or of the top pages when it is null. */
+  siblingSlugs(args: {
+    slug: PrototypeSlug;
+    locale: string;
+    parentId: string | null;
+  }): Promise<string[]>;
+  /** The documents of the collection with no row in `locale` yet. */
+  missingOwners(args: { slug: PrototypeSlug; locale: string }): Promise<string[]>;
+  /** New urls, in one transaction. */
+  setUrls(args: {
+    slug: PrototypeSlug;
+    rows: { ownerId: string; locale: string; url: string }[];
+  }): Promise<void>;
 }
 
 export interface TransformHandle {

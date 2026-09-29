@@ -42,3 +42,42 @@ export const signIn = (email: string, password: string) => {
     };
   };
 };
+
+/**
+ * `GET /api/sse?keys=…` with Node's own fetch: Playwright's request context waits for the whole
+ * body, and a stream never ends. The response is answered as soon as the headers are in.
+ */
+export const openStream = async (keys: string, cookie?: string) => {
+  const controller = new AbortController();
+  const response = await fetch(`${API_BASE_URL}/sse?keys=${encodeURIComponent(keys)}`, {
+    headers: cookie ? { cookie } : {},
+    signal: controller.signal
+  });
+  return { response, close: () => controller.abort() };
+};
+
+/** One reader over an open stream; `until` reads on from where the last call stopped. */
+export const streamReader = (response: Response) => {
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let received = '';
+  return {
+    async until(needle: string, timeoutMs = 5000) {
+      const deadline = Date.now() + timeoutMs;
+      while (!received.includes(needle) && Date.now() < deadline) {
+        const chunk = await Promise.race([
+          reader.read(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), deadline - Date.now())
+          )
+        ]);
+        if (chunk.done) break;
+        received += decoder.decode(chunk.value, { stream: true });
+      }
+      if (!received.includes(needle)) {
+        throw new Error(`"${needle}" never arrived; received:\n${received}`);
+      }
+      return received;
+    }
+  };
+};

@@ -4,12 +4,15 @@ import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
 import { versionsDocType } from '$lib/core/prototype/shared/versions/doc-type.js';
 import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
 import { uploadDocType } from '$lib/core/prototype/collection/upload/doc-type.js';
+import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
+import { urlDocType } from '$lib/core/prototype/shared/url/doc-type.js';
 
 /**
  * What each config's generated doc type gains beyond its own fields.
  *
- * Two contributors and they are the whole list: `versions` adds `versionId`, `upload` extends
- * `UploadDoc`, adds its `sizes` member and filters out the fields its image sizes collide with.
+ * Three contributors and they are the whole list: `versions` adds `versionId`, `upload` extends
+ * `UploadDoc`, adds its `sizes` member and filters out the fields its image sizes collide with,
+ * `url` adds the address.
  * The `fields` predicates are **ANDed** — each says which fields it still wants generated, and
  * a field has to survive both.
  *
@@ -19,7 +22,11 @@ export const contributionsFor = (
 ): Required<DocTypeContribution> =>
   // Upload before versions: the prototype's feature list has upload first, and the members land
   // in that order in the generated type.
-  [isUpload(config) ? uploadDocType(config) : null, isVersioned(config) ? versionsDocType() : null]
+  [
+    isUpload(config) ? uploadDocType(config) : null,
+    isVersioned(config) ? versionsDocType() : null,
+    hasUrl(config) ? urlDocType(config.type) : null
+  ]
     .filter((c): c is DocTypeContribution => c !== null)
     .reduce<Required<DocTypeContribution>>(
       (current, contribution) => ({

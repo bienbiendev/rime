@@ -109,7 +109,6 @@
     z-index: 40;
     margin-inline: calc(-1 * var(--rz-fields-padding));
     padding: var(--rz-size-2) var(--rz-fields-padding);
-    background-color: var(--rz-bg-page);
   }
 
   .rz-tabs :global {

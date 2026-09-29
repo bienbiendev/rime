@@ -7,6 +7,7 @@ import { restGet } from './get.server.js';
 import { restGetById } from './get-by-id.server.js';
 import { restLock, restUnlock } from './lock.server.js';
 import { restUpdateById } from './update-by-id.server.js';
+import { restUpdateSlugById } from './update-slug-by-id.server.js';
 
 /**
  * The REST surface a collection provides.
@@ -22,5 +23,6 @@ export const rest: Record<string, RouteConfig> = {
   '': { GET: restGet, POST: restCreate, DELETE: restDelete },
   '[id]': { GET: restGetById, PATCH: restUpdateById, DELETE: restDeleteById },
   '[id]/duplicate': { POST: restDuplicate },
-  '[id]/lock': { POST: restLock, DELETE: restUnlock }
+  '[id]/lock': { POST: restLock, DELETE: restUnlock },
+  '[id]/slug': { PATCH: restUpdateSlugById }
 };

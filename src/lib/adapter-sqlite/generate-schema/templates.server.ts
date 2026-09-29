@@ -5,7 +5,9 @@ import {
   baseTableName,
   declaredTableProperty,
   getSchemaColumnNames,
-  joinName
+  joinName,
+  tableName,
+  type TableName
 } from '../naming.server.js';
 import dedent from 'dedent';
 
@@ -16,8 +18,8 @@ const s = toSnakeCase;
  * Includes SQLite table definitions, relations, and a primary key helper function
  */
 export const templateImports = `
-import { text, integer, sqliteTable, real, index } from "drizzle-orm/sqlite-core";
-import { defineRelations } from 'drizzle-orm';
+import { text, integer, sqliteTable, real, index, unique, check, foreignKey } from "drizzle-orm/sqlite-core";
+import { defineRelations, sql } from 'drizzle-orm';
 
 const pk = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 `;
@@ -202,6 +204,38 @@ export const templateUniqueRequired = (
  */
 const templateDefault = (value: unknown): string =>
   value instanceof Date ? `new Date(${value.getTime()})` : JSON.stringify(value);
+
+/**
+ * The addresses of a collection with `$url`: one row per page and per locale, off its base table.
+ *
+ * `path` is generated from the parent's path and the slug. Renaming or moving a row carries down
+ * its subtree, through the foreign key on `(locale, parent_path)`.
+ *
+ * ```ts
+ * export const pages__$paths = sqliteTable('pages__$paths', { …, path: text('path').generatedAlwaysAs(…) }, …)
+ * ```
+ */
+export const templatePathsTable = (owner: TableName): string => {
+  const table = tableName({ owner, child: { kind: 'paths' } });
+  return `
+export const ${table} = sqliteTable('${table}', {
+  id: pk(),
+  ownerId: text('owner_id').notNull().references(() => ${owner}.id, { onDelete: 'cascade' }),
+  locale: text('locale').notNull(),
+  slug: text('slug').notNull(),
+  parentPath: text('parent_path'),
+  path: text('path').generatedAlwaysAs(sql\`coalesce(parent_path || '/', '') || slug\`, { mode: 'stored' }),
+  url: text('url')
+}, (t) => [
+  unique('${table}_owner_locale').on(t.ownerId, t.locale),
+  unique('${table}_path').on(t.locale, t.path),
+  index('${table}_parent_idx').on(t.locale, t.parentPath),
+  index('${table}_url_idx').on(t.locale, t.url),
+  check('${table}_slug', sql\`slug <> ''\`),
+  foreignKey({ columns: [t.locale, t.parentPath], foreignColumns: [t.locale, t.path] }).onUpdate('cascade')
+]);
+`;
+};
 
 /** Template rows Relation */
 

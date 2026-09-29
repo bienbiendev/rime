@@ -140,24 +140,22 @@ const ADAPTER_CONFIG_FILES = [
   'svelte.config.mjs'
 ];
 
-/** Points the app's SvelteKit adapter at the one rime builds with, wherever it is declared:
- * `vite.config.ts` in current sv templates, `svelte.config.js` in older ones. adapter-auto
- * produces nothing for a plain Node or Bun server; `bun` also moves an app off adapter-node.
- * Any other adapter is the app's choice and left alone. Returns the files it patched. */
-export function setSvelteKitAdapter(root: string, bun: boolean): string[] {
-  const adapter = SVELTEKIT_ADAPTER[bun ? 'bun' : 'node'];
-  const replaced = ['@sveltejs/adapter-auto', ...(bun ? [SVELTEKIT_ADAPTER.node] : [])];
-  const pattern = new RegExp(
-    `from\\s*(['"])(${replaced.map((name) => name.replace(/[/.-]/g, '\\$&')).join('|')})\\1`,
-    'g'
-  );
+/** Swaps adapter-auto for adapter-node, wherever the app declares it: `vite.config.ts` in
+ * current sv templates, `svelte.config.js` in older ones. adapter-auto produces nothing for a
+ * plain Node or Bun server. Any other adapter is the app's choice and left alone. Returns the
+ * files it patched. */
+export function setSvelteKitAdapter(root: string): string[] {
+  const pattern = /from\s*(['"])@sveltejs\/adapter-auto\1/g;
 
   const patched: string[] = [];
   for (const file of ADAPTER_CONFIG_FILES) {
     const configPath = path.join(root, file);
     if (!existsSync(configPath)) continue;
     const content = readFileSync(configPath, 'utf-8');
-    const next = content.replace(pattern, (_, quote) => `from ${quote}${adapter}${quote}`);
+    const next = content.replace(
+      pattern,
+      (_, quote) => `from ${quote}${SVELTEKIT_ADAPTER}${quote}`
+    );
     if (next !== content) {
       writeFileSync(configPath, next);
       patched.push(file);

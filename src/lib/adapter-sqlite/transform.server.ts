@@ -68,6 +68,8 @@ export const createTransformHandle = <const C extends Config>(args: {
     // the config rather than asked of a feature, which is what keeps this file naming none.
     const tableName = baseTableName(configCtx.getBySlug(slug)._versions?.slug ?? slug);
     const tableNameRelationFields = buildTableName({ owner: tableName, child: { kind: 'rels' } });
+    // The addresses hang off the base row, whether or not the content is on a versions table.
+    const tableNamePaths = buildTableName({ owner: baseTableName(slug), child: { kind: 'paths' } });
     const tableNameLocales = buildTableName({ owner: tableName, branch: 'locales' });
 
     /** Add localized fields, each from the first locale in the fallback order that holds it. */
@@ -149,7 +151,12 @@ export const createTransformHandle = <const C extends Config>(args: {
     // at the very end.
     // One pass over the row: a child table's key is dropped, a column becomes its path, and a
     // JSON value — an object or an array — is flattened under it, nothing else is walked.
-    const childTables = new Set<string>([...blocksTables, ...treeTables, tableNameRelationFields]);
+    const childTables = new Set<string>([
+      ...blocksTables,
+      ...treeTables,
+      tableNameRelationFields,
+      tableNamePaths
+    ]);
     const base: Dic = {};
     for (const [key, value] of Object.entries(doc)) {
       if (childTables.has(key)) continue;
@@ -160,6 +167,15 @@ export const createTransformHandle = <const C extends Config>(args: {
       } else {
         base[databaseColumnToPath(key)] = value;
       }
+    }
+
+    // The page's address in the locale read: `url`, `_urlPath` and `_slug` on the document. Not
+    // `_path`, which an upload collection already names.
+    if (tableNamePaths in doc) {
+      const [address] = (doc[tableNamePaths] as Dic[] | undefined) ?? [];
+      base.url = address?.url ?? null;
+      base._urlPath = address?.path ?? null;
+      base._slug = address?.slug ?? null;
     }
 
     return { base, blocks, tree, relations };

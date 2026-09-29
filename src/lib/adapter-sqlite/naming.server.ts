@@ -12,6 +12,7 @@ import { mapSegments, toCamelCase, toSnakeCase } from '$lib/util/string.js';
  * child     pages__$relations                    hangs off an owner by `ownerId`
  *           pages__$blocks_hero                  one per block type
  *           pages__$tree_facts                   one per tree field
+ *           pages__$paths                        a page's address per locale, off the base table
  * branch    pages__$blocks_hero__$$locales       the localized half of whatever it hangs off
  * ```
  *
@@ -64,7 +65,7 @@ export const baseTableName = (slug: string): TableName =>
 export const declaredTableProperty = (slug: string): TableName =>
   slug.replace(/^\$/, '') as TableName;
 
-export type ChildKind = 'blocks' | 'tree' | 'rels';
+export type ChildKind = 'blocks' | 'tree' | 'rels' | 'paths';
 
 export type TableParts = {
   /**
@@ -74,7 +75,7 @@ export type TableParts = {
    * a whole subtree of children onto it.
    */
   owner: TableName;
-  /** A child table. `name` is the block type or the tree field; `rels` has no name. */
+  /** A child table. `name` is the block type or the tree field; `rels` and `paths` have none. */
   child?: { kind: ChildKind; name?: string };
   /** The localized half of whatever the parts above resolve to. */
   branch?: 'locales';
@@ -87,8 +88,12 @@ export type TableParts = {
 const CHILD_MARKER: Record<ChildKind, string> = {
   blocks: '__$blocks',
   tree: '__$tree',
-  rels: '__$relations'
+  rels: '__$relations',
+  paths: '__$paths'
 };
+
+/** `pages__$paths` -> true: the addresses table a read joins off the base row. */
+export const isPathsTable = (name: string) => name.endsWith(CHILD_MARKER.paths);
 
 /** `__$$` marks a branch: the half of a table holding its localized columns. */
 const BRANCH_MARKER = '__$$locales';
@@ -101,6 +106,7 @@ const BRANCH_MARKER = '__$$locales';
  * tableName({ owner: pagesShadow, branch: 'locales' })          // 'pages__shadow__$$locales'
  * tableName({ owner: pages, child: { kind: 'blocks', name: 'hero' }}) // 'pages__$blocks_hero'
  * tableName({ owner: pages, child: { kind: 'rels' } })          // 'pages__$relations'
+ * tableName({ owner: pages, child: { kind: 'paths' } })         // 'pages__$paths'
  */
 export const tableName = (parts: TableParts): TableName => {
   let name: string = parts.owner;

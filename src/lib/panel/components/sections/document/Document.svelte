@@ -31,6 +31,7 @@
   import AuthFooter from './AuthFooter.svelte';
   import AutoSaveBanner from './AutoSaveBanner.svelte';
   import CurrentlyEdited from './CurrentlyEdited.svelte';
+  import DocumentChildren from './DocumentChildren.svelte';
   import Header from './Header.svelte';
   import UploadHeader from './upload-header/UploadHeader.svelte';
 
@@ -139,6 +140,7 @@
   });
 
   /** The blocks focus mode, on the document itself: a nested create has none. */
+  // svelte-ignore state_referenced_locally
   const focus = nestedLevel === 0 ? setBlocksFocusContext(form) : null;
 
   /**
@@ -350,6 +352,11 @@
       <AuthFooter collection={config} {operation} {form} />
     {/if}
   </div>
+
+  <!-- A pre-footer: the pages under this one, outside the form's tabs. -->
+  {#if nestedLevel === 0 && operation === 'update' && config.type === 'collection' && config.nested && form.values.id}
+    <DocumentChildren {config} id={String(form.values.id)} />
+  {/if}
 
   <!-- Quiet lines at the bottom: created, updated, the id. -->
   {#if form.values.id}

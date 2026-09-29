@@ -1,6 +1,11 @@
 import type { BuiltConfig } from '$lib/core/config/types.js';
 import { authColumns } from '$lib/core/auth/tables.js';
-import { baseTableName, declaredTableProperty, type TableName } from '../naming.server.js';
+import {
+  baseTableName,
+  declaredTableProperty,
+  tableName,
+  type TableName
+} from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
 import type { Dic } from '$lib/util/types.js';
 import { generateJunctionTableDefinition } from './relations/junction.server.js';
@@ -12,6 +17,7 @@ import {
   templateExportTables,
   templateHead,
   templateImports,
+  templatePathsTable,
   templateRelations
 } from './templates.server.js';
 import write from './write.server.js';
@@ -118,6 +124,15 @@ export async function generateSchemaString(config: BuiltConfig) {
     };
 
     schema.push(prototypeSchema, junctionTable);
+
+    // A collection with `$url` keeps its pages' addresses in a table of their own, off the base
+    // table: an address belongs to the page, not to one of its versions.
+    if (prototype.type === 'collection' && prototype.$url) {
+      const pathsTable = tableName({ owner: baseName, child: { kind: 'paths' } });
+      schema.push(templatePathsTable(baseName));
+      enumTables = [...enumTables, pathsTable];
+      (relationTree[baseName] ??= []).push(pathsTable);
+    }
   }
 
   // Tables no prototype declares — better-auth's own, plus whatever a plugin added during the

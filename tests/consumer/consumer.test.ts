@@ -1,7 +1,15 @@
 import test, { expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { panelUrl, panelUrlRe, panelPath } from '../util.js';
+import {
+  API_BASE_URL,
+  openStream,
+  panelUrl,
+  panelUrlRe,
+  panelPath,
+  signIn,
+  streamReader
+} from '../util.js';
 
 // Reused from tests/basic rather than adding a new binary fixture just for this suite.
 const FIXTURE_IMAGE = readFileSync(
@@ -127,4 +135,78 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   await expect(page.locator('.rz-aria__last')).toHaveText(mediaFilename);
 
   expect(pageErrors).toEqual([]);
+});
+
+// The junction rows pointing at a deleted page go by cascade, which only happens with foreign
+// keys on: libsql opens a database with them, the Bun driver turns them on.
+test('deleting a page removes the relations pointing at it', async ({ request }) => {
+  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  const create = async (title: string, related: string[] = []) => {
+    const response = await request.post(`${API_BASE_URL}/pages`, {
+      headers,
+      data: { title, related }
+    });
+    expect(response.status()).toBe(200);
+    return (await response.json()).doc.id as string;
+  };
+  const read = async (id: string) =>
+    (await request.get(`${API_BASE_URL}/pages/${id}`, { headers }).then((r) => r.json())).doc;
+
+  const target = await create(`Target ${SUFFIX}`);
+  const source = await create(`Source ${SUFFIX}`, [target]);
+  expect((await read(source)).related).toHaveLength(1);
+
+  expect((await request.delete(`${API_BASE_URL}/pages/${target}`, { headers })).status()).toBe(200);
+  expect((await read(source)).related).toEqual([]);
+});
+
+// A new slug rewrites the paths under the page by cascade: foreign keys again.
+test('renaming a page carries its child url', async ({ request }) => {
+  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  const create = async (data: Record<string, unknown>) => {
+    const response = await request.post(`${API_BASE_URL}/pages`, { headers, data });
+    expect(response.status()).toBe(200);
+    return (await response.json()).doc;
+  };
+  const parent = await create({ title: `Parent ${SUFFIX}` });
+  const child = await create({ title: `Child ${SUFFIX}`, _parent: parent.id });
+  expect(child._urlPath).toBe(`${parent._slug}/${child._slug}`);
+
+  const renamed = await request.patch(`${API_BASE_URL}/pages/${parent.id}/slug`, {
+    headers,
+    data: { slug: `renamed-${SUFFIX}` }
+  });
+  expect(renamed.status()).toBe(200);
+
+  const { doc } = await request
+    .get(`${API_BASE_URL}/pages/${child.id}`, { headers })
+    .then((response) => response.json());
+  expect(doc._urlPath).toBe(`renamed-${SUFFIX}/${child._slug}`);
+  expect(new URL(doc.url).pathname).toBe(`/renamed-${SUFFIX}/${child._slug}`);
+});
+
+// A stream stays open while nothing happens, on either runtime, and still carries the next event.
+// 12 s is past the 10 s a server's idle timeout may default to, and short of the keep-alive.
+test('a quiet SSE stream still carries the lock event', async ({ request }) => {
+  test.setTimeout(45_000);
+  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  const created = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { title: `Stream ${SUFFIX}` }
+  });
+  expect(created.status()).toBe(200);
+  const { doc } = await created.json();
+
+  const { response, close } = await openStream(`rime:pages:${doc.id}`, headers.cookie);
+  expect(response.status).toBe(200);
+  const stream = streamReader(response);
+  await stream.until(': open');
+
+  await new Promise((resolve) => setTimeout(resolve, 12_000));
+
+  const lock = await request.post(`${API_BASE_URL}/pages/${doc.id}/lock`, { headers });
+  expect(lock.status()).toBe(200);
+  const received = await stream.until('"event":"rime:lock"');
+  expect(received).toContain('data: {"event":"rime:lock","payload":{}}');
+  close();
 });

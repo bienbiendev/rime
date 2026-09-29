@@ -15,6 +15,7 @@
   import SpinLoader from '../../ui/spin-loader/SpinLoader.svelte';
   import ButtonSave from './ButtonSave.svelte';
   import ButtonStatus from './ButtonStatus.svelte';
+  import DocumentUrl from './DocumentUrl.svelte';
   import Settings from './Settings.svelte';
 
   // Props
@@ -94,11 +95,16 @@
   <span class="rz-document-meta">{meta}</span>
 {/snippet}
 
+{#snippet urlLine()}
+  <DocumentUrl {form} {config} />
+{/snippet}
+
 <!-- The bar: the breadcrumb, then the actions. Under it, the heading and the meta line. -->
 <PageHeader
   topLeft={onCloseIsDefined ? topLeft : undefined}
   {title}
   meta={meta ? metaLine : undefined}
+  aside={form.values.url ? urlLine : undefined}
 >
   {#snippet topRight()}
     <!-- Ghost buttons, then the primary one: open, language, status, menu, save. -->
