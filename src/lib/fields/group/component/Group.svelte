@@ -95,11 +95,11 @@
     border-radius: var(--rz-radius-xl);
   }
 
-  /* Inside a group, a block, a tree item or a stage card: a hairline, no second fill. */
+  /* Inside a group, a block, a tree item or the inspector: a hairline, no second fill. */
   :global(.rz-group-field__content) .rz-group-field__wrapper,
   :global(.rz-block__fields) .rz-group-field__wrapper,
   :global(.rz-tree-item__fields) .rz-group-field__wrapper,
-  :global(.rz-stage__fields) .rz-group-field__wrapper {
+  :global(.rz-inspector__fields) .rz-group-field__wrapper {
     background-color: transparent;
     box-shadow: 0 0 0 1px var(--rz-border);
   }

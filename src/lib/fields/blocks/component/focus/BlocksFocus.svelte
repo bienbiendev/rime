@@ -19,8 +19,8 @@
   import { getBlocksFocusContext, type SidebarTab } from './focus.svelte.js';
   import Layers from './Layers.svelte';
   import Palette from './Palette.svelte';
+  import Inspector from './Inspector.svelte';
   import Renders from './Renders.svelte';
-  import Stage from './Stage.svelte';
   import StagePlaceholder from './StagePlaceholder.svelte';
 
   const { form }: { form: DocumentFormContext } = $props();
@@ -30,14 +30,26 @@
   /** The overlay starts where the navigation ends, folded or not. */
   const nav = getNavContext();
 
-  const builder = $derived(focus.path ? form.blocks.builder(focus.path) : undefined);
-  /** The types of the list the next insert goes to: the selected block's, else the open one. */
+  /** The list on screen: the open one, or the one the narrowed block sits in. */
+  const stageList = $derived(focus.narrowedRow?.list ?? focus.path ?? '');
+  const builder = $derived(stageList ? form.blocks.builder(stageList) : undefined);
+  /** The types of the list the next insert goes to. */
   const addable = $derived.by(() => {
-    const list = focus.current?.list ?? focus.path;
+    const list = focus.insertList();
     return list ? (form.blocks.builder(list)?.get.blocks ?? []) : [];
   });
   const crumbs = $derived(focus.breadcrumb());
-  const count = $derived(focus.path ? form.blocks.list(focus.path).length : 0);
+  /** The open list's blocks, or those the narrowed block holds. */
+  const count = $derived(
+    focus.narrowedRow
+      ? focus.narrowedRow.children.reduce(
+          (sum, child) => sum + form.blocks.list(child.list).length,
+          0
+        )
+      : focus.path
+        ? form.blocks.list(focus.path).length
+        : 0
+  );
   const countLabel = $derived(
     count === 1 ? t__('fields.blocks_count', '1') : t__('fields.blocks_count|m|p', String(count))
   );
@@ -57,24 +69,21 @@
     return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
   }
 
-  /** Fields to show: a render with nothing but fields of its own, beside the stack of renders. */
-  const inspectable = $derived(focus.hasRenders);
-
   // The selection moved. Nothing left to inspect: the types to add. Picked from the layers in the
   // sheet: put it away, to see the block.
   $effect(() => {
     const picked = !!focus.current;
     untrack(() => {
-      if (focus.tab === 'inspector' && (!picked || !inspectable)) focus.tab = 'add';
+      if (focus.tab === 'inspector' && !picked) focus.tab = 'add';
       if (focus.tab === 'layers') panelOpen = false;
     });
   });
 
   // Arriving on an empty list: the types to add.
   $effect(() => {
-    const list = focus.path;
+    const opened = focus.path;
     untrack(() => {
-      if (list && !focus.locked && !form.blocks.list(list).length) focus.tab = 'add';
+      if (opened && !focus.locked && !count) focus.tab = 'add';
     });
   });
 
@@ -82,7 +91,7 @@
   $effect(() => {
     if (!focus.inspected) return;
     untrack(() => {
-      if (narrow && inspectable) panelOpen = true;
+      if (narrow) panelOpen = true;
     });
   });
 
@@ -109,10 +118,10 @@
     else focus.removeSelection();
   }
 
-  /** Escape goes back one step: the selection, then focus mode. The sheet closes itself. */
+  /** Escape goes back one step: the selection, then one level up. The sheet closes itself. */
   function back() {
     if (!focus.rootSelected) focus.selectRoot();
-    else focus.close();
+    else focus.up();
   }
 
   async function paste() {
@@ -130,8 +139,7 @@
    */
   useCommands(() => {
     if (!focus.path) return [];
-    const list = focus.current?.list ?? focus.path;
-    const types = form.blocks.builder(list)?.get.blocks ?? [];
+    const types = addable;
     const row = focus.currentRow;
     const editing = !focus.locked;
     const free = () => !dialogOpen();
@@ -145,7 +153,7 @@
             run: () => focus.insertType(builder.name)
           }))
         : []),
-      ...(editing && row
+      ...(editing && row && !focus.isNarrowedBlock(row.path)
         ? [
             {
               id: 'blocks.duplicate',
@@ -302,7 +310,6 @@
 <div
   class="rz-blocks-focus"
   data-focus={focus.path}
-  data-layout={focus.hasRenders ? 'renders' : 'fields'}
   style:left={nav?.width ?? '0'}
   bind:clientWidth={width}
 >
@@ -370,11 +377,9 @@
         <Tabs.Trigger value="layers" data-label={t__('fields.layers')}>
           {t__('fields.layers')}
         </Tabs.Trigger>
-        {#if inspectable}
-          <Tabs.Trigger value="inspector" data-label={t__('fields.inspector')}>
-            {t__('fields.inspector')}
-          </Tabs.Trigger>
-        {/if}
+        <Tabs.Trigger value="inspector" data-label={t__('fields.inspector')}>
+          {t__('fields.inspector')}
+        </Tabs.Trigger>
         {#if !focus.locked}
           <Tabs.Trigger value="add" data-label={t__('fields.blocks')}>
             {t__('fields.blocks')}
@@ -386,15 +391,13 @@
           <Layers {form} heading={false} />
         </div>
       </Tabs.Content>
-      {#if inspectable}
-        <Tabs.Content value="inspector" class="rz-blocks-focus__panel-content">
-          {#if focus.current}
-            <Stage {form} onRemove={requestRemove} />
-          {:else}
-            <p class="rz-blocks-focus__panel-hint">{t__('fields.pick_a_block')}</p>
-          {/if}
-        </Tabs.Content>
-      {/if}
+      <Tabs.Content value="inspector" class="rz-blocks-focus__panel-content">
+        {#if focus.current}
+          <Inspector {form} />
+        {:else}
+          <p class="rz-blocks-focus__panel-hint">{t__('fields.pick_a_block')}</p>
+        {/if}
+      </Tabs.Content>
       {#if !focus.locked}
         <Tabs.Content value="add" class="rz-blocks-focus__panel-content">
           <div class="rz-blocks-focus__panel-pad"><Palette {form} heading={false} /></div>
@@ -404,19 +407,18 @@
   {/snippet}
 
   <div class="rz-blocks-focus__body">
-    {#if focus.hasRenders}
-      <!-- A click beside the blocks selects the root; the blocks stop their own clicks. -->
-      <section class="rz-blocks-focus__renders" role="presentation" onclick={focus.selectRoot}>
-        <Renders {form} list={focus.path ?? ''} onRemove={requestRemove} />
-        {#if count && !focus.locked}
-          <StagePlaceholder />
-        {/if}
-      </section>
-    {:else}
-      <section class="rz-blocks-focus__stage">
-        <Stage {form} onRemove={requestRemove} />
-      </section>
-    {/if}
+    <!--
+      The stage: the open list, or the narrowed block alone with what it holds. A click beside the
+      blocks selects the root; the blocks stop their own clicks.
+    -->
+    <section class="rz-blocks-focus__renders" role="presentation" onclick={focus.selectRoot}>
+      {#key focus.path}
+        <Renders {form} list={stageList} only={focus.narrowedRow?.index} onRemove={requestRemove} />
+      {/key}
+      {#if count && !focus.locked}
+        <StagePlaceholder />
+      {/if}
+    </section>
 
     {#if narrow}
       <Sheet.Root bind:open={panelOpen}>
@@ -546,12 +548,11 @@
    * The stage, a canvas with the blocks centred on it as wide as the document's column at most,
    * and the panel on the right.
    *
-   *   --rz-focus-side: the panel, growing with the room; wider beside renders, where it holds a
-   *                    block's fields
+   *   --rz-focus-side: the panel, growing with the room, where a block's fields want some
    *   --rz-document-width: the blocks' column, 60rem
    */
   .rz-blocks-focus__body {
-    --rz-focus-side: clamp(20rem, 22cqi, 26rem);
+    --rz-focus-side: clamp(26rem, 32cqi, 40rem);
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--rz-focus-side);
@@ -559,8 +560,7 @@
   }
 
   .rz-blocks-focus__renders > :global(.rz-renders),
-  .rz-blocks-focus__renders > :global(.rz-stage-placeholder),
-  .rz-blocks-focus__stage > :global(.rz-stage) {
+  .rz-blocks-focus__renders > :global(.rz-stage-placeholder) {
     max-width: var(--rz-document-width, 60rem);
     margin-inline: auto;
   }
@@ -571,13 +571,7 @@
     margin-top: var(--rz-size-3);
   }
 
-  /* With renders the panel holds a block's fields, which want room. */
-  .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__body {
-    --rz-focus-side: clamp(24rem, 30cqi, 36rem);
-  }
-
   .rz-blocks-focus__panel,
-  .rz-blocks-focus__stage,
   .rz-blocks-focus__renders {
     min-width: 0;
     min-height: 0;
@@ -589,7 +583,6 @@
     border-left: 1px solid var(--rz-border);
   }
 
-  .rz-blocks-focus__stage,
   .rz-blocks-focus__renders {
     background-color: var(--rz-bg-well);
   }
@@ -600,10 +593,6 @@
    */
   .rz-blocks-focus__renders {
     padding: var(--rz-size-14) var(--rz-size-8) var(--rz-size-32);
-  }
-
-  .rz-blocks-focus__stage {
-    padding-bottom: var(--rz-size-16);
   }
 
   /* The tabs on the panel's top edge, the content scrolling under them; in a column or a sheet. */
@@ -656,8 +645,7 @@
 
   /* Narrow: the stage alone, the panel in a sheet from the right, behind the header's button. */
   @container rz-focus (max-width: 52rem) {
-    .rz-blocks-focus__body,
-    .rz-blocks-focus[data-layout='renders'] .rz-blocks-focus__body {
+    .rz-blocks-focus__body {
       grid-template-columns: minmax(0, 1fr);
     }
   }

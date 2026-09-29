@@ -14,8 +14,8 @@
   const { form, heading = true }: Props = $props();
 
   const focus = getBlocksFocusContext()!;
-  /** The block types of the list the next insert goes to: the current block's, else the open one. */
-  const list = $derived(focus.current?.list ?? focus.path ?? '');
+  /** The block types of the list the next insert goes to. */
+  const list = $derived(focus.insertList() ?? '');
   const types = $derived(list ? (form.blocks.builder(list)?.get.blocks ?? []) : []);
 
   /** Past this many types, a search sits above them. */

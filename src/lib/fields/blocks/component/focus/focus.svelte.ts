@@ -16,12 +16,19 @@ import { SvelteSet } from 'svelte/reactivity';
 
 const KEY = 'rime.blocks-focus';
 
-/** The query parameter that names the list focus is open on: `?focus=layout.sections`. */
+/**
+ * The query parameter that names what focus is open on: a list, `?focus=layout.sections`, or one
+ * block and what it holds, `?focus=layout.sections.1`.
+ */
 export const FOCUS_PARAM = 'focus';
 
-type PageState = { blocksFocus?: string };
+/** What focus is open on, and how many of its own entries the history holds up to this one. */
+type PageState = { blocksFocus?: string; blocksFocusDepth?: number };
 
 export type SidebarTab = 'layers' | 'inspector' | 'add';
+
+/** `sections.1` ends on a block, `sections` does not. */
+const endsOnBlock = (target: string) => /\.\d+$/.test(target);
 
 /** One step of the way down to the open list: a blocks field, or the block an index names. */
 export type Crumb = { label: string; list: string; block?: string };
@@ -45,34 +52,44 @@ export type LayerRow = {
  * rows are folded. The document form is the only state it writes to; a page reload with
  * `?focus=` in the address reopens it.
  *
- * The selection drives the stage: a block, or nothing, which is the root node of the layers and
- * shows the whole list.
+ * The stage shows the open list, or the one block the path ends on and the lists it holds. The
+ * selection is a block, or nothing, which is the root node of the layers.
  *
- * A focus opened from the field rides in `page.state`, so Escape, the close button and the back
- * button all do the same thing. One opened by the address has no history entry of its own: the
- * router is not ready for one while the page mounts, and closing it rewrites the address instead.
+ * A focus opened from the field rides in `page.state`, one history entry per `open`, so Escape
+ * and the back button go up the same levels. One opened by the address has no history entry of
+ * its own: the router is not ready for one while the page mounts, and going up rewrites the
+ * address instead.
  */
 export function setBlocksFocusContext(form: DocumentFormContext) {
-  let fromUrl = $state<string | null>(page.url.searchParams.get(FOCUS_PARAM));
+  const initial = page.url.searchParams.get(FOCUS_PARAM);
+  let fromUrl = $state<string | null>(initial);
   const path = $derived(((page.state as PageState).blocksFocus ?? fromUrl) || null);
-  let selection = $state<string[]>([]);
+  /** Narrowed by the address, the block is selected and its fields show. */
+  const narrowedFromUrl = !!initial && endsOnBlock(initial);
+  let selection = $state<string[]>(narrowedFromUrl ? [initial] : []);
   /** The panel's tab: the tree of blocks, the selected block's fields, the types to add. */
-  let tab = $state<SidebarTab>('layers');
+  let tab = $state<SidebarTab>(narrowedFromUrl ? 'inspector' : 'layers');
   /** Counts the asks to show a block's fields, so a closed panel knows to open. */
   let inspected = $state(0);
   /** The picker of types to add is open. */
   let picking = $state(false);
   /** The folded rows, by block id: a fold stays on its block when the block moves. */
   const collapsed = new SvelteSet<string>();
-  let openedHere = false;
+  /** The entries focus pushed, up to the one on screen. */
+  const depth = $derived((page.state as PageState).blocksFocusDepth ?? 0);
 
   $effect(() => {
     if (path) return;
     selection = [];
     collapsed.clear();
+    // Closed back onto the entry the address opened: the address drops its focus too.
+    if (page.url.searchParams.has(FOCUS_PARAM)) replaceState(urlWith(null), {} as App.PageState);
   });
 
   const locked = $derived(form.isDisabled || form.readOnly);
+
+  /** The block the path ends on, the one the stage is narrowed to. */
+  const narrowed = $derived(path && endsOnBlock(path) ? parseBlockPath(path) : null);
 
   const urlWith = (list: string | null) => {
     const url = new URL(page.url);
@@ -81,20 +98,40 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     return url;
   };
 
-  function open(list: string, selected?: string) {
-    openedHere = true;
-    fromUrl = null;
-    pushState(urlWith(list), { blocksFocus: list } as App.PageState);
-    selection = selected ? [selected] : [];
+  /**
+   * Opens focus on a list, `sections`, with `selected` selected. Or narrows it to a block,
+   * `sections.1`: that block selected, its fields in the panel.
+   */
+  function open(target: string, selected?: string) {
+    if (endsOnBlock(target)) {
+      selection = [target];
+      tab = 'inspector';
+    } else {
+      selection = selected ? [selected] : [];
+    }
+    const state: PageState = { blocksFocus: target, blocksFocusDepth: depth + 1 };
+    pushState(urlWith(target), state as App.PageState);
   }
 
+  /** Leaves focus mode, back past every entry it pushed, the one the address opened included. */
   function close() {
-    if (openedHere) {
-      openedHere = false;
-      history.back();
+    fromUrl = null;
+    if (depth) {
+      history.go(-depth);
     } else {
-      fromUrl = null;
       replaceState(urlWith(null), {} as App.PageState);
+    }
+  }
+
+  /** One level up: the entry before, the list of the narrowed block, or out of focus mode. */
+  function up() {
+    if (depth) {
+      history.back();
+    } else if (narrowed) {
+      fromUrl = narrowed.list;
+      replaceState(urlWith(narrowed.list), { blocksFocus: narrowed.list } as App.PageState);
+    } else {
+      close();
     }
   }
 
@@ -141,33 +178,34 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     });
   }
 
-  /** Every row, folded ones included, in layers order. */
-  function allRows(): LayerRow[] {
+  /** The rows the stage starts from: the open list's, or the one block the path ends on. */
+  function rootRows(): LayerRow[] {
     if (!path) return [];
-    const out: LayerRow[] = [];
-    const walk = (list: string, depth: number) => {
-      for (const row of rowsOf(list, depth)) {
-        out.push(row);
-        for (const child of row.children) walk(child.list, depth + 1);
-      }
-    };
-    walk(path, 0);
+    if (!narrowed) return rowsOf(path);
+    return rowsOf(narrowed.list).filter((row) => row.index === narrowed.index);
+  }
+
+  /** The rows from the root down, each followed by the rows of its lists. */
+  function walk(rows: LayerRow[], skipFolded: boolean, out: LayerRow[] = []): LayerRow[] {
+    for (const row of rows) {
+      out.push(row);
+      if (skipFolded && collapsed.has(row.block.id)) continue;
+      for (const child of row.children) walk(rowsOf(child.list, row.depth + 1), skipFolded, out);
+    }
     return out;
   }
 
+  /** Every row, folded ones included, in layers order. */
+  const allRows = () => walk(rootRows(), false);
+
   /** The rows on screen: what the arrow keys walk. */
-  function visibleRows(): LayerRow[] {
-    if (!path) return [];
-    const out: LayerRow[] = [];
-    const walk = (list: string, depth: number) => {
-      for (const row of rowsOf(list, depth)) {
-        out.push(row);
-        if (collapsed.has(row.block.id)) continue;
-        for (const child of row.children) walk(child.list, depth + 1);
-      }
-    };
-    walk(path, 0);
-    return out;
+  const visibleRows = () => walk(rootRows(), true);
+
+  /** Where a block goes with nothing selected: the open list, or the narrowed block's first list. */
+  function homeList(): string | null {
+    if (!path) return null;
+    if (!narrowed) return path;
+    return rootRows()[0]?.children[0]?.list ?? null;
   }
 
   /**
@@ -176,6 +214,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
    */
   function rootLabel(): string {
     if (!path) return '';
+    if (narrowed) return rootRows()[0]?.title ?? '';
     const builder = builderOf(path);
     const fieldLabel = builder?.get.label || capitalize(builder?.name || '');
     const crumbs = breadcrumb();
@@ -217,14 +256,14 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
 
   /** The lists a block of `type` may go to, the one it is in and its own subtree left out. */
   function moveTargets(): { list: string; label: string }[] {
-    const current = currentAt();
+    const current = movableAt();
     if (!path || !current) return [];
     const currentPath = blockPath(current);
     const type = form.blocks.list(current.list)[current.index]?.type;
     if (!type) return [];
     const rootBuilder = builderOf(path);
     const targets: { list: string; label: string }[] = [];
-    if (form.blocks.accepts(path, type) && current.list !== path) {
+    if (!narrowed && form.blocks.accepts(path, type) && current.list !== path) {
       targets.push({
         list: path,
         label: rootBuilder?.get.label || capitalize(rootBuilder?.name || '')
@@ -272,12 +311,25 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
 
   /* ---------------------------------------------------------- operations */
 
-  /** Where the palette inserts: after the current block, else at the end of the open list. */
-  function insertionPoint(): BlockAt | null {
+  /** The narrowed block itself: it stays where it is, and what is added goes inside it. */
+  const isNarrowedBlock = (rowPath: string) => !!narrowed && rowPath === path;
+
+  /** The block the operations act on: the selected one, unless it is the narrowed block. */
+  function movableAt(): BlockAt | null {
     const current = currentAt();
+    return current && !isNarrowedBlock(blockPath(current)) ? current : null;
+  }
+
+  /** The list the next insert goes to: the selected block's, else the home list. */
+  const insertList = () => movableAt()?.list ?? homeList();
+
+  /** Where the palette inserts: after the selected block, else at the end of the home list. */
+  function insertionPoint(): BlockAt | null {
+    const current = movableAt();
     if (current) return { list: current.list, index: current.index + 1 };
-    if (!path) return null;
-    return { list: path, index: form.blocks.list(path).length };
+    const list = homeList();
+    if (!list) return null;
+    return { list, index: form.blocks.list(list).length };
   }
 
   function insertType(type: string, at = insertionPoint()): string | null {
@@ -291,7 +343,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   }
 
   function duplicateSelection() {
-    const current = currentAt();
+    const current = movableAt();
     if (locked || !current) return;
     form.blocks.duplicate(blockPath(current));
     select(blockPath({ list: current.list, index: current.index + 1 }));
@@ -301,7 +353,10 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   function removeSelection() {
     if (locked || !selection.length) return;
     const order = visibleRows().map((row) => row.path);
-    const targets = [...selection].sort((a, b) => order.indexOf(b) - order.indexOf(a));
+    const targets = selection
+      .filter((rowPath) => !isNarrowedBlock(rowPath))
+      .sort((a, b) => order.indexOf(b) - order.indexOf(a));
+    if (!targets.length) return;
     for (const target of targets) form.blocks.remove(target);
     const first = parseBlockPath(targets[targets.length - 1]);
     const remaining = form.blocks.list(first.list);
@@ -313,7 +368,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   }
 
   function moveSelection(delta: number) {
-    const current = currentAt();
+    const current = movableAt();
     if (locked || !current) return;
     const index = current.index + delta;
     if (index < 0 || index >= form.blocks.list(current.list).length) return;
@@ -322,7 +377,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   }
 
   function moveSelectionInto(list: string) {
-    const current = currentAt();
+    const current = movableAt();
     if (locked || !current) return;
     const index = form.blocks.list(list).length;
     form.blocks.move(blockPath(current), { list, index });
@@ -408,9 +463,9 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     pick() {
       if (!locked) picking = true;
     },
-    /** The open list's block set has at least one render: the stage is the stack of renders. */
-    get hasRenders() {
-      return !!path && !!builderOf(path)?.get.blocks.some((block) => block.get.render);
+    /** The block the stage is narrowed to, when the path ends on one. */
+    get narrowedRow() {
+      return narrowed ? (rootRows()[0] ?? null) : null;
     },
     /** Nothing selected: the root node, and the whole list on the stage. */
     get rootSelected() {
@@ -420,10 +475,15 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     selectRoot,
     breadcrumb,
     isSelected: (rowPath: string) => selection.includes(rowPath),
+    isNarrowedBlock,
+    insertList,
     isCollapsed,
     open,
     close,
+    up,
     rowsOf,
+    rootRows,
+    homeList,
     allRows,
     visibleRows,
     moveTargets,
