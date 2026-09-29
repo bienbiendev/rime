@@ -53,6 +53,33 @@ export const resolvedReferenceJoins = (args: {
   return withParam;
 };
 
+/** What a read of a page's address asks for: `url`, `_urlPath` and `_slug`, or all of the page. */
+const ADDRESS_PATHS = ['url', '_urlPath', '_slug'];
+
+/**
+ * The page's row in its paths table, in the locale read, when its collection has `$url`. A page
+ * has a row in every locale, so there is no fallback to resolve.
+ *
+ * ```ts
+ * pathsJoin({ base: 'pages', tables, locale: 'en' })
+ * // { 'pages__$paths': { where: { locale: 'en' }, columns: { slug: true, path: true, url: true } } }
+ * ```
+ */
+export const pathsJoin = (args: {
+  base: TableName;
+  tables: Dic;
+  locale?: string;
+  select?: string[];
+}): Dic => {
+  const { base, tables, locale, select } = args;
+  const paths = tableName({ owner: base, child: { kind: 'paths' } });
+  if (!(paths in tables)) return {};
+  if (select?.length && !select.some((path) => ADDRESS_PATHS.includes(path))) return {};
+  return {
+    [paths]: { where: { locale: locale ?? '' }, columns: { slug: true, path: true, url: true } }
+  };
+};
+
 export const buildWithParam = (args: {
   table: TableName;
   select?: string[];
@@ -68,20 +95,29 @@ export const buildWithParam = (args: {
   // A child row — a block, a tree node — belongs to one locale. Its locales branch, and the
   // document's, are read for every locale in the order and merged in `transform`.
   const branchWhere = branchFilter(locale, fallback);
+  // On the base table only: a versioned read joins it above the content row.
+  const paths =
+    table === baseTableName(documentConfig.slug)
+      ? pathsJoin({ base: table, tables, locale, select })
+      : {};
   if (!select.length) {
     return {
       ...buildFullWithParam({ table, locale, fallback, tables }),
-      ...resolvedReferenceJoins({ table, tables, config: documentConfig, resolve })
+      ...resolvedReferenceJoins({ table, tables, config: documentConfig, resolve }),
+      ...paths
     };
   }
 
-  const withParam: Dic = resolvedReferenceJoins({
-    table,
-    tables,
-    config: documentConfig,
-    select,
-    resolve
-  });
+  const withParam: Dic = {
+    ...resolvedReferenceJoins({
+      table,
+      tables,
+      config: documentConfig,
+      select,
+      resolve
+    }),
+    ...paths
+  };
 
   const directRelationPaths: string[] = [];
   /** The selected paths stored as child tables, by the tables' kind. */

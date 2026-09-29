@@ -42,8 +42,9 @@ export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     setDocumentType,
     when(isVersioned, versions.exposeVersionId),
     title.setDocumentTitle,
-    // After the title, for the reason the collection's list gives.
-    when(hasUrl, url.populateURL),
+    // After the title: `$url` is the author's function, and may read it.
+    when(hasUrl, url.setAreaUrl),
+    when(hasUrl, url.setLiveUrl),
     metas.deletePanelLockMetas
   ],
 

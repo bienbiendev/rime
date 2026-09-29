@@ -9,6 +9,7 @@ import { connect, type SqliteDriver } from './connect.server.js';
 import generateSchema from './generate-schema/index.server.js';
 import type { RelationFieldsMap } from './generate-schema/root.server.js';
 import { baseTableName } from './naming.server.js';
+import createPathsHandle from './paths.server.js';
 import { createPrototypeRegistry } from './registry.server.js';
 import createRelationsHandle from './relations.server.js';
 import { createTableHandles } from './table.server.js';
@@ -73,6 +74,7 @@ const createAdapter = async <const C extends Config>(args: {
   const blocks = createBlocksHandle({ db, tables });
   const tree = createTreeHandle({ db, tables });
   const relations = createRelationsHandle({ db, tables });
+  const paths = createPathsHandle({ db, tables });
   const auth = createAuthHandle({
     db,
     schema: schema.default
@@ -90,6 +92,7 @@ const createAdapter = async <const C extends Config>(args: {
     blocks,
     tree,
     relations,
+    paths,
     transform,
     auth,
     db,

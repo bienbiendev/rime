@@ -1,10 +1,7 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
 import { augmentMetas } from '$rime/modules:core/prototype/shared/metas';
 import { augmentTitle } from '$lib/core/prototype/shared/title/augment.js';
-import { augmentUrl } from '$lib/core/prototype/shared/url/augment.js';
-import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
 import { augmentVersions } from '$lib/core/prototype/shared/versions/augment.js';
-import { when } from '../when.js';
 import { definePrototype } from '../define.js';
 import { augmentAreaLabel } from './augment-label.js';
 import type { AreaWithoutSlug } from './types.js';
@@ -31,13 +28,7 @@ export const area = definePrototype({
    * in — it simply does not list them. That is what the two lists say that a shared
    * implementation with a flag could not.
    */
-  augments: () => [
-    augmentAreaLabel,
-    augmentVersions,
-    when(hasUrl, augmentUrl),
-    augmentTitle,
-    augmentMetas
-  ]
+  augments: () => [augmentAreaLabel, augmentVersions, augmentTitle, augmentMetas]
 });
 
 /**

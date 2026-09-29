@@ -28,12 +28,9 @@ type PMConfig = Record<
 const DRIZZLE = '1.0.0-rc.4';
 
 const deps = [`drizzle-orm@${DRIZZLE}`, '@libsql/client', '@lucide/svelte', 'sharp'];
-// The Bun pack builds with svelte-adapter-bun instead
-export const SVELTEKIT_ADAPTER = { node: '@sveltejs/adapter-node', bun: 'svelte-adapter-bun' };
-const devDeps = (bun: boolean) => [
-  SVELTEKIT_ADAPTER[bun ? 'bun' : 'node'],
-  `drizzle-kit@${DRIZZLE}`
-];
+// Both packs build with adapter-node: the Bun pack runs the same server on Bun
+export const SVELTEKIT_ADAPTER = '@sveltejs/adapter-node';
+const devDeps = [SVELTEKIT_ADAPTER, `drizzle-kit@${DRIZZLE}`];
 
 const packageManagerConfigs: PMConfig = {
   yarn: {
@@ -83,7 +80,7 @@ export function getInvokingPackageManager(): PackageManagerName {
   return 'npm';
 }
 
-export function installDependencies({ bun = false }: { bun?: boolean } = {}) {
+export function installDependencies() {
   const pm = getInvokingPackageManager();
 
   if (pm === 'deno' || pm === 'yarn') {
@@ -96,7 +93,7 @@ export function installDependencies({ bun = false }: { bun?: boolean } = {}) {
   config.preInstall?.();
 
   // Main installation
-  const command = config.command(devDeps(bun));
+  const command = config.command(devDeps);
   logger.info('exec : ' + command);
   execSync(command);
 

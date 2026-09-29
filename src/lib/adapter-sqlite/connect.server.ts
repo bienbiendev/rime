@@ -32,7 +32,11 @@ export async function connect(args: {
   // `relations` comes untyped from the generated schema module; the casts restore `Relations`.
   if (driver === 'bun') {
     const { drizzle } = await import('drizzle-orm/bun-sqlite');
-    return drizzle(dbPath, { relations }) as unknown as SqliteDatabase;
+    const db = drizzle(dbPath, { relations });
+    // bun:sqlite opens a database with foreign keys off, libsql with them on. Every cascade and
+    // set-null of the schema depends on them.
+    db.$client.run('PRAGMA foreign_keys = ON');
+    return db as unknown as SqliteDatabase;
   }
 
   const { drizzle } = await import('drizzle-orm/libsql');

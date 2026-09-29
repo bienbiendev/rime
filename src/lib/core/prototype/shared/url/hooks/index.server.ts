@@ -6,4 +6,8 @@
  * It exists because a prototype's `hooks.server.ts` writes the run order and would otherwise carry
  * one import line per hook.
  */
-export { populateURL } from './populate-url.server.js';
+export { createPaths } from './create-paths.server.js';
+export { detachPaths } from './detach-paths.server.js';
+export { setAreaUrl } from './set-area-url.server.js';
+export { setLiveUrl } from './set-live-url.server.js';
+export { syncPaths } from './sync-paths.server.js';

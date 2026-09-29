@@ -120,6 +120,24 @@ export const buildWhereParam = ({
       value
     } = getConditionMembers(conditionObject);
 
+    // A collection with `$url` finds its pages by url or by path through its paths table, in the
+    // locale read. A versions table is matched through its `ownerId`, like any base-row filter.
+    const pathsTable = getTable(
+      tableName({ owner: baseTableName(base ?? slug), child: { kind: 'paths' } })
+    );
+    if (pathsTable && (column === 'url' || column === '_urlPath')) {
+      const owners = db
+        .select({ id: pathsTable.ownerId })
+        .from(pathsTable)
+        .where(
+          and(
+            eq(pathsTable.locale, locale ?? ''),
+            fn(column === 'url' ? pathsTable.url : pathsTable.path, value)
+          )
+        );
+      return inArray(isShadow ? table.ownerId : table.id, owners);
+    }
+
     // Handle regular fields
     if (unlocalizedColumns.includes(sqlColumn)) {
       return fn(table[sqlColumn], value);

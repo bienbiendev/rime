@@ -1,9 +1,16 @@
 import { Hooks } from '$rime/config';
 
-export const buildPagesUrl = (doc: { attributes: { isHome?: boolean; slug: string } }) =>
+// The home page at the root; the others at their path, without the home page's `home` segment.
+export const buildPagesUrl = ({
+  path,
+  doc
+}: {
+  path: string[];
+  doc: { attributes: { isHome?: boolean } };
+}) =>
   doc.attributes.isHome
     ? `${process.env.PUBLIC_RIME_URL}/`
-    : `${process.env.PUBLIC_RIME_URL}/[...parent.attributes.slug]/${doc.attributes.slug}`;
+    : `${process.env.PUBLIC_RIME_URL}/${path.filter((segment) => segment !== 'home').join('/')}`;
 
 const clearCacheHook = Hooks.afterUpsert<'pages'>(async (args) => {
   args.event.locals.rime.cache.clear();

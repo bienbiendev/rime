@@ -156,6 +156,28 @@ type PrototypeConfig<S extends string = string> = {
   live?: boolean;
 };
 
+/**
+ * What `$url` is given to format a document's url.
+ *
+ * ```ts
+ * $url: ({ path, locale, doc }) => `/${locale}/${path.join('/')}`
+ * // path ['services', 'web'], slug 'web', locale 'en' -> '/en/services/web'
+ * ```
+ *
+ * A pure, synchronous function of these: the url is stored when a page is saved or moved, and
+ * found by, so it has to come from nothing else. A relative url is made absolute against
+ * `PUBLIC_RIME_URL`.
+ */
+export type UrlArgs<Doc> = {
+  /** The slugs from the top page down to this one; empty for an area. */
+  path: string[];
+  /** This page's own slug; empty for an area. */
+  slug: string;
+  /** The locale the url is for; empty when the config has no localization. */
+  locale: string;
+  doc: Doc;
+};
+
 export type Collection<S> = {
   slug: S;
   /** The collection label */
@@ -164,8 +186,13 @@ export type Collection<S> = {
   auth?: boolean | CollectionAuthConfig;
   /** Operation hooks */
   $hooks?: CollectionHooks<S extends keyof RegisterCollection ? S : any>;
-  /** A function to generate the document URL */
-  $url?: (doc: S extends keyof RegisterCollection ? RegisterCollection[S] : any) => string;
+  /**
+   * Formats a document's url from its address. With it, each page gets a built-in slug, an address
+   * per locale, and `url`, `_urlPath`, `_slug` on its documents. See `UrlArgs`.
+   */
+  $url?: (
+    args: UrlArgs<S extends keyof RegisterCollection ? RegisterCollection[S] : any>
+  ) => string;
   /** Whether a document can have children/parent */
   nested?: boolean;
   /** Whether the collection support file upload */
@@ -176,8 +203,8 @@ export type Collection<S> = {
 
 export type Area<S> = PrototypeConfig & {
   slug: S;
-  /** A function to generate the document URL */
-  $url?: (doc: S extends keyof RegisterArea ? RegisterArea[S] : any) => string;
+  /** Formats the area's url, on read: `path` and `slug` are empty. See `UrlArgs`. */
+  $url?: (args: UrlArgs<S extends keyof RegisterArea ? RegisterArea[S] : any>) => string;
   $hooks?: AreaHooks<S extends keyof RegisterArea ? S : any>;
   /** The area label */
   label?: string;

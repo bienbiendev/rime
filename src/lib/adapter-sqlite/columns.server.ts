@@ -6,7 +6,7 @@ import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import { baseFieldNames } from '$lib/core/fields/util.js';
 import type { Dic } from '$lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
-import { JOIN_SUFFIX } from './naming.server.js';
+import { isPathsTable, JOIN_SUFFIX } from './naming.server.js';
 
 /**
  * Main function to generated primaryKeys
@@ -169,7 +169,7 @@ export function mergeContentRow(
     const rootProps = ['createdAt', 'id', ...baseFieldNames(config)];
     const hasRootSelectColumn = rootProps.some((column) => select.includes(column));
     // A resolved reference's target, joined only when its column was selected.
-    const joined = Object.keys(doc).filter((key) => key.endsWith(JOIN_SUFFIX));
+    const joined = Object.keys(doc).filter((key) => key.endsWith(JOIN_SUFFIX) || isPathsTable(key));
 
     // Pick the selected base columns on doc, or only the "id"
     const docFields = hasRootSelectColumn

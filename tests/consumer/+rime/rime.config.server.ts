@@ -2,13 +2,21 @@ import { Area, Collection, rime } from '$rime/config';
 import { consumerField } from '@rimecms/test-consumer-field';
 import { consumerPlugin } from '@rimecms/test-consumer-plugin';
 import { adapterSqlite } from 'rimecms/adapter-sqlite';
-import { text, toggle } from 'rimecms/fields';
+import { relation, text, toggle } from 'rimecms/fields';
 
 // Exercises a third-party field's own client/server split (consumerField's server hook
 // prefixes the saved value — see @bienbien/rime-consumer-field/module.server.ts) on a
 // collection the plugin below also extends, so both packages touch the same document.
+// Two foreign key cascades, checked on either driver: `related` rows go when the page they point
+// at is deleted, and a rename is carried down the addresses of the nested pages under it.
 const Pages = Collection.create('pages', {
-  fields: [text('title').isTitle().required(), consumerField('note')]
+  nested: true,
+  $url: ({ path }) => `/${path.join('/')}`,
+  fields: [
+    text('title').isTitle().required(),
+    consumerField('note'),
+    relation('related').to('pages').many()
+  ]
 });
 
 const Medias = Collection.create('medias', {

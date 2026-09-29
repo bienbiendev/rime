@@ -65,9 +65,8 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     when(isNested, nested.addChildrenProperty),
     when(isVersioned, versions.exposeVersionId),
     title.setDocumentTitle,
-    // After the title: `config.$url(document)` is the author's own function, and a slug built
-    // from the title is the ordinary case.
-    when(hasUrl, url.populateURL),
+    // The live edit link, from the url the read joined.
+    when(hasUrl, url.setLiveUrl),
     // After the sizes: it takes the thumbnail `upload.populateSizes` derived when there is one.
     thumbnail.setDocumentThumbnail,
     metas.deletePanelLockMetas
@@ -94,7 +93,13 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     when(isUpload, upload.processFileUpload)
   ],
 
-  afterCreate: [when(isAuth, auth.populateAPIKey), when(isAuth, auth.signInNewUser)],
+  afterCreate: [
+    when(isAuth, auth.populateAPIKey),
+    when(isAuth, auth.signInNewUser),
+    when(hasUrl, url.createPaths)
+  ],
+
+  afterUpdate: [when(hasUrl, url.syncPaths)],
 
   beforeUpdate: [
     versions.stripAutoSaveFlag,
@@ -134,7 +139,9 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     when(isAuth, auth.preventSupperAdminDeletion),
     // After the refusal above: a user who cannot be deleted keeps their auto-saves.
     when(isStaffCollection, versions.discardAutoSavesOf),
-    when(isUpload, upload.cleanUpFiles)
+    when(isUpload, upload.cleanUpFiles),
+    // Its children go to the top with their addresses, before its own go by cascade.
+    when(hasUrl, url.detachPaths)
   ],
 
   afterDelete: [when(isAuth, auth.deleteBetterAuthUser)]

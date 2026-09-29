@@ -35,11 +35,9 @@ export const populateRessourceURL: FieldHook<LinkField> = async (
           locale: locale,
           select: ['url']
         });
+      // An area's url is built on read from the whole document: no `select`.
       case rime.config.isArea(slug):
-        return await rime.area(slug as AreaSlug).find({
-          locale: locale,
-          select: ['url']
-        });
+        return await rime.area(slug as AreaSlug).find({ locale: locale });
     }
   }
 

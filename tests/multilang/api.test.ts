@@ -463,21 +463,32 @@ test('Should leave out a related document the reader may not see', async ({
   await request.delete(`${API_BASE_URL}/notes/${note.id}`, { headers });
 });
 
-test('Should find a page by its url, in its own locale and through the fallback', async ({
-  request
-}) => {
+test('Should find a page by its url, each locale by its own', async ({ request }) => {
   const headers = await signInSuperAdmin(request);
-  const { doc: page } = await request
-    .get(`${API_BASE_URL}/pages/${pageWithAuthorId}?locale=fr`, { headers })
-    .then((response) => response.json());
-  expect(page.url).toBeTruthy();
-
-  const query = `where[url][equals]=${encodeURIComponent(page.url)}`;
   for (const locale of ['fr', 'en']) {
+    const { doc: page } = await request
+      .get(`${API_BASE_URL}/pages/${pageWithAuthorId}?locale=${locale}`, { headers })
+      .then((response) => response.json());
+    expect(page.url).toBe(`${process.env.PUBLIC_RIME_URL}/${locale}/${page._slug}`);
+
     const { docs } = await request
-      .get(`${API_BASE_URL}/pages?${query}&locale=${locale}`, { headers })
+      .get(
+        `${API_BASE_URL}/pages?where[url][equals]=${encodeURIComponent(page.url)}&locale=${locale}`,
+        {
+          headers
+        }
+      )
       .then((response) => response.json());
     expect(docs.map((doc: any) => doc.id)).toEqual([pageWithAuthorId]);
+  }
+});
+
+test("Should build an area's url on read", async ({ request }) => {
+  for (const locale of ['fr', 'en']) {
+    const { doc } = await request
+      .get(`${API_BASE_URL}/infos?locale=${locale}`)
+      .then((response) => response.json());
+    expect(doc.url).toBe(`${process.env.PUBLIC_RIME_URL}/${locale}/about`);
   }
 });
 
