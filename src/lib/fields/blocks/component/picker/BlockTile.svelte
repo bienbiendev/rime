@@ -53,9 +53,7 @@
   }
 
   :global(.rz-block-tile[data-selected]) {
-    box-shadow:
-      0 0 0 1px var(--rz-accent-border),
-      var(--rz-shadow-raised);
+    box-shadow: 0 0 0 1px var(--rz-accent-border);
   }
 
   :global(.rz-block-tile:focus-visible) {

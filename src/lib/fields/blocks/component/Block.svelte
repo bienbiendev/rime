@@ -109,9 +109,6 @@
 
   /* Open, the row and its fields read as one: a hairline around both, another between them. */
   .rz-block[data-open] {
-    outline: 1px solid var(--rz-border-strong);
-    outline-offset: -1px;
-
     > .rz-block__header {
       border-bottom: 1px solid var(--rz-border);
     }
@@ -127,10 +124,12 @@
     display: flex;
     align-items: center;
     gap: var(--rz-size-2);
+    height: var(--rz-size-11);
     min-height: var(--rz-size-11);
     padding: 0 var(--rz-size-1-5) 0 var(--rz-size-1);
     transition: background-color 0.15s;
-
+    border-top: 1px solid transparent;
+    border-bottom: 1px solid transparent;
     &:hover {
       background-color: var(--rz-bg-hover);
     }

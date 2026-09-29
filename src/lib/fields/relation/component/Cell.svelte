@@ -42,7 +42,7 @@
         mimeType={ressource.data.doc.mimeType}
         url="{env.PUBLIC_RIME_URL}{ressource.data.doc._thumbnail}"
       />
-      {ressource.data.doc.title}
+      <span class="rz-relation-cell__title">{ressource.data.doc.title}</span>
     {:else}
       <span class="rz-relation-cell__title">{ressource.data.doc.title}</span>
     {/if}
@@ -51,6 +51,8 @@
 
 <style lang="postcss">
   .rz-relation-cell {
+    --rz-upload-preview-cell-size: var(--rz-size-7);
+    --rz-upload-preview-cell-fit: cover;
     display: flex;
     gap: var(--rz-size-2);
     align-items: center;

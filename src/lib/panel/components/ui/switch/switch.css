@@ -13,7 +13,6 @@
   align-items: center;
   border-radius: var(--rz-radius-full);
   border: 2px solid transparent;
-  box-shadow: var(--rz-shadow-raised);
   transition: all 0.1s ease;
   outline: none;
 }
@@ -46,7 +45,6 @@
   display: block;
   transition: translate 0.25s ease;
   border-radius: var(--rz-radius-full);
-  box-shadow: var(--rz-shadow-knob);
   background-color: var(--rz-switch-color-thumb);
 }
 

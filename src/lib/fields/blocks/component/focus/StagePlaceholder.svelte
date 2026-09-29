@@ -49,8 +49,5 @@
       font-size: var(--rz-text-sm);
       vertical-align: text-bottom;
     }
-    :global(.rz-kbd__key) {
-      background-color: var(--rz-bg-raised);
-    }
   }
 </style>
