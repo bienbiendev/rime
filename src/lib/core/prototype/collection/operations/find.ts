@@ -1,10 +1,10 @@
 import { readableReferences } from '$lib/core/fields/util.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { logger } from '$lib/core/logger.server.js';
-import { readDocument, runBeforeOperation } from '$lib/core/pipeline/run.server.js';
+import { readDocuments, runBeforeOperation } from '$lib/core/pipeline/run.server.js';
 import type { OperationContext, OperationQuery } from '$lib/core/pipeline/types.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
-import type { CollectionSlug, GenericDoc, RawDoc } from '$lib/core/prototype/types.js';
+import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
 
 export type FindArgs = {
   query?: OperationQuery;
@@ -74,31 +74,22 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
     content: ctx.versionQuery({ latest })
   });
 
-  async function processDocument(documentRaw: RawDoc) {
-    try {
-      const result = await readDocument<CollectionSlug, T>({
-        raw: documentRaw,
-        config,
-        event,
-        context,
-        locale,
-        localeFallback,
-        depth,
-        select
-      });
-      context = result.context;
-      return result.doc;
-    } catch (error: any) {
-      // Skip this document and carry on with the next one. The transform is inside the try
-      // alongside the hooks now: a row rime cannot turn into a document is the same kind of
-      // per-row problem as a beforeRead hook rejecting one, and taking the whole query down
-      // for it made a single bad row look like an empty collection.
-      logger.error(error.message, error);
-      return null;
-    }
-  }
+  const results = await readDocuments<CollectionSlug, T>({
+    raws: documentsRaw,
+    config,
+    event,
+    context,
+    locale,
+    localeFallback,
+    depth,
+    select
+  });
 
-  const documents = await Promise.all(documentsRaw.map((doc) => processDocument(doc)));
-
-  return documents.filter((d) => !!d) as T[];
+  // A row rime cannot turn into a document, or that a beforeRead hook rejects, is skipped: one bad
+  // row does not take the whole list down.
+  return results.flatMap((result) => {
+    if (result.status === 'fulfilled') return [result.value.doc];
+    logger.error(result.reason.message, result.reason);
+    return [];
+  });
 };

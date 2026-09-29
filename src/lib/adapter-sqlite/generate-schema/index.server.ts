@@ -60,7 +60,7 @@ export async function generateSchemaString(config: BuiltConfig) {
         fields: [
           ...prototype.fields.filter((field) => field.get.root),
           date('createdAt').hidden(),
-          date('updatedAt').hidden()
+          date('updatedAt').hidden().$index()
         ],
         rootName: baseName,
         locales: [],

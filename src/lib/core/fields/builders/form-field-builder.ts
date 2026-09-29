@@ -140,6 +140,18 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
+  /**
+   * Indexes the field's column, for a field a list is filtered or sorted by.
+   *
+   * ```ts
+   * text('sku').$index()   // where[sku][equals]=… reads the index, not every row
+   * ```
+   */
+  $index() {
+    this.field.index = true;
+    return this;
+  }
+
   /** `label`/`localized`/`root`/`required` are the only properties that need
    *  anything beyond a plain `this.field` read (a fallback default, or a
    *  boolean coercion) — everything else a concrete field type adds

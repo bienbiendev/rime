@@ -14,6 +14,7 @@ program
   .option('-n, --name <name>', 'Will be the database name')
   .option('-f, --force', 'Force init with default package name', false)
   .option('-s, --skip-install', 'Do not install dependencies', false)
+  .option('-b, --bun', 'Bun pack: bun:sqlite driver, bun --bun scripts, Bun.serve build', false)
   .action(async (args) => {
     const init = await import('./commands/init.server.js').then((m) => m.init);
     init(args);
@@ -24,6 +25,7 @@ program
   .option('-d, --with-database', 'Include database', false)
   .option('-e, --with-env', 'Create the /app/.env file from the production template', false)
   .option('-s, --with-static', 'Copy the current static directory', false)
+  .option('-b, --bun', 'Build for Bun (default: detected from `rime init --bun` scripts)')
   .action(async (args) => {
     const build = await import('./commands/build.js').then((m) => m.build);
     build(args);

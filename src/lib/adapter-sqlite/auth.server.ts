@@ -1,6 +1,6 @@
 import type { GetRegisterType } from '$lib/index.js';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { SqliteDatabase } from './types.server.js';
 
 /**
  * All that is left of the auth facade: Better-auth's own database adapter.
@@ -12,10 +12,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
  * `core/features/auth/better-auth-tables.server.ts`, reaching them through `adapter.table(slug)`
  * because those are declared tables rather than a hand-written template.
  */
-const createAuthHandle = (args: {
-  db: LibSQLDatabase<GetRegisterType<'Relations'>>;
-  schema: GetRegisterType<'Schema'>;
-}) => {
+const createAuthHandle = (args: { db: SqliteDatabase; schema: GetRegisterType<'Schema'> }) => {
   const { db, schema } = args;
 
   return {

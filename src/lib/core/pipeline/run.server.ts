@@ -7,6 +7,7 @@ import type { DocType, GenericDoc, PrototypeSlug, RawDoc } from '$lib/core/proto
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { buildDocument } from './build-document.server.js';
+import { populateRelations } from './populate-relations.server.js';
 import { saveBlocks } from './persist/blocks/index.server.js';
 import { saveRelations } from './persist/relations/index.server.js';
 import { saveTreeBlocks } from './persist/tree/index.server.js';
@@ -208,12 +209,7 @@ export const persistRelational = async (args: {
   });
 };
 
-/**
- * The read tail shared by findById and an area's find: turn a raw adapter row into a document,
- * then run the beforeRead chain over it.
- */
-export const readDocument = async <S extends DocType, T extends GenericDoc>(args: {
-  raw: RawDoc;
+type ReadArgs<S extends DocType> = {
   config: AnyConfig;
   event: RequestEvent;
   context: OperationContext<S>;
@@ -221,42 +217,76 @@ export const readDocument = async <S extends DocType, T extends GenericDoc>(args
   localeFallback?: boolean;
   depth?: number;
   select?: string[];
-}): Promise<{ doc: T; context: OperationContext<S> }> => {
-  const { raw, config, event, locale, localeFallback, depth, select } = args;
+};
+
+/**
+ * The read tail of a list: every raw adapter row turned into rows, what their relations point at
+ * read in one pass, then each document built and run through the beforeRead chain.
+ *
+ * One settled result per raw, in order: a document that fails is the caller's to skip or throw.
+ */
+export const readDocuments = async <S extends DocType, T extends GenericDoc>(
+  args: ReadArgs<S> & { raws: RawDoc[] }
+): Promise<PromiseSettledResult<{ doc: T; context: OperationContext<S> }>[]> => {
+  const { raws, config, event, locale, localeFallback, depth = 0, select } = args;
   const hasSelect = !!select && Array.isArray(select) && !!select.length;
 
-  const rows = await event.locals.rime.adapter.transform.rows({
-    doc: raw,
-    slug: config.slug,
-    locale,
-    localeFallback
-  });
+  const rows = await Promise.allSettled(
+    raws.map((raw) =>
+      event.locals.rime.adapter.transform.rows({
+        doc: raw,
+        slug: config.slug,
+        locale,
+        localeFallback
+      })
+    )
+  );
 
-  const document = await buildDocument(rows, {
-    config,
-    event,
-    locale,
-    depth,
-    withBlank: !hasSelect,
-    /**
-     * The panel edits blocks and tree nodes in place, so it needs each child row's own
-     * bookkeeping — `position`, `path`, `ownerId`, `locale` — kept on it.
-     *
-     * The adapter used to work this out for itself, by testing `event.params.panel`. Core naming
-     * the panel here is the last of that coupling (core letting go of `src/lib/panel/`), and it
-     * is one line rather than four `if`s in the database layer.
-     */
-    withRowMeta: event.params.panel !== undefined
-  });
+  const populated =
+    depth > 0
+      ? await populateRelations(
+          rows.flatMap((row) => (row.status === 'fulfilled' ? [row.value] : [])),
+          { event, locale, depth }
+        )
+      : undefined;
 
-  return runDocHooks<S, T>({
-    hooks: config.$hooks?.beforeRead,
-    doc: document as T,
-    config,
-    event,
-    operation: 'read',
-    context: args.context
-  });
+  return Promise.allSettled(
+    rows.map(async (row) => {
+      if (row.status === 'rejected') throw row.reason;
+
+      const document = await buildDocument(row.value, {
+        config,
+        event,
+        locale,
+        depth,
+        populated,
+        withBlank: !hasSelect,
+        /**
+         * The panel edits blocks and tree nodes in place, so it needs each child row's own
+         * bookkeeping — `position`, `path`, `ownerId`, `locale` — kept on it.
+         */
+        withRowMeta: event.params.panel !== undefined
+      });
+
+      return runDocHooks<S, T>({
+        hooks: config.$hooks?.beforeRead,
+        doc: document as T,
+        config,
+        event,
+        operation: 'read',
+        context: args.context
+      });
+    })
+  );
+};
+
+/** The read tail of a single document: `readDocuments` over one raw row, its failure thrown. */
+export const readDocument = async <S extends DocType, T extends GenericDoc>(
+  args: ReadArgs<S> & { raw: RawDoc }
+): Promise<{ doc: T; context: OperationContext<S> }> => {
+  const [result] = await readDocuments<S, T>({ ...args, raws: [args.raw] });
+  if (result.status === 'rejected') throw result.reason;
+  return result.value;
 };
 
 /**

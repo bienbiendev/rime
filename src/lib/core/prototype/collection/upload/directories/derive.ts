@@ -49,7 +49,7 @@ export function makeUploadDirectoriesCollectionClient<C extends WithUpload<Built
       text('parent').hidden(),
       ...(directoriesConfig?.fields || []),
       date('createdAt').hidden(),
-      date('updatedAt').hidden()
+      date('updatedAt').hidden().$index()
     ],
     type: 'collection',
     label: {

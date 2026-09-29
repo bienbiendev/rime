@@ -180,6 +180,7 @@ const tabAttributes = tab('attributes').fields(
   relation('author').to('staff'),
   relation('contributors').to('staff').many(),
   relation('ambassadors').to('staff').many().localized(),
+  relation('notes').to('notes').many(),
   date('published'),
 
   // Not localized, with a hook that is not idempotent: a create runs it once, and a read in
@@ -220,6 +221,25 @@ const Pages = Collection.create('pages', {
 });
 
 /****************************************************
+/* Notes
+/****************************************************/
+
+// Readable by admins only: a relation to one is left out for anybody else.
+const Notes = Collection.create('notes', {
+  icon: Text,
+  panel: {
+    group: 'Content'
+  },
+  fields: [text('body').isTitle()],
+  access: {
+    read: (user) => access.isAdmin(user),
+    create: (user) => access.isAdmin(user),
+    update: (user) => access.isAdmin(user),
+    delete: (user) => access.isAdmin(user)
+  }
+});
+
+/****************************************************
 /* Medias
 /****************************************************/
 
@@ -247,7 +267,7 @@ export default rime({
   $adapter: adapterSqlite('multilang.sqlite'),
   siteUrl: env.PUBLIC_RIME_URL,
 
-  collections: [Pages, Medias],
+  collections: [Pages, Medias, Notes],
   areas: [Settings, Informations, Menu],
 
   localization: {

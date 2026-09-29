@@ -19,7 +19,9 @@ export const augmentNested = <T extends IncomingConfig>(config: T): T => ({
     text('_parent')
       .$references(config.slug, { onDelete: 'set null', selfReferencing: true })
       .hidden()
-      .$root(),
+      .$root()
+      // A read lists a document's children by it
+      .$index(),
     number('_position').defaultValue(0).hidden().$root()
   ]
 });

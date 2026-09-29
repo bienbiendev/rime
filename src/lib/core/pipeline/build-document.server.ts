@@ -1,12 +1,13 @@
 import type { DocumentRows } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
+import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { Relation } from '$lib/fields/relation/index.js';
 import { isObjectLiteral, omit, withDefaults } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { unflatten } from 'flat';
 import { logger } from '../logger.server.js';
+import { populatedKey, type Populated } from './populate-relations.server.js';
 
 /**
  * Assembles one document out of the rows it is stored across.
@@ -23,6 +24,8 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
     event: RequestEvent;
     locale?: string | undefined;
     depth?: number;
+    /** What the relations point at, read ahead for the whole list. Read when `depth > 0`. */
+    populated?: Populated;
     /** Merge the blank document, so every field the config declares is present. */
     withBlank?: boolean;
     /**
@@ -33,7 +36,15 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
     withRowMeta?: boolean;
   }
 ): Promise<T> => {
-  const { config, event, locale, depth = 0, withBlank = true, withRowMeta = false } = args;
+  const {
+    config,
+    event,
+    locale,
+    depth = 0,
+    populated,
+    withBlank = true,
+    withRowMeta = false
+  } = args;
   const { rime } = event.locals;
 
   const flatDoc: Dic = { ...rows.base };
@@ -71,9 +82,13 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
     let output: Relation | GenericDoc | null;
 
     if (depth > 0) {
-      output = await rime
-        .collection(relation.relationTo as CollectionSlug)
-        .findById({ id: relation.documentId, locale: relation.locale, depth: depth - 1 });
+      const target = populated?.get(
+        populatedKey(relation.relationTo, relation.locale, relation.documentId)
+      );
+      // Missing, or not readable by this reader: the relation is left out.
+      if (!target) continue;
+      // A copy per placement: two documents never share an object a hook could change.
+      output = structuredClone(target);
     } else {
       output = (
         withRowMeta ? relation : omit(['position', 'ownerId', 'path'], relation)

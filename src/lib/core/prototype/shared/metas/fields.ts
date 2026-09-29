@@ -27,5 +27,6 @@ export const metasFields = {
   createdBy: () => text('createdBy').hidden().$root().access(staffOnly),
   createdAt: () => date('createdAt').hidden(),
   updatedBy: () => text('updatedBy').hidden().access(staffOnly),
-  updatedAt: () => date('updatedAt').hidden()
+  // The default sort of every list
+  updatedAt: () => date('updatedAt').hidden().$index()
 };

@@ -3,9 +3,8 @@ import { RimeError } from '$lib/core/errors/index.js';
 import type { GetRegisterType } from '$lib/index.js';
 import type { Dic } from '$lib/util/types.js';
 import { and, eq } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { declaredTableProperty } from './naming.server.js';
-import type { GenericTable } from './types.server.js';
+import type { GenericTable, SqliteDatabase } from './types.server.js';
 
 /**
  * Handles for the tables features declared — see `FeatureDefinition.tables`.
@@ -19,7 +18,7 @@ import type { GenericTable } from './types.server.js';
  * had no way to name until a feature could declare one.
  */
 export const createTableHandles = (args: {
-  db: LibSQLDatabase<GetRegisterType<'Relations'>>;
+  db: SqliteDatabase;
   tables: GetRegisterType<'Tables'>;
 }) => {
   const { db, tables } = args;
