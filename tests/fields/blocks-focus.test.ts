@@ -63,7 +63,7 @@ async function save(page: Page) {
   await scope.locator('button[type="submit"]').first().click();
 }
 
-/** Adds a type through ⌘K: with a render in the list, there is no palette column. */
+/** Adds a type through ⌘K. */
 async function addViaCommand(page: Page, type: RegExp) {
   await page.keyboard.press('Control+k');
   await expect(dialog(page)).toBeVisible();
@@ -240,9 +240,8 @@ test('The renders draw the blocks, a click selects one, the panel follows', asyn
   await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
   await page.waitForLoadState('networkidle');
 
-  // `paragraph` has a render: the stack of renders beside one panel, open on its Layers tab.
+  // The stack of renders beside one panel, open on its Layers tab.
   const focus = page.locator('.rz-blocks-focus');
-  await expect(focus).toHaveAttribute('data-layout', 'renders');
   const panel = focus.locator('.rz-blocks-focus__panel');
   const tab = (name: string) => panel.getByRole('tab', { name });
   await expect(tab('Layers')).toHaveAttribute('data-state', 'active');
@@ -294,6 +293,52 @@ test('The renders draw the blocks, a click selects one, the panel follows', asyn
       return grid.items[0].text.content[0].content[0].text;
     })
     .toBe('Inner plus');
+});
+
+test('A text field is edited where the render draws it', async ({ page, request }) => {
+  const docId = await createPage(request);
+  await loginAs(page);
+  await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
+  await page.waitForLoadState('networkidle');
+
+  const focus = page.locator('.rz-blocks-focus');
+  const panel = focus.locator('.rz-blocks-focus__panel');
+  const tab = (name: string) => panel.getByRole('tab', { name });
+
+  // The grid's render draws its title with TextInline: its own h2, editable.
+  const title = focus.locator('.site-grid__title');
+  await expect(title).toHaveJSProperty('tagName', 'H2');
+  await expect(title).toHaveAttribute('contenteditable', 'plaintext-only');
+  await expect(title).toHaveText('Grid');
+
+  // Typed in place, it shows in the inspector's field.
+  await title.click();
+  await expect(tab('Inspector')).toHaveAttribute('data-state', 'active');
+  await page.keyboard.press('End');
+  await page.keyboard.type(' one');
+  const input = panel.locator('input.rz-input');
+  await expect(input).toHaveValue('Grid one');
+
+  // Enter adds no line; Backspace edits the text and leaves the blocks alone.
+  await page.keyboard.press('Enter');
+  await expect(title).toHaveText('Grid one');
+  await page.keyboard.press('Backspace');
+  await expect(title).toHaveText('Grid on');
+  await expect(rows(page)).toHaveCount(4);
+  await page.keyboard.type('e');
+
+  // Typed in the inspector, it shows on the stage.
+  await input.click();
+  await page.keyboard.press('End');
+  await page.keyboard.type('!');
+  await expect(title).toHaveText('Grid one!');
+
+  await save(page);
+  await expect
+    .poll(
+      async () => (await readSections(page, docId)).find((block) => block.type === 'grid').title
+    )
+    .toBe('Grid one!');
 });
 
 test('An empty list opens the panel on the types to add', async ({ page, request }) => {
@@ -364,6 +409,178 @@ test('The selected render has a bar above with its arrows, the panel three tabs'
   await expect
     .poll(async () => (await readSections(page, docId)).map((block) => block.type))
     .toEqual(['grid', 'paragraph', 'paragraph', 'paragraph']);
+});
+
+/** A page whose `plain` list has no render: a note, then columns holding a note. */
+async function createPlainPage(request: APIRequestContext) {
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      title: 'Plain focus',
+      plain: [
+        { type: 'note', text: 'One' },
+        { type: 'columns', title: 'Cols', cells: [{ type: 'note', text: 'Cell' }] }
+      ]
+    }
+  });
+  expect(response.status()).toBe(200);
+  return (await response.json()).doc.id as string;
+}
+
+async function readPlain(page: Page, docId: string) {
+  const response = await page.request.get(`${API_BASE_URL}/pages/${docId}`);
+  expect(response.status()).toBe(200);
+  return (await response.json()).doc.plain as any[];
+}
+
+test('A list without renders is rows, its nested lists under them, its fields in the inspector', async ({
+  page,
+  request
+}) => {
+  const docId = await createPlainPage(request);
+  await loginAs(page);
+  await page.goto(`${panelUrl('pages', docId)}?focus=plain`);
+  await page.waitForLoadState('networkidle');
+
+  const focus = page.locator('.rz-blocks-focus');
+  const panel = focus.locator('.rz-blocks-focus__panel');
+  const tab = (name: string) => panel.getByRole('tab', { name });
+  const top = focus.locator('.rz-blocks-focus__renders > .rz-renders > .rz-renders__item');
+
+  // Each block is a row; the columns' note sits under it, on the same stage.
+  await expect(top).toHaveCount(2);
+  await expect(top.nth(0).locator('.rz-default-render__title')).toHaveText('Note');
+  const cell = top.nth(1).locator('.rz-renders__item');
+  await expect(cell).toHaveCount(1);
+
+  // A click on the nested note selects it and shows its field.
+  await cell.click();
+  await expect(cell).toHaveAttribute('data-selected', '');
+  await expect(tab('Inspector')).toHaveAttribute('data-state', 'active');
+  await expect(panel.locator('input.rz-input')).toHaveValue('Cell');
+
+  // The columns' own fields leave its notes out: they are on the stage.
+  await top.nth(1).locator(':scope > .rz-default-render > .rz-default-render__row').click();
+  await expect(panel.locator('input.rz-input')).toHaveValue('Cols');
+  await expect(panel.locator('.rz-field-blocks')).toHaveCount(0);
+
+  // In their place, the list and its count; the way into the block is in the head.
+  await expect(panel.locator('.rz-inspector__list')).toHaveText(/Cells\s*1 block/);
+  await expect(
+    panel.locator('.rz-inspector__header').getByRole('button', { name: 'Focus on this block' })
+  ).toBeVisible();
+});
+
+test('A type drags from the Blocks tab into a list without renders, shaped as a row', async ({
+  page,
+  request
+}) => {
+  const docId = await createPlainPage(request);
+  await loginAs(page);
+  await page.goto(`${panelUrl('pages', docId)}?focus=plain`);
+  await page.waitForLoadState('networkidle');
+
+  const focus = page.locator('.rz-blocks-focus');
+  const panel = focus.locator('.rz-blocks-focus__panel');
+  const list = focus.locator('.rz-blocks-focus__renders > .rz-renders');
+  const top = list.locator(':scope > .rz-renders__item');
+  await panel.getByRole('tab', { name: 'Blocks' }).click();
+
+  const tile = (await panel.locator('.rz-palette__item[data-type="note"]').boundingBox())!;
+  const target = (await top.nth(0).boundingBox())!;
+  await page.mouse.move(tile.x + tile.width / 2, tile.y + tile.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height - 4, { steps: 16 });
+
+  // While it moves, the new block's place is a row, not the palette's tile.
+  const placeholder = list.locator(':scope > .rz-palette__item');
+  await expect(placeholder).toHaveCount(1);
+  expect((await placeholder.boundingBox())!.height).toBeLessThan(80);
+  await page.mouse.up();
+
+  await expect(top).toHaveCount(3);
+  await save(page);
+  await expect
+    .poll(async () => (await readPlain(page, docId)).map((block) => block.type).sort())
+    .toEqual(['columns', 'note', 'note']);
+});
+
+test('Focus on a block narrows the stage to it and its lists, Escape widens it again', async ({
+  page,
+  request
+}) => {
+  const docId = await createPlainPage(request);
+  await loginAs(page);
+  await page.goto(`${panelUrl('pages', docId)}?focus=plain`);
+  await page.waitForLoadState('networkidle');
+
+  const focus = page.locator('.rz-blocks-focus');
+  const panel = focus.locator('.rz-blocks-focus__panel');
+  const top = focus.locator('.rz-blocks-focus__renders > .rz-renders > .rz-renders__item');
+
+  // The inspector's head holds the way in; the note has nothing to narrow to.
+  const focusButton = panel
+    .locator('.rz-inspector__header')
+    .getByRole('button', { name: 'Focus on this block' });
+  await top.nth(0).click();
+  await expect(focusButton).toHaveCount(0);
+  await top.nth(1).locator(':scope > .rz-default-render > .rz-default-render__row').click();
+  await focusButton.click();
+
+  // The stage holds the columns alone; the address and the layers follow.
+  await expect(page).toHaveURL(/[?&]focus=plain\.1(&|$)/);
+  await expect(top).toHaveCount(1);
+  await expect(top.nth(0)).toHaveAttribute('data-type', 'columns');
+  await expect(page.locator('.rz-layers__root')).toHaveText(/Columns/);
+  await expect(rows(page)).toHaveCount(1);
+
+  // The columns stay selected, their fields in the inspector; no bar moves them out of place.
+  await expect(top.nth(0)).toHaveAttribute('data-selected', '');
+  await expect(panel.getByRole('tab', { name: 'Inspector' })).toHaveAttribute(
+    'data-state',
+    'active'
+  );
+  await expect(top.nth(0).locator(':scope > .rz-renders__toolbar')).toHaveCount(0);
+
+  // A type from the Blocks tab goes into its notes.
+  await panel.getByRole('tab', { name: 'Blocks' }).click();
+  await panel.locator('.rz-palette__item[data-type="note"]').click();
+  await expect(top.nth(0).locator('.rz-renders__item')).toHaveCount(2);
+
+  // Escape clears the selection, then goes back to the whole list.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(/[?&]focus=plain(&|$)/);
+  await expect(top).toHaveCount(2);
+
+  await save(page);
+  await expect.poll(async () => (await readPlain(page, docId))[1].cells.length).toBe(2);
+});
+
+test('Opened from a nested list in the document, focus narrows to its block, selected', async ({
+  page,
+  request
+}) => {
+  const docId = await createPlainPage(request);
+  await loginAs(page);
+  await page.goto(panelUrl('pages', docId));
+  await page.waitForLoadState('networkidle');
+
+  // The columns open in the document, then their cells open the editor.
+  await page.locator('.rz-block__title-button', { hasText: 'Columns' }).click();
+  await page.locator('[data-focus-open="plain.1.cells"]').click();
+
+  const focus = page.locator('.rz-blocks-focus');
+  const panel = focus.locator('.rz-blocks-focus__panel');
+  const top = focus.locator('.rz-blocks-focus__renders > .rz-renders > .rz-renders__item');
+  await expect(page).toHaveURL(/[?&]focus=plain\.1(&|$)/);
+  await expect(top).toHaveCount(1);
+  await expect(top.nth(0)).toHaveAttribute('data-selected', '');
+  await expect(panel.getByRole('tab', { name: 'Inspector' })).toHaveAttribute(
+    'data-state',
+    'active'
+  );
+  await expect(panel.locator('input.rz-input')).toHaveValue('Cols');
 });
 
 test.describe('On a narrow screen', () => {

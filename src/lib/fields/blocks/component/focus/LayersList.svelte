@@ -8,8 +8,9 @@
   import { getBlocksFocusContext } from './focus.svelte.js';
   import LayersList from './LayersList.svelte';
 
-  type Props = { form: DocumentFormContext; list: string; depth: number };
-  const { form, list, depth }: Props = $props();
+  /** `label` names the list above it, for a block that holds several. */
+  type Props = { form: DocumentFormContext; list: string; depth: number; label?: string };
+  const { form, list, depth, label }: Props = $props();
 
   const focus = getBlocksFocusContext()!;
   const rows = $derived(focus.rowsOf(list, depth));
@@ -59,6 +60,9 @@
   }
 </script>
 
+{#if label}
+  <span class="rz-layers__child-label" style:--rz-layers-depth={depth}>{label}</span>
+{/if}
 <ul
   class="rz-layers__list"
   data-list={list}
@@ -103,8 +107,8 @@
         {#if hasError(row.path)}
           <span class="rz-layers__error" aria-label="error"></span>
         {/if}
-        {#if focus.hasRenders && !focus.locked && focus.isSelected(row.path)}
-          <!-- Beside the renders, the fields are a tab away: this opens it. -->
+        {#if !focus.locked && focus.isSelected(row.path)}
+          <!-- The fields are a tab away: this opens it. -->
           <button
             type="button"
             class="rz-layers__edit"
@@ -123,12 +127,12 @@
       {#if row.children.length && !folded}
         {#each row.children as child (child.builder.name)}
           <div class="rz-layers__child">
-            {#if row.children.length > 1}
-              <span class="rz-layers__child-label" style:--rz-layers-depth={depth + 1}>
-                {child.label}
-              </span>
-            {/if}
-            <LayersList {form} list={child.list} depth={depth + 1} />
+            <LayersList
+              {form}
+              list={child.list}
+              depth={depth + 1}
+              label={row.children.length > 1 ? child.label : undefined}
+            />
           </div>
         {/each}
       {/if}
@@ -284,5 +288,18 @@
 
   :global(.rz-layers__item.sortable-ghost > .rz-layers__row) {
     opacity: 0.4;
+  }
+
+  /* A type dragged in from the palette: a row of the layers, its name alone. */
+  :global(.rz-layers__list > .rz-palette__item.rz-block-tile) {
+    height: var(--rz-size-7);
+    padding: 0 0 0 var(--rz-layers-start);
+    border-radius: var(--rz-radius-sm);
+    justify-content: center;
+  }
+  :global(
+    .rz-layers__list > .rz-palette__item :is(.rz-block-tile__frame, .rz-block-tile__description)
+  ) {
+    display: none;
   }
 </style>

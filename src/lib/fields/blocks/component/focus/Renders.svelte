@@ -3,18 +3,23 @@
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { shiftListPath } from '$lib/panel/context/blocks-ops.js';
   import { useSortable } from '$lib/panel/util/Sortable.js';
-  import { ArrowDown, ArrowUp, CopyPlus, Trash2 } from '@lucide/svelte';
+  import { ArrowDown, ArrowUp, CopyPlus, Focus, Trash2 } from '@lucide/svelte';
   import type Sortable from 'sortablejs';
+  import DefaultRender from './DefaultRender.svelte';
   import { getBlocksFocusContext } from './focus.svelte.js';
-  import RenderPlaceholder from './RenderPlaceholder.svelte';
   import Renders from './Renders.svelte';
 
-  /** `onRemove` asks first when the block holds blocks of its own. */
-  type Props = { form: DocumentFormContext; list: string; onRemove: () => void };
-  const { form, list, onRemove }: Props = $props();
+  /**
+   * `only` narrows the list to the block at that index, focus on one block: it does not move
+   * then, its own lists do. `onRemove` asks first when the block holds blocks of its own.
+   */
+  type Props = { form: DocumentFormContext; list: string; only?: number; onRemove: () => void };
+  const { form, list, only, onRemove }: Props = $props();
 
   const focus = getBlocksFocusContext()!;
-  const rows = $derived(focus.rowsOf(list));
+  const rows = $derived(
+    only === undefined ? focus.rowsOf(list) : focus.rowsOf(list).filter((row) => row.index === only)
+  );
 
   /**
    * A click selects the block, shows its fields, and stops there; a link inside a render does not
@@ -46,8 +51,10 @@
 
   /**
    * The stage is in the same group as the layers: a block drags from one to the other, a type
-   * drags in from the palette, and a nested list is a target like any other.
+   * drags in from the palette, and a nested list is a target like any other. The stage mounts a
+   * list anew when focus moves, so `only` is read once.
    */
+  // svelte-ignore state_referenced_locally
   const { sortable } = useSortable({
     group: {
       name: 'rz-blocks-layers',
@@ -61,7 +68,7 @@
     animation: 150,
     fallbackOnBody: true,
     swapThreshold: 0.65,
-    disabled: focus.locked,
+    disabled: focus.locked || only !== undefined,
     /** A type dropped from the palette: a new block at the drop index. */
     onAdd: (event: Sortable.SortableEvent) => {
       if (!event.from.classList.contains('rz-palette__list')) return;
@@ -90,7 +97,7 @@
 
 <!--
   One list of blocks, one wrapper per block. A block's nested lists are the `nested` snippet its
-  render puts where they go; a block without a render is a placeholder card with them below.
+  render puts where they go; a block without a render is a row with them under it.
 -->
 <div class="rz-renders" data-list={list} data-empty={rows.length ? undefined : ''} use:sortableList>
   {#each rows as row (row.block.id)}
@@ -98,12 +105,15 @@
     {@const Render = config?.render}
     {#snippet nested(name?: string)}
       {#each row.children.filter((child) => !name || child.builder.name === name) as child (child.builder.name)}
+        <!-- All of them at once, and more than one: each under its name. -->
+        {#if !name && row.children.length > 1}
+          <p class="rz-renders__list-label">{child.label}</p>
+        {/if}
         <Renders {form} list={child.list} {onRemove} />
       {/each}
     {/snippet}
     <div
       class="rz-renders__item"
-      data-placeholder={config?.render ? null : ''}
       data-path={row.path}
       data-type={row.block.type}
       data-selected={focus.isSelected(row.path) ? '' : undefined}
@@ -117,7 +127,7 @@
         }
       }}
     >
-      {#if controlled(row.path)}
+      {#if controlled(row.path) && !focus.isNarrowedBlock(row.path)}
         <!-- Above it: move, duplicate, remove. A click on the block already opens its fields. -->
         <div class="rz-renders__toolbar">
           <button
@@ -139,6 +149,17 @@
             <ArrowDown size={14} />
           </button>
           <span class="rz-renders__toolbar-separator" aria-hidden="true"></span>
+          {#if row.children.length && focus.path !== row.path}
+            <!-- The stage narrowed to this block and what it holds. -->
+            <button
+              type="button"
+              title={t__('fields.focus_block')}
+              aria-label={t__('fields.focus_block')}
+              onclick={(event) => control(event, () => focus.open(row.path))}
+            >
+              <Focus size={14} />
+            </button>
+          {/if}
           <button
             type="button"
             title={t__('common.duplicate')}
@@ -167,16 +188,16 @@
             children={nested}
           />
           {#snippet failed(error)}
-            <RenderPlaceholder {row} {error} children={nested} />
+            <DefaultRender {row} {error} children={nested} />
           {/snippet}
         </svelte:boundary>
       {:else}
-        <RenderPlaceholder {row} children={nested} />
+        <DefaultRender {row} children={nested} />
       {/if}
     </div>
   {:else}
     {#if list === focus.path}
-      <p class="rz-renders__empty">{t__('fields.no_blocks_yet_render')}</p>
+      <p class="rz-renders__empty">{t__('fields.no_blocks_yet')}</p>
     {/if}
   {/each}
 </div>
@@ -221,6 +242,36 @@
 
   :global(.rz-renders__item.sortable-ghost) {
     opacity: 0.4;
+  }
+
+  /* A type dragged in from the palette: the row the block will be, not the palette's tile. */
+  :global(.rz-renders > .rz-palette__item.rz-block-tile) {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--rz-size-2);
+    height: --size(11);
+    padding: 0 var(--rz-size-3);
+    border-radius: var(--rz-radius-md);
+    color: var(--rz-fg);
+  }
+  :global(.rz-renders > .rz-palette__item .rz-block-tile__frame) {
+    width: var(--rz-size-6);
+    flex-shrink: 0;
+    aspect-ratio: 1;
+    border-radius: var(--rz-radius-sm);
+  }
+  :global(.rz-renders > .rz-palette__item .rz-block-tile__title) {
+    padding-inline: 0;
+  }
+  :global(.rz-renders > .rz-palette__item .rz-block-tile__description) {
+    display: none;
+  }
+
+  /* The name of a nested list, when a block holds several. */
+  .rz-renders__list-label {
+    margin-bottom: --size(-1.5);
+    font-size: var(--rz-text-xs);
+    color: var(--rz-fg-subtle);
   }
 
   /*

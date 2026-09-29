@@ -21,6 +21,16 @@
   /** The document's focus mode, absent in a nested form. */
   const focus = getBlocksFocusContext();
   const list = $derived(normalizeFieldPath(path));
+  /**
+   * Where focus opens: a list inside a block on that block, `sections.1.items` on `sections.1`;
+   * any other on itself.
+   */
+  const focusTarget = $derived.by(() => {
+    const parts = list.split('.');
+    const last = parts.findLastIndex((part) => /^\d+$/.test(part));
+    if (last === -1 || !form.blocks.builder(parts.slice(0, last).join('.'))) return list;
+    return parts.slice(0, last + 1).join('.');
+  });
   const summary = $derived(config.get.layout === 'summary' && !!focus);
 
   const field = $derived(form.useField(path, config));
@@ -119,7 +129,7 @@
           variant="ghost"
           size="sm"
           icon={Maximize2}
-          onclick={() => focus.open(list)}
+          onclick={() => focus.open(focusTarget)}
           data-focus-open={list}
         >
           {t__('fields.open_editor')}
@@ -138,7 +148,7 @@
           : t__('fields.blocks_count|m|p', String(count))}
       </span>
       <Button
-        onclick={() => focus.open(list)}
+        onclick={() => focus.open(focusTarget)}
         size="sm"
         variant="ghost"
         icon={Maximize2}
@@ -274,18 +284,12 @@
     > :global(.rz-block + .rz-block) {
       border-top: 1px solid var(--rz-border);
     }
-
-    /* An open block draws its own edge. */
-    > :global(.rz-block[data-open] + .rz-block) {
-      border-top-color: transparent;
-    }
   }
 
-  /* Inside a group, a block, a tree item or a stage card: a hairline, no second fill. */
+  /* Inside a group, a block or a tree item: a hairline, no second fill. */
   :global(.rz-group-field__content) :is(.rz-blocks__list:not([data-empty]), .rz-blocks__summary),
   :global(.rz-block__fields) :is(.rz-blocks__list:not([data-empty]), .rz-blocks__summary),
-  :global(.rz-tree-item__fields) :is(.rz-blocks__list:not([data-empty]), .rz-blocks__summary),
-  :global(.rz-stage__fields) :is(.rz-blocks__list:not([data-empty]), .rz-blocks__summary) {
+  :global(.rz-tree-item__fields) :is(.rz-blocks__list:not([data-empty]), .rz-blocks__summary) {
     background-color: transparent;
     box-shadow: 0 0 0 1px var(--rz-border);
   }

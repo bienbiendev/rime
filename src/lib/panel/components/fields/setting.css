@@ -3,9 +3,9 @@
  * Rows that follow each other share one card, a hairline between them.
  *
  *   ╭────────────────────────────────────╮
- *   │ Show in the navigation        ━●  │
+ *   │ Show in the navigation        ━●   │
  *   ├────────────────────────────────────┤
- *   │ Hide from search engines      ●━  │
+ *   │ Hide from search engines      ●━   │
  *   ╰────────────────────────────────────╯
  */
 
@@ -30,8 +30,8 @@
   margin-top: var(--rz-size-0-5);
 }
 
-/* Inside a group, a block, a tree item or a stage card: a hairline, no second fill. */
-:is(.rz-group-field__content, .rz-block__fields, .rz-tree-item__fields, .rz-stage__fields)
+/* Inside a group, a block, a tree item or the inspector: a hairline, no second fill. */
+:is(.rz-group-field__content, .rz-block__fields, .rz-tree-item__fields, .rz-inspector__fields)
   .rz-setting {
   background-color: transparent;
   box-shadow: 0 0 0 1px var(--rz-border);
@@ -69,7 +69,7 @@
 }
 
 /* Without a fill, the earlier row's edge is the hairline: the later one hides its own. */
-:is(.rz-group-field__content, .rz-block__fields, .rz-tree-item__fields, .rz-stage__fields)
+:is(.rz-group-field__content, .rz-block__fields, .rz-tree-item__fields, .rz-inspector__fields)
   .rz-render-fields__field--full:is([data-type='toggle'], [data-type='checkbox']):has(
     > .rz-setting[data-visible]
   )

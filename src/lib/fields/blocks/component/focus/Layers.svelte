@@ -33,7 +33,7 @@
     </header>
   {/if}
   {#if focus.path}
-    <!-- The root node: the list itself. Selected, the stage shows every block of it. -->
+    <!-- The root node: the open list, or the narrowed block. Selected, nothing is. -->
     <button
       type="button"
       class="rz-layers__root"
@@ -43,7 +43,20 @@
       <span class="rz-layers__root-icon"><LayoutList size={13} /></span>
       <span class="rz-layers__root-title">{focus.rootLabel()}</span>
     </button>
-    <LayersList {form} list={focus.path} depth={1} />
+    {#if focus.narrowedRow}
+      <!-- Narrowed to a block: the lists it holds, each under its name when there are several. -->
+      {@const lists = focus.narrowedRow.children}
+      {#each lists as child (child.list)}
+        <LayersList
+          {form}
+          list={child.list}
+          depth={1}
+          label={lists.length > 1 ? child.label : undefined}
+        />
+      {/each}
+    {:else}
+      <LayersList {form} list={focus.path} depth={1} />
+    {/if}
   {/if}
 </div>
 

@@ -182,8 +182,8 @@
     background-color: transparent;
   }
 
-  /* Inside a group, a block or a stage card: a hairline, no second fill. */
-  :global(:is(.rz-group-field__content, .rz-block__fields, .rz-stage__fields)) .rz-tree-item {
+  /* Inside a group, a block or the inspector: a hairline, no second fill. */
+  :global(:is(.rz-group-field__content, .rz-block__fields, .rz-inspector__fields)) .rz-tree-item {
     background-color: transparent;
     box-shadow: 0 0 0 1px var(--rz-border);
   }

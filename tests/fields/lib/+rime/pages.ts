@@ -60,6 +60,10 @@ const blockGrid = block('grid')
   .render(Grid)
   .thumbnail(GridThumbnail);
 
+// Blocks without a render: rows on the focus stage, a columns block holding notes of its own.
+const blockNote = block('note').fields(text('text'));
+const blockColumns = block('columns').fields(text('title'), blocks('cells', [blockNote]));
+
 export const Pages = Collection.create('pages', {
   // Pages hang under one another: the list's tree view and the parent field.
   nested: true,
@@ -148,6 +152,7 @@ export const Pages = Collection.create('pages', {
     blocks('sections', [blockParagraph, blockImage, blockKeyFacts, blockGrid, blockGallery]),
     // One row in the form, edited in focus mode.
     blocks('extras', [blockParagraph, blockImage]).layout('summary'),
+    blocks('plain', [blockNote, blockColumns]),
 
     // Titled by their label; one without a label reads `Links 1.2`.
     tree('links')
