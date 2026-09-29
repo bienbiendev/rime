@@ -1,6 +1,7 @@
-import type { FieldReference } from '$lib/core/fields/builders/form-field-builder.js';
 import type { ColumnDeclaration, ColumnType, TableDeclaration } from '$lib/core/adapter.js';
+import type { FieldReference } from '$lib/core/fields/builders/form-field-builder.js';
 import { toSnakeCase } from '$lib/util/string.js';
+import dedent from 'dedent';
 import {
   baseTableName,
   declaredTableProperty,
@@ -9,7 +10,6 @@ import {
   tableName,
   type TableName
 } from '../naming.server.js';
-import dedent from 'dedent';
 
 const s = toSnakeCase;
 
@@ -240,10 +240,11 @@ export const ${table} = sqliteTable('${table}', {
 /** Template rows Relation */
 
 /**
- * The whole schema's relations, in one declaration.
+ * The drizzle relations of the whole schema. A read lists them in its `with` to load related rows
+ * in the same query, by the names given here.
  *
- * Every relation rime generates is the same shape — a child row points at its owner through
- * `ownerId` — so the tree is `parent -> children` and both directions fall out of it:
+ * A child table (blocks, tree…) points at its owner through `ownerId`. It gets a relation each way,
+ * named after the table on the other end:
  *
  * ```ts
  * export const relations = defineRelations(tables, (r) => ({
@@ -258,14 +259,13 @@ export const ${table} = sqliteTable('${table}', {
  * }));
  * ```
  *
- * A relation is keyed by the table on the other end, which is what `buildWithParam` names when it
- * builds a `with`.
- *
- * A reference the read resolves is the other shape: the owner's row points at its target through
- * the field's own column, one direction, keyed by `joinName(column)`:
+ * A reference field that stores another document's id in its own column: `updatedBy` holds a staff id.
+ * It gets one relation, from that column to the target, named after the column. Two columns can
+ * point at the same table:
  *
  * ```ts
  * pages: {
+ *   createdBy__$doc: r.one.staff({ from: r.pages.createdBy, to: r.staff.id }),
  *   updatedBy__$doc: r.one.staff({ from: r.pages.updatedBy, to: r.staff.id })
  * }
  * ```
