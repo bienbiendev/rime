@@ -16,6 +16,7 @@
   color: var(--rz-fg-muted);
   font-variation-settings: 'wght' 380;
   font-weight: 380;
+  border: 1px solid transparent;
 }
 
 .rz-tabs-trigger:hover {
@@ -37,6 +38,7 @@
 
 .rz-tabs-trigger[data-state='active'] {
   @mixin knob;
+  border: 1px solid var(--rz-border);
   position: relative;
   font-variation-settings: 'wght' 450;
   font-weight: 450;

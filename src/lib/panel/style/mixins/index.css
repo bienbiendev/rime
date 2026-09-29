@@ -5,12 +5,12 @@
   -webkit-line-clamp: $(count);
 }
 
-/* A level: its fill, a hairline, its shadow. raised, float. */
+/* A level: its fill, a hairline, and its shadow when it has one. raised has none, float does. */
 @define-mixin surface $level {
   background-color: var(--rz-bg-$(level));
   box-shadow:
     0 0 0 1px var(--rz-border),
-    var(--rz-shadow-$(level));
+    var(--rz-shadow-$(level), 0 0 transparent);
 }
 
 /* A well: an input, a track, a dropzone. Its edge shows on hover. */
@@ -30,14 +30,12 @@
 /* The picked item of a segmented control. */
 @define-mixin knob {
   background-color: var(--rz-bg-knob);
-  box-shadow: var(--rz-shadow-knob);
 }
 
 /* The primary button's face: black on light, white on dark. */
 @define-mixin primary {
-  background: var(--rz-gradient-primary);
+  background-color: var(--rz-bg-inverse);
   color: var(--rz-fg-inverse);
-  box-shadow: var(--rz-shadow-primary);
 }
 
 /* Keyboard focus on a button, a tab, a link. */

@@ -22,9 +22,9 @@
   --rz-gray-14: oklch(0.865 var(--rz-gray-chroma) var(--rz-gray-hue));
   --rz-gray-15: oklch(0.905 var(--rz-gray-chroma) var(--rz-gray-hue));
   --rz-gray-16: oklch(0.94 var(--rz-gray-chroma) var(--rz-gray-hue));
-  --rz-gray-17: oklch(0.965 var(--rz-gray-chroma) var(--rz-gray-hue));
-  --rz-gray-18: oklch(0.982 var(--rz-gray-chroma) var(--rz-gray-hue));
-  --rz-gray-19: oklch(0.996 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-17: oklch(0.968 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-18: oklch(0.986 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-19: oklch(0.992 var(--rz-gray-chroma) var(--rz-gray-hue));
 
   --rz-accent-hue: 268;
   --rz-accent-chroma: 0.19;

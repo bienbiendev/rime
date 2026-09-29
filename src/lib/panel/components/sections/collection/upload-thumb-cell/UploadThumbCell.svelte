@@ -47,7 +47,7 @@
   }
 
   .rz-upload-preview-cell {
-    --size: var(--rz-upload-preview-cell-size, var(--rz-size-9));
+    --size: var(--rz-upload-preview-cell-size, var(--rz-size-8));
     display: flex;
     width: var(--size);
     height: var(--size);
