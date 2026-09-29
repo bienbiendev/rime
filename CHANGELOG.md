@@ -1,5 +1,19 @@
 # rimecms
 
+## 2.0.0
+
+### Major Changes
+
+- [`bdf553d`](https://github.com/bienbiendev/rime/commit/bdf553defa51587d6cf6593f7bea0d8bf07a5c34) - Breaking Change: a site page imports rime from `rimecms/public`, which never reaches the panel or the config. `openSse`, `createI18n`, `getI18nContext`, `setI18nContext`, `LiveProvider`, `LiveEdit`, `LiveConsumer`, `RenderRichText`, `richTextJSONToText`, `isRelationPopulated`, `isRelationResolved`, `isRelationUnresolved` and `resolveRelation` move there, from `rimecms`, `rimecms/fields/rich-text` and `rimecms/fields/relation`; `rimecms/fields/relation` is gone. `rimecms` keeps what a config and the panel use: `definePlugin`, `i18n` and `t__`; `cache` leaves it. `SignIn`, `ForgotPassword` and `ResetPassword` move from `rimecms/panel` to `rimecms/panel/public`, which the generated sign-in routes import: an anonymous visitor no longer loads the whole panel.
+
+### Patch Changes
+
+- [`706eae9`](https://github.com/bienbiendev/rime/commit/706eae9f8d27ec56dda0fcb8a5de72e8bcf059d8) - Fixed: a rich text's resource and upload nodes open their picker when they are inserted, not every time the document loads. A node stored without `_fresh` opened its picker on load, each one over the last.
+
+- [`addc409`](https://github.com/bienbiendev/rime/commit/addc409764392204432d1dff1aba7060d7ef59ac) - Changed: on a collection with `$url`, a new page takes its slug from its title. A `slug` field no longer gives it.
+
+- [`bfe75b9`](https://github.com/bienbiendev/rime/commit/bfe75b9754f246c0e47568cdb1114c912c504631) - Fixed: deleting a page whose child has a slug a top page holds, or moving a page under a parent where a sibling holds its slug, answered 500. The moved page takes the next free slug: `team-2`.
+
 ## 1.0.0
 
 ### Major Changes
