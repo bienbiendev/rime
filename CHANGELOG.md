@@ -1,5 +1,17 @@
 # rimecms
 
+## 1.1.0
+
+### Minor Changes
+
+- [`600a17b`](https://github.com/bienbiendev/rime/commit/600a17bba092f77f716dd8228f4775148ca92605) - Changed: focus mode draws every blocks list on one stage, beside the layers, the inspector and the types to add. A block without a render is a row, its icon, its title and its type, with its nested lists under it; its fields are in the inspector, which leaves its lists of blocks out. A type drags from the _Blocks_ tab into any list, its place shown as a row. Under the block's fields, the inspector gives the count of each of its lists. _Focus on this block_, in the selected block's bar and in the inspector's head, narrows the stage to that block and what it holds, `?focus=sections.1`, the block selected and its fields in the inspector; a nested list's _Open the editor_ in the document opens it the same way. Escape widens it again.
+
+- [`9fd8299`](https://github.com/bienbiendev/rime/commit/9fd8299ea9350b9ebb8730e5a50ea77ead67ecd7) - Added: `TextInline` from `rimecms/panel`, a `text` or `textarea` field edited where a block render draws it: the render's own element, `<TextInline as="h2" path="{path}.title" config={title} {form} />`, keeps its tag and its class. A text is one line, a textarea keeps its lines.
+
+### Patch Changes
+
+- [`ce893d3`](https://github.com/bienbiendev/rime/commit/ce893d3d5e0f6898713a4b82735a6075183f8b60) - Changed: `RelationInline` shows its controls in one quiet bar at the bottom right of the picked images, _Replace_ or _Edit the selection_ and a trash icon, clear of the block's own bar on top.
+
 ## 1.0.1
 
 ### Patch Changes
