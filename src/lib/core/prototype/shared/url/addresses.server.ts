@@ -81,6 +81,26 @@ export const addAddresses = async (args: {
 };
 
 /**
+ * Moves a page and its subtree under `parentId`, or to the top when it is null. In each locale the
+ * page keeps its slug, or takes the next free one when a new sibling holds it: `team`, `team-2`.
+ */
+export const movePage = async (args: {
+  event: RequestEvent;
+  config: BuiltCollection;
+  ownerId: string;
+  parentId: string | null;
+}) => {
+  const { event, config, ownerId, parentId } = args;
+  const { paths } = event.locals.rime.adapter;
+  const slugs: Record<string, string> = {};
+  for (const row of await paths.get({ slug: config.slug, ownerId })) {
+    const taken = await paths.siblingSlugs({ slug: config.slug, locale: row.locale, parentId });
+    slugs[row.locale] = freeSlug(row.slug, taken);
+  }
+  return paths.moveUnder({ slug: config.slug, ownerId, parentId, slugs });
+};
+
+/**
  * The document with its address as it now is: the read that produced it ran before a create or an
  * update gave it one.
  */

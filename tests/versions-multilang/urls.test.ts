@@ -203,3 +203,34 @@ test('Deleting a page puts its children at the top level, with their urls', asyn
   expect(child.url).toBe(`${BASE}/en/s4-2`);
   expect((await read(request, ids['s4-2-1'])).url).toBe(`${BASE}/en/s4-2/s4-2-1`);
 });
+
+test('A child moved to the top takes the next free slug when a top page holds it', async ({
+  request
+}) => {
+  await create(request, { title: 'Clash', slug: 'clash-top' });
+  const holder = await create(request, { title: 'Holder', slug: 'holder' });
+  const child = await create(request, { title: 'Clash', slug: 'clash-child', parent: holder.id });
+  expect(child._urlPath).toBe('holder/clash');
+
+  const response = await request.delete(`${API_BASE_URL}/pages/${holder.id}`, { headers });
+  expect(response.status()).toBe(200);
+  const moved = await read(request, child.id);
+  expect(moved._slug).toBe('clash-2');
+  expect(moved.url).toBe(`${BASE}/en/clash-2`);
+});
+
+test('A page moved under a parent takes the next free slug when a sibling holds it', async ({
+  request
+}) => {
+  const parent = await create(request, { title: 'Crowded', slug: 'crowded' });
+  await create(request, { title: 'Twin', slug: 'twin-inside', parent: parent.id });
+  const outside = await create(request, { title: 'Twin', slug: 'twin-outside' });
+
+  const response = await request.patch(`${API_BASE_URL}/pages/${outside.id}`, {
+    headers,
+    data: { _parent: parent.id }
+  });
+  expect(response.status()).toBe(200);
+  const moved = await read(request, outside.id);
+  expect(moved._urlPath).toBe('crowded/twin-2');
+});

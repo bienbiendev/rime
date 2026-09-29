@@ -100,19 +100,36 @@ test('a new slug carries down the subtree, in its locale only', async () => {
   expect(await pathOf('audits', 'en')).toBe('services-en/web-en/audits-en');
 });
 
-test('a move carries the page and its subtree, in every locale at once', async () => {
-  const moved = await handle.moveUnder({ slug, ownerId: 'web', parentId: 'news' });
+const webSlugs = { fr: 'web-fr', en: 'web-en' };
+
+test('a move carries the page and its subtree, in every locale', async () => {
+  const moved = await handle.moveUnder({ slug, ownerId: 'web', parentId: 'news', slugs: webSlugs });
   expect(moved.map((row) => row.path).sort()).toEqual(['news-en/web-en', 'news-fr/web-fr']);
   expect(await pathOf('audits', 'fr')).toBe('news-fr/web-fr/audits-fr');
   expect(await pathOf('audits', 'en')).toBe('news-en/web-en/audits-en');
 
-  await handle.moveUnder({ slug, ownerId: 'web', parentId: null });
+  await handle.moveUnder({ slug, ownerId: 'web', parentId: null, slugs: webSlugs });
   expect(await pathOf('audits', 'fr')).toBe('web-fr/audits-fr');
 });
 
-test('detaching the children before a delete puts them at the top, their subtrees with them', async () => {
-  const detached = await handle.detachChildren({ slug, ownerId: 'services' });
-  expect(detached.map((row) => row.path).sort()).toEqual(['web-en', 'web-fr']);
+test('a move takes the slug it is given in each locale', async () => {
+  await handle.moveUnder({
+    slug,
+    ownerId: 'web',
+    parentId: null,
+    slugs: { fr: 'news-fr-2', en: 'web-en' }
+  });
+  expect(await pathOf('audits', 'fr')).toBe('news-fr-2/audits-fr');
+  expect(await pathOf('audits', 'en')).toBe('web-en/audits-en');
+});
+
+test('children answers the pages directly under a page, once each', async () => {
+  expect(await handle.children({ slug, ownerId: 'services' })).toEqual(['web']);
+  expect(await handle.children({ slug, ownerId: 'audits' })).toEqual([]);
+});
+
+test('a deleted page takes its rows with it', async () => {
+  await handle.moveUnder({ slug, ownerId: 'web', parentId: null, slugs: webSlugs });
   await db.delete(pages).where(sql`id = 'services'`);
   expect(await handle.get({ slug, ownerId: 'services' })).toEqual([]);
   expect(await pathOf('audits', 'fr')).toBe('web-fr/audits-fr');
