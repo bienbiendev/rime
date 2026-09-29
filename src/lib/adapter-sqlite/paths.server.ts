@@ -68,31 +68,40 @@ const createPathsHandle = ({ db, tables }: AdapterDeps): PathsHandle => {
       return row as PathRow | undefined;
     },
 
-    // One statement for every locale: each row takes its new parent's path in its own locale.
-    moveUnder: async ({ slug, ownerId, parentId }) => {
+    // One statement per locale, in one transaction: each row takes its new parent's path in its
+    // locale, and its slug there.
+    moveUnder: async ({ slug, ownerId, parentId, slugs }) => {
       const { paths } = tablesOf(slug);
-      const moved = await db
-        .update(paths)
-        .set({ parentPath: parentId ? parentPathIn(paths, parentId, paths.locale) : null })
-        .where(eq(paths.ownerId, ownerId))
-        .returning();
-      return rowsOf(moved);
+      return db.transaction(async (tx) => {
+        const moved: unknown[] = [];
+        for (const [locale, value] of Object.entries(slugs)) {
+          const rows = await tx
+            .update(paths)
+            .set({
+              slug: value,
+              parentPath: parentId ? parentPathIn(paths, parentId, locale) : null
+            })
+            .where(and(eq(paths.ownerId, ownerId), eq(paths.locale, locale)))
+            .returning();
+          moved.push(...rows);
+        }
+        return rowsOf(moved);
+      });
     },
 
-    detachChildren: async ({ slug, ownerId }) => {
+    children: async ({ slug, ownerId }) => {
       const { paths } = tablesOf(slug);
       const self = alias(paths, 'self');
-      const detached = await db
-        .update(paths)
-        .set({ parentPath: null })
+      const rows = await db
+        .selectDistinct({ ownerId: paths.ownerId })
+        .from(paths)
         .where(
           sql`(${paths.locale}, ${paths.parentPath}) IN (${db
             .select({ locale: self.locale, path: self.path })
             .from(self)
             .where(eq(self.ownerId, ownerId))})`
-        )
-        .returning();
-      return rowsOf(detached);
+        );
+      return rows.map((row) => row.ownerId as string);
     },
 
     // `path/` <= p < `path0` is every path starting with `path/`, read off the unique index:

@@ -311,14 +311,18 @@ export interface PathsHandle {
     locale: string;
     value: string;
   }): Promise<PathRow | undefined>;
-  /** Under another parent, or at the top, in every locale at once. Answers the page's rows. */
+  /**
+   * Under another parent, or at the top, with the slug it takes there in each of its locales:
+   * `{ en: 'team', fr: 'equipe' }`. Answers the page's rows.
+   */
   moveUnder(args: {
     slug: PrototypeSlug;
     ownerId: string;
     parentId: string | null;
+    slugs: Record<string, string>;
   }): Promise<PathRow[]>;
-  /** Its children go to the top, before it is deleted. Answers their rows. */
-  detachChildren(args: { slug: PrototypeSlug; ownerId: string }): Promise<PathRow[]>;
+  /** The pages directly under this one, in any locale. */
+  children(args: { slug: PrototypeSlug; ownerId: string }): Promise<string[]>;
   /** The row at `path` and, with `withDescendants`, every row below it, in one locale. */
   under(args: {
     slug: PrototypeSlug;
