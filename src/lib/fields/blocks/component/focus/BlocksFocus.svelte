@@ -10,7 +10,7 @@
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
   import { getNavContext } from '$lib/panel/context/nav.svelte.js';
-  import { populate } from '$lib/panel/util/populate.js';
+  import { populate } from '$lib/fields/relation/populate.js';
   import { capitalize } from '$lib/util/string.js';
   import { ChevronRight, PanelRight, ToyBrick, X } from '@lucide/svelte';
   import { untrack } from 'svelte';

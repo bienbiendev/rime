@@ -13,21 +13,18 @@ import Input from './components/ui/input/input.svelte';
 import SpinLoader from './components/ui/spin-loader/SpinLoader.svelte';
 import { API_PROXY } from './context/api-proxy.svelte.js';
 import { COLLECTION_CTX } from './context/collection.svelte.js';
-import { LIVE_KEY } from './context/live.svelte.js';
+import { LIVE_KEY } from '$lib/live/context.svelte.js';
 import { LOCALE_CTX } from './context/locale.svelte.js';
 import { USER_CTX } from './context/user.svelte.js';
 
 import { TITLE_CTX } from './context/title.js';
 import Area from './pages/area/Area.svelte';
-import ForgotPassword from './pages/auth/forgot-password/ForgotPassword.svelte';
-import ResetPassword from './pages/auth/reset-password/ResetPassword.svelte';
-import SignIn from './pages/auth/sign-in/SignIn.svelte';
 import CollectionDoc from './pages/collection-document/CollectionDocument.svelte';
 import Collection from './pages/collection/Collection.svelte';
 import Dashboard from './pages/dashboard/Dashboard.svelte';
 import Live from './pages/live/Live.svelte';
 import type { Route } from './types.js';
-import { populate } from './util/populate.js';
+import { populate } from '$lib/fields/relation/populate.js';
 import { useCommands } from './context/commands.svelte.js';
 
 export {
@@ -39,15 +36,12 @@ export {
   Dashboard,
   Doc,
   Field,
-  ForgotPassword,
   Input,
   Live,
   Panel,
   RelationInline,
   RenderFields,
-  ResetPassword,
   RichTextInline,
-  SignIn,
   SpinLoader,
   // A block render's relations, resolved as the API answers them
   populate,

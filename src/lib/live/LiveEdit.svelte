@@ -1,7 +1,7 @@
 <script lang="ts" generics="T">
   import { browser } from '$app/environment';
   import { page } from '$app/state';
-  import { getLiveContext } from '$lib/panel/context/live.svelte.js';
+  import { getLiveContext } from './context.svelte.js';
   import { normalizeFieldPath } from '$lib/util/string.js';
   import { onDestroy, type Snippet } from 'svelte';
 

@@ -1,5 +1,5 @@
 <script lang="ts" generics="T">
-  import { getLiveContext } from '$lib/panel/context/live.svelte.js';
+  import { getLiveContext } from './context.svelte.js';
   import type { WithRelationPopulated } from '$lib/core/fields/types.js';
   import type { Snippet } from 'svelte';
 

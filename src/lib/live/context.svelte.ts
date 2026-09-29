@@ -4,8 +4,8 @@ import { PARAMS } from '$lib/core/constants.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { BeforeNavigate } from '@sveltejs/kit';
 import { getContext, setContext } from 'svelte';
-import { getValueAtPath, setValueAtPath } from '../../util/object.js';
-import { populate } from '../util/populate.js';
+import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
+import { populate } from '$lib/fields/relation/populate.js';
 
 export const LIVE_KEY = Symbol('rime.live');
 

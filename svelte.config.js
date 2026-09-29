@@ -21,7 +21,6 @@ const config = {
       'rimecms/config/server': './src/lib/core/config/index.server.js',
       'rimecms/config': './src/lib/core/config/index.js',
       'rimecms/fields/rich-text': './src/lib/fields/rich-text/client.js',
-      'rimecms/fields/relation': './src/lib/fields/relation/client.js',
       $lib: './src/lib',
       rimecms: './src/lib'
     }

@@ -1,7 +1,5 @@
 <script lang="ts">
-  import { isRelationResolved } from '$lib/fields/relation';
-  import { richTextJSONToText } from '$lib/fields/rich-text';
-  import LiveEdit from '$lib/panel/components/sections/live/LiveEdit.svelte';
+  import { LiveEdit, isRelationResolved, richTextJSONToText } from '$lib/public.js';
 
   let { data } = $props();
 </script>

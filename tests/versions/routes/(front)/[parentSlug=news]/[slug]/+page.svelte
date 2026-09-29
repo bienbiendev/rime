@@ -1,6 +1,5 @@
 <script lang="ts">
-  import RenderRichText from '$lib/fields/rich-text/core/render-rich-text.svelte';
-  import LiveEdit from '$lib/panel/components/sections/live/LiveEdit.svelte';
+  import { LiveEdit, RenderRichText } from '$lib/public.js';
 
   let { data }: { data: { doc: NewsDoc } } = $props();
 </script>

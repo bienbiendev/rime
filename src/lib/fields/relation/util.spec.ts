@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { isRelationPopulated } from './client.js';
+import { isRelationPopulated } from './util.js';
 
 const stringArrayRel = [
   '7674e91b-598a-4a72-a5cd-9594736a34dd',

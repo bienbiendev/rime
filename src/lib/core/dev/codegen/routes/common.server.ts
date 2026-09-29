@@ -97,7 +97,7 @@ export const load = async ({ locals }: ServerLoadEvent) => {
  */
 const signInPage = () => `
 <script>
-  import { SignIn } from '${PACKAGE_NAME}/panel';
+  import { SignIn } from '${PACKAGE_NAME}/panel/public';
   const { data } = $props();
 </script>
 
@@ -122,7 +122,7 @@ export const actions = {
  */
 const forgotPasswordPage = () => `
 <script>
-  import { ForgotPassword } from '${PACKAGE_NAME}/panel'
+  import { ForgotPassword } from '${PACKAGE_NAME}/panel/public'
   const { data } = $props();
 </script>
 <ForgotPassword {data} />`;
@@ -143,7 +143,7 @@ export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.f
  */
 const resetPasswordPage = () => `
 <script>
-  import { ResetPassword } from '${PACKAGE_NAME}/panel';
+  import { ResetPassword } from '${PACKAGE_NAME}/panel/public';
   const { data } = $props();
 </script>
 

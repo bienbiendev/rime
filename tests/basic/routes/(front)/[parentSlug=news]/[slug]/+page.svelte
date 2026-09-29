@@ -1,5 +1,5 @@
 <script lang="ts">
-  import LiveEdit from '$lib/panel/components/sections/live/LiveEdit.svelte';
+  import { LiveEdit } from '$lib/public.js';
 
   let { data }: { data: { doc: NewsDoc } } = $props();
 </script>
