@@ -7,6 +7,7 @@ import { PANEL_ROUTE } from '$lib/core/routes/constants.server.js';
 import { slugify } from '$lib/util/string.js';
 import fs from 'fs';
 import path from 'path';
+import { templatesSurface } from './common.server.js';
 
 /**
  * Types for route definitions
@@ -26,7 +27,8 @@ export type Routes = Record<string, RouteDefinition>;
  * custom, css     written straight from config.panel
  * prototypes      the slug lists the [slug=<name>] matchers accept
  * rest            one +server.ts per prototype route path, and the methods it exports
- * version         the templates every file above is written from ship with the package
+ * templates       the fixed files as the package's templates write them today
+ * version         the package the templates ship with
  * ```
  *
  * `PANEL_ROUTE` and `CONFIG_DIR` are read once at process start, so a changed value only takes
@@ -50,6 +52,7 @@ export function shouldRegenerateRoutes<T extends Config>(config: T): boolean {
       .map((p) => `${p.type}:${p.slug}`)
       .join(',')}
     rest:${restSurface()}
+    templates:${templatesSurface()}
     version:${rimeVersion()}
   `;
 

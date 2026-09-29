@@ -3,6 +3,7 @@ import { flatten } from 'flat';
 import cache from './cache.server.js';
 import { CONFIG_DIR } from './constants.server.js';
 import { restSurface } from './prototype-routes.server.js';
+import { templatesSurface } from './codegen/routes/common.server.js';
 import { rimeVersion } from './version.server.js';
 
 /**
@@ -78,6 +79,9 @@ const writeMemo = <T extends object>(config: T) => {
     // `generateRoutes` included, so a route added to a prototype has to move it — a version bump
     // does not, inside this repo, and the config never mentions those paths at all.
     .concat(`REST_SURFACE:${restSurface()}`)
+    // Nor are the route templates, which change inside this repo and between two packs of one
+    // version: the routes they write must follow.
+    .concat(`ROUTE_TEMPLATES:${templatesSurface()}`)
     .join('\n');
 
   if (cache.matches('config', memoStr)) return false;
