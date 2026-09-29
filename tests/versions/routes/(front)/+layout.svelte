@@ -1,5 +1,5 @@
 <script lang="ts">
-  import LiveProvider from '$lib/panel/components/sections/live/Provider.svelte';
+  import { LiveProvider } from '$lib/public.js';
 
   const { children } = $props();
 </script>

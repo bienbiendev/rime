@@ -9,7 +9,7 @@
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { populate } from '$lib/panel/util/populate.js';
+  import { populate } from '$lib/fields/relation/populate.js';
   import { uploadFiles, type UploadProgress } from '$lib/panel/util/upload-file.js';
   import { Image as ImageIcon } from '@lucide/svelte';
   import type { Snippet } from 'svelte';

@@ -1,5 +1,5 @@
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { isRelationResolved } from '$lib/fields/relation/index.js';
+import { isRelationResolved } from '$lib/fields/relation/util.js';
 import {
   type BuiltCollection,
   type CollectionSlug,

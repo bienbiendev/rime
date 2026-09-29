@@ -39,6 +39,12 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./public": {
+      "types": "./dist/public.d.ts",
+      "svelte": "./dist/public.js",
+      "import": "./dist/public.js",
+      "default": "./dist/public.js"
+    },
     "./server": {
       "types": "./dist/server.d.ts",
       "import": "./dist/server.js",
@@ -69,15 +75,15 @@
       "import": "./dist/fields/rich-text/client.js",
       "default": "./dist/fields/rich-text/client.js"
     },
-    "./fields/relation": {
-      "types": "./dist/fields/relation/client.d.ts",
-      "import": "./dist/fields/relation/client.js",
-      "default": "./dist/fields/relation/client.js"
-    },
     "./panel": {
       "types": "./dist/panel/index.d.ts",
       "import": "./dist/panel/index.js",
       "default": "./dist/panel/index.js"
+    },
+    "./panel/public": {
+      "types": "./dist/panel/public.d.ts",
+      "import": "./dist/panel/public.js",
+      "default": "./dist/panel/public.js"
     },
     "./panel/style/index.css": {
       "import": "./dist/panel/style/index.css",

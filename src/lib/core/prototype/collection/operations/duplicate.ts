@@ -1,7 +1,7 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { copyLocales } from '$lib/core/locale/copy.server.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
-import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/index.js';
+import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/json.js';
 import type { GenericDoc } from '$lib/types';
 import { getValueAtPath, isObjectLiteral, setValueAtPath } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';

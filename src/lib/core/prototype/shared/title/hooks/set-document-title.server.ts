@@ -1,5 +1,5 @@
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { richTextJSONToText } from '$lib/fields/rich-text/index.js';
+import { richTextJSONToText } from '$lib/fields/rich-text/json.js';
 import { getValueAtPath, isObjectLiteral } from '$lib/util/object.js';
 
 /**

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import LiveConsumer from '$lib/panel/components/sections/live/Consumer.svelte';
+  import { LiveConsumer } from '$lib/public.js';
 
   let { data } = $props();
 </script>

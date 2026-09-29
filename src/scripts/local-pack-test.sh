@@ -105,14 +105,24 @@ resolve_package_spec() {
   elif [[ -d "$spec" ]]; then
     (
       cd "$spec"
-      pnpm add "$TARBALL" >&2
+      # The file: spec is rewritten before installing: pnpm resolves every dependency first,
+      # and the tarball of the previous rime version may be gone.
+      node -e "
+      const fs = require('fs');
+      const pkg = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
+      for (const key of ['dependencies', 'devDependencies']) {
+        if (pkg[key]?.rimecms?.startsWith('file:')) pkg[key].rimecms = 'file:$TARBALL';
+      }
+      fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\\n');
+      " || exit 1
+      pnpm install >&2 || exit 1
       # local-pack only builds — it never runs `rime generate`, so without this src/routes,
       # +rime.generated, hooks.server.ts, and drizzle.config.ts stay whatever they were the
       # last time *anyone* generated them, possibly with an older rime, not the tarball just
       # installed above.
-      pnpm exec rime generate >&2
+      pnpm exec rime generate >&2 || exit 1
       local pack_output
-      pack_output=$(pnpm local-pack)
+      pack_output=$(pnpm local-pack) || exit 1
       local tarball
       tarball=$(echo "$pack_output" | tail -1 | sed -E 's/^Package created at: //')
       [[ -f "$tarball" ]] || {
@@ -165,6 +175,8 @@ copy_plugin_config() {
   local runtime=${2:-node}
   mkdir -p "$WORK_DIR/$config_dir"
   cp -rf "$ROOT_DIR/tests/consumer/+rime/"* "$WORK_DIR/$config_dir/"
+  # The front page imports rimecms/public, what verify_public_chunks checks after the build.
+  cp -f "$ROOT_DIR/tests/consumer/routes/+page.svelte" "$WORK_DIR/src/routes/+page.svelte"
   if [[ $runtime == "bun" ]]; then
     local config="$WORK_DIR/$config_dir/rime.config.server.ts"
     sed -i.bak "s/adapterSqlite('consumer.sqlite')/adapterSqlite('consumer.sqlite', { driver: 'bun' })/" "$config"
@@ -193,6 +205,16 @@ verify_plugin_mounted() {
     # Confirms drizzle-kit's migration actually created the table.
     TABLE=$(sqlite3 db/consumer.sqlite "SELECT name FROM sqlite_master WHERE type='table' AND name='plugin_visits';" 2>/dev/null || true)
     [[ -n "$TABLE" ]] || { echo "plugin_visits table missing from db/consumer.sqlite after rime init"; exit 1; }
+  )
+}
+
+# What a visitor loads without signing in: the front page no panel, no config and no auth client;
+# the sign-in pages no config and none of the signed-in panel. verify-public-chunks.mjs reads the
+# source maps of the chunks each loads; the build has source maps on for that.
+verify_public_chunks() {
+  (
+    cd "$WORK_DIR"
+    node "$ROOT_DIR/src/scripts/verify-public-chunks.mjs"
   )
 }
 
@@ -244,11 +266,17 @@ run_pass() {
 
   log "[$pm] Building for production"
   cd "$WORK_DIR"
+  # Source maps name the modules in each chunk, which verify_public_chunks reads.
+  sed -i.bak "s/defineConfig({/defineConfig({ build: { sourcemap: true },/" vite.config.ts
+  rm -f vite.config.ts.bak
+  grep -q "sourcemap: true" vite.config.ts || { echo "could not turn source maps on in vite.config.ts"; exit 1; }
   case "$pm" in
     npm) npx rime build -d -e -s ;;
     pnpm) pnpm exec rime build -d -e -s ;;
     bun) bunx rime build -d -e -s ;;
   esac
+  log "[$pm] Verifying what a visitor loads"
+  verify_public_chunks
   cd app
 
   if [[ $pm == "npm" ]]; then
