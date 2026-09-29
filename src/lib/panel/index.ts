@@ -5,6 +5,7 @@ import type { Snippet } from 'svelte';
 import { Field } from './components/fields/index.js';
 import RelationInline from '$lib/fields/relation/component/RelationInline.svelte';
 import RichTextInline from '$lib/fields/rich-text/component/RichTextInline.svelte';
+import TextInline from '$lib/fields/text/component/TextInline.svelte';
 import RenderFields from './components/fields/RenderFields.svelte';
 import Panel from './components/Root.svelte';
 import Doc from './components/sections/document/Document.svelte';
@@ -42,6 +43,7 @@ export {
   RelationInline,
   RenderFields,
   RichTextInline,
+  TextInline,
   SpinLoader,
   // A block render's relations, resolved as the API answers them
   populate,
