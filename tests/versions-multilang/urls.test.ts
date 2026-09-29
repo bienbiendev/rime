@@ -139,7 +139,7 @@ test('A slug a sibling holds is refused; a new page takes the next free one', as
   });
   expect(refused.status()).toBe(400);
 
-  const twin = await create(request, { title: 'Another S0', slug: 's0', parent: ids.services });
+  const twin = await create(request, { title: 'S0', slug: 'twin', parent: ids.services });
   expect(twin._slug).toBe('s0-2');
   expect(twin.url).toBe(`${BASE}/en/company/services/s0-2`);
 });

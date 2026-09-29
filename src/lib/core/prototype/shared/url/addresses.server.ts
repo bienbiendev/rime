@@ -1,9 +1,7 @@
 import type { PathRow } from '$lib/core/adapter.js';
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { walkFields } from '$lib/core/fields/walk.js';
 import { logger } from '$lib/core/logger.server.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
-import { getValueAtPath } from '$lib/util/object.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { hasUrl } from './enabled.js';
 import { freeSlug, toSlug } from './format.server.js';
@@ -15,18 +13,8 @@ export const addressLocales = (event: RequestEvent) => {
   return codes.length ? codes : [''];
 };
 
-/**
- * The slug a page starts with: the collection's own slug field when it has one, its title
- * otherwise, its id as a last resort.
- */
-const initialSlug = (config: BuiltCollection, doc: GenericDoc) => {
-  for (const { field, path } of walkFields(config.fields)) {
-    if (field.type !== 'slug') continue;
-    const value = toSlug(getValueAtPath(path, doc));
-    if (value) return value;
-  }
-  return toSlug(doc.title) || doc.id;
-};
+/** The slug a page starts with: its title, its id as a last resort. */
+const initialSlug = (doc: GenericDoc) => toSlug(doc.title) || doc.id;
 
 /**
  * Gives these pages their address in one locale: a slug free among their siblings, under their
@@ -55,7 +43,7 @@ const addAddressesIn = async (args: {
     for (const id of ready) {
       const parentId = parentOf(id);
       const taken = await paths.siblingSlugs({ slug: config.slug, locale, parentId });
-      const slug = freeSlug(initialSlug(config, docs.get(id)!), taken);
+      const slug = freeSlug(initialSlug(docs.get(id)!), taken);
       inserted.push(
         ...(await paths.insert({
           slug: config.slug,
