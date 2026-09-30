@@ -53,7 +53,7 @@ export type LayerRow = {
  * `?focus=` in the address reopens it.
  *
  * The stage shows the open list, or the one block the path ends on and the lists it holds. The
- * selection is a block, or nothing, which is the root node of the layers.
+ * selection is a block, a list inside the stage, or nothing, which is the root node of the layers.
  *
  * A focus opened from the field rides in `page.state`, one history entry per `open`, so Escape
  * and the back button go up the same levels. One opened by the address has no history entry of
@@ -67,6 +67,8 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   /** Narrowed by the address, the block is selected and its fields show. */
   const narrowedFromUrl = !!initial && endsOnBlock(initial);
   let selection = $state<string[]>(narrowedFromUrl ? [initial] : []);
+  /** A list inside the stage, `sections.1.items`, selected while no block is. */
+  let selectedList = $state<string | null>(null);
   /** The panel's tab: the tree of blocks, the selected block's fields, the types to add. */
   let tab = $state<SidebarTab>(narrowedFromUrl ? 'inspector' : 'layers');
   /** Counts the asks to show a block's fields, so a closed panel knows to open. */
@@ -81,6 +83,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   $effect(() => {
     if (path) return;
     selection = [];
+    selectedList = null;
     collapsed.clear();
     // Closed back onto the entry the address opened: the address drops its focus too.
     if (page.url.searchParams.has(FOCUS_PARAM)) replaceState(urlWith(null), {} as App.PageState);
@@ -103,6 +106,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
    * `sections.1`: that block selected, its fields in the panel.
    */
   function open(target: string, selected?: string) {
+    selectedList = null;
     if (endsOnBlock(target)) {
       selection = [target];
       tab = 'inspector';
@@ -285,6 +289,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   const currentAt = (): BlockAt | null => (selection[0] ? parseBlockPath(selection[0]) : null);
 
   function select(rowPath: string, options: { extend?: boolean } = {}) {
+    selectedList = null;
     if (options.extend && selection.length) {
       selection = selection.includes(rowPath)
         ? selection.filter((item) => item !== rowPath)
@@ -307,7 +312,25 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
 
   const selectRoot = () => {
     selection = [];
+    selectedList = null;
   };
+
+  /** A list the blocks of the stage hold: `sections.1.items` under `sections`. */
+  const isNestedList = (list: string) =>
+    !!path && list.startsWith(`${path}.`) && list !== homeList() && !!builderOf(list);
+
+  /**
+   * Selects a list: the next block goes at its end. The home list, or a list outside the stage,
+   * selects the root.
+   */
+  function selectList(list: string) {
+    selection = [];
+    selectedList = isNestedList(list) ? list : null;
+  }
+
+  /** The selected list, while no block is selected and the stage still holds it. */
+  const listSelected = () =>
+    !selection.length && selectedList && isNestedList(selectedList) ? selectedList : null;
 
   /* ---------------------------------------------------------- operations */
 
@@ -320,14 +343,14 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     return current && !isNarrowedBlock(blockPath(current)) ? current : null;
   }
 
-  /** The list the next insert goes to: the selected block's, else the home list. */
-  const insertList = () => movableAt()?.list ?? homeList();
+  /** The list the next insert goes to: the selected block's, the selected list, the home list. */
+  const insertList = () => movableAt()?.list ?? listSelected() ?? homeList();
 
-  /** Where the palette inserts: after the selected block, else at the end of the home list. */
+  /** Where the palette inserts: after the selected block, else at the end of the list. */
   function insertionPoint(): BlockAt | null {
     const current = movableAt();
     if (current) return { list: current.list, index: current.index + 1 };
-    const list = homeList();
+    const list = listSelected() ?? homeList();
     if (!list) return null;
     return { list, index: form.blocks.list(list).length };
   }
@@ -458,7 +481,10 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     set picking(value: boolean) {
       picking = value;
     },
-    /** Opens the picker of types to add; the one picked goes after the selection. */
+    /**
+     * Opens the picker of types to add. The one picked goes after the selected block, or at the
+     * end of the selected list.
+     */
     pick() {
       if (!locked) picking = true;
     },
@@ -468,10 +494,11 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     },
     /** Nothing selected: the root node, and the whole list on the stage. */
     get rootSelected() {
-      return selection.length === 0;
+      return selection.length === 0 && !listSelected();
     },
     rootLabel,
     selectRoot,
+    selectList,
     breadcrumb,
     isSelected: (rowPath: string) => selection.includes(rowPath),
     isNarrowedBlock,

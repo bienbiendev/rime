@@ -21,7 +21,6 @@
   import Palette from './Palette.svelte';
   import Inspector from './Inspector.svelte';
   import Renders from './Renders.svelte';
-  import StagePlaceholder from './StagePlaceholder.svelte';
 
   const { form }: { form: DocumentFormContext } = $props();
 
@@ -409,15 +408,12 @@
   <div class="rz-blocks-focus__body">
     <!--
       The stage: the open list, or the narrowed block alone with what it holds. A click beside the
-      blocks selects the root; the blocks stop their own clicks.
+      blocks selects the root; the blocks and their lists stop their own clicks.
     -->
     <section class="rz-blocks-focus__renders" role="presentation" onclick={focus.selectRoot}>
       {#key focus.path}
         <Renders {form} list={stageList} only={focus.narrowedRow?.index} onRemove={requestRemove} />
       {/key}
-      {#if count && !focus.locked}
-        <StagePlaceholder />
-      {/if}
     </section>
 
     {#if narrow}
@@ -559,16 +555,9 @@
     min-height: 0;
   }
 
-  .rz-blocks-focus__renders > :global(.rz-renders),
-  .rz-blocks-focus__renders > :global(.rz-stage-placeholder) {
+  .rz-blocks-focus__renders > :global(.rz-renders) {
     max-width: var(--rz-document-width, 60rem);
     margin-inline: auto;
-  }
-
-  /* Under the blocks, one gap further down. */
-  .rz-blocks-focus__renders > :global(.rz-stage-placeholder) {
-    display: block;
-    margin-top: var(--rz-size-3);
   }
 
   .rz-blocks-focus__panel,

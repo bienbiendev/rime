@@ -5,7 +5,7 @@
   import { Button } from '$lib/panel/components/ui/button/index.js';
   import { withBlockTypes } from '$lib/panel/context/blocks-ops.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { Focus, ToyBrick } from '@lucide/svelte';
+  import { Focus, Plus, ToyBrick } from '@lucide/svelte';
   import { getBlocksFocusContext } from './focus.svelte.js';
 
   type Props = { form: DocumentFormContext };
@@ -30,11 +30,20 @@
       ? t__('fields.blocks_count', '1')
       : t__('fields.blocks_count|m|p', String(count));
   };
+
+  /** Opens the picker on the list: the block picked goes at its end. */
+  function addTo(list: string) {
+    focus.selectList(list);
+    focus.pick();
+  }
 </script>
 
 {#if row && rendered}
   {@const Icon = row.config?.icon ?? ToyBrick}
-  <!-- The selected block: its head, its fields, then how many blocks each of its lists holds. -->
+  <!--
+    The selected block: its head, its fields, then how many blocks each of its lists holds, and a
+    button that adds one.
+  -->
   <article class="rz-inspector" data-block-path={row.path}>
     <header class="rz-inspector__header">
       <span class="rz-inspector__icon"><Icon size={14} /></span>
@@ -63,6 +72,17 @@
           <li class="rz-inspector__list">
             <span>{child.label}</span>
             <span class="rz-inspector__count">{countOf(child.list)}</span>
+            {#if !focus.locked}
+              <button
+                type="button"
+                class="rz-inspector__add"
+                title={t__('fields.add_block')}
+                aria-label={t__('fields.add_block')}
+                onclick={() => addTo(child.list)}
+              >
+                <Plus size={14} />
+              </button>
+            {/if}
           </li>
         {/each}
       </ul>
@@ -137,11 +157,30 @@
 
   .rz-inspector__list {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
     gap: var(--rz-size-2);
   }
 
+  /* On the right, then the button. */
   .rz-inspector__count {
+    margin-left: auto;
     color: var(--rz-fg-subtle);
+  }
+
+  .rz-inspector__add {
+    display: grid;
+    place-items: center;
+    width: var(--rz-size-6);
+    height: var(--rz-size-6);
+    flex-shrink: 0;
+    border-radius: var(--rz-radius-sm);
+    color: var(--rz-fg-subtle);
+    &:hover {
+      color: var(--rz-fg);
+      background-color: var(--rz-bg-hover);
+    }
+    &:focus-visible {
+      @mixin focus-ring;
+    }
   }
 </style>
