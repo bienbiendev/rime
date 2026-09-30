@@ -8,6 +8,7 @@
   import DefaultRender from './DefaultRender.svelte';
   import { getBlocksFocusContext } from './focus.svelte.js';
   import Renders from './Renders.svelte';
+  import StagePlaceholder from './StagePlaceholder.svelte';
 
   /**
    * `only` narrows the list to the block at that index, focus on one block: it does not move
@@ -31,6 +32,23 @@
     focus.select(rowPath, { extend: event.shiftKey });
     focus.inspect();
   }
+
+  /**
+   * A click beside the blocks selects the list, so the next block goes at its end. A click on a
+   * block stops at the block.
+   */
+  function selectList(event: MouseEvent) {
+    event.stopPropagation();
+    focus.selectList(list);
+  }
+
+  /**
+   * "Type / to add a block" at the end of the list the next block goes to, so one on the stage.
+   * An empty open list has its own message instead.
+   */
+  const placeholder = $derived(
+    !focus.locked && list === focus.insertList() && (rows.length > 0 || list !== focus.path)
+  );
 
   /** The one block the controls act on: selected alone, and the form open to changes. */
   const controlled = (rowPath: string) =>
@@ -99,7 +117,14 @@
   One list of blocks, one wrapper per block. A block's nested lists are the `nested` snippet its
   render puts where they go; a block without a render is a row with them under it.
 -->
-<div class="rz-renders" data-list={list} data-empty={rows.length ? undefined : ''} use:sortableList>
+<div
+  class="rz-renders"
+  data-list={list}
+  data-empty={rows.length ? undefined : ''}
+  role="presentation"
+  onclick={selectList}
+  use:sortableList
+>
   {#each rows as row (row.block.id)}
     {@const config = row.config}
     {@const Render = config?.render}
@@ -200,6 +225,9 @@
       <p class="rz-renders__empty">{t__('fields.no_blocks_yet')}</p>
     {/if}
   {/each}
+  {#if placeholder}
+    <StagePlaceholder {list} compact={list !== focus.path} />
+  {/if}
 </div>
 
 <style lang="postcss">
