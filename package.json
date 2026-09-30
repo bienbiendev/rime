@@ -235,7 +235,7 @@
     "ast-kit": "^2.1.2",
     "autoprefixer": "^10.4.21",
     "better-auth": "1.7.4",
-    "bits-ui": "2.8.0",
+    "bits-ui": "2.19.3",
     "camelcase": "^8.0.0",
     "chalk": "^5.6.2",
     "clone-deep": "^4.0.1",

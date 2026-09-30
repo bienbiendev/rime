@@ -12,7 +12,6 @@
   let {
     open = $bindable(false),
     ref = $bindable(null),
-    value = $bindable(''),
     preventScroll = true,
     onCloseAutoFocus,
     children,
@@ -26,14 +25,9 @@
     } = $props();
 </script>
 
+<!-- The command mounts with each opening, so its selection starts on the first line. -->
 <Dialog.Root bind:open {...restProps}>
   <Dialog.Content class="rz-command-dialog-content" {preventScroll} {onCloseAutoFocus}>
-    <Command
-      class="rz-command-dialog-content__command"
-      {...restProps}
-      bind:value
-      bind:ref
-      {children}
-    />
+    <Command class="rz-command-dialog-content__command" {...restProps} bind:ref {children} />
   </Dialog.Content>
 </Dialog.Root>
