@@ -23,7 +23,7 @@ import { resolvedReferencesOf } from '$lib/core/fields/util.js';
  * Turns the rows a read returned into the four piles core builds a document from.
  *
  * Everything here needs `tables`: which children hang off this document, which locales branch
- * belongs to which row, which columns a branch has. Everything that did not — the blank merge,
+ * belongs to which row, which columns a branch has. Everything that does not — the empty fields,
  * the key stripping, the relation assembly, the depth walk — is in
  * `core/pipeline/build-document.server.ts`.
  */
@@ -37,7 +37,8 @@ export const createTransformHandle = <const C extends Config>(args: {
    * Merges a child row's locales branch onto it — the rows the read returned, one per locale in
    * the fallback order, each column from the first that holds it — and nulls the localized
    * columns no locale has saved yet: a localized block fetched in a locale it was never written
-   * in reads as absent columns otherwise, and absent is not null once the blank is merged.
+   * in reads as absent columns otherwise: the empty fields a read adds stop at the list, and never
+   * reach into a block.
    */
   const withLocalesBranch = (row: Dic, branchTable: TableName, order: string[]): Dic => {
     const merged = {

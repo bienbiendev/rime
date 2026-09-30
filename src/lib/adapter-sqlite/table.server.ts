@@ -7,15 +7,12 @@ import { declaredTableProperty } from './naming.server.js';
 import type { GenericTable, SqliteDatabase } from './types.server.js';
 
 /**
- * Handles for the tables features declared — see `FeatureDefinition.tables`.
+ * Handles for the tables a config declares in `$tables`, the ones no prototype owns: better-auth's
+ * users, sessions and accounts (`core/auth/configure.ts`).
  *
  * The counterpart to `prototype.server.ts`, and much smaller for one reason: a declared table has
  * no config behind it. Nothing to resolve a path against, no locales branch, no children, no
- * blank to merge. So the filter is a flat column-to-value map and the verbs are three.
- *
- * This is what let `AuthHandle` collapse to Better-auth's own adapter. Its last three methods
- * read and wrote `auth_users`, `auth_sessions` and `auth_accounts` — real tables that core simply
- * had no way to name until a feature could declare one.
+ * empty fields to add. So the filter is a flat column-to-value map and the verbs are three.
  */
 export const createTableHandles = (args: {
   db: SqliteDatabase;

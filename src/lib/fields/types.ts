@@ -72,6 +72,8 @@ export type FormField = Field & {
   table?: FieldPanelTableConfig;
   hooks?: FieldHooks;
   defaultValue?: DefaultValueFn<any> | unknown;
+  /** When the default fills the field. Set by `defaultValue(value, { fill })`. */
+  defaultFill?: DefaultFill;
   isEmpty: (value: unknown) => boolean;
   /** Kept on the base row of a versioned config, shared by every version. Set by `$root()`. */
   root?: boolean;
@@ -80,6 +82,18 @@ export type FormField = Field & {
 };
 
 export type DefaultValueFn<T> = ({ event }: { event?: RequestEvent }) => T;
+
+/**
+ * When a default fills its field.
+ *
+ * ```ts
+ * text('title').defaultValue('Untitled')                     // 'create': a new document starts with it
+ * text('title').defaultValue('Untitled', { fill: 'save' })   // 'save': and a save never leaves it empty
+ * ```
+ */
+export type DefaultFill = 'create' | 'save';
+
+export type DefaultOptions = { fill?: DefaultFill };
 
 export type FieldHookContext<T extends FormField = FormField> = {
   event: RequestEvent;

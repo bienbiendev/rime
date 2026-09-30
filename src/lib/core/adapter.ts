@@ -52,7 +52,7 @@ export interface Adapter {
    * The handle for a table a feature declared — see `TableDeclaration`.
    *
    * Separate from the two above because a declared table is not a prototype: no fields, no
-   * pipeline, no access rules, nothing to merge a blank into. Three verbs and a flat filter,
+   * pipeline, no access rules, no empty fields to add. Three verbs and a flat filter,
    * because whoever declared it already knows its columns and there is nothing to resolve
    * against a config.
    */
@@ -210,8 +210,11 @@ export interface AreaHandle extends BaseHandle {
     locale?: string;
   }): Promise<{ id: string }>;
 
-  /** Boot only. Writes the row if absent; a no-op if not. */
-  ensureExists(args: { blank: Dic; locale?: string }): Promise<void>;
+  /**
+   * Boot only. Writes the row if absent, and answers the row its children hang off — the version
+   * row when there is one. `null`, and nothing written, when the row was there.
+   */
+  ensureExists(args: { initial: Dic; locale?: string }): Promise<{ contentId: string } | null>;
 }
 
 /**
@@ -352,9 +355,9 @@ export interface TransformHandle {
    * Three things, and each of them needs a table: resolving which tables hang off this document,
    * merging each locales branch, and turning column names back into document paths.
    *
-   * `buildDocument` in `core/pipeline/build-document.server.ts` takes it from here — merging the
-   * blank, keeping the bookkeeping the caller asked for, and assembling relations into document
-   * properties are core's, and none of them needs a table.
+   * `buildDocument` in `core/pipeline/build-document.server.ts` takes it from here — adding the
+   * empty fields, keeping the bookkeeping the caller asked for, and assembling relations into
+   * document properties are core's, and none of them needs a table.
    */
   rows(args: {
     doc: RawDoc;
@@ -424,9 +427,6 @@ export interface AuthHandle {
   betterAuthAdapter: unknown;
 }
 
-/** Which blank a feature is being asked to shape — see `FeatureDefinition.blank`. */
-export type BlankIntent = 'create' | 'seed';
-
 export type WritePlan = {
   /** What goes on the prototype's own row. */
   data: Dic;
@@ -453,19 +453,6 @@ export type VersionsTable = {
    */
   slug: string;
 };
-
-/**
- * How a feature describes storage it needs, in core's terms.
- *
- * A `versions` deviates a prototype's own table and a prototype's fields become its columns. Neither
- * covers a table that belongs to the **feature** — better-auth's four, an api-key store, an audit
- * log. Those were written out as drizzle source inside the schema generator, which is how the
- * database layer came to know that a collection called `staff` exists and is special.
- *
- * No drizzle here, and no SQL: a declaration says what the storage *is*, and the adapter decides
- * how to spell it. That is the same line `Adapter` draws, for the same reason — a second adapter
- * has to be able to satisfy this.
- */
 
 /**
  * What a column holds.
@@ -497,6 +484,13 @@ export type ColumnDeclaration = {
   references?: { table: string; column?: string; onDelete?: 'cascade' | 'set null' };
 };
 
+/**
+ * A table that belongs to a feature rather than to a prototype, in core's terms: better-auth's
+ * four, the api-key store. A prototype's table comes from its fields; this covers the rest.
+ *
+ * No drizzle here, and no SQL: a declaration says what the storage *is*, and the adapter decides
+ * how to spell it. That is the line `Adapter` draws too, so a second adapter can satisfy it.
+ */
 export type TableDeclaration = {
   /**
    * The table's slug, `$`-prefixed to mark it rime-derived — `$authUsers`.
@@ -507,15 +501,3 @@ export type TableDeclaration = {
   slug: string;
   columns: ColumnDeclaration[];
 };
-/**
- * How a feature describes storage it needs, in core's terms.
- *
- * A `versions` deviates a prototype's own table and a prototype's fields become its columns. Neither
- * covers a table that belongs to the **feature** — better-auth's four, an api-key store, an audit
- * log. Those were written out as drizzle source inside the schema generator, which is how the
- * database layer came to know that a collection called `staff` exists and is special.
- *
- * No drizzle here, and no SQL: a declaration says what the storage *is*, and the adapter decides
- * how to spell it. That is the same line `Adapter` draws, for the same reason — a second adapter
- * has to be able to satisfy this.
- */

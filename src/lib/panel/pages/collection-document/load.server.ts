@@ -42,7 +42,7 @@ export async function documentLoad(event: ServerLoadEvent) {
     if (!authorized) {
       throw handleError(new RimeError(RimeError.UNAUTHORIZED), { context: ERROR_CONTEXT.LOAD });
     }
-    doc = collection.blank();
+    doc = collection.initial();
   } else {
     /** Check for authorizations */
     const authorizedRead = collection.config.access.read(user, { id });

@@ -1,6 +1,6 @@
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
+import type { DefaultOptions, DefaultValueFn, FormField } from '$lib/fields/types.js';
 import * as validate from '$lib/core/fields/validate.js';
 import { sanitize, slugify } from '$lib/util/string.js';
 import Cell from './component/Cell.svelte';
@@ -41,8 +41,9 @@ export class SlugFieldBuilder extends FormFieldBuilder<SlugField> {
     return this;
   }
 
-  defaultValue(value: string | DefaultValueFn<string>) {
+  defaultValue(value: string | DefaultValueFn<string>, options?: DefaultOptions) {
     this.field.defaultValue = value;
+    this.field.defaultFill = options?.fill;
     return this;
   }
 

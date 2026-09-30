@@ -20,10 +20,8 @@ export type WithVersionsConfig<T> = Omit<T, 'versions'> & {
  * Normalises `versions`, adds the `status` field when drafts are on and `isAutoSave` when
  * auto-save is, and — when this config is versioned — states **where its content lives**.
  *
- * `_versions` is the answer five callers used to fold the feature list for, through a
- * `FeatureDefinition.shadow` seam that only this feature ever implemented. Two of those callers
- * are in `adapter-sqlite/`, so it has to be a config member rather than a call: reading data keeps
- * the adapter naming no feature.
+ * `_versions` is a config member rather than a call because two of its readers are in
+ * `adapter-sqlite/`: reading it keeps the adapter naming no feature.
  */
 export const augmentVersions = <T extends Input>(config: T): WithVersionsConfig<T> => {
   const fields = [...(config.fields || [])];
@@ -39,14 +37,14 @@ export const augmentVersions = <T extends Input>(config: T): WithVersionsConfig<
     };
 
     if (normalizedVersions.draft) {
-      fields.push(text('status').defaultValue(VERSIONS_STATUS.DRAFT).hidden());
+      fields.push(text('status').defaultValue(VERSIONS_STATUS.DRAFT, { fill: 'save' }).hidden());
     }
 
     // `required()` makes the column not null with a default, so a migration backfills every
     // existing row as `false`. Reads filter on `isAutoSave != true`, and SQLite does not count a
     // null row as passing that.
     if (normalizedVersions.draft && normalizedVersions.autoSave) {
-      fields.push(toggle('isAutoSave').defaultValue(false).required().hidden());
+      fields.push(toggle('isAutoSave').defaultValue(false, { fill: 'save' }).required().hidden());
     }
   } else {
     normalizedVersions = undefined;

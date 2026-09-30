@@ -31,41 +31,6 @@ export const isNotHidden = <T extends FormField>(field: FormFieldBuilder<T>) => 
 export const isLiveField = (field: Field) => field.live;
 
 /**
- * Creates an object with empty values based on field configurations.
- * Uses defaultValue if specified, otherwise undefined.
- * Handles nested fields like groups and tabs recursively.
- *
- * @example
- * // Returns { title: '', attributes: { name: '', description: '' } }
- * emptyValuesFromFieldConfig([
- *   { name: 'title', type: 'text', defaultValue: '' },
- *   { name: 'attributes', type: 'group', fields: [
- *     { name: 'name', type: 'text', defaultValue: '' },
- *     { name: 'description', type: 'text', defaultValue: '' }
- *   ]}
- * ]);
- */
-export const emptyValuesFromFieldConfig = (fields: FieldBuilder[]): Dic =>
-  Object.fromEntries(
-    fields.filter(isFormField).map((config) => {
-      const nodes = config.use.nodes();
-
-      // A leaf, and a repeater with it: `#` means only a document can name the children, so an
-      // empty one holds the field's own default.
-      if (!nodes.length || nodes.some((node) => node.segment.includes('#'))) {
-        return [config.name, config.use.defaultValue()];
-      }
-
-      const value: Dic = {};
-      for (const node of nodes) {
-        const bucket = node.segment ? (value[node.segment] = {} as Dic) : value;
-        Object.assign(bucket, emptyValuesFromFieldConfig(node.fields));
-      }
-      return [config.name, value];
-    })
-  );
-
-/**
  * Converts a path with numeric indices to a regex pattern
  * Numbers between dots or between dot and colon are converted to \d+
  *

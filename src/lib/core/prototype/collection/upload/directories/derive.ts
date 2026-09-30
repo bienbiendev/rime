@@ -1,5 +1,5 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
-import { blank } from '$lib/core/prototype/blank.js';
+import { initial } from '$lib/core/prototype/initial.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import { date } from '$lib/fields/date/index.js';
 import { text } from '$lib/fields/text/index.js';
@@ -22,7 +22,7 @@ export function makeUploadDirectoriesCollectionClient<C extends WithUpload<Built
   const directoriesCollection: BuiltCollection = {
     slug: slug as CollectionSlug,
     kebab: prototypeKebab(slug),
-    blank,
+    initial,
     versions: undefined,
     access: {
       read: directoriesConfig?.access?.read || collection.access.read,

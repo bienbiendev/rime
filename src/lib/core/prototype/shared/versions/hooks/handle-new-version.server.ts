@@ -200,13 +200,12 @@ async function prepareDataForNewVersion(args: {
     data.file = (await fileForDocument(originalDoc)) ?? data.file;
   }
 
-  // Use missing required data from original version
-  data = await fallbackDataFromOriginal({
+  // The fields the update did not send, from the previous version.
+  data = fallbackDataFromOriginal({
     data,
     original: originalDoc,
     configMap: originalConfigMap,
-    ignore: ['status'],
-    mode: 'all'
+    ignore: ['status']
   });
 
   // Set default status to "draft" if no data.status

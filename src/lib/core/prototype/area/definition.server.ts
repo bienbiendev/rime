@@ -1,6 +1,9 @@
 import type { BuiltArea } from '$lib/core/config/types.js';
+import { buildConfigMap } from '$lib/core/pipeline/config-map/index.js';
+import { persistRelational } from '$lib/core/pipeline/run.server.js';
+import type { OperationContext } from '$lib/core/pipeline/types.js';
 import { definePrototype } from '../define.js';
-import { blankVersion } from '$lib/core/prototype/shared/versions/blank.js';
+import { initialVersion } from '$lib/core/prototype/shared/versions/initial.js';
 import { area as base } from './definition.js';
 import { areaHooks } from './hooks.server.js';
 import { rest } from './rest/index.server.js';
@@ -26,19 +29,32 @@ export const area = definePrototype<BuiltArea>({
 
   boot: async ({ config, adapter, defaultLocale }) => {
     /**
-     * No request event: boot has no request. `blank` takes one only to pass to a field's
+     * No request event: boot has no request. `initial` takes one only to pass to a field's
      * `defaultValue({ event })`, which already declares it optional — so a default that reads it
      * gets `undefined` here rather than whichever request arrived first.
      *
      * The locale is the config's default for the same reason: the locale of an area's first row
      * is a property of the config, not of its first reader.
      */
-    await adapter.area(config.slug).ensureExists({
-      // Intent `'seed'`, not `'create'`: a feature that gives this prototype a versions table may need
-      // the first row to differ from what an author's create starts with. See
-      // FeatureDefinition.blank.
-      blank: blankVersion(config.blank(), config),
-      locale: defaultLocale
-    });
+    // A versioned area's first row is its published version, unlike a draft a create starts.
+    const initial = initialVersion(config.initial(), config);
+    const created = await adapter
+      .area(config.slug)
+      .ensureExists({ initial, locale: defaultLocale });
+
+    // The first boot is the area's create: the blocks, tree items and relations of its initial
+    // document are written with it, on the row they hang off.
+    if (created) {
+      const configMap = buildConfigMap(initial, config.fields);
+      await persistRelational({
+        context: { params: { locale: defaultLocale }, configMap } as OperationContext,
+        ownerId: created.contentId,
+        data: initial,
+        incomingPaths: Object.keys(configMap),
+        adapter,
+        config,
+        locale: defaultLocale
+      });
+    }
   }
 });

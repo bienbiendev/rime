@@ -1,6 +1,11 @@
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DefaultValueFn, FieldValidationFunc, FormField } from '$lib/fields/types.js';
+import type {
+  DefaultOptions,
+  DefaultValueFn,
+  FieldValidationFunc,
+  FormField
+} from '$lib/fields/types.js';
 import Number from './component/Number.svelte';
 
 export const number = (name: string) => new NumberFieldBuilder(name);
@@ -29,8 +34,9 @@ export class NumberFieldBuilder extends FormFieldBuilder<NumberField> {
     return Number;
   }
 
-  defaultValue(value: number | DefaultValueFn<number>) {
+  defaultValue(value: number | DefaultValueFn<number>, options?: DefaultOptions) {
     this.field.defaultValue = value;
+    this.field.defaultFill = options?.fill;
     return this;
   }
 

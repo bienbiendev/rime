@@ -4,15 +4,21 @@ import {
   type NodeStorage,
   type ValueNode
 } from '$lib/core/fields/builders/field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { Field, FormField } from '$lib/fields/types.js';
+import {
+  FormFieldBuilder,
+  type FormFieldUse
+} from '$lib/core/fields/builders/form-field-builder.js';
+import type { CompletesDefault } from '$lib/core/fields/complete.js';
+import type { DefaultOptions, DefaultValueFn, Field, FormField } from '$lib/fields/types.js';
 import { joinMemberTypes, toPascalCase } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
+import type { RequestEvent } from '@sveltejs/kit';
 import dedent from 'dedent';
 import { number } from '../number/index.js';
 import { text } from '../text/index.js';
 import Cell from './component/Cell.svelte';
 import Tree from './component/Tree.svelte';
+import { completeTree, type TreeItemDefault } from './defaults.js';
 
 export const tree = (name: string) => new TreeBuilder(name);
 
@@ -52,6 +58,37 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
   maxDepth(n: number) {
     this.field.maxDepth = n;
     return this;
+  }
+
+  /**
+   * The items a new document starts with. Each names the values it starts with and its own
+   * `_children`; the rest comes from the tree's fields.
+   *
+   * ```ts
+   * tree('nav').fields(text('label')).defaultValue([{ label: 'Home', _children: [{ label: 'About' }] }]);
+   * ```
+   */
+  defaultValue(
+    value: TreeItemDefault[] | DefaultValueFn<TreeItemDefault[]>,
+    options?: DefaultOptions
+  ) {
+    this.field.defaultValue = value;
+    this.field.defaultFill = options?.fill;
+    return this;
+  }
+
+  /** The default completed as a document holds it — see `completeTree`. */
+  override get use(): FormFieldUse<TreeField> & CompletesDefault<TreeItemDefault> {
+    const use = super.use;
+    const completeDefault = (value: TreeItemDefault[]) => completeTree(this.field.fields, value);
+    return {
+      ...use,
+      completeDefault,
+      defaultValue: (context: { event?: RequestEvent } = {}) => {
+        const value = use.defaultValue(context);
+        return Array.isArray(value) ? completeDefault(value) : [];
+      }
+    };
   }
 
   localized() {

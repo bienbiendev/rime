@@ -63,9 +63,8 @@ describe('validateAuth', () => {
 });
 
 /**
- * And the guard: these rules only apply to a collection that declares `auth`. That was
- * `FeatureDefinition.enabled` gating a `validate` seam only auth ever implemented; it is the
- * function's own first line now, which is why every case above states `auth`.
+ * And the guard: these rules only apply to a collection that declares `auth`. It is the function's
+ * own first line, which is why every case above states `auth`.
  */
 describe('the auth guard', () => {
   it('reports a rule for a collection that declares auth', () => {

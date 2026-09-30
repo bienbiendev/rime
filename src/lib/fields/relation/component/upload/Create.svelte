@@ -24,7 +24,7 @@
 >
   <Sheet.Content style="--rz-page-gutter:var(--rz-size-6)" showCloseButton={false} side="right">
     <Doc
-      doc={config.blank()}
+      doc={config.initial()}
       readOnly={false}
       onClose={() => {
         open = false;

@@ -1,13 +1,13 @@
 <script lang="ts">
   import type { FieldBuilder } from '$lib/core/fields/builders';
-  import { emptyValuesFromFieldConfig } from '$lib/core/fields/util';
+  import { initialValues } from '$lib/core/fields/initial.js';
   import type { Field } from '$lib/fields/types.js';
   import Button from '$lib/panel/components/ui/button/button.svelte';
   import type { Dic } from '$lib/util/types';
   import { Plus } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
 
-  type AddItem = (emptyValues: Dic) => void;
+  type AddItem = (values: Dic) => void;
   type Props = {
     size: 'default' | 'sm';
     class: string;
@@ -18,8 +18,7 @@
   const { class: className, fields, addItem, size, children }: Props = $props();
 
   const add = () => {
-    const empty = emptyValuesFromFieldConfig(fields);
-    addItem(empty);
+    addItem(initialValues(fields));
   };
 </script>
 

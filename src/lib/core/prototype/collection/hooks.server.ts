@@ -24,7 +24,7 @@ import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
 import { isVersioned, isVersionsCollection } from '$lib/core/prototype/shared/versions/enabled.js';
 import * as versions from '$lib/core/prototype/shared/versions/hooks/index.server.js';
 import { when } from '$lib/core/prototype/when.js';
-import { mergeWithBlankDocument } from './hooks/merge-with-blank.server.js';
+import { mergeWithInitialDocument } from './hooks/merge-with-initial.server.js';
 
 /**
  * Every hook a collection can run, in the order it runs them.
@@ -76,14 +76,14 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     // First, on the submission as sent. Unconditional: the derived versions collection carries
     // the flag and is not itself versioned.
     versions.stripAutoSaveFlag,
-    mergeWithBlankDocument,
+    mergeWithInitialDocument,
     // After the merge: it appends the password field, and the config map below has to see it.
     when(isAuth, auth.augmentFieldsPassword),
     // Above `buildDataConfigMap`: that map is what the write turns into `incomingPaths`, the set
     // of paths the request may touch, so a field added to `data` below it is dropped in silence.
     metas.stampCreatedBy,
-    buildDataConfigMap,
     setDefaultValues,
+    buildDataConfigMap,
     // Above validation, which reads an id where a read handed back the document.
     normalizeResolvedReferences,
     validateFields,
@@ -119,10 +119,10 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     when(isVersioned, versions.handleNewVersion),
     // Between the two: below `handleNewVersion`, which reads the submission *as sent* to work out
     // what the previous version did not carry, and above `buildDataConfigMap`, whose keys are the
-    // paths the write may touch — a stamp below that is dropped in silence.
+    // paths the write may touch — a stamp or a default below that is dropped in silence.
     metas.stampUpdatedBy,
-    buildDataConfigMap,
     setDefaultValues,
+    buildDataConfigMap,
     normalizeResolvedReferences,
     validateFields,
     when(isUpload, upload.handlePathCreation),

@@ -3,20 +3,26 @@ import type {
   FieldNode,
   ValueNode
 } from '$lib/core/fields/builders/field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
+import {
+  FormFieldBuilder,
+  type FormFieldUse
+} from '$lib/core/fields/builders/form-field-builder.js';
+import type { CompletesDefault } from '$lib/core/fields/complete.js';
 import type { WithoutBuilders } from '$lib/core/fields/types.js';
 import type { GenericBlock } from '$lib/core/prototype/types.js';
-import type { Field, FormField } from '$lib/fields/types.js';
+import type { DefaultOptions, DefaultValueFn, Field, FormField } from '$lib/fields/types.js';
 import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
 import { toPascalCase, joinMemberTypes } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';
+import type { RequestEvent } from '@sveltejs/kit';
 import dedent from 'dedent';
 import type { Component, Snippet } from 'svelte';
 import { number } from '../number/index.js';
 import { text } from '../text/index.js';
 import Blocks from './component/Blocks.svelte';
 import Cell from './component/Cell.svelte';
+import { completeBlocks, type BlockDefault } from './defaults.js';
 
 export const blocks = (name: string, blocks: BlockBuilder[]) => new BlocksBuilder(name, blocks);
 
@@ -46,6 +52,38 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
   layout(layout: 'default' | 'summary') {
     this.field.layout = layout;
     return this;
+  }
+
+  /**
+   * The blocks a new document starts with, and a block inserted in the panel when the list sits
+   * inside it. Each names its `type` and the values it starts with; the rest comes from its
+   * fields.
+   *
+   * ```ts
+   * blocks('sections', [paragraph, grid]).defaultValue([
+   *   { type: 'grid', title: 'Gallery', items: [{ type: 'paragraph' }] }
+   * ]);
+   * ```
+   */
+  defaultValue(value: BlockDefault[] | DefaultValueFn<BlockDefault[]>, options?: DefaultOptions) {
+    this.field.defaultValue = value;
+    this.field.defaultFill = options?.fill;
+    return this;
+  }
+
+  /** The default completed as a document holds it — see `completeBlocks`. */
+  override get use(): FormFieldUse<BlocksField> & CompletesDefault<BlockDefault> {
+    const use = super.use;
+    const completeDefault = (value: BlockDefault[]) =>
+      completeBlocks(this.name, this.field.blocks, value);
+    return {
+      ...use,
+      completeDefault,
+      defaultValue: (context: { event?: RequestEvent } = {}) => {
+        const value = use.defaultValue(context);
+        return Array.isArray(value) ? completeDefault(value) : [];
+      }
+    };
   }
 
   localized() {

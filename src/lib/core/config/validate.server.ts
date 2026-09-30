@@ -196,6 +196,18 @@ const validateDocumentFields = (documentConfig: BuiltCollection | BuiltArea, con
             }
             validateBlockField(block.get.fields, block.name);
           }
+          // A default names block types this list declares. A function default is checked when
+          // it runs.
+          const initial = field.get.defaultValue;
+          if (Array.isArray(initial)) {
+            try {
+              field.use.completeDefault(initial);
+            } catch (error) {
+              errors.push(
+                `${(error as Error).message}, in ${documentConfig.type} ${documentConfig.slug}`
+              );
+            }
+          }
         } else if (field instanceof RelationFieldBuilder) {
           validateRelationField(field);
         }

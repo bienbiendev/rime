@@ -30,17 +30,12 @@ export const collection = definePrototype({
   name: 'collection',
   /**
    * **Everything that shapes a collection config, in the order it runs** — which is the order the
-   * fields land in, and therefore column order (CONTRIBUTING rule 2).
-   *
-   * This was two declarations: `augments: [augmentLabel]` for the prototype's own, and
-   * `features: [auth, panel, upload, …]` for the rest, folded by `applyAugments`, each entry
-   * gated by a `FeatureDefinition.enabled` predicate declared in its own file. Reading the chain
-   * meant opening ten of them. It is one list now, and the guard is beside the step.
+   * fields land in, and therefore column order (CONTRIBUTING rule 2). A step that does not always
+   * apply has its guard beside it.
    *
    * `auth` is first because `title` resolves `asTitle` from the fallback `auth` and `upload` each
    * offer, so both have to have run before it. `metas` is last because metas close the table.
-   * `augmentVersions` carries its own guard on its first line; the four `when`s are the rest of
-   * what `enabled` used to answer, and the unguarded steps are the six that answered `() => true`.
+   * `augmentVersions` carries its own guard on its first line.
    *
    * `panel` and `cors` are not here: neither has an augment. They shape the whole config and are
    * called by the config chain — see `config/build.ts`.

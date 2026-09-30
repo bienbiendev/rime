@@ -256,11 +256,10 @@ export const readDocuments = async <S extends DocType, T extends GenericDoc>(
 
       const document = await buildDocument(row.value, {
         config,
-        event,
         locale,
         depth,
         populated,
-        withBlank: !hasSelect,
+        allFields: !hasSelect,
         /**
          * The panel edits blocks and tree nodes in place, so it needs each child row's own
          * bookkeeping — `position`, `path`, `ownerId`, `locale` — kept on it.

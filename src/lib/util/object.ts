@@ -66,17 +66,17 @@ export const omitId = <T extends { id?: string; [k: string]: any }>(obj: T): Omi
  * Anything the object holds is the object's — `null` included, an array as it is.
  *
  * ```
- * withDefaults({ title: 'T', seo: { og: null } }, { title: null, body: null, seo: { og: null, meta: null } })
+ * withDefaultValues({ title: 'T', seo: { og: null } }, { title: null, body: null, seo: { og: null, meta: null } })
  * // { title: 'T', seo: { og: null, meta: null }, body: null }
  * ```
  */
-export const withDefaults = <T extends Dic>(obj: T, defaults: Dic): T => {
+export const withDefaultValues = <T extends Dic>(obj: T, defaults: Dic): T => {
   const out: Dic = { ...obj };
   for (const key of Object.keys(defaults)) {
     const value = obj[key];
     if (value === undefined) out[key] = defaults[key];
     else if (isObjectLiteral(value) && isObjectLiteral(defaults[key])) {
-      out[key] = withDefaults(value, defaults[key]);
+      out[key] = withDefaultValues(value, defaults[key]);
     }
   }
   return out as T;

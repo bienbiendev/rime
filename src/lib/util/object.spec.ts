@@ -1,10 +1,10 @@
 import { expect, test } from 'vitest';
-import { withDefaults } from './object.js';
+import { withDefaultValues } from './object.js';
 
-test('withDefaults fills what is missing and leaves what is held', () => {
+test('withDefaultValues fills what is missing and leaves what is held', () => {
   const now = new Date();
   const doc = { id: '1', title: 'T', body: null, tags: [], when: now, seo: { og: 'x' }, extra: 1 };
-  const blank = {
+  const defaults = {
     title: null,
     body: 'b',
     tags: ['a'],
@@ -13,7 +13,7 @@ test('withDefaults fills what is missing and leaves what is held', () => {
     views: 0
   };
 
-  const out = withDefaults(doc, blank);
+  const out = withDefaultValues(doc, defaults);
 
   expect(out).toEqual({
     id: '1',

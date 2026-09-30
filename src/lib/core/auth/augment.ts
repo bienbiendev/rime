@@ -83,7 +83,8 @@ export const augmentAuth = <T extends Input>(config: T): WithNormalizedAuth<T> =
   // Define role field
   const rolesField = select('roles')
     .options(...roles)
-    .defaultValue([defaultRole.value])
+    // Never saved empty: an account without a role has the default one.
+    .defaultValue([defaultRole.value], { fill: 'save' })
     .many()
     .required();
 
