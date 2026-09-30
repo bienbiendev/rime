@@ -101,7 +101,9 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
       .map((block) => {
         const blockTypeName = `Block${toPascalCase(block.name)}`;
         blockNames.push(blockTypeName);
-        const fieldsType = joinMemberTypes(block.get.fields.map((f) => f.use.generateType()));
+        // `type` is written above as the block's name, so its hidden field stays out.
+        const fields = block.get.fields.filter((f) => f.name !== 'type');
+        const fieldsType = joinMemberTypes(fields.map((f) => f.use.generateType()));
 
         return dedent`
         //@shared:start ${blockTypeName}
