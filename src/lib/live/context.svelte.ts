@@ -1,5 +1,4 @@
 import { page } from '$app/state';
-import { env } from '$env/dynamic/public';
 import { PARAMS } from '$lib/core/constants.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
 import type { BeforeNavigate } from '@sveltejs/kit';
@@ -8,6 +7,16 @@ import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 import { populate } from '$lib/fields/relation/populate.js';
 
 export const LIVE_KEY = Symbol('rime.live');
+
+/**
+ * The panel's origin, the only one whose messages are read. `$env/dynamic/public` loads with the
+ * first message, so `rimecms/public` imports outside a SvelteKit page, in a component spec.
+ */
+let panelOrigin: Promise<string> | undefined;
+const getPanelOrigin = () =>
+  (panelOrigin ??= import('$env/dynamic/public').then(
+    ({ env }) => new URL(env.PUBLIC_RIME_URL).origin
+  ));
 
 /**
  * Live Editing Flow:
@@ -28,7 +37,6 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
   let doc = $state<T>();
   const liveStore = $state<Record<string, any>>({});
   let activePanelKey = $state<string | null>(null);
-  const origin = new URL(env.PUBLIC_RIME_URL).origin;
 
   /**
    * Handles navigation within iframe to maintain live editing mode
@@ -47,7 +55,7 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
    */
   const onMessage = async (e: MessageEvent) => {
     // Only accept messages from the trusted panel origin
-    if (e.origin !== origin) return;
+    if (e.origin !== (await getPanelOrigin())) return;
 
     // Handle handshake request
     if (e.data.handshake) {

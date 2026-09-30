@@ -75,15 +75,15 @@ const resolve = (specifier: string, from: string) => {
   return null;
 };
 
-/** The runtime imports of a file, static and dynamic. */
-const importsOf = (file: string) => {
+/** The runtime imports of a file: static, and dynamic unless `dynamic` is off. */
+const importsOf = (file: string, dynamic: boolean) => {
   const source = fs.readFileSync(file, 'utf8');
   const statement =
     /(?:^|\n)\s*(?:import|export)\s+(type\s+)?(?:[^'";]*?\sfrom\s+)?['"]([^'"]+)['"]/g;
-  const dynamic = /import\(\s*['"]([^'"]+)['"]\s*\)/g;
+  const call = /import\(\s*['"]([^'"]+)['"]\s*\)/g;
   const specifiers: string[] = [];
   for (const match of source.matchAll(statement)) if (!match[1]) specifiers.push(match[2]);
-  for (const match of source.matchAll(dynamic)) specifiers.push(match[1]);
+  if (dynamic) for (const match of source.matchAll(call)) specifiers.push(match[1]);
   return specifiers;
 };
 
@@ -96,14 +96,21 @@ const chainOf = (file: string, importer: Map<string, string | null>) => {
   return chain.join(' -> ');
 };
 
-/** Each refused module an entry reaches, with the chain of imports that reaches it. */
-const refusedFrom = (entry: string, rules: Rule[]) => {
+/**
+ * Each refused module an entry reaches, with the chain of imports that reaches it. With `dynamic`
+ * off, only what evaluates with the entry: its static imports, all the way down.
+ */
+const refusedFrom = (
+  entry: string,
+  rules: Rule[],
+  { specifiers = REFUSED_SPECIFIERS, dynamic = true } = {}
+) => {
   const importer = new Map<string, string | null>([[entry, null]]);
   const refused: string[] = [];
   const queue = [entry];
   for (const file of queue) {
-    for (const specifier of importsOf(file)) {
-      const specifierRule = REFUSED_SPECIFIERS.find((rule) => rule.test(specifier));
+    for (const specifier of importsOf(file, dynamic)) {
+      const specifierRule = specifiers.find((rule) => rule.test(specifier));
       if (specifierRule) {
         refused.push(`${chainOf(file, importer)} -> ${specifier} (${specifierRule.name})`);
         continue;
@@ -125,4 +132,22 @@ describe('a visitor never loads the config, nor a panel it cannot open', () => {
       expect(refusedFrom(path.join(LIB, file), refused)).toEqual([]);
     });
   }
+});
+
+// `$env/dynamic/*` reads the SvelteKit page it runs in the moment it evaluates
+const KIT_PAGE = [
+  {
+    name: 'the env of a SvelteKit page',
+    test: (specifier: string) => specifier.startsWith('$env/dynamic/')
+  }
+];
+
+describe('a site page imports rimecms/public outside SvelteKit, in a component spec', () => {
+  it('public.ts', () => {
+    const refused = refusedFrom(path.join(LIB, 'public.ts'), [], {
+      specifiers: KIT_PAGE,
+      dynamic: false
+    });
+    expect(refused).toEqual([]);
+  });
 });
