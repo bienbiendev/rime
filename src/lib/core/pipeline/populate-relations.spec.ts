@@ -73,10 +73,9 @@ test('a relation whose target was not read is left out, the others are copies', 
     ]) as any,
     {
       config: { slug: 'pages' } as any,
-      event: { locals: { rime: {} }, params: {} } as any,
       depth: 1,
       populated,
-      withBlank: false
+      allFields: false
     }
   );
 

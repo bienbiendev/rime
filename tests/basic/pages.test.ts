@@ -340,6 +340,6 @@ test.describe('Live Edit', () => {
 
     const liveContainer = page.locator('.rz-live-container');
     await expect(liveContainer).toBeVisible({ timeout: 5000 });
-    expect(liveContainer).toHaveCount(1);
+    await expect(liveContainer).toHaveCount(1);
   });
 });

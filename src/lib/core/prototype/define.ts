@@ -5,7 +5,7 @@ import type { AnyHook, HookTiming, OperationQuery } from '$lib/core/pipeline/typ
 import type { Dic } from '$lib/util/types.js';
 import { FileText } from '@lucide/svelte';
 import type { RequestEvent } from '@sveltejs/kit';
-import { blank } from './blank.js';
+import { initial } from './initial.js';
 import { prototypeKebab } from './naming.js';
 import type { GenericDoc } from './types.js';
 
@@ -107,8 +107,8 @@ export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
   /** The locale to act in: the one asked for, else the request's, else the config's default. */
   fallbackLocale(locale?: string): string | undefined;
 
-  /** A document of this config's shape with every default applied, and no id. */
-  blank(): GenericDoc;
+  /** What a new document of this config starts with: every default applied, and no id. */
+  initial(): GenericDoc;
 
   /**
    * Which **version row** a read means. `undefined` for a config that is not versioned, which is
@@ -144,14 +144,14 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
    * `pipeline/build.server.ts` — so a derived config resolves by the same line as an authored one.
    */
   const create = (slug: string, incomingConfig: Dic): C => {
-    const initial: Dic = { ...incomingConfig, slug, _titleFallback: 'id' };
-    const augmented = augments().reduce((current, augment) => augment(current), initial) as Dic;
+    const seed: Dic = { ...incomingConfig, slug, _titleFallback: 'id' };
+    const augmented = augments().reduce((current, augment) => augment(current), seed) as Dic;
 
     return {
       ...augmented,
       type: name,
       slug,
-      blank,
+      initial,
       kebab: prototypeKebab(slug),
       fields: augmented.fields || [],
       icon: augmented.icon || FileText,

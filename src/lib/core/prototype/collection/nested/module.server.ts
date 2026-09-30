@@ -22,6 +22,6 @@ export const augmentNested = <T extends IncomingConfig>(config: T): T => ({
       .$root()
       // A read lists a document's children by it
       .$index(),
-    number('_position').defaultValue(0).hidden().$root()
+    number('_position').defaultValue(0, { fill: 'save' }).hidden().$root()
   ]
 });

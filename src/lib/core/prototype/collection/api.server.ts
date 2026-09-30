@@ -70,7 +70,7 @@ class CollectionAPI<
   }
 
   /**
-   * A document of this collection's shape with every default applied, and no id.
+   * What a new document of this collection starts with: every default applied, and no id.
    *
    * An auth collection hands back nothing private. Only a collection signs in, which is why this
    * step is here and not on the area's.
@@ -78,12 +78,11 @@ class CollectionAPI<
    * **Likely dead, to be checked and dropped.** `withoutPrivateFields` strips `PRIVATE_FIELDS`, and
    * of those only `apiKeyId` is ever a member of `config.fields` — `augment.ts` adds it, hidden, on
    * an apiKey collection. `password` is appended per-operation by `augmentFieldsPassword`, which
-   * runs *after* the blank merge, and the rest are columns no field declares. So the one member
-   * this can remove is `apiKeyId`, which `removePrivateFields` takes off again on every read. If
-   * that holds, an auth collection's blank is a blank like any other and this line is ceremony.
+   * runs *after* the initial merge, and the rest are columns no field declares. So the one member
+   * this can remove is `apiKeyId`, which `removePrivateFields` takes off again on every read.
    */
-  blank(): Doc {
-    const doc = this.config.blank(this.event);
+  initial(): Doc {
+    const doc = this.config.initial(this.event);
     return (isAuth(this.config) ? withoutPrivateFields(doc) : doc) as Doc;
   }
 
@@ -343,7 +342,7 @@ export type CollectionApi<
 > = Pick<
   CollectionAPI<Doc>,
   | 'config'
-  | 'blank'
+  | 'initial'
   | 'create'
   | 'duplicate'
   | 'find'

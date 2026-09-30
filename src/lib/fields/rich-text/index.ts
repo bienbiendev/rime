@@ -1,6 +1,6 @@
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
+import type { DefaultOptions, DefaultValueFn, FormField } from '$lib/fields/types.js';
 import { sanitize } from '$lib/util/string.js';
 import type { JSONContent } from '@tiptap/core';
 import Cell from './component/Cell.svelte';
@@ -102,8 +102,9 @@ export class RichTextFieldBuilder extends FormFieldBuilder<RichTextField> {
     return value;
   };
 
-  defaultValue(value: RichTextContent | DefaultValueFn<RichTextContent>) {
+  defaultValue(value: RichTextContent | DefaultValueFn<RichTextContent>, options?: DefaultOptions) {
     this.field.defaultValue = value;
+    this.field.defaultFill = options?.fill;
     return this;
   }
 

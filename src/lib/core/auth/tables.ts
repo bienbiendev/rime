@@ -150,15 +150,11 @@ export const authTables = (config: {
 };
 
 /**
- * What a collection that signs in carries on its own row.
- *
- * The link to the better-auth user, and — on the collection auth itself derived — the super-admin
- * flag. `templateHasAuth` decided the second by testing `slug === 'staff'`; the feature that made
- * that collection is the thing that knows which it is.
+ * What a collection that signs in carries on its own row: the link to the better-auth user, and,
+ * on the staff collection auth derives, the super-admin flag.
  */
 export const authColumns = (config: { slug: string; auth?: unknown }): ColumnDeclaration[] =>
-  // Not an auth collection: no link, no flag. `enabled` used to gate this through a
-  // `FeatureDefinition.columns` seam only auth ever implemented.
+  // Not an auth collection: no link, no flag.
   !config.auth
     ? []
     : [

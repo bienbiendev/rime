@@ -1,6 +1,6 @@
 import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
-import { blank } from '$lib/core/prototype/blank.js';
+import { initial } from '$lib/core/prototype/initial.js';
 import { prototypeKebab } from '$lib/core/prototype/naming.js';
 import type { Access, BuiltCollection, Config } from '$lib/core/config/types.js';
 import { isStaff } from '$lib/core/auth/access.js';
@@ -36,7 +36,7 @@ export function configureVersions<C extends Config>(config: C) {
         slug: withVersionsSuffix(collection.slug) as CollectionSlug,
         kebab: prototypeKebab(withVersionsSuffix(collection.slug)),
         versions: undefined,
-        blank,
+        initial,
         access: versionsAccess(collection.access),
         $hooks: collection.$hooks,
         fields: contentFields(collection),
@@ -65,7 +65,7 @@ export function configureVersions<C extends Config>(config: C) {
         kebab: prototypeKebab(withVersionsSuffix(area.slug)),
         icon: area.icon,
         versions: undefined,
-        blank,
+        initial,
         access: versionsAccess(area.access),
         asTitle: area.asTitle,
         asThumbnail: null,

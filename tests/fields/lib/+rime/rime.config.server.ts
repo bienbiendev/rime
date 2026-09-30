@@ -1,6 +1,8 @@
 import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
 import { access } from '$lib/core/auth/access.js';
 import { rime } from '$rime/config';
+import { Defaults } from './defaults';
+import { Homepage } from './homepage';
 import { HooksTest } from './hooks-test';
 import { Medias } from './medias';
 import { Pages } from './pages';
@@ -10,8 +12,8 @@ import { Targets } from './targets';
 export default rime({
   $adapter: adapterSqlite('fields.sqlite'),
 
-  collections: [HooksTest, Targets, Medias, Pages],
-  areas: [Settings],
+  collections: [HooksTest, Targets, Medias, Pages, Defaults],
+  areas: [Settings, Homepage],
 
   // Defaults to admin-only (features/panel/augment.server.ts) — relaxed to any
   // staff member so the editor account can reach the panel UI at all, which

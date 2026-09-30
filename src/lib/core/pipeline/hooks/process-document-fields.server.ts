@@ -1,13 +1,12 @@
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { logger } from '$lib/core/logger.server.js';
 import type { GenericBlock } from '$lib/core/prototype/types.js';
 import type { Dic } from '$lib/util/types.js';
 import { buildConfigMap } from '../config-map/index.js';
-import { getDefaultValue } from './set-default-values.server.js';
 
 /**
- * Walks every field of the document on the way out: drops what the reader may not see, fills an
- * empty one from its default, and hands each value to the field's own `hooks.beforeRead`.
+ * Walks every field of the document on the way out: drops what the reader may not see, and hands
+ * each value to the field's own `hooks.beforeRead`. An empty value stays empty: a default is what
+ * a new document starts with, never what a read shows.
  *
  * One copy of the document, walked in place. A config-map key is already normalized, so it is
  * its segments and nothing else; a copy of the document per key was most of this hook.
@@ -35,19 +34,6 @@ export const processDocumentFields = Hooks.beforeRead(async function processDocu
         operation: args.context,
         documentId: doc.id
       });
-      setAt(doc, parts, value);
-    }
-
-    let isEmpty;
-    try {
-      isEmpty = config.use.isEmpty(value);
-    } catch {
-      isEmpty = false;
-      logger.warn(`Error in config.isEmpty for field ${key}`);
-    }
-
-    if (isEmpty && config.get.defaultValue !== undefined) {
-      value = await getDefaultValue({ key, config, adapter: args.event.locals.rime.adapter });
       setAt(doc, parts, value);
     }
 

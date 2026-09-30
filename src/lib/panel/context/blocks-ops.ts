@@ -1,7 +1,7 @@
 import type { GenericBlock } from '$lib/core/prototype/types.js';
 import { getValueAtPath, isObjectLiteral, setValueAtPath } from '$lib/util/object.js';
 import { normalizeFieldPath } from '$lib/util/string.js';
-import { randomId } from '$lib/util/random.js';
+import { tempId } from '$lib/util/random.js';
 import type { Dic } from '$lib/util/types.js';
 import cloneDeep from 'clone-deep';
 
@@ -24,8 +24,6 @@ export type NewBlock = { type: string } & Dic;
 export type BlockClipboardData = { rime: typeof CLIPBOARD_KIND; type: string; block: GenericBlock };
 
 export const CLIPBOARD_KIND = 'block';
-
-export const tempId = () => `temp-${randomId(8)}`;
 
 /** `sections.0.items.2` -> `{ list: 'sections.0.items', index: 2 }` */
 export const parseBlockPath = (path: string): BlockAt => {

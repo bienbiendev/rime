@@ -24,10 +24,8 @@ export type AreaApiArgs = {
  * anywhere in these signatures. That is the whole difference from a collection, and it is why
  * this is its own class rather than a collection with a flag.
  *
- * `blank()` is the document as its fields default it, full stop: no auth step, because an area
- * lists no `auth`. The collection's strips auth's private members — the two were one
- * `prototypeContext` with a `shapeBlank(doc, config, intent)` between them, for a branch neither
- * kind could reach.
+ * `initial()` is the document as its fields default it, full stop: no auth step, because an area
+ * lists no `auth`. The collection's strips auth's private members.
  */
 class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> {
   readonly config: BuiltArea;
@@ -58,8 +56,8 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
   }
 
   /** The area's document with every default applied. */
-  blank(): Doc {
-    return this.config.blank(this.event) as Doc;
+  initial(): Doc {
+    return this.config.initial(this.event) as Doc;
   }
 
   /** The locale to act in: the one asked for, else the request's, else the config's default. */
@@ -156,7 +154,7 @@ export const areaApi = <Doc extends GenericDoc>(args: AreaApiArgs): AreaApi<Doc>
  */
 export type AreaApi<Doc extends GenericDoc = GenericDoc> = Pick<
   AreaAPI<Doc>,
-  'config' | 'blank' | 'find' | 'update' | 'system'
+  'config' | 'initial' | 'find' | 'update' | 'system'
 >;
 
 export type AreaAccessor = <Slug extends keyof RegisterArea>(

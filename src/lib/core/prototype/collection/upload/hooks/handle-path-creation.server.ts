@@ -19,9 +19,9 @@ export const handlePathCreation = Hooks.beforeUpsert<'upload'>(
      * An update that says nothing about the path leaves it alone; a create always has one.
      *
      * `getSegments` answers `root` for a missing *or null* path, which is what makes the second
-     * half true — and null is the case that matters, because the blank document a create is
+     * half true — and null is the case that matters, because the initial document a create is
      * merged with puts `_path: null` in `data`. A test for `'_path' in data` therefore never
-     * fires on a create, which is why the **adapter** was the thing defaulting it.
+     * fires on a create.
      */
     if (args.operation !== 'create' && !args.data._path) return args;
 

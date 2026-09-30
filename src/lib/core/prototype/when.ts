@@ -14,12 +14,8 @@ import type { Dic } from '$lib/util/types.js';
  * with a promise. `carriesConfig` below is the whole of the difference, and `R` is what lets an
  * async step through.
  *
- * This was two mechanisms. Augments were gated by a `FeatureDefinition.enabled` predicate on a
- * definition, folded by `applyAugments`; hooks by a `feature: 'auth'` mark on the hook and a
- * name → predicate map in `buildPipeline`. Neither was visible where the step was placed, which
- * is the only place the question is interesting.
- *
- * A step with no guard runs always — which is what six of the ten features declared anyway.
+ * The guard sits where the step is placed, so the list says when each step runs. A step with no
+ * guard runs always.
  */
 export const when = <T, R>(applies: (config: Dic) => boolean, step: (subject: T) => R) => {
   const guarded = (subject: T): R | T =>

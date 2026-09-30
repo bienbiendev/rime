@@ -28,6 +28,9 @@ export const randomId = (length: number): string => {
   return result;
 };
 
+/** The id of a row not saved yet: a save adds it and gives it a real one. `temp-3f9aK2bQ` */
+export const tempId = () => `temp-${randomId(8)}`;
+
 /**
  * Generate a secure random password with uppercase, lowercase, numbers and symbols
  *

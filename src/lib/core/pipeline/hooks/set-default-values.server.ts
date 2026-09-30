@@ -1,52 +1,72 @@
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { getRequestEvent } from '$app/server';
 import type { Adapter } from '$lib/core/adapter.js';
-import { RimeError } from '$lib/core/errors/index.js';
 import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
+import { isFormField } from '$lib/core/fields/util.js';
+import { walkFields } from '$lib/core/fields/walk.js';
 import { logger } from '$lib/core/logger.server.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
+import type { Dic } from '$lib/util/types.js';
+import { buildConfigMap } from '../config-map/index.js';
 
 /**
- * Fills in each field's `defaultValue` where the incoming data left it empty.
+ * Gives an empty value its default on every save, for a field that says `fill: 'save'`: a value
+ * sent empty and, on an update, a field not sent whose stored value is empty. Any other field
+ * keeps what it was sent; a create gives a field not sent its default before this, in
+ * `mergeWithInitialDocument`.
  *
- * A relation's default is one id or a list of them, and only the ids that name a document that
- * exists survive — see `defaultRelationValue`.
+ * ```ts
+ * date('publishedAt').defaultValue(() => new Date(), { fill: 'save' });
+ * // PATCH { publishedAt: null }   -> now
+ * // PATCH {}, stored null          -> now
+ * // PATCH {}, stored 2026-02-01    -> unchanged
+ * ```
+ *
+ * It sits above `buildDataConfigMap`, so a field it adds is written. A relation's default is one
+ * id or a list of them, and only the ids that name a document that exists survive — see
+ * `defaultRelationValue`.
  */
 export const setDefaultValues = Hooks.beforeUpsert(async function setDefaultValues(args) {
   const { operation, event } = args;
   const { rime } = event.locals;
+  const fields = args.config.fields;
+  const stored = operation === 'update' ? (args.context.originalDoc as Dic | undefined) : undefined;
 
-  const configMap = args.context.configMap;
+  let output: Dic = { ...args.data };
 
-  if (!configMap)
-    throw new RimeError(RimeError.OPERATION_ERROR, 'missing configMap @setDefaultValues');
+  const fill = async (key: string, config: FormFieldBuilder) => {
+    const value = await getDefaultValue({ key, config, adapter: rime.adapter });
+    output = setValueAtPath(key, output, value);
+  };
 
-  let output = { ...args.data };
-  for (const [key, config] of Object.entries(configMap)) {
-    let value = getValueAtPath(key, output);
+  // The values sent, blocks and tree items included: an empty one takes its default.
+  for (const [key, config] of Object.entries(buildConfigMap(output, fields))) {
+    if (config.get.defaultFill !== 'save') continue;
+    if (isEmpty(config, key, getValueAtPath(key, output))) await fill(key, config);
+  }
 
-    let isEmpty;
-    const shouldAddDefault =
-      operation === 'create' || (operation === 'update' && config.get.required);
-
-    try {
-      isEmpty = config.use.isEmpty(value);
-    } catch {
-      isEmpty = false;
-      logger.warn(`Error in config.isEmpty for field ${key}`);
-    }
-    if (shouldAddDefault && isEmpty && config.get.defaultValue !== undefined) {
-      value = await getDefaultValue({ key, config, adapter: rime.adapter });
-      output = setValueAtPath(key, output, value);
+  // The fields not sent, outside blocks and tree items: an empty stored value takes its default.
+  if (stored) {
+    for (const { field, path } of walkFields(fields, { determinate: true })) {
+      if (!isFormField(field) || field.get.defaultFill !== 'save') continue;
+      if (getValueAtPath(path, output) !== undefined) continue;
+      if (isEmpty(field, path, getValueAtPath(path, stored))) await fill(path, field);
     }
   }
 
-  return {
-    ...args,
-    data: output
-  };
+  return { ...args, data: output };
 });
+
+/** A field's own `isEmpty`, and not empty when it throws. */
+const isEmpty = (config: FormFieldBuilder, key: string, value: unknown) => {
+  try {
+    return config.use.isEmpty(value);
+  } catch {
+    logger.warn(`Error in config.isEmpty for field ${key}`);
+    return false;
+  }
+};
 
 type GetDefaultValue = (args: {
   key: string;

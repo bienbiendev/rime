@@ -19,9 +19,9 @@ const passwordField = text('password')
  * purely to carry `validate.password`, which is why it is added here per-operation rather
  * than declared on the collection in augment.ts.
  *
- * Must run *after* mergeWithBlankDocument. The blank document is built from `config.fields`,
+ * Must run *after* mergeWithInitialDocument. The initial document is built from `config.fields`,
  * and the config map is built from the *data*: augment before the merge and every create
- * gains a blank `password`, which then fails its own `.required()` check on the paths that
+ * gains an empty `password`, which then fails its own `.required()` check on the paths that
  * legitimately have no password — better-auth's post-signup callback, which creates the
  * document with `{ name, email, authUserId }`.
  *

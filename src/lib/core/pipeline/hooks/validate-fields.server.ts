@@ -164,7 +164,7 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
     // This bit publicly-creatable collections in particular. FormFieldBuilder's default is
     // `access.create: (user) => !!user`, so on an anonymous POST every field that does not
     // override it gets stripped, and each `.required()` one then 400s no matter what was
-    // sent. A denied field is not the caller's to provide; it keeps whatever the blank
+    // sent. A denied field is not the caller's to provide; it keeps whatever the initial
     // document or the column default gives it.
     if (config.get.required && !accessDenied && config.use.isEmpty(value)) {
       if (skipRequired) {

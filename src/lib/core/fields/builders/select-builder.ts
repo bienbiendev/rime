@@ -1,6 +1,12 @@
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DefaultValueFn, FieldValidationFunc, FormField, Option } from '$lib/fields/types.js';
+import type {
+  DefaultOptions,
+  DefaultValueFn,
+  FieldValidationFunc,
+  FormField,
+  Option
+} from '$lib/fields/types.js';
 import { capitalize } from '$lib/util/string.js';
 
 const ensureSelectIsOption: FieldValidationFunc<FieldWithOptions> = (value, { config }) => {
@@ -71,8 +77,9 @@ class PickFieldBuilder<T extends FieldWithOptions = FieldWithOptions> extends Fo
 export class PickOneFieldBuilder<
   T extends FieldWithOptions = FieldWithOptions
 > extends PickFieldBuilder<T> {
-  defaultValue(value: string | DefaultValueFn<string>) {
+  defaultValue(value: string | DefaultValueFn<string>, options?: DefaultOptions) {
     this.field.defaultValue = value;
+    this.field.defaultFill = options?.fill;
     return this;
   }
 
@@ -84,8 +91,9 @@ export class PickOneFieldBuilder<
 export class PickManyFieldBuilder<
   T extends FieldWithOptions = FieldWithOptions
 > extends PickFieldBuilder<T> {
-  defaultValue(value: string[] | DefaultValueFn<string[]>) {
+  defaultValue(value: string[] | DefaultValueFn<string[]>, options?: DefaultOptions) {
     this.field.defaultValue = value;
+    this.field.defaultFill = options?.fill;
     return this;
   }
 

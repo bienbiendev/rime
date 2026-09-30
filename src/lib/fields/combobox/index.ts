@@ -1,4 +1,9 @@
-import type { DefaultValueFn, FormField, OptionWithIcon } from '$lib/fields/types.js';
+import type {
+  DefaultOptions,
+  DefaultValueFn,
+  FormField,
+  OptionWithIcon
+} from '$lib/fields/types.js';
 import { PickOneFieldBuilder } from '../../core/fields/builders/select-builder.js';
 import Combobox from './component/ComboBox.svelte';
 
@@ -11,8 +16,9 @@ export class ComboBoxFieldBuilder extends PickOneFieldBuilder<ComboBoxField> {
     return super.options(...options);
   }
 
-  defaultValue(value: string | DefaultValueFn<string>) {
+  defaultValue(value: string | DefaultValueFn<string>, options?: DefaultOptions) {
     this.field.defaultValue = value;
+    this.field.defaultFill = options?.fill;
     return this;
   }
 

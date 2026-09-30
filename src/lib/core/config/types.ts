@@ -223,10 +223,10 @@ export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'up
   slug: CollectionSlug;
   type: 'collection';
   /**
-   * A document of this config's shape with every default applied, and no id — see
-   * `prototype/blank.ts`, which every config carries as this method.
+   * What a new document starts with: every default applied, and no id — see
+   * `prototype/initial.ts`, which every config carries as this method.
    */
-  blank(event?: RequestEvent): GenericDoc;
+  initial(event?: RequestEvent): GenericDoc;
   /** Make fields mandatory */
   fields: FieldBuilder<Field>[];
   /** The kebab-case version of the slug for urls */
@@ -291,10 +291,10 @@ export type BuiltArea = Omit<Area<string>, 'versions'> & {
   slug: AreaSlug;
   type: 'area';
   /**
-   * A document of this config's shape with every default applied, and no id — see
-   * `prototype/blank.ts`, which every config carries as this method.
+   * What a new document starts with: every default applied, and no id — see
+   * `prototype/initial.ts`, which every config carries as this method.
    */
-  blank(event?: RequestEvent): GenericDoc;
+  initial(event?: RequestEvent): GenericDoc;
   /** Make fields mandatory */
   fields: FieldBuilder<Field>[];
   /** The kebab-case version of the slug for urls */

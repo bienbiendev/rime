@@ -8,11 +8,9 @@ import type { Dic } from '$lib/util/types.js';
  * `status = published`. The `status` field's own default is `draft`, which is right for every
  * version made after this one.
  *
- * There was a `BlankIntent` parameter saying which blank this is. It had one interesting value:
- * only `boot` seeds a row, only an area is booted, and a create never publishes. So the caller is
- * the answer — this one is `ensureExists`, and nothing else calls it.
+ * Only an area's boot seeds a row, through `ensureExists`, which is the one caller.
  */
-export const blankVersion = (doc: Dic, config: Dic): Dic =>
+export const initialVersion = (doc: Dic, config: Dic): Dic =>
   (config.versions as { draft?: boolean } | undefined)?.draft
     ? { ...doc, status: VERSIONS_STATUS.PUBLISHED }
     : doc;

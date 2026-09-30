@@ -113,11 +113,11 @@ export const readPrototype = async (
         }),
         // The row the caller's filter names, else the newest — one query either way, and the
         // adapter chooses nothing. Which content row a request means is decided above this module
-        // and arrives as an ordinary filter (`FeatureDefinition.readQuery`).
+        // and arrives as an ordinary filter (`versionsReadQuery`).
         //
-        // The `orderBy`/`limit` are not the third branch coming back: they are what "the content
-        // of this document" means with nothing else said, the same statement as `updatedAt` being
-        // the default sort. A filter narrows within that, it does not replace it.
+        // The `orderBy`/`limit` are what "the content of this document" means with nothing else
+        // said, the same statement as `updatedAt` being the default sort. A filter narrows within
+        // that, it does not replace it.
         ...(content
           ? {
               where: {

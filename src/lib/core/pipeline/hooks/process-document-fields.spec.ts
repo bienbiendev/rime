@@ -1,9 +1,6 @@
 import { block, blocks, group, text } from '$lib/fields/index.js';
-import { expect, test, vi } from 'vitest';
+import { expect, test } from 'vitest';
 import { processDocumentFields } from './process-document-fields.server.js';
-
-// A default resolves against the request; there is none here.
-vi.mock('$app/server', () => ({ getRequestEvent: () => ({}) }));
 
 const read = (fields: unknown[], doc: Record<string, unknown>, user?: unknown) =>
   processDocumentFields({
@@ -14,9 +11,8 @@ const read = (fields: unknown[], doc: Record<string, unknown>, user?: unknown) =
     operation: 'read'
   } as any);
 
-// A default fills a value the document holds and finds empty; a field the document does not hold
-// is not on the config map at all.
-test('a field the reader may not see is gone, an empty one with a default is filled in', async () => {
+// A default is what a new document starts with: a read leaves an empty value empty.
+test('a field the reader may not see is gone, an empty one with a default stays empty', async () => {
   const fields = [
     text('title'),
     text('secret').access({ read: () => false }),
@@ -31,7 +27,7 @@ test('a field the reader may not see is gone, an empty one with a default is fil
     meta: { a: 'A' }
   });
 
-  expect(doc).toEqual({ id: '1', title: 'T', greeting: 'hello', meta: { a: 'A' } });
+  expect(doc).toEqual({ id: '1', title: 'T', greeting: null, meta: { a: 'A' } });
 });
 
 test('a beforeRead hook sees the value and writes it back, at its path', async () => {

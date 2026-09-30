@@ -1,7 +1,7 @@
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
-import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
+import type { DefaultOptions, DefaultValueFn, FormField } from '$lib/fields/types.js';
 import type { RegisterCollection } from '$lib/index.js';
 import { capitalize } from '$lib/util/string.js';
 import type { WithOptional } from '$lib/util/types.js';
@@ -50,8 +50,12 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
     return this;
   }
 
-  defaultValue(value: string | string[] | DefaultValueFn<string | string[]>) {
+  defaultValue(
+    value: string | string[] | DefaultValueFn<string | string[]>,
+    options?: DefaultOptions
+  ) {
     this.field.defaultValue = value;
+    this.field.defaultFill = options?.fill;
     return this;
   }
 

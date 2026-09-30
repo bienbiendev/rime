@@ -1,6 +1,6 @@
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DefaultValueFn, FormField } from '$lib/fields/types.js';
+import type { DefaultOptions, DefaultValueFn, FormField } from '$lib/fields/types.js';
 import Cell from './component/Cell.svelte';
 import DateComponent from './component/Date.svelte';
 
@@ -31,8 +31,9 @@ export class DateFieldBuilder extends FormFieldBuilder<DateField> {
     return Cell;
   }
 
-  defaultValue(value: Date | DefaultValueFn<Date>) {
+  defaultValue(value: Date | DefaultValueFn<Date>, options?: DefaultOptions) {
     this.field.defaultValue = value;
+    this.field.defaultFill = options?.fill;
     return this;
   }
 

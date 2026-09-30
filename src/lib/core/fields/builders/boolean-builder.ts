@@ -1,4 +1,9 @@
-import type { DefaultValueFn, FieldValidationFunc, FormField } from '$lib/fields/types.js';
+import type {
+  DefaultOptions,
+  DefaultValueFn,
+  FieldValidationFunc,
+  FormField
+} from '$lib/fields/types.js';
 import { FormFieldBuilder } from './form-field-builder.js';
 
 type BooleanField = FormField & {
@@ -14,10 +19,13 @@ export class BooleanFieldBuilder<
   constructor(name: string, type: string) {
     super(name, type);
     this.field.defaultValue = false;
+    // `false` is a value: only a missing one is empty.
+    this.field.isEmpty = (value) => typeof value !== 'boolean';
   }
 
-  defaultValue(value: boolean | DefaultValueFn<boolean>) {
+  defaultValue(value: boolean | DefaultValueFn<boolean>, options?: DefaultOptions) {
     this.field.defaultValue = value;
+    this.field.defaultFill = options?.fill;
     return this;
   }
 

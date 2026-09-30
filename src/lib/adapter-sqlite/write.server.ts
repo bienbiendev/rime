@@ -87,13 +87,9 @@ type Deps = {
 };
 
 /**
- * Writes the rows the caller's plan names.
- *
- * Three branches until 1ec2dfca's successor, decoded here from an enum the caller passed down.
- * They differed in exactly two facts — is there a second row, and has somebody already written it
- * — and both are settled before the call now (`core/pipeline/run.server.ts` builds the plan,
- * `FeatureDefinition.writePlan` refines it). What was left is the same two writes in every case,
- * so there is one path.
+ * Writes the rows the caller's plan names, one path for every case. Whether there is a second row,
+ * and whether it is already written, is settled before the call: `core/pipeline/run.server.ts`
+ * builds the plan and `versionsWritePlan` refines it.
  *
  * The content row's *table* is still the adapter's to know: registration carries the versions table, and
  * where rows live is storage. Which row, and whether to touch it, is the caller's.
@@ -325,18 +321,19 @@ export const deletePrototype = async (
 /**
  * Brings a singleton's row into being if it is not already there. Boot only.
  *
- * Deliberately not an `insert`: it takes no data beyond the blank document, hands back no id,
- * and a second call does nothing. That shape is what lets a singleton have no create at all
- * while its one row still comes from somewhere.
+ * Deliberately not an `insert`: it takes no data beyond the initial document, and a second call
+ * does nothing. That shape is what lets a singleton have no create at all while its one row still
+ * comes from somewhere. It answers the row the document's children hang off when it wrote one,
+ * `null` when the row was there.
  */
 export const ensurePrototypeExists = async (
   { db, tables }: Deps,
-  { slug, blank, locale, versions }: EnsureExistsArgs
-): Promise<void> => {
+  { slug, initial, locale, versions }: EnsureExistsArgs
+): Promise<{ contentId: string } | null> => {
   const table = baseTableName(slug);
   const [existing] = await db.select({ id: tables[table].id }).from(tables[table]);
 
-  if (existing) return;
+  if (existing) return null;
 
   const now = new Date();
 
@@ -348,7 +345,7 @@ export const ensurePrototypeExists = async (
 
     const contentTable = baseTableName(versions.slug);
 
-    const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(blank, {
+    const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(initial, {
       tables,
       mainTableName: contentTable,
       localesTableName: tableName({ owner: contentTable, branch: 'locales' }),
@@ -356,7 +353,7 @@ export const ensurePrototypeExists = async (
       fillNotNull: true
     });
 
-    await insertRowWithLocales(
+    const contentId = await insertRowWithLocales(
       { db, tables },
       {
         table: contentTable,
@@ -366,12 +363,12 @@ export const ensurePrototypeExists = async (
       }
     );
 
-    return;
+    return { contentId };
   }
 
   const localesTable = tableName({ owner: table, branch: 'locales' });
 
-  const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(blank, {
+  const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(initial, {
     tables,
     mainTableName: table,
     localesTableName: localesTable,
@@ -379,7 +376,7 @@ export const ensurePrototypeExists = async (
     fillNotNull: true
   });
 
-  await insertRowWithLocales(
+  const contentId = await insertRowWithLocales(
     { db, tables },
     {
       table,
@@ -388,6 +385,8 @@ export const ensurePrototypeExists = async (
       localized: { data: localizedData, isLocalized, locale }
     }
   );
+
+  return { contentId };
 };
 
 type InsertArgs = {
@@ -403,11 +402,10 @@ type EnsureExistsArgs = {
   versions?: VersionsTable;
   slug: string;
   /**
-   * The document to write. Already shaped by whatever the prototype's features say a bootstrapped
-   * first document carries — see `FeatureDefinition.blank` with intent `'seed'`. This module
-   * writes it and asks nothing about what is in it.
+   * The document to write, already shaped as a first document: `initialVersion` publishes it when
+   * the prototype has drafts. This module writes it and asks nothing about what is in it.
    */
-  blank: Dic;
+  initial: Dic;
   locale?: string;
 };
 

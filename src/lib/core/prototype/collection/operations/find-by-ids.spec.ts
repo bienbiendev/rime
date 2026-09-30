@@ -28,8 +28,7 @@ const setup = (options: { beforeOperation?: unknown[] } = {}) => {
             rows: async ({ doc }: any) => ({ base: doc, blocks: [], tree: [], relations: [] })
           }
         },
-        config: { isCollection: () => true },
-        collection: () => ({ blank: () => ({}) })
+        config: { isCollection: () => true }
       }
     }
   };

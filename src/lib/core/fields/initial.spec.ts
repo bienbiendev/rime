@@ -11,9 +11,9 @@ import {
   tree
 } from '$lib/fields/index.js';
 import { expect, test } from 'vitest';
-import { blankFields } from './blank.js';
+import { initialValues } from './initial.js';
 
-test('a blank document, one member per field', () => {
+test('a new document, one member per field', () => {
   const fields = [
     tabs(
       tab('hero').fields(text('headline').defaultValue('Hello'), separator()),
@@ -30,7 +30,7 @@ test('a blank document, one member per field', () => {
     relation('author').to('staff')
   ];
 
-  expect(blankFields(fields)).toEqual({
+  expect(initialValues(fields)).toEqual({
     hero: { headline: 'Hello' },
     attributes: {
       title: null,

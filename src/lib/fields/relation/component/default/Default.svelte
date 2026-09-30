@@ -156,7 +156,7 @@
     >
       <Sheet.Content style="--rz-page-gutter:var(--rz-size-6)" side="right" showCloseButton={false}>
         <Document
-          doc={relationConfig.blank()}
+          doc={relationConfig.initial()}
           readOnly={false}
           onClose={() => {
             creating = false;

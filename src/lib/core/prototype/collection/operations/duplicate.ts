@@ -55,16 +55,12 @@ export const duplicate = async (args: Args): Promise<string> => {
     data = normalizeProps(data, locale);
     delete data.id;
     /**
-     * A copy is a new document, so it starts where a new document starts.
-     *
-     * This was `data.status = data.status ? VERSIONS_STATUS.DRAFT : undefined` — a core operation
-     * naming a feature's vocabulary to say "a copy of a published document is not published".
-     * True, and not this operation's rule: the feature that adds `status` already declares its
-     * default, and `setDefaultValues` applies it on every create. Carrying the original's value
-     * over is what made the reset necessary.
+     * A copy is a new document, so it starts where a new document starts: a copy of a published
+     * document is not published. The feature that adds `status` declares its default, and a create
+     * gives it to a field not sent.
      *
      * Unconditional, and safe for a config with no such field: `delete` on an absent key is a
-     * no-op, which is what the `data.status ?` test was standing in for.
+     * no-op.
      */
     delete data.status;
     return data;
