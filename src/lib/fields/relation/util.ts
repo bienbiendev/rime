@@ -5,38 +5,22 @@ import type { Relation } from './index.js';
 /**
  * Checks if a relation field's value is populated with full documents.
  *
- * A relation is considered populated if it is an array of objects that do not
- * contain only the relation identifiers (`id`, `relationTo`, `documentId`).
- * If the value is a string or an array of relation identifier objects,
- * it is considered not populated.
+ * A relation is populated when it is a non-empty array of documents: objects that are not
+ * relation references (`id`, `relationTo`, `documentId`). Anything else is not populated.
  *
  * @example
- * // Returns: false
- * isRelationPopulated('7674e91b-598a-4a72-a5cd-9594736a34dd');
- *
- * @example
- * // Returns: false
- * isRelationPopulated([]);
- *
- * @example
- * // Returns: false
- * isRelationPopulated([
- *   {
- *     id: '7674e91b-598a-4a72-a5cd-9594736a34dd',
- *     relationTo: 'articles',
- *     documentId: 'b674e91b-598a-4a72-a5cd-9594736a34dd'
- *   }
- * ]);
+ * isRelationPopulated([{ id: '7674…', title: 'Home' }]); // true
+ * isRelationPopulated('7674e91b-598a-4a72-a5cd-9594736a34dd'); // false
+ * isRelationPopulated([{ id: '7674…', relationTo: 'articles', documentId: 'b674…' }]); // false
+ * isRelationPopulated([]); // false
+ * isRelationPopulated(undefined); // false
+ * isRelationPopulated(null); // false
  */
-export const isRelationPopulated = <T>(value: RelationValue<T>): value is T[] => {
-  if (Array.isArray(value)) {
-    if (value.length === 0) return false;
-
-    return value.every((v) => {
-      return isObjectLiteral(v) && !hasProps(['id', 'relationTo', 'documentId'], v);
-    });
-  }
-  return typeof value !== 'string';
+export const isRelationPopulated = <T>(
+  value: RelationValue<T> | null | undefined
+): value is T[] => {
+  if (!Array.isArray(value) || value.length === 0) return false;
+  return value.every((v) => isObjectLiteral(v) && !hasProps(['id', 'relationTo', 'documentId'], v));
 };
 
 /**

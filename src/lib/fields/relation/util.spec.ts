@@ -38,6 +38,15 @@ test('should return false for strings array object', () => {
   expect(isRelationPopulated(stringArrayRel)).toBe(false);
 });
 
+test('should return false for an empty relation', () => {
+  expect(isRelationPopulated(undefined)).toBe(false);
+  expect(isRelationPopulated(null)).toBe(false);
+});
+
+test('should return false for a lone document outside an array', () => {
+  expect(isRelationPopulated(doc as any)).toBe(false);
+});
+
 test('should return true', () => {
   expect(isRelationPopulated([doc])).toBe(true);
 });
