@@ -1,5 +1,17 @@
 # rimecms
 
+## 1.1.1
+
+### Patch Changes
+
+- Fixed: a generated block type has `type` once, the block's name: `type: 'card'`, where a second `type?: string` used to win. A list of blocks narrows on `block.type`, and a block is a `GenericBlock`.
+
+- Fixed: closing a dialog, the ⌘K palette or the relation picker, no longer warns `derived_inert` in the console when the focus has nowhere to go back to. `bits-ui` goes from 2.8.0 to 2.19.3; a command dialog still opens on its first line.
+
+- Fixed: `rimecms/public` imports outside a SvelteKit page, in a component spec. `LiveProvider` loads `$env/dynamic/public` with the first message from the panel, not on import.
+
+- Fixed: `isRelationPopulated` answers `false` for `undefined`, `null`, and anything that is not a non-empty array of documents.
+
 ## 1.1.0
 
 ### Minor Changes
