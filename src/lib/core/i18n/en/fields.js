@@ -55,6 +55,8 @@ export default {
   uploading: 'Uploading $1 of $2…',
   upload_progress: '$1 of $2 uploaded',
   upload_failed: 'Not uploaded: $1',
+  upload_another: 'Upload another file',
+  drop_to_replace: 'Drop to replace',
   clear: 'Clear',
   add_images: 'Add $1 {image|image|images|images}',
   add_files: 'Add $1 {file|file|files|files}',
