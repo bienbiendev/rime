@@ -4,14 +4,6 @@ import { Node, mergeAttributes } from '@tiptap/core';
 import SvelteNodeViewRenderer from '../../svelte/node-view-renderer.svelte';
 import ResourceComponent from './resource.svelte';
 
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    resource: {
-      insertResource: (attributes?: Dic) => ReturnType;
-    };
-  }
-}
-
 export interface ResourceFeatureExtensionOptions {
   label?: string;
   source: `${PrototypeSlug}${string}`;
@@ -33,19 +25,6 @@ export const Resource = Node.create<ResourceFeatureExtensionOptions>({
       // A node just inserted opens its dialog; one read from stored content does not.
       { _fresh: { default: false } }
     );
-  },
-
-  addCommands() {
-    return {
-      insertResource:
-        (attributes = {}) =>
-        ({ commands }) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs: { _fresh: true, ...attributes }
-          });
-        }
-    };
   },
 
   parseHTML() {

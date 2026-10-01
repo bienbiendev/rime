@@ -14,7 +14,13 @@ export const ResourceFeature = (args: ResourceFeatureExtensionOptions): RichText
         icon: Images,
         isActive: ({ editor }) => editor.isActive('rich-text-resource-' + slug),
         suggestion: {
-          command: ({ editor }) => editor.chain().focus().insertResource().run()
+          // This feature's own node: each `resource()` is a node type of its own.
+          command: ({ editor }) =>
+            editor
+              .chain()
+              .focus()
+              .insertContent({ type: 'rich-text-resource-' + slug, attrs: { _fresh: true } })
+              .run()
         }
       }
     ]
