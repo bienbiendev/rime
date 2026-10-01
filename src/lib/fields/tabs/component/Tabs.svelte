@@ -99,9 +99,6 @@
 
 <style type="postcss">
   .rz-tabs__bar {
-    position: sticky;
-    top: var(--rz-tabs-list-top, var(--rz-size-11));
-    z-index: 40;
     margin-inline: calc(-1 * var(--rz-fields-padding));
     padding: var(--rz-size-2) var(--rz-fields-padding);
   }
