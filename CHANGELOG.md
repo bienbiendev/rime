@@ -1,5 +1,13 @@
 # rimecms
 
+## 1.1.6
+
+### Patch Changes
+
+- [`7a2b831`](https://github.com/bienbiendev/rime/commit/7a2b831dfcbaa1ff5b267c6a73b84b82053701c3) - Changed: the generated schema no longer exports `relationFieldsMap`, and the SQLite adapter no longer has a `relationFieldsMap` property. Nothing read them.
+
+- [`a0d4186`](https://github.com/bienbiendev/rime/commit/a0d41863f24f1faa626f151bda8c66e50c514b1a) - Fixed: a relation field stays a relation after a dev reload that loads its code twice. The schema generator no longer takes it for a text column, which dropped its junction table and every relation in it.
+
 ## 1.1.5
 
 ### Patch Changes
