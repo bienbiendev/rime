@@ -233,11 +233,16 @@ export class BlockBuilder {
    * The component drawn for the block on the stage of focus mode.
    * It gets the block value, its path, its fields and the form, so it can show the value,
    * resolve its relations with `populate` and mount panel fields with `RenderFields`.
+   *
+   * `controls: false` drops the bar above the selected block, for a small one like a button.
+   * Keys, ⌘K and the layers still move, duplicate and remove it.
    * @example
    * block('hero').fields(text('title'), richText('text')).render(HeroRender)
+   * block('button').render(ButtonRender, { controls: false })
    */
-  render(component: Component<BlockRenderProps>) {
+  render(component: Component<BlockRenderProps>, options: { controls?: boolean } = {}) {
     this.block.render = component;
+    if (options.controls === false) this.block.controls = false;
     return this;
   }
   description(description: string) {
@@ -288,8 +293,17 @@ export type BlockRenderProps = {
   /** The block's field builders, for `RenderFields`. */
   fields: FieldBuilder<Field>[];
   form: DocumentFormContext;
-  /** The block's nested lists, each block in its own selectable wrapper. `children('items')` for one list. */
-  children?: Snippet<[name?: string]>;
+  /**
+   * The block's nested lists, each block in its own selectable wrapper, `.rz-renders`, and a `+`
+   * after them, `.rz-renders__add`. `children('items')` draws one list; `class` names its wrapper,
+   * for the render to lay it out.
+   * @example
+   * {@render children?.('items', { class: 'cards' })}
+   *
+   * :global(.cards) { display: flex; gap: 1rem; }
+   * :global(.cards > .rz-renders__add) { align-self: center; }
+   */
+  children?: Snippet<[name?: string, options?: { class?: string }]>;
 };
 
 export type BlocksFieldBlock = {
@@ -300,6 +314,8 @@ export type BlocksFieldBlock = {
   thumbnail?: Component;
   renderTitle?: BlocksFieldBlockRenderTitle;
   render?: Component<BlockRenderProps>;
+  /** `false`: no bar above the block when it is selected on the stage. */
+  controls?: boolean;
   fields: FieldBuilder<Field>[];
 };
 

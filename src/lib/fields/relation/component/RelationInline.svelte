@@ -3,13 +3,13 @@
   import type { UploadDoc } from '$lib/core/prototype/collection/upload/types.js';
   import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config.js';
   import { apiUrl } from '$lib/core/routes/util.js';
+  import { populate } from '$lib/fields/relation/populate.js';
   import FileDrop from '$lib/panel/components/sections/collection/bulk-upload/FileDrop.svelte';
   import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import { getConfigContext } from '$lib/panel/context/config.svelte.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { populate } from '$lib/fields/relation/populate.js';
   import { uploadFiles, type UploadProgress } from '$lib/panel/util/upload-file.js';
   import { Image as ImageIcon, Trash2 } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
@@ -260,7 +260,6 @@
   .rz-relation-inline :global(.rz-relation-inline__empty) {
     width: 100%;
     padding: var(--rz-size-11) var(--rz-size-4);
-    background-color: var(--rz-bg-raised);
   }
 
   .rz-relation-inline__loading {

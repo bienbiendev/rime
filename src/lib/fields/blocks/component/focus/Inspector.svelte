@@ -30,12 +30,6 @@
       ? t__('fields.blocks_count', '1')
       : t__('fields.blocks_count|m|p', String(count));
   };
-
-  /** Opens the picker on the list: the block picked goes at its end. */
-  function addTo(list: string) {
-    focus.selectList(list);
-    focus.pick();
-  }
 </script>
 
 {#if row && rendered}
@@ -73,15 +67,15 @@
             <span>{child.label}</span>
             <span class="rz-inspector__count">{countOf(child.list)}</span>
             {#if !focus.locked}
-              <button
-                type="button"
+              <Button
                 class="rz-inspector__add"
+                variant="secondary"
                 title={t__('fields.add_block')}
                 aria-label={t__('fields.add_block')}
-                onclick={() => addTo(child.list)}
+                onclick={() => focus.pick(child.list)}
               >
                 <Plus size={14} />
-              </button>
+              </Button>
             {/if}
           </li>
         {/each}
@@ -108,6 +102,7 @@
 
     h3 {
       @mixin font-medium;
+      @mixin line-clamp 1;
       font-size: var(--rz-text-md);
       white-space: nowrap;
     }
@@ -159,28 +154,15 @@
     display: flex;
     align-items: center;
     gap: var(--rz-size-2);
+
+    :global(.rz-inspector__add) {
+      flex-shrink: 0;
+    }
   }
 
   /* On the right, then the button. */
   .rz-inspector__count {
     margin-left: auto;
     color: var(--rz-fg-subtle);
-  }
-
-  .rz-inspector__add {
-    display: grid;
-    place-items: center;
-    width: var(--rz-size-6);
-    height: var(--rz-size-6);
-    flex-shrink: 0;
-    border-radius: var(--rz-radius-sm);
-    color: var(--rz-fg-subtle);
-    &:hover {
-      color: var(--rz-fg);
-      background-color: var(--rz-bg-hover);
-    }
-    &:focus-visible {
-      @mixin focus-ring;
-    }
   }
 </style>

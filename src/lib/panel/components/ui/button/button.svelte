@@ -91,7 +91,7 @@
     --rz-button-ghost-fg: var(--rz-fg);
 
     /* Secondary variant */
-    --rz-button-secondary-bg: var(--rz-bg-raised);
+    --rz-button-secondary-bg: oklch(from var(--rz-bg-inverse) l c h / 0.032);
     --rz-button-secondary-fg: var(--rz-fg);
 
     /* Link variant */
@@ -116,8 +116,7 @@
     white-space: nowrap;
     @mixin font-medium;
     transition-property:
-      box-shadow, color, background-color, border-color, text-decoration-color, fill, stroke,
-      filter;
+      box-shadow, color, background-color, border-color, text-decoration-color, fill, stroke, filter;
     transition-duration: 0.25s;
     gap: var(--rz-size-2);
     fill: currentColor;

@@ -35,10 +35,11 @@ const blockParagraph = block('paragraph')
   .fields(richText('text'))
   .render(Paragraph)
   .thumbnail(ParagraphThumbnail);
-// Upload relations, one and many, each drawn by a render that picks them in place.
+// Upload relations, one and many, each drawn by a render that picks them in place. The image has
+// no bar above it when selected.
 const blockImage = block('image')
   .fields(relation('image').to('medias'))
-  .render(Image)
+  .render(Image, { controls: false })
   .thumbnail(ImageThumbnail);
 const blockGallery = block('gallery')
   .fields(relation('images').to('medias').many())

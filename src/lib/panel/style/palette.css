@@ -18,9 +18,9 @@
   --rz-gray-10: oklch(0.625 var(--rz-gray-chroma) var(--rz-gray-hue));
   --rz-gray-11: oklch(0.69 var(--rz-gray-chroma) var(--rz-gray-hue));
   --rz-gray-12: oklch(0.755 var(--rz-gray-chroma) var(--rz-gray-hue));
-  --rz-gray-13: oklch(0.815 var(--rz-gray-chroma) var(--rz-gray-hue));
-  --rz-gray-14: oklch(0.865 var(--rz-gray-chroma) var(--rz-gray-hue));
-  --rz-gray-15: oklch(0.905 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-13: oklch(0.845 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-14: oklch(0.885 var(--rz-gray-chroma) var(--rz-gray-hue));
+  --rz-gray-15: oklch(0.915 var(--rz-gray-chroma) var(--rz-gray-hue));
   --rz-gray-16: oklch(0.94 var(--rz-gray-chroma) var(--rz-gray-hue));
   --rz-gray-17: oklch(0.968 var(--rz-gray-chroma) var(--rz-gray-hue));
   --rz-gray-18: oklch(0.986 var(--rz-gray-chroma) var(--rz-gray-hue));

@@ -21,6 +21,7 @@
   import Palette from './Palette.svelte';
   import Inspector from './Inspector.svelte';
   import Renders from './Renders.svelte';
+  import StageAdd from './StageAdd.svelte';
 
   const { form }: { form: DocumentFormContext } = $props();
 
@@ -52,6 +53,13 @@
   const countLabel = $derived(
     count === 1 ? t__('fields.blocks_count', '1') : t__('fields.blocks_count|m|p', String(count))
   );
+
+  /**
+   * "Add a block or type /" under the stage, while the home list has blocks. Empty, the open list
+   * has its message, and a nested one its `+`.
+   */
+  const homeList = $derived(focus.homeList());
+  const showAdd = $derived(!focus.locked && !!homeList && form.blocks.list(homeList).length > 0);
 
   let confirmRemove = $state(false);
 
@@ -292,7 +300,7 @@
         keys: '/',
         hidden: true,
         when: () => free() && editing,
-        run: focus.pick
+        run: () => focus.pick()
       },
       {
         id: 'blocks.back',
@@ -414,6 +422,9 @@
       {#key focus.path}
         <Renders {form} list={stageList} only={focus.narrowedRow?.index} onRemove={requestRemove} />
       {/key}
+      {#if showAdd && homeList}
+        <StageAdd list={homeList} />
+      {/if}
     </section>
 
     {#if narrow}
@@ -434,8 +445,8 @@
 
   <BlockPicker
     bind:open={() => focus.picking, (open) => (focus.picking = open)}
-    types={addable}
-    onpick={(block) => focus.insertType(block.name)}
+    types={focus.pickTypes()}
+    onpick={(block) => focus.insertPicked(block.name)}
   />
 
   <Dialog.Root bind:open={confirmRemove}>
@@ -555,9 +566,15 @@
     min-height: 0;
   }
 
-  .rz-blocks-focus__renders > :global(.rz-renders) {
+  .rz-blocks-focus__renders > :global(.rz-renders),
+  .rz-blocks-focus__renders > :global(.rz-stage-add) {
     max-width: var(--rz-document-width, 60rem);
     margin-inline: auto;
+  }
+
+  /* Under the blocks, one gap further down. */
+  .rz-blocks-focus__renders > :global(.rz-stage-add) {
+    margin-top: var(--rz-size-3);
   }
 
   .rz-blocks-focus__panel,
