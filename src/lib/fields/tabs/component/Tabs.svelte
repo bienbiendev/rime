@@ -86,12 +86,7 @@
           <!-- If the first and only field is a rich text field, render it directly -->
           {#if tab.get.fields.length === 1 && tab.get.fields[0].type === 'richText'}
             {@const firstField = tab.get.fields[0] as RichTextFieldBuilder}
-            <RichText
-              standAlone={true}
-              path="{prependPath}{tab.name}.{firstField.name}"
-              config={firstField}
-              {form}
-            />
+            <RichText path="{prependPath}{tab.name}.{firstField.name}" config={firstField} {form} />
           {:else}
             <!-- Otherwise, render the fields -->
             <RenderFields fields={tab.get.fields} path="{prependPath}{tab.name}" {form} />
