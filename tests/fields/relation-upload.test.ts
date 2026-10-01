@@ -182,9 +182,9 @@ test('One: in the inspector, a click picks and closes, another replaces it', asy
   await expect(marked(page)).toHaveCount(1);
   await card(page, medias[1]).click();
   await expect(dialog(page)).toHaveCount(0);
-  await expect(panel.locator('.rz-relation-upload__list .rz-relation-upload__thumb')).toHaveCount(
-    1
-  );
+  // One pick: a card in the zone's place, no drop zone beside it.
+  await expect(panel.locator('.rz-relation-upload__card')).toHaveCount(1);
+  await expect(panel.locator('.rz-relation-upload__drop')).toHaveCount(0);
 
   await save(page);
   await expect

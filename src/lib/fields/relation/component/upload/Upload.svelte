@@ -6,6 +6,7 @@
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
   import {
     acceptLabel,
+    mediaMeta,
     typeLabel,
     uploadFiles,
     type UploadProgress
@@ -41,6 +42,8 @@
   const APIProxy = getAPIProxyContext();
   /** What the picker marks, in order. */
   const selected = $derived(selectedItems.map((item) => item.documentId));
+  /** A field of one: its pick, drawn as a card in the zone's place. */
+  const picked = $derived(many ? undefined : selectedItems[0]);
   const accept = $derived(relationConfig.upload?.accept);
 
   /* ------------------------------------------------------------ uploading */
@@ -93,7 +96,81 @@
   const slots = $derived(many ? (SLOTS - (selectedItems.length % SLOTS)) % SLOTS : 0);
 </script>
 
-{#if !readOnly}
+{#snippet uploading(current: UploadProgress)}
+  {t__(
+    'fields.uploading',
+    String(Math.min(current.uploaded + current.failed.length + 1, current.total)),
+    String(current.total)
+  )}
+{/snippet}
+
+{#if picked}
+  <!--
+    One pick: its image, name and size, then upload another file or remove it. A file dropped on
+    the card replaces the pick.
+  -->
+  <FileDrop
+    class="rz-relation-upload__card"
+    {accept}
+    disabled={readOnly || !!progress}
+    data-error={hasError ? '' : undefined}
+    onfiles={upload}
+  >
+    {#snippet children({ browse })}
+      <a
+        class="rz-relation-upload__card-thumb"
+        href={panelPath(relationConfig.kebab, picked.documentId)}
+        aria-label={picked.title}
+      >
+        {#if progress}
+          <SpinLoader />
+        {:else if picked.isImage && picked.url}
+          <img src={picked.url} alt="" />
+        {:else}
+          <span class="rz-relation-upload__type">{typeLabel(picked.mimeType)}</span>
+        {/if}
+      </a>
+      <div class="rz-relation-upload__card-info">
+        <a
+          class="rz-relation-upload__card-name"
+          href={panelPath(relationConfig.kebab, picked.documentId)}
+        >
+          {picked.title}
+        </a>
+        <span class="rz-relation-upload__card-meta" aria-live="polite">
+          {#if progress}{@render uploading(progress)}{:else}{mediaMeta(picked)}{/if}
+        </span>
+      </div>
+      {#if !readOnly && !progress}
+        <div class="rz-relation-upload__card-actions">
+          <button
+            type="button"
+            title={t__('fields.upload_another')}
+            aria-label={t__('fields.upload_another')}
+            onclick={browse}
+          >
+            <Upload size={15} />
+          </button>
+          <button
+            type="button"
+            title={t__('fields.remove_item', picked.title)}
+            aria-label={t__('fields.remove_item', picked.title)}
+            onclick={() => removeValue(picked.documentId)}
+          >
+            <X size={15} />
+          </button>
+        </div>
+      {/if}
+      <span class="rz-relation-upload__card-drop" aria-hidden="true">
+        <Upload size={15} />
+        {t__('fields.drop_to_replace')}
+      </span>
+    {/snippet}
+  </FileDrop>
+  {#if failed.length}
+    <p class="rz-relation-upload__failed">{t__('fields.upload_failed', failed.join(', '))}</p>
+  {/if}
+{:else if !readOnly}
   <FileDrop
     class="rz-relation-upload__drop"
     multiple={many}
@@ -105,13 +182,7 @@
     {#snippet children({ browse })}
       {#if progress}
         <SpinLoader />
-        <span aria-live="polite">
-          {t__(
-            'fields.uploading',
-            String(Math.min(progress.uploaded + progress.failed.length + 1, progress.total)),
-            String(progress.total)
-          )}
-        </span>
+        <span aria-live="polite">{@render uploading(progress)}</span>
       {:else}
         <Upload size={18} />
         <span>
@@ -132,43 +203,40 @@
   {/if}
 {/if}
 
-{#key stamp}
-  <div
-    bind:this={list}
-    class="rz-relation-upload__list"
-    data-many={many ? '' : null}
-    data-error={hasError ? '' : null}
-  >
-    {#each selectedItems as item (item.documentId)}
-      <div class="rz-relation-upload__thumb" title={item.title}>
-        <a
-          href={panelPath(relationConfig.kebab, item.documentId)}
-          aria-label={item.title}
-          draggable="false"
-        >
-          {#if item.isImage && item.url}
-            <img src={item.url} alt="" draggable="false" />
-          {:else}
-            <span class="rz-relation-upload__type">{typeLabel(item.mimeType)}</span>
-          {/if}
-        </a>
-        {#if !readOnly}
-          <button
-            type="button"
-            class="rz-relation-upload__remove"
-            aria-label={t__('fields.remove_item', item.title)}
-            onclick={() => removeValue(item.documentId)}
+{#if many}
+  {#key stamp}
+    <div bind:this={list} class="rz-relation-upload__list" data-error={hasError ? '' : null}>
+      {#each selectedItems as item (item.documentId)}
+        <div class="rz-relation-upload__thumb" title={item.title}>
+          <a
+            href={panelPath(relationConfig.kebab, item.documentId)}
+            aria-label={item.title}
+            draggable="false"
           >
-            <X size={11} />
-          </button>
-        {/if}
-      </div>
-    {/each}
-    {#each { length: slots }, index (index)}
-      <div class="rz-relation-upload__slot" aria-hidden="true"></div>
-    {/each}
-  </div>
-{/key}
+            {#if item.isImage && item.url}
+              <img src={item.url} alt="" draggable="false" />
+            {:else}
+              <span class="rz-relation-upload__type">{typeLabel(item.mimeType)}</span>
+            {/if}
+          </a>
+          {#if !readOnly}
+            <button
+              type="button"
+              class="rz-relation-upload__remove"
+              aria-label={t__('fields.remove_item', item.title)}
+              onclick={() => removeValue(item.documentId)}
+            >
+              <X size={11} />
+            </button>
+          {/if}
+        </div>
+      {/each}
+      {#each { length: slots }, index (index)}
+        <div class="rz-relation-upload__slot" aria-hidden="true"></div>
+      {/each}
+    </div>
+  {/key}
+{/if}
 
 <Browse
   bind:open={browsing}
@@ -187,7 +255,7 @@
     border-color: var(--rz-danger);
   }
 
-  /* Narrow, in a side panel: the zone on one line. */
+  /* Narrow, in a side panel: the zone on one line, the card's image smaller. */
   @container rz-field-root (max-width: 20rem) {
     :global(.rz-relation-upload__drop) {
       flex-direction: row;
@@ -200,6 +268,122 @@
     }
     :global(.rz-relation-upload__drop small) {
       flex-basis: 100%;
+    }
+    .rz-relation-upload__card-thumb {
+      width: var(--rz-size-11);
+      height: var(--rz-size-11);
+    }
+  }
+
+  /*
+   * One pick, in the zone's place: the media's image, its name and size, then its actions, on a
+   * well with a hairline. `div.` outweighs the zone's own look.
+   */
+  :global(div.rz-file-drop.rz-relation-upload__card) {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--rz-size-3);
+    padding: var(--rz-size-2);
+    border: 0;
+    border-radius: var(--rz-radius-lg);
+    box-shadow: inset 0 0 0 1px var(--rz-border);
+    color: var(--rz-fg);
+    text-align: left;
+  }
+
+  :global(div.rz-file-drop.rz-relation-upload__card[data-over]) {
+    box-shadow: inset 0 0 0 1px var(--rz-accent-border);
+  }
+
+  .rz-relation-upload__card-thumb {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: var(--rz-size-14);
+    height: var(--rz-size-14);
+    overflow: hidden;
+    border-radius: var(--rz-radius-md);
+    background-color: var(--rz-bg-well);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    &:focus-visible {
+      @mixin focus-ring;
+    }
+  }
+
+  .rz-relation-upload__card-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--rz-size-0-5);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .rz-relation-upload__card-name {
+    @mixin font-medium;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    &:hover {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    &:focus-visible {
+      @mixin focus-ring;
+      border-radius: var(--rz-radius-sm);
+    }
+  }
+
+  .rz-relation-upload__card-meta {
+    color: var(--rz-fg-subtle);
+    font-size: var(--rz-text-sm);
+  }
+
+  .rz-relation-upload__card-actions {
+    display: flex;
+    gap: var(--rz-size-0-5);
+
+    button {
+      display: grid;
+      place-items: center;
+      width: var(--rz-size-7);
+      height: var(--rz-size-7);
+      border-radius: var(--rz-radius-sm);
+      color: var(--rz-fg-muted);
+      &:hover {
+        background-color: var(--rz-bg-hover);
+        color: var(--rz-fg);
+      }
+      &:focus-visible {
+        @mixin focus-ring;
+      }
+    }
+  }
+
+  /* A file over the card: the image dims, "Drop to replace" takes the name's place. */
+  .rz-relation-upload__card-drop {
+    display: none;
+    align-items: center;
+    gap: var(--rz-size-2);
+    flex: 1;
+    color: var(--rz-accent-text);
+    @mixin font-medium;
+  }
+
+  :global(.rz-relation-upload__card[data-over]) {
+    .rz-relation-upload__card-drop {
+      display: flex;
+    }
+    .rz-relation-upload__card-info,
+    .rz-relation-upload__card-actions {
+      display: none;
+    }
+    .rz-relation-upload__card-thumb {
+      opacity: 0.45;
     }
   }
 
@@ -262,7 +446,7 @@
     }
   }
 
-  .rz-relation-upload__list[data-many] .rz-relation-upload__thumb {
+  .rz-relation-upload__list .rz-relation-upload__thumb {
     cursor: grab;
   }
 

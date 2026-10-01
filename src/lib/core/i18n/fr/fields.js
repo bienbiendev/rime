@@ -55,6 +55,8 @@ export default {
   uploading: 'Import de $1 sur $2…',
   upload_progress: '$1 sur $2 importé(s)',
   upload_failed: 'Non importé(s) : $1',
+  upload_another: 'Importer un autre fichier',
+  drop_to_replace: 'Déposez pour remplacer',
   clear: 'Effacer',
   add_images: 'Ajouter $1 {image|image|images|images}',
   add_files: 'Ajouter $1 {fichier|fichier|fichiers|fichiers}',
