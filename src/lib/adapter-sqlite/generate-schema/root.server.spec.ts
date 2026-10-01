@@ -1,4 +1,5 @@
 import buildRootTable from '$lib/adapter-sqlite/generate-schema/root.server.js';
+import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import {
   block,
   blocks,
@@ -106,4 +107,20 @@ test('a field with $index() and every owner_id get an index on their own table',
   expect(schema).toContain(`index('pages__$tree_nav_owner_id_idx').on(t.ownerId)`);
   // the base table's own id is not an owner: no owner_id index there
   expect(schema).not.toContain(`index('pages_owner_id_idx')`);
+});
+
+test('a relation from a second copy of its class still gets junction rows, not a column', async () => {
+  // A dev reload can load RelationFieldBuilder twice. A relation built from the other copy fails
+  // `instanceof RelationFieldBuilder` but passes `instanceof FormFieldBuilder`.
+  const image = Object.setPrototypeOf(relation('image').to('medias'), FormFieldBuilder.prototype);
+  const out = await buildRootTable({
+    fields: [text('title'), image] as any,
+    tableName: 'pages' as any,
+    rootName: 'pages' as any,
+    locales: [{ code: 'en', label: 'English' }] as any,
+    blocksRegister: []
+  });
+
+  expect(columns(out.schema, 'pages')).toEqual(['id', 'title']);
+  expect(out.relationFieldsMap).toEqual({ image: { localized: false, to: 'medias' } });
 });

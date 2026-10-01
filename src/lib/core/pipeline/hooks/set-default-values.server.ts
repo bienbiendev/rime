@@ -5,7 +5,7 @@ import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-buil
 import { isFormField } from '$lib/core/fields/util.js';
 import { walkFields } from '$lib/core/fields/walk.js';
 import { logger } from '$lib/core/logger.server.js';
-import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
+import { isRelationField, type RelationFieldBuilder } from '$lib/fields/relation/index.js';
 import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import { buildConfigMap } from '../config-map/index.js';
@@ -111,7 +111,7 @@ const defaultRelationValue = async (
 
 /** A relation's default becomes junction rows, checked against the collection. */
 export const getDefaultValue: GetDefaultValue = async ({ key, config, adapter }) => {
-  if (config instanceof RelationFieldBuilder) {
+  if (isRelationField(config)) {
     return await defaultRelationValue(config, key, adapter);
   }
   return config.use.defaultValue({ event: getRequestEvent() });

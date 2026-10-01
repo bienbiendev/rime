@@ -1,5 +1,5 @@
 import type { BeforeOperationRelation } from '$lib/fields/relation/index.js';
-import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
+import { isRelationField } from '$lib/fields/relation/index.js';
 import { Relation } from '$lib/fields/relation/relation.js';
 import { getValueAtPath, isObjectLiteral } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
@@ -18,7 +18,7 @@ export const extractRelations = ({ ownerId, data, configMap, locale }: Args) => 
   // The config map keys every field the document holds; relations are the ones stored as junction
   // rows, and the key is the `path` those rows carry.
   for (const [path, config] of Object.entries(configMap)) {
-    if (config instanceof RelationFieldBuilder) {
+    if (isRelationField(config)) {
       const value = getValueAtPath<unknown>(path, data);
       // One value outside an array is a list of one.
       const entries = Array.isArray(value) ? value : value ? [value] : [];

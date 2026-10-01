@@ -1,19 +1,19 @@
-import type { LocaleConfig } from '$lib/core/locale/types.js';
+import type { ColumnDeclaration } from '$lib/core/adapter.js';
 import type { FieldBuilder, NodeStorage } from '$lib/core/fields/builders/field-builder.js';
 import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { walkFields } from '$lib/core/fields/walk.js';
-import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
+import type { LocaleConfig } from '$lib/core/locale/types.js';
+import { isRelationField } from '$lib/fields/relation/index.js';
 import type { Field, FormField } from '$lib/fields/types.js';
+import type { TableName } from '../naming.server.js';
 import { tableName as buildTableName, getSchemaColumnNames } from '../naming.server.js';
 import { toSchemaColumn } from './column.server.js';
-import type { TableName } from '../naming.server.js';
 import {
   templateDeclaredColumn,
   templateLocale,
   templateParent,
   templateTable
 } from './templates.server.js';
-import type { ColumnDeclaration } from '$lib/core/adapter.js';
 
 /** A relation field on a prototype: which collection it points at, and whether it is localized. */
 export type RelationFieldsMap = Record<string, { to: string; localized?: boolean }>;
@@ -134,7 +134,7 @@ const buildRootTable = async ({
 
     for (const field of fields) {
       // Junction rows: no column here, and the relations table wants to know it exists.
-      if (field instanceof RelationFieldBuilder) {
+      if (isRelationField(field)) {
         if (field.get.localized) {
           relationFieldsHasLocale = true;
         }

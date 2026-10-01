@@ -2,7 +2,7 @@ import { RimeError } from '$lib/core/errors/index.js';
 import { getFieldAtPath } from '$lib/core/fields/util.js';
 import { logger } from '$lib/core/logger.server.js';
 import type { ConfigContext } from '$lib/core/rime.server.js';
-import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
+import { isRelationField } from '$lib/fields/relation/index.js';
 import { type GetRegisterType } from '$lib/index.js';
 import type { Dic } from '$lib/util/types.js';
 import * as drizzleORM from 'drizzle-orm';
@@ -211,7 +211,7 @@ export const buildWhereParam = ({
     }
 
     // If still not found or not a relation field, log warning and return false condition
-    if (!(fieldConfig instanceof RelationFieldBuilder)) {
+    if (!isRelationField(fieldConfig)) {
       const message = `the query contains the field "${column}", not found for ${documentConfig.slug} document`;
       logger.warn(message);
       // Return a condition that will always be false instead of returning false

@@ -8,7 +8,7 @@ import { fileForDocument } from '$lib/core/prototype/collection/upload/util/conv
 import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
 import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 import { VersionOperations } from '$lib/core/prototype/shared/versions/strategy.js';
-import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
+import { isRelationField } from '$lib/fields/relation/index.js';
 import { Relation } from '$lib/fields/relation/relation.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import {
@@ -225,7 +225,7 @@ async function prepareDataForNewVersion(args: {
   // A relation sent back as documents, read at depth 1, keeps what it points to: the strip
   // below takes every `id`, a document's own included.
   for (const [path, field] of Object.entries(buildConfigMap(data, config.fields))) {
-    if (!(field instanceof RelationFieldBuilder)) continue;
+    if (!isRelationField(field)) continue;
     const value = getValueAtPath<unknown>(path, data);
     if (!Array.isArray(value)) continue;
     const refs = value.map((entry) =>

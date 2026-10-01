@@ -106,6 +106,15 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
 
 export const relation = (name: string) => new RelationFieldBuilder(name);
 
+/**
+ * A relation, told by its type. `instanceof` is not enough: a dev reload can load this class
+ * twice, and a relation built from the other copy then fails it. The schema generator once took
+ * such a relation for a text column, and dropped the junction table with every row in it.
+ */
+export const isRelationField = (
+  field: { type?: string } | null | undefined
+): field is RelationFieldBuilder => field?.type === 'relation';
+
 /****************************************************/
 /* Type
 /****************************************************/
