@@ -19,7 +19,6 @@ import { ParagraphFeature } from './features/paragraph.js';
 
 type BuildEditorConfigArgs = {
   features: Array<RichTextFeature>;
-  standAlone?: boolean;
 };
 
 /**

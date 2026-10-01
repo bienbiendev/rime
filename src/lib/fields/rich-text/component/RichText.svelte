@@ -7,16 +7,12 @@
   import type { RichTextFieldProps } from './props.js';
   import './styles/field.css';
 
-  const { path, config, form, standAlone, class: className }: RichTextFieldProps = $props();
+  const { path, config, form, class: className }: RichTextFieldProps = $props();
 
   const field = $derived(form.useField<JSONContent>(path, config));
 </script>
 
-<fieldset
-  class:rz-field-rich-text--standalone={standAlone}
-  class="rz-field-rich-text {config.get.className || ''}"
-  use:fieldset={field}
->
+<fieldset class="rz-field-rich-text {config.get.className || ''}" use:fieldset={field}>
   <Field.Label {config} for={path || config.name} />
 
   <Field.Error error={field.error} />
@@ -31,9 +27,7 @@
     onUpdate={(json) => (field.value = json)}
   />
 
-  {#if !standAlone}
-    <Field.Hint {config} />
-  {/if}
+  <Field.Hint {config} />
 </fieldset>
 
 <style type="postcss">
