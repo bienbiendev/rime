@@ -1,5 +1,13 @@
 # rimecms
 
+## 1.1.5
+
+### Patch Changes
+
+- [`276100f`](https://github.com/bienbiendev/rime/commit/276100f7c941876ce2b9ecfbf8e515952104aea5) - Fixed: a rich text with several `resource()` features inserts the one picked in the menu; each inserted the last one declared, so `resource({ source: 'pages' })` listed medias when `resource({ source: 'medias' })` came after it.
+
+- [`15f6344`](https://github.com/bienbiendev/rime/commit/15f63447586dc3a08ef0bddaa7fb856f0061cfb0) - Changed: a relation to an upload collection that takes one document shows its pick as a card in the drop zone's place: the image, the name, linked to the media, its size and type, a button to upload another file and one to remove it. A file dropped on the card replaces the pick. A field that takes several keeps the zone and the squares.
+
 ## 1.1.4
 
 ### Patch Changes
