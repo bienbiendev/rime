@@ -1,5 +1,19 @@
 # rimecms
 
+## 1.1.3
+
+### Patch Changes
+
+- [`4739d1b`](https://github.com/bienbiendev/rime/commit/4739d1b38ea347498557ef1dbbbe4600e994bd51) - Fixed: in focus mode, a long block title in the layers ends in an ellipsis instead of widening the panel.
+
+- [`4739d1b`](https://github.com/bienbiendev/rime/commit/4739d1b38ea347498557ef1dbbbe4600e994bd51) - Changed: in focus mode, a nested list has a `+` after its blocks that adds one at its end. An empty list always shows it; a list with blocks shows it while its block, or one of its own blocks, is selected. A click beside the blocks of a nested list selects the block that holds it, its fields in the inspector, and no longer the list alone. Under the stage, _Add a block or type /_ is a button.
+
+- [`4739d1b`](https://github.com/bienbiendev/rime/commit/4739d1b38ea347498557ef1dbbbe4600e994bd51) - Changed: in focus mode, a list that takes one block type adds it at once from `/`, a `+` or the button under the stage, without opening the picker.
+
+- [`4739d1b`](https://github.com/bienbiendev/rime/commit/4739d1b38ea347498557ef1dbbbe4600e994bd51) - Added: `children('items', { class: 'cards' })` names the wrapper of a nested list in a block's render, so the render lays it out, the list's `+`, `.rz-renders__add`, included.
+
+- [`4739d1b`](https://github.com/bienbiendev/rime/commit/4739d1b38ea347498557ef1dbbbe4600e994bd51) - Added: `block('button').render(Render, { controls: false })` drops the bar above the block when it is selected in focus mode, for a small block. Keys, ⌘K and the layers still move, duplicate and remove it.
+
 ## 1.1.2
 
 ### Patch Changes
