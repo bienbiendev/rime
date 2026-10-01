@@ -45,11 +45,12 @@ export const deleteDocs = async (args: Args): Promise<string[]> => {
     ? rime.collection(config.slug).system()
     : rime.collection(config.slug);
 
-  const promisesDelete = documentsToDelete.map(({ id }) => {
-    return collection.deleteById({ id });
-  });
-
-  const ids = await Promise.all(promisesDelete);
+  // One after the other: rows sharing an uploaded file each check whether another still uses it,
+  // and the last one deleted is the one that finds none and removes the file.
+  const ids: string[] = [];
+  for (const { id } of documentsToDelete) {
+    ids.push(await collection.deleteById({ id }));
+  }
 
   return ids;
 };

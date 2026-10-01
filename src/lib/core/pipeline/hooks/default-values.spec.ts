@@ -97,9 +97,8 @@ const kinds: Kind[] = [
     field: (options) => (relation('f') as any).to('targets').defaultValue('target-1', options),
     value: [{ relationTo: 'targets', documentId: 'target-2' }],
     empty: [],
-    // The initial document hands the id as it is; a save hands the relation it checked.
-    isDefault: (value) =>
-      value === 'target-1' || (Array.isArray(value) && value[0]?.documentId === 'target-1')
+    // The initial document and a save both hand the default as refs.
+    isDefault: (value) => Array.isArray(value) && value[0]?.documentId === 'target-1'
   },
   {
     name: 'blocks',

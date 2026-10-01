@@ -75,48 +75,41 @@ type GetDefaultValue = (args: {
 }) => Promise<any>;
 
 /**
- * This function convert any default value string | string[] of ids
- * to a RelationValue from an existing relation record
+ * A relation's default, as junction rows: the refs `use.defaultValue` answers, kept in their
+ * order, those that name no document left out.
  */
 const defaultRelationValue = async (
   config: RelationFieldBuilder,
   key: string,
   adapter: Adapter
 ) => {
-  const buildRelation = async (defaultValue: any) => {
-    // A default relation is one id or a list of them. Anything else names no document, and must
-    // not fall through to a `where(undefined)` that would hand back every row in the collection.
-    const ids =
-      typeof defaultValue === 'string'
-        ? [defaultValue]
-        : Array.isArray(defaultValue)
-          ? defaultValue
-          : [];
+  const refs = config.use.defaultValue({ event: getRequestEvent() });
+  const ids = refs.map((ref) => ref.documentId);
 
-    // `existingIds` on the adapter, written out: which of these ids name a document that exists.
-    // The ordinary read, projected — see collection/nested/hooks/add-children.server.ts.
-    //
-    // `relationTo` is typed `CollectionSlug` by `RelationFieldBuilder.to`, so a relation names a
-    // collection by construction.
-    const existing = ids.length
-      ? await adapter
-          .collection(config.get.relationTo)
-          .findMany({ query: { where: { id: { in_array: ids } } }, select: ['id'] })
-      : [];
+  // `existingIds` on the adapter, written out: which of these ids name a document that exists.
+  // The ordinary read, projected — see collection/nested/hooks/add-children.server.ts.
+  //
+  // `relationTo` is typed `CollectionSlug` by `RelationFieldBuilder.to`, so a relation names a
+  // collection by construction.
+  const existing = ids.length
+    ? await adapter
+        .collection(config.get.relationTo)
+        .findMany({ query: { where: { id: { in_array: ids } } }, select: ['id'] })
+    : [];
+  const found = new Set(existing.map(({ id }) => id));
 
-    return existing.map(({ id: documentId }, index) => ({
+  return ids
+    .filter((id) => found.has(id))
+    .map((documentId, position) => ({
       id: null,
       relationTo: config.get.relationTo,
       path: key,
-      position: index,
+      position,
       documentId
     }));
-  };
-
-  return await buildRelation(config.use.defaultValue({ event: getRequestEvent() }));
 };
 
-/** A relation's default is ids; they become junction rows, checked against the collection. */
+/** A relation's default becomes junction rows, checked against the collection. */
 export const getDefaultValue: GetDefaultValue = async ({ key, config, adapter }) => {
   if (config instanceof RelationFieldBuilder) {
     return await defaultRelationValue(config, key, adapter);

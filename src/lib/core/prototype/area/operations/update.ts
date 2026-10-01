@@ -3,10 +3,11 @@ import { runUpdate } from '$lib/core/pipeline/run.server.js';
 import type { OperationContext } from '$lib/core/pipeline/types.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { AreaSlug, GenericDoc } from '$lib/core/prototype/types.js';
+import type { WithRelationInput } from '$lib/core/fields/types.js';
 import type { DeepPartial } from '$lib/util/types.js';
 
 export type UpdateArgs<T> = {
-  data: DeepPartial<T>;
+  data: DeepPartial<WithRelationInput<T>>;
   locale?: string | undefined;
   versionId?: string;
   /** Start from the newest version rather than the published one. `PARAMS.LATEST`. */

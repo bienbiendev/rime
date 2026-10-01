@@ -12,14 +12,14 @@ export const isJSONContent = (value: any): value is JSONContent => {
 };
 
 /**
- * Converts rich text JSON content to plain text.
- * Extracts text content from a TipTap/ProseMirror JSON structure.
+ * The text of a rich text value, its nodes' text joined by spaces.
  *
- * @example
- * // Returns "Hello world"
- * richTextJSONToText('{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Hello world"}]}]}');
+ * ```ts
+ * RichText.toText({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello' }] }] });
+ * // 'Hello'
+ * ```
  */
-export const richTextJSONToText = (value: string | JSONContent | undefined): string => {
+const toText = (value: string | JSONContent | undefined): string => {
   if (!value) return '';
   let textValue: string;
   const renderNodes = (nodes: { [k: string]: any }) => {
@@ -43,3 +43,6 @@ export const richTextJSONToText = (value: string | JSONContent | undefined): str
   }
   return textValue;
 };
+
+/** Reads rich text field values. */
+export const RichText = { toText };

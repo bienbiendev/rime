@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { richTextJSONToText } from '../json.js';
+  import { RichText } from '../json.js';
 
   let { value }: { value: string } = $props();
 
-  let textValue: string = $derived(richTextJSONToText(value));
+  let textValue: string = $derived(RichText.toText(value));
 </script>
 
 {#if textValue && textValue.length > 10}

@@ -1,4 +1,5 @@
 import { RimeError } from '$lib/core/errors/index.js';
+import { buildConfigMap } from '$lib/core/pipeline/config-map/index.js';
 import type { ConfigMap } from '$lib/core/pipeline/config-map/types.js';
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
 import { copyLocales } from '$lib/core/locale/copy.server.js';
@@ -7,8 +8,16 @@ import { fileForDocument } from '$lib/core/prototype/collection/upload/util/conv
 import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
 import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
 import { VersionOperations } from '$lib/core/prototype/shared/versions/strategy.js';
+import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
+import { Relation } from '$lib/fields/relation/relation.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
-import { omit, recursiveRemoveKeys } from '$lib/util/object.js';
+import {
+  getValueAtPath,
+  isObjectLiteral,
+  omit,
+  recursiveRemoveKeys,
+  setValueAtPath
+} from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import { retireAutoSaves } from '../retire-auto-saves.server.js';
 import { fallbackDataFromOriginal } from './fallback-data-from-original.js';
@@ -213,6 +222,18 @@ async function prepareDataForNewVersion(args: {
     data.status = VERSIONS_STATUS.DRAFT;
   }
 
+  // A relation sent back as documents, read at depth 1, keeps what it points to: the strip
+  // below takes every `id`, a document's own included.
+  for (const [path, field] of Object.entries(buildConfigMap(data, config.fields))) {
+    if (!(field instanceof RelationFieldBuilder)) continue;
+    const value = getValueAtPath<unknown>(path, data);
+    if (!Array.isArray(value)) continue;
+    const refs = value.map((entry) =>
+      isDocument(entry) ? { relationTo: field.get.relationTo, documentId: entry.id } : entry
+    );
+    data = setValueAtPath(path, data, refs);
+  }
+
   // Remove ownerId and id props from data this force new relation/blocks creations
   data = recursiveRemoveKeys('ownerId', 'id').from(data);
 
@@ -221,3 +242,7 @@ async function prepareDataForNewVersion(args: {
 
   return data;
 }
+
+/** An object with its own `id` that is not a ref: a document, as a read at depth 1 hands it back. */
+const isDocument = (entry: unknown): entry is { id: string } =>
+  isObjectLiteral(entry) && !Relation.isRef(entry) && typeof entry.id === 'string';

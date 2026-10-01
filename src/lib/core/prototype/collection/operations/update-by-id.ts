@@ -3,6 +3,7 @@ import { runUpdate } from '$lib/core/pipeline/run.server.js';
 import type { OperationContext } from '$lib/core/pipeline/types.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
+import type { WithRelationInput } from '$lib/core/fields/types.js';
 import type { DeepPartial } from '$lib/util/types.js';
 
 export type UpdateByIdArgs<T> = {
@@ -14,7 +15,7 @@ export type UpdateByIdArgs<T> = {
   fork?: boolean;
   /** Write the caller's auto-saved row of the version `versionId` names. Panel only. */
   autoSave?: boolean;
-  data: DeepPartial<T>;
+  data: DeepPartial<WithRelationInput<T>>;
   locale?: string | undefined;
   /** This write copies another locale's rows onto the row — see `copyLocales`. */
   isLocaleCopy?: boolean;

@@ -4,6 +4,7 @@
   import { PARAMS } from '$lib/core/constants.js';
   import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
   import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
+  import { getMimeTypeFromExtension } from '$lib/core/prototype/collection/upload/util/mime';
   import type { GenericDoc } from '$lib/core/prototype/types';
   import { panelPath } from '$lib/core/routes/util';
   import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
@@ -29,7 +30,12 @@
   const isUploadCollection = $derived(isUploadConfig(config));
   const hasDraft = $derived(!!(config.versions && config.versions.draft));
 
-  const mimeType = $derived(typeof doc.mimeType === 'string' ? doc.mimeType : '');
+  // A file's own type, else the one its thumbnail's extension names: a page shows its image.
+  const mimeType = $derived.by(() => {
+    if (typeof doc.mimeType === 'string') return doc.mimeType;
+    const url = typeof doc._thumbnail === 'string' ? doc._thumbnail : '';
+    return getMimeTypeFromExtension(url.split('.').pop() || '') || '';
+  });
   const isImage = $derived(!!doc._thumbnail && mimeType.startsWith('image/'));
   // A photo fills its frame; a png, a gif or an svg may be a logo, so it shows whole.
   const contain = $derived(/^image\/(png|gif|svg)/.test(mimeType));

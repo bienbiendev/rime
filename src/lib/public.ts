@@ -3,14 +3,9 @@
 import { getI18nContext, setI18nContext } from '$lib/core/i18n/context.js';
 import { createI18n } from '$lib/core/i18n/index.js';
 import { openSse } from '$lib/core/plugins/sse/index.js';
-import {
-  isRelationPopulated,
-  isRelationResolved,
-  isRelationUnresolved,
-  resolveRelation
-} from '$lib/fields/relation/util.js';
+import { Relation } from '$lib/fields/relation/relation.js';
 import RenderRichText from '$lib/fields/rich-text/core/render-rich-text.svelte';
-import { richTextJSONToText } from '$lib/fields/rich-text/json.js';
+import { RichText } from '$lib/fields/rich-text/json.js';
 import LiveConsumer from '$lib/live/Consumer.svelte';
 import LiveEdit from '$lib/live/LiveEdit.svelte';
 import LiveProvider from '$lib/live/Provider.svelte';
@@ -25,15 +20,12 @@ export type { JSONContent } from '@tiptap/core';
 export {
   createI18n,
   getI18nContext,
-  isRelationPopulated,
-  isRelationResolved,
-  isRelationUnresolved,
   LiveConsumer,
   LiveEdit,
   LiveProvider,
   openSse,
+  Relation,
   RenderRichText,
-  resolveRelation,
-  richTextJSONToText,
+  RichText,
   setI18nContext
 };

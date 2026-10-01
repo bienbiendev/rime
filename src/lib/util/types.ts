@@ -1,6 +1,6 @@
 /**
  * Generic type utilities. Nothing here names a rime type — that is the rule that keeps this
- * file in util/. The two that did (WithRelationPopulated, WithoutBuilders) moved to
+ * file in util/. The ones that do (WithRelationResolved, WithoutBuilders) are in
  * core/fields/types.ts.
  */
 

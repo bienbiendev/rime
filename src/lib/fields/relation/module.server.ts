@@ -1,7 +1,8 @@
 import { getRequestEvent } from '$app/server';
 import { env } from '$env/dynamic/public';
 import { PARAMS } from '$lib/core/constants.js';
-import type { FieldHookShared, RelationValue } from '$lib/fields/types.js';
+import { Relation } from '$lib/fields/relation/relation.js';
+import type { FieldHookShared, RelationInput } from '$lib/fields/types.js';
 import { trycatchFetch } from '$lib/util/function.js';
 import { toKebabCase } from '$lib/util/string.js';
 
@@ -9,10 +10,10 @@ import { toKebabCase } from '$lib/util/string.js';
  *  relation/module.ts for the client-side no-op counterpart). Uses a plain static import of
  *  `$app/server`, which SvelteKit's build blocks from ever reaching client code. */
 export const ensureRelationExists: FieldHookShared = async (
-  value: RelationValue<any>,
+  value: RelationInput<any>,
   { config }
 ) => {
-  const output = [];
+  const output: unknown[] = [];
 
   const retrieveRelation = async (id: string) => {
     // Forward auth, not the incoming body's headers: Bun's fetch keeps a `content-length` on a
@@ -33,23 +34,20 @@ export const ensureRelationExists: FieldHookShared = async (
     return doc;
   };
 
-  if (value && Array.isArray(value)) {
-    for (const relation of value) {
-      // A `null` element — what `[undefined]` becomes over JSON — names nothing, like an unknown id.
-      const documentId = typeof relation === 'string' ? relation : relation?.documentId;
-      if (!documentId) {
-        continue;
-      }
-      const doc = await retrieveRelation(documentId);
-      if (doc) {
-        output.push(relation);
-      }
-    }
-  } else if (typeof value === 'string') {
-    const doc = await retrieveRelation(value);
-    if (doc) {
-      output.push(doc.id);
-    }
+  // One value outside an array is a list of one.
+  const entries = Array.isArray(value) ? value : value ? [value] : [];
+
+  for (const entry of entries) {
+    // A bare id, a ref, or a document read at depth 1 and sent back. A `null` element — what
+    // `[undefined]` becomes over JSON — names nothing, like an unknown id.
+    const documentId =
+      typeof entry === 'string'
+        ? entry
+        : Relation.isRef(entry)
+          ? entry.documentId
+          : (entry as { id?: string } | null)?.id;
+    if (!documentId) continue;
+    if (await retrieveRelation(documentId)) output.push(entry);
   }
 
   return output;
