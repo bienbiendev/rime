@@ -68,7 +68,7 @@ const isFilenameStillReferenced = async <C extends Config>(args: {
   for (const slug of targetSlugs) {
     for (const locale of localesToQuery) {
       const docs = await rime.collection(slug).find({
-        query: `where[filename][equals]=${filename}`,
+        query: `where[filename][equals]=${encodeURIComponent(filename)}`,
         latest: true,
         locale,
         limit: slug === selfSlug ? 2 : 1

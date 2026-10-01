@@ -232,7 +232,7 @@ export class BlockBuilder {
   /**
    * The component drawn for the block on the stage of focus mode.
    * It gets the block value, its path, its fields and the form, so it can show the value,
-   * resolve its relations with `populate` and mount panel fields with `RenderFields`.
+   * read its relations with `Relation.resolve` and mount panel fields with `RenderFields`.
    *
    * `controls: false` drops the bar above the selected block, for a small one like a button.
    * Keys, ⌘K and the layers still move, duplicate and remove it.
@@ -286,7 +286,7 @@ export type BlocksFieldBlockRenderTitle = (args: { values: Dic; position: number
 
 /** What a block's render component receives. */
 export type BlockRenderProps = {
-  /** The block value, relations as `{ relationTo, documentId }`. */
+  /** The block value; read a relation with `Relation.resolve(block.image).first()`. */
   block: GenericBlock;
   /** `layout.sections.0` */
   path: string;

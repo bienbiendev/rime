@@ -1,20 +1,20 @@
 import type { BeforeOperationRelation } from '$lib/fields/relation/index.js';
 import { pathToRegex } from '$lib/core/fields/util.js';
-import type { Relation } from '$lib/fields/relation/index.js';
+import type { RelationRow } from '$lib/fields/relation/index.js';
 
 export type RelationDiff = {
   toAdd: BeforeOperationRelation[];
-  toDelete: Relation[];
-  toUpdate: Relation[];
+  toDelete: RelationRow[];
+  toUpdate: RelationRow[];
 };
 
 type Args = {
-  existingRelations: Relation[];
+  existingRelations: RelationRow[];
   incomingRelations: BeforeOperationRelation[];
   locale?: string;
 };
 
-const needUpdate = (existing: Relation, incoming: BeforeOperationRelation) =>
+const needUpdate = (existing: RelationRow, incoming: BeforeOperationRelation) =>
   !(
     existing.position === incoming.position &&
     existing[`${incoming.relationTo}Id` as keyof typeof existing] === incoming.documentId &&
@@ -28,8 +28,8 @@ export const defineRelationsDiff = ({
   locale
 }: Args): RelationDiff => {
   const toAdd: BeforeOperationRelation[] = [];
-  const toDelete: Relation[] = [];
-  const toUpdate: Relation[] = [];
+  const toDelete: RelationRow[] = [];
+  const toUpdate: RelationRow[] = [];
   const processedIds = new Set<string>(); // Keep track of processed IDs
 
   // Process incoming relations

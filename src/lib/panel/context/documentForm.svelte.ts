@@ -14,7 +14,7 @@ import {
 import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '$lib/core/prototype/types.js';
 import { apiUrl, panelUrl } from '$lib/core/routes/util.js';
 import type { BlocksBuilder } from '$lib/fields/blocks/index.js';
-import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/json.js';
+import { isJSONContent, RichText } from '$lib/fields/rich-text/json.js';
 import type { FormField } from '$lib/types.js';
 import { isObjectLiteral, omit } from '$lib/util/object.js';
 import { normalizeFieldPath } from '$lib/util/string.js';
@@ -124,7 +124,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       function computeTitleFromValue(value: unknown): string {
         // Handle rich text value
         if (isJSONContent(value)) {
-          return richTextJSONToText(value as any);
+          return RichText.toText(value as any);
         }
         if (typeof value === 'string') {
           return value;

@@ -1,10 +1,10 @@
 <script lang="ts" generics="T">
   import { getLiveContext } from './context.svelte.js';
-  import type { WithRelationPopulated } from '$lib/core/fields/types.js';
+  import type { WithRelationResolved } from '$lib/core/fields/types.js';
   import type { Snippet } from 'svelte';
 
   let { child, data } = $props<{
-    child: Snippet<[doc: WithRelationPopulated<T>]>;
+    child: Snippet<[doc: WithRelationResolved<T>]>;
     data: { doc: T };
   }>();
 
@@ -16,7 +16,7 @@
     }
   });
 
-  const doc = $derived(live.doc || data.doc) as WithRelationPopulated<T>;
+  const doc = $derived(live.doc || data.doc) as WithRelationResolved<T>;
 </script>
 
 {@render child(doc)}

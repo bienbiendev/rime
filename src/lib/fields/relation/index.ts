@@ -1,10 +1,14 @@
 import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
+import {
+  FormFieldBuilder,
+  type FormFieldUse
+} from '$lib/core/fields/builders/form-field-builder.js';
 import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
-import type { DefaultOptions, DefaultValueFn, FormField } from '$lib/fields/types.js';
+import type { DefaultOptions, DefaultValueFn, FormField, RelationRef } from '$lib/fields/types.js';
 import type { RegisterCollection } from '$lib/index.js';
 import { capitalize } from '$lib/util/string.js';
 import type { WithOptional } from '$lib/util/types.js';
+import type { RequestEvent } from '@sveltejs/kit';
 import { ensureRelationExists } from '$rime/modules:fields/relation';
 import dedent from 'dedent';
 import Cell from './component/Cell.svelte';
@@ -19,6 +23,28 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
     this.field.defaultValue = [];
     this.field.hooks = {
       beforeValidate: [ensureRelationExists]
+    };
+  }
+
+  /**
+   * The default as refs, as a read answers them: the panel's form and a new block hold
+   * `[{ relationTo, documentId }]`, not the ids the default was written with.
+   */
+  override get use(): Omit<FormFieldUse<RelationField<Doc>>, 'defaultValue'> & {
+    defaultValue(context?: { event?: RequestEvent }): RelationRef[];
+  } {
+    const use = super.use;
+    return {
+      ...use,
+      defaultValue: (context: { event?: RequestEvent } = {}): RelationRef[] => {
+        const value = use.defaultValue(context);
+        const ids: unknown[] =
+          typeof value === 'string' ? [value] : Array.isArray(value) ? value : [];
+        // Only a non-empty string names a document.
+        return ids
+          .filter((id): id is string => typeof id === 'string' && id !== '')
+          .map((documentId) => ({ relationTo: this.field.relationTo, documentId }));
+      }
     };
   }
 
@@ -69,10 +95,8 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
     const relationValueType = dedent`
     //@shared:start RelationValue
     export type RelationValue<T> =
-      | T[] // When depth > 0, fully populated docs
-      | { id?: string; relationTo: string; documentId: string }[] // When depth = 0, relation objects
-      | string[]
-      | string; // When sending data to update
+      | T[] // depth 1 or more: the documents
+      | { id?: string; relationTo: string; documentId: string }[]; // depth 0: refs
     //@shared:end
     `;
     const fieldType = `${this.name}${this.get.required ? '' : '?'}: RelationValue<${capitalize(this.get.relationTo)}Doc>`;
@@ -96,7 +120,7 @@ export type RelationField<Doc extends GenericDoc = GenericDoc> = FormField & {
   isThumbnail?: boolean;
 };
 
-export type Relation = {
+export type RelationRow = {
   id?: string;
   ownerId: string;
   path: string;
@@ -110,10 +134,9 @@ export type Relation = {
 /**
  * A relation before it is written, when the row it hangs off does not exist yet.
  *
- * The only difference from `Relation` is that `ownerId` is not known — a create resolves it
- * after inserting the owner. Declared in the sqlite adapter until now, which meant core's
- * relation diffing imported a type from an adapter to describe its own intermediate value.
+ * The only difference from `RelationRow` is that `ownerId` is not known — a create resolves it
+ * after inserting the owner.
  */
-export type BeforeOperationRelation = Omit<Relation, 'ownerId'> & { ownerId?: string };
+export type BeforeOperationRelation = Omit<RelationRow, 'ownerId'> & { ownerId?: string };
 
 type QueryResolver<Doc extends GenericDoc = GenericDoc> = (doc: WithOptional<Doc, 'id'>) => string;

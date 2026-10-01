@@ -1,5 +1,5 @@
 import type { GenericDoc } from '$lib/core/prototype/types.js';
-import type { Relation } from './index.js';
+import type { RelationRow } from './index.js';
 
 /** A related document as the field holds it before it is written: its id, and its row if any. */
 export type RelationItem = { documentId: string; id?: string; livePreview?: GenericDoc };
@@ -18,9 +18,9 @@ export type RelationItem = { documentId: string; id?: string; livePreview?: Gene
 export function toRelationValue(
   items: RelationItem[],
   args: { relationTo: string; path: string; locale?: string; live?: boolean }
-): Omit<Relation, 'ownerId'>[] {
+): Omit<RelationRow, 'ownerId'>[] {
   return items.map((item, index) => {
-    const relation: Omit<Relation, 'ownerId'> = {
+    const relation: Omit<RelationRow, 'ownerId'> = {
       id: item.id,
       relationTo: args.relationTo,
       path: args.path,

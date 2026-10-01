@@ -11,6 +11,7 @@ import type { OperationContext } from '$lib/core/pipeline/types.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
 import type { CollectionSlug } from '$lib/core/prototype/types.js';
 import type { RegisterCollection } from '$lib/index.js';
+import type { WithRelationInput } from '$lib/core/fields/types.js';
 import type { DeepPartial, Dic } from '$lib/util/types.js';
 
 /**
@@ -18,7 +19,7 @@ import type { DeepPartial, Dic } from '$lib/util/types.js';
  * declares never mentions the request — see the note on `CollectionApi`.
  */
 export type CreateArgs<T> = {
-  data: DeepPartial<T>;
+  data: DeepPartial<WithRelationInput<T>>;
   locale?: string | undefined;
 };
 
@@ -38,7 +39,11 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
     context
   });
 
-  const before = await runDataHooks<CollectionSlug, DeepPartial<T>, BuiltCollection>({
+  const before = await runDataHooks<
+    CollectionSlug,
+    DeepPartial<WithRelationInput<T>>,
+    BuiltCollection
+  >({
     hooks: config.$hooks?.beforeCreate,
     data: args.data,
     config,

@@ -1,6 +1,6 @@
 import type { AdapterDeps } from '$lib/adapter-sqlite/types.server.js';
 import { baseTableName, tableName } from './naming.server.js';
-import type { BeforeOperationRelation, Relation } from '$lib/fields/relation/index.js';
+import type { BeforeOperationRelation, RelationRow } from '$lib/fields/relation/index.js';
 import type { PrototypeSlug } from '$lib/core/prototype/types.js';
 import { omit } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
@@ -154,7 +154,7 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
       .from(table)
       .where(and(...conditions));
 
-    return all as Relation[];
+    return all as RelationRow[];
   };
 
   return {
@@ -175,8 +175,8 @@ type DeleteFromPaths = (args: {
   locale?: string;
 }) => Promise<boolean>;
 
-type Delete = (args: { parentSlug: PrototypeSlug; relations: Relation[] }) => Promise<boolean>;
-type Update = (args: { parentSlug: PrototypeSlug; relations: Relation[] }) => Promise<boolean>;
+type Delete = (args: { parentSlug: PrototypeSlug; relations: RelationRow[] }) => Promise<boolean>;
+type Update = (args: { parentSlug: PrototypeSlug; relations: RelationRow[] }) => Promise<boolean>;
 type Create = (args: {
   parentSlug: PrototypeSlug;
   ownerId: string;
@@ -187,4 +187,4 @@ type GetAllRelations = (args: {
   parentSlug: PrototypeSlug;
   ownerId: string;
   locale?: string;
-}) => Promise<Relation[]>;
+}) => Promise<RelationRow[]>;

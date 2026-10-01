@@ -1,7 +1,7 @@
 import type { BuiltCollection } from '$lib/core/config/types.js';
 import { copyLocales } from '$lib/core/locale/copy.server.js';
 import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
-import { isJSONContent, richTextJSONToText } from '$lib/fields/rich-text/json.js';
+import { isJSONContent, RichText } from '$lib/fields/rich-text/json.js';
 import type { GenericDoc } from '$lib/types';
 import { getValueAtPath, isObjectLiteral, setValueAtPath } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
@@ -36,9 +36,7 @@ export const duplicate = async (args: Args): Promise<string> => {
 
     const getTitle = () => {
       const title = getValueAtPath<string>(config.asTitle, doc);
-      return isJSONContent(title)
-        ? richTextJSONToText(title as any) + ' (copy)'
-        : title + ' (copy)';
+      return isJSONContent(title) ? RichText.toText(title as any) + ' (copy)' : title + ' (copy)';
     };
     const data = setValueAtPath<Dic>(config.asTitle, doc, getTitle());
     return data;

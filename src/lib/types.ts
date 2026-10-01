@@ -52,7 +52,7 @@ export type { JsonFile, UploadDoc } from '$lib/core/prototype/collection/upload/
 export type { Link } from './fields/link/types.js';
 
 // Util
-export type { WithRelationPopulated } from '$lib/core/fields/types.js';
+export type { WithRelationInput, WithRelationResolved } from '$lib/core/fields/types.js';
 
 export type { RouteHandlers } from './core/routes/handler.server.js';
 export type { Plugin } from './core/plugins/index.js';

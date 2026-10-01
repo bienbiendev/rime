@@ -3,7 +3,7 @@
   import type { UploadDoc } from '$lib/core/prototype/collection/upload/types.js';
   import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config.js';
   import { apiUrl } from '$lib/core/routes/util.js';
-  import { populate } from '$lib/fields/relation/populate.js';
+  import { Relation } from '$lib/fields/relation/relation.js';
   import FileDrop from '$lib/panel/components/sections/collection/bulk-upload/FileDrop.svelte';
   import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
   import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
@@ -14,7 +14,7 @@
   import { Image as ImageIcon, Trash2 } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
-  import type { Relation, RelationFieldBuilder } from '../index.js';
+  import type { RelationFieldBuilder, RelationRow } from '../index.js';
   import { toRelationValue } from '../value.js';
   import Browse from './upload/Browse.svelte';
 
@@ -39,7 +39,7 @@
   const isUpload = $derived(isUploadConfig(relationConfig));
   const many = $derived(!!config.get.many);
 
-  const field = $derived(form.useField<Relation[]>(path, config));
+  const field = $derived(form.useField<RelationRow[]>(path, config));
   const refs = $derived(Array.isArray(field.value) ? field.value : []);
   const ids = $derived(refs.map((ref) => ref.documentId));
   /** Files and the library only reach an editable field to an upload collection. */
@@ -51,10 +51,8 @@
     for (const ref of refs) {
       if (known.has(ref.documentId)) continue;
       const lookup = { relationTo: ref.relationTo, documentId: ref.documentId };
-      populate<unknown>(lookup).then((doc) => {
-        if (doc && typeof doc === 'object' && '_type' in doc) {
-          known.set(ref.documentId, doc as UploadDoc);
-        }
+      Promise.resolve(Relation.resolve<UploadDoc>([lookup]).first()).then((doc) => {
+        if (doc) known.set(ref.documentId, doc);
       });
     }
   });
@@ -78,7 +76,7 @@
       relationTo: config.get.relationTo,
       path,
       locale: config.get.localized ? locale.code : undefined
-    }) as Relation[];
+    }) as RelationRow[];
   }
 
   /* ------------------------------------------------------------ uploading */

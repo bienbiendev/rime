@@ -147,7 +147,10 @@ export type OptionWithIcon = {
 };
 
 export type RelationRef = { id?: string; relationTo: string; documentId: string };
-export type RelationValue<T> = T[] | RelationRef[] | string[] | string;
+/** A relation as a read answers it: the documents at depth 1 or more, refs at depth 0. */
+export type RelationValue<T> = T[] | RelationRef[];
+/** What a write takes for a relation: what a read answers, or bare ids. */
+export type RelationInput<T> = RelationValue<T> | string[] | string;
 
 export type BaseUseFieldReturn = {
   path: string;

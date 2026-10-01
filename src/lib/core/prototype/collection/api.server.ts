@@ -4,6 +4,7 @@ import type { RegisterCollection } from '$lib/index.js';
 import type { PrototypeApiContext } from '../define.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
+import type { WithRelationResolved } from '$lib/core/fields/types.js';
 import { withoutPrivateFields } from '$lib/core/auth/constant.server.js';
 import { isAuth } from '$lib/core/auth/enabled.js';
 import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
@@ -149,8 +150,13 @@ class CollectionAPI<
    *   sort: '-createdAt',
    *   limit: 10
    * });
+   *
+   * // A literal `depth` types the relations resolved: `posts[0].author` is `UsersDoc[]`
+   * const posts = await rime.collection('posts').find({ depth: 1 });
    */
-  find(args: FindArgs = {}): Promise<Doc[]> {
+  find<D extends number = 0>(
+    args: FindArgs & { depth?: D } = {}
+  ): Promise<WithRelationResolved<Doc, D>[]> {
     const {
       query,
       locale,
@@ -182,7 +188,7 @@ class CollectionAPI<
           localeFallback,
           locale: this.fallbackLocale(locale)
         })
-    );
+    ) as Promise<WithRelationResolved<Doc, D>[]>;
   }
 
   /**
@@ -209,8 +215,13 @@ class CollectionAPI<
    *   id: '12345',
    *   latest: true
    * });
+   *
+   * // A literal `depth` types the relations resolved: `post.author` is `UsersDoc[]`
+   * const post = await rime.collection('posts').findById({ id: '12345', depth: 1 });
    */
-  findById(args: FindByIdArgs): Promise<Doc> {
+  findById<D extends number = 0>(
+    args: FindByIdArgs & { depth?: D }
+  ): Promise<WithRelationResolved<Doc, D>> {
     const { id, versionId, locale, select, latest, depth = 0, localeFallback } = args;
 
     if (!id) {
@@ -231,7 +242,7 @@ class CollectionAPI<
           localeFallback,
           locale: this.fallbackLocale(locale)
         })
-    );
+    ) as Promise<WithRelationResolved<Doc, D>>;
   }
 
   /**
@@ -242,7 +253,9 @@ class CollectionAPI<
    * @example
    * const medias = await rime.collection('medias').findByIds({ ids: ['a1', 'b2'] });
    */
-  findByIds(args: FindByIdsArgs): Promise<Doc[]> {
+  findByIds<D extends number = 0>(
+    args: FindByIdsArgs & { depth?: D }
+  ): Promise<WithRelationResolved<Doc, D>[]> {
     const { ids, locale, depth = 0, localeFallback } = args;
 
     if (!ids.length) return Promise.resolve([]);
@@ -253,7 +266,7 @@ class CollectionAPI<
       depth,
       localeFallback,
       locale: this.fallbackLocale(locale)
-    });
+    }) as Promise<WithRelationResolved<Doc, D>[]>;
   }
 
   /**

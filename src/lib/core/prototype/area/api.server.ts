@@ -3,6 +3,7 @@ import type { RegisterArea } from '$lib/index.js';
 import type { PrototypeApiContext } from '../define.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Dic } from '$lib/util/types.js';
+import type { WithRelationResolved } from '$lib/core/fields/types.js';
 import type { GenericDoc } from '../types.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
@@ -99,8 +100,13 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
    * const doc = await rime.area('settings').find({ locale })
    * const doc = await rime.area('settings').find({ versionId: '123' })
    * const doc = await rime.area('settings').find({ latest: true })
+   *
+   * // A literal `depth` types the relations resolved: `doc.logo` is `MediasDoc[]`
+   * const doc = await rime.area('settings').find({ depth: 1 })
    */
-  find(args: FindArgs = {}): Promise<Doc> {
+  find<D extends number = 0>(
+    args: FindArgs & { depth?: D } = {}
+  ): Promise<WithRelationResolved<Doc, D>> {
     const { locale, select = [], depth = 0, versionId, latest, localeFallback } = args;
 
     // As on a collection's find: the key holds the caller's locale, not the resolved one.
@@ -117,7 +123,7 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
           localeFallback,
           locale: this.fallbackLocale(locale)
         })
-    );
+    ) as Promise<WithRelationResolved<Doc, D>>;
   }
 
   /**

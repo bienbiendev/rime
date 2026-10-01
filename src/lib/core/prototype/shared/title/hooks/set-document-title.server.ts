@@ -1,5 +1,5 @@
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { richTextJSONToText } from '$lib/fields/rich-text/json.js';
+import { RichText } from '$lib/fields/rich-text/json.js';
 import { getValueAtPath, isObjectLiteral } from '$lib/util/object.js';
 
 /**
@@ -17,7 +17,7 @@ export const setDocumentTitle = Hooks.beforeRead(async function setDocumentTitle
     function computeTitleFromValue(value: unknown): string {
       // Handle rich text value
       if (isObjectLiteral(value) && 'content' in value) {
-        return richTextJSONToText(value as any);
+        return RichText.toText(value as any);
       }
       if (typeof value === 'string') {
         return value;

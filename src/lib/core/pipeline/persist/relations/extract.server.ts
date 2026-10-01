@@ -1,6 +1,7 @@
 import type { BeforeOperationRelation } from '$lib/fields/relation/index.js';
 import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
-import { getValueAtPath } from '$lib/util/object.js';
+import { Relation } from '$lib/fields/relation/relation.js';
+import { getValueAtPath, isObjectLiteral } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import type { ConfigMap } from '../../config-map/types.js';
 
@@ -18,69 +19,38 @@ export const extractRelations = ({ ownerId, data, configMap, locale }: Args) => 
   // rows, and the key is the `path` those rows carry.
   for (const [path, config] of Object.entries(configMap)) {
     if (config instanceof RelationFieldBuilder) {
-      const value = getValueAtPath<BeforeOperationRelation[] | string | string[]>(path, data);
+      const value = getValueAtPath<unknown>(path, data);
+      // One value outside an array is a list of one.
+      const entries = Array.isArray(value) ? value : value ? [value] : [];
 
-      const localized = config.get.localized;
-      const relationRawValue = value;
-      let output: BeforeOperationRelation[] = [];
+      // A bare id, a ref, or a document read at depth 1 and sent back. Anything else, a `null`
+      // element included, names nothing.
+      const named = entries.flatMap((entry) => {
+        const documentId = documentIdOf(entry);
+        return documentId ? [{ entry, documentId }] : [];
+      });
 
-      const relationFromString = ({ value, position = 0 }: RelationFromStringArgs) => {
-        const result: BeforeOperationRelation = {
+      named.forEach(({ entry, documentId }, position) => {
+        relations.push({
+          // A ref's own row, so the stored row is updated rather than replaced.
+          id: Relation.isRef(entry) ? entry.id || undefined : undefined,
           position,
           relationTo: config.get.relationTo,
-          documentId: value,
+          documentId,
           ownerId,
-          path
-        };
-        if (localized) {
-          result.locale = locale;
-        }
-        return result;
-      };
-
-      const completeRelation = ({ value, position = 0 }: AugmentRelationArgs) => {
-        const result: BeforeOperationRelation = {
-          id: value.id || undefined,
-          position,
-          relationTo: config.get.relationTo,
-          documentId: value.documentId,
-          ownerId,
-          path
-        };
-        if (localized) {
-          result.locale = locale;
-        }
-        return result;
-      };
-
-      // If value is array
-      if (Array.isArray(relationRawValue)) {
-        output = relationRawValue.map((value, n) => {
-          // Array of string build the relation value
-          if (typeof value === 'string') {
-            return relationFromString({ value, position: n });
-          } else {
-            // Complete possible missing props
-            return completeRelation({ value, position: n });
-          }
+          path,
+          ...(config.get.localized && { locale })
         });
-        // Check if it's a string
-      } else if (typeof relationRawValue === 'string') {
-        output = [relationFromString({ value: relationRawValue, position: 0 })];
-      }
-      relations.push(...output);
+      });
     }
   }
 
   return relations;
 };
 
-type RelationFromStringArgs = {
-  value: string;
-  position?: number;
-};
-
-type AugmentRelationArgs = {
-  value: Partial<BeforeOperationRelation> & { documentId: string };
-  position?: number;
+const documentIdOf = (entry: unknown): string | null => {
+  if (typeof entry === 'string') return entry || null;
+  if (Relation.isRef(entry)) return entry.documentId;
+  if (isObjectLiteral(entry) && typeof entry.id === 'string') return entry.id;
+  return null;
 };

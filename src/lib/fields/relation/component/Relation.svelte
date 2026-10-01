@@ -16,7 +16,8 @@
   import { Images, Plus, TextSearch } from '@lucide/svelte';
   import { untrack } from 'svelte';
   import { getAPIProxyContext } from '../../../panel/context/api-proxy.svelte.js';
-  import type { Relation, RelationFieldBuilder } from '../index.js';
+  import type { RelationFieldBuilder, RelationRow } from '../index.js';
+  import { Relation } from '../relation.js';
   import { toRelationValue } from '../value.js';
   import Default from './default/Default.svelte';
   import type { RelationFieldItem } from './types.js';
@@ -42,7 +43,7 @@
   // the fetched items
   let initialItems: RelationFieldItem[] = $state([]);
   // value from the form
-  let initialValue = $derived(form.getRawValue<Relation[]>(path) || []);
+  let initialValue = $derived(form.getRawValue<RelationRow[]>(path) || []);
   // timestamp to force re-render
   let stamp = $state(new Date().getTime().toString());
 
@@ -122,11 +123,23 @@
     if (ressource.data) {
       initialItems = ressource.data.docs.map((doc: GenericDoc) => documentToRelationFieldItem(doc));
       if (!initialized) {
-        const findItem = (relation: Relation) => {
+        const findItem = (relation: RelationRow) => {
           return initialItems.find((item) => item.documentId === relation.documentId);
         };
         selectedItems = initialValue.map(findItem).filter((item) => !!item);
         initialized = true;
+
+        // A saved relation the candidates leave out, the field's `query()` no longer matching it,
+        // is read on its own: it stays picked, and the next change writes it back.
+        const missing = initialValue.filter((relation) => !findItem(relation));
+        if (missing.length) {
+          const order = initialValue.map((relation) => relation.documentId);
+          Promise.resolve(Relation.resolve<GenericDoc>(missing).all()).then((docs) => {
+            selectedItems = [...selectedItems, ...docs.map(documentToRelationFieldItem)].sort(
+              (a, b) => order.indexOf(a.documentId) - order.indexOf(b.documentId)
+            );
+          });
+        }
       }
     }
   });

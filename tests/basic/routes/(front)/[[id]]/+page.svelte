@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { LiveEdit, isRelationResolved, richTextJSONToText } from '$lib/public.js';
+  import { LiveEdit, Relation, RichText } from '$lib/public.js';
 
   let { data } = $props();
 </script>
@@ -20,13 +20,14 @@
 
     <LiveEdit path="attributes.summary" data={doc.attributes.summary}>
       {#snippet child(summary, props)}
-        {@const thumbnail = summary.thumbnail?.at(0)}
         <div {...props}>
-          {#if isRelationResolved(thumbnail)}
-            <img alt="" style="width:100%;height:auto;" src={(thumbnail as MediasDoc).sizes.lg} />
-          {/if}
+          {#await Relation.resolve(summary.thumbnail).first() then thumbnail}
+            {#if thumbnail}
+              <img alt="" style="width:100%;height:auto;" src={thumbnail.sizes.lg} />
+            {/if}
+          {/await}
           {#if summary.intro}
-            <p>{richTextJSONToText(summary.intro)}</p>
+            <p>{RichText.toText(summary.intro)}</p>
           {/if}
         </div>
       {/snippet}
@@ -38,12 +39,13 @@
           {#snippet child(block, props)}
             <div {...props}>
               {#if block.type === 'paragraph'}
-                <p>{richTextJSONToText(block.text)}</p>
+                <p>{RichText.toText(block.text)}</p>
               {:else if block.type === 'image'}
-                {@const image = block.image?.at(0)}
-                {#if isRelationResolved<MediasDoc>(image)}
-                  <img alt="" style="width:100%;height:auto;" src={image.sizes.lg} />
-                {/if}
+                {#await Relation.resolve(block.image).first() then image}
+                  {#if image}
+                    <img alt="" style="width:100%;height:auto;" src={image.sizes.lg} />
+                  {/if}
+                {/await}
               {/if}
             </div>
           {/snippet}

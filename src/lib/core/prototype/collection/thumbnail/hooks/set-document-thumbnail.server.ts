@@ -1,9 +1,9 @@
 import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { isRelationResolved } from '$lib/fields/relation/util.js';
+import { Relation } from '$lib/fields/relation/relation.js';
+import type { RelationRef } from '$lib/fields/types.js';
 import {
   type BuiltCollection,
   type CollectionSlug,
-  type GenericDoc,
   type RelationValue,
   type UploadDoc
 } from '$lib/types.js';
@@ -35,22 +35,17 @@ export const setDocumentThumbnail = Hooks.beforeRead(async (args) => {
     (!hasSelect || (hasSelect && paramSelect.includes('_thumbnail')));
 
   if (shouldSetThumbnail) {
-    const relationValue = getValueAtPath<RelationValue<UploadDoc>>(config.asThumbnail, doc);
-    if (!relationValue || (Array.isArray(relationValue) && relationValue.length === 0)) return args;
+    // At depth 0 the relation holds a ref to the media; at depth 1 or more, the media itself.
+    const [first] = getValueAtPath<RelationValue<UploadDoc>>(config.asThumbnail, doc) ?? [];
+    if (!first) return args;
 
-    const unwraped = Array.isArray(relationValue) ? relationValue[0] : relationValue;
-    if (typeof unwraped === 'string') return args;
+    const readMedia = (ref: RelationRef) =>
+      args.event.locals.rime
+        .collection(ref.relationTo as CollectionSlug)
+        .findById({ id: ref.documentId }) as Promise<UploadDoc>;
 
-    const relationResolved: GenericDoc = isRelationResolved<GenericDoc>(unwraped)
-      ? unwraped
-      : await args.event.locals.rime
-          .collection(unwraped.relationTo as CollectionSlug)
-          .findById({ id: unwraped.documentId });
-
-    doc = {
-      _thumbnail: relationResolved._thumbnail,
-      ...doc
-    };
+    const media = Relation.isRef(first) ? await readMedia(first) : first;
+    doc = { _thumbnail: media._thumbnail, ...doc };
   }
 
   return { ...args, doc };

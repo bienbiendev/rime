@@ -1,7 +1,7 @@
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import type { OperationQuery } from '$lib/core/pipeline/types.js';
 import type { GenericBlock, PrototypeSlug, RawDoc, TreeBlock } from '$lib/core/prototype/types.js';
-import type { BeforeOperationRelation, Relation } from '$lib/fields/relation/index.js';
+import type { BeforeOperationRelation, RelationRow } from '$lib/fields/relation/index.js';
 import type { Dic, WithOptional, WithRequired } from '$lib/util/types.js';
 
 /**
@@ -261,8 +261,8 @@ export interface RelationsHandle {
     ownerId: string;
     relations: BeforeOperationRelation[];
   }): Promise<boolean>;
-  update(args: { parentSlug: PrototypeSlug; relations: Relation[] }): Promise<boolean>;
-  delete(args: { parentSlug: PrototypeSlug; relations: Relation[] }): Promise<boolean>;
+  update(args: { parentSlug: PrototypeSlug; relations: RelationRow[] }): Promise<boolean>;
+  delete(args: { parentSlug: PrototypeSlug; relations: RelationRow[] }): Promise<boolean>;
   deleteFromPaths(args: {
     parentSlug: PrototypeSlug;
     ownerId: string;
@@ -273,7 +273,7 @@ export interface RelationsHandle {
     parentSlug: PrototypeSlug;
     ownerId: string;
     locale?: string;
-  }): Promise<Relation[]>;
+  }): Promise<RelationRow[]>;
 }
 
 /**

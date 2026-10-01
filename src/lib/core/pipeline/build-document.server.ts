@@ -2,7 +2,7 @@ import type { DocumentRows } from '$lib/core/adapter.js';
 import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
 import { withEmptyFields } from '$lib/core/fields/empty.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
-import type { Relation } from '$lib/fields/relation/index.js';
+import type { RelationRow } from '$lib/fields/relation/index.js';
 import { isObjectLiteral, omit } from '$lib/util/object.js';
 import type { Dic } from '$lib/util/types.js';
 import { unflatten } from 'flat';
@@ -65,7 +65,7 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
       continue;
     }
 
-    let output: Relation | GenericDoc | null;
+    let output: RelationRow | GenericDoc | null;
 
     if (depth > 0) {
       const target = populated?.get(
@@ -78,7 +78,7 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
     } else {
       output = (
         withRowMeta ? relation : omit(['position', 'ownerId', 'path'], relation)
-      ) as Relation;
+      ) as RelationRow;
     }
 
     flatDoc[path] = [...(flatDoc[path] || []), output];

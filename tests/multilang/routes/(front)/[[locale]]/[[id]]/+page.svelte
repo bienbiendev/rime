@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { LiveEdit, resolveRelation, richTextJSONToText } from '$lib/public.js';
+  import { LiveEdit, Relation, RichText } from '$lib/public.js';
 
   let { data } = $props();
 </script>
@@ -10,7 +10,7 @@
       {#snippet child(attributes, props)}
         <div {...props}>
           <h1>{attributes.title}</h1>
-          {#await resolveRelation(attributes.author).then((r) => r?.at(0)) then author}
+          {#await Relation.resolve(attributes.author).first() then author}
             {#if author}
               <p>{author.email}</p>
             {/if}
@@ -25,9 +25,9 @@
           {#snippet child(block, props)}
             <div {...props}>
               {#if block.type === 'paragraph'}
-                <p>{richTextJSONToText(block.text)}</p>
+                <p>{RichText.toText(block.text)}</p>
               {:else if block.type === 'image'}
-                {#await resolveRelation(block.image).then((r) => r?.at(0)) then image}
+                {#await Relation.resolve(block.image).first() then image}
                   {#if image}
                     <img alt="" style="width:100%;height:auto;" src={image.sizes.large} />
                   {/if}
