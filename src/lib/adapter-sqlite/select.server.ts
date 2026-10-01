@@ -2,7 +2,7 @@ import type { NodeStorage } from '$lib/core/fields/builders/field-builder.js';
 import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
 import { getFieldAtPath, resolvedReferencesOf } from '$lib/core/fields/util.js';
 import { getColumns } from 'drizzle-orm';
-import { RelationFieldBuilder } from '$lib/fields/relation/index.js';
+import { isRelationField } from '$lib/fields/relation/index.js';
 import type { BuiltArea, BuiltCollection } from '$lib/types.js';
 import type { Dic } from '$lib/util/types.js';
 import {
@@ -137,7 +137,7 @@ export const buildWithParam = (args: {
 
     // Each branch is where the field's rows are stored: the junction table, a child table, or a
     // column of the row itself.
-    if (fieldConfig instanceof RelationFieldBuilder) {
+    if (isRelationField(fieldConfig)) {
       directRelationPaths.push(path);
     } else if (fieldConfig && storageKinds(fieldConfig).length) {
       for (const kind of storageKinds(fieldConfig)) {
