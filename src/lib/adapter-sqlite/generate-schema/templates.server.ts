@@ -364,31 +364,6 @@ export const ${junctionTable} = sqliteTable('${junctionTable}', {
 `;
 
 /**
- * Generates an export of relation field mappings for runtime use
- * Creates a record mapping table names to their relation configurations
- *
- * @example
- * ```typescript
- * export const relationFieldsMap: Record<string, any> = {
- *   pages: {"medias":{"to":"medias"},"categories":{"to":"categories"}}
- * }
- * ```
- */
-export const templateExportRelationsFieldsToTable = (relationFieldsDic: Record<string, string>) => {
-  const content = [];
-  for (const [table, dic] of Object.entries(relationFieldsDic)) {
-    content.push(dedent`
-      ${table} : ${JSON.stringify(dic)}
-    `);
-  }
-  return dedent`
-    export const relationFieldsMap: Record<string, any> = {
-      ${content.join(',\n      ')}
-    }
-  `;
-};
-
-/**
  * Generates an export of all tables for runtime use
  * Creates a record with all table definitions and proper TypeScript types
  *

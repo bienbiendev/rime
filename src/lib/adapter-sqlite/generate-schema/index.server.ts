@@ -7,12 +7,10 @@ import {
   type TableName
 } from '../naming.server.js';
 import { date } from '$lib/fields/date/index.js';
-import type { Dic } from '$lib/util/types.js';
 import { generateJunctionTableDefinition } from './relations/junction.server.js';
 import buildRootTable, { type ReferenceJoin } from './root.server.js';
 import {
   templateDeclaredTable,
-  templateExportRelationsFieldsToTable,
   templateExportSchema,
   templateExportTables,
   templateHead,
@@ -37,7 +35,6 @@ export async function generateSchemaString(config: BuiltConfig) {
   let enumTables: string[] = [];
   /** parent table -> its child tables, for the one `defineRelations` at the end. */
   const relationTree: Record<string, string[]> = {};
-  let relationFieldsExportDic: Dic = {};
   const blocksRegister: string[] = [];
   /** Every resolved reference, joined onto its owner in the same `defineRelations`. */
   const referenceJoins: ReferenceJoin[] = [];
@@ -118,11 +115,6 @@ export async function generateSchemaString(config: BuiltConfig) {
     for (const [parent, children] of Object.entries(relationsDic)) {
       (relationTree[parent] ??= []).push(...children);
     }
-    relationFieldsExportDic = {
-      ...relationFieldsExportDic,
-      [rootTableName]: relationFieldsMap
-    };
-
     schema.push(prototypeSchema, junctionTable);
 
     // A collection with `$url` keeps its pages' addresses in a table of their own, off the base
@@ -145,7 +137,6 @@ export async function generateSchemaString(config: BuiltConfig) {
   schema.push(templateExportTables(enumTables));
   // After `tables`, which `defineRelations` takes as its first argument.
   schema.push(templateRelations(relationTree, referenceJoins));
-  schema.push(templateExportRelationsFieldsToTable(relationFieldsExportDic));
   schema.push(templateExportSchema({ enumTables }));
 
   return schema.join('\n').replace(/\n{3,}/g, '\n\n');
