@@ -1,5 +1,35 @@
 # rimecms
 
+## 1.1.4
+
+### Patch Changes
+
+- Fixed: deleting several upload documents at once removes the file they share. The documents are deleted one after the other, so the last one finds no other document using the file and deletes it, with its sizes. A filename with `&` or `+` no longer breaks the check.
+
+- Added: `find`, `findById` and `findByIds` of a collection, and an area's `find`, called with a literal `depth` return the documents typed with their relations resolved to that depth: `findById({ id, depth: 1 })` types `page.hero.thumbnail` as `MediasDoc[]`.
+
+- Fixed: in a collection's grid layout, a document with an `isThumbnail()` relation shows the image instead of the collection's icon.
+
+- Fixed: a relation's list default is stored in the order it is written, not in the order of the last update of its documents.
+
+- Fixed: in the panel, a relation's default shows as picked: a create form no longer throws on it, a new block's relation no longer shows empty or loads forever, and a group preview no longer counts the characters of the id.
+
+- Fixed: a relation fetched from a site page or a panel preview requests the API path, whatever the page's own path; it requested `api/…` relative to the page, a 404 under `/panel/pages/<id>` or `/fr/…`.
+
+- Breaking Change: `isRelationPopulated`, `isRelationResolved`, `isRelationUnresolved` and `resolveRelation` are replaced by `Relation`, from `rimecms/public`. `Relation.resolve(value).first()` and `.all()` give the documents a relation holds: at once when the value already holds them, a promise when refs have to be fetched, so `{#await}` server-renders a page read at depth 1. `Relation.isRef(entry)` tells a ref from a document. Before: `{#await resolveRelation(block.image).then((r) => r?.at(0)) then image}`. After: `{#await Relation.resolve(block.image).first() then image}`.
+
+- Fixed: in the panel, a related document that no longer matches the field's `query()` stays in the field instead of being dropped by the next change.
+
+- Fixed: a document read with its relations resolved and saved back keeps its relations; they were deleted, on a versioned collection too.
+
+- Breaking Change: `RelationValue<T>` is what a read answers, `T[] | RelationRef[]`; a bare id no longer types as a read value. A write takes `RelationInput<T>`, which adds `string | string[]`: `create` and `update` data are typed with it, and so are a relation field's hooks.
+
+- Fixed: a relation sent as `[null]` with `?skipValidation` no longer answers 500, and one ref sent outside an array is no longer read as empty, which deleted the relation.
+
+- Breaking Change: `richTextJSONToText(value)` is `RichText.toText(value)`, from `rimecms/public`.
+
+- Breaking Change: `WithRelationPopulated<T>` is `WithRelationResolved<T, D>`, `D` the depth, 1 by default. It walks blocks and trees, which it took for relations before, so a relation inside a block is typed resolved too.
+
 ## 1.1.3
 
 ### Patch Changes
