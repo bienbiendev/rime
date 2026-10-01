@@ -6,6 +6,7 @@
  */
 :root {
   color-scheme: light dark;
+  scrollbar-color: var(--rz-border-strong) transparent; /* thumb track */
 
   /* levels */
   --rz-bg-base: var(--rz-gray-15);

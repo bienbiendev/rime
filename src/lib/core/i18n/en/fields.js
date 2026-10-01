@@ -70,7 +70,7 @@ export default {
   delete_item: 'Delete item',
   inside: 'Inside $1',
   nothing_inside: 'Nothing inside yet: drop an item here, or add one.',
-  type_to_add_block: 'Type $1 to add a block',
+  add_block_or_type: 'Add a block or type $1',
   slug_hint: 'Lowercase letters, digits and dashes.',
   build_from: 'Build it from the $1',
   choose: 'Choose…',

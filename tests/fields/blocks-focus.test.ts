@@ -209,7 +209,7 @@ test('⌘K moves a block into a nested list, and never into one that refuses its
     .toEqual({ root: ['paragraph', 'grid'], items: ['paragraph', 'paragraph'] });
 });
 
-test('A nested list takes the next block, from the inspector or the stage', async ({
+test('A nested list adds blocks from its +, from the inspector, or under the stage', async ({
   page,
   request
 }) => {
@@ -220,45 +220,59 @@ test('A nested list takes the next block, from the inspector or the stage', asyn
 
   const focus = page.locator('.rz-blocks-focus');
   const panel = focus.locator('.rz-blocks-focus__panel');
-  const placeholder = focus.locator('.rz-stage-placeholder');
-  const gridList = focus.locator('.site-grid__items > .rz-renders');
+  const stageAdd = focus.locator('.rz-blocks-focus__renders > .rz-stage-add');
+  const grid = focus.locator('.rz-blocks-focus__renders > .rz-renders > [data-type="grid"]');
+  const gridList = grid.locator('.site-grid__items > .rz-renders');
   const gridItems = gridList.locator(':scope > .rz-renders__item');
+  const gridAdd = gridList.locator(':scope > .rz-renders__add');
+  const clickBeside = () =>
+    focus.locator('.rz-blocks-focus__renders').click({ position: { x: 4, y: 4 } });
 
-  // One prompt on the stage, under the open list.
-  await expect(placeholder).toHaveCount(1);
-  await expect(
-    focus.locator('.rz-blocks-focus__renders > .rz-renders > .rz-stage-placeholder')
-  ).toHaveCount(1);
+  // Under the stage, a button adds to the open list. Nothing selected in the grid: no + in it.
+  await expect(stageAdd).toHaveCount(1);
+  await expect(gridAdd).toHaveCount(0);
+  await stageAdd.getByRole('button').click();
+  await expect(dialog(page).locator('.rz-block-tile')).toHaveCount(5);
+  await page.keyboard.press('Escape');
+  await expect(dialog(page)).toHaveCount(0);
 
-  // The grid's fields end on its list, whose button picks a type for it.
-  await focus.locator('.site-grid__title').click();
-  await panel.locator('.rz-inspector__list').getByRole('button', { name: 'Add block' }).click();
-  await expect(dialog(page)).toBeVisible();
+  // A click beside the grid's blocks selects the grid: its fields, and a + after its blocks.
+  await grid.click({ position: { x: 4, y: 4 } });
+  await expect(grid).toHaveAttribute('data-selected', '');
+  await expect(panel.getByRole('tab', { name: 'Inspector' })).toHaveAttribute(
+    'data-state',
+    'active'
+  );
+  await expect(gridAdd).toHaveCount(1);
+
+  // The + picks a type for the grid's list. The new block is selected, and the + stays.
+  await gridAdd.click();
   await expect(dialog(page).locator('.rz-block-tile')).toHaveCount(2);
   await dialog(page).locator('.rz-block-tile', { hasText: 'Image' }).click();
   await expect(dialog(page)).toHaveCount(0);
   await expect(gridItems).toHaveCount(2);
   await expect(gridItems.nth(1)).toHaveAttribute('data-selected', '');
+  await expect(gridAdd).toHaveCount(1);
+  // The image asks for no bar.
+  await expect(gridItems.nth(1).locator(':scope > .rz-renders__toolbar')).toHaveCount(0);
 
-  // The prompt follows the list the next block goes to: the grid's now, and only there.
-  await expect(placeholder).toHaveCount(1);
-  await expect(gridList.locator(':scope > .rz-stage-placeholder')).toHaveCount(1);
-
-  // A click beside the blocks selects the root: the prompt is back under the open list.
-  await focus.locator('.rz-blocks-focus__renders').click({ position: { x: 4, y: 4 } });
-  await expect(gridList.locator(':scope > .rz-stage-placeholder')).toHaveCount(0);
-  await expect(placeholder).toHaveCount(1);
-
-  // A click between the grid's blocks selects its list; `/` adds at its end.
-  const first = (await gridItems.nth(0).boundingBox())!;
-  const second = (await gridItems.nth(1).boundingBox())!;
-  await page.mouse.click(first.x + 4, (first.y + first.height + second.y) / 2);
-  await expect(gridList.locator(':scope > .rz-stage-placeholder')).toHaveCount(1);
-  await page.keyboard.press('/');
-  await expect(dialog(page)).toBeVisible();
+  // The inspector's + does the same.
+  await grid.click({ position: { x: 4, y: 4 } });
+  await panel.locator('.rz-inspector__list').getByRole('button', { name: 'Add block' }).click();
   await dialog(page).locator('.rz-block-tile', { hasText: 'Paragraph' }).click();
   await expect(gridItems).toHaveCount(3);
   await expect(gridItems.nth(2)).toHaveAttribute('data-type', 'paragraph');
+
+  // Nothing selected in the grid again: its + goes.
+  await clickBeside();
+  await expect(gridAdd).toHaveCount(0);
+
+  // An empty nested list keeps its +, selected or not.
+  await addViaCommand(page, /^Grid$/);
+  const emptyAdd = focus.locator('.site-grid__items > .rz-renders[data-empty] > .rz-renders__add');
+  await expect(emptyAdd).toHaveCount(1);
+  await clickBeside();
+  await expect(emptyAdd).toHaveCount(1);
 
   await save(page);
   await expect
@@ -529,6 +543,25 @@ test('A list without renders is rows, its nested lists under them, its fields in
   await expect(
     panel.locator('.rz-inspector__header').getByRole('button', { name: 'Focus on this block' })
   ).toBeVisible();
+});
+
+test('A list of one type adds it at once, without the picker', async ({ page, request }) => {
+  const docId = await createPlainPage(request);
+  await loginAs(page);
+  await page.goto(`${panelUrl('pages', docId)}?focus=plain`);
+  await page.waitForLoadState('networkidle');
+
+  // The columns' cells take notes only: their + adds one straight away.
+  const focus = page.locator('.rz-blocks-focus');
+  const columns = focus.locator('.rz-blocks-focus__renders > .rz-renders > [data-type="columns"]');
+  const cells = columns.locator('.rz-renders[data-list$=".cells"]');
+  await columns.locator(':scope > .rz-default-render > .rz-default-render__row').click();
+  await cells.locator(':scope > .rz-renders__add').click();
+  await expect(cells.locator(':scope > .rz-renders__item')).toHaveCount(2);
+  await expect(dialog(page)).toHaveCount(0);
+
+  await save(page);
+  await expect.poll(async () => (await readPlain(page, docId))[1].cells.length).toBe(2);
 });
 
 test('A type drags from the Blocks tab into a list without renders, shaped as a row', async ({

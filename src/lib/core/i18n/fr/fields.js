@@ -70,7 +70,7 @@ export default {
   delete_item: 'Supprimer l’élément',
   inside: 'Dans $1',
   nothing_inside: 'Rien dedans pour l’instant : déposez un élément ici, ou ajoutez-en un.',
-  type_to_add_block: 'Tapez $1 pour ajouter un bloc',
+  add_block_or_type: 'Ajouter un bloc ou tapez $1',
   slug_hint: 'Lettres minuscules, chiffres et tirets.',
   build_from: 'Le générer depuis le champ $1',
   choose: 'Choisir…',

@@ -1,21 +1,29 @@
 <script lang="ts">
   import { t__ } from '$lib/core/i18n/index.js';
+  import { Button } from '$lib/panel/components/ui/button/index.js';
+  import { parseBlockPath, shiftListPath } from '$lib/panel/context/blocks-ops.js';
   import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { shiftListPath } from '$lib/panel/context/blocks-ops.js';
   import { useSortable } from '$lib/panel/util/Sortable.js';
-  import { ArrowDown, ArrowUp, CopyPlus, Focus, Trash2 } from '@lucide/svelte';
+  import { ArrowDown, ArrowUp, CopyPlus, Focus, Plus, Trash2 } from '@lucide/svelte';
   import type Sortable from 'sortablejs';
   import DefaultRender from './DefaultRender.svelte';
   import { getBlocksFocusContext } from './focus.svelte.js';
   import Renders from './Renders.svelte';
-  import StagePlaceholder from './StagePlaceholder.svelte';
 
   /**
    * `only` narrows the list to the block at that index, focus on one block: it does not move
    * then, its own lists do. `onRemove` asks first when the block holds blocks of its own.
+   * `holder` is the block a nested list belongs to, and `class` what its render names it.
    */
-  type Props = { form: DocumentFormContext; list: string; only?: number; onRemove: () => void };
-  const { form, list, only, onRemove }: Props = $props();
+  type Props = {
+    form: DocumentFormContext;
+    list: string;
+    only?: number;
+    holder?: string;
+    class?: string;
+    onRemove: () => void;
+  };
+  const { form, list, only, holder, class: className, onRemove }: Props = $props();
 
   const focus = getBlocksFocusContext()!;
   const rows = $derived(
@@ -34,21 +42,21 @@
   }
 
   /**
-   * A click beside the blocks selects the list, so the next block goes at its end. A click on a
-   * block stops at the block.
+   * The `+` at the end of a nested list. An empty list always has it; one with blocks while its
+   * block, or one of its own blocks, is selected.
    */
-  function selectList(event: MouseEvent) {
-    event.stopPropagation();
-    focus.selectList(list);
-  }
-
-  /**
-   * "Type / to add a block" at the end of the list the next block goes to, so one on the stage.
-   * An empty open list has its own message instead.
-   */
-  const placeholder = $derived(
-    !focus.locked && list === focus.insertList() && (rows.length > 0 || list !== focus.path)
+  const showAdd = $derived(
+    !!holder &&
+      !focus.locked &&
+      (!rows.length ||
+        focus.selection.some((path) => path === holder || parseBlockPath(path).list === list))
   );
+
+  /** Opens the picker on this list; the block picked goes at its end. */
+  function add(event: MouseEvent) {
+    event.stopPropagation();
+    focus.pick(list);
+  }
 
   /** The one block the controls act on: selected alone, and the form open to changes. */
   const controlled = (rowPath: string) =>
@@ -118,23 +126,21 @@
   render puts where they go; a block without a render is a row with them under it.
 -->
 <div
-  class="rz-renders"
+  class="rz-renders {className ?? ''}"
   data-list={list}
   data-empty={rows.length ? undefined : ''}
-  role="presentation"
-  onclick={selectList}
   use:sortableList
 >
   {#each rows as row (row.block.id)}
     {@const config = row.config}
     {@const Render = config?.render}
-    {#snippet nested(name?: string)}
+    {#snippet nested(name?: string, options?: { class?: string })}
       {#each row.children.filter((child) => !name || child.builder.name === name) as child (child.builder.name)}
         <!-- All of them at once, and more than one: each under its name. -->
         {#if !name && row.children.length > 1}
           <p class="rz-renders__list-label">{child.label}</p>
         {/if}
-        <Renders {form} list={child.list} {onRemove} />
+        <Renders {form} list={child.list} holder={row.path} class={options?.class} {onRemove} />
       {/each}
     {/snippet}
     <div
@@ -152,7 +158,7 @@
         }
       }}
     >
-      {#if controlled(row.path) && !focus.isNarrowedBlock(row.path)}
+      {#if controlled(row.path) && !focus.isNarrowedBlock(row.path) && config?.controls !== false}
         <!-- Above it: move, duplicate, remove. A click on the block already opens its fields. -->
         <div class="rz-renders__toolbar">
           <button
@@ -225,8 +231,18 @@
       <p class="rz-renders__empty">{t__('fields.no_blocks_yet')}</p>
     {/if}
   {/each}
-  {#if placeholder}
-    <StagePlaceholder {list} compact={list !== focus.path} />
+  {#if showAdd}
+    <!-- After the blocks, in the list's own layout: the render styles `.rz-renders__add`. -->
+    <Button
+      class="rz-renders__add"
+      variant="secondary"
+      size="icon-sm"
+      title={t__('fields.add_block')}
+      aria-label={t__('fields.add_block')}
+      onclick={add}
+    >
+      <Plus size={14} />
+    </Button>
   {/if}
 </div>
 
@@ -239,8 +255,9 @@
     min-height: var(--rz-size-8);
   }
 
-  /* An empty nested list: somewhere to drop a type. */
+  /* An empty nested list: somewhere to drop a type, its `+` inside. */
   .rz-renders[data-empty]:not([data-list='']) {
+    padding: var(--rz-size-2);
     border: 1px dashed var(--rz-border-strong);
     border-radius: var(--rz-radius-md);
   }
@@ -248,7 +265,6 @@
   /* A block under the pointer: a dashed frame, on the innermost block only. */
   .rz-renders__item {
     position: relative;
-    border-radius: var(--rz-radius-md);
     outline: 1px dashed transparent;
     outline-offset: 3px;
     cursor: pointer;
@@ -264,7 +280,7 @@
 
   /* The selected block: an accent frame around it. */
   .rz-renders__item[data-selected] {
-    outline: 1.5px solid var(--rz-accent);
+    outline: 1px solid oklch(from var(--rz-accent) l c h / 0.6);
     outline-offset: 3px;
   }
 

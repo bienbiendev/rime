@@ -143,8 +143,10 @@
 <style lang="postcss">
   @import '../../../../panel/style/mixins/index.css';
 
+  /* One column as wide as the panel: a long title ends in an ellipsis instead of widening it. */
   .rz-layers__list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 1px;
     min-height: var(--rz-size-2);
   }
@@ -264,6 +266,7 @@
 
   .rz-layers__title {
     flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
