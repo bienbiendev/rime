@@ -7,7 +7,6 @@ import createAuthHandle from './auth.server.js';
 import createBlocksHandle from './blocks.server.js';
 import { connect, type SqliteDriver } from './connect.server.js';
 import generateSchema from './generate-schema/index.server.js';
-import type { RelationFieldsMap } from './generate-schema/root.server.js';
 import { baseTableName } from './naming.server.js';
 import createPathsHandle from './paths.server.js';
 import { createPrototypeRegistry } from './registry.server.js';
@@ -57,7 +56,6 @@ const createAdapter = async <const C extends Config>(args: {
     tables: Tables;
     default: Schema;
     relations: any;
-    relationFieldsMap: any;
   };
 
   const dbPath = path.join(process.cwd(), 'db', database);
@@ -114,10 +112,6 @@ const createAdapter = async <const C extends Config>(args: {
 
     get schema() {
       return schema.default;
-    },
-
-    get relationFieldsMap() {
-      return schema.relationFieldsMap;
     }
   };
 };
@@ -139,5 +133,4 @@ export type SqliteAdapter = Adapter & {
   getTable<T>(key: string): T extends any ? GenericTable : T;
   tableForSlug<T>(slug: string): T extends any ? GenericTable : T;
   readonly schema: Schema;
-  readonly relationFieldsMap: RelationFieldsMap;
 };
