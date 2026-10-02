@@ -142,11 +142,6 @@
       "browser": "./dist/core/cors/module.browser.js",
       "default": "./dist/core/cors/module.server.js"
     },
-    "./fields/relation/module": {
-      "types": "./dist/fields/relation/module.server.d.ts",
-      "browser": "./dist/fields/relation/module.js",
-      "default": "./dist/fields/relation/module.server.js"
-    },
     "./fields/link/module": {
       "types": "./dist/fields/link/module.server.d.ts",
       "browser": "./dist/fields/link/module.js",

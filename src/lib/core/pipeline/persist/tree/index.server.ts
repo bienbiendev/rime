@@ -1,6 +1,7 @@
 import type { Adapter } from '$lib/core/adapter.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { TreeBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
+import { isWithin } from '$lib/util/string.js';
 import type { Dic, WithRequired } from '$lib/util/types.js';
 import type { OperationContext } from '../../types.js';
 import { defineTreeBlocksDiff } from './diff.server.js';
@@ -40,7 +41,7 @@ export const saveTreeBlocks = async (args: {
     existingTreeBlocks = blocks.filter((block) => {
       // filter path that are not present in incoming data
       // in order to not delete unmodified blocks fields
-      return incomingPaths.some((path) => block.path?.startsWith(path));
+      return incomingPaths.some((path) => !!block.path && isWithin(block.path, path));
     });
   }
 

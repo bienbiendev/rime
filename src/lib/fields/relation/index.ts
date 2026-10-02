@@ -9,7 +9,6 @@ import type { RegisterCollection } from '$lib/index.js';
 import { capitalize } from '$lib/util/string.js';
 import type { WithOptional } from '$lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { ensureRelationExists } from '$rime/modules:fields/relation';
 import dedent from 'dedent';
 import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
@@ -21,9 +20,6 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
     super(name, 'relation');
     this.field.isEmpty = (value) => !value || (Array.isArray(value) && value.length === 0);
     this.field.defaultValue = [];
-    this.field.hooks = {
-      beforeValidate: [ensureRelationExists]
-    };
   }
 
   /**

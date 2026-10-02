@@ -1,5 +1,6 @@
 import type { Adapter } from '$lib/core/adapter.js';
 import type { GenericBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
+import { isWithin } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import type { ConfigMap } from '../../config-map/types.js';
 import type { TreeBlocksDiff } from '../tree/diff.server.js';
@@ -72,7 +73,7 @@ export const saveRelations = async (args: {
     .then((relations) => {
       // Filter existing relations
       return relations.filter((relation) => {
-        return incomingPaths.some((path) => relation.path?.startsWith(path));
+        return incomingPaths.some((path) => !!relation.path && isWithin(relation.path, path));
       });
     });
 

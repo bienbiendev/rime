@@ -65,19 +65,19 @@
     font-weight: var(--font-weight, 600);
   }
   h1 {
-    font-size: var(--font-size, var(--rz-text-5xl));
+    font-size: var(--font-size, clamp(1rem, 4cqi, var(--rz-text-5xl)));
   }
   h2 {
-    font-size: var(--font-size, var(--rz-text-4xl));
+    font-size: var(--font-size, clamp(1rem, 3.5cqi, var(--rz-text-4xl)));
   }
   h3 {
-    font-size: var(--font-size, var(--rz-text-3xl));
+    font-size: var(--font-size, clamp(1rem, 3cqi, var(--rz-text-3xl)));
   }
   h4 {
-    font-size: var(--font-size, var(--rz-text-xl));
+    font-size: var(--font-size, clamp(1rem, 2.6cqi, var(--rz-text-2xl)));
   }
   h5 {
-    font-size: var(--font-size, var(--rz-text-lg));
+    font-size: var(--font-size, clamp(1rem, 2.3cqi, var(--rz-text-lg)));
   }
   h6 {
     font-size: var(--font-size, 1em);

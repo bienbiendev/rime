@@ -54,13 +54,14 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
     if (relation.locale && relation.locale !== locale) continue;
 
     const path: string = relation.path;
-    const parentPath = path.split('.').slice(0, -1).join('.');
+    const rowPath = enclosingRowPath(path);
 
-    // A parent path ending in `.<digits>` means the relation sits inside a blocks or tree array,
-    // so its owner must have been placed above. If it was not, the row outlived it.
-    if (/.*\.[\d]+$/.test(parentPath) && !flatDoc[parentPath]) {
+    // Inside a blocks or tree row, directly (`sections.3.image`) or through a group
+    // (`sections.3.media.image`): that row must have been placed above. If it was not, the
+    // relation outlived it, and placing it would make up a row out of the relation alone.
+    if (rowPath && !flatDoc[rowPath]) {
       logger.warn(
-        `Orphean ${config.slug} relation at ${path} with id ${relation.id} because parent path ${parentPath} doesn't exist in the document`
+        `Orphean ${config.slug} relation at ${path} with id ${relation.id} because its row ${rowPath} doesn't exist in the document`
       );
       continue;
     }
@@ -98,6 +99,24 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
  */
 const stripRowMeta = (row: Dic, withRowMeta: boolean): Dic =>
   withRowMeta ? row : omit(['position', 'path', 'ownerId', 'locale'], row);
+
+/**
+ * The path of the blocks or tree row a field path sits in: up to its last index, the field's own
+ * name aside. `null` outside any row.
+ *
+ * ```
+ * enclosingRowPath('sections.3.media.image') // 'sections.3'
+ * enclosingRowPath('sections.0.items.2.image') // 'sections.0.items.2'
+ * enclosingRowPath('hero.thumbnail') // null
+ * ```
+ */
+const enclosingRowPath = (path: string) => {
+  const segments = path.split('.').slice(0, -1);
+  for (let i = segments.length - 1; i >= 0; i--) {
+    if (/^\d+$/.test(segments[i])) return segments.slice(0, i + 1).join('.');
+  }
+  return null;
+};
 
 /** Drop the holes left where a row was expected and none came back. */
 const cleanEmptyElementsInArrays = <T>(value: T): T => {

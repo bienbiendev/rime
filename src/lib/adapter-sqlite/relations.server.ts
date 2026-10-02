@@ -1,8 +1,10 @@
 import type { AdapterDeps } from '$lib/adapter-sqlite/types.server.js';
+import { RimeError } from '$lib/core/errors/index.js';
 import { baseTableName, tableName } from './naming.server.js';
 import type { BeforeOperationRelation, RelationRow } from '$lib/fields/relation/index.js';
 import type { PrototypeSlug } from '$lib/core/prototype/types.js';
 import { omit } from '$lib/util/object.js';
+import { isWithin } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import { and, eq, getTableColumns, inArray, isNull, or, type SQLWrapper } from 'drizzle-orm';
 import { transformDataToSchema } from './columns.server.js';
@@ -34,7 +36,7 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
       .where(and(...conditions));
 
     const toDelete = existingRelations
-      .filter((row) => paths.some((path) => row.path.startsWith(path)))
+      .filter((row) => paths.some((path) => isWithin(row.path, path)))
       .map((row) => row.id);
 
     if (!toDelete.length) return true;
@@ -72,8 +74,7 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
       try {
         await db.insert(table).values(values);
       } catch (err: any) {
-        console.error('error in sqlite/relations create' + err.message);
-        return false;
+        throw writeError('create', relation.path, err);
       }
     }
     return true;
@@ -95,8 +96,7 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
         })
       );
     } catch (err: any) {
-      console.error('error in sqlite/relations update' + err.message);
-      return false;
+      throw writeError('update', relations[0]?.path, err);
     }
 
     return true;
@@ -119,8 +119,7 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
     try {
       await db.delete(table).where(inArray(table.id, documentIds));
     } catch (err: any) {
-      console.error('error in sqlite/relations delete' + err.message);
-      return false;
+      throw writeError('delete', relations[0]?.path, err);
     }
 
     return true;
@@ -157,16 +156,40 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
     return all as RelationRow[];
   };
 
+  // One query per target, against the table the junction rows' foreign key points at.
+  const missing: Missing = async ({ relationTo, ids }) => {
+    if (!ids.length) return [];
+    const table = tables[baseTableName(relationTo)];
+    if (!table) return ids;
+
+    const found = await db.select({ id: table.id }).from(table).where(inArray(table.id, ids));
+    const existing = new Set(found.map((row: { id: string }) => row.id));
+    return ids.filter((id) => !existing.has(id));
+  };
+
   return {
     create,
     update,
     delete: deleteRelations,
     deleteFromPaths,
-    getAll
+    getAll,
+    missing
   };
 };
 
 export default createRelationsHandle;
+
+/**
+ * A relation write that failed. It used to be logged and swallowed, and the save went on without
+ * the rows: thrown now, so the save fails instead of losing them quietly.
+ */
+const writeError = (operation: string, path: string | undefined, err: Error) =>
+  new RimeError(
+    RimeError.OPERATION_ERROR,
+    `relations ${operation} failed${path ? ` at ${path}` : ''}: ${err.message}`
+  );
+
+type Missing = (args: { relationTo: PrototypeSlug; ids: string[] }) => Promise<string[]>;
 
 type DeleteFromPaths = (args: {
   parentSlug: PrototypeSlug;

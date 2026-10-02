@@ -207,7 +207,7 @@ test('Should stamp readAt on body via $beforeRead without losing the original co
   expect(doc.body.readAt).toBe(true);
 });
 
-/** ---------------- BEFOREVALIDATE VIA $rime/runtime, RELATION SINGLE ---------------- */
+/** ---------------- RELATION EXISTENCE, SINGLE ---------------- */
 
 test('Should keep a valid related reference', async ({ request }) => {
   const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
@@ -219,25 +219,38 @@ test('Should keep a valid related reference', async ({ request }) => {
   expect(doc.related.map((ref: any) => ref.documentId)).toContain(targetAId);
 });
 
-test('Should filter out a related reference to a nonexistent document', async ({ request }) => {
+test('Should refuse a related reference to a nonexistent document, and keep the stored one', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
   const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
-    headers: await signInSuperAdmin(request),
+    headers,
     data: { related: '00000000-0000-0000-0000-000000000000' }
   });
-  expect(response.status()).toBe(200);
-  const { doc } = await response.json();
-  const ids = (doc.related ?? []).map((ref: any) => ref.documentId);
-  expect(ids).not.toContain('00000000-0000-0000-0000-000000000000');
+  expect(response.status()).toBe(400);
+
+  const { doc } = await (
+    await request.get(`${API_BASE_URL}/hooks-test/${docId}`, { headers })
+  ).json();
+  expect(doc.related.map((ref: any) => ref.documentId)).toEqual([targetAId]);
 });
 
-/** ---------------- BEFOREVALIDATE VIA $rime/runtime, RELATION MANY ---------------- */
+/** ---------------- RELATION EXISTENCE, MANY ---------------- */
 
-test('Should keep only valid references in relatedMany', async ({ request }) => {
+test('Should refuse relatedMany when one reference names no document', async ({ request }) => {
   const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: await signInSuperAdmin(request),
     data: {
       relatedMany: [targetAId, targetBId, '00000000-0000-0000-0000-000000000000']
     }
+  });
+  expect(response.status()).toBe(400);
+});
+
+test('Should keep every valid reference in relatedMany', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data: { relatedMany: [targetAId, targetBId] }
   });
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
