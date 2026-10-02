@@ -374,3 +374,10 @@ export const normalizeFieldPath = (path: string) => {
   const regExpBlockType = /:[a-zA-Z0-9]+/g;
   return path.replace(regExpBlockType, '');
 };
+
+/**
+ * Whether `path` is `ancestor` itself or lies below it. Not a plain `startsWith`: `sections.1`
+ * is no ancestor of `sections.10`, nor `image` of `images`.
+ */
+export const isWithin = (path: string, ancestor: string) =>
+  path === ancestor || path.startsWith(`${ancestor}.`);

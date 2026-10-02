@@ -1,6 +1,7 @@
 import type { Adapter } from '$lib/core/adapter.js';
 import { RimeError } from '$lib/core/errors/index.js';
 import type { GenericBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
+import { isWithin } from '$lib/util/string.js';
 import type { Dic } from '$lib/util/types.js';
 import type { OperationContext } from '../../types.js';
 import { defineBlocksDiff } from './diff.server.js';
@@ -55,7 +56,7 @@ export const saveBlocks = async (args: {
     // For example, if only "content.hero" was modified, we don't want to
     // accidentally delete blocks in "content.footer"
     existingBlocks = blocks.filter((block) => {
-      return incomingPaths.some((path) => block.path?.startsWith(path));
+      return incomingPaths.some((path) => !!block.path && isWithin(block.path, path));
     });
   }
 

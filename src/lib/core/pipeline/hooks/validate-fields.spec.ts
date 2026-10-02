@@ -1,8 +1,9 @@
 import { RimeFormError } from '$lib/core/errors/index.js';
+import { relation } from '$lib/fields/relation/index.js';
 import { text } from '$lib/fields/text/index.js';
 import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
 import type { Field } from '$lib/fields/types.js';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { buildConfigMap } from '../config-map/index.js';
 import { validateFields } from './validate-fields.server.js';
 
@@ -92,5 +93,90 @@ describe('validateFields: required vs. field access on create', () => {
     await expect(promise).rejects.toMatchObject({
       errors: { nickname: RimeFormError.REQUIRED_FIELD }
     });
+  });
+});
+
+/**
+ * A relation names documents that exist, checked before anything is written. A stale id fails
+ * the save; it is never dropped from it, which used to leave the save to delete its row.
+ */
+describe('validateFields: relations name documents that exist', () => {
+  /** `m1` and `m2` exist in medias; anything else does not. */
+  const existing = ['m1', 'm2'];
+
+  const runRelation = (args: {
+    data: Record<string, unknown>;
+    user?: unknown;
+    search?: string;
+    missing?: (args: { relationTo: string; ids: string[] }) => Promise<string[]>;
+  }) => {
+    // Cast: `medias` is only a registered slug in the fixture that declares it.
+    const fields = [(relation('image') as any).to('medias').many()] as FieldBuilder<Field>[];
+    const missing = vi.fn(
+      args.missing ??
+        (async ({ ids }: { ids: string[] }) => ids.filter((id) => !existing.includes(id)))
+    );
+    const event = {
+      url: new URL(`http://localhost/api/members${args.search ?? ''}`),
+      locals: {
+        user: 'user' in args ? args.user : { id: 'u1' },
+        locale: undefined,
+        rime: { config: { isCollection: () => true }, adapter: { relations: { missing } } }
+      }
+    } as any;
+    const promise = validateFields({
+      data: args.data,
+      config: { slug: 'members', fields } as any,
+      event,
+      operation: 'create',
+      context: { params: {}, configMap: buildConfigMap(args.data, fields) }
+    } as any);
+    return { promise, missing };
+  };
+
+  test('a document that does not exist fails the save', async () => {
+    const { promise, missing } = runRelation({ data: { image: ['m1', 'gone'] } });
+
+    await expect(promise).rejects.toMatchObject({
+      errors: { image: RimeFormError.RELATION_NOT_FOUND }
+    });
+    expect(missing).toHaveBeenCalledWith({ relationTo: 'medias', ids: ['m1', 'gone'] });
+  });
+
+  test('documents that exist pass, untouched, in one query', async () => {
+    const value = ['m1', { relationTo: 'medias', documentId: 'm2' }];
+    const { promise, missing } = runRelation({ data: { image: value } });
+
+    expect(((await promise) as any).data.image).toEqual(value);
+    expect(missing).toHaveBeenCalledTimes(1);
+  });
+
+  test('a check that fails fails the save, it never drops the relation', async () => {
+    const { promise } = runRelation({
+      data: { image: ['m1'] },
+      missing: async () => {
+        throw new Error('database is locked');
+      }
+    });
+
+    await expect(promise).rejects.toThrow('database is locked');
+  });
+
+  test('?skipValidation=true skips the check', async () => {
+    const { promise, missing } = runRelation({
+      data: { image: ['gone'] },
+      search: '?skipValidation=true'
+    });
+
+    await expect(promise).resolves.toBeDefined();
+    expect(missing).not.toHaveBeenCalled();
+  });
+
+  test('a relation the request may not write is not checked, it is dropped', async () => {
+    // relation() keeps FormFieldBuilder's default `create: (user) => !!user`.
+    const { promise, missing } = runRelation({ data: { image: ['gone'] }, user: undefined });
+
+    expect(((await promise) as any).data).not.toHaveProperty('image');
+    expect(missing).not.toHaveBeenCalled();
   });
 });

@@ -49,6 +49,7 @@ class RimeFormError extends RimeError {
   static PASSWORD_NUMBER_MISSING = 'password_number_missing';
   static PASSWORD_SPECIAL_CHAR_MISSING = 'password_special_char_missing';
   static PASSWORD_UPPERCASE_MISSING = 'password_uppercase_mmissing';
+  static RELATION_NOT_FOUND = 'relation_not_found';
   static REQUIRED_FIELD = 'required_field';
   static UNIQUE_FIELD = 'unique_field';
   static VALIDATION_ERROR = 'validation_error';

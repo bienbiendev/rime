@@ -1,6 +1,6 @@
 import type { GenericBlock } from '$lib/core/prototype/types.js';
 import { getValueAtPath, isObjectLiteral, setValueAtPath } from '$lib/util/object.js';
-import { normalizeFieldPath } from '$lib/util/string.js';
+import { isWithin, normalizeFieldPath } from '$lib/util/string.js';
 import { tempId } from '$lib/util/random.js';
 import type { Dic } from '$lib/util/types.js';
 import cloneDeep from 'clone-deep';
@@ -34,9 +34,7 @@ export const parseBlockPath = (path: string): BlockAt => {
 
 export const blockPath = (at: BlockAt) => `${at.list}.${at.index}`;
 
-/** Whether `path` is `ancestor` itself or lies below it. */
-export const isWithin = (path: string, ancestor: string) =>
-  path === ancestor || path.startsWith(`${ancestor}.`);
+export { isWithin };
 
 /**
  * The index a list path carries at the position `removed` names, once the block at `removed` is

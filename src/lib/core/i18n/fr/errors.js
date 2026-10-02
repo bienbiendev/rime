@@ -6,6 +6,7 @@ export default {
   invalid_email: 'Adresse email invalide',
   invalid_url: 'URL invalide',
   invalid_field: "Le champs $1 n'est pas valide",
+  relation_not_found: "Le champ $1 lie un document qui n'existe pas",
   not_found: 'Non trouvé',
   hook: 'Hook error',
   upload: 'Erreur de téléchargement',

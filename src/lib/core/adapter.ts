@@ -274,6 +274,8 @@ export interface RelationsHandle {
     ownerId: string;
     locale?: string;
   }): Promise<RelationRow[]>;
+  /** The ids, among these, that name no document of `relationTo`. */
+  missing(args: { relationTo: PrototypeSlug; ids: string[] }): Promise<string[]>;
 }
 
 /**

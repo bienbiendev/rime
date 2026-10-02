@@ -22,6 +22,10 @@ const write = (schema: string) => {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
+  // What to put back if a migration that loses data is refused below.
+  const migrationsBefore = new Set(listMigrations());
+  const previousSchema = fs.existsSync(outputFile) ? fs.readFileSync(outputFile, 'utf8') : null;
+
   try {
     fs.writeFileSync(outputFile, schema);
   } catch (err: any) {
@@ -60,6 +64,29 @@ const write = (schema: string) => {
   if (generateResult.error || generateResult.status !== 0) {
     throw new Error('drizzle-kit generate failed');
   }
+
+  // drizzle-kit applies whatever it generated, a dropped table included. A migration that loses
+  // data waits for a yes; without one nothing is applied and the boot stops.
+  const created = listMigrations().filter((name) => !migrationsBefore.has(name));
+  const losses = created.flatMap((name) =>
+    dataLoss(fs.readFileSync(path.join(migrationsDir(), name, 'migration.sql'), 'utf8'))
+  );
+  if (losses.length) {
+    const question = `\n ⚠︎ This migration will lose data:\n   ${losses.join('\n   ')}\n Continue? [y/N] `;
+    if (!confirm(question)) {
+      for (const name of created) {
+        fs.rmSync(path.join(migrationsDir(), name), { recursive: true, force: true });
+      }
+      if (previousSchema === null) fs.rmSync(outputFile, { force: true });
+      else fs.writeFileSync(outputFile, previousSchema);
+      // The next boot asks again, rather than taking this config as already generated.
+      cache.delete('config');
+      throw new Error(
+        'Migration cancelled: it would lose data. db/ and the schema are left as they were.'
+      );
+    }
+  }
+
   console.log(`\n ⚡︎ ${command} drizzle-kit migrate \n`);
   const migrateResult = spawnSync(command, ['drizzle-kit', 'migrate'], { stdio: 'inherit' });
   if (migrateResult.error || migrateResult.status !== 0) {
@@ -73,3 +100,44 @@ const write = (schema: string) => {
 };
 
 export default write;
+
+/** Where drizzle-kit writes migrations: `out` in the drizzle.config.ts rime generates. */
+const migrationsDir = () => path.resolve(process.cwd(), 'db');
+
+/** The migration folders, by name: `20261001194217_dazzling_wallflower`. */
+const listMigrations = () => {
+  const dir = migrationsDir();
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).filter((name) => fs.existsSync(path.join(dir, name, 'migration.sql')));
+};
+
+/**
+ * The statements of a migration that lose data: a dropped table, a dropped column.
+ *
+ * Not every `DROP TABLE` does. SQLite cannot change a column in place, so drizzle-kit rebuilds
+ * the table: it creates `__new_pages`, copies every row into it, drops `pages`, and renames
+ * `__new_pages` to `pages`. That drop keeps the rows, and is left out.
+ */
+export const dataLoss = (sql: string) => {
+  const rebuilt = new Set(
+    [...sql.matchAll(/ALTER TABLE `__new_([^`]+)` RENAME TO/g)].map((match) => match[1])
+  );
+  return sql
+    .split('--> statement-breakpoint')
+    .map((statement) => statement.trim())
+    .filter((statement) => {
+      const dropped = /^DROP TABLE `([^`]+)`/.exec(statement)?.[1];
+      if (dropped) return !rebuilt.has(dropped);
+      return /^ALTER TABLE `[^`]+` DROP COLUMN/.test(statement);
+    });
+};
+
+/**
+ * A yes or no on the terminal, asked in a child that owns stdin, the way drizzle-kit's own
+ * prompts are. No terminal (CI, a test run) answers no.
+ */
+export const confirm = (question: string) => {
+  if (!process.stdin.isTTY) return false;
+  const ask = `process.stdout.write(${JSON.stringify(question)});process.stdin.once('data',(d)=>process.exit(/^y(es)?$/i.test(String(d).trim())?0:1))`;
+  return spawnSync(process.execPath, ['-e', ask], { stdio: 'inherit' }).status === 0;
+};

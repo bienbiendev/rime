@@ -3,12 +3,14 @@ import { PARAMS } from '$lib/core/constants.js';
 import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
 import { logger } from '$lib/core/logger.server.js';
 import type { GenericDoc } from '$lib/core/prototype/types.js';
+import { missingRelations } from '$lib/fields/relation/exists.server.js';
+import { isRelationField } from '$lib/fields/relation/index.js';
 import type { FormErrors } from '$lib/panel/types.js';
 import { deleteValueAtPath, getValueAtPath, setValueAtPath } from '$lib/util/object.js';
 
 /**
- * Runs each field's `validate` and its write access check, and throws a `RimeFormError` carrying
- * every message at once.
+ * Runs each field's `validate` and its write access check, checks that each relation names
+ * documents that exist, and throws a `RimeFormError` carrying every message at once.
  *
  * A field the caller may not write is deleted from **both** the data and `context.configMap`.
  * Leaving its path in the map would make the dropped write look like an explicit "nothing here
@@ -155,6 +157,13 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
         value = undefined;
         accessDenied = true;
       }
+    }
+
+    // A relation names documents that exist. Checked here, before anything is written: a stale
+    // id fails the save, it is never dropped from it.
+    if (isRelationField(config) && !accessDenied && value != null && !skipHooks) {
+      const missing = await missingRelations(rime.adapter, config.get.relationTo, value);
+      if (missing.length) errors[key] = RimeFormError.RELATION_NOT_FOUND;
     }
 
     // Required — but never for a field this request may not write. The block above just

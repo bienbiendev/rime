@@ -8,6 +8,7 @@ export default {
   invalid_email: 'Invalid email address',
   invalid_url: 'Invalid URL',
   invalid_field: 'Field $1 is not valid',
+  relation_not_found: 'Field $1 links a document that does not exist',
   not_found: 'Not found',
   hook: 'Hook error',
   upload: 'Upload error',
