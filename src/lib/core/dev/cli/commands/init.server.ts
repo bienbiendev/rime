@@ -1,3 +1,5 @@
+import type { AdapterInit } from '#lib/core/adapter.js';
+import devCache from '#lib/core/dev/cache.server.js';
 import { logger } from '#lib/core/logger.server.js';
 import { trycatchSync } from '#lib/util/function.js';
 import { generate as generateCode } from '@babel/generator';
@@ -5,13 +7,16 @@ import * as t from '@babel/types';
 import { babelParse, getLang } from 'ast-kit';
 import { execSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { cp, mkdir } from 'fs/promises';
 import fs from 'node:fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { CONFIG_DIR, OUTPUT_DIR } from '../../constants.server.js';
 import { devEnv, missingEnv, renderEnv } from '../templates/env.js';
 import * as templates from '../templates/init.js';
+import {
+  adapterHooksModule,
+  DEFAULT_ADAPTER,
+  importAdapterHooks
+} from '../util/adapter-hooks.server.js';
 import { installDependencies, SVELTEKIT_ADAPTER } from '../util/package-manager.server.js';
 import { getPackageInfoByKey, MIN_BUN, setBunScripts } from '../util/package.server.js';
 import { projectName } from '../util/project-name.js';
@@ -23,14 +28,21 @@ type Args = {
   skipInstall?: boolean;
   name?: string;
   bun?: boolean;
+  /** The database adapter: `sqlite`, or a package with a `hooks` entry. */
+  adapter?: string;
 };
 
 const PACKAGE = 'rimecms';
 const root = process.cwd();
 
-export const init = async ({ force, name: incomingName, skipInstall, bun }: Args) => {
+export const init = async ({
+  force,
+  name: incomingName,
+  skipInstall,
+  bun,
+  adapter: adapterName = DEFAULT_ADAPTER
+}: Args) => {
   const packageName = getPackageInfoByKey('name');
-  const driver = bun ? 'bun' : 'libsql';
 
   function setEnv() {
     const envPath = path.resolve(root, '.env');
@@ -87,7 +99,7 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
     logger.debug(`[✓] ${file}: ${missing.join(', ')} declared`);
   }
 
-  function setConfig(name: string) {
+  function setConfig(adapter: AdapterInit['config']) {
     const configDirPath = path.resolve(root, CONFIG_DIR);
     const configPath = path.join(configDirPath, 'rime.config.server.ts');
 
@@ -95,20 +107,10 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
       if (!existsSync(configDirPath)) {
         mkdirSync(configDirPath);
       }
-      writeFileSync(configPath, templates.defaultConfig(name.toString(), driver));
+      writeFileSync(configPath, templates.defaultConfig(adapter));
       logger.debug(`[✓] Config created at ${configDirPath}/rime.config.server.ts`);
     } else {
       logger.debug('[✓] Config already exists (skip)');
-    }
-  }
-
-  function setDatabase() {
-    const dbPath = path.join(root, 'db');
-    if (!existsSync(dbPath)) {
-      mkdirSync(dbPath);
-      logger.debug('[✓] Database folder created');
-    } else {
-      logger.debug('[✓] Database folder already exists (skip)');
     }
   }
 
@@ -128,7 +130,6 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
     const updates = [
       '.cache',
       '/logs',
-      '/db',
       '/storage',
       OUTPUT_DIR,
       'src/app.generated.d.ts',
@@ -144,20 +145,6 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
     }
     writeFileSync(gitignorePath, gitignoreContent);
     logger.debug('[✓] .gitignore populated');
-  }
-
-  function setDrizzle(name: string) {
-    const drizzleConfigPath = path.join(root, 'drizzle.config.ts');
-    if (!existsSync(drizzleConfigPath)) {
-      writeFileSync(drizzleConfigPath, templates.drizzleConfig(name.toString()));
-      logger.debug('[✓] Drizzle config added');
-      return;
-    }
-    logger.debug(
-      templates.regenerateDrizzleConfig(root)
-        ? '[✓] Drizzle config schema path updated'
-        : '[✓] Drizzle config already exists (skip)'
-    );
   }
 
   function setBun() {
@@ -291,23 +278,6 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
     return null;
   }
 
-  async function copyAssets() {
-    try {
-      const currentDir = path.dirname(fileURLToPath(import.meta.url));
-      await mkdir(path.resolve(process.cwd(), 'static/assets/panel/fonts'), { recursive: true });
-      await cp(
-        path.join(currentDir, '../../../../panel/fonts'),
-        path.resolve(process.cwd(), 'static/assets/panel/fonts'),
-        {
-          recursive: true
-        }
-      );
-      logger.debug('[✓] Copied assets');
-    } catch (err) {
-      console.error('Error copying fonts:', err);
-    }
-  }
-
   const name = await projectName({ incomingName, packageName, force: !!force, ask: prompt });
   if (!name) {
     logger.error(`--name "${incomingName}": use letters, numbers, hyphens and underscores`);
@@ -318,14 +288,15 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
   setEnv();
   setEnvVars();
   addToGitignore();
-  setConfig(name);
-  setDatabase();
-  setDrizzle(name);
+  // The adapter's files: recorded first, so `rime clear` finds its hooks with no config loaded
+  const specifier = adapterHooksModule(adapterName);
+  devCache.set('adapter-hooks', specifier);
+  const adapter = await (await importAdapterHooks(specifier)).init({ name, bun: !!bun });
+  setConfig(adapter.config);
   setBun();
   setAdapter();
   configureVite();
-  await copyAssets();
-  !skipInstall && installDependencies();
+  !skipInstall && installDependencies(adapter);
   await generate({ force: true });
   logger.debug('[✓] done');
 };

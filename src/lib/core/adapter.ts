@@ -5,6 +5,29 @@ import type { BeforeOperationRelation, RelationRow } from '#lib/fields/relation/
 import type { Dic, WithOptional, WithRequired } from '#lib/util/types.js';
 
 /**
+ * What an adapter does to a project outside a request. `$adapter.hooks` carries them; `rime init`,
+ * which runs before a config exists, and `rime clear`, which loads none, import them from `module`.
+ */
+export type AdapterHooks = {
+  /** The module these hooks are imported from: `'rimecms/adapter-sqlite/hooks'`. */
+  module: string;
+  /** `rime init`: writes the adapter's files, and answers what the starter config and the install need. */
+  init(args: { name: string; bun: boolean }): Promise<AdapterInit>;
+  /** Dev boot, before codegen: the adapter's files are in place, or it throws saying what to run. */
+  boot(): Promise<void>;
+  /** `rime clear`: removes the adapter's files, and answers which it removed. */
+  clear(): Promise<string[]>;
+};
+
+export type AdapterInit = {
+  /** The `$adapter` of the starter config `rime init` writes when there is none. */
+  config: { import: string; call: string };
+  /** Installed with rime's own packages, unless `--skip-install`. */
+  dependencies: string[];
+  devDependencies: string[];
+};
+
+/**
  * What core requires of a database adapter.
  *
  * The rule that decides what may appear below: **every argument and return type is something core

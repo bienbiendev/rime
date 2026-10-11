@@ -98,9 +98,14 @@ export const userAttributes = async (
 };
 
 /**
- * The session user of a request made with an api key: the key's own document, with the roles the
- * key carries. Not staff, so the panel stays closed to it. `slugs` are the api-key collections,
- * asked in turn.
+ * The user of a request made with an api key: the document that holds the key, found by the key's
+ * id in its `apiKeyId`, with the roles the key carries. It is not staff, so the panel stays closed
+ * to it, and it has no email. `slugs` are the api-key collections, asked in turn.
+ *
+ * ```ts
+ * apiKeyUser(adapter, { slugs: ['apps'], apiKeyId: 'k1', roles: ['sync'] })
+ * // { id: 'app1', name: 'Sync job', email: '', roles: ['sync'], isStaff: false }
+ * ```
  */
 export const apiKeyUser = async (
   adapter: Adapter,

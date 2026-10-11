@@ -16,34 +16,31 @@ const packageManagersMap = {
 type PMConfig = Record<
   Exclude<PackageManagerName, 'yarn' | 'deno'>,
   {
-    command: (devDeps: string[]) => string;
+    command: (deps: string[], devDeps: string[]) => string;
     preInstall?: () => void;
     postInstall?: () => void;
   }
 >;
 
-// Drizzle is pinned to the exact release rime is built against: `@rc` is a moving tag, and a
-// prerelease range drifts across API changes.
-const DRIZZLE = '1.0.0-rc.4';
-
-const deps = [`drizzle-orm@${DRIZZLE}`, '@libsql/client', '@lucide/svelte', 'sharp'];
+const deps = ['@lucide/svelte', 'sharp'];
 // Both packs build with adapter-node: the Bun pack runs the same server on Bun
 export const SVELTEKIT_ADAPTER = '@sveltejs/adapter-node';
-const devDeps = [SVELTEKIT_ADAPTER, `drizzle-kit@${DRIZZLE}`];
+const devDeps = [SVELTEKIT_ADAPTER];
 
 const packageManagerConfigs: PMConfig = {
   pnpm: {
-    command: (devDeps) => `pnpm add -D ${devDeps.join(' ')} && pnpm add ${deps.join(' ')}`,
+    command: (deps, devDeps) => `pnpm add -D ${devDeps.join(' ')} && pnpm add ${deps.join(' ')}`,
     preInstall: configurePnpm,
     postInstall: () => {
       execSync('pnpm rebuild');
     }
   },
   bun: {
-    command: (devDeps) => `bun add -D ${devDeps.join(' ')} && bun add ${deps.join(' ')}`
+    command: (deps, devDeps) => `bun add -D ${devDeps.join(' ')} && bun add ${deps.join(' ')}`
   },
   npm: {
-    command: (devDeps) => `npm install -D ${devDeps.join(' ')} && npm install ${deps.join(' ')}`
+    command: (deps, devDeps) =>
+      `npm install -D ${devDeps.join(' ')} && npm install ${deps.join(' ')}`
   }
 };
 
@@ -73,7 +70,11 @@ export function getInvokingPackageManager(): PackageManagerName {
   return 'npm';
 }
 
-export function installDependencies() {
+/** Installs rime's own packages, and the ones the database adapter asks for. */
+export function installDependencies(adapter: {
+  dependencies: string[];
+  devDependencies: string[];
+}) {
   const pm = getInvokingPackageManager();
 
   if (pm === 'deno' || pm === 'yarn') {
@@ -86,7 +87,10 @@ export function installDependencies() {
   config.preInstall?.();
 
   // Main installation
-  const command = config.command(devDeps);
+  const command = config.command(
+    [...adapter.dependencies, ...deps],
+    [...devDeps, ...adapter.devDependencies]
+  );
   logger.debug('exec : ' + command);
   execSync(command);
 

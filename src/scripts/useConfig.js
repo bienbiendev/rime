@@ -17,6 +17,12 @@ program
       // Delete previous, including a previous fixture's src/params.ts, so init writes a fresh one
       execSync('bun ./src/lib/core/dev/cli/index.ts clear --force', { stdio: 'inherit' });
       execSync(`rm -f ${path.join(projectRoot, 'src', 'params.ts')}`);
+      // Removes the previous fixture's database, its drizzle config and any `db/` folder, so each
+      // fixture starts on a database of its own and init never stops to ask for `rime db:move`.
+      const previous = ['storage', 'db', 'drizzle.config.ts'].map((entry) =>
+        path.join(projectRoot, entry)
+      );
+      execSync(`rm -rf ${previous.join(' ')}`);
 
       // tests/<name>/lib/ mirrors src/lib/ exactly (its +rime/ subfolder and any local
       // $rime/<name> split folders alike) — a straight copy is correct.

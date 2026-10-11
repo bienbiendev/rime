@@ -225,8 +225,8 @@ verify_plugin_mounted() {
     }
 
     # Confirms drizzle-kit's migration actually created the table.
-    TABLE=$(sqlite3 db/consumer.sqlite "SELECT name FROM sqlite_master WHERE type='table' AND name='plugin_visits';" 2>/dev/null || true)
-    [[ -n "$TABLE" ]] || { echo "plugin_visits table missing from db/consumer.sqlite after rime init"; exit 1; }
+    TABLE=$(sqlite3 storage/sqlite/consumer.sqlite "SELECT name FROM sqlite_master WHERE type='table' AND name='plugin_visits';" 2>/dev/null || true)
+    [[ -n "$TABLE" ]] || { echo "plugin_visits table missing from storage/sqlite/consumer.sqlite after rime init"; exit 1; }
   )
 }
 
@@ -299,10 +299,15 @@ run_pass() {
   rm -f vite.config.ts.bak
   grep -q "sourcemap: true" vite.config.ts || { echo "could not turn source maps on in vite.config.ts"; exit 1; }
   case "$pm" in
-    npm) npx rime build -d -e -s ;;
-    pnpm) pnpm exec rime build -d -e -s ;;
-    bun) bunx rime build -d -e -s ;;
+    npm) npx rime build -w -e -s ;;
+    pnpm) pnpm exec rime build -w -e -s ;;
+    bun) bunx rime build -w -e -s ;;
   esac
+  # -w ships storage/: the dev pass's database and its upload
+  [[ -f app/storage/sqlite/consumer.sqlite ]] || { echo "rime build -w left no app/storage/sqlite/consumer.sqlite"; exit 1; }
+  # The file the dev pass uploaded (consumer.test.ts: landscape-<suffix>.jpg), not just the folder
+  # a boot creates
+  compgen -G "app/storage/uploads/medias/landscape-*" > /dev/null || { echo "rime build -w left no upload of the dev pass in app/storage/uploads/medias"; exit 1; }
   log "[$pm] Verifying what a visitor loads"
   verify_public_chunks
   cd app

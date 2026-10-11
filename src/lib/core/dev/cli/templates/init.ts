@@ -1,20 +1,16 @@
 import { logger } from '#lib/core/logger.server.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import {
-  GENERATED_DIR,
-  configImportPaths,
-  paramsPath,
-  relativeImportSpecifier
-} from '../../constants.server.js';
+import { configImportPaths, paramsPath, relativeImportSpecifier } from '../../constants.server.js';
 import { SVELTEKIT_ADAPTER } from '../util/package-manager.server.js';
 
 const PACKAGE = 'rimecms';
 
-export const defaultConfig = (name: string, driver: 'libsql' | 'bun' = 'libsql') => `
+/** The starter config `rime init` writes, its `$adapter` the call the adapter's `init` answers. */
+export const defaultConfig = (adapter: { import: string; call: string }) => `
 import { Collection, rime } from '$rime/config';
 import { text } from '${PACKAGE}/fields';
-import { adapterSqlite } from '${PACKAGE}/adapter-sqlite';
+${adapter.import}
 
 const Pages = Collection.create('pages', {
 	fields: [text('title').isTitle()]
@@ -28,25 +24,9 @@ const Medias = Collection.create('medias', {
 });
 
 export default rime({
-  $adapter: adapterSqlite('${name}.sqlite'${driver === 'bun' ? ", { driver: 'bun' }" : ''}),
+  $adapter: ${adapter.call},
   collections: [Pages, Medias]
 });
-`;
-
-export const drizzleConfig = (name: string) => `
-import { defineConfig, type Config } from 'drizzle-kit';
-
-export const config: Config = {
-  schema: './${GENERATED_DIR}/schema.server.ts',
-  out: './db',
-  strict: false,
-  dialect: 'sqlite',
-  dbCredentials: {
-    url: './db/${name}.sqlite'
-  }
-};
-
-export default defineConfig(config);
 `;
 
 // src/, where hooks.server.ts lives: its config import is relative to it.
@@ -185,30 +165,6 @@ export function regenerateParams(root: string = process.cwd()): boolean {
   }
   if (!content.includes(expectedImportLine)) {
     writeFileSync(paramsFile, content.replace(PARAMS_IMPORT_LINE_REGEX, expectedImportLine));
-    return true;
-  }
-  return false;
-}
-
-const DRIZZLE_SCHEMA_LINE_REGEX = /^\s*schema:\s*['"][^'"]*['"],?\s*$/m;
-
-/** Patches drizzle.config.ts's schema path line if it's stale (e.g. after RIME_CONFIG_DIR
- * changes) — only that one line, since the rest of the file may carry real customizations
- * (verbose, custom fields, etc.). Must run before generateSchema()'s own drizzle-kit
- * generate/migrate shell-out, which reads this file from disk. No-op if the file doesn't
- * exist — creating it from scratch needs a project name, which is `rime init`'s job
- * (setDrizzle() in cli/commands/init.server.ts). Returns whether it patched anything. */
-export function regenerateDrizzleConfig(root: string = process.cwd()): boolean {
-  const drizzleConfigPath = path.join(root, 'drizzle.config.ts');
-  if (!existsSync(drizzleConfigPath)) return false;
-
-  const expectedSchemaLine = `  schema: './${GENERATED_DIR}/schema.server.ts',`;
-  const content = readFileSync(drizzleConfigPath, 'utf-8');
-  if (DRIZZLE_SCHEMA_LINE_REGEX.test(content) && !content.includes(expectedSchemaLine)) {
-    writeFileSync(
-      drizzleConfigPath,
-      content.replace(DRIZZLE_SCHEMA_LINE_REGEX, expectedSchemaLine)
-    );
     return true;
   }
   return false;

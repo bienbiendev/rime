@@ -1,20 +1,14 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import {
-  GENERATED_DIR,
-  configImportPaths,
-  paramsPath,
-  relativeImportSpecifier
-} from '../../constants.server.js';
+import { configImportPaths, paramsPath, relativeImportSpecifier } from '../../constants.server.js';
 import {
   addEnvVars,
   appParams,
   envVars,
   hooks,
   missingEnvVars,
-  regenerateDrizzleConfig,
   regenerateHooks,
   regenerateParams,
   setSvelteKitAdapter
@@ -106,22 +100,6 @@ describe("the patchers of a project's own files", () => {
     write('src/params.ts', own);
     expect(regenerateParams(root)).toBe(false);
     expect(read('src/params.ts')).toBe(own);
-  });
-
-  it('patches only a stale schema line in drizzle.config.ts, and writes none when it is missing', () => {
-    expect(regenerateDrizzleConfig(root)).toBe(false);
-    expect(existsSync(join(root, 'drizzle.config.ts'))).toBe(false);
-
-    write(
-      'drizzle.config.ts',
-      "export default {\n  schema: './old/schema.server.ts',\n  verbose: true\n};\n"
-    );
-    expect(regenerateDrizzleConfig(root)).toBe(true);
-    expect(read('drizzle.config.ts')).toBe(
-      `export default {\n  schema: './${GENERATED_DIR}/schema.server.ts',\n  verbose: true\n};\n`
-    );
-    // Now current: nothing to patch
-    expect(regenerateDrizzleConfig(root)).toBe(false);
   });
 
   it('swaps adapter-auto for adapter-node, and leaves any other adapter', () => {

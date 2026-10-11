@@ -25,7 +25,10 @@ export const hasAuthUser = async (adapter: Adapter): Promise<boolean> => {
   return rows.length > 0;
 };
 
-/** An auth user's Better-auth role, or `null` when no user has that id. */
+/**
+ * A better-auth user's own role, `admin`, `staff` or `user`, or `null` when no user has that id.
+ * Read for the user who made an api key: their role decides whether the key's `admin` counts.
+ */
 export const authUserRole = async (
   adapter: Adapter,
   args: { authUserId: string }

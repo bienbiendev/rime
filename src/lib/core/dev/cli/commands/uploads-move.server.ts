@@ -101,6 +101,9 @@ export const moveUploads = async (rime: UploadsSource) => {
  */
 export const uploadsMove = async () => {
   async function run() {
+    // A CLI run, as `rime generate` marks itself: the bin runs on Node, so a config on the bun
+    // driver opens its database with libsql (adapter-sqlite/connect.server.ts)
+    process.env.RIME_CLI = 'true';
     ensureUserConfigExist();
     await sanitize();
 

@@ -94,7 +94,7 @@ export function rime(): Plugin {
     name: 'virtual-rime',
 
     configureServer(server) {
-      // Ahead of Vite's own middlewares: no request reaches storage/, the uploads' folder
+      // Ahead of Vite's own middlewares: no request reaches storage/, the uploads and the database
       server.middlewares.use(denyStorage);
 
       // Add a listener for when the server starts
@@ -125,8 +125,8 @@ export function rime(): Plugin {
       // Add a watcher for sanitizing config changes and triggering schema/routes/types
       // generation. Debounced + single-flight: a config change is rarely one file (e.g. a
       // plugin swap copying several files under +rime/ at once) — without this, each file
-      // fires its own overlapping sanitize()+generate()+migrate() run against the same db/
-      // and sqlite file, racing each other.
+      // fires its own overlapping sanitize()+generate()+migrate() run against the same database,
+      // racing each other.
       let reloadTimer: ReturnType<typeof setTimeout> | null = null;
       let reloadInFlight: Promise<void> | null = null;
       let reloadQueued = false;
@@ -179,6 +179,11 @@ export function rime(): Plugin {
     },
 
     config(): UserConfig {
+      // The project's own storage/, the database and the uploads: not a folder named storage
+      // deeper in the tree, such as src/lib/server/storage/
+      const storage = path.resolve(process.cwd(), 'storage');
+      const inStorage = (file: string) =>
+        file === storage || file.startsWith(`${storage}${path.sep}`);
       return {
         // `bun:sqlite` only exists at runtime under Bun (adapterSqlite driver 'bun').
         ssr: {
@@ -196,7 +201,7 @@ export function rime(): Plugin {
         },
         server: {
           watch: {
-            ignored: ['**/db/**', '**/logs/**']
+            ignored: [inStorage, '**/logs/**']
           }
         }
       };

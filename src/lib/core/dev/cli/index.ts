@@ -5,6 +5,7 @@ import { program } from 'commander';
 import { existsSync, writeFileSync } from 'fs';
 import { logSettings } from '../env.server.js';
 import { envProduction } from './templates/build.js';
+import { DEFAULT_ADAPTER } from './util/adapter-hooks.server.js';
 
 logger.configure(logSettings);
 // The commands report their steps at debug: shown here even without a level set
@@ -18,6 +19,11 @@ program
   .option('-f, --force', 'Force init with default package name', false)
   .option('-s, --skip-install', 'Do not install dependencies', false)
   .option('-b, --bun', 'Bun pack: bun:sqlite driver, bun --bun scripts', false)
+  .option(
+    '-a, --adapter <name>',
+    'The database adapter: sqlite, or a package with a hooks entry',
+    DEFAULT_ADAPTER
+  )
   .action(async (args) => {
     const init = await import('./commands/init.server.js').then((m) => m.init);
     init(args);
@@ -25,12 +31,12 @@ program
 
 program
   .command('build')
-  .option('-d, --with-database', 'Include database', false)
   .option('-e, --with-env', 'Create the /app/.env file from the production template', false)
-  .option('-s, --with-static', 'Copy the current static directory and the uploads', false)
+  .option('-s, --with-static', 'Copy the static directory', false)
+  .option('-w, --with-storage', 'Copy storage/: the database and the uploads', false)
   .action(async (args) => {
     const build = await import('./commands/build.js').then((m) => m.build);
-    build(args);
+    await build(args);
   });
 
 program
@@ -67,6 +73,22 @@ program
     );
     try {
       await uploadsMove();
+    } catch {
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command('db:move')
+  .description(
+    'Moves the database and its migrations from db/ to storage/sqlite/, points the ./db paths ' +
+      'of drizzle.config.ts there, and adds /storage to .gitignore. Run once, after upgrading, ' +
+      'with the server stopped.'
+  )
+  .action(async () => {
+    const dbMove = await import('#lib/adapter-sqlite/db-move.server.js').then((m) => m.dbMove);
+    try {
+      dbMove();
     } catch {
       process.exitCode = 1;
     }

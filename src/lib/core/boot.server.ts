@@ -42,9 +42,15 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   // 3. Upload makes sure the folder of each upload collection exists.
   bootUpload(config);
 
-  // 4. Phase 1, in dev only: write routes, schema and types. Before the adapter, which imports
-  //    the schema this produces.
+  // 4. Phase 1, in dev only: the adapter's files, then routes, schema and types. Before the
+  //    adapter, which imports the schema this produces.
   if (dev) {
+    // `rime clear` imports the adapter's hooks from this record, with no config loaded
+    const devCache = await import('./dev/cache.server.js').then((m) => m.default);
+    devCache.set('adapter-hooks', config.$adapter.hooks.module);
+    // Its folder in place, before codegen runs drizzle-kit on it
+    await config.$adapter.hooks.boot();
+
     const runCodegen = await import('./codegen.server.js').then((m) => m.runCodegen);
     await runCodegen({ config, generateSchema: config.$adapter.generateSchema });
   }

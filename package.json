@@ -56,6 +56,11 @@
       "import": "./dist/adapter-sqlite/index.server.js",
       "default": "./dist/adapter-sqlite/index.server.js"
     },
+    "./adapter-sqlite/hooks": {
+      "types": "./dist/adapter-sqlite/hooks.server.d.ts",
+      "import": "./dist/adapter-sqlite/hooks.server.js",
+      "default": "./dist/adapter-sqlite/hooks.server.js"
+    },
     "./config": {
       "types": "./dist/core/config/index.d.ts",
       "import": "./dist/core/config/index.js",

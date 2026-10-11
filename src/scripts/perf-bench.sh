@@ -426,7 +426,7 @@ bench_one() {
   config=$(find src -name 'rime.config*.ts' -not -path '*generated*' | head -1)
   [[ -n "$config" ]] || { echo "rime init wrote no config file"; exit 1; }
   write_config "$config" "$runtime"
-  rm -rf db
+  rm -rf db storage/sqlite
   # The handler reads the env var before the config's own function; false by default.
   if [[ $CACHE -eq 1 ]]; then
     grep -q '^RIME_CACHE_ENABLED=' .env && sed -i '' 's/^RIME_CACHE_ENABLED=.*/RIME_CACHE_ENABLED=true/' .env || echo 'RIME_CACHE_ENABLED=true' >> .env
@@ -468,15 +468,21 @@ bench_one() {
   if [[ $MODE != "dev" ]]; then
     # A database with the schema and the admin alone: the dev passes' pages stay out of the built
     # one.
-    rm -rf db
+    rm -rf db storage/sqlite
     "${rime_cli[@]}" generate --force > generate.log 2>&1
     boot_ms "$DEV_URL" dev.log "${vite_dev[@]}" > /dev/null
     create_admin "$DEV_URL"
     stop_dev
 
     log "[$label] Build"
-    # Older releases have no --with-static: the bench serves no static file, it goes when there.
-    local build_flags=(-d -e)
+    # A release with --with-storage copies the database with -w, one without it with -d. Older
+    # releases have no --with-static: the bench serves no static file, it goes when there.
+    local build_flags=(-e)
+    if npx rime build --help 2>/dev/null | grep -q -- '--with-storage'; then
+      build_flags+=(-w)
+    else
+      build_flags+=(-d)
+    fi
     npx rime build --help 2>/dev/null | grep -q -- '--with-static' && build_flags+=(-s)
     local rime_build=(npx rime build "${build_flags[@]}")
     local vite_build=(./node_modules/.bin/vite build)
