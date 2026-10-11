@@ -1,5 +1,599 @@
 # rimecms
 
+## 1.2.0
+
+### Minor Changes
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Breaking Change: rime no longer loads `.env` into `process.env`. The app reads its variables from `$app/env/private` and `$app/env/public`, the CLI and the Vite plugin from the env files the way Vite reads them, and the environment always wins over `.env`. A config that reads `process.env.X` gets `undefined` in dev on Node: declare `X` in `src/env.ts` and import it from `$app/env/private`. `PUBLIC_RIME_URL` is renamed `SITE_URL` and `RIME_SMTP_*` are renamed `SMTP_*`; `npx rime init -f` renames them in `.env` and adds every variable rime reads to `src/env.ts`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: an area with `$url` stores its url when it is saved, in a `<area>__$paths` table with one row per locale, as a collection's pages do, and a read joins it: `select: ['url']` answers it. The url is formatted from the area's published document, so a read of a draft shows the published url, and a change to `$url` or to `SITE_URL` shows after the area's next save. A project with such an area needs a migration for the new table: run `bun rime generate`, then drizzle-kit, as for any new table. The rows are written on the first request after deploy.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Added: the `$beforeDuplicate` field hook gives a field its value on a copy of its document, after the field type's own copy: `email('contact').unique().$beforeDuplicate(() => null)` leaves the copy without one.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Breaking Change: members that rime never sets or reads are removed from the published types: `$InferRoutes`, `$InferAreasSlug` and `$InferCollectionsSlug` on `BuildConfig`; `$database` on `BuiltConfig`; `getDocumentPrototype` on the config context; `unique` on `ComboBoxField`, `DateField` and `TimeField`; `layout` on `RelationField`; `tree` on `BlocksField`; `suggestionOpen` and `editor` on the rich-text context; `context` in the `SvelteNodeViewRenderer` options; `invalidateAll` and `urls` on the API proxy context; the unused getters of the collection, document form and errors contexts; the `status: 401` arm of `CollectionDocData` and `AreaDocData`; `lastEdited` and `titleSingular` in the dashboard entries; the `TranslationKey` and `ModifiedKey` types; and the panel translation keys nothing reads. A panel language with no dictionary loads none, where English was loaded in its place.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Breaking Change: duplicating a document of an auth or upload collection answers 400 through the API, as the panel already refused it. An auth document is a user with an account, and an upload document is a file on disk.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: errors are answered by SvelteKit's `handleError`, which rime exports from `rimecms/server` and adds to `src/hooks.server.ts` when the file has none. A `RimeError` keeps its status, a thrown `error()` keeps its own instead of becoming a 500, and an unexpected error is logged with its stack, its message never sent.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Breaking Change: a JSON body is taken as it is sent. `"true"`, `"12"` or `"null"` sent as strings stay strings, where they were turned into a boolean, a number or `null`: send `true`, `12` and `null`. A dotted key is no longer expanded: send `{ "meta": { "priority": 4 } }`, not `{ "meta.priority": 4 }`. A form-encoded body written by hand is still read by the shape of each value, dotted keys included.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: a link to a document carries its target's `id`, `url` and `title` at every depth, `depth=0` and a link to its own document included. The target is read in the read's locale with only those selected, through its own read rules: a target the reader may not read, one never published, or one with no url gives none of the three. The save stores none of them, so a `url` sent with a document link is never shown. The panel's list cell shows the link's title.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Breaking Change: each surface reads its own locale. `/api` reads `?locale=`, the panel reads `?locale=` then its `rime.locale` cookie, and the site reads the route param named `locale`. A code the config does not list is skipped: the next place the surface reads is tried, the panel's cookie after an unknown `?locale=`, and the default locale when none is left. The cookie is written for the panel's path only, once a locale switch goes ahead, so the site and `/api` do not follow the panel's locale; it is `Secure` on https only, so a panel served over plain http keeps its locale. A panel save names the locale of the row on screen, so a cancelled switch, another tab or the live editor cannot move it. A site route names its locale `[[locale=locale]]`: rime generates the `locale` matcher, which types `params.locale` and leaves a segment that is not a locale to the next route. A site that keeps its locale elsewhere sets it with `rime.setLocale()`, which sets the default locale for a code the config does not list. A REST body carrying `locale` answers 400: name the locale with `?locale=`. `rime.getLocale()` is removed: read `event.locals.locale`. A duplicate or a locale copy leaves the request's locale alone: a hook reads the locale it writes in from `context.params.locale`. A read with `depth` resolves its relations and links in its own locale: `find({ locale: 'en', depth: 1 })` reads the related documents in `en` whatever the request's locale. The live preview reads related documents in the edited document's locale, and `Relation.resolve(value, { locale })` reads them in the locale given (the default locale without one). In the panel, the relation fields read their documents in the panel's locale, and a block's focus render receives `locale` beside `block`, `path`, `fields` and `form`: it reads a relation with `Relation.resolve(block.image, { locale })`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Breaking Change: a field inside tabs, in a localized group, blocks or tree, is localized, so each locale keeps its own value instead of sharing one. Its column moves to the matching locales table (`pages__$$locales`, `pages__$blocks_note__$$locales`, `pages__$tree_links__$$locales`), and the migration drops the old column without carrying its values: copy them over before applying it, for example `UPDATE "pages__$$locales" SET meta__seo__title = (SELECT meta__seo__title FROM pages WHERE pages.id = "pages__$$locales".owner_id);`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Breaking Change: text, textarea, slug and email fields store their value as typed, and the link field its `value`: `x < y` lost everything after the `<` on save. The panel and the site print these values escaped. A site that renders one with `{@html}` sanitizes it on save itself: `text('bio').$beforeSave(string.sanitize)`, with `string` from `rimecms/util`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Breaking Change: rimecms requires SvelteKit 3 (and adapter-node 6, Svelte 5.57.1, Vite 8.0.12). To upgrade an app, run `npx sv migrate sveltekit-3`, install rimecms, then `npx rime init -f`: it keeps what exists and adds `src/env.ts`, which declares the variables rime reads, and `src/params.ts`, which spreads rime's param matchers (an existing `src/params.ts` gets a warning with the two lines to add). The app's own matchers go in that same file, next to `...rime`. Delete the old `src/params/panel.ts`, `collection.ts` and `area.ts`. `ORIGIN` is gone: `rime build -e` writes an `app/index.js` that sends the origin of `SITE_URL` to adapter-node.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Breaking Change: uploaded files move out of `static/medias` to `storage/uploads/<folder>/<file>` at the project root, one folder per upload collection, and their URLs become `/uploads/<folder>/<file>`. `upload.folder` names the folder; it is the collection's kebab by default. Rime serves the files itself. A collection anonymous callers may not read serves its files only to callers who may read a document naming them; anyone else gets 404. No URL reaches `storage/`. Run `rime uploads:move` once to move the existing files.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Added: `url.isSafeUrl` in `rimecms/util` tells whether a URL can go in an `href`, for a custom `link` component of `RenderRichText`.
+
+### Patch Changes
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an access rule written as `undefined`, such as `access: { read: flag ? anyone : undefined }`, keeps the staff-only default instead of answering 500 on every request it guards.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a user who deletes their own document loses their sign-in account and sessions with it, instead of the request failing and leaving the account behind.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `POST /api/init` with a weak password answers the password's own error under `password`, instead of `invalid_field` under `name`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an api key sent in `x-api-key` is a credential on its own. The request runs as the key's document with the key's roles, with no session needed, and a session sent with it is ignored. A key that does not verify, or one carrying `admin` that was made by someone who is not a better-auth admin, answers 401. Only an admin can give a key `admin` afterwards, and a key never opens the panel. Keys no longer stop at ten requests a day, existing keys included. A key used to be ignored without a session, with one it only replaced the session user's roles, and its eleventh request in a day answered 401.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: deleting an API key document removes its key, whoever created it, and the key stops authenticating. A key document that holds no key no longer deletes the account of the user who created it.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: closing the new API key dialog with Escape or a click outside moves on to the new document, instead of leaving the page stuck.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: changing the `roles` of an API key document changes the roles a request made with the key carries.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an api key is refused to a signed-in user who is not staff before the key is made. The key was created and mailed, then its document failed to save, which left a live key with no document to revoke it.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a site route whose path only starts with `/api` (`/apiary`) is no longer treated as an API route: no API CORS check, and its `slug` param is left alone.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: when an area is created for the first time, a required field that its initial document leaves empty takes its column's own default, and a NOT NULL column with no default gets an empty value of its type. A text or boolean column got an empty value over its default, and a number, date or JSON column with no default was left unfilled.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a new version of a localized area copies the other locales as a locale copy, as a collection does: their field hooks, validation and required checks do not run again on values already checked where they came from.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an area's panel page opens its newest version, a draft included, as a collection document's page does. It opened the published version.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the sign-in password field no longer shows the reset-password placeholder after a reset in the same tab.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a block removed while an auto-save is in flight no longer leaves an empty item in the list when the save comes back.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: better-auth's own user and admin routes under `/api/auth` (`delete-user`, `update-user`, `change-email`, `admin/*`) answer 404. An admin can no longer reset the super-admin's password or delete it through them, and a signed-in user can no longer delete their own document or move their session to another collection past rime's access and hooks.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a block named with `_` or `-`, like `call_to_action` or `hero-banner`, keeps the validation, hooks and relations of its fields. A required field in it no longer refuses every save, and a relation picked in it is stored. A block name holding a `.` is refused by the config check.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `localized()` on a blocks list gives the list its own copies of its block types, and leaves a block shared with another list as it is. A document that holds the same block in a localized list and in another list is now refused by the config check, where the block used to turn localized in both.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a block takes its place from where it sits in the data. A block read from the API and sent back in another order kept the `position` it was read with, and its relations ended up on another block.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: in the blocks focus mode, removing a selection that holds a block under a folded row removes that block. It removed a block the user had not selected.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: saving a block list rewrites only the blocks whose sent values changed.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a blocks list refuses a block whose `type` it does not declare, with a 400 naming the field (`unknown_block`).
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: with `driver: 'bun'`, moving a page or refreshing its urls is all or nothing again. bun:sqlite committed the transaction before its updates ran, so a move refused in one locale stayed applied in the others.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: with the cache on, a route that sets its own `cache-control` keeps it, and a `load` calling `setHeaders({ 'cache-control': … })` no longer answers 500. `max-age=3600` goes on a response that has none.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the cache plugin adds `cache-control: private, max-age=3600` and `vary: Cookie` to a successful page only, so a browser no longer keeps a redirect or an error for an hour, and a sign-in or a locale change reads the page again.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a cached read answers the same document as the read it saved. With the disk strategy, dates stay dates instead of strings; with the memory strategy, each request gets its own copy, so a change one request makes never shows in the next.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: with the disk strategy, a cache key is stored under a hash of itself, so a key built from request input can no longer read or write a file outside `.cache/`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the API cache keys a read on the locale it runs in. A local read without `locale`, such as `rime.area('settings').find()` in a localized layout, served one locale's document to visitors of the other.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a checkbox that is not required is optional in the generated document type, `agree?: boolean`, like a toggle.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a page's `_children` lists only the children a reader who is not staff may read, their published versions, instead of the ids of children never published.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `rime build` stops when `vite build` fails, instead of packaging a missing or stale build.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an interrupted `rime generate` no longer stops code generation in later dev starts. Its marker names its process, and a marker left by a process that died blocks nothing.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `rime init -f` in a scoped package names the database after the package name made a slug (`@acme/site` → `acmesite`); `--name` refuses a value that is not a slug.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a server-only declaration that reads its own name, such as `const setHome = Hooks.beforeUpsert(async function setHome(args) {…})` or a helper that calls itself, is left out of the panel's copy of the config. It stayed there with its server imports, and the panel failed to load.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a field inside a localized group, blocks or tree keeps its `$references`: its foreign key, and a resolved reference.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a code generation step that fails in development (the routes, a migration, the types) runs again at the next start. It was taken as done until the config changed.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `component().access({ read })` and `component().condition()` hide the component, and `separator().className()` reaches the separator.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: in dev, a config edit is picked up when `RIME_CONFIG_DIR` starts with `./`, and on Windows. It was ignored until the dev server restarted.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a config with a rich text `fields()` or `upload()` feature outside tabs no longer stops code generation with "Maximum call stack size exceeded".
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a CORS preflight from a trusted origin allows credentials, so a credentialed `PATCH` or JSON request from another origin goes through.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the site's own origin is always trusted, read without a path or trailing slash, and `$trustedOrigins` adds to it. An authored `$trustedOrigins`, or a `SITE_URL` ending in `/`, made the panel's deletes, status changes, slug changes and uploads answer 403.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: every API answer carries `Vary: Origin`, a preflight included, whether or not the request sent an `Origin`. A shared cache could hand one origin's answer to another, whose browser refused it.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a date cleared in the panel's calendar is saved empty. It was saved as 1 January 1970, and a required date now shows its error instead.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a document whose title field is a `date('…').isTitle()` is titled with its day, `YYYY-MM-DD`, instead of its id. A title field that holds an empty string or an empty rich text now titles the document with its id instead of `''`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a date field refuses a value that is not a date, such as `"soon"`, with a 400 naming the field. It answered 500 on libsql and stored `null` on bun:sqlite.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: `_generateRoutes` is removed from the published `BuiltCollection` and `BuiltArea` types, and the `unknown` text from the error dictionaries: rime never sets or reads them.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a block or tree item in a default list that names some members of a group keeps the defaults of the members it leaves out.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a field the caller may not write is dropped with every field inside it, before it is validated. A group the caller may not write keeps its blocks, tree items and relations, its required members are not reported missing, a unique field the caller may not write is not looked up, and inside a block or a tree item the save sends, such a field keeps its stored value, the relations and nested rows it holds included, wherever the row moves. A new version keeps it the same way.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: in a deno project, dev runs drizzle-kit through deno (`deno run -A npm:drizzle-kit`) instead of `npx`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an empty or unreadable `?depth=` reads as 0 on every API GET.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: config validation checks a slug starting with `$` too: it must be camelCase parts joined by `__`, like the slugs rime derives (`$pages__versions`). Any `$` slug used to skip the slug rules.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: in dev, a second invalid config edit in a row prints what is wrong with the config. It answered `ENOENT … node_modules/.rime` instead.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a text made only of digits (`"2024"`, `"007"`) is saved as text, from the panel and from a JSON body. It was turned into a number, losing leading zeros, and refused by the text field.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a disabled link button does not navigate. In a read-only document, the live edit button no longer opens the live editor.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the generated type of a relation or a resolved reference to a rime collection, such as `$mediasDirectories`, names `MediasDirectoriesDoc`, the type that is declared, instead of `$mediasDirectoriesDoc`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a document read with an explicit `locale` says that locale. It said the request's locale, or none outside a request.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a duplicate keeps a `status` field the author declared on a collection without drafts, such as a ticket's `closed`, instead of resetting it to its default. On a collection with drafts, the copy still starts as a draft.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a duplicate or a locale copy that fails leaves the request in its own locale. It stayed in the default one.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a copy of a document first written in another locale takes, for each required field it has no value for in the default locale, the value a read shows there. Its title read `null (copy)`, and a required field left empty refused the copy.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: duplicating a document keeps a reference read as a document (`$references(…, { resolve: true })`). The copy saved it empty.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a rich-text title keeps its nodes and marks on a copy, with ` (copy)` added after its last text. It was written back as plain text.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a slug title becomes `my-page-copy` on a copy, and an email or date title is copied as it is. Each got ` (copy)`, which its validation refused.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a unique text or slug takes a free value on a copy: `Title (copy)`, then `Title (copy 2)`, and `my-page-copy`, then `my-page-copy-2`. The copy was refused as a duplicate value.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `email().placeholder()` sets the email field's placeholder.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an email address with a `+` tag or an apostrophe before the `@`, such as `ann+news@x.com` or `o'brien@x.io`, is accepted instead of answering `invalid_email`, and one with two dots in a row before the `@`, such as `a..b@x.io`, is refused.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an optional email, slug, number or time field can be emptied, in the panel and through the API. The empty value failed the field's format check; a number sent as `''` is stored as no number.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: three English panel texts read correctly: "only panel users can read it", "Operation successful" and "The changes you made will be lost".
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a variable the environment sets, `PORT` from the platform or the command line, is no longer overwritten by the one in `.env`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: `rime init`, `rime build -e` and `rime env` write the `.env` from one list. `rime init` on an existing `.env` adds the missing variables with their comments, `RIME_CACHE_ENABLED` included. The production `.env` writes `RIME_LOG_TO_FILE_MAX_DAYS=30`, `HOST=127.0.0.1` (the address `index.js` falls back to) and the same SMTP placeholders as development.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a field error follows its block or tree item when items are removed, moved, inserted or duplicated. An error used to stay at the old position, show on the wrong item or nowhere, and keep Save disabled until a reload.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: field defaults that only existed on a dev server, inside `tabs()`, now apply everywhere. A text or textarea refuses a value that is not a string, a checkbox or toggle one that is not a boolean, a radio starts on its first option, and a required `select().many()` refuses an empty selection. A number or link field starts empty unless it has a `.defaultValue()`, as it already did in production.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an upload's stored `filesize` moves up a unit when it rounds to 1000, `1.00MB` instead of `1000.00KB`, and reads in GB past 1000 MB.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `findByIds` hands the context its `beforeOperation` hooks return to the `beforeRead` hooks, as `find` and `findById` do.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an API form error reads each field's error as the panel shows it. A composite code read `errors.url::invalid_url`, and a custom validator's message was prefixed with `errors.`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the French panel texts for creating, finding nothing and searching no longer put a masculine article before every collection ("Créer un page"). They now read "Créer : page", "Aucun résultat : page" and "Rechercher : page...". A collection's `label.create`, `label.none` and `label.search` still take precedence.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a duplicated or pasted block, and content copied from the default locale, keep their rich-text page links and embedded images. Only the blocks, tree items and relation rows get new ids; an `id` inside a rich-text node stays.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `rime generate` no longer makes the next `vite dev` rebuild every dependency. Its Vite server keeps its cache in `node_modules/.rime/vite` instead of `node_modules/.vite`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a field named `d` (or `dd`, any run of the letter d) reads its value instead of nothing.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: saving a group with only some of its fields keeps the blocks and tree items of the others, and the relations inside them. They were deleted, while the group's other values were kept.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: saving a group with only some of its fields keeps the relations of the others. They were deleted, while the group's other values were kept.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a hand-written form keeps its values as the strings it sends, so a postcode, a phone number or a title such as `2024` is stored as typed instead of becoming a number, and a key sent several times, such as a `<select multiple>`, arrives as a list instead of its last value. A number field reads its string as a number, and a checkbox or a toggle reads `'true'`, `'on'` and `'false'` as booleans. `'null'` and `'[]'` still empty a field, and `'undefined'` is now kept as a string.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a `HEAD` request on a REST route or on a route declared in `$routes` is answered by its `GET` handler. It answered 404.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a hook that answers without its arguments, such as one that forgets `return args`, fails with an error that names the hook and what it left out, instead of a `TypeError` further down the pipeline.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a translation keeps a brace with no `|` as written. Only `{a|b}` is a list of variants; `Use {name} here` read as `Use name here`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: every error code has a text in English and French. A weak password, a taken unique value or an invalid slug read as a sentence under the field instead of `errors.password_min_8`, and failure toasts read "An error occurred" instead of `error.generic`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a field error says what is wrong ("Required") instead of "Field is required" with the name missing. A `RimeFormError` message names each field before its text: `title: Required, slug: Only lowercase letters, digits and dashes`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a malformed query, body or uploaded file answers 400 instead of 500, and is no longer logged as a server error with its stack. An upload refused for its content keeps its reason, such as `File type not supported`, in place of `Unable to process file`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `access.isAdminOrMe` refuses an anonymous caller when no id is given. A list operation called it with no id, so an anonymous visitor passed a rule built on it, such as `read: (user, { id }) => access.isAdminOrMe(user, id)`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a JSON body that is not an object, such as `null` or `[]`, answers 400 instead of a 500 or a document made of defaults.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the keys inside a JSON value are read back as written. A key holding `__`, such as `foo__bar`, came back split as `foo.bar`. A JSON field inside a group whose value held a key with `$` (`{ $x: 1 }`) came back under its column name, `group__data`, rather than `group.data`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: on a collection or area with a camelCase slug (`blogPosts`), the version history and relation lists refresh after a save, an auto-save, a status change or a version delete.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: on a nested collection with a camelCase slug, the tree rows link to `/panel/blog-pages/<id>` instead of a 404. The edit link of a resource card in rich text does the same.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the last version of a document cannot be deleted while an auto-save is all that would stay, which left the document unreadable. An auto-save may always be deleted.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the media library search sends its text URL-encoded.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an emptied link is accepted as it is stored. Duplicating a document, or saving a blocks or tree list, that holds an emptied link answered 400.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the link field drops a `url` that would run script (`javascript:`, `vbscript:`, `data:`) when it is saved.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: switching a link field's type clears its text, instead of keeping the old text under the new type.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a link field refuses a link whose `type` its `types(...)` do not name, such as `{ type: 'other', value: 'javascript:…' }`, instead of storing it.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a list delete that matches a row the caller may not delete, such as a super admin, leaves that row, deletes the others, and answers the ids it deleted, instead of failing halfway through. The panel's bulk delete counts the documents the answer lists, and says how many were not deleted.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `?limit=` and `?offset=` on a list GET or DELETE answer 400 unless they are whole numbers, from 1 for `limit` and from 0 for `offset`, instead of reading `?limit=abc` as no limit, which on a DELETE removed every match.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the list search works in a collection whose title is rich text, matching its plain text. A date title is left out of the search instead of throwing.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: in a collection list, a sortable column inside a group or a tab sorts, and so does the Title column when the title field sits inside a group. A column placed with `.table(0)` comes first instead of last.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the close button of live edit on an area goes to the area page instead of a 404.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a page rendered with `<LiveConsumer>` opens its document's form in live edit and shows what is typed before it is saved.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: live edit opens for a collection or area with a two-word slug, such as `blogPosts`. The `update` key of `LiveEdit` is the document's API path without `/api`, with the slug in its URL form: `/blog-posts/123`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a document's `_live` link encodes its `src`, so a url with a `#` or a query opens live edit on the right document.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the live-edit link joins the site and the panel on one slash when `SITE_URL` ends in a slash.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: following a link with a query string inside live edit stays in live edit (`/news?page=2` becomes `/news?page=2&live=1`, not `/news?page=2?live=1`).
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a live-edited page ignores a message that is not an object, such as a string another script of the page posts, instead of throwing.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: live edit applies the panel's updates in the order they arrive. An update whose related documents were slow to read landed last and undid what was typed after it.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: copying locales to a new version or a duplicate keeps a localized field named like a row meta, such as `ownerId` or `createdAt` inside a group. Such a field was never copied to the other locales.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a new version of a localized document keeps the edit that made it in the fields every locale shares, and keeps its blocks after a reorder. Copying the other locales onto a new version or a duplicate writes only their localized values; a localized field inside a shared block takes the other locale's value when the block at that position has the same type, and falls back on read otherwise.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `localized()` called before `fields()` on a group or a tree localizes the fields given after it. A group threw, and a tree left its fields unlocalized.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the edit-lock routes hand the request to the update access rule, as a save does, so a rule that reads `options.event` answers the same for the lock and for the save.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: when an auto-save or a fork carries the edit lock onto its new row, the other tabs on the document reload once instead of twice.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the edit-lock routes of a collection and an area answer 403 to a user who is not staff, instead of a 500.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a `RIME_LOG_TO_FILE_MAX_DAYS` of `0`, empty or not a number keeps log files for thirty days. `0` or empty deleted today's file every hour, and a value that is not a number kept every file forever.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the log cleanup counts a file's age in local days. West of UTC, with `RIME_LOG_TO_FILE_MAX_DAYS=1`, today's log was deleted in the evening with every line written before.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: rime imports each Lucide icon from its own file (`@lucide/svelte/icons/<name>`), so the dev server no longer loads all ~1,900 icons at each start. A config that imports from `@lucide/svelte` itself still loads them all: import from the icon's file instead.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a read resolves 3 levels of relations at most, whatever `depth` it asks for. The cap holds for the REST API and the local API alike: `?depth=50` and `rime.collection('pages').find({ depth: 50 })` both read at 3. A negative `?depth=` reads as 0.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `maxVersions` keeps the newest versions of each document. It counted the whole versions table, so saving one document deleted other documents' versions, sometimes a document's only version, which then read as missing. `maxVersions` defaults to 12, so every collection or area with versions was affected.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a signed-in member of a non-staff auth collection can create a document where the collection lets them, instead of answering 500 on the `createdBy` foreign key. `createdBy` and `updatedBy` record staff only, and only staff may set them on a create.
+
+- [`857f208`](https://github.com/bienbiendev/rime/commit/857f20888a880b5debd0c6c133c193113713deed) - Added: in development, a migration that drops a table or a column asks before it is applied, `Continue? [y/N]`. No, or no terminal, applies nothing: the migration and the schema are put back and the boot stops. A table drizzle-kit rebuilds to change a column keeps its rows and is not asked about.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: converting a migrations folder from before drizzle 1.0 no longer counts the converted migrations as new. An old migration that dropped a table made the boot ask about data loss, and a refusal, or a boot without a terminal, deleted the whole migration history.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a move in a nested collection's tree that the server refuses shows an error and the stored order, instead of "Order updated". The stored order shown keeps its unpublished documents.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a `tabs()` inside a group, block, tree item or tab reads and writes its fields at their own path (`meta.seo.title`). It used `meta..seo.title`, so stored values showed empty and an edit was saved under an empty key.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: "Save in a new draft" leaves the Save button as it was. After a new draft that failed, a plain Save forked another version, and could turn the published version into a draft.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a new block or tree item sent without some of its fields gets each one's default, `null` without one, so a required field it leaves out is refused instead of being saved empty. A stored row sent in part keeps its stored values.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a new version takes the fields the caller may not write from the version it branches from, on `?fork=true`, on every save of a versioned config without drafts, and on an auto-save. The caller's values for those fields, an upload's file name and image sizes among them, were written to the new version.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: removing the file of an upload document whose every save makes a new version leaves the new version with no file, instead of giving it the previous version's file back. The previous version keeps its file, on disk as long as a version names it.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a rich-text node view drops an attribute its `attrs` option no longer gives, such as a `data-empty` once a document is picked.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: saving a group or a tab as `null` clears every value inside it, and a required field inside it answers its form error, as it does when sent empty. The previous values were kept.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `number().min(0)` and `.max(0)` are bounds. A bound of 0 was ignored.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `object.getValueAtPath` and `object.deleteValueAtPath` find nothing on a path that runs through `null` or a primitive. `deleteValueAtPath` no longer throws there, `getValueAtPath` no longer throws on `null`, and it no longer reads a string's own properties: `getValueAtPath('title.length', { title: 'abc' })` is `undefined`, where it was `3`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `object.setValueAtPath` replaces a parent that cannot hold a key, such as a string, with an object or a list, as it does for a falsy one. It used to set nothing.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: on a versioned list, an `offset` that is not a number is ignored, as it already was on other lists. `?offset=abc` answered 500.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a select, combobox or radio option holding a quote, such as `l'été`, is written as a valid string literal in the generated types, which no longer fail to compile.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: moving a page under itself or under a page below it answers 400 before anything is written, instead of storing a `_parent` that loops and dropping both pages from the tree.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the command palette names a document by its title when the title field sits inside a group, instead of its id.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `panel.components.collectionHeader` renders above the collection list. The config dropped it.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: panel dates are formatted in the panel language, not the content locale: "Créé le samedi 3 oct. 2026" instead of "Créé le Saturday, Oct 3, 2026".
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an area with `panel: false` is left out of the panel sidebar, as a collection is.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a panel language rime has no texts for shows the English texts, and an error names the language. It showed raw keys. A translation file that fails to load now leaves the others in place.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a panel link to another collection, area or collection document shows that page on the first click. The page load now reads the slug from its own event, so SvelteKit runs it again when the slug changes instead of keeping the previous page's data.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a custom panel route imports its component by a relative path, so a component from a package resolves in dev and in `vite build`, and a lowercase or kebab-case file name works. A component with no file to import logs an error.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a custom panel page whose `component` is an imported Svelte component (`panel.routes: { stats: { label, component: Stats } }`) renders it. The page read "Cannot parse provided component path".
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: in development, changing `RIME_PANEL_ROUTE` regenerates the routes at the next start. Every panel URL answered 404 until the config changed too.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a custom panel route without a `group` is listed under the Dashboard link. Every panel page answered 500.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a password counts any character that is not a letter or a digit as its special character, so `/`, `,`, `[`, `~` or a space no longer reads as "Needs a special character".
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: creating a user with two different passwords shows "The passwords do not match" under the confirmation, instead of `password_mismatch`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the error code for a password without an uppercase letter is spelled `password_uppercase_missing`. It was `password_uppercase_mmissing`; an API client that matched the misspelled code needs the new one.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a plugin the config adds replaces rime's default plugin of the same name. A hand-added `cache()` ran twice, with two clear-cache buttons in the panel header.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a read with `localeFallback: false` and a `depth` reads the related documents without fallback too, instead of filling their empty fields from the default locale.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a list read or a list delete refuses a `where` or a `sort` on a field the reader may not read (403), on a path into a related collection they may not read (403), or on a column that is no field (400). A filter could otherwise read a hidden value back one letter at a time.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a `where` query string may nest an `or` inside an `and` and list up to 1000 ids, instead of answering 400 or 500, and `?where=foo` is refused as invalid data.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a radio given a second `options(...)`, on a clone for instance, starts on one of its new options. It kept the first option of the old list, and a new document's save answered 400.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `random.randomPassword` throws a `RangeError` for a length under 4, the one character of each kind it holds. It returned 4 characters, most of them fixed.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: in a read-only document, the X of a select or link value is disabled and leaves the value alone.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: in dev, a migration that rebuilds a table and leaves one of its columns out asks before it runs, as a dropped column does. The column's data was lost without a question.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a resolved reference sent as a number, such as `{ author: 42 }` or `{ author: { id: 42 } }` on an app's `text('author').$references('staff', { resolve: true })`, is refused with a 400 instead of silently clearing the stored reference.
+
+- [`857f208`](https://github.com/bienbiendev/rime/commit/857f20888a880b5debd0c6c133c193113713deed) - Breaking Change: a save that names a document which does not exist is refused, with `relation_not_found` on the field, instead of the id being dropped from it. The check is one database query per relation field, run before anything is written. It replaces a fetch to `PUBLIC_RIME_URL` per document, which dropped the relation whenever the fetch failed, and the save then deleted its row. `rimecms/fields/relation/module` is gone.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a block render whose related document cannot be fetched shows its empty state, where the pick can be replaced. It showed a loading box until the page was reloaded.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a relation row whose locale changes, when its field becomes localized or stops being localized, is written with its new locale, instead of being updated again on every save.
+
+- [`857f208`](https://github.com/bienbiendev/rime/commit/857f20888a880b5debd0c6c133c193113713deed) - Fixed: a relation left from a deleted block no longer makes up a block on read when it sits in a group inside that block.
+
+- [`857f208`](https://github.com/bienbiendev/rime/commit/857f20888a880b5debd0c6c133c193113713deed) - Fixed: deleting block 1 no longer deletes the relations of blocks 10 to 19, and a save of one field no longer reaches the relations, blocks or tree rows of another whose name starts the same, `image` and `images`, `nav` and `navigation`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: saving relations deletes the right rows. A row was kept when the same document arrived at another block index or a field whose name read like its path, and a relation sent as a bare id could take the row another relation named by `id`, losing one of the two.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a relation that lists the same document twice stores it twice, instead of keeping one row.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: two relation fields with the same name and different targets, in two blocks of one collection, both keep their target. The junction table had a column for one target only, and the other field's relations were saved pointing at nothing.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a relation sent back with its row `id` and another document saves that document. It kept the old one, with no error.
+
+- [`857f208`](https://github.com/bienbiendev/rime/commit/857f20888a880b5debd0c6c133c193113713deed) - Fixed: a relation write that fails fails the save. It was logged, and the save went on without the rows.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `RenderRichText` renders a line break as `<br>` and a horizontal rule as `<hr>`, and keeps the text of a mark it has no component for, without the mark. All three were left out of the page.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: in a collection list, a tree cell counts every item, children included, as "items", and a blocks cell reads in the panel language.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: blocks and tree items remember being open under one shared key, so each opens closed once after the update.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: a log line is `22:56:00.031 message`, written in order to one file per local day. A request line carries its status, `200 GET /panel/pages`, coloured by status on the terminal; in dev it goes to the file only, as SvelteKit prints every response itself. A warning starts with `[warn]`, an error with `[error]`, coloured on the terminal, and an error is printed with its stack. The CLI, codegen and schema steps log at `debug`, which the CLI always shows.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: every required column gets a default its type can hold, so adding a required `select`, a required field with a function default, or a required field from a package to a collection that has rows migrates. The migration failed with "Cannot add a NOT NULL column with default value NULL".
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the reset-password page enables its button only when the two passwords match, and asks for a password as strong as the staff form does.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `DELETE /api/<collection>` without a `where` filter answers 400 and deletes nothing, instead of deleting every document the caller may delete. An empty id in a client's URL (`DELETE /api/pages/`) no longer empties the collection. The local API's `delete()` with no query is unchanged.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the rich text bubble menu shows a mark as active right after a shortcut toggles it.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a duplicated rich-text title gets its " (copy)" after its last text, also when an empty paragraph, a rule or a line break follows it. It used to land in a new paragraph.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the rich text drag handle finds a block that starts right of the middle of the window.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: with two `fields()` or two `upload()` features on a rich text, each palette entry inserts its own node instead of the last one registered.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `heading()` without levels gives all six heading levels, instead of none.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: rich text copied to the other locales, on a duplicate or a new version, reads back as written instead of empty.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an upload or resource node in rich text keeps the document it points at on a new version and on a duplicate. Only the rows of the document — blocks, tree items, relations — lose their ids to be written anew.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: copying and pasting a rich text `fields()` or `upload()` node keeps its values, instead of `[object Object]`, and a pasted upload node keeps its own upload type.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the rich text resource dialog searches the documents by their title, and the three pick dialogs say "Nothing found" in the panel language.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a rich text stored as a plain string opens as a paragraph in the panel and reads back as that text. It opened empty, and its cell and title showed it wrapped in quotes.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a required rich text with an empty editor is reported missing. An empty paragraph counted as content.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a resource in rich text follows its document. A rich-text resource node stores the document's `id`, and a read fills `title`, `_type` and `_thumbnail` from the document as the reader sees it now: its thumbnail is the current one after `rime uploads:move`, and a document the reader may not read gives `null` for all three instead of its title and thumbnail.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a rich text `resource()` node stores the picked document's own `_type`, not the feature's `source` with its query.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a rich text given two features that make the same node type, such as two `upload()` of one collection or two `fields()` of one name, is refused at boot. The editor kept one of them and warned in the console.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a rich text sent as a JSON string has its script links removed before it is saved, like a rich text sent as a document.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: rich text keeps its text as typed. `a < b and c > d` or `Use the <div> tag` were rewritten as markup on save.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: reading a rich text turns only a text node's `text` into a string. An empty `text` field inside a rich-text node, such as a fields node, read back as `"null"`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `RichText.toText` keeps a word with a mark on part of it whole ("Rethink", not "Re think"), and the list cell adds "..." only to a text it cut.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a rich-text link whose `href` runs script (`javascript:`, `vbscript:`, `data:`) loses its `href` when it is saved, and `RenderRichText` leaves out such an `href` stored before this fix.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a rich text that holds a node or mark type its field does not offer opens read-only in the panel, with a notice naming those types. The editor opened it empty, and the first edit saved over the stored text.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an image in rich text follows its media. A rich-text upload node stores the media's `id` and its `legend`, and a read fills `url`, `sizes`, `title`, `mimeType` and `filename` from the media as it is now. After `rime uploads:move` or a privacy change, its URL is the media's current one, and a private media's image goes only to callers who may read it: for anyone else those attributes are `null`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: route generation writes the app's `src/routes/+layout.server.ts` only when the app has no root layout server. It overwrote the app's own on every config change in dev. The written file says that rime's `LiveEdit` reads `user` from it.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: on the panel and API routes, `event.params.slug` stays the slug the URL carries (`medias-directories`). `rime.routes.slug` gives the prototype it names (`$mediasDirectories`).
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an `id`, `ownerId` or `locale` in a document's data is ignored by the rows a write touches. An update keeps its row's key and owner, a locales row stays on the document and locale it was written for, a saved block stays on its document and locale, and a second locale written with the document's `id` in the body is saved instead of answering 500. An update answers the document it wrote, not the one an `id` in the body names. A folder of an upload collection still moves when its path changes, with its sub-folders and their files.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a block or tree item reads with every field of its own, empty when nothing is stored, as the document does: a hero block with no image reads `image: []` instead of having no `image` key. A row's bookkeeping (`path`, `position`) is still left out of a read outside the panel.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `string.sanitize` escapes attribute values, so a quote in an `href` can no longer open an event handler. It also drops an `href` whose script scheme hides behind spaces or control characters (`" javascript:"`), and keeps a link's `target` (it kept `_target`).
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a config file that imports or re-exports a file with `$` properties (an `index.ts` barrel) gets a server copy pointing at the server halves. The server read the panel's copy, without `$url`, `$hooks` or `$beforeSave`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a `$` member written as a method, `$url(doc) { … }`, or with a quoted key, `'$url': …`, is removed from the panel's copy of the config, with what only it reads. It used to ship to the browser, and a `.server` import it read failed the panel build.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a `.js` file under the config folder is split like a `.ts` file. Its `$` members, such as `$url` or `$hooks`, and the constants only they read, stay on the server instead of reaching the panel's public JavaScript.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `string.sanitize` keeps the text around a `<` that opens no tag. `1 < 2` came out as `1  2`; it now comes out as `1 &lt; 2`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a config constant used both in a `$` property and elsewhere stays in the panel's copy of the config. It was removed, and the panel threw a ReferenceError.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `string.sanitize` drops a U+E000 character the input holds, which it used to turn into a space.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: after a save or an auto-save that got no answer (a dropped connection), the document can be saved again without reloading the page. The failure shows as an error toast.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: on a document with versions and no drafts, each save from the panel, the document page and live edit alike, makes a new version instead of overwriting the one on screen.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the generated schema is found when the project path holds `.ts` in a folder name.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: selecting a blocks or tree field whose name holds `_` reads only its own relations. `?select=my_list` also loaded the relations of a sibling field such as `myXlist`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the select and combobox searches find an option by the label it shows, not only by its stored value.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `?select=title, attributes.slug` reads the names with the spaces around each comma trimmed, so a name after a space selects its field.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a select refuses a value that is not one of its options as a string, a list on a single select, and an option listed twice on a `many` select, which stored a document the panel could not open.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a select, radio or combobox with no option is reported by config validation, naming the field and its collection or area.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the server `rime build` writes no longer crashes when a visitor leaves while a static file is still loading.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a session whose user document was deleted is read as anonymous. Every request from that browser, public pages included, answered 401.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: deleting a media keeps its file while another document uses it, whatever the caller may read.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: type generation refuses two blocks or trees with one name and different fields, and names the type. The first one's type was written for both, so a collection type-checked against another collection's block.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a public sign-up follows the auth collection's own `create` rule, and only goes to an auth collection of `password` type. It created its document as rime, in any collection its `type` named.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a request that sends `authUserId` itself can no longer create an auth document linked to an existing better-auth account. Only better-auth's own sign-up takes that path. An API-key document posted with an `authUserId` gets its key, where it was saved without one.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `?skipValidation=true` only lets a staff request leave required fields empty. Field hooks, sanitizers, `validate`, unique and the relation check always run, so a caller can no longer store a `javascript:` link or raw HTML by adding the parameter. A required field left empty takes its default. Without one it is not written, instead of being written `''`: a create leaves the column to its own default, and an update keeps the column's stored value.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: changing a page's slug runs the collection's `beforeOperation` hooks, its access rule included, and its `afterUpdate` hooks on the page with its new url, so a guard, a cache purge or a webhook placed there sees a slug change as it sees a save.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the mailer opens TLS at once on port 465 only, so an SMTP server on 587 or 25 works through STARTTLS. `$smtp.secure` sets it for any other port. A failed mail still answers "Error while sending mail", and the server log now shows the transport's error, which the `mail_error` carries as its `cause`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `state.snapshot` copies a value that holds itself instead of overflowing the stack, and keeps a class instance as it is instead of turning it into a plain object.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a `Date` inside a list that a `beforeRead` hook adds to a document reads as that date instead of `{}`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: in the SQLite adapter, a relation to a collection whose slug holds `Id` (`productIdeas`) reads back with the right `relationTo`, and a query on a property of a relation to a camelCase slug no longer fails. A field named `paid`, `valid` or `grid` no longer removes its table's primary key.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a server-sent events client that stops reading is dropped once 100 frames wait for it, instead of the server queueing every event and keep-alive in memory until it disconnects.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a server-sent events listener that throws is logged, and the other listeners on the same stream still hear the event.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: two `openSse` calls with the same handler are two listeners: unsubscribing one leaves the other listening.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: calling the unsubscribe `openSse` returns a second time does nothing. It used to take a newer stream on the same keys out of the shared list, so the next `openSse` on those keys opened a second `EventSource`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a staff member who is not an admin can create a user in a collection that allows it, and can no longer list or delete accounts through `/api/auth/admin/*`, which skipped rime's access rules. The `roles` field of a collection other than staff can only be changed by staff.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the labels given to staff roles (`staff: { roles: [{ value: 'editor', label: 'Editor' }] }`) show in the roles select.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the staff `update` rule lets a staff member update their own document, and never a user of another auth collection sending their own id.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a `rime generate` run that died no longer stops dev codegen once its process id is reused. Its marker counts as stale after ten minutes, and when dev codegen does step aside for a run, it says so in a warning.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a system update of the super-admin (`rime.collection('staff').system().updateById(…)`) goes through, whoever made the request. It was refused unless the request's own user was the super-admin.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a `.system()` create, update or media delete runs as rime to the end. Its reread, the original document and the upload cleanup were read as the request user, so an anonymous request answered 403.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: a `.system()` read returns every field, including the ones the request user may not read, and reads its relations, thumbnail and link urls as rime. An app that answers such a read picks the fields it sends.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: config validation refuses a tab named like a field at the same level, as it refuses two fields of one name. Both wrote to the same key of the document.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a tab without a label reads its name capitalized, `tab('seo')` reads "Seo", as a field does.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: on a declared table handle (`rime.adapter.table(…)`), a `null` value in `where` finds the rows that hold none, and a `select` naming a column the table does not have is refused with the column's name. The `null` filter matched nothing, and the unknown column threw a `TypeError`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a tab remembered by its name that no longer exists opens the first tab, instead of showing no tab.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `validate.tel` takes a number written with dots, dashes or parentheses, such as `+33 (0)1 23-45`, and refuses one with no digit, such as `'   '` or `'+++'`. A `+` is only accepted at the start.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a document whose thumbnail media the reader may not read is still listed, with no `_thumbnail`. A list dropped it without an error.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a time field refuses a one-digit hour, such as `8:00`, which the panel's time input cannot show. Write `08:00`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a tree item's ⋯ menu shows when its header is hovered or focused.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: deleting a nested tree item clears that item's errors, so Save is enabled again.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: saving a tree writes only the items that changed, instead of every item on every save.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: two tree fields shown together keep their drag lists apart, and a drop that would take an item's deepest child past `maxDepth` is refused instead of hiding that child from the form.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a block whose `type` the blocks field does not declare is left out of the save instead of answering 500.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a `.unique()` field is checked on the value its `beforeSave` hooks leave, the value the save writes, so a duplicate answers 400 under the field instead of a database error.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the unique check looks up the value as sent. A value with `+`, `&` or `%` (`a+b`) was read as another value (`a b`), passed the check, and the save failed on the database's unique constraint. An empty value is no longer looked up.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Changed: a list sorted on a field that is not a column is refused, like a filter with an unknown operator. `?sort=titel` used to answer the list ordered by creation date, hiding the typo.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a field the reader may not see is left out of the answer only. The document an `afterUpdate` or `afterCreate` hook was handed keeps it, at any depth.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a document without a title reads "Untitled" in the panel language in the list, grid, tree, dashboard and breadcrumbs, instead of `[untitled]`. The delete dialog names the document.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the adapter's `updateWhere` reads a filter on a localized field in the locale it writes, and refuses a filter that keeps every row, such as an empty `and`. The localized filter matched nothing, and the empty filter updated every row.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an upload collection with `accept` refuses a file of another type when it is picked or dropped, with a toast and a field error, instead of at save. The file chooser offers the accepted types only.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an upload document's files are removed after the write, and only when no row uses them any more. Replacing the file of one version removes that version's old file and leaves the files of the other versions; replacing a file in a new version saves it once and keeps it; deleting a versioned document removes the files of all its versions; `file: null` clears `filename`, `mimeType` and `filesize` with the sizes; the image sizes of a file already missing are removed too.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: dropping text or a link on the upload drop zone no longer leaves the document form disabled until a reload.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a file without an extension (`README`) is saved as `readme` instead of the hidden file `.readme`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an upload's stored file name never reaches a file outside `static/medias`. A request cannot write `filename` or an image size column, which the saved file sets; a stored name with a folder, `.` or `..` in it is refused, so a delete removes nothing outside the folder and a new version copies no file from outside it.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an upload whose folder cannot be created fails with the folder's error, instead of landing in `root` with a 200. A folder another upload creates at the same moment is used as it is.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an upload named in a non-Latin script, such as `日本.jpg`, is saved as `file.jpg` instead of the hidden file `.jpg`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an image size named with a dash (`large-square`) reaches `doc.sizes.largeSquare`, and its generated type is valid TypeScript. Size names are camelCased once, when the config is built.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: uploading the same image twice reuses its existing sizes, width-only sizes such as `thumbnail` included, instead of writing every size again.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: an admin or staff member creating a user without a password gets a form error on `password`. The user was created with no password and could never sign in.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a field's `.validate()` adds a rule after the field's own check instead of replacing it, so `number('age').min(0).validate(...)` still refuses `-5`, and an email, a checkbox or a select with a rule still refuses a value of the wrong kind.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `validate.link` refuses a value that is not a link object with `invalid_field`, instead of throwing on `null`.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: saving a version checks the update right only. It also asked for `create` on the versions collection, so an editor who may update but not create got 403.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a filtered `find` with `limit` or `offset` on a collection or area with versions pages the documents that match. It cut the page first and filtered after, so matches past the first rows were missing.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a versioned list sorted on a content field is ordered by the version each document shows. It was ordered by the newest version, so an unpublished draft or an auto-save decided where a published document stood.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a version row cannot be created or updated through `/api/<collection>--versions` any more, which let a `PATCH` publish a draft beside the published version. A version is made and changed through its document. Reading and deleting version rows is for staff the document allows: a caller who is not staff now gets 403 on a delete, even when the document's `delete` rule allows them.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: the `between` and `not_between` filters take their two bounds, as `1,10` in a URL or `[1, 10]` in code, and `ilike` runs on SQLite. `between` matched nothing and `ilike` answered 500; a range that is not two values is refused.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a filter with several fields, or several operators on one field, applies all of them. `where[status][equals]=published&where[category][equals]=x` and `{ price: { greater_than: 1, less_than: 10 } }` kept only their first condition.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a filter value is read as the type of the column it is compared to. A text field keeps the value as sent, so `007`, `1e3`, an empty value or a date-like text are found, and a localized field matches a number-like value. A number, boolean or date column still reads the string as its type, a date column refuses a value that is not a date, and `in_array` takes a single value from code.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a `versionId` filter on a versioned list answers the document that holds that version. It answered nothing, because the filter was rewritten in place and read a second time.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a filter on a field of a related versioned document, such as `?where[category.title][equals]=News` with versioned `categories`, finds the documents whose related document has a version holding the value, a draft included. It found none.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: `?versionId=` and `?latest=true` on a write or a duplicate are staff's to name, as on a GET. From anyone else, a PATCH targets the published version and a duplicate copies it, so a draft or an auto-save no longer reaches a caller who cannot read it.
+
+- [`402a993`](https://github.com/bienbiendev/rime/commit/402a9932ce2c0eb6e98dbc08bea353ba79ef7cc0) - Fixed: a create or update the caller may write but not read answers `{ doc: { id } }` instead of 403 after the row is written, and leaves out the fields they may not read. The afterCreate and afterUpdate hooks get the whole document.
+
 ## 1.1.6
 
 ### Patch Changes
