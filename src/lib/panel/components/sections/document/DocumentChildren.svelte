@@ -1,10 +1,11 @@
 <script lang="ts">
-  import type { BuiltCollection } from '$lib/core/config/types';
-  import { PARAMS } from '$lib/core/constants.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import type { GenericDoc } from '$lib/core/prototype/types';
-  import { apiUrl, panelUrl } from '$lib/core/routes/util.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
+  import type { BuiltCollection } from '#lib/core/config/types.js';
+  import { PARAMS } from '#lib/core/constants.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import { apiUrl, panelUrl } from '#lib/core/routes/util.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { titleOrUntitled } from '#lib/panel/util/title.js';
 
   type Props = { config: BuiltCollection; id: string };
   const { config, id }: Props = $props();
@@ -65,7 +66,7 @@
     <div class="rz-document-children__list">
       {#each children as child (child.id)}
         <a class="rz-document-children__row" href={panelUrl(config.kebab, child.id)}>
-          <span class="rz-document-children__name">{child.title || t__('common.untitled')}</span>
+          <span class="rz-document-children__name">{titleOrUntitled(child.title)}</span>
           <span class="rz-document-children__path">{pathOf(child)}</span>
         </a>
       {/each}

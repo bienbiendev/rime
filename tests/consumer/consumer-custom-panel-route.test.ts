@@ -6,6 +6,17 @@ import { BASE_URL, PANEL_SEGMENT } from '../util.js';
 // against a default-configured instance doesn't produce a false failure.
 test.skip(PANEL_SEGMENT === 'panel', 'requires a non-default RIME_PANEL_ROUTE');
 
+// The pass moved the panel after init: the first request boots the app, which regenerates the
+// routes for the new segment and reloads. Wait for the custom segment to answer before checking.
+test.beforeAll(async ({ request }) => {
+  await expect
+    .poll(
+      async () => (await request.get(`${BASE_URL}/${PANEL_SEGMENT}`, { maxRedirects: 0 })).status(),
+      { timeout: 30000 }
+    )
+    .toBe(303);
+});
+
 test('old default /panel 404s once RIME_PANEL_ROUTE is customized', async ({ request }) => {
   const dashboard = await request.get(`${BASE_URL}/panel`, { maxRedirects: 0 });
   expect(dashboard.status()).toBe(404);

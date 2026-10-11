@@ -2,6 +2,7 @@ import test, { expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
+  BASE_URL,
   API_BASE_URL,
   openStream,
   panelUrl,
@@ -26,7 +27,7 @@ const SUFFIX = process.env.CONSUMER_TEST_SUFFIX || 'run';
 let adminId: string | undefined;
 
 test.beforeAll(async ({ request }) => {
-  const initResponse = await request.post(`${process.env.PUBLIC_RIME_URL}/api/init`, {
+  const initResponse = await request.post(`${BASE_URL}/api/init`, {
     data: { email: ADMIN_EMAIL, name: 'Admin User', password: PASSWORD }
   });
   if (![200, 404].includes(initResponse.status())) {
@@ -77,9 +78,7 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   // Create a page
   await nav.locator(`a[href="${panelPath('pages')}"]`).click();
   await page.waitForLoadState('networkidle');
-  // "^=" not "=": upload collections append ?uploadPath=... to their create link (see
-  // ButtonCreate.svelte), so an exact match would miss medias' create button.
-  await page.locator(`a[href^="${panelPath('pages', 'create')}"]`).click();
+  await page.locator(`a[href="${panelPath('pages', 'create')}"]`).click();
   await page.waitForLoadState('networkidle');
   const title = `Home ${SUFFIX}`;
   await page.locator('input.rz-input[name="title"]').pressSequentially(title, { delay: 50 });
@@ -209,4 +208,31 @@ test('a quiet SSE stream still carries the lock event', async ({ request }) => {
   const received = await stream.until('"event":"rime:lock"');
   expect(received).toContain('data: {"event":"rime:lock","payload":{}}');
   close();
+});
+
+test('the sidebar lists a custom page with no group, leaves out an area with panel: false, and a collection list shows its header', async ({
+  page
+}) => {
+  await page.goto(panelUrl('sign-in'));
+  await page.waitForLoadState();
+  await page.locator('input[name="email"]').pressSequentially(ADMIN_EMAIL, { delay: 50 });
+  await page.locator('input[name="password"]').pressSequentially(PASSWORD, { delay: 50 });
+  const signInButton = page.locator('button[type="submit"]');
+  await expect(signInButton).toBeEnabled();
+  await signInButton.click();
+  await page.waitForURL(panelUrl());
+
+  const nav = page.locator('.rz-nav__nav');
+  await expect(nav.locator(`a[href="${panelPath('settings')}"]`)).toBeVisible();
+  await expect(nav.locator(`a[href="${panelPath('hidden-settings')}"]`)).toHaveCount(0);
+
+  // panel.routes: the page renders its imported component
+  await nav.locator(`a[href="${panelPath('stats')}"]`).click();
+  await page.waitForURL(panelUrl('stats'));
+  await expect(page.locator('.consumer-stats')).toHaveText('Consumer stats');
+
+  // panel.components.collectionHeader
+  await nav.locator(`a[href="${panelPath('pages')}"]`).click();
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('.consumer-banner')).toHaveText('Consumer banner');
 });

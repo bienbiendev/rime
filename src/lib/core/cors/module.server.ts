@@ -2,6 +2,6 @@
 // a client build resolves the name to `undefined` and the feature simply carries no `configure`
 // there. See `core/dev/codegen/runtime/index.server.ts`.
 //
-// The handler is not here: `handlers/index.ts` imports it directly, because that file is
-// server-only and a feature no longer carries its handler as a property.
+// The handler is not here: `core/handler.server.ts` imports it directly, because that file is
+// server-only.
 export { configureCors } from './configure.server.js';

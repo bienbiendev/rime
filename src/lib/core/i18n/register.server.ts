@@ -1,7 +1,6 @@
 import { namespaces, type Dictionaries, type PanelLanguage } from './index.js';
 
-// Static mapping of all available translations
-// This makes imports statically analyzable by the bundler
+// Static imports, so the bundler can analyze them.
 const translationModules = {
   en: {
     common: () => import('./en/common.js'),
@@ -17,31 +16,27 @@ const translationModules = {
   }
 };
 
+/**
+ * The four panel dictionaries of `locale`, English for a language rime has no texts for. A
+ * namespace that fails to load is left out, the others are kept.
+ */
 export async function registerTranslation(locale: PanelLanguage) {
-  const dictionaries: Partial<Dictionaries> = {};
-  try {
-    for (const namespace of namespaces) {
-      // Check if we have this language/namespace combination
-      if (translationModules[locale]?.[namespace]) {
-        // Load the translation module
-        const module = await translationModules[locale][namespace]();
-        dictionaries[namespace] = module.default;
-      } else {
-        // Fallback to English if translation not found
-        const fallbackLocale = 'en';
-        if (translationModules[fallbackLocale]?.[namespace]) {
-          console.warn(
-            `Translation not found for ${locale}/${namespace}, falling back to ${fallbackLocale}`
-          );
-          const fallbackModule = await translationModules[fallbackLocale][namespace]();
-          dictionaries[namespace] = fallbackModule.default;
-        } else {
-          console.error(`Translation not found for ${namespace} in any language`);
-        }
-      }
-    }
-  } catch (error) {
-    console.error(`Failed to load translations:`, error);
+  const modules = translationModules[locale];
+  if (!modules) {
+    console.error(`No panel translations for "${locale}", English is used`);
   }
-  return dictionaries;
+  const loaded = await Promise.allSettled(
+    namespaces.map(
+      async (namespace) =>
+        [namespace, (await (modules ?? translationModules.en)[namespace]()).default] as const
+    )
+  );
+  for (const result of loaded) {
+    if (result.status === 'rejected') {
+      console.error(`Failed to load the "${locale}" panel translations:`, result.reason);
+    }
+  }
+  return Object.fromEntries(
+    loaded.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
+  ) as Partial<Dictionaries>;
 }

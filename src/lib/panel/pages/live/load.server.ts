@@ -1,12 +1,11 @@
-import { env } from '$env/dynamic/public';
-import { PARAMS } from '$lib/core/constants.js';
-import type { PrototypeSlug } from '$lib/core/prototype/types.js';
+import { SITE_URL } from '$app/env/public';
+import { PARAMS } from '#lib/core/constants.js';
+import type { PrototypeSlug } from '#lib/core/prototype/types.js';
 import type { ServerLoadEvent } from '@sveltejs/kit';
 import { error, redirect } from '@sveltejs/kit';
 
 export async function liveLoad(event: ServerLoadEvent) {
   const { user, rime } = event.locals;
-  event.depends('data:src');
   const params = event.url.searchParams;
 
   const id = params.get('id');
@@ -22,7 +21,7 @@ export async function liveLoad(event: ServerLoadEvent) {
   // Validate src is from the trusted frontend origin to prevent iframe injection
   if (src) {
     try {
-      const trustedOrigin = new URL(env.PUBLIC_RIME_URL).origin;
+      const trustedOrigin = new URL(SITE_URL).origin;
       if (new URL(src).origin !== trustedOrigin) {
         error(400, 'Invalid src');
       }
@@ -31,7 +30,7 @@ export async function liveLoad(event: ServerLoadEvent) {
     }
   }
 
-  if (user && src && slug && id) {
+  if (src && slug && id) {
     const output = { user, src: src, slug, locale };
 
     if (rime.config.isCollection(slug)) {

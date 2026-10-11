@@ -1,4 +1,4 @@
-import { checkLiveRedirect } from '$lib/panel/util/live.server.js';
+import { checkLiveRedirect } from '#lib/panel/util/live.server.js';
 import { error, type ServerLoadEvent } from '@sveltejs/kit';
 
 export const load = async (event: ServerLoadEvent) => {
@@ -7,7 +7,7 @@ export const load = async (event: ServerLoadEvent) => {
 
   const locale = parentSlug === 'news' ? 'en' : 'fr';
 
-  const query = `where[attributes.slug][equals]=${slug}`;
+  const query = `where[attributes.slug][equals]=${encodeURIComponent(slug ?? '')}`;
   const docs = await rime.collection('news').find({ query, locale, depth: 2, latest: true });
 
   if (!docs.length) {

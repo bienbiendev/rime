@@ -1,6 +1,6 @@
-import { STAFF_SLUG } from '$lib/core/auth/tables.js';
-import type { text } from '$lib/fields/text/index.js';
-import type { Collection } from '$lib/core/config/types.js';
+import { STAFF_SLUG } from '#lib/core/auth/constant.js';
+import type { text } from '#lib/fields/text/index.js';
+import type { Collection } from '#lib/core/config/types.js';
 import { metasFields } from './fields.js';
 
 type Input = { slug?: string; fields?: Collection<any>['fields'] };
@@ -24,9 +24,6 @@ type Input = { slug?: string; fields?: Collection<any>['fields'] };
  * tell you the row is stale. `set null` says it plainly: the documents outlive their author and
  * lose the attribution. A config where documents genuinely should not outlive their owner wants
  * `cascade` instead, and that is a one-word change here rather than a cleanup job.
- *
- * The reference has to be on the builder at construction, which is why this is written out rather
- * than wrapping the client half — the same reason `nested/module.server.ts` is.
  */
 export const augmentMetas = <T extends Input>(config: T): T => {
   const fields = [...(config.fields || [])];

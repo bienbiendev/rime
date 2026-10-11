@@ -12,12 +12,6 @@
   padding: var(--rz-size-3);
   border-radius: var(--rz-radius-lg);
   margin: 0 var(--gutter);
-
-  &.rz-dialog-content--xl {
-    height: calc(100vh - 4 * var(--gutter));
-    top: 50%;
-    grid-template-rows: 1fr;
-  }
 }
 
 @media (min-width: 768px) {
@@ -29,9 +23,6 @@
   }
   .rz-dialog-content--lg {
     width: var(--rz-size-lg);
-  }
-  .rz-dialog-content--xl {
-    width: calc(100vw - 4 * var(--gutter));
   }
 }
 

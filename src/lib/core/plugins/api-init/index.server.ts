@@ -1,12 +1,12 @@
-import { dev } from '$app/environment';
-import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
-import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
-import { extractData } from '$lib/core/pipeline/extract-data.server.js';
-import { hasAuthUser } from '$lib/core/auth/better-auth-tables.server.js';
-import type { FormErrors } from '$lib/types.js';
-import { trycatch, trycatchSync } from '$lib/util/function.js';
-import { email as validateEmail, password as validatePassword } from '$lib/core/fields/validate.js';
-import { json, type RequestHandler } from '@sveltejs/kit';
+import { hasAuthUser } from '#lib/core/auth/better-auth-tables.server.js';
+import { STAFF_SLUG } from '#lib/core/auth/constant.js';
+import { RimeError, RimeFormError } from '#lib/core/errors/index.js';
+import { email as validateEmail, password as validatePassword } from '#lib/core/fields/validate.js';
+import { extractData } from '#lib/core/pipeline/extract-data.server.js';
+import type { FormErrors } from '#lib/types.js';
+import { trycatch, trycatchSync } from '#lib/util/function.js';
+import { dev } from '$app/env';
+import { type RequestHandler } from '@sveltejs/kit';
 import { definePlugin, type Plugin } from '../index.js';
 
 export const apiInit = definePlugin(() => {
@@ -14,47 +14,28 @@ export const apiInit = definePlugin(() => {
     if (!dev) throw new RimeError(RimeError.NOT_FOUND);
 
     const alreadyHasAuthUser = await hasAuthUser(event.locals.rime.adapter);
-    if (alreadyHasAuthUser || (!alreadyHasAuthUser && !dev)) {
-      throw handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.API });
+    if (alreadyHasAuthUser) {
+      throw new RimeError(RimeError.NOT_FOUND);
     }
 
     const [extractError, data] = await trycatch(() => extractData(event.request));
-    if (extractError) {
-      throw handleError(new RimeError(RimeError.INVALID_DATA, extractError.message), {
-        context: ERROR_CONTEXT.API
-      });
-    }
+    if (extractError) throw new RimeError(RimeError.INVALID_DATA, extractError.message);
 
     const [error] = trycatchSync(() => validateForm(data));
-
-    if (error) {
-      throw handleError(new RimeError(RimeError.INVALID_DATA, error.message), {
-        context: ERROR_CONTEXT.ACTION,
-        formData: { email: data.email }
-      });
-    }
+    if (error) throw new RimeError(RimeError.INVALID_DATA, error.message);
 
     event.locals.isInit = true;
 
-    const [signUpError, response] = await trycatch(() =>
-      event.locals.rime.auth.api.signUpEmail({
-        body: {
-          email: data.email,
-          name: data.name,
-          password: data.password,
-          type: 'staff'
-        }
-      })
-    );
+    const response = await event.locals.rime.auth.api.signUpEmail({
+      body: {
+        email: data.email,
+        name: data.name,
+        password: data.password,
+        type: STAFF_SLUG
+      }
+    });
 
-    if (signUpError) {
-      throw handleError(signUpError, {
-        context: 'api',
-        formData: { email: data.email }
-      });
-    }
-
-    return json({ initialized: true, user: response.user });
+    return Response.json({ initialized: true, user: response.user });
   };
 
   return {
@@ -67,7 +48,7 @@ export const apiInit = definePlugin(() => {
   } as const satisfies Plugin;
 });
 
-const validateForm = (
+export const validateForm = (
   data: Record<string, string>
 ): data is { email: string; name: string; password: string } => {
   const errors: FormErrors = {};
@@ -93,8 +74,8 @@ const validateForm = (
   }
 
   const passwordValidation = validatePassword(password);
-  if (typeof passwordValidation === 'string') {
-    errors.name = RimeFormError.INVALID_FIELD;
+  if (password && typeof passwordValidation === 'string') {
+    errors.password = passwordValidation;
   }
 
   if (Object.keys(errors).length > 0) {

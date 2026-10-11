@@ -1,25 +1,13 @@
-import { readableReferences } from '$lib/core/fields/util.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { readDocument, runBeforeOperation } from '$lib/core/pipeline/run.server.js';
-import type { OperationContext } from '$lib/core/pipeline/types.js';
-import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
-import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { readDocument, runBeforeOperation } from '#lib/core/pipeline/run.server.js';
+import type { OperationContext } from '#lib/core/pipeline/types.js';
+import type { PrototypeApiContext } from '#lib/core/prototype/define.js';
+import type { CollectionSlug, GenericDoc } from '#lib/core/prototype/types.js';
+import type { ReadArgs } from '#lib/core/prototype/shared/operations/read-args.js';
+import { rowQuery } from '#lib/core/prototype/shared/operations/row-query.js';
 
-export type FindByIdArgs = {
-  id: string;
-  versionId?: string;
-  locale?: string | undefined;
-  depth?: number;
-  select?: string[];
-  /** The newest version, whatever its status; the published one otherwise. `PARAMS.LATEST`. */
-  latest?: boolean;
-  /**
-   * Whether a field the locale has not written reads from the other locales. `true` unless said
-   * otherwise; `false` is the locale's own rows, which is what a copy onto another row reads.
-   */
-  localeFallback?: boolean;
-};
+export type FindByIdArgs = ReadArgs & { id: string };
 
 type Args = FindByIdArgs & { ctx: PrototypeApiContext<BuiltCollection> };
 
@@ -47,15 +35,9 @@ export const findById = async <T extends GenericDoc>(args: Args) => {
     context
   });
 
-  const documentRaw = await rime.adapter.collection(config.slug).find({
-    id,
-    locale,
-    localeFallback,
-    select,
-    resolve: isSystemOperation ? undefined : readableReferences(config.fields, event.locals.user),
-    // `draft` and `versionId` are request parameters; which row they name is the feature's answer.
-    content: ctx.versionQuery({ latest, versionId })
-  });
+  const documentRaw = await rime.adapter
+    .collection(config.slug)
+    .find({ id, ...rowQuery(ctx, args) });
 
   // The adapter reports "nothing matched" and leaves the meaning to the caller, so an HTTP-shaped
   // decision like this one stays out of the database layer.

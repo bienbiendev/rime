@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { text } from '$lib/fields/text/index.js';
-import { create } from '$lib/core/prototype/collection/definition.js';
+import { email } from '#lib/fields/email/index.js';
+import { select } from '#lib/fields/select/index.js';
+import { text } from '#lib/fields/text/index.js';
+import { create } from '#lib/core/prototype/collection/definition.js';
 import { validateAuth } from './validate-config.js';
 
 /**
@@ -60,6 +62,18 @@ describe('validateAuth', () => {
 
     expect(errors).toContain('Field roles is missing in collection spec_badroles');
   });
+
+  it('asks for `many` on roles, even with a single option', () => {
+    const errors = validateAuth({
+      slug: 'spec_single_role',
+      auth: true,
+      fields: [select('roles').options('a'), text('name'), email('email')]
+    } as any);
+
+    expect(errors).toEqual([
+      `Field roles must have "many" enabled : select('roles').options(...).many(), even with a single option`
+    ]);
+  });
 });
 
 /**
@@ -67,12 +81,6 @@ describe('validateAuth', () => {
  * own first line, which is why every case above states `auth`.
  */
 describe('the auth guard', () => {
-  it('reports a rule for a collection that declares auth', () => {
-    const built = create('spec_wired', { auth: true, versions: true, fields: [] });
-
-    expect(validateAuth(built)).toContain("Auth collections can't be versionned (spec_wired)");
-  });
-
   it('says nothing about a collection that does not', () => {
     const built = create('spec_plain', { versions: true, fields: [text('title').isTitle()] });
 

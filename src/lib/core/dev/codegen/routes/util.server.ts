@@ -1,10 +1,8 @@
-import type { Config } from '$lib/core/config/types.js';
-import cache from '$lib/core/dev/cache.server.js';
-import { CONFIG_DIR } from '$lib/core/dev/constants.server.js';
-import { restSurface } from '$lib/core/dev/prototype-routes.server.js';
-import { rimeVersion } from '$lib/core/dev/version.server.js';
-import { PANEL_ROUTE } from '$lib/core/routes/constants.server.js';
-import { slugify } from '$lib/util/string.js';
+import type { Config } from '#lib/core/config/types.js';
+import { CONFIG_DIR, PANEL_ROUTE } from '#lib/core/dev/constants.server.js';
+import { restSurface } from '#lib/core/dev/prototype-routes.server.js';
+import { rimeVersion } from '#lib/core/dev/version.server.js';
+import { slugify } from '#lib/util/string.js';
 import fs from 'fs';
 import path from 'path';
 import { templatesSurface } from './common.server.js';
@@ -12,8 +10,8 @@ import { templatesSurface } from './common.server.js';
 /**
  * Types for route definitions
  */
-export type RouteTemplateFunction<T extends any[] = any[]> = (...args: T) => string;
-export type RouteDefinition = Record<string, RouteTemplateFunction>;
+type RouteTemplateFunction<T extends any[] = any[]> = (...args: T) => string;
+type RouteDefinition = Record<string, RouteTemplateFunction>;
 export type Routes = Record<string, RouteDefinition>;
 
 /**
@@ -26,18 +24,19 @@ export type Routes = Record<string, RouteDefinition>;
  * panel, config   baked into the param matchers and the layouts' config import path
  * custom, css     written straight from config.panel
  * prototypes      the slug lists the [slug=<name>] matchers accept
+ * locales         the codes the `locale` matcher accepts
  * rest            one +server.ts per prototype route path, and the methods it exports
  * templates       the fixed files as the package's templates write them today
  * version         the package the templates ship with
  * ```
  *
- * `PANEL_ROUTE` and `CONFIG_DIR` are read once at process start, so a changed value only takes
- * effect after a restart — and only if that restart's regen notices it.
+ * `PANEL_ROUTE` and `CONFIG_DIR` are read once at process start: a changed value takes effect at
+ * the next restart, which regenerates the routes.
  *
- * @returns true if routes should be regenerated, false otherwise
+ * It stores nothing: `generateRoutes` stores it once the route tree is written.
  */
-export function shouldRegenerateRoutes<T extends Config>(config: T): boolean {
-  const memo = `
+export function routesMemo<T extends Config>(config: T): string {
+  return `
     panel:${PANEL_ROUTE}
     config:${CONFIG_DIR}
     custom:${
@@ -51,15 +50,11 @@ export function shouldRegenerateRoutes<T extends Config>(config: T): boolean {
     prototypes:${[...(config.collections || []), ...(config.areas || [])]
       .map((p) => `${p.type}:${p.slug}`)
       .join(',')}
+    locales:${(config.localization?.locales ?? []).map((locale) => locale.code).join(',')}
     rest:${restSurface()}
     templates:${templatesSurface()}
     version:${rimeVersion()}
   `;
-
-  if (cache.matches('routes', memo)) return false;
-
-  cache.remember('routes', memo);
-  return true;
 }
 
 /**
@@ -80,14 +75,16 @@ export function ensureDir(dirPath: string): void {
  * Writes a route file with its content
  * @param basePath The base path where routes are generated
  * @param routePath The specific route path
- * @param fileType The type of file to generate (page, pageServer, layout, layoutServer)
+ * @param fileType layout, layoutServer, page, pageServer, error, server, or any other name for
+ * `+<name>.svelte`; an `@<group>` suffix goes before the extension: `page@(rime)` ->
+ * `+page@(rime).svelte`
  * @param content The content to write to the file
  * @example
  * // Write a page file for a collection
  * const basePath = '/path/to/src/routes';
  * const routePath = '(rime)/[panel=panel]/news';
  * const fileType = 'page';
- * const content = '<script>\n  import { Collection } from "rime/panel"\n</script>...';
+ * const content = '<script>\n  import { Collection } from "rimecms/panel"\n</script>...';
  * writeRouteFile(basePath, routePath, fileType, content);
  * // Creates /path/to/src/routes/(rime)/[panel=panel]/news/+page.svelte with the provided content
  */

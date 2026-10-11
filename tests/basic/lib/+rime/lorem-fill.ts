@@ -1,5 +1,5 @@
-import type { RichTextFeatureNode } from '$lib/fields/rich-text/core/types';
-import { SquarePilcrow } from '@lucide/svelte';
+import type { RichTextFeatureNode } from '#lib/fields/rich-text/core/types.js';
+import SquarePilcrow from '@lucide/svelte/icons/square-pilcrow';
 
 const lorems = [
   'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin auctor, sapien nec mollis pharetra, ante massa ullamcorper nisl, at blandit magna purus at est.',

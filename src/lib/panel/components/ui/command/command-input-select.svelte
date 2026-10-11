@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Command as CommandPrimitive } from 'bits-ui';
-  import { Search } from '@lucide/svelte';
+  import Search from '@lucide/svelte/icons/search';
 
   let {
     ref = $bindable(null),
@@ -10,7 +10,7 @@
   }: CommandPrimitive.InputProps = $props();
 </script>
 
-<div class="rz-command-input-select {className}" data-command-input-wrapper="">
+<div class="rz-command-input-select {className}">
   <Search class="rz-command-input-select__icon" size={12} />
   <CommandPrimitive.Input
     class="rz-command-input-select__input"

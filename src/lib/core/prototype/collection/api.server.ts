@@ -1,15 +1,14 @@
-import { RimeError } from '$lib/core/errors/index.js';
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import type { RegisterCollection } from '$lib/index.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import type { RegisterCollection } from '#lib/index.js';
 import type { PrototypeApiContext } from '../define.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import type { Dic } from '$lib/util/types.js';
-import type { WithRelationResolved } from '$lib/core/fields/types.js';
-import { withoutPrivateFields } from '$lib/core/auth/constant.server.js';
-import { isAuth } from '$lib/core/auth/enabled.js';
-import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
+import type { Dic } from '#lib/util/types.js';
+import type { WithRelationResolved } from '#lib/core/fields/types.js';
+import { versionsReadQuery } from '#lib/core/prototype/shared/versions/read-query.js';
+import { cachedRead, fallbackLocale } from '#lib/core/prototype/shared/api.server.js';
 import type { CollectionSlug } from '../types.js';
-import type { OperationQuery } from '$lib/core/pipeline/types.js';
+import type { OperationQuery } from '#lib/core/pipeline/types.js';
 import { create, type CreateArgs } from './operations/create.js';
 import { deleteById, type DeleteByIdArgs } from './operations/delete-by-id.js';
 import { deleteDocs, type DeleteArgs } from './operations/delete.js';
@@ -21,7 +20,7 @@ import { updateById, type UpdateByIdArgs } from './operations/update-by-id.js';
 import { updateSlugById, type UpdateSlugByIdArgs } from './operations/update-slug-by-id.js';
 
 /** What building a collection's API for one request needs. */
-export type CollectionApiArgs = {
+type CollectionApiArgs = {
   config: BuiltCollection;
   event: RequestEvent;
   defaultLocale: string | undefined;
@@ -31,10 +30,7 @@ export type CollectionApiArgs = {
  * Everything `rime.collection('pages')` can do, in the collection's own folder, beside the
  * operations that implement it.
  *
- * A class, and the operations are handed `this`. It was a `context()` building a plumbing object,
- * a `shape(ctx)` returning the verbs, a `build()` wiring `system` around them and a
- * `collectionApi()` calling that — four functions to hand back one object, and a
- * `ReturnType<typeof shape>` to name it afterwards.
+ * A class. Each operation is handed `this`.
  *
  * The plumbing members below `system` are what the operations reach for; `CollectionApi` at the
  * foot of this file is the list a caller sees.
@@ -70,26 +66,14 @@ class CollectionAPI<
     return isSystem ? new CollectionAPI<Doc>(this.args, true) : this;
   }
 
-  /**
-   * What a new document of this collection starts with: every default applied, and no id.
-   *
-   * An auth collection hands back nothing private. Only a collection signs in, which is why this
-   * step is here and not on the area's.
-   *
-   * **Likely dead, to be checked and dropped.** `withoutPrivateFields` strips `PRIVATE_FIELDS`, and
-   * of those only `apiKeyId` is ever a member of `config.fields` — `augment.ts` adds it, hidden, on
-   * an apiKey collection. `password` is appended per-operation by `augmentFieldsPassword`, which
-   * runs *after* the initial merge, and the rest are columns no field declares. So the one member
-   * this can remove is `apiKeyId`, which `removePrivateFields` takes off again on every read.
-   */
+  /** What a new document of this collection starts with: every default applied, and no id. */
   initial(): Doc {
-    const doc = this.config.initial(this.event);
-    return (isAuth(this.config) ? withoutPrivateFields(doc) : doc) as Doc;
+    return this.config.initial(this.event) as Doc;
   }
 
   /** The locale to act in: the one asked for, else the request's, else the config's default. */
   fallbackLocale(locale?: string): string | undefined {
-    return locale || this.event.locals.locale || this.defaultLocale;
+    return fallbackLocale(this, locale);
   }
 
   /** Which version row a read means — see `versionsReadQuery`. */
@@ -99,16 +83,7 @@ class CollectionAPI<
 
   /** Read through the API cache when it is on and this is not a system call. */
   cached<T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T> {
-    if (!this.event.locals.cacheEnabled || this.isSystemOperation) return read();
-
-    const cacheKey = this.event.locals.rime.cache.createKey(operation, {
-      slug: this.config.slug,
-      userEmail: this.event.locals.user?.email,
-      userRoles: this.event.locals.user?.roles,
-      ...key
-    });
-
-    return this.event.locals.rime.cache.get(cacheKey, read);
+    return cachedRead(this, operation, key, read);
   }
 
   /**
@@ -159,7 +134,7 @@ class CollectionAPI<
   ): Promise<WithRelationResolved<Doc, D>[]> {
     const {
       query,
-      locale,
+      locale: askedLocale,
       sort = '-updatedAt',
       depth = 0,
       limit,
@@ -168,10 +143,9 @@ class CollectionAPI<
       select,
       localeFallback
     } = args;
+    // The locale the read runs in, for the key as for the read
+    const locale = this.fallbackLocale(askedLocale);
 
-    // The key holds the locale as the *caller* gave it, not the resolved one — preserved from
-    // the class this replaces. Reachable only from a local-API call that omits `locale` while
-    // the API cache is on, which the REST layer never does: it always passes rime.getLocale().
     return this.cached(
       'collection.find',
       { select, sort, depth, limit, offset, locale, latest, query, localeFallback },
@@ -186,7 +160,7 @@ class CollectionAPI<
           offset,
           latest,
           localeFallback,
-          locale: this.fallbackLocale(locale)
+          locale
         })
     ) as Promise<WithRelationResolved<Doc, D>[]>;
   }
@@ -197,7 +171,7 @@ class CollectionAPI<
    * For collections with versioning:
    * - If versionId is provided: Retrieves that specific version
    * - If no versionId and latest=true: Retrieves the newest version, whatever its status
-   * - If no versionId and draft=false: Retrieves the published version
+   * - If no versionId and no latest: Retrieves the published version
    *
    * @example
    * // Get published version
@@ -222,11 +196,14 @@ class CollectionAPI<
   findById<D extends number = 0>(
     args: FindByIdArgs & { depth?: D }
   ): Promise<WithRelationResolved<Doc, D>> {
-    const { id, versionId, locale, select, latest, depth = 0, localeFallback } = args;
+    const { id, versionId, locale: askedLocale, select, latest, depth = 0, localeFallback } = args;
 
     if (!id) {
       throw new RimeError(RimeError.NOT_FOUND);
     }
+
+    // The locale the read runs in, for the key as for the read
+    const locale = this.fallbackLocale(askedLocale);
 
     return this.cached(
       'collection.findById',
@@ -240,7 +217,7 @@ class CollectionAPI<
           depth,
           latest,
           localeFallback,
-          locale: this.fallbackLocale(locale)
+          locale
         })
     ) as Promise<WithRelationResolved<Doc, D>>;
   }
@@ -252,11 +229,13 @@ class CollectionAPI<
    *
    * @example
    * const medias = await rime.collection('medias').findByIds({ ids: ['a1', 'b2'] });
+   * // Only these fields, as find's `select`
+   * const titles = await rime.collection('pages').findByIds({ ids, select: ['title', 'attributes.title'] });
    */
   findByIds<D extends number = 0>(
     args: FindByIdsArgs & { depth?: D }
   ): Promise<WithRelationResolved<Doc, D>[]> {
-    const { ids, locale, depth = 0, localeFallback } = args;
+    const { ids, locale, depth = 0, localeFallback, select } = args;
 
     if (!ids.length) return Promise.resolve([]);
 
@@ -265,6 +244,7 @@ class CollectionAPI<
       ids,
       depth,
       localeFallback,
+      select,
       locale: this.fallbackLocale(locale)
     }) as Promise<WithRelationResolved<Doc, D>[]>;
   }
@@ -331,7 +311,7 @@ class CollectionAPI<
    * });
    */
   delete(args: DeleteArgs = {}): Promise<string[]> {
-    return deleteDocs({ ctx: this, ...args });
+    return deleteDocs({ ctx: this, ...args, locale: this.fallbackLocale(args.locale) });
   }
 }
 

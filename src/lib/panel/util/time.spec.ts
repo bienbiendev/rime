@@ -1,6 +1,6 @@
-import { createI18n } from '$lib/core/i18n/index.js';
-import en from '$lib/core/i18n/en/common.js';
-import fr from '$lib/core/i18n/fr/common.js';
+import { createI18n } from '#lib/core/i18n/index.js';
+import en from '#lib/core/i18n/en/common.js';
+import fr from '#lib/core/i18n/fr/common.js';
 import { describe, expect, it } from 'vitest';
 import { formatWhen } from './time.js';
 

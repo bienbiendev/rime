@@ -6,13 +6,15 @@ import { logger } from '../logger.server.js';
 import { findModulePair, scanModulePairs } from './codegen/runtime/index.server.js';
 import { parseExportNames } from './codegen/runtime/parse-exports.server.js';
 import { sanitize } from './codegen/sanitize/index.server.js';
+import { denyStorage } from './deny-storage.server.js';
 import {
   CONFIG_DIR,
-  GENERATED_DIR,
   generatedConfigServerPath,
+  libImportSpecifier,
   schemaPath
 } from './constants.server.js';
 import { ensureHasInit } from './ensure.server.js';
+import { logSettings } from './env.server.js';
 
 const dev = process.env.NODE_ENV === 'development';
 
@@ -21,15 +23,10 @@ export function regenerateModulesDeclaration() {
   const blocks = Array.from(scanModulePairs(libDir))
     .map(([subpath, entry]) => {
       // The server half where there is one: a pair's two halves share their export names, and a
-      // name only one side declares is always the server's (`uploadHooks`, and every other piece
-      // a browser has no use for).
-      const file = entry.server || entry.client;
-      if (!file) return null;
-      const aliased = `$lib/${path.relative(libDir, file).split(path.sep).join('/')}`.replace(
-        /\.ts$/,
-        '.js'
-      );
-      return `declare module '$rime/modules:${subpath}' {\n  export * from '${aliased}';\n}`;
+      // name only one side declares is always the server's: a piece a browser has no use for.
+      const half = entry.server || entry.client;
+      if (!half) return null;
+      return `declare module '$rime/modules:${subpath}' {\n  export * from '${libImportSpecifier(half)}';\n}`;
     })
     .filter((block) => block !== null)
     .join('\n\n');
@@ -40,7 +37,22 @@ export function regenerateModulesDeclaration() {
   else rmSync(file, { force: true });
 }
 
+/**
+ * Whether `file`, an absolute path as the watcher reports it, sits inside the config folder
+ * `configDir` (`RIME_CONFIG_DIR`, relative to the project). The trailing separator keeps the
+ * sibling `<configDir>.generated/` out.
+ *
+ * ```ts
+ * isInConfigDir('/site/src/cms/pages.ts', './src/cms'); // true
+ * isInConfigDir('/site/src/cms.generated/pages.ts', './src/cms'); // false
+ * ```
+ */
+export const isInConfigDir = (file: string, configDir: string) =>
+  path.resolve(file).startsWith(path.resolve(process.cwd(), configDir) + path.sep);
+
 export function rime(): Plugin {
+  logger.configure(logSettings);
+
   /** Two reserved names, always resolved to *the currently running app's* generated
    *  config/schema, independent of who's asking — a third-party plugin importing
    *  `$rime/config` gets the host app's config, never its own. Unrelated to the modules
@@ -61,10 +73,8 @@ export function rime(): Plugin {
    * The path is part of the specifier, so a name is unique per pair rather than per package, and
    * a name the pair does not export is an error at that path instead of `undefined` at link time.
    *
-   * This hook only ever answers for *this* project's own `src/lib`. A dependency's halves were
-   * rewritten to real package subpaths by its own prepack, so nothing here crosses into
-   * `node_modules` — which is what used to put a raw file path in the browser's module graph
-   * (see notes/isomorphic-module.md).
+   * This hook only answers for this project's own `src/lib`. A dependency's halves are rewritten
+   * to real package subpaths by its `rime package`, so nothing here reaches into `node_modules`.
    */
   const VModulesPrefix = '$rime/modules:';
   const libDir = () => path.resolve(process.cwd(), 'src/lib');
@@ -84,6 +94,9 @@ export function rime(): Plugin {
     name: 'virtual-rime',
 
     configureServer(server) {
+      // Ahead of Vite's own middlewares: no request reaches storage/, the uploads' folder
+      server.middlewares.use(denyStorage);
+
       // Add a listener for when the server starts
       server.httpServer?.once('listening', () => {
         dev && ensureHasInit();
@@ -93,7 +106,7 @@ export function rime(): Plugin {
 
         if (shouldRebuild && existsSync(RIME_DEV_CACHE_DIR)) {
           rmSync(RIME_DEV_CACHE_DIR, { recursive: true, force: true });
-          logger.info('--rebuild : node_modules/.rime folder deleted');
+          logger.debug('--rebuild : node_modules/.rime folder deleted');
         }
       });
 
@@ -133,7 +146,7 @@ export function rime(): Plugin {
           }
           // Trigger generation
           try {
-            // ssrLoadModule wants the real .ts file path, not a $lib/*.js-style import
+            // ssrLoadModule wants the real .ts file path, not a #lib/*.js-style import
             // specifier — different consumer than configImportPaths() (used for generated
             // source code).
             const mod = await server.ssrLoadModule(generatedConfigServerPath());
@@ -155,10 +168,7 @@ export function rime(): Plugin {
       }
 
       server.watcher.on('change', (modulePath) => {
-        const isConfigChange =
-          modulePath.includes(CONFIG_DIR) && !modulePath.includes(GENERATED_DIR);
-
-        if (!isConfigChange) return;
+        if (!isInConfigDir(modulePath, CONFIG_DIR)) return;
 
         if (reloadTimer) clearTimeout(reloadTimer);
         reloadTimer = setTimeout(() => {
@@ -203,7 +213,7 @@ export function rime(): Plugin {
       }
 
       if (IS_RIME_REPO && file.includes('src/lib/core/config')) {
-        logger.info('reload core config');
+        logger.debug('reload core config');
         const module = invalidateVModule(VCoreId);
         if (module) return [module];
       }
@@ -244,12 +254,10 @@ export function rime(): Plugin {
       }
 
       if (id === resolvedVModule(VSchemaId) && isServer) {
-        // Mirrors write.server.ts (adapter-sqlite/generate-schema) — the adapter itself never
-        // needed to change for this, it already goes through this virtual module instead of a
-        // hardcoded path.
+        // The schema file that adapter-sqlite/generate-schema/write.server.ts writes.
         const schemaFilePath = schemaPath();
         if (existsSync(schemaFilePath)) {
-          const modulePath = schemaFilePath.replace('.ts', '.js');
+          const modulePath = schemaFilePath.replace(/\.ts$/, '.js');
           return `export * from '${modulePath}'; export { default } from '${modulePath}';`;
         }
       }

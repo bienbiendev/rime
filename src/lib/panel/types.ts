@@ -1,4 +1,3 @@
-import type { WithRequired } from 'better-auth/svelte';
 import type { Component, Snippet } from 'svelte';
 import type { GenericDoc } from '../core/prototype/types.js';
 export type { Navigation } from '../core/routes/panel-navigation.js';
@@ -23,7 +22,5 @@ export type CollectionProps = {
   };
   children: Snippet;
 };
-
-export type Aria = WithRequired<Partial<Route>, 'title'>[];
 
 export type FormErrors<T extends string = string> = Record<T, string>;

@@ -26,7 +26,7 @@ describe('localeOrder', () => {
     expect(localeOrder(ctx(trilingual), 'de', false)).toEqual(['de']);
   });
 
-  it('is nothing when the read names no locale', () => {
+  it('is nothing when the read names no locale, and the locale alone without localization', () => {
     expect(localeOrder(ctx(trilingual), undefined)).toBeUndefined();
     expect(localeOrder(ctx(undefined), 'fr')).toEqual(['fr']);
   });

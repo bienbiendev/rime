@@ -1,8 +1,7 @@
-import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
-import { RimeError } from '$lib/core/errors/index.js';
+import { RimeError } from '#lib/core/errors/index.js';
 import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
 
-/** See the collection wrapper for why this comes from the accessor and not from `../index`. */
+/** The area API for this request: the type `rime.area(slug)` hands back. */
 type AreaApi = ReturnType<App.Locals['rime']['area']>;
 
 type Run = (args: { event: RequestEvent; area: AreaApi }) => Promise<Response>;
@@ -16,11 +15,9 @@ export const endpoint =
   (run: Run): RequestHandler =>
   (event) => {
     const { rime } = event.locals;
-    const slug = event.params.slug;
+    const slug = rime.routes.slug;
 
-    if (!rime.config.isArea(slug)) {
-      return handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.API });
-    }
+    if (!rime.config.isArea(slug)) throw new RimeError(RimeError.NOT_FOUND);
 
     return run({ event, area: rime.area(slug) });
   };

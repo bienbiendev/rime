@@ -1,12 +1,20 @@
+import { RIME_CACHE_ENABLED, RIME_CACHE_STRATEGY } from '$app/env/private';
 import { getRequestEvent } from '$app/server';
-import { RimeError } from '$lib/core/errors/index.js';
-import { logger } from '$lib/core/logger.server.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { logger } from '#lib/core/logger.server.js';
 import fs from 'fs';
+import { createHash } from 'node:crypto';
+import { deserialize, serialize } from 'node:v8';
 import path from 'path';
 
 const cachePath = path.resolve(process.cwd(), '.cache');
 
-const IS_ENV_CACHE_ENABLED = process.env.RIME_CACHE_ENABLED === 'true';
+/**
+ * The file a key is kept in, under `.cache/` in the working directory: its hash, so any key stays
+ * a file name there.
+ */
+const fileOf = (key: string) =>
+  path.join(cachePath, `${createHash('sha256').update(key).digest('hex')}.bin`);
 
 type CacheStrategy = 'memory' | 'disk';
 
@@ -15,13 +23,13 @@ export class Cache {
   private static readonly MAX_MEMORY_ENTRIES = 1000;
 
   private static getCacheStrategy(): CacheStrategy {
-    const strategy = process.env.RIME_CACHE_STRATEGY?.toLowerCase();
+    const strategy = RIME_CACHE_STRATEGY.toLowerCase();
     return strategy === 'memory' || strategy === 'disk' ? strategy : 'memory';
   }
 
   static async get<T>(key: string, loadData: () => Promise<T>): Promise<T> {
     const event = getRequestEvent();
-    if (!event.locals.cacheEnabled || !IS_ENV_CACHE_ENABLED) {
+    if (!event.locals.cacheEnabled || !RIME_CACHE_ENABLED) {
       logger.debug(`Cache disabled, loading ${key}`);
       return loadData();
     }
@@ -38,37 +46,33 @@ export class Cache {
   }
 
   private static async getFromMemory<T>(key: string, loadData: () => Promise<T>): Promise<T> {
-    // Check memory cache only
+    // Each request gets its own copy: a change made by one never reaches the next
     if (this.memoryCache.has(key)) {
-      return this.memoryCache.get(key);
+      return structuredClone(this.memoryCache.get(key));
     }
 
-    // Load fresh data and cache in memory only
     const freshData = await loadData();
-    this.setMemoryCache(key, freshData);
+    this.setMemoryCache(key, structuredClone(freshData));
     return freshData;
   }
 
   private static async getFromDisk<T>(key: string, loadData: () => Promise<T>): Promise<T> {
-    // Check disk cache only
-    const keyPath = path.join(cachePath, key + '.txt');
+    // Kept with `node:v8`: a hit answers the same shape as the read, dates as dates
     try {
-      const data = await fs.promises.readFile(keyPath, 'utf8');
-      return JSON.parse(data);
+      return deserialize(await fs.promises.readFile(fileOf(key)));
     } catch (err: any) {
       if (err.code !== 'ENOENT') {
         logger.error(err);
       }
     }
 
-    // Load fresh data and cache to disk only
     const freshData = await loadData();
-    await this.setToDisk(key, JSON.stringify(freshData));
+    await this.setToDisk(key, serialize(freshData));
     return freshData;
   }
 
   private static setMemoryCache(key: string, value: any) {
-    // Simple LRU: remove oldest entry if at limit
+    // At the limit, drop the oldest entry (first in, first out).
     if (this.memoryCache.size >= this.MAX_MEMORY_ENTRIES) {
       const firstKey = this.memoryCache.keys().next().value;
       if (firstKey) {
@@ -78,29 +82,11 @@ export class Cache {
     this.memoryCache.set(key, value);
   }
 
-  private static async setToDisk(key: string, value: string) {
+  private static async setToDisk(key: string, value: Buffer) {
     if (!fs.existsSync(cachePath)) {
       fs.mkdirSync(cachePath);
     }
-    const keyPath = path.join(cachePath, key + '.txt');
-    await fs.promises.writeFile(keyPath, value);
-  }
-
-  static async delete(key: string) {
-    const strategy = this.getCacheStrategy();
-
-    if (strategy === 'memory') {
-      this.memoryCache.delete(key);
-    } else {
-      const keyPath = path.join(cachePath, key + '.txt');
-      try {
-        await fs.promises.rm(keyPath);
-      } catch (err: any) {
-        if (err.code !== 'ENOENT') {
-          logger.error('Failed to delete cache file:', err);
-        }
-      }
-    }
+    await fs.promises.writeFile(fileOf(key), value);
   }
 
   static clear() {

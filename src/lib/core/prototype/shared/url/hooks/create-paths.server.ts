@@ -1,5 +1,5 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
 import { addAddresses, withAddress } from '../addresses.server.js';
 
 /** A new page gets its address in every locale: a slug from its title, under its parent, a url. */

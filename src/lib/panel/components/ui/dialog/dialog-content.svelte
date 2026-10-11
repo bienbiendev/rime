@@ -24,12 +24,12 @@
         }
       ]
     >;
-    size?: 'sm' | 'default' | 'lg' | 'xl';
+    size?: 'sm' | 'default' | 'lg';
   } = $props();
 
   /**
-   * Enter clicks the button showing `enter`. A field, a button or a link with the focus keeps
-   * the key, and so does an input in a form, which submits it.
+   * Enter clicks the button showing `enter`. A textarea, a select, an editable area, a button or a
+   * link with the focus keeps the key, and so does an input in a form, which submits it.
    */
   function enter(event: KeyboardEvent & { currentTarget: HTMLDivElement }) {
     onkeydown?.(event);

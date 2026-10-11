@@ -1,9 +1,7 @@
-import { PARAMS } from '$lib/core/constants.js';
-import { handleError } from '$lib/core/errors/handler.server.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { claimEditLock, releaseEditLock } from '$lib/core/prototype/shared/metas/lock.server.js';
-import { trycatch } from '$lib/util/function.js';
-import { json } from '@sveltejs/kit';
+import { access } from '#lib/core/auth/access.js';
+import { PARAMS } from '#lib/core/constants.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { answerLock } from '#lib/core/prototype/shared/metas/lock-answer.server.js';
 import { endpoint } from './endpoint.server.js';
 
 /**
@@ -16,18 +14,18 @@ import { endpoint } from './endpoint.server.js';
  *
  * Neither method goes near the write pipeline: `claimEditLock`/`releaseEditLock` set the two lock
  * columns through the adapter's `updateWhere`, so holding a document leaves `updatedAt` and
- * `updatedBy` alone and cuts no version. The fields' own `.access({ update })` decides who may
- * call this at all; the update access below decides which documents.
+ * `updatedBy` alone and cuts no version. Only staff may call it, since the lock names a staff
+ * member; the update access below decides which documents.
  */
 const run = (intent: 'claim' | 'release') =>
   endpoint(async ({ event, collection }) => {
     const { user } = event.locals;
     const id = event.params.id;
 
-    if (!user) return handleError(new RimeError(RimeError.UNAUTHORIZED), { context: 'api' });
-    if (!id) return handleError(new RimeError(RimeError.NOT_FOUND), { context: 'api' });
-    if (!collection.config.access.update(user, { id })) {
-      return handleError(new RimeError(RimeError.UNAUTHORIZED), { context: 'api' });
+    if (!user || !access.isStaff(user)) throw new RimeError(RimeError.UNAUTHORIZED);
+    if (!id) throw new RimeError(RimeError.NOT_FOUND);
+    if (!collection.config.access.update(user, { event, id })) {
+      throw new RimeError(RimeError.UNAUTHORIZED);
     }
 
     // Past the access check above, so `system()`: the lock sits on a document this caller may
@@ -36,29 +34,9 @@ const run = (intent: 'claim' | 'release') =>
     // The row on the caller's screen when they name one, else the newest: a lock is held on the
     // version being edited, and an auto-saved row is only ever reached by its `versionId`.
     const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
-    const [readError, doc] = await trycatch(() =>
-      collection.system().findById({ id, versionId, latest: true })
-    );
-    if (readError) return handleError(readError, { context: 'api' });
+    const doc = await collection.system().findById({ id, versionId, latest: true });
 
-    // A `pagehide` beacon can only POST, so a release arriving that way says so in the query.
-    // DELETE stays the method for every release that has time to pick one.
-    const releasing = intent === 'release' || event.url.searchParams.get('release') === 'true';
-    const force = !releasing && event.url.searchParams.get('force') === 'true';
-    const args = { event, config: collection.config, doc, userId: user.id, force };
-
-    const [error, held] = await trycatch(async () => {
-      if (releasing) {
-        await releaseEditLock(args);
-        return false;
-      }
-      return claimEditLock(args);
-    });
-    if (error) return handleError(error, { context: 'api' });
-
-    // `held` is the answer, not a failure: a heartbeat that lost the document has to render that,
-    // so somebody else holding it is an ordinary 200.
-    return json({ held: !!held });
+    return answerLock({ event, intent, config: collection.config, doc, userId: user.id });
   });
 
 export const restLock = run('claim');

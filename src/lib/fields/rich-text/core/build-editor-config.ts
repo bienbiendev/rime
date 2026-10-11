@@ -1,7 +1,7 @@
-import { t__ } from '$lib/core/i18n/index.js';
-import type { RichTextEditorConfig, RichTextFeature } from '$lib/fields/rich-text/core/types.js';
-import { getTitleContext, TITLE_CTX } from '$lib/panel/context/title.js';
-import type { WithRequired } from '$lib/util/types.js';
+import { t__ } from '#lib/core/i18n/index.js';
+import type { RichTextEditorConfig, RichTextFeature } from '#lib/fields/rich-text/core/types.js';
+import { getTitleContext, TITLE_CTX } from '#lib/panel/context/title.js';
+import type { WithRequired } from '#lib/util/types.js';
 import type { EditorOptions } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
 import HardBreak from '@tiptap/extension-hard-break';
@@ -49,7 +49,6 @@ export function buildEditorConfig(args: BuildEditorConfigArgs): RichTextEditorCo
       CurrentNodeAttribute,
       Typography,
       Placeholder.configure({
-        emptyEditorClass: 'empty-editor',
         placeholder: withSuggestion ? t__('fields.write_or_slash') : t__('fields.write_something')
       })
     ]

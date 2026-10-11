@@ -1,14 +1,15 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import { getNavContext } from '$lib/panel/context/nav.svelte.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import { getNavContext } from '#lib/panel/context/nav.svelte.js';
   import {
     uploadFiles,
     type UploadProgress as Progress,
     type UploadTarget
-  } from '$lib/panel/util/upload-file.js';
-  import { Upload, X } from '@lucide/svelte';
+  } from '#lib/panel/util/upload-file.js';
+  import Upload from '@lucide/svelte/icons/upload';
+  import X from '@lucide/svelte/icons/x';
   import UploadProgress from './UploadProgress.svelte';
 
   type Props = {

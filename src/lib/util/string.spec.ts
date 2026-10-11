@@ -1,67 +1,27 @@
 import { describe, expect, it, test } from 'vitest';
-import { mapSegments, sanitize, toKebabCase, toSnakeCase } from './string.js';
+import * as util from './index.js';
+import { mapSegments, normalizeFieldPath, sanitize, toKebabCase, toSnakeCase } from './string.js';
 
 describe('sanitize', () => {
   describe('XSS Prevention', () => {
     it('should remove script tags', () => {
-      const malicious = '<script>alert("XSS")</script>Hello';
-      const result = sanitize(malicious);
-      expect(result).toBe('Hello');
-      expect(result).not.toContain('script');
-      expect(result).not.toContain('alert');
+      expect(sanitize('<script>alert("XSS")</script>Hello')).toBe('Hello');
     });
 
-    it('should remove onclick handlers', () => {
-      const malicious = '<div onclick="alert(\'XSS\')">Click me</div>';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('onclick');
-      expect(result).not.toContain('alert');
-    });
-
-    it('should remove javascript: URLs', () => {
-      const malicious = '<a href="javascript:alert(\'XSS\')">Click</a>';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('javascript:');
-      expect(result).not.toContain('alert');
-    });
-
-    it('should remove iframe tags', () => {
-      const malicious = '<iframe src="javascript:alert(\'XSS\')"></iframe>';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('iframe');
-      expect(result).not.toContain('javascript:');
-    });
-
-    it('should remove object and embed tags', () => {
-      const malicious = '<object data="data:text/html,<script>alert(\'XSS\')</script>"></object>';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('object');
-      expect(result).not.toContain('script');
-    });
-
-    it('should remove style tags with malicious CSS', () => {
-      const malicious = '<style>body { background: url("javascript:alert(\'XSS\')"); }</style>';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('style');
-      expect(result).not.toContain('javascript:');
-    });
-
-    it('should remove event handlers (onerror, onload, etc.)', () => {
-      const malicious = '<img src="x" onerror="alert(\'XSS\')" onload="alert(\'XSS2\')">';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('onerror');
-      expect(result).not.toContain('onload');
-      expect(result).not.toContain('alert');
+    it.each([
+      ['<div onclick="alert(\'XSS\')">Click me</div>', 'Click me'],
+      ['<a href="javascript:alert(\'XSS\')">Click</a>', '<a>Click</a>'],
+      ['<iframe src="javascript:alert(\'XSS\')"></iframe>', ''],
+      ['<style>body { background: url("javascript:alert(\'XSS\')"); }</style>', ''],
+      ['<img src="x" onerror="alert(\'XSS\')" onload="alert(\'XSS2\')">', '']
+    ])('%j → %j', (input, output) => {
+      expect(sanitize(input)).toBe(output);
     });
 
     it('should handle complex nested XSS attempts', () => {
       const malicious =
         '<div><script>alert("XSS")</script><strong onclick="alert(\'XSS2\')">Bold</strong></div>';
-      const result = sanitize(malicious);
-      expect(result).toBe('<strong>Bold</strong>');
-      expect(result).not.toContain('script');
-      expect(result).not.toContain('onclick');
-      expect(result).not.toContain('alert');
+      expect(sanitize(malicious)).toBe('<strong>Bold</strong>');
     });
   });
 
@@ -103,20 +63,14 @@ describe('sanitize', () => {
     });
 
     it('should preserve a tags with allowed attributes', () => {
-      const input = '<a href="https://example.com" _target="_blank">Link</a>';
-      const result = sanitize(input);
-      expect(result).toContain('<a href="https://example.com"');
-      expect(result).toContain('_target="_blank"');
-      expect(result).toContain('Link');
+      const input = '<a href="https://example.com" target="_blank">Link</a>';
+      expect(sanitize(input)).toBe(input);
+      expect(sanitize('<a _target="_blank">x</a>')).toBe('<a>x</a>');
     });
 
     it('should remove disallowed attributes from a tags', () => {
       const input = '<a href="https://example.com" onclick="alert(\'XSS\')" class="link">Link</a>';
-      const result = sanitize(input);
-      expect(result).toContain('href="https://example.com"');
-      expect(result).not.toContain('onclick');
-      expect(result).not.toContain('class');
-      expect(result).toContain('Link');
+      expect(sanitize(input)).toBe('<a href="https://example.com">Link</a>');
     });
   });
 
@@ -195,53 +149,43 @@ describe('sanitize', () => {
   });
 
   describe('Filter Bypass Techniques', () => {
-    it('should prevent nested script tag bypass', () => {
-      const malicious = '<script><script>alert(1)</script>';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('script');
-      expect(result).not.toContain('alert');
+    it('escapes a quote inside an attribute value', () => {
+      // The handler stays inside the href value, as text
+      expect(sanitize(`<a href='" onmouseover="alert(1)'>x</a>`)).toBe(
+        '<a href="&quot; onmouseover=&quot;alert(1)">x</a>'
+      );
     });
 
-    it('should prevent fully nested script tag bypass', () => {
-      const malicious = '<script><script>alert(1)</script></script>';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('script');
-      expect(result).not.toContain('alert');
+    it.each([' javascript:alert(1)', '\njavascript:alert(1)', 'JAVASCRIPT:alert(1)'])(
+      'drops the href %j',
+      (href) => {
+        expect(sanitize(`<a href="${href}">x</a>`)).toBe('<a>x</a>');
+      }
+    );
+
+    it('escapes an ampersand in a kept href', () => {
+      expect(sanitize('<a href="https://e.com/?a=1&b=2">x</a>')).toBe(
+        '<a href="https://e.com/?a=1&amp;b=2">x</a>'
+      );
     });
 
-    it('should prevent recursive stripping bypass', () => {
-      const malicious = '<scr<script>ipt>alert(1)</script>';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('script');
+    it.each([
+      ['<script><script>alert(1)</script>', ''],
+      ['<script><script>alert(1)</script></script>', ''],
+      ['<scr<script>ipt>alert(1)</script>', 'scr'],
+      ['<scr<object>ipt>alert(1)</script>', 'scr'],
+      ['<img src=x onerror=alert(1)>', ''],
+      ['<svg onload="alert(\'XSS\')"><circle r="10"/></svg>', '']
+    ])('%j → %j', (input, output) => {
+      expect(sanitize(input)).toBe(output);
     });
 
-    it('should prevent multi-step filter bypass', () => {
-      const malicious = '<scr<object>ipt>alert(1)</script>';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('script');
-      expect(result).not.toContain('object');
-    });
-
-    it('should prevent alternative event handlers', () => {
-      const malicious = '<img src=x onerror=alert(1)>';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('onerror');
-      expect(result).not.toContain('alert');
-    });
-
-    it('should prevent data URI XSS', () => {
-      const malicious = '<a href="data:text/html,<script>alert(\'XSS\')</script>">Click</a>';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('data:text/html');
-      expect(result).not.toContain('script');
-    });
-
-    it('should prevent SVG XSS', () => {
-      const malicious = '<svg onload="alert(\'XSS\')"><circle r="10"/></svg>';
-      const result = sanitize(malicious);
-      expect(result).not.toContain('svg');
-      expect(result).not.toContain('onload');
-      expect(result).not.toContain('alert');
+    // The parser ends a tag at the first `>`, even inside quotes: what is left is text
+    it.each([
+      '<object data="data:text/html,<script>alert(\'XSS\')</script>"></object>',
+      '<a href="data:text/html,<script>alert(\'XSS\')</script>">Click</a>'
+    ])('%j keeps no tag but a bare a', (input) => {
+      expect(sanitize(input)).not.toMatch(/<(?!\/?a>)/);
     });
 
     it('should safely handle HTML entities', () => {
@@ -294,6 +238,26 @@ describe('sanitize', () => {
       expect(result).toBe('<strong>Bold</strong><em>Italic</em>');
     });
   });
+
+  describe('text that holds a <', () => {
+    it.each([
+      ['1 < 2 and 3 > 2', '1 &lt; 2 and 3 > 2'],
+      ['5 &lt; 6', '5 &lt; 6'],
+      ['if a<3 then', 'if a&lt;3 then'],
+      ['<b>x</b> < y', '<b>x</b> &lt; y'],
+      ['1 < 2 &amp; 3', '1 &lt; 2 & 3']
+    ])('keeps %j', (input, output) => {
+      expect(sanitize(input)).toBe(output);
+    });
+
+    it('escapes a < in a link href once', () => {
+      expect(sanitize('<a href="/s?q=1<2">x</a> < y')).toBe('<a href="/s?q=1&lt;2">x</a> &lt; y');
+    });
+  });
+
+  it('drops a U+E000 the input holds, where it marks no space', () => {
+    expect(sanitize('a\uE000b <b>c\uE000d</b>')).toBe('ab <b>cd</b>');
+  });
 });
 
 describe('mapSegments', () => {
@@ -324,10 +288,33 @@ describe('mapSegments', () => {
     expect(mapSegments('_path', toSnakeCase, '__')).toBe('_path');
     expect(mapSegments('_someField', toSnakeCase, '__')).toBe('_some_field');
   });
+});
 
-  test('round-trips a multi-segment name through both forms', () => {
-    const slug = 'someSlug__versions';
-    expect(mapSegments(slug, toSnakeCase, '__')).toBe('some_slug__versions');
-    expect(mapSegments(slug, toKebabCase, '--')).toBe('some-slug--versions');
+describe('normalizeFieldPath', () => {
+  test('removes the block type after an index', () => {
+    expect(normalizeFieldPath('bar.0:booz.foo')).toBe('bar.0.foo');
+  });
+
+  test('removes every block type of a nested path', () => {
+    expect(normalizeFieldPath('bar.0:hello.foo.4:guys.baz')).toBe('bar.0.foo.4.baz');
+  });
+
+  test('leaves a path with no block type as it is', () => {
+    expect(normalizeFieldPath('bar.0.foo.4.baz')).toBe('bar.0.foo.4.baz');
+  });
+
+  test('removes a block type starting with a digit, and keeps the case of the next segment', () => {
+    expect(normalizeFieldPath('bar.0:3someCase.Foo12.4.baz')).toBe('bar.0.Foo12.4.baz');
+  });
+
+  test('removes a block name holding _ or - whole', () => {
+    expect(normalizeFieldPath('layout.0:call_to_action.text')).toBe('layout.0.text');
+    expect(normalizeFieldPath('a.0:cta-block.b.1:x_y.c')).toBe('a.0.b.1.c');
+  });
+});
+
+describe('the public string module', () => {
+  it('leaves out the doc type name rule, which only rime itself uses', () => {
+    expect(util.string).not.toHaveProperty('makeDocTypeName');
   });
 });

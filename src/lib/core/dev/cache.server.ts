@@ -26,6 +26,8 @@ function set(key: string, value: string) {
   fs.writeFileSync(keyPath, value);
 }
 
+const digest = (content: string) => createHash('sha256').update(content).digest('hex');
+
 /**
  * The two verbs for a memo — content that is only ever compared, never read back.
  *
@@ -34,15 +36,14 @@ function set(key: string, value: string) {
  * the comparison a fixed 64 bytes:
  *
  * ```ts
- * if (cache.matches('config', memo)) return false;
+ * if (cache.matches('config', memo)) return;
+ * // …the work
  * cache.remember('config', memo);
  * ```
  *
- * Split in two rather than one `changed()` because the schema step stores only once drizzle-kit
- * has actually generated and migrated — a memo written before the work succeeds would skip it
- * forever after a failure.
+ * Split in two rather than one `changed()` because a step stores its memo only once its work
+ * succeeded: a memo written before would skip the work forever after a failure.
  */
-const digest = (content: string) => createHash('sha256').update(content).digest('hex');
 
 /** Whether `content` hashes to what is stored under `key`. Stores nothing. */
 function matches(key: string, content: string): boolean {
@@ -61,8 +62,9 @@ function del(key: string) {
   }
 }
 
+/** Removes every stored entry: the whole node_modules/.rime folder, whether or not it exists. */
 function clear() {
-  fs.rmSync(RIME_DEV_CACHE_DIR, { recursive: true });
+  fs.rmSync(RIME_DEV_CACHE_DIR, { recursive: true, force: true });
 }
 
 export default {

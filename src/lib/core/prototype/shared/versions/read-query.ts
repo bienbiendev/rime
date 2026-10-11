@@ -1,7 +1,7 @@
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
-import type { OperationQuery } from '$lib/core/pipeline/types.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import type { Dic } from '$lib/util/types.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+import type { OperationQuery } from '#lib/core/pipeline/types.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import type { Dic } from '#lib/util/types.js';
 
 /**
  * Which version a read means.

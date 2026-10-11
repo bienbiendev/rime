@@ -10,7 +10,6 @@ export type ActivePanel = {
 
 export type LivePanelStore = {
   readonly activePanel: ActivePanel | null;
-  readonly panelStack: ActivePanel[];
 };
 
 export function setLivePanelContext(store: LivePanelStore) {

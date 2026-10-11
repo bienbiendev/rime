@@ -10,6 +10,6 @@
 
 <div class="rz-link-cell">
   {#if link}
-    {link.url || link.value || '—'}
+    {link.title || link.url || link.value || '—'}
   {/if}
 </div>

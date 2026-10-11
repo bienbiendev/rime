@@ -1,4 +1,4 @@
-import { Text } from '@lucide/svelte';
+import Text from '@lucide/svelte/icons/text';
 import Paragraph from '@tiptap/extension-paragraph';
 import type { RichTextFeature, RichTextFeatureNode } from '../types.js';
 

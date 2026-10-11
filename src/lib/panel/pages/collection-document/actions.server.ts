@@ -1,11 +1,10 @@
-import { PARAMS } from '$lib/core/constants.js';
-import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { extractData } from '$lib/core/pipeline/extract-data.server.js';
-import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
-import { retireAutoSaves } from '$lib/core/prototype/shared/versions/retire-auto-saves.server.js';
-import { trycatch } from '$lib/util/function.js';
-import { toKebabCase } from '$lib/util/string.js';
+import { PARAMS } from '#lib/core/constants.js';
+import { formFailure } from '#lib/core/errors/handler.server.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { extractData } from '#lib/core/pipeline/extract-data.server.js';
+import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
+import { answerSave, saveParams } from '#lib/panel/pages/shared/save.server.js';
+import { trycatch } from '#lib/util/function.js';
 import { type Actions, type RequestEvent } from '@sveltejs/kit';
 import { t__ } from '../../../core/i18n/index.js';
 
@@ -18,30 +17,20 @@ export const collectionFormActions: Actions = {
   create: async (event: RequestEvent) => {
     const { rime, locale } = event.locals;
 
-    const slug = event.params.slug;
-    if (!rime.config.isCollection(slug)) {
-      throw handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.ACTION });
-    }
+    const slug = rime.routes.slug;
+    if (!rime.config.isCollection(slug)) throw new RimeError(RimeError.NOT_FOUND);
 
     // Get the redirect parameter ex: ?redirect=false that can be present if we're in a nested form
     // to prevent redirection after entry creation ex: for relation creation
     const withoutRedirect = event.url.searchParams.get(PARAMS.REDIRECT) === 'false';
 
     const [extractError, data] = await trycatch(() => extractData(event.request));
-    if (extractError) {
-      return handleError(extractError, { context: ERROR_CONTEXT.ACTION });
-    }
+    if (extractError) return formFailure(extractError);
 
-    if (!rime.config.isCollection(slug)) {
-      throw handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.ACTION });
-    }
     const collection = rime.collection(slug);
 
     const [error, document] = await trycatch(() => collection.create({ data, locale }));
-
-    if (error) {
-      return handleError(error, { context: ERROR_CONTEXT.ACTION });
-    }
+    if (error) return formFailure(error);
 
     if (withoutRedirect) {
       return {
@@ -54,7 +43,7 @@ export const collectionFormActions: Actions = {
     const params = collection.config.upload
       ? `?${PARAMS.UPLOAD_PATH}=${data._path || UPLOAD_PATH.ROOT_NAME}`
       : '';
-    const redirectUrl = rime.routes.panelUrl(toKebabCase(slug), document.id) + params;
+    const redirectUrl = rime.routes.panelUrl(collection.config.kebab, document.id) + params;
 
     return {
       redirectUrl,
@@ -69,66 +58,22 @@ export const collectionFormActions: Actions = {
    * /panel/{slug}/{documentId}
    */
   update: async (event: RequestEvent) => {
-    const { rime, locale, user } = event.locals;
-    const slug = event.params.slug || '';
+    const { rime, locale } = event.locals;
+    const slug = rime.routes.slug || '';
     const id = event.params.id || '';
-    const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
-    const fork = event.url.searchParams.get(PARAMS.FORK) === 'true';
-    const autoSave = event.url.searchParams.get(PARAMS.AUTO_SAVE) === 'true';
-
-    if (!rime.config.isCollection(slug)) {
-      throw handleError(new RimeError(RimeError.NOT_FOUND), { context: ERROR_CONTEXT.ACTION });
-    }
+    if (!rime.config.isCollection(slug)) throw new RimeError(RimeError.NOT_FOUND);
+    const collection = rime.collection(slug);
+    const { versionId, fork, autoSave } = saveParams(event);
 
     const [extractError, data] = await trycatch(() => extractData(event.request));
-    if (extractError) {
-      return handleError(extractError, { context: ERROR_CONTEXT.ACTION });
-    }
-
-    const collection = rime.collection(slug);
+    if (extractError) return formFailure(extractError);
 
     const [error, document] = await trycatch(() =>
-      collection.updateById({
-        id,
-        data,
-        versionId,
-        fork,
-        autoSave,
-        locale
-      })
+      collection.updateById({ id, data, versionId, fork, autoSave, locale })
     );
+    if (error) return formFailure(error);
 
-    if (error) {
-      return handleError(error, { context: ERROR_CONTEXT.ACTION });
-    }
-
-    // An auto-save is silent: the form merges the document back and nothing else moves.
-    if (autoSave) {
-      return { document };
-    }
-
-    // A save is where the saver's auto-saves of the document end, except the row it landed on.
-    if (user) {
-      await retireAutoSaves({
-        event,
-        config: collection.config,
-        docId: document.id,
-        userId: user.id,
-        keep: document.versionId as string | undefined
-      });
-    }
-
-    if (fork && 'versionId' in document) {
-      return {
-        document,
-        message: t__('common.version_created'),
-        redirectUrl: `${rime.routes.panelUrl(toKebabCase(slug), document.id)}?${PARAMS.VERSION_ID}=${document.versionId}`
-      };
-    }
-
-    return {
-      document,
-      message: t__('common.doc_updated')
-    };
+    const documentUrl = rime.routes.panelUrl(collection.config.kebab, document.id);
+    return answerSave({ event, config: collection.config, document, fork, autoSave, documentUrl });
   }
 };

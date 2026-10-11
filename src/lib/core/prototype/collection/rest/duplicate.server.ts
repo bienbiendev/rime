@@ -1,23 +1,15 @@
-import { PARAMS } from '$lib/core/constants.js';
-import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
-import { trycatch } from '$lib/util/function.js';
-import { error, json } from '@sveltejs/kit';
+import { RimeError } from '#lib/core/errors/index.js';
+import { writeParams } from '#lib/core/prototype/shared/rest/params.server.js';
 import { endpoint } from './endpoint.server.js';
 
+/** `POST /api/<collection>/<id>/duplicate`: copies the document and answers the copy's id. */
 export const restDuplicate = endpoint(async ({ event, collection }) => {
-  //
-  if (!event.params.id) throw error(404);
+  if (!event.params.id) throw new RimeError(RimeError.NOT_FOUND);
 
-  // `?versionId=` names the row to copy; without it, the newest real version.
-  const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
+  // `?versionId=` names the row to copy, for staff; without it, the newest real version.
+  const { versionId } = writeParams(event);
 
-  const [duplicateError, newId] = await trycatch(() =>
-    collection.duplicate({ id: event.params.id!, versionId })
-  );
+  const newId = await collection.duplicate({ id: event.params.id, versionId });
 
-  if (duplicateError) {
-    return handleError(duplicateError, { context: ERROR_CONTEXT.API });
-  }
-
-  return json({ id: newId });
+  return Response.json({ id: newId });
 });

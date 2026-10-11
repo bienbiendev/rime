@@ -1,23 +1,20 @@
 import { applyAction } from '$app/forms';
-import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { FormField } from '$lib/fields/types.js';
-import { getValueAtPath } from '$lib/util/object.js';
-import { snapshot } from '$lib/util/state.js';
-import type { Dic } from '$lib/util/types.js';
-import type { SubmitFunction } from '@sveltejs/kit';
+import type { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import type { FormField } from '#lib/fields/types.js';
+import { getValueAtPath } from '#lib/util/object.js';
+import { snapshot } from '#lib/util/state.js';
+import type { Dic } from '#lib/util/types.js';
+import type { SubmitFunction } from '$app/forms';
 import { diff } from 'deep-object-diff';
-import { getContext, setContext } from 'svelte';
-import { setErrorsContext } from './errors.svelte';
+import { createErrorsStore } from './errors.svelte';
 
-function createFormStore(initial: Dic, key: string) {
-  //
-  const errors = setErrorsContext(key);
+export function createFormStore(initial: Dic) {
+  const errors = createErrorsStore();
 
   let form = $state(initial);
   const changes = $derived<Dic>(diff(initial, form));
   const hasError = $derived(errors.length);
   const canSubmit = $derived(Object.keys(changes).length > 0 && !hasError);
-  let status = $state<number>();
   let pending = $state(false);
 
   $effect(() => {
@@ -33,7 +30,6 @@ function createFormStore(initial: Dic, key: string) {
    * @returns an unreactive snapshot
    *
    * @example
-   * const form = getDocumentFormContext()
    * const initialValue = form.getRawValue('blocks.0.title')
    *
    * // value will not update if doc.blocks.0.title update
@@ -43,13 +39,11 @@ function createFormStore(initial: Dic, key: string) {
   }
 
   function setValue(path: string, value: any) {
-    status = undefined;
     form = { ...form, [path]: value };
   }
 
   function useField(path: string | undefined, config: FormFieldBuilder<FormField>) {
     path = path || config.name;
-    //
     const validate = (value: any) => {
       let isEmpty;
       try {
@@ -121,7 +115,6 @@ function createFormStore(initial: Dic, key: string) {
     }
 
     return async ({ result }) => {
-      status = result.status;
       pending = false;
 
       switch (result.type) {
@@ -161,31 +154,14 @@ function createFormStore(initial: Dic, key: string) {
       return errors;
     },
 
-    get error() {
-      return errors;
-    },
-
     get values() {
       return form;
     },
 
     get changes() {
       return changes;
-    },
-
-    get status() {
-      return status;
     }
   };
 }
 
-export function setFormContext(initial: Dic, key: string) {
-  const store = createFormStore(initial, key);
-  return setContext(key, store);
-}
-
-export function getFormContext(key: string) {
-  return getContext<FormContext>(key);
-}
-
-export type FormContext = ReturnType<typeof setFormContext>;
+export type FormContext = ReturnType<typeof createFormStore>;

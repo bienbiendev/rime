@@ -8,6 +8,12 @@ describe('listColumns', () => {
     );
   });
 
+  it('leaves out the author at medium width', () => {
+    expect(listColumns({ columns: 1, status: true })).toBe(
+      'var(--rz-size-4) minmax(0, 2fr) minmax(0, 1fr) var(--rz-size-28) var(--rz-size-24)'
+    );
+  });
+
   it('leaves out the parts not asked for', () => {
     expect(listColumns({})).toBe('var(--rz-size-4) minmax(0, 2fr) var(--rz-size-24)');
     expect(listColumns({ author: true })).toBe(

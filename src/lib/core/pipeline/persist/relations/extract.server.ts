@@ -1,8 +1,8 @@
-import type { BeforeOperationRelation } from '$lib/fields/relation/index.js';
-import { isRelationField } from '$lib/fields/relation/index.js';
-import { Relation } from '$lib/fields/relation/relation.js';
-import { getValueAtPath, isObjectLiteral } from '$lib/util/object.js';
-import type { Dic } from '$lib/util/types.js';
+import type { BeforeOperationRelation } from '#lib/fields/relation/index.js';
+import { isRelationField } from '#lib/fields/relation/index.js';
+import { Relation } from '#lib/fields/relation/relation.js';
+import { getValueAtPath, isObjectLiteral } from '#lib/util/object.js';
+import type { Dic } from '#lib/util/types.js';
 import type { ConfigMap } from '../../config-map/types.js';
 
 type Args = {

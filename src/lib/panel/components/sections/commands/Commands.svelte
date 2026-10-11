@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { setCommandsContext } from '$lib/panel/context/commands.svelte.js';
-  import type { Route } from '$lib/panel/types.js';
+  import { setCommandsContext } from '#lib/panel/context/commands.svelte.js';
+  import type { Route } from '#lib/panel/types.js';
   import type { Snippet } from 'svelte';
   import CommandPalette from './CommandPalette.svelte';
 

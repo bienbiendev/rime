@@ -1,17 +1,13 @@
-import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DefaultOptions, DefaultValueFn, FormField } from '$lib/fields/types.js';
-import { sanitize } from '$lib/util/string.js';
-import validate from '$lib/core/fields/validate.js';
+import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import type { DefaultValueFn, FormField } from '#lib/fields/types.js';
+import validate from '#lib/core/fields/validate.js';
 import EmailComp from './component/Email.svelte';
 
 export class EmailFieldBuilder extends FormFieldBuilder<EmailField> {
   constructor(name: string) {
     super(name, 'email');
     this.field.validate = validate.email;
-    this.field.hooks = {
-      beforeSave: [sanitize]
-    };
   }
 
   get dataType(): DataType {
@@ -32,14 +28,13 @@ export class EmailFieldBuilder extends FormFieldBuilder<EmailField> {
     return this;
   }
 
-  defaultValue(value: string | DefaultValueFn<string>, options?: DefaultOptions) {
-    this.field.defaultValue = value;
-    this.field.defaultFill = options?.fill;
+  isTitle() {
+    this.field.isTitle = true;
     return this;
   }
 
-  isTitle() {
-    this.field.isTitle = true;
+  placeholder(str: string) {
+    this.field.placeholder = str;
     return this;
   }
 

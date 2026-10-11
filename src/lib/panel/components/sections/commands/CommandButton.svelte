@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { getCommandsContext } from '$lib/panel/context/commands.svelte.js';
-  import { Search } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { getCommandsContext } from '#lib/panel/context/commands.svelte.js';
+  import Search from '@lucide/svelte/icons/search';
   import Button from '../../ui/button/button.svelte';
   import Kbd from '../../ui/kbd/Kbd.svelte';
 

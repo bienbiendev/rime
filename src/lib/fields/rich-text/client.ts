@@ -32,5 +32,4 @@ export const upload = (args: UploadFeatureExtensionOptions) => UploadFeature(arg
 export const resource = (args: ResourceFeatureExtensionOptions) => ResourceFeature(args);
 
 export { NodeViewWrapper, SvelteNodeViewRenderer };
-//
 export type { JSONContent, RichTextResource };

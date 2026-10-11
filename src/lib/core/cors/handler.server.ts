@@ -1,6 +1,7 @@
-import { RimeError } from '$lib/core/errors/index.js';
-import { logger } from '$lib/core/logger.server.js';
-import { error, type Handle } from '@sveltejs/kit';
+import { RimeError } from '#lib/core/errors/index.js';
+import { logger } from '#lib/core/logger.server.js';
+import { error } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 
 /**
  * Validates if the origin is in the trusted origins list
@@ -18,18 +19,28 @@ function handlePreflightRequest(origin: string): Response {
     headers: {
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
       'Access-Control-Allow-Origin': origin,
+      // A credentialed request is sent only when its preflight allows credentials too
+      'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
-      'Access-Control-Max-Age': '86400'
+      'Access-Control-Max-Age': '86400',
+      Vary: 'Origin'
     }
   });
 }
 
-/**
- * Adds CORS headers to the response
- */
+/** The CORS headers of a trusted origin's answer. */
 function addCorsHeaders(response: Response, origin: string): void {
   response.headers.set('Access-Control-Allow-Origin', origin);
   response.headers.set('Access-Control-Allow-Credentials', 'true');
+}
+
+/**
+ * Every API answer depends on `Origin`, whether or not the request sent one, so a shared cache
+ * never hands one origin's answer to another.
+ */
+function varyByOrigin(response: Response): Response {
+  response.headers.append('Vary', 'Origin');
+  return response;
 }
 
 /**
@@ -38,21 +49,20 @@ function addCorsHeaders(response: Response, origin: string): void {
 function validateCorsOrigin(origin: string, trustedOrigins: string[], pathname: string): void {
   if (!isOriginTrusted(origin, trustedOrigins)) {
     logger.error(`CORS violation: Origin "${origin}" not in trusted origins for ${pathname}`);
-    throw error(403, RimeError.UNAUTHORIZED || 'CORS origin not allowed');
+    throw error(403, RimeError.UNAUTHORIZED);
   }
 }
 
 /**
- * Handles Cross-Origin Resource Sharing (CORS) for API routes
- *
- * Only validates CORS when Origin header is present (indicating browser cross-origin request).
- * Same-origin requests and server-to-server requests don't have Origin header and are allowed.
+ * Refuses an API request whose `Origin` is not trusted, answers its preflight, and adds the CORS
+ * headers to its response. A browser sends `Origin` on every cross-origin request and on a
+ * same-origin `POST`, `PATCH` or `DELETE`, which is why the site's own origin is always in the
+ * list. A request with no `Origin` (a server, a same-origin `GET`) passes.
  */
 export const handleCORS: Handle = async ({ event, resolve }) => {
   const { rime } = event.locals;
-  // Always a list by here: ./augment.server.ts is this feature's `configure`, and index.ts
-  // declares what it does to the type.
-  const trustedOrigins = rime.config.raw.$trustedOrigins || [];
+  // Always a list by here: `./configure.server.ts` defaults it.
+  const trustedOrigins = rime.config.raw.$trustedOrigins;
 
   const { isAPI } = event.locals.rime.routes;
   const IS_OPTIONS_REQUEST = event.request.method === 'OPTIONS';
@@ -63,14 +73,12 @@ export const handleCORS: Handle = async ({ event, resolve }) => {
     return resolve(event);
   }
 
-  // No Origin header = same-origin or server-to-server request
-  // These don't need CORS validation
+  // No Origin header: a server, or a same-origin GET
   if (!origin) {
-    return resolve(event);
+    return varyByOrigin(await resolve(event));
   }
 
-  // Origin header present = browser cross-origin request
-  // Validate the origin is trusted
+  // A browser request, cross-origin or a same-origin write: the origin has to be trusted
   validateCorsOrigin(origin, trustedOrigins, event.url.pathname);
 
   // Handle preflight OPTIONS requests
@@ -84,5 +92,5 @@ export const handleCORS: Handle = async ({ event, resolve }) => {
   // Add CORS headers for cross-origin requests
   addCorsHeaders(response, origin);
 
-  return response;
+  return varyByOrigin(response);
 };

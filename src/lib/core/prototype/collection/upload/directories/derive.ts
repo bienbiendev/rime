@@ -1,16 +1,15 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { initial } from '$lib/core/prototype/initial.js';
-import { prototypeKebab } from '$lib/core/prototype/naming.js';
-import { date } from '$lib/fields/date/index.js';
-import { text } from '$lib/fields/text/index.js';
-import type { CollectionSlug } from '$lib/types.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { initial } from '#lib/core/prototype/initial.js';
+import { prototypeKebab } from '#lib/core/prototype/naming.js';
+import { date } from '#lib/fields/date/index.js';
+import { text } from '#lib/fields/text/index.js';
+import type { CollectionSlug } from '#lib/types.js';
 import { withDirectoriesSuffix } from '../naming.js';
 import type { WithUpload } from '../util/config.js';
 import { validatePath } from '../util/path.js';
 
 /**
- * Creates an upload directories collection for collections with upload enabled
- * Eg. for medias this will create a collection medias_directories
+ * Derives the directories collection of an upload collection: `medias` -> `$mediasDirectories`.
  */
 export function makeUploadDirectoriesCollectionClient<C extends WithUpload<BuiltCollection>>(
   collection: C
@@ -18,7 +17,6 @@ export function makeUploadDirectoriesCollectionClient<C extends WithUpload<Built
   const slug = withDirectoriesSuffix(collection.slug);
   const directoriesConfig = collection.upload.directories;
 
-  // else create the directory collection
   const directoriesCollection: BuiltCollection = {
     slug: slug as CollectionSlug,
     kebab: prototypeKebab(slug),

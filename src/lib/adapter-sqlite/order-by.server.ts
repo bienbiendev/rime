@@ -1,10 +1,11 @@
-import { logger } from '$lib/core/logger.server.js';
-import type { PrototypeSlug } from '$lib/core/prototype/types.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
-import { asc, desc, getTableColumns, sql, type SQL } from 'drizzle-orm';
+import { RimeError } from '#lib/core/errors/index.js';
+import type { PrototypeSlug } from '#lib/core/prototype/types.js';
+import type { ConfigContext } from '#lib/core/rime.server.js';
+import { and, asc, desc, eq, getTableColumns, sql, type SQL } from 'drizzle-orm';
 import { pathToDatabaseColumn } from './columns.server.js';
 import { localeOrder } from './locales.server.js';
 import { baseTableName, tableName, type TableName } from './naming.server.js';
+import type { GenericTable } from './types.server.js';
 
 /**
  * A localized value as a read shows it: the first locale in the fallback order that holds one,
@@ -33,6 +34,11 @@ type Args = {
    */
   versions?: TableName;
   /**
+   * Which content row each document shows, as the read filters it — the same condition as the
+   * join, built against the table it is handed. Absent, the newest row.
+   */
+  contentWhere?: (versionsTable: GenericTable) => SQL | false | undefined;
+  /**
    * The table the ordering is built against.
    *
    * A relational query renames the table it selects from — `from "pages" as "d0"` — so both a
@@ -49,6 +55,7 @@ export const buildOrderByParam = ({
   configCtx,
   by,
   versions,
+  contentWhere,
   rootTable: aliasedRoot
 }: Args) => {
   // Presence in the schema, not a config member: a declared versions with no table is not one.
@@ -114,7 +121,7 @@ export const buildOrderByParam = ({
           // each locale on the way past.
           const valueIn = (code: string) =>
             sql`(SELECT DISTINCT ${localeTable[columnStr]} FROM ${localeTable} WHERE ${localeTable.ownerId} = ${rootTable.id} AND ${localeTable.locale} = ${code})`;
-          return [orderFunc(resolvedValue(localeOrder(configCtx, locale) ?? [locale], valueIn))];
+          return [orderFunc(resolvedValue(localeOrder(configCtx, locale)!, valueIn))];
         }
       }
     }
@@ -123,16 +130,17 @@ export const buildOrderByParam = ({
     const versionsTable = tables[versionsTableName];
     const versionsTableColumns = Object.keys(getTableColumns(versionsTable));
 
-    // Check if the column exists in the versions table and is not a system field
-    if (
-      versionsTableColumns.includes(columnStr) &&
-      columnStr !== 'createdAt' &&
-      columnStr !== 'updatedAt'
-    ) {
-      // The value from the newest content row.
+    /** The content rows of the document the list shows: the newest of them is the one read. */
+    const shown = and(
+      eq(versionsTable.ownerId, rootTable.id),
+      contentWhere?.(versionsTable) || undefined
+    );
+
+    // A column of the versions table, read from the row the document shows
+    if (versionsTableColumns.includes(columnStr)) {
       return [
         orderFunc(
-          sql`(SELECT DISTINCT ${versionsTable[columnStr]} FROM ${versionsTable} WHERE ${versionsTable.ownerId} = ${rootTable.id} ORDER BY ${versionsTable.updatedAt} DESC LIMIT 1)`
+          sql`(SELECT ${versionsTable[columnStr]} FROM ${versionsTable} WHERE ${shown} ORDER BY ${versionsTable.updatedAt} DESC LIMIT 1)`
         )
       ];
     }
@@ -148,25 +156,23 @@ export const buildOrderByParam = ({
         const localizedColumns = getTableColumns(localeTable);
 
         if (Object.keys(localizedColumns).includes(columnStr)) {
-          // Two hops: the newest content row, then its localized value.
+          // Two hops: the row the document shows, then its localized value.
           const valueIn = (code: string) =>
             sql`(SELECT ${localeTable[columnStr]}
                    FROM ${localeTable}
                   WHERE ${localeTable.ownerId} IN
                         (SELECT ${versionsTable.id}
                            FROM ${versionsTable}
-                          WHERE ${versionsTable.ownerId} = ${rootTable.id}
+                          WHERE ${shown}
                           ORDER BY ${versionsTable.updatedAt} DESC LIMIT 1)
                     AND ${localeTable.locale} = ${code}
                   LIMIT 1)`;
-          return [orderFunc(resolvedValue(localeOrder(configCtx, locale) ?? [locale], valueIn))];
+          return [orderFunc(resolvedValue(localeOrder(configCtx, locale)!, valueIn))];
         }
       }
     }
   }
 
-  logger.warn(`"${by}" is not a property of ${slug}`);
-
-  // Fallback to ordering by createdAt on the root table
-  return [desc(rootTable.createdAt)];
+  // The same answer as an unknown filter operator
+  throw new RimeError(RimeError.INVALID_DATA, `"${by}" is not a property of ${slug} to sort by`);
 };

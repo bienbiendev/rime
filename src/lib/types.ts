@@ -1,5 +1,5 @@
 // Auth types
-export type { User } from '$lib/core/auth/types.js';
+export type { User } from '#lib/core/auth/types.js';
 
 // Config types
 export type {
@@ -34,7 +34,7 @@ export type {
 } from './core/prototype/types.js';
 
 // Fields types
-export type * from '$lib/fields/types.js';
+export type * from '#lib/fields/types.js';
 
 // Panel types
 export type {
@@ -45,20 +45,21 @@ export type {
   Route
 } from './panel/types.js';
 
-export type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+export type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
 
 // Upload types
-export type { JsonFile, UploadDoc } from '$lib/core/prototype/collection/upload/types.js';
+export type { JsonFile, UploadDoc } from '#lib/core/prototype/collection/upload/types.js';
 export type { Link } from './fields/link/types.js';
 
 // Util
-export type { WithRelationInput, WithRelationResolved } from '$lib/core/fields/types.js';
+export type { WithRelationInput, WithRelationResolved } from '#lib/core/fields/types.js';
 
 export type { RouteHandlers } from './core/routes/handler.server.js';
 export type { Plugin } from './core/plugins/index.js';
 export type { SSEAccess, SSEConfig } from './core/plugins/sse/types.js';
 export type { Rime, RimeContext } from './core/rime.server.js';
 export type { BlocksFieldBlockRenderTitle } from './fields/blocks/index.js';
+export type { TreeFieldBlockRenderTitle } from './fields/tree/index.js';
 export type {
   RichTextFeature,
   RichTextFeatureMark,

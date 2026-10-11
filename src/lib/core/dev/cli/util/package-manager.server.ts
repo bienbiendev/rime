@@ -1,9 +1,9 @@
-import { logger } from '$lib/core/logger.server.js';
+import { logger } from '#lib/core/logger.server.js';
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import path from 'path';
 
-export type PackageManagerName = 'yarn' | 'pnpm' | 'bun' | 'npm' | 'deno';
+type PackageManagerName = 'yarn' | 'pnpm' | 'bun' | 'npm' | 'deno';
 
 const packageManagersMap = {
   yarn: 'yarn.lock',
@@ -14,7 +14,7 @@ const packageManagersMap = {
 } as const;
 
 type PMConfig = Record<
-  PackageManagerName,
+  Exclude<PackageManagerName, 'yarn' | 'deno'>,
   {
     command: (devDeps: string[]) => string;
     preInstall?: () => void;
@@ -22,9 +22,8 @@ type PMConfig = Record<
   }
 >;
 
-// Drizzle is pinned to the exact release rime is built against. `@rc` is a moving tag and a
-// prerelease range drifts across API changes — an app on a different rc than the rimecms it
-// installed is the split that made every sign-in fail when better-auth did the same thing.
+// Drizzle is pinned to the exact release rime is built against: `@rc` is a moving tag, and a
+// prerelease range drifts across API changes.
 const DRIZZLE = '1.0.0-rc.4';
 
 const deps = [`drizzle-orm@${DRIZZLE}`, '@libsql/client', '@lucide/svelte', 'sharp'];
@@ -33,9 +32,6 @@ export const SVELTEKIT_ADAPTER = '@sveltejs/adapter-node';
 const devDeps = [SVELTEKIT_ADAPTER, `drizzle-kit@${DRIZZLE}`];
 
 const packageManagerConfigs: PMConfig = {
-  yarn: {
-    command: () => 'echo "yarn is not supported, please use pnpm or npm" && exit 1'
-  },
   pnpm: {
     command: (devDeps) => `pnpm add -D ${devDeps.join(' ')} && pnpm add ${deps.join(' ')}`,
     preInstall: configurePnpm,
@@ -48,9 +44,6 @@ const packageManagerConfigs: PMConfig = {
   },
   npm: {
     command: (devDeps) => `npm install -D ${devDeps.join(' ')} && npm install ${deps.join(' ')}`
-  },
-  deno: {
-    command: () => 'echo "deno is not supported, please use pnpm or npm" && exit 1'
   }
 };
 
@@ -94,7 +87,7 @@ export function installDependencies() {
 
   // Main installation
   const command = config.command(devDeps);
-  logger.info('exec : ' + command);
+  logger.debug('exec : ' + command);
   execSync(command);
 
   // Post installation hooks
@@ -102,26 +95,17 @@ export function installDependencies() {
 }
 
 /**
- * pnpm 11 no longer reads the "pnpm" field in package.json (onlyBuiltDependencies
- * included) - every pnpm-specific setting moved to pnpm-workspace.yaml, and
- * onlyBuiltDependencies itself was replaced by allowBuilds (a name -> boolean map).
- * `pnpm config set --location=project` writes there directly (creating the file if
- * it doesn't exist yet, even for a non-monorepo single package).
- *
- * strictDepBuilds is also now on by default: any dependency (however deep) with a
- * build script that isn't in allowBuilds hard-fails the whole install with
- * ERR_PNPM_IGNORED_BUILDS instead of just skipping that one script. allowBuilds only
- * covers esbuild/sharp; the rest of this command's tree (drizzle-kit, adapter-node,
- * ...) will always have *something* pnpm hasn't seen before, and pinning every one of
- * them here would just break again on their next update - so strict-dep-builds is
- * turned off the same way.
+ * Writes pnpm's project settings into pnpm-workspace.yaml (`pnpm config set --location=project`
+ * creates it when missing). `allowBuilds` lets only sharp run its build script. `strict-dep-builds`
+ * is off: with it on, any dependency build script missing from `allowBuilds` fails the whole
+ * install with ERR_PNPM_IGNORED_BUILDS.
  */
 function configurePnpm(): void {
   const allowBuilds = JSON.stringify({ esbuild: false, sharp: true, 'better-sqlite3': false });
   try {
     execSync(`pnpm config set --location=project --json allowBuilds '${allowBuilds}'`);
     execSync('pnpm config set --location=project strict-dep-builds false');
-    logger.info(
+    logger.debug(
       '[✓] Configured pnpm-workspace.yaml: allowBuilds (sharp) and strict-dep-builds (false)'
     );
   } catch (error) {

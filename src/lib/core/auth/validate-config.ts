@@ -1,5 +1,5 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { SelectFieldBuilder } from '$lib/fields/select/index.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { SelectFieldBuilder } from '#lib/fields/select/index.js';
 
 /**
  * What a collection declaring `auth` has to look like. `config/validate.server.ts` asks it of every

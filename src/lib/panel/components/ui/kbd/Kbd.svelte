@@ -1,16 +1,14 @@
 <script lang="ts">
-  import { formatKeys, isMac, parseKeys } from '$lib/panel/util/keys.js';
-  import {
-    ArrowBigUp,
-    ArrowDown,
-    ArrowLeft,
-    ArrowRight,
-    ArrowUp,
-    Command,
-    CornerDownLeft,
-    Delete,
-    Option
-  } from '@lucide/svelte';
+  import { formatKeys, isMac, parseKeys } from '#lib/panel/util/keys.js';
+  import ArrowBigUp from '@lucide/svelte/icons/arrow-big-up';
+  import ArrowDown from '@lucide/svelte/icons/arrow-down';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
+  import ArrowUp from '@lucide/svelte/icons/arrow-up';
+  import Command from '@lucide/svelte/icons/command';
+  import CornerDownLeft from '@lucide/svelte/icons/corner-down-left';
+  import Delete from '@lucide/svelte/icons/delete';
+  import Option from '@lucide/svelte/icons/option';
 
   /**
    * A key chord drawn key by key: `mod+k` -> [⌘] [K] on a Mac, [Ctrl] [K] elsewhere.

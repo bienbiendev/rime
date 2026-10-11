@@ -1,8 +1,8 @@
-import type { CollectionLabel } from '$lib/core/prototype/collection/types.js';
-import { capitalize } from '$lib/util/string.js';
-import type { Collection } from '$lib/types.js';
+import type { CollectionLabel } from '#lib/core/prototype/collection/types.js';
+import { capitalize } from '#lib/util/string.js';
+import type { Collection } from '#lib/types.js';
 
-export type WithNormalizedLabel<T> = Omit<T, 'label'> & { label: CollectionLabel };
+type WithNormalizedLabel<T> = Omit<T, 'label'> & { label: CollectionLabel };
 
 export const augmentLabel = <T extends Collection<any>>(config: T): WithNormalizedLabel<T> => {
   let label: CollectionLabel;

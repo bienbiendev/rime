@@ -1,14 +1,6 @@
-import type { Config } from '$lib/core/config/types.js';
-import { IS_RIME_REPO, PACKAGE_NAME } from '$lib/core/constants.server.js';
-import { capitalize } from '$lib/util/string.js';
-
-/**
- * Generate document's type name
- * @example
- * makeDocTypeName('pages')
- * // return PagesDoc
- */
-const makeDocTypeName = (slug: string): string => `${capitalize(slug.replace('$', ''))}Doc`;
+import type { Config } from '#lib/core/config/types.js';
+import { IS_RIME_REPO, PACKAGE_NAME } from '#lib/core/constants.server.js';
+import { makeDocTypeName } from '#lib/core/prototype/naming.js';
 
 /**
  * Generate the document's type definition
@@ -35,14 +27,10 @@ export const templateRegister = <T extends Config>(config: T): string => {
   /**
    * The slug a config's content lives under, when a feature gives it a second table.
    *
-   * A versions is registered as a collection in its own right but carries `_generateTypes: false`,
-   * because it has no doc type of its own — it shares its parent's. So it is filtered out above
-   * and its `RegisterCollection` entry added back here, pointing at the parent's type.
-   *
-   * Asked of the features that extend a collection, the way the schema generator asks. It was
-   * `collection.versions` plus the versions feature's own `withVersionsSuffix`, which is codegen
-   * naming a feature's table for it — and which would have registered nothing for a second
-   * feature that declared a versions table.
+   * A versions collection is registered as a collection in its own right but carries
+   * `_generateTypes: false`, because it has no doc type of its own — it shares its parent's. So
+   * it is filtered out above and its `RegisterCollection` entry added back here, pointing at the
+   * parent's type.
    *
    * Collections only: a versions table is registered as a collection in its own right, and this map is
    * read nowhere but in `RegisterCollection` below.
@@ -80,21 +68,23 @@ export const templateRegister = <T extends Config>(config: T): string => {
   return ["declare module 'rimecms' {", ...registerCollections, ...registerAreas, '}'].join('\n');
 };
 
-export const templateDeclareVirtualModule = () =>
+/** `schemaSpecifier` is the generated schema's `#lib/...` specifier, null when the schema lives
+ * outside src/lib: an ambient declaration has no other way to reach it, so it is left out. */
+export const templateDeclareVirtualModule = (schemaSpecifier: string | null) =>
   [
     `declare module '$rime/config' {`,
     ...(IS_RIME_REPO ? ['\t// eslint-disable-next-line no-restricted-imports'] : []),
     `\texport * from '${PACKAGE_NAME}/config/server';`,
     `}`,
-    `declare module '$rime/schema' {`,
-    `\texport * from '$lib/rime.schema.server.js';`,
-    `}`
+    ...(schemaSpecifier
+      ? [`declare module '$rime/schema' {`, `\texport * from '${schemaSpecifier}';`, `}`]
+      : [])
   ].join('\n');
 
 export const templateLocals = (rimeConfigServerPath: string) => `declare global {
   namespace App {
     interface Locals {
-			/** Flag only ON when create the first panel user */
+			/** Flag only ON when creating the first panel user */
 			isInit?: boolean;
 			/** The better auth session */
       session: Session | undefined;
@@ -102,7 +92,7 @@ export const templateLocals = (rimeConfigServerPath: string) => `declare global 
       user: User | undefined;
 			/**
 			 * Flag enabled when a create operation is triggered
-			 * by a auth/sign-up api call.
+			 * by an auth/sign-up api call.
 			 */
 			pendingSignInAfterSignUp?: boolean;
 			/** The full better-auth user */
@@ -134,13 +124,13 @@ export const templateLocals = (rimeConfigServerPath: string) => `declare global 
       /** Dispatch facade backing the fixed /panel/[slug]/... and /api/[slug]/... routes */
       routes: RouteHandlers;
 			/**
-			 * Current locale if applicable
-			 * set following this prioroty :
-			 * - locale inside the url from your front-end ex: /en/foo
-			 * - locale from searchParams ex : ?locale=en
-			 * - locale from cookie
-			 * - default locale
-			*/
+			 * The request's locale: the first code the config lists among those the request's
+			 * surface names, else the default locale (undefined without localization).
+			 * - /api: ?locale=en
+			 * - the panel: ?locale=en, then its rime.locale cookie
+			 * - the site: the route param locale, ex: [[locale=locale]] in /en/foo
+			 * A hook or a load sets another with rime.setLocale().
+			 */
       locale: string | undefined;
     }
   }

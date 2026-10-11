@@ -1,16 +1,17 @@
-import type { Adapter } from '$lib/core/adapter.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import type { WritePlan } from '$lib/core/adapter.js';
-import { versionsWritePlan } from '$lib/core/prototype/shared/versions/write-plan.js';
-import type { DocType, GenericDoc, PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
-import type { Dic } from '$lib/util/types.js';
+import type { Adapter } from '#lib/core/adapter.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import type { WritePlan } from '#lib/core/adapter.js';
+import { versionsWritePlan } from '#lib/core/prototype/shared/versions/write-plan.js';
+import type { DocType, GenericDoc, PrototypeSlug, RawDoc } from '#lib/core/prototype/types.js';
+import type { Dic } from '#lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { buildDocument } from './build-document.server.js';
 import { populateRelations } from './populate-relations.server.js';
 import { saveBlocks } from './persist/blocks/index.server.js';
 import { saveRelations } from './persist/relations/index.server.js';
 import { saveTreeBlocks } from './persist/tree/index.server.js';
+import { seenBy } from './seen-by.server.js';
 import type { Operation, OperationContext } from './types.js';
 
 /**
@@ -18,14 +19,26 @@ import type { Operation, OperationContext } from './types.js';
  *
  * Collections and areas differ in how a document is addressed (an id vs. a singleton) and in
  * which adapter method writes it — not in the shape of the pipeline around that write. These
- * helpers hold that shape; the per-prototype operations in this folder supply the two or three
- * pieces that genuinely differ, as callbacks.
+ * helpers hold that shape; the per-prototype operations (`prototype/collection/operations/`,
+ * `prototype/area/operations/`) supply the two or three pieces that genuinely differ, as callbacks.
  *
- * Hook *ordering* is not decided here — see pipeline.server.ts.
+ * Hook order is written in each prototype's `hooks.server.ts`.
  */
 
 type AnyConfig = BuiltCollection | BuiltArea;
 type AnyHook = (args: any) => Promise<any>;
+
+/** What a hook answered, refused with the hook's name when it lacks one of `keys`. */
+const answerOf = <R>(hook: AnyHook, result: unknown, keys: string[]): R => {
+  const missing = keys.filter((key) => !result || typeof result !== 'object' || !(key in result));
+  if (missing.length) {
+    throw new RimeError(
+      RimeError.OPERATION_ERROR,
+      `hook ${hook.name || '(an arrow)'} answered without ${missing.join(', ')}: return its arguments`
+    );
+  }
+  return result as R;
+};
 
 /**
  * A `WritePlan` that has been through the update path, where a named content row is named.
@@ -48,12 +61,16 @@ export const runBeforeOperation = async <S extends DocType>(args: {
   let context = args.context;
 
   for (const hook of (args.config.$hooks?.beforeOperation as AnyHook[]) || []) {
-    const result = await hook({
-      config: args.config,
-      operation: args.operation,
-      event: args.event,
-      context
-    });
+    const result = answerOf<{ context: OperationContext<S> }>(
+      hook,
+      await hook({
+        config: args.config,
+        operation: args.operation,
+        event: args.event,
+        context
+      }),
+      ['context']
+    );
     context = result.context;
   }
 
@@ -81,13 +98,17 @@ export const runDataHooks = async <S extends DocType, D, C extends AnyConfig>(ar
   let { data, config, context } = args;
 
   for (const hook of (args.hooks as AnyHook[]) || []) {
-    const result = await hook({
-      data,
-      config,
-      operation: args.operation,
-      event: args.event,
-      context
-    });
+    const result = answerOf<{ data: D; config: C; context: OperationContext<S> }>(
+      hook,
+      await hook({
+        data,
+        config,
+        operation: args.operation,
+        event: args.event,
+        context
+      }),
+      ['data', 'config', 'context']
+    );
     context = result.context;
     data = result.data;
     config = result.config;
@@ -113,14 +134,18 @@ export const runDocHooks = async <S extends DocType, T>(args: {
   let { doc, context } = args;
 
   for (const hook of (args.hooks as AnyHook[]) || []) {
-    const result = await hook({
-      doc,
-      ...(args.data !== undefined ? { data: args.data } : {}),
-      config: args.config,
-      operation: args.operation,
-      event: args.event,
-      context
-    });
+    const result = answerOf<{ doc: T; context: OperationContext<S> }>(
+      hook,
+      await hook({
+        doc,
+        ...(args.data !== undefined ? { data: args.data } : {}),
+        config: args.config,
+        operation: args.operation,
+        event: args.event,
+        context
+      }),
+      ['doc', 'context']
+    );
     context = result.context;
     doc = result.doc;
   }
@@ -147,9 +172,8 @@ export const assertUpsertContext = (
 };
 
 /**
- * Writes a document's blocks, tree blocks and relations. Always these three, always in this
- * order — relations last, because it needs both diffs to resolve a relation that points at a
- * block or tree node created in the same pass.
+ * Writes a document's blocks, tree blocks and relations, in this order. Relations go last: they
+ * delete the relations under the block and tree rows the two diffs removed.
  */
 export const persistRelational = async (args: {
   context: OperationContext<any>;
@@ -164,11 +188,6 @@ export const persistRelational = async (args: {
 
   /**
    * Whose children these are, in slug space.
-   *
-   * Read off the config, which `augmentVersions` stamped. It was a round trip —
-   * `adapter.prototype(config.slug).versions?.slug` — asking the database layer for something the
-   * config already carries, and before that a `contentOwnerSlug(config)` helper in versions'
-   * own folder that three pipeline files imported to name a table.
    *
    * `ownerId` is the row; this is the table it is in.
    *
@@ -246,7 +265,13 @@ export const readDocuments = async <S extends DocType, T extends GenericDoc>(
     depth > 0
       ? await populateRelations(
           rows.flatMap((row) => (row.status === 'fulfilled' ? [row.value] : [])),
-          { event, locale, depth }
+          {
+            event,
+            locale,
+            localeFallback,
+            depth,
+            isSystemOperation: args.context.isSystemOperation
+          }
         )
       : undefined;
 
@@ -306,11 +331,11 @@ export const runUpdate = async <
   event: RequestEvent;
   context: OperationContext<S>;
   where: string;
-  /** Passed explicitly rather than read off the context, matching what both callers did. */
+  /** Passed explicitly rather than read off the context. */
   locale?: string | undefined;
   /** Persists the write plan. Returns whatever `reread` needs to find the document again. */
   write: (ctx: { plan: UpdateWritePlan; config: C; context: OperationContext<S> }) => Promise<any>;
-  /** Fetches the saved document back, for the afterUpdate hooks and the caller. */
+  /** Fetches the saved document back as rime, for the afterUpdate hooks and the caller. */
   reread: (ctx: { written: any; config: C; context: OperationContext<S> }) => Promise<T>;
 }): Promise<T> => {
   const { event, where } = args;
@@ -347,16 +372,9 @@ export const runUpdate = async <
   const incomingPaths = Object.keys(context.configMap!);
 
   /**
-   * 3.5. which rows this write touches, and with what.
-   *
-   * Here rather than in a hook, and that is the point of it: it has to run after *every* data
-   * hook, and a hook cannot be guaranteed last — a consumer's `beforeUpdate` hook requires
-   * `validated` and provides nothing, so no mark exists for a plan step to wait on. A consumer
-   * hook that rewrote `data` would have been silently split around.
-   *
-   * The default is the whole story for a config with one row: everything goes on it. `versions`
-   * is what refines it (core/prototype/shared/versions/write-plan.ts), and it is why `versionOperation` no longer
-   * travels to the adapter — the enum was only ever a way of saying which rows to write.
+   * 3.5. Which rows this write touches, and with what. Here rather than in a hook, so it runs
+   * after every data hook, consumer hooks included. The default puts everything on the one row;
+   * `versions` refines it (core/prototype/shared/versions/write-plan.ts).
    */
   const plan = versionsWritePlan({ data }, { config, context, operation: 'update' });
 
@@ -400,6 +418,6 @@ export const runUpdate = async <
   });
 
   // 8. Return what afterUpdate handed back, matching afterCreate — an afterUpdate hook that
-  // amends the document has to have that document reach the caller.
-  return after.doc;
+  // amends the document has to have that document reach the caller, as far as they may read it.
+  return context.isSystemOperation ? after.doc : seenBy({ event, config, doc: after.doc });
 };

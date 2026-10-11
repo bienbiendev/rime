@@ -8,11 +8,11 @@ import { getPackageInfoByKey } from '../util/package.server.js';
 const SPECIFIER = '$rime/modules:';
 
 /**
- * Run at prepack, after `svelte-package` — makes this package's `$rime/modules:` splits work for
+ * Run by `rime package`, after `svelte-package` — makes this package's `$rime/modules:` splits work for
  * anyone who installs it.
  *
  * In this package's own repo the Vite plugin answers those imports from `src/lib`. An installed
- * copy has no such plugin, so prepack turns each one into an ordinary package subpath and adds
+ * copy has no such plugin, so `rime package` turns each one into an ordinary package subpath and adds
  * the `exports` entry that resolves it per environment:
  *
  * ```js
@@ -28,9 +28,7 @@ const SPECIFIER = '$rime/modules:';
  * ```
  *
  * A subpath written into a real `dist` file is followed by esbuild while it pre-bundles the
- * package, so the half it picks lands *inside* that bundle. The absolute `node_modules` path this
- * replaces did not — it left half of rime's client graph outside the bundler, CommonJS and all
- * (see notes/isomorphic-module.md).
+ * package, so the half it picks lands inside that bundle.
  */
 export const generateExports = () => {
   const pkgName = getPackageInfoByKey('name');
@@ -54,7 +52,7 @@ export const generateExports = () => {
   rewriteSpecifiers(distDir, pkgName, pairs);
   writeExports(root, distDir, pairs, stubs);
 
-  logger.info(`[✓] $rime/modules: ${pairs.size} split(s) exported for ${pkgName}`);
+  logger.debug(`[✓] $rime/modules: ${pairs.size} split(s) exported for ${pkgName}`);
 };
 
 /** `<subpath>` -> `./dist/...` as `exports` wants it, forward slashes on every platform. */
@@ -62,9 +60,8 @@ const asExportTarget = (distDir: string, file: string) =>
   './' + path.relative(path.dirname(distDir), file).split(path.sep).join('/');
 
 /**
- * A server-only pair still has to answer on the client, where its names read `undefined` — the
- * shape a half pair has always had. A condition needs a file to point at, so the stub that used to
- * be synthesised at request time is written out here.
+ * A server-only pair still has to answer on the client, where its names read `undefined`. A
+ * condition needs a file to point at, so the stub is written out here.
  *
  * ESM binds named exports statically, so an empty module is not enough: `import { x }` throws a
  * SyntaxError at link time if `x` is absent rather than lazily reading `undefined`.
@@ -142,11 +139,8 @@ function rewriteSpecifiers(distDir: string, pkgName: string, pairs: RuntimeRegis
 }
 
 /**
- * One `exports` entry per pair, plus the two fixes every pre-existing entry needs.
- *
- * `browser` has to come before `svelte`: vite-plugin-svelte applies `svelte` to both environments,
- * conditions are first-match-wins, and an entry led by `svelte` therefore hands the client build
- * the server half. And an entry with no `default` fails to resolve through the map at all.
+ * One `exports` entry per pair, plus a `default` for every other entry that lacks one: an entry
+ * with no `default` fails to resolve through the map.
  */
 function writeExports(
   root: string,
@@ -158,7 +152,7 @@ function writeExports(
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
   const exportsMap: Record<string, unknown> = pkg.exports ?? {};
 
-  // Idempotent: this command runs on every prepack, and a pair that disappeared must not leave
+  // Idempotent: this command runs on every `rime package`, and a pair that disappeared must not leave
   // its entry behind pointing at a file dist/ no longer has.
   for (const key of Object.keys(exportsMap)) {
     if (key.endsWith('/module')) delete exportsMap[key];

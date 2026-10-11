@@ -1,4 +1,4 @@
-import { isTyping, matches, parseKeys } from '$lib/panel/util/keys.js';
+import { isTyping, matches, parseKeys } from '#lib/panel/util/keys.js';
 import type { IconProps } from '@lucide/svelte';
 import { getContext, setContext, type Component } from 'svelte';
 

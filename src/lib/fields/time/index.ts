@@ -1,6 +1,6 @@
-import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DefaultOptions, DefaultValueFn, FormField } from '$lib/fields/types.js';
+import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import type { DefaultValueFn, FormField } from '#lib/fields/types.js';
 import TimeComponent from './component/Time.svelte';
 
 export const time = (name: string) => new TimeFieldBuilder(name);
@@ -10,7 +10,7 @@ export class TimeFieldBuilder extends FormFieldBuilder<TimeField> {
     super(name, 'time');
     this.field.defaultValue = '08:00';
     this.field.validate = (value) => {
-      if (typeof value === 'string' && /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+      if (typeof value === 'string' && /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
         return true;
       }
       return 'incorrect time format ' + value;
@@ -19,12 +19,6 @@ export class TimeFieldBuilder extends FormFieldBuilder<TimeField> {
 
   get component() {
     return TimeComponent;
-  }
-
-  defaultValue(value: string | DefaultValueFn<string>, options?: DefaultOptions) {
-    this.field.defaultValue = value;
-    this.field.defaultFill = options?.fill;
-    return this;
   }
 
   get dataType(): DataType {
@@ -42,5 +36,4 @@ export class TimeFieldBuilder extends FormFieldBuilder<TimeField> {
 export type TimeField = FormField & {
   type: 'time';
   defaultValue?: string | DefaultValueFn<string>;
-  unique?: boolean;
 };

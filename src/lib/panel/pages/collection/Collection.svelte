@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
   import type { ComponentProps } from 'svelte';
   import CollectionPage from './CollectionPage.svelte';
 

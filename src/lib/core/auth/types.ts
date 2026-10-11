@@ -1,10 +1,8 @@
-import type { BaseDoc } from '$lib/core/prototype/types.js';
-import type { Dic } from '$lib/util/types.js';
+import type { BaseDoc } from '#lib/core/prototype/types.js';
+import type { Dic } from '#lib/util/types.js';
 
 /**
  * What a document of a collection that signs in carries beyond a plain one.
- *
- * Was in `core/prototype/types.ts`, spelled into the `Docs` registry by core.
  */
 export type GenericAuthDoc = BaseDoc & {
   apiKeyId?: string;
@@ -12,7 +10,7 @@ export type GenericAuthDoc = BaseDoc & {
   roles?: string[];
 } & Dic;
 
-declare module '$lib/core/prototype/types.js' {
+declare module '../prototype/types.js' {
   interface FeatureDocTypes {
     auth: GenericAuthDoc;
   }
@@ -27,13 +25,13 @@ export type User = {
   isSuperAdmin?: boolean;
 };
 
-import type { Option } from '$lib/fields/types.js';
-import type { Access } from '$lib/core/config/types.js';
-import type { CollectionLabel } from '$lib/core/prototype/collection/types.js';
-import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import type { Field } from '$lib/fields/types.js';
+import type { Option } from '#lib/fields/types.js';
+import type { Access } from '#lib/core/config/types.js';
+import type { CollectionLabel } from '#lib/core/prototype/collection/types.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
+import type { Field } from '#lib/fields/types.js';
 
-/** What an author writes under `auth`, and what `staff` may be extended with. */
+/** What an author writes under a collection's `auth`. */
 export type CollectionAuthConfig = (
   | {
       type: 'password';

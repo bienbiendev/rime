@@ -1,24 +1,20 @@
-import { RimeError } from '$lib/core/errors/index.js';
-import { buildConfigMap } from '$lib/core/pipeline/config-map/index.js';
-import type { ConfigMap } from '$lib/core/pipeline/config-map/types.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { copyLocales } from '$lib/core/locale/copy.server.js';
-import { moveEditLock } from '$lib/core/prototype/shared/metas/lock.server.js';
-import { fileForDocument } from '$lib/core/prototype/collection/upload/util/converter.server.js';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
-import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
-import { VersionOperations } from '$lib/core/prototype/shared/versions/strategy.js';
-import { isRelationField } from '$lib/fields/relation/index.js';
-import { Relation } from '$lib/fields/relation/relation.js';
-import type { BuiltArea, BuiltCollection } from '$lib/types.js';
-import {
-  getValueAtPath,
-  isObjectLiteral,
-  omit,
-  recursiveRemoveKeys,
-  setValueAtPath
-} from '$lib/util/object.js';
-import type { Dic } from '$lib/util/types.js';
+import { isStaff } from '#lib/core/auth/access.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { buildConfigMap } from '#lib/core/pipeline/config-map/index.js';
+import type { ConfigMap } from '#lib/core/pipeline/config-map/types.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { withoutDeniedFields } from '#lib/core/pipeline/without-denied-fields.js';
+import { withoutRowKeys } from '#lib/core/pipeline/without-row-keys.js';
+import { copyLocales } from '#lib/core/locale/copy.server.js';
+import { moveEditLock } from '#lib/core/prototype/shared/metas/lock.server.js';
+import { fileForDocument } from '#lib/core/prototype/collection/upload/util/converter.server.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+import { VersionOperations } from '#lib/core/prototype/shared/versions/strategy.js';
+import { isRelationField } from '#lib/fields/relation/index.js';
+import { Relation } from '#lib/fields/relation/relation.js';
+import type { BuiltArea, BuiltCollection, CollectionSlug } from '#lib/types.js';
+import { getValueAtPath, isObjectLiteral, omit, setValueAtPath } from '#lib/util/object.js';
+import type { Dic } from '#lib/util/types.js';
 import { retireAutoSaves } from '../retire-auto-saves.server.js';
 import { fallbackDataFromOriginal } from './fallback-data-from-original.js';
 
@@ -53,7 +49,7 @@ import { fallbackDataFromOriginal } from './fallback-data-from-original.js';
  *   defaults land first and editing one field resets every unsent field to its default instead of
  *   carrying it forward.
  */
-export const handleNewVersion = Hooks.beforeUpsert(async (args) => {
+export const handleNewVersion = Hooks.beforeUpdate(async function handleNewVersion(args) {
   const { config, event } = args;
   const { rime } = event.locals;
 
@@ -94,24 +90,47 @@ export const handleNewVersion = Hooks.beforeUpsert(async (args) => {
       throw new RimeError(RimeError.UNAUTHORIZED, 'an auto-save belongs to a user');
     }
 
+    // The fields the caller may not write leave the submission, as `validateFields` drops them:
+    // the system create below checks no access, and the new row takes them from the previous one
+    const skipAccess = args.context.isLocaleCopy || args.context.isSystemOperation;
+    const submitted = skipAccess
+      ? args.data
+      : withoutDeniedFields({
+          data: args.data,
+          configMap: buildConfigMap(args.data, config.fields),
+          operation: 'update',
+          user: event.locals.user,
+          id: originalDoc.id,
+          stored: { doc: originalDoc, configMap: originalConfigMap }
+        }).data;
+
     const data = await prepareDataForNewVersion({
-      data: args.data,
+      data: submitted,
       originalDoc,
       config,
       originalConfigMap
     });
     if (isAutoSave) data.status = originalDoc.status;
 
-    const versionsSlug = withVersionsSuffix(config.slug);
+    const versionsSlug = config._versions!.slug as CollectionSlug;
 
     if (isAutoSave) {
       await retireAutoSaves({ event, config, docId: originalDoc.id, userId: userId! });
     }
 
-    const document = await rime.collection(versionsSlug).create({
-      data,
-      locale: params.locale
-    });
+    // Part of the update: its `update` right was checked, and the versions' forwarded `create`
+    // right is not asked again. A system create stamps nobody, so the row is named after the
+    // staff member whose update it carries out. `updatedBy` names staff: anyone else, an api key
+    // included, is not recorded, as `stampUpdatedBy` does.
+    const revisedBy =
+      args.context.isSystemOperation || !isStaff(event.locals.user) ? undefined : userId;
+    const document = await rime
+      .collection(versionsSlug)
+      .system()
+      .create({
+        data: revisedBy ? { ...data, updatedBy: revisedBy } : data,
+        locale: params.locale
+      });
 
     // The edit continues on the new row: the claim its maker holds on the original goes with it,
     // so the panel has nothing to hand back or take.
@@ -132,13 +151,13 @@ export const handleNewVersion = Hooks.beforeUpsert(async (args) => {
     if (params.locale && otherLocales.length) {
       const created =
         config.type === 'collection'
-          ? await rime.collection(config.slug).findById({
+          ? await rime.collection(config.slug).system().findById({
               id: originalDoc.id,
               locale: params.locale,
               versionId: document.id,
               localeFallback: false
             })
-          : await rime.area(config.slug).find({
+          : await rime.area(config.slug).system().find({
               locale: params.locale,
               versionId: document.id,
               localeFallback: false
@@ -158,12 +177,15 @@ export const handleNewVersion = Hooks.beforeUpsert(async (args) => {
         data: { isAutoSave: true }
       });
     } else if (config.versions && config.versions.maxVersions) {
-      // The versions beyond `maxVersions`, oldest first, go. A published version stays, and an
-      // auto-save is not a version — each clause only where the config has the field, since a
-      // clause on a missing column matches nothing and the pruning would never happen.
-      const spared: Dic[] = [];
-      if (config.versions.draft) spared.push({ status: { not_equals: VERSIONS_STATUS.PUBLISHED } });
-      if (autoSaves) spared.push({ isAutoSave: { not_equals: true } });
+      // This document's versions beyond `maxVersions`, oldest first, go. A published version
+      // stays, and an auto-save is not a version — each clause only where the config has the
+      // field, since a clause on a missing column matches nothing and the pruning would never
+      // happen.
+      const candidates: Dic[] = [{ ownerId: { equals: originalDoc.id } }];
+      if (config.versions.draft) {
+        candidates.push({ status: { not_equals: VERSIONS_STATUS.PUBLISHED } });
+      }
+      if (autoSaves) candidates.push({ isAutoSave: { not_equals: true } });
 
       // Bookkeeping, as rime itself: the editor writing a version need not hold `access.delete`.
       await rime
@@ -171,14 +193,17 @@ export const handleNewVersion = Hooks.beforeUpsert(async (args) => {
         .system()
         .delete({
           sort: '-updatedAt',
-          query: spared.length
-            ? { where: spared.length === 1 ? spared[0] : { and: spared } }
-            : undefined,
+          query: { where: { and: candidates } },
           offset: config.versions.maxVersions
         });
     }
 
-    return { ...args, context: { ...args.context, contentOwnerId: document.id } };
+    // The new row holds the file now: the rest of this update has none to save
+    return {
+      ...args,
+      data: omit(['file'], args.data),
+      context: { ...args.context, contentOwnerId: document.id }
+    };
   }
 
   // Versioned, but this update writes neither a named version nor a new one — the default
@@ -196,17 +221,18 @@ async function prepareDataForNewVersion(args: {
   let data = { ...args.data };
 
   /**
-   * A new version of an upload document inherits the file the old one had, unless the write brings
-   * a new one — the version row has its own `filename`, so without this a revision of a document
+   * A new version of an upload document inherits the file the old one had when the write sends
+   * none — the version row has its own `filename`, so without this a revision of a document
    * nobody re-uploaded to comes out with no file.
    *
-   * This asked `upload` for two things: where it keeps its files, and how to turn a path into a
-   * `File`. It asks for one now. The remaining import is the genuine cross-feature dependency
-   * what a new content row inherits is a question this feature
-   * has and only that one can answer — and it is one call rather than a copy of a convention.
+   * ```
+   * file: File    the new version holds that file
+   * file: null    the new version holds no file
+   * no file       the new version holds the previous version's file
+   * ```
    */
-  if (config.type === 'collection' && config.upload && !data.file) {
-    data.file = (await fileForDocument(originalDoc)) ?? data.file;
+  if (config.type === 'collection' && config.upload && data.file === undefined) {
+    data.file = (await fileForDocument(config, originalDoc)) ?? data.file;
   }
 
   // The fields the update did not send, from the previous version.
@@ -234,11 +260,10 @@ async function prepareDataForNewVersion(args: {
     data = setValueAtPath(path, data, refs);
   }
 
-  // Remove ownerId and id props from data this force new relation/blocks creations
-  data = recursiveRemoveKeys('ownerId', 'id').from(data);
+  // Strip every `ownerId` and `id` from the rows, so relations and blocks are written as new rows.
+  data = withoutRowKeys(data, config.fields, ['ownerId', 'id']);
 
   data.ownerId = originalDoc.id;
-  delete data.id;
 
   return data;
 }

@@ -1,34 +1,21 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import {
-    ContextMenu,
-    type ContextMenuContentProps,
-    type ContextMenuRootProps,
-    type WithoutChild
-  } from 'bits-ui';
+  import { ContextMenu, type ContextMenuRootProps } from 'bits-ui';
   import './context-menu.css';
 
   type Props = ContextMenuRootProps & {
     trigger: Snippet;
     content: Snippet;
-    contentProps?: WithoutChild<ContextMenuContentProps>;
   };
-  let {
-    open = $bindable(false),
-    children,
-    trigger,
-    content,
-    contentProps,
-    ...restProps
-  }: Props = $props();
+  let { trigger, content, ...restProps }: Props = $props();
 </script>
 
-<ContextMenu.Root bind:open {...restProps}>
+<ContextMenu.Root {...restProps}>
   <ContextMenu.Trigger>
     {@render trigger()}
   </ContextMenu.Trigger>
   <ContextMenu.Portal>
-    <ContextMenu.Content class="rz-context-menu-content" {...contentProps}>
+    <ContextMenu.Content class="rz-context-menu-content">
       {@render content()}
     </ContextMenu.Content>
   </ContextMenu.Portal>

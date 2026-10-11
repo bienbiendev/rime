@@ -1,4 +1,3 @@
-// Server half. The aliases are built from `collectionHooks`, which is server-only, so there is no
-// client half to pair this with — a client build resolves the name to `undefined` and the feature
-// simply carries no `configure` there. Same shape as `features/url`'s hooks.
+// Server half only. A client build resolves `configureVersions` to `undefined`, and
+// `configureConfig` skips it.
 export { configureVersions } from './configure.server.js';

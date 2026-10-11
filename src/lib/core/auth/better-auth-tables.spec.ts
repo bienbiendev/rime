@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { Adapter } from '$lib/core/adapter.js';
-import { deleteAuthUser, hasAuthUser, setAuthUserRole } from './better-auth-tables.server.js';
+import type { Adapter } from '#lib/core/adapter.js';
+import {
+  deleteAuthApiKey,
+  deleteAuthUser,
+  hasAuthUser,
+  setAuthUserRole
+} from './better-auth-tables.server.js';
 
 /**
  * What these ask of Better-auth's tables, pinned.
@@ -74,5 +79,15 @@ describe('deleteAuthUser', () => {
     expect(calls[0].args).toEqual({ where: { userId: 'au1' } });
     expect(calls[1].args).toEqual({ where: { userId: 'au1' } });
     expect(calls[2].args).toEqual({ where: { id: 'au1' } });
+  });
+});
+
+describe('deleteAuthApiKey', () => {
+  it('deletes the key by id', async () => {
+    const { adapter, calls } = stubAdapter();
+
+    await deleteAuthApiKey(adapter, { apiKeyId: 'k1' });
+
+    expect(calls).toEqual([{ slug: '$apikey', verb: 'delete', args: { where: { id: 'k1' } } }]);
   });
 });

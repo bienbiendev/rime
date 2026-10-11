@@ -1,4 +1,5 @@
-import { PARAMS } from '$lib/core/constants';
+import { PARAMS } from '#lib/core/constants.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
 import test, { expect, type APIRequestContext } from '@playwright/test';
 import { API_BASE_URL, signIn } from '../util.js';
 
@@ -57,4 +58,74 @@ test('A new version carries the translations its original has', async ({ request
   expect(de.title).toBe('Infos auf Deutsch');
   // Empty in German, on the original and so on the copy: read from the default locale.
   expect(de.email).toBe('hello@infos.com');
+});
+
+/**
+ * `pages` shares its `attributes` group and its `sections` list between locales; the texts inside
+ * the blocks are localized. A new version made in `en` keeps what that save changed in the shared
+ * fields, in every locale.
+ */
+test('A new version keeps the shared fields and blocks of the save that made it', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+
+  const created = await request.post(`${API_BASE_URL}/pages?locale=en`, {
+    headers,
+    data: {
+      attributes: { title: 'Shared fields probe', slug: 'shared-fields-probe', isHome: false },
+      sections: [
+        { type: 'paragraph', text: 'EN p' },
+        { type: 'image', legent: 'EN i' }
+      ],
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { doc } = await created.json();
+  const [paragraph, image] = doc.sections;
+
+  // The same rows, translated in French
+  const translated = await request.patch(`${API_BASE_URL}/pages/${doc.id}?locale=fr`, {
+    headers,
+    data: {
+      sections: [
+        { ...paragraph, text: 'FR p' },
+        { ...image, legent: 'FR i' }
+      ]
+    }
+  });
+  expect(translated.status()).toBe(200);
+
+  // A save in `en` that makes a new version: a shared field changed, the blocks swapped
+  const forked = await request.patch(
+    `${API_BASE_URL}/pages/${doc.id}?locale=en&${PARAMS.FORK}=true`,
+    {
+      headers,
+      data: {
+        attributes: { ...doc.attributes, isHome: true },
+        sections: [
+          { type: 'image', legent: 'EN i' },
+          { type: 'paragraph', text: 'EN p' }
+        ]
+      }
+    }
+  );
+  expect(forked.status()).toBe(200);
+
+  for (const locale of ['en', 'fr']) {
+    const response = await request.get(
+      `${API_BASE_URL}/pages/${doc.id}?locale=${locale}&${PARAMS.LATEST}=true`,
+      { headers }
+    );
+    expect(response.status()).toBe(200);
+    const { doc: latest } = await response.json();
+    expect(latest.attributes.isHome).toBe(true);
+    expect(latest.sections.map((block: { type: string }) => block.type)).toEqual([
+      'image',
+      'paragraph'
+    ]);
+  }
+
+  await request.delete(`${API_BASE_URL}/pages/${doc.id}`, { headers });
 });

@@ -10,7 +10,7 @@ import {
 const projectRoot = process.cwd();
 
 /**
- * Ensure sanitize config exists — the generated server config inside the generated config dir.
+ * Returns the generated server config's path. Throws when sanitize has not written it.
  */
 export function ensureGeneratedConfig() {
   const configGeneratedPath = path.resolve(projectRoot, GENERATED_DIR, 'rime.config.server.ts');
@@ -27,9 +27,8 @@ export function ensureUserConfigExist() {
   const folderConfig = path.resolve(projectRoot, CONFIG_DIR, 'rime.config.server.ts');
   if (existsSync(folderConfig)) return;
 
-  // Every project set up before RIME_CONFIG_DIR existed has its config here — if it's there
-  // but not at CONFIG_DIR, this is almost certainly an upgrade whose .env predates the env
-  // var, not a missing init, so say that instead of the generic message.
+  // A config at LEGACY_DEFAULT but not at CONFIG_DIR means .env does not set RIME_CONFIG_DIR:
+  // say so instead of the generic message.
   const LEGACY_DEFAULT = 'src/lib/+rime';
   if (
     CONFIG_DIR !== LEGACY_DEFAULT &&
@@ -48,7 +47,7 @@ export function ensureUserConfigExist() {
  * Ensure schema exists (see adapter-sqlite/generate-schema/write.server.ts, which writes to
  * the same path).
  */
-export function ensureSchema() {
+function ensureSchema() {
   if (!existsSync(schemaPath(projectRoot))) {
     throw new Error('Unable to find schema, did you run rime init');
   }
@@ -57,7 +56,7 @@ export function ensureSchema() {
 /**
  * Ensure .env exists
  */
-export function ensureEnv() {
+function ensureEnv() {
   const envFile = path.resolve(projectRoot, './.env');
   if (!existsSync(envFile)) throw new Error('Missing .env file');
 }
@@ -65,7 +64,7 @@ export function ensureEnv() {
 /**
  * Ensure drizzle config exists
  */
-export function ensureDirzzle() {
+function ensureDirzzle() {
   const drizzleConfigFile = path.resolve(projectRoot, './drizzle.config.ts');
   if (!existsSync(drizzleConfigFile)) throw new Error('Missing drizzle.config.ts file');
 }
@@ -73,7 +72,7 @@ export function ensureDirzzle() {
 /**
  * Ensure hooks.server exists
  */
-export function ensureHooks() {
+function ensureHooks() {
   const hooksServerFile = path.resolve(projectRoot, './src/hooks.server.ts');
   if (!existsSync(hooksServerFile)) throw new Error('Missing src/hooks.server.ts file');
 }
@@ -81,7 +80,7 @@ export function ensureHooks() {
 /**
  * Ensure db directory exists
  */
-export function ensureDatabase() {
+function ensureDatabase() {
   const dbDirectory = path.resolve(projectRoot, './db');
   if (!existsSync(dbDirectory)) throw new Error('Missing db directory');
 }

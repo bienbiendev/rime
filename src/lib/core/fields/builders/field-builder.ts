@@ -26,9 +26,9 @@ export type WithoutBuilders<T> =
 /** Method-syntax (not `foo: () => ...` property syntax) so subtype checks
  *  like `FormFieldBuilder<SlugField> -> FormFieldBuilder<FormField>` — used
  *  all over the panel, where a concrete field builder flows into a
- *  generically-typed prop — stay bivariant on their params, exactly like the
- *  class methods this replaced. Property syntax would make TS check those
- *  params strictly/contravariantly and break that assignability. */
+ *  generically-typed prop — stay bivariant on their params. Property syntax
+ *  would make TS check those params strictly/contravariantly and break that
+ *  assignability. */
 export type FieldUse = {
   accessRead(...args: Parameters<FieldAccess>): boolean;
   accessCreate(...args: Parameters<FieldAccess>): boolean;
@@ -142,10 +142,9 @@ export class FieldBuilder<T extends Field = Field> {
 
   /** Behavior the builder runs on your behalf (invoking a stored function) —
    *  see `.get` for plain data reads. Fields without an access concept
-   *  (Tabs) default every check to allowed, matching how the field-less case
-   *  already behaved. Params are unused here but must match FormFieldBuilder's
-   *  override signature — TS checks generic-constraint satisfaction
-   *  (`T extends FieldBuilder<any>`) strictly, not with the bivariant
+   *  (Tabs) default every check to allowed. Params are unused here but must
+   *  match FormFieldBuilder's override signature — TS checks generic-constraint
+   *  satisfaction (`T extends FieldBuilder<any>`) strictly, not with the bivariant
    *  leniency normal overrides get, so a param-less base signature breaks
    *  assignability everywhere. */
   get use(): FieldUse {

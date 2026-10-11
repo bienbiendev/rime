@@ -1,40 +1,19 @@
-import { normalizeQuery } from '$lib/core/pipeline/query.js';
-import { PARAMS } from '$lib/core/constants.js';
-import { handleError } from '$lib/core/errors/handler.server.js';
-import { trycatch } from '$lib/util/function.js';
-import { json } from '@sveltejs/kit';
+import { RimeError } from '#lib/core/errors/index.js';
+import { listParams } from '#lib/core/prototype/shared/rest/params.server.js';
 import { endpoint } from './endpoint.server.js';
 
 /**
- * DELETE handler for the collection API endpoint.
+ * `DELETE /api/<collection>?where[…]`: deletes the documents the filter matches, each through
+ * the delete access and hooks, and answers their ids. A request with no `where` answers 400: a
+ * bulk delete always names what it deletes.
  */
 export const restDelete = endpoint(async ({ event, collection }) => {
-  //
-  const { rime } = event.locals;
-  const params = event.url.searchParams;
-
-  const hasQueryParams = !!params
-    .keys()
-    .filter((key) => key.startsWith('where'))
-    .toArray().length;
-
-  const query = hasQueryParams ? normalizeQuery(event.url.search.substring(1)) : undefined;
-
-  const apiParams = {
-    locale: rime.getLocale(),
-    sort: params.get(PARAMS.SORT) || undefined,
-    depth: params.get(PARAMS.DEPTH) ? parseInt(params.get(PARAMS.DEPTH)!) : 0,
-    limit: params.get(PARAMS.LIMIT) ? parseInt(params.get(PARAMS.LIMIT)!) : undefined,
-    offset: params.get(PARAMS.OFFSET) ? parseInt(params.get(PARAMS.OFFSET)!) : undefined,
-    query,
-    select: params.get(PARAMS.SELECT) ? params.get(PARAMS.SELECT)!.split(',') : undefined
-  };
-
-  const [error, docs] = await trycatch(() => collection.delete(apiParams));
-
-  if (error) {
-    return handleError(error, { context: 'api' });
+  const { query, sort, limit, offset } = listParams(event);
+  if (!query) {
+    throw new RimeError(RimeError.BAD_REQUEST, 'a delete on the list names a where filter');
   }
 
-  return json({ docs }, { status: 200 });
+  const docs = await collection.delete({ query, sort, limit, offset });
+
+  return Response.json({ docs }, { status: 200 });
 });

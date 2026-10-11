@@ -1,4 +1,4 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
 import { buildConfigMap } from '../config-map/index.js';
 
 /**

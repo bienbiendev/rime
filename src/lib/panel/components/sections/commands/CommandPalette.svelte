@@ -1,19 +1,20 @@
 <script lang="ts">
+  import { createPath, withLocale } from '#lib/panel/util/url.js';
   import { goto } from '$app/navigation';
   import type { ResolvedPathname } from '$app/types';
-  import { PARAMS } from '$lib/core/constants.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { apiUrl, panelPath } from '$lib/core/routes/util.js';
-  import * as Command from '$lib/panel/components/ui/command/index.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { apiUrl, panelPath } from '#lib/core/routes/util.js';
+  import * as Command from '#lib/panel/components/ui/command/index.js';
   import {
     getCommandsContext,
     useCommands,
     type Command as CommandType
-  } from '$lib/panel/context/commands.svelte.js';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import type { Route } from '$lib/panel/types.js';
-  import Kbd from '$lib/panel/components/ui/kbd/Kbd.svelte';
+  } from '#lib/panel/context/commands.svelte.js';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import type { Route } from '#lib/panel/types.js';
+  import Kbd from '#lib/panel/components/ui/kbd/Kbd.svelte';
   import type { IconProps } from '@lucide/svelte';
   import { computeCommandScore } from 'bits-ui';
   import type { Component } from 'svelte';
@@ -34,6 +35,7 @@
   const commands = getCommandsContext()!;
   const config = getConfigContext();
   const user = getUserContext();
+  const locale = getLocaleContext();
 
   const pages = $derived(Object.values(routes).flat());
 
@@ -44,11 +46,6 @@
       return collection ? [collection] : [];
     })
   );
-
-  const createPath = (collection: (typeof collections)[number]) => {
-    const path = panelPath(collection.kebab, 'create');
-    return collection.upload ? (`${path}?${PARAMS.UPLOAD_PATH}=root` as ResolvedPathname) : path;
-  };
 
   /**
    * The outermost scope, so its lines come last: ⌘K, then what the panel offers wherever the
@@ -110,13 +107,16 @@
     const found = await Promise.all(
       collections.map(async (collection) => {
         const where = `where[${collection.asTitle}][like]=${encodeURIComponent(`%${query}%`)}`;
-        const url = `${apiUrl(collection.kebab)}?${where}&select=${collection.asTitle}&limit=5`;
+        const url = withLocale(
+          `${apiUrl(collection.kebab)}?${where}&select=title&limit=5`,
+          locale.code
+        );
         const response = await fetch(url).catch(() => null);
         if (!response?.ok) return [];
         const { docs } = (await response.json()) as { docs: Record<string, unknown>[] };
         return docs.map((doc) => ({
           id: `${collection.slug}/${doc.id}`,
-          label: String(doc[collection.asTitle] ?? doc.id),
+          label: String(doc.title ?? doc.id),
           group: collection.label.plural,
           icon: config.raw.icons[collection.slug],
           run: () => goto(panelPath(collection.kebab, String(doc.id)))

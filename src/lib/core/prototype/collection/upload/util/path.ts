@@ -1,26 +1,14 @@
-import { PARAMS } from '$lib/core/constants.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
-import type { CollectionSlug } from '$lib/core/prototype/types.js';
-import { joinPath } from '$lib/core/routes/util.js';
-import type { Route } from '$lib/panel/types.js';
-import { toKebabCase } from '$lib/util/string.js';
-import type { WithRequired } from '$lib/util/types.js';
+import { PARAMS } from '#lib/core/constants.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
+import type { CollectionSlug } from '#lib/core/prototype/types.js';
+import { joinPath } from '#lib/core/routes/util.js';
+import type { Route } from '#lib/panel/types.js';
+import { toKebabCase } from '#lib/util/string.js';
+import type { WithRequired } from '#lib/util/types.js';
 
 export type UploadPath = `${typeof UPLOAD_PATH.ROOT_NAME}${string}`;
 type Aria = WithRequired<Partial<Route>, 'title'>;
-
-/**
- * Validates that a path string follows the required format:
- * - Must start with ROOT_NAME
- * - Only allows alphanumeric characters, hyphens, underscores, spaces, and the separator
- * - Can only use the defined separator
- * @example
- * validatePath("root:folder:subfolder") // valid
- * validatePath("root:folder with spaces:sub-folder_name") // valid
- * validatePath("root/folder") // throws Error
- * validatePath("root:folder$") // throws Error
- */
 
 /**
  * Given an optional path string
@@ -46,10 +34,7 @@ export function getSegments(path?: UploadPath | null): {
     throw new RimeError(RimeError.BAD_REQUEST, isValid);
   }
 
-  const segments = safePath
-    .split(UPLOAD_PATH.SEPARATOR)
-    .filter((s) => s !== UPLOAD_PATH.SEPARATOR)
-    .filter((s) => !!s);
+  const segments = safePath.split(UPLOAD_PATH.SEPARATOR).filter((s) => !!s);
 
   if (segments.length <= 1) {
     return {
@@ -60,8 +45,7 @@ export function getSegments(path?: UploadPath | null): {
   }
 
   const name = segments[segments.length - 1];
-  // Only create parent if we have more than one segment
-  const parent = segments.length > 1 ? segments.slice(0, -1).join(UPLOAD_PATH.SEPARATOR) : null;
+  const parent = segments.slice(0, -1).join(UPLOAD_PATH.SEPARATOR);
   // Reconstruct the normalized path from filtered segments
   const normalizedPath = segments.join(UPLOAD_PATH.SEPARATOR) as UploadPath;
 
@@ -81,7 +65,7 @@ export function getSegments(path?: UploadPath | null): {
  */
 export function getParentPath(path: UploadPath) {
   if (path === UPLOAD_PATH.ROOT_NAME) return null;
-  return path.split(UPLOAD_PATH.SEPARATOR).slice(0, -1).join(UPLOAD_PATH.SEPARATOR);
+  return path.split(UPLOAD_PATH.SEPARATOR).slice(0, -1).join(UPLOAD_PATH.SEPARATOR) as UploadPath;
 }
 
 /**
@@ -106,13 +90,13 @@ export function buildUploadAria({
   slug: CollectionSlug;
   panelSegment: string;
 }): Partial<Route>[] {
-  const segments = path.split(':');
+  const segments = path.split(UPLOAD_PATH.SEPARATOR);
   const result: Aria[] = [];
   let currentPath = '';
 
   for (const segment of segments) {
     if (!segment) continue;
-    currentPath = currentPath ? `${currentPath}:${segment}` : segment;
+    currentPath = currentPath ? `${currentPath}${UPLOAD_PATH.SEPARATOR}${segment}` : segment;
     if (currentPath !== segments[0]) {
       result.push({
         title: segment,
@@ -151,7 +135,8 @@ export const validatePath = (value: unknown): string | true => {
 
   // Check if path starts with ROOT_NAME
   const STARTS_WITH_ROOT =
-    value === UPLOAD_PATH.ROOT_NAME || value.startsWith(`${UPLOAD_PATH.ROOT_NAME}:`);
+    value === UPLOAD_PATH.ROOT_NAME ||
+    value.startsWith(`${UPLOAD_PATH.ROOT_NAME}${UPLOAD_PATH.SEPARATOR}`);
   if (!STARTS_WITH_ROOT) {
     return `Path must start with "${UPLOAD_PATH.ROOT_NAME}"`;
   }

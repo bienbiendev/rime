@@ -1,14 +1,16 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import type { BuiltArea, BuiltCollection } from '$lib/core/config/types';
-  import { PARAMS } from '$lib/core/constants';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { formatWhen } from '$lib/panel/util/time.js';
-  import { capitalize } from '$lib/util/string.js';
-  import { ExternalLink, PencilRuler, X } from '@lucide/svelte';
+  import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+  import { PARAMS } from '#lib/core/constants.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { titleOrUntitled } from '#lib/panel/util/title.js';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { formatWhen } from '#lib/panel/util/time.js';
+  import { capitalize } from '#lib/util/string.js';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import PencilRuler from '@lucide/svelte/icons/pencil-ruler';
+  import X from '@lucide/svelte/icons/x';
   import { Button } from '../../ui/button';
   import LanguageSwitcher from '../../ui/language-switcher/LanguageSwitcher.svelte';
   import PageHeader from '../../ui/page-header/PageHeader.svelte';
@@ -23,10 +25,10 @@
     onClose?: any;
     form: DocumentFormContext;
     config: BuiltArea | BuiltCollection;
-    /** What a locale pick does; the document settles its unsaved changes before reloading. */
-    onLocaleSwitch?: () => unknown;
+    /** What a locale pick does; the document settles its unsaved changes before switching. */
+    onLocaleSwitch: (code: string) => unknown;
   };
-  const { form, onClose, config, onLocaleSwitch = invalidateAll }: Props = $props();
+  const { form, onClose, config, onLocaleSwitch }: Props = $props();
 
   const onCloseIsDefined = $derived(!!onClose);
   const locale = getLocaleContext();
@@ -44,8 +46,8 @@
   const autoSavedAt = $derived(form.lastAutoSavedAt ?? form.values.updatedAt);
 
   /** The heading: the document's title, "Untitled" until it has one. */
-  const untitled = $derived(!form.title || form.title === '[untitled]');
-  const heading = $derived(untitled ? t__('common.untitled') : form.title);
+  const untitled = $derived(!form.title);
+  const heading = $derived(titleOrUntitled(form.title));
 
   /**
    * The line under the heading: what the document is, then who edited it last, and when.

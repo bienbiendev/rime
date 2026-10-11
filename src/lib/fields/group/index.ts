@@ -2,10 +2,11 @@ import type {
   FieldBuilder,
   FieldNode,
   ValueNode
-} from '$lib/core/fields/builders/field-builder.js';
-import { joinMemberTypes } from '$lib/util/string.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { Field, FieldsPreviewProps, FormField } from '$lib/fields/types.js';
+} from '#lib/core/fields/builders/field-builder.js';
+import { joinMemberTypes } from '#lib/util/string.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import { localizeFields } from '#lib/core/fields/localize.js';
+import type { Field, FieldsPreviewProps, FormField } from '#lib/fields/types.js';
 import type { Component } from 'svelte';
 import Group from './component/Group.svelte';
 
@@ -33,18 +34,14 @@ export class GroupFieldBuilder extends FormFieldBuilder<GroupField> {
   }
 
   fields(...fields: FieldBuilder<Field>[]) {
-    this.field.fields = fields;
+    this.field.fields = this.field.localized ? localizeFields(fields) : fields;
     return this;
   }
 
+  /** The group and every field in it localized, whichever of `fields()` and this comes first. */
   localized() {
     this.field.localized = true;
-    this.field.fields = this.field.fields.map((field) => {
-      if (field instanceof FormFieldBuilder) {
-        return field.clone().localized();
-      }
-      return field;
-    });
+    this.field.fields = localizeFields(this.field.fields ?? []);
     return this;
   }
 
@@ -74,16 +71,6 @@ export class GroupFieldBuilder extends FormFieldBuilder<GroupField> {
 
 export const group = (name: string) => new GroupFieldBuilder(name);
 
-/**
- * Checks if a field is a group field.
- */
-export const isGroupField = (field: Field): field is GroupField => field.type === 'group';
-
-/**
- * Checks if a field is a group field (raw type).
- */
-export const isGroupFieldRaw = (field: Field): field is GroupFieldRaw => field.type === 'group';
-
 /****************************************************/
 /* Types
 /****************************************************/
@@ -94,11 +81,4 @@ export type GroupField = FormField & {
   label?: string;
   fields: FieldBuilder<Field>[];
   preview?: Component<FieldsPreviewProps>;
-};
-
-export type GroupFieldRaw = FormField & {
-  type: 'group';
-  name: string;
-  label?: string;
-  fields: Field[];
 };

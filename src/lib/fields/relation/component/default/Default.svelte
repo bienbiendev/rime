@@ -1,14 +1,14 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import Document from '$lib/panel/components/sections/document/Document.svelte';
-  import * as Command from '$lib/panel/components/ui/command/index.js';
-  import * as Sheet from '$lib/panel/components/ui/sheet/index.js';
-  import { dataError } from '$lib/panel/util/dataError.js';
-  import { dataFocused } from '$lib/panel/util/dataFocused.js';
-  import { useSortable } from '$lib/panel/util/Sortable.js';
-  import { X } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import Document from '#lib/panel/components/sections/document/Document.svelte';
+  import * as Command from '#lib/panel/components/ui/command/index.js';
+  import * as Sheet from '#lib/panel/components/ui/sheet/index.js';
+  import { dataError } from '#lib/panel/util/dataError.js';
+  import { dataFocused } from '#lib/panel/util/dataFocused.js';
+  import { useSortable } from '#lib/panel/util/Sortable.js';
+  import X from '@lucide/svelte/icons/x';
   import type { RelationComponentProps, RelationFieldItem } from '../types.js';
 
   /**
@@ -60,8 +60,8 @@
 
   const onNestedDocumentCreated = (doc: GenericDoc) => {
     creating = false;
+    // Lists the new document among the candidates, picks it and writes the value
     onRelationCreated(doc);
-    addValue(doc.id);
   };
 
   const { sortable } = useSortable({

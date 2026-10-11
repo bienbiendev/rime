@@ -1,17 +1,18 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import type { GenericBlock } from '$lib/core/prototype/types.js';
-  import type { BlocksFieldBlock } from '$lib/fields/types';
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte';
-  import { useSortable } from '$lib/panel/util/Sortable.js';
-  import { normalizeFieldPath } from '$lib/util/string.js';
-  import { Download, Maximize2 } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import type { GenericBlock } from '#lib/core/prototype/types.js';
+  import type { BlocksFieldBlock } from '#lib/fields/types.js';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import { useSortable } from '#lib/panel/util/Sortable.js';
+  import { normalizeFieldPath } from '#lib/util/string.js';
+  import Maximize2 from '@lucide/svelte/icons/maximize-2';
   import { onMount } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
+  import DefaultLocaleButton from '../../repeatable/DefaultLocaleButton.svelte';
   import AddBlockButton from './AddBlockButton.svelte';
+  import { isRememberedOpen, rememberOpen } from '../../repeatable.js';
   import Block from './Block.svelte';
   import { getBlocksFocusContext } from './focus/focus.svelte.js';
   import type { BlocksProps } from './props.js';
@@ -38,30 +39,23 @@
   const count = $derived(blockState.blocks.length);
   let sorting = $state(false);
 
-  const locale = getLocaleContext();
-
-  /**
-   * The blocks shown open, by id; the others are rows. The browser keeps the open ones:
-   * `rz-block-open:<id>` is set while a block is open.
-   */
-  const OPEN_KEY = 'rz-block-open:';
+  /** The blocks shown open, by id; the others are rows. The browser remembers the open ones. */
   const opened = new SvelteSet<string>();
   const anyOpen = $derived(blockState.blocks.some((block) => opened.has(block.id)));
 
   onMount(() => {
     for (const block of blockState.blocks) {
-      if (localStorage.getItem(OPEN_KEY + block.id)) opened.add(block.id);
+      if (isRememberedOpen(block.id)) opened.add(block.id);
     }
   });
 
   function setOpen(id: string, open: boolean) {
     if (open) {
       opened.add(id);
-      localStorage.setItem(OPEN_KEY + id, '1');
     } else {
       opened.delete(id);
-      localStorage.removeItem(OPEN_KEY + id);
     }
+    rememberOpen(id, open);
   }
 
   function toggleAll() {
@@ -180,12 +174,10 @@
     <div class="rz-blocks__actions-bottom">
       <AddBlockButton addBlock={add} {config} />
 
-      {#if locale && locale.code !== locale.defaultCode && config.get.localized}
-        <Button icon={Download} size="sm" onclick={field.setValueFromDefaultLocale} variant="ghost">
-          {t__('fields.get_data_from')}
-          {locale.defaultCode}
-        </Button>
-      {/if}
+      <DefaultLocaleButton
+        localized={config.get.localized}
+        onclick={field.setValueFromDefaultLocale}
+      />
     </div>
   {/if}
 

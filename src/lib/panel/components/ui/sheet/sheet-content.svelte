@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
   import { Dialog as SheetPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
   import type { Snippet } from 'svelte';
   import { SheetOverlay, SheetPortal, type Side } from './index.js';

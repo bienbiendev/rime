@@ -1,24 +1,16 @@
-import type { Adapter } from '$lib/core/adapter.js';
-import type { CollectionSlug } from '$lib/core/prototype/types.js';
-import { STAFF_SLUG } from './tables.js';
+import type { Adapter } from '#lib/core/adapter.js';
+import type { CollectionSlug } from '#lib/core/prototype/types.js';
+import { STAFF_SLUG } from './constant.js';
 import type { User } from './types.js';
 
 /**
- * The three reads auth needs about its own rows.
- *
- * They were `adapter.auth.isSuperAdmin`, `.getBetterAuthUserId` and `.getUserAttributes` — a third
- * of a facade on the `Adapter` interface, for one feature. Each is
- * `select … from <a prototype's table> where <a column> = ?`, which is what `findMany` already is;
- * what made them look like adapter work was that all three named a collection called `staff` and
- * the database layer was the only place that name appeared.
- *
- * It appears here instead, once, as `STAFF_SLUG` — and it belongs here because this feature is
- * what derives that collection (`staff/configure.ts`).
+ * The reads auth needs about its own rows.
  *
  * > **These read rows, not documents.** `adapter.collection(slug).findMany` runs no hooks and no
- * > access checks, which is deliberate and load-bearing: all three run *during* authentication,
- * > before there is a user to check anything against. Going through `rime.collection(slug).find()`
- * > would recurse — the access check needs the user this call is resolving.
+ * > access checks. Most of them run *during* authentication, before there is a user to check
+ * > anything against: going through `rime.collection(slug).find()` would recurse, since the access
+ * > check needs the user this call is resolving. The others read the private fields a document
+ * > never carries.
  */
 
 /**
@@ -53,12 +45,28 @@ export const betterAuthUserId = async (
   return (row?.authUserId as string | undefined) ?? null;
 };
 
+/** The better-auth api key a collection row holds and the user that created it, or `null`. */
+export const betterAuthApiKey = async (
+  adapter: Adapter,
+  args: { slug: CollectionSlug; id: string }
+): Promise<{ keyId: string; userId: string } | null> => {
+  const [row] = await adapter.collection(args.slug).findMany({
+    query: { where: { id: { equals: args.id } } },
+    select: ['apiKeyId', 'authUserId'],
+    limit: 1
+  });
+
+  if (!row?.apiKeyId) {
+    return null;
+  }
+  return { keyId: row.apiKeyId as string, userId: row.authUserId as string };
+};
+
 /**
  * The session user, read off the collection row a better-auth user is linked to.
  *
- * The members are named rather than spread, which is what the hand-written `db.select()` did too:
- * this object becomes `event.locals.user` and reaches the client through `toPublicUser`, so what
- * it carries is a decision, not whatever the read happened to return.
+ * The members are named rather than spread: this object becomes `event.locals.user` and reaches
+ * the client through `toPublicUser`.
  */
 export const userAttributes = async (
   adapter: Adapter,
@@ -87,4 +95,26 @@ export const userAttributes = async (
     ...(isStaff ? { isSuperAdmin: row.isSuperAdmin === true } : {}),
     isStaff
   } as User;
+};
+
+/**
+ * The session user of a request made with an api key: the key's own document, with the roles the
+ * key carries. Not staff, so the panel stays closed to it. `slugs` are the api-key collections,
+ * asked in turn.
+ */
+export const apiKeyUser = async (
+  adapter: Adapter,
+  args: { slugs: CollectionSlug[]; apiKeyId: string; roles: string[] }
+): Promise<User | undefined> => {
+  for (const slug of args.slugs) {
+    const [row] = await adapter.collection(slug).findMany({
+      query: { where: { apiKeyId: { equals: args.apiKeyId } } },
+      select: ['id', 'name'],
+      limit: 1
+    });
+    if (row) {
+      return { id: row.id, name: row.name, email: '', roles: args.roles, isStaff: false } as User;
+    }
+  }
+  return undefined;
 };

@@ -13,6 +13,7 @@ class SvelteRenderer {
   component: App;
   props: NodeViewProps;
   dom: HTMLElement;
+  private attributeNames: string[] = [];
 
   constructor(component: App, { element, props }: RendererOptions) {
     this.component = component;
@@ -26,10 +27,20 @@ class SvelteRenderer {
     Object.assign(this.props, props);
   }
 
+  /**
+   * Sets the given attributes on the element, and removes those the previous call set and this
+   * one does not.
+   */
   updateAttributes(attributes: Record<string, string>): void {
-    Object.keys(attributes).forEach((key) => {
-      this.dom.setAttribute(key, attributes[key]);
-    });
+    for (const name of this.attributeNames) {
+      if (!(name in attributes)) {
+        this.dom.removeAttribute(name);
+      }
+    }
+    for (const [name, value] of Object.entries(attributes)) {
+      this.dom.setAttribute(name, value);
+    }
+    this.attributeNames = Object.keys(attributes);
   }
 
   destroy(): void {

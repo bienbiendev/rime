@@ -1,5 +1,6 @@
-import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
-import { access } from '$lib/core/auth/access.js';
+import { SITE_URL } from '$app/env/public';
+import { adapterSqlite } from '#lib/adapter-sqlite/index.server.js';
+import { access } from '#lib/core/auth/access.js';
 import {
   block,
   blocks,
@@ -14,14 +15,14 @@ import {
   text,
   toggle,
   tree
-} from '$lib/fields/index.js';
+} from '#lib/fields/index.js';
 import {
   bold,
   heading,
   italic,
   link as linkFeature,
   upload
-} from '$lib/fields/rich-text/client.js';
+} from '#lib/fields/rich-text/client.js';
 import { Area, Collection, rime } from '$rime/config';
 
 const Settings = Area.create('settings', {
@@ -38,6 +39,21 @@ const Settings = Area.create('settings', {
 
 const Infos = Area.create('infos', {
   fields: [text('title').localized(), text('email').localized()],
+  access: {
+    read: (user) => access.hasRoles(user, 'admin')
+  },
+  versions: true
+});
+
+// Each new version copies the other locales onto it: a copy carries values already hooked, so a
+// hook that is not idempotent must not run on it again
+const Contact = Area.create('contact', {
+  fields: [
+    text('title').localized(),
+    text('marker')
+      .localized()
+      .$beforeSave((value) => (value ? `${value}-saved` : value))
+  ],
   access: {
     read: (user) => access.hasRoles(user, 'admin')
   },
@@ -64,13 +80,17 @@ const tabNewsAttributes = tab('attributes').fields(
     .required(),
   relation('image').to('medias'),
   richText('intro').features(bold(), linkFeature()),
-  date('published')
+  date('published'),
+  // Only admins read and write it: an editor's new version still carries it, in every locale
+  text('adminNote')
+    .localized()
+    .access({ read: (user) => access.isAdmin(user), update: (user) => access.isAdmin(user) })
 );
 
 const News = Collection.create('news', {
   fields: [tabs(tabNewsAttributes, tabWriter)],
   live: true,
-  $url: ({ slug, locale }) => `${process.env.PUBLIC_RIME_URL}/${locale}/actualites/${slug}`,
+  $url: ({ slug, locale }) => `${SITE_URL}/${locale}/actualites/${slug}`,
   access: {
     read: () => true,
     create: (user) => access.isAdmin(user),
@@ -139,7 +159,7 @@ const Pages = Collection.create('pages', {
       )
     ])
   ],
-  $url: ({ path, locale }) => `${process.env.PUBLIC_RIME_URL}/${locale}/${path.join('/')}`,
+  $url: ({ path, locale }) => `${SITE_URL}/${locale}/${path.join('/')}`,
   nested: true,
   access: {
     read: () => true
@@ -150,7 +170,7 @@ const Pages = Collection.create('pages', {
 export default rime({
   $adapter: adapterSqlite('versions-multilang.sqlite'),
   collections: [News, Medias, Pdf, Pages],
-  areas: [Settings, Infos],
+  areas: [Settings, Infos, Contact],
   localization: {
     locales: [
       { code: 'fr', label: 'Français' },

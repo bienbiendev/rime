@@ -3,7 +3,7 @@
  * This utility helps with error handling without try/catch blocks throughout the codebase.
  *
  * @example
- * // Using safe to handle API calls without try/catch
+ * // Handle API calls without try/catch
  * const [error, data] = await trycatch(() => fetchData());
  * if (error) {
  *   // Handle error case

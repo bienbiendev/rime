@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { panelUrl } from '$lib/core/routes/util.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
-  import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import { authClient } from '$lib/panel/util/auth.js';
-  import { ChevronsUpDown, LogOut, UserRound } from '@lucide/svelte';
+  import { STAFF_SLUG } from '#lib/core/auth/constant.js';
+  import { panelUrl } from '#lib/core/routes/util.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import * as DropdownMenu from '#lib/panel/components/ui/dropdown-menu/index.js';
+  import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import { authClient } from '#lib/panel/util/auth.js';
+  import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+  import LogOut from '@lucide/svelte/icons/log-out';
+  import UserRound from '@lucide/svelte/icons/user-round';
   import { toast } from 'svelte-sonner';
 
   type Props = { navCollapsed: boolean };
@@ -60,7 +63,7 @@
     <DropdownMenu.Content side="top" align="start" sideOffset={6} class="rz-user__menu">
       <DropdownMenu.Item>
         {#snippet child({ props })}
-          <a {...props} href={panelUrl('staff', user.attributes.id)}>
+          <a {...props} href={panelUrl(STAFF_SLUG, user.attributes.id)}>
             <UserRound size="14" />
             {t__('common.profile')}
           </a>

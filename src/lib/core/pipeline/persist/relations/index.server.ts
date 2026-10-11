@@ -1,28 +1,20 @@
-import type { Adapter } from '$lib/core/adapter.js';
-import type { GenericBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
-import { isWithin } from '$lib/util/string.js';
-import type { Dic } from '$lib/util/types.js';
+import type { Adapter } from '#lib/core/adapter.js';
+import type { GenericBlock, PrototypeSlug, TreeBlock } from '#lib/core/prototype/types.js';
+import type { Dic, WithRequired } from '#lib/util/types.js';
 import type { ConfigMap } from '../../config-map/types.js';
-import type { TreeBlocksDiff } from '../tree/diff.server.js';
+import { replacedPaths, withinPaths, type RepeatablesDiff } from '../repeatable.server.js';
 import { defineRelationsDiff } from './diff.server.js';
 import { extractRelations } from './extract.server.js';
-
-type Diff<T> = {
-  toAdd: (Omit<T, 'id'> & { id?: string })[];
-  toDelete: T[];
-  toUpdate: T[];
-};
 
 export const saveRelations = async (args: {
   data: Dic;
   configMap: ConfigMap;
   incomingPaths: string[];
-  blocksDiff: Diff<GenericBlock>;
-  treeDiff: TreeBlocksDiff;
+  blocksDiff: RepeatablesDiff<GenericBlock>;
+  treeDiff: RepeatablesDiff<WithRequired<TreeBlock, 'path'>>;
   adapter: Adapter;
   locale?: string;
-  /** Whose children these are — the versions's slug when the prototype has one. Resolved by
-   *  `persistRelational` from what the prototype was registered with. */
+  /** Whose children these are: the versions table's slug when the config has one, else its own. */
   ownerSlug: PrototypeSlug;
   ownerId: string;
 }) => {
@@ -62,20 +54,13 @@ export const saveRelations = async (args: {
     locale
   });
 
-  // get existing relations filtered by path
-  // if not present in incoming paths don't keep it.
   const existingRelations = await adapter.relations
     .getAll({
       parentSlug: ownerSlug,
       ownerId,
       locale: locale
     })
-    .then((relations) => {
-      // Filter existing relations
-      return relations.filter((relation) => {
-        return incomingPaths.some((path) => !!relation.path && isWithin(relation.path, path));
-      });
-    });
+    .then((relations) => withinPaths(relations, replacedPaths(incomingPaths, configMap)));
 
   /** get difference between them */
   const relationsDiff = defineRelationsDiff({

@@ -1,6 +1,5 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { logger } from '$lib/core/logger.server.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { RimeError } from '#lib/core/errors/index.js';
 
 /**
  * Runs the config's own access check for this operation, and throws `UNAUTHORIZED` if it says no.
@@ -33,9 +32,6 @@ export const authorize = Hooks.beforeOperation(async function authorize(args) {
       break;
   }
 
-  if (!authorized) {
-    logger.error(RimeError.UNAUTHORIZED);
-    throw new RimeError(RimeError.UNAUTHORIZED);
-  }
+  if (!authorized) throw new RimeError(RimeError.UNAUTHORIZED);
   return args;
 });

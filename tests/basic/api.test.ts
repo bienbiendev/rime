@@ -1,8 +1,12 @@
-import { filePathToBase64 } from '$lib/core/prototype/collection/upload/util/converter.server.js';
+import { filePathToBase64 } from '#lib/core/prototype/collection/upload/util/converter.server.js';
+import { EDIT_LOCK_TTL_AFTER_CLOSE_MS } from '#lib/core/prototype/shared/metas/constant.js';
 import test, { expect } from '@playwright/test';
-import { readFileSync } from 'fs';
+import { readFileSync, rmSync } from 'fs';
 import path from 'path';
-import { API_BASE_URL, signIn } from '../util.js';
+import { API_BASE_URL, BASE_URL, panelUrl, signIn } from '../util.js';
+
+// The tests run in order and share the ids they create: one failure skips the rest.
+test.describe.configure({ mode: 'serial' });
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -74,6 +78,7 @@ test('Should not create Page with missing required title', async ({ request }) =
     data: {}
   });
   expect(response.status()).toBe(400);
+  expect((await response.json()).message).toContain('attributes.title');
 });
 
 test('Should create Home', async ({ request }) => {
@@ -203,11 +208,12 @@ test('Should return 1 page', async ({ request }) => {
 /* Check server config has been generated (hooks should be active)
 /****************************************************/
 
-test('Server config should have hooks configured', async () => {
-  const dateStr = new Date().toISOString().split('T')[0];
-  const logFileName = `${dateStr}.log`;
-  const logs = readFileSync(path.resolve(process.cwd(), `logs/${logFileName}`), 'utf-8');
-  expect(logs).toContain('Reading a page document');
+test('Server config should have hooks configured', async ({ request }) => {
+  // Written by the pages beforeRead hook in lib/+rime/pages/module.server.ts
+  const probeFile = path.resolve(process.cwd(), 'test-results', 'probe-hook.txt');
+  rmSync(probeFile, { force: true });
+  await request.get(`${API_BASE_URL}/pages`);
+  expect(readFileSync(probeFile, 'utf-8')).toBe('pages beforeRead');
 });
 
 /****************************************************/
@@ -216,64 +222,59 @@ test('Server config should have hooks configured', async () => {
 
 test('Should get correct offset / limit', async ({ request }) => {
   const headers = await signInSuperAdmin(request);
+  // Every page this test makes, deleted at the end
+  const created: string[] = [];
 
-  // Delete home for test // recreate at the end
-  await request.delete(`${API_BASE_URL}/pages/${homeId}`, { headers });
+  // Home leaves for the test, and is made again at the end
+  const homeRemoved = await request.delete(`${API_BASE_URL}/pages/${homeId}`, { headers });
+  expect(homeRemoved.status()).toBe(200);
 
-  // Create 100 pages
-  for (let i = 1; i < 100; i++) {
-    await request.post(`${API_BASE_URL}/pages`, {
+  const COUNT = 25;
+  const pad = (n: number) => n.toString().padStart(3, '0');
+
+  // "Page 001" to "Page 025"
+  for (let i = 1; i <= COUNT; i++) {
+    const response = await request.post(`${API_BASE_URL}/pages`, {
       headers,
-      data: {
-        attributes: {
-          title: 'Page ' + i.toString().padStart(3, '0'),
-          slug: 'page-' + i.toString().padStart(3, '0')
-        }
-      }
+      data: { attributes: { title: 'Page ' + pad(i), slug: 'page-' + pad(i) } }
     });
+    expect(response.status()).toBe(200);
+    created.push((await response.json()).doc.id);
   }
 
-  // Check findAll
-  for (let i = 1; i < 10; i++) {
-    const pagination = i;
-    const offset = (pagination - 1) * 10;
+  // Pages of 10 by title: 001-010, 011-020, then 021-025
+  for (let offset = 0; offset < COUNT; offset += 10) {
     const response = await request
       .get(`${API_BASE_URL}/pages?limit=10&offset=${offset}&sort=attributes.title`)
       .then((response) => {
         return response.json();
       });
-    expect(response.docs).toBeDefined();
-    expect(response.docs.length).toBe(10);
-    expect(response.docs.at(0).title).toBe('Page ' + (offset + 1).toString().padStart(3, '0'));
-    expect(response.docs.at(9).title).toBe('Page ' + (offset + 10).toString().padStart(3, '0'));
+    const titles = response.docs.map((doc: { title: string }) => doc.title);
+    const last = Math.min(offset + 10, COUNT);
+    expect(titles.length).toBe(last - offset);
+    expect(titles.at(0)).toBe('Page ' + pad(offset + 1));
+    expect(titles.at(-1)).toBe('Page ' + pad(last));
   }
 
-  // Create 100 other pages
-  for (let i = 1; i < 100; i++) {
+  // "Other 001" to "Other 025", dated backwards: "Other 025" is the oldest, one second apart
+  for (let i = 1; i <= COUNT; i++) {
     const { doc } = await request
       .post(`${API_BASE_URL}/pages`, {
         headers,
-        data: {
-          attributes: {
-            title: 'Other ' + i.toString().padStart(3, '0'),
-            slug: 'other-' + i.toString().padStart(3, '0')
-          }
-        }
+        data: { attributes: { title: 'Other ' + pad(i), slug: 'other-' + pad(i) } }
       })
       .then((r) => r.json());
+    created.push(doc.id);
 
-    await request.patch(`${API_BASE_URL}/pages/${doc.id}`, {
+    const dated = await request.patch(`${API_BASE_URL}/pages/${doc.id}`, {
       headers,
-      data: {
-        createdAt: new Date(new Date('2025-05-22T06:58:35.000Z').getTime() + i * 1000)
-      }
+      data: { createdAt: new Date(Date.UTC(2025, 4, 22) - i * 1000).toISOString() }
     });
+    expect(dated.status()).toBe(200);
   }
 
-  // Check with query
-  for (let i = 1; i < 10; i++) {
-    const pagination = i;
-    const offset = (pagination - 1) * 10;
+  // Oldest first: only the dates written above put "Other 025" before "Other 001"
+  for (let offset = 0; offset < COUNT; offset += 10) {
     const response = await request
       .get(
         `${API_BASE_URL}/pages?where[attributes.slug][like]=other-&limit=10&offset=${offset}&sort=createdAt`
@@ -281,11 +282,18 @@ test('Should get correct offset / limit', async ({ request }) => {
       .then((response) => {
         return response.json();
       });
-    expect(response.docs).toBeDefined();
-    expect(response.docs.length).toBe(10);
-    expect(response.docs.at(0).title).toBe('Other ' + (offset + 1).toString().padStart(3, '0'));
-    expect(response.docs.at(9).title).toBe('Other ' + (offset + 10).toString().padStart(3, '0'));
+    const titles = response.docs.map((doc: { title: string }) => doc.title);
+    const last = Math.min(offset + 10, COUNT);
+    expect(titles.length).toBe(last - offset);
+    expect(titles.at(0)).toBe('Other ' + pad(COUNT - offset));
+    expect(titles.at(-1)).toBe('Other ' + pad(COUNT + 1 - last));
   }
+
+  const removed = await request.delete(
+    `${API_BASE_URL}/pages?where[id][in_array]=${created.join(',')}`,
+    { headers }
+  );
+  expect(removed.status()).toBe(200);
 
   // Re-create home
   const response = await request.post(`${API_BASE_URL}/pages`, {
@@ -374,11 +382,11 @@ test('Should create a Media', async ({ request }) => {
   expect(doc.filename).toBe('landscape-3.jpg');
   expect(doc.mimeType).toBe('image/jpeg');
   expect(doc.sizes).toBeDefined();
-  expect(doc.sizes.sm).toBe('/medias/landscape-3-sm-640.webp');
-  expect(doc.sizes.md).toBe('/medias/landscape-3-md-1024.webp');
-  expect(doc.sizes.lg).toBe('/medias/landscape-3-lg-1536.webp');
-  expect(doc.sizes.xl).toBe('/medias/landscape-3-xl-2048.webp');
-  expect(doc.sizes.thumbnail).toBe('/medias/landscape-3-thumbnail-400.jpg');
+  expect(doc.sizes.sm).toBe('/uploads/medias/landscape-3-sm-640.webp');
+  expect(doc.sizes.md).toBe('/uploads/medias/landscape-3-md-1024.webp');
+  expect(doc.sizes.lg).toBe('/uploads/medias/landscape-3-lg-1536.webp');
+  expect(doc.sizes.xl).toBe('/uploads/medias/landscape-3-xl-2048.webp');
+  expect(doc.sizes.thumbnail).toBe('/uploads/medias/landscape-3-thumbnail-400.jpg');
   expect(doc._path).toBe('root');
 });
 
@@ -403,6 +411,19 @@ test("Should update a media path (path doesn't exists)", async ({ request }) => 
 test('Should not get users', async ({ request }) => {
   const response = await request.get(`${API_BASE_URL}/staff`);
   expect(response.status()).toBe(403);
+});
+
+// users is read by anyone. `authUserId` is a column of every auth collection that no field declares
+test('Should refuse an anonymous users filter on a column no field declares', async ({
+  request
+}) => {
+  const response = await request.get(`${API_BASE_URL}/users?where[authUserId][like]=a%25`);
+  expect(response.status()).toBe(400);
+});
+
+test('Should let anyone filter users on a field anyone reads', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/users?where[website][like]=a%25`);
+  expect(response.status()).toBe(200);
 });
 
 test('SuperAdmin sould not delete himself', async ({ request }) => {
@@ -514,6 +535,12 @@ test('Should get editor user', async ({ request }) => {
   expect(data.doc.roles).toContain('editor');
   expect(data.doc.roles).not.toContain('admin');
   expect(data.doc.name).toBe('Chesster');
+
+  // A staff member made by an admin, not an admin, has better-auth's `staff` role
+  const session = await request
+    .get(`${API_BASE_URL}/auth/get-session`, { headers: await signInEditor(request) })
+    .then((r) => r.json());
+  expect(session.user.role).toBe('staff');
 });
 
 test('Should logout super admin', async ({ request }) => {
@@ -628,11 +655,12 @@ test('Admin should not create an admin with isSuperAdmin', async ({ request }) =
   expect(response.status()).toBe(403);
 });
 
+// On their own document, so only the `isSuperAdmin` key can be refused, not the target
 test('Admin should not update isSuperAdmin', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/staff/${superAdminId}`, {
+  const response = await request.patch(`${API_BASE_URL}/staff/${adminId}`, {
     headers: await signInAdmin(request),
     data: {
-      isSuperAdmin: false
+      isSuperAdmin: true
     }
   });
   expect(response.status()).toBe(403);
@@ -660,22 +688,17 @@ test('Should get settings', async ({ request }) => {
 });
 
 test('Should update settings', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
   const response = await request.patch(`${API_BASE_URL}/settings`, {
-    headers: await signInSuperAdmin(request),
+    headers,
     data: {
       maintenance: true
     }
   });
   expect(response.status()).toBe(200);
-});
 
-test('Should get the updated settings', async ({ request }) => {
-  const response = await request
-    .get(`${API_BASE_URL}/settings`, {
-      headers: await signInSuperAdmin(request)
-    })
-    .then((r) => r.json());
-  expect(response.doc.maintenance).toBe(true);
+  const { doc } = await request.get(`${API_BASE_URL}/settings`, { headers }).then((r) => r.json());
+  expect(doc.maintenance).toBe(true);
 });
 
 test('Should not get settings', async ({ request }) => {
@@ -902,6 +925,121 @@ test('Should login user', async ({ request }) => {
   regularId = data.user.id;
 });
 
+let editorMadeId: string;
+const signInEditorMade = signIn('editor-made@email.com', PASSWORD);
+
+test('Editor should create a user', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/users`, {
+    headers: await signInEditor(request),
+    data: { name: 'Editor made', email: 'editor-made@email.com', password: PASSWORD }
+  });
+  expect(response.status()).toBe(200);
+  editorMadeId = (await response.json()).doc.id;
+
+  // A member made by a staff member has better-auth's `user` role
+  const session = await request
+    .get(`${API_BASE_URL}/auth/get-session`, { headers: await signInEditorMade(request) })
+    .then((r) => r.json());
+  expect(session.user.role).toBe('user');
+});
+
+test('A user should delete their own account', async ({ request }) => {
+  const response = await request.delete(`${API_BASE_URL}/users/${editorMadeId}`, {
+    headers: await signInEditorMade(request)
+  });
+  expect(response.status()).toBe(200);
+
+  // The better-auth account went with the document
+  const signInResponse = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
+    data: { email: 'editor-made@email.com', password: PASSWORD }
+  });
+  expect(signInResponse.status()).toBe(401);
+});
+
+test('Editor should not reach the better-auth admin endpoints', async ({ request }) => {
+  const headers = await signInEditor(request);
+
+  const list = await request.get(`${API_BASE_URL}/auth/admin/list-users`, { headers });
+  expect(list.status()).toBe(404);
+
+  const remove = await request.post(`${API_BASE_URL}/auth/admin/remove-user`, {
+    headers,
+    data: { userId: regularId }
+  });
+  expect(remove.status()).toBe(404);
+});
+
+test('Admin should not reach the super-admin through the better-auth admin endpoints', async ({
+  request
+}) => {
+  // get-session answers the better-auth user, whose id the admin endpoints take
+  const superAdminSession = await request
+    .get(`${API_BASE_URL}/auth/get-session`, { headers: await signInSuperAdmin(request) })
+    .then((r) => r.json());
+  const superAdminAuthUserId = superAdminSession.user.id;
+  const headers = await signInAdmin(request);
+
+  const setPassword = await request.post(`${API_BASE_URL}/auth/admin/set-user-password`, {
+    headers,
+    data: { userId: superAdminAuthUserId, newPassword: 'b&2Bb&2B' }
+  });
+  expect(setPassword.status()).toBe(404);
+
+  const remove = await request.post(`${API_BASE_URL}/auth/admin/remove-user`, {
+    headers,
+    data: { userId: superAdminAuthUserId }
+  });
+  expect(remove.status()).toBe(404);
+
+  const signInResponse = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
+    data: { email: ADMIN_EMAIL, password: PASSWORD }
+  });
+  expect(signInResponse.status()).toBe(200);
+});
+
+test('A staff member should not delete their own account through better-auth', async ({
+  request
+}) => {
+  const response = await request.post(`${API_BASE_URL}/auth/delete-user`, {
+    headers: await signInEditor(request),
+    data: { password: PASSWORD }
+  });
+  expect(response.status()).toBe(404);
+
+  const staff = await request.get(`${API_BASE_URL}/staff/${editorId}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(staff.status()).toBe(200);
+});
+
+test('A user should not move their session to another collection', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/auth/update-user`, {
+    headers: await signInEditor(request),
+    data: { type: 'apps' }
+  });
+  expect(response.status()).toBe(404);
+});
+
+test('A user who is not staff cannot claim an edit lock', async ({ request }) => {
+  const claim = await request.post(`${API_BASE_URL}/users/${regularId}/lock`, {
+    headers: await signInRegular(request)
+  });
+  expect(claim.status()).toBe(403);
+});
+
+test('An anonymous delete of a whole list is refused', async ({ request }) => {
+  // A filter that matches every user: the refusal is the delete access, not the missing filter
+  const response = await request.delete(`${API_BASE_URL}/users?where[email][like]=%25`);
+  expect(response.status()).toBe(403);
+});
+
+test('Should not link a new user to an existing account', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/users`, {
+    data: { name: 'Intruder', email: 'intruder@gmail.com', authUserId: regularId }
+  });
+  expect(response.status()).toBe(403);
+});
+
 test('Regular should not create pages', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/pages`, {
     headers: await signInRegular(request),
@@ -980,6 +1118,18 @@ test('Regular should not update his email', async ({ request }) => {
   expect(response.status()).toBe(403);
 });
 
+test('Regular should not update his own roles', async ({ request }) => {
+  await request.patch(`${API_BASE_URL}/users/${regularId}`, {
+    headers: await signInRegular(request),
+    data: { roles: ['member'] }
+  });
+
+  const { doc } = await request
+    .get(`${API_BASE_URL}/users/${regularId}`, { headers: await signInSuperAdmin(request) })
+    .then((r) => r.json());
+  expect(doc.roles).toEqual(['user']);
+});
+
 test('Regular should not update a page', async ({ request }) => {
   const response = await request.patch(`${API_BASE_URL}/pages/${homeId}`, {
     headers: await signInRegular(request),
@@ -996,7 +1146,7 @@ test('Regular should not create a staff user', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/staff`, {
     headers: await signInRegular(request),
     data: {
-      eamil: 'admin@regular.com',
+      email: 'admin@regular.com',
       name: 'Regular',
       password: PASSWORD
     }
@@ -1014,45 +1164,20 @@ test('Regular should not update a staff user', async ({ request }) => {
   expect(response.status()).toBe(403);
 });
 
-test('Regular should not update his roles (admin)', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/staff/${regularId}`, {
-    headers: await signInRegular(request),
-    data: {
-      roles: ['admin']
-    }
-  });
-  expect(response.status()).toBe(403);
-});
+// The member's own `users` document: only the `roles` field rule can keep the role out
+for (const role of ['admin', 'app', 'editor', 'other-role']) {
+  test(`Regular should not give himself the ${role} role`, async ({ request }) => {
+    await request.patch(`${API_BASE_URL}/users/${regularId}`, {
+      headers: await signInRegular(request),
+      data: { roles: [role] }
+    });
 
-test('Regular should not update his roles (app)', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/staff/${regularId}`, {
-    headers: await signInRegular(request),
-    data: {
-      roles: ['app']
-    }
+    const { doc } = await request
+      .get(`${API_BASE_URL}/users/${regularId}`, { headers: await signInSuperAdmin(request) })
+      .then((r) => r.json());
+    expect(doc.roles).toEqual(['user']);
   });
-  expect(response.status()).toBe(403);
-});
-
-test('Regular should not update his roles (editor)', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/staff/${regularId}`, {
-    headers: await signInRegular(request),
-    data: {
-      roles: ['editor']
-    }
-  });
-  expect(response.status()).toBe(403);
-});
-
-test('Regular should not update his roles (other-role)', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/staff/${regularId}`, {
-    headers: await signInRegular(request),
-    data: {
-      roles: ['other-role']
-    }
-  });
-  expect(response.status()).toBe(403);
-});
+}
 
 test('Regular should not update a media', async ({ request }) => {
   const response = await request.patch(`${API_BASE_URL}/medias/${mediaId}`, {
@@ -1100,7 +1225,72 @@ test('Should not public sign-up as staff', async ({ request }) => {
     }
   });
   expect(response.status()).toBe(401);
+
+  // No account was written
+  const signInAfter = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
+    data: { email: 'public@public.com', password: 'e"3Ee"3E' }
+  });
+  expect(signInAfter.status()).toBe(401);
 });
+
+// users lets anyone create: a public sign-up goes through
+test('Should public sign-up as a user', async ({ request }) => {
+  const email = `signup-${Date.now()}@public.com`;
+  const response = await request.post(`${API_BASE_URL}/auth/sign-up/email`, {
+    data: { email, name: 'Signed up', password: 'e"3Ee"3E', type: 'users' }
+  });
+  expect(response.status()).toBe(200);
+
+  const signedIn = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
+    data: { email, password: 'e"3Ee"3E' }
+  });
+  expect(signedIn.status()).toBe(200);
+
+  // A public sign-up has better-auth's `user` role
+  const session = await request
+    .get(`${API_BASE_URL}/auth/get-session`, {
+      headers: await signIn(email, 'e"3Ee"3E')(request)
+    })
+    .then((r) => r.json());
+  expect(session.user.role).toBe('user');
+
+  const { docs } = await request
+    .get(`${API_BASE_URL}/users?where[email][equals]=${encodeURIComponent(email)}`, {
+      headers: await signInSuperAdmin(request)
+    })
+    .then((r) => r.json());
+  expect(docs).toHaveLength(1);
+});
+
+// apps is an API-key collection, pages is no auth collection, nope is none at all: each is refused
+// before an account is written
+for (const [type, extra] of [
+  ['apps', {}],
+  ['pages', { attributes: { title: 'Signed-up page', slug: 'signed-up-page' } }],
+  ['nope', {}]
+] as const) {
+  test(`Should not public sign-up to ${type}`, async ({ request }) => {
+    const email = `signup-${type}-${Date.now()}@public.com`;
+    const response = await request.post(`${API_BASE_URL}/auth/sign-up/email`, {
+      data: { email, name: 'Refused', password: 'e"3Ee"3E', type, ...extra }
+    });
+    expect(response.status()).toBe(401);
+
+    const signedIn = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
+      data: { email, password: 'e"3Ee"3E' }
+    });
+    expect(signedIn.status()).toBe(401);
+
+    if (type === 'pages') {
+      const { docs } = await request
+        .get(`${API_BASE_URL}/pages?where[attributes.title][equals]=Signed-up page`, {
+          headers: await signInSuperAdmin(request)
+        })
+        .then((r) => r.json());
+      expect(docs).toHaveLength(0);
+    }
+  });
+}
 
 /****************************************************/
 /* Duplicate — deeply nested structure (relation
@@ -1271,11 +1461,57 @@ test('Admin should create an api key app', async ({ request }) => {
   appApiKey = data.doc.apiKey;
 });
 
+test('A key alone is its app: the `apps` role reads nothing, every time', async ({ request }) => {
+  // No session in this context: the key is the only credential
+  for (let i = 0; i < 12; i++) {
+    const response = await request.get(`${API_BASE_URL}/apps`, {
+      headers: { 'x-api-key': appApiKey }
+    });
+    // 403, never the 401 of a key past a daily quota
+    expect(response.status()).toBe(403);
+  }
+});
+
+test('A key never opens the panel', async ({ request }) => {
+  const response = await request.get(panelUrl(), {
+    headers: { 'x-api-key': appApiKey },
+    maxRedirects: 0
+  });
+  expect(response.status()).toBe(401);
+});
+
+test('Admin should create an api key app even when the body carries an authUserId', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const response = await request.post(`${API_BASE_URL}/apps`, {
+    headers,
+    data: { name: 'Other App', authUserId: regularId }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  // The key exists: the request took the API-key path, not the sign-up one
+  expect(doc.apiKey).toBeDefined();
+  await request.delete(`${API_BASE_URL}/apps/${doc.id}`, { headers });
+});
+
 test('Should list apps as admin', async ({ request }) => {
   const response = await request.get(`${API_BASE_URL}/apps`, {
     headers: await signInSuperAdmin(request)
   });
   expect(response.status()).toBe(200);
+});
+
+test('An app read carries no private auth field', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/apps/${appId}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+  expect(doc.id).toBe(appId);
+  // PRIVATE_FIELDS, core/auth/constant.server.ts: both are columns of an api-key collection
+  expect(doc.apiKeyId).toBeUndefined();
+  expect(doc.authUserId).toBeUndefined();
 });
 
 test('An invalid api key should be rejected', async ({ request }) => {
@@ -1294,6 +1530,97 @@ test('A valid api key overrides the request roles to its own scope', async ({ re
     headers: { ...headers, 'x-api-key': appApiKey }
   });
   expect(response.status()).toBe(403);
+});
+
+test('Changing the roles of an app changes the roles of its key', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const update = await request.patch(`${API_BASE_URL}/apps/${appId}`, {
+    headers,
+    data: { roles: ['reports'] }
+  });
+  expect(update.status()).toBe(200);
+
+  // `reports` may read the apps, `apps` may not
+  const response = await request.get(`${API_BASE_URL}/apps`, {
+    headers: { ...headers, 'x-api-key': appApiKey }
+  });
+  expect(response.status()).toBe(200);
+});
+
+test('An admin should delete a key another admin created', async ({ request }) => {
+  const superAdminHeaders = await signInSuperAdmin(request);
+  const keysAdmin = await request.post(`${API_BASE_URL}/staff`, {
+    headers: superAdminHeaders,
+    data: {
+      email: 'keys-admin@email.com',
+      name: 'Keys admin',
+      roles: ['admin'],
+      password: PASSWORD
+    }
+  });
+  expect(keysAdmin.status()).toBe(200);
+  const keysAdminId = (await keysAdmin.json()).doc.id;
+
+  const created = await request.post(`${API_BASE_URL}/apps`, {
+    headers: await signIn('keys-admin@email.com', PASSWORD)(request),
+    data: { name: 'Keys admin app' }
+  });
+  expect(created.status()).toBe(200);
+  const { doc } = await created.json();
+
+  const deleted = await request.delete(`${API_BASE_URL}/apps/${doc.id}`, {
+    headers: superAdminHeaders
+  });
+  expect(deleted.status()).toBe(200);
+
+  const withKey = await request.get(`${API_BASE_URL}/apps`, {
+    headers: { ...superAdminHeaders, 'x-api-key': doc.apiKey }
+  });
+  expect(withKey.status()).toBe(401);
+
+  await request.delete(`${API_BASE_URL}/staff/${keysAdminId}`, { headers: superAdminHeaders });
+});
+
+test('An admin key passes while the staff member who made it is an admin', async ({
+  request,
+  playwright
+}) => {
+  const superAdminHeaders = await signInSuperAdmin(request);
+  const maker = await request.post(`${API_BASE_URL}/staff`, {
+    headers: superAdminHeaders,
+    data: { email: 'key-maker@email.com', name: 'Key maker', roles: ['admin'], password: PASSWORD }
+  });
+  expect(maker.status()).toBe(200);
+  const makerId = (await maker.json()).doc.id;
+
+  const created = await request.post(`${API_BASE_URL}/apps`, {
+    headers: await signIn('key-maker@email.com', PASSWORD)(request),
+    data: { name: 'Admin app', roles: ['admin'] }
+  });
+  expect(created.status()).toBe(200);
+  const { doc } = await created.json();
+
+  // A context with no cookie: the key alone
+  const keyOnly = await playwright.request.newContext();
+  const asAdmin = await keyOnly.get(`${API_BASE_URL}/apps`, {
+    headers: { 'x-api-key': doc.apiKey }
+  });
+  expect(asAdmin.status()).toBe(200);
+
+  // Demoted: the member's better-auth role becomes `staff`, and the key carries `admin` no more
+  const demoted = await request.patch(`${API_BASE_URL}/staff/${makerId}`, {
+    headers: superAdminHeaders,
+    data: { roles: ['editor'] }
+  });
+  expect(demoted.status()).toBe(200);
+  const afterDemotion = await keyOnly.get(`${API_BASE_URL}/apps`, {
+    headers: { 'x-api-key': doc.apiKey }
+  });
+  expect(afterDemotion.status()).toBe(401);
+
+  await keyOnly.dispose();
+  await request.delete(`${API_BASE_URL}/apps/${doc.id}`, { headers: superAdminHeaders });
+  await request.delete(`${API_BASE_URL}/staff/${makerId}`, { headers: superAdminHeaders });
 });
 
 test('Admin should delete the api key app', async ({ request }) => {
@@ -1474,13 +1801,11 @@ test('Private auth fields never leave the server', async ({ request }) => {
     headers: await signInSuperAdmin(request)
   });
   const { doc } = await response.json();
+  expect(doc.id).toBe(superAdminId);
   // PRIVATE_FIELDS, core/auth/constant.server.ts — stripped for everyone, superadmin included.
-  expect(doc.password).toBeUndefined();
-  expect(doc.token).toBeUndefined();
+  // These two are columns of staff; an app's `apiKeyId` is checked with the api keys above.
   expect(doc.isSuperAdmin).toBeUndefined();
-  expect(doc.apiKeyId).toBeUndefined();
   expect(doc.authUserId).toBeUndefined();
-  expect(doc.isStaff).toBeUndefined();
 });
 
 test('An anonymous read of a public collection carries no lock metas', async ({ request }) => {
@@ -1524,7 +1849,7 @@ test('Claiming a document somebody else holds answers held: false', async ({ req
   expect((await claim.json()).held).toBe(false);
 });
 
-test('The lock never reaches an API read, staff or not', async ({ request }) => {
+test('The lock never reaches an API read, staff or not', async ({ request, playwright }) => {
   // `deletePanelLockMetas` drops both fields off every read that is not a panel read, so a
   // superadmin over REST sees no more than an anonymous visitor.
   const asStaff = await request
@@ -1533,9 +1858,12 @@ test('The lock never reaches an API read, staff or not', async ({ request }) => 
   expect(asStaff.doc.currentlyEditedBy).toBeUndefined();
   expect(asStaff.doc.currentlyEditedAt).toBeUndefined();
 
-  const anonymous = await request
+  // A fresh context: `request` keeps the superadmin's cookie from the sign-in above
+  const anonymousContext = await playwright.request.newContext();
+  const anonymous = await anonymousContext
     .get(`${API_BASE_URL}/pages/${authoredPageId}`)
     .then((r) => r.json());
+  await anonymousContext.dispose();
   expect(anonymous.doc.currentlyEditedBy).toBeUndefined();
   expect(anonymous.doc.currentlyEditedAt).toBeUndefined();
 });
@@ -1549,14 +1877,17 @@ test('Neither claim nor release works without credentials', async ({ request }) 
 });
 
 test('Releasing frees the document for somebody else', async ({ request }) => {
+  test.setTimeout(45_000);
   const release = await request.delete(`${API_BASE_URL}/pages/${authoredPageId}/lock`, {
     headers: await signInReviser(request)
   });
   expect(release.status()).toBe(200);
 
-  // The release is a short lease rather than a hand-back — EDIT_LOCK_TTL_AFTER_CLOSE_MS — so the
-  // proof it worked is that the next claim takes it.
-  const claim = await request.post(`${API_BASE_URL}/pages/${authoredPageId}/lock?force=true`, {
+  // A release leaves the claim alive for EDIT_LOCK_TTL_AFTER_CLOSE_MS, so a refresh can take it
+  // back. After that, anybody's claim takes the document. Without the release, the reviser's
+  // claim would hold for EDIT_LOCK_TTL_MS and this claim would answer held: false.
+  await new Promise((resolve) => setTimeout(resolve, EDIT_LOCK_TTL_AFTER_CLOSE_MS + 1000));
+  const claim = await request.post(`${API_BASE_URL}/pages/${authoredPageId}/lock`, {
     headers: await signInSuperAdmin(request)
   });
   expect(claim.status()).toBe(200);
@@ -1576,10 +1907,14 @@ test('None of that moved updatedBy', async ({ request }) => {
 /* Urls
 /****************************************************/
 
-// $url puts the page marked isHome at the root, and leaves the `home` segment out of the others.
-test('The home page is at the root; its children have no home segment', async ({ request }) => {
+// $url puts the page marked isHome at the root, and leaves the root `home` segment out of the
+// pages under it. The front route serves each page at its url.
+test('The home page is at the root; its children have no home segment', async ({
+  request,
+  playwright
+}) => {
   const headers = await signInSuperAdmin(request);
-  const BASE = process.env.PUBLIC_RIME_URL;
+  const BASE = BASE_URL;
 
   const marked = await request.patch(`${API_BASE_URL}/pages/${homeId}`, {
     headers,
@@ -1606,6 +1941,7 @@ test('The home page is at the root; its children have no home segment', async ({
   const { docs } = await request
     .get(`${API_BASE_URL}/pages?where[_parent][equals]=${homeId}`)
     .then((response) => response.json());
+  expect(docs.map((doc: { id: string }) => doc.id)).toEqual([about.id]);
   for (const doc of docs) {
     const { doc: one } = await request
       .get(`${API_BASE_URL}/pages/${doc.id}`)
@@ -1613,9 +1949,143 @@ test('The home page is at the root; its children have no home segment', async ({
     expect(doc.url).toBe(one.url);
   }
 
+  const { doc: team } = await request
+    .post(`${API_BASE_URL}/pages`, {
+      headers,
+      data: { attributes: { title: 'Team', slug: 'team' }, _parent: about.id }
+    })
+    .then((response) => response.json());
+  expect(team.url).toBe(`${BASE}/about-us/team`);
+
+  // A `home` page that is not at the root keeps its segment. The address slug comes from the title.
+  const { doc: blog } = await request
+    .post(`${API_BASE_URL}/pages`, {
+      headers,
+      data: { attributes: { title: 'Blog', slug: 'blog' } }
+    })
+    .then((response) => response.json());
+  const { doc: blogHome } = await request
+    .post(`${API_BASE_URL}/pages`, {
+      headers,
+      data: { attributes: { title: 'Home', slug: 'home' }, _parent: blog.id }
+    })
+    .then((response) => response.json());
+  expect(blogHome._urlPath).toBe('blog/home');
+  expect(blogHome.url).toBe(`${BASE}/blog/home`);
+
+  // A fresh context: `request` keeps the superadmin's cookie from the sign-in above
+  const anonymous = await playwright.request.newContext();
+  expect((await anonymous.get(`${BASE}/about-us`)).status()).toBe(200);
+  expect((await anonymous.get(`${BASE}/about-us/team`)).status()).toBe(200);
+  await anonymous.dispose();
+
+  await request.delete(`${API_BASE_URL}/pages/${blogHome.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/pages/${blog.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/pages/${team.id}`, { headers });
   await request.delete(`${API_BASE_URL}/pages/${about.id}`, { headers });
   await request.patch(`${API_BASE_URL}/pages/${homeId}`, {
     headers,
     data: { attributes: { isHome: false } }
   });
+});
+
+// One page at a time is marked home: marking another one un-marks the first
+test('Marking a second page as home un-marks the first', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  await request.patch(`${API_BASE_URL}/pages/${homeId}`, {
+    headers,
+    data: { attributes: { isHome: true } }
+  });
+
+  const { doc: other } = await request
+    .post(`${API_BASE_URL}/pages`, {
+      headers,
+      data: { attributes: { title: 'Other home', slug: 'other-home', isHome: true } }
+    })
+    .then((response) => response.json());
+  expect(other.attributes.isHome).toBe(true);
+
+  const { doc: home } = await request
+    .get(`${API_BASE_URL}/pages/${homeId}`, { headers })
+    .then((response) => response.json());
+  expect(home.attributes.isHome).toBe(false);
+
+  await request.delete(`${API_BASE_URL}/pages/${other.id}`, { headers });
+});
+
+// The news url is the address the `(front)/[parentSlug=news]` route serves
+test('A news item is served at its url', async ({ request, playwright }) => {
+  const headers = await signInSuperAdmin(request);
+  const { doc } = await request
+    .post(`${API_BASE_URL}/news`, {
+      headers,
+      data: { attributes: { title: 'Hello news', slug: 'hello-news' } }
+    })
+    .then((response) => response.json());
+  expect(doc.url).toBe(`${BASE_URL}/news/${doc.attributes.slug}`);
+
+  // A fresh context: `request` keeps the superadmin's cookie from the sign-in above
+  const anonymous = await playwright.request.newContext();
+  expect((await anonymous.get(doc.url)).status()).toBe(200);
+  await anonymous.dispose();
+
+  await request.delete(`${API_BASE_URL}/news/${doc.id}`, { headers });
+});
+
+/****************************************************
+/* CORS
+/****************************************************/
+
+test('Should allow credentials on a preflight from a trusted origin', async ({ request }) => {
+  const response = await request.fetch(`${API_BASE_URL}/pages`, {
+    method: 'OPTIONS',
+    headers: { origin: BASE_URL, 'access-control-request-method': 'PATCH' }
+  });
+  expect(response.status()).toBe(204);
+  expect(response.headers()['access-control-allow-credentials']).toBe('true');
+  expect(response.headers()['access-control-allow-origin']).toBe(BASE_URL);
+});
+
+// No page has the slug `apiary`: the front route answers its own 404, not a CORS 403
+test('Should leave a site path that starts with /api out of the CORS check', async ({
+  request
+}) => {
+  const response = await request.get(`${BASE_URL}/apiary`, {
+    headers: { origin: 'https://untrusted.example' }
+  });
+  expect(response.status()).toBe(404);
+});
+
+// At depth 0 a relation reads as a reference (`documentId`), at depth 1 as the related document
+test('Should read an empty ?depth= as 0, on an area and on a collection document', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+
+  const logo = await request.patch(`${API_BASE_URL}/settings`, {
+    headers,
+    data: { logo: mediaId }
+  });
+  expect(logo.status()).toBe(200);
+  const area = await request.get(`${API_BASE_URL}/settings?depth=`, { headers });
+  expect(area.status()).toBe(200);
+  const areaLogo = (await area.json()).doc.logo[0];
+  expect(areaLogo.documentId).toBe(mediaId);
+  expect(areaLogo.filename).toBeUndefined();
+
+  const created = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: {
+      attributes: { title: 'Depth page', slug: 'depth-page', summary: { thumbnail: mediaId } }
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { id } = (await created.json()).doc;
+  const one = await request.get(`${API_BASE_URL}/pages/${id}?depth=`, { headers });
+  expect(one.status()).toBe(200);
+  const thumbnail = (await one.json()).doc.attributes.summary.thumbnail[0];
+  expect(thumbnail.documentId).toBe(mediaId);
+  expect(thumbnail.filename).toBeUndefined();
+
+  await request.delete(`${API_BASE_URL}/pages/${id}`, { headers });
 });

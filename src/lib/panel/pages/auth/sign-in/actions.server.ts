@@ -1,6 +1,6 @@
-import { dev } from '$app/environment';
-import { handleError } from '$lib/core/errors/handler.server.js';
-import { RimeFormError } from '$lib/core/errors/index.js';
+import { dev } from '$app/env';
+import { formFailure } from '#lib/core/errors/handler.server.js';
+import { RimeFormError } from '#lib/core/errors/index.js';
 import { redirect, type Actions } from '@sveltejs/kit';
 
 export const signInActions: Actions = {
@@ -19,17 +19,12 @@ export const signInActions: Actions = {
     const authenticated = response && response.status === 200;
 
     if (!authenticated) {
-      return handleError(
-        new RimeFormError({
-          _form: RimeFormError.INVALID_CREDENTIALS,
-          email: RimeFormError.INVALID_CREDENTIALS,
-          password: RimeFormError.INVALID_CREDENTIALS
-        }),
-        {
-          context: 'action',
-          formData: { email }
-        }
-      );
+      const invalid = new RimeFormError({
+        _form: RimeFormError.INVALID_CREDENTIALS,
+        email: RimeFormError.INVALID_CREDENTIALS,
+        password: RimeFormError.INVALID_CREDENTIALS
+      });
+      return formFailure(invalid, { email });
     }
 
     const setCookieHeader = response.headers.get('set-cookie') as string;

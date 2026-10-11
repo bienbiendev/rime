@@ -1,54 +1,14 @@
+// Based on https://github.com/ueberdosis/tiptap/tree/main/packages/extension-drag-handle
 import { type ComputePositionConfig, type VirtualElement, computePosition } from '@floating-ui/dom';
 import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
-import { type EditorState, type Transaction, Plugin, PluginKey } from '@tiptap/pm/state';
+import { type Transaction, Plugin, PluginKey } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
-import {
-  absolutePositionToRelativePosition,
-  relativePositionToAbsolutePosition,
-  ySyncPluginKey
-} from '@tiptap/y-tiptap';
 
 import { dragHandler } from './helpers/dragHandler.js';
 import { findElementNextToCoords } from './helpers/findNextElementFromCursor.js';
 import { getOuterNode, getOuterNodePos } from './helpers/getOuterNode.js';
 import { removeNode } from './helpers/removeNode.js';
-
-type PluginState = {
-  locked: boolean;
-};
-
-function isChangeOrigin(transaction: Transaction): boolean {
-  return !!transaction.getMeta(ySyncPluginKey);
-}
-
-const getRelativePos = (state: EditorState, absolutePos: number) => {
-  const ystate = ySyncPluginKey.getState(state);
-
-  if (!ystate) {
-    return null;
-  }
-
-  return absolutePositionToRelativePosition(absolutePos, ystate.type, ystate.binding.mapping);
-};
-
-// biome-ignore lint/suspicious/noExplicitAny: y-prosemirror (and y-tiptap by extension) does not have types for relative positions
-const getAbsolutePos = (state: EditorState, relativePos: any) => {
-  const ystate = ySyncPluginKey.getState(state);
-
-  if (!ystate) {
-    return -1;
-  }
-
-  return (
-    relativePositionToAbsolutePosition(
-      ystate.doc,
-      ystate.type,
-      relativePos,
-      ystate.binding.mapping
-    ) || 0
-  );
-};
 
 const getOuterDomNode = (view: EditorView, domNode: HTMLElement) => {
   let tmpDomNode = domNode;
@@ -66,34 +26,21 @@ const getOuterDomNode = (view: EditorView, domNode: HTMLElement) => {
 };
 
 export interface DragHandlePluginProps {
-  pluginKey?: PluginKey | string;
+  pluginKey: PluginKey | string;
   editor: Editor;
   element: HTMLElement;
-  onNodeChange?: (data: { editor: Editor; node: Node | null; pos: number }) => void;
-  onElementDragStart?: (e: DragEvent) => void;
-  onElementDragEnd?: (e: DragEvent) => void;
   computePositionConfig?: ComputePositionConfig;
-  getReferencedVirtualElement?: () => VirtualElement | null;
 }
 
-export const dragHandlePluginDefaultKey = new PluginKey('dragHandle');
-
 export const DragHandlePlugin = ({
-  pluginKey = dragHandlePluginDefaultKey,
+  pluginKey,
   element,
   editor,
-  computePositionConfig,
-  getReferencedVirtualElement,
-  onNodeChange,
-  onElementDragStart,
-  onElementDragEnd
+  computePositionConfig
 }: DragHandlePluginProps) => {
   const wrapper = document.createElement('div');
-  let locked = false;
   let currentNode: Node | null = null;
   let currentNodePos = -1;
-  // biome-ignore lint/suspicious/noExplicitAny: See above - relative positions in y-prosemirror are not typed
-  let currentNodeRelPos: any;
   let rafId: number | null = null;
   let pendingMouseCoords: { x: number; y: number } | null = null;
 
@@ -151,9 +98,7 @@ export const DragHandlePlugin = ({
   }
 
   function repositionDragHandle(dom: Element) {
-    const virtualElement = getReferencedVirtualElement?.() || firstLineOf(dom);
-
-    computePosition(virtualElement, element, computePositionConfig).then((val) => {
+    computePosition(firstLineOf(dom), element, computePositionConfig).then((val) => {
       Object.assign(element.style, {
         position: val.strategy,
         left: `${val.x}px`,
@@ -163,12 +108,10 @@ export const DragHandlePlugin = ({
   }
 
   function onDragStart(e: DragEvent) {
-    onElementDragStart?.(e);
-    // Push this to the end of the event cue
-    // Fixes bug where incorrect drag pos is returned if drag handle has position: absolute
-    // @ts-ignore
     dragHandler(e, editor);
 
+    // The handle stops catching the pointer once the drag has started. Done at once, the drag
+    // position is wrong when the handle is `position: absolute`.
     setTimeout(() => {
       if (element) {
         element.style.pointerEvents = 'none';
@@ -176,8 +119,7 @@ export const DragHandlePlugin = ({
     }, 0);
   }
 
-  function onDragEnd(e: DragEvent) {
-    onElementDragEnd?.(e);
+  function onDragEnd() {
     hideHandle();
     if (element) {
       element.style.pointerEvents = 'auto';
@@ -204,61 +146,16 @@ export const DragHandlePlugin = ({
 
       state: {
         init() {
-          return { locked: false };
+          return null;
         },
-        apply(tr: Transaction, value: PluginState, _oldState: EditorState, state: EditorState) {
-          const isLocked = tr.getMeta('lockDragHandle');
-          const hideDragHandle = tr.getMeta('hideDragHandle');
-
-          if (isLocked !== undefined) {
-            locked = isLocked;
-          }
-
-          if (hideDragHandle) {
-            hideHandle();
-
-            locked = false;
-            currentNode = null;
-            currentNodePos = -1;
-
-            onNodeChange?.({ editor, node: null, pos: -1 });
-
-            return value;
-          }
-
-          // Something has changed and drag handler is visible…
+        apply(tr: Transaction) {
+          // Something has changed and drag handler is visible: map the position through the change.
+          // The view's update method then reads the outer node at the new position.
           if (tr.docChanged && currentNodePos !== -1 && element) {
-            // Yjs replaces the entire document on every incoming change and needs a special handling.
-            // If change comes from another user …
-            if (isChangeOrigin(tr)) {
-              // https://discuss.yjs.dev/t/y-prosemirror-mapping-a-single-relative-position-when-doc-changes/851/3
-              const newPos = getAbsolutePos(state, currentNodeRelPos);
-
-              if (newPos !== currentNodePos) {
-                // Set the new position for our current node.
-                currentNodePos = newPos;
-
-                // We will get the outer node with data and position in views update method.
-              }
-            } else {
-              // … otherwise use ProseMirror mapping to update the position.
-              const newPos = tr.mapping.map(currentNodePos);
-
-              if (newPos !== currentNodePos) {
-                // TODO: Remove
-
-                // Set the new position for our current node.
-                currentNodePos = newPos;
-
-                // Memorize relative position to retrieve absolute position in case of collaboration
-                currentNodeRelPos = getRelativePos(state, currentNodePos);
-
-                // We will get the outer node with data and position in views update method.
-              }
-            }
+            currentNodePos = tr.mapping.map(currentNodePos);
           }
 
-          return value;
+          return null;
         }
       },
 
@@ -284,14 +181,7 @@ export const DragHandlePlugin = ({
               return;
             }
 
-            // Prevent element being draggend while being open.
-            if (locked) {
-              element.draggable = false;
-            } else {
-              element.draggable = true;
-            }
-
-            // Recalculate popup position if doc has changend and drag handler is visible.
+            // Recalculate popup position if doc has changed and drag handler is visible.
             if (view.state.doc.eq(oldState.doc) || currentNodePos === -1) {
               return;
             }
@@ -315,20 +205,14 @@ export const DragHandlePlugin = ({
 
             const domNodePos = view.posAtDOM(domNode, 0);
             const outerNode = getOuterNode(editor.state.doc, domNodePos);
-            const outerNodePos = getOuterNodePos(editor.state.doc, domNodePos); // TODO: needed?
+            const outerNodePos = getOuterNodePos(editor.state.doc, domNodePos);
 
             currentNode = outerNode;
             currentNodePos = outerNodePos;
 
-            // Memorize relative position to retrieve absolute position in case of collaboration
-            currentNodeRelPos = getRelativePos(view.state, currentNodePos);
-
-            onNodeChange?.({ editor, node: currentNode, pos: currentNodePos });
-
             repositionDragHandle(domNode as Element);
           },
 
-          // TODO: Kills even on hot reload
           destroy() {
             if (rafId) {
               cancelAnimationFrame(rafId);
@@ -346,7 +230,7 @@ export const DragHandlePlugin = ({
       props: {
         handleDOMEvents: {
           keydown(view) {
-            if (!element || locked) {
+            if (!element) {
               return false;
             }
 
@@ -354,7 +238,6 @@ export const DragHandlePlugin = ({
               hideHandle();
               currentNode = null;
               currentNodePos = -1;
-              onNodeChange?.({ editor, node: null, pos: -1 });
 
               // We want to still continue with other keydown events.
               return false;
@@ -363,27 +246,20 @@ export const DragHandlePlugin = ({
             return false;
           },
           mouseleave(_view, e) {
-            // Do not hide open popup on mouseleave.
-            if (locked) {
-              return false;
-            }
-
-            // If e.target is not inside the wrapper, hide.
+            // Hide unless the pointer moved into the wrapper.
             if (e.target && !wrapper.contains(e.relatedTarget as HTMLElement)) {
               hideHandle();
 
               currentNode = null;
               currentNodePos = -1;
-
-              onNodeChange?.({ editor, node: null, pos: -1 });
             }
 
             return false;
           },
 
           mousemove(view, e) {
-            // Do not continue if popup is not initialized or open.
-            if (!element || locked) {
+            // Do not continue if popup is not initialized.
+            if (!element) {
               return false;
             }
 
@@ -438,11 +314,6 @@ export const DragHandlePlugin = ({
 
                 currentNode = outerNode;
                 currentNodePos = outerNodePos;
-
-                // Memorize relative position to retrieve absolute position in case of collaboration
-                currentNodeRelPos = getRelativePos(view.state, currentNodePos);
-
-                onNodeChange?.({ editor, node: currentNode, pos: currentNodePos });
 
                 // Set nodes clientRect.
                 repositionDragHandle(domNode as Element);

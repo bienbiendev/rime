@@ -1,5 +1,5 @@
-import type { Dic } from '$lib/util/types.js';
-import { STAFF_SLUG } from './tables.js';
+import type { Dic } from '#lib/util/types.js';
+import { STAFF_SLUG } from './constant.js';
 
 /**
  * A collection signs in by declaring `auth`.

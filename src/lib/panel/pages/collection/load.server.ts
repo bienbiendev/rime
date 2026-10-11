@@ -1,18 +1,20 @@
-import { handleError } from '$lib/core/errors/handler.server.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { logger } from '$lib/core/logger.server.js';
-import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
-import { withDirectoriesSuffix } from '$lib/core/prototype/collection/upload/naming.js';
-import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
+import { dashboardCrumb } from '#lib/panel/pages/aria.server.js';
+import { PARAMS } from '#lib/core/constants.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { logger } from '#lib/core/logger.server.js';
+import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
+import { withDirectoriesSuffix } from '#lib/core/prototype/collection/upload/naming.js';
+import type { Directory } from '#lib/core/prototype/collection/upload/types.js';
 import {
   buildUploadAria,
   getParentPath,
   removePathFromLastAria,
   type UploadPath
-} from '$lib/core/prototype/collection/upload/util/path.js';
-import type { GenericDoc } from '$lib/core/prototype/types.js';
-import type { Route } from '$lib/panel/types.js';
-import { trycatch } from '$lib/util/function.js';
+} from '#lib/core/prototype/collection/upload/util/path.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
+import { slugOf } from '#lib/core/routes/context.server.js';
+import type { Route } from '#lib/panel/types.js';
+import { trycatch } from '#lib/util/function.js';
 import { redirect, type ServerLoadEvent } from '@sveltejs/kit';
 
 type Data = {
@@ -23,17 +25,11 @@ type Data = {
   upload?: { directories: Directory[]; currentPath: UploadPath; parentDirectory: Directory };
 };
 
-/**
- * Load function for the collection page in the panel.
- */
 export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
-  //
   const { rime, locale, user } = event.locals;
 
-  const slug = event.params.slug || '';
-  if (!rime.config.isCollection(slug)) {
-    throw handleError(new RimeError(RimeError.NOT_FOUND), { context: 'load' });
-  }
+  const slug = slugOf(event) || '';
+  if (!rime.config.isCollection(slug)) throw new RimeError(RimeError.NOT_FOUND);
 
   const collection = rime.collection(slug);
   const authorizedCreate = collection.config.access.create(user, {});
@@ -43,10 +39,7 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
     latest: true
   });
 
-  let aria: Partial<Route>[] = [
-    { title: 'Dashboard', icon: 'dashboard', url: rime.routes.panelUrl() },
-    { title: collection.config.label.plural }
-  ];
+  let aria: Partial<Route>[] = [dashboardCrumb(rime), { title: collection.config.label.plural }];
 
   let data: Data = {
     aria,
@@ -57,17 +50,15 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
 
   if (collection.config.upload) {
     let directories: any[] = [];
-    const paramUploadPath = event.url.searchParams.get('uploadPath') as UploadPath | null;
+    const paramUploadPath = event.url.searchParams.get(PARAMS.UPLOAD_PATH) as UploadPath | null;
     const currentDirectoryPath = paramUploadPath || UPLOAD_PATH.ROOT_NAME;
     const directoryCollection = rime.collection<any>(withDirectoriesSuffix(slug));
-    // Check if dir exists
     const [error, currentDirectory] = await trycatch(() =>
       directoryCollection.findById({
         id: currentDirectoryPath
       })
     );
 
-    // If doesn't exists and path is root then create it
     if (!currentDirectory && currentDirectoryPath === UPLOAD_PATH.ROOT_NAME) {
       await directoryCollection.create({
         data: { id: UPLOAD_PATH.ROOT_NAME }
@@ -86,16 +77,7 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
     let parentDirectory;
 
     if (parentPath) {
-      const [parentError, result] = await trycatch(() =>
-        directoryCollection.findById({
-          id: parentPath
-        })
-      );
-
-      if (parentError) {
-        throw handleError(parentError, { context: 'load' });
-      }
-      parentDirectory = result;
+      parentDirectory = await directoryCollection.findById({ id: parentPath });
 
       const collectionAria = {
         title: collection.config.label.plural,

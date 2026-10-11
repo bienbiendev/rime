@@ -1,4 +1,4 @@
-import type { Dic } from '$lib/util/types.js';
+import type { Dic } from '#lib/util/types.js';
 
 /**
  * Guards a step with the question that decides whether it applies.
@@ -21,10 +21,9 @@ export const when = <T, R>(applies: (config: Dic) => boolean, step: (subject: T)
   const guarded = (subject: T): R | T =>
     applies(carriesConfig(subject) ? subject.config : (subject as Dic)) ? step(subject) : subject;
 
-  // The guard is transparent to everything that looks at a step: the generated hooks chart reads
-  // `fn.name`, and `.step` says which step a list entry guards. A function's own `name` is
-  // non-writable but configurable, so it takes a defineProperty and not an assignment — and
-  // setting it means the step shows up under its real name in a stack trace too.
+  // The guard keeps the step's name, which stack traces read, and `.step` says
+  // which step it guards. A function's `name` is non-writable but configurable, so it takes a
+  // defineProperty.
   Object.defineProperty(guarded, 'name', { value: step.name, configurable: true });
   return Object.assign(guarded, { step });
 };

@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { DISPLAY_MODE, getCollectionContext } from '$lib/panel/context/collection.svelte.js';
-  import { LayoutGrid, List, ListTree } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { DISPLAY_MODE, getCollectionContext } from '#lib/panel/context/collection.svelte.js';
+  import LayoutGrid from '@lucide/svelte/icons/layout-grid';
+  import List from '@lucide/svelte/icons/list';
+  import ListTree from '@lucide/svelte/icons/list-tree';
 
   const collection = getCollectionContext();
 

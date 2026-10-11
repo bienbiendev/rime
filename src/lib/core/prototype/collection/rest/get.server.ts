@@ -1,44 +1,13 @@
-import { isStaff } from '$lib/core/auth/access.js';
-import { normalizeQuery } from '$lib/core/pipeline/query.js';
-import { selectWithTitle } from '$lib/core/prototype/shared/title/select.js';
-import { PARAMS } from '$lib/core/constants.js';
-import { handleError } from '$lib/core/errors/handler.server.js';
-import { trycatch } from '$lib/util/function.js';
-import { json } from '@sveltejs/kit';
+import { listParams, readParams } from '#lib/core/prototype/shared/rest/params.server.js';
 import { endpoint } from './endpoint.server.js';
 
 /**
  * GET handler for the collection API endpoint.
  */
 export const restGet = endpoint(async ({ event, collection }) => {
-  //
-  const { rime } = event.locals;
-  const params = event.url.searchParams;
+  // A list reads no `versionId`: each document answers its own row
+  const { latest, depth, select } = readParams(event, collection.config.asTitle);
+  const docs = await collection.find({ ...listParams(event), latest, depth, select });
 
-  const hasQueryParams = !!params
-    .keys()
-    .filter((key) => key.startsWith('where'))
-    .toArray().length;
-
-  const query = hasQueryParams ? normalizeQuery(event.url.search.substring(1)) : undefined;
-  // A row other than the published one is staff's to see: from anyone else, `latest` reads as absent.
-  const staff = isStaff(event.locals.user);
-  const apiParams = {
-    locale: rime.getLocale(),
-    sort: params.get(PARAMS.SORT) || undefined,
-    depth: params.get(PARAMS.DEPTH) ? parseInt(params.get(PARAMS.DEPTH)!) : 0,
-    limit: params.get(PARAMS.LIMIT) ? parseInt(params.get(PARAMS.LIMIT)!) : undefined,
-    offset: params.get(PARAMS.OFFSET) ? parseInt(params.get(PARAMS.OFFSET)!) : undefined,
-    latest: staff && params.get(PARAMS.LATEST) ? params.get(PARAMS.LATEST) === 'true' : undefined,
-    query,
-    select: selectWithTitle(params.get(PARAMS.SELECT), collection.config.asTitle)
-  };
-
-  const [error, docs] = await trycatch(() => collection.find(apiParams));
-
-  if (error) {
-    return handleError(error, { context: 'api' });
-  }
-
-  return json({ docs }, { status: 200 });
+  return Response.json({ docs }, { status: 200 });
 });

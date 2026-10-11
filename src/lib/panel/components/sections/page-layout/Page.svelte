@@ -3,32 +3,20 @@
 
   type Props = {
     main: Snippet;
-    aside?: Snippet;
   };
-  const { main, aside }: Props = $props();
+  const { main }: Props = $props();
 </script>
 
-<div class="rz-page" class:rz-page-with-aside={aside}>
+<div class="rz-page">
   <main>
     {@render main()}
   </main>
-
-  {#if aside}
-    <aside>
-      {@render aside()}
-    </aside>
-  {/if}
 </div>
 
 <style>
   main {
     container: main / inline-size;
     --rz-page-gutter: var(--rz-size-4);
-  }
-
-  .rz-page-with-aside {
-    display: grid;
-    grid-template-columns: 1fr var(--rz-size-xs);
   }
 
   @media (min-width: 640px) {

@@ -1,8 +1,20 @@
-import { email } from '$lib/fields/email/index.js';
-import { text } from '$lib/fields/text/index.js';
-import { email as validateEmail } from '$lib/core/fields/validate.js';
+import { RimeFormError } from '#lib/core/errors/index.js';
+import { email as validateEmail, password as validatePassword } from '#lib/core/fields/validate.js';
+import { email } from '#lib/fields/email/index.js';
+import { text } from '#lib/fields/text/index.js';
 
-export const passwordField = text('password').required();
-export const confirmPasswordField = text('confirmPassword').required();
-export const emailField = email('email').layout('compact').required().validate(validateEmail);
-export const nameField = text('name').layout('compact').required();
+// A new builder on each call: one page's `.placeholder()` never reaches another page
+
+/** The password typed to sign in. */
+export const passwordField = () => text('password').required();
+
+/** A password being set: as strong as `validate.password` asks. */
+export const newPasswordField = () => text('password').required().validate(validatePassword);
+
+/** The confirmation typed under a new password: equal to it. */
+export const confirmPasswordField = () =>
+  text('confirmPassword')
+    .required()
+    .validate((value, { data }) => value === data.password || RimeFormError.PASSWORD_MISMATCH);
+
+export const emailField = () => email('email').layout('compact').required().validate(validateEmail);

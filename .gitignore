@@ -40,13 +40,19 @@ src/lib/+rime*
 src/lib/config
 assets/src
 static/medias
+/storage
 test-results
 bun.lock
 
 .auto
 src/params
+src/params.ts
 src/lib/site
 rime.code-workspace
 /CLAUDE.md
 # rime
 +rime.generated
+
+# Notes
+notes/issues
+notes/audit

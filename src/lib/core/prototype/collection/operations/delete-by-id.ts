@@ -1,9 +1,9 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { runBeforeOperation, runDocHooks } from '$lib/core/pipeline/run.server.js';
-import type { OperationContext } from '$lib/core/pipeline/types.js';
-import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
-import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { runBeforeOperation, runDocHooks } from '#lib/core/pipeline/run.server.js';
+import type { OperationContext } from '#lib/core/pipeline/types.js';
+import type { PrototypeApiContext } from '#lib/core/prototype/define.js';
+import type { CollectionSlug, GenericDoc } from '#lib/core/prototype/types.js';
 
 export type DeleteByIdArgs = {
   id: string;
@@ -28,8 +28,7 @@ export const deleteById = async <T extends GenericDoc>(args: Args): Promise<stri
     context
   });
 
-  // No `content`: a delete means the document, so it reads whichever row is newest. That is what
-  // `latest: true` said here before there was a way to say "no narrowing".
+  // No `content`: a delete means the document, so it reads whichever row is newest.
   const document = (await rime.adapter.collection(config.slug).find({ id })) as T;
 
   if (!document) {
@@ -48,8 +47,7 @@ export const deleteById = async <T extends GenericDoc>(args: Args): Promise<stri
 
   await rime.adapter.collection(config.slug).delete({ id });
 
-  // Deliberately the pre-hook document, matching the previous implementation: beforeDelete's
-  // returned doc was never carried into afterDelete.
+  // afterDelete gets the document as read, not the one beforeDelete hands back.
   await runDocHooks<CollectionSlug, T>({
     hooks: config.$hooks?.afterDelete,
     doc: document,

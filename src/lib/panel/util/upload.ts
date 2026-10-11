@@ -1,4 +1,7 @@
-import { FileArchive, FileAudio, FileText, FileVideo } from '@lucide/svelte';
+import FileArchive from '@lucide/svelte/icons/file-archive';
+import FileAudio from '@lucide/svelte/icons/file-audio';
+import FileText from '@lucide/svelte/icons/file-text';
+import FileVideo from '@lucide/svelte/icons/file-video';
 export const mimeTypeToIcon = (type: string) => {
   if (type === 'application/zip') {
     return FileArchive;

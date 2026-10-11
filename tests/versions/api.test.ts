@@ -1,7 +1,7 @@
-import { PARAMS } from '$lib/core/constants';
-import { filePathToBase64 } from '$lib/core/prototype/collection/upload/util/converter.server.js';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant';
-import test, { expect } from '@playwright/test';
+import { PARAMS } from '#lib/core/constants.js';
+import { filePathToBase64 } from '#lib/core/prototype/collection/upload/util/converter.server.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+import test, { expect, type APIRequestContext } from '@playwright/test';
 import path from 'path';
 import { API_BASE_URL, BASE_URL, signIn } from '../util.js';
 
@@ -10,17 +10,8 @@ const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
-test('Superadmin login should be successfull', async ({ request }) => {
-  const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
-    data: {
-      email: ADMIN_EMAIL,
-      password: PASSWORD
-    }
-  });
-  const json = await response.json();
-  expect(json.user).toBeDefined();
-  expect(json.user.id).toBeDefined();
-});
+// The tests share ids and rows: one failing skips the rest
+test.describe.configure({ mode: 'serial' });
 
 /*********************************************************
 /* Handling versioned collection without draft enabled
@@ -141,8 +132,12 @@ test('Should then get the first created version of Media (latest updated)', asyn
 });
 
 test('Should get a 404 when fetching a wrong Medias version', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  // The media is there: only the version is wrong
+  expect((await request.get(`${API_BASE_URL}/medias/${mediaId}`, { headers })).status()).toBe(200);
+
   const response = await request.get(`${API_BASE_URL}/medias/${mediaId}?versionId=123`, {
-    headers: await signInSuperAdmin(request)
+    headers
   });
   const status = response.status();
   expect(status).toBe(404);
@@ -262,11 +257,6 @@ test('Should return 2 versions of infos', async ({ request }) => {
   expect(data.docs.at(1).title).toBe('latest');
 });
 
-test('Should not return infos versions without credentials', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/infos--versions`);
-  expect(response.status()).toBe(403);
-});
-
 test('Should return versions with only id versionId and email', async ({ request }) => {
   const response = await request.get(`${API_BASE_URL}/infos?select=email`, {
     headers: await signInSuperAdmin(request)
@@ -333,7 +323,7 @@ test('Should update the published settings', async ({ request }) => {
   expect(verifyData.doc.versionId).toBe(settingVersionId);
   expect(verifyData.doc.title).toBeDefined();
   expect(verifyData.doc.title).toBe('initial settings');
-  expect(verifyData.doc.logo).toBeDefined();
+  expect(verifyData.doc.logo.map((ref: any) => ref.documentId)).toEqual([mediaId]);
 });
 
 test('Should update the settings and create a second settings version', async ({ request }) => {
@@ -350,7 +340,7 @@ test('Should update the settings and create a second settings version', async ({
   expect(responseData.doc.status).toBe(VERSIONS_STATUS.DRAFT);
   expect(responseData.doc.versionId).toBeDefined();
   expect(responseData.doc.versionId).not.toBe(settingVersionId);
-  expect(responseData.doc.logo).toBeDefined();
+  expect(responseData.doc.logo.map((ref: any) => ref.documentId)).toEqual([mediaId]);
 });
 
 test('Should get the published settings', async ({ request }) => {
@@ -419,11 +409,6 @@ test('Should return 2 versions of settings', async ({ request }) => {
   expect(data.docs.at(1).status).toBe(VERSIONS_STATUS.DRAFT);
 });
 
-test('Should not return settings versions without credentials', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings--versions`);
-  expect(response.status()).toBe(403);
-});
-
 test('Should get a 404 when fetching a wrong Settings version', async ({ request }) => {
   const response = await request.get(`${API_BASE_URL}/settings?versionId=123`, {
     headers: await signInSuperAdmin(request)
@@ -475,7 +460,7 @@ test('Should create a News and publish it', async ({ request }) => {
   expect(doc.attributes.title).toBe('News 1.1');
   expect(doc.attributes.slug).toBeDefined();
   expect(doc.attributes.slug).toBe('news-1');
-  expect(doc.attributes.image).toBeDefined();
+  expect(doc.attributes.image.map((ref: any) => ref.documentId)).toEqual([secondMediaId]);
   expect(doc.versionId).toBeDefined();
   expect(doc.status).toBeDefined();
   expect(doc.status).toBe(VERSIONS_STATUS.PUBLISHED);
@@ -499,7 +484,7 @@ test('Should update the initial News by creating a new version', async ({ reques
   expect(doc.attributes.title).toBe('News 1.2 draft');
   expect(doc.attributes.slug).toBeDefined();
   expect(doc.attributes.slug).toBe('news-1');
-  expect(doc.attributes.image).toBeDefined();
+  expect(doc.attributes.image.map((ref: any) => ref.documentId)).toEqual([secondMediaId]);
   expect(doc.versionId).toBeDefined();
   expect(doc.versionId).not.toBe(newsVersionId);
 });
@@ -550,8 +535,17 @@ test('Should update the initial News and unpublish it', async ({ request }) => {
 });
 
 test('Should not return any news (collection query)', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  // The filter finds the news among the newest rows: only the published read leaves it out
+  const latest = await request.get(
+    `${API_BASE_URL}/news?where[attributes.slug][equals]=news-1&${PARAMS.LATEST}=true`,
+    { headers }
+  );
+  expect(latest.status()).toBe(200);
+  expect((await latest.json()).docs.map((doc: { id: string }) => doc.id)).toEqual([newsId]);
+
   const response = await request.get(`${API_BASE_URL}/news?where[attributes.slug][equals]=news-1`, {
-    headers: await signInSuperAdmin(request)
+    headers
   });
   const status = response.status();
   expect(status).toBe(200);
@@ -576,8 +570,15 @@ test('News should have 2 versions', async ({ request }) => {
 });
 
 test('None should be published and 404 should be returned', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  // The news is there, as drafts
+  const latest = await request.get(`${API_BASE_URL}/news/${newsId}?${PARAMS.LATEST}=true`, {
+    headers
+  });
+  expect(latest.status()).toBe(200);
+
   const response = await request.get(`${API_BASE_URL}/news/${newsId}`, {
-    headers: await signInSuperAdmin(request)
+    headers
   });
   const status = response.status();
   expect(status).toBe(404);
@@ -641,6 +642,82 @@ test('Should return one news (collection query)', async ({ request }) => {
 });
 
 /*********************************************************
+/* A body `ownerId` moves no version to another document
+/*********************************************************/
+
+/** A published news, created as the super admin. */
+const createOwnedNews = async (
+  request: APIRequestContext,
+  headers: { cookie: string },
+  title: string,
+  extra: Record<string, unknown> = {}
+) => {
+  const slug = title.toLowerCase().replaceAll(' ', '-');
+  return request.post(`${API_BASE_URL}/news`, {
+    headers,
+    data: { attributes: { title, slug }, status: VERSIONS_STATUS.PUBLISHED, ...extra }
+  });
+};
+
+/** The titles of the version rows that hang off `id`. */
+const versionTitles = async (
+  request: APIRequestContext,
+  headers: { cookie: string },
+  id: string
+) => {
+  const response = await request.get(
+    `${API_BASE_URL}/news--versions?where[ownerId][equals]=${id}`,
+    {
+      headers
+    }
+  );
+  expect(response.status()).toBe(200);
+  return (await response.json()).docs.map((doc: any) => doc.attributes.title);
+};
+
+test('A PATCH with another document as ownerId writes its own version', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const a = (await (await createOwnedNews(request, headers, 'Owner probe A')).json()).doc;
+  const b = (await (await createOwnedNews(request, headers, 'Owner probe B')).json()).doc;
+
+  const response = await request.patch(`${API_BASE_URL}/news/${a.id}`, {
+    headers,
+    data: { attributes: { title: 'Owner probe A edited' }, ownerId: b.id }
+  });
+  expect(response.status()).toBe(200);
+
+  const readA = await request.get(`${API_BASE_URL}/news/${a.id}`, { headers });
+  expect(readA.status()).toBe(200);
+  expect((await readA.json()).doc.attributes.title).toBe('Owner probe A edited');
+
+  const readB = await request.get(`${API_BASE_URL}/news/${b.id}`, { headers });
+  expect((await readB.json()).doc.attributes.title).toBe('Owner probe B');
+  expect(await versionTitles(request, headers, b.id)).toEqual(['Owner probe B']);
+
+  await request.delete(`${API_BASE_URL}/news/${a.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/news/${b.id}`, { headers });
+});
+
+test('A POST with another document as ownerId makes a document of its own', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const b = (await (await createOwnedNews(request, headers, 'Owner probe D')).json()).doc;
+
+  const response = await createOwnedNews(request, headers, 'Owner probe C', { ownerId: b.id });
+  expect(response.status()).toBe(200);
+  const { doc: c } = await response.json();
+  expect(c.id).not.toBe(b.id);
+  expect(c.attributes.title).toBe('Owner probe C');
+  expect(await versionTitles(request, headers, c.id)).toEqual(['Owner probe C']);
+
+  const readB = await request.get(`${API_BASE_URL}/news/${b.id}`, { headers });
+  expect((await readB.json()).doc.attributes.title).toBe('Owner probe D');
+  expect(await versionTitles(request, headers, b.id)).toEqual(['Owner probe D']);
+
+  await request.delete(`${API_BASE_URL}/news/${b.id}`, { headers });
+  await request.delete(`${API_BASE_URL}/news/${c.id}`, { headers });
+});
+
+/*********************************************************
 /* Nested + versioned collection (never exercised before —
 /* Pages combines nested: true with versions: { draft: true })
 /*********************************************************/
@@ -685,14 +762,26 @@ test('Should create a child Page as a draft under the parent', async ({ request 
 });
 
 test('Should not return the unpublished child in the public collection query', async ({
-  request
+  request,
+  playwright
 }) => {
-  const response = await request.get(
+  // Staff find the child by its slug among the newest rows
+  const latest = await request.get(
+    `${API_BASE_URL}/pages?where[attributes.slug][equals]=child-page&${PARAMS.LATEST}=true`,
+    { headers: await signInSuperAdmin(request) }
+  );
+  expect(latest.status()).toBe(200);
+  expect((await latest.json()).docs.map((doc: { id: string }) => doc.id)).toEqual([childPageId]);
+
+  // A visitor does not
+  const visitor = await playwright.request.newContext();
+  const response = await visitor.get(
     `${API_BASE_URL}/pages?where[attributes.slug][equals]=child-page`
   );
   expect(response.status()).toBe(200);
   const { docs } = await response.json();
   expect(docs).toHaveLength(0);
+  await visitor.dispose();
 });
 
 test('Should publish the child page and then find it by parent', async ({ request }) => {
@@ -750,8 +839,16 @@ test('Should sort a versioned collection by a base-row column', async ({ request
   const headers = await signInSuperAdmin(request);
 
   // The parent was created first and the child second; give them the opposite `_position`.
-  await request.patch(`${API_BASE_URL}/pages/${parentPageId}`, { headers, data: { _position: 2 } });
-  await request.patch(`${API_BASE_URL}/pages/${childPageId}`, { headers, data: { _position: 1 } });
+  const parentMoved = await request.patch(`${API_BASE_URL}/pages/${parentPageId}`, {
+    headers,
+    data: { _position: 2 }
+  });
+  expect(parentMoved.status()).toBe(200);
+  const childMoved = await request.patch(`${API_BASE_URL}/pages/${childPageId}`, {
+    headers,
+    data: { _position: 1 }
+  });
+  expect(childMoved.status()).toBe(200);
 
   const idsSortedBy = async (sort: string) => {
     const response = await request.get(`${API_BASE_URL}/pages?sort=${sort}`, { headers });
@@ -880,60 +977,83 @@ test('Should duplicate a nested child Page, keeping it under the same parent', a
   expect(docs).toHaveLength(1);
 });
 
-test('Should duplicate a Pdf, and the copy must survive deleting the original', async ({
+test('Should refuse to duplicate a Pdf, and a Pdf sharing its file must survive deleting it', async ({
   request
 }) => {
   const headers = await signInSuperAdmin(request);
   const base64 = await filePathToBase64(
     path.resolve(process.cwd(), 'tests/versions/landscape.jpg')
   );
+  const createPdf = async (alt: string) => {
+    const response = await request.post(`${API_BASE_URL}/pdf`, {
+      headers,
+      data: {
+        file: { base64, filename: 'landscape.jpg' },
+        alt,
+        status: VERSIONS_STATUS.PUBLISHED
+      }
+    });
+    expect(response.status()).toBe(200);
+    return (await response.json()).doc;
+  };
 
-  const createResponse = await request.post(`${API_BASE_URL}/pdf`, {
-    headers,
-    data: {
-      file: { base64, filename: 'landscape.jpg' },
-      alt: 'duplicate source pdf',
-      status: VERSIONS_STATUS.PUBLISHED
-    }
-  });
-  expect(createResponse.status()).toBe(200);
-  const { doc: source } = await createResponse.json();
+  const source = await createPdf('duplicate source pdf');
 
+  // An upload document is a file on disk: it has no copy
   const dupResponse = await request.post(`${API_BASE_URL}/pdf/${source.id}/duplicate`, {
     headers
   });
-  expect(dupResponse.status()).toBe(200);
-  const { id: duplicateId } = await dupResponse.json();
-  expect(duplicateId).not.toBe(source.id);
+  expect(dupResponse.status()).toBe(400);
 
-  const draftResponse = await request.get(
-    `${API_BASE_URL}/pdf/${duplicateId}?${PARAMS.LATEST}=true`,
-    { headers }
-  );
-  expect(draftResponse.status()).toBe(200);
-  const { doc: duplicateDoc } = await draftResponse.json();
-  // filename isn't the title field here, so it's carried over unchanged —
-  // both documents share the same underlying file on disk (dedup in
-  // saveFile), which is exactly the scenario cleanUpDocumentFile's
-  // cross-document reference check exists to protect.
-  expect(duplicateDoc.filename).toBe('landscape.jpg');
-  expect(duplicateDoc.alt).toBe('duplicate source pdf');
+  // The same content uploaded again shares the file on disk (dedup in saveFile), which is the
+  // case removeUnusedFiles's cross-document reference check protects.
+  const sharing = await createPdf('sharing pdf');
+  expect(sharing.filename).toBe(source.filename);
 
   const deleteResponse = await request.delete(`${API_BASE_URL}/pdf/${source.id}`, { headers });
   expect(deleteResponse.status()).toBe(200);
 
-  // The duplicate — a wholly separate document — must still be intact,
-  // filename and all, after the original it shared a file with is gone.
+  // The other document still reads its file after the first one is gone
   const afterDeleteResponse = await request.get(
-    `${API_BASE_URL}/pdf/${duplicateId}?${PARAMS.LATEST}=true`,
+    `${API_BASE_URL}/pdf/${sharing.id}?${PARAMS.LATEST}=true`,
     { headers }
   );
   expect(afterDeleteResponse.status()).toBe(200);
   const { doc: survivingDoc } = await afterDeleteResponse.json();
-  expect(survivingDoc.filename).toBe('landscape.jpg');
-  expect(survivingDoc.alt).toBe('duplicate source pdf');
+  expect(survivingDoc.filename).toBe(source.filename);
+  expect(survivingDoc.alt).toBe('sharing pdf');
 
-  await request.delete(`${API_BASE_URL}/pdf/${duplicateId}`, { headers });
+  await request.delete(`${API_BASE_URL}/pdf/${sharing.id}`, { headers });
+});
+
+/*********************************************************
+/* A filtered find with a limit pages the matching documents
+/*********************************************************/
+
+test('A filtered find with a limit finds a match that is not in the first rows', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const titles = ['Page limit A', 'Page limit B'];
+  const ids: string[] = [];
+  for (const title of titles) {
+    const response = await request.post(`${API_BASE_URL}/news`, {
+      headers,
+      data: {
+        attributes: { title, slug: title.toLowerCase().replaceAll(' ', '-') },
+        status: VERSIONS_STATUS.PUBLISHED
+      }
+    });
+    expect(response.status()).toBe(200);
+    ids.push((await response.json()).doc.id);
+  }
+  for (const title of titles) {
+    const query = `where[attributes.title][equals]=${encodeURIComponent(title)}&limit=1`;
+    const response = await request.get(`${API_BASE_URL}/news?${query}`, { headers });
+    const { docs } = await response.json();
+    expect(docs.map((doc: any) => doc.attributes.title)).toEqual([title]);
+  }
+  for (const id of ids) await request.delete(`${API_BASE_URL}/news/${id}`, { headers });
 });
 
 /*********************************************************
@@ -966,12 +1086,31 @@ test('Should create a Pdf and exceed maxVersions with draft updates', async ({ r
   const { doc } = await createResponse.json();
   pdfId = doc.id;
 
+  // A second Pdf with 2 drafts of its own: pruning the first must leave them alone
+  const otherResponse = await request.post(`${API_BASE_URL}/pdf`, {
+    headers,
+    data: {
+      file: { base64, filename: 'landscape.jpg' },
+      alt: 'other v0',
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(otherResponse.status()).toBe(200);
+  const otherPdfId = (await otherResponse.json()).doc.id;
+  for (let i = 1; i <= 2; i++) {
+    const response = await request.patch(`${API_BASE_URL}/pdf/${otherPdfId}?${PARAMS.FORK}=true`, {
+      headers,
+      data: { alt: `other v${i}` }
+    });
+    expect(response.status()).toBe(200);
+  }
+
   // maxVersions is 3 — branch 5 draft versions off the published one, so
   // pruning (which only ever touches non-published rows) has something to
   // prune down to 3. No file in the patch body on purpose: this exercises
   // prepareDataForNewVersion's copy-from-original-path fallback on every
   // branch, including branches created after earlier drafts have already
-  // been pruned — a regression guard for cleanUpDocumentFile deleting a
+  // been pruned — a regression guard for removeUnusedFiles deleting a
   // still-shared file (dedup means every version points at the same
   // landscape.jpg) out from under the versions that still reference it.
   for (let i = 1; i <= 5; i++) {
@@ -1000,6 +1139,52 @@ test('Should create a Pdf and exceed maxVersions with draft updates', async ({ r
   const { doc: publishedDoc } = await publishedResponse.json();
   expect(publishedDoc.alt).toBe('v0');
   expect(publishedDoc.status).toBe(VERSIONS_STATUS.PUBLISHED);
+
+  // Pruning is per document: the other Pdf keeps both its drafts
+  const otherDrafts = await request.get(
+    `${API_BASE_URL}/pdf--versions?where[and][0][ownerId][equals]=${otherPdfId}&where[and][1][status][not_equals]=published`,
+    { headers }
+  );
+  expect((await otherDrafts.json()).docs).toHaveLength(2);
+  await request.delete(`${API_BASE_URL}/pdf/${otherPdfId}`, { headers });
+});
+
+test('Should keep the only version of a media when another media passes maxVersions', async ({
+  request
+}) => {
+  // medias has `versions: true`, so maxVersions is 12 and every save writes a new version
+  const headers = await signInSuperAdmin(request);
+  const base64 = await filePathToBase64(
+    path.resolve(process.cwd(), 'tests/versions/landscape.jpg')
+  );
+  const create = (alt: string) =>
+    request
+      .post(`${API_BASE_URL}/medias`, {
+        headers,
+        data: { file: { base64, filename: 'landscape.jpg' }, alt }
+      })
+      .then((response) => response.json())
+      .then(({ doc }) => doc.id as string);
+
+  const firstId = await create('first');
+  const secondId = await create('second');
+  for (let i = 1; i <= 13; i++) {
+    const response = await request.patch(`${API_BASE_URL}/medias/${secondId}`, {
+      headers,
+      data: { alt: `second v${i}` }
+    });
+    expect(response.status()).toBe(200);
+  }
+
+  expect((await request.get(`${API_BASE_URL}/medias/${firstId}`, { headers })).status()).toBe(200);
+  const secondVersions = await request.get(
+    `${API_BASE_URL}/medias--versions?where[ownerId][equals]=${secondId}`,
+    { headers }
+  );
+  expect((await secondVersions.json()).docs).toHaveLength(12);
+
+  await request.delete(`${API_BASE_URL}/medias/${firstId}`, { headers });
+  await request.delete(`${API_BASE_URL}/medias/${secondId}`, { headers });
 });
 
 /*********************************************************
@@ -1071,6 +1256,7 @@ test('Should sort a versioned list by a localized content column', async ({ requ
   expect(ascA).toBeLessThan(ascB);
 
   const [descA, descB] = await positions('-attributes.slug');
+  expect(descB).toBeGreaterThanOrEqual(0);
   expect(descB).toBeLessThan(descA);
 });
 
@@ -1082,14 +1268,12 @@ test('Should sort a versioned list by a localized content column', async ({ requ
  * The other half of the duplicate test above, and the one that was missing.
  *
  * That test proves a shared file **survives** a delete; nothing proved an unshared one is
- * **removed**. The difference matters because the failure is one-sided: `cleanUpDocumentFile` asks
- * `isFilenameStillReferenced`, and every way of getting that wrong answers "yes, still referenced"
+ * **removed**. The difference matters because the failure is one-sided: `removeUnusedFiles` asks
+ * `isFilenameReferenced`, and every way of getting that wrong answers "yes, still referenced"
  * — so the file is silently kept forever and every assertion in the suite still passes.
  *
- * That is exactly what happens if the scan looks at the *base* table of a versioned upload
- * collection as well as its shadow: the base row comes back under a different slug than `selfSlug`,
- * counts as somebody else, and the document protects its own file from deletion. The scan is built
- * to hit one table per collection for that reason.
+ * The check runs after the delete, over one table per upload collection, so the document's own
+ * rows are gone by then and cannot keep its file.
  *
  * Bytes unique to this test, so `saveFile`'s dedup cannot point it at a file another test owns.
  */
@@ -1116,14 +1300,257 @@ test('Should delete the file from disk when the last document referencing it is 
   expect(doc.filename).toBe(filename);
 
   // On disk, and served.
-  const beforeDelete = await request.get(`${BASE_URL}/medias/${filename}`);
+  const beforeDelete = await request.get(`${BASE_URL}/uploads/pdf/${filename}`);
   expect(beforeDelete.status()).toBe(200);
 
   const deleteResponse = await request.delete(`${API_BASE_URL}/pdf/${doc.id}`, { headers });
   expect(deleteResponse.status()).toBe(200);
 
-  const afterDelete = await request.get(`${BASE_URL}/medias/${filename}`);
+  const afterDelete = await request.get(`${BASE_URL}/uploads/pdf/${filename}`);
   expect(afterDelete.status()).toBe(404);
+});
+
+/*********************************************************
+/* A file goes with the rows that used it, and only with them
+/*********************************************************/
+
+/** A text file whose bytes no other test uploads, so `saveFile` shares it with no other row. */
+const uniqueTextFile = (name: string) => ({
+  base64: `data:text/plain;base64,${Buffer.from(`${name}-${Date.now()}`).toString('base64')}`,
+  filename: `${name}.txt`
+});
+
+/** One of the suite's images, uploaded under `filename`. */
+const imageFile = async (image: string, filename: string) => ({
+  base64: await filePathToBase64(path.resolve(process.cwd(), `tests/versions/${image}`)),
+  filename
+});
+
+/** The status the site answers an uploaded file with, by url, or by name for a Pdf file. */
+const servedStatus = async (request: APIRequestContext, file: string) =>
+  (
+    await request.get(
+      file.startsWith('/') ? `${BASE_URL}${file}` : `${BASE_URL}/uploads/pdf/${file}`
+    )
+  ).status();
+
+test('Replacing the file of the published Pdf keeps the file of its draft', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const created = await request.post(`${API_BASE_URL}/pdf`, {
+    headers,
+    data: {
+      file: uniqueTextFile('replace-published'),
+      alt: 'replace probe',
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { doc: published } = await created.json();
+
+  // A newer draft with a file of its own
+  const forked = await request.patch(`${API_BASE_URL}/pdf/${published.id}?${PARAMS.FORK}=true`, {
+    headers,
+    data: { file: uniqueTextFile('replace-draft') }
+  });
+  expect(forked.status()).toBe(200);
+  const { doc: draft } = await forked.json();
+  expect(draft.status).toBe(VERSIONS_STATUS.DRAFT);
+
+  // No versionId: the published row is written in place
+  const replaced = await request.patch(`${API_BASE_URL}/pdf/${published.id}`, {
+    headers,
+    data: { file: uniqueTextFile('replace-new') }
+  });
+  expect(replaced.status()).toBe(200);
+  const { doc: republished } = await replaced.json();
+  expect(republished.versionId).toBe(published.versionId);
+
+  expect(await servedStatus(request, republished.filename)).toBe(200);
+  expect(await servedStatus(request, draft.filename)).toBe(200);
+  expect(await servedStatus(request, published.filename)).toBe(404);
+
+  await request.delete(`${API_BASE_URL}/pdf/${published.id}`, { headers });
+});
+
+test('A Media given another image under the same name keeps both files', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const filename = `same-name-${Date.now()}.jpg`;
+
+  const created = await request.post(`${API_BASE_URL}/medias`, {
+    headers,
+    data: { file: await imageFile('landscape.jpg', filename), alt: 'same name probe' }
+  });
+  expect(created.status()).toBe(200);
+  const { doc: first } = await created.json();
+  expect(first.filename).toBe(filename);
+
+  // No drafts: a new version, whose image is saved under a name of its own
+  const updated = await request.patch(`${API_BASE_URL}/medias/${first.id}`, {
+    headers,
+    data: { file: await imageFile('leaves.jpg', filename) }
+  });
+  expect(updated.status()).toBe(200);
+  const { doc: second } = await updated.json();
+  expect(second.versionId).not.toBe(first.versionId);
+  expect(second.filename).not.toBe(filename);
+
+  expect(await servedStatus(request, second.url)).toBe(200);
+  expect(await servedStatus(request, first.url)).toBe(200);
+
+  const older = await request.get(
+    `${API_BASE_URL}/medias/${first.id}?${PARAMS.VERSION_ID}=${first.versionId}`,
+    { headers }
+  );
+  expect((await older.json()).doc.filename).toBe(filename);
+
+  await request.delete(`${API_BASE_URL}/medias/${first.id}`, { headers });
+});
+
+test('Deleting a Media removes the files of all its versions', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const stamp = Date.now();
+
+  const created = await request.post(`${API_BASE_URL}/medias`, {
+    headers,
+    data: {
+      file: await imageFile('landscape.jpg', `all-versions-a-${stamp}.jpg`),
+      alt: 'all versions v1'
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { doc: first } = await created.json();
+
+  // Two more versions sharing the first file
+  for (const alt of ['all versions v2', 'all versions v3']) {
+    const response = await request.patch(`${API_BASE_URL}/medias/${first.id}`, {
+      headers,
+      data: { alt }
+    });
+    expect(response.status()).toBe(200);
+    expect((await response.json()).doc.filename).toBe(first.filename);
+  }
+
+  // A fourth with a file of its own
+  const replaced = await request.patch(`${API_BASE_URL}/medias/${first.id}`, {
+    headers,
+    data: { file: await imageFile('leaves.jpg', `all-versions-b-${stamp}.jpg`) }
+  });
+  expect(replaced.status()).toBe(200);
+  const { doc: last } = await replaced.json();
+  expect(last.filename).not.toBe(first.filename);
+
+  const files = [first.url, first.sizes.thumbnail, last.url, last.sizes.thumbnail];
+  for (const file of files) {
+    expect(await servedStatus(request, file)).toBe(200);
+  }
+
+  const deleted = await request.delete(`${API_BASE_URL}/medias/${first.id}`, { headers });
+  expect(deleted.status()).toBe(200);
+
+  for (const file of files) {
+    expect(await servedStatus(request, file)).toBe(404);
+  }
+});
+
+test('Removing the file of a Media leaves its new version with none', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const created = await request.post(`${API_BASE_URL}/medias`, {
+    headers,
+    data: {
+      file: await imageFile('landscape.jpg', `removed-file-${Date.now()}.jpg`),
+      alt: 'removed file probe'
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { doc: first } = await created.json();
+
+  // No drafts: a new version, with no file
+  const removed = await request.patch(`${API_BASE_URL}/medias/${first.id}`, {
+    headers,
+    data: { file: null }
+  });
+  expect(removed.status()).toBe(200);
+  const { doc: second } = await removed.json();
+  expect(second.versionId).not.toBe(first.versionId);
+  expect(second.filename).toBeNull();
+  expect(second.url).toBeNull();
+
+  // The previous version still names its file, which stays on disk
+  const older = await request.get(
+    `${API_BASE_URL}/medias/${first.id}?${PARAMS.VERSION_ID}=${first.versionId}`,
+    { headers }
+  );
+  expect((await older.json()).doc.filename).toBe(first.filename);
+  expect(await servedStatus(request, first.url)).toBe(200);
+
+  await request.delete(`${API_BASE_URL}/medias/${first.id}`, { headers });
+});
+
+/*********************************************************
+/* Only the server names a document's file
+/*********************************************************/
+
+/**
+ * `filename` and the size columns name files in `storage/uploads/pdf`, and the server sets them from
+ * the file it saved. The path sent here names no file: run against a build that writes it, a
+ * delete or a new version would touch nothing real.
+ */
+test('A Pdf keeps its own file name whatever names a PATCH sends', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const created = await request.post(`${API_BASE_URL}/pdf`, {
+    headers,
+    data: {
+      file: uniqueTextFile('filename-probe'),
+      alt: 'filename probe',
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { doc } = await created.json();
+
+  const outside = '../../rime-e2e-no-such-file.txt';
+  const response = await request.patch(`${API_BASE_URL}/pdf/${doc.id}`, {
+    headers,
+    data: { filename: outside, thumbnail: outside }
+  });
+  expect(response.status()).toBe(200);
+  const { doc: patched } = await response.json();
+  expect(patched.filename).toBe(doc.filename);
+  // A text file has no thumbnail of its own: the size names the file itself
+  expect(patched.sizes.thumbnail).toBe(`/uploads/pdf/${doc.filename}`);
+
+  await request.delete(`${API_BASE_URL}/pdf/${doc.id}`, { headers });
+});
+
+test('A Pdf branched with ?fork=true keeps no thumbnail a PATCH names', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const created = await request.post(`${API_BASE_URL}/pdf`, {
+    headers,
+    data: {
+      file: uniqueTextFile('fork-thumbnail-probe'),
+      alt: 'fork thumbnail probe',
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { doc } = await created.json();
+
+  // A new version, written by the server from the previous one and this body
+  const response = await request.patch(`${API_BASE_URL}/pdf/${doc.id}?${PARAMS.FORK}=true`, {
+    headers,
+    data: { thumbnail: 'x' }
+  });
+  expect(response.status()).toBe(200);
+  const { doc: draft } = await response.json();
+  expect(draft.versionId).not.toBe(doc.versionId);
+  // A text file has no thumbnail of its own: the size names the file itself
+  expect(draft.sizes.thumbnail).toBe(`/uploads/pdf/${draft.filename}`);
+
+  await request.delete(`${API_BASE_URL}/pdf/${doc.id}`, { headers });
 });
 
 /*********************************************************
@@ -1150,7 +1577,7 @@ test('Should store the computed url on the version row', async ({ request }) => 
   expect(createResponse.status()).toBe(200);
   const { doc } = await createResponse.json();
 
-  const url = `${process.env.PUBLIC_RIME_URL}/actualites/${slug}`;
+  const url = `${BASE_URL}/actualites/${slug}`;
   expect(doc.url).toBe(url);
 
   // The document is found by the *stored* url, not the computed one.

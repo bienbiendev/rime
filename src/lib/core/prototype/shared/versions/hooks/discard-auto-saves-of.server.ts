@@ -1,4 +1,4 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
 import { retireAutoSaves } from '../retire-auto-saves.server.js';
 
 /**

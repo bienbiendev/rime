@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   block,
   blocks,
@@ -14,23 +13,30 @@ import {
   text,
   toggle,
   tree
-} from '$lib/fields/index.js';
-import { bold } from '$lib/fields/rich-text/client.js';
-import { normalizeFieldPath } from '$lib/util/string.js';
-import { Images, Text } from '@lucide/svelte';
+} from '#lib/fields/index.js';
+import type { RelationFieldBuilder } from '#lib/fields/relation/index.js';
+import { bold } from '#lib/fields/rich-text/client.js';
+import Images from '@lucide/svelte/icons/images';
+import Text from '@lucide/svelte/icons/text';
 import { expect, test } from 'vitest';
+import type { FieldBuilder } from './builders/field-builder.js';
 import { FormFieldBuilder } from './builders/form-field-builder.js';
 import { getFieldAtPath, getFieldListAtPath, isFormField } from './util.js';
 
-// getFieldAtPath operates on FieldBuilder[], like getFieldListAtPath. Kept separate from the
-// `builders` tree below (used by the getFieldListAtPath tests) because that one's field counts
-// are asserted exactly and do not include this fixture's group-inside-attributes and
-// tree-inside-slider-block.
-const configByPathFields = [
+/** A relation to `slug`. Cast: the slugs are registered only in the fixtures that declare them. */
+const relationTo = (name: string, slug: string) =>
+  (relation(name) as any).to(slug) as RelationFieldBuilder;
+
+/** The names of the fields a form shows: the ones rime adds to a block or a tree row are hidden. */
+const shownNames = (fields: FieldBuilder[]) =>
+  fields.filter((field) => isFormField(field) && !field.get.hidden).map((field) => field.name);
+
+// The tree getFieldAtPath reads; the getFieldListAtPath tests read `builders` below.
+const configByPathFields: FieldBuilder[] = [
   tabs(
     tab('hero').fields(
       radio('heroType').options('banner', 'text').defaultValue('banner'),
-      relation('image').to('medias'),
+      relationTo('image', 'medias'),
       richText('intro')
     ),
     tab('layout').fields(
@@ -45,7 +51,7 @@ const configByPathFields = [
     ),
     tab('attributes').fields(
       text('title').isTitle().localized().required(),
-      group('group').fields(relation('image').to('medias'), toggle('ok'))
+      group('group').fields(relationTo('image', 'medias'), toggle('ok'))
     ),
     tab('footer').fields(
       tree('nav').fields(text('label'), link('link'), group('group').fields(text('metaTitle')))
@@ -59,26 +65,6 @@ const configByPathFields = [
   date('createdAt').hidden(),
   date('updatedAt').hidden()
 ];
-
-test('should return bar.0.foo', () => {
-  const res = normalizeFieldPath('bar.0:booz.foo');
-  expect(res).toBe('bar.0.foo');
-});
-
-test('should return bar.0.foo.4.baz', () => {
-  const res = normalizeFieldPath('bar.0:hello.foo.4:guys.baz');
-  expect(res).toBe('bar.0.foo.4.baz');
-});
-
-test('should return bar.0.foo.4.baz', () => {
-  const res = normalizeFieldPath('bar.0.foo.4.baz');
-  expect(res).toBe('bar.0.foo.4.baz');
-});
-
-test('should return bar.0.Foo12.4.baz', () => {
-  const res = normalizeFieldPath('bar.0:3someCase.Foo12.4.baz');
-  expect(res).toBe('bar.0.Foo12.4.baz');
-});
 
 test('should return correct config', () => {
   const field = getFieldAtPath('hero.heroType', configByPathFields);
@@ -163,15 +149,13 @@ const blockParagraph = block('paragraph')
   .fields(richText('text').localized());
 
 const blockSlider = block('slider').icon(Images).description('Simple slider').fields(text('image'));
-const blockImage = block('image').fields(relation('image').to('medias'), text('legend'));
+const blockImage = block('image').fields(relationTo('image', 'medias'), text('legend'));
 
 const tabHero = tab('hero').fields(
   radio('heroType').options('banner', 'text').defaultValue('banner'),
-  relation('image')
-    .to('medias')
-    .condition((doc) => {
-      return doc.heroType === 'banner';
-    }),
+  relationTo('image', 'medias').condition((doc) => {
+    return doc.heroType === 'banner';
+  }),
   richText('intro').features(bold())
 );
 
@@ -185,10 +169,10 @@ const tabAttributes = tab('attributes').fields(
     .localized()
     .required(),
 
-  relation('related').to('pages').many(),
-  relation('author').to('staff'),
-  relation('contributors').to('staff').many(),
-  relation('ambassadors').to('staff').many().localized(),
+  relationTo('related', 'pages').many(),
+  relationTo('author', 'staff'),
+  relationTo('contributors', 'staff').many(),
+  relationTo('ambassadors', 'staff').many().localized(),
   date('published')
 );
 
@@ -223,13 +207,7 @@ test('should return correct field builders at path inside blocks', () => {
 
 test('should return the list of fields inside a block', () => {
   const { fields: fieldList, path } = getFieldListAtPath('layout.components.0:slider', [builders]);
-  expect(fieldList).toBeDefined();
-  expect(fieldList.length).toBe(5); // [ 'image', 'type', 'path', 'position', 'locale' ]
-  const builder = fieldList[0];
-  if (!(builder instanceof FormFieldBuilder))
-    throw Error('Expected builder to be an instance of FormFieldBuilder');
-  expect(builder.field.name).toBeDefined();
-  expect(builder.field.name).toBe('image');
+  expect(shownNames(fieldList)).toEqual(['image']);
   expect(path).toBe('layout.components.0');
 });
 
@@ -257,27 +235,8 @@ test('should return the list of fields inside a tab', () => {
 
 test('should return the list of fields inside a tree', () => {
   const { fields: fieldList, path } = getFieldListAtPath('footer.nav', [builders]);
-  expect(fieldList).toBeDefined();
-  expect(fieldList.length).toBe(5); // [ 'path', 'position', 'label', 'link', 'group' ]
-  const filteredList = fieldList.filter(
-    (builder) => isFormField(builder) && builder.get.hidden !== true
-  );
-  const builder1 = filteredList[0];
-  if (!(builder1 instanceof FormFieldBuilder))
-    throw Error('Expected builder to be an instance of FormFieldBuilder');
-  expect(builder1.field.name).toBeDefined();
-  expect(builder1.field.name).toBe('label');
+  expect(shownNames(fieldList)).toEqual(['label', 'link', 'group']);
   expect(path).toBe('footer.nav');
-  const builder2 = filteredList[1];
-  if (!(builder2 instanceof FormFieldBuilder))
-    throw Error('Expected builder to be an instance of FormFieldBuilder');
-  expect(builder2.field.name).toBeDefined();
-  expect(builder2.field.name).toBe('link');
-  const builder3 = filteredList[2];
-  if (!(builder3 instanceof FormFieldBuilder))
-    throw Error('Expected builder to be an instance of FormFieldBuilder');
-  expect(builder3.field.name).toBeDefined();
-  expect(builder3.field.name).toBe('group');
 });
 
 // const tabFooter = tab('footer').fields(

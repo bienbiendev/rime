@@ -1,4 +1,4 @@
-import { capitalize } from '$lib/util/string.js';
+import { capitalize } from '#lib/util/string.js';
 
 /**
  * The greeting key for an hour of the day.

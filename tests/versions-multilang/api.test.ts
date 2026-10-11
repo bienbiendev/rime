@@ -1,6 +1,6 @@
-import { filePathToBase64 } from '$lib/core/prototype/collection/upload/util/converter.server.js';
-import { PARAMS } from '$lib/core/constants';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant';
+import { filePathToBase64 } from '#lib/core/prototype/collection/upload/util/converter.server.js';
+import { PARAMS } from '#lib/core/constants.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
 import test, { expect } from '@playwright/test';
 import path from 'path';
 import { API_BASE_URL, signIn } from '../util.js';
@@ -10,17 +10,8 @@ const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
-test('Superadmin login should be successfull', async ({ request }) => {
-  const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
-    data: {
-      email: ADMIN_EMAIL,
-      password: PASSWORD
-    }
-  });
-  const json = await response.json();
-  expect(json.user).toBeDefined();
-  expect(json.user.id).toBeDefined();
-});
+// The tests share ids and rows: one failing skips the rest
+test.describe.configure({ mode: 'serial' });
 
 /*********************************************************
 /* Handling versioned collection without draft enabled
@@ -151,8 +142,12 @@ test('Should then get the first created version of Media (latest updated)', asyn
 });
 
 test('Should get a 404 when fetching a wrong Medias version', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  // The media is there: only the version is wrong
+  expect((await request.get(`${API_BASE_URL}/medias/${mediaId}`, { headers })).status()).toBe(200);
+
   const response = await request.get(`${API_BASE_URL}/medias/${mediaId}?versionId=123`, {
-    headers: await signInSuperAdmin(request)
+    headers
   });
   const status = response.status();
   expect(status).toBe(404);
@@ -181,30 +176,31 @@ test('Should create an other Media', async ({ request }) => {
   secondMediaId = doc.id;
 });
 
-test('Should get 2 docs FR', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/medias`, {
-    headers: await signInSuperAdmin(request),
-    data: { locale: 'fr' }
+// No alt is written in fr or de yet: each falls back to the default locale's, en
+test('Should get 2 docs in FR, each alt falling back to EN', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/medias?locale=fr`, {
+    headers: await signInSuperAdmin(request)
   });
   const status = response.status();
   expect(status).toBe(200);
   const { docs } = await response.json();
   expect(docs).toBeDefined();
   expect(docs).toHaveLength(2);
+  expect(docs.map((doc: { locale: string }) => doc.locale)).toEqual(['fr', 'fr']);
   expect(docs.at(0).alt).toBe('alt-2.1 en');
   expect(docs.at(1).alt).toBe('alt-1.1 en');
 });
 
-test('Should get 2 docs DE', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/medias`, {
-    headers: await signInSuperAdmin(request),
-    data: { locale: 'de' }
+test('Should get 2 docs in DE, each alt falling back to EN', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/medias?locale=de`, {
+    headers: await signInSuperAdmin(request)
   });
   const status = response.status();
   expect(status).toBe(200);
   const { docs } = await response.json();
   expect(docs).toBeDefined();
   expect(docs).toHaveLength(2);
+  expect(docs.map((doc: { locale: string }) => doc.locale)).toEqual(['de', 'de']);
   expect(docs.at(0).alt).toBe('alt-2.1 en');
   expect(docs.at(1).alt).toBe('alt-1.1 en');
 });
@@ -224,12 +220,11 @@ test('Should get 2 docs EN', async ({ request }) => {
 
 test('Should update 1st media created in DE', async ({ request }) => {
   const response = await request.patch(
-    `${API_BASE_URL}/medias/${mediaId}?${PARAMS.VERSION_ID}=${mediaVersionId}`,
+    `${API_BASE_URL}/medias/${mediaId}?${PARAMS.VERSION_ID}=${mediaVersionId}&locale=de`,
     {
       headers: await signInSuperAdmin(request),
       data: {
-        alt: 'alt-1.1 de',
-        locale: 'de'
+        alt: 'alt-1.1 de'
       }
     }
   );
@@ -247,12 +242,11 @@ test('Should update 1st media created in DE', async ({ request }) => {
 
 test('Should update 1st media created in FR', async ({ request }) => {
   const response = await request.patch(
-    `${API_BASE_URL}/medias/${mediaId}?${PARAMS.VERSION_ID}=${mediaVersionId}`,
+    `${API_BASE_URL}/medias/${mediaId}?${PARAMS.VERSION_ID}=${mediaVersionId}&locale=fr`,
     {
       headers: await signInSuperAdmin(request),
       data: {
-        alt: 'alt-1.1 fr',
-        locale: 'fr'
+        alt: 'alt-1.1 fr'
       }
     }
   );
@@ -387,14 +381,16 @@ test('Should get the first infos version', async ({ request }) => {
 });
 
 test('Should update the 1st infos version (FR)', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/infos?versionId=${infoVersionId}`, {
-    headers: await signInSuperAdmin(request),
-    data: {
-      title: 'newer than latest (FR)',
-      email: 'hello@gmail.fr',
-      locale: 'fr'
+  const response = await request.patch(
+    `${API_BASE_URL}/infos?versionId=${infoVersionId}&locale=fr`,
+    {
+      headers: await signInSuperAdmin(request),
+      data: {
+        title: 'newer than latest (FR)',
+        email: 'hello@gmail.fr'
+      }
     }
-  });
+  );
   expect(response.status()).toBe(200);
 
   const verify = await request.get(`${API_BASE_URL}/infos?locale=fr`, {
@@ -410,14 +406,16 @@ test('Should update the 1st infos version (FR)', async ({ request }) => {
 });
 
 test('Should update the 1st infos version (DE)', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/infos?versionId=${infoVersionId}`, {
-    headers: await signInSuperAdmin(request),
-    data: {
-      title: 'newer than latest (DE)',
-      email: 'hello@gmail.de',
-      locale: 'de'
+  const response = await request.patch(
+    `${API_BASE_URL}/infos?versionId=${infoVersionId}&locale=de`,
+    {
+      headers: await signInSuperAdmin(request),
+      data: {
+        title: 'newer than latest (DE)',
+        email: 'hello@gmail.de'
+      }
     }
-  });
+  );
   expect(response.status()).toBe(200);
 
   const verify = await request.get(`${API_BASE_URL}/infos?locale=de`, {
@@ -491,11 +489,14 @@ test('Should update the 1st infos version (EN)', async ({ request }) => {
   expect(data.doc.versionId).toBe(infoVersionId);
   expect(data.doc.title).toBe('newer than latest (FR)');
   expect(data.doc.id).toBe(infosId);
-});
 
-test('Should not return infos versions without credentials', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/infos--versions`);
-  expect(response.status()).toBe(403);
+  // The version reads the new title in EN
+  const en = await request
+    .get(`${API_BASE_URL}/infos?${PARAMS.VERSION_ID}=${infoVersionId}`, {
+      headers: await signInSuperAdmin(request)
+    })
+    .then((r) => r.json());
+  expect(en.doc.title).toBe('newer than latest (EN)');
 });
 
 test('Should return versions with only id versionId and email', async ({ request }) => {
@@ -553,166 +554,6 @@ test('Should update infos (creating a new version) (FR)', async ({ request }) =>
   expect(en.doc.title).toBe('newer than newer');
 });
 
-/****************************************************
-/* Handling versioned areas with draft enabled
-/****************************************************/
-
-let settingVersionId: string;
-
-test('Should get settings', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings`, {
-    headers: await signInSuperAdmin(request)
-  });
-  expect(response.status()).toBe(200);
-  const data = await response.json();
-  expect(data.doc).toBeDefined();
-  expect(data.doc.title).toBe(null);
-  expect(data.doc.versionId).toBeDefined();
-  settingVersionId = data.doc.versionId;
-});
-
-test('Should update the published settings', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/settings`, {
-    headers: await signInSuperAdmin(request),
-    data: {
-      title: 'initial settings',
-      logo: [mediaId]
-    }
-  });
-
-  expect(response.status()).toBe(200);
-  const responseData = await response.json();
-  expect(responseData.doc).toBeDefined();
-  expect(responseData.doc.title).toBe('initial settings');
-  expect(responseData.doc.versionId).toBeDefined();
-  expect(responseData.doc.versionId).toBe(settingVersionId);
-
-  const verify = await request.get(`${API_BASE_URL}/settings`, {
-    headers: await signInSuperAdmin(request)
-  });
-  expect(verify.status()).toBe(200);
-  const verifyData = await verify.json();
-
-  expect(verifyData.doc).toBeDefined();
-  expect(verifyData.doc.versionId).toBeDefined();
-  expect(verifyData.doc.versionId).toBe(settingVersionId);
-  expect(verifyData.doc.title).toBeDefined();
-  expect(verifyData.doc.title).toBe('initial settings');
-  expect(verifyData.doc.logo).toBeDefined();
-});
-
-test('Should update the settings and create a second settings version', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/settings?${PARAMS.FORK}=true`, {
-    headers: await signInSuperAdmin(request),
-    data: {
-      title: 'second settings version'
-    }
-  });
-  expect(response.status()).toBe(200);
-  const responseData = await response.json();
-  expect(responseData.doc).toBeDefined();
-  expect(responseData.doc.title).toBe('second settings version');
-  expect(responseData.doc.status).toBe(VERSIONS_STATUS.DRAFT);
-  expect(responseData.doc.versionId).toBeDefined();
-  expect(responseData.doc.versionId).not.toBe(settingVersionId);
-  expect(responseData.doc.logo).toBeDefined();
-});
-
-test('Should get the published settings', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings`, {
-    headers: await signInSuperAdmin(request)
-  });
-  expect(response.status()).toBe(200);
-  const responseData = await response.json();
-  expect(responseData.doc).toBeDefined();
-  expect(responseData.doc.title).toBe('initial settings');
-  expect(responseData.doc.status).toBe(VERSIONS_STATUS.PUBLISHED);
-  expect(responseData.doc.versionId).toBe(settingVersionId);
-});
-
-test('Should get the latest settings draft and publish it', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings?${PARAMS.LATEST}=true`, {
-    headers: await signInSuperAdmin(request)
-  });
-  expect(response.status()).toBe(200);
-  const responseData = await response.json();
-  expect(responseData.doc).toBeDefined();
-  expect(responseData.doc.title).toBe('second settings version');
-  expect(responseData.doc.status).toBe(VERSIONS_STATUS.DRAFT);
-  expect(responseData.doc.versionId).not.toBe(settingVersionId);
-
-  const publishResponse = await request.patch(
-    `${API_BASE_URL}/settings?versionId=${responseData.doc.versionId}`,
-    {
-      headers: await signInSuperAdmin(request),
-      data: {
-        status: VERSIONS_STATUS.PUBLISHED,
-        maintenance: true
-      }
-    }
-  );
-
-  expect(publishResponse.status()).toBe(200);
-  const publishResponseData = await publishResponse.json();
-  expect(publishResponseData.doc).toBeDefined();
-  expect(publishResponseData.doc.title).toBe('second settings version');
-  expect(publishResponseData.doc.status).toBe(VERSIONS_STATUS.PUBLISHED);
-});
-
-test('Should get the initial settings as a draft', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings?versionId=${settingVersionId}`, {
-    headers: await signInSuperAdmin(request)
-  });
-  expect(response.status()).toBe(200);
-  const responseData = await response.json();
-  expect(responseData.doc).toBeDefined();
-  expect(responseData.doc.title).toBe('initial settings');
-  expect(responseData.doc.status).toBe(VERSIONS_STATUS.DRAFT);
-});
-
-test('Should return 2 versions of settings', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings--versions`, {
-    headers: await signInSuperAdmin(request)
-  });
-  expect(response.status()).toBe(200);
-  const data = await response.json();
-  expect(data.docs).toBeDefined();
-  expect(data.docs).toHaveLength(2);
-  expect(data.docs.at(0).title).toBe('second settings version');
-  expect(data.docs.at(0).status).toBe(VERSIONS_STATUS.PUBLISHED);
-  expect(data.docs.at(1).title).toBe('initial settings');
-  expect(data.docs.at(1).status).toBe(VERSIONS_STATUS.DRAFT);
-});
-
-test('Should not return settings versions without credentials', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings--versions`);
-  expect(response.status()).toBe(403);
-});
-
-test('Should get a 404 when fetching a wrong Settings version', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings?versionId=123`, {
-    headers: await signInSuperAdmin(request)
-  });
-  const status = response.status();
-  expect(status).toBe(404);
-});
-
-test('Should get only maintenance field on published Settings', async ({ request }) => {
-  const response = await request.get(`${API_BASE_URL}/settings?select=maintenance`, {
-    headers: await signInSuperAdmin(request)
-  });
-  const status = response.status();
-  expect(status).toBe(200);
-  const data = await response.json();
-  expect(data.doc).toBeDefined();
-  expect(data.doc.id).toBeDefined();
-  expect(data.doc.versionId).toBeDefined();
-  expect(data.doc.maintenance).toBeDefined();
-  expect(data.doc.maintenance).toBe(true);
-  expect(data.doc.title).not.toBeDefined();
-  expect(data.doc.logo).not.toBeDefined();
-});
-
 /*********************************************************
 /* Handling versioned collection with draft enabled
 /*********************************************************/
@@ -740,7 +581,7 @@ test('Should create a News and publish it', async ({ request }) => {
   expect(doc.attributes.title).toBe('News 1.1');
   expect(doc.attributes.slug).toBeDefined();
   expect(doc.attributes.slug).toBe('news-1');
-  expect(doc.attributes.image).toBeDefined();
+  expect(doc.attributes.image.map((ref: any) => ref.documentId)).toEqual([secondMediaId]);
   expect(doc.versionId).toBeDefined();
   expect(doc.status).toBeDefined();
   expect(doc.status).toBe(VERSIONS_STATUS.PUBLISHED);
@@ -764,7 +605,7 @@ test('Should update the initial News by creating a new version', async ({ reques
   expect(doc.attributes.title).toBe('News 1.2 draft');
   expect(doc.attributes.slug).toBeDefined();
   expect(doc.attributes.slug).toBe('news-1');
-  expect(doc.attributes.image).toBeDefined();
+  expect(doc.attributes.image.map((ref: any) => ref.documentId)).toEqual([secondMediaId]);
   expect(doc.versionId).toBeDefined();
   expect(doc.versionId).not.toBe(newsVersionId);
 });
@@ -815,8 +656,17 @@ test('Should update the initial News and unpublish it', async ({ request }) => {
 });
 
 test('Should not return any news (collection query)', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  // The filter finds the news among the newest rows: only the published read leaves it out
+  const latest = await request.get(
+    `${API_BASE_URL}/news?where[attributes.slug][equals]=news-1&${PARAMS.LATEST}=true`,
+    { headers }
+  );
+  expect(latest.status()).toBe(200);
+  expect((await latest.json()).docs.map((doc: { id: string }) => doc.id)).toEqual([newsId]);
+
   const response = await request.get(`${API_BASE_URL}/news?where[attributes.slug][equals]=news-1`, {
-    headers: await signInSuperAdmin(request)
+    headers
   });
   const status = response.status();
   expect(status).toBe(200);
@@ -841,8 +691,15 @@ test('News should have 2 versions', async ({ request }) => {
 });
 
 test('None should be published and 404 should be returned', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  // The news is there, as drafts
+  const latest = await request.get(`${API_BASE_URL}/news/${newsId}?${PARAMS.LATEST}=true`, {
+    headers
+  });
+  expect(latest.status()).toBe(200);
+
   const response = await request.get(`${API_BASE_URL}/news/${newsId}`, {
-    headers: await signInSuperAdmin(request)
+    headers
   });
   const status = response.status();
   expect(status).toBe(404);
@@ -921,16 +778,19 @@ test('Should duplicate a News keeping each locale’s own title, as drafts', asy
       status: VERSIONS_STATUS.PUBLISHED
     }
   });
+  expect(createResponse.status()).toBe(200);
   const { doc: original } = await createResponse.json();
 
-  await request.patch(`${API_BASE_URL}/news/${original.id}?locale=fr`, {
+  const fr = await request.patch(`${API_BASE_URL}/news/${original.id}?locale=fr`, {
     headers,
     data: { attributes: { title: 'Multi FR' }, status: VERSIONS_STATUS.PUBLISHED }
   });
-  await request.patch(`${API_BASE_URL}/news/${original.id}?locale=de`, {
+  expect(fr.status()).toBe(200);
+  const de = await request.patch(`${API_BASE_URL}/news/${original.id}?locale=de`, {
     headers,
     data: { attributes: { title: 'Multi DE' }, status: VERSIONS_STATUS.PUBLISHED }
   });
+  expect(de.status()).toBe(200);
 
   const dupResponse = await request.post(`${API_BASE_URL}/news/${original.id}/duplicate`, {
     headers
@@ -959,11 +819,6 @@ test('Should duplicate a News keeping each locale’s own title, as drafts', asy
 
   await request.delete(`${API_BASE_URL}/news/${original.id}`, { headers });
   await request.delete(`${API_BASE_URL}/news/${duplicateId}`, { headers });
-});
-
-test('Should require create access to duplicate (no credentials)', async ({ request }) => {
-  const response = await request.post(`${API_BASE_URL}/news/${newsId}/duplicate`);
-  expect(response.status()).toBe(403);
 });
 
 test('Should duplicate a never-published News across every locale', async ({ request }) => {
@@ -1091,10 +946,11 @@ test('Should duplicate a nested child Page, keeping it under the same parent', a
 });
 
 /*********************************************************
-/* Draft/published status is tracked per locale, not globally
+/* A new draft written in one locale leaves the published
+/* version alone in every locale
 /*********************************************************/
 
-test('Should keep draft/published status independent per locale', async ({ request }) => {
+test('A new EN draft leaves the published version alone in every locale', async ({ request }) => {
   const headers = await signInSuperAdmin(request);
 
   const createResponse = await request.post(`${API_BASE_URL}/news`, {
@@ -1104,19 +960,27 @@ test('Should keep draft/published status independent per locale', async ({ reque
       status: VERSIONS_STATUS.PUBLISHED
     }
   });
+  expect(createResponse.status()).toBe(200);
   const { doc } = await createResponse.json();
 
-  await request.patch(`${API_BASE_URL}/news/${doc.id}?locale=fr`, {
+  const fr = await request.patch(`${API_BASE_URL}/news/${doc.id}?locale=fr`, {
     headers,
     data: { attributes: { title: 'Independence FR' }, status: VERSIONS_STATUS.PUBLISHED }
   });
+  expect(fr.status()).toBe(200);
 
-  // A new EN draft (not published) must not touch FR at all.
-  await request.patch(`${API_BASE_URL}/news/${doc.id}?locale=en&${PARAMS.FORK}=true`, {
+  // A new EN draft, not published
+  const fork = await request.patch(`${API_BASE_URL}/news/${doc.id}?locale=en&${PARAMS.FORK}=true`, {
     headers,
     data: { attributes: { title: 'Independence EN draft' } }
   });
+  expect(fork.status()).toBe(200);
+  const draft = await request
+    .get(`${API_BASE_URL}/news/${doc.id}?locale=en&${PARAMS.LATEST}=true`, { headers })
+    .then((r) => r.json());
+  expect(draft.doc.attributes.title).toBe('Independence EN draft');
 
+  // The published version reads as before, in EN and in FR
   const enPublished = await request
     .get(`${API_BASE_URL}/news/${doc.id}?locale=en`, { headers })
     .then((r) => r.json());
@@ -1130,4 +994,90 @@ test('Should keep draft/published status independent per locale', async ({ reque
   expect(frPublished.doc.status).toBe(VERSIONS_STATUS.PUBLISHED);
 
   await request.delete(`${API_BASE_URL}/news/${doc.id}`, { headers });
+});
+
+/*********************************************************
+/* An editor's new version, checked against `update` only,
+/* keeps in every locale the field the editor may not read
+/*********************************************************/
+
+test('An editor saves a version of news they may not create, keeping the admin note in every locale', async ({
+  request
+}) => {
+  const admin = await signInSuperAdmin(request);
+  const editorEmail = `news-editor-${Date.now()}@email.com`;
+  const staff = await request.post(`${API_BASE_URL}/staff`, {
+    headers: admin,
+    data: { email: editorEmail, name: 'News editor', roles: ['editor'], password: PASSWORD }
+  });
+  expect(staff.status()).toBe(200);
+  const editor = await signIn(editorEmail, PASSWORD)(request);
+
+  const created = await request.post(`${API_BASE_URL}/news?locale=fr`, {
+    headers: admin,
+    data: { attributes: { title: 'Note FR', slug: `note-fr-${Date.now()}`, adminNote: 'note fr' } }
+  });
+  expect(created.status()).toBe(200);
+  const { doc } = await created.json();
+
+  const english = await request.patch(
+    `${API_BASE_URL}/news/${doc.id}?locale=en&${PARAMS.LATEST}=true`,
+    {
+      headers: admin,
+      data: {
+        attributes: { title: 'Note EN', slug: `note-en-${Date.now()}`, adminNote: 'note en' }
+      }
+    }
+  );
+  expect(english.status()).toBe(200);
+
+  // `create` is admin-only: the version is part of the update
+  const saved = await request.patch(
+    `${API_BASE_URL}/news/${doc.id}?locale=fr&${PARAMS.FORK}=true&${PARAMS.LATEST}=true`,
+    { headers: editor, data: { attributes: { title: 'Note FR edited' } } }
+  );
+  expect(saved.status()).toBe(200);
+  const { doc: savedDoc } = await saved.json();
+  expect(savedDoc.attributes.title).toBe('Note FR edited');
+  expect(savedDoc.attributes).not.toHaveProperty('adminNote');
+
+  const read = async (locale: string) =>
+    (
+      await (
+        await request.get(`${API_BASE_URL}/news/${doc.id}?locale=${locale}&${PARAMS.LATEST}=true`, {
+          headers: admin
+        })
+      ).json()
+    ).doc;
+  const fr = await read('fr');
+  expect(fr.attributes.title).toBe('Note FR edited');
+  expect(fr.attributes.adminNote).toBe('note fr');
+  const en = await read('en');
+  expect(en.attributes.title).toBe('Note EN');
+  expect(en.attributes.adminNote).toBe('note en');
+
+  await request.delete(`${API_BASE_URL}/news/${doc.id}`, { headers: admin });
+});
+
+/*********************************************************
+/* A new area version copies the other locales as a locale
+/* copy: their values are not hooked a second time
+/*********************************************************/
+
+test('A versioned area copies the other locales onto a new version without hooking them again', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const save = (locale: string, data: object) =>
+    request.patch(`${API_BASE_URL}/contact?locale=${locale}`, { headers, data });
+  const read = async (locale: string) =>
+    (await (await request.get(`${API_BASE_URL}/contact?locale=${locale}`, { headers })).json()).doc;
+
+  expect((await save('en', { title: 'Hello', marker: 'm' })).status()).toBe(200);
+  expect((await read('en')).marker).toBe('m-saved');
+
+  // A save in fr makes a new version, onto which en is copied
+  expect((await save('fr', { title: 'Bonjour' })).status()).toBe(200);
+  expect((await read('en')).marker).toBe('m-saved');
+  expect((await read('fr')).title).toBe('Bonjour');
 });

@@ -1,16 +1,17 @@
 <script lang="ts">
   import { page } from '$app/state';
   import type { ResolvedPathname } from '$app/types';
-  import { PARAMS } from '$lib/core/constants.js';
-  import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
-  import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
-  import { getMimeTypeFromExtension } from '$lib/core/prototype/collection/upload/util/mime';
-  import type { GenericDoc } from '$lib/core/prototype/types';
-  import { panelPath } from '$lib/core/routes/util';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { mediaMeta } from '$lib/panel/util/upload-file.js';
-  import type { BuiltCollection } from '$lib/types';
-  import { Check } from '@lucide/svelte';
+  import { PARAMS } from '#lib/core/constants.js';
+  import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
+  import { isUploadConfig } from '#lib/core/prototype/collection/upload/util/config.js';
+  import { getMimeTypeFromExtension } from '#lib/core/prototype/collection/upload/util/mime.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import { panelPath } from '#lib/core/routes/util.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { mediaMeta } from '#lib/panel/util/upload-file.js';
+  import { titleOrUntitled } from '#lib/panel/util/title.js';
+  import type { BuiltCollection } from '#lib/types.js';
+  import Check from '@lucide/svelte/icons/check';
   import StatusDot from '../../StatusDot.svelte';
 
   type Props = {
@@ -47,7 +48,7 @@
     return (fromName || mimeType.split('/').pop() || '').toUpperCase();
   });
 
-  const name = $derived(doc.title || doc.filename || '[untitled]');
+  const name = $derived(titleOrUntitled(doc.title || doc.filename));
 
   // 3.2 MB · JPG for a file, the last edit for a document.
   const meta = $derived.by(() => {
@@ -99,7 +100,10 @@
   </span>
 {/snippet}
 
-<!-- A media card: the thumbnail, the name, then its size and type. While picking, a click picks it. -->
+<!--
+  A card: the thumbnail, or the file type or the collection icon, the name, then the size and type
+  or the last edit. While picking, a click picks it.
+-->
 <div
   class="rz-grid-item"
   class:rz-grid-item--picked={checked}

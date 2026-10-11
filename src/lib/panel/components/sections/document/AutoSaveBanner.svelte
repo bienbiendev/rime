@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { PARAMS } from '$lib/core/constants.js';
-  import type { AutoSave, AutoSaves } from '$lib/core/prototype/shared/versions/types.js';
-  import { panelUrl } from '$lib/core/routes/util.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import { X } from '@lucide/svelte';
+  import { documentSegments } from '#lib/panel/util/url.js';
+  import { PARAMS } from '#lib/core/constants.js';
+  import type { AutoSave, AutoSaves } from '#lib/core/prototype/shared/versions/types.js';
+  import { panelUrl } from '#lib/core/routes/util.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import X from '@lucide/svelte/icons/x';
   import { SvelteSet } from 'svelte/reactivity';
   import { fade } from 'svelte/transition';
   import { t__ } from '../../../../core/i18n/index.js';
@@ -42,11 +43,8 @@
     )
   );
 
-  const documentUrl = (versionId: string) => {
-    const kebab = form.config.kebab;
-    const base = doc._prototype === 'collection' ? panelUrl(kebab, doc.id ?? '') : panelUrl(kebab);
-    return `${base}?${PARAMS.VERSION_ID}=${versionId}`;
-  };
+  const documentUrl = (versionId: string) =>
+    `${panelUrl(...documentSegments(form.config.kebab, doc))}?${PARAMS.VERSION_ID}=${versionId}`;
 
   const when = (date: Date | string) => locale.dateFormat(date, { short: true, withTime: true });
   const nameOf = (user: { name?: string; email?: string } | null | undefined) =>

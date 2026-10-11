@@ -1,5 +1,6 @@
-import type { DocumentRows } from '$lib/core/adapter.js';
-import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
+import type { DocumentRows } from '#lib/core/adapter.js';
+import { MAX_DEPTH } from '#lib/core/constants.js';
+import type { CollectionSlug, GenericDoc } from '#lib/core/prototype/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 
 /**
@@ -21,14 +22,23 @@ export const populatedKey = (slug: string, locale: string | undefined, id: strin
  * ```
  *
  * A relation row keeps its own locale, or none: the target is read in that locale, else in the
- * request's, as `findById` would. A target that is missing or refused to this reader is absent
- * from the map.
+ * read's. The targets are read as the read runs, rime or the caller, and a target that is missing
+ * or refused to this reader is absent from the map.
  */
 export const populateRelations = async (
   rows: DocumentRows[],
-  args: { event: RequestEvent; locale?: string; depth: number }
+  args: {
+    event: RequestEvent;
+    locale?: string;
+    /** Whether a target missing in the locale reads in the default one, as the read asked. */
+    localeFallback?: boolean;
+    depth: number;
+    isSystemOperation?: boolean;
+  }
 ): Promise<Populated> => {
-  const { event, locale, depth } = args;
+  const { event, locale, localeFallback, isSystemOperation } = args;
+  // Every read goes down through here, so a read resolves `MAX_DEPTH` levels at most
+  const depth = Math.min(args.depth, MAX_DEPTH);
   const groups = new Map<string, { slug: CollectionSlug; locale?: string; ids: Set<string> }>();
 
   for (const relation of rows.flatMap((row) => row.relations)) {
@@ -52,7 +62,13 @@ export const populateRelations = async (
     [...groups.values()].map(async (group) => {
       const docs = await event.locals.rime
         .collection(group.slug)
-        .findByIds({ ids: [...group.ids], locale: group.locale, depth: depth - 1 });
+        .system(!!isSystemOperation)
+        .findByIds({
+          ids: [...group.ids],
+          locale: group.locale ?? locale,
+          localeFallback,
+          depth: depth - 1
+        });
       for (const doc of docs) {
         populated.set(populatedKey(group.slug, group.locale, doc.id), doc);
       }

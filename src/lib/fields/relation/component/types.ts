@@ -1,5 +1,5 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import type { GenericDoc } from '$lib/core/prototype/types.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
 
 export type RelationFieldItem = {
   id?: string;
@@ -18,7 +18,6 @@ export type RelationFieldItem = {
 };
 
 export type RelationComponentProps = {
-  path: string;
   relationConfig: BuiltCollection;
   stamp: string;
   hasError: boolean;

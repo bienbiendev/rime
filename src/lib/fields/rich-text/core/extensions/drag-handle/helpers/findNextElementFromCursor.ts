@@ -15,7 +15,7 @@ export const findElementNextToCoords = (options: FindElementNextToCoords) => {
     top: y - bandHeight,
     bottom: y + bandHeight,
     left: direction === 'right' ? x : 0,
-    right: direction === 'right' ? window.innerWidth - x : x
+    right: direction === 'right' ? window.innerWidth : x
   };
 
   const root = editor.view.dom as HTMLElement;
@@ -36,7 +36,7 @@ export const findElementNextToCoords = (options: FindElementNextToCoords) => {
       );
     });
 
-  if (!candidates || candidates.length === 0) {
+  if (candidates.length === 0) {
     return { resultElement: null, resultNode: null, pos: null };
   }
 

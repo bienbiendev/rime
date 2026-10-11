@@ -1,67 +1,25 @@
-import { PARAMS } from '$lib/core/constants.js';
-import { ERROR_CONTEXT, handleError } from '$lib/core/errors/handler.server.js';
-import { extractData } from '$lib/core/pipeline/extract-data.server.js';
-import { retireAutoSaves } from '$lib/core/prototype/shared/versions/retire-auto-saves.server.js';
-import type { AreaSlug } from '$lib/core/prototype/types.js';
-import { trycatch } from '$lib/util/function.js';
-import { toKebabCase } from '$lib/util/string.js';
+import { formFailure } from '#lib/core/errors/handler.server.js';
+import { extractData } from '#lib/core/pipeline/extract-data.server.js';
+import type { AreaSlug } from '#lib/core/prototype/types.js';
+import { answerSave, saveParams } from '#lib/panel/pages/shared/save.server.js';
+import { trycatch } from '#lib/util/function.js';
 import { type Actions, type RequestEvent } from '@sveltejs/kit';
-import { t__ } from '../../../core/i18n/index.js';
 
 export const areaFormActions: Actions = {
   update: async (event: RequestEvent) => {
-    const { rime, locale, user } = event.locals;
-    const slug = (event.params.slug || '') as AreaSlug;
-
-    const versionId = event.url.searchParams.get(PARAMS.VERSION_ID) || undefined;
-    const fork = event.url.searchParams.get(PARAMS.FORK) === 'true';
-    const autoSave = event.url.searchParams.get(PARAMS.AUTO_SAVE) === 'true';
+    const { rime, locale } = event.locals;
+    const area = rime.area((rime.routes.slug || '') as AreaSlug);
+    const { versionId, fork, autoSave } = saveParams(event);
 
     const [extractError, data] = await trycatch(() => extractData(event.request));
-    if (extractError) {
-      return handleError(extractError, { context: ERROR_CONTEXT.ACTION });
-    }
-
-    const area = rime.area(slug);
+    if (extractError) return formFailure(extractError);
 
     const [error, document] = await trycatch(() =>
-      area.update({
-        data,
-        versionId,
-        fork,
-        autoSave,
-        locale
-      })
+      area.update({ data, versionId, fork, autoSave, locale })
     );
+    if (error) return formFailure(error);
 
-    if (error) {
-      return handleError(error, { context: ERROR_CONTEXT.ACTION });
-    }
-
-    // An auto-save is silent: the form merges the document back and nothing else moves.
-    if (autoSave) {
-      return { document };
-    }
-
-    // A save is where the saver's auto-saves end, except the row it landed on.
-    if (user) {
-      await retireAutoSaves({
-        event,
-        config: area.config,
-        docId: document.id,
-        userId: user.id,
-        keep: document.versionId as string | undefined
-      });
-    }
-
-    if (fork && 'versionId' in document) {
-      return {
-        document,
-        message: t__('common.version_created'),
-        redirectUrl: `${rime.routes.panelUrl(toKebabCase(slug))}?${PARAMS.VERSION_ID}=${document.versionId}`
-      };
-    }
-
-    return { document, message: t__('common.doc_updated') };
+    const documentUrl = rime.routes.panelUrl(area.config.kebab);
+    return answerSave({ event, config: area.config, document, fork, autoSave, documentUrl });
   }
 };

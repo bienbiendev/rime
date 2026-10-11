@@ -1,8 +1,8 @@
-import type { UploadConfig } from '$lib/core/prototype/collection/upload/types.js';
-import { text } from '$lib/fields/text/index.js';
-import { toCamelCase } from '$lib/util/string.js';
-import type { Collection } from '$lib/core/config/types.js';
-import type { ImageSizesConfig } from '$lib/core/prototype/collection/upload/types.js';
+import type { UploadConfig } from '#lib/core/prototype/collection/upload/types.js';
+import { text } from '#lib/fields/text/index.js';
+import { toCamelCase } from '#lib/util/string.js';
+import type { Collection } from '#lib/core/config/types.js';
+import type { ImageSizesConfig } from '#lib/core/prototype/collection/upload/types.js';
 import type { WithNormalizedUpload } from './types.js';
 import { validatePath } from './util/path.js';
 
@@ -21,7 +21,7 @@ import { validatePath } from './util/path.js';
 const withNormalizedUpload = <T extends { upload?: boolean | UploadConfig }>(
   config: T
 ): WithNormalizedUpload<T> => {
-  // Create a new object without the auth property
+  // Create a new object without the upload property
   const { upload, ...rest } = config;
   // Determine the normalized upload value
   let normalizedUpload: undefined | UploadConfig;
@@ -45,60 +45,63 @@ const withNormalizedUpload = <T extends { upload?: boolean | UploadConfig }>(
  */
 export const augmentUpload = <T extends Collection<any>>(config: T): WithNormalizedUpload<T> => {
   const normalizedUploadConfig = withNormalizedUpload(config);
-  if (!normalizedUploadConfig.upload) return normalizedUploadConfig;
-
   const { upload } = normalizedUploadConfig;
+  if (!upload) return normalizedUploadConfig;
+
   let fields = [...(config.fields || [])];
 
-  if (upload) {
-    // Add panel thumbnail size if not already present
-    const isPanelThumbnailInSizes =
-      upload.imageSizes &&
-      upload.imageSizes.some((size: ImageSizesConfig) => size.name === 'thumbnail');
-    if (!isPanelThumbnailInSizes) {
-      const thumbnailSize = { name: 'thumbnail', width: 400, compression: 60 };
-      upload.imageSizes = [thumbnailSize, ...(upload.imageSizes || [])];
-    }
+  // A size name is a column name: `large-square` -> `largeSquare`
+  const sizes = (upload.imageSizes ?? []).map((size: ImageSizesConfig) => ({
+    ...size,
+    name: toCamelCase(size.name)
+  }));
+  // The panel's thumbnail, unless the config names one
+  const hasThumbnail = sizes.some((size) => size.name === 'thumbnail');
+  upload.imageSizes = hasThumbnail
+    ? sizes
+    : [{ name: 'thumbnail', width: 400, compression: 60 }, ...sizes];
 
-    // Add image size fields
-    if ('imageSizes' in upload && upload.imageSizes?.length) {
-      const sizesFields = upload.imageSizes.map((size: ImageSizesConfig) =>
-        text(toCamelCase(size.name)).hidden()
+  // Written by `processFileUpload` from the saved file, never by a client
+  const serverOnly = { create: () => false, update: () => false };
+
+  // One hidden column per size
+  const sizesFields = upload.imageSizes.map((size) => text(size.name).hidden().access(serverOnly));
+  fields = [...fields, ...sizesFields];
+
+  // Add mimeType field
+  const mimeType = text('mimeType').table({ sort: true, position: 99 }).hidden();
+
+  // Add validation if accept is defined
+  if ('accept' in upload && Array.isArray(upload.accept)) {
+    const allowedMimeTypes = upload.accept;
+    mimeType.validate((value) => {
+      return (
+        (typeof value === 'string' && allowedMimeTypes.includes(value)) ||
+        `File should be the type of ${allowedMimeTypes.toString()}`
       );
-      fields = [...fields, ...sizesFields];
-    }
-
-    // Add mimeType field
-    const mimeType = text('mimeType').table({ sort: true, position: 99 }).hidden();
-
-    // Add validation if accept is defined
-    if ('accept' in upload && Array.isArray(upload.accept)) {
-      const allowedMimeTypes = upload.accept;
-      mimeType.validate((value) => {
-        return (
-          (typeof value === 'string' && allowedMimeTypes.includes(value)) ||
-          `File should be the type of ${allowedMimeTypes.toString()}`
-        );
-      });
-    }
-
-    const _pathField = text('_path').$root().hidden().validate(validatePath);
-
-    // Add hidden fields
-    fields.push(mimeType, text('filename').hidden(), text('filesize').hidden(), _pathField);
+    });
   }
 
+  const _pathField = text('_path').$root().hidden().validate(validatePath);
+
+  // Add hidden fields
+  fields.push(
+    mimeType,
+    text('filename').hidden().access(serverOnly),
+    text('filesize').hidden(),
+    _pathField
+  );
+
   // What an upload document is called, overriding the prototype's fallback. Overrides rather than
-  // defers, so upload wins for the rare config carrying both — registry order puts this after
-  // auth's.
+  // defers, so upload wins for the rare config carrying both — the `augments` order in
+  // `collection/definition.ts` puts this after auth's.
   //
   // `_dashboardLayout` is the same kind of statement: a collection of files reads better as
   // thumbnails than as rows. Offered, not imposed — the dashboard falls back to `'rows'` and an
-  // author's `panel.dashboard.layout` wins over both. Before this, the *collection prototype*
-  // tested `config.upload` to decide it.
+  // author's `panel.dashboard.layout` wins over both.
   return {
     ...config,
-    upload: upload || false,
+    upload,
     fields,
     _titleFallback: 'filename',
     _dashboardLayout: 'grid' as const

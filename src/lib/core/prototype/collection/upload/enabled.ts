@@ -1,4 +1,4 @@
-import type { Dic } from '$lib/util/types.js';
+import type { Dic } from '#lib/util/types.js';
 
 /**
  * A collection stores files by declaring `upload`.

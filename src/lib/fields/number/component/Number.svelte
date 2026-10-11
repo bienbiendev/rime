@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import { ChevronDown, ChevronUp } from '@lucide/svelte';
-  import './number.css';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronUp from '@lucide/svelte/icons/chevron-up';
   import type { NumberFieldProps } from './props';
 
   const { path, config, form }: NumberFieldProps = $props();

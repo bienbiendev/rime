@@ -1,6 +1,6 @@
-import type { PathRow } from '$lib/core/adapter.js';
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
+import type { PathRow } from '#lib/core/adapter.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import type { CollectionSlug, GenericDoc } from '#lib/core/prototype/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { formatUrl } from './format.server.js';
 

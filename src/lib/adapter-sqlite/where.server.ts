@@ -1,16 +1,18 @@
-import { RimeError } from '$lib/core/errors/index.js';
-import { getFieldAtPath } from '$lib/core/fields/util.js';
-import { logger } from '$lib/core/logger.server.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
-import { isRelationField } from '$lib/fields/relation/index.js';
-import { type GetRegisterType } from '$lib/index.js';
-import type { Dic } from '$lib/util/types.js';
+import { pathToDatabaseColumn } from './columns.server.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { getFieldAtPath } from '#lib/core/fields/util.js';
+import { logger } from '#lib/core/logger.server.js';
+import type { ConfigContext } from '#lib/core/rime.server.js';
+import { isRelationField } from '#lib/fields/relation/index.js';
+import { type GetRegisterType } from '#lib/index.js';
+import { isObjectLiteral } from '#lib/util/object.js';
+import type { Dic } from '#lib/util/types.js';
 import * as drizzleORM from 'drizzle-orm';
-import { and, eq, getTableColumns, inArray, or } from 'drizzle-orm';
+import { and, eq, getTableColumns, inArray, or, type SQL } from 'drizzle-orm';
 import type { ParsedQs } from 'qs';
 import type { PrototypeSlug } from '../types.js';
 import { localeOrder } from './locales.server.js';
-import { baseTableName, tableName } from './naming.server.js';
+import { baseTableName, junctionKey, tableName } from './naming.server.js';
 import type { GenericTable, SqliteDatabase } from './types.server.js';
 
 type BuildWhereArgs = {
@@ -56,10 +58,8 @@ export const buildWhereParam = ({
 }: BuildWhereArgs) => {
   /** `slug` names a content table standing in for `base`, not a prototype's own rows. */
   const isShadow = !!base;
-  // Helper to get table by key with correct typing
-  function getTable<T>(key: string) {
-    return tables[key as keyof typeof tables] as T extends any ? GenericTable : T;
-  }
+  /** The generated table named `key`. */
+  const getTable = (key: string) => tables[key as keyof typeof tables] as unknown as GenericTable;
 
   function getTablesAndColumns(slug: string) {
     // Get main table and localized table if applicable
@@ -92,6 +92,22 @@ export const buildWhereParam = ({
   const baseColumns = baseTable ? Object.keys(getTableColumns(baseTable)) : [];
 
   const buildCondition = (conditionObject: Dic): any | false => {
+    // `{ a: …, b: … }` is `a` and `b`; `{ price: { greater_than: 1, less_than: 10 } }` is both bounds.
+    const entries = Object.entries(conditionObject);
+    if (entries.length > 1) {
+      return and(
+        ...entries.map(([key, value]) => buildCondition({ [key]: value })).filter(Boolean)
+      );
+    }
+    const [[key, operators]] = entries;
+    if (isObjectLiteral(operators) && Object.keys(operators).length > 1) {
+      return and(
+        ...Object.entries(operators)
+          .map(([operator, value]) => buildCondition({ [key]: { [operator]: value } }))
+          .filter(Boolean)
+      );
+    }
+
     // Handle nested AND conditions
     if ('and' in conditionObject && Array.isArray(conditionObject.and)) {
       const subConditions = conditionObject.and
@@ -120,6 +136,13 @@ export const buildWhereParam = ({
       value
     } = getConditionMembers(conditionObject);
 
+    /**
+     * `fn` on `column`, the value cast for `cast` (the column itself, unless it is an expression).
+     * A `like` pattern is text whatever the column, and is never cast.
+     */
+    const compare = (column: any, cast: { dataType: string } = column) =>
+      fn(column, LIKE_OPERATORS.includes(operator) ? value : castTo(cast, value));
+
     // A collection with `$url` finds its pages by url or by path through its paths table, in the
     // locale read. A versions table is matched through its `ownerId`, like any base-row filter.
     const pathsTable = getTable(
@@ -132,7 +155,7 @@ export const buildWhereParam = ({
         .where(
           and(
             eq(pathsTable.locale, locale ?? ''),
-            fn(column === 'url' ? pathsTable.url : pathsTable.path, value)
+            compare(column === 'url' ? pathsTable.url : pathsTable.path)
           )
         );
       return inArray(isShadow ? table.ownerId : table.id, owners);
@@ -140,7 +163,7 @@ export const buildWhereParam = ({
 
     // Handle regular fields
     if (unlocalizedColumns.includes(sqlColumn)) {
-      return fn(table[sqlColumn], value);
+      return compare(table[sqlColumn]);
     }
 
     // A localized column is compared as a read would show it: the first locale in the fallback
@@ -156,7 +179,9 @@ export const buildWhereParam = ({
           ? sql`COALESCE(${sql.join(order.map(valueIn), sql`, `)})`
           : valueIn(order[0]);
 
-      if (operator !== 'equals' && operator !== 'in_array') return fn(resolved, value);
+      if (operator !== 'equals' && operator !== 'in_array') {
+        return compare(resolved, tableLocales[sqlColumn]);
+      }
 
       // A document whose read value matches has a locales row holding it, so the documents with
       // one are asked first: that is what an index on the column answers, and the comparison
@@ -167,9 +192,9 @@ export const buildWhereParam = ({
           db
             .select({ ownerId: tableLocales.ownerId })
             .from(tableLocales)
-            .where(fn(tableLocales[sqlColumn], value))
+            .where(compare(tableLocales[sqlColumn]))
         ),
-        fn(resolved, value)
+        compare(resolved, tableLocales[sqlColumn])
       );
     }
 
@@ -178,7 +203,7 @@ export const buildWhereParam = ({
     if (baseTable && baseColumns.includes(sqlColumn)) {
       return inArray(
         table.ownerId,
-        db.select({ ownerId: baseTable.id }).from(baseTable).where(fn(baseTable[sqlColumn], value))
+        db.select({ ownerId: baseTable.id }).from(baseTable).where(compare(baseTable[sqlColumn]))
       );
     }
 
@@ -199,12 +224,9 @@ export const buildWhereParam = ({
         const candidate = getFieldAtPath(prefix, documentConfig.fields);
         if (candidate) {
           fieldConfig = candidate;
-          // If prefix shorter than original column, record the property suffix
-          if (i < parts.length) {
-            matchedPrefix = prefix;
-            relationPropertyPath = parts.slice(i).join('.');
-            isRelationProperty = true;
-          }
+          matchedPrefix = prefix;
+          relationPropertyPath = parts.slice(i).join('.');
+          isRelationProperty = true;
           break;
         }
       }
@@ -233,30 +255,30 @@ export const buildWhereParam = ({
     // Handle relation property queries (e.g., attributes.author.name)
     // by building a subquery on the related collection
     const buildRelationPropertyCondition = () => {
-      const relatedSlug = fieldConfig.get.relationTo;
-      const relatedTable = getTable(relatedSlug as any);
+      const relatedSlug = fieldConfig.get.relationTo as PrototypeSlug;
+      // A versioned target keeps its fields on its versions table: match a version, answer its
+      // document. A document matches when any of its versions holds the value, a draft included.
+      const versions = configCtx.getBySlug(relatedSlug)._versions;
+      const searched = versions ? (versions.slug as PrototypeSlug) : relatedSlug;
+      const searchedTable = getTable(baseTableName(searched));
 
       // Build a where clause for the related collection using the same operator/value
       const relatedWhere = { [relationPropertyPath!]: { [operator]: rawValue } } as any;
       // Recursive call to buildWhereParam for the related collection
       const relatedCondition = buildWhereParam({
         query: { where: relatedWhere } as any,
-        slug: relatedSlug as PrototypeSlug,
+        slug: searched,
+        base: versions ? relatedSlug : undefined,
         db,
         locale,
         tables,
         configCtx
       });
 
-      if (!relatedCondition) {
-        // No documents in related collection match => no parent documents match
-        return eq(table.id, '-1');
-      }
-
       // Subquery of related document ids that match the property condition
       const matchingRelatedIds = db
-        .select({ id: relatedTable.id })
-        .from(relatedTable)
+        .select({ id: versions ? searchedTable.ownerId : searchedTable.id })
+        .from(searchedTable)
         .where(relatedCondition);
 
       const relsTable = getTable(
@@ -268,7 +290,7 @@ export const buildWhereParam = ({
         .from(relsTable)
         .where(
           and(
-            inArray(relsTable[`${relatedSlug}Id`], matchingRelatedIds),
+            inArray(relsTable[junctionKey(relatedSlug)], matchingRelatedIds),
             eq(relsTable.path, matchedPrefix),
             ...(fieldConfig.get.localized ? [eq(relsTable.locale, locale)] : [])
           )
@@ -286,9 +308,6 @@ export const buildWhereParam = ({
     // only support a subset of operators for multi-valued relations
     const supportedRelationManyOperators = ['equals', 'not_equals', 'in_array', 'not_in_array'];
 
-    // Only enforce the restriction for direct relation field queries.
-    // If this is a relation property query (e.g. attributes.author.name) we allow
-    // any operator because those will be applied to the related collection.
     if (fieldConfig.get.many && !supportedRelationManyOperators.includes(operator)) {
       const unsupportedMessage = `the operator "${operator}" is not supported for multi-valued relation field "${column}" in ${documentConfig.slug} document`;
       logger.warn(unsupportedMessage);
@@ -323,7 +342,7 @@ export const buildWhereParam = ({
         .from(relsTable)
         .where(
           and(
-            drizzleORM.inArray(relsTable[`${to}Id`], values),
+            drizzleORM.inArray(relsTable[junctionKey(to)], values),
             eq(relsTable.path, column),
             ...(localized ? [eq(relsTable.locale, locale)] : [])
           )
@@ -338,7 +357,7 @@ export const buildWhereParam = ({
         .from(relsTable)
         .where(
           and(
-            drizzleORM.notInArray(relsTable[`${to}Id`], values),
+            drizzleORM.notInArray(relsTable[junctionKey(to)], values),
             eq(relsTable.path, column),
             ...(localized ? [eq(relsTable.locale, locale)] : [])
           )
@@ -413,7 +432,7 @@ export const buildWhereParam = ({
     // Default behavior (membership checks with in_array etc.)
     const conditions = [
       eq(relsTable.path, column),
-      fn(relsTable[`${to}Id`], value),
+      compare(relsTable[junctionKey(to)]),
       ...(localized ? [eq(relsTable.locale, locale)] : [])
     ];
 
@@ -429,16 +448,20 @@ export const buildWhereParam = ({
   return buildCondition(query.where as Dic);
 };
 
-const operators: Record<string, any> = {
+/**
+ * Each REST operator as a condition on a column. SQLite's `LIKE` already ignores the case of
+ * ASCII letters, so `ilike` is `like`. A range is its two bounds, `[min, max]`.
+ */
+const operators: Record<string, (column: any, value: any) => SQL> = {
   equals: drizzleORM.eq,
   not_equals: drizzleORM.ne,
   in_array: drizzleORM.inArray,
-  like: drizzleORM.like,
-  ilike: drizzleORM.ilike,
-  between: drizzleORM.between,
-  not_between: drizzleORM.notBetween,
-  not_like: drizzleORM.notLike,
   not_in_array: drizzleORM.notInArray,
+  like: drizzleORM.like,
+  ilike: drizzleORM.like,
+  not_like: drizzleORM.notLike,
+  between: (column, [min, max]) => drizzleORM.between(column, min, max),
+  not_between: (column, [min, max]) => drizzleORM.notBetween(column, min, max),
   is_not_null: drizzleORM.isNotNull,
   is_null: drizzleORM.isNull,
   less_than_or_equals: drizzleORM.lte,
@@ -449,28 +472,59 @@ const operators: Record<string, any> = {
 
 const isOperator = (str: string) => Object.keys(operators).includes(str);
 
-// Format value based on operator and type
-const formatValue = ({ operator, value }: { operator: string; value: any }) => {
-  switch (true) {
-    case typeof value === 'string' &&
-      /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?(Z|[+-]\d{2}:\d{2})?)?$/.test(value):
-      return new Date(value);
-    case ['in_array', 'not_in_array'].includes(operator):
-      // Value is an array do nothing
-      if (Array.isArray(value)) return value;
-      // Handle string value with "," separators for url params
-      return value.split(',');
-    case ['like', 'ilike', 'not_like'].includes(operator):
-      return !value.includes('%') ? `%${value}%` : value;
-    // Handle boolean strings
-    case typeof value === 'string' && (value === 'false' || value === 'true'):
-      return value === 'true';
-    // Handle numeric strings
-    case typeof value === 'string' && !isNaN(Number(value)):
-      return Number(value);
-    default:
-      return value;
+/** The operators that compare a column with a text pattern. */
+const LIKE_OPERATORS = ['like', 'ilike', 'not_like'];
+
+/**
+ * The value as its operator takes it: a list for `in_array`, two bounds for `between`, a pattern
+ * for `like`, nothing for a null check. Its type is the column's business — see `castTo`.
+ *
+ * ```ts
+ * formatValue({ operator: 'in_array', value: 'a,b' }) // ['a', 'b']
+ * formatValue({ operator: 'like', value: 'home' })    // '%home%'
+ * ```
+ */
+const formatValue = ({ operator, value }: { operator: string; value: unknown }) => {
+  if (['in_array', 'not_in_array'].includes(operator)) {
+    return Array.isArray(value) ? value : String(value).split(',');
   }
+  if (['between', 'not_between'].includes(operator)) {
+    // `1,10` from a URL, or `[1, 10]` from code
+    const bounds = Array.isArray(value) ? value : String(value).split(',');
+    if (bounds.length !== 2) {
+      throw new RimeError(RimeError.INVALID_DATA, `${operator} takes two values, got "${value}"`);
+    }
+    return bounds;
+  }
+  if (LIKE_OPERATORS.includes(operator)) {
+    const pattern = String(value);
+    return pattern.includes('%') ? pattern : `%${pattern}%`;
+  }
+  if (['is_null', 'is_not_null'].includes(operator)) return undefined;
+  return value;
+};
+
+/**
+ * A value from a URL as `column` stores it: a number for a number column, `true`/`false` for a
+ * boolean (sent as `true`/`false` or `1`/`0`), a `Date` for a timestamp. A text column keeps the
+ * string as sent, `'007'` included.
+ */
+const castTo = (column: { dataType: string }, value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map((one) => castTo(column, one));
+  if (typeof value !== 'string') return value;
+  if (column.dataType.startsWith('number') && value.trim() !== '' && !isNaN(Number(value))) {
+    return Number(value);
+  }
+  if (column.dataType === 'boolean' && ['true', 'false', '1', '0'].includes(value)) {
+    return value === 'true' || value === '1';
+  }
+  if (column.dataType === 'object date') {
+    if (isNaN(Date.parse(value))) {
+      throw new RimeError(RimeError.INVALID_DATA, `"${value}" is not a date`);
+    }
+    return new Date(value);
+  }
+  return value;
 };
 
 // Extract column, operator, and raw value from condition object
@@ -482,35 +536,26 @@ function getConditionMembers(obj: Dic) {
   }
   // get the correct Drizzle operator
   const fn = operators[operator];
-  // Convert dot notation to double underscore
-  // for fields included in groups or tabs
-  const sqlColumn = column.replace(/\./g, '__');
-  // Format compared value to support Date, Arrays,...
+  const sqlColumn = pathToDatabaseColumn(column);
+  // Shaped for its operator: a list, two bounds or a pattern
   const value = formatValue({ operator, value: rawValue });
   return { column, sqlColumn, fn, operator, rawValue, value };
 }
 
-// Normalize condition object for versioned collections
 /**
- * Retargets the two id conditions when the table being queried is a versions table.
+ * The condition as a versions table reads it, as a new object: `id` names the document, which is
+ * the row's `ownerId`, and `versionId` names the row itself, its `id`. Other tables read it as is.
  *
- * A caller filtering by `id` means the document, which is the base row — on a versions table that is
- * `ownerId`. `versionId` means the content row itself, which is the versions table's own `id`.
+ * ```ts
+ * normalizedForShadow({ versionId: { equals: 'v1' } }, true) // { id: { equals: 'v1' } }
+ * ```
  */
 function normalizedForShadow(conditionObject: Dic, isShadow: boolean): Dic {
   if (!isShadow) return conditionObject;
-
-  // "id" refers to the document, so it resolves against the base row this versions hangs off.
-  if ('id' in conditionObject) {
-    const idOperator = conditionObject.id;
-    delete conditionObject.id;
-    conditionObject.ownerId = idOperator;
-  }
-  // "versionId" refers to the content row, which is this table's own id.
-  if ('versionId' in conditionObject) {
-    const idOperator = conditionObject.versionId;
-    delete conditionObject.versionId;
-    conditionObject.id = idOperator;
-  }
-  return conditionObject;
+  const { id, versionId, ...rest } = conditionObject;
+  return {
+    ...rest,
+    ...(id !== undefined && { ownerId: id }),
+    ...(versionId !== undefined && { id: versionId })
+  };
 }

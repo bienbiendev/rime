@@ -1,4 +1,4 @@
-import { Images } from '@lucide/svelte';
+import Images from '@lucide/svelte/icons/images';
 import type { RichTextFeature } from '../../types.js';
 import { Upload, type UploadFeatureExtensionOptions } from './upload-extension.js';
 
@@ -12,7 +12,13 @@ export const UploadFeature = (args: UploadFeatureExtensionOptions): RichTextFeat
         icon: Images,
         isActive: ({ editor }) => editor.isActive('rich-text-upload-' + slug),
         suggestion: {
-          command: ({ editor }) => editor.chain().focus().insertUpload().run()
+          // This feature's own node: each `upload()` is a node type of its own
+          command: ({ editor }) =>
+            editor
+              .chain()
+              .focus()
+              .insertContent({ type: 'rich-text-upload-' + slug, attrs: { _fresh: true } })
+              .run()
         }
       }
     ]

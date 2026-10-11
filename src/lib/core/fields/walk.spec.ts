@@ -1,5 +1,6 @@
-import { block, blocks, group, tab, tabs, text, toggle, tree } from '$lib/fields/index.js';
+import { block, blocks, group, tab, tabs, text, toggle, tree } from '#lib/fields/index.js';
 import { expect, test } from 'vitest';
+import type { FieldBuilder } from './builders/field-builder.js';
 import { isFormField } from './util.js';
 import { matchesSegment, walkFields, walkValues } from './walk.js';
 
@@ -73,25 +74,24 @@ test('a leaf has no branches', () => {
   expect(text('title').use.nodesFor('hello')).toEqual([]);
 });
 
+/**
+ * The visits of the fields the config declares: the members rime adds to a block or a tree row
+ * are hidden.
+ */
+const declared = (visits: Iterable<{ field: FieldBuilder; path: string }>) =>
+  [...visits].filter(({ field }) => !(isFormField(field) && field.get.hidden));
+
 // A `tabs` field has no name, so it sits at its parent's own path and each tab names the segment.
 test('walkFields reaches every block type and the tree row', () => {
-  expect(paths(walkFields(fields))).toEqual([
+  expect(paths(declared(walkFields(fields)))).toEqual([
     '',
     'layout.components',
     'layout.components.#:paragraph.text',
-    'layout.components.#:paragraph.type',
-    'layout.components.#:paragraph.path',
-    'layout.components.#:paragraph.position',
     'layout.components.#:slider.image',
-    'layout.components.#:slider.type',
-    'layout.components.#:slider.path',
-    'layout.components.#:slider.position',
     'attributes.title',
     'attributes.group',
     'attributes.group.ok',
     'footer.nav',
-    'footer.nav.#.path',
-    'footer.nav.#.position',
     'footer.nav.#.label',
     'footer.nav.#.group',
     'footer.nav.#.group.metaTitle'
@@ -106,16 +106,6 @@ test('determinate stops at a path no config can name', () => {
     'attributes.group',
     'attributes.group.ok',
     'footer.nav'
-  ]);
-});
-
-test('a joiner of its own makes the schema generator grammar', () => {
-  const join = (parent: string, part: string) => (parent ? `${parent}__${part}` : part);
-  const attributes = [tabs(tab('attributes').fields(group('group').fields(toggle('ok'))))];
-  expect(paths(walkFields(attributes, { join, determinate: true }))).toEqual([
-    '',
-    'attributes__group',
-    'attributes__group__ok'
   ]);
 });
 

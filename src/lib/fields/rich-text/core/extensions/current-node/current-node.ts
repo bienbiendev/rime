@@ -25,9 +25,8 @@ export const CurrentNodeAttribute = Extension.create({
             // Get the position + node at selection
             const pos = $from.before();
             const node = $from.node();
-            if (!node) return DecorationSet.empty;
 
-            // Create a node decoration with your custom attribute
+            // Mark the node as current with `data-current`.
             const deco = Decoration.node(pos, pos + node.nodeSize, {
               'data-current': ''
             });

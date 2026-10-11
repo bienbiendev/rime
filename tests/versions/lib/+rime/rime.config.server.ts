@@ -1,10 +1,12 @@
-import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
-import { access } from '$lib/core/auth/access.js';
+import { SITE_URL } from '$app/env/public';
+import { adapterSqlite } from '#lib/adapter-sqlite/index.server.js';
+import { access } from '#lib/core/auth/access.js';
 import {
   block,
   blocks,
   date,
   group,
+  link,
   relation,
   richText,
   slug,
@@ -12,14 +14,14 @@ import {
   tabs,
   text,
   toggle
-} from '$lib/fields/index.js';
+} from '#lib/fields/index.js';
 import {
   bold,
   heading,
   italic,
   link as linkFeature,
   upload
-} from '$lib/fields/rich-text/client.js';
+} from '#lib/fields/rich-text/client.js';
 import { Area, Collection, rime } from '$rime/config';
 
 const Settings = Area.create('settings', {
@@ -68,7 +70,7 @@ const tabNewsAttributes = tab('attributes').fields(
 const News = Collection.create('news', {
   fields: [tabs(tabNewsAttributes, tabWriter)],
   live: true,
-  $url: ({ slug }) => `${process.env.PUBLIC_RIME_URL}/actualites/${slug}`,
+  $url: ({ slug }) => `${SITE_URL}/actualites/${slug}`,
   access: {
     read: () => true,
     create: (user) => access.isAdmin(user),
@@ -117,7 +119,7 @@ const Pages = Collection.create('pages', {
     group: 'content'
   },
   fields: [group('attributes').fields(text('title').isTitle(), slug('slug'), toggle('isHome'))],
-  $url: ({ path }) => `${process.env.PUBLIC_RIME_URL}/${path.join('/')}`,
+  $url: ({ path }) => `${SITE_URL}/${path.join('/')}`,
   nested: true,
   access: {
     read: () => true
@@ -125,9 +127,24 @@ const Pages = Collection.create('pages', {
   versions: { draft: true }
 });
 
+// camelCase slugs: the panel and the API reach them by their kebab, `blog-posts` and `blog-pages`
+const BlogPosts = Collection.create('blogPosts', {
+  panel: { group: 'content' },
+  fields: [text('title').isTitle(), link('next').types('pages')],
+  access: { read: () => true },
+  versions: { draft: true }
+});
+
+const BlogPages = Collection.create('blogPages', {
+  panel: { group: 'content' },
+  fields: [text('title').isTitle()],
+  nested: true,
+  access: { read: () => true }
+});
+
 export default rime({
   $adapter: adapterSqlite('versions.sqlite'),
-  collections: [News, Medias, Pdf, Pages],
+  collections: [News, Medias, Pdf, Pages, BlogPosts, BlogPages],
   areas: [Settings, Infos],
   staff: {
     roles: [{ value: 'editor' }]

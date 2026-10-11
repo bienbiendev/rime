@@ -1,4 +1,4 @@
-import { block, blocks, group, tab, tabs, text, toggle, tree } from '$lib/fields/index.js';
+import { block, blocks, group, tab, tabs, text, toggle, tree } from '#lib/fields/index.js';
 import { expect, test } from 'vitest';
 import { buildConfigMap } from './index.js';
 
@@ -66,4 +66,26 @@ test('a tree keys every row and its nesting', () => {
 test('residual data for a block type the config dropped is skipped', () => {
   const data = { layout: { components: [{ type: 'gone', text: 'a' }] } };
   expect(keys(data)).toEqual(['layout.components']);
+});
+
+test('a block named with _ or - keys its fields at the index', () => {
+  const layout = [
+    blocks('layout', [
+      block('call_to_action').fields(text('title')),
+      block('hero-banner').fields(text('title'))
+    ])
+  ];
+  const data = {
+    layout: [
+      { type: 'call_to_action', title: 'a' },
+      { type: 'hero-banner', title: 'b' }
+    ]
+  };
+  expect(Object.keys(buildConfigMap(data, layout)).sort()).toEqual([
+    'layout',
+    'layout.0.title',
+    'layout.0.type',
+    'layout.1.title',
+    'layout.1.type'
+  ]);
 });

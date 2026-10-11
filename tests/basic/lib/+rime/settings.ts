@@ -1,7 +1,7 @@
-import { toggle, relation } from '$lib/fields/index.js';
-import { access } from '$lib/core/auth/access.js';
+import { toggle, relation } from '#lib/fields/index.js';
+import { access } from '#lib/core/auth/access.js';
 import { Area } from '$rime/config';
-import { Settings2 } from '@lucide/svelte';
+import Settings2 from '@lucide/svelte/icons/settings-2';
 
 export const Settings = Area.create('settings', {
   icon: Settings2,

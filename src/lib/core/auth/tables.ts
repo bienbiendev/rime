@@ -1,26 +1,10 @@
-import type { ColumnDeclaration, TableDeclaration } from '$lib/core/adapter.js';
+import { STAFF_SLUG } from './constant.js';
+import type { ColumnDeclaration, TableDeclaration } from '#lib/core/adapter.js';
 
 /**
- * The storage auth needs, said by auth.
- *
- * These four tables were a string constant in `adapter-sqlite/generate-schema/templates.server.ts`,
- * pushed onto every schema whether or not anything signed in; the api-key table was a fifth behind
- * a `authConfig(prototype)?.type === 'apiKey'` sniff in the generator; and the column below was
- * `templateHasAuth`, which decided whether to add the super-admin flag by testing
- * `slug === 'staff'`. All of it was the database layer knowing what auth is.
- *
- * The column order is the order those templates emitted, and it is load-bearing: field order is
- * column order, so a reorder is a migration nobody asked for (`CONTRIBUTING.md`, rule 2).
+ * The storage auth needs. Column order is load-bearing: field order is column order, so a
+ * reorder is a migration.
  */
-
-/**
- * The collection auth derives for panel sign-in.
- *
- * The literal was in the schema generator, which is what made the database layer know a `staff`
- * collection exists and is the one with a super-admin flag. It is auth's, because auth is what
- * creates it — see `staff/configure.ts`.
- */
-export const STAFF_SLUG = 'staff';
 
 const timestampsMs: ColumnDeclaration[] = [
   { name: 'createdAt', type: 'timestampMs', notNull: true },
@@ -38,9 +22,7 @@ export const authTables = (config: {
 }): TableDeclaration[] => {
   const collections = config.collections ?? [];
 
-  // Nothing signs in, so none of this is needed. The generator used to emit all four regardless.
-  // In practice `configure` derives the staff collection for every config, so this is true today
-  // only for a build that has dropped it — which is exactly when emitting them would be wrong.
+  // Nothing signs in, so no auth table is needed.
   if (!collections.some((collection) => collection.auth)) return [];
 
   const tables: TableDeclaration[] = [

@@ -1,6 +1,6 @@
-import { text } from '$lib/fields/text/index.js';
+import { text } from '#lib/fields/text/index.js';
 import { describe, expect, it } from 'vitest';
-import { create } from '$lib/core/prototype/collection/definition.js';
+import { create } from '#lib/core/prototype/collection/definition.js';
 import { versionsWritePlan } from './write-plan.js';
 import { VERSIONS_OPERATIONS } from './strategy.js';
 
@@ -106,12 +106,17 @@ describe('the write plan', () => {
   });
 
   it('does not empty the data it was handed', () => {
-    const data = { title: 'a', body: 'b' };
+    const nested = create('spec_plan_nested_copy', {
+      versions: true,
+      nested: true,
+      fields: [text('title').isTitle()]
+    });
+    const data = { title: 'a', _parent: 'p1' };
 
     versionsWritePlan(
       { data },
       {
-        config: versioned,
+        config: nested,
         context: {
           versionOperation: VERSIONS_OPERATIONS.UPDATE_VERSION,
           contentOwnerId: 'v1'
@@ -120,8 +125,7 @@ describe('the write plan', () => {
       }
     );
 
-    // `extractRootData` used to delete the base keys out of the caller's own object, which
-    // `runUpdate` then handed to `persistRelational`.
-    expect(data).toEqual({ title: 'a', body: 'b' });
+    // `_parent` goes to the base row in the plan, and stays in the data handed in.
+    expect(data).toEqual({ title: 'a', _parent: 'p1' });
   });
 });

@@ -1,5 +1,5 @@
-import type { Config } from '$lib/core/config/types.js';
-import { type Handle } from '@sveltejs/kit';
+import type { Config } from '#lib/core/config/types.js';
+import type { Handle } from '@sveltejs/kit/hooks';
 import type { Rime } from '../rime.server.js';
 
 export function createPluginsHandler<const C extends Config>(rime: Rime<C>) {

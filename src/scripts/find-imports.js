@@ -6,14 +6,14 @@ import path from 'path';
 import { createInterface } from 'readline';
 
 /**
- * Finds all imports that start with '.' or '$' and don't end with .js or .svelte
+ * Finds all imports that start with '.', '$' or '#' and don't end with .js or .svelte
  */
 function findMissingExtensions() {
   const srcDir = path.join(process.cwd(), 'src');
   const results = [];
 
   // Regex to find imports that need extensions
-  const importRegex = /import\s+.*?\s+from\s+['"`]([.$][^'"`]*?)['"`]/g;
+  const importRegex = /import\s+.*?\s+from\s+['"`]([.$#][^'"`]*?)['"`]/g;
   const extensionRegex = /\.(js|svelte|ts|json)$/;
 
   function scanDirectory(dir) {
@@ -67,7 +67,7 @@ function findMissingExtensions() {
 
       // Check if it's a relative or aliased import and missing proper extension
       if (
-        (importPath.startsWith('.') || importPath.startsWith('$')) &&
+        (importPath.startsWith('.') || importPath.startsWith('$') || importPath.startsWith('#')) &&
         !extensionRegex.test(importPath)
       ) {
         const replacement = suggestReplacement(importPath, filePath);
@@ -157,12 +157,9 @@ function findMissingExtensions() {
           return importPath + '/index.js';
         }
       }
-    } else if (importPath.startsWith('$lib/')) {
-      // $lib alias - resolve relative to src/lib
-      const aliasPath = importPath.replace(
-        /^\$lib\//,
-        path.join(process.cwd(), 'src', 'lib') + '/'
-      );
+    } else if (importPath.startsWith('#lib/')) {
+      // #lib alias - resolve relative to src/lib
+      const aliasPath = importPath.replace(/^#lib\//, path.join(process.cwd(), 'src', 'lib') + '/');
 
       // Try .ts file
       if (fs.existsSync(aliasPath + '.ts')) {

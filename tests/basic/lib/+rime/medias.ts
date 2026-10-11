@@ -1,6 +1,6 @@
-import { text } from '$lib/fields/index.js';
+import { text } from '#lib/fields/index.js';
 import { Collection } from '$rime/config';
-import { Images } from '@lucide/svelte';
+import Images from '@lucide/svelte/icons/images';
 
 export const Medias = Collection.create('medias', {
   label: { singular: 'Media', plural: 'Medias' },

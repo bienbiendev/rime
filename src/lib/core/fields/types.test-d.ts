@@ -1,4 +1,4 @@
-import type { RelationInput, RelationRef, RelationValue } from '$lib/fields/types.js';
+import type { RelationInput, RelationRef, RelationValue } from '#lib/fields/types.js';
 import { describe, expectTypeOf, it } from 'vitest';
 import type { WithRelationInput, WithRelationResolved } from './types.js';
 
@@ -45,8 +45,9 @@ describe('WithRelationResolved', () => {
     expectTypeOf<Page['tags']>().toEqualTypeOf<string[] | undefined>();
   });
 
-  it('is the document as typed at depth 0, and at a depth it cannot know', () => {
+  it('is the document as typed at depth 0, past MAX_DEPTH, and at a depth it cannot know', () => {
     expectTypeOf<WithRelationResolved<PagesDoc, 0>>().toEqualTypeOf<PagesDoc>();
+    expectTypeOf<WithRelationResolved<PagesDoc, 4>>().toEqualTypeOf<PagesDoc>();
     expectTypeOf<WithRelationResolved<PagesDoc, number>>().toEqualTypeOf<PagesDoc>();
   });
 });

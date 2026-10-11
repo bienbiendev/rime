@@ -1,6 +1,6 @@
-import type { ColumnDeclaration, ColumnType, TableDeclaration } from '$lib/core/adapter.js';
-import type { FieldReference } from '$lib/core/fields/builders/form-field-builder.js';
-import { toSnakeCase } from '$lib/util/string.js';
+import type { ColumnDeclaration, ColumnType, TableDeclaration } from '#lib/core/adapter.js';
+import type { FieldReference } from '#lib/core/fields/builders/form-field-builder.js';
+import { toSnakeCase } from '#lib/util/string.js';
 import dedent from 'dedent';
 import {
   baseTableName,
@@ -8,7 +8,8 @@ import {
   getSchemaColumnNames,
   joinName,
   tableName,
-  type TableName
+  type TableName,
+  junctionKey
 } from '../naming.server.js';
 
 const s = toSnakeCase;
@@ -38,7 +39,8 @@ const pk = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
  * ```
  */
 export const templateTable = (table: string, content: string, indexed: string[] = []): string => {
-  if (!content.includes('id:')) {
+  // A line that declares `id` itself keeps it; `paid:` or `grid:` is another column
+  if (!/^\s*id:/m.test(content)) {
     content = `id: pk(),\n${content}`;
   }
   return `export const ${table} = sqliteTable( '${table}', {
@@ -51,11 +53,11 @@ export const templateTable = (table: string, content: string, indexed: string[] 
  * One index per column, named after the table and the column.
  *
  * ```ts
- * templateIndexes('pages__$rels', ['ownerId', 'mediasId'])
- * // , (t) => [index('pages__$rels_owner_id_idx').on(t.ownerId), index('pages__$rels_medias_id_idx').on(t.mediasId)]
+ * templateIndexes('pages__$relations', ['ownerId', 'mediasId'])
+ * // , (t) => [index('pages__$relations_owner_id_idx').on(t.ownerId), index('pages__$relations_medias_id_idx').on(t.mediasId)]
  * ```
  */
-export const templateIndexes = (table: string, columns: string[]): string =>
+const templateIndexes = (table: string, columns: string[]): string =>
   columns.length
     ? `, (t) => [${columns.map((column) => `index('${table}_${s(column)}_idx').on(t.${column})`).join(', ')}]`
     : '';
@@ -114,7 +116,7 @@ export const templateReferences = ({
 
 /**
  * How a declared `ColumnType` is spelled in drizzle. The whole of what the adapter knows about a
- * feature's storage: six shapes, none of them named after anything.
+ * feature's storage: seven shapes, none of them named after anything.
  */
 const COLUMN_EXPR: Record<ColumnType, (snake: string) => string> = {
   text: (snake) => `text('${snake}')`,
@@ -127,11 +129,9 @@ const COLUMN_EXPR: Record<ColumnType, (snake: string) => string> = {
 };
 
 /**
- * One column of a `TableDeclaration`, or one a feature puts on a prototype's own table.
- *
- * A `references` names a slug, so it resolves here — the same rule `templateReferences` follows
- * for a field-level foreign key, and for the same reason: which table a slug lives in is the
- * adapter's business.
+ * One column of a `TableDeclaration`, or one a feature puts on a prototype's own table. A
+ * `references` names another declared table by its slug — `$authUsers` — exported under
+ * `declaredTableProperty`.
  *
  * @example
  * ```typescript
@@ -155,8 +155,7 @@ export const templateDeclaredColumn = (column: ColumnDeclaration): string => {
 };
 
 /**
- * A table a feature declared: `templateAuth`, `templateAPIKey` and `templateDirectories` were
- * three hand-written copies of this, and the schema generator had to know each by name to push it.
+ * A table a feature declared: better-auth's tables, API keys, upload directories.
  *
  * Exported under the slug's own name and stored under the snake-cased one — see
  * `declaredTableProperty`. No `pk()` default: a declaration says which column is the primary key.
@@ -206,7 +205,8 @@ const templateDefault = (value: unknown): string =>
   value instanceof Date ? `new Date(${value.getTime()})` : JSON.stringify(value);
 
 /**
- * The addresses of a collection with `$url`: one row per page and per locale, off its base table.
+ * The addresses of a config with `$url`: one row per page and per locale, off its base table. An
+ * area has one row per locale, its slug and no parent.
  *
  * `path` is generated from the parent's path and the slug. Renaming or moving a row carries down
  * its subtree, through the foreign key on `(locale, parent_path)`.
@@ -327,7 +327,7 @@ ${entries.join(',\n')}
  */
 export const templateFieldRelationColumn = (slug: string) => {
   const table = baseTableName(slug);
-  return `${slug}Id: text('${table}_id').references(() => ${table}.id, { onDelete: 'cascade' })`;
+  return `${junctionKey(slug)}: text('${table}_id').references(() => ${table}.id, { onDelete: 'cascade' })`;
 };
 
 /**
@@ -337,14 +337,14 @@ export const templateFieldRelationColumn = (slug: string) => {
  *
  * @example
  * ```typescript
- * export const pagesRels = sqliteTable('pages_rels', {
+ * export const pages__$relations = sqliteTable('pages__$relations', {
  *   id: pk(),
  *   path: text('path'),
  *   position: integer('position'),
  *   ownerId: text('owner_id').references(() => pages.id, { onDelete: 'cascade' }),
  *   mediasId: text('medias_id').references(() => medias.id, { onDelete: 'cascade' }),
  *   locale: text('locale'),
- * }, (t) => [index('pages_rels_owner_id_idx').on(t.ownerId), index('pages_rels_medias_id_idx').on(t.mediasId)])
+ * }, (t) => [index('pages__$relations_owner_id_idx').on(t.ownerId), index('pages__$relations_medias_id_idx').on(t.mediasId)])
  * ```
  */
 export const templateRelationFieldsTable = ({
@@ -360,7 +360,7 @@ export const ${junctionTable} = sqliteTable('${junctionTable}', {
   ${templateParent(table)}
   ${relations.map((rel) => templateFieldRelationColumn(rel)).join(',\n')},
   ${hasLocale ? `locale: text('locale'),` : ''}
-}${templateIndexes(junctionTable, ['ownerId', ...relations.map((rel) => `${rel}Id`)])})
+}${templateIndexes(junctionTable, ['ownerId', ...relations.map(junctionKey)])})
 `;
 
 /**
@@ -371,8 +371,8 @@ export const ${junctionTable} = sqliteTable('${junctionTable}', {
  * ```typescript
  * export const tables = {
  *   pages,
- *   pagesBlocksParagraph,
- *   pagesBlocksImage
+ *   pages__$blocks_paragraph,
+ *   pages__$blocks_image
  * }
  * ```
  */
@@ -391,15 +391,16 @@ export const templateExportTables = (tables: string[]): string => dedent`
  * ```typescript
  * const schema = {
  *   pages,
- *   pagesShadow,
- *   rel_pagesShadowHasOnePages,
- *   rel_pagesHasManyShadow
+ *   pages__versions,
+ *   pages__$relations
  * }
  *
  * declare module 'rimecms' {
  *   export interface RegisterSchema {
- *      schema: typeof schema;
- * 	 }
+ *     schema: typeof schema;
+ *     tables: typeof tables;
+ *     relations: typeof relations;
+ *   }
  * }
  * export default schema
  * ```

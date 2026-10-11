@@ -1,27 +1,31 @@
-import { withVersionsSuffix } from '$lib/core/prototype/shared/versions/naming.js';
-import type { CollectionSlug } from '$lib/core/prototype/types.js';
-import { initial } from '$lib/core/prototype/initial.js';
-import { prototypeKebab } from '$lib/core/prototype/naming.js';
-import type { Access, BuiltCollection, Config } from '$lib/core/config/types.js';
-import { isStaff } from '$lib/core/auth/access.js';
+import { withVersionsSuffix } from '#lib/core/prototype/shared/versions/naming.js';
+import type { CollectionSlug } from '#lib/core/prototype/types.js';
+import { initial } from '#lib/core/prototype/initial.js';
+import { prototypeKebab } from '#lib/core/prototype/naming.js';
+import type { Access, BuiltCollection, Config } from '#lib/core/config/types.js';
+import { isStaff } from '#lib/core/auth/access.js';
 
 /**
- * The versions holds the content half of a document, so it carries the content half of the fields:
- * everything except what the base row keeps (`$root()`). The schema generator splits the two
- * tables by the same flag, so a versions table config claiming a base field would name a column its table
- * does not have.
+ * The versions collection holds the content half of a document, so it carries the content half of
+ * the fields: everything except what the base row keeps (`$root()`). The schema generator splits
+ * the two tables by the same flag, so a versions collection claiming a base field would name a
+ * column its table does not have.
  */
 const contentFields = (config: { fields: BuiltCollection['fields'] }) =>
   config.fields.filter((field) => !field.get.root);
 
 /**
  * Version rows are the panel's history, and a document's auto-saved rows live among them. They
- * read for staff who may read the document, and for nobody else — a public collection's drafts
- * are not public.
+ * read and delete for staff the document allows, and for nobody else — a public collection's
+ * drafts are not public. Nobody writes them directly: a version is made and changed through its
+ * document, where the versions hooks run, and rime writes them as itself.
  */
 const versionsAccess = <A extends Access>(access: A): A => ({
   ...access,
-  read: (user, options) => isStaff(user) && !!access.read?.(user, options)
+  create: () => false,
+  update: () => false,
+  read: (user, options) => isStaff(user) && !!access.read?.(user, options),
+  delete: (user, options) => isStaff(user) && !!access.delete?.(user, options)
 });
 
 /**
@@ -32,9 +36,10 @@ const versionsAccess = <A extends Access>(access: A): A => ({
 export function configureVersions<C extends Config>(config: C) {
   for (const collection of config.collections || []) {
     if (collection.versions) {
+      const slug = withVersionsSuffix(collection.slug) as CollectionSlug;
       const versionedCollection: BuiltCollection = {
-        slug: withVersionsSuffix(collection.slug) as CollectionSlug,
-        kebab: prototypeKebab(withVersionsSuffix(collection.slug)),
+        slug,
+        kebab: prototypeKebab(slug),
         versions: undefined,
         initial,
         access: versionsAccess(collection.access),
@@ -60,9 +65,10 @@ export function configureVersions<C extends Config>(config: C) {
 
   for (const area of config.areas || []) {
     if (area.versions) {
+      const slug = withVersionsSuffix(area.slug) as CollectionSlug;
       const versionedCollection: BuiltCollection = {
-        slug: withVersionsSuffix(area.slug) as CollectionSlug,
-        kebab: prototypeKebab(withVersionsSuffix(area.slug)),
+        slug,
+        kebab: prototypeKebab(slug),
         icon: area.icon,
         versions: undefined,
         initial,

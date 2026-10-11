@@ -1,10 +1,10 @@
-import type { GetRegisterType, RegisterArea, RegisterCollection } from '$lib/index.js';
+import type { GetRegisterType, RegisterArea, RegisterCollection } from '#lib/index.js';
 
 export type CollectionSlug = GetRegisterType<'CollectionSlug'>;
 export type AreaSlug = GetRegisterType<'AreaSlug'>;
 export type PrototypeSlug = CollectionSlug | AreaSlug;
 
-import type { Dic } from '$lib/util/types.js';
+import type { Dic } from '#lib/util/types.js';
 
 export type Prototype = 'area' | 'collection';
 
@@ -52,9 +52,6 @@ export type GenericBlock<T extends string = string> = {
  * a raw row or a document. `FeatureDocTypes` is what the features contribute (`upload`, `version`,
  * `auth`, `directory`), each declared beside the feature that means it. `RegisterCollection` and
  * `RegisterArea` are what codegen writes for the configs in the build.
- *
- * The four feature shapes were spelled out here, which is why this file imported `UploadPath` and
- * `VersionsStatus` out of two features to describe its own registry.
  */
 export type Docs = {
   raw: RawDoc;
@@ -68,15 +65,14 @@ export type DocType = keyof Docs;
 /**
  * How a feature declares a **document shape** into core's `Docs` registry.
  *
- * `Docs` maps a `DocType` to what a document of that type looks like, and four of its entries were
- * a feature's: `upload`, `version`, `auth` and `directory`. Core declaring them meant
- * `core/prototype/types.ts` importing `UploadPath` and `VersionsStatus` out of two features to
- * spell its own registry.
+ * `Docs` maps a `DocType` to what a document of that type looks like.
  *
- * Merged beside the feature's own types:
+ * Merged beside the feature's own types, through a relative path: packaging keeps it as is, so
+ * the merge still happens in an app that installs rimecms.
  *
  * ```ts
- * declare module '$lib/core/prototype/types.js' {
+ * // core/prototype/shared/versions/types.ts
+ * declare module '../../types.js' {
  *   interface FeatureDocTypes {
  *     version: VersionDoc;
  *   }

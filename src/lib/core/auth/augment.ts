@@ -1,10 +1,11 @@
-import type { Collection } from '$lib/core/config/types.js';
-import type { CollectionAuthConfig } from '$lib/core/auth/types.js';
-import { access } from '$lib/core/auth/access.js';
-import { email } from '$lib/fields/email/index.js';
-import { select } from '$lib/fields/select/index.js';
-import { text } from '$lib/fields/text/index.js';
-import type { Option } from '$lib/types.js';
+import { ROLES, STAFF_SLUG } from '#lib/core/auth/constant.js';
+import type { Collection } from '#lib/core/config/types.js';
+import type { CollectionAuthConfig } from '#lib/core/auth/types.js';
+import { access } from '#lib/core/auth/access.js';
+import { email } from '#lib/fields/email/index.js';
+import { select } from '#lib/fields/select/index.js';
+import { text } from '#lib/fields/text/index.js';
+import type { Option } from '#lib/types.js';
 
 const emailField = email('email')
   .access({
@@ -52,29 +53,24 @@ const withNormalizedAuth = <T extends { auth?: boolean | CollectionAuthConfig }>
 };
 
 /**
- * Augment Auth collections :
- * - normalize config.auth
- * - add fields name, email fields
- * - check roles fields
+ * Augments an auth collection: normalizes `config.auth`, adds the `name`, `email` and `roles`
+ * fields (`apiKeyId` and `ownerId` instead of `email` for api-key auth), and sets
+ * `_titleFallback`. Throws when no default role remains.
  */
 export const augmentAuth = <T extends Input>(config: T): WithNormalizedAuth<T> => {
-  const normalizedAuthConfig = withNormalizedAuth(config);
-  if (!normalizedAuthConfig.auth) return normalizedAuthConfig;
+  const normalizedAuthConfig = withNormalizedAuth(config) as WithNormalizedAuth<T> & {
+    auth: CollectionAuthConfig;
+  };
 
   // Augment Fields
-  const IS_STAFF_COLLECTION = normalizedAuthConfig.slug === 'staff';
+  const IS_STAFF_COLLECTION = normalizedAuthConfig.slug === STAFF_SLUG;
   const IS_GENERIC_COLLECTION = !IS_STAFF_COLLECTION;
   const IS_API_AUTH = normalizedAuthConfig.auth.type === 'apiKey';
 
-  const roles = [...(normalizedAuthConfig.auth.roles || ['user'])];
-  let normalizedRoles: Option[] = roles.map((r) => (typeof r === 'string' ? { value: r } : r));
+  const roles = [...(normalizedAuthConfig.auth.roles || [ROLES.USER])];
+  const normalizedRoles: Option[] = roles.map((r) => (typeof r === 'string' ? { value: r } : r));
 
-  // Filter out 'admin' roles for non staff collection
-  normalizedRoles = IS_GENERIC_COLLECTION
-    ? normalizedRoles.filter((role) => role.value !== 'admin')
-    : normalizedRoles;
-
-  const defaultRole = normalizedRoles.filter((r) => r.value !== 'admin')[0];
+  const defaultRole = normalizedRoles.filter((r) => r.value !== ROLES.ADMIN)[0];
 
   if (!defaultRole) {
     throw Error('Missing default role');
@@ -92,7 +88,7 @@ export const augmentAuth = <T extends Input>(config: T): WithNormalizedAuth<T> =
     rolesField.access({
       create: () => true,
       read: (user) => !!user,
-      update: (user) => !!user
+      update: (user) => access.isStaff(user)
     });
   } else {
     rolesField.access({
@@ -125,14 +121,9 @@ export const augmentAuth = <T extends Input>(config: T): WithNormalizedAuth<T> =
     fields.push(ownerIdField);
   }
 
-  // What an auth document is called, overriding the prototype's fallback rather than being
-  // guessed at by `title`. Upload overrides it again where a config carries both, which is the
-  // precedence registry order gives: upload is listed after auth.
+  // Names an auth document by `email`, or by `name` for api-key auth. `augmentUpload` runs later
+  // and overrides it.
   const _titleFallback = IS_API_AUTH ? 'name' : 'email';
 
   return { ...normalizedAuthConfig, fields, _titleFallback };
 };
-
-// The staff collection every config gets. Client-side it goes first (the panel lists it
-// first), server-side last — the one thing the two halves genuinely disagree on.
-export { configureStaff } from './staff/configure.js';

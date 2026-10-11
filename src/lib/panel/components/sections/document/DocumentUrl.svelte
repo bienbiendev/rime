@@ -1,9 +1,11 @@
 <script lang="ts">
-  import type { BuiltArea, BuiltCollection } from '$lib/core/config/types';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { Check, Copy, Globe } from '@lucide/svelte';
+  import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import Check from '@lucide/svelte/icons/check';
+  import Copy from '@lucide/svelte/icons/copy';
+  import Globe from '@lucide/svelte/icons/globe';
   import { toast } from 'svelte-sonner';
   import Button from '../../ui/button/button.svelte';
   import ChangeSlugDialog from './ChangeSlugDialog.svelte';
@@ -33,7 +35,7 @@
       copied = true;
       setTimeout(() => (copied = false), 1400);
     } catch {
-      toast.error(t__('error.generic'));
+      toast.error(t__('common.generic_error'));
     }
   }
 </script>

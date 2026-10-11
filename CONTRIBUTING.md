@@ -21,7 +21,7 @@ bun install
 # Must be at least 32 characters, or better-auth warns on every boot
 BETTER_AUTH_SECRET=supersecret
 
-PUBLIC_RIME_URL=http://localhost:5173
+SITE_URL=http://localhost:5173
 
 # Where your config lives. Required in this repo: `rime:use` copies each test
 # config to src/lib/+rime, while RIME_CONFIG_DIR defaults to src/+rime.
@@ -31,10 +31,10 @@ RIME_LOG_LEVEL=TRACE
 RIME_LOG_TO_FILE=true
 RIME_LOG_TO_FILE_MAX_DAYS=1
 
-# RIME_SMTP_USER=
-# RIME_SMTP_PASSWORD=
-# RIME_SMTP_HOST=
-# RIME_SMTP_PORT=
+# SMTP_USER=
+# SMTP_PASSWORD=
+# SMTP_HOST=
+# SMTP_PORT=
 ```
 
 ## Init & run

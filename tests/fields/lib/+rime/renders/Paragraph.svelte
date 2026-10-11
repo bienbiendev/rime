@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { RichTextFieldBuilder } from '$lib/fields/rich-text/index.js';
-  import type { BlockRenderProps } from '$lib/fields/types.js';
-  import { RichTextInline } from '$lib/panel/index.js';
+  import type { RichTextFieldBuilder } from '#lib/fields/rich-text/index.js';
+  import type { BlockRenderProps } from '#lib/fields/types.js';
+  import { RichTextInline } from '#lib/panel/index.js';
 
   const { path, fields, form }: BlockRenderProps = $props();
   const text = $derived(fields.find((field) => field.name === 'text') as RichTextFieldBuilder);

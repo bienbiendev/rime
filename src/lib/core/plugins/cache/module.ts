@@ -1,8 +1,8 @@
 import { definePlugin, type Plugin } from '../index.js';
 import HeaderButton from './HeaderButton.svelte';
 
-// Signature has to match module.server.ts's — the same call site (whatever the consumer
-// wrote in rime.config.ts) compiles against both, whichever one this build resolves to.
+// Call sites are typed against module.server.ts's `(options?) => Plugin`; this half takes no
+// options and ignores any passed.
 export const cache = definePlugin(() => {
   return {
     name: 'cache',

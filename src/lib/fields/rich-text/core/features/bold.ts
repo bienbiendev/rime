@@ -1,5 +1,4 @@
-// /Users/ai/Dev/rime/src/lib/fields/rich-text/core/features/bold.ts
-import { BoldIcon } from '@lucide/svelte';
+import BoldIcon from '@lucide/svelte/icons/bold';
 import Bold from '@tiptap/extension-bold';
 import type { RichTextFeature, RichTextFeatureMark } from '../types.js';
 

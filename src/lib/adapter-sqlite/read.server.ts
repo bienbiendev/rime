@@ -1,11 +1,11 @@
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import type { VersionsTable } from '$lib/core/adapter.js';
-import { normalizeQuery } from '$lib/core/pipeline/query.js';
-import type { OperationQuery } from '$lib/core/pipeline/types.js';
-import type { PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
-import type { Dic } from '$lib/util/types.js';
-import { and, eq } from 'drizzle-orm';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import type { VersionsTable } from '#lib/core/adapter.js';
+import { normalizeQuery } from '#lib/core/pipeline/query.js';
+import type { OperationQuery } from '#lib/core/pipeline/types.js';
+import type { PrototypeSlug, RawDoc } from '#lib/core/prototype/types.js';
+import type { ConfigContext } from '#lib/core/rime.server.js';
+import type { Dic } from '#lib/util/types.js';
+import { and, eq, inArray } from 'drizzle-orm';
 import { RimeError } from '../core/errors/index.js';
 import type { GenericTable } from './types.server.js';
 import { baseTableName } from './naming.server.js';
@@ -20,14 +20,8 @@ import { buildWithParam, pathsJoin, resolvedReferenceJoins } from './select.serv
  *
  * The adapter's vocabulary is in `naming.server.ts`: **base**, **versions** (a second table
  * holding the content), **child** (blocks, tree, the relations junction) and **branch** (the
- * localized half). "Collection" and "area" are not adapter words. They were, in the two facades
- * this replaces, and that was the mistake: a whole parallel implementation existed because the
- * database layer thought the kinds were different things. Diffed, every difference reduced to
- * one — who supplies the root row's id.
- *
- * `singleton` is the one shape fact this side needs: it decides whether a read wants an id.
- * Writing is `write.server.ts` beside this. One 649-line file held both, and the two halves share
- * nothing but their imports.
+ * localized half). "Collection" and "area" are not adapter words: the one difference between
+ * them is who supplies the root row's id. Writing is `write.server.ts` beside this.
  */
 
 type ReadArgs = {
@@ -147,6 +141,12 @@ export const readPrototype = async (
   return adapterUtil.mergeContentRow(doc, contentTable, config, select);
 };
 
+/**
+ * Reads many documents, merged with the content row each should show.
+ *
+ * The versioned branch queries the base table and pulls one content row per document, because
+ * pagination and ordering are properties of the document rather than of one of its rows.
+ */
 export const findManyPrototypes = async (
   { db, tables, configCtx }: DepsWithConfig,
   args: FindManyArgs
@@ -178,9 +178,7 @@ export const findManyPrototypes = async (
         buildWithParam({ table, select, resolve, tables, config, locale, fallback }) || undefined,
       orderBy: (t: GenericTable) =>
         buildOrderByParam({ slug, locale, tables, configCtx, by: sort, rootTable: t }),
-      // sqlite requires a limit when an offset is present.
-      limit: limit || (typeof offset === 'number' ? 1000000 : undefined),
-      offset: offset || undefined
+      ...pageParams(limit, offset)
     };
 
     if (query) {
@@ -198,7 +196,6 @@ export const findManyPrototypes = async (
     });
   }
 
-  // Two different things that stopped being the same string when the naming convention changed:
   // buildWithParam reads the schema, so it takes a table name; buildWhereParam resolves fields
   // against the config, so it takes a slug.
   // `VersionsTable.slug` is a plain string on purpose — a feature names a slug, and only the
@@ -212,9 +209,7 @@ export const findManyPrototypes = async (
     undefined;
 
   // The caller's own filter, and the one saying which content row each document shows. Both
-  // resolve against the versions table, so they are two wheres to `and` rather than two query objects to
-  // splice — which is what this was, a condition spliced into somebody else's `where` by hand
-  // behind a config read.
+  // resolve against the versions table, so they are two wheres to `and`.
   const contentWhere = (rootTable: GenericTable) => {
     const wheres = [query, content && normalizeQuery(content)]
       .filter((one) => !!one)
@@ -230,16 +225,15 @@ export const findManyPrototypes = async (
           rootTable
         })
       )
-      // Only `undefined` drops out. `buildWhereParam` answers `false` for a degenerate query (an
-      // empty `and`/`or`), and that was passed straight to drizzle before; it still is.
+      // Only `undefined` drops out: `buildWhereParam` answers `false` for a degenerate query (an
+      // empty `and`/`or`), which goes to drizzle as is.
       .filter((one) => one !== undefined);
 
     return wheres.length > 1 ? and(...wheres) : wheres[0];
   };
 
   const params: Dic = {
-    limit: limit || (typeof offset === 'number' ? 1000000 : undefined),
-    offset: offset,
+    ...pageParams(limit, offset),
     // The sortable columns are on the versions table, so the sort builder is handed it by name.
     orderBy: (t: GenericTable) =>
       buildOrderByParam({
@@ -249,9 +243,23 @@ export const findManyPrototypes = async (
         configCtx,
         by: sort,
         versions: contentTable,
+        contentWhere,
         rootTable: t
       })
   };
+
+  // Only the documents that have a matching content row, before `limit` and `offset` cut the page.
+  // The same `contentWhere` as the join below, run on the versions table itself.
+  if (query || content) {
+    const contentRows = tables[contentTable];
+    params.where = {
+      RAW: (t: GenericTable) =>
+        inArray(
+          t.id,
+          db.select({ id: contentRows.ownerId }).from(contentRows).where(contentWhere(contentRows))
+        )
+    };
+  }
   Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);
 
   const rawDocs = await (db.query as Record<string, any>)[table].findMany({
@@ -275,8 +283,8 @@ export const findManyPrototypes = async (
       try {
         return adapterUtil.mergeContentRow(doc, contentTable, config, select);
       } catch (err: any) {
-        // A query forwarded to the content table can match nothing for a given document; that
-        // document simply drops out of the result rather than failing the whole read.
+        // A document left with no content row drops out of the result rather than failing the
+        // whole read. The `where` above keeps such a document off the page in the first place.
         if (err instanceof RimeError && err.code === RimeError.NOT_FOUND) return false;
         throw err;
       }
@@ -284,7 +292,14 @@ export const findManyPrototypes = async (
     .filter(Boolean);
 };
 
-/** Removes a document. Its content rows and children follow by cascade. */
+/**
+ * `limit` and `offset` as SQLite takes them: an offset that is not a positive integer is none,
+ * and SQLite needs a limit beside an offset.
+ */
+const pageParams = (limit?: number, offset?: number) => {
+  const skip = Number.isInteger(offset) && offset! > 0 ? offset : undefined;
+  return { limit: limit || (skip ? 1000000 : undefined), offset: skip };
+};
 
 type FindManyArgs = {
   versions?: VersionsTable;
@@ -305,9 +320,7 @@ type FindManyArgs = {
 };
 
 /**
- * `findMany` alone reaches buildOrderByParam and buildWhereParam, which are typed against the
- * generated schema rather than against `Dic`. The facade this was moved from declared its tables
- * as `any` for that reason; keeping that here confines the looseness to the one operation that
- * needs it instead of widening `Deps` for everything.
+ * The reads reach buildOrderByParam and buildWhereParam, which are typed against the generated
+ * schema rather than against `Dic`, so `db` and `tables` stay `any` here.
  */
 type DepsWithConfig = { db: any; tables: any; configCtx: ConfigContext };

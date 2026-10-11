@@ -1,3 +1,4 @@
+/* `[data-sonner-toast]` twice outranks svelte-sonner's own rules. */
 .rz-toaster__toast[data-sonner-toast][data-sonner-toast][data-styled='true'] {
   @mixin surface float;
   border: 0;

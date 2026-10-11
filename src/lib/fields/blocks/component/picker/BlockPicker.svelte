@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import * as Command from '$lib/panel/components/ui/command/index.js';
-  import Kbd from '$lib/panel/components/ui/kbd/Kbd.svelte';
-  import { capitalize } from '$lib/util/string.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import * as Command from '#lib/panel/components/ui/command/index.js';
+  import Kbd from '#lib/panel/components/ui/kbd/Kbd.svelte';
+  import { capitalize } from '#lib/util/string.js';
   import { Command as CommandPrimitive } from 'bits-ui';
   import type { BlockBuilder, BlocksFieldBlock } from '../../index.js';
   import BlockTile from './BlockTile.svelte';

@@ -1,17 +1,20 @@
 <script lang="ts">
-  import { env } from '$env/dynamic/public';
-  import validate from '$lib/core/fields/validate.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { apiUrl } from '$lib/core/routes/util.js';
-  import IconButton from '$lib/fields/rich-text/component/bubble-menu/icon-button/icon-button.svelte';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import * as Command from '$lib/panel/components/ui/command/index.js';
-  import Input from '$lib/panel/components/ui/input/input.svelte';
-  import { getAPIProxyContext, type Resource } from '$lib/panel/context/api-proxy.svelte.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte';
-  import { CornerDownLeft, ExternalLink, Link2, Newspaper, Trash } from '@lucide/svelte';
+  import { SITE_URL } from '$app/env/public';
+  import validate from '#lib/core/fields/validate.js';
+  import { apiUrl } from '#lib/core/routes/util.js';
+  import IconButton from '#lib/fields/rich-text/component/bubble-menu/icon-button/icon-button.svelte';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import PickDialog from '../../pick-dialog.svelte';
+  import Input from '#lib/panel/components/ui/input/input.svelte';
+  import { getAPIProxyContext, type Resource } from '#lib/panel/context/api-proxy.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import CornerDownLeft from '@lucide/svelte/icons/corner-down-left';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import Link2 from '@lucide/svelte/icons/link-2';
+  import Newspaper from '@lucide/svelte/icons/newspaper';
+  import Trash from '@lucide/svelte/icons/trash';
   import type { Editor } from '@tiptap/core';
-  import { watch } from 'runed';
+  import { untrack } from 'svelte';
   import type { LinkFeatureOptions } from '..';
   import type { RichTextContext } from '../../../types';
   import './link-selector.css';
@@ -78,10 +81,7 @@
     }
   });
 
-  /**
-   * Whenver the bubble-menu is closed,
-   *	close the linnk input
-   */
+  /** The link input closes with the bubble menu. */
   $effect(() => {
     if (!context.bubbleOpen) {
       open = false;
@@ -92,7 +92,6 @@
    * Validate url whenever value changes
    */
   let urlState = $derived.by(() => {
-    let transformedUrl = value;
     let isValid = false;
 
     if (!value) {
@@ -104,29 +103,24 @@
     if (value.startsWith('mailto:')) {
       const email = value.replace('mailto:', '');
       isValid = validate.email(email) === true;
-      transformedUrl = value;
     }
     // tel
     else if (value.startsWith('tel:')) {
       const phone = value.replace('tel:', '');
       isValid = validate.tel(phone) === true;
-      transformedUrl = value;
     }
     // Anchor link
     else if (value.startsWith('#')) {
       const anchor = value.slice(1);
       isValid = validate.slug(anchor) === true;
-      transformedUrl = value;
     }
     // relative url
     else if (value.startsWith('/')) {
-      transformedUrl = `${env.PUBLIC_RIME_URL}${value}`;
-      isValid = validate.url(transformedUrl) === true;
+      isValid = validate.url(`${SITE_URL}${value}`) === true;
     }
     // Only validate if it already has a protocol
     else {
       isValid = value.includes('://') ? validate.url(value) === true : false;
-      transformedUrl = value;
     }
 
     return {
@@ -147,19 +141,21 @@
   }
 
   /** The target changed: the link takes it. Not on mount, which would focus the editor. */
-  watch(
-    () => isTargetBlank,
-    (current, previous) => {
-      if (current !== previous && urlState.isValid) {
-        editor
-          .chain()
-          .focus()
-          .setLink({ href: urlState.url, target: isTargetBlank ? '_blank' : '_self' })
-          .run();
-      }
-    },
-    { lazy: true }
-  );
+  let previousTargetBlank: boolean | undefined;
+  $effect(() => {
+    const current = isTargetBlank;
+    const changed = previousTargetBlank !== undefined && current !== previousTargetBlank;
+    previousTargetBlank = current;
+    if (!changed) return;
+    untrack(() => {
+      if (!urlState.isValid) return;
+      editor
+        .chain()
+        .focus()
+        .setLink({ href: urlState.url, target: current ? '_blank' : '_self' })
+        .run();
+    });
+  });
 
   function onDelete() {
     editor.chain().focus().unsetLink().run();
@@ -222,34 +218,16 @@
   {/if}
 </div>
 
-<Command.Dialog bind:open={resourceDialogOpen}>
-  <Command.Input placeholder={t__('common.search')} />
-
-  <Command.List>
-    <Command.Empty>No results found.</Command.Empty>
-
-    {#if Array.isArray(resourcesFlatMap)}
-      {#each resourcesFlatMap as item, index (index)}
-        {#if item}
-          <Command.Item
-            onSelect={() => {
-              value = item.url.replace(env.PUBLIC_RIME_URL, '');
-              resourceDialogOpen = false;
-              onSubmit();
-            }}
-            value={item.title}
-          >
-            <div>
-              <p>
-                {item.title}
-              </p>
-            </div>
-          </Command.Item>
-        {/if}
-      {/each}
-    {/if}
-  </Command.List>
-</Command.Dialog>
+<PickDialog
+  bind:open={resourceDialogOpen}
+  items={(resourcesFlatMap ?? []).filter(Boolean)}
+  label={(item) => item.title}
+  onPick={(item) => {
+    value = item.url.replace(SITE_URL, '');
+    resourceDialogOpen = false;
+    onSubmit();
+  }}
+/>
 
 <style lang="postcss">
   @import '../../../../../../panel/style/mixins/index.css';

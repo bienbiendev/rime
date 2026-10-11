@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import { Input } from '$lib/panel/components/ui/input/index.js';
-  import { capitalize } from '$lib/util/string.js';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import { Input } from '#lib/panel/components/ui/input/index.js';
   import type { TextFieldProps } from './props.js';
 
   const { path, config, type = 'text', form, icon: Icon }: TextFieldProps = $props();
@@ -26,7 +25,7 @@
       icon={Icon}
       autocomplete="off"
       name={path || config.name}
-      placeholder={config.get.placeholder || capitalize(config.get.name)}
+      placeholder={config.get.placeholder || config.get.label}
       data-error={field.error ? '' : null}
       {type}
       value={field.value}
@@ -56,12 +55,6 @@
       position: relative;
       display: flex;
       align-items: center;
-
-      :global(.rz-button) {
-        position: absolute;
-        right: var(--rz-size-1-5);
-        top: var(--rz-size-1-5);
-      }
     }
   }
 </style>

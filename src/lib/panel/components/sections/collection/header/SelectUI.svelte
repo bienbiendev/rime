@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
-  import { SquareCheck, SquareMinus, Trash } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import { getCollectionContext } from '#lib/panel/context/collection.svelte.js';
+  import SquareCheck from '@lucide/svelte/icons/square-check';
+  import SquareMinus from '@lucide/svelte/icons/square-minus';
+  import Trash from '@lucide/svelte/icons/trash';
 
   const collection = getCollectionContext();
   const selectedCount = $derived(collection.selected.length);

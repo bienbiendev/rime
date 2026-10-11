@@ -18,6 +18,14 @@ describe('selectWithTitle', () => {
     ]);
   });
 
+  it('trims each name and drops the empty ones', () => {
+    expect(selectWithTitle('title, attributes.slug,', 'attributes.title')).toEqual([
+      'title',
+      'attributes.slug',
+      'attributes.title'
+    ]);
+  });
+
   it('adds the asTitle field when `title` is selected', () => {
     expect(selectWithTitle('title', 'attributes.title')).toEqual(['title', 'attributes.title']);
   });

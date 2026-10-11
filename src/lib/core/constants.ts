@@ -57,8 +57,9 @@ export const PARAMS = {
    */
   REDIRECT: 'redirect',
 
-  /** On fetch operation fields to be fetched
-   * @example ?depth=3
+  /**
+   * On fetch operation, the fields to fetch.
+   * @example ?select=title,updatedAt
    */
   SELECT: 'select',
 
@@ -70,12 +71,19 @@ export const PARAMS = {
   /** GET / UPDATE a specific version*/
   VERSION_ID: 'versionId',
 
-  /** On fetch (upload) list operation filter out documents from a specific uploadPath */
+  /**
+   * The upload folder the panel list opens at; the create form sends it on as `_path`.
+   * @example ?uploadPath=root:images
+   */
   UPLOAD_PATH: 'uploadPath',
 
   /**
-   * Disable validation on CREATE / UPDATE operations
+   * A staff create or update that leaves required fields empty: the panel's bulk upload sends a
+   * file before its other fields. Every other check still runs.
    * @example ?skipValidation=true
    */
   SKIP_VALIDATION: 'skipValidation'
 } as const;
+
+/** The deepest relation level any read resolves, REST or local API: `depth: 50` reads at 3. */
+export const MAX_DEPTH = 3;

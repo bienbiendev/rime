@@ -1,10 +1,10 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-  import type { UploadTarget } from '$lib/panel/util/upload-file.js';
-  import { X } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
+  import type { UploadTarget } from '#lib/panel/util/upload-file.js';
+  import X from '@lucide/svelte/icons/x';
   import DropZone from './DropZone.svelte';
 
   type Props = {

@@ -1,29 +1,31 @@
 <script lang="ts">
+  import { documentSegments } from '#lib/panel/util/url.js';
+  import { switchLocale } from '#lib/panel/util/locale-cookie.js';
   import { beforeNavigate, goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/state';
   import type { ResolvedPathname } from '$app/types';
-  import { isAuthConfig } from '$lib/core/auth/util';
-  import { PARAMS } from '$lib/core/constants.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { openSse } from '$lib/core/plugins/sse/index.js';
-  import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config';
-  import { EDIT_LOCK_TTL_MS } from '$lib/core/prototype/shared/metas/constant.js';
-  import { isLockHeldByOther } from '$lib/core/prototype/shared/metas/lock.js';
-  import type { GenericDoc } from '$lib/core/prototype/types';
-  import { apiUrl } from '$lib/core/routes/util.js';
-  import BlocksFocus from '$lib/fields/blocks/component/focus/BlocksFocus.svelte';
-  import { setBlocksFocusContext } from '$lib/fields/blocks/component/focus/focus.svelte.js';
-  import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-  import { useCommands } from '$lib/panel/context/commands.svelte.js';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
+  import { isAuthConfig } from '#lib/core/auth/util.js';
+  import { PARAMS } from '#lib/core/constants.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { openSse } from '#lib/core/plugins/sse/index.js';
+  import { isUploadConfig } from '#lib/core/prototype/collection/upload/util/config.js';
+  import { EDIT_LOCK_TTL_MS } from '#lib/core/prototype/shared/metas/constant.js';
+  import { isLockHeldByOther } from '#lib/core/prototype/shared/metas/lock.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import { apiUrl } from '#lib/core/routes/util.js';
+  import BlocksFocus from '#lib/fields/blocks/component/focus/BlocksFocus.svelte';
+  import { setBlocksFocusContext } from '#lib/fields/blocks/component/focus/focus.svelte.js';
+  import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
+  import { useCommands } from '#lib/panel/context/commands.svelte.js';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
   import {
     setDocumentFormContext,
     type FormSuccessData
-  } from '$lib/panel/context/documentForm.svelte.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import { getVersionsContext } from '$lib/panel/context/versions.svelte.js';
-  import { Save } from '@lucide/svelte';
+  } from '#lib/panel/context/documentForm.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import { getVersionsContext } from '#lib/panel/context/versions.svelte.js';
+  import Save from '@lucide/svelte/icons/save';
   import { untrack } from 'svelte';
   import RenderFields from '../../fields/RenderFields.svelte';
   import Button from '../../ui/button/button.svelte';
@@ -39,7 +41,6 @@
     doc: GenericDoc;
     operation: 'update' | 'create';
     class?: string;
-    onFieldFocus?: any;
     readOnly: boolean;
     onClose?: any;
     nestedLevel?: number;
@@ -53,7 +54,6 @@
     onClose,
     onNestedDocumentCreated,
     nestedLevel = 0,
-    onFieldFocus = null,
     class: className
   }: Props = $props();
 
@@ -119,13 +119,15 @@
   /**
    * The language switcher reloads the page in place rather than navigating, so `beforeNavigate`
    * never sees it. The same rules run from here: pending changes are auto-saved first when the
-   * config auto-saves, and asked about otherwise.
+   * config auto-saves, and asked about otherwise. The panel cookie moves only once the switch
+   * goes ahead.
    */
-  async function switchLocale() {
+  async function switchToLocale(code: string) {
     const hasChanges = Object.keys(form.changes).length > 0;
-    if (!hasChanges) return invalidateAll();
-    if (form.isAutoSave && (await form.flushAutoSave())) return invalidateAll();
-    interceptedLeave = { proceed: () => invalidateAll() };
+    if (!hasChanges) return switchLocale(code);
+    // The pending typing is saved while the page still names the locale on screen.
+    if (form.isAutoSave && (await form.flushAutoSave())) return switchLocale(code);
+    interceptedLeave = { proceed: () => switchLocale(code) };
   }
 
   // svelte-ignore state_referenced_locally
@@ -134,7 +136,6 @@
     config,
     readOnly,
     onNestedDocumentCreated,
-    onFieldFocus,
     key: `${initial._type}_${nestedLevel}`,
     beforeRedirect: beforeRedirect
   });
@@ -192,11 +193,6 @@
   /**
    * This document's lock: POST takes it (claim), DELETE gives it back (release).
    *
-   * A REST route, not a panel form action. Form actions live in the generated `+page.server.ts`
-   * and each one has to be listed there by name. A `?/lock` action left off that list answers
-   * 404, the claims fail quietly, and nothing but the TTL ever frees a document. A route declared
-   * in the prototype's `rest` is written by codegen and cannot be left out.
-   *
    * The claim names the row the form is on: an auto-save moves the form onto a new row without
    * a load, and the lock moves with it. `lockVersionId` is a string, so the claim effect below
    * re-runs when the row changes and not on every keystroke.
@@ -204,10 +200,7 @@
   const lockVersionId = $derived(form.values.versionId as string | undefined);
 
   const lockUrl = (params: Record<string, string> = {}, versionId = lockVersionId) => {
-    const base =
-      initial._prototype === 'collection'
-        ? `${apiUrl(config.kebab, initial.id)}/lock`
-        : `${apiUrl(config.kebab)}/lock`;
+    const base = `${apiUrl(...documentSegments(config.kebab, initial))}/lock`;
     const search = new URLSearchParams({
       ...(versionId ? { [PARAMS.VERSION_ID]: versionId } : {}),
       ...params
@@ -239,10 +232,7 @@
   /**
    * Hold the document for as long as it is open.
    *
-   * Claimed on mount and renewed at half the TTL. The load does not claim: opening a document is
-   * a read, and a read that writes is a read that has to explain itself in every caller. Here it
-   * is one effect — take it when the editor arrives, keep it while they stay, and the renewal is
-   * the same call as the claim. Half the TTL leaves room for one missed beat.
+   * Claimed on mount and renewed at half the TTL, which leaves room for one missed beat.
    *
    * Not while the document is read-only, being created (there is no row to lock yet), or already
    * held by somebody else.
@@ -329,7 +319,7 @@
   enctype="multipart/form-data"
   method="post"
 >
-  <Header {form} {config} {onClose} onLocaleSwitch={switchLocale}></Header>
+  <Header {form} {config} {onClose} onLocaleSwitch={switchToLocale}></Header>
 
   {#if isLockedByOther}
     <CurrentlyEdited
@@ -347,7 +337,6 @@
     {:else}
       <RenderFields fields={config.fields} {form} />
     {/if}
-    <!--  -->
     {#if config.type === 'collection' && isAuthConfig(config) && config.auth.type === 'password'}
       <AuthFooter collection={config} {operation} {form} />
     {/if}
@@ -400,7 +389,6 @@
         {t__('common.leave_confirm_title')}
       </Dialog.Header>
       <p>{t__('common.leave_confirm_text')}</p>
-      <!--  -->
       <Dialog.Footer>
         <Button onclick={confirmLeave} kbd="enter">
           {t__('common.confirm')}

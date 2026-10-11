@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { FormFieldBuilder } from '$lib/core/fields/builders';
-  import type { BaseUseFieldReturn, FieldsPreviewProps, FormField } from '$lib/fields/types.js';
+  import { FormFieldBuilder } from '#lib/core/fields/builders/index.js';
+  import type { BaseUseFieldReturn, FieldsPreviewProps, FormField } from '#lib/fields/types.js';
   import type { Component } from 'svelte';
 
   type Props = {
@@ -22,7 +22,7 @@
     {#each fields as builder, index (index)}
       {@const field = getField(builder)}
       {#if !builder.get.hidden && field.visible}
-        <div class="rz-render-fields-preview__row" data-visible={field.visible || null}>
+        <div class="rz-render-fields-preview__row" data-visible>
           <div class="rz-render-fields-preview__name">
             <p>
               {builder.get.label}

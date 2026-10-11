@@ -1,16 +1,17 @@
-import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DefaultOptions, DefaultValueFn, FormField } from '$lib/fields/types.js';
-import { capitalize, sanitize } from '$lib/util/string.js';
+import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import type { DefaultValueFn, FormField } from '#lib/fields/types.js';
+import { duplicateText } from '$rime/modules:fields/text';
 import Text from './component/Text.svelte';
+
+const isString = (value: unknown) => typeof value === 'string' || 'Should be a string';
 
 /****************************************************/
 export class TextFieldBuilder extends FormFieldBuilder<TextField> {
   constructor(name: string) {
     super(name, 'text');
-    this.field.hooks = {
-      beforeSave: [sanitize]
-    };
+    this.field.validate = isString;
+    this.$beforeDuplicate(duplicateText);
   }
 
   unique(bool?: boolean) {
@@ -24,12 +25,6 @@ export class TextFieldBuilder extends FormFieldBuilder<TextField> {
 
   get cell() {
     return null;
-  }
-
-  defaultValue(value: string | DefaultValueFn<string>, options?: DefaultOptions) {
-    this.field.defaultValue = value;
-    this.field.defaultFill = options?.fill;
-    return this;
   }
 
   get dataType(): DataType {
@@ -51,20 +46,6 @@ export class TextFieldBuilder extends FormFieldBuilder<TextField> {
     return this;
   }
 
-  compile() {
-    if (!this.field.validate) {
-      this.field.validate = (value: any) => {
-        return typeof value === 'string' || 'Should be a string';
-      };
-    }
-
-    if (!this.field.placeholder) {
-      this.field.placeholder = this.field.label || capitalize(this.field.name);
-    }
-
-    return super.compile();
-  }
-
   protected override generateType(): string {
     return `${this.name}${this.get.required ? '' : '?'}: string`;
   }
@@ -80,6 +61,6 @@ export type TextField = {
   defaultValue?: string | DefaultValueFn<string>;
   unique?: boolean;
   isTitle?: true;
-  placeholder: string;
+  placeholder?: string;
   layout?: 'compact';
 } & FormField;

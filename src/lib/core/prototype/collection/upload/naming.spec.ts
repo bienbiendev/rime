@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { directoriesOf, withDirectoriesSuffix } from './naming.js';
+import { directoriesKebab, directoriesOf, withDirectoriesSuffix } from './naming.js';
 
 /**
  * Which directories collection a config's files live under.
@@ -31,5 +31,12 @@ describe('directoriesOf', () => {
 
   it('strips nothing on its own', () => {
     expect(withDirectoriesSuffix('$medias__versions')).toBe('$$medias__versionsDirectories');
+  });
+});
+
+describe('directoriesKebab', () => {
+  it('gives the URL form from the slug', () => {
+    expect(directoriesKebab('medias')).toBe('medias-directories');
+    expect(directoriesKebab('myMedias')).toBe('my-medias-directories');
   });
 });

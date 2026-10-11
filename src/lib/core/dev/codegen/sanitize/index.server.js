@@ -5,7 +5,13 @@ import { babelParse } from 'ast-kit';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logger } from '../../../logger.server.js';
-import { CONFIG_DIR, GENERATED_DIR, OUTPUT_DIR } from '../../constants.server.js';
+import {
+  CONFIG_DIR,
+  GENERATED_DIR,
+  OUTPUT_DIR,
+  paramsPath,
+  schemaPath
+} from '../../constants.server.js';
 
 /**
  * $ prefix-based sanitizer that rules:
@@ -20,12 +26,20 @@ import { CONFIG_DIR, GENERATED_DIR, OUTPUT_DIR } from '../../constants.server.js
 // a sanitized client copy too — the panel still needs +rime.generated/rime.config.ts.
 const TOP_LEVEL_CONFIG = 'rime.config.server.ts';
 
+/** Whether the sanitizer reads `name` as code, and splits it when it holds `$` content. */
+const isConfigModule = (name) => /\.(ts|js)$/.test(name) && !/\.server\.(ts|js)$/.test(name);
+
+const isServerFile = (name) => name.endsWith('.server.ts');
+
+/** Where a split file's server copy goes: `news.ts` → `news.server.ts`, `news.js` → `news.server.js`. */
+const serverHalfOf = (filePath) => filePath.replace(/\.(ts|js)$/, '.server.$1');
+
 export async function sanitize() {
   const root = process.cwd();
   const configDir = path.resolve(root, CONFIG_DIR);
   const outputDir = path.resolve(root, GENERATED_DIR);
 
-  logger.info('Sanitizing config...');
+  logger.debug('Sanitizing config...');
 
   // List all existing files recursively in the output directory
   const existingFiles = new Set();
@@ -52,37 +66,41 @@ export async function sanitize() {
   // Track files that get split into both client and server versions
   const splitFiles = new Set();
 
-  // Scan all TypeScript files (excluding .server.ts)
-  const allFiles = await scanConfigFiles(configDir);
+  // Scan all .ts and .js files (excluding .server.ts and .server.js)
+  const allFiles = scanFiles(configDir, isConfigModule);
 
   // Pre-scan files to determine which ones will be split (contain server content)
+  const sourcesByFile = new Map();
   for (const filePath of allFiles) {
-    const relativePath = path.relative(configDir, filePath);
+    // Forward slashes, to match how imports are compared later
+    const relativePath = path.relative(configDir, filePath).split(path.sep).join('/');
     try {
       const content = fs.readFileSync(filePath, 'utf-8');
       const ast = babelParse(content, 'ts', { sourceType: 'module', attachComment: false });
-      const analysis = analyzeFile(ast);
-      if (analysis.hasServerContent) {
-        // Normalize to forward slashes to match how imports are compared later
-        splitFiles.add(relativePath.split(path.sep).join('/'));
-      }
+      if (analyzeFile(ast).hasServerContent) splitFiles.add(relativePath);
+      sourcesByFile.set(
+        relativePath,
+        moduleSources(ast.body).map((node) => node.source.value)
+      );
     } catch (err) {
       logger.warn(`Failed to analyze ${relativePath} during pre-scan: ${err.message}`);
     }
   }
 
+  splitImporters(sourcesByFile, splitFiles);
+
   // Also scan and copy all existing .server.ts files — except the top-level config, which
   // gets its own client+server split below instead of a plain verbatim copy.
-  const serverFiles = (await scanServerFiles(configDir)).filter(
+  const serverFiles = scanFiles(configDir, isServerFile).filter(
     (filePath) => path.relative(configDir, filePath) !== TOP_LEVEL_CONFIG
   );
 
-  // Scan and copy all other files (non-.ts files like .svelte, .json, etc.)
-  const otherFiles = await scanOtherFiles(configDir);
+  // Scan and copy all other files (.server.js, .svelte, .json, etc.)
+  const otherFiles = scanFiles(configDir, (name) => !name.endsWith('.ts') && !isConfigModule(name));
 
   // Top-level config split: same client/server treatment as every other split file below,
   // just addressed by its fixed name instead of found via the scan (it's .server.ts-suffixed,
-  // so scanConfigFiles/allFiles never sees it). Runs after the pre-scan above so splitFiles is
+  // so allFiles never sees it). Runs after the pre-scan above so splitFiles is
   // fully populated — this file's own `import { Pages } from './pages'`-style imports need to
   // know which nested files themselves got split.
   await processTopLevelConfig(configDir, outputDir, outputFiles, splitFiles);
@@ -91,8 +109,8 @@ export async function sanitize() {
     const relativePath = path.relative(configDir, filePath);
     logger.debug(`   Processing: ${relativePath}`);
 
-    // Check if corresponding .server.ts already exists
-    const originalServerPath = filePath.replace('.ts', '.server.ts');
+    // Check if corresponding .server.ts or .server.js already exists
+    const originalServerPath = serverHalfOf(filePath);
     if (fs.existsSync(originalServerPath)) {
       throw new Error(
         `Error: ${originalServerPath} already exists. Remove it before running sanitization.`
@@ -104,67 +122,39 @@ export async function sanitize() {
   }
 
   // Copy existing .server.ts files
-  for (const serverFilePath of serverFiles) {
-    const relativePath = path.relative(configDir, serverFilePath);
-    const outputPath = path.join(outputDir, relativePath);
-    const outputDirPath = path.dirname(outputPath);
-
-    if (!fs.existsSync(outputDirPath)) {
-      fs.mkdirSync(outputDirPath, { recursive: true });
-    }
-
-    const content = fs.readFileSync(serverFilePath, 'utf-8');
-    const relativeOutputPath = path.relative(outputDir, outputPath);
-    outputFiles.add(relativeOutputPath);
-
-    // Only write if content is different or file doesn't exist
-    if (shouldWriteFile(outputPath, content)) {
-      fs.writeFileSync(outputPath, content);
-      logger.debug(`   Copied: ${relativePath}`);
-    }
+  for (const filePath of serverFiles) {
+    const relativePath = path.relative(configDir, filePath);
+    writeOutput(outputDir, relativePath, fs.readFileSync(filePath, 'utf-8'), outputFiles);
   }
 
-  // Copy other files (.svelte, .json, etc.)
-  for (const otherFilePath of otherFiles) {
-    const relativePath = path.relative(configDir, otherFilePath);
-    const outputPath = path.join(outputDir, relativePath);
-    const outputDirPath = path.dirname(outputPath);
-
-    if (!fs.existsSync(outputDirPath)) {
-      fs.mkdirSync(outputDirPath, { recursive: true });
-    }
-
-    const content = fs.readFileSync(otherFilePath, 'utf-8');
-    const relativeOutputPath = path.relative(outputDir, outputPath);
-    outputFiles.add(relativeOutputPath);
-
-    // Only write if content is different or file doesn't exist
-    if (shouldWriteFile(outputPath, content)) {
-      fs.writeFileSync(outputPath, content);
-      logger.debug(`   Copied: ${relativePath}`);
-    }
+  // Copy other files (.server.js, .svelte, .json, etc.)
+  for (const filePath of otherFiles) {
+    const relativePath = path.relative(configDir, filePath);
+    writeOutput(outputDir, relativePath, fs.readFileSync(filePath, 'utf-8'), outputFiles);
   }
 
-  // Delete files that exist in current list but not in output list. schema.server.ts is
-  // excluded — write.server.ts owns it (writes it straight into OUTPUT_DIR, see schemaPath()
-  // in constants.ts), sanitize() never adds it to outputFiles, so without this exclusion
-  // every sanitize run deletes it out from under write()'s own cache guard.
-  const SCHEMA_FILE = 'schema.server.ts';
+  // Delete files that exist in current list but not in output list. Two files are excluded:
+  // other codegen steps write them straight into OUTPUT_DIR and sanitize() never adds them to
+  // outputFiles, so without this every sanitize run deletes them out from under their writer's
+  // own cache guard.
+  //   schema.server.ts  write.server.ts, see schemaPath() in constants.server.ts
+  //   params.ts         generateRoutes, see paramsPath() in constants.server.ts
+  const WRITTEN_ELSEWHERE = new Set([path.basename(schemaPath()), path.basename(paramsPath())]);
   for (const existingFile of existingFiles) {
-    if (existingFile !== SCHEMA_FILE && !outputFiles.has(existingFile)) {
+    if (!WRITTEN_ELSEWHERE.has(existingFile) && !outputFiles.has(existingFile)) {
       const fileToDelete = path.join(outputDir, existingFile);
       fs.unlinkSync(fileToDelete);
       logger.debug(`   Deleted: ${existingFile}`);
     }
   }
 
-  logger.info('Sanitization complete');
+  logger.debug('Sanitization complete');
 }
 
 /**
- * The top-level config (src/lib/+rime/rime.config.server.ts) — real, hand-authored. Client
- * copy via analyzeFile + sanitizeClientAst + removeUnusedImports, written into
- * +rime.generated/, plus a server copy via updateServerImports so its own imports of nested
+ * The top-level config (`<CONFIG_DIR>/rime.config.server.ts`, `src/+rime/` by default) — real,
+ * hand-authored. Client copy via analyzeFile + sanitizeClientAst + removeUnusedImports, written
+ * into +rime.generated/, plus a server copy via updateServerImports so its own imports of nested
  * split files resolve like every other split file's do.
  */
 async function processTopLevelConfig(configDir, outputDir, outputFiles, splitFiles) {
@@ -195,67 +185,13 @@ async function processTopLevelConfig(configDir, outputDir, outputFiles, splitFil
   }
 }
 
-async function scanConfigFiles(configDir) {
-  const files = [];
-
-  function scanDir(currentDir) {
-    const items = fs.readdirSync(currentDir, { withFileTypes: true });
-
-    for (const item of items) {
-      const fullPath = path.join(currentDir, item.name);
-
-      if (item.isDirectory() && item.name !== OUTPUT_DIR) {
-        scanDir(fullPath);
-      } else if (item.isFile() && item.name.endsWith('.ts') && !item.name.endsWith('.server.ts')) {
-        files.push(fullPath);
-      }
-    }
-  }
-
-  scanDir(configDir);
-  return files;
-}
-
-async function scanServerFiles(configDir) {
-  const files = [];
-
-  function scanDir(currentDir) {
-    const items = fs.readdirSync(currentDir, { withFileTypes: true });
-
-    for (const item of items) {
-      const fullPath = path.join(currentDir, item.name);
-
-      if (item.isDirectory() && item.name !== OUTPUT_DIR) {
-        scanDir(fullPath);
-      } else if (item.isFile() && item.name.endsWith('.server.ts')) {
-        files.push(fullPath);
-      }
-    }
-  }
-
-  scanDir(configDir);
-  return files;
-}
-
-async function scanOtherFiles(configDir) {
-  const files = [];
-
-  function scanDir(currentDir) {
-    const items = fs.readdirSync(currentDir, { withFileTypes: true });
-
-    for (const item of items) {
-      const fullPath = path.join(currentDir, item.name);
-
-      if (item.isDirectory() && item.name !== OUTPUT_DIR) {
-        scanDir(fullPath);
-      } else if (item.isFile() && !item.name.endsWith('.ts')) {
-        files.push(fullPath);
-      }
-    }
-  }
-
-  scanDir(configDir);
-  return files;
+/** Every file under `dir` whose name passes `keep`, the generated folder left out. */
+function scanFiles(dir, keep) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((item) => {
+    const fullPath = path.join(dir, item.name);
+    if (item.isDirectory()) return item.name === OUTPUT_DIR ? [] : scanFiles(fullPath, keep);
+    return item.isFile() && keep(item.name) ? [fullPath] : [];
+  });
 }
 
 async function processConfigFile(originalPath, configDir, outputDir, outputFiles, splitFiles) {
@@ -263,81 +199,49 @@ async function processConfigFile(originalPath, configDir, outputDir, outputFiles
   const relativePath = path.relative(configDir, originalPath);
 
   try {
-    const ast = babelParse(content, 'ts', { sourceType: 'module', attachComment: false });
-
-    // Analyze the file to find $ patterns
-    const analysis = analyzeFile(ast);
-
-    if (!analysis.hasServerContent) {
-      // Just copy the original file to .generated
-      const outputPath = path.join(outputDir, relativePath);
-      const outputDirPath = path.dirname(outputPath);
-      if (!fs.existsSync(outputDirPath)) {
-        fs.mkdirSync(outputDirPath, { recursive: true });
-      }
-      const relativeOutputPath = path.relative(outputDir, outputPath);
-      outputFiles.add(relativeOutputPath);
-
-      // Only write if content is different or file doesn't exist
-      if (shouldWriteFile(outputPath, content)) {
-        fs.writeFileSync(outputPath, content);
-      }
+    if (!splitFiles.has(relativePath.split(path.sep).join('/'))) {
+      // No server content and no split import: one copy for both sides
+      writeOutput(outputDir, relativePath, content, outputFiles);
       return;
     }
 
-    // Calculate output paths
-    const clientPath = path.join(outputDir, relativePath);
-    const serverPath = path.join(outputDir, relativePath.replace('.ts', '.server.ts'));
-
-    // Ensure output directories exist
-    const clientDir = path.dirname(clientPath);
-    const serverDir = path.dirname(serverPath);
-    if (!fs.existsSync(clientDir)) {
-      fs.mkdirSync(clientDir, { recursive: true });
-    }
-    if (!fs.existsSync(serverDir)) {
-      fs.mkdirSync(serverDir, { recursive: true });
-    }
-
-    // Track output files
-    const relativeServerPath = path.relative(outputDir, serverPath);
-    const relativeClientPath = path.relative(outputDir, clientPath);
-    outputFiles.add(relativeServerPath);
-    outputFiles.add(relativeClientPath);
-
-    // Track this as a split file (has both client and server versions)
-    const relativeOriginalPath = path.relative(configDir, originalPath);
-    splitFiles.add(relativeOriginalPath);
-
-    // Create server version (full content with updated imports)
+    // Server version: full content with updated imports
     const serverContent = updateServerImports(content, splitFiles, path.dirname(relativePath));
-    if (shouldWriteFile(serverPath, serverContent)) {
-      fs.writeFileSync(serverPath, serverContent);
-      logger.debug(`   Created: ${relativeServerPath}`);
-    }
+    writeOutput(outputDir, serverHalfOf(relativePath), serverContent, outputFiles);
 
-    // Create sanitized client version
-    const clientAst = sanitizeClientAst(ast, analysis);
-    // Clean up unused imports
-    const cleanedAst = removeUnusedImports(clientAst);
-    const clientCode = generate(cleanedAst, { compact: false, comments: true }).code;
-    if (shouldWriteFile(clientPath, clientCode)) {
-      fs.writeFileSync(clientPath, clientCode);
-      logger.debug(`   Sanitized: ${relativeClientPath}`);
-    }
+    // Sanitized client version
+    writeOutput(outputDir, relativePath, clientCopy(content), outputFiles);
   } catch (error) {
     logger.error(`    Failed to process ${originalPath}:`, error.message);
     throw error;
   }
 }
 
+/** The name of an object key written as `name` or `'name'`; '' for a computed key. */
+const keyName = (member) => {
+  if (member.computed) return '';
+  if (t.isIdentifier(member.key)) return member.key.name;
+  if (t.isStringLiteral(member.key)) return member.key.value;
+  return '';
+};
+
+/**
+ * Whether `node` is a server-only member of an object literal, in any of its spellings:
+ *
+ * ```js
+ * { $url: toUrl, $url(doc) { … }, '$url': (doc) => … }
+ * ```
+ */
+const isDollarMember = (node) =>
+  (t.isObjectProperty(node) || t.isObjectMethod(node)) && keyName(node).startsWith('$');
+
+/** What a `$` member runs or holds: a method's body, a property's value. */
+const dollarMemberValue = (node) => (t.isObjectMethod(node) ? node.body : node.value);
+
 function analyzeFile(ast) {
   const analysis = {
     hasServerContent: false,
-    serverImports: new Set(),
     serverFunctions: new Set(),
-    dollarProperties: new Set(),
-    dollarMethods: new Set(),
     functionsUsedInDollarProps: new Set()
   };
 
@@ -350,21 +254,14 @@ function analyzeFile(ast) {
       const source = node.source.value;
       if (source.includes('.server')) {
         analysis.hasServerContent = true;
-        // Mark all imported identifiers as server
-        node.specifiers.forEach((spec) => {
-          if (t.isImportSpecifier(spec) || t.isImportDefaultSpecifier(spec)) {
-            analysis.serverImports.add(spec.local.name);
-          }
-        });
       }
     }
 
     // Find $ prefixed object properties
-    if (t.isObjectProperty(node) && t.isIdentifier(node.key) && node.key.name.startsWith('$')) {
+    if (isDollarMember(node)) {
       analysis.hasServerContent = true;
-      analysis.dollarProperties.add(node.key.name);
       // Track functions used within $ properties
-      findFunctionsInNode(node.value, analysis.functionsUsedInDollarProps);
+      collectIdentifiers(dollarMemberValue(node), analysis.functionsUsedInDollarProps);
     }
 
     // Find $ prefixed method calls (e.g., .$beforeSave())
@@ -375,7 +272,6 @@ function analyzeFile(ast) {
       node.callee.property.name.startsWith('$')
     ) {
       analysis.hasServerContent = true;
-      analysis.dollarMethods.add(node.callee.property.name);
     }
 
     // Find local functions that might be used by $ methods
@@ -385,13 +281,13 @@ function analyzeFile(ast) {
       (t.isArrowFunctionExpression(node.init) || t.isFunctionExpression(node.init))
     ) {
       // Check if this function is used by server content
-      if (isFunctionUsedByServerContent(node.id.name, ast, analysis)) {
+      if (isFunctionUsedByServerContent(node.id.name, ast)) {
         analysis.serverFunctions.add(node.id.name);
       }
     }
 
     if (t.isFunctionDeclaration(node) && node.id) {
-      if (isFunctionUsedByServerContent(node.id.name, ast, analysis)) {
+      if (isFunctionUsedByServerContent(node.id.name, ast)) {
         analysis.serverFunctions.add(node.id.name);
       }
     }
@@ -436,7 +332,7 @@ function isFunctionUsedByServerContent(functionName, ast) {
     }
 
     // Check if function is used in $ properties
-    if (t.isObjectProperty(node) && t.isIdentifier(node.key) && node.key.name.startsWith('$')) {
+    if (isDollarMember(node)) {
       function checkValue(value) {
         if (t.isIdentifier(value) && value.name === functionName) {
           isUsedByServer = true;
@@ -453,7 +349,7 @@ function isFunctionUsedByServerContent(functionName, ast) {
         }
       }
 
-      checkValue(node.value);
+      checkValue(dollarMemberValue(node));
     }
 
     // Recursively check child nodes
@@ -473,32 +369,17 @@ function isFunctionUsedByServerContent(functionName, ast) {
   return isUsedByServer;
 }
 
-function findFunctionsInNode(node, functionsSet) {
+/** Adds to `names` every identifier in the subtree of `node`. */
+function collectIdentifiers(node, names) {
   if (!node || typeof node !== 'object') return;
-
-  if (t.isIdentifier(node)) {
-    functionsSet.add(node.name);
-  } else if (t.isArrayExpression(node)) {
-    node.elements.forEach((element) => {
-      if (element) findFunctionsInNode(element, functionsSet);
-    });
-  } else if (t.isObjectExpression(node)) {
-    node.properties.forEach((prop) => {
-      if (t.isObjectProperty(prop)) {
-        findFunctionsInNode(prop.value, functionsSet);
-      }
-    });
-  }
-
-  // Recursively check child nodes
+  if (t.isIdentifier(node)) names.add(node.name);
   for (const key in node) {
-    if (Object.prototype.hasOwnProperty.call(node, key) && key !== 'parent') {
-      const child = node[key];
-      if (Array.isArray(child)) {
-        child.forEach((item) => findFunctionsInNode(item, functionsSet));
-      } else if (child && typeof child === 'object') {
-        findFunctionsInNode(child, functionsSet);
-      }
+    if (key === 'parent') continue;
+    const child = node[key];
+    if (Array.isArray(child)) {
+      child.forEach((c) => collectIdentifiers(c, names));
+    } else {
+      collectIdentifiers(child, names);
     }
   }
 }
@@ -540,12 +421,7 @@ function sanitizeClientAst(ast, analysis) {
 
     // Remove $ prefixed object properties
     if (t.isObjectExpression(node)) {
-      node.properties = node.properties.filter((prop) => {
-        if (t.isObjectProperty(prop) && t.isIdentifier(prop.key) && prop.key.name.startsWith('$')) {
-          return false; // Remove $ properties
-        }
-        return true;
-      });
+      node.properties = node.properties.filter((prop) => !isDollarMember(prop));
     }
 
     // Remove $ prefixed method calls from call chains
@@ -557,32 +433,6 @@ function sanitizeClientAst(ast, analysis) {
     ) {
       // Return the object the method was called on (strip the method call)
       return sanitizeNode(node.callee.object);
-    }
-
-    // Remove server function declarations and functions only used in $ properties
-    if (t.isVariableDeclaration(node)) {
-      node.declarations = node.declarations.filter((declarator) => {
-        if (t.isIdentifier(declarator.id)) {
-          const name = declarator.id.name;
-          // Remove if it's a server function or only used in $ properties
-          if (analysis.serverFunctions.has(name) || analysis.functionsUsedInDollarProps.has(name)) {
-            return false;
-          }
-        }
-        return true;
-      });
-      // If no declarations left, mark for removal
-      if (node.declarations.length === 0) {
-        return null;
-      }
-    }
-
-    if (t.isFunctionDeclaration(node) && node.id) {
-      const name = node.id.name;
-      // Remove if it's a server function or only used in $ properties
-      if (analysis.serverFunctions.has(name) || analysis.functionsUsedInDollarProps.has(name)) {
-        return null;
-      }
     }
 
     // Recursively sanitize child nodes
@@ -605,13 +455,9 @@ function sanitizeClientAst(ast, analysis) {
     return node;
   }
 
-  // Apply sanitization
+  // Apply sanitization, then drop what only the removed server content read
   sanitizeNode(clonedAst);
-
-  // Remove null body items (removed imports/declarations)
-  if (clonedAst.body) {
-    clonedAst.body = clonedAst.body.filter((item) => item !== null);
-  }
+  removeServerOnlyDeclarations(clonedAst, analysis);
 
   // Final cleanup: remove orphaned expression statements (standalone identifiers)
   if (clonedAst.body) {
@@ -627,108 +473,209 @@ function sanitizeClientAst(ast, analysis) {
   return clonedAst;
 }
 
-function removeUnusedImports(ast) {
-  const clonedAst = JSON.parse(JSON.stringify(ast));
+/** Every name the code reads, outside import lines, declaration names and `$` properties. */
+function referencedNames(program) {
+  return namesReadBy(program.body);
+}
 
-  // Collect all imported identifiers
-  const importedIdentifiers = new Map(); // identifier -> import declaration
-  const usedIdentifiers = new Set();
+/** The names `node` reads, by the same rules as `referencedNames`. */
+function namesReadBy(node) {
+  const used = new Set();
 
-  // First pass: collect all imports
-  function collectImports(node) {
-    if (t.isImportDeclaration(node)) {
-      node.specifiers.forEach((spec) => {
-        let localName;
-        if (t.isImportDefaultSpecifier(spec)) {
-          localName = spec.local.name;
-        } else if (t.isImportSpecifier(spec)) {
-          localName = spec.local.name;
-        } else if (t.isImportNamespaceSpecifier(spec)) {
-          localName = spec.local.name;
-        }
-
-        if (localName) {
-          importedIdentifiers.set(localName, node);
-        }
-      });
-    }
-  }
-
-  // Second pass: find used identifiers
-  function findUsedIdentifiers(node) {
+  function visit(node) {
     if (!node || typeof node !== 'object') return;
-
-    // Skip import declarations and variable declarators' ids to avoid marking declarations as usage
-    if (t.isImportDeclaration(node)) {
-      return;
-    }
-
+    if (t.isImportDeclaration(node)) return;
     if (t.isVariableDeclarator(node)) {
-      // Only check the init, not the id
-      if (node.init) {
-        findUsedIdentifiers(node.init);
-      }
+      visit(node.init);
       return;
     }
-
     if (t.isFunctionDeclaration(node)) {
-      // Only check the body, not the id and params
-      if (node.body) {
-        findUsedIdentifiers(node.body);
-      }
+      visit(node.body);
       return;
     }
-
-    // Skip $ prefixed object properties to avoid marking their content as used
-    if (t.isObjectProperty(node) && t.isIdentifier(node.key) && node.key.name.startsWith('$')) {
-      return;
-    }
-
-    if (t.isIdentifier(node)) {
-      usedIdentifiers.add(node.name);
-    }
-
-    // Recursively check child nodes
+    if (isDollarMember(node)) return;
+    if (t.isIdentifier(node)) used.add(node.name);
     for (const key in node) {
-      if (Object.prototype.hasOwnProperty.call(node, key) && key !== 'parent') {
-        const child = node[key];
-        if (Array.isArray(child)) {
-          child.forEach(findUsedIdentifiers);
-        } else if (child && typeof child === 'object') {
-          findUsedIdentifiers(child);
-        }
-      }
+      if (key === 'parent') continue;
+      const child = node[key];
+      if (Array.isArray(child)) child.forEach(visit);
+      else if (child && typeof child === 'object') visit(child);
     }
   }
 
-  // Collect imports and find usage
-  clonedAst.body.forEach(collectImports);
-  clonedAst.body.forEach(findUsedIdentifiers);
+  if (Array.isArray(node)) {
+    node.forEach(visit);
+  } else {
+    visit(node);
+  }
+  return used;
+}
 
-  // Remove unused imports
-  clonedAst.body = clonedAst.body.filter((node) => {
-    if (t.isImportDeclaration(node)) {
-      // Filter out unused specifiers
-      node.specifiers = node.specifiers.filter((spec) => {
-        let localName;
-        if (t.isImportDefaultSpecifier(spec)) {
-          localName = spec.local.name;
-        } else if (t.isImportSpecifier(spec)) {
-          localName = spec.local.name;
-        } else if (t.isImportNamespaceSpecifier(spec)) {
-          localName = spec.local.name;
-        }
+const declarationOf = (statement) =>
+  t.isExportNamedDeclaration(statement) ? statement.declaration : statement;
 
-        return localName && usedIdentifiers.has(localName);
-      });
-
-      // Keep the import declaration only if it has remaining specifiers
-      return node.specifiers.length > 0;
+/**
+ * What each top-level declaration reads: one entry per variable, function or other statement.
+ *
+ * ```ts
+ * const a = 1, b = a; // [{ node: a, names: {} }, { node: b, names: { a } }]
+ * ```
+ */
+function readersOf(program) {
+  return program.body.flatMap((statement) => {
+    const declaration = declarationOf(statement);
+    if (t.isVariableDeclaration(declaration)) {
+      return declaration.declarations.map((node) => ({ node, names: namesReadBy(node) }));
     }
-    return true;
+    return [{ node: declaration, names: namesReadBy(statement) }];
   });
+}
 
-  return clonedAst;
+/**
+ * Removes the top-level declarations that only the removed server content read. A name still read
+ * by the client copy stays; the pass repeats, so a helper read only by a removed helper goes too.
+ * A declaration's reads of its own name do not keep it.
+ *
+ * ```ts
+ * const slug = 'news';                      // kept: the label reads it
+ * const toUrl = (doc) => '/' + slug + doc.id; // removed: only $url read it
+ * const setHome = Hooks.beforeUpsert(async function setHome(args) {…}); // removed: only itself
+ * export const News = Collection.create(slug, { label: slug, $url: toUrl });
+ * ```
+ */
+function removeServerOnlyDeclarations(program, analysis) {
+  const serverNames = new Set([
+    ...analysis.serverFunctions,
+    ...analysis.functionsUsedInDollarProps
+  ]);
+
+  let removed = true;
+  while (removed) {
+    removed = false;
+    const readers = readersOf(program);
+    const readElsewhere = (name, own) =>
+      readers.some((reader) => reader.node !== own && reader.names.has(name));
+    const serverOnly = (id, own) =>
+      t.isIdentifier(id) && serverNames.has(id.name) && !readElsewhere(id.name, own);
+
+    // What a removed declaration read may now be read by nobody: it is a candidate too
+    const remove = (node) => {
+      removed = true;
+      collectIdentifiers(node, serverNames);
+    };
+
+    program.body = program.body.filter((statement) => {
+      const declaration = declarationOf(statement);
+      if (t.isFunctionDeclaration(declaration) && serverOnly(declaration.id, declaration)) {
+        remove(declaration.body);
+        return false;
+      }
+      if (t.isVariableDeclaration(declaration)) {
+        const kept = declaration.declarations.filter((declarator) => {
+          if (!serverOnly(declarator.id, declarator)) return true;
+          remove(declarator.init);
+          return false;
+        });
+        declaration.declarations = kept;
+        return kept.length > 0;
+      }
+      return true;
+    });
+  }
+}
+
+/**
+ * The client copy of a config file: its server content removed, and what only that content used.
+ *
+ * ```ts
+ * clientCopy(`export const News = Collection.create('news', { label: 'News', $url: (doc) => doc.id });`);
+ * // export const News = Collection.create('news', { label: 'News' });
+ * ```
+ */
+export function clientCopy(content) {
+  const ast = babelParse(content, 'ts', { sourceType: 'module', attachComment: false });
+  const clientAst = sanitizeClientAst(ast, analyzeFile(ast));
+  return generate(removeUnusedImports(clientAst), { compact: false, comments: true }).code;
+}
+
+/**
+ * The server path for a relative import of a split file, or null.
+ *
+ * ```js
+ * serverImportOf('./pages', 'collections', new Set(['collections/pages.ts']))  // './pages.server.js'
+ * serverImportOf('./blocks', '.', new Set(['blocks/index.ts']))                // './blocks/index.server.js'
+ * ```
+ */
+function serverImportOf(importPath, currentDir, splitFiles) {
+  if (!importPath.startsWith('./') && !importPath.startsWith('../')) return null;
+  if (importPath.includes('.server')) return null;
+
+  const importNoExt = importPath.replace(/\/+$/, '').replace(/(\.js|\.ts)$/, '');
+  const normalize = (p) =>
+    path
+      .normalize(p)
+      .replace(/^\.\/?/, '')
+      .split(path.sep)
+      .join('/');
+  const split = new Set([...splitFiles].map(normalize));
+  // A split file is found under its `.ts` or its `.js` name
+  const isSplit = (noExt) =>
+    ['.ts', '.js'].some((ext) => split.has(normalize(path.join(currentDir, noExt + ext))));
+
+  if (isSplit(importNoExt)) {
+    return importNoExt + '.server.js';
+  }
+  if (isSplit(importNoExt + '/index')) {
+    return importNoExt + '/index.server.js';
+  }
+  return null;
+}
+
+/**
+ * Adds to `splitFiles` every file that imports or re-exports a split file: its server copy then
+ * points at the server halves. Repeated until no file joins, so a chain of barrels splits every
+ * link.
+ *
+ * ```js
+ * // pages.ts has a $url; collections/index.ts: export { Pages } from './pages'
+ * splitImporters(new Map([['collections/index.ts', ['./pages']]]), new Set(['collections/pages.ts']));
+ * // splitFiles: collections/pages.ts, collections/index.ts
+ * ```
+ */
+export function splitImporters(sourcesByFile, splitFiles) {
+  let joined = true;
+  while (joined) {
+    joined = false;
+    for (const [relativePath, sources] of sourcesByFile) {
+      if (splitFiles.has(relativePath)) continue;
+      const dir = path.posix.dirname(relativePath);
+      if (sources.some((source) => serverImportOf(source, dir, splitFiles))) {
+        splitFiles.add(relativePath);
+        joined = true;
+      }
+    }
+  }
+}
+
+/** The statements that name a module: `import … from`, `export … from`, `export * from`. */
+const moduleSources = (body) =>
+  body.filter(
+    (node) =>
+      (t.isImportDeclaration(node) ||
+        t.isExportNamedDeclaration(node) ||
+        t.isExportAllDeclaration(node)) &&
+      t.isStringLiteral(node.source)
+  );
+
+/** `ast` without the import specifiers its code does not read; an import left with none goes. */
+function removeUnusedImports(ast) {
+  const used = referencedNames(ast);
+  ast.body = ast.body.filter((node) => {
+    if (!t.isImportDeclaration(node)) return true;
+    node.specifiers = node.specifiers.filter((spec) => used.has(spec.local.name));
+    return node.specifiers.length > 0;
+  });
+  return ast;
 }
 
 /**
@@ -740,68 +687,14 @@ export function updateServerImports(content, splitFiles, currentDir) {
 
     let hasChanges = false;
 
-    // Helper to normalize paths for comparison with splitFiles entries
-    const normalizeForCompare = (p) =>
-      p
-        .replace(/^\.\/?/, '')
-        .split(path.sep)
-        .join('/');
-    const splitFilesSet = new Set(Array.from(splitFiles).map((s) => normalizeForCompare(s)));
+    for (const node of moduleSources(ast.body)) {
+      const newImportPath = serverImportOf(node.source.value, currentDir, splitFiles);
+      if (!newImportPath) continue;
 
-    // Walk through all import declarations
-    for (const node of ast.body) {
-      if (t.isImportDeclaration(node) && t.isStringLiteral(node.source)) {
-        const importPath = node.source.value;
-
-        // Skip absolute imports and package imports
-        if (!importPath.startsWith('./') && !importPath.startsWith('../')) {
-          continue;
-        }
-
-        // Skip already server imports
-        if (importPath.includes('.server')) continue;
-
-        // Normalize import path: remove trailing slashes and explicit extensions
-        const cleanedImport = importPath.replace(/\/+$/, '');
-        const importNoExt = cleanedImport.replace(/(\.js|\.ts)$/, '');
-
-        // Build candidate relative paths (relative to config dir)
-        const candidateFile = path.normalize(path.join(currentDir, importNoExt + '.ts'));
-        const candidateIndex = path.normalize(path.join(currentDir, importNoExt, 'index.ts'));
-
-        const candidateFileNorm = normalizeForCompare(candidateFile);
-        const candidateIndexNorm = normalizeForCompare(candidateIndex);
-
-        let matched = null;
-        let matchedIsIndex = false;
-
-        if (splitFilesSet.has(candidateFileNorm)) {
-          matched = candidateFileNorm;
-          matchedIsIndex = false;
-        } else if (splitFilesSet.has(candidateIndexNorm)) {
-          matched = candidateIndexNorm;
-          matchedIsIndex = true;
-        }
-
-        if (matched) {
-          // Build new import path: prefer .server.js so runtime imports point to JS server files
-          let newImportPath;
-          if (matchedIsIndex) {
-            newImportPath = importNoExt + '/index.server.js';
-          } else {
-            newImportPath = importNoExt + '.server.js';
-          }
-
-          // Set the node's source value and ensure it renders with single quotes
-          node.source.value = newImportPath;
-          if (!node.source.extra || typeof node.source.extra !== 'object') {
-            node.source.extra = {};
-          }
-          node.source.extra.raw = `'${newImportPath}'`;
-          node.source.extra.rawValue = newImportPath;
-          hasChanges = true;
-        }
-      }
+      // Set the node's source value and ensure it renders with single quotes
+      node.source.value = newImportPath;
+      node.source.extra = { raw: `'${newImportPath}'`, rawValue: newImportPath };
+      hasChanges = true;
     }
 
     if (hasChanges) {
@@ -816,6 +709,17 @@ export function updateServerImports(content, splitFiles, currentDir) {
   }
 }
 
+/** Writes `content` at `relativePath` under `outputDir` when it differs, and records the file as produced. */
+function writeOutput(outputDir, relativePath, content, outputFiles) {
+  const outputPath = path.join(outputDir, relativePath);
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  outputFiles.add(relativePath);
+  if (shouldWriteFile(outputPath, content)) {
+    fs.writeFileSync(outputPath, content);
+    logger.debug(`   Wrote: ${relativePath}`);
+  }
+}
+
 /**
  * Checks if a file should be written by comparing content with existing file
  */
@@ -826,9 +730,4 @@ function shouldWriteFile(filePath, newContent) {
 
   const existingContent = fs.readFileSync(filePath, 'utf-8');
   return existingContent !== newContent;
-}
-
-// Run the sanitizer if this script is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  sanitize().catch(console.error);
 }

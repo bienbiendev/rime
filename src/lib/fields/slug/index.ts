@@ -1,8 +1,8 @@
-import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DefaultOptions, DefaultValueFn, FormField } from '$lib/fields/types.js';
-import * as validate from '$lib/core/fields/validate.js';
-import { sanitize, slugify } from '$lib/util/string.js';
+import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import type { DefaultValueFn, FormField } from '#lib/fields/types.js';
+import * as validate from '#lib/core/fields/validate.js';
+import { duplicateSlug } from '$rime/modules:fields/slug';
 import Cell from './component/Cell.svelte';
 import Slug from './component/Slug.svelte';
 
@@ -13,9 +13,7 @@ export class SlugFieldBuilder extends FormFieldBuilder<SlugField> {
     super(name, 'slug');
     this.field.validate = validate.slug;
     this.field.isEmpty = (value) => !value;
-    this.field.hooks = {
-      beforeSave: [sanitize]
-    };
+    this.$beforeDuplicate(duplicateSlug);
   }
 
   get component() {
@@ -41,12 +39,6 @@ export class SlugFieldBuilder extends FormFieldBuilder<SlugField> {
     return this;
   }
 
-  defaultValue(value: string | DefaultValueFn<string>, options?: DefaultOptions) {
-    this.field.defaultValue = value;
-    this.field.defaultFill = options?.fill;
-    return this;
-  }
-
   unique(bool?: boolean) {
     this.field.unique = typeof bool === 'boolean' ? bool : true;
     return this;
@@ -59,13 +51,6 @@ export class SlugFieldBuilder extends FormFieldBuilder<SlugField> {
   isTitle() {
     this.field.isTitle = true;
     return this;
-  }
-
-  compile() {
-    if (!this.field.placeholder) {
-      this.field.placeholder = slugify(this.field.label || this.field.name);
-    }
-    return super.compile();
   }
 
   protected override generateType(): string {
@@ -82,6 +67,6 @@ export type SlugField = FormField & {
   defaultValue?: string | DefaultValueFn<string>;
   unique?: boolean;
   isTitle?: true;
-  placeholder: string;
-  layout: 'compact' | 'default';
+  placeholder?: string;
+  layout?: 'compact' | 'default';
 };

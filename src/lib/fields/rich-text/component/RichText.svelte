@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
   import type { JSONContent } from '@tiptap/core';
   import { defaultFeatures } from '../core/features/index.js';
   import RichTextEditorCore from '../core/rich-text-editor-core.svelte';
@@ -13,7 +13,7 @@
 </script>
 
 <fieldset class="rz-field-rich-text {config.get.className || ''}" use:fieldset={field}>
-  <Field.Label {config} for={path || config.name} />
+  <Field.Label {config} />
 
   <Field.Error error={field.error} />
 
@@ -29,11 +29,3 @@
 
   <Field.Hint {config} />
 </fieldset>
-
-<style type="postcss">
-  .rz-field-rich-text__label-box {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-</style>

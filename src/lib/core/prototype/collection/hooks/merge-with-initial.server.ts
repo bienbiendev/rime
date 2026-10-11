@@ -1,6 +1,6 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { withDefaultValues } from '$lib/util/object.js';
-import type { Dic } from '$lib/util/types.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { withDefaultValues } from '#lib/util/object.js';
+import type { Dic } from '#lib/util/types.js';
 
 /**
  * Gives a create the fields the caller did not send, from the initial document: each field's

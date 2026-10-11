@@ -1,12 +1,12 @@
-import type { DocTypeContribution } from '$lib/core/dev/codegen/types/contributions.server.js';
-import type { ImageSizesConfig } from '$lib/core/prototype/collection/upload/types.js';
-import type { Dic } from '$lib/util/types.js';
+import type { DocTypeContribution } from '#lib/core/dev/codegen/types/contributions.server.js';
+import type { ImageSizesConfig } from '#lib/core/prototype/collection/upload/types.js';
+import type { Dic } from '#lib/util/types.js';
 
 /**
  * What an upload document's type carries, and which of its fields describe themselves.
  *
- * Three reads of `collection.upload` in `dev/codegen/types` — the `UploadDoc` intersection, the
- * `sizes` object, and the filter that keeps the per-size fields from appearing twice.
+ * Three parts: the `UploadDoc` intersection, the `sizes` member, and a filter that keeps the
+ * per-size fields from appearing twice.
  */
 export const uploadDocType = (config: { upload?: { imageSizes?: ImageSizesConfig[] } } | Dic) => {
   const sizes =
@@ -27,7 +27,7 @@ export const uploadDocType = (config: { upload?: { imageSizes?: ImageSizesConfig
   } satisfies DocTypeContribution;
 };
 
-/** One member holding every generated size, matching what `generateImageSizesType` emitted. */
+/** Every generated size as one member: `sizes:{thumbnail: string, hero_webp: string}`. */
 const sizesMember = (sizes: ImageSizesConfig[]) =>
   `sizes:{${sizes
     .map((size) =>

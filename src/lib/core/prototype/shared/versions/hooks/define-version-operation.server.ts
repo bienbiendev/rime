@@ -1,5 +1,5 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { defineVersionUpdateOperation } from '$lib/core/prototype/shared/versions/strategy.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { defineVersionUpdateOperation } from '#lib/core/prototype/shared/versions/strategy.js';
 
 /**
  * Decides what this update does to the row it selected, and puts it on

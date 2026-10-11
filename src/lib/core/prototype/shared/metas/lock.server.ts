@@ -1,6 +1,6 @@
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import { logger } from '$lib/core/logger.server.js';
-import type { GenericDoc } from '$lib/core/prototype/types.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import { logger } from '#lib/core/logger.server.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { EDIT_LOCK_TTL_AFTER_CLOSE_MS, EDIT_LOCK_TTL_MS } from './constant.js';
 import { isLockHeldByOther, isLockStale, lockHolderId } from './lock.js';
@@ -16,10 +16,8 @@ type LockArgs = {
 /**
  * Write the lock fields and nothing else, on the row being edited.
  *
- * **Which row.** The lock is not `$root()`, so on a versioned config it lives with the content —
- * one claim per revision. Two people on two different versions are not editing the same thing, and
- * locking one must not lock the other. Where there are no versions there is one row and this
- * resolves to it.
+ * **Which row.** On a versioned config, the version row: one claim per revision. Otherwise the
+ * document's one row.
  *
  * **`updateWhere` rather than `update`**: a table, a filter and a patch, writing exactly the
  * columns it is given. Opening a document is not editing it, so the write leaves `updatedAt` where
@@ -28,7 +26,9 @@ type LockArgs = {
  */
 const writeLock = async (
   args: LockArgs,
-  data: { currentlyEditedBy: string | null; currentlyEditedAt: Date | null }
+  data: { currentlyEditedBy: string | null; currentlyEditedAt: Date | null },
+  /** Whether the other tabs hear of a change of hands. */
+  notify = true
 ) => {
   const { event, config, doc } = args;
   const { rime } = event.locals;
@@ -53,7 +53,7 @@ const writeLock = async (
   // Tell whoever else has the document open, so they reload — for the overlay, and for the
   // content, which the holder has usually just changed. Only when the lock actually changed
   // hands: a claim is also the renewal, and those would reach every client twice a TTL.
-  if (lockHolderId(doc) !== data.currentlyEditedBy) {
+  if (notify && lockHolderId(doc) !== data.currentlyEditedBy) {
     // Keyed on the document's own id, not the version row's — it is what the panel subscribed to.
     rime.sse.emit(`rime:${config.slug}:${doc.id}`, 'rime:lock');
   }
@@ -80,8 +80,7 @@ export const claimEditLock = async (args: LockArgs & { force?: boolean }) => {
  * Give the document back, if it is ours to give — as a short lease rather than a hand-back.
  *
  * The claim keeps our name and is back-dated to expire in `EDIT_LOCK_TTL_AFTER_CLOSE_MS`, so a
- * refresh has time to reclaim it. Clearing it outright is what let another tab's renewal take the
- * document from someone who only reloaded.
+ * refresh has time to reclaim it.
  *
  * The `doc` guard matters: a release racing somebody else's claim would otherwise hand them a
  * document with no lock on it a moment after they took it.
@@ -108,7 +107,8 @@ export const moveEditLock = async (args: LockArgs & { to: Partial<GenericDoc> })
   const { doc, to, userId } = args;
   if (lockHolderId(doc) !== userId || isLockStale(doc.currentlyEditedAt)) return false;
 
-  await writeLock(args, { currentlyEditedBy: null, currentlyEditedAt: null });
+  // Clearing the old row says nothing: the stamp on the new row is the one change the others see.
+  await writeLock(args, { currentlyEditedBy: null, currentlyEditedAt: null }, false);
   await writeLock(
     { ...args, doc: to },
     { currentlyEditedBy: userId, currentlyEditedAt: new Date() }

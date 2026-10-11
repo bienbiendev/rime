@@ -1,10 +1,10 @@
-import type { ColumnDeclaration } from '$lib/core/adapter.js';
-import type { FieldBuilder, NodeStorage } from '$lib/core/fields/builders/field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { walkFields } from '$lib/core/fields/walk.js';
-import type { LocaleConfig } from '$lib/core/locale/types.js';
-import { isRelationField } from '$lib/fields/relation/index.js';
-import type { Field, FormField } from '$lib/fields/types.js';
+import type { ColumnDeclaration } from '#lib/core/adapter.js';
+import type { FieldBuilder, NodeStorage } from '#lib/core/fields/builders/field-builder.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import { walkFields } from '#lib/core/fields/walk.js';
+import type { LocaleConfig } from '#lib/core/locale/types.js';
+import { isRelationField } from '#lib/fields/relation/index.js';
+import type { Field, FormField } from '#lib/fields/types.js';
 import type { TableName } from '../naming.server.js';
 import { tableName as buildTableName, getSchemaColumnNames } from '../naming.server.js';
 import { toSchemaColumn } from './column.server.js';
@@ -15,8 +15,8 @@ import {
   templateTable
 } from './templates.server.js';
 
-/** A relation field on a prototype: which collection it points at, and whether it is localized. */
-export type RelationFieldsMap = Record<string, { to: string; localized?: boolean }>;
+/** The collections the prototype's relation fields point at, each once. */
+export type RelationTargets = Set<string>;
 
 /** A reference the read resolves: the table and column holding the foreign key, and its target. */
 export type ReferenceJoin = { table: TableName; column: string; to: string };
@@ -27,7 +27,7 @@ type Args = {
   rootName: TableName;
   locales?: LocaleConfig[];
   hasParent?: boolean;
-  relationFieldsMap?: RelationFieldsMap;
+  relationTargets?: RelationTargets;
   relationsDic?: Record<string, string[]>;
   /**
    * Storage-only columns to append to this config's table, in order.
@@ -46,7 +46,7 @@ type Args = {
 
 type Return = {
   schema: string;
-  relationFieldsMap: RelationFieldsMap;
+  relationTargets: RelationTargets;
   relationsDic: Record<string, string[]>;
   relationFieldsHasLocale: boolean;
   /** Every resolved reference on this table and its blocks and tree tables. */
@@ -58,13 +58,13 @@ const joinColumn = (parent: string, part: string) => (parent ? `${parent}__${par
 
 /**
  * The table of a collection or area, its locales branch when a field is localized, and one child
- * table per block type and per tree field. Relation fields become no column; they are collected in
- * `relationFieldsMap` for the junction table built later.
+ * table per block type and per tree field. Relation fields become no column; their targets are
+ * collected in `relationTargets` for the junction table built later.
  *
  * The branches below decide where a field's rows are stored, not what is below it:
  *
  * ```
- * relation                 junction rows      no column, an entry in relationFieldsMap
+ * relation                 junction rows      no column, its target in relationTargets
  * a node with storage      a child table      blocks and tree, built by this function recursing
  * a node without           the owner's row    group, tabs, and a container from a package
  * leaf                     one column
@@ -76,7 +76,7 @@ const buildRootTable = async ({
   rootName,
   hasParent,
   locales,
-  relationFieldsMap = {},
+  relationTargets = new Set(),
   relationsDic = {},
   featureColumns = [],
   versionsOf,
@@ -101,12 +101,11 @@ const buildRootTable = async ({
       tableName: name,
       hasParent: true,
       relationsDic,
-      relationFieldsMap,
+      relationTargets,
       locales,
       rootName
     });
     relationsDic = nested.relationsDic;
-    relationFieldsMap = nested.relationFieldsMap;
     if (nested.relationFieldsHasLocale) relationFieldsHasLocale = true;
     referenceJoins.push(...nested.referenceJoins);
     blocksRegister.push(name);
@@ -138,13 +137,7 @@ const buildRootTable = async ({
         if (field.get.localized) {
           relationFieldsHasLocale = true;
         }
-        relationFieldsMap = {
-          ...relationFieldsMap,
-          [field.name]: {
-            to: field.get.relationTo,
-            localized: field.get.localized
-          }
-        };
+        relationTargets.add(field.get.relationTo);
       } else if (field.use.nodes().length) {
         // A branch stored as rows of its own gets a child table; any other flattens into the
         // owner's row, `attributes__seo__title`.
@@ -227,7 +220,7 @@ const buildRootTable = async ({
 
   return {
     schema: [table, ...blocksTables].join('\n\n'),
-    relationFieldsMap,
+    relationTargets,
     relationFieldsHasLocale,
     relationsDic,
     referenceJoins

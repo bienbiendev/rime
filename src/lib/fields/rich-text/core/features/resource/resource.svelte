@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import { apiUrl } from '$lib/core/routes/util.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import CardResource from '$lib/panel/components/ui/card-resource/card-resource.svelte';
-  import * as Command from '$lib/panel/components/ui/command/index.js';
-  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import { apiUrl } from '#lib/core/routes/util.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import CardResource from '#lib/panel/components/ui/card-resource/card-resource.svelte';
+  import PickDialog from '../pick-dialog.svelte';
+  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
   import type { NodeViewProps } from '@tiptap/core';
   import { onMount } from 'svelte';
   import NodeViewWrapper from '../../svelte/node-view-wrapper.svelte';
@@ -52,10 +52,6 @@
   $effect(() => {
     if (ressource.data) {
       docs = ressource.data.docs;
-      // Update atttributes if document has changed
-      if (node.attrs.id) {
-        selected = docs.find((doc) => doc.id === node.attrs.id);
-      }
     }
   });
 
@@ -86,7 +82,7 @@
     updateAttributes({
       id: selected.id,
       title: selected.title,
-      _type: extension.options.source,
+      _type: selected._type,
       _thumbnail: selected._thumbnail,
       _fresh: false
     });
@@ -109,23 +105,12 @@
   </div>
 </NodeViewWrapper>
 
-<Command.Dialog bind:open={isDialogOpen} preventScroll={false}>
-  <Command.Input placeholder="Select a resource" />
-
-  <Command.List>
-    <Command.Empty>No results found.</Command.Empty>
-    {#each docs as doc, index (index)}
-      <Command.Item
-        value={doc.filename}
-        onSelect={() => {
-          handleResourceSelection(doc);
-        }}
-      >
-        {doc.title}
-      </Command.Item>
-    {/each}
-  </Command.List>
-</Command.Dialog>
+<PickDialog
+  bind:open={isDialogOpen}
+  items={docs}
+  label={(doc) => doc.title}
+  onPick={handleResourceSelection}
+/>
 
 <style lang="postcss">
   @import '../../../../../panel/style/mixins/index.css';

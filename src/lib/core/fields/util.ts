@@ -1,6 +1,6 @@
-import type { Field, FieldAccess, FormField, SeparatorField } from '$lib/fields/types.js';
-import { normalizeFieldPath } from '$lib/util/string.js';
-import type { Dic } from '$lib/util/types.js';
+import type { Field, FieldAccess, FormField, SeparatorField } from '#lib/fields/types.js';
+import { normalizeFieldPath } from '#lib/util/string.js';
+import type { Dic } from '#lib/util/types.js';
 import type { FormFieldBuilder } from './builders/form-field-builder.js';
 import type { FieldBuilder } from './builders/index.js';
 import { matchesSegment, walkFields } from './walk.js';
@@ -29,28 +29,6 @@ export const isNotHidden = <T extends FormField>(field: FormFieldBuilder<T>) => 
  * Checks if a field has live updates enabled.
  */
 export const isLiveField = (field: Field) => field.live;
-
-/**
- * Converts a path with numeric indices to a regex pattern
- * Numbers between dots or between dot and colon are converted to \d+
- *
- * @example
- * pathToRegex('some.0.path3') // matches 'some.\\d+.path3'
- * pathToRegex('some.0:bar.path3') // matches 'some.\\d+:bar.path3'
- * pathToRegex('some.31.baz.bar:foo.ouep12') // matches 'some.\\d+.baz.bar:foo.ouep12'
- * pathToRegex('some.31.baz.bar:foo.4.ouep12') // matches 'some.\\d+.baz.bar:foo.\\d+.ouep12'
- */
-export function pathToRegex(path: string): RegExp {
-  // Escape special regex characters except dots and colons
-  const escaped = path.replace(/[\\^$*+?{}[\]|()]/g, '\\$&');
-
-  // Replace numeric indices that are:
-  // - preceded by a dot: \.123
-  // - followed by a dot or colon: 123\. or 123:
-  const pattern = escaped.replace(/(?<=\.)(\d+)(?=[.:])|\b(\d+)(?=[.:])/g, '\\d+');
-
-  return new RegExp(`^${pattern}$`);
-}
 
 /**
  * Retrieves a field configuration by its dot-notation path
@@ -204,16 +182,15 @@ export function getFieldListAtPath(
  * `$root()`.
  *
  * Read off the config, never a list of names, because the schema generator splits the two tables
- * by the same flag: the base table gets `filter((f) => f.get.root)`, the versions table gets the rest. A
- * name-matching list would silently drop any field marked by something other than the two features
- * whose names happened to be in it — there is no versions column to fall back to.
+ * by the same flag: the base table gets `filter((f) => f.get.root)`, the versions table gets the
+ * rest.
  *
  * Top-level only, matching the generator: a nested field cannot be split off its parent.
  */
 export const baseFieldNames = (config: { fields: FieldBuilder[] }): string[] =>
   config.fields.filter((field) => field.get.root).map((field) => field.name);
 
-export type ResolvedReference = {
+type ResolvedReference = {
   /** The field itself, for whoever must ask it something — who may read it, for one. */
   field: FormFieldBuilder<FormField>;
   /** The document path: `meta.owner`. */
@@ -225,6 +202,20 @@ export type ResolvedReference = {
   /** The collection it points at. */
   to: string;
 };
+
+/**
+ * The resolved references a reader may see, by path — what a read asks the adapter to join. A
+ * reference the pipeline would drop for this reader is not joined for nothing.
+ */
+export const readableReferences = (
+  fields: FieldBuilder[],
+  user: Parameters<FieldAccess>[0]
+): string[] =>
+  resolvedReferencesOf(fields)
+    .filter((reference) => reference.field.use.accessRead(user))
+    .map((reference) => reference.path);
+
+const resolvedReferencesMemo = new WeakMap<FieldBuilder[], ResolvedReference[]>();
 
 /**
  * The fields a read resolves into the document they reference, with the column each one is
@@ -241,35 +232,15 @@ export type ResolvedReference = {
  * Walks tabs and groups, whose columns sit on the owner's row. Blocks and tree rows are their
  * own tables and are not walked.
  */
-/**
- * The resolved references a reader may see, by path — what a read asks the adapter to join. A
- * reference the pipeline would drop for this reader is not joined for nothing.
- */
-export const readableReferences = (
-  fields: FieldBuilder[],
-  user: Parameters<FieldAccess>[0]
-): string[] =>
-  resolvedReferencesOf(fields)
-    .filter((reference) => reference.field.use.accessRead(user))
-    .map((reference) => reference.path);
-
-const resolvedReferencesMemo = new WeakMap<FieldBuilder[], ResolvedReference[]>();
-
-export const resolvedReferencesOf = (
-  fields: FieldBuilder[],
-  parentPath = ''
-): ResolvedReference[] => {
+export const resolvedReferencesOf = (fields: FieldBuilder[]): ResolvedReference[] => {
   // A config's fields do not change once built, and this is asked once per query and once per
   // document read: answered once per list of fields.
-  if (!parentPath) {
-    let found = resolvedReferencesMemo.get(fields);
-    if (!found) {
-      found = collectResolvedReferences(fields, '');
-      resolvedReferencesMemo.set(fields, found);
-    }
-    return found;
+  let found = resolvedReferencesMemo.get(fields);
+  if (!found) {
+    found = collectResolvedReferences(fields, '');
+    resolvedReferencesMemo.set(fields, found);
   }
-  return collectResolvedReferences(fields, parentPath);
+  return found;
 };
 
 const collectResolvedReferences = (fields: FieldBuilder[], parentPath: string) => {
@@ -291,15 +262,8 @@ const collectResolvedReferences = (fields: FieldBuilder[], parentPath: string) =
  * Splits a write into the half that belongs on the base row and the half that belongs on the
  * content row.
  *
- * Lived in `adapter-sqlite/util.server.ts` as `extractRootData`, which is one layer too low: which
- * fields are base fields is a fact about the field configs, and every adapter would have to
- * re-derive it. It is also where the write plan needs it (core/pipeline/write-plan.ts), which is
- * above any adapter.
- *
- * Non-mutating, unlike the version it replaces — that one deleted the base keys out of the
- * caller's own `data`, which `runUpdate` then went on to hand to `persistRelational`. Nothing
- * depended on that (blocks, tree and relations resolve against `incomingPaths`, and no base field
- * is one), but a write that quietly empties its argument is a trap either way.
+ * The base half is every field marked `$root()`, the content half the rest. Used by the write plan
+ * (core/prototype/shared/versions/write-plan.ts). Leaves `data` untouched.
  */
 export const splitRootData = (data: Dic, config: { fields: FieldBuilder[] }) => {
   const base: Dic = {};

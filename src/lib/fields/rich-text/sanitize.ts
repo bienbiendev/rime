@@ -1,35 +1,34 @@
-import { sanitize } from '$lib/util/string.js';
+import { isSafeUrl } from '#lib/util/url.js';
 import type { JSONContent } from '@tiptap/core';
 
-// Helper function to sanitize JSONContent recursively
-export const sanitizeJSONContent = (content: JSONContent): any => {
+type Attrs = Record<string, any> | undefined;
+
+/** Removes an `href` that would run script. */
+const sanitizeAttrs = (attrs: Attrs): Attrs => {
+  if (typeof attrs?.href !== 'string' || isSafeUrl(attrs.href)) return attrs;
+  const rest = { ...attrs };
+  delete rest.href;
+  return rest;
+};
+
+/**
+ * Removes the unsafe `href` of every node and mark. Text is kept as typed: the renderer escapes it.
+ *
+ * ```ts
+ * sanitizeJSONContent({ type: 'text', text: 'a < b', marks: [{ type: 'link', attrs: { href: 'javascript:x' } }] })
+ * // { type: 'text', text: 'a < b', marks: [{ type: 'link', attrs: {} }] }
+ * ```
+ */
+export const sanitizeJSONContent = (content: JSONContent): JSONContent => {
   if (!content) return content;
-
-  // Prevent code mark from being sanitized (preserve original content)
-  if (Array.isArray(content.marks) && content.marks.map((m) => m.type).includes('code')) {
-    return content;
-  }
-
-  // Handle text nodes - sanitize the text content
-  if (content.type === 'text' && content.text) {
-    return {
-      ...content,
-      text: sanitize(content.text)
-    };
-  }
-
-  // Skip sanitization for code blocks (preserve original content)
-  if (content.type === 'codeBlock') {
-    return content;
-  }
-
-  // Recursively handle content array
-  if (content.content && Array.isArray(content.content)) {
-    return {
-      ...content,
-      content: content.content.map(sanitizeJSONContent)
-    };
-  }
-
-  return content;
+  return {
+    ...content,
+    ...(content.attrs && { attrs: sanitizeAttrs(content.attrs) }),
+    ...(content.marks && {
+      marks: content.marks.map((mark) =>
+        mark.attrs ? { ...mark, attrs: sanitizeAttrs(mark.attrs) } : mark
+      )
+    }),
+    ...(Array.isArray(content.content) && { content: content.content.map(sanitizeJSONContent) })
+  };
 };

@@ -1,9 +1,9 @@
 import type { Component } from 'svelte';
 import type { IconProps } from '@lucide/svelte';
-import type { User } from '$lib/core/auth/types.js';
-import type { PanelLanguage } from '$lib/core/i18n/index.js';
-import type { DashboardEntry } from '$lib/panel/pages/dashboard/types.js';
-import type { BuiltCollectionClient } from '$lib/core/config/types.js';
+import type { User } from '#lib/core/auth/types.js';
+import type { PanelLanguage } from '#lib/core/i18n/index.js';
+import type { DashboardEntry } from '#lib/panel/pages/dashboard/types.js';
+import type { BuiltCollectionClient } from '#lib/core/config/types.js';
 
 /** The groups the panel's sidebar shows, and the icon each carries. */
 export type NavigationConfig = {
@@ -12,11 +12,11 @@ export type NavigationConfig = {
 
 /** What an author writes under `panel`. */
 export type PanelConfig = {
-  /** who can accesss the panel */
+  /** who can access the panel */
   $access?: (user: User | undefined) => boolean;
   /** Custom panel routes that render a given component */
   routes?: Record<string, CustomPanelRoute>;
-  /** The panel language, "en" or "fr" supports only */
+  /** The panel language: 'en' or 'fr'. */
   language?: PanelLanguage;
   /** Sidebar navigation groups labels and icons */
   navigation?: NavigationConfig;

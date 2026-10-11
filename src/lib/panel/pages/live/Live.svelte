@@ -1,25 +1,27 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import type { BuiltConfigClient } from '$lib/core/config/types';
-  import { t__ } from '$lib/core/i18n';
-  import { panelPath } from '$lib/core/routes/util.js';
-  import LiveEditPanel from '$lib/panel/components/sections/live/LiveEditPanel.svelte';
-  import Commands from '$lib/panel/components/sections/commands/Commands.svelte';
-  import LiveFloatingUI from '$lib/panel/components/sections/live/LiveFloatingUI.svelte';
-  import { Pane, PaneGroup, PaneResizer } from '$lib/panel/components/ui/pane/index.js';
-  import { Toaster } from '$lib/panel/components/ui/sonner';
-  import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
-  import { setAPIProxyContext } from '$lib/panel/context/api-proxy.svelte';
-  import { setConfigContext } from '$lib/panel/context/config.svelte';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { setLivePanelContext, type ActivePanel } from '$lib/panel/context/livePanel.svelte.js';
-  import { setLocaleContext } from '$lib/panel/context/locale.svelte';
-  import { setTitleContext } from '$lib/panel/context/title';
-  import { setUserContext } from '$lib/panel/context/user.svelte';
-  import type { GenericDoc, User } from '$lib/types';
-  import { trycatchFetch } from '$lib/util/function';
-  import { snapshot } from '$lib/util/state';
-  import { toKebabCase } from '$lib/util/string';
+  import type { BuiltConfigClient } from '#lib/core/config/types.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { API_PREFIX } from '#lib/core/routes/constants.js';
+  import { panelPath } from '#lib/core/routes/util.js';
+  import LiveEditPanel from '#lib/panel/components/sections/live/LiveEditPanel.svelte';
+  import Commands from '#lib/panel/components/sections/commands/Commands.svelte';
+  import LiveFloatingUI from '#lib/panel/components/sections/live/LiveFloatingUI.svelte';
+  import { Pane, PaneGroup, PaneResizer } from '#lib/panel/components/ui/pane/index.js';
+  import { Toaster } from '#lib/panel/components/ui/sonner/index.js';
+  import SpinLoader from '#lib/panel/components/ui/spin-loader/SpinLoader.svelte';
+  import { setAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import { setConfigContext } from '#lib/panel/context/config.svelte.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { setLivePanelContext, type ActivePanel } from '#lib/panel/context/livePanel.svelte.js';
+  import { setLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { setTitleContext } from '#lib/panel/context/title.js';
+  import { setUserContext } from '#lib/panel/context/user.svelte.js';
+  import type { GenericDoc, User } from '#lib/types.js';
+  import { trycatchFetch } from '#lib/util/function.js';
+  import { snapshot } from '#lib/util/state.js';
+  import { withLocale } from '#lib/panel/util/url.js';
+  import { toKebabCase } from '#lib/util/string.js';
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
 
@@ -34,18 +36,18 @@
   type Props = { data: Data; config: BuiltConfigClient };
   const { data, config }: Props = $props();
 
-  setAPIProxyContext();
   // svelte-ignore state_referenced_locally
   setConfigContext(config);
   // svelte-ignore state_referenced_locally
   setUserContext(data.user);
   // svelte-ignore state_referenced_locally
-  setLocaleContext(data.locale);
-  setTitleContext('[untitled]');
+  const locale = setLocaleContext(data.locale);
+  setAPIProxyContext(() => locale.code);
+  setTitleContext('');
 
   // One entry per unique `update` key — never removed once added
   let panelContexts = $state<Record<string, { doc: any }>>({});
-  // Collected from LivePanelContext children after mount
+  // One form per `update` key, handed over by LiveEditPanel's `onFormReady`.
   let panelForms = $state<Record<string, DocumentFormContext>>({});
   // Stack-based navigation: last entry is the active panel, Escape pops one level
   let panelStack = $state<ActivePanel[]>([]);
@@ -55,6 +57,7 @@
   let rootDocumentPanel = $state<ActivePanel>();
 
   let paneLeft: ReturnType<typeof Pane>;
+  // An update key is an API path without `/api`: `/blog-posts/123?locale=fr`, `/infos`
   const VALID_UPDATE = /^\/[a-z][a-z0-9-]*(?:\/[a-zA-Z0-9_-]+)?(?:\?[a-zA-Z0-9_=&%.-]*)?$/;
   let iframe: HTMLIFrameElement;
   let iframeSrc = $state('');
@@ -62,7 +65,6 @@
   // Normalize URLs by removing trailing slashes
   function normalizeUrl(url: string): string {
     if (!url) return '';
-    // Remove trailing slash if it exists
     return url.endsWith('/') ? url.slice(0, -1) : url;
   }
 
@@ -89,23 +91,13 @@
     };
   }
 
-  // Validate the update URI format and extract slug and id
-  function parseUpdate(update: string): { slug: string; id?: string } | null {
-    if (!VALID_UPDATE.test(update)) return null;
-    const [, slug, id] = update.split('/');
-    return { slug, id };
-  }
-
-  // Wrapper tells the iframe it's live - using requestAnimationFrame for better performance
+  // Posts `{ handshake: true }` to the iframe every 300 ms until it answers.
   function handshake() {
     if (sync === false) {
-      // Use requestAnimationFrame to yield to the browser for rendering
       requestAnimationFrame(() => {
         if (iframe?.contentWindow) {
           iframe.contentWindow.postMessage({ handshake: true });
         }
-        // Continue handshake attempts until synced
-        // Use setTimeout outside to ensure we don't create a tight animation frame loop
         setTimeout(handshake, 300);
       });
     }
@@ -120,12 +112,15 @@
   });
 
   async function activatePanel(key: string, update: string, fieldPath: string) {
-    const parsed = parseUpdate(update);
-    if (!parsed) return console.warn(`Invalid update key: ${update}`);
+    if (!VALID_UPDATE.test(update)) {
+      return console.warn(
+        `Invalid update key: ${update} (expected an API path such as /blog-posts/123)`
+      );
+    }
 
     if (!panelContexts[update]) {
-      const url = parsed.id ? `/api/${parsed.slug}/${parsed.id}` : `/api/${parsed.slug}`;
-      const res = await fetch(url);
+      // The key's own locale stays
+      const res = await fetch(withLocale(`${API_PREFIX}${update}`, locale.code));
       if (!res.ok) return;
       panelContexts[update] = { doc: (await res.json()).doc };
 
@@ -149,12 +144,9 @@
     // Only accept messages from the expected iframe origin
     if (!iframeOrigin || e.origin !== iframeOrigin) return;
 
-    // Handle handshake response from iframe - process in next microtask
+    // The page answered the handshake with its URL: in sync once it is the one asked for
     if (e.data.handshake) {
-      // Use Promise.resolve().then to defer state update to next microtask
-      Promise.resolve().then(() => {
-        iframeSrc = e.data.handshake;
-      });
+      iframeSrc = e.data.handshake;
     }
 
     // Handle navigation request from iframe
@@ -178,12 +170,11 @@
   };
 
   onMount(() => {
-    // Set up message listener when component mounts
     window.addEventListener('message', onIframeMessage);
   });
 
   $effect(() => {
-    // Check wether the iframe src has a 200 status code and is reachable
+    // Check whether the iframe src has a 200 status code and is reachable
     trycatchFetch(data.src, { method: 'HEAD' }).then(([error, response]) => {
       if (error || !response?.ok) {
         console.error(`Error loading iframe, check your routes for ${data.src}`);
@@ -194,13 +185,6 @@
         }
       }
     });
-  });
-
-  $effect(() => {
-    // Log when sync is established
-    if (sync) {
-      console.log('live:synced');
-    }
   });
 
   $effect(() => {
@@ -224,9 +208,6 @@
   setLivePanelContext({
     get activePanel() {
       return activePanel;
-    },
-    get panelStack() {
-      return panelStack;
     }
   });
 
@@ -238,12 +219,11 @@
     }
   }
 
+  // A collection document goes back to its page, an area to the area page.
   function backToDocumentPanel() {
-    const slug = data.slug;
-    const id = data.doc.id;
-    // Start with the base URI for the panel, adding the item ID if present
-    const panelUri = id ? panelPath(toKebabCase(slug), id) : panelPath(toKebabCase(slug));
-    return goto(panelUri);
+    const kebab = toKebabCase(data.slug);
+    const isCollection = data.doc._prototype === 'collection';
+    return goto(isCollection ? panelPath(kebab, data.doc.id) : panelPath(kebab));
   }
 
   function toggleRootPanel() {
@@ -322,17 +302,6 @@
     justify-content: flex-start;
     height: 100vh;
     background-color: var(--rz-bg-page);
-  }
-
-  .rz-live-container__side-panel {
-    width: 100%;
-    flex-shrink: 0;
-    flex-grow: 0;
-    border-right: 1px solid var(--rz-border);
-  }
-
-  :global(.rz-live-hidden) {
-    display: none;
   }
 
   .rz-live-container iframe {

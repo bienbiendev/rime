@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import type { JSONContent } from '@tiptap/core';
   import { defaultFeatures } from '../core/features/index.js';
   import RichTextEditorCore from '../core/rich-text-editor-core.svelte';

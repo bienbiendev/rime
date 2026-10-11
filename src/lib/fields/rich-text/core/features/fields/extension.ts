@@ -1,18 +1,10 @@
-import type { FieldBuilder } from '$lib/core/fields/builders/index.js';
-import type { FieldsPreviewProps } from '$lib/fields/types.js';
-import type { Dic } from '$lib/util/types.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/index.js';
+import type { FieldsPreviewProps } from '#lib/fields/types.js';
 import { Node, mergeAttributes } from '@tiptap/core';
 import type { Component } from 'svelte';
 import SvelteNodeViewRenderer from '../../svelte/node-view-renderer.svelte';
+import { jsonAttribute } from '../json-attribute.js';
 import FieldsComponent from './fields.svelte';
-
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    'rich-text-fields': {
-      insertSheet: (attributes?: Dic) => ReturnType;
-    };
-  }
-}
 
 export interface FieldsFeatureExtensionOptions {
   fields: FieldBuilder[];
@@ -27,23 +19,7 @@ export const FieldsExtension = Node.create<FieldsFeatureExtensionOptions>({
   inline: false,
 
   addAttributes() {
-    return ['json'].reduce((acc: Dic, key) => {
-      acc[key] = { default: null };
-      return acc;
-    }, {});
-  },
-
-  addCommands() {
-    return {
-      insertSheet:
-        (attributes = {}) =>
-        ({ commands }) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs: attributes
-          });
-        }
-    };
+    return { json: jsonAttribute('json') };
   },
 
   parseHTML() {

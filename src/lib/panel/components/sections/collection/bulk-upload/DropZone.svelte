@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
+  import { t__ } from '#lib/core/i18n/index.js';
   import {
     acceptLabel,
     uploadFiles,
     type UploadProgress as Progress,
     type UploadTarget
-  } from '$lib/panel/util/upload-file.js';
-  import { Upload } from '@lucide/svelte';
+  } from '#lib/panel/util/upload-file.js';
+  import Upload from '@lucide/svelte/icons/upload';
   import FileDrop from './FileDrop.svelte';
   import UploadProgress from './UploadProgress.svelte';
 

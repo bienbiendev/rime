@@ -1,6 +1,6 @@
-import type { Collection } from '$lib/core/config/types.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { directoriesOf } from '$lib/core/prototype/collection/upload/naming.js';
+import type { Collection } from '#lib/core/config/types.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import { directoriesOf } from '#lib/core/prototype/collection/upload/naming.js';
 import { augmentUpload as augmentUploadBase } from './module.js';
 import type { WithNormalizedUpload } from './types.js';
 
@@ -8,8 +8,7 @@ import type { WithNormalizedUpload } from './types.js';
  * The upload feature's server half.
  *
  * Same export name as `module.ts` for the augment, because `$rime/modules` picks the file, not the
- * name — the `…Server` suffix this replaces was doing the resolver's job by hand. `uploadHooks`
- * has no client half at all, so the resolver stubs it to `undefined` there.
+ * name.
  */
 
 /**

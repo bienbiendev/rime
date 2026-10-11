@@ -1,7 +1,10 @@
-import { PARAMS } from '$lib/core/constants';
-import { AUTO_SAVE_DELAY_MS, VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant';
+import { PARAMS } from '#lib/core/constants.js';
+import {
+  AUTO_SAVE_DELAY_MS,
+  VERSIONS_STATUS
+} from '#lib/core/prototype/shared/versions/constant.js';
 import test, { expect, type APIRequestContext, type Page } from '@playwright/test';
-import { API_BASE_URL, panelUrl, signIn } from '../util.js';
+import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -26,14 +29,8 @@ const HISTORY = '.rz-document-versions';
  * the REST API, which never shows an auto-saved row unless asked for it by `versionId`.
  */
 
-async function loginAs(page: Page, email: string, password: string) {
-  await page.context().clearCookies();
-  await page.goto(panelUrl('sign-in'));
-  await page.locator('input[name="email"]').pressSequentially(email, { delay: 30 });
-  await page.locator('input[name="password"]').pressSequentially(password, { delay: 30 });
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL(panelUrl());
-}
+// The tests share ids and rows: one failing skips the rest
+test.describe.configure({ mode: 'serial' });
 
 /** The version history, from the settings menu. */
 async function openHistory(page: Page) {
@@ -107,7 +104,6 @@ test('Should create a published news and a second admin', async ({ request }) =>
 test('Typing auto-saves into a row of its own', async ({ page, request }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl());
-  await page.waitForLoadState('networkidle');
 
   const saved = page.waitForResponse(isAutoSavePost);
   await page.locator(TITLE).fill('Typed news, typing');
@@ -139,7 +135,6 @@ test('Typing auto-saves into a row of its own', async ({ page, request }) => {
 test('Reopening the document offers to resume', async ({ page }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl());
-  await page.waitForLoadState('networkidle');
 
   // The real row is on screen, the auto-save is offered.
   await expect(page.locator(TITLE)).toHaveValue('Typed news');
@@ -147,7 +142,6 @@ test('Reopening the document offers to resume', async ({ page }) => {
 
   await page.locator(OWN_BANNER).getByRole('link', { name: 'Resume' }).click();
   await page.waitForURL(new RegExp(`versionId=${autoSaveId}`));
-  await page.waitForLoadState('networkidle');
 
   // On the row itself there is nothing newer to announce.
   await expect(page.locator(TITLE)).toHaveValue('Typed news, typing');
@@ -161,7 +155,6 @@ test('Auto-saving with the history open lists the row, and leaving still offers 
 }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl(publishedVersionId));
-  await page.waitForLoadState('networkidle');
   await openHistory(page);
 
   const saved = page.waitForResponse(isAutoSavePost);
@@ -184,14 +177,12 @@ test('Auto-saving with the history open lists the row, and leaving still offers 
 
   // Back on the document, the banner offers the row.
   await page.goto(documentUrl());
-  await page.waitForLoadState('networkidle');
   await expect(page.locator(OWN_BANNER)).toBeVisible();
 });
 
 test('Saving the resumed row turns it into a version', async ({ page, request }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl(autoSaveId));
-  await page.waitForLoadState('networkidle');
 
   // Nothing changed since the auto-save, and Save is still on: it is the promotion.
   await expect(page.locator(SAVE)).toBeEnabled();
@@ -217,21 +208,20 @@ test('Saving the resumed row turns it into a version', async ({ page, request })
   expect(publishedRows.map((v) => v.id)).toEqual([autoSaveId]);
 
   await page.goto(documentUrl());
-  await page.waitForLoadState('networkidle');
+  // The banners are drawn with the form, from the same load
+  await expect(page.locator(TITLE)).toBeVisible();
   await expect(page.locator(OWN_BANNER)).toHaveCount(0);
 });
 
 test('Closing the banner keeps the row', async ({ page, request }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl());
-  await page.waitForLoadState('networkidle');
 
   const saved = page.waitForResponse(isAutoSavePost);
   await page.locator(TITLE).fill('Typed news, again');
   expect((await saved).status()).toBe(200);
 
   await page.goto(documentUrl());
-  await page.waitForLoadState('networkidle');
   await expect(page.locator(OWN_BANNER)).toBeVisible();
 
   // Closed for this visit only: the row is still there, and so is the offer on the next load.
@@ -240,7 +230,6 @@ test('Closing the banner keeps the row', async ({ page, request }) => {
   expect((await versionsOf(request)).filter((v) => v.isAutoSave)).toHaveLength(1);
 
   await page.reload();
-  await page.waitForLoadState('networkidle');
   await expect(page.locator(OWN_BANNER)).toBeVisible();
 
   // Deleting it is done from the version history.
@@ -250,7 +239,8 @@ test('Closing the banner keeps the row', async ({ page, request }) => {
   });
   expect(remove.status()).toBe(200);
   await page.reload();
-  await page.waitForLoadState('networkidle');
+  // The banners are drawn with the form, from the same load
+  await expect(page.locator(TITLE)).toBeVisible();
   await expect(page.locator(OWN_BANNER)).toHaveCount(0);
 });
 
@@ -258,7 +248,6 @@ test('Changing the status is not typing: no auto-save follows', async ({ page, r
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   // The published version is the one promoted above.
   await page.goto(documentUrl(autoSaveId));
-  await page.waitForLoadState('networkidle');
   const before = (await versionsOf(request)).length;
 
   await page.getByRole('button', { name: 'Published' }).click();
@@ -294,13 +283,11 @@ test("Somebody else's auto-save is announced, and editable when opened", async (
 
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl());
-  await page.waitForLoadState('networkidle');
   await expect(page.locator(OTHER_BANNER)).toBeVisible();
   await expect(page.locator(OTHER_BANNER)).toContainText('Typist');
   await expect(page.locator(OWN_BANNER)).toHaveCount(0);
 
   await page.goto(documentUrl(otherAutoSaveId));
-  await page.waitForLoadState('networkidle');
   await expect(page.locator(TITLE)).toHaveValue('Typed news, by the typist');
   await expect(page.locator(TITLE)).toBeEnabled();
   await expect(page.locator(SAVE)).toBeEnabled();
@@ -309,7 +296,6 @@ test("Somebody else's auto-save is announced, and editable when opened", async (
 test('The versions history labels the auto-saved row', async ({ page }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl(autoSaveId));
-  await page.waitForLoadState('networkidle');
   await openHistory(page);
 
   const row = page.locator('[data-version-auto-save="other"]');
@@ -321,7 +307,6 @@ test('The versions history labels the auto-saved row', async ({ page }) => {
 test('Deleting a version from the settings keeps the document', async ({ page, request }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl(autoSaveId));
-  await page.waitForLoadState('networkidle');
   const before = (await versionsOf(request)).length;
 
   await page.getByRole('button', { name: 'Document actions' }).click();
@@ -347,12 +332,12 @@ test('The last version of a document cannot be deleted', async ({ page, request 
       status: VERSIONS_STATUS.PUBLISHED
     }
   });
+  expect(created.status()).toBe(200);
   const { doc } = await created.json();
 
   // The menu says so, and the server refuses regardless.
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('news', doc.id)}?${PARAMS.VERSION_ID}=${doc.versionId}`);
-  await page.waitForLoadState('networkidle');
   await page.getByRole('button', { name: 'Document actions' }).click();
   await expect(page.getByRole('menuitem', { name: 'Delete this version' })).toBeDisabled();
 
@@ -360,6 +345,13 @@ test('The last version of a document cannot be deleted', async ({ page, request 
     headers
   });
   expect(response.status()).toBe(400);
+
+  // The version is still there
+  const read = await request.get(
+    `${API_BASE_URL}/news/${doc.id}?${PARAMS.VERSION_ID}=${doc.versionId}`,
+    { headers }
+  );
+  expect(read.status()).toBe(200);
 });
 
 test('Only an auto-save newer than the row on screen is announced', async ({ page, request }) => {
@@ -371,6 +363,7 @@ test('Only an auto-save newer than the row on screen is announced', async ({ pag
       status: VERSIONS_STATUS.PUBLISHED
     }
   });
+  expect(created.status()).toBe(200);
   const doc = (await created.json()).doc;
   const rowsOf = async () =>
     (
@@ -381,7 +374,6 @@ test('Only an auto-save newer than the row on screen is announced', async ({ pag
 
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('news', doc.id)}`);
-  await page.waitForLoadState('networkidle');
 
   // Typing lands in an auto-save, which is then the row on screen: nothing to announce.
   const saved = page.waitForResponse(isAutoSavePost);
@@ -392,7 +384,6 @@ test('Only an auto-save newer than the row on screen is announced', async ({ pag
 
   // Back on the published row, the auto-save is newer: announced.
   await page.goto(`${panelUrl('news', doc.id)}`);
-  await page.waitForLoadState('networkidle');
   await expect(page.locator(OWN_BANNER)).toBeVisible();
 
   // The published row is written after it: the auto-save is older, and stays out of the way.
@@ -402,8 +393,42 @@ test('Only an auto-save newer than the row on screen is announced', async ({ pag
   );
   expect(written.status()).toBe(200);
   await page.reload();
-  await page.waitForLoadState('networkidle');
   await expect(page.locator(TITLE)).toHaveValue('Newer or not, written since');
   await expect(page.locator(ANY_BANNER)).toHaveCount(0);
   expect((await rowsOf()).filter((row) => row.isAutoSave)).toHaveLength(1);
+});
+
+test('Saving works again after an auto-save that got no answer', async ({ page, request }) => {
+  const created = await request.post(`${API_BASE_URL}/news`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      attributes: { title: 'Offline news', slug: 'offline-news' },
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { id } = (await created.json()).doc;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('news', id));
+
+  // The connection drops under the first auto-save
+  await page.route(
+    (url) => url.search.includes(`${PARAMS.AUTO_SAVE}=true`),
+    (route) => route.abort(),
+    {
+      times: 1
+    }
+  );
+  await page.locator(TITLE).fill('Offline news, typed');
+  await expect(page.locator('[data-auto-save-state="paused"]')).toBeVisible();
+
+  const saved = page.waitForResponse(isSavePost);
+  await page.locator(SAVE).click();
+  expect((await saved).status()).toBe(200);
+
+  const response = await request.get(`${API_BASE_URL}/news/${id}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect((await response.json()).doc.attributes.title).toBe('Offline news, typed');
 });

@@ -1,10 +1,10 @@
-import { RIME_DEV_CACHE_DIR } from '$lib/core/constants.server.js';
-import cache from '$lib/core/dev/cache.server.js';
-import { sanitize } from '$lib/core/dev/codegen/sanitize/index.server.js';
-import { ensureGeneratedConfig, ensureUserConfigExist } from '$lib/core/dev/ensure.server.js';
-import { regenerateModulesDeclaration } from '$lib/core/dev/vite.server.js';
-import { logger } from '$lib/core/logger.server.js';
-import { trycatch } from '$lib/util/function.js';
+import { RIME_DEV_CACHE_DIR } from '#lib/core/constants.server.js';
+import cache from '#lib/core/dev/cache.server.js';
+import { sanitize } from '#lib/core/dev/codegen/sanitize/index.server.js';
+import { ensureGeneratedConfig, ensureUserConfigExist } from '#lib/core/dev/ensure.server.js';
+import { regenerateModulesDeclaration } from '#lib/core/dev/vite.server.js';
+import { logger } from '#lib/core/logger.server.js';
+import { trycatch } from '#lib/util/function.js';
 import { mkdirSync, rmSync } from 'fs';
 import path from 'path';
 
@@ -35,7 +35,7 @@ export const generate = async (args: { force?: boolean }) => {
   }
 
   /**
-   * Sanitize the user config and create the config.generated folder
+   * Sanitize the user config into GENERATED_DIR (`src/+rime.generated` by default)
    */
   async function sanitizeConfig() {
     await sanitize();
@@ -50,9 +50,14 @@ export const generate = async (args: { force?: boolean }) => {
     // Create a Vite server using the project's vite.config.ts
     const vite = await createServer({
       configFile: path.join(process.cwd(), 'vite.config.ts'),
+      // A cache of its own: this server runs with hmr off, and in `node_modules/.vite` that
+      // setting would make the next `vite dev` see a changed config and rebuild every dependency
+      cacheDir: path.join(RIME_DEV_CACHE_DIR, 'vite'),
       server: {
         hmr: false,
-        middlewareMode: true
+        middlewareMode: true,
+        // One run, nothing to reload: the files codegen writes must not reach SvelteKit's watcher
+        watch: { ignored: ['**'] }
       },
       optimizeDeps: { disabled: true },
       appType: 'custom',
@@ -66,10 +71,12 @@ export const generate = async (args: { force?: boolean }) => {
       clearConfigCache();
       clearRoutes();
     }
-    // Mark that a CLI generation is in flight, so a concurrently running dev
-    // server doesn't race us on the shared .rime cache (see rime.server.ts).
+    // Mark that a CLI generation is in flight, so a running dev server leaves the .rime cache to
+    // it (see core/codegen.server.ts). The marker holds this process's id and the time it started:
+    // a marker left by a process that died blocks nothing, and one older than ten minutes is
+    // ignored even when another process has taken that id.
     process.env.RIME_CLI = 'true';
-    cache.set('.cli', new Date().toISOString());
+    cache.set('.cli', `${process.pid} ${Date.now()}`);
     try {
       ensureUserConfigExist();
       await sanitizeConfig();
@@ -78,7 +85,7 @@ export const generate = async (args: { force?: boolean }) => {
       regenerateModulesDeclaration();
       const importPathJS = ensureGeneratedConfig();
 
-      logger.info('Starting vite server...');
+      logger.debug('Starting vite server...');
       const vite = await createServer();
       try {
         const mod = await vite.ssrLoadModule(importPathJS);
@@ -86,7 +93,7 @@ export const generate = async (args: { force?: boolean }) => {
         // ssrLoadModule only awaits the module's synchronous evaluation, so we
         // must await it directly to observe init failures (e.g. config validation).
         await mod.default;
-        logger.info('[✓] Generation completed successfully');
+        logger.debug('[✓] Generation completed successfully');
       } finally {
         await vite.close();
       }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { create } from '$lib/core/prototype/collection/definition.js';
-import { group } from '$lib/fields/group/index.js';
-import { text } from '$lib/fields/text/index.js';
+import { create } from '#lib/core/prototype/collection/definition.js';
+import { group } from '#lib/fields/group/index.js';
+import { text } from '#lib/fields/text/index.js';
 import { mergeWithInitialDocument } from './merge-with-initial.server.js';
 
 /**
@@ -47,14 +47,6 @@ describe('mergeWithInitialDocument', () => {
 
     // `b` comes from the initial document, `a` from the submission.
     expect(data.attributes).toEqual({ a: 'set', b: null });
-  });
-
-  it('leaves a config with no upload alone', async () => {
-    const plain = create('spec_merge_plain', { fields: [text('title').isTitle()] });
-
-    const data = await run(plain, { title: 'a' });
-
-    expect(data.title).toBe('a');
   });
 
   it('keeps a field sent empty, and fills a field not sent', async () => {

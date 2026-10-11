@@ -14,6 +14,7 @@
   const { onDragStart } = getContext<TiptapNodeViewContext>(TIPTAP_NODE_VIEW);
   let element: HTMLElement;
 
+  // The component's own markup wraps as normal text, not with the editor's `white-space`.
   onMount(async () => {
     await tick();
     element.style.whiteSpace = 'normal';

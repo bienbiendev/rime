@@ -18,34 +18,20 @@ function createStore(initial?: string) {
 
   setValue(initial);
 
+  /** A date in the panel language: `Saturday, Oct 3, 2026`, `samedi 3 oct. 2026`. */
   const dateFormat = (
     date: Date | string,
     args: { short?: boolean; withTime?: boolean } = { short: false, withTime: false }
   ) => {
     const { short, withTime } = args;
-
-    if (typeof date === 'string') {
-      date = new Date(date);
-    }
-
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    };
-    if (short) delete options.weekday;
+    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+    if (!short) options.weekday = 'long';
     if (withTime) {
       options.hour = '2-digit';
       options.minute = '2-digit';
-      options.second = undefined;
-      options.hour12 = false; // Use 24-hour format
+      options.hour12 = false;
     }
-    if (code) {
-      return date.toLocaleDateString(code, options);
-    } else {
-      return date.toLocaleDateString('en', options);
-    }
+    return new Date(date).toLocaleDateString(config?.raw.panel.language, options);
   };
 
   return {

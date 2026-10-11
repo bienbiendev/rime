@@ -1,13 +1,16 @@
 #!/usr/bin/env node
-import { logger } from '$lib/core/logger.server.js';
+import { logger } from '#lib/core/logger.server.js';
 import { spawnSync } from 'node:child_process';
 import { program } from 'commander';
 import { existsSync, writeFileSync } from 'fs';
+import { logSettings } from '../env.server.js';
 import { envProduction } from './templates/build.js';
 
-program.version('0.1').description('CMS utilities');
+logger.configure(logSettings);
+// The commands report their steps at debug: shown here even without a level set
+if (!['TRACE', 'DEBUG'].includes(logger.getLevel() ?? '')) logger.setLevel('DEBUG');
 
-program.description('Rime utilities');
+program.version('0.1').description('Rime utilities');
 
 program
   .command('init')
@@ -24,7 +27,7 @@ program
   .command('build')
   .option('-d, --with-database', 'Include database', false)
   .option('-e, --with-env', 'Create the /app/.env file from the production template', false)
-  .option('-s, --with-static', 'Copy the current static directory', false)
+  .option('-s, --with-static', 'Copy the current static directory and the uploads', false)
   .action(async (args) => {
     const build = await import('./commands/build.js').then((m) => m.build);
     build(args);
@@ -47,6 +50,23 @@ program
       await generate({
         force: args.force
       });
+    } catch {
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command('uploads:move')
+  .description(
+    'Moves the files of each upload collection from static/medias/<file> to ' +
+      'storage/uploads/<folder>/<file>. Run once, after upgrading.'
+  )
+  .action(async () => {
+    const uploadsMove = await import('./commands/uploads-move.server.js').then(
+      (m) => m.uploadsMove
+    );
+    try {
+      await uploadsMove();
     } catch {
       process.exitCode = 1;
     }
@@ -107,11 +127,11 @@ program
   .action(async (args) => {
     try {
       if (existsSync('./.env') && !args.force) {
-        logger.info('.env file already exists. Use --force to overwrite.');
+        logger.debug('.env file already exists. Use --force to overwrite.');
         return;
       }
       writeFileSync('./.env', envProduction());
-      logger.info('[✓] .env file created');
+      logger.debug('[✓] .env file created');
     } catch {
       process.exitCode = 1;
     }

@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import { Input } from '$lib/panel/components/ui/input/index.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { slugify } from '$lib/util/string.js';
-  import { Hash } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import { Input } from '#lib/panel/components/ui/input/index.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { slugify } from '#lib/util/string.js';
+  import Hash from '@lucide/svelte/icons/hash';
   import type { SlugFieldBuilder } from '../index.js';
 
   type Props = { path: string; config: SlugFieldBuilder; form: DocumentFormContext };
@@ -58,7 +58,7 @@
   <Input
     id={path || config.name}
     icon={Hash}
-    placeholder={config.get.placeholder}
+    placeholder={config.get.placeholder || slugify(config.get.label)}
     data-error={field.error ? '' : null}
     type="text"
     value={field.value}

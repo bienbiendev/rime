@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { FieldBuilder, FormFieldBuilder } from '$lib/core/fields/builders';
-  import type { FieldsPreviewProps } from '$lib/fields/types';
-  import FieldsPreview from '$lib/panel/components/fields/FieldsPreview.svelte';
-  import FieldsPreviewTrigger from '$lib/panel/components/fields/FieldsPreviewTrigger.svelte';
-  import * as Sheet from '$lib/panel/components/ui/sheet/index.js';
-  import { setFormContext } from '$lib/panel/context/form.svelte';
+  import { FieldBuilder, FormFieldBuilder } from '#lib/core/fields/builders/index.js';
+  import type { FieldsPreviewProps } from '#lib/fields/types.js';
+  import FieldsPreview from '#lib/panel/components/fields/FieldsPreview.svelte';
+  import FieldsPreviewTrigger from '#lib/panel/components/fields/FieldsPreviewTrigger.svelte';
+  import * as Sheet from '#lib/panel/components/ui/sheet/index.js';
+  import { createFormStore } from '#lib/panel/context/form.svelte.js';
   import type { NodeViewProps } from '@tiptap/core';
   import { onMount, type Component } from 'svelte';
   import NodeViewWrapper from '../../svelte/node-view-wrapper.svelte';
@@ -23,7 +23,7 @@
   let isSheetOpen = $state(false);
 
   // svelte-ignore state_referenced_locally
-  const form = setFormContext(node.attrs.json || {}, 'fields');
+  const form = createFormStore(node.attrs.json || {});
 
   onMount(() => {
     if (!node.attrs.json) {
@@ -63,7 +63,7 @@
 
 <Sheet.Root bind:open={isSheetOpen}>
   <Sheet.Content preventScroll={false} side="right" class="rz-rich-text-sheet">
-    {#each previewFields || [] as field, index (index)}
+    {#each previewFields as field, index (index)}
       {@const FieldComponent = field.component}
       <FieldComponent path={field.name} config={field} {form} />
     {/each}

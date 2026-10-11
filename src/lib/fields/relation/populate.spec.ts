@@ -13,6 +13,7 @@ afterEach(() => {
   populate.clear();
   fetchMock.mockClear();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe('populate', () => {
@@ -41,6 +42,21 @@ describe('populate', () => {
     ]);
     await populate({ relationTo: 'medias', documentId: 'm1' });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads in the locale it is given, once per locale', async () => {
+    await populate({ relationTo: 'medias', documentId: 'm1' }, 'fr');
+    await populate([{ relationTo: 'medias', documentId: 'm1' }], 'fr');
+    await populate({ relationTo: 'medias', documentId: 'm1' });
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/medias/m1?depth=1&locale=fr',
+      '/api/medias/m1?depth=1'
+    ]);
+  });
+
+  it('reads a resource link in the locale it is given', async () => {
+    await populate({ type: 'pages', value: 'p1', target: '_self' }, 'fr');
+    expect(fetchMock).toHaveBeenCalledWith('/api/pages/p1?depth=1&locale=fr');
   });
 
   it('takes a livePreview as is', async () => {

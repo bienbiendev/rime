@@ -1,17 +1,16 @@
-import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DefaultOptions, DefaultValueFn, FormField } from '$lib/fields/types.js';
-import { capitalize, sanitize } from '$lib/util/string.js';
+import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import type { DefaultValueFn, FormField } from '#lib/fields/types.js';
 import TextArea from './component/TextArea.svelte';
 
 export const textarea = (name: string) => new TextAreaFieldBuilder(name);
 
+const isString = (value: unknown) => typeof value === 'string' || 'Should be a string';
+
 export class TextAreaFieldBuilder extends FormFieldBuilder<TextAreaField> {
   constructor(name: string) {
     super(name, 'textarea');
-    this.field.hooks = {
-      beforeSave: [sanitize]
-    };
+    this.field.validate = isString;
   }
 
   get component() {
@@ -20,12 +19,6 @@ export class TextAreaFieldBuilder extends FormFieldBuilder<TextAreaField> {
 
   get cell() {
     return null;
-  }
-
-  defaultValue(value: string | DefaultValueFn<string>, options?: DefaultOptions) {
-    this.field.defaultValue = value;
-    this.field.defaultFill = options?.fill;
-    return this;
   }
 
   get dataType(): DataType {
@@ -42,20 +35,6 @@ export class TextAreaFieldBuilder extends FormFieldBuilder<TextAreaField> {
     return this;
   }
 
-  compile() {
-    if (!this.field.validate) {
-      this.field.validate = (value: any) => {
-        return typeof value === 'string' || 'Should be a string';
-      };
-    }
-
-    if (!this.field.placeholder) {
-      this.field.placeholder = this.field.label || capitalize(this.field.name);
-    }
-
-    return super.compile();
-  }
-
   protected override generateType(): string {
     return `${this.name}${this.get.required ? '' : '?'}: string`;
   }
@@ -68,5 +47,5 @@ export type TextAreaField = FormField & {
   type: 'textarea';
   defaultValue?: string | DefaultValueFn<string>;
   isTitle?: true;
-  placeholder: string;
+  placeholder?: string;
 };

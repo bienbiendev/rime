@@ -1,6 +1,6 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { isObjectLiteral } from '$lib/util/object.js';
-import type { Dic } from '$lib/util/types.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { isObjectLiteral } from '#lib/util/object.js';
+import type { Dic } from '#lib/util/types.js';
 
 /**
  * Sorts every key of the document, at every depth, so a response is stable to diff.
@@ -39,9 +39,11 @@ function sortDocumentKeys<T extends Dic>(obj: T): T {
     // If not an object or is null, return the value as-is
     if (!obj || typeof obj !== 'object') return obj;
 
-    // If array, process each object in the array
+    // A list: each list or plain object in it is sorted, anything else (a Date) kept as it is
     if (Array.isArray(obj)) {
-      return obj.map((item) => (typeof item === 'object' ? sortObjectKeys(item) : item));
+      return obj.map((item) =>
+        Array.isArray(item) || isObjectLiteral(item) ? sortObjectKeys(item) : item
+      );
     }
 
     // Sort the keys

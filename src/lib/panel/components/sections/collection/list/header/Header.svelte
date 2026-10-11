@@ -1,12 +1,10 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
-  import { ChevronDown, ChevronUp } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { getCollectionContext } from '#lib/panel/context/collection.svelte.js';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronUp from '@lucide/svelte/icons/chevron-up';
 
   const collection = getCollectionContext();
-
-  // attributes.title -> title
-  const titleName = $derived(collection.config.asTitle.split('.').at(-1) || 'title');
 </script>
 
 {#snippet sortable(name: string, label: string)}
@@ -32,13 +30,13 @@
   <span></span>
 
   <div class="rz-list-header__column">
-    {@render sortable(titleName, t__('common.title'))}
+    {@render sortable('title', t__('common.title'))}
   </div>
 
   {#each collection.columns as column (column.path)}
     <div class="rz-list-header__column" data-column="field">
       {#if column.table.sort}
-        {@render sortable(column.name, column.label ?? column.name)}
+        {@render sortable(column.path, column.label ?? column.name)}
       {:else}
         {column.label ?? column.name}
       {/if}

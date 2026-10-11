@@ -14,13 +14,15 @@ import {
   select,
   separator,
   slug,
+  tab,
+  tabs,
   text,
   textarea,
   time,
   toggle,
   tree
-} from '$lib/fields/index.js';
-import { access } from '$lib/core/auth/access.js';
+} from '#lib/fields/index.js';
+import { access } from '#lib/core/auth/access.js';
 import { Collection } from '$rime/config';
 import Gallery from './renders/Gallery.svelte';
 import Grid from './renders/Grid.svelte';
@@ -64,6 +66,12 @@ const blockGrid = block('grid')
 // Blocks without a render: rows on the focus stage, a columns block holding notes of its own.
 const blockNote = block('note').fields(text('text'));
 const blockColumns = block('columns').fields(text('title'), blocks('cells', [blockNote]));
+
+// A block name with an underscore: its fields sit at `layout.0.title`, `layout.0.image`
+const blockCallToAction = block('call_to_action').fields(
+  text('title').required(),
+  relation('image').to('targets')
+);
 
 export const Pages = Collection.create('pages', {
   // Pages hang under one another: the list's tree view and the parent field.
@@ -122,6 +130,10 @@ export const Pages = Collection.create('pages', {
     text('priorityLabel'),
 
     relation('thumbnail').to('targets'),
+    // Many, to a collection that is no upload: picked from a list, or created from the field
+    relation('tags').to('targets').many(),
+    // A relation to a slug holding `Id`: its junction column is `productIdeasId`
+    relation('idea').to('productIdeas'),
     // Many medias in the plain form: the picker's toggle, marks and sweep.
     relation('photos').to('medias').many(),
     richText('intro'),
@@ -147,17 +159,30 @@ export const Pages = Collection.create('pages', {
       checkbox('metaFeatured'),
       toggle('metaPublished'),
       select('metaCategory').options('news', 'blog', 'docs'),
-      number('metaPriority').min(0).max(10)
+      number('metaPriority').min(0).max(10),
+      relation('metaImage').to('targets'),
+      // Tabs inside a group: their fields sit at meta.seo.seoTitle, meta.social.ogTitle
+      tabs(
+        tab('seo').fields(text('seoTitle'), relation('seoImage').to('targets')),
+        tab('social').fields(text('ogTitle'))
+      ),
+      // Blocks inside a group: a save that sends another member of the group keeps them
+      blocks('gallery', [blockImage])
     ),
 
     blocks('sections', [blockParagraph, blockImage, blockKeyFacts, blockGrid, blockGallery]),
     // One row in the form, edited in focus mode.
     blocks('extras', [blockParagraph, blockImage]).layout('summary'),
     blocks('plain', [blockNote, blockColumns]),
+    blocks('layout', [blockCallToAction]),
 
     // Titled by their label; one without a label reads `Links 1.2`.
     tree('links')
-      .fields(text('label'), link('url').types('url', 'email', 'pages'))
+      .fields(
+        text('label'),
+        link('url').types('url', 'email', 'pages'),
+        relation('target').to('targets')
+      )
       .renderTitle(({ values }) => values.label)
   ]
 });

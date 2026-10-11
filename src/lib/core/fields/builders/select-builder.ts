@@ -1,29 +1,26 @@
-import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
+import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
 import type {
   DefaultOptions,
   DefaultValueFn,
   FieldValidationFunc,
   FormField,
   Option
-} from '$lib/fields/types.js';
-import { capitalize } from '$lib/util/string.js';
+} from '#lib/fields/types.js';
+import { capitalize } from '#lib/util/string.js';
 
+/** A select's value is one of its options, or a list of distinct options when it takes `many`. */
 const ensureSelectIsOption: FieldValidationFunc<FieldWithOptions> = (value, { config }) => {
-  const selected = value;
-  const validValues = config.options.map((o) => o.value);
-  if (selected && Array.isArray(selected)) {
-    for (const value of selected) {
-      if (!validValues.includes(value)) {
-        return `Value should be one of these : ${validValues.join('|')}`;
-      }
-    }
-  } else if (typeof selected === 'string') {
-    if (!validValues.includes(selected)) {
-      return `Value should be one of these : ${validValues.join('|')}`;
-    }
-  }
-  return true;
+  const allowed = config.options.map((option) => option.value);
+  const isOption = (candidate: unknown) =>
+    typeof candidate === 'string' && allowed.includes(candidate);
+  // Each option once: the panel shows one tag per option, keyed by its value
+  const isOptionList = (candidate: unknown) =>
+    Array.isArray(candidate) &&
+    candidate.every(isOption) &&
+    new Set(candidate).size === candidate.length;
+  const valid = config.many ? isOptionList(value) : isOption(value);
+  return valid || `Value should be one of these, each once : ${allowed.join('|')}`;
 };
 
 type FieldWithOptions = FormField & {
@@ -59,18 +56,9 @@ class PickFieldBuilder<T extends FieldWithOptions = FieldWithOptions> extends Fo
     return this;
   }
 
-  compile() {
-    if (!this.field.options || !this.field.options.length) {
-      throw new Error(`${this.field.name} should at least have one option`);
-    }
-    if (!this.field.isEmpty) {
-      if (this.field.many) {
-        this.field.isEmpty = (value) => Array.isArray(value) && value.length === 0;
-      } else {
-        this.field.isEmpty = (value) => !value;
-      }
-    }
-    return super.compile();
+  /** The options as a TypeScript union of string literals: `"a" | "l'été"`. */
+  protected optionsType() {
+    return this.field.options.map((option) => JSON.stringify(option.value)).join(' | ');
   }
 }
 
@@ -91,6 +79,14 @@ export class PickOneFieldBuilder<
 export class PickManyFieldBuilder<
   T extends FieldWithOptions = FieldWithOptions
 > extends PickFieldBuilder<T> {
+  constructor(name: string, type: string) {
+    super(name, type);
+    // With `many`, a form sends one picked option as a string, and none as ''
+    this.beforeValidate((value, { config }) =>
+      config.many && typeof value === 'string' ? (value ? [value] : []) : value
+    );
+  }
+
   defaultValue(value: string[] | DefaultValueFn<string[]>, options?: DefaultOptions) {
     this.field.defaultValue = value;
     this.field.defaultFill = options?.fill;
@@ -99,6 +95,8 @@ export class PickManyFieldBuilder<
 
   many() {
     this.field.many = true;
+    // A many-select is empty when it holds no option
+    this.field.isEmpty = (value) => !Array.isArray(value) || value.length === 0;
     return this;
   }
 }

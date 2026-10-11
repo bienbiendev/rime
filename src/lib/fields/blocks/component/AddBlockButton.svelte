@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { initialValues } from '$lib/core/fields/initial.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import type { GenericBlock } from '$lib/core/prototype/types.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import { Plus } from '@lucide/svelte';
+  import { initialValues } from '#lib/core/fields/initial.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import type { GenericBlock } from '#lib/core/prototype/types.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import Plus from '@lucide/svelte/icons/plus';
   import type { BlocksBuilder, BlocksFieldBlock } from '../index.js';
   import BlockPicker from './picker/BlockPicker.svelte';
 

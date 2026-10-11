@@ -1,4 +1,4 @@
-import { text } from '$lib/fields/index.js';
+import { text } from '#lib/fields/index.js';
 import { Collection } from '$rime/config';
 
 /** An upload collection, for the relation picker and the inline relation of block renders. */

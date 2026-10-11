@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import { formatWhen } from '$lib/panel/util/time.js';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { formatWhen } from '#lib/panel/util/time.js';
 
   type Props = {
     date: Date | string;

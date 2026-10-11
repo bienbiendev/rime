@@ -1,12 +1,11 @@
 <script lang="ts">
+  import { createPath } from '#lib/panel/util/url.js';
   import { page } from '$app/state';
-  import type { ResolvedPathname } from '$app/types';
-  import { PARAMS } from '$lib/core/constants.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { panelPath } from '$lib/core/routes/util.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import type { BuiltCollection } from '$lib/types';
-  import { Plus } from '@lucide/svelte';
+  import { PARAMS } from '#lib/core/constants.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import type { BuiltCollection } from '#lib/types.js';
+  import Plus from '@lucide/svelte/icons/plus';
 
   type Props = {
     config: BuiltCollection;
@@ -21,14 +20,9 @@
     config.label.create || t__(`common.create_new`, config.label.singular)
   );
 
-  const createPathname = $derived.by(() => {
-    const path = panelPath(config.kebab, 'create');
-    if (config.upload) {
-      const currentUploadPath = page.url.searchParams.get(PARAMS.UPLOAD_PATH);
-      return `${path}?${PARAMS.UPLOAD_PATH}=${currentUploadPath || 'root'}` as ResolvedPathname;
-    }
-    return path;
-  });
+  const createPathname = $derived(
+    createPath(config, page.url.searchParams.get(PARAMS.UPLOAD_PATH))
+  );
 </script>
 
 {#if size === 'sm'}

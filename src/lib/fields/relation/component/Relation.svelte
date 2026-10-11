@@ -1,19 +1,21 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config.js';
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import { apiUrl, panelPath } from '$lib/core/routes/util.js';
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import type { FormContext } from '$lib/panel/context/form.svelte.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte';
-  import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import { moveItem } from '$lib/util/array.js';
-  import { snapshot } from '$lib/util/state.js';
-  import { Images, Plus, TextSearch } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { isUploadConfig } from '#lib/core/prototype/collection/upload/util/config.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import { apiUrl, panelPath } from '#lib/core/routes/util.js';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { type DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import type { FormContext } from '#lib/panel/context/form.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import { moveItem } from '#lib/util/array.js';
+  import { snapshot } from '#lib/util/state.js';
+  import Images from '@lucide/svelte/icons/images';
+  import Plus from '@lucide/svelte/icons/plus';
+  import TextSearch from '@lucide/svelte/icons/text-search';
   import { untrack } from 'svelte';
   import { getAPIProxyContext } from '../../../panel/context/api-proxy.svelte.js';
   import type { RelationFieldBuilder, RelationRow } from '../index.js';
@@ -134,7 +136,8 @@
         const missing = initialValue.filter((relation) => !findItem(relation));
         if (missing.length) {
           const order = initialValue.map((relation) => relation.documentId);
-          Promise.resolve(Relation.resolve<GenericDoc>(missing).all()).then((docs) => {
+          const resolved = Relation.resolve<GenericDoc>(missing, { locale: locale.code });
+          Promise.resolve(resolved.all()).then((docs) => {
             selectedItems = [...selectedItems, ...docs.map(documentToRelationFieldItem)].sort(
               (a, b) => order.indexOf(a.documentId) - order.indexOf(b.documentId)
             );
@@ -196,9 +199,7 @@
     });
   };
 
-  // Disabled the parent form (this one)
-  // So when user save the nested doc
-  // it doesn't save this one
+  // Disable this form while a related document is created, so saving that one does not save this one.
   const onRelationCreation = () => {
     if ('isDisabled' in form) {
       form.isDisabled = true;
@@ -213,13 +214,10 @@
   };
 
   const onRelationCreated = async (doc: GenericDoc) => {
-    // Enabled the form
     if ('isDisabled' in form) {
       form.isDisabled = false;
     }
-    // update resssource
     ressource.data?.docs.push(doc);
-    // Set value if not full
     if (isFull) return;
     selectedItems = [...selectedItems, documentToRelationFieldItem(doc)];
     field.value = buildRelationFieldValue();
@@ -282,7 +280,6 @@
   const canChoose = $derived(!isFull && availableItems.length > 0);
 
   const shared = $derived({
-    path,
     many: !!config.get.many,
     hasError: !!field.error,
     formNestedLevel: 'nestedLevel' in form ? form.nestedLevel : 0,

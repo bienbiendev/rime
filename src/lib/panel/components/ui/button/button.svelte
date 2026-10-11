@@ -9,6 +9,7 @@
     ref = $bindable(null),
     href = undefined,
     type = 'button',
+    disabled = false,
     icon,
     kbd,
     children,
@@ -38,9 +39,13 @@
 {/snippet}
 
 {#if href}
+  <!-- A disabled link has no href: it does not navigate and leaves the tab order -->
   <a
     bind:this={ref}
-    {href}
+    href={disabled ? undefined : href}
+    aria-disabled={disabled}
+    role={disabled ? 'link' : undefined}
+    tabindex={disabled ? -1 : undefined}
     class="rz-button rz-button--size-{size} rz-button--{variant} {className}"
     {...restProps}
   >
@@ -52,6 +57,7 @@
     bind:this={ref}
     class="rz-button rz-button--size-{size} rz-button--{variant} {className}"
     {type}
+    {disabled}
     data-kbd={kbd}
     {...restProps}
   >
@@ -127,7 +133,7 @@
   }
 
   .rz-button:disabled,
-  .rz-button[disabled='true'] {
+  .rz-button[aria-disabled='true'] {
     opacity: 0.5;
     cursor: no-drop !important;
   }

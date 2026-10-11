@@ -1,6 +1,7 @@
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
-import type { AreaSlug } from '$lib/core/prototype/types.js';
-import { capitalize } from '$lib/util/string.js';
+import { dashboardCrumb } from '#lib/panel/pages/aria.server.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+import type { AreaSlug } from '#lib/core/prototype/types.js';
+import { capitalize } from '#lib/util/string.js';
 import type { ServerLoadEvent } from '@sveltejs/kit';
 import type { BuiltCollection, Route } from '../../../types.js';
 import type { DashboardEntry } from './types.js';
@@ -41,7 +42,6 @@ export const dashboardLoad = async (event: ServerLoadEvent) => {
       slug: c.slug,
       canCreate: user && c.access.create(user, {}),
       link: rime.routes.panelUrl(c.kebab),
-      titleSingular: c.label.singular,
       title: c.label.plural,
       layout: panelConfig.dashboard.layout
     };
@@ -121,7 +121,7 @@ export const dashboardLoad = async (event: ServerLoadEvent) => {
   );
   entries.push(...areaEntries);
 
-  const aria: Route[] = [{ title: 'Dashboard', icon: 'dashboard', url: rime.routes.panelUrl() }];
+  const aria: Route[] = [dashboardCrumb(rime)];
 
   return { entries, aria };
 };

@@ -1,4 +1,4 @@
-import { access } from '$lib/core/auth/access.js';
+import { access } from '#lib/core/auth/access.js';
 import {
   checkbox,
   combobox,
@@ -16,7 +16,7 @@ import {
   textarea,
   time,
   toggle
-} from '$lib/fields/index.js';
+} from '#lib/fields/index.js';
 import { Collection } from '$rime/config';
 
 export const HooksTest = Collection.create('hooksTest', {
@@ -137,6 +137,9 @@ export const HooksTest = Collection.create('hooksTest', {
     // no custom hooks: built-in ensureSelectIsOption default validator, many values
     select('tags').options('a', 'b', 'c').many(),
 
+    // required many-select: an empty selection is empty
+    select('requiredTags').options('a', 'b').many().required().defaultValue(['a']),
+
     // server-only beforeRead on a structured (JSONContent) value, not a string
     richText('body').$beforeRead((value) => (value ? { ...value, readAt: true } : value)),
 
@@ -162,18 +165,21 @@ export const HooksTest = Collection.create('hooksTest', {
         typeof value === 'number' ? Math.min(100, Math.max(0, value)) : value
       ),
 
-    // built-in beforeValidate (string -> Date) already runs first; this one
-    // pins the year, proving hooks chain/append rather than replace
+    // The built-in beforeValidate (string -> Date) runs first; this one pins the year of the Date
+    // it gets. A string is left as it is, so the year is pinned only when both hooks ran.
     date('publishedAt').beforeValidate((value) => {
-      const asDate = value instanceof Date ? value : new Date(value as any);
-      asDate.setUTCFullYear(2030);
-      return asDate;
+      if (!(value instanceof Date)) {
+        return value;
+      }
+      const pinned = new Date(value);
+      pinned.setUTCFullYear(2030);
+      return pinned;
     }),
 
     // beforeValidate -> validate coercion chain, time (keeps the built-in format validator)
     time('openAt').beforeValidate((value) => '09:00'),
 
-    // beforeSave lowercasing after the built-in sanitize hook; built-in validate.email still guards format
+    // beforeSave lowercasing; built-in validate.email still guards format
     email('contact').$beforeSave((value) => (value ? String(value).toLowerCase() : value)),
 
     // beforeValidate normalizing input before the built-in validate.slug format check

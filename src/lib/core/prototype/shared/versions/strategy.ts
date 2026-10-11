@@ -1,5 +1,5 @@
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import { RimeError } from '$lib/core/errors/index.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import { RimeError } from '#lib/core/errors/index.js';
 
 /**
  * What an update does to a versioned document.
@@ -32,10 +32,7 @@ export const VersionOperations = {
 
   /** The selected row is written in place. */
   isSpecificVersionUpdate: (operation: VersionOperation) =>
-    operation === VERSIONS_OPERATIONS.UPDATE_VERSION,
-
-  /** No versions at all. */
-  isSimpleUpdate: (operation: VersionOperation) => operation === VERSIONS_OPERATIONS.UPDATE
+    operation === VERSIONS_OPERATIONS.UPDATE_VERSION
 };
 
 type Args = {

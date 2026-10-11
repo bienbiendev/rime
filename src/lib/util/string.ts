@@ -1,5 +1,6 @@
 import { Parser } from '@thednp/domparser';
 import camelCase from 'camelcase';
+import { isSafeUrl } from './url.js';
 
 let parser: ReturnType<typeof Parser>;
 
@@ -24,15 +25,15 @@ export const toCamelCase = (str: string): string => camelCase(str);
 
 /**
  * Converts a string to camelCase while preserving a trailing _suffix if it exists.
- * 
+ *
  * @example
  * // Returns "helloWorld"
  * toCamelCasePreserveTrailingUnderscoreSuffix("helloWorld");
- * 
+ *
  * // Returns "helloWorld_directories"
  * toCamelCasePreserveTrailingUnderscoreSuffix("hello-world_directories");
- 
-* // Returns "helloWorld_"
+ *
+ * // Returns "helloWorld"
  * toCamelCasePreserveTrailingUnderscoreSuffix("hello-world");
  */
 export const toCamelCasePreserveTrailingUnderscoreSuffix = (str: string): string => {
@@ -43,24 +44,24 @@ export const toCamelCasePreserveTrailingUnderscoreSuffix = (str: string): string
   return camelCase(baseString) + suffix;
 };
 
+const wordSeparators = /[\s\u2000-\u206F\u2E00-\u2E7F\\'!"#$%&()*+,\-./:;<=>?@[\]^_`{|}~]+/;
+const capital_plus_lower = /[A-ZÀ-Ý\u00C0-\u00D6\u00D9-\u00DD][a-zà-ÿ]/g;
+const capitals = /[A-ZÀ-Ý\u00C0-\u00D6\u00D9-\u00DD]+/g;
+
 /**
  * Converts a string to kebab-case.
  * Source : https://github.com/angus-c/just/blob/master/packages/string-kebab-case
  *
  * @example
- * kebabCase('the quick brown fox'); // 'the-quick-brown-fox'
- * kebabCase('the-quick-brown-fox'); // 'the-quick-brown-fox'
- * kebabCase('the_quick_brown_fox'); // 'the-quick-brown-fox'
- * kebabCase('theQuickBrownFox'); // 'the-quick-brown-fox'
- * kebabCase('theQuickBrown Fox'); // 'the-quick-brown-fox'
- * kebabCase('thequickbrownfox'); // 'thequickbrownfox'
- * kebabCase('the - quick * brown# fox'); // 'the-quick-brown-fox'
- * kebabCase('theQUICKBrownFox'); // 'the-quick-brown-fox'
+ * toKebabCase('the quick brown fox'); // 'the-quick-brown-fox'
+ * toKebabCase('the-quick-brown-fox'); // 'the-quick-brown-fox'
+ * toKebabCase('the_quick_brown_fox'); // 'the-quick-brown-fox'
+ * toKebabCase('theQuickBrownFox'); // 'the-quick-brown-fox'
+ * toKebabCase('theQuickBrown Fox'); // 'the-quick-brown-fox'
+ * toKebabCase('thequickbrownfox'); // 'thequickbrownfox'
+ * toKebabCase('the - quick * brown# fox'); // 'the-quick-brown-fox'
+ * toKebabCase('theQUICKBrownFox'); // 'the-quick-brown-fox'
  */
-const wordSeparators = /[\s\u2000-\u206F\u2E00-\u2E7F\\'!"#$%&()*+,\-./:;<=>?@[\]^_`{|}~]+/;
-const capital_plus_lower = /[A-ZÀ-Ý\u00C0-\u00D6\u00D9-\u00DD][a-zà-ÿ]/g;
-const capitals = /[A-ZÀ-Ý\u00C0-\u00D6\u00D9-\u00DD]+/g;
-
 export function toKebabCase(str: string) {
   // replace word starts with space + lower case equivalent for later parsing
   // 1) treat cap + lower as start of new word
@@ -86,18 +87,6 @@ export function toKebabCase(str: string) {
  */
 export const toPascalCase = (str: string): string => camelCase(str, { pascalCase: true });
 
-/**
- * Converts a string to snake_case.
- * This is a custom implementation that replaces the to-snake-case dependency
- * and maintains the same functionality of the original package.
- *
- * @example
- * // Returns "hello_world"
- * toSnakeCase("helloWorld");
- *
- * // Returns "_hello_world"
- * toSnakeCase("_helloWorld");
- */
 /**
  * The separator that marks a *segment boundary* inside a rime name, as opposed to a word break.
  *
@@ -134,6 +123,16 @@ export const mapSegments = (
   return hasLeadingUnderscore ? `_${converted}` : converted;
 };
 
+/**
+ * Converts a string to snake_case.
+ *
+ * @example
+ * // Returns "hello_world"
+ * toSnakeCase("helloWorld");
+ *
+ * // Returns "_hello_world"
+ * toSnakeCase("_helloWorld");
+ */
 export const toSnakeCase = (str: string): string => {
   // Preserve leading underscore if present
   const hasLeadingUnderscore = str.startsWith('_');
@@ -217,9 +216,16 @@ export const isCamelCase = (str: string) => /^[a-z][a-zA-Z0-9]*$/.test(str);
 export const isValidSlug = (str: string): boolean => /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(str);
 
 /**
- * Sanitizes user input by removing dangerous HTML tags while preserving allowed formatting tags,
- * this doesn't encode/decode HTML entities.
- * allowed tags : ['strong', 'b', 'em', 'i', 'u', 'br', 'a']
+ * Removes every HTML tag except `strong`, `b`, `em`, `i`, `u`, `br` and `a`, and every attribute
+ * except the `href` and `target` of a link. Entities in the input are decoded first; a `<` that
+ * opens no tag comes out as `&lt;`, other decoded characters come out as they are. The result is
+ * HTML, for a site that renders a value with `{@html}`.
+ *
+ * ```ts
+ * sanitize('<b onclick="x()">Hi</b><script>x()</script>') // '<b>Hi</b>'
+ * sanitize('1 < 2 &amp; 3') // '1 &lt; 2 & 3'
+ * text('bio').$beforeSave(string.sanitize) // a field the site renders with {@html}
+ * ```
  */
 export const sanitize = (value?: string): string => {
   if (!value) return value || '';
@@ -248,20 +254,30 @@ export const sanitize = (value?: string): string => {
 
   const restoreWhitespace = (str: string) => str.replace(new RegExp(WHITESPACE_MARKER, 'g'), ' ');
 
+  /** An attribute value made safe to write between double quotes. */
+  const escapeAttribute = (value: string) =>
+    value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
   // Decode multiple levels of encoding on input
   let decodedValue = value;
   while (decodedValue.match(/&amp;|&quot;|&lt;|&gt;|&#x27;|&#39;|&#38;/)) {
     decodedValue = decode(decodedValue);
   }
 
-  const protectedInput = encodeTextSpace(decodedValue);
+  // A `<` that opens no tag is text: `1 < 2`, `a<3`. A tag stays as it is, its quoted values
+  // included: `<a href="?q=1<2">`
+  const tagOrLoneBracket = /<[a-zA-Z/!](?:"[^"]*"|'[^']*'|[^"'>])*>?|<(?![a-zA-Z/!])/g;
+  // A U+E000 in the input is dropped: the sanitizer marks the spaces with it
+  const escaped = decodedValue
+    .replaceAll(WHITESPACE_MARKER, '')
+    .replace(tagOrLoneBracket, (match) => (match === '<' ? '&lt;' : match));
+  const protectedInput = encodeTextSpace(escaped);
 
   const { root } = parser.parseFromString(protectedInput);
 
   const allowedTags = new Set(['strong', 'b', 'em', 'i', 'u', 'br', 'a']);
   const dangerousTags = new Set(['script', 'style', 'iframe', 'object', 'embed', 'svg']);
   const eventHandlers = /^on[a-z]+$/i;
-  const dangerousUrls = /^(javascript:|data:text\/html)/i;
 
   const processNode = (node: any): string => {
     if (!node) return '';
@@ -310,12 +326,12 @@ export const sanitize = (value?: string): string => {
           if (tagName === 'a') {
             if (attrName === 'href') {
               // Remove dangerous URLs
-              if (dangerousUrls.test(attrValue)) {
+              if (!isSafeUrl(attrValue)) {
                 continue;
               }
-              safeAttributes.push(`${attrName}="${attrValue}"`);
-            } else if (attrName === '_target') {
-              safeAttributes.push(`${attrName}="${attrValue}"`);
+              safeAttributes.push(`${attrName}="${escapeAttribute(attrValue)}"`);
+            } else if (attrName === 'target') {
+              safeAttributes.push(`${attrName}="${escapeAttribute(attrValue)}"`);
             }
             // Skip all other attributes for 'a' tags
             continue;
@@ -323,7 +339,7 @@ export const sanitize = (value?: string): string => {
 
           // For other allowed tags, remove dangerous attributes
           if (attrName === 'href' || attrName === 'src') {
-            if (dangerousUrls.test(attrValue)) {
+            if (!isSafeUrl(attrValue)) {
               continue;
             }
           }
@@ -346,7 +362,7 @@ export const sanitize = (value?: string): string => {
 
   const sanitized = root.children ? root.children.map(processNode).join('') : '';
 
-  return decode(restoreWhitespace(sanitized));
+  return restoreWhitespace(sanitized);
 };
 
 /**
@@ -364,16 +380,14 @@ export const joinMemberTypes = (types: string[]): string =>
     .join(',\n');
 
 /**
- * Removes the block type from a field path.
+ * Removes the block type from a field path: everything from a `:` to the next `.`.
  *
  * ```ts
  * normalizeFieldPath('foo.bar.0:content.baz'); // 'foo.bar.0.baz'
+ * normalizeFieldPath('layout.0:call_to_action.title'); // 'layout.0.title'
  * ```
  */
-export const normalizeFieldPath = (path: string) => {
-  const regExpBlockType = /:[a-zA-Z0-9]+/g;
-  return path.replace(regExpBlockType, '');
-};
+export const normalizeFieldPath = (path: string) => path.replace(/:[^.]+/g, '');
 
 /**
  * Whether `path` is `ancestor` itself or lies below it. Not a plain `startsWith`: `sections.1`
@@ -381,3 +395,21 @@ export const normalizeFieldPath = (path: string) => {
  */
 export const isWithin = (path: string, ancestor: string) =>
   path === ancestor || path.startsWith(`${ancestor}.`);
+
+/**
+ * The path of the blocks or tree row a field path sits in: up to its last index, the field's own
+ * name aside. `null` outside any row.
+ *
+ * ```
+ * enclosingRowPath('sections.3.media.image') // 'sections.3'
+ * enclosingRowPath('sections.0.items.2.image') // 'sections.0.items.2'
+ * enclosingRowPath('hero.thumbnail') // null
+ * ```
+ */
+export const enclosingRowPath = (path: string) => {
+  const segments = path.split('.').slice(0, -1);
+  for (let i = segments.length - 1; i >= 0; i--) {
+    if (/^\d+$/.test(segments[i])) return segments.slice(0, i + 1).join('.');
+  }
+  return null;
+};

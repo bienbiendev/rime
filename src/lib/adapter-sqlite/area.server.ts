@@ -1,7 +1,7 @@
-import type { AreaHandle } from '$lib/core/adapter.js';
-import type { BuiltArea } from '$lib/core/config/types.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import type { RawDoc } from '$lib/core/prototype/types.js';
+import type { AreaHandle } from '#lib/core/adapter.js';
+import type { BuiltArea } from '#lib/core/config/types.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import type { RawDoc } from '#lib/core/prototype/types.js';
 import { baseTableName } from './naming.server.js';
 import { bundles, type HandleDeps } from './rows.server.js';
 import { findManyPrototypes, readPrototype } from './read.server.js';
@@ -10,9 +10,8 @@ import { ensurePrototypeExists, updatePrototype, updateWherePrototype } from './
 /**
  * What the adapter can do to one registered area.
  *
- * Exactly one document, so no verb here takes an id — `resolveRowId` below is where the one they
- * need comes from, and it is the *only* place the difference between the two kinds shows. There is
- * no `insert` and no `delete`: not refused, absent.
+ * Exactly one document, so no verb here takes an id: `find` reads with none, which selects the one
+ * row, and `update` takes its id from `resolveRowId` below. There is no `insert` and no `delete`.
  *
  * The collection's builder is `collection.server.ts` beside this.
  */

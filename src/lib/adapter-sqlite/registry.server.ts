@@ -1,8 +1,8 @@
-import type { AreaHandle, BaseHandle, CollectionHandle } from '$lib/core/adapter.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
-import type { Dic } from '$lib/util/types.js';
+import type { AreaHandle, BaseHandle, CollectionHandle } from '#lib/core/adapter.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import type { ConfigContext } from '#lib/core/rime.server.js';
+import type { Dic } from '#lib/util/types.js';
 import { createAreaHandle } from './area.server.js';
 import { createCollectionHandle } from './collection.server.js';
 import { baseTableName } from './naming.server.js';

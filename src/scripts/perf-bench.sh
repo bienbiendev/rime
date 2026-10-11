@@ -4,15 +4,28 @@
 # API on the built server. Everything happens outside this repository, in a throwaway SvelteKit
 # app per spec, and nothing is written back here.
 #
+# Each spec runs on the SvelteKit its own `@sveltejs/kit` peer range asks for: a range on kit 2
+# (rimecms@1.0.0: ^2.22.0) is scaffolded by sv 0.17.1 and gets @sveltejs/adapter-node 5, which
+# its `rime init` keeps (on Bun through an `overrides` entry); any other range by sv 1.1.1, on
+# kit 3.
+#
+# A published release is measured once. Its npm spec is resolved to the exact version
+# (rimecms@1.1 -> the newest 1.1.x), and its row of results is saved in <base-dir>/baselines/,
+# in a file named by everything that changes the numbers: the version, the runtime, --mode,
+# --fixture, --runs, --pages and --cache. A later run with the same ones reads that row instead of
+# measuring again, and labels it with the day it was measured: "rimecms-0.29.0 (saved
+# 2026-10-11)". A tarball is measured every time.
+#
 # Usage: bash src/scripts/perf-bench.sh rimecms@0.29.0 rimecms@0.33.0
 #        bash src/scripts/perf-bench.sh rimecms@0.33.0 ./rimecms-0.34.0.tgz:bun   # old on Node, new on Bun
 #        bash src/scripts/perf-bench.sh ./rimecms-0.34.0.tgz ./rimecms-0.34.0.tgz:bun  # the runtime alone
 #          [--bun] [--mode dev|prod|both] [--fixture pages|relations] [--runs 5] [--pages 100] [--cache]
-#          [--base-dir <path>] [--keep]
+#          [--base-dir <path>] [--keep] [--fresh] [--npm-force]
 #
 #   <spec>[:bun] an npm spec (rimecms@0.29.0, rimecms@latest) or a tarball from `npm pack`; `:bun`
 #                runs it as the Bun pack (bun install, `rime init --bun`, bun:sqlite, vite and the
-#                built server on Bun), else it runs on Node
+#                built server on Bun), else it runs on Node. Its peer range is read with
+#                `npm view <spec> peerDependencies`, or from the tarball's package.json
 #   --bun        every spec on Bun
 #   --mode       dev: codegen, dev boot, API on the dev server; prod: build, production boot, API on
 #                the built server; both (default)
@@ -24,8 +37,12 @@
 #   --pages      how many pages the passes create or read, and calls a pass makes (default 100)
 #   --cache      turn the API cache on — RIME_CACHE_ENABLED=true in the app's .env, and every
 #                request cached, signed in or not; the "again" passes then hit it
-#   --base-dir   where the apps are scaffolded (default $HOME/perf-bench)
+#   --base-dir   where the apps are scaffolded and the rows saved (default $HOME/perf-bench)
 #   --keep       keep the apps afterwards
+#   --fresh      measure every spec again, and save the published releases' rows over the old ones
+#   --npm-force  every npm command runs with --force, `rime init`'s installs included: npm installs
+#                a peer range no published version satisfies anyway, and still installs the other
+#                peers
 #
 # Needs: npm, npx, bun, curl, perl. Ports 5173 and 3000 must be free.
 set -euo pipefail
@@ -36,6 +53,7 @@ RUNS=5
 PAGES=100
 CACHE=0
 KEEP=0
+FRESH=0
 ALL_BUN=0
 MODE="both"
 FIXTURE="pages"
@@ -50,6 +68,9 @@ while [[ $# -gt 0 ]]; do
     --fixture) FIXTURE="$2"; shift 2 ;;
     --base-dir) BASE_DIR="$2"; shift 2 ;;
     --keep) KEEP=1; shift ;;
+    --fresh) FRESH=1; shift ;;
+    # npm reads its config from npm_config_* variables, in this script and in every child it starts
+    --npm-force) export npm_config_force=true; shift ;;
     *) SPECS+=("$1"); shift ;;
   esac
 done
@@ -62,7 +83,7 @@ done
 
 # The apps read their own .env, not this repo's one leaking in from the shell: a variable already
 # set wins over .env, so PORT=5173 would put the built server on the dev port.
-for name in $(env | grep -oE '^(RIME_[A-Z0-9_]*|PUBLIC_[A-Z0-9_]*|BETTER_AUTH_[A-Z0-9_]*|HOST|PORT|ORIGIN|BODY_SIZE_LIMIT)='); do
+for name in $(env | grep -oE '^(RIME_[A-Z0-9_]*|PUBLIC_[A-Z0-9_]*|SMTP_[A-Z0-9_]*|BETTER_AUTH_[A-Z0-9_]*|SITE_URL|HOST|PORT|ORIGIN|BODY_SIZE_LIMIT)='); do
   unset "${name%=}"
 done
 
@@ -165,7 +186,6 @@ EOF
 # tree, nested collections, and a url made of the parents' slugs.
 write_config_relations() {
   cat > "$1" <<EOF
-import { env } from '\$env/dynamic/public';
 import { Area, Collection, rime } from '\$rime/config';
 import { adapterSqlite } from 'rimecms/adapter-sqlite';
 import { block, blocks, link, relation, slug, text, textarea, tree } from 'rimecms/fields';
@@ -185,8 +205,8 @@ const Pages = Collection.create('pages', {
   nested: true,
   // Both signatures: a release with addresses passes { path, … }, an older one the document.
   \$url: (arg) => arg.path
-    ? \`\${env.PUBLIC_RIME_URL}/\${arg.path.join('/')}\`
-    : \`\${env.PUBLIC_RIME_URL}/[...parent.slug]/\${arg.slug}\`,
+    ? \`/\${arg.path.join('/')}\`
+    : \`/[...parent.slug]/\${arg.slug}\`,
   fields: [
     text('title').isTitle().required(),
     slug('slug').slugify('title'),
@@ -213,6 +233,30 @@ $3
   areas: [Menu]
 });
 EOF
+}
+
+# The highest major the spec's `@sveltejs/kit` peer range names, empty without one:
+# ^2.22.0 -> 2, ^2.22.0 || ^3.0.0 -> 3. An npm spec matching several versions gives a list:
+# the last, newest one counts.
+kit_major() {
+  local spec=$1
+  local json
+  if [[ -f "$spec" ]]; then
+    json=$(tar -xzOf "$spec" package/package.json)
+  else
+    json=$(npm view "$spec" peerDependencies --json)
+  fi
+  printf '%s' "$json" | node -e '
+    const text = require("fs").readFileSync(0, "utf-8").trim();
+    const parsed = text ? JSON.parse(text) : {};
+    const latest = Array.isArray(parsed) ? parsed.at(-1) ?? {} : parsed;
+    const range = (latest.peerDependencies ?? latest)["@sveltejs/kit"] ?? "";
+    const majors = range
+      .split(/\|\||\s+/)
+      .map((part) => parseInt(part.replace(/^[\^~<>=v]+/, ""), 10))
+      .filter((major) => !Number.isNaN(major));
+    if (majors.length) console.log(Math.max(...majors));
+  '
 }
 
 # Starts a server in the background and answers how long its sign-in page took to answer 200,
@@ -255,6 +299,36 @@ api_ops() {
     --email "$ADMIN_EMAIL" --password "$ADMIN_PASSWORD" ${cache_flag[@]+"${cache_flag[@]}"} | tee /dev/stderr | grep '^RESULT ' | sed 's/^RESULT //'
 }
 
+# The exact release an npm spec names, the newest when it matches several:
+# rimecms@1.1 -> rimecms@1.1.6, rimecms@latest -> rimecms@1.1.6.
+resolve_spec() {
+  npm view "$1" name version --json | node -e '
+    const parsed = JSON.parse(require("fs").readFileSync(0, "utf-8"));
+    const latest = Array.isArray(parsed) ? parsed.at(-1) : parsed;
+    console.log(`${latest.name}@${latest.version}`);
+  '
+}
+
+# Where the row of an exact release is saved, named by everything that changes its numbers:
+# rimecms@0.29.0 on Node -> baselines/rimecms@0.29.0.node.both.pages.runs-5.pages-100.cache-0.json
+baseline_file() {
+  local spec=$1
+  local runtime=$2
+  local name="${spec//\//-}.$runtime.$MODE.$FIXTURE.runs-$RUNS.pages-$PAGES.cache-$CACHE"
+  echo "$BASE_DIR/baselines/$name.json"
+}
+
+# A saved row, its label holding the day the file was written: "rimecms-0.29.0 (saved 2026-10-11)".
+saved_row() {
+  node -e '
+    const fs = require("fs");
+    const file = process.argv[1];
+    const row = JSON.parse(fs.readFileSync(file, "utf-8"));
+    const day = fs.statSync(file).mtime.toISOString().slice(0, 10);
+    console.log(JSON.stringify({ ...row, label: `${row.label} (saved ${day})` }));
+  ' "$1"
+}
+
 bench_one() {
   local spec=$1
   local runtime="node"
@@ -264,10 +338,23 @@ bench_one() {
     *:node) runtime="node"; spec=${spec%:node} ;;
   esac
 
+  # A published release: its exact version, and the row saved for it
+  local saved=""
+  if [[ ! -f "$spec" ]]; then
+    spec=$(resolve_spec "$spec")
+    saved=$(baseline_file "$spec" "$runtime")
+  fi
+
   local label
   label=$(basename "$spec" .tgz | tr '@/' '--')
   [[ $runtime == "bun" ]] && label="$label-bun"
   [[ -f "$spec" ]] && spec="$(cd "$(dirname "$spec")" && pwd)/$(basename "$spec")"
+
+  if [[ -n "$saved" && -f "$saved" && $FRESH -eq 0 ]]; then
+    log "[$label] Saved row: $saved"
+    RESULTS+=("$(saved_row "$saved")")
+    return 0
+  fi
 
   # rime on the runtime: codegen and the build's vite run where the app does.
   local rime_cli=(npx rime)
@@ -283,12 +370,18 @@ bench_one() {
   local work_dir="$BASE_DIR/$label"
   rm -rf "$work_dir" "$BASE_DIR/current"
 
-  log "[$label] Scaffolding a SvelteKit app ($runtime)"
+  # sv 0.17.1 scaffolds kit ^2.63, vite ^8 and vite-plugin-svelte ^7; sv 1.1.1 kit 3
+  local kit
+  kit=$(kit_major "$spec")
+  local sv="sv@1.1.1"
+  [[ $kit == 2 ]] && sv="sv@0.17.1"
+
+  log "[$label] Scaffolding a SvelteKit ${kit:-3} app with $sv ($runtime)"
   cd "$BASE_DIR"
   if [[ $runtime == "bun" ]]; then
-    bunx sv create --template minimal --types ts --add eslint --install bun "$label" > /dev/null
+    bunx "$sv" create --template minimal --types ts --add eslint --install bun "$label" > /dev/null
   else
-    npx sv create --template minimal --types ts --add eslint --install npm "$label" > /dev/null
+    npx "$sv" create --template minimal --types ts --add eslint --install npm "$label" > /dev/null
   fi
   ln -s "$work_dir" "$BASE_DIR/current"
   cd "$work_dir"
@@ -300,6 +393,23 @@ bench_one() {
       { echo "$spec has no Bun pack (rime init --bun): run it on Node"; exit 1; }
   else
     npm install "$spec" > /dev/null
+  fi
+
+  # adapter-node 6 needs kit 3. `rime init` installs @sveltejs/adapter-node with no version: npm
+  # keeps a declared ^5, bun moves to the newest unless an override holds it on 5.
+  if [[ $kit == 2 ]]; then
+    log "[$label] @sveltejs/adapter-node 5, for kit 2"
+    if [[ $runtime == "bun" ]]; then
+      bun add -D @sveltejs/adapter-node@5 > /dev/null
+      node -e "
+        const fs = require('fs');
+        const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
+        pkg.overrides = { ...pkg.overrides, '@sveltejs/adapter-node': '^5.5.7' };
+        fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
+      "
+    else
+      npm install -D @sveltejs/adapter-node@5 > /dev/null
+    fi
   fi
 
   log "[$label] rime init"
@@ -430,9 +540,14 @@ bench_one() {
     prod="{\"build\":$build_ms,\"bootCold\":$prod_cold,\"bootWarm\":$prod_warm,\"ops\":$prod_ops}"
   fi
 
-  RESULTS+=("{\"label\":\"$label\",\"generate\":$generate_ms,\"dev\":$dev,\"prod\":$prod}")
+  local row="{\"label\":\"$label\",\"generate\":$generate_ms,\"dev\":$dev,\"prod\":$prod}"
+  RESULTS+=("$row")
 
   cd "$ROOT_DIR"
+  if [[ -n "$saved" ]]; then
+    mkdir -p "$(dirname "$saved")"
+    echo "$row" > "$saved"
+  fi
   [[ $KEEP -eq 1 ]] || rm -rf "$work_dir"
   rm -f "$BASE_DIR/current"
 }

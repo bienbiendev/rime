@@ -1,15 +1,14 @@
-import type { VersionsTable } from '$lib/core/adapter.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
-import type { Dic } from '$lib/util/types.js';
+import type { VersionsTable } from '#lib/core/adapter.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import type { ConfigContext } from '#lib/core/rime.server.js';
+import type { Dic } from '#lib/util/types.js';
 
 /**
  * What a handle builder is handed: the connection, the generated tables, and which config it is
  * building a handle for.
  *
- * `read` carries `configCtx` because `findMany` resolves a query against the config's fields;
- * `write` does not need it. `self` is the prototype's identity, which every call underneath
- * re-stated before this existed.
+ * `read` carries `configCtx` because a read resolves a query against the config's fields;
+ * `write` does not need it. `self` is the prototype's identity, passed to every call underneath.
  */
 export type HandleDeps = {
   db: any;

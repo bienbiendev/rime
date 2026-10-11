@@ -1,29 +1,14 @@
 <script lang="ts">
-  import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
-  import { t__ } from '$lib/core/i18n/index.js';
+  import { errorText } from '#lib/panel/util/error-text.js';
 
   type Props = { error: string | false };
 
   const { error }: Props = $props();
-
-  function formatError(error: string) {
-    // subfield::error
-    const cleanError = error.split('::').at(-1) ?? '';
-    // If it's a predefined error from RimeError or RimeFormError
-    if (
-      Object.values(RimeError).includes(cleanError) ||
-      Object.values(RimeFormError).includes(cleanError)
-    ) {
-      return t__(`errors.${cleanError}`);
-    }
-    // Otherwise return as-is (user defined message)
-    return cleanError;
-  }
 </script>
 
 {#if error}
   <div class="rz-field-error">
-    {formatError(error)}
+    {errorText(error)}
   </div>
 {/if}
 

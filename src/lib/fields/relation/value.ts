@@ -1,8 +1,8 @@
-import type { GenericDoc } from '$lib/core/prototype/types.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
 import type { RelationRow } from './index.js';
 
 /** A related document as the field holds it before it is written: its id, and its row if any. */
-export type RelationItem = { documentId: string; id?: string; livePreview?: GenericDoc };
+type RelationItem = { documentId: string; id?: string; livePreview?: GenericDoc };
 
 /**
  * The value a relation field writes for these documents, in this order.

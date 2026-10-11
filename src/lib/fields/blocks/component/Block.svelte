@@ -1,11 +1,14 @@
 <script lang="ts">
-  import type { GenericBlock } from '$lib/core/prototype/types.js';
-  import type { BlocksFieldBlock } from '$lib/fields/types';
-  import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
-  import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { capitalize } from '$lib/util/string.js';
-  import { GripVertical, ToyBrick } from '@lucide/svelte';
-  import BlockActions from './BlockActions.svelte';
+  import type { GenericBlock } from '#lib/core/prototype/types.js';
+  import type { BlocksFieldBlock } from '#lib/fields/types.js';
+  import RenderFields from '#lib/panel/components/fields/RenderFields.svelte';
+  import { type DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { capitalize } from '#lib/util/string.js';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
+  import ToyBrick from '@lucide/svelte/icons/toy-brick';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import RepeatableActions from '../../repeatable/RepeatableActions.svelte';
+  import { repeatableTitle } from '../../repeatable.js';
 
   type Props = {
     config: BlocksFieldBlock;
@@ -42,17 +45,13 @@
   const position = $derived(parseInt(path.split('.').pop() || '0'));
   const blockValue = $derived(form.getValue<GenericBlock>(path));
 
-  const title = $derived.by(() => {
-    if (config.renderTitle) {
-      try {
-        const rendered = config.renderTitle({ values: blockValue || {}, position });
-        if (rendered) return rendered;
-      } catch (err) {
-        console.error(`Can't render title in block`, err);
-      }
-    }
-    return config.label ? config.label : capitalize(config.name);
-  });
+  const title = $derived(
+    repeatableTitle(
+      config.renderTitle,
+      { values: blockValue || {}, position },
+      config.label || capitalize(config.name)
+    )
+  );
 
   const fieldsId = $derived(`rz-block-fields-${blockValue?.id ?? path}`);
   const BlockIcon = $derived(config.icon || ToyBrick);
@@ -60,7 +59,7 @@
 
 <!-- A row: grip, icon, name, actions. A click on it shows its fields under it. -->
 <div class="rz-block" data-open={open ? '' : null} data-sorting={sorting}>
-  <div class="rz-block__header">
+  <div class="rz-block__header" data-repeatable-header>
     <span class="rz-block__grip" aria-hidden="true">
       <GripVertical size={15} />
     </span>
@@ -76,7 +75,15 @@
       <span class="rz-block__heading">{title}</span>
     </button>
 
-    <BlockActions {duplicateBlock} {deleteBlock} {moveUp} {moveDown} {focusBlock} />
+    <RepeatableActions
+      label={t__('fields.block_actions')}
+      deleteLabel={t__('fields.delete_block')}
+      onDelete={deleteBlock}
+      onDuplicate={duplicateBlock}
+      onFocus={focusBlock}
+      {moveUp}
+      {moveDown}
+    />
   </div>
 
   <div class="rz-block__fields" id={fieldsId} hidden={!open}>
@@ -200,7 +207,7 @@
   }
 
   /* While the list sorts, the rows show their name and nothing to click. */
-  .rz-block[data-sorting='true'] :global(.rz-block-actions) {
+  .rz-block[data-sorting='true'] :global(.rz-repeatable-actions) {
     visibility: hidden;
   }
 

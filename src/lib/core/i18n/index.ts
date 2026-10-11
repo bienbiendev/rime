@@ -1,13 +1,10 @@
-export const languages = ['fr', 'en'] as const;
 export const namespaces = ['errors', 'fields', 'common', 'mail'] as const;
 
-export type PanelLanguage = (typeof languages)[number];
-export type Namespace = (typeof namespaces)[number];
+export type PanelLanguage = 'fr' | 'en';
+type Namespace = (typeof namespaces)[number];
 export type Dictionaries = Record<string, Record<string, string>>;
-export type TranslationKey = `${Namespace}.${string}`;
-export type ModifiedKey = `${TranslationKey}|${'m' | 'f'}` | `${TranslationKey}|${'m' | 'f'}|p`;
 
-export type Translate = (key: TranslationKey | ModifiedKey | string, ...params: string[]) => string;
+export type Translate = (key: string, ...params: string[]) => string;
 
 /** A translator over one set of dictionaries. */
 export type I18n = { t__: Translate };
@@ -41,7 +38,8 @@ export function createI18n(source: Dictionaries | (() => Dictionaries) = {}): I1
     if (cached) return cached;
 
     const compiled = (gender?: string, plural?: string) => {
-      return text.replace(/\{([^}]+)\}/g, (_, options) => {
+      // Only `{a|b…}` is a variant list; any other brace is text
+      return text.replace(/\{([^}|]*\|[^}]*)\}/g, (_, options) => {
         const variants = options.split('|');
         if (gender === 'f') {
           if (plural) return variants[3]?.trim() || variants[0].trim();

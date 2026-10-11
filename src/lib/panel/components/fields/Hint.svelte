@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { FormFieldBuilder } from '$lib/fields';
-  import type { FormField } from '$lib/fields/types.js';
+  import type { FormFieldBuilder } from '#lib/fields/index.js';
+  import type { FormField } from '#lib/fields/types.js';
   import type { Snippet } from 'svelte';
 
   /**

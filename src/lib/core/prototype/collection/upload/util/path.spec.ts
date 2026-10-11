@@ -1,15 +1,21 @@
-import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
+import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
 import { expect, test } from 'vitest';
-import { getSegments } from './path.js';
+import {
+  buildUploadAria,
+  getParentPath,
+  getSegments,
+  removePathFromLastAria,
+  validatePath
+} from './path.js';
 
-test('should return root', () => {
+test('getSegments("root") is the root', () => {
   const res = getSegments(UPLOAD_PATH.ROOT_NAME);
   expect(res.parent).toBe(null);
   expect(res.name).toBe(UPLOAD_PATH.ROOT_NAME);
   expect(res.path).toBe(UPLOAD_PATH.ROOT_NAME);
 });
 
-test('should also return root', () => {
+test('getSegments(null) is the root', () => {
   const res = getSegments(null);
   expect(res.parent).toBe(null);
   expect(res.name).toBe(UPLOAD_PATH.ROOT_NAME);
@@ -82,4 +88,26 @@ test('should throw error for root/baz.foo', () => {
 
 test('should throw error for root%3Abaz.foo', () => {
   expect(() => getSegments('root%3Abaz.foo')).toThrow();
+});
+
+test('getParentPath drops the last segment', () => {
+  expect(getParentPath('root')).toBeNull();
+  expect(getParentPath('root:press')).toBe('root');
+  expect(getParentPath('root:press:2024')).toBe('root:press');
+});
+
+test('validatePath refuses a missing separator, an empty segment and a non-string', () => {
+  expect(validatePath('root:foo')).toBe(true);
+  expect(validatePath('rootfoo')).not.toBe(true);
+  expect(validatePath('root::foo')).not.toBe(true);
+  expect(validatePath(4)).not.toBe(true);
+});
+
+test('buildUploadAria links each folder, and the last one loses its link', () => {
+  const aria = buildUploadAria({ path: 'root:a:b', slug: 'medias' as any, panelSegment: 'panel' });
+  expect(aria.map((route) => route.url)).toEqual([
+    '/panel/medias?uploadPath=root:a',
+    '/panel/medias?uploadPath=root:a:b'
+  ]);
+  expect(removePathFromLastAria(aria).at(-1)).toEqual({ title: 'b' });
 });

@@ -4,9 +4,6 @@
   padding: var(--rz-size-3);
 }
 
-.rz-date__popover-content {
-  border-radius: var(--rz-radius-md);
-}
 /**************************************/
 /* Cell
 /**************************************/

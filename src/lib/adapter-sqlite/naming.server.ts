@@ -1,4 +1,4 @@
-import { mapSegments, toCamelCase, toSnakeCase } from '$lib/util/string.js';
+import { mapSegments, toCamelCase, toSnakeCase } from '#lib/util/string.js';
 
 /**
  * How a table is named, in one place. Names are built from parts, never concatenated at the call
@@ -65,9 +65,9 @@ export const baseTableName = (slug: string): TableName =>
 export const declaredTableProperty = (slug: string): TableName =>
   slug.replace(/^\$/, '') as TableName;
 
-export type ChildKind = 'blocks' | 'tree' | 'rels' | 'paths';
+type ChildKind = 'blocks' | 'tree' | 'rels' | 'paths';
 
-export type TableParts = {
+type TableParts = {
   /**
    * The base or versions table this hangs off, already resolved.
    *
@@ -103,7 +103,7 @@ const BRANCH_MARKER = '__$$locales';
  *
  * @example
  * tableName({ owner: pages })                                   // 'pages'
- * tableName({ owner: pagesShadow, branch: 'locales' })          // 'pages__shadow__$$locales'
+ * tableName({ owner: pages__versions, branch: 'locales' })      // 'pages__versions__$$locales'
  * tableName({ owner: pages, child: { kind: 'blocks', name: 'hero' }}) // 'pages__$blocks_hero'
  * tableName({ owner: pages, child: { kind: 'rels' } })          // 'pages__$relations'
  * tableName({ owner: pages, child: { kind: 'paths' } })         // 'pages__$paths'
@@ -119,24 +119,14 @@ export const tableName = (parts: TableParts): TableName => {
   return (parts.branch === 'locales' ? `${name}${BRANCH_MARKER}` : name) as TableName;
 };
 
-/**
- * The SQL table name for a Drizzle property name.
- *
- * Identity: property names are already snake-cased with their markers intact, so the two forms
- * are the same string. Snake-casing a camelCase property name instead produces an unreadable mix
- * (`pages_shadowBlocksHero` -> `pages_shadow_blocks_hero`), where nothing says which
- * underscore means what.
- */
-export const toSqlTableName = (drizzleName: TableName) => drizzleName;
+const childTablesMemo = new WeakMap<object, Map<string, TableName[]>>();
 
 /**
  * Every child table of `owner` of a given kind, read back off the schema.
  *
  * Excludes the `locales` branches, which are reached through their own owner rather than listed
- * alongside it. Replaces the three hand-written filters, one of which was misnamed.
+ * alongside it.
  */
-const childTablesMemo = new WeakMap<object, Map<string, TableName[]>>();
-
 export const childTableNames = (
   owner: TableName,
   kind: ChildKind,
@@ -175,6 +165,16 @@ export const JOIN_SUFFIX = '__$doc';
 
 export const joinName = (column: string) => `${column}${JOIN_SUFFIX}`;
 
+/** The junction column that points at a target collection: `medias` -> `mediasId`. */
+export const junctionKey = (slug: string) => `${slug}Id`;
+
+/**
+ * The target collection a junction column points at: `mediasId` -> `medias`; `undefined` for
+ * `ownerId` and every column that is not a target.
+ */
+export const junctionTarget = (key: string) =>
+  key !== 'ownerId' && key.endsWith('Id') ? key.slice(0, -'Id'.length) : undefined;
+
 /**
  * Generate the column and property names for a field given its name and its parent path.
  * Snake case is used for the sqlite column name and Camel case is used for the drizzle column
@@ -185,7 +185,7 @@ export const joinName = (column: string) => `${column}${JOIN_SUFFIX}`;
  * `mapSegments`, shared with slug naming.
  *
  * @example
- * // returns { camel : 'groupTitle', snake: 'group__title' }
+ * // returns { camel: 'group__title', snake: 'group__title' }
  * getSchemaColumnNames({ name: 'title', parentPath: 'group' })
  */
 export function getSchemaColumnNames(args: { name: string; parentPath?: string }) {

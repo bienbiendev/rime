@@ -1,7 +1,11 @@
-import type { JsonFile } from '$lib/core/prototype/collection/upload/types.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { logger } from '$lib/core/logger.server.js';
-import { fileSizeToString } from '$lib/util/file.js';
+import {
+  mediaFilePath,
+  type FilesConfig
+} from '#lib/core/prototype/collection/upload/disk/medias.server.js';
+import type { JsonFile } from '#lib/core/prototype/collection/upload/types.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { logger } from '#lib/core/logger.server.js';
+import { fileSizeToString } from '#lib/util/file.js';
 import { readFile } from 'fs/promises';
 import fs from 'fs';
 import path from 'path';
@@ -14,7 +18,7 @@ export const jsonFileToFile = (jsonFile: JsonFile) => {
   const base64Content = base64String.split(',')[1];
 
   if (!base64Content) {
-    throw new RimeError(RimeError.UPLOAD, 'Invalid base64 data format');
+    throw new RimeError(RimeError.INVALID_DATA, 'Invalid base64 data format');
   }
 
   try {
@@ -40,7 +44,7 @@ export const jsonFileToFile = (jsonFile: JsonFile) => {
 
     const extension = getExtensionFromMimeType(mimeType);
     if (!extension) {
-      throw new RimeError(RimeError.UPLOAD, 'File type not supported');
+      throw new RimeError(RimeError.INVALID_DATA, 'File type not supported');
     }
 
     const blob = new Blob([byteArray], { type: mimeType });
@@ -59,8 +63,9 @@ export const jsonFileToFile = (jsonFile: JsonFile) => {
       })
     };
   } catch (err: any) {
+    if (err instanceof RimeError) throw err;
     logger.error('Error converting base64 to File:', err.message);
-    throw new RimeError(RimeError.UPLOAD, 'Invalid base64 content');
+    throw new RimeError(RimeError.INVALID_DATA, 'Invalid base64 content');
   }
 };
 
@@ -88,7 +93,7 @@ export async function filePathToBase64(filePath: string): Promise<string> {
  * @example
  * const file = await filePathToFile('/path/to/image.jpg');
  */
-export async function filePathToFile(filePath: string): Promise<File> {
+async function filePathToFile(filePath: string): Promise<File> {
   try {
     // Check if file exists
     if (!fs.existsSync(filePath)) {
@@ -119,23 +124,25 @@ export async function filePathToFile(filePath: string): Promise<File> {
 }
 
 /**
- * The file a stored document already has, as a `File`.
+ * The file a stored document of a collection already has, as a `File`.
  *
- * One call, so a caller never spells out where upload keeps its files —
- * `disk/save.server.ts` and `disk/delete.server.ts` own that convention.
+ * One call, so a caller never spells out the collection's folder, the one `disk/save.server.ts`
+ * writes to.
  *
  * `undefined` when the document has no file, so a caller asking "does it have one?" and "give it
  * to me" makes one call, not two.
  */
-export async function fileForDocument(doc: { filename?: unknown }): Promise<File | undefined> {
+export async function fileForDocument(
+  config: FilesConfig,
+  doc: { filename?: unknown }
+): Promise<File | undefined> {
   if (typeof doc.filename !== 'string' || !doc.filename) return undefined;
 
-  const filePath = path.resolve(process.cwd(), 'static', 'medias', doc.filename);
-
+  // A name that is not a file in the folder throws here, and is no file
   try {
-    return await filePathToFile(filePath);
+    return await filePathToFile(mediaFilePath(config, doc.filename));
   } catch (err) {
-    logger.error(`Failed to create file from path: ${filePath}`, err);
+    logger.error(`Failed to read the file of ${doc.filename}`, err);
     return undefined;
   }
 }

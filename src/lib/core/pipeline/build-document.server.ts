@@ -1,10 +1,11 @@
-import type { DocumentRows } from '$lib/core/adapter.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import { withEmptyFields } from '$lib/core/fields/empty.js';
-import type { GenericDoc } from '$lib/core/prototype/types.js';
-import type { RelationRow } from '$lib/fields/relation/index.js';
-import { isObjectLiteral, omit } from '$lib/util/object.js';
-import type { Dic } from '$lib/util/types.js';
+import type { DocumentRows } from '#lib/core/adapter.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import { ROW_BOOKKEEPING, withEmptyFields } from '#lib/core/fields/empty.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
+import type { RelationRow } from '#lib/fields/relation/index.js';
+import { isObjectLiteral, omit } from '#lib/util/object.js';
+import { enclosingRowPath } from '#lib/util/string.js';
+import type { Dic } from '#lib/util/types.js';
 import { unflatten } from 'flat';
 import { logger } from '../logger.server.js';
 import { populatedKey, type Populated } from './populate-relations.server.js';
@@ -24,9 +25,8 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
     /** Every field the config declares is present, empty when nothing is stored. */
     allFields?: boolean;
     /**
-     * Keep a child row's own bookkeeping on it — `position`, `path`, `ownerId`, `locale` — and
-     * the edit lock on the document. An API read wants the document; an editor that writes blocks
-     * back in place wants the bookkeeping too.
+     * Keep a child row's own bookkeeping on it: `position`, `path`, `ownerId`, `locale`. An editor
+     * that writes blocks back in place needs it.
      */
     withRowMeta?: boolean;
   }
@@ -40,13 +40,14 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
   }
 
   for (const node of rows.tree) {
+    // Every tree node gets `_children`, empty when it has none. This sets it on the incoming row.
     if (!node._children) node._children = [];
     flatDoc[`${node.path}.${node.position}`] = stripRowMeta(node, withRowMeta);
   }
 
   for (const relation of rows.relations) {
     if (!relation.documentId) {
-      logger.warn(`orphean ${config.slug} relation : ${relation.id}`);
+      logger.warn(`orphan ${config.slug} relation : ${relation.id}`);
       continue;
     }
 
@@ -61,7 +62,7 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
     // relation outlived it, and placing it would make up a row out of the relation alone.
     if (rowPath && !flatDoc[rowPath]) {
       logger.warn(
-        `Orphean ${config.slug} relation at ${path} with id ${relation.id} because its row ${rowPath} doesn't exist in the document`
+        `Orphan ${config.slug} relation at ${path} with id ${relation.id} because its row ${rowPath} doesn't exist in the document`
       );
       continue;
     }
@@ -98,25 +99,7 @@ export const buildDocument = async <T extends GenericDoc = GenericDoc>(
  * from what the document carries, never from what the assembly needs.
  */
 const stripRowMeta = (row: Dic, withRowMeta: boolean): Dic =>
-  withRowMeta ? row : omit(['position', 'path', 'ownerId', 'locale'], row);
-
-/**
- * The path of the blocks or tree row a field path sits in: up to its last index, the field's own
- * name aside. `null` outside any row.
- *
- * ```
- * enclosingRowPath('sections.3.media.image') // 'sections.3'
- * enclosingRowPath('sections.0.items.2.image') // 'sections.0.items.2'
- * enclosingRowPath('hero.thumbnail') // null
- * ```
- */
-const enclosingRowPath = (path: string) => {
-  const segments = path.split('.').slice(0, -1);
-  for (let i = segments.length - 1; i >= 0; i--) {
-    if (/^\d+$/.test(segments[i])) return segments.slice(0, i + 1).join('.');
-  }
-  return null;
-};
+  withRowMeta ? row : omit(ROW_BOOKKEEPING, row);
 
 /** Drop the holes left where a row was expected and none came back. */
 const cleanEmptyElementsInArrays = <T>(value: T): T => {

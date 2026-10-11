@@ -3,30 +3,34 @@ import {
   type FieldNode,
   type NodeStorage,
   type ValueNode
-} from '$lib/core/fields/builders/field-builder.js';
+} from '#lib/core/fields/builders/field-builder.js';
 import {
   FormFieldBuilder,
   type FormFieldUse
-} from '$lib/core/fields/builders/form-field-builder.js';
-import type { CompletesDefault } from '$lib/core/fields/complete.js';
-import type { DefaultOptions, DefaultValueFn, Field, FormField } from '$lib/fields/types.js';
-import { joinMemberTypes, toPascalCase } from '$lib/util/string.js';
-import type { Dic } from '$lib/util/types.js';
+} from '#lib/core/fields/builders/form-field-builder.js';
+import type { CompletesDefault } from '#lib/core/fields/complete.js';
+import type { DefaultOptions, DefaultValueFn, Field, FormField } from '#lib/fields/types.js';
+import { joinMemberTypes, toPascalCase } from '#lib/util/string.js';
+import type { Dic } from '#lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import dedent from 'dedent';
 import { number } from '../number/index.js';
 import { text } from '../text/index.js';
 import Cell from './component/Cell.svelte';
 import Tree from './component/Tree.svelte';
+import { isEmptyList, localizeRepeatableFields } from '../repeatable.js';
 import { completeTree, type TreeItemDefault } from './defaults.js';
 
 export const tree = (name: string) => new TreeBuilder(name);
+
+// A row's own members are not content: position, path and locale stay as they are
+const OWN = ['position', 'path', 'locale'];
 
 export class TreeBuilder extends FormFieldBuilder<TreeField> {
   constructor(name: string) {
     super(name, 'tree');
     this.field.defaultValue = [];
-    this.field.isEmpty = (value) => !value || (Array.isArray(value) && value.length === 0);
+    this.field.isEmpty = isEmptyList;
 
     this.field.fields = [text('path').hidden(), number('position').hidden()];
     this.field.maxDepth = 8;
@@ -42,6 +46,9 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
 
   fields(...fields: FieldBuilder<Field>[]) {
     this.field.fields = [...(this.field.fields || []), ...fields];
+    if (this.field.localized) {
+      this.field.fields = localizeRepeatableFields(this.field.fields, OWN);
+    }
     return this;
   }
 
@@ -91,32 +98,13 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
     };
   }
 
+  /**
+   * The tree and its items' content fields localized, whichever of `fields()` and this comes
+   * first.
+   */
   localized() {
-    if (this.field.fields.length === 0) {
-      throw new Error('localized() must be called after fields assignment');
-    }
     this.field.localized = true;
-
-    // Add a locale prop in its fields
-    const hasAlreadyLocale = this.field.fields.some((field) => field.name === 'locale');
-    if (!hasAlreadyLocale) {
-      this.field.fields.push(text('locale').hidden());
-    }
-    // Set all descendant fields localized
-    this.field.fields = this.field.fields.map((field) => {
-      // A row's own members are not content: position, path and locale stay as they are.
-      if (['position', 'path', 'locale'].includes(field.name)) {
-        return field;
-      }
-      // For all others fields set as localized
-      if ('localized' in field && field instanceof FormFieldBuilder) {
-        // Clone to prevent localizing a field used elsewhere
-        const fieldClone = field.clone();
-        fieldClone.localized();
-        return fieldClone;
-      }
-      return field;
-    });
+    this.field.fields = localizeRepeatableFields(this.field.fields, OWN);
     return this;
   }
 
@@ -174,11 +162,6 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
   }
 }
 
-/**
- * Checks if a field is a tree field.
- */
-export const isTreeFieldRaw = (field: Field): field is TreeFieldRaw => field.type === 'tree';
-
 /****************************************************/
 /* Types
 /****************************************************/
@@ -192,5 +175,3 @@ export type TreeField = FormField & {
 };
 
 export type TreeFieldBlockRenderTitle = (args: { position: string; values: Dic }) => string;
-
-export type TreeFieldRaw = FormField & Omit<TreeField, 'fields'> & { fields: Field[] };

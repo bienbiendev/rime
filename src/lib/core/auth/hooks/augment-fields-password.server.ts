@@ -1,6 +1,6 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import validate from '$lib/core/fields/validate.js';
-import { text } from '$lib/fields/text/index.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import validate from '#lib/core/fields/validate.js';
+import { text } from '#lib/fields/text/index.js';
 
 const passwordField = text('password')
   .required()
@@ -12,30 +12,14 @@ const passwordField = text('password')
   .validate((value) => validate.password(value));
 
 /**
- * Appends the `password` field to the config, so the validation steps that follow
- * (buildDataConfigMap → validateFields) see it and enforce the password policy.
- *
- * `password` is not a column — better-auth stores the credential. It lives in the config
- * purely to carry `validate.password`, which is why it is added here per-operation rather
- * than declared on the collection in augment.ts.
- *
- * Must run *after* mergeWithInitialDocument. The initial document is built from `config.fields`,
- * and the config map is built from the *data*: augment before the merge and every create
- * gains an empty `password`, which then fails its own `.required()` check on the paths that
- * legitimately have no password — better-auth's post-signup callback, which creates the
- * document with `{ name, email, authUserId }`.
- *
- * `confirmPassword` deliberately does NOT appear here. It is a form control, not data: the
- * only thing a server-side comparison proves is that the same client sent the same value
- * twice. The panel enforces the match in AuthFooter.svelte, where a mistyped password can
- * still be corrected.
+ * On a create, appends the `password` field to a password-auth config, so `validateFields`
+ * enforces the password policy. `password` is not a column: better-auth stores the credential.
  */
-export const augmentFieldsPassword = Hooks.beforeUpsert<'auth'>(
+export const augmentFieldsPassword = Hooks.beforeCreate<'auth'>(
   async function augmentFieldsPassword(args) {
     let { config } = args;
 
-    const IS_PASSWORD_AUTH =
-      config.auth && typeof config.auth !== 'boolean' && config.auth.type === 'password';
+    const IS_PASSWORD_AUTH = config.auth?.type === 'password';
 
     if (IS_PASSWORD_AUTH) {
       config = {

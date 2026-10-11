@@ -1,4 +1,4 @@
-import type { User } from '$lib/core/auth/types.js';
+import type { User } from '#lib/core/auth/types.js';
 
 /** One event on the stream. */
 export type SSEEvent = {

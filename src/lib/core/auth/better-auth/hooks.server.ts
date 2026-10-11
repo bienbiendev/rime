@@ -1,11 +1,14 @@
-import { dev } from '$app/environment';
+import { ROLES } from '#lib/core/auth/constant.js';
+import { dev } from '$app/env';
 import { getRequestEvent } from '$app/server';
-import { deleteAuthUser, setAuthUserRole } from '$lib/core/auth/better-auth-tables.server.js';
-import { BETTER_AUTH_ROLES } from '$lib/core/auth/constant.server.js';
-import { userAttributes } from '$lib/core/auth/user.server.js';
-import { logger } from '$lib/core/logger.server.js';
-import { trycatch } from '$lib/util/function.js';
-import { omit } from '$lib/util/object.js';
+import { deleteAuthUser, setAuthUserRole } from '#lib/core/auth/better-auth-tables.server.js';
+import { BETTER_AUTH_ROLES } from '#lib/core/auth/constant.server.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { userAttributes } from '#lib/core/auth/user.server.js';
+import { logger } from '#lib/core/logger.server.js';
+import { trycatch } from '#lib/util/function.js';
+import { omit } from '#lib/util/object.js';
+import type { Dic } from '#lib/util/types.js';
 import type { AuthContext, MiddlewareContext, MiddlewareOptions } from 'better-auth';
 import { APIError, createAuthMiddleware, type AuthMiddleware } from 'better-auth/api';
 
@@ -32,7 +35,7 @@ const getUserAttributes = async (ctx: CTX) => {
     });
     if (!user) {
       logger.error(
-        `cant' find user with authUser id ${newSession.user.id} from ${newSession.user.type} collection`
+        `can't find user with authUser id ${newSession.user.id} from ${newSession.user.type} collection`
       );
       throw new APIError('BAD_REQUEST');
     }
@@ -47,9 +50,8 @@ const getUserAttributes = async (ctx: CTX) => {
 };
 
 /**
- * The creation of users handle from here is made for these two scenarios :
- * - public sign-up with better-auth
- * - create the first user via api/init
+ * Creates the collection document for a new Better-auth user: on public sign-up, and for the
+ * first user via api/init.
  */
 const handleUserCreation = async (ctx: CTX) => {
   const newSession = ctx.context.newSession;
@@ -74,7 +76,7 @@ const handleUserCreation = async (ctx: CTX) => {
       id: '1',
       name: 'system',
       email: 'admin@system.com',
-      roles: ['admin'],
+      roles: [ROLES.ADMIN],
       isStaff: true,
       isSuperAdmin: true
     };
@@ -83,36 +85,31 @@ const handleUserCreation = async (ctx: CTX) => {
   }
 
   /**
-   * Set pendingSignInAfterSignUp flag to true to auto-populate the user document
-   * after creation on event.locals.user, this tell the operation that
-   * the creation is initiate by a better-auth sign-up
+   * Marks the create below as a better-auth sign-up: `createBetterAuthUser` keeps the
+   * `authUserId` it carries, and `signInNewUser` signs the new user in.
    */
   event.locals.pendingSignInAfterSignUp = true;
 
   /**
    * Create the collection document
    */
-  const [error, userData] = await trycatch(() =>
+  const [error] = await trycatch(() =>
     event.locals.rime
       .collection(ctx.body.type)
-      .system(event.locals.isInit)
+      // As rime only for the init; a sign-up is checked as the caller, like any create
+      .system(!!event.locals.isInit)
       .create({
         data: {
           ...omit(['password', 'type'], ctx.body),
-          // explicit set roles to null if not from the init process,
-          // it will be set to the default role value
-          // better safe than wrong, this prevent the role prop to be set from
-          // outside the panel
-          roles: event.locals.isInit ? ['admin'] : null,
+          // Outside init, `null` applies the default role.
+          roles: event.locals.isInit ? [ROLES.ADMIN] : null,
           authUserId: newSession.user.id
         }
       })
   );
 
   // If error clean up session/account/user created
-  // note: would be cleaner to do it with the admin plugin, not possible at the moment
   if (error) {
-    console.log(error);
     logger.error(error.message);
     ctx.context.newSession = null;
     const { user } = newSession;
@@ -121,19 +118,32 @@ const handleUserCreation = async (ctx: CTX) => {
     await deleteAuthUser(rime.adapter, { authUserId: user.id });
     throw new APIError('BAD_REQUEST');
   }
-
-  // Return rime user data
-  return userData;
 };
 
 /****************************************************/
 /* Before Hooks
 /****************************************************/
 
-const preventPublicStaffSignUp = (ctx: CTX): void => {
-  // Prevent public staff sign-up
+/**
+ * A sign-up goes to an auth collection of `password` type that lets this request create, as any
+ * create would; checked before better-auth writes its account. The init, which creates the first
+ * admin, is rime's own.
+ *
+ * ```ts
+ * // users: access.create () => true
+ * { type: 'users' }  // signs up
+ * { type: 'staff' }  // UNAUTHORIZED: staff create is admin-only
+ * { type: 'pages' }  // UNAUTHORIZED: not an auth collection
+ * ```
+ */
+const preventRefusedSignUp = (ctx: CTX): void => {
   const event = getRequestEvent();
-  if (ctx.body.type === 'staff' && !event.locals.user?.isStaff && !event.locals.isInit) {
+  if (event.locals.isInit) return;
+
+  const collections = event.locals.rime.config.collections as Dic<BuiltCollection | undefined>;
+  const config = collections[ctx.body.type];
+  const signsUp = typeof config?.auth === 'object' && config.auth.type === 'password';
+  if (!signsUp || !config.access.create(event.locals.user, { event })) {
     throw new APIError('UNAUTHORIZED');
   }
 };
@@ -144,7 +154,7 @@ const preventPublicStaffSignUp = (ctx: CTX): void => {
 
 export const betterAuthBeforeHook: AuthMiddleware = createAuthMiddleware(async (ctx) => {
   if (ctx.path.startsWith('/sign-up')) {
-    preventPublicStaffSignUp(ctx);
+    preventRefusedSignUp(ctx);
   }
 });
 

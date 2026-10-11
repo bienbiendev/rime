@@ -1,33 +1,34 @@
 <script lang="ts">
-  import { GripVertical } from '@lucide/svelte';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
   import type { Editor } from '@tiptap/core';
   import {
     DragHandlePlugin,
-    defaultComputePositionConfig,
-    type DragHandlePluginProps
+    defaultComputePositionConfig
   } from '../../core/extensions/drag-handle/index.js';
   import './drag-handle.css';
 
   type Props = {
     editor: Editor;
-    element?: HTMLElement;
-    computePositionConfig?: DragHandlePluginProps['computePositionConfig'];
   };
 
-  let { editor, computePositionConfig, element = $bindable() }: Props = $props();
+  let { editor }: Props = $props();
+  let element = $state<HTMLElement>();
 
   const pluginKey = new Date().getTime().toString();
 
   $effect(() => {
     if (!element || !editor) return;
-    const { plugin } = DragHandlePlugin({
+    const { plugin, unbind } = DragHandlePlugin({
       editor,
       pluginKey,
       element,
-      computePositionConfig: { ...defaultComputePositionConfig, ...computePositionConfig }
+      computePositionConfig: defaultComputePositionConfig
     });
     editor.registerPlugin(plugin);
-    return () => editor.unregisterPlugin(pluginKey);
+    return () => {
+      unbind();
+      editor.unregisterPlugin(pluginKey);
+    };
   });
 </script>
 

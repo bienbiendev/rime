@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
+  import type { CollectionContext } from '#lib/panel/context/collection.svelte.js';
   import Folder from './FolderWithActions.svelte';
 
   type Props = { collection: CollectionContext };

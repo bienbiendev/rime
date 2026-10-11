@@ -1,10 +1,11 @@
-import type { NodeStorage } from '$lib/core/fields/builders/field-builder.js';
-import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { getFieldAtPath, resolvedReferencesOf } from '$lib/core/fields/util.js';
+import { pathToDatabaseColumn } from './columns.server.js';
+import type { NodeStorage } from '#lib/core/fields/builders/field-builder.js';
+import type { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import { getFieldAtPath, resolvedReferencesOf } from '#lib/core/fields/util.js';
 import { getColumns } from 'drizzle-orm';
-import { isRelationField } from '$lib/fields/relation/index.js';
-import type { BuiltArea, BuiltCollection } from '$lib/types.js';
-import type { Dic } from '$lib/util/types.js';
+import { isRelationField } from '#lib/fields/relation/index.js';
+import type { BuiltArea, BuiltCollection } from '#lib/types.js';
+import type { Dic } from '#lib/util/types.js';
 import {
   baseTableName,
   childTableNames,
@@ -57,8 +58,8 @@ export const resolvedReferenceJoins = (args: {
 const ADDRESS_PATHS = ['url', '_urlPath', '_slug'];
 
 /**
- * The page's row in its paths table, in the locale read, when its collection has `$url`. A page
- * has a row in every locale, so there is no fallback to resolve.
+ * The document's row in its paths table, in the locale read, when its config has `$url`. A
+ * document has a row in every locale, so there is no fallback to resolve.
  *
  * ```ts
  * pathsJoin({ base: 'pages', tables, locale: 'en' })
@@ -130,8 +131,7 @@ export const buildWithParam = (args: {
   ];
 
   for (const path of select) {
-    // Convert dot notation to double underscore notation for SQLite queries
-    const sqlPath = path.replace(/\./g, '__');
+    const sqlPath = pathToDatabaseColumn(path);
 
     const fieldConfig = getFieldAtPath(path, documentConfig.fields);
 
@@ -184,36 +184,15 @@ export const buildWithParam = (args: {
     }
   }
 
-  // Compute direct relationships if defined
-  // this ensure we only fetch the necessary relations
-  if (directRelationPaths.length) {
-    withParam[tableName({ owner: table, child: { kind: 'rels' } })] = {
-      where: { OR: directRelationPaths.map((path) => ({ path })) },
-      orderBy: { path: 'asc', position: 'asc' }
-    };
-  }
-
-  // Handle nested relationships
-
-  // 1. Include relations table if container paths exist (blocks or trees).
-  //    If container paths are present we include relations for those containers
-  //    and also include any direct relation paths.
-  if (
-    allChildPaths().length > 0 &&
-    tableName({ owner: table, child: { kind: 'rels' } }) in tables
-  ) {
-    // Create a where condition that matches relations within any of the container paths,
-    // and include direct relation paths as exact matches.
-    withParam[tableName({ owner: table, child: { kind: 'rels' } })] = {
-      where: {
-        OR: [
-          // A container's rows sit under its path; a direct relation is the path itself.
-          ...allChildPaths().map((path) => ({ path: { like: `${path}__%` } })),
-          ...directRelationPaths.map((path) => ({ path }))
-        ]
-      },
-      orderBy: { path: 'asc', position: 'asc' }
-    };
+  // 1. The junction rows below each selected container and at each selected relation path.
+  //    A container's rows sit under its path; a direct relation is the path itself.
+  const rels = tableName({ owner: table, child: { kind: 'rels' } });
+  const relationPaths = [
+    ...(rels in tables ? allChildPaths().map(below) : []),
+    ...directRelationPaths.map((path) => ({ path }))
+  ];
+  if (relationPaths.length) {
+    withParam[rels] = { where: { OR: relationPaths }, orderBy: { path: 'asc', position: 'asc' } };
   }
 
   // 2. Include tree tables for blocks that might contain trees
@@ -222,7 +201,7 @@ export const buildWithParam = (args: {
     for (const treeTable of treeTables) {
       if (!withParam[treeTable]) {
         withParam[treeTable] = {
-          where: { OR: childPaths.blocks.map((path) => ({ path: { like: `${path}__%` } })) },
+          where: { OR: childPaths.blocks.map(below) },
           orderBy: { position: 'asc' }
         };
 
@@ -248,7 +227,7 @@ export const buildWithParam = (args: {
     for (const blocksTable of blocksTables) {
       if (!withParam[blocksTable]) {
         withParam[blocksTable] = {
-          where: { OR: childPaths.tree.map((path) => ({ path: { like: `${path}__%` } })) },
+          where: { OR: childPaths.tree.map(below) },
           orderBy: { position: 'asc' }
         };
 
@@ -277,6 +256,13 @@ export const buildWithParam = (args: {
 };
 
 /** The filter on a locales branch: every locale in the fallback order, else the one requested. */
+/**
+ * Rows stored below a container: `layout` -> `layout.0.image`, not `layoutCover` nor
+ * `layoutXcover`. A range, not `LIKE`, where `_` would match any character: `/` is the character
+ * after `.`.
+ */
+const below = (path: string) => ({ path: { gte: `${path}.`, lt: `${path}/` } });
+
 const branchFilter = (locale?: string, fallback?: string[]): Dic =>
   fallback && fallback.length > 1 ? { locale: { in: fallback } } : { locale };
 

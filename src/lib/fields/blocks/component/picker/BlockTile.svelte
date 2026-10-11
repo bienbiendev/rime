@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { capitalize } from '$lib/util/string.js';
-  import { ToyBrick } from '@lucide/svelte';
+  import { capitalize } from '#lib/util/string.js';
+  import ToyBrick from '@lucide/svelte/icons/toy-brick';
   import type { BlocksFieldBlock } from '../../index.js';
 
   /**
    * The inside of a type's tile: its thumbnail, or its icon, above its name and description. The
-   * element around it carries `rz-block-tile`: a button in the blocks editor, an item in the
+   * element around it carries `rz-block-tile`: a button in the focus mode palette, an item in the
    * picker.
    */
   type Props = { block: BlocksFieldBlock };

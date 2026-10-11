@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { panelUrl } from '$lib/core/routes/util.js';
-  import Email from '$lib/fields/email/component/Email.svelte';
-  import AuthForm from '$lib/panel/components/sections/auth/AuthForm.svelte';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import { setFormContext } from '$lib/panel/context/form.svelte';
-  import { emailField } from '$lib/panel/pages/auth/fields.js';
-  import { authClient } from '$lib/panel/util/auth';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { panelUrl } from '#lib/core/routes/util.js';
+  import Email from '#lib/fields/email/component/Email.svelte';
+  import AuthForm from '#lib/panel/components/sections/auth/AuthForm.svelte';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import { createFormStore } from '#lib/panel/context/form.svelte.js';
+  import { emailField } from '#lib/panel/pages/auth/fields.js';
+  import { authClient } from '#lib/panel/util/auth.js';
   import { toast } from 'svelte-sonner';
 
   type Props = {
@@ -16,16 +16,9 @@
   };
   const { data }: Props = $props();
 
-  const context = setFormContext({}, 'login');
+  const context = createFormStore({});
 
   let success = $state(false);
-
-  $effect(() => {
-    const formError = context.errors.get('_form');
-    if (typeof formError === 'string') {
-      toast.error(t__(`errors.${formError}`));
-    }
-  });
 
   async function sendResetPasswordMail() {
     const { data, error } = await authClient.requestPasswordReset({
@@ -45,7 +38,7 @@
   {#if success}
     <p>{t__('common.passwordResetLinkSent', context.values.email)}</p>
   {:else}
-    <Email config={emailField} form={context} />
+    <Email config={emailField()} form={context} />
     <Button size="xl" disabled={!context.canSubmit} onclick={sendResetPasswordMail}>
       {t__('common.requestPasswordReset')}
     </Button>

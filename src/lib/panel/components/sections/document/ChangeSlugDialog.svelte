@@ -1,13 +1,13 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
-  import type { BuiltCollection } from '$lib/core/config/types';
-  import { PARAMS } from '$lib/core/constants.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { apiUrl } from '$lib/core/routes/util.js';
-  import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { slugify } from '$lib/util/string.js';
+  import type { BuiltCollection } from '#lib/core/config/types.js';
+  import { PARAMS } from '#lib/core/constants.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { apiUrl } from '#lib/core/routes/util.js';
+  import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { slugify } from '#lib/util/string.js';
   import { toast } from 'svelte-sonner';
   import Button from '../../ui/button/button.svelte';
   import Label from '../../ui/label/label.svelte';
@@ -64,7 +64,7 @@
       return;
     }
     // A slug the client already checked is refused for one reason: a sibling holds it.
-    error = response?.status === 400 ? t__('common.url_slug_taken') : t__('error.generic');
+    error = response?.status === 400 ? t__('common.url_slug_taken') : t__('common.generic_error');
   }
 </script>
 

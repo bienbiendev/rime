@@ -14,8 +14,9 @@ program
     try {
       const frontRoutesPath = path.join(projectRoot, 'src', 'routes', '\\(front\\)');
 
-      // Delete previous
+      // Delete previous, including a previous fixture's src/params.ts, so init writes a fresh one
       execSync('bun ./src/lib/core/dev/cli/index.ts clear --force', { stdio: 'inherit' });
+      execSync(`rm -f ${path.join(projectRoot, 'src', 'params.ts')}`);
 
       // tests/<name>/lib/ mirrors src/lib/ exactly (its +rime/ subfolder and any local
       // $rime/<name> split folders alike) — a straight copy is correct.
@@ -43,18 +44,19 @@ program
         execSync(`cp -rf ${testFrontRoutesPath} ${frontRoutesPath}`);
       }
 
-      // Copy any param matchers the fixture's own front routes need. rime generates only
-      // panel/collection/area, so a route naming another matcher (e.g. [parentSlug=news])
-      // must ship it — without it SvelteKit cannot build the route manifest and every
-      // request 500s. Must run after init, which regenerates src/params.
-      const testParamsPath = path.join(projectRoot, 'tests', name, 'params');
+      // Copy the fixture's own src/params.ts when its front routes name another matcher (e.g.
+      // [parentSlug=news]). rime generates only panel/collection/area, and locale for a config
+      // with locales — without it SvelteKit cannot build the route manifest and every request
+      // 500s. It spreads rime's matchers too, so it replaces the one init wrote: must run after
+      // init.
+      const testParamsPath = path.join(projectRoot, 'tests', name, 'params.ts');
 
       if (existsSync(testParamsPath)) {
-        const paramsDirPath = path.join(projectRoot, 'src', 'params');
-        execSync(`mkdir -p ${paramsDirPath} && cp -rf ${testParamsPath}/* ${paramsDirPath}/`);
+        execSync(`cp -f ${testParamsPath} ${path.join(projectRoot, 'src', 'params.ts')}`);
       }
     } catch (error) {
       console.error('Error setting configuration:', error);
+      process.exitCode = 1;
     }
   });
 

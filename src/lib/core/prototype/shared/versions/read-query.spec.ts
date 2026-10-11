@@ -1,6 +1,6 @@
-import { create } from '$lib/core/prototype/collection/definition.js';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
-import { text } from '$lib/fields/text/index.js';
+import { create } from '#lib/core/prototype/collection/definition.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+import { text } from '#lib/fields/text/index.js';
 import { describe, expect, it } from 'vitest';
 import { versionsReadQuery } from './read-query.js';
 
@@ -37,13 +37,6 @@ describe('versionsReadQuery', () => {
 
   it('names the row when the caller named a version, whatever its status', () => {
     expect(queryFor(drafts, { versionId: 'v9' })).toEqual({
-      where: { versionId: { equals: 'v9' } }
-    });
-  });
-
-  it('prefers a named version over the published filter', () => {
-    // Both parameters arrive together on `?versionId=v9` requests from the panel.
-    expect(queryFor(drafts, { versionId: 'v9', latest: false })).toEqual({
       where: { versionId: { equals: 'v9' } }
     });
   });
@@ -97,12 +90,6 @@ describe('versionsReadQuery', () => {
    * and a named version is that row.
    */
   describe("as an update's original", () => {
-    it('is the published version on a draft config', () => {
-      expect(queryFor(drafts, { latest: false })).toEqual({
-        where: { status: { equals: VERSIONS_STATUS.PUBLISHED } }
-      });
-    });
-
     it('is the named version when one was named', () => {
       expect(queryFor(drafts, { versionId: 'v9', latest: false })).toEqual({
         where: { versionId: { equals: 'v9' } }

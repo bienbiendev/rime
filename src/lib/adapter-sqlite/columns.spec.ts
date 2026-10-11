@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { text } from '$lib/fields/text/index.js';
-import { create } from '$lib/core/prototype/collection/definition.js';
-import { RimeError } from '$lib/core/errors/index.js';
+import { text } from '#lib/fields/text/index.js';
+import { create } from '#lib/core/prototype/collection/definition.js';
+import { RimeError } from '#lib/core/errors/index.js';
 import { mergeContentRow } from './columns.server.js';
 
 /**

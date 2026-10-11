@@ -1,5 +1,6 @@
-import type { ConfigContext } from '$lib/core/rime.server.js';
-import type { Dic } from '$lib/util/types.js';
+import type { ConfigContext } from '#lib/core/rime.server.js';
+import type { Dic } from '#lib/util/types.js';
+import { ROW_ADDRESS } from './columns.server.js';
 
 /**
  * Which locales a read in `locale` draws on, first to last.
@@ -29,9 +30,6 @@ export const localeOrder = (
   return order.filter((code, index) => order.indexOf(code) === index);
 };
 
-/** The columns a locales row carries beside its values. */
-const ROW_KEYS = ['id', 'locale', 'ownerId'];
-
 /**
  * Nothing written. `''` counts: a required localized column is `NOT NULL DEFAULT ''`, and that is
  * what it holds when another field's write creates the locale's row.
@@ -56,7 +54,7 @@ export const mergeLocaleRows = (rows: Dic[] | undefined, order: string[]): Dic =
 
   for (const row of ordered) {
     for (const [key, value] of Object.entries(row)) {
-      if (ROW_KEYS.includes(key)) continue;
+      if (ROW_ADDRESS.includes(key)) continue;
       if (unwritten(merged[key])) merged[key] = value;
     }
   }

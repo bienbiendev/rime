@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { getCommandsContext, useCommands } from '$lib/panel/context/commands.svelte.js';
-  import * as random from '$lib/util/random.js';
-  import { capitalize } from '$lib/util/string.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { getCommandsContext, useCommands } from '#lib/panel/context/commands.svelte.js';
+  import * as random from '#lib/util/random.js';
   import type { Editor } from '@tiptap/core';
   import { Plugin, PluginKey } from '@tiptap/pm/state';
   import type { RichTextFeature } from '../../core/types.js';
@@ -14,22 +13,15 @@
 
   let { editor, features = [] }: Props = $props();
 
-  const augmentFeatureName = (feature: RichTextFeature): RichTextFeature & { name?: string } => ({
-    ...feature,
-    name: feature.extension?.name
-  });
-
   // Get all items with suggestion commands
   const markItems = $derived(
     features
-      .map(augmentFeatureName)
       .flatMap((feature) => feature.marks?.map((m) => ({ ...m, name: m.label })) || [])
       .filter((mark) => mark.suggestion && mark.suggestion.command)
   );
 
   const nodeItems = $derived(
     features
-      .map(augmentFeatureName)
       .flatMap((feature) => feature.nodes?.map((m) => ({ ...m, name: m.label })) || [])
       .filter((node) => node.suggestion && node.suggestion.command)
   );
@@ -41,8 +33,8 @@
   const commands = getCommandsContext();
 
   /**
-   * `/` typed on an empty line opens the palette on these, and is not written. It is the typed
-   * character, not a key, so it works on every keyboard.
+   * `/` typed on an empty line opens the palette on the editor's commands, registered below, and
+   * is not written. It is the typed character, not a key, so it works on every keyboard.
    */
   $effect(() => {
     if (!commands) return;
@@ -67,7 +59,7 @@
   useCommands(() =>
     allSuggestionItems.map((item) => ({
       id: `text.${item.name}`,
-      label: item.label || capitalize(item.name || ''),
+      label: item.label,
       group,
       icon: item.icon,
       when: () => editor.isFocused,

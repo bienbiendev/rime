@@ -1,22 +1,21 @@
 import { page } from '$app/state';
-import { PARAMS } from '$lib/core/constants.js';
-import type { GenericDoc } from '$lib/core/prototype/types.js';
-import type { BeforeNavigate } from '@sveltejs/kit';
+import { PARAMS } from '#lib/core/constants.js';
+import { prototypeKebab } from '#lib/core/prototype/naming.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
+import type { BeforeNavigate } from '$app/navigation';
 import { getContext, setContext } from 'svelte';
-import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
-import { populate } from '$lib/fields/relation/populate.js';
+import { getValueAtPath, setValueAtPath } from '#lib/util/object.js';
+import { populate } from '#lib/fields/relation/populate.js';
 
 export const LIVE_KEY = Symbol('rime.live');
 
 /**
- * The panel's origin, the only one whose messages are read. `$env/dynamic/public` loads with the
+ * The panel's origin, the only one whose messages are read. `$app/env/public` loads with the
  * first message, so `rimecms/public` imports outside a SvelteKit page, in a component spec.
  */
 let panelOrigin: Promise<string> | undefined;
 const getPanelOrigin = () =>
-  (panelOrigin ??= import('$env/dynamic/public').then(
-    ({ env }) => new URL(env.PUBLIC_RIME_URL).origin
-  ));
+  (panelOrigin ??= import('$app/env/public').then(({ SITE_URL }) => new URL(SITE_URL).origin));
 
 /**
  * Live Editing Flow:
@@ -24,17 +23,34 @@ const getPanelOrigin = () =>
  * 2. Live context in iframe receives it, enables itself
  * 3. Live context sends handshake response with its href
  * 4. Live.svelte receives the handshake response
- * 5. Live.svelte compares iframe href to expected iframeSrc
+ * 5. Live.svelte compares the href the iframe sent (`iframeSrc`) to the expected `data.src`
  * 6. If they match, sync is established and user can edit
  * 7. When navigating, iframe context sends message to parent with new location + ?live=1
  * 8. Live.svelte navigates to new location, maintaining live edit mode
  */
 
-type LiveStore<T extends GenericDoc = GenericDoc> = ReturnType<typeof createStore<T>>;
+type LiveStore = ReturnType<typeof createStore>;
 
-function createStore<T extends GenericDoc = GenericDoc>(href: string) {
+/**
+ * The API path the panel reads and saves a document through, without `/api`.
+ *
+ * ```ts
+ * updateURI(doc); // '/pages/123?versionId=v1&locale=fr'
+ * updateURI(blogPost); // '/blog-posts/456'
+ * ```
+ */
+export const updateURI = (doc: GenericDoc) => {
+  let uri = `/${prototypeKebab(doc._type)}`;
+  if (doc._prototype === 'collection') uri += `/${doc.id}`;
+  const params = [];
+  if (doc.versionId) params.push(`${PARAMS.VERSION_ID}=${doc.versionId}`);
+  if (doc.locale) params.push(`${PARAMS.LOCALE}=${doc.locale}`);
+  if (params.length) uri += `?${params.join('&')}`;
+  return uri;
+};
+
+function createStore(href: string) {
   let enabled = $state(false);
-  let doc = $state<T>();
   const liveStore = $state<Record<string, any>>({});
   let activePanelKey = $state<string | null>(null);
 
@@ -43,11 +59,12 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
    */
   const beforeNavigate = (params: BeforeNavigate) => {
     if (params.type === 'leave') return;
-    const url = params.to?.url.href;
-    if (window && window.top && url && enabled) {
-      window.top.postMessage({ location: url + '?live=1' });
-      params.cancel();
-    }
+    if (!params.to || !window.top || !enabled) return;
+    // The page's own query stays: `/news?page=2` → `/news?page=2&live=1`
+    const location = new URL(params.to.url);
+    location.searchParams.set('live', '1');
+    window.top.postMessage({ location: location.href });
+    params.cancel();
   };
 
   /**
@@ -56,6 +73,8 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
   const onMessage = async (e: MessageEvent) => {
     // Only accept messages from the trusted panel origin
     if (e.origin !== (await getPanelOrigin())) return;
+    // The panel posts objects; anything else is another script's message
+    if (typeof e.data !== 'object' || e.data === null) return;
 
     // Handle handshake request
     if (e.data.handshake) {
@@ -66,7 +85,7 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
       }
     }
 
-    // Handle panel store updates (new protocol — has `update` key)
+    // Handle panel store updates (messages with an `update` key)
     else if (
       e.data.update !== undefined &&
       e.data.path !== undefined &&
@@ -78,17 +97,26 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
     else if ('activePanel' in e.data) {
       activePanelKey = e.data.activePanel ?? null;
     }
-    // Handle field updates (legacy single-doc protocol)
-    else if (e.data.path && e.data.value !== undefined) {
-      await handleFieldUpdate(e.data);
-    }
   };
 
+  /** The locale an update key names: `/pages/1?locale=fr` → `'fr'`, `/settings` → `undefined`. */
+  const localeOf = (update: string) =>
+    new URLSearchParams(update.split('?')[1] ?? '').get(PARAMS.LOCALE) ?? undefined;
+
+  let queue: Promise<void> = Promise.resolve();
+
   /**
-   * Handles panel store updates (new multi-panel protocol)
+   * Writes a panel update into the store of its `update` key, one store per key. Updates apply
+   * one at a time, in the order they arrive: each waits for the one before it to finish.
    */
-  const handlePanelUpdate = async (data: { update: string; path: string; value: any }) => {
-    const processedValue = await populate(data.value);
+  const handlePanelUpdate = (data: { update: string; path: string; value: any }) => {
+    queue = queue.then(() => applyUpdate(data)).catch((error) => console.error(error));
+    return queue;
+  };
+
+  /** Related documents are read in the key's locale. */
+  const applyUpdate = async (data: { update: string; path: string; value: any }) => {
+    const processedValue = await populate(data.value, localeOf(data.update));
     if (!data.path) {
       // Empty path = full doc seed (sent on panel activation)
       liveStore[data.update] = processedValue;
@@ -98,17 +126,6 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
     liveStore[data.update] = setValueAtPath(data.path, current, processedValue);
   };
 
-  /**
-   * Handles field value updates
-   */
-  const handleFieldUpdate = async (data: { path: string; value: any }) => {
-    if (!doc) throw new Error('live.doc has not been set before handleFieldUpdate');
-    // Populate relations / link
-    const processedValue = await populate(data.value);
-    // Update the document
-    doc = setValueAtPath(data.path, doc, processedValue) as T;
-  };
-
   // Return public facade
   return {
     beforeNavigate,
@@ -116,17 +133,12 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
 
     get documentUpdateURI() {
       const doc = page.data.doc;
-      if (!doc)
+      if (!doc) {
         throw new Error(
-          'live.doc has not been set before accessing documentAPIUpdateURL, be sure to provide a "doc" property in the page data, or provide an update property to the LiveEdit component.'
+          'page.data.doc is missing: provide a "doc" in the page data, or an update property to the LiveEdit component.'
         );
-      let uri = `/${doc._type}`;
-      if (doc._prototype === 'collection') uri += `/${doc.id}`;
-      const params = [];
-      if (doc.versionId) params.push(`${PARAMS.VERSION_ID}=${doc.versionId}`);
-      if (doc.locale) params.push(`${PARAMS.LOCALE}=${doc.locale}`);
-      if (params.length) uri += `?${params.join('&')}`;
-      return uri;
+      }
+      return updateURI(doc);
     },
 
     getPanelValue: (update: string, path: string): any => {
@@ -141,18 +153,6 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
       return activePanelKey;
     },
 
-    get data() {
-      return { doc };
-    },
-
-    get doc() {
-      return doc;
-    },
-
-    set doc(value) {
-      doc = value;
-    },
-
     get enabled() {
       return enabled;
     }
@@ -162,8 +162,8 @@ function createStore<T extends GenericDoc = GenericDoc>(href: string) {
 /**
  * Creates and sets the live context for the current component
  */
-export function setLiveContext<T extends GenericDoc = GenericDoc>(href: string) {
-  const store = createStore<T>(href);
+export function setLiveContext(href: string) {
+  const store = createStore(href);
   setContext(LIVE_KEY, store);
   return store;
 }
@@ -171,6 +171,6 @@ export function setLiveContext<T extends GenericDoc = GenericDoc>(href: string) 
 /**
  * Gets the live context from the current component
  */
-export function getLiveContext<T extends GenericDoc = GenericDoc>() {
-  return getContext<LiveStore<T>>(LIVE_KEY);
+export function getLiveContext() {
+  return getContext<LiveStore>(LIVE_KEY);
 }

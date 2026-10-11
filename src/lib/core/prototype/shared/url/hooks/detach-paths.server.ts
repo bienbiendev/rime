@@ -1,5 +1,5 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
 import { movePage } from '../addresses.server.js';
 import { refreshUrls } from '../refresh.server.js';
 

@@ -1,5 +1,5 @@
-import type { PrototypeSlug } from '$lib/core/prototype/types.js';
-import type { Dic } from '$lib/util/types.js';
+import type { PrototypeSlug } from '#lib/core/prototype/types.js';
+import type { Dic } from '#lib/util/types.js';
 import { Node, mergeAttributes } from '@tiptap/core';
 import SvelteNodeViewRenderer from '../../svelte/node-view-renderer.svelte';
 import ResourceComponent from './resource.svelte';

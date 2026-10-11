@@ -1,17 +1,13 @@
-import type { PathRow } from '$lib/core/adapter.js';
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { logger } from '$lib/core/logger.server.js';
-import type { GenericDoc } from '$lib/core/prototype/types.js';
+import type { PathRow } from '#lib/core/adapter.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import { logger } from '#lib/core/logger.server.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
+import { refreshAreaUrls } from './area.server.js';
 import { hasUrl } from './enabled.js';
 import { freeSlug, toSlug } from './format.server.js';
+import { addressLocales } from './locales.server.js';
 import { formatRows, readForUrls } from './refresh.server.js';
-
-/** The locales a page has an address in: `''` when the config has no localization. */
-export const addressLocales = (event: RequestEvent) => {
-  const codes = event.locals.rime.config.getLocalesCodes();
-  return codes.length ? codes : [''];
-};
 
 /** The slug a page starts with: its title, its id as a last resort. */
 const initialSlug = (doc: GenericDoc) => toSlug(doc.title) || doc.id;
@@ -122,9 +118,9 @@ let ensured: Promise<void> | undefined;
 let done = false;
 
 /**
- * Once per process, on the first request: every page of a collection with `$url` gets the address
- * it is missing. One query per collection and locale once they all have one. The requests after
- * it are not held: nothing to await once it is done.
+ * Once per process, on the first request: every page of a collection with `$url`, and every area
+ * with one, gets the address it is missing. One query per config and locale once they all have
+ * one. The requests after it are not held: nothing to await once it is done.
  */
 export const ensureAddresses = async (event: RequestEvent) => {
   if (done) return;
@@ -140,6 +136,17 @@ export const ensureAddresses = async (event: RequestEvent) => {
       if (!missing.size) continue;
       logger.info(`${config.slug}: giving ${missing.size} pages their address`);
       await addAddresses({ event, config, ids: [...missing] });
+    }
+    for (const config of rime.config.raw.areas as BuiltArea[]) {
+      if (!hasUrl(config)) continue;
+      const missing = await Promise.all(
+        addressLocales(event).map((locale) =>
+          rime.adapter.paths.missingOwners({ slug: config.slug, locale })
+        )
+      );
+      if (!missing.some((ids) => ids.length)) continue;
+      logger.info(`${config.slug}: giving the area its url`);
+      await refreshAreaUrls({ event, config });
     }
   })().then(
     () => {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { LiveEdit } from '$lib/public.js';
+  import { LiveEdit } from '#lib/public.js';
 
   let { data }: { data: { doc: NewsDoc } } = $props();
 </script>

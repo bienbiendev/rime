@@ -1,4 +1,4 @@
-import { block, blocks, group, text } from '$lib/fields/index.js';
+import { block, blocks, group, text } from '#lib/fields/index.js';
 import { expect, test } from 'vitest';
 import { processDocumentFields } from './process-document-fields.server.js';
 
@@ -55,4 +55,41 @@ test('the document handed in is not the one handed back', async () => {
 
   expect(doc).not.toBe(input);
   expect(input).toEqual({ id: '1', title: 'T' });
+});
+
+test('a system read keeps every field, a caller read drops the hidden ones at any depth', async () => {
+  const staffOnly = { read: (user: any) => !!user?.isStaff };
+  const fields = [
+    text('title'),
+    text('note').access(staffOnly),
+    group('meta').fields(text('a'), text('b').access(staffOnly)),
+    blocks('layout', [block('p').fields(text('t'), text('hidden').access(staffOnly))])
+  ];
+  /** The stored document, a new object on each call. */
+  const stored = () => ({
+    id: '1',
+    title: 'T',
+    note: 'n',
+    meta: { a: 'A', b: 'B' },
+    layout: [{ id: 'x', type: 'p', position: 0, t: 'x', hidden: 'h' }]
+  });
+  // Both reads get the same object: a nested value deleted in place would show in the second
+  const input = stored();
+  const readAs = (isSystemOperation: boolean) =>
+    processDocumentFields({
+      doc: input,
+      config: { slug: 'pages', fields },
+      event: { locals: { user: undefined, rime: { adapter: {} } } },
+      context: { isSystemOperation },
+      operation: 'read'
+    } as any);
+
+  expect((await readAs(false)).doc).toEqual({
+    id: '1',
+    title: 'T',
+    meta: { a: 'A' },
+    layout: [{ id: 'x', type: 'p', position: 0, t: 'x' }]
+  });
+  expect((await readAs(true)).doc).toEqual(stored());
+  expect(input).toEqual(stored());
 });

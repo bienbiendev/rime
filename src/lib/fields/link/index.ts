@@ -1,19 +1,25 @@
-import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DefaultOptions, DefaultValueFn, FormField } from '$lib/fields/types.js';
-import { sanitize } from '$lib/util/string.js';
-import validate from '$lib/core/fields/validate.js';
+import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import type { DefaultValueFn, FormField } from '#lib/fields/types.js';
+import validate from '#lib/core/fields/validate.js';
+import { omit } from '#lib/util/object.js';
+import { isSafeUrl } from '#lib/util/url.js';
 import Cell from './component/Cell.svelte';
 import LinkComp from './component/Link.svelte';
 import type { Link, LinkType } from './types.js';
+import { isDocumentLink } from './util.js';
 import { populateRessourceURL } from '$rime/modules:fields/link';
+
+/** A link with no value is empty: `null`, or `{ type, value: '' | null }`. */
+const isEmptyLink = (link: unknown) =>
+  !link || (typeof link === 'object' && 'value' in link && !link.value);
 
 export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
   constructor(name: string) {
     super(name, 'link');
-    this.field.isEmpty = (link: unknown) =>
-      !link || (typeof link === 'object' && 'value' in link && !link.value);
-    this.field.validate = validate.link;
+    this.field.isEmpty = isEmptyLink;
+    // An empty link has nothing to check: `required` reports it when the field needs one
+    this.field.validate = (link, context) => isEmptyLink(link) || validate.link(link, context);
     this.field.layout = 'default';
     this.field.types = ['url'];
     this.field.hooks = {
@@ -35,12 +41,6 @@ export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
     return this;
   }
 
-  defaultValue(value: Link | DefaultValueFn<Link>, options?: DefaultOptions) {
-    this.field.defaultValue = value;
-    this.field.defaultFill = options?.fill;
-    return this;
-  }
-
   get dataType(): DataType {
     return 'json';
   }
@@ -52,33 +52,29 @@ export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
 
   static readonly sanitize = (link: unknown): Link | undefined => {
     if (!link) return undefined;
-    // Sanitize only the value and url properties of the link, other properties are left as is
+    // Kept as sent, except a `url` that would run script: every renderer escapes the rest
     const isLinkValue = (v: any): v is Link =>
       typeof v === 'object' && !Array.isArray(v) && 'value' in v;
 
     if (isLinkValue(link)) {
-      return {
-        ...link,
-        url: link.url ? sanitize(link.url) : undefined,
-        value: link.value ? sanitize(link.value) : null
-      };
+      const value = { ...link, value: link.value || null };
+      // A document link's id, url and title are filled on read, never stored.
+      if (isDocumentLink(value)) {
+        return omit(['id', 'url', 'title'], value);
+      }
+      return { ...value, url: link.url && isSafeUrl(link.url) ? link.url : undefined };
     }
     return undefined;
   };
-
-  compile() {
-    if (!this.field.defaultValue) {
-      this.field.defaultValue = { value: '', target: '_self', type: this.field.types![0] };
-    }
-    return super.compile();
-  }
 
   protected override generateType(): string {
     return `${this.name}${this.get.required ? '' : '?'}: {
     type: ${this.get.types.map((t) => `'${t}'`).join(' | ')};
     value: string | null;
     target: '_self' | '_blank';
+    id?: string;
     url?: string;
+    title?: string;
 }`;
   }
 }

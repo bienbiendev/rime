@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isSafeUrl } from '#lib/util/url.js';
   import type { JSONContent } from '@tiptap/core';
   import RenderRichText from './render-rich-text.svelte';
   import type { RichTextNodeRenderer } from './types';
@@ -25,6 +26,10 @@
     const item = arrayClone.shift(); // removes and returns the first element
     return [item, arrayClone];
   }
+
+  /** The link target, or no `href` when it would run script. */
+  const safeHref = (href: unknown) =>
+    typeof href === 'string' && isSafeUrl(href) ? href : undefined;
 
   const { json, components }: Props = $props();
 </script>
@@ -60,15 +65,17 @@
           {@render renderMarks(processedNode)}
         </components.link>
       {:else}
-        <a {...mark.attrs}>{@render renderMarks(processedNode)}</a>
+        <a {...mark.attrs} href={safeHref(mark.attrs?.href)}>{@render renderMarks(processedNode)}</a
+        >
       {/if}
     {:else if components && mark.type && mark.type in components}
       {@const CustomMark = components[mark.type]}
       <CustomMark {components} {node}>
         {@render renderMarks(processedNode)}
       </CustomMark>
-    {:else if node.content}
-      <span {...mark.attrs}>{@render renderMarks(processedNode)}</span>
+    {:else}
+      <!-- A mark this renderer does not know: its text, without the mark -->
+      {@render renderMarks(processedNode)}
     {/if}
   {:else}
     {node.text}
@@ -138,22 +145,24 @@
       {/if}
       <!--  -->
     {:else if node.type?.startsWith('rich-text-upload-')}
+      <!-- Without a media component, a node with no url renders nothing: its media is missing, or the reader may not read it -->
       {#if components?.media}
         <components.media {components} {node}>
           <RenderRichText {components} json={node} />
         </components.media>
       {:else if node.attrs?.url && node.attrs.mimeType?.startsWith('image/')}
         <img alt={node.attrs?.alt || ''} style="width:100%;height:auto;" src={node.attrs?.url} />
-      {:else}
+      {:else if node.attrs?.url}
         [Provide a media component to render this node]
       {/if}
       <!--  -->
     {:else if node.type?.startsWith('rich-text-resource-')}
+      <!-- Without a resource component, a node with no _type renders nothing: its document is missing, or the reader may not read it -->
       {#if components?.resource}
         <components.resource {components} {node}>
           <RenderRichText {components} json={node} />
         </components.resource>
-      {:else}
+      {:else if node.attrs?._type}
         [Provide a resource component to render this node]
       {/if}
     {:else if node.type?.startsWith('rich-text-fields-')}
@@ -170,6 +179,10 @@
       <CustomNode {node}>
         <RenderRichText {components} json={node} />
       </CustomNode>
+    {:else if node.type === 'hardBreak'}
+      <br />
+    {:else if node.type === 'horizontalRule'}
+      <hr />
     {:else if node.content}
       <RenderRichText {components} json={node} />
     {/if}

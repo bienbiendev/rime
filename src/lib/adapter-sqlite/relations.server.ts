@@ -1,16 +1,15 @@
-import type { AdapterDeps } from '$lib/adapter-sqlite/types.server.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { baseTableName, tableName } from './naming.server.js';
-import type { BeforeOperationRelation, RelationRow } from '$lib/fields/relation/index.js';
-import type { PrototypeSlug } from '$lib/core/prototype/types.js';
-import { omit } from '$lib/util/object.js';
-import { isWithin } from '$lib/util/string.js';
-import type { Dic } from '$lib/util/types.js';
+import type { AdapterDeps } from '#lib/adapter-sqlite/types.server.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { baseTableName, junctionKey, tableName } from './naming.server.js';
+import type { BeforeOperationRelation, RelationRow } from '#lib/fields/relation/index.js';
+import type { PrototypeSlug } from '#lib/core/prototype/types.js';
+import { isWithin } from '#lib/util/string.js';
+import type { Dic } from '#lib/util/types.js';
 import { and, eq, getTableColumns, inArray, isNull, or, type SQLWrapper } from 'drizzle-orm';
 import { transformDataToSchema } from './columns.server.js';
+import { resolveRelationTarget } from './transform.server.js';
 
 const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
-  //
   const deleteFromPaths: DeleteFromPaths = async ({ parentSlug, ownerId, paths, locale }) => {
     if (paths.length === 0) return true;
 
@@ -57,7 +56,7 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
     for (const relation of relations) {
       if (!relation.documentId) continue;
 
-      const relationToIdKey = `${relation.relationTo}Id`;
+      const relationToIdKey = junctionKey(relation.relationTo);
       const baseValues: Dic = {
         path: relation.path,
         position: relation.position,
@@ -91,7 +90,16 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
     try {
       await Promise.all(
         relations.map((relation) => {
-          const values = transformDataToSchema(omit(['id'], relation), columns);
+          const values = transformDataToSchema(
+            {
+              path: relation.path,
+              position: relation.position,
+              [junctionKey(relation.relationTo)]: relation.documentId,
+              // Written where the junction has a `locale` column
+              ...('locale' in columns && { locale: relation.locale })
+            },
+            columns
+          );
           return db.update(table).set(values).where(eq(table.id, relation.id));
         })
       );
@@ -148,12 +156,13 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
       conditions = [eq(table.ownerId, ownerId)];
     }
 
-    const all = await db
+    const rows = await db
       .select()
       .from(table)
       .where(and(...conditions));
 
-    return all as RelationRow[];
+    // Core reads `relationTo` and `documentId`, never the per-target column
+    return rows.map((row) => resolveRelationTarget({ ...row }) as RelationRow);
   };
 
   // One query per target, against the table the junction rows' foreign key points at.
@@ -180,8 +189,7 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
 export default createRelationsHandle;
 
 /**
- * A relation write that failed. It used to be logged and swallowed, and the save went on without
- * the rows: thrown now, so the save fails instead of losing them quietly.
+ * A relation write that failed, as an error that fails the save.
  */
 const writeError = (operation: string, path: string | undefined, err: Error) =>
   new RimeError(

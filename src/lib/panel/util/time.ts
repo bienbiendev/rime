@@ -1,4 +1,4 @@
-import { t__, type Translate } from '$lib/core/i18n/index.js';
+import { t__, type Translate } from '#lib/core/i18n/index.js';
 
 const MINUTE = 60;
 const HOUR = 60 * MINUTE;

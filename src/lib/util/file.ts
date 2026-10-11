@@ -1,32 +1,37 @@
-import { slugify } from '$lib/util/string.js';
+import { slugify } from '#lib/util/string.js';
+
+const SIZE_UNITS = ['KB', 'MB', 'GB', 'TB'];
 
 /**
- * Converts a file size in bytes to a human-readable string format
+ * A size in bytes as text, in decimal units (1 KB = 1000 bytes), two decimals.
  * @example
- * fileSizeToString(500) // returns "0.50KB"
- * fileSizeToString(1500000) // returns "1.50MB"
+ * fileSizeToString(500) // "0.50KB"
+ * fileSizeToString(999_999) // "1.00MB"
+ * fileSizeToString(2_500_000_000) // "2.50GB"
  */
 export const fileSizeToString = (size: number) => {
-  if (size < 1_000_000) {
-    return (size / 1_000).toFixed(2) + 'KB';
-  } else {
-    return (size / 1_000_000).toFixed(2) + 'MB';
+  let value = size / 1000;
+  let unit = 0;
+  // A value that rounds to 1000.00 moves up a unit
+  while (Math.round(value * 100) >= 100_000 && unit < SIZE_UNITS.length - 1) {
+    value /= 1000;
+    unit += 1;
   }
+  return `${value.toFixed(2)}${SIZE_UNITS[unit]}`;
 };
 
 /**
- * Normalizes a filename by slugifying the name and standardizing the extension
+ * A file name fit for the medias folder: the name slugified, `file` when nothing of it is left,
+ * the extension lower-cased and `jpeg` written `jpg`.
  * @example
- * normalizeFileName("My Photo.JPEG") // returns { name: "my-photo", extension: "jpg" }
- * normalizeFileName("Document 1.PDF") // returns { name: "document-1", extension: "pdf" }
+ * normalizeFileName("My Photo.JPEG") // { name: "my-photo", extension: "jpg" }
+ * normalizeFileName("日本.jpg") // { name: "file", extension: "jpg" }
  */
 export const normalizeFileName = (filename: string) => {
   const { name, extension } = fileNameAndExt(filename);
-  const normalizedName = slugify(name);
-  const normalizedExtension = extension.toLowerCase().replace('jpeg', 'jpg');
   return {
-    name: normalizedName,
-    extension: normalizedExtension
+    name: slugify(name).replace(/^-+|-+$/g, '') || 'file',
+    extension: extension.replace('jpeg', 'jpg')
   };
 };
 
@@ -38,14 +43,24 @@ export function isFile(file: any): file is File {
 }
 
 /**
- * Splits a filename into its name and extension parts
+ * Splits a filename into its name and extension parts. A name with no dot, or with its only dot
+ * first, has no extension.
  * @example
  * fileNameAndExt("document.pdf") // returns { name: "document", extension: "pdf" }
  * fileNameAndExt("image.with.dots.jpg") // returns { name: "image.with.dots", extension: "jpg" }
+ * fileNameAndExt("README") // returns { name: "README", extension: "" }
  */
 export const fileNameAndExt = (filename: string) => {
-  return {
-    name: filename.substring(0, filename.lastIndexOf('.')),
-    extension: filename.substring(filename.lastIndexOf('.') + 1, filename.length).toLowerCase()
-  };
+  const dot = filename.lastIndexOf('.');
+  if (dot <= 0) return { name: filename, extension: '' };
+  return { name: filename.slice(0, dot), extension: filename.slice(dot + 1).toLowerCase() };
 };
+
+/**
+ * Joins a name and an extension.
+ * @example
+ * joinFileName('photo', 'jpg') // 'photo.jpg'
+ * joinFileName('readme', '') // 'readme'
+ */
+export const joinFileName = (name: string, extension: string) =>
+  extension ? `${name}.${extension}` : name;

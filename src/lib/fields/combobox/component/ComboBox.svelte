@@ -1,12 +1,13 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import type { OptionWithIcon } from '$lib/fields/types.js';
-  import { Field } from '$lib/panel';
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Button } from '$lib/panel/components/ui/button/index.js';
-  import * as Command from '$lib/panel/components/ui/command/index.js';
-  import * as Popover from '$lib/panel/components/ui/popover/index.js';
-  import { Check, ChevronsUpDown } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import type { OptionWithIcon } from '#lib/fields/types.js';
+  import { Field } from '#lib/panel/index.js';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Button } from '#lib/panel/components/ui/button/index.js';
+  import * as Command from '#lib/panel/components/ui/command/index.js';
+  import * as Popover from '#lib/panel/components/ui/popover/index.js';
+  import Check from '@lucide/svelte/icons/check';
+  import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
   import './combobox.css';
   import type { ComboBoxProps } from './props';
 
@@ -68,6 +69,7 @@
               <Command.Item
                 class="rz-combobox__item"
                 value={option.value}
+                keywords={[option.label ?? option.value]}
                 onSelect={() => {
                   selected = option;
                   field.value = option.value;

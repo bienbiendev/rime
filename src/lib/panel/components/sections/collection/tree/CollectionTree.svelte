@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import '$lib/panel/components/ui/tree/tree-rows.css';
-  import type { CollectionContext } from '$lib/panel/context/collection.svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import '#lib/panel/components/ui/tree/tree-rows.css';
+  import type { CollectionContext } from '#lib/panel/context/collection.svelte.js';
   import Sortable from 'sortablejs';
   import { onDestroy } from 'svelte';
   import { toast } from 'svelte-sonner';
@@ -11,7 +11,7 @@
   type Props = { collection: CollectionContext };
   const { collection }: Props = $props();
 
-  // Track collection stamp for reactivity
+  // A new stamp remounts the tree and its Sortable lists (the {#key} at :97).
   const collectionStamp = $derived(collection.stamp);
 
   let sortingInitialized = $state(false);
@@ -30,13 +30,9 @@
     onEnd: function (evt) {
       const { newIndex, oldIndex } = evt;
 
-      const fromParentId =
-        //@ts-expect-error annoying
-        evt.item.getAttribute('data-parent') || evt.item.__attributes?.['data-parent'];
-      //@ts-expect-error annoying
-      const toParentId = evt.to.getAttribute('data-id') || evt.to.__attributes?.['data-id'];
-      //@ts-expect-error annoying
-      const nodeId = evt.item.getAttribute('data-id') || evt.item.__attributes?.['data-id'];
+      const fromParentId = evt.item.getAttribute('data-parent');
+      const toParentId = evt.to.getAttribute('data-id');
+      const nodeId = evt.item.getAttribute('data-id') as string;
 
       collection
         .handleNestedDocumentMove({
@@ -55,7 +51,7 @@
             toast.success('Order updated');
             resetSortable();
           } else {
-            toast.error('An error occured');
+            toast.error(t__('common.generic_error'));
           }
         });
     }

@@ -1,12 +1,13 @@
-import { RIME_DEV_CACHE_DIR } from '$lib/core/constants.server.js';
-import { logger } from '$lib/core/logger.server.js';
+import { UPLOADS } from '#lib/core/prototype/collection/upload/constant.js';
+import { RIME_DEV_CACHE_DIR } from '#lib/core/constants.server.js';
+import { logger } from '#lib/core/logger.server.js';
 import { rmSync } from 'node:fs';
 import path from 'node:path';
 import { CONFIG_DIR, GENERATED_DIR } from '../../constants.server.js';
 import { prompt } from '../util/prompt.server.js';
 
 const clearMessage = `Are you sure you want to delete all related rime files (Y/n):
-- ./static/medias
+- ./storage/uploads
 - ./db
 - ./src/routes/(rime)
 - ./${CONFIG_DIR}
@@ -16,6 +17,7 @@ const clearMessage = `Are you sure you want to delete all related rime files (Y/
 - ./src/rime.modules.generated.d.ts
 - ./src/hooks.server.ts
 - ./drizzle.config.ts
+- ./node_modules/.rime
 `;
 
 export const clear = async (args: { force?: boolean }) => {
@@ -27,7 +29,7 @@ export const clear = async (args: { force?: boolean }) => {
   }
 
   if (!shouldProceed) {
-    return logger.info('Operation cancelled. Great!');
+    return logger.debug('Operation cancelled. Great!');
   }
 
   // Remove directories
@@ -36,7 +38,7 @@ export const clear = async (args: { force?: boolean }) => {
   rmSync(CONFIG_DIR, { recursive: true, force: true });
   rmSync(GENERATED_DIR, { recursive: true, force: true });
   rmSync(path.join('db'), { recursive: true, force: true });
-  rmSync(path.join('static', 'medias'), { recursive: true, force: true });
+  rmSync(UPLOADS.DIRECTORY, { recursive: true, force: true });
 
   // Remove files
   rmSync(path.join('src', 'hooks.server.ts'), { force: true });
@@ -45,5 +47,5 @@ export const clear = async (args: { force?: boolean }) => {
   rmSync(path.join('src', 'rime.modules.generated.d.ts'), { force: true });
   rmSync(path.join('drizzle.config.ts'), { force: true });
 
-  return logger.info('rime cleared');
+  return logger.debug('rime cleared');
 };

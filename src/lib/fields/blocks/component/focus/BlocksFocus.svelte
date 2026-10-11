@@ -1,18 +1,22 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import CommandButton from '$lib/panel/components/sections/commands/CommandButton.svelte';
-  import ButtonSave from '$lib/panel/components/sections/document/ButtonSave.svelte';
-  import { Button } from '$lib/panel/components/ui/button/index.js';
-  import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-  import * as Sheet from '$lib/panel/components/ui/sheet/index.js';
-  import * as Tabs from '$lib/panel/components/ui/tabs/index.js';
-  import { useCommands } from '$lib/panel/context/commands.svelte.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { getNavContext } from '$lib/panel/context/nav.svelte.js';
-  import { populate } from '$lib/fields/relation/populate.js';
-  import { capitalize } from '$lib/util/string.js';
-  import { ChevronRight, PanelRight, ToyBrick, X } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import CommandButton from '#lib/panel/components/sections/commands/CommandButton.svelte';
+  import ButtonSave from '#lib/panel/components/sections/document/ButtonSave.svelte';
+  import { Button } from '#lib/panel/components/ui/button/index.js';
+  import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
+  import * as Sheet from '#lib/panel/components/ui/sheet/index.js';
+  import * as Tabs from '#lib/panel/components/ui/tabs/index.js';
+  import { useCommands } from '#lib/panel/context/commands.svelte.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { getNavContext } from '#lib/panel/context/nav.svelte.js';
+  import { titleOrUntitled } from '#lib/panel/util/title.js';
+  import { populate } from '#lib/fields/relation/populate.js';
+  import { capitalize } from '#lib/util/string.js';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import PanelRight from '@lucide/svelte/icons/panel-right';
+  import ToyBrick from '@lucide/svelte/icons/toy-brick';
+  import X from '@lucide/svelte/icons/x';
   import { untrack } from 'svelte';
   import { toast } from 'svelte-sonner';
   import BlockPicker from '../picker/BlockPicker.svelte';
@@ -323,7 +327,7 @@
   <header class="rz-blocks-focus__header">
     <nav class="rz-blocks-focus__crumbs" aria-label="breadcrumb">
       <button type="button" class="rz-blocks-focus__crumb" onclick={() => focus.close()}>
-        {form.title}
+        {titleOrUntitled(form.title)}
       </button>
       {#each crumbs as crumb, index (crumb.list + (crumb.block ?? ''))}
         <span class="rz-blocks-focus__crumb-separator" aria-hidden="true">
@@ -395,7 +399,7 @@
       </Tabs.List>
       <Tabs.Content value="layers" class="rz-blocks-focus__panel-content">
         <div class="rz-blocks-focus__panel-pad rz-blocks-focus__panel-pad--layers">
-          <Layers {form} heading={false} />
+          <Layers {form} />
         </div>
       </Tabs.Content>
       <Tabs.Content value="inspector" class="rz-blocks-focus__panel-content">
@@ -407,7 +411,7 @@
       </Tabs.Content>
       {#if !focus.locked}
         <Tabs.Content value="add" class="rz-blocks-focus__panel-content">
-          <div class="rz-blocks-focus__panel-pad"><Palette {form} heading={false} /></div>
+          <div class="rz-blocks-focus__panel-pad"><Palette {form} /></div>
         </Tabs.Content>
       {/if}
     </Tabs.Root>
@@ -601,8 +605,10 @@
     padding: var(--rz-size-14) var(--rz-size-8) var(--rz-size-32);
   }
 
-  /* The tabs on the panel's top edge, the content scrolling under them; in a column or a sheet. */
-  /* In a column or in a sheet, which sits outside the overlay: the padding its fields read. */
+  /*
+   * The tabs on the panel's top edge, the content scrolling under them. In a column or a sheet,
+   * outside the overlay, so it sets the padding its fields read.
+   */
   :global(.rz-blocks-focus__panel-tabs.rz-tabs[data-tabs-root]) {
     /* Room on the left for a rich text's drag handle, which sits outside its field. */
     --rz-fields-padding: var(--rz-size-10);

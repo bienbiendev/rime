@@ -9,6 +9,7 @@ import { beforeEach, expect, test } from 'vitest';
 import createPathsHandle from './paths.server.js';
 
 // The table as `templatePathsTable` writes it, and its migration as drizzle-kit generates it.
+// templates.spec.ts pins the template: when it changes, that spec fails and this copy follows.
 const pages = sqliteTable('pages', { id: text('id').primaryKey() });
 const paths = sqliteTable(
   'pages__$paths',
@@ -31,6 +32,7 @@ const paths = sqliteTable(
     unique('pages__$paths_owner_locale').on(t.ownerId, t.locale),
     unique('pages__$paths_path').on(t.locale, t.path),
     index('pages__$paths_parent_idx').on(t.locale, t.parentPath),
+    index('pages__$paths_url_idx').on(t.locale, t.url),
     check('pages__$paths_slug', sql`slug <> ''`),
     foreignKey({ columns: [t.locale, t.parentPath], foreignColumns: [t.locale, t.path] }).onUpdate(
       'cascade'
@@ -54,7 +56,8 @@ const MIGRATION = [
     UNIQUE(\`locale\`,\`path\`),
     CHECK(slug <> '')
   )`,
-  'CREATE INDEX `pages__$paths_parent_idx` ON `pages__$paths` (`locale`,`parent_path`)'
+  'CREATE INDEX `pages__$paths_parent_idx` ON `pages__$paths` (`locale`,`parent_path`)',
+  'CREATE INDEX `pages__$paths_url_idx` ON `pages__$paths` (`locale`,`url`)'
 ];
 
 let handle: ReturnType<typeof createPathsHandle>;
@@ -76,6 +79,16 @@ const seed = async () => {
 
 const pathOf = async (ownerId: string, locale: string) =>
   (await handle.get({ slug, ownerId, locale }))[0]?.path;
+
+/**
+ * What SQLite answered to a write it refused: drizzle throws its own error and keeps the
+ * database's as the cause. `'accepted'` when the write went through.
+ */
+const refusal = (write: Promise<unknown>) =>
+  write.then(
+    () => 'accepted',
+    (error) => String(error.cause?.message ?? error.message)
+  );
 
 // A file, not `:memory:`: a libsql transaction opens a connection of its own, which would see an
 // empty in-memory database.
@@ -122,6 +135,40 @@ test('a move takes the slug it is given in each locale', async () => {
   expect(await pathOf('audits', 'fr')).toBe('news-fr-2/audits-fr');
   expect(await pathOf('audits', 'en')).toBe('web-en/audits-en');
 });
+
+/** web moves to the top: en takes a free slug, fr the one `news` already holds there. */
+const refusedMove = {
+  slug,
+  ownerId: 'web',
+  parentId: null,
+  slugs: { en: 'web-en-2', fr: 'news-fr' }
+};
+
+test('a move refused in one locale changes no locale', async () => {
+  expect(await refusal(handle.moveUnder(refusedMove))).toMatch(/UNIQUE constraint failed/);
+  expect(await pathOf('web', 'en')).toBe('services-en/web-en');
+  expect(await pathOf('web', 'fr')).toBe('services-fr/web-fr');
+});
+
+// bun:sqlite commits when the transaction callback returns: the same move, on that driver
+test.skipIf(!process.versions.bun)(
+  'a move refused in one locale changes no locale, under bun:sqlite',
+  async () => {
+    const { Database } = await import('bun:sqlite' as string);
+    const { drizzle: drizzleBun } = await import('drizzle-orm/bun-sqlite');
+    const client = new Database(':memory:');
+    // Foreign keys on, as connect.server.ts opens a bun:sqlite database
+    client.run('PRAGMA foreign_keys = ON');
+    for (const statement of MIGRATION) client.run(statement);
+    db = drizzleBun({ client }) as any;
+    handle = createPathsHandle({ db: db as any, tables: { pages, pages__$paths: paths } as any });
+    await seed();
+
+    expect(await refusal(handle.moveUnder(refusedMove))).toMatch(/UNIQUE constraint failed/);
+    expect(await pathOf('web', 'en')).toBe('services-en/web-en');
+    expect(await pathOf('web', 'fr')).toBe('services-fr/web-fr');
+  }
+);
 
 test('children answers the pages directly under a page, once each', async () => {
   expect(await handle.children({ slug, ownerId: 'services' })).toEqual(['web']);
@@ -171,11 +218,12 @@ test('sibling slugs, missing owners, and urls written in one go', async () => {
   );
 });
 
-test('an empty slug and a taken address are refused', async () => {
-  await expect(
-    handle.setSlug({ slug, ownerId: 'news', locale: 'fr', value: '' })
-  ).rejects.toThrow();
-  await expect(
-    handle.setSlug({ slug, ownerId: 'news', locale: 'fr', value: 'services-fr' })
-  ).rejects.toThrow();
+test('an empty slug and a taken address are refused, and the row keeps its slug', async () => {
+  expect(await refusal(handle.setSlug({ slug, ownerId: 'news', locale: 'fr', value: '' }))).toMatch(
+    /CHECK constraint failed/
+  );
+  expect(
+    await refusal(handle.setSlug({ slug, ownerId: 'news', locale: 'fr', value: 'services-fr' }))
+  ).toMatch(/UNIQUE constraint failed/);
+  expect(await pathOf('news', 'fr')).toBe('news-fr');
 });

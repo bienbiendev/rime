@@ -1,5 +1,5 @@
-import { completeItem } from '$lib/core/fields/complete.js';
-import type { Dic } from '$lib/util/types.js';
+import { completeItem } from '#lib/core/fields/complete.js';
+import type { Dic } from '#lib/util/types.js';
 import type { BlockBuilder } from './index.js';
 
 /** A block in a default: its `type`, and the values it starts with. */

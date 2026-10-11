@@ -5,7 +5,9 @@ import svelte from 'eslint-plugin-svelte';
 import globals from 'globals';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript-eslint';
-import svelteConfig from './svelte.config.js';
+import { loadConfig } from '@sveltejs/load-config';
+
+const svelteConfig = (await loadConfig('./', { traverse: false }))?.config;
 
 const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 
@@ -28,19 +30,25 @@ export default ts.config(
       '@typescript-eslint/ban-ts-comment': 'off',
       '@typescript-eslint/no-empty-object-type': 'warn',
       '@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true }],
-      'no-restricted-imports': [
+      '@typescript-eslint/no-restricted-imports': [
         'error',
         {
           paths: [
             {
               name: 'rimecms',
-              message: 'Please use $lib/* imports instead of rime imports in source files'
+              message: 'Please use #lib/* imports instead of rime imports in source files'
+            },
+            {
+              // The package entry re-exports every icon, and the dev server loads them all
+              name: '@lucide/svelte',
+              message: "Import each icon from its own file: '@lucide/svelte/icons/<name>'",
+              allowTypeImports: true
             }
           ],
           patterns: [
             {
               group: ['rimecms/*', 'rimecms/**'],
-              message: 'Please use $lib/* imports instead of rime imports in source files'
+              message: 'Please use #lib/* imports instead of rime imports in source files'
             }
           ]
         }

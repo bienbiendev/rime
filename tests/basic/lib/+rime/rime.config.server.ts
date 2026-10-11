@@ -1,6 +1,8 @@
-import { AppWindowMac, BookType, SlidersVertical } from '@lucide/svelte';
+import AppWindowMac from '@lucide/svelte/icons/app-window-mac';
+import BookType from '@lucide/svelte/icons/book-type';
+import SlidersVertical from '@lucide/svelte/icons/sliders-vertical';
 
-import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
+import { adapterSqlite } from '#lib/adapter-sqlite/index.server.js';
 import { rime } from '$rime/config';
 import { Apps } from './app';
 import { Informations } from './informations';
@@ -15,14 +17,13 @@ export default rime({
   $adapter: adapterSqlite('basic.sqlite'),
   collections: [Pages, Medias, News, Users, Apps],
   areas: [Settings, Navigation, Informations],
+  // nodemailer's JSON transport: sendMail resolves, and no mail leaves the machine
   $smtp: {
-    from: process.env.RIME_SMTP_USER,
-    host: process.env.RIME_SMTP_HOST,
-    port: parseInt(process.env.RIME_SMTP_PORT || '465'),
-    auth: {
-      user: process.env.RIME_SMTP_USER,
-      password: process.env.RIME_SMTP_PASSWORD
-    }
+    from: 'rime@example.com',
+    host: undefined,
+    port: undefined,
+    auth: { user: undefined, password: undefined },
+    jsonTransport: true
   },
   staff: {
     roles: [{ value: 'editor' }]

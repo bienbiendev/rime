@@ -1,26 +1,25 @@
 <script lang="ts">
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import { dataError } from '$lib/panel/util/dataError.js';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import { dataError } from '#lib/panel/util/dataError.js';
   import type { TextAreaFieldProps } from './props.js';
 
   const { path, config, form }: TextAreaFieldProps = $props();
 
-  const field = $derived(form.useField(path || config.name, config));
+  const field = $derived(form.useField(path, config));
 
-  // Actions
   const onInput = (event: Event) => {
     field.value = (event.target as HTMLTextAreaElement).value;
   };
 </script>
 
 <fieldset use:fieldset={field} class="rz-textarea-field {config.get.className || ''}">
-  <Field.Label {config} for={path || config.name} />
+  <Field.Label {config} for={path} />
   <textarea
     use:dataError={!!field.error}
-    id={path || config.name}
-    name={path || config.name}
-    placeholder={config.get.placeholder}
+    id={path}
+    name={path}
+    placeholder={config.get.placeholder || config.get.label}
     value={field.value}
     oninput={onInput}
   ></textarea>

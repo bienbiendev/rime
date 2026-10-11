@@ -1,12 +1,7 @@
-import { PARAMS } from '$lib/core/constants';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant';
-import test, {
-  expect,
-  request as anonymous,
-  type APIRequestContext,
-  type Page
-} from '@playwright/test';
-import { API_BASE_URL, panelUrl, signIn } from '../util.js';
+import { PARAMS } from '#lib/core/constants.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+import test, { expect, request as anonymous, type APIRequestContext } from '@playwright/test';
+import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -17,6 +12,9 @@ const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
  * new-version write, updating a document nobody has published yet, reading drafts without being
  * staff, and what the form is told when an action fails.
  */
+
+// The area's page test reads the draft the test before it writes: one failing skips the rest
+test.describe.configure({ mode: 'serial' });
 
 type Headers = { cookie: string };
 type Row = { id: string; status: string; attributes: { title: string } };
@@ -53,15 +51,6 @@ const readTitle = async (request: APIRequestContext, url: string, headers?: Head
   const body = await response.json();
   return (body.doc ?? body.docs[0]).attributes.title as string;
 };
-
-async function loginAs(page: Page, email: string, password: string) {
-  await page.context().clearCookies();
-  await page.goto(panelUrl('sign-in'));
-  await page.locator('input[name="email"]').pressSequentially(email, { delay: 30 });
-  await page.locator('input[name="password"]').pressSequentially(password, { delay: 30 });
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL(panelUrl());
-}
 
 test('Publishing through a new-version write leaves one published version', async ({ request }) => {
   const headers = await signInSuperAdmin(request);
@@ -174,6 +163,15 @@ test("An area's save in a new draft answers like a collection's", async ({ reque
   expect(doc.status).toBe(VERSIONS_STATUS.DRAFT);
 });
 
+test("An area's page opens its newest version, as a collection document's does", async ({
+  page
+}) => {
+  // The draft written above is newer than the published version
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('settings'));
+  await expect(page.locator('input[name="title"]')).toHaveValue('Settings, drafted');
+});
+
 test('A save the server refuses says so in the form', async ({ page, request }) => {
   const headers = await signInSuperAdmin(request);
   const doc = await createNews(request, headers, 'Refused save', VERSIONS_STATUS.PUBLISHED);
@@ -188,13 +186,63 @@ test('A save the server refuses says so in the form', async ({ page, request }) 
 
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('news', doc.id)}?${PARAMS.VERSION_ID}=${draftId}`);
-  await page.waitForLoadState('networkidle');
+  await expect(page.locator('input[name="attributes.title"]')).toHaveValue('Refused save, draft');
 
-  // The row goes away under the form; its save is refused with a 404, and the form says so.
+  // The row goes away under the form; its save is refused with a 404, and the form says so and
+  // keeps what was typed.
   const removed = await request.delete(`${API_BASE_URL}/news--versions/${draftId}`, { headers });
   expect(removed.status()).toBe(200);
 
   await page.locator('input[name="attributes.title"]').fill('Refused save, typed');
   await page.locator('button[data-submit]').click();
   await expect(page.locator('[data-sonner-toast][data-type="error"]')).toBeVisible();
+  await expect(page.locator('input[name="attributes.title"]')).toHaveValue('Refused save, typed');
+});
+
+/**
+ * A link reads its target as any reader does: a page saved as a draft only gives the link no id,
+ * url or title, for an admin too; once published, it gives its own.
+ */
+test('A link to a page carries its id, url and title once the page is published', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const created = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { attributes: { title: 'Link target', slug: 'link-target' } }
+  });
+  expect(created.status()).toBe(200);
+  const page = (await created.json()).doc;
+
+  const posted = await request.post(`${API_BASE_URL}/blog-posts`, {
+    headers,
+    data: {
+      title: 'Linking post',
+      next: { type: 'pages', value: page.id, target: '_self' },
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(posted.status()).toBe(200);
+  const post = (await posted.json()).doc;
+
+  const next = async () => {
+    const response = await request.get(`${API_BASE_URL}/blog-posts/${post.id}`, { headers });
+    expect(response.status()).toBe(200);
+    return (await response.json()).doc.next;
+  };
+
+  const draftOnly = await next();
+  expect(draftOnly).not.toHaveProperty('id');
+  expect(draftOnly).not.toHaveProperty('url');
+  expect(draftOnly).not.toHaveProperty('title');
+
+  const publish = await request.patch(`${API_BASE_URL}/pages/${page.id}?${PARAMS.LATEST}=true`, {
+    headers,
+    data: { status: VERSIONS_STATUS.PUBLISHED }
+  });
+  expect(publish.status()).toBe(200);
+  const published = await request.get(`${API_BASE_URL}/pages/${page.id}`, { headers });
+  const { doc } = await published.json();
+
+  expect(await next()).toMatchObject({ id: page.id, url: doc.url, title: doc.title });
 });

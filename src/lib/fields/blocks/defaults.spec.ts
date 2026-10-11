@@ -1,5 +1,5 @@
-import { block, blocks, text } from '$lib/fields/index.js';
-import { expect, test } from 'vitest';
+import { block, blocks, group, text } from '#lib/fields/index.js';
+import { expect, test, vi } from 'vitest';
 
 const paragraph = block('paragraph').fields(text('text'), text('note').defaultValue('Note'));
 const grid = block('grid').fields(
@@ -25,6 +25,17 @@ test('a block names its type and the values it starts with; the rest comes from 
 
   expect(without(sections.use.defaultValue())).toEqual([
     { type: 'paragraph', path: null, position: null, text: 'Hello', note: 'Note' }
+  ]);
+});
+
+test('a group the block names keeps the defaults of the members it leaves out', () => {
+  const hero = block('hero').fields(
+    group('seo').fields(text('title'), text('desc').defaultValue('D'))
+  );
+  const sections = blocks('sections', [hero]).defaultValue([{ type: 'hero', seo: { title: 'x' } }]);
+
+  expect(without(sections.use.defaultValue())).toEqual([
+    { type: 'hero', path: null, position: null, seo: { title: 'x', desc: 'D' } }
   ]);
 });
 
@@ -69,10 +80,15 @@ test('the default given is not changed, and two calls share no object', () => {
   expect(second.items).not.toBe(first.items);
 });
 
-test('a function default is completed on each call', () => {
-  const sections = blocks('sections', [paragraph]).defaultValue(() => [{ type: 'paragraph' }]);
+test('a function default runs and is completed on each call', () => {
+  const make = vi.fn(() => [{ type: 'paragraph' }]);
+  const sections = blocks('sections', [paragraph]).defaultValue(make);
+  const [first] = sections.use.defaultValue() as { id: string }[];
+  const [second] = sections.use.defaultValue() as { id: string }[];
 
-  expect((sections.use.defaultValue() as any[])[0].id).toMatch(/^temp-/);
+  expect(make).toHaveBeenCalledTimes(2);
+  expect(first.id).toMatch(/^temp-/);
+  expect(second.id).not.toBe(first.id);
 });
 
 test('a type the list does not declare throws', () => {

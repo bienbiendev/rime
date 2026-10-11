@@ -1,29 +1,29 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import { deleteAuthApiKey, deleteAuthUser } from '#lib/core/auth/better-auth-tables.server.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
 
 /**
- * After delete, delete better-auth user
+ * After a delete, removes the document's twin in better-auth: the key of an api-key document, the
+ * user of any other auth document.
+ *
+ * Writes the tables directly, so better-auth's own rules (only a key's creator deletes it, nobody
+ * removes themselves) never leave behind a twin of a document rime's access let go.
  */
 export const deleteBetterAuthUser = Hooks.afterDelete<'auth'>(
   async function deleteBetterAuthUser(args) {
     const { doc, event, config } = args;
-    const IS_API_AUTH = config.auth && config.auth?.type === 'apiKey';
+    const { adapter } = event.locals.rime;
 
-    if (IS_API_AUTH && doc.apiKeyId) {
-      await event.locals.rime.auth.api.deleteApiKey({
-        headers: args.event.request.headers,
-        body: {
-          keyId: doc.apiKeyId
-        }
-      });
-    } else if (doc.authUserId) {
-      await event.locals.rime.auth.api.removeUser({
-        body: {
-          userId: doc.authUserId
-        },
-        headers: args.event.request.headers
-      });
+    // On a key document, `authUserId` is the key's creator: only the key goes.
+    if (config.auth?.type === 'apiKey') {
+      if (doc.apiKeyId) {
+        await deleteAuthApiKey(adapter, { apiKeyId: doc.apiKeyId });
+      }
+      return args;
     }
 
+    if (doc.authUserId) {
+      await deleteAuthUser(adapter, { authUserId: doc.authUserId });
+    }
     return args;
   }
 );

@@ -1,16 +1,17 @@
-import { pushState, replaceState } from '$app/navigation';
-import { page } from '$app/state';
-import { initialValues } from '$lib/core/fields/initial.js';
-import type { GenericBlock } from '$lib/core/prototype/types.js';
-import type { BlocksBuilder, BlocksFieldBlock } from '$lib/fields/blocks/index.js';
+import { initialValues } from '#lib/core/fields/initial.js';
+import type { GenericBlock } from '#lib/core/prototype/types.js';
+import type { BlocksBuilder, BlocksFieldBlock } from '#lib/fields/blocks/index.js';
+import { repeatableTitle } from '#lib/fields/repeatable.js';
 import {
   blockPath,
   parseBlockPath,
   shiftListPath,
   type BlockAt
-} from '$lib/panel/context/blocks-ops.js';
-import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-import { capitalize } from '$lib/util/string.js';
+} from '#lib/panel/context/blocks-ops.js';
+import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+import { capitalize } from '#lib/util/string.js';
+import { pushState, replaceState } from '$app/navigation';
+import { page } from '$app/state';
 import { getContext, setContext } from 'svelte';
 import { SvelteSet } from 'svelte/reactivity';
 
@@ -20,7 +21,7 @@ const KEY = 'rime.blocks-focus';
  * The query parameter that names what focus is open on: a list, `?focus=layout.sections`, or one
  * block and what it holds, `?focus=layout.sections.1`.
  */
-export const FOCUS_PARAM = 'focus';
+const FOCUS_PARAM = 'focus';
 
 /** What focus is open on, and how many of its own entries the history holds up to this one. */
 type PageState = { blocksFocus?: string; blocksFocusDepth?: number };
@@ -31,7 +32,7 @@ export type SidebarTab = 'layers' | 'inspector' | 'add';
 const endsOnBlock = (target: string) => /\.\d+$/.test(target);
 
 /** One step of the way down to the open list: a blocks field, or the block an index names. */
-export type Crumb = { label: string; list: string; block?: string };
+type Crumb = { label: string; list: string; block?: string };
 
 /** One row of the layers: a block, where it sits, and the lists it holds. */
 export type LayerRow = {
@@ -94,7 +95,8 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   const narrowed = $derived(path && endsOnBlock(path) ? parseBlockPath(path) : null);
 
   const urlWith = (list: string | null) => {
-    const url = new URL(page.url);
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- a copy handed to pushState, not state
+    const url = new URL(page.url.href);
     if (list) url.searchParams.set(FOCUS_PARAM, list);
     else url.searchParams.delete(FOCUS_PARAM);
     return url;
@@ -144,17 +146,12 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   const configOf = (list: string, block: GenericBlock) =>
     builderOf(list)?.get.blocks.find((candidate) => candidate.name === block.type)?.get;
 
-  function titleOf(config: BlocksFieldBlock | undefined, block: GenericBlock, index: number) {
-    if (config?.renderTitle) {
-      try {
-        const title = config.renderTitle({ values: block, position: index });
-        if (title) return title;
-      } catch (error) {
-        console.error(`Can't render title in block`, error);
-      }
-    }
-    return config?.label || capitalize(block.type);
-  }
+  const titleOf = (config: BlocksFieldBlock | undefined, block: GenericBlock, index: number) =>
+    repeatableTitle(
+      config?.renderTitle,
+      { values: block, position: index },
+      config?.label || capitalize(block.type)
+    );
 
   function rowsOf(list: string, depth = 0): LayerRow[] {
     return form.blocks.list(list).map((block, index) => {
@@ -256,7 +253,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     return crumbs;
   }
 
-  /** The lists a block of `type` may go to, the one it is in and its own subtree left out. */
+  /** The lists the selected block may move to, the one it is in and its own subtree left out. */
   function moveTargets(): { list: string; label: string }[] {
     const current = movableAt();
     if (!path || !current) return [];
@@ -377,10 +374,13 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     select(blockPath({ list: current.list, index: current.index + 1 }));
   }
 
-  /** Removes the selected blocks, last in layers order first, so earlier paths hold. */
+  /**
+   * Removes the selected blocks, last in layers order first, so earlier paths hold. The order
+   * counts folded rows too: a selected block under a folded row keeps its place.
+   */
   function removeSelection() {
     if (locked || !selection.length) return;
-    const order = visibleRows().map((row) => row.path);
+    const order = allRows().map((row) => row.path);
     const targets = selection
       .filter((rowPath) => !isNarrowedBlock(rowPath))
       .sort((a, b) => order.indexOf(b) - order.indexOf(a));
@@ -509,14 +509,11 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     close,
     up,
     rowsOf,
-    rootRows,
     homeList,
     allRows,
-    visibleRows,
     moveTargets,
     select,
     selectRelative,
-    insertionPoint,
     insertType,
     duplicateSelection,
     removeSelection,
@@ -533,7 +530,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   return setContext(KEY, store);
 }
 
-export type BlocksFocus = ReturnType<typeof setBlocksFocusContext>;
+type BlocksFocus = ReturnType<typeof setBlocksFocusContext>;
 
 /** The focus of the document on screen, or nothing in a form that has none: a nested create. */
 export const getBlocksFocusContext = () => getContext<BlocksFocus | undefined>(KEY);

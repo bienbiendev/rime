@@ -1,9 +1,4 @@
-import type {
-  DefaultOptions,
-  DefaultValueFn,
-  FieldValidationFunc,
-  FormField
-} from '$lib/fields/types.js';
+import type { DefaultValueFn, FieldValidationFunc, FormField } from '#lib/fields/types.js';
 import { FormFieldBuilder } from './form-field-builder.js';
 
 type BooleanField = FormField & {
@@ -21,26 +16,14 @@ export class BooleanFieldBuilder<
     this.field.defaultValue = false;
     // `false` is a value: only a missing one is empty.
     this.field.isEmpty = (value) => typeof value !== 'boolean';
-  }
-
-  defaultValue(value: boolean | DefaultValueFn<boolean>, options?: DefaultOptions) {
-    this.field.defaultValue = value;
-    this.field.defaultFill = options?.fill;
-    return this;
+    this.field.validate = (value: unknown) => typeof value === 'boolean' || 'Should be true/false';
+    // A form sends a checked box as 'true' or 'on', and 'false' for an explicit no
+    this.beforeValidate((value) =>
+      value === 'true' || value === 'on' ? true : value === 'false' ? false : value
+    );
   }
 
   get dataType(): 'boolean' {
     return 'boolean';
-  }
-
-  compile() {
-    if (!this.field.validate) {
-      this.field.validate = (value: unknown) =>
-        typeof value === 'boolean' || 'Should be true/false';
-    }
-    if (!this.field.defaultValue) {
-      this.field.defaultValue = false;
-    }
-    return super.compile();
   }
 }

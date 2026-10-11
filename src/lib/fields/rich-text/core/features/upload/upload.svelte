@@ -1,14 +1,14 @@
 <script lang="ts">
-  import type { UploadDoc } from '$lib/core/prototype/collection/upload/types.js';
-  import { apiUrl } from '$lib/core/routes/util.js';
-  import UploadThumbCell from '$lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
-  import { mediaMeta } from '$lib/panel/util/upload-file.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import * as Command from '$lib/panel/components/ui/command/index.js';
-  import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-  import Input from '$lib/panel/components/ui/input/input.svelte';
-  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
-  import { X } from '@lucide/svelte';
+  import type { UploadDoc } from '#lib/core/prototype/collection/upload/types.js';
+  import { apiUrl } from '#lib/core/routes/util.js';
+  import UploadThumbCell from '#lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
+  import { mediaMeta } from '#lib/panel/util/upload-file.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import PickDialog from '../pick-dialog.svelte';
+  import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
+  import Input from '#lib/panel/components/ui/input/input.svelte';
+  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import X from '@lucide/svelte/icons/x';
   import type { NodeViewProps } from '@tiptap/core';
   import { onMount } from 'svelte';
   import NodeViewWrapper from '../../svelte/node-view-wrapper.svelte';
@@ -27,7 +27,6 @@
   let { node, updateAttributes, extension }: NodeViewProps = $props();
   let isDialogOpen = $state(false);
   let selected = $state<Omit<NodeAttributes, 'legend' | '_fresh'> | null>();
-  let legendElement = $state<HTMLParagraphElement>();
   let legend = $state('');
   let dialogLegendOpen = $state(false);
 
@@ -48,9 +47,6 @@
 
       // Initialize legend from node attributes
       legend = node.attrs.legend || '';
-      if (legendElement && legend) {
-        legendElement.textContent = $state.snapshot(legend);
-      }
     } else {
       selected = null;
     }
@@ -84,9 +80,6 @@
 
     // Reset legend
     legend = '';
-    if (legendElement) {
-      legendElement.textContent = '';
-    }
 
     // Update node attributes
     updateNodeAttributes();
@@ -182,26 +175,16 @@
   </div>
 {/snippet}
 
-<Command.Dialog bind:open={isDialogOpen} preventScroll={false}>
-  <Command.Input placeholder="Select an image" />
-
-  <Command.List>
-    <Command.Empty>No results found.</Command.Empty>
-    {#each docs as doc, index (index)}
-      <Command.Item
-        value={doc.filename}
-        onSelect={() => {
-          handleMediaSelection(doc);
-        }}
-      >
-        {@render dialogItem(doc)}
-      </Command.Item>
-    {/each}
-  </Command.List>
-</Command.Dialog>
+<PickDialog
+  bind:open={isDialogOpen}
+  items={docs}
+  label={(doc) => doc.filename}
+  onPick={handleMediaSelection}
+  row={dialogItem}
+/>
 
 <Dialog.Root bind:open={dialogLegendOpen}>
-  <Dialog.Content class="rz-status-dialog">
+  <Dialog.Content>
     <Dialog.Title>Media legend</Dialog.Title>
     <Input bind:value={legend} oninput={updateNodeAttributes} />
   </Dialog.Content>
@@ -243,7 +226,6 @@
       }
       .rz-richtext-media__button {
         border: 1px solid var(--foreground);
-        /*color: var(--foreground);*/
         border-radius: 1rem;
         height: var(--rz-size-5);
         display: flex;
