@@ -1,37 +1,35 @@
-import { authorize } from '$lib/core/pipeline/hooks/authorize.server.js';
-import { buildDataConfigMap } from '$lib/core/pipeline/hooks/data-config-map.server.js';
-import { getOriginalDocument } from '$lib/core/pipeline/hooks/get-original-document.server.js';
-import { normalizeResolvedReferences } from '$lib/core/pipeline/hooks/normalize-resolved-references.server.js';
-import { buildOriginalDocConfigMap } from '$lib/core/pipeline/hooks/original-config-map.server.js';
-import { processDocumentFields } from '$lib/core/pipeline/hooks/process-document-fields.server.js';
-import { resolveContentOwner } from '$lib/core/pipeline/hooks/resolve-content-owner.server.js';
-import { setDefaultValues } from '$lib/core/pipeline/hooks/set-default-values.server.js';
-import { setDocumentLocale } from '$lib/core/pipeline/hooks/set-document-locale.server.js';
-import { setDocumentType } from '$lib/core/pipeline/hooks/set-document-type.server.js';
-import { validateFields } from '$lib/core/pipeline/hooks/validate-fields.server.js';
-import type { AnyHook, HookTiming } from '$lib/core/pipeline/types.js';
-import * as metas from '$lib/core/prototype/shared/metas/hooks/index.server.js';
-import * as title from '$lib/core/prototype/shared/title/hooks/index.server.js';
-import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
-import * as url from '$lib/core/prototype/shared/url/hooks/index.server.js';
-import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
-import * as versions from '$lib/core/prototype/shared/versions/hooks/index.server.js';
-import { when } from '$lib/core/prototype/when.js';
+import { authorize } from '#lib/core/pipeline/hooks/authorize.server.js';
+import { completeNewRows } from '#lib/core/pipeline/hooks/complete-new-rows.server.js';
+import { buildDataConfigMap } from '#lib/core/pipeline/hooks/data-config-map.server.js';
+import { getOriginalDocument } from '#lib/core/pipeline/hooks/get-original-document.server.js';
+import { normalizeResolvedReferences } from '#lib/core/pipeline/hooks/normalize-resolved-references.server.js';
+import { buildOriginalDocConfigMap } from '#lib/core/pipeline/hooks/original-config-map.server.js';
+import { processDocumentFields } from '#lib/core/pipeline/hooks/process-document-fields.server.js';
+import { resolveContentOwner } from '#lib/core/pipeline/hooks/resolve-content-owner.server.js';
+import { setDefaultValues } from '#lib/core/pipeline/hooks/set-default-values.server.js';
+import { setDocumentLocale } from '#lib/core/pipeline/hooks/set-document-locale.server.js';
+import { setDocumentType } from '#lib/core/pipeline/hooks/set-document-type.server.js';
+import { validateFields } from '#lib/core/pipeline/hooks/validate-fields.server.js';
+import type { AnyHook, HookTiming } from '#lib/core/pipeline/types.js';
+import * as metas from '#lib/core/prototype/shared/metas/hooks/index.server.js';
+import * as title from '#lib/core/prototype/shared/title/hooks/index.server.js';
+import { hasUrl } from '#lib/core/prototype/shared/url/enabled.js';
+import * as url from '#lib/core/prototype/shared/url/hooks/index.server.js';
+import { isVersioned } from '#lib/core/prototype/shared/versions/enabled.js';
+import * as versions from '#lib/core/prototype/shared/versions/hooks/index.server.js';
+import { when } from '#lib/core/prototype/when.js';
 
 /**
- * The area prototype's *own* document hooks — the ones that are its, unconditionally.
+ * The area prototype's document hooks, its features' included, in the order they run. A `when`
+ * guard skips a hook on a config without that feature.
  *
- * In its own file for the reason the collection's are (see collection/hooks.server.ts): a list of
- * hooks depends on nothing, so anything can import it without going through `definition.server.ts`
- * and its module-scope `{ ...base }` spread. The area's config factory needs exactly this list and
- * the feature list, and reaching them through the server definition is what made the collection
- * silently lose its feature hooks when an import order changed.
+ * In its own file so `pipeline/build.server.ts` imports it without loading `definition.server.ts`.
  *
  * No create, no delete: a second row is not a thing.
  *
- * The order is written, not computed — see the long note in `collection/hooks.server.ts`, which
- * also says what nothing checks. An area lists fewer features than a collection (no `auth`,
- * `upload`, `nested` or `thumbnail`), so it places fewer hooks.
+ * The order is written, not computed. A hook this list does not place never runs, and nothing
+ * checks for it. An area lists fewer features than a collection (no `auth`, `upload`, `nested` or
+ * `thumbnail`), so it places fewer hooks.
  */
 export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   beforeOperation: [authorize],
@@ -42,8 +40,7 @@ export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     setDocumentType,
     when(isVersioned, versions.exposeVersionId),
     title.setDocumentTitle,
-    // After the title: `$url` is the author's function, and may read it.
-    when(hasUrl, url.setAreaUrl),
+    // The live edit link, from the url the read joined.
     when(hasUrl, url.setLiveUrl),
     metas.deletePanelLockMetas
   ],
@@ -55,12 +52,16 @@ export const areaHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     resolveContentOwner,
     when(isVersioned, versions.defineVersionOperation),
     when(isVersioned, versions.handleNewVersion),
-    // Between the two, for the reasons the collection's list gives.
+    // Below `handleNewVersion`, which reads the submission as sent, and above `buildDataConfigMap`,
+    // whose keys are the paths the write may touch.
     metas.stampUpdatedBy,
+    completeNewRows,
     setDefaultValues,
     buildDataConfigMap,
     normalizeResolvedReferences,
     validateFields,
     when(isVersioned, versions.demoteOtherVersions)
-  ]
+  ],
+
+  afterUpdate: [when(hasUrl, url.syncAreaUrl)]
 };

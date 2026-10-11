@@ -22,10 +22,4 @@
     flex-direction: column;
     gap: var(--rz-size-4);
   }
-
-  @media (min-width: 640px) {
-    .rz-calendar-months {
-      flex-direction: row;
-    }
-  }
 </style>

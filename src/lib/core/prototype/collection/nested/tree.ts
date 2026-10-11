@@ -1,11 +1,12 @@
-import type { GenericDoc } from '$lib/core/prototype/types.js';
-import { snapshot } from '$lib/util/state.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
+import { snapshot } from '#lib/util/state.js';
 
 /**
  * The flat rows of a nested collection as a tree, each document holding its own children.
  *
- * Roots are the documents with no `_parent`, ordered by `_position`; a document already placed is
- * never placed twice, so a cycle in the rows stops rather than recurses.
+ * Roots are the documents with no `_parent`, ordered by `_position`. A document whose parent is not
+ * in `documents` is left out. A document reached a second time is placed as it came, children
+ * unexpanded, so a cycle stops rather than recurses.
  *
  * ```ts
  * toNestedStructure(pages); // [{ id: '1', _children: [{ id: '2', _children: [] }] }]
@@ -35,11 +36,6 @@ export const toNestedStructure = (documents: GenericDoc[]) => {
           return childDoc ? processDocument(childDoc) : null;
         })
         .filter(Boolean);
-    }
-
-    // The parent stays an id — only children are expanded.
-    if (result._parent && typeof result._parent === 'string') {
-      result._parent = docById.get(result._parent)?.id || null;
     }
 
     return result;

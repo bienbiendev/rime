@@ -1,20 +1,22 @@
-import type { RelationInput, RelationRef, RelationValue } from '$lib/fields/types.js';
+import type { RelationInput, RelationRef, RelationValue } from '#lib/fields/types.js';
 
 /**
  * Type utilities that know about fields.
  *
- * They lived in util/types.ts, but both name a rime type — a relation value and a field
- * builder — so by the placement rule they belong with the concept, not with the generic
- * helpers.
+ * They name rime types (relation values, field builders), so they live with the concept rather
+ * than in util/types.ts.
  */
 
-/** The depths a read resolves, each mapped to the one its related documents are read at. */
-type LessDepth = { 1: 0; 2: 1; 3: 2; 4: 3 };
+/**
+ * The depths a read resolves, up to `MAX_DEPTH`, each mapped to the one its related documents are
+ * read at.
+ */
+type LessDepth = { 1: 0; 2: 1; 3: 2 };
 
 /**
  * A document as a read at `depth` hands it back: each relation holds the related documents, read
- * themselves at one depth less. Depth 0, past 4, or a depth the type cannot know (a `number`) is
- * the document as typed, its relations refs or documents.
+ * themselves at one depth less. Depth 0, past `MAX_DEPTH` (3), or a depth the type cannot know (a
+ * `number`) is the document as typed, its relations refs or documents.
  *
  * ```ts
  * WithRelationResolved<PagesDoc, 1>['hero']['thumbnail']        // MediasDoc[]

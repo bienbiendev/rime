@@ -1,8 +1,9 @@
 import { redirect, type ServerLoadEvent } from '@sveltejs/kit';
 
 /**
- * Check and handle live edit redirect if needed.
- * @throws {Redirect} If live=1 and the visitor is staff
+ * Redirects to the document's live editor.
+ * @throws {Redirect} When the visitor is staff, the document has a `_live` url and the url asks
+ * for `live=1`.
  */
 export function checkLiveRedirect(doc: { _live?: string }, event: ServerLoadEvent): void {
   const { user } = event.locals;

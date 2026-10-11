@@ -1,5 +1,5 @@
-#!/usr/bin/env node
-import { logger } from '$lib/core/logger.server.js';
+import { logger } from '#lib/core/logger.server.js';
+import { UPLOADS } from '#lib/core/prototype/collection/upload/constant.js';
 import chalk from 'chalk';
 import { spawnSync } from 'child_process';
 import { copyFileSync, cpSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'fs';
@@ -40,45 +40,53 @@ export const build = (args: {
   // Build
   // A Bun app builds on Bun: `bun --bun` runs vite, and anything the build imports, on Bun
   // rather than on its bin's Node shebang
-  if (bun) {
-    spawnSync('bun', ['--bun', './node_modules/.bin/vite', 'build'], { stdio: 'inherit' });
-  } else {
-    spawnSync('./node_modules/.bin/vite', ['build'], { stdio: 'inherit' });
-  }
+  const result = bun
+    ? spawnSync('bun', ['--bun', './node_modules/.bin/vite', 'build'], { stdio: 'inherit' })
+    : spawnSync('./node_modules/.bin/vite', ['build'], { stdio: 'inherit' });
   console.log('');
+
+  if (result.error || result.status !== 0) {
+    logger.error('[✗] vite build failed, nothing packaged');
+    process.exitCode = 1;
+    return;
+  }
 
   // Create app directory
   mkdirSync('./app', { recursive: true });
 
   // Move build folder
   renameSync('./build', './app/build');
-  logger.info('[✓] /app folder created');
+  logger.debug('[✓] /app folder created');
 
   // Copy package.json
   copyFileSync('./package.json', './app/package.json');
-  logger.info('[✓] package.json copied');
+  logger.debug('[✓] package.json copied');
 
   // Copy db folder if flag is set
   if (args.withDatabase) {
     cpSync('./db', './app/db', { recursive: true });
-    logger.info('[✓] database copied');
+    logger.debug('[✓] database copied');
   }
 
-  // Copy static folder if flag is set
+  // Copy the static folder and the uploads if flag is set
   if (args.withStatic) {
     cpSync('./static', './app/static', { recursive: true });
-    logger.info('[✓] static directory copied');
+    logger.debug('[✓] static directory copied');
+    if (existsSync(`./${UPLOADS.DIRECTORY}`)) {
+      cpSync(`./${UPLOADS.DIRECTORY}`, `./app/${UPLOADS.DIRECTORY}`, { recursive: true });
+      logger.debug('[✓] uploads directory copied');
+    }
   }
 
   // Create main entry server file
   writeFileSync('./app/index.js', nodeServer);
-  logger.info('[✓] server created at app/index.js');
+  logger.debug('[✓] server created at app/index.js');
 
   // Create .env file if flag is set
   const envContent = envProduction();
   if (args.withEnv) {
     writeFileSync('./app/.env', envContent);
-    logger.info('[✓] .env file created at app/.env');
+    logger.debug('[✓] .env file created at app/.env');
   }
 
   console.log('----------------------------------------------------------------\n');

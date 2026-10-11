@@ -1,5 +1,5 @@
-import { buildConfigMap } from '$lib/core/pipeline/config-map/index.js';
-import { block, blocks, text } from '$lib/fields/index.js';
+import { buildConfigMap } from '#lib/core/pipeline/config-map/index.js';
+import { block, blocks, text } from '#lib/fields/index.js';
 import { expect, test } from 'vitest';
 import { fallbackDataFromOriginal } from './fallback-data-from-original.js';
 

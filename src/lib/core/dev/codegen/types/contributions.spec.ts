@@ -1,30 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { create } from '$lib/core/prototype/collection/definition.js';
-import { text } from '$lib/fields/text/index.js';
-import { block, blocks } from '$lib/fields/blocks/index.js';
+import { create } from '#lib/core/prototype/collection/definition.js';
+import { create as createArea } from '#lib/core/prototype/area/definition.js';
+import { text } from '#lib/fields/text/index.js';
+import { block, blocks } from '#lib/fields/blocks/index.js';
 import { contributionsFor } from './contributions.server.js';
 
 /**
- * What each feature adds to a generated document type.
+ * What each feature adds to a generated document type, read through `contributionsFor`, the
+ * function codegen calls, on real built configs.
  *
- * `dev/codegen/types` wrote these itself — `if (collection.versions) push('versionId: string')`
- * and three reads of `collection.upload`. They are `docType` contributions now, and the reason
- * this file exists is that **`bun run check` does not catch losing one**: deleting versions'
- * contribution drops `versionId` from every generated doc type and the `versions` fixture still
- * type-checks at 0, because nothing in it reads `doc.versionId` in a typed position. A consumer
- * would find out, at their own compile, whenever they next upgraded.
- *
- * So the contributions are asserted through the very function codegen calls, on real built
- * configs.
+ * `bun run check` does not catch a lost contribution: without versions' one, every generated doc
+ * type loses `versionId`, and the `versions` fixture still type-checks, since nothing in it reads
+ * `doc.versionId` in a typed position.
  */
-const contributionFor = (config: Parameters<typeof contributionsFor>[0]) =>
-  contributionsFor(config);
-
 describe('docType contributions', () => {
   it('adds nothing for a config whose features contribute nothing', () => {
     const plain = create('spec_doctype_pages', { fields: [text('title').isTitle()] });
 
-    const contribution = contributionFor(plain);
+    const contribution = contributionsFor(plain);
 
     expect(contribution.extends).toEqual([]);
     expect(contribution.members).toEqual([]);
@@ -37,7 +30,7 @@ describe('docType contributions', () => {
       fields: [text('title').isTitle()]
     });
 
-    expect(contributionFor(versioned).members).toEqual(['versionId: string']);
+    expect(contributionsFor(versioned).members).toEqual(['versionId: string']);
   });
 
   it('intersects an upload config with UploadDoc, and asks codegen to import it', () => {
@@ -46,7 +39,7 @@ describe('docType contributions', () => {
       fields: [text('alt')]
     });
 
-    const contribution = contributionFor(upload);
+    const contribution = contributionsFor(upload);
 
     expect(contribution.extends).toEqual(['UploadDoc']);
     // The augment gives every upload collection a `thumbnail` size, so there is always one.
@@ -66,7 +59,7 @@ describe('docType contributions', () => {
       fields: [text('alt')]
     });
 
-    const contribution = contributionFor(sized);
+    const contribution = contributionsFor(sized);
 
     expect(contribution.members).toEqual(['sizes:{thumbnail: string, sm: string, lg: string}']);
     // `sm` and `lg` are columns, and their type comes from the member above. Generating them from
@@ -86,19 +79,19 @@ describe('docType contributions', () => {
       fields: [text('alt')]
     });
 
-    expect(contributionFor(multi).members).toEqual([
+    expect(contributionsFor(multi).members).toEqual([
       'sizes:{thumbnail: string, hero_webp: string, hero_jpg: string}'
     ]);
   });
 
-  it('ANDs the predicates, so a config with both features keeps both answers', () => {
+  it('lists every member of a config with upload and versions, upload first', () => {
     const both = create('spec_doctype_both', {
       versions: true,
       upload: { imageSizes: [{ name: 'sm', width: 100 }] },
       fields: [text('alt')]
     });
 
-    const contribution = contributionFor(both);
+    const contribution = contributionsFor(both);
 
     expect(contribution.extends).toEqual(['UploadDoc']);
     expect(contribution.members).toEqual([
@@ -106,5 +99,23 @@ describe('docType contributions', () => {
       'versionId: string'
     ]);
     expect(contribution.fields(text('sm'))).toBe(false);
+  });
+
+  it('gives a $url collection its address members, and a $url area its url only', () => {
+    const page = create('spec_doctype_url', {
+      $url: () => '/',
+      fields: [text('title').isTitle()]
+    });
+    const settings = createArea('spec_doctype_url_area', {
+      $url: () => '/',
+      fields: [text('title').isTitle()]
+    });
+
+    expect(contributionsFor(page).members).toEqual([
+      'url: string | null',
+      '_urlPath: string | null',
+      '_slug: string | null'
+    ]);
+    expect(contributionsFor(settings).members).toEqual(['url: string | null']);
   });
 });

@@ -1,18 +1,37 @@
-import { PARAMS } from '$lib/core/constants';
-import { EDIT_LOCK_TTL_AFTER_CLOSE_MS } from '$lib/core/prototype/shared/metas/constant';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant';
-import test, { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import { API_BASE_URL, panelUrl, signIn } from '../util.js';
+import { PARAMS } from '#lib/core/constants.js';
+import { EDIT_LOCK_TTL_AFTER_CLOSE_MS } from '#lib/core/prototype/shared/metas/constant.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+import test, {
+  expect,
+  type APIRequestContext,
+  type Browser,
+  type BrowserContext,
+  type Page,
+  type Response
+} from '@playwright/test';
+import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const LOCK_EDITOR_EMAIL = 'lock-editor@email.com';
 
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
+const DOCUMENT = 'form.rz-document';
 const OVERLAY = '.rz-document-read-only';
 
-// A closed tab keeps its claim for EDIT_LOCK_TTL_AFTER_CLOSE_MS, and the checks below wait it out.
-test.describe.configure({ timeout: 90_000 });
+/** The page's claim on the version: a POST to its lock, a release excepted. */
+const isClaim = (response: Response) => {
+  const url = new URL(response.url());
+  return (
+    response.request().method() === 'POST' &&
+    url.pathname.endsWith('/lock') &&
+    !url.searchParams.has('release')
+  );
+};
+
+// A closed tab keeps its claim for EDIT_LOCK_TTL_AFTER_CLOSE_MS; the release check waits it out.
+// Every test signs in the lock-editor the first one creates: one failing skips the rest.
+test.describe.configure({ mode: 'serial', timeout: 90_000 });
 
 /**
  * Two people, one versioned document.
@@ -26,13 +45,8 @@ test.describe.configure({ timeout: 90_000 });
 async function openAs(browser: Browser, email: string, url: string) {
   const context = await browser.newContext();
   const page = await context.newPage();
-  await page.goto(panelUrl('sign-in'));
-  await page.locator('input[name="email"]').pressSequentially(email, { delay: 30 });
-  await page.locator('input[name="password"]').pressSequentially(PASSWORD, { delay: 30 });
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL(panelUrl());
+  await loginAs(page, email, PASSWORD);
   await page.goto(url);
-  await page.waitForLoadState('networkidle');
   return { context, page };
 }
 
@@ -42,14 +56,23 @@ async function openAs(browser: Browser, email: string, url: string) {
  * A tab that closes keeps its claim as a short lease, and the page only re-reads the lock on a
  * load — so a row somebody left a moment ago reads as held until the lease runs out, and a row
  * somebody just opened reads as free until their claim lands. Polling through reloads covers both.
+ *
+ * The overlay is drawn with the form, from the same load. A page without it claims the row as it
+ * mounts, and answers once that claim has landed: whoever opens the row next finds it held.
  */
 async function expectOverlay(page: Page, visible: boolean) {
   await expect
     .poll(
       async () => {
+        // Caught: a page under the overlay sends no claim, and this wait is dropped.
+        const claimed = page.waitForResponse(isClaim).catch(() => null);
         await page.reload();
-        await page.waitForLoadState('networkidle');
-        return page.locator(OVERLAY).count();
+        await expect(page.locator(DOCUMENT)).toBeVisible();
+        const shown = await page.locator(OVERLAY).count();
+        if (!shown) {
+          await claimed;
+        }
+        return shown;
       },
       { timeout: EDIT_LOCK_TTL_AFTER_CLOSE_MS * 2, intervals: [500, 1000, 2000] }
     )
@@ -91,13 +114,14 @@ test('Should create a lock-editor staff account', async ({ request }) => {
   expect(response.status()).toBe(200);
 });
 
-test('Should create a news with a published version and a draft', async ({ request }) => {
+/** A fresh news with a published version and a draft, so no earlier test's lease is on it. */
+async function createNews(request: APIRequestContext) {
   const headers = await signInSuperAdmin(request);
 
   const created = await request.post(`${API_BASE_URL}/news`, {
     headers,
     data: {
-      attributes: { title: 'Locked news', slug: 'locked-news' },
+      attributes: { title: 'Locked news', slug: `locked-news-${Date.now()}` },
       status: VERSIONS_STATUS.PUBLISHED
     }
   });
@@ -117,9 +141,13 @@ test('Should create a news with a published version and a draft', async ({ reque
     .then((r) => r.json());
   draftVersionId = draft.doc.versionId;
   expect(draftVersionId).not.toBe(publishedVersionId);
-});
+}
 
-test('Should show the overlay to a second person on the same version', async ({ browser }) => {
+test('Should show the overlay to a second person on the same version', async ({
+  browser,
+  request
+}) => {
+  await createNews(request);
   const admin = await openAs(browser, ADMIN_EMAIL, versionUrl(draftVersionId));
   await expectOverlay(admin.page, false);
 
@@ -131,7 +159,8 @@ test('Should show the overlay to a second person on the same version', async ({ 
   await leave(admin);
 });
 
-test('Should not lock one version because somebody holds another', async ({ browser }) => {
+test('Should not lock one version because somebody holds another', async ({ browser, request }) => {
+  await createNews(request);
   const admin = await openAs(browser, ADMIN_EMAIL, versionUrl(publishedVersionId));
   await expectOverlay(admin.page, false);
 
@@ -148,7 +177,11 @@ test('Should not lock one version because somebody holds another', async ({ brow
   await leave(admin);
 });
 
-test('Should open the newest real version by default, and lock that one', async ({ browser }) => {
+test('Should open the newest real version by default, and lock that one', async ({
+  browser,
+  request
+}) => {
+  await createNews(request);
   // No versionId in the URL: the panel loads the newest row, which is the draft.
   const admin = await openAs(browser, ADMIN_EMAIL, panelUrl('news', newsId));
   await expectOverlay(admin.page, false);
@@ -163,52 +196,63 @@ test('Should open the newest real version by default, and lock that one', async 
   await leave(admin);
 });
 
-test('Should hand a version over on Take control', async ({ browser }) => {
+test('Should hand a version over on Take control, and leave its authorship alone', async ({
+  browser,
+  request
+}) => {
+  await createNews(request);
+  const headers = await signInSuperAdmin(request);
+  const read = async () => {
+    const response = await request.get(
+      `${API_BASE_URL}/news/${newsId}?${PARAMS.VERSION_ID}=${publishedVersionId}`,
+      { headers }
+    );
+    expect(response.status()).toBe(200);
+    return (await response.json()).doc;
+  };
+  const before = await read();
+
   const admin = await openAs(browser, ADMIN_EMAIL, versionUrl(publishedVersionId));
   await expectOverlay(admin.page, false);
 
   const editor = await openAs(browser, LOCK_EDITOR_EMAIL, versionUrl(publishedVersionId));
   await expectOverlay(editor.page, true);
-  await editor.page.locator(OVERLAY).getByRole('button', { name: 'Take control' }).click();
 
-  await editor.page.waitForLoadState('networkidle');
+  // Take control forces the claim past the admin's, then reloads onto a version it now holds.
+  const reloaded = editor.page.waitForEvent('load');
+  await editor.page.locator(OVERLAY).getByRole('button', { name: 'Take control' }).click();
+  await reloaded;
   await expectOverlay(editor.page, false);
+  // The admin's page hears the claim and shows the overlay without a reload
+  await expect(admin.page.locator(OVERLAY)).toContainText(LOCK_EDITOR_EMAIL);
 
   await leave(editor);
   await leave(admin);
+
+  // The claims wrote the lock columns only: the version still reads as the admin wrote it
+  const after = await read();
+  expect(after.updatedAt).toEqual(before.updatedAt);
+  expect(after.updatedBy).toEqual(before.updatedBy);
+  expect(after.updatedBy?.email).toBe(ADMIN_EMAIL);
 });
 
-test('Should release a version when its holder leaves', async ({ browser }) => {
+test('Should release a version when its holder leaves', async ({ browser, request }) => {
+  await createNews(request);
   const admin = await openAs(browser, ADMIN_EMAIL, versionUrl(publishedVersionId));
   await expectOverlay(admin.page, false);
-  await leave(admin);
+  // The admin leaves the document: the page's own `pagehide` sends the release
+  await admin.page.goto(panelUrl());
 
   // Free again once the lease a closing tab keeps has run out.
   const editor = await openAs(browser, LOCK_EDITOR_EMAIL, versionUrl(publishedVersionId));
   await expectOverlay(editor.page, false);
 
   await leave(editor);
+  await leave(admin);
 });
 
-test('Should leave updatedAt and updatedBy alone while the lock changes hands', async ({
-  request
-}) => {
-  const headers = await signInSuperAdmin(request);
-
-  const { doc } = await request
-    .get(`${API_BASE_URL}/news/${newsId}?${PARAMS.VERSION_ID}=${publishedVersionId}`, {
-      headers
-    })
-    .then((r) => r.json());
-
-  // Every claim above went through `updateWhere`, which writes the two lock columns and nothing
-  // else: the version still reads as written by whoever created it.
-  expect(doc.status).toBe(VERSIONS_STATUS.PUBLISHED);
-  expect(doc.updatedBy?.id).toBeDefined();
-  expect(doc.createdBy?.id).toBeDefined();
-});
-
-test('An auto-save moves the lock onto the new row', async ({ browser }) => {
+test('An auto-save moves the lock onto the new row', async ({ browser, request }) => {
+  await createNews(request);
   const admin = await openAs(browser, ADMIN_EMAIL, versionUrl(publishedVersionId));
   await expectOverlay(admin.page, false);
 
@@ -218,9 +262,10 @@ test('An auto-save moves the lock onto the new row', async ({ browser }) => {
   );
   await admin.page.locator('input[name="attributes.title"]').fill('Locked while typing');
   expect((await saved).status()).toBe(200);
-  await admin.page.waitForURL(
-    (url) => url.searchParams.get(PARAMS.VERSION_ID) !== publishedVersionId
-  );
+  await admin.page.waitForURL((url) => {
+    const versionId = url.searchParams.get(PARAMS.VERSION_ID);
+    return !!versionId && versionId !== publishedVersionId;
+  });
   const autoSaveId = new URL(admin.page.url()).searchParams.get(PARAMS.VERSION_ID)!;
 
   // The row being typed on is held; the row it branched from was handed back.

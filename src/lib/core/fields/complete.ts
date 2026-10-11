@@ -1,8 +1,8 @@
-import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import type { Field } from '$lib/fields/types.js';
-import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
-import { tempId } from '$lib/util/random.js';
-import type { Dic } from '$lib/util/types.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
+import type { Field } from '#lib/fields/types.js';
+import { getValueAtPath, setValueAtPath, withDefaultValues } from '#lib/util/object.js';
+import { tempId } from '#lib/util/random.js';
+import type { Dic } from '#lib/util/types.js';
 import cloneDeep from 'clone-deep';
 import { initialValues } from './initial.js';
 import { isFormField } from './util.js';
@@ -16,8 +16,8 @@ const completesDefault = (use: unknown): use is CompletesDefault =>
 
 /**
  * One item of a default list, a block or a tree item, as a document holds it: the initial values
- * of its fields, the values the item names winning, its own lists completed, and a fresh
- * temporary id. A new copy on each call.
+ * of its fields, the values the item names winning at every depth, its own lists completed, and a
+ * fresh temporary id. A new copy on each call.
  *
  * ```ts
  * completeItem([text('title'), text('intro')], { title: 'Hello' });
@@ -25,7 +25,7 @@ const completesDefault = (use: unknown): use is CompletesDefault =>
  * ```
  */
 export const completeItem = (fields: FieldBuilder<Field>[], given: Dic): Dic => {
-  let item: Dic = { ...initialValues(fields), ...cloneDeep(given) };
+  let item: Dic = withDefaultValues(cloneDeep(given), initialValues(fields));
 
   // A nested list the item names is completed by its own field; one it leaves out already holds
   // that field's default, from `initialValues`.

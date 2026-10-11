@@ -6,10 +6,10 @@
 /** Pathname prefix every rime endpoint sits under. */
 export const API_PREFIX = '/api';
 
-export const PANEL_ROUTE_ID = '/(rime)/[panel=panel]';
-export const PANEL_SIGN_IN_ROUTE_ID = `${PANEL_ROUTE_ID}/sign-in`;
-export const PANEL_FORGOT_PASSWORD_ROUTE_ID = `${PANEL_ROUTE_ID}/forgot-password`;
-export const PANEL_RESET_PASSWORD_ROUTE_ID = `${PANEL_ROUTE_ID}/reset-password`;
+const PANEL_ROUTE_ID = '/(rime)/[panel=panel]';
+const PANEL_SIGN_IN_ROUTE_ID = `${PANEL_ROUTE_ID}/sign-in`;
+const PANEL_FORGOT_PASSWORD_ROUTE_ID = `${PANEL_ROUTE_ID}/forgot-password`;
+const PANEL_RESET_PASSWORD_ROUTE_ID = `${PANEL_ROUTE_ID}/reset-password`;
 
 /** Must stay reachable without a session — a locked-out visitor still needs these. */
 export const PANEL_PUBLIC_AUTH_ROUTE_IDS = new Set([

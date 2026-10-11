@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 
 /**
  * What a visitor's browser loads without signing in never reaches the config, and a site page
@@ -64,7 +64,7 @@ const resolve = (specifier: string, from: string) => {
   // The client half of an isomorphic module
   if (specifier.startsWith('$rime/modules:')) {
     base = path.join(LIB, specifier.slice('$rime/modules:'.length), 'module');
-  } else if (specifier.startsWith('$lib/')) base = path.join(LIB, specifier.slice(5));
+  } else if (specifier.startsWith('#lib/')) base = path.join(LIB, specifier.slice(5));
   else if (specifier.startsWith('.')) base = path.resolve(path.dirname(from), specifier);
   else return null;
 
@@ -87,7 +87,10 @@ const importsOf = (file: string, dynamic: boolean) => {
   return specifiers;
 };
 
-/** `public.ts -> live/Provider.svelte -> panel/util/populate.ts` */
+/**
+ * The import chain from an entry to `file`:
+ * `public.ts -> live/Provider.svelte -> live/context.svelte.ts -> fields/relation/populate.ts`
+ */
 const chainOf = (file: string, importer: Map<string, string | null>) => {
   const chain: string[] = [];
   for (let at: string | null | undefined = file; at; at = importer.get(at)) {
@@ -126,6 +129,27 @@ const refusedFrom = (
   return refused;
 };
 
+/** Every file of the library an entry reaches through its runtime imports. */
+const reachedFrom = (entry: string) => {
+  const reached = new Set([entry]);
+  for (const file of reached) {
+    for (const specifier of importsOf(file, true)) {
+      const target = resolve(specifier, file);
+      if (target) reached.add(target);
+    }
+  }
+  return [...reached].map((file) => path.relative(LIB, file));
+};
+
+// The two checks below pass when the walk finds nothing: this one fails then
+test('the walk follows .svelte files and #lib/ imports', () => {
+  const reached = reachedFrom(path.join(LIB, 'public.ts'));
+  // public.ts -> #lib/live/Provider.svelte -> ./context.svelte.js
+  expect(reached).toContain('live/context.svelte.ts');
+  // public.ts -> #lib/live/LiveEdit.svelte -> #lib/util/string.js
+  expect(reached).toContain('util/string.ts');
+});
+
 describe('a visitor never loads the config, nor a panel it cannot open', () => {
   for (const { file, refused } of ENTRIES) {
     it(file, () => {
@@ -134,11 +158,12 @@ describe('a visitor never loads the config, nor a panel it cannot open', () => {
   }
 });
 
-// `$env/dynamic/*` reads the SvelteKit page it runs in the moment it evaluates
+// `$app/env/public` and `$app/env/private` read the app's env the moment they evaluate.
+// `$app/env` itself (`dev`, `browser`) reads no variable.
 const KIT_PAGE = [
   {
-    name: 'the env of a SvelteKit page',
-    test: (specifier: string) => specifier.startsWith('$env/dynamic/')
+    name: 'the env of a SvelteKit app',
+    test: (specifier: string) => /^\$app\/env\/(public|private)$/.test(specifier)
   }
 ];
 

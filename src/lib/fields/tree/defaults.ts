@@ -1,7 +1,7 @@
-import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import { completeItem } from '$lib/core/fields/complete.js';
-import type { Field } from '$lib/fields/types.js';
-import type { Dic } from '$lib/util/types.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
+import { completeItem } from '#lib/core/fields/complete.js';
+import type { Field } from '#lib/fields/types.js';
+import type { Dic } from '#lib/util/types.js';
 
 /** A tree item in a default: the values it starts with, and its own items. */
 export type TreeItemDefault = Dic & { _children?: TreeItemDefault[] };

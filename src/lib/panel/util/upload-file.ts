@@ -1,7 +1,7 @@
-import { PARAMS } from '$lib/core/constants.js';
-import type { UploadDoc } from '$lib/core/prototype/collection/upload/types.js';
-import { getExtensionFromMimeType } from '$lib/core/prototype/collection/upload/util/mime.js';
-import { trycatchFetch } from '$lib/util/function.js';
+import { PARAMS } from '#lib/core/constants.js';
+import type { UploadDoc } from '#lib/core/prototype/collection/upload/types.js';
+import { getExtensionFromMimeType } from '#lib/core/prototype/collection/upload/util/mime.js';
+import { trycatchFetch } from '#lib/util/function.js';
 
 /** Where files go: the collection's API url, the folder, and the mime types it takes. */
 export type UploadTarget = { url: string; path?: string; accept?: string[] };
@@ -140,13 +140,14 @@ const readAsDataURL = (file: File) =>
 
 /**
  * Creates one document of an upload collection from a file, and answers it.
- * Validation is skipped, so a required field the file cannot fill, like an `alt`, never blocks it.
+ * `?skipValidation=true` lets a staff request leave required fields empty, so a required field the
+ * file cannot fill, like an `alt`, never blocks it.
  *
  * ```ts
  * const doc = await uploadFile(file, { url: '/api/medias', path: 'root:press' });
  * ```
  */
-export async function uploadFile(file: File, target: UploadTarget): Promise<UploadDoc> {
+async function uploadFile(file: File, target: UploadTarget): Promise<UploadDoc> {
   if (!isAccepted(file, target.accept)) {
     throw new Error(`${file.name} is not of an accepted type`);
   }

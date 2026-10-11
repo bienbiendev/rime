@@ -11,6 +11,7 @@
   }: TooltipPrimitive.ContentProps = $props();
 </script>
 
+<!-- Always mounted, the tooltip drawn while `open`, so `fly` plays on close too. -->
 <TooltipPrimitive.Content bind:ref forceMount {sideOffset} {...restProps}>
   {#snippet child({ wrapperProps, props, open })}
     {#if open}

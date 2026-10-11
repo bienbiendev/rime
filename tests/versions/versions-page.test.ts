@@ -1,7 +1,7 @@
-import { PARAMS } from '$lib/core/constants';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant';
+import { PARAMS } from '#lib/core/constants.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
 import test, { expect, type Page } from '@playwright/test';
-import { API_BASE_URL, panelUrl, signIn } from '../util.js';
+import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -22,14 +22,8 @@ const SAVE = 'button[data-submit]';
  * back over it so what the browser did is checked against what is stored.
  */
 
-async function loginAs(page: Page, email: string, password: string) {
-  await page.context().clearCookies();
-  await page.goto(panelUrl('sign-in'));
-  await page.locator('input[name="email"]').pressSequentially(email, { delay: 30 });
-  await page.locator('input[name="password"]').pressSequentially(password, { delay: 30 });
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL(panelUrl());
-}
+// The tests share the news the first one creates: one failing skips the rest
+test.describe.configure({ mode: 'serial' });
 
 /** The history stays open across picks; a reload closes it. */
 async function openHistory(page: Page) {
@@ -89,7 +83,8 @@ test('Should create a news with a published version and a draft', async ({ reque
 test('Should list both versions and mark the one on screen', async ({ page }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl(draftVersionId));
-  await page.waitForLoadState('networkidle');
+  // The document is on screen, its history closed
+  await expect(page.locator(TITLE)).toBeVisible();
   await expect(page.locator(HISTORY)).toHaveCount(0);
   await openHistory(page);
 
@@ -105,7 +100,6 @@ test('Should save a draft in place, leaving the published version alone', async 
 }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl(draftVersionId));
-  await page.waitForLoadState('networkidle');
 
   await page.locator(TITLE).fill('Versioned news, draft edited');
   const saved = waitForSave(page);
@@ -114,7 +108,6 @@ test('Should save a draft in place, leaving the published version alone', async 
 
   // Same row, same history: nothing was added.
   await page.reload();
-  await page.waitForLoadState('networkidle');
   await expect(page.locator(TITLE)).toHaveValue('Versioned news, draft edited');
   await openHistory(page);
   await expect(page.locator(LIST_ITEM)).toHaveCount(2);
@@ -131,12 +124,10 @@ test('Should save a draft in place, leaving the published version alone', async 
 test('Should load the version picked in the history, and keep it open', async ({ page }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl(draftVersionId));
-  await page.waitForLoadState('networkidle');
   await openHistory(page);
 
   await page.locator(`${LIST_ITEM} a[href*="${publishedVersionId}"]`).click();
   await page.waitForURL(new RegExp(`versionId=${publishedVersionId}`));
-  await page.waitForLoadState('networkidle');
 
   await expect(page.locator(TITLE)).toHaveValue('Versioned news');
   await expect(page.locator(HISTORY)).toBeVisible();
@@ -149,7 +140,6 @@ test('Should save the published version as published, leaving the draft alone', 
 }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl(publishedVersionId));
-  await page.waitForLoadState('networkidle');
 
   await page.locator(TITLE).fill('Versioned news, edited');
   const saved = waitForSave(page);
@@ -172,7 +162,6 @@ test('Should branch a new draft from the published version and land on it', asyn
 }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl(publishedVersionId));
-  await page.waitForLoadState('networkidle');
 
   await page.locator(TITLE).fill('Versioned news, third');
   await page.getByRole('button', { name: 'Document actions' }).click();
@@ -183,7 +172,6 @@ test('Should branch a new draft from the published version and land on it', asyn
     const versionId = url.searchParams.get(PARAMS.VERSION_ID);
     return !!versionId && versionId !== publishedVersionId && versionId !== draftVersionId;
   });
-  await page.waitForLoadState('networkidle');
 
   await openHistory(page);
   await expect(page.locator(LIST_ITEM)).toHaveCount(3);
@@ -202,7 +190,6 @@ test('Should branch a new draft from the published version and land on it', asyn
 test('Should close the history and stay on the version', async ({ page }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl(draftVersionId));
-  await page.waitForLoadState('networkidle');
   await openHistory(page);
 
   await page.locator(HISTORY).getByRole('button', { name: 'Close' }).click();
@@ -210,4 +197,154 @@ test('Should close the history and stay on the version', async ({ page }) => {
   await expect(page.locator(HISTORY)).toHaveCount(0);
   expect(new URL(page.url()).searchParams.get(PARAMS.VERSION_ID)).toBe(draftVersionId);
   await expect(page.locator(TITLE)).toHaveValue('Versioned news, draft edited');
+});
+
+/**
+ * `infos` keeps versions without drafts: each save from the document page is a new version.
+ * Its oldest versions are pruned past `maxVersions`, so the new ones are checked, not a count.
+ */
+test('Should add a version per save on a config without drafts', async ({ page, request }) => {
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('infos'));
+
+  let versionId = new URL(page.url()).searchParams.get(PARAMS.VERSION_ID);
+  const saves: (string | null)[] = [];
+  for (const title of ['Infos, first save', 'Infos, second save']) {
+    await page.locator('input[name="title"]').fill(title);
+    const saved = waitForSave(page);
+    await page.locator(SAVE).click();
+    expect((await saved).status()).toBe(200);
+
+    // The save lands on the version it made
+    await page.waitForURL((url) => {
+      const landed = url.searchParams.get(PARAMS.VERSION_ID);
+      return !!landed && landed !== versionId;
+    });
+    versionId = new URL(page.url()).searchParams.get(PARAMS.VERSION_ID);
+    saves.push(versionId);
+  }
+
+  // Each save is its own version, holding what was typed
+  const response = await request.get(`${API_BASE_URL}/infos--versions`, {
+    headers: await signInSuperAdmin(request)
+  });
+  const titles = new Map(
+    ((await response.json()).docs as { id: string; title: string }[]).map((v) => [v.id, v.title])
+  );
+  expect(saves.map((id) => titles.get(id!))).toEqual(['Infos, first save', 'Infos, second save']);
+});
+
+/**
+ * "Save in a new draft" borrows the Save button: whatever the request gives, the button is left
+ * as it was, and a Save that follows works and saves in place.
+ */
+test('Should leave the Save button as it was after a new draft that got no answer', async ({
+  page,
+  request
+}) => {
+  const created = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      attributes: { title: 'Page in drafts', slug: 'page-in-drafts' },
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { id } = (await created.json()).doc;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', id));
+  await page.getByRole('button', { name: 'Attributes' }).click();
+  await page.locator(TITLE).fill('Page in drafts, edited');
+
+  // The connection drops under the new draft
+  await page.route(
+    (url) => url.search.startsWith('?/update'),
+    (route) => route.abort(),
+    {
+      times: 1
+    }
+  );
+  await page.getByRole('button', { name: 'Document actions' }).click();
+  await page.getByRole('menuitem', { name: 'Save in a new draft' }).click();
+
+  await expect(page.locator(SAVE)).toBeEnabled();
+  await expect(page.locator(SAVE)).not.toHaveAttribute('data-fork');
+  await expect(page.locator(SAVE)).toHaveAttribute('data-status', VERSIONS_STATUS.PUBLISHED);
+
+  const saved = waitForSave(page);
+  await page.locator(SAVE).click();
+  const response = await saved;
+  expect(response.status()).toBe(200);
+  expect(response.url()).not.toContain(`${PARAMS.FORK}=true`);
+  expect((await response.json()).type).toBe('success');
+
+  // Saved in place: the published version holds the title, and it is the only version
+  const headers = await signInSuperAdmin(request);
+  const read = await request.get(`${API_BASE_URL}/pages/${id}`, { headers });
+  expect(read.status()).toBe(200);
+  const { doc } = await read.json();
+  expect(doc.attributes.title).toBe('Page in drafts, edited');
+  expect(doc.status).toBe(VERSIONS_STATUS.PUBLISHED);
+  const versions = await request.get(
+    `${API_BASE_URL}/pages--versions?where[ownerId][equals]=${id}`,
+    { headers }
+  );
+  expect((await versions.json()).docs).toHaveLength(1);
+});
+
+/**
+ * camelCase slugs. `blogPosts` lives at `/panel/blog-posts`: what a write refreshes, and what a
+ * tree row links to, is found by that kebab.
+ */
+test('Should show a status change in the history of a camelCase collection', async ({
+  page,
+  request
+}) => {
+  const created = await request.post(`${API_BASE_URL}/blog-posts`, {
+    headers: await signInSuperAdmin(request),
+    data: { title: 'Blog post' }
+  });
+  expect(created.status()).toBe(200);
+  const { id } = (await created.json()).doc;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('blog-posts', id));
+
+  // The history is read once, as a draft
+  const dot = page.locator('.rz-document-versions__list-item--active .rz-status__dot');
+  await openHistory(page);
+  await expect(dot).toHaveAttribute('style', /--rz-warn/);
+  await page.keyboard.press('Escape');
+  await expect(page.locator(HISTORY)).toHaveCount(0);
+
+  await page.locator('.rz-status__button').click();
+  await page.locator('[id="document.published"]').click();
+  await page.getByRole('button', { name: 'Validate' }).click();
+  await expect(page.locator('.rz-status__text')).toHaveText('Published');
+
+  await openHistory(page);
+  await expect(dot).toHaveAttribute('style', /--rz-success/);
+});
+
+test('Should open a document of a camelCase nested collection from its tree', async ({
+  page,
+  request
+}) => {
+  const created = await request.post(`${API_BASE_URL}/blog-pages`, {
+    headers: await signInSuperAdmin(request),
+    data: { title: 'Blog page' }
+  });
+  expect(created.status()).toBe(200);
+  const { id } = (await created.json()).doc;
+
+  await page.addInitScript(() =>
+    localStorage.setItem('collection.blogPages.display', 'display_nested')
+  );
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('blog-pages'));
+  await page.locator('.rz-collection-node__title', { hasText: 'Blog page' }).click();
+
+  await page.waitForURL(panelUrl('blog-pages', id));
+  await expect(page.locator('input[name="title"]')).toHaveValue('Blog page');
 });

@@ -1,10 +1,11 @@
-import type { OperationContext } from '$lib/core/pipeline/types.js';
-import type { DocumentFormContext } from '$lib/panel/index.js';
-import type { Dic } from '$lib/util/types.js';
+import type { OperationContext } from '#lib/core/pipeline/types.js';
+import type { CollectionSlug } from '#lib/core/prototype/types.js';
+import type { DocumentFormContext } from '#lib/panel/index.js';
+import type { Dic } from '#lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Component } from 'svelte';
-import type { User } from '$lib/core/auth/types.js';
+import type { User } from '#lib/core/auth/types.js';
 import type { FieldPanelTableConfig } from '../panel/types.js';
 
 export type { BlockRenderProps, BlocksField, BlocksFieldBlock } from './blocks/index.js';
@@ -27,6 +28,7 @@ export type { TextField } from './text/index.js';
 export type { TextAreaField } from './textarea/index.js';
 export type { TimeField } from './time/index.js';
 export type { ToggleField } from './toggle/index.js';
+export type { TreeField } from './tree/index.js';
 
 export type FieldValidationFunc<TConfig extends FormField = FormField, TData extends Dic = Dic> = (
   value: unknown,
@@ -128,10 +130,27 @@ export type FieldHook<T extends FormField = any> = (
   context: FieldHookContext<T>
 ) => any;
 
+/**
+ * Field hook run on a field's value when its document is duplicated, before the copy is created.
+ * `doc` is the source document, `path` where the field sits in it, `slug` its collection.
+ */
+export type FieldHookDuplicate<T extends FormField = any> = (
+  value: any,
+  context: {
+    event: RequestEvent;
+    config: T;
+    slug: CollectionSlug;
+    path: string;
+    locale?: string;
+    doc: Dic;
+  }
+) => any;
+
 type FieldHooks = {
   beforeRead?: FieldHook[];
   beforeSave?: FieldHook[];
   beforeValidate?: FieldHookShared[];
+  beforeDuplicate?: FieldHookDuplicate[];
   onChange?: FieldHookClient[];
 };
 

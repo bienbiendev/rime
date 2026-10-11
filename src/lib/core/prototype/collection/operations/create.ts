@@ -1,18 +1,19 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { versionsWritePlan } from '$lib/core/prototype/shared/versions/write-plan.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { versionsWritePlan } from '#lib/core/prototype/shared/versions/write-plan.js';
 import {
   assertUpsertContext,
   persistRelational,
   runBeforeOperation,
   runDataHooks,
   runDocHooks
-} from '$lib/core/pipeline/run.server.js';
-import type { OperationContext } from '$lib/core/pipeline/types.js';
-import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
-import type { CollectionSlug } from '$lib/core/prototype/types.js';
-import type { RegisterCollection } from '$lib/index.js';
-import type { WithRelationInput } from '$lib/core/fields/types.js';
-import type { DeepPartial, Dic } from '$lib/util/types.js';
+} from '#lib/core/pipeline/run.server.js';
+import { seenBy } from '#lib/core/pipeline/seen-by.server.js';
+import type { OperationContext } from '#lib/core/pipeline/types.js';
+import type { PrototypeApiContext } from '#lib/core/prototype/define.js';
+import type { CollectionSlug } from '#lib/core/prototype/types.js';
+import type { RegisterCollection } from '#lib/index.js';
+import type { WithRelationInput } from '#lib/core/fields/types.js';
+import type { DeepPartial, Dic } from '#lib/util/types.js';
 
 /**
  * What a caller passes. Exported, and free of the context, so the API surface a prototype
@@ -87,12 +88,13 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
   });
 
   // The created document, in the one locale this create wrote. The other locales are not
-  // written: a read in one of them falls back field by field until it is translated.
+  // written: a read in one of them falls back field by field until it is translated. Read as
+  // rime, so the afterCreate hooks see the whole document whoever the caller is.
   let document = (await rime
     .collection(config.slug)
+    .system()
     .findById({ id: created.id, locale, versionId: created.contentId })) as T;
 
-  // Unlike afterUpdate, afterCreate's returned doc IS propagated — preserved as-is.
   const after = await runDocHooks<CollectionSlug, T>({
     hooks: config.$hooks?.afterCreate,
     doc: document,
@@ -104,5 +106,6 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
   });
   document = after.doc;
 
-  return document;
+  // The caller gets what they may read of it
+  return isSystemOperation ? document : seenBy({ event, config, doc: document });
 };

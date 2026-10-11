@@ -1,18 +1,17 @@
-import type { Config } from '$lib/core/config/types.js';
-import { hasProp } from '$lib/util/object.js';
+import { SITE_URL } from '$app/env/public';
+import type { Config } from '#lib/core/config/types.js';
 
 /**
- * Which origins may call the API, defaulted to the app's own URL.
+ * Which origins may call the API: the site's own, which the panel's fetches send, and the ones
+ * `$trustedOrigins` adds. Each is an origin as a browser sends it, `https://app.example.com`,
+ * with no path or trailing slash.
  *
- * A whole-config step, so the feature declares it as `configure`. What it does to the type is
- * declared in index.ts — `$trustedOrigins` is optional as an author writes it, and the handler
- * beside this file reads it as a list that is always there.
+ * A whole-config step, so the feature declares it as `configure`. `$trustedOrigins` is optional
+ * as an author writes it; `BuiltConfig.$trustedOrigins` (core/config/types.ts) is always a list,
+ * and the handler beside this file reads it.
  */
 export const configureCors = <const T extends Config>(config: T) => {
-  const trustedOrigins =
-    hasProp('$trustedOrigins', config) && Array.isArray(config.$trustedOrigins)
-      ? config.$trustedOrigins
-      : [process.env.PUBLIC_RIME_URL as string];
-
+  const authored = Array.isArray(config.$trustedOrigins) ? config.$trustedOrigins : [];
+  const trustedOrigins = [...new Set([new URL(SITE_URL).origin, ...authored])];
   return { ...config, $trustedOrigins: trustedOrigins } as const;
 };

@@ -7,8 +7,8 @@
  * hook cannot see, `getValueAtPath(config.asTitle, doc)` comes back undefined, and the document is
  * titled with its own id.
  *
- * Every REST endpoint that parses this param goes through here, so `?select=title` means the same
- * thing on `/pages` and on `/pages/<id>`.
+ * Every read endpoint goes through here, so `?select=title` means the same thing on `/pages` and
+ * on `/pages/<id>`.
  *
  * @param raw The `select` search param as sent — comma separated, or null when absent.
  * @param asTitle The config's resolved title path (`BuiltCollection`/`BuiltArea`).
@@ -16,7 +16,11 @@
 export const selectWithTitle = (raw: string | null, asTitle: string): string[] | undefined => {
   if (!raw) return undefined;
 
-  const select = raw.split(',');
+  // `?select=title, attributes.slug` names two fields, spaces around the comma or not
+  const select = raw
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean);
 
   if (select.includes('title') && !select.includes(asTitle)) {
     select.push(asTitle);

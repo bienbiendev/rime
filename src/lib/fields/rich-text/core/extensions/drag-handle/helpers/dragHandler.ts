@@ -21,20 +21,10 @@ function getDragHandleRanges(event: DragEvent, editor: Editor): SelectionRange[]
     return [];
   }
 
-  const x = event.clientX;
-
-  // @ts-ignore
-  const coords = getInnerCoords(editor.view, x, event.clientY);
+  const coords = getInnerCoords(editor.view, event.clientX, event.clientY);
   const posAtCoords = editor.view.posAtCoords(coords);
 
   if (!posAtCoords) {
-    return [];
-  }
-
-  const { pos } = posAtCoords;
-  const nodeAt = doc.resolve(pos).parent;
-
-  if (!nodeAt) {
     return [];
   }
 

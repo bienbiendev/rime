@@ -1,4 +1,4 @@
-import { TextQuote } from '@lucide/svelte';
+import TextQuote from '@lucide/svelte/icons/text-quote';
 import Blockquote from '@tiptap/extension-blockquote';
 import type { RichTextFeature, RichTextFeatureNode } from '../types.js';
 

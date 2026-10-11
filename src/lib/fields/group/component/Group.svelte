@@ -1,15 +1,14 @@
 <script lang="ts">
-  import { FormFieldBuilder } from '$lib/core/fields/builders';
-  import { isFormField } from '$lib/core/fields/util.js';
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import type { GroupFieldBuilder } from '$lib/fields/group/index.js';
-  import { TabsBuilder } from '$lib/fields/tabs';
-  import FieldsPreview from '$lib/panel/components/fields/FieldsPreview.svelte';
-  import FieldsPreviewTrigger from '$lib/panel/components/fields/FieldsPreviewTrigger.svelte';
-  import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import { ChevronDown } from '@lucide/svelte';
+  import { FormFieldBuilder } from '#lib/core/fields/builders/index.js';
+  import { isFormField } from '#lib/core/fields/util.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import type { GroupFieldBuilder } from '#lib/fields/group/index.js';
+  import FieldsPreview from '#lib/panel/components/fields/FieldsPreview.svelte';
+  import FieldsPreviewTrigger from '#lib/panel/components/fields/FieldsPreviewTrigger.svelte';
+  import RenderFields from '#lib/panel/components/fields/RenderFields.svelte';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import { onMount } from 'svelte';
 
   type Props = {
@@ -40,10 +39,9 @@
 
   const user = getUserContext() || undefined;
 
-  // The preview shows the group's own values: a layout field has none, and tabs are one.
+  // The preview shows the values of the form fields the user can read.
   const previewFields = $derived.by(() => {
     return config.get.fields
-      .filter((field) => !(field instanceof TabsBuilder))
       .filter((field) => field instanceof FormFieldBuilder)
       .filter((field) => !form.isLive || (form.isLive && field.get.live))
       .filter((field) => field.use.accessRead(user.attributes, { id: form.values.id }));
@@ -66,7 +64,7 @@
     class:rz-group-field__trigger--live={form.isLive}
     class="rz-group-field__trigger"
   >
-    <span class="rz-group-field__title">{config.get.label || config.name || 'Group'}</span>
+    <span class="rz-group-field__title">{config.get.label}</span>
     <span class="rz-group-field__chevron" aria-hidden="true">
       <ChevronDown size="14" />
     </span>

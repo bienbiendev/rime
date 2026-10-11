@@ -2,11 +2,12 @@ import {
   FieldBuilder,
   type FieldNode,
   type ValueNode
-} from '$lib/core/fields/builders/field-builder.js';
-import type { Field } from '$lib/fields/types.js';
-import { isObjectLiteral } from '$lib/util/object.js';
-import { isCamelCase, joinMemberTypes } from '$lib/util/string.js';
-import type { WithoutBuilders } from '$lib/core/fields/types.js';
+} from '#lib/core/fields/builders/field-builder.js';
+import type { Field } from '#lib/fields/types.js';
+import { localizeFields } from '#lib/core/fields/localize.js';
+import { isObjectLiteral } from '#lib/util/object.js';
+import { capitalize, isCamelCase, joinMemberTypes } from '#lib/util/string.js';
+import type { WithoutBuilders } from '#lib/core/fields/types.js';
 import Tabs from './component/Tabs.svelte';
 
 export const tabs = (...tabs: TabBuilder[]) => new TabsBuilder(...tabs);
@@ -20,6 +21,21 @@ export class TabsBuilder extends FieldBuilder<TabsField> {
 
   get component() {
     return Tabs;
+  }
+
+  /** A copy whose tabs are copies too, so `localized()` on it leaves this one as it is. */
+  clone() {
+    const clone = new TabsBuilder();
+    clone.field = { ...this.field, tabs: this.field.tabs.map((tab) => tab.clone()) };
+    return clone;
+  }
+
+  /** Each tab's fields become localized clones. A tabs holds no value of its own. */
+  localized() {
+    for (const tab of this.field.tabs) {
+      tab.fields(...localizeFields(tab.get.fields));
+    }
+    return this;
   }
 
   override compile() {
@@ -60,7 +76,7 @@ export class TabBuilder {
 
   constructor(name: string) {
     if (!isCamelCase(name)) throw new Error('Tab name should be camelCase');
-    this.#tab = { name, label: name, fields: [], live: true };
+    this.#tab = { name, label: capitalize(name), fields: [], live: true };
   }
 
   label(label: string) {
@@ -70,6 +86,13 @@ export class TabBuilder {
 
   get name() {
     return this.#tab.name;
+  }
+
+  /** A copy with its own list of fields: the fields themselves are shared. */
+  clone() {
+    const clone = new TabBuilder(this.#tab.name);
+    clone.#tab = { ...this.#tab };
+    return clone;
   }
 
   fields(...fields: FieldBuilder<Field>[]) {

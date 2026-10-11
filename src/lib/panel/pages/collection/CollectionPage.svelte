@@ -1,54 +1,50 @@
 <script lang="ts">
-  import { goto, invalidateAll } from '$app/navigation';
-  import type { ResolvedPathname } from '$app/types';
-  import { PARAMS } from '$lib/core/constants.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { panelPath } from '$lib/core/routes/util.js';
-  import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
-  import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
-  import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
-  import type { GenericDoc } from '$lib/core/prototype/types';
-  import BulkUploadDialog from '$lib/panel/components/sections/collection/bulk-upload/BulkUploadDialog.svelte';
-  import PageDrop from '$lib/panel/components/sections/collection/bulk-upload/PageDrop.svelte';
-  import CollectionGrid from '$lib/panel/components/sections/collection/grid/CollectionGrid.svelte';
-  import CreateDirectoryDialog from '$lib/panel/components/sections/collection/grid/create-directory-dialog/CreateDirectoryDialog.svelte';
-  import ButtonCreate from '$lib/panel/components/sections/collection/header/ButtonCreate.svelte';
-  import DisplayMode from '$lib/panel/components/sections/collection/header/DisplayMode.svelte';
-  import FilterMenu from '$lib/panel/components/sections/collection/header/FilterMenu.svelte';
-  import SearchInput from '$lib/panel/components/sections/collection/header/SearchInput.svelte';
-  import SelectUI from '$lib/panel/components/sections/collection/header/SelectUI.svelte';
-  import type { KindFilter, StatusFilter } from '$lib/panel/context/collection.svelte.js';
-  import { fileSizeLabel, type UploadTarget } from '$lib/panel/util/upload-file.js';
-  import CollectionList from '$lib/panel/components/sections/collection/list/CollectionList.svelte';
-  import CollectionTree from '$lib/panel/components/sections/collection/tree/CollectionTree.svelte';
-  import Page from '$lib/panel/components/sections/page-layout/Page.svelte';
-  import Unauthorized from '$lib/panel/components/sections/unauthorized/Unauthorized.svelte';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import LanguageSwitcher from '$lib/panel/components/ui/language-switcher/LanguageSwitcher.svelte';
-  import PageHeader from '$lib/panel/components/ui/page-header/PageHeader.svelte';
-  import { DISPLAY_MODE, setCollectionContext } from '$lib/panel/context/collection.svelte.js';
-  import { useCommands } from '$lib/panel/context/commands.svelte.js';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import { getTitleContext } from '$lib/panel/context/title';
-  import {
-    CirclePlus,
-    FolderPlus,
-    LayoutGrid,
-    List,
-    ListTree,
-    Search,
-    Upload
-  } from '@lucide/svelte';
+  import { createPath } from '#lib/panel/util/url.js';
+  import type { UploadPath } from '#lib/core/prototype/collection/upload/util/path.js';
+  import { goto } from '$app/navigation';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
+  import type { Directory } from '#lib/core/prototype/collection/upload/types.js';
+  import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import BulkUploadDialog from '#lib/panel/components/sections/collection/bulk-upload/BulkUploadDialog.svelte';
+  import PageDrop from '#lib/panel/components/sections/collection/bulk-upload/PageDrop.svelte';
+  import CollectionGrid from '#lib/panel/components/sections/collection/grid/CollectionGrid.svelte';
+  import CreateDirectoryDialog from '#lib/panel/components/sections/collection/grid/create-directory-dialog/CreateDirectoryDialog.svelte';
+  import ButtonCreate from '#lib/panel/components/sections/collection/header/ButtonCreate.svelte';
+  import DisplayMode from '#lib/panel/components/sections/collection/header/DisplayMode.svelte';
+  import FilterMenu from '#lib/panel/components/sections/collection/header/FilterMenu.svelte';
+  import SearchInput from '#lib/panel/components/sections/collection/header/SearchInput.svelte';
+  import SelectUI from '#lib/panel/components/sections/collection/header/SelectUI.svelte';
+  import type { KindFilter, StatusFilter } from '#lib/panel/context/collection.svelte.js';
+  import { fileSizeLabel, type UploadTarget } from '#lib/panel/util/upload-file.js';
+  import { switchLocale } from '#lib/panel/util/locale-cookie.js';
+  import CollectionList from '#lib/panel/components/sections/collection/list/CollectionList.svelte';
+  import CollectionTree from '#lib/panel/components/sections/collection/tree/CollectionTree.svelte';
+  import Page from '#lib/panel/components/sections/page-layout/Page.svelte';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import LanguageSwitcher from '#lib/panel/components/ui/language-switcher/LanguageSwitcher.svelte';
+  import PageHeader from '#lib/panel/components/ui/page-header/PageHeader.svelte';
+  import { DISPLAY_MODE, setCollectionContext } from '#lib/panel/context/collection.svelte.js';
+  import { useCommands } from '#lib/panel/context/commands.svelte.js';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { getTitleContext } from '#lib/panel/context/title.js';
+  import CirclePlus from '@lucide/svelte/icons/circle-plus';
+  import FolderPlus from '@lucide/svelte/icons/folder-plus';
+  import LayoutGrid from '@lucide/svelte/icons/layout-grid';
+  import List from '@lucide/svelte/icons/list';
+  import ListTree from '@lucide/svelte/icons/list-tree';
+  import Search from '@lucide/svelte/icons/search';
+  import Upload from '@lucide/svelte/icons/upload';
 
   type Props = {
     slug: string;
     data: {
-      status: number;
       docs: GenericDoc[];
       canCreate: boolean;
       upload?: {
         directories: Directory[];
-        currentPath: `root${string}`;
+        currentPath: UploadPath;
         parentDirectory: Directory;
       };
     };
@@ -73,7 +69,7 @@
   $effect(() => {
     collection.upload = {
       directories: data.upload?.directories || [],
-      currentPath: data.upload?.currentPath || 'root',
+      currentPath: data.upload?.currentPath || UPLOAD_PATH.ROOT_NAME,
       parentDirectory: data.upload?.parentDirectory || null
     };
   });
@@ -140,13 +136,6 @@
     return !name || name === UPLOAD_PATH.ROOT_NAME ? collection.title : name;
   });
 
-  const createPath = () => {
-    const path = panelPath(collection.config.kebab, 'create');
-    return collection.isUpload
-      ? (`${path}?${PARAMS.UPLOAD_PATH}=${collection.upload.currentPath}` as ResolvedPathname)
-      : path;
-  };
-
   const searchInput = () =>
     document.querySelector<HTMLInputElement>('.rz-header-search-input input');
 
@@ -169,7 +158,13 @@
         icon: CirclePlus,
         // An upload collection creates its documents through the upload.
         when: () => collection.canCreate && !collection.isUpload,
-        run: () => goto(createPath())
+        run: () =>
+          goto(
+            createPath(
+              collection.config,
+              collection.isUpload ? collection.upload.currentPath : null
+            )
+          )
       },
       {
         id: 'collection.search',
@@ -210,95 +205,91 @@
   });
 </script>
 
-{#if data.status === 200}
-  <Page>
-    {#snippet main()}
-      <div class="rz-collection">
-        <PageHeader>
-          {#snippet topRight()}
-            {#each config.raw.panel.components.collectionHeader || [] as CustomHeaderComponent, index (index)}
-              <CustomHeaderComponent config={collectionConfig} />
-            {/each}
+<Page>
+  {#snippet main()}
+    <div class="rz-collection">
+      <PageHeader>
+        {#snippet topRight()}
+          {#each config.raw.panel.components.collectionHeader || [] as CustomHeaderComponent, index (index)}
+            <CustomHeaderComponent config={collectionConfig} />
+          {/each}
 
-            <LanguageSwitcher onLocalClick={() => invalidateAll()} />
+          <LanguageSwitcher onLocalClick={switchLocale} />
 
-            {#if collection.isUpload}
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={FolderPlus}
-                aria-label={t__('common.create_folder')}
-                onclick={() => (folderDialogOpen = true)}
-              >
-                <span class="rz-collection__folder-label">{t__('common.create_folder')}</span>
+          {#if collection.isUpload}
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={FolderPlus}
+              aria-label={t__('common.create_folder')}
+              onclick={() => (folderDialogOpen = true)}
+            >
+              <span class="rz-collection__folder-label">{t__('common.create_folder')}</span>
+            </Button>
+            {#if collection.canCreate}
+              <Button size="sm" icon={Upload} onclick={() => (bulkDialogOpen = true)}>
+                {t__('common.collection_upload')}
               </Button>
-              {#if collection.canCreate}
-                <Button size="sm" icon={Upload} onclick={() => (bulkDialogOpen = true)}>
-                  {t__('common.collection_upload')}
-                </Button>
-              {/if}
-            {:else if collection.canCreate}
-              <ButtonCreate config={collection.config} variant="default" />
             {/if}
-          {/snippet}
-
-          {#snippet title()}
-            {collection.title}
-          {/snippet}
-
-          {#snippet meta()}
-            {metaLine}
-          {/snippet}
-
-          {#snippet bottomLeft()}
-            <SearchInput />
-            {#if !collection.isNested()}
-              {#if collection.hasDraft}
-                <FilterMenu
-                  label={t__('common.status')}
-                  options={statusOptions}
-                  value={collection.statusFilter}
-                  onchange={(value) => (collection.statusFilter = value as StatusFilter)}
-                />
-              {/if}
-              {#if collection.isUpload}
-                <FilterMenu
-                  label={t__('fields.all_types')}
-                  options={kindOptions}
-                  value={collection.kindFilter}
-                  onchange={(value) => (collection.kindFilter = value as KindFilter)}
-                />
-              {/if}
-            {/if}
-            <DisplayMode />
-            {#if !collection.isNested()}
-              <SelectUI />
-            {/if}
-          {/snippet}
-        </PageHeader>
-
-        <div class="rz-collection__docs">
-          {#if collection.isNested()}
-            <CollectionTree {collection} />
-          {:else if collection.isGrid()}
-            <CollectionGrid {collection} oncreatefolder={() => (folderDialogOpen = true)} />
-          {:else}
-            <CollectionList {collection} />
+          {:else if collection.canCreate}
+            <ButtonCreate config={collection.config} variant="default" />
           {/if}
-        </div>
-      </div>
-    {/snippet}
-  </Page>
+        {/snippet}
 
-  {#if uploadTarget}
-    <BulkUploadDialog target={uploadTarget} bind:open={bulkDialogOpen} />
-    <CreateDirectoryDialog {collection} bind:open={folderDialogOpen} />
-    {#if collection.canCreate}
-      <PageDrop target={uploadTarget} folder={folderName} disabled={bulkDialogOpen} />
-    {/if}
+        {#snippet title()}
+          {collection.title}
+        {/snippet}
+
+        {#snippet meta()}
+          {metaLine}
+        {/snippet}
+
+        {#snippet bottomLeft()}
+          <SearchInput />
+          {#if !collection.isNested()}
+            {#if collection.hasDraft}
+              <FilterMenu
+                label={t__('common.status')}
+                options={statusOptions}
+                value={collection.statusFilter}
+                onchange={(value) => (collection.statusFilter = value as StatusFilter)}
+              />
+            {/if}
+            {#if collection.isUpload}
+              <FilterMenu
+                label={t__('fields.all_types')}
+                options={kindOptions}
+                value={collection.kindFilter}
+                onchange={(value) => (collection.kindFilter = value as KindFilter)}
+              />
+            {/if}
+          {/if}
+          <DisplayMode />
+          {#if !collection.isNested()}
+            <SelectUI />
+          {/if}
+        {/snippet}
+      </PageHeader>
+
+      <div class="rz-collection__docs">
+        {#if collection.isNested()}
+          <CollectionTree {collection} />
+        {:else if collection.isGrid()}
+          <CollectionGrid {collection} oncreatefolder={() => (folderDialogOpen = true)} />
+        {:else}
+          <CollectionList {collection} />
+        {/if}
+      </div>
+    </div>
+  {/snippet}
+</Page>
+
+{#if uploadTarget}
+  <BulkUploadDialog target={uploadTarget} bind:open={bulkDialogOpen} />
+  <CreateDirectoryDialog {collection} bind:open={folderDialogOpen} />
+  {#if collection.canCreate}
+    <PageDrop target={uploadTarget} folder={folderName} disabled={bulkDialogOpen} />
   {/if}
-{:else}
-  <Unauthorized />
 {/if}
 
 <style type="postcss">

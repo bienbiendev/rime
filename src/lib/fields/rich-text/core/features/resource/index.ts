@@ -1,4 +1,4 @@
-import { Images } from '@lucide/svelte';
+import Images from '@lucide/svelte/icons/images';
 import type { RichTextFeature } from '../../types.js';
 import { Resource, type ResourceFeatureExtensionOptions } from './resource-extension.js';
 

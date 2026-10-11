@@ -1,8 +1,8 @@
 <script lang="ts" generics="T">
-  import { browser } from '$app/environment';
+  import { browser } from '$app/env';
   import { page } from '$app/state';
   import { getLiveContext } from './context.svelte.js';
-  import { normalizeFieldPath } from '$lib/util/string.js';
+  import { normalizeFieldPath } from '#lib/util/string.js';
   import { onDestroy, type Snippet } from 'svelte';
 
   type Props = {
@@ -10,7 +10,7 @@
     data?: T;
     /** Full path to the field being edited from the root of the document, e.g. `attributes.title` or `layout.sections.2:paragraph.text` */
     path?: string;
-    /** Update URI of the API ex: `/pages/123` */
+    /** API path of the document, without `/api`: `/pages/123`, `/blog-posts/456` */
     update?: string;
     child: Snippet<[value: T, props: PanelProps]>;
   };

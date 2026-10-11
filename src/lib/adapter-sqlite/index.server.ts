@@ -1,12 +1,11 @@
-import type { Adapter } from '$lib/core/adapter.js';
-import type { Config } from '$lib/core/config/types.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
-import type { GetRegisterType } from '$lib/index.js';
+import type { Adapter } from '#lib/core/adapter.js';
+import type { Config } from '#lib/core/config/types.js';
+import type { ConfigContext } from '#lib/core/rime.server.js';
+import type { GetRegisterType } from '#lib/index.js';
 import path from 'path';
 import createAuthHandle from './auth.server.js';
 import createBlocksHandle from './blocks.server.js';
 import { connect, type SqliteDriver } from './connect.server.js';
-import generateSchema from './generate-schema/index.server.js';
 import { baseTableName } from './naming.server.js';
 import createPathsHandle from './paths.server.js';
 import { createPrototypeRegistry } from './registry.server.js';
@@ -16,6 +15,7 @@ import { createTransformHandle } from './transform.server.js';
 import createTreeHandle from './tree.server.js';
 import type { GenericTable, SqliteDatabase } from './types.server.js';
 
+type GenerateSchema = typeof import('./generate-schema/index.server.js').default;
 type Schema = GetRegisterType<'Schema'>;
 type Tables = GetRegisterType<'Tables'>;
 
@@ -35,13 +35,15 @@ export function adapterSqlite(
   options: AdapterSqliteOptions = {}
 ): {
   createAdapter: <C extends Config>(configCtx: ConfigContext<C>) => Promise<SqliteAdapter>;
-  generateSchema: typeof generateSchema;
+  generateSchema: GenerateSchema;
 } {
   const driver = options.driver ?? 'libsql';
   return {
     createAdapter: <C extends Config>(configCtx: ConfigContext<C>) =>
       createAdapter({ database, driver, configCtx }),
-    generateSchema
+    // Dev only: loaded on its first call, codegen stays out of a production build
+    generateSchema: (config) =>
+      import('./generate-schema/index.server.js').then((m) => m.default(config))
   };
 }
 
@@ -64,11 +66,10 @@ const createAdapter = async <const C extends Config>(args: {
   const db = await connect({ driver, dbPath, relations: schema.relations });
   const tables = schema.tables;
 
-  // Two words, and each is the contract's own. `core/adapter.ts` declares `BlocksHandle`,
-  // `TreeHandle`, `RelationsHandle`, `TransformHandle` and `AuthHandle` — one object of verbs
-  // each — and `PrototypeHandle` / `TableHandle`, which are looked up by slug. The factories are
-  // named for what they build, so a name here can be checked against a type there. It was three
-  // words for the same idea: Facade, Registry and Handles.
+  // `core/adapter.ts` declares `BlocksHandle`, `TreeHandle`, `RelationsHandle`, `PathsHandle`,
+  // `TransformHandle` and `AuthHandle` — one object of verbs each — and `CollectionHandle` /
+  // `AreaHandle` / `TableHandle`, which are looked up by slug. Each factory is named for the
+  // handle it builds; `createPrototypeRegistry` builds the collection and area ones.
   const blocks = createBlocksHandle({ db, tables });
   const tree = createTreeHandle({ db, tables });
   const relations = createRelationsHandle({ db, tables });
@@ -96,8 +97,8 @@ const createAdapter = async <const C extends Config>(args: {
     db,
     tables: tables as GetRegisterType<'Tables'>,
 
-    getTable<T>(key: string) {
-      return tables[key as keyof typeof tables] as T extends any ? GenericTable : T;
+    getTable<T = GenericTable>(key: string): T {
+      return tables[key as keyof typeof tables] as T;
     },
 
     /**
@@ -106,8 +107,8 @@ const createAdapter = async <const C extends Config>(args: {
      * Part of the escape hatch, not of the Adapter contract: core asks for documents by slug
      * and never for the table they sit in.
      */
-    tableForSlug<T>(slug: string) {
-      return tables[baseTableName(slug) as keyof typeof tables] as T extends any ? GenericTable : T;
+    tableForSlug<T = GenericTable>(slug: string): T {
+      return tables[baseTableName(slug) as keyof typeof tables] as T;
     },
 
     get schema() {
@@ -124,13 +125,13 @@ const createAdapter = async <const C extends Config>(args: {
  * members below are things only a SQL adapter can honour, and no core code may use them —
  * `rime.adapter.db` is documented for *consumers* who need to drop to drizzle.
  *
- * `createAdapter`'s return type is checked against `Adapter` where it is declared, so a facade
+ * `createAdapter`'s return type is checked against `Adapter` where it is declared, so an adapter
  * that drifts from the contract is a build error rather than a runtime surprise.
  */
 export type SqliteAdapter = Adapter & {
   db: SqliteDatabase;
   tables: GetRegisterType<'Tables'>;
-  getTable<T>(key: string): T extends any ? GenericTable : T;
-  tableForSlug<T>(slug: string): T extends any ? GenericTable : T;
+  getTable<T = GenericTable>(key: string): T;
+  tableForSlug<T = GenericTable>(slug: string): T;
   readonly schema: Schema;
 };

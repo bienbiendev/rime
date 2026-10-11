@@ -1,10 +1,11 @@
-import type { PathRow } from '$lib/core/adapter.js';
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { RimeError, RimeFormError } from '$lib/core/errors/index.js';
-import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
-import { toSlug } from '$lib/core/prototype/shared/url/format.server.js';
-import { refreshUrls } from '$lib/core/prototype/shared/url/refresh.server.js';
-import type { CollectionSlug } from '$lib/core/prototype/types.js';
+import type { PathRow } from '#lib/core/adapter.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { RimeError, RimeFormError } from '#lib/core/errors/index.js';
+import { runBeforeOperation, runDocHooks } from '#lib/core/pipeline/run.server.js';
+import type { PrototypeApiContext } from '#lib/core/prototype/define.js';
+import { toSlug } from '#lib/core/prototype/shared/url/format.server.js';
+import { refreshUrls } from '#lib/core/prototype/shared/url/refresh.server.js';
+import type { CollectionSlug, GenericDoc } from '#lib/core/prototype/types.js';
 
 export type UpdateSlugByIdArgs = {
   id: string;
@@ -18,8 +19,10 @@ type Args = UpdateSlugByIdArgs & { ctx: PrototypeApiContext<BuiltCollection> };
 /**
  * A page's slug in one locale: its address changes, and the pages under it follow.
  *
- * On the published page only, for whoever may update it. A slug a sibling holds is refused as a
- * field error on `_slug`.
+ * On the published page only. It runs the `beforeOperation` chain of an update, and the
+ * `afterUpdate` hooks with the page as it now reads, so a guard or a cache purge placed there
+ * sees a slug change as it sees a save. A slug a sibling holds is refused as a field error on
+ * `_slug`.
  */
 export const updateSlugById = async (args: Args): Promise<PathRow> => {
   const { ctx, id } = args;
@@ -30,9 +33,13 @@ export const updateSlugById = async (args: Args): Promise<PathRow> => {
   if (!config.$url) {
     throw new RimeError(RimeError.BAD_REQUEST, `${config.slug} has no $url, so no slug`);
   }
-  if (!isSystemOperation && !config.access.update(event.locals.user, { event, id })) {
-    throw new RimeError(RimeError.UNAUTHORIZED);
-  }
+  // authorize, then the config's own guards, as an update runs them
+  const context = await runBeforeOperation<CollectionSlug>({
+    config,
+    event,
+    operation: 'update',
+    context: { params: { id, locale: args.locale }, isSystemOperation }
+  });
 
   const collection = rime.collection(config.slug as CollectionSlug).system();
   const byId = { where: { id: { equals: id } } };
@@ -62,6 +69,19 @@ export const updateSlugById = async (args: Args): Promise<PathRow> => {
   const row = await rime.adapter.paths.setSlug({ slug: config.slug, ownerId: id, locale, value });
   if (!row) throw new RimeError(RimeError.NOT_FOUND);
   await refreshUrls({ event, config, locale, path: row.path });
+
+  // The update hooks see the page with its new address; the page before is the original, so
+  // `syncPaths` finds it under the same parent and moves nothing.
+  const doc = await collection.findById({ id, locale: locale || undefined });
+  await runDocHooks<CollectionSlug, GenericDoc>({
+    hooks: config.$hooks?.afterUpdate,
+    doc,
+    data: { _slug: value },
+    config,
+    event,
+    operation: 'update',
+    context: { ...context, originalDoc: page }
+  });
 
   const [updated] = await rime.adapter.paths.get({ slug: config.slug, ownerId: id, locale });
   return updated;

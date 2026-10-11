@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
-  import type { UploadProgress } from '$lib/panel/util/upload-file.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import SpinLoader from '#lib/panel/components/ui/spin-loader/SpinLoader.svelte';
+  import type { UploadProgress } from '#lib/panel/util/upload-file.js';
 
   type Props = { progress: UploadProgress; class?: string };
   const { progress, class: className }: Props = $props();

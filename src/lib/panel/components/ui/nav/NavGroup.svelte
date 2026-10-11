@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { ChevronDown, type IconProps } from '@lucide/svelte';
+  import type { IconProps } from '@lucide/svelte';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import type { Component, Snippet } from 'svelte';
 
   type Props = {
@@ -28,7 +29,12 @@
   class:rz-nav-group--nav-collapsed={navCollapsed}
 >
   {#if !navCollapsed}
-    <button type="button" class="rz-nav-group__label" onclick={toggleFolded} aria-expanded={!folded}>
+    <button
+      type="button"
+      class="rz-nav-group__label"
+      onclick={toggleFolded}
+      aria-expanded={!folded}
+    >
       {#if icon}
         {@const IconComp = icon}
         <IconComp size="12" />

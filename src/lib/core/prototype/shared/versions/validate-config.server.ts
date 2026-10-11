@@ -1,4 +1,4 @@
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
 
 /**
  * What a config declaring `versions` has to look like.

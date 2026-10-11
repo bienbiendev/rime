@@ -1,13 +1,13 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { Relation } from '$lib/fields/relation/relation.js';
-import type { RelationRef } from '$lib/fields/types.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { Relation } from '#lib/fields/relation/relation.js';
+import type { RelationRef } from '#lib/fields/types.js';
 import {
   type BuiltCollection,
   type CollectionSlug,
   type RelationValue,
   type UploadDoc
-} from '$lib/types.js';
-import { getValueAtPath } from '$lib/util/object.js';
+} from '#lib/types.js';
+import { getValueAtPath } from '#lib/util/object.js';
 
 /**
  * Puts `_thumbnail` on the document — the URL the panel shows for it in a list.
@@ -15,7 +15,7 @@ import { getValueAtPath } from '$lib/util/object.js';
  * Runs after `populateSizes`, so it can take the thumbnail size an upload collection generated
  * rather than the original file.
  */
-export const setDocumentThumbnail = Hooks.beforeRead(async (args) => {
+export const setDocumentThumbnail = Hooks.beforeRead(async function setDocumentThumbnail(args) {
   const config = args.config;
   let doc = args.doc;
 
@@ -39,13 +39,18 @@ export const setDocumentThumbnail = Hooks.beforeRead(async (args) => {
     const [first] = getValueAtPath<RelationValue<UploadDoc>>(config.asThumbnail, doc) ?? [];
     if (!first) return args;
 
-    const readMedia = (ref: RelationRef) =>
-      args.event.locals.rime
+    // Read as the read runs. A media the reader may not read gives no thumbnail, and the document
+    // itself is still read.
+    const readMedia = async (ref: RelationRef) => {
+      const [media] = await args.event.locals.rime
         .collection(ref.relationTo as CollectionSlug)
-        .findById({ id: ref.documentId }) as Promise<UploadDoc>;
+        .system(!!args.context.isSystemOperation)
+        .findByIds({ ids: [ref.documentId] });
+      return media as UploadDoc | undefined;
+    };
 
     const media = Relation.isRef(first) ? await readMedia(first) : first;
-    doc = { _thumbnail: media._thumbnail, ...doc };
+    if (media) doc = { _thumbnail: media._thumbnail, ...doc };
   }
 
   return { ...args, doc };

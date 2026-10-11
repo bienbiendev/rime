@@ -1,9 +1,10 @@
-import { env } from '$env/dynamic/public';
-import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
+import { SITE_URL } from '$app/env/public';
+import { adapterSqlite } from '#lib/adapter-sqlite/index.server.js';
 import {
   block,
   blocks,
   date,
+  group,
   link,
   radio,
   relation,
@@ -14,11 +15,16 @@ import {
   text,
   toggle,
   tree
-} from '$lib/fields/index.js';
-import { bold } from '$lib/fields/rich-text/client.js';
-import { access } from '$lib/core/auth/access.js';
+} from '#lib/fields/index.js';
+import { bold } from '#lib/fields/rich-text/client.js';
+import { access } from '#lib/core/auth/access.js';
 import { Area, Collection, Hooks, rime } from '$rime/config';
-import { Images, ListTree, Newspaper, ReceiptText, Settings2, Text } from '@lucide/svelte';
+import Images from '@lucide/svelte/icons/images';
+import ListTree from '@lucide/svelte/icons/list-tree';
+import Newspaper from '@lucide/svelte/icons/newspaper';
+import ReceiptText from '@lucide/svelte/icons/receipt-text';
+import Settings2 from '@lucide/svelte/icons/settings-2';
+import Text from '@lucide/svelte/icons/text';
 
 /****************************************************
 /* Settings
@@ -79,7 +85,7 @@ const Informations = Area.create('infos', {
   access: {
     read: () => true
   },
-  $url: ({ locale }) => `${env.PUBLIC_RIME_URL}/${locale}/about`,
+  $url: ({ locale }) => `${SITE_URL}/${locale}/about`,
   live: true
 });
 
@@ -87,22 +93,16 @@ const Informations = Area.create('infos', {
 /* Pages
 /****************************************************/
 
+/** When a save marks a page as home, the other pages marked home lose the mark. */
 const setHome = Hooks.beforeUpsert<'pages'>(async (args) => {
-  const { data, event } = args;
+  const { data, event, context } = args;
+  if (!data?.attributes?.isHome) return args;
 
-  if (data?.attributes?.isHome) {
-    const query = `where[attributes.isHome][equals]=true`;
-
-    const pagesIsHome = await event.locals.rime.collection('pages').find({ query });
-
-    for (const page of pagesIsHome) {
-      await event.locals.rime.collection('pages').updateById({
-        id: page.id,
-        data: { attributes: { isHome: false } }
-      });
-    }
+  const pages = event.locals.rime.collection('pages');
+  const homes = await pages.find({ query: `where[attributes.isHome][equals]=true` });
+  for (const page of homes.filter((page) => page.id !== context.params.id)) {
+    await pages.updateById({ id: page.id, data: { attributes: { isHome: false } } });
   }
-
   return args;
 });
 
@@ -114,7 +114,7 @@ const formatslug = Hooks.beforeUpsert<'pages'>(async (args) => {
     const query = `where[attributes.slug][equals]=${slug}`;
     return event.locals.rime.collection('pages').find({
       query,
-      locale: event.locals.locale
+      locale: args.context.params.locale
     });
   };
 
@@ -124,7 +124,12 @@ const formatslug = Hooks.beforeUpsert<'pages'>(async (args) => {
       const baseSlug = slug;
       let suffix = 0;
       let pagesWithCurrentSlug = await queryPagesWithSlug({ slug: baseSlug });
-      while (pagesWithCurrentSlug.some((page) => page.attributes.slug === slug)) {
+      // A slug held by the page being updated is free.
+      const ownId = args.context.params.id;
+      const takenByOther = (pages: { id: string; attributes: { slug?: string } }[], slug: string) =>
+        pages.some((page) => page.id !== ownId && page.attributes.slug === slug);
+
+      while (takenByOther(pagesWithCurrentSlug, slug)) {
         suffix++;
         slug = `${baseSlug}-${suffix}`;
         pagesWithCurrentSlug = await queryPagesWithSlug({ slug });
@@ -186,8 +191,13 @@ const tabAttributes = tab('attributes').fields(
   text('createMarker').$beforeSave((value) => (value ? `${value}-created` : value))
 );
 
+// Shared by every locale, each block's text localized: one set of rows, translated
+const blockNote = block('note').fields(text('label').localized());
+const blockQuote = block('quote').fields(text('text').localized(), text('author'));
+
 const tabContent = tab('layout').fields(
-  blocks('components', [blockParagraph, blockSlider, blockImage]).table().localized()
+  blocks('components', [blockParagraph, blockSlider, blockImage]).table().localized(),
+  blocks('sections', [blockNote, blockQuote])
 );
 
 const tabSeo = tab('seo').fields(
@@ -203,7 +213,7 @@ const Pages = Collection.create('pages', {
     group: 'Content'
   },
   fields: [tabs(tabHero, tabContent, tabAttributes, tabSeo, tabFooter)],
-  $url: ({ locale, slug }) => `${env.PUBLIC_RIME_URL}/${locale}/${slug}`,
+  $url: ({ locale, slug }) => `${SITE_URL}/${locale}/${slug}`,
   live: true,
   access: {
     read: () => true,
@@ -226,7 +236,13 @@ const Notes = Collection.create('notes', {
   panel: {
     group: 'Content'
   },
-  fields: [text('body').isTitle()],
+  fields: [
+    text('body').isTitle(),
+    // A field inside tabs takes the locale of the group around it
+    group('meta')
+      .fields(tabs(tab('seo').fields(text('metaTitle'))))
+      .localized()
+  ],
   access: {
     read: (user) => access.isAdmin(user),
     create: (user) => access.isAdmin(user),
@@ -261,7 +277,7 @@ const Medias = Collection.create('medias', {
 export default rime({
   //
   $adapter: adapterSqlite('multilang.sqlite'),
-  siteUrl: env.PUBLIC_RIME_URL,
+  siteUrl: SITE_URL,
 
   collections: [Pages, Medias, Notes],
   areas: [Settings, Informations, Menu],

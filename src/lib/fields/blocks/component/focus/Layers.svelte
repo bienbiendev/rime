@@ -1,35 +1,29 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { Button } from '$lib/panel/components/ui/button/index.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { LayoutList } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { Button } from '#lib/panel/components/ui/button/index.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import LayoutList from '@lucide/svelte/icons/layout-list';
   import { getBlocksFocusContext } from './focus.svelte.js';
   import LayersList from './LayersList.svelte';
 
-  /** `heading` off where a tab names it already. */
-  type Props = { form: DocumentFormContext; heading?: boolean };
-  const { form, heading = true }: Props = $props();
+  type Props = { form: DocumentFormContext };
+  const { form }: Props = $props();
   const focus = getBlocksFocusContext()!;
   /** Folding means something once a block holds a list of its own. */
   const nested = $derived(focus.allRows().some((row) => row.children.length > 0));
 </script>
 
 <div class="rz-layers">
-  {#if heading || nested}
+  {#if nested}
     <header class="rz-layers__header">
-      {#if heading}
-        <h3>{t__('fields.layers')}</h3>
-      {/if}
-      {#if nested}
-        <div class="rz-layers__actions">
-          <Button size="xs" variant="ghost" onclick={focus.collapseAll}>
-            {t__('fields.collapse_all')}
-          </Button>
-          <Button size="xs" variant="ghost" onclick={focus.expandAll}>
-            {t__('fields.expand_all')}
-          </Button>
-        </div>
-      {/if}
+      <div class="rz-layers__actions">
+        <Button size="xs" variant="ghost" onclick={focus.collapseAll}>
+          {t__('fields.collapse_all')}
+        </Button>
+        <Button size="xs" variant="ghost" onclick={focus.expandAll}>
+          {t__('fields.expand_all')}
+        </Button>
+      </div>
     </header>
   {/if}
   {#if focus.path}
@@ -70,13 +64,6 @@
     gap: var(--rz-size-2);
     padding: 0 var(--rz-size-0-5) 0 var(--rz-size-2);
     margin-bottom: var(--rz-size-1);
-    h3 {
-      @mixin font-medium;
-      font-size: var(--rz-text-xs);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--rz-fg-subtle);
-    }
   }
 
   /* Small ghost text on the right, quiet until hovered. */

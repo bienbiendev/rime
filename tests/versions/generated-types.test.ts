@@ -10,6 +10,7 @@ import path from 'path';
  */
 test('An upload collection with image sizes keeps its blocks field in the generated type', () => {
   const generated = fs.readFileSync(path.resolve(process.cwd(), 'src/app.generated.d.ts'), 'utf8');
+  expect(generated).toContain('export type MediasDoc');
   const medias = generated.slice(generated.indexOf('export type MediasDoc'));
   const mediasDoc = medias.slice(0, medias.indexOf('export type', 1));
 

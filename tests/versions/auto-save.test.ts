@@ -1,5 +1,5 @@
-import { PARAMS } from '$lib/core/constants';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant';
+import { PARAMS } from '#lib/core/constants.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
 import test, { expect, type APIRequestContext } from '@playwright/test';
 import { API_BASE_URL, panelUrl, signIn } from '../util.js';
 
@@ -16,6 +16,9 @@ const signInOther = signIn(OTHER_EMAIL, PASSWORD);
  * `news` opts in. Every write is checked back through the REST API, which never sees an
  * auto-saved row unless it is asked for by `versionId`.
  */
+
+// The tests share ids and rows: one failing skips the rest
+test.describe.configure({ mode: 'serial' });
 
 let newsId: string;
 let publishedVersionId: string;
@@ -65,6 +68,7 @@ test('Should create a second admin and a published news', async ({ request }) =>
   const me = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
     data: { email: ADMIN_EMAIL, password: PASSWORD }
   });
+  expect(me.status()).toBe(200);
   adminId = (await me.json()).user.id;
 
   const other = await request.post(`${API_BASE_URL}/staff`, {
@@ -88,15 +92,21 @@ test('Should create a second admin and a published news', async ({ request }) =>
 });
 
 test('An auto-save needs the version it starts from', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
   const response = await panelUpdate(
     request,
-    await signInSuperAdmin(request),
+    headers,
     { [PARAMS.AUTO_SAVE]: 'true' },
     { 'attributes.title': 'nowhere' }
   );
   // A RimeError out of an action is answered with `error(status)`, not `fail()`.
   expect(response.status()).toBe(400);
-  expect((await response.json()).type).toBe('error');
+  const body = await response.json();
+  expect(body.type).toBe('error');
+  expect(body.error.message).toContain('an auto-save names the version it starts from');
+
+  // Refused before anything is written: the published version is still the only row
+  expect(await versionsOf(request, headers)).toHaveLength(1);
 });
 
 test('The first auto-save is a new row nobody reads by default', async ({ request }) => {
@@ -233,6 +243,19 @@ test("A save from the panel promotes the row and retires the saver's other auto-
 }) => {
   const headers = await signInSuperAdmin(request);
 
+  // The saver holds another auto-save of the document: the save retires it
+  const elsewhere = await panelUpdate(
+    request,
+    headers,
+    { [PARAMS.AUTO_SAVE]: 'true', [PARAMS.VERSION_ID]: publishedVersionId },
+    { 'attributes.title': 'Auto-saved news, elsewhere' }
+  );
+  expect((await elsewhere.json()).type).toBe('success');
+  const saversAutoSaves = (await versionsOf(request, headers)).filter(
+    (v) => v.isAutoSave && v.updatedBy?.id === adminId
+  );
+  expect(saversAutoSaves).toHaveLength(1);
+
   // No status in the body: the row keeps the published one it inherited.
   const response = await panelUpdate(
     request,
@@ -248,7 +271,8 @@ test("A save from the panel promotes the row and retires the saver's other auto-
   expect(published.attributes.title).toBe('Auto-saved news, saved');
 
   const versions = await versionsOf(request, headers);
-  // The first version, demoted; the promoted row; the other user's auto-save, untouched.
+  // The first version, demoted; the promoted row; the other user's auto-save, untouched. The
+  // saver's other auto-save is gone.
   expect(versions).toHaveLength(3);
   expect(versions.filter((v) => v.isAutoSave).map((v) => v.id)).toEqual([otherAutoSaveId]);
   expect(versions.find((v) => v.id === publishedVersionId)!.status).toBe(VERSIONS_STATUS.DRAFT);

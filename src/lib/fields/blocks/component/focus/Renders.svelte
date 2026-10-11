@@ -1,10 +1,16 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { Button } from '$lib/panel/components/ui/button/index.js';
-  import { parseBlockPath, shiftListPath } from '$lib/panel/context/blocks-ops.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { useSortable } from '$lib/panel/util/Sortable.js';
-  import { ArrowDown, ArrowUp, CopyPlus, Focus, Plus, Trash2 } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { Button } from '#lib/panel/components/ui/button/index.js';
+  import { parseBlockPath, shiftListPath } from '#lib/panel/context/blocks-ops.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { useSortable } from '#lib/panel/util/Sortable.js';
+  import ArrowDown from '@lucide/svelte/icons/arrow-down';
+  import ArrowUp from '@lucide/svelte/icons/arrow-up';
+  import CopyPlus from '@lucide/svelte/icons/copy-plus';
+  import Focus from '@lucide/svelte/icons/focus';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import type Sortable from 'sortablejs';
   import DefaultRender from './DefaultRender.svelte';
   import { getBlocksFocusContext } from './focus.svelte.js';
@@ -26,6 +32,7 @@
   const { form, list, only, holder, class: className, onRemove }: Props = $props();
 
   const focus = getBlocksFocusContext()!;
+  const locale = getLocaleContext();
   const rows = $derived(
     only === undefined ? focus.rowsOf(list) : focus.rowsOf(list).filter((row) => row.index === only)
   );
@@ -122,8 +129,8 @@
 </script>
 
 <!--
-  One list of blocks, one wrapper per block. A block's nested lists are the `nested` snippet its
-  render puts where they go; a block without a render is a row with them under it.
+  One list of blocks, one wrapper per block. A render receives a block's nested lists as
+  `children` and draws them where they go; a block without a render is a row with them under it.
 -->
 <div
   class="rz-renders {className ?? ''}"
@@ -180,7 +187,7 @@
             <ArrowDown size={14} />
           </button>
           <span class="rz-renders__toolbar-separator" aria-hidden="true"></span>
-          {#if row.children.length && focus.path !== row.path}
+          {#if row.children.length}
             <!-- The stage narrowed to this block and what it holds. -->
             <button
               type="button"
@@ -216,6 +223,7 @@
             path={row.path}
             fields={config.fields}
             {form}
+            locale={locale.code}
             children={nested}
           />
           {#snippet failed(error)}

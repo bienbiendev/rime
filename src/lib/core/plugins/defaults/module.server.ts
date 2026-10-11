@@ -1,4 +1,4 @@
-import { dev } from '$app/environment';
+import { dev } from '$app/env';
 import { apiInit } from '../api-init/index.server.js';
 import { cache } from '../cache/index.js';
 import type { Plugin } from '../index.js';

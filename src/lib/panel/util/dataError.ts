@@ -1,5 +1,4 @@
 export function dataError(node: HTMLElement, condition: boolean) {
-  //
   function update(value: boolean) {
     if (value) {
       node.setAttribute('data-error', '');

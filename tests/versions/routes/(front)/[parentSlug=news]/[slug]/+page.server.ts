@@ -1,4 +1,4 @@
-import { checkLiveRedirect } from '$lib/panel/util/live.server.js';
+import { checkLiveRedirect } from '#lib/panel/util/live.server.js';
 import { error, type ServerLoadEvent } from '@sveltejs/kit';
 
 export const load = async (event: ServerLoadEvent) => {

@@ -1,4 +1,4 @@
-import { date, richText, slug, tab, tabs, text } from '$lib/fields/index.js';
+import { date, richText, slug, tab, tabs, text } from '#lib/fields/index.js';
 import {
   bold,
   heading,
@@ -6,13 +6,13 @@ import {
   link as linkFeature,
   resource,
   upload
-} from '$lib/fields/rich-text/client.js';
-import { buildNewsUrl } from '$rime/modules:+rime/news';
+} from '#lib/fields/rich-text/client.js';
 import { Collection } from '$rime/config';
+import { buildNewsUrl } from '$rime/modules:+rime/news';
 import LoremFeature from '../lorem-fill.js';
 
-import { access } from '$lib/core/auth/access.js';
-import { NotebookText } from '@lucide/svelte';
+import { access } from '#lib/core/auth/access.js';
+import NotebookText from '@lucide/svelte/icons/notebook-text';
 
 const tabWriter = tab('writer').fields(
   richText('text').features(

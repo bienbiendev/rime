@@ -1,15 +1,16 @@
-import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
+import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
 import {
   FormFieldBuilder,
   type FormFieldUse
-} from '$lib/core/fields/builders/form-field-builder.js';
-import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
-import type { DefaultOptions, DefaultValueFn, FormField, RelationRef } from '$lib/fields/types.js';
-import type { RegisterCollection } from '$lib/index.js';
-import { capitalize } from '$lib/util/string.js';
-import type { WithOptional } from '$lib/util/types.js';
+} from '#lib/core/fields/builders/form-field-builder.js';
+import type { CollectionSlug, GenericDoc } from '#lib/core/prototype/types.js';
+import type { DefaultOptions, DefaultValueFn, FormField, RelationRef } from '#lib/fields/types.js';
+import type { RegisterCollection } from '#lib/index.js';
+import { makeDocTypeName } from '#lib/core/prototype/naming.js';
+import type { WithOptional } from '#lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import dedent from 'dedent';
+import { isEmptyList } from '../repeatable.js';
 import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
 
@@ -18,7 +19,7 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
 > {
   constructor(name: string) {
     super(name, 'relation');
-    this.field.isEmpty = (value) => !value || (Array.isArray(value) && value.length === 0);
+    this.field.isEmpty = isEmptyList;
     this.field.defaultValue = [];
   }
 
@@ -81,8 +82,8 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
     return this;
   }
 
-  /** Documentation only — relation fields are diverted into relationFieldsMap/junction
-   *  tables before reaching the adapter's generic column renderer (see root.server.ts). */
+  /** Documentation only — relation fields are diverted into the junction table before
+   *  reaching the adapter's generic column renderer (see root.server.ts). */
   get dataType(): DataType {
     return 'json';
   }
@@ -95,7 +96,7 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
       | { id?: string; relationTo: string; documentId: string }[]; // depth 0: refs
     //@shared:end
     `;
-    const fieldType = `${this.name}${this.get.required ? '' : '?'}: RelationValue<${capitalize(this.get.relationTo)}Doc>`;
+    const fieldType = `${this.name}${this.get.required ? '' : '?'}: RelationValue<${makeDocTypeName(this.get.relationTo)}>`;
     return [relationValueType, fieldType].join('\n');
   }
 }
@@ -104,8 +105,7 @@ export const relation = (name: string) => new RelationFieldBuilder(name);
 
 /**
  * A relation, told by its type. `instanceof` is not enough: a dev reload can load this class
- * twice, and a relation built from the other copy then fails it. The schema generator once took
- * such a relation for a text column, and dropped the junction table with every row in it.
+ * twice, and a relation built from the other copy then fails it.
  */
 export const isRelationField = (
   field: { type?: string } | null | undefined
@@ -118,7 +118,6 @@ export const isRelationField = (
 export type RelationField<Doc extends GenericDoc = GenericDoc> = FormField & {
   type: 'relation';
   relationTo: CollectionSlug;
-  layout?: 'tags' | 'list';
   many?: boolean;
   defaultValue?: string | string[] | DefaultValueFn<string | string[]>;
   query?: string | ((doc: WithOptional<Doc, 'id'>) => string);
@@ -132,7 +131,8 @@ export type RelationRow = {
   position: number;
   relationTo: string;
   documentId: string;
-  locale?: string;
+  /** The locale the row belongs to; none, or `null` as a junction stores it, for every locale. */
+  locale?: string | null;
   livePreview?: GenericDoc;
 };
 

@@ -1,4 +1,4 @@
-import { mapSegments, toKebabCase } from '$lib/util/string.js';
+import { capitalize, mapSegments, toKebabCase } from '#lib/util/string.js';
 
 /**
  * A prototype slug's URL form.
@@ -15,11 +15,20 @@ import { mapSegments, toKebabCase } from '$lib/util/string.js';
  * in a URL. The `__` becomes `--`, keeping a segment boundary visible and distinct from the
  * word breaks around it.
  *
- * This replaced a `prototypeKebabToSlug` that matched `/(_(?:directories|versions))$/` — core
- * hardcoding two features' suffixes. Going the other way is now a lookup against the config
- * rather than an inverse transform (see handlers/routes.server.ts), which is both exact and
- * feature-agnostic: `medias-directories` cannot be reversed by rule, since it is indistinguishable
- * from a user collection named `mediasDirectories`.
+ * Going the other way is a lookup against the config, in `core/routes/context.server.ts`:
+ * `medias-directories` is what both `$mediasDirectories` and a collection named
+ * `mediasDirectories` kebab to.
  */
 export const prototypeKebab = (slug: string) =>
   mapSegments(slug.replace(/^\$/, ''), toKebabCase, '--');
+
+/**
+ * The name of a document's generated type: its slug capitalized, without the `$` of a rime
+ * collection, then `Doc`.
+ *
+ * ```ts
+ * makeDocTypeName('pages'); // 'PagesDoc'
+ * makeDocTypeName('$mediasDirectories'); // 'MediasDirectoriesDoc'
+ * ```
+ */
+export const makeDocTypeName = (slug: string): string => `${capitalize(slug.replace('$', ''))}Doc`;

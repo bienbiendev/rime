@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { FieldBuilder } from '$lib/core/fields/builders';
-  import { initialValues } from '$lib/core/fields/initial.js';
-  import type { Field } from '$lib/fields/types.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import type { Dic } from '$lib/util/types';
-  import { Plus } from '@lucide/svelte';
+  import type { FieldBuilder } from '#lib/core/fields/builders/index.js';
+  import { initialValues } from '#lib/core/fields/initial.js';
+  import type { Field } from '#lib/fields/types.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import type { Dic } from '#lib/util/types.js';
+  import Plus from '@lucide/svelte/icons/plus';
   import type { Snippet } from 'svelte';
 
   type AddItem = (values: Dic) => void;

@@ -1,4 +1,4 @@
-import type { GetRegisterType } from '$lib/index.js';
+import type { GetRegisterType } from '#lib/index.js';
 import type { ColumnBaseConfig, ColumnDataType } from 'drizzle-orm';
 import type {
   SQLiteAsyncDatabase,
@@ -6,14 +6,13 @@ import type {
   SQLiteTableWithColumns
 } from 'drizzle-orm/sqlite-core';
 
-// Basic types needed across multiple files
-
 /**
  * The drizzle connection, whichever driver opened it.
  *
  * libsql is async and bun:sqlite is sync, but drizzle wraps both in `SQLiteAsyncDatabase`, so
- * every query is awaited the same way. The one difference that leaks: a sync driver's
- * `db.transaction()` rejects an async callback.
+ * every query is awaited the same way. The one difference that leaks: a sync driver commits when
+ * the `db.transaction()` callback returns, so that callback must not await. Run several writes as
+ * one with `inTransaction` (transaction.server.ts).
  */
 export type SqliteDatabase = SQLiteAsyncDatabase<
   'sync' | 'async',
@@ -22,7 +21,7 @@ export type SqliteDatabase = SQLiteAsyncDatabase<
 >;
 
 /**
- * What every facade in this folder is built from: the connection and the generated tables.
+ * What every handle in this folder is built from: the connection and the generated tables.
  */
 export type AdapterDeps = {
   db: SqliteDatabase;
@@ -41,4 +40,4 @@ export type GenericTable = SQLiteTableWithColumns<{
   schema: undefined;
 }>;
 
-export type GenericTables = Record<string, GenericTable | SQLiteTableWithColumns<any>>;
+type GenericTables = Record<string, GenericTable | SQLiteTableWithColumns<any>>;

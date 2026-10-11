@@ -1,4 +1,4 @@
-import type { CollectionSlug } from '$lib/types.js';
+import type { CollectionSlug } from '#lib/types.js';
 
 /**
  * The versions table naming convention, in slug space.
@@ -11,7 +11,7 @@ import type { CollectionSlug } from '$lib/types.js';
  * rime-owned config keys. The `__` says *versions of*, and it is a segment boundary rather than
  * a word break — which is why every case conversion goes through mapSegments and why an author
  * slug may not contain it (see core/config/validate.server.ts). Without that rule a
- * collection named `pagesVersions` would snake-case onto the same table as this versions.
+ * collection named `pagesVersions` would snake-case onto the same table as this versions table.
  */
 
 const DERIVED = '$';
@@ -20,10 +20,3 @@ const MARKER = '__versions';
 /** `pages` -> `$pages__versions` */
 export const withVersionsSuffix = (name: string) =>
   `${DERIVED}${name.replace(/^\$/, '')}${MARKER}` as CollectionSlug;
-
-/** `$pages__versions` -> `pages`; anything else unchanged. */
-export const withoutVersionsSuffix = (name: string) =>
-  name.replace(/^\$/, '').replace(MARKER, '') as CollectionSlug;
-
-/** `$pages__versions` -> true */
-export const hasVersionsSuffix = (slug: string) => slug.endsWith(MARKER);

@@ -1,12 +1,12 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { trycatch } from '$lib/util/function.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { trycatch } from '#lib/util/function.js';
 
 type Update = { id: string; data: { parent: string } };
 
 /**
- * @TODO explain — reads the directory's children before the write, for `updateDirectoryChildren`
- * below to re-parent afterwards.
+ * When a directory's path changes, works out the new path of each direct child, for
+ * `updateDirectoryChildren` to write after the update.
  */
 export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>(
   async function prepareDirectoryChildren(args) {
@@ -21,8 +21,8 @@ export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>(
       );
 
     if (data.id) {
-      // `parent` is an ordinary field on the directories collection, which is never versioned —
-      // so the normal query path answers this and no drizzle handle is needed.
+      // `parent` is an ordinary field on the directories collection, which is never versioned,
+      // so the plain query answers this.
       const children = await event.locals.rime.adapter.collection(config.slug).findMany({
         query: { where: { parent: { equals: `${originalDoc.id}` } } }
       });
@@ -43,13 +43,28 @@ export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>(
 );
 
 /**
- * @TODO explain — re-parents what `prepareDirectoryChildren` collected, once the directory's own
- * row has been written.
+ * Moves the directory to the path in `data.id`, then writes the child paths
+ * `prepareDirectoryChildren` worked out. Each child update runs both hooks again, so the whole
+ * subtree follows.
+ *
+ * A directory's id is its path, and an update never writes a row's id, so the move is written
+ * here: `root:a` -> `root:b:a`. The foreign key on each upload's `_path` follows it.
  */
 export const updateDirectoryChildren = Hooks.afterUpdate<'directory'>(
   async function updateDirectoryChildren(args) {
-    const { event, config } = args;
-    const collection = event.locals.rime.collection(config.slug);
+    const { event, config, data } = args;
+    let doc = args.doc;
+
+    if (data.id && data.id !== doc.id) {
+      await event.locals.rime.adapter.collection(config.slug).updateWhere({
+        query: { where: { id: { equals: doc.id } } },
+        data: { id: data.id }
+      });
+      doc = { ...doc, id: data.id };
+    }
+
+    // Part of the directory's update: its children are re-parented as rime
+    const collection = event.locals.rime.collection(config.slug).system();
     const updates: Update[] = args.context.directoriesUpdates || [];
 
     for (const update of updates) {
@@ -59,6 +74,6 @@ export const updateDirectoryChildren = Hooks.afterUpdate<'directory'>(
       }
     }
 
-    return args;
+    return { ...args, doc };
   }
 );

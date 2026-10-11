@@ -1,5 +1,5 @@
-import { area } from '$lib/core/prototype/area/definition.server.js';
-import { collection } from '$lib/core/prototype/collection/definition.server.js';
+import { area } from '#lib/core/prototype/area/definition.server.js';
+import { collection } from '#lib/core/prototype/collection/definition.server.js';
 
 /**
  * Every `/api` route the installed prototypes declare, as one string.

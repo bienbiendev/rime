@@ -1,4 +1,4 @@
-import { block, blocks, text, tree } from '$lib/fields/index.js';
+import { block, blocks, text, tree } from '#lib/fields/index.js';
 import { Area } from '$rime/config';
 
 /**

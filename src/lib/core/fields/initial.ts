@@ -1,12 +1,15 @@
-import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { Field, FormField } from '$lib/fields/types.js';
-import type { Dic } from '$lib/util/types.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
+import type { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import type { Field, FormField } from '#lib/fields/types.js';
+import type { Dic } from '#lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { isFormField } from './util.js';
 
 /** What a field is handed to build its initial value. The event is a default's, and boot has none. */
-export type InitialContext = { event?: RequestEvent };
+type InitialContext = { event?: RequestEvent };
+
+/** The errors already logged: an outer container passes them on without a line of its own. */
+const logged = new WeakSet<object>();
 
 /**
  * A list of fields as an object, each field contributing its own members, each leaf holding what
@@ -43,7 +46,12 @@ export const fieldValues = (
         Object.assign(bucket, fieldValues(node.fields, leaf));
       }
     } catch (err) {
-      console.error(`Building the value of ${field.type} field "${field.name}" failed.`);
+      // An object is logged once, at the field that threw it; anything else, at every level
+      const isObject = err instanceof Object;
+      if (!isObject || !logged.has(err)) {
+        if (isObject) logged.add(err);
+        console.error(`Building the value of ${field.type} field "${field.name}" failed.`);
+      }
       throw err;
     }
   }

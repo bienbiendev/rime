@@ -1,17 +1,18 @@
-import type { RimeAuth } from '$lib/core/auth/better-auth/instance.server.js';
-import type { Config } from '$lib/core/config/types.js';
+import type { RimeAuth } from '#lib/core/auth/better-auth/instance.server.js';
+import type { Config } from '#lib/core/config/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Adapter } from './adapter.js';
 import { bootRime } from './boot.server.js';
 import type { ConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
+import { knownLocale, requestLocale } from './locale/request.server.js';
 import { logger } from './logger.server.js';
 import { areaApi, type AreaAccessor } from './prototype/area/api.server.js';
 import { collectionApi, type CollectionAccessor } from './prototype/collection/api.server.js';
 import { createRoutesContext } from './routes/context.server.js';
 
-// Declared in core/config/context.server.ts, beside `createConfigContext`, and re-exported
-// here because this is where consumers have always imported it from.
+// Declared in core/config/context.server.ts, beside `createConfigContext`; consumers import it
+// from here.
 export type { ConfigContext };
 
 /**
@@ -32,15 +33,8 @@ export type RimeContext<C extends Config = Config> = {
   /**
    * `rime.collection(slug)` / `rime.area(slug)`.
    *
-   * **Named from each prototype's `api.server.ts`, never off its definition**, and that is a
-   * correctness requirement rather than a preference. Every hook is typed through `HookContext` →
-   * `event.locals.rime` → this, so reading an accessor off a definition — which carries hooks —
-   * would make every hook's type depend on itself and TypeScript would answer `any` for all of
-   * them. Each `api.server.ts` imports no hooks, so it cuts the loop.
-   *
-   * These two lines were a `PrototypeAccessors` alias in a file of its own, so that this one did
-   * not name a kind. It names two, they are both core's, and the file it took them from is the
-   * file it now names.
+   * Named from each prototype's `api.server.ts`, never off its definition (see `RimeContext`):
+   * each `api.server.ts` imports no hooks.
    */
   collection: CollectionAccessor;
   area: AreaAccessor;
@@ -51,16 +45,14 @@ export type RimeContext<C extends Config = Config> = {
     logger: typeof logger;
     /** The Better-auth instance, carrying whatever plugins this config declared. */
     auth: RimeAuth<C>;
-    /** The drizzle instance and the low-level surface. */
+    /** The database adapter: per-prototype handles and the low-level surface. */
     adapter: Adapter;
     /** The configuration interface. */
     config: ConfigContext<C>;
     /** What this request knows about its own route. */
     routes: ReturnType<typeof createRoutesContext>;
-    /** Overrides `event.locals.locale`. */
+    /** Sets `event.locals.locale`. A code the config does not list sets the default locale. */
     setLocale(locale: string | undefined): void;
-    /** The current `event.locals.locale`. */
-    getLocale(): string | undefined;
   };
 
 /** The process-wide object. One per boot; `createRimeContext` makes the per-request one above. */
@@ -82,39 +74,9 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
   // boot.server.ts. Everything below is phase 3: what a request gets.
   const { plugins, configCtx, adapter, auth } = await bootRime(config);
 
-  /**
-   * Function that define the locale to use in a request event
-   * based on this priority, high to low :
-   * - locale inside the url ex: /en/foo
-   * - locale from searchParams ex: ?locale=en
-   * - locale from cookie
-   * - default locale
-   */
+  /** Sets `event.locals.locale` from what the request's surface names (see `requestLocale`). */
   function defineLocale(event: RequestEvent) {
-    // locale present inside the url params ex : /en/foo
-    const params = event.params;
-
-    const paramLocale =
-      'locale' in params &&
-      typeof params.locale === 'string' &&
-      configCtx.getLocalesCodes().includes(params.locale)
-        ? params.locale
-        : null;
-
-    // locale present as a search param ex : ?locale=en
-    const searchParams = event.url.searchParams;
-    const hasParams = searchParams.toString();
-    const searchParamLocale = hasParams && searchParams.get('locale');
-
-    // locale from the cookie
-    const cookieLocale = event.cookies.get('rime.locale');
-    const defaultLocale = configCtx.getDefaultLocale();
-    const locale = paramLocale || searchParamLocale || cookieLocale;
-
-    if (locale && configCtx.getLocalesCodes().includes(locale)) {
-      return (event.locals.locale = locale);
-    }
-    return (event.locals.locale = defaultLocale);
+    event.locals.locale = requestLocale(event, configCtx);
   }
 
   /**
@@ -122,7 +84,7 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
    *
    * The cast is what makes writing it out safe: these types cannot be derived from the values —
    * each accessor carries its own slug literals and document types — so they are declared, on
-   * `RimeContext` above, from each prototype's `api.server.ts`. That is rule 1's boundary.
+   * `RimeContext` above, from each prototype's `api.server.ts`. See the rule on `RimeContext`.
    */
   const buildAccessors = (event: RequestEvent) =>
     ({
@@ -162,11 +124,9 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
     createRimeContext(event: RequestEvent): RimeContext<C> {
       defineLocale(event);
 
-      // The cast covers the plugin spread only. `plugins` is already `as
-      // typeof config.$InferPluginsServer` where bootRime builds it — a runtime
-      // `Object.fromEntries` cannot be checked against a mapped type — so re-deriving the same
-      // relationship here would only restate that cast, not verify it. Every other member is
-      // checked against the declaration above.
+      // `as unknown as`: `plugins` is a runtime `Object.fromEntries`, cast to
+      // `BuildConfig<C>['$InferPluginsServer']` in bootRime, so this object is not checked
+      // against `RimeContext`.
       return {
         logger,
         ...plugins,
@@ -177,11 +137,9 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
         },
 
         /**
-         * Provides access to the drizzle instance and some
-         * low level functionnalities
+         * The database adapter's low-level surface.
          *
          * @example
-         * rime.adapter.db.query.pages.findFirst()
          * rime.adapter.collection('users').findMany({ query: { where: { id: { equals: '1' } } } })
          */
         get adapter() {
@@ -209,18 +167,9 @@ export async function createRime<const C extends Config>(config: BuildConfig<C>)
          */
         routes: createRoutesContext(event),
 
-        /**
-         * This overrides the event.locals.locale.
-         */
+        /** Sets `event.locals.locale`. A code the config does not list sets the default locale. */
         setLocale(locale: string | undefined) {
-          event.locals.locale = locale;
-        },
-
-        /**
-         * Get the current event.locals.locale
-         */
-        getLocale() {
-          return event.locals.locale;
+          event.locals.locale = knownLocale(configCtx, locale);
         },
 
         /**

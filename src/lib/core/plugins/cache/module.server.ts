@@ -1,5 +1,5 @@
-import { isStaff } from '$lib/core/auth/access.js';
-import { error, json, type RequestEvent, type RequestHandler } from '@sveltejs/kit';
+import { isStaff } from '#lib/core/auth/access.js';
+import { error, type RequestEvent, type RequestHandler } from '@sveltejs/kit';
 import { createHash } from 'node:crypto';
 import { definePlugin, type Plugin } from '../index.js';
 import { Cache } from './cache.server.js';
@@ -25,11 +25,11 @@ type CacheOptions = {
 };
 
 /**
- * Generates a numeric hash from a string using sha256 hashing algorithm.
+ * Hashes a string with sha256, as a 64-character hex string.
  * Useful for generating deterministic IDs from string content.
  *
  * @example
- * // Returns a consistent numeric hash string
+ * // Returns the same hex string for the same input
  * toHash("hello");
  */
 export const toHash = (str: string): string => {
@@ -45,7 +45,7 @@ export const cache = definePlugin((options?: CacheOptions) => {
   /** Empties the cache. A config's hook calls it as an action; the route below guards it. */
   const clearCache = () => {
     Cache.clear();
-    return json({ message: 'Cache cleared' });
+    return Response.json({ message: 'Cache cleared' });
   };
 
   const actions: CacheActions = {

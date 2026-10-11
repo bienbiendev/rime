@@ -1,7 +1,6 @@
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import type { CollectionSlug, GenericDoc } from '#lib/core/prototype/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { withVersionsSuffix } from './naming.js';
 import type { AutoSave, AutoSaves } from './types.js';
 
 /**
@@ -17,9 +16,9 @@ export const autoSavesOf = async (args: {
   doc: GenericDoc;
 }): Promise<AutoSaves | undefined> => {
   const { event, config, doc } = args;
-  if (!config.versions?.autoSave) return undefined;
+  if (!config.versions?.autoSave || !config._versions) return undefined;
 
-  const versionsSlug = withVersionsSuffix(config.slug) as CollectionSlug;
+  const versionsSlug = config._versions.slug as CollectionSlug;
 
   const rows = (await event.locals.rime
     .collection(versionsSlug)

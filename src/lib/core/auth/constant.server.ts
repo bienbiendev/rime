@@ -1,12 +1,11 @@
-import type { Dic } from '$lib/util/types.js';
+import type { Dic } from '#lib/util/types.js';
 import type { User } from './types.js';
 
 /**
  * The members of an auth document that never leave the server.
  *
- * `.server` is the guarantee, not a filing convention: nothing client-reachable may import this,
- * so nothing can ship a copy of the list to a browser or drift from it. Anything that needs it on
- * the client's behalf goes through the server — see `auth/blank/module.server.ts`.
+ * Server-only, so the list never reaches a browser bundle. Documents leave the server stripped by
+ * `removePrivateFields` (`auth/hooks/remove-private-fields.server.ts`), and users by `toPublicUser`.
  */
 export const PRIVATE_FIELDS = [
   'password',
@@ -36,11 +35,8 @@ export function withoutPrivateFields<T extends Dic>(doc: T): T {
 }
 
 /**
- * Strips PRIVATE_FIELDS off the session user. Call this only where a load() function is
- * about to hand `user` to the client (the public layouts in
- * dev/codegen/routes/common.server.ts) — never on event.locals.user itself, which stays
- * the full object so server-only code (hooks, access checks) always sees real staff status
- * regardless of which route triggered it.
+ * Strips `PRIVATE_FIELDS` off the session user, for a load() that hands `user` to the client.
+ * `event.locals.user` keeps the full object.
  */
 export function toPublicUser(user: User | undefined): User | undefined {
   if (!user) return undefined;

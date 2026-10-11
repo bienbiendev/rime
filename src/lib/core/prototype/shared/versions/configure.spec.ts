@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { hookName } from '$lib/core/pipeline/hook-name.server.js';
-import { resolvePipelines } from '$lib/core/pipeline/build.server.js';
-import type { Dic } from '$lib/util/types.js';
-import { create } from '$lib/core/prototype/collection/definition.js';
-import { text } from '$lib/fields/text/index.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { resolvePipelines } from '#lib/core/pipeline/build.server.js';
+import type { Dic } from '#lib/util/types.js';
+import { create } from '#lib/core/prototype/collection/definition.js';
+import { text } from '#lib/fields/text/index.js';
 import { configureVersions } from './configure.server.js';
 
 /**
@@ -38,7 +37,7 @@ describe('a versions versions', () => {
   ) as unknown as { $hooks?: Record<string, unknown[]> };
 
   const entries = (versions.$hooks?.beforeRead ?? []) as ((args: unknown) => unknown)[];
-  const beforeRead = entries.map((hook) => hookName(hook));
+  const beforeRead = entries.map((hook) => hook.name);
 
   it('runs the author’s own hooks', () => {
     expect(beforeRead).toContain('authorBeforeRead');
@@ -68,10 +67,6 @@ describe('a versions versions', () => {
 /**
  * A versions says whose content it holds.
  *
- * `upload`'s naming used to answer that question by string surgery — `withoutVersionsSuffix(slug)`,
- * so a versions table's directories resolved to its parent's. It was the only feature-to-feature import in
- * the registry, and it could only ever know about the one feature whose suffix it stripped.
- *
  * What upload does with the answer is asserted in `upload/naming.spec.ts`, against a plain object
  * rather than against this feature — which is the point: neither spec names the other.
  */
@@ -93,5 +88,32 @@ describe('_shadowOf', () => {
 
   it('leaves the authored config saying nothing, so it is its own owner', () => {
     expect((versionedUpload as unknown as Dic)._shadowOf).toBeUndefined();
+  });
+});
+
+describe('the versions access', () => {
+  const anyone = () => true;
+  const parent = create('access_spec_news', {
+    fields: [text('title').isTitle()],
+    versions: { draft: true },
+    access: { create: anyone, read: anyone, update: anyone, delete: anyone }
+  });
+  const config = { collections: [parent] } as unknown as { collections: Dic[] };
+  configureVersions(config as never);
+  const access = config.collections.find((c) => c.slug === '$access_spec_news__versions')!.access;
+
+  const staff = { id: 's1', isStaff: true } as any;
+  const member = { id: 'u1' } as any;
+
+  it('writes no row directly: a version is made and changed through its document', () => {
+    expect(access.create(staff, {})).toBe(false);
+    expect(access.update(staff, {})).toBe(false);
+  });
+
+  it('reads and deletes for staff the document allows, and for nobody else', () => {
+    expect(access.read(staff, {})).toBe(true);
+    expect(access.delete(staff, {})).toBe(true);
+    expect(access.read(member, {})).toBe(false);
+    expect(access.delete(member, {})).toBe(false);
   });
 });

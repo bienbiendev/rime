@@ -31,17 +31,24 @@ export const randomId = (length: number): string => {
 /** The id of a row not saved yet: a save adds it and gives it a real one. `temp-3f9aK2bQ` */
 export const tempId = () => `temp-${randomId(8)}`;
 
+/** Whether a row id is a temp id: the row is not saved yet. */
+export const isTempId = (id: string) => id.startsWith('temp-');
+
 /**
- * Generate a secure random password with uppercase, lowercase, numbers and symbols
+ * Generate a secure random password with uppercase, lowercase, numbers and symbols. It holds one
+ * character of each kind, so a length under 4 throws a `RangeError`.
  *
  * @example
  * // Generate a password with default length (12)
- * const password = generateSecurePassword();
+ * const password = randomPassword();
  *
  * // Generate a password with custom length
- * const longPassword = generateSecurePassword(16);
+ * const longPassword = randomPassword(16);
  */
 export const randomPassword = (length = 12): string => {
+  if (length < 4) {
+    throw new RangeError(`A password holds one character of each kind: 4 at least, got ${length}`);
+  }
   const uppercaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const lowercaseChars = 'abcdefghijklmnopqrstuvwxyz';
   const numberChars = '0123456789';
@@ -54,7 +61,6 @@ export const randomPassword = (length = 12): string => {
 
   // Use crypto.getRandomValues for better randomness when available
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    // Ensure we have at least one character from each character set
     const randomValues = new Uint32Array(length);
     crypto.getRandomValues(randomValues);
 

@@ -1,23 +1,14 @@
-import type { Adapter } from '$lib/core/adapter.js';
-import type { MailerActions } from '$lib/core/plugins/mailer/index.server.js';
-import type { Config } from '$lib/types.js';
+import type { Adapter } from '#lib/core/adapter.js';
+import type { MailerActions } from '#lib/core/plugins/mailer/index.server.js';
+import type { Config } from '#lib/types.js';
 import { betterAuth } from 'better-auth';
-import type { ConfigContext } from '$lib/core/config/context.server.js';
-import type { BuildConfig } from '$lib/core/config/index.server.js';
+import type { ConfigContext } from '#lib/core/config/context.server.js';
+import type { BuildConfig } from '#lib/core/config/index.server.js';
 import { getBaseAuthConfig } from './config.server.js';
 
 /**
- * Builds the better-auth instance for a config.
- *
- * Extracted from `bootRime` so its *type* can be named without naming `bootRime`. `RimeContext`
- * declares `auth`, and `bootRime` imports the prototype registry — so referring to
- * `ReturnType<typeof bootRime>` for it would put every prototype definition, and therefore every
- * hook, back into the type graph of `event.locals.rime`. That is the loop this whole change
- * exists to cut. This module imports no registry and no prototype.
- *
- * The inference is the point of extracting it rather than widening it: a consumer's own
- * better-auth plugins come from `config.$auth.plugins`, and `auth` has to keep carrying them so
- * `rime.auth` is typed against the plugins that config actually declared.
+ * Builds the better-auth instance for a config. Its inferred type, `RimeAuth`, carries the
+ * plugins from `config.$auth.plugins`.
  */
 export const createAuthInstance = <const C extends Config>(args: {
   config: BuildConfig<C>;

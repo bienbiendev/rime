@@ -1,7 +1,6 @@
 <script lang="ts">
-  import type { TextAreaFieldBuilder } from '$lib/fields/textarea/index.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { capitalize } from '$lib/util/string.js';
+  import type { TextAreaFieldBuilder } from '#lib/fields/textarea/index.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import type { TextFieldBuilder } from '../index.js';
 
   type Props = {
@@ -67,9 +66,9 @@
   role="textbox"
   tabindex="0"
   aria-multiline={multiline}
-  aria-label={config.get.label || capitalize(config.name)}
+  aria-label={config.get.label}
   data-multiline={multiline ? '' : null}
-  data-placeholder={config.get.placeholder || capitalize(config.name)}
+  data-placeholder={config.get.placeholder || config.get.label}
   data-error={field.error ? '' : null}
   {oninput}
   {onkeydown}

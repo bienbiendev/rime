@@ -1,19 +1,13 @@
 <script lang="ts">
-  type Dic = Record<string, any>;
+  import { t__ } from '#lib/core/i18n/index.js';
 
-  type Props = {
-    value: Dic | null;
-  };
+  const { value }: { value: unknown[] | null } = $props();
 
-  const { value }: Props = $props();
-
-  const blockCount = $derived(value ? value.length : 0);
-  const blockLabel = $derived(blockCount === 1 ? 'block' : 'blocks');
+  const count = $derived(value?.length ?? 0);
 </script>
 
 <div class="rz-blocks-cell">
-  {blockCount}
-  {blockLabel}
+  {count === 1 ? t__('fields.blocks_count', '1') : t__('fields.blocks_count|m|p', String(count))}
 </div>
 
 <style type="postcss">

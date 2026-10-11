@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import { Input } from '$lib/panel/components/ui/input/index.js';
-  import { Mail } from '@lucide/svelte';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import { Input } from '#lib/panel/components/ui/input/index.js';
+  import Mail from '@lucide/svelte/icons/mail';
   import type { EmailFieldProps } from './props';
 
   const { path, config, form }: EmailFieldProps = $props();
@@ -10,7 +10,6 @@
   const field = $derived(form.useField(path || config.name, config));
   let showError = $state(false);
 
-  // Actions
   const onInput = (event: Event) => {
     showError = false;
     field.value = (event.target as HTMLInputElement).value;

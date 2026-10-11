@@ -1,4 +1,4 @@
-import type { DocTypeContribution } from '$lib/core/dev/codegen/types/contributions.server.js';
+import type { DocTypeContribution } from '#lib/core/dev/codegen/types/contributions.server.js';
 
 /**
  * A document of a config with `$url` carries its url. A collection's also carries its address:

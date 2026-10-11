@@ -1,17 +1,18 @@
 <script lang="ts">
+  import { documentSegments } from '#lib/panel/util/url.js';
   import { goto, invalidateAll } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { PARAMS } from '$lib/core/constants.js';
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import { panelPath } from '$lib/core/routes/util.js';
-  import * as Sheet from '$lib/panel/components/ui/sheet/index.js';
-  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import type { DocVersion } from '$lib/panel/index.js';
-  import { toKebabCase } from '$lib/util/string.js';
-  import { Trash2, X } from '@lucide/svelte';
+  import { PARAMS } from '#lib/core/constants.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import { panelPath } from '#lib/core/routes/util.js';
+  import * as Sheet from '#lib/panel/components/ui/sheet/index.js';
+  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import type { DocVersion } from '#lib/panel/index.js';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import X from '@lucide/svelte/icons/x';
   import { toast } from 'svelte-sonner';
   import { t__ } from '../../../../core/i18n/index.js';
   import Button from '../../ui/button/button.svelte';
@@ -44,9 +45,11 @@
   const resource = $derived(APIProxy.getRessource<{ docs: DocVersion[] }>(versionsListUrl(doc)));
   const list = $derived(resource.data?.docs ?? []);
 
+  const kebab = $derived(
+    config.getDocumentConfig({ prototype: doc._prototype, slug: doc._type }).kebab
+  );
   const documentPath = (versionId?: string) => {
-    const kebab = toKebabCase(doc._type);
-    const base = doc._prototype === 'collection' ? panelPath(kebab, doc.id) : panelPath(kebab);
+    const base = panelPath(...documentSegments(kebab, doc));
     return versionId ? `${base}?${PARAMS.VERSION_ID}=${versionId}` : base;
   };
 
@@ -67,7 +70,7 @@
       method: 'DELETE'
     });
     if (!response.ok) {
-      toast.error(t__('error.generic'));
+      toast.error(t__('common.generic_error'));
       return;
     }
     APIProxy.invalidate(versionsApiUrl(doc._type));

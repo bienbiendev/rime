@@ -1,6 +1,6 @@
-import type { TreeBlock } from '$lib/core/prototype/types.js';
-import { getValueAtPath } from '$lib/util/object.js';
-import type { Dic, WithRequired } from '$lib/util/types.js';
+import type { TreeBlock } from '#lib/core/prototype/types.js';
+import { getValueAtPath } from '#lib/util/object.js';
+import type { Dic, WithRequired } from '#lib/util/types.js';
 import cloneDeep from 'clone-deep';
 import type { ConfigMap } from '../../config-map/types.js';
 
@@ -20,11 +20,11 @@ export function extractTreeBlocks({ data, configMap }: ExtractTreesArgs) {
   ): void {
     // Create a copy of the item to avoid modifying the original
     const processedItem: TreeBlock = cloneDeep({ ...item });
-    // Set position if not defined
+    // Position is the index in its list
     processedItem.position = index;
     // Set path based on whether it's a root level or nested item
     processedItem.path = parentPath ? `${parentPath}` : rootPath;
-    // Remove children prop as they will be extracted
+    // Empty `_children`: each child becomes its own row
     processedItem._children = [];
     // Add the processed item to the flat array
     blocks.push(processedItem as WithRequired<TreeBlock, 'path'>);

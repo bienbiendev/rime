@@ -6,9 +6,7 @@
     ref = $bindable(null),
     class: className,
     ...restProps
-  }: DropdownMenuPrimitive.ItemProps & {
-    inset?: boolean;
-  } = $props();
+  }: DropdownMenuPrimitive.ItemProps = $props();
 </script>
 
 <DropdownMenuPrimitive.Item bind:ref class="rz-dropdown-item {className}" {...restProps} />

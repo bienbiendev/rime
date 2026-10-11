@@ -1,4 +1,4 @@
-import type { RelationValue } from '$lib/fields/types.js';
+import type { RelationValue } from '#lib/fields/types.js';
 import { describe, expectTypeOf, it } from 'vitest';
 import { Relation } from './relation.js';
 

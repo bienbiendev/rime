@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { getMimeTypeFromExtension } from '$lib/core/prototype/collection/upload/util/mime';
-  import { mimeTypeToIcon } from '$lib/panel/util/upload.js';
-  import { FileText } from '@lucide/svelte';
+  import { getMimeTypeFromExtension } from '#lib/core/prototype/collection/upload/util/mime.js';
+  import { mimeTypeToIcon } from '#lib/panel/util/upload.js';
+  import FileText from '@lucide/svelte/icons/file-text';
 
   type Props = {
     url?: string;

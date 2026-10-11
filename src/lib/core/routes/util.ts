@@ -1,6 +1,6 @@
 import { page } from '$app/state';
 import type { ResolvedPathname } from '$app/types';
-import { env } from '$env/dynamic/public';
+import { SITE_URL } from '$app/env/public';
 import { API_PREFIX, PANEL_PUBLIC_AUTH_ROUTE_IDS } from './constants.js';
 
 /**
@@ -9,7 +9,6 @@ import { API_PREFIX, PANEL_PUBLIC_AUTH_ROUTE_IDS } from './constants.js';
  * joinPath('panel', 'pages', '123') // -> /panel/pages/123
  */
 export function joinPath(...args: string[]): string {
-  if (!Array.isArray(args)) return '/';
   return `/${args.join('/')}`;
 }
 
@@ -21,13 +20,14 @@ export function apiUrl(...args: string[]): string {
   return `${API_PREFIX}/${args.join('/')}`;
 }
 
-/** Prefixes the configured site origin. For links that leave the app: emails, CORS, `_live`. */
+/** Prefixes `SITE_URL` to a root-relative path. */
 export function absolute(path: string): string {
-  return `${env.PUBLIC_RIME_URL}${path}`;
+  return `${SITE_URL}${path}`;
 }
 
+/** `/api` and the paths under it: `/api/pages` is one, `/apiary` is not. */
 export function isApiPathname(pathname: string): boolean {
-  return pathname.startsWith(API_PREFIX);
+  return pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`);
 }
 
 export function isPublicPanelAuthRoute(routeId: string | null): boolean {
@@ -46,7 +46,7 @@ export function panelPath(...args: string[]): ResolvedPathname {
 }
 
 /**
- * Panel-only. Reads `page.params.panel`, which is undefined server-side
+ * Panel-only. `panelPath` prefixed with `SITE_URL`: an absolute URL.
  */
 export function panelUrl(...args: string[]): ResolvedPathname {
   return absolute(panelPath(...args)) as ResolvedPathname;

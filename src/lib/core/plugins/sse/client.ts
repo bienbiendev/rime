@@ -17,13 +17,19 @@ import type { SSEEvent, SSEHandler } from './types.js';
  */
 export const openSse = (keys: string | string[], handler: SSEHandler): (() => void) => {
   const connection = connect(keys);
-  connection.handlers.add(handler);
+  // One entry per call: the same handler passed twice is two listeners
+  const listener: SSEHandler = (event) => handler(event);
+  connection.handlers.add(listener);
 
+  // Runs once: a second call would close a newer stream opened on the same keys
+  let subscribed = true;
   return () => {
-    connection.handlers.delete(handler);
+    if (!subscribed) return;
+    subscribed = false;
+    connection.handlers.delete(listener);
     if (connection.handlers.size === 0) {
       connection.source.close();
-      shared.delete(connection.keys);
+      if (shared.get(connection.keys) === connection) shared.delete(connection.keys);
     }
   };
 };
@@ -52,7 +58,15 @@ const connect = (keys: string | string[]): Connection => {
     } catch (error) {
       return console.error('[sse] unreadable event', error, message.data);
     }
-    for (const handler of connection.handlers) void handler(event);
+    // A listener that fails, at once or later, is logged; the others still hear the event
+    const failed = (error: unknown) => console.error('[sse] listener failed', error);
+    for (const handler of connection.handlers) {
+      try {
+        void Promise.resolve(handler(event)).catch(failed);
+      } catch (error) {
+        failed(error);
+      }
+    }
   };
 
   shared.set(id, connection);

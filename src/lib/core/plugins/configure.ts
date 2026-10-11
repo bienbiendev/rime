@@ -1,16 +1,21 @@
-import { defaultPlugins } from '$lib/core/plugins/defaults/index.js';
-import type { PluginHost } from '$lib/core/plugins/defaults/types.js';
-import type { Plugin } from '$lib/core/plugins/index.js';
+import { defaultPlugins } from '#lib/core/plugins/defaults/index.js';
+import type { PluginHost } from '#lib/core/plugins/defaults/types.js';
+import type { Plugin } from '#lib/core/plugins/index.js';
 
 /**
  * The plugin step, once, for both sides.
  *
  * Each build gets its own core plugins from `plugins/defaults/`, a `$rime/modules` pair, so one
- * function serves both. Last in the config chain, after the features have derived what they
- * derive, so a plugin's `configure` sees the config the rest of rime will see.
+ * function serves both. Runs after the whole-config steps, so a plugin's `configure` sees what the
+ * features derived. On the server, `resolvePipelines` runs after it.
  */
 export const configurePlugins = <const T extends PluginHost>(config: T) => {
-  const plugins: Plugin[] = [...defaultPlugins(config), ...(config.plugins || [])];
+  const own = config.plugins || [];
+  const ownNames = new Set(own.map((plugin) => plugin.name));
+
+  // A plugin the config adds replaces the default plugin of the same name
+  const defaults = defaultPlugins(config).filter((plugin) => !ownNames.has(plugin.name));
+  const plugins: Plugin[] = [...defaults, ...own];
 
   let output = config;
   for (const plugin of plugins) {

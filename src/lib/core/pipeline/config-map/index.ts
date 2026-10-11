@@ -1,10 +1,10 @@
-import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import { isFormField } from '$lib/core/fields/util.js';
-import { walkValues } from '$lib/core/fields/walk.js';
-import type { GenericDoc } from '$lib/core/prototype/types.js';
-import type { Field } from '$lib/fields/types.js';
-import { normalizeFieldPath } from '$lib/util/string.js';
-import type { DeepPartial } from '$lib/util/types.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
+import { isFormField } from '#lib/core/fields/util.js';
+import { walkValues } from '#lib/core/fields/walk.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
+import type { Field } from '#lib/fields/types.js';
+import { normalizeFieldPath } from '#lib/util/string.js';
+import type { DeepPartial } from '#lib/util/types.js';
 import type { ConfigMap } from './types.js';
 
 /**

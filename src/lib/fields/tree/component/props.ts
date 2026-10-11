@@ -1,6 +1,6 @@
-import type { TreeBlock } from '$lib/core/prototype/types.js';
-import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-import type { Dic } from '$lib/util/types.js';
+import type { TreeBlock } from '#lib/core/prototype/types.js';
+import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+import type { Dic } from '#lib/util/types.js';
 import type { TreeBuilder } from '../index.js';
 
 export type TreeProps = {

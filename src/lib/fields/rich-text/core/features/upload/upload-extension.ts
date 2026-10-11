@@ -1,19 +1,11 @@
-import type { CollectionSlug } from '$lib/types.js';
-import type { Dic } from '$lib/util/types.js';
+import type { CollectionSlug } from '#lib/types.js';
 import { Node, mergeAttributes } from '@tiptap/core';
 import SvelteNodeViewRenderer from '../../svelte/node-view-renderer.svelte';
+import { jsonAttribute } from '../json-attribute.js';
 import CounterComponent from './upload.svelte';
 
 export interface UploadFeatureExtensionOptions {
   source: `${CollectionSlug}${string}`;
-}
-
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    upload: {
-      insertUpload: (attributes?: Dic) => ReturnType;
-    };
-  }
 }
 
 export const Upload = Node.create<UploadFeatureExtensionOptions>({
@@ -24,35 +16,26 @@ export const Upload = Node.create<UploadFeatureExtensionOptions>({
   inline: false,
 
   addAttributes() {
-    return ['id', 'title', 'sizes', 'mimeType', 'url', 'filename', 'legend'].reduce(
-      (acc: Dic, key) => {
-        acc[key] = { default: null };
-        return acc;
-      },
-      // A node just inserted opens its dialog; one read from stored content does not.
-      { _fresh: { default: false } }
-    );
-  },
-
-  addCommands() {
     return {
-      insertUpload:
-        (attributes = {}) =>
-        ({ commands }) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs: { _fresh: true, ...attributes }
-          });
-        }
+      // A node just inserted opens its dialog; one read from stored content does not.
+      _fresh: { default: false },
+      id: { default: null },
+      title: { default: null },
+      sizes: jsonAttribute('sizes'),
+      mimeType: { default: null },
+      url: { default: null },
+      filename: { default: null },
+      legend: { default: null }
     };
   },
 
+  // Each upload type has its own tag: a pasted node goes back to its own type
   parseHTML() {
-    return [{ tag: 'rich-text-media' }];
+    return [{ tag: this.name }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['rich-text-media', mergeAttributes(HTMLAttributes)];
+    return [this.name, mergeAttributes(HTMLAttributes)];
   },
 
   addNodeView() {

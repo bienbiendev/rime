@@ -1,11 +1,11 @@
-import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import { isVersioned } from '$lib/core/prototype/shared/versions/enabled.js';
-import { versionsDocType } from '$lib/core/prototype/shared/versions/doc-type.js';
-import { isUpload } from '$lib/core/prototype/collection/upload/enabled.js';
-import { uploadDocType } from '$lib/core/prototype/collection/upload/doc-type.js';
-import { hasUrl } from '$lib/core/prototype/shared/url/enabled.js';
-import { urlDocType } from '$lib/core/prototype/shared/url/doc-type.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import { isVersioned } from '#lib/core/prototype/shared/versions/enabled.js';
+import { versionsDocType } from '#lib/core/prototype/shared/versions/doc-type.js';
+import { isUpload } from '#lib/core/prototype/collection/upload/enabled.js';
+import { uploadDocType } from '#lib/core/prototype/collection/upload/doc-type.js';
+import { hasUrl } from '#lib/core/prototype/shared/url/enabled.js';
+import { urlDocType } from '#lib/core/prototype/shared/url/doc-type.js';
 
 /**
  * What each config's generated doc type gains beyond its own fields.
@@ -13,8 +13,7 @@ import { urlDocType } from '$lib/core/prototype/shared/url/doc-type.js';
  * Three contributors and they are the whole list: `versions` adds `versionId`, `upload` extends
  * `UploadDoc`, adds its `sizes` member and filters out the fields its image sizes collide with,
  * `url` adds the address.
- * The `fields` predicates are **ANDed** — each says which fields it still wants generated, and
- * a field has to survive both.
+ * The `fields` predicates are ANDed. Only upload supplies one.
  *
  */
 export const contributionsFor = (
@@ -41,10 +40,6 @@ export const contributionsFor = (
 
 /**
  * What a feature adds to a prototype's **generated document type**.
- *
- * `dev/codegen/types` wrote these itself: `if (collection.versions) push('versionId: string')`,
- * and three reads of `collection.upload`. Two features named by config member in the one place
- * that decides what a consumer's `PagesDoc` looks like.
  *
  * Nothing here is drizzle or SQL — a `DocTypeContribution` is TypeScript source, which is what
  * this generator emits. `extends` names a type by the name it is exported under from the package's

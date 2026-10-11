@@ -1,6 +1,4 @@
-import type { BeforeOperationRelation } from '$lib/fields/relation/index.js';
-import { pathToRegex } from '$lib/core/fields/util.js';
-import type { RelationRow } from '$lib/fields/relation/index.js';
+import type { BeforeOperationRelation, RelationRow } from '#lib/fields/relation/index.js';
 
 export type RelationDiff = {
   toAdd: BeforeOperationRelation[];
@@ -14,68 +12,75 @@ type Args = {
   locale?: string;
 };
 
-const needUpdate = (existing: RelationRow, incoming: BeforeOperationRelation) =>
-  !(
-    existing.position === incoming.position &&
-    existing[`${incoming.relationTo}Id` as keyof typeof existing] === incoming.documentId &&
-    existing.path === incoming.path &&
-    (incoming.locale ? existing.locale === incoming.locale : existing.locale === null)
-  );
+/** No locale on either side reads as `null`. */
+const sameLocale = (existing: RelationRow, incoming: BeforeOperationRelation) =>
+  (existing.locale ?? null) === (incoming.locale ?? null);
 
+const needUpdate = (existing: RelationRow, incoming: BeforeOperationRelation) =>
+  existing.position !== incoming.position ||
+  existing.documentId !== incoming.documentId ||
+  existing.path !== incoming.path ||
+  !sameLocale(existing, incoming);
+
+/**
+ * The rows to add, update and delete so the stored relations become the incoming ones.
+ *
+ * ```ts
+ * // stored: { id: 'r1', path: 'image', documentId: 'm1' }
+ * defineRelationsDiff({ existingRelations, incomingRelations: [{ id: 'r1', path: 'image', documentId: 'm2', … }] })
+ * // { toAdd: [], toDelete: [], toUpdate: [{ id: 'r1', path: 'image', documentId: 'm2', … }] }
+ * ```
+ */
 export const defineRelationsDiff = ({
   existingRelations,
   incomingRelations,
   locale
 }: Args): RelationDiff => {
   const toAdd: BeforeOperationRelation[] = [];
-  const toDelete: RelationRow[] = [];
   const toUpdate: RelationRow[] = [];
-  const processedIds = new Set<string>(); // Keep track of processed IDs
 
-  // Process incoming relations
+  // The rows an incoming relation names by `id` are that relation's: a bare id never takes them
+  const claimed = new Set(incomingRelations.flatMap((incoming) => incoming.id ?? []));
+
+  /**
+   * The stored row an incoming relation is: the row it names by `id`, else an unclaimed row
+   * holding the same document at the same path, in the same locale.
+   */
+  const isRowOf = (existing: RelationRow, incoming: BeforeOperationRelation) =>
+    incoming.id
+      ? existing.id === incoming.id
+      : !claimed.has(existing.id!) &&
+        existing.documentId === incoming.documentId &&
+        existing.path === incoming.path &&
+        sameLocale(existing, incoming);
+
+  // A stored row is the row of the first incoming relation that matches it, and of no other
+  const matched = new Set<string>();
+
   for (const incoming of incomingRelations) {
     const existingMatch = existingRelations.find(
-      (existing) =>
-        (incoming.id && existing.id === incoming.id) ||
-        (!incoming.id &&
-          existing[`${incoming.relationTo}Id` as keyof typeof existing] === incoming.documentId &&
-          existing.path === incoming.path &&
-          (incoming.locale ? existing.locale === incoming.locale : existing.locale === null))
+      (existing) => !matched.has(existing.id!) && isRowOf(existing, incoming)
     );
-
-    if (existingMatch) {
-      // Only add to toUpdate if we haven't processed this ID yet and if not all props are the same
-      if (!processedIds.has(existingMatch.id!) && needUpdate(existingMatch, incoming)) {
-        toUpdate.push({
-          ...existingMatch,
-          path: incoming.path,
-          position: incoming.position
-        });
-        processedIds.add(existingMatch.id!);
-      }
-    } else {
+    if (!existingMatch) {
       toAdd.push(incoming);
+      continue;
+    }
+    matched.add(existingMatch.id!);
+    if (needUpdate(existingMatch, incoming)) {
+      toUpdate.push({
+        ...existingMatch,
+        path: incoming.path,
+        position: incoming.position,
+        relationTo: incoming.relationTo,
+        documentId: incoming.documentId,
+        locale: incoming.locale ?? null
+      });
     }
   }
 
-  // Find relations to delete
-  toDelete.push(
-    ...existingRelations.filter((existing) => {
-      // Keep relations from other locales
-      if (existing.locale && existing.locale !== locale) {
-        return false;
-      }
-
-      // Delete if not found in incoming relations
-      return !incomingRelations.some(
-        (incoming) =>
-          (incoming.id && existing.id === incoming.id) ||
-          (!incoming.id &&
-            existing[`${incoming.relationTo}Id` as keyof typeof existing] === incoming.documentId &&
-            pathToRegex(existing.path).test(incoming.path) &&
-            (incoming.locale ? existing.locale === incoming.locale : existing.locale === null))
-      );
-    })
+  // Rows of another locale are that locale's
+  const toDelete = existingRelations.filter(
+    (existing) => !(existing.locale && existing.locale !== locale) && !matched.has(existing.id!)
   );
 
   return { toAdd, toDelete, toUpdate };

@@ -1,6 +1,6 @@
-import { email, slug, textarea } from '$lib/fields/index.js';
+import { email, slug, textarea } from '#lib/fields/index.js';
 import { Area } from '$rime/config';
-import { Contact } from '@lucide/svelte';
+import Contact from '@lucide/svelte/icons/contact';
 
 export const Informations = Area.create('infos', {
   icon: Contact,

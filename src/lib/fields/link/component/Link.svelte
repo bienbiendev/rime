@@ -1,14 +1,19 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import Checkbox from '$lib/panel/components/ui/checkbox/checkbox.svelte';
-  import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
-  import { Input } from '$lib/panel/components/ui/input/index.js';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import type { PrototypeSlug } from '$lib/types';
-  import { capitalize } from '$lib/util/string.js';
-  import { Anchor, AtSign, ChevronDown, FileText, Link2, Phone } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import Checkbox from '#lib/panel/components/ui/checkbox/checkbox.svelte';
+  import * as DropdownMenu from '#lib/panel/components/ui/dropdown-menu/index.js';
+  import { Input } from '#lib/panel/components/ui/input/index.js';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import type { PrototypeSlug } from '#lib/types.js';
+  import { capitalize } from '#lib/util/string.js';
+  import Anchor from '@lucide/svelte/icons/anchor';
+  import AtSign from '@lucide/svelte/icons/at-sign';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import Link2 from '@lucide/svelte/icons/link-2';
+  import Phone from '@lucide/svelte/icons/phone';
   import type { Link, LinkType } from '../types';
   import type { LinkFieldProps } from './props';
   import RessourceInput from './RessourceInput.svelte';
@@ -48,7 +53,6 @@
   let initialLinkValue = $derived(initial?.value || '');
   let initialTargetBlank = $derived((initial?.target && initial.target === '_blank') || false);
 
-  let inputValue = $derived(initialLinkValue);
   let linkType = $derived(initialLinkType);
   let linkValue = $derived(initialLinkValue);
   let targetBlank = $derived(initialTargetBlank);
@@ -69,7 +73,7 @@
 
   const onTypeChange = (type: string | undefined) => {
     linkType = (type || 'url') as LinkType;
-    inputValue = '';
+    linkValue = '';
     ressourceId = '';
     setValue();
     if (!form.errors.hasRequired(path || config.name)) {
@@ -133,7 +137,7 @@
         </DropdownMenu.Trigger>
 
         <DropdownMenu.Portal>
-          <DropdownMenu.Content class="rz-link__type-content" align="start">
+          <DropdownMenu.Content align="start">
             <DropdownMenu.RadioGroup onValueChange={onTypeChange} bind:value={linkType}>
               {#each plainTypes as type (type)}
                 <DropdownMenu.RadioItem value={type}>{typeLabel(type)}</DropdownMenu.RadioItem>
@@ -155,7 +159,7 @@
       <Input
         id={path || config.name}
         name={path || config.name}
-        value={inputValue}
+        value={linkValue}
         {placeholder}
         oninput={onInput}
       />

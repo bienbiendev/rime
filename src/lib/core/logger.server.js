@@ -2,12 +2,9 @@
 import chalk from 'chalk';
 import fs from 'fs/promises';
 import path from 'node:path';
+import { inspect, stripVTControlCharacters } from 'node:util';
 
-// Environment and configuration
-const LOG_TO_FILE = process.env.RIME_LOG_TO_FILE === 'true';
 const LOG_DIR = path.join(process.cwd(), 'logs');
-// Maximum number of days to keep log files (default: 30 days)
-const LOG_MAX_DAYS = parseInt(process.env.RIME_LOG_TO_FILE_MAX_DAYS || '30', 10);
 
 // Log levels with numeric values for comparison
 const LogLevel = {
@@ -19,36 +16,24 @@ const LogLevel = {
   SILENT: 5
 };
 
-// Get log level from environment variable
-const getLogLevelFromEnv = () => {
-  const envLevel = (process.env.RIME_LOG_LEVEL || 'INFO').toUpperCase();
-  return LogLevel[envLevel] ?? LogLevel.INFO;
-};
+// Set by `logger.configure`
+let currentLogLevel = LogLevel.INFO;
+let logToFile = false;
+// Days a log file is kept
+let logMaxDays = 30;
 
-// Current log level
-let currentLogLevel = getLogLevelFromEnv();
+/** The arguments as one line: an Error with its stack, any other object inspected. */
+const formatMessage = (args, colors) =>
+  args
+    .map((arg) => (typeof arg === 'string' ? arg : inspect(arg, { colors, depth: 4 })))
+    .join(' ')
+    .trimStart();
 
-// Format message for logging
-const formatMessage = (args) => {
-  return args
-    .map((arg) =>
-      typeof arg === 'string' ? arg : typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-    )
-    .join(' ');
-};
-
-/**
- * Clean up old log files that exceed the maximum retention period
- */
-/**
- * Clean up old log files that exceed the maximum retention period
- */
-// The cleanup lists the log directory; once an hour is plenty, once a line was every request.
+// The cleanup lists the log directory, so it runs at most once an hour.
 const CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 let lastCleanup = 0;
 
 const cleanupOldLogs = async () => {
-  if (!LOG_TO_FILE) return;
   if (Date.now() - lastCleanup < CLEANUP_INTERVAL_MS) return;
   lastCleanup = Date.now();
 
@@ -56,35 +41,17 @@ const cleanupOldLogs = async () => {
     // Create logs directory if it doesn't exist
     await fs.mkdir(LOG_DIR, { recursive: true });
 
-    // Get all log files
     const files = await fs.readdir(LOG_DIR);
-
-    // Current date for comparison
     const now = new Date();
 
     for (const file of files) {
-      // Only process .log files
-      if (!file.endsWith('.log')) continue;
-
-      // Extract date from filename (format: YYYY-MM-DD.log)
-      const dateStr = file.replace('.log', '');
-      const fileDate = new Date(dateStr);
-
-      // Skip files with invalid dates
-      if (isNaN(fileDate.getTime())) continue;
-
-      // Calculate age in days
-      const ageInDays = (now.getTime() - fileDate.getTime()) / (1000 * 60 * 60 * 24);
-
-      // Delete if older than max days
-      if (ageInDays > LOG_MAX_DAYS) {
-        try {
-          await fs.unlink(path.join(LOG_DIR, file));
-        } catch (error) {
-          // Silently ignore ENOENT errors (file already deleted)
-          if (error.code !== 'ENOENT') {
-            console.error('Failed to delete log file:', file, error);
-          }
+      if (!isExpired(file, now, logMaxDays)) continue;
+      try {
+        await fs.unlink(path.join(LOG_DIR, file));
+      } catch (error) {
+        // A file already deleted is not an error
+        if (error.code !== 'ENOENT') {
+          console.error('Failed to delete log file:', file, error);
         }
       }
     }
@@ -93,41 +60,63 @@ const cleanupOldLogs = async () => {
   }
 };
 
-/**
- * Get the current date formatted as YYYY-MM-DD for log file naming
- */
-const getFormattedDate = (date) => {
-  return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+const pad = (value, width = 2) => String(value).padStart(width, '0');
+
+/** `2026-10-02`, the local day: one log file per day. */
+const getDay = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+/** The local midnight a `getDay` file name stands for: `2026-10-02.log`. Null for any other file. */
+const parseDay = (file) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})\.log$/.exec(file);
+  return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /**
- * Write log entry to a date-prefixed file
+ * The days a log file is kept: `maxDays` when it is a positive number, else thirty — `0`, an empty
+ * `RIME_LOG_TO_FILE_MAX_DAYS` and `NaN` included.
  */
-const writeToFile = async (level, timestamp, args) => {
-  if (!LOG_TO_FILE) return;
+export const retentionDays = (maxDays) => (Number.isFinite(maxDays) && maxDays > 0 ? maxDays : 30);
 
-  try {
-    const message = formatMessage(args);
-    // Strip ANSI color codes
-    // eslint-disable-next-line no-control-regex
-    const cleanMessage = message.replace(/\u001b\[\d+m/g, '');
-    const logEntry = `[${timestamp}] [${level}] ${cleanMessage}\n`;
+/**
+ * Whether a log file is past `maxDays` on `now`, counted in local days. Today's file is 0 days
+ * old, so `maxDays` of 1 keeps today's file only.
+ *
+ * ```js
+ * // on 2026-10-03, any hour
+ * isExpired('2026-10-03.log', now, 1); // false
+ * isExpired('2026-10-02.log', now, 1); // true
+ * ```
+ *
+ * Rounded, since a day across a daylight-saving change lasts 23 or 25 hours.
+ */
+export const isExpired = (file, now, maxDays) => {
+  const day = parseDay(file);
+  if (!day) return false;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((today.getTime() - day.getTime()) / DAY_MS) >= maxDays;
+};
 
-    // Create logs directory if it doesn't exist
-    await fs.mkdir(LOG_DIR, { recursive: true });
+/** `22:56:00.031`, local time: the file already says which day. */
+const getTime = (date) =>
+  `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
 
-    // Get current date for log file name
-    const dateStr = getFormattedDate(new Date());
-    const logFileName = `${dateStr}.log`;
+// One write at a time, so the lines land in the order they were logged
+let writing = Promise.resolve();
 
-    // Append to date-specific log file
-    await fs.appendFile(path.join(LOG_DIR, logFileName), logEntry);
-
-    // Clean up old log files
-    await cleanupOldLogs();
-  } catch (error) {
-    console.error('Failed to write to log file:', error);
-  }
+/** `22:56:00.031 message`, appended to the day's file, colours stripped. */
+const writeToFile = (date, message) => {
+  if (!logToFile) return;
+  const file = path.join(LOG_DIR, `${getDay(date)}.log`);
+  const entry = `${getTime(date)} ${stripVTControlCharacters(message)}\n`;
+  writing = writing
+    .then(async () => {
+      await fs.mkdir(LOG_DIR, { recursive: true });
+      await fs.appendFile(file, entry);
+      await cleanupOldLogs();
+    })
+    .catch((error) => console.error('Failed to write to log file:', error));
 };
 
 // Check if a log level is enabled
@@ -135,21 +124,60 @@ const isLevelEnabled = (level) => {
   return level >= currentLogLevel;
 };
 
-// One formatter, built once: `toLocaleTimeString` with options builds one per call.
-const localTime = new Intl.DateTimeFormat(undefined, {
-  hour: 'numeric',
-  minute: '2-digit',
-  second: '2-digit',
-  hour12: true
-});
+/** `22:56:00.031 message` on the terminal: warnings and errors on stderr, the rest on stdout.
+ * Written to the stream directly, as a runtime may style `console.error` itself (Bun colours it
+ * red). */
+const print = (level, date, line) => {
+  const stream = level === 'WARN' || level === 'ERROR' ? process.stderr : process.stdout;
+  stream.write(`${chalk.dim(getTime(date))} ${line}\n`);
+};
 
-function getFormattedLocalTime(date) {
-  return localTime.format(date);
-}
+// A warning or an error starts with its level, coloured on the terminal: the thing to grep for
+const MARKERS = { WARN: ['[warn]', chalk.yellow], ERROR: ['[error]', chalk.red] };
 
-const rimeFormatted = chalk.bold(chalk.gray('[rime]'));
+/** `[error] message` or `[warn] message`, `colors` for the terminal; any other level as is. */
+const mark = (level, message, colors) => {
+  if (!MARKERS[level]) return message;
+  const [marker, color] = MARKERS[level];
+  return `${colors ? color(marker) : marker} ${message}`;
+};
+
+const log = (level, args) => {
+  if (!isLevelEnabled(LogLevel[level])) return;
+  const date = new Date();
+  print(level, date, mark(level, formatMessage(args, true), true));
+  writeToFile(date, mark(level, formatMessage(args, false), false));
+};
+
+const statusColor = (status) => {
+  if (status >= 500) {
+    return chalk.red;
+  } else if (status >= 400) {
+    return chalk.yellow;
+  } else if (status >= 300) {
+    return chalk.cyan;
+  } else {
+    return chalk.green;
+  }
+};
+
 // Base logger implementation
 const logger = {
+  /**
+   * The level and the log file, from the environment: the app's `$app/env/private`, the env files
+   * for the CLI and the Vite plugin.
+   *
+   * ```js
+   * logger.configure({ level: 'DEBUG', toFile: true, maxDays: 30 });
+   * ```
+   */
+  configure: ({ level, toFile, maxDays }) => {
+    logger.setLevel(level.toUpperCase());
+    // Never from the unit tests, which would write into the dev app's log
+    logToFile = toFile && !process.env.VITEST;
+    logMaxDays = retentionDays(maxDays);
+  },
+
   // Set the log level
   setLevel: (level) => {
     if (typeof level === 'string') {
@@ -165,40 +193,24 @@ const logger = {
   },
 
   // Log methods
-  trace: (...args) => {
-    if (isLevelEnabled(LogLevel.TRACE)) {
-      const timestamp = getFormattedLocalTime(new Date());
-      console.trace(...args);
-      writeToFile('TRACE', timestamp, args);
+  trace: (...args) => log('TRACE', args),
+  debug: (...args) => log('DEBUG', args),
+  info: (...args) => log('INFO', args),
+  warn: (...args) => log('WARN', args),
+  error: (...args) => log('ERROR', args),
+
+  /**
+   * `200 GET /panel/pages`, at the level its status calls for, with only the status coloured.
+   * `console: false` writes it to the log file only.
+   */
+  response: (status, text, { console: toConsole = true } = {}) => {
+    const level = status >= 500 ? 'ERROR' : status >= 400 ? 'WARN' : 'INFO';
+    if (!isLevelEnabled(LogLevel[level])) return;
+    const date = new Date();
+    if (toConsole) {
+      print(level, date, mark(level, `${statusColor(status)(status)} ${text}`, true));
     }
-  },
-  debug: (...args) => {
-    if (isLevelEnabled(LogLevel.DEBUG)) {
-      const timestamp = getFormattedLocalTime(new Date());
-      console.debug(chalk.dim(timestamp), rimeFormatted, chalk.gray('DEBUG'), ...args);
-      writeToFile('DEBUG', timestamp, args);
-    }
-  },
-  info: (...args) => {
-    if (isLevelEnabled(LogLevel.INFO)) {
-      const timestamp = getFormattedLocalTime(new Date());
-      console.info(chalk.dim(timestamp), rimeFormatted, chalk.blue(' INFO'), ...args);
-      writeToFile('INFO', timestamp, args);
-    }
-  },
-  warn: (...args) => {
-    if (isLevelEnabled(LogLevel.WARN)) {
-      const timestamp = getFormattedLocalTime(new Date());
-      console.warn(chalk.dim(timestamp), rimeFormatted, chalk.yellow(' WARN'), ...args);
-      writeToFile('WARN', timestamp, args);
-    }
-  },
-  error: (...args) => {
-    if (isLevelEnabled(LogLevel.ERROR)) {
-      const timestamp = getFormattedLocalTime(new Date());
-      console.error(chalk.dim(timestamp), rimeFormatted, chalk.red('ERROR'), ...args);
-      writeToFile('ERROR', timestamp, args);
-    }
+    writeToFile(date, mark(level, `${status} ${text}`, false));
   }
 };
 

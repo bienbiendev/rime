@@ -1,4 +1,4 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
 
 /**
  * Drops `isAutoSave` from the submission. The server sets it; a request body cannot.

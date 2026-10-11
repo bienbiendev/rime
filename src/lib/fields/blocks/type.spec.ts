@@ -1,4 +1,4 @@
-import { block, blocks, text } from '$lib/fields/index.js';
+import { block, blocks, text } from '#lib/fields/index.js';
 import { expect, test } from 'vitest';
 
 const generated = blocks('sections', [block('card').fields(text('title'))]).use.generateType();

@@ -1,22 +1,28 @@
-import { RimeError } from '$lib/core/errors/index.js';
-import type { RawDoc } from '$lib/core/prototype/types.js';
-import { omit, pick } from '$lib/util/object.js';
-import { randomId } from '$lib/util/random.js';
-import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import { baseFieldNames } from '$lib/core/fields/util.js';
-import type { Dic } from '$lib/util/types.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import type { RawDoc } from '#lib/core/prototype/types.js';
+import { omit, pick } from '#lib/util/object.js';
+import { randomId } from '#lib/util/random.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
+import { baseFieldNames } from '#lib/core/fields/util.js';
+import type { Dic } from '#lib/util/types.js';
 import { and, eq, getTableColumns } from 'drizzle-orm';
 import { isPathsTable, JOIN_SUFFIX } from './naming.server.js';
 
 /**
- * Main function to generated primaryKeys
+ * A new primary key: a random UUID.
  */
 export const generatePK = (): string => {
   return crypto.randomUUID();
 };
 
 /**
- * Updates a database table with the provided data and timestamp
+ * The columns that say where a row sits rather than what it holds: its own id, the row it hangs
+ * off, and the locale a branch row is for. The adapter sets them; a document's data never does.
+ */
+export const ROW_ADDRESS = ['id', 'ownerId', 'locale'];
+
+/**
+ * Updates one row by id with `data`. Does nothing when `data` is empty.
  */
 export async function updateTableRecord(
   db: any,
@@ -52,7 +58,8 @@ export async function insertTableRecord(
 }
 
 /**
- * Updates or inserts localized data for a record
+ * Updates or inserts localized data for a record. The row is the one `ownerId` and `locale` name;
+ * the `ROW_ADDRESS` keys of `data` are dropped.
  */
 export async function upsertLocalizedData(
   db: any,
@@ -64,7 +71,8 @@ export async function upsertLocalizedData(
     locale: string;
   }
 ) {
-  const { ownerId, data, locale } = options;
+  const { ownerId, locale } = options;
+  const data = omit(ROW_ADDRESS, options.data);
   if (Object.keys(data).length) {
     const tableLocales = tables[tableLocalesName];
     const localizedRow = await db.query[tableLocalesName].findFirst({
@@ -80,8 +88,8 @@ export async function upsertLocalizedData(
     } else {
       // Insert new localized data
       await db.insert(tableLocales).values({
-        id: generatePK(),
         ...data,
+        id: generatePK(),
         ownerId,
         locale
       });
@@ -89,12 +97,6 @@ export async function upsertLocalizedData(
   }
 }
 
-/**
- * Extract root table properties :
- * - hierarchy props : _parent and _position
- * - directory props : _path
- * return an object with the data filtered and the rootData.
- */
 /**
  * Prepares data for database operations by transforming it according to table schemas
  */
@@ -164,8 +166,7 @@ export function mergeContentRow(
   const contentRow = doc[contentTable][0];
 
   if (select && Array.isArray(select) && select.length) {
-    // The row's own columns, plus whatever the config keeps on the base row. Hardcoding the
-    // latter is how `_path` came to be missing from this list while being a base field.
+    // The row's own columns, plus whatever the config keeps on the base row.
     const rootProps = ['createdAt', 'id', ...baseFieldNames(config)];
     const hasRootSelectColumn = rootProps.some((column) => select.includes(column));
     // A resolved reference's target, joined only when its column was selected.
@@ -210,9 +211,7 @@ export function columnsParams({ table, select }: { table: Dic; select?: string[]
     selectColumns.id = true;
     // Process each requested field
     for (const path of select) {
-      // Convert nested paths (dot notation) to SQL format (double underscore)
-      // Example: 'attributes.slug' becomes 'attributes__slug'
-      const sqlPath = path.replace(/\./g, '__');
+      const sqlPath = pathToDatabaseColumn(path);
       // If this column exists on the content table, add it to our select
       if (sqlPath in table) {
         selectColumns[sqlPath] = true;
@@ -252,10 +251,10 @@ export const databaseColumnToPath = (path: string): string =>
 /**
  * Is this key a table name rather than a column path?
  *
- * Both use `__` as a separator, so converting it to `.` blindly turns a relational table's key
- * into nested document properties: `settings__shadow__$relations` becomes
- * `settings.versions.$relations`, which the cleanup below cannot find by its flat key, and it
- * surfaces inside every response — silently, as a 200 with wrong data.
+ * Both use `__` as a separator, so converting it to `.` blindly turns a table key into nested
+ * document properties: `settings__versions__$relations` becomes `settings.versions.$relations`,
+ * which no longer matches the table key transform.server.ts drops, and it surfaces in the response
+ * as wrong data.
  *
  * `$` is what separates the two. The naming convention uses it to mark structure — `__$` a
  * child, `__$$` a branch — and a column path can never contain one, since column names come
@@ -327,8 +326,9 @@ export const transformDataToSchema = (
     const pathParts = docPath.split('.');
     let value = data;
     for (const part of pathParts) {
-      value = value?.[part];
-      if (value === undefined) break;
+      // A null group is null all the way down
+      if (value === null || value === undefined) break;
+      value = value[part];
     }
 
     // Case 1: Value exists and is not null - always use it
@@ -349,28 +349,26 @@ export const transformDataToSchema = (
         result[column] = randomId(32);
         continue;
       }
+      // A column with a default of its own takes it: the insert leaves it out
+      if (columnConfig.hasDefault) continue;
 
       console.warn(`No default value provided for ${column}, setting it with a placeholder`);
-      // Add default values for not-null columns without defaults
-      switch (columnConfig.dataType) {
-        case 'string':
-          result[column] = '';
-          break;
-        case 'number':
-          result[column] = 0;
-          break;
-        case 'boolean':
-          result[column] = false;
-          break;
-        case 'json':
-          result[column] = {};
-          break;
-        case 'date':
-          result[column] = new Date();
-          break;
+      const empty = placeholder(columnConfig.dataType);
+      if (empty !== undefined) {
+        result[column] = empty;
       }
     }
   }
 
   return result;
+};
+
+/** A placeholder of a column's type, by drizzle's `dataType`: `'number double'`, `'object date'`… */
+const placeholder = (dataType: string) => {
+  if (dataType.startsWith('string')) return '';
+  if (dataType.startsWith('number')) return 0;
+  if (dataType === 'boolean') return false;
+  if (dataType === 'object date') return new Date();
+  if (dataType === 'object json') return {};
+  return undefined;
 };

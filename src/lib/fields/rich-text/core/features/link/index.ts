@@ -1,10 +1,10 @@
-import type { PrototypeSlug } from '$lib/types.js';
-import { LinkIcon } from '@lucide/svelte';
+import type { PrototypeSlug } from '#lib/types.js';
+import LinkIcon from '@lucide/svelte/icons/link';
 import Link, { type LinkOptions } from '@tiptap/extension-link';
 import type { RichTextFeature, RichTextFeatureMark } from '../../types.js';
 import LinkSelector from './component/link-selector.svelte';
 
-// Create the link extension
+// No extension on the server, where the editor never runs.
 const linkExtension = import.meta.env.SSR
   ? undefined
   : Link.extend({

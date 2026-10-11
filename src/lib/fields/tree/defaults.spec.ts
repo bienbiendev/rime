@@ -1,4 +1,4 @@
-import { text, tree } from '$lib/fields/index.js';
+import { text, tree } from '#lib/fields/index.js';
 import { expect, test } from 'vitest';
 
 test('each item gets a temporary id, the fields it leaves out, and its children the same way', () => {

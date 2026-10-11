@@ -1,4 +1,4 @@
-import type { Dic } from '$lib/util/types.js';
+import type { Dic } from '#lib/util/types.js';
 
 /**
  * A collection nests its documents by declaring `nested`.

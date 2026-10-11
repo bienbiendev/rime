@@ -1,17 +1,18 @@
-import type { Adapter } from '$lib/core/adapter.js';
+import type { Adapter } from '#lib/core/adapter.js';
 
 /**
- * The three writes and one read auth makes against Better-auth's own tables, through
- * `adapter.table(slug)`.
+ * The reads and writes auth makes against Better-auth's own tables, through `adapter.table(slug)`.
  *
- * **Better-auth's admin API cannot do any of this.** `listUsers`, `setRole` and `removeUser` all
- * sit behind `adminMiddleware`, and every caller here runs where no admin session exists — see
- * each function.
+ * **Better-auth's own API would check permissions again**, with rules that differ from rime's:
+ * `listUsers`, `setRole` and `removeUser` sit behind `adminMiddleware`, and `deleteApiKey` lets
+ * only the key's creator delete it. Each function here runs once rime's access has allowed the
+ * change, or where no session exists — see each function.
  */
 
 const USERS = '$authUsers';
 const SESSIONS = '$authSessions';
 const ACCOUNTS = '$authAccounts';
+const API_KEYS = '$apikey';
 
 /**
  * Whether anybody has signed up yet.
@@ -22,6 +23,19 @@ const ACCOUNTS = '$authAccounts';
 export const hasAuthUser = async (adapter: Adapter): Promise<boolean> => {
   const rows = await adapter.table(USERS).find({ select: ['id'], limit: 1 });
   return rows.length > 0;
+};
+
+/** An auth user's Better-auth role, or `null` when no user has that id. */
+export const authUserRole = async (
+  adapter: Adapter,
+  args: { authUserId: string }
+): Promise<string | null> => {
+  const [row] = await adapter.table(USERS).find({
+    where: { id: args.authUserId },
+    select: ['role'],
+    limit: 1
+  });
+  return (row?.role as string | undefined) ?? null;
 };
 
 /**
@@ -45,12 +59,11 @@ export const setAuthUserRole = async (
  * Removes an auth user and everything hanging off it.
  *
  * Sessions and accounts first, then the user: they reference it, and nothing here relies on a
- * cascade. Used to undo a half-made signup, so it must not leave a session behind that would
- * still authenticate.
+ * cascade. No session is left behind that would still authenticate.
  *
- * Better-auth's `removeUser` deletes sessions first too, but it refuses this case outright —
- * `YOU_CANNOT_REMOVE_YOURSELF`, and the half-made signup being rolled back is exactly the session
- * making the request.
+ * Used to undo a half-made signup and after an auth document is deleted. Better-auth's
+ * `removeUser` refuses both when the caller is the user being removed
+ * (`YOU_CANNOT_REMOVE_YOURSELF`), and refuses any caller without its `user: ['delete']` statement.
  */
 export const deleteAuthUser = async (
   adapter: Adapter,
@@ -59,4 +72,15 @@ export const deleteAuthUser = async (
   await adapter.table(SESSIONS).delete({ where: { userId: args.authUserId } });
   await adapter.table(ACCOUNTS).delete({ where: { userId: args.authUserId } });
   await adapter.table(USERS).delete({ where: { id: args.authUserId } });
+};
+
+/**
+ * Removes an api key, whoever created it. Better-auth's `deleteApiKey` lets only the key's creator
+ * do that.
+ */
+export const deleteAuthApiKey = async (
+  adapter: Adapter,
+  args: { apiKeyId: string }
+): Promise<void> => {
+  await adapter.table(API_KEYS).delete({ where: { id: args.apiKeyId } });
 };

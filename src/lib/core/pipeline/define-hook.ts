@@ -1,4 +1,4 @@
-import type { DocType } from '$lib/core/prototype/types.js';
+import type { DocType } from '#lib/core/prototype/types.js';
 import type { Hook, HookBeforeOperation, Operation } from './types.js';
 
 /**
@@ -10,8 +10,8 @@ import type { Hook, HookBeforeOperation, Operation } from './types.js';
  * });
  * ```
  *
- * A **named function expression**, not an arrow: the chart and the order specs read `fn.name`, and
- * an arrow passed as an argument has none.
+ * A **named function expression**, not an arrow: stack traces and tests read `fn.name`, and an
+ * arrow passed as an argument has none.
  *
  * Each timing returns the function untouched — `run.server.ts` calls hooks directly, so a wrapper
  * here would break every call site.
@@ -21,52 +21,52 @@ import type { Hook, HookBeforeOperation, Operation } from './types.js';
  */
 
 export const Hooks = {
-  /** Creates a before operation hook */
+  /** Types a before operation hook */
   beforeOperation: <S extends DocType = 'raw'>(
     run: HookBeforeOperation<S, Operation>
   ): HookBeforeOperation<S, Operation> => run,
 
-  /** Creates a before read hook */
+  /** Types a before read hook */
   beforeRead: <S extends DocType = 'raw'>(
     run: Hook<S, 'read', 'before'>
   ): Hook<S, 'read', 'before'> => run,
 
-  /** Creates a before create hook */
+  /** Types a before create hook */
   beforeCreate: <S extends DocType = 'raw'>(
     run: Hook<S, 'create', 'before'>
   ): Hook<S, 'create', 'before'> => run,
 
-  /** A hook that runs before both create and update — `augmentFieldsPassword` is the one. */
+  /** A hook that runs before both create and update. */
   beforeUpsert: <S extends DocType = 'raw'>(
     run: Hook<S, 'create' | 'update', 'before'>
   ): Hook<S, 'create' | 'update', 'before'> => run,
 
-  /** Creates a before update hook */
+  /** Types a before update hook */
   beforeUpdate: <S extends DocType = 'raw'>(
     run: Hook<S, 'update', 'before'>
   ): Hook<S, 'update', 'before'> => run,
 
-  /** Creates a before delete hook */
+  /** Types a before delete hook */
   beforeDelete: <S extends DocType = 'raw'>(
     run: Hook<S, 'delete', 'before'>
   ): Hook<S, 'delete', 'before'> => run,
 
-  /** Creates an after create hook */
+  /** Types an after create hook */
   afterCreate: <S extends DocType = 'raw'>(
     run: Hook<S, 'create', 'after'>
   ): Hook<S, 'create', 'after'> => run,
 
-  /** Creates a hook that runs after both create and update */
+  /** Types a hook that runs after both create and update */
   afterUpsert: <S extends DocType = 'raw'>(
     run: Hook<S, 'create' | 'update', 'after'>
   ): Hook<S, 'create' | 'update', 'after'> => run,
 
-  /** Creates an after update hook */
+  /** Types an after update hook */
   afterUpdate: <S extends DocType = 'raw'>(
     run: Hook<S, 'update', 'after'>
   ): Hook<S, 'update', 'after'> => run,
 
-  /** Creates an after delete hook */
+  /** Types an after delete hook */
   afterDelete: <S extends DocType = 'raw'>(
     run: Hook<S, 'delete', 'after'>
   ): Hook<S, 'delete', 'after'> => run

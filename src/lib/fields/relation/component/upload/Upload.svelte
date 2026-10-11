@@ -1,17 +1,12 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { apiUrl, panelPath } from '$lib/core/routes/util.js';
-  import FileDrop from '$lib/panel/components/sections/collection/bulk-upload/FileDrop.svelte';
-  import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
-  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
-  import {
-    acceptLabel,
-    mediaMeta,
-    typeLabel,
-    uploadFiles,
-    type UploadProgress
-  } from '$lib/panel/util/upload-file.js';
-  import { Upload, X } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { apiUrl, panelPath } from '#lib/core/routes/util.js';
+  import FileDrop from '#lib/panel/components/sections/collection/bulk-upload/FileDrop.svelte';
+  import SpinLoader from '#lib/panel/components/ui/spin-loader/SpinLoader.svelte';
+  import { acceptLabel, mediaMeta, typeLabel } from '#lib/panel/util/upload-file.js';
+  import { createUploader, uploadingLabel } from '#lib/panel/util/uploader.svelte.js';
+  import Upload from '@lucide/svelte/icons/upload';
+  import X from '@lucide/svelte/icons/x';
   import Sortable from 'sortablejs';
   import type { RelationComponentProps } from '../types.js';
   import Browse from './Browse.svelte';
@@ -39,7 +34,6 @@
     browsing = $bindable(false)
   }: Props = $props();
 
-  const APIProxy = getAPIProxyContext();
   /** What the picker marks, in order. */
   const selected = $derived(selectedItems.map((item) => item.documentId));
   /** A field of one: its pick, drawn as a card in the zone's place. */
@@ -48,19 +42,12 @@
 
   /* ------------------------------------------------------------ uploading */
 
-  let progress = $state<UploadProgress | null>(null);
-  let failed = $state<string[]>([]);
+  const uploader = createUploader(() => ({ url: apiUrl(relationConfig.kebab), accept }));
 
   /** Each file becomes a media of the library, then a pick of the field. */
   async function upload(files: File[]) {
-    failed = [];
-    const target = { url: apiUrl(relationConfig.kebab), accept };
-    const result = await uploadFiles(files, target, (state) => (progress = state));
-    progress = null;
-    failed = result.failed;
-    if (!result.docs.length) return;
-    addUploaded(result.docs);
-    APIProxy.invalidate(apiUrl(relationConfig.kebab));
+    const docs = await uploader.upload(files);
+    if (docs.length) addUploaded(docs);
   }
 
   /* ------------------------------------------------------------ ordering */
@@ -96,14 +83,6 @@
   const slots = $derived(many ? (SLOTS - (selectedItems.length % SLOTS)) % SLOTS : 0);
 </script>
 
-{#snippet uploading(current: UploadProgress)}
-  {t__(
-    'fields.uploading',
-    String(Math.min(current.uploaded + current.failed.length + 1, current.total)),
-    String(current.total)
-  )}
-{/snippet}
-
 {#if picked}
   <!--
     One pick: its image, name and size, then upload another file or remove it. A file dropped on
@@ -112,7 +91,7 @@
   <FileDrop
     class="rz-relation-upload__card"
     {accept}
-    disabled={readOnly || !!progress}
+    disabled={readOnly || !!uploader.progress}
     data-error={hasError ? '' : undefined}
     onfiles={upload}
   >
@@ -122,7 +101,7 @@
         href={panelPath(relationConfig.kebab, picked.documentId)}
         aria-label={picked.title}
       >
-        {#if progress}
+        {#if uploader.progress}
           <SpinLoader />
         {:else if picked.isImage && picked.url}
           <img src={picked.url} alt="" />
@@ -138,10 +117,10 @@
           {picked.title}
         </a>
         <span class="rz-relation-upload__card-meta" aria-live="polite">
-          {#if progress}{@render uploading(progress)}{:else}{mediaMeta(picked)}{/if}
+          {#if uploader.progress}{uploadingLabel(uploader.progress)}{:else}{mediaMeta(picked)}{/if}
         </span>
       </div>
-      {#if !readOnly && !progress}
+      {#if !readOnly && !uploader.progress}
         <div class="rz-relation-upload__card-actions">
           <button
             type="button"
@@ -167,22 +146,24 @@
       </span>
     {/snippet}
   </FileDrop>
-  {#if failed.length}
-    <p class="rz-relation-upload__failed">{t__('fields.upload_failed', failed.join(', '))}</p>
+  {#if uploader.failed.length}
+    <p class="rz-relation-upload__failed">
+      {t__('fields.upload_failed', uploader.failed.join(', '))}
+    </p>
   {/if}
 {:else if !readOnly}
   <FileDrop
     class="rz-relation-upload__drop"
     multiple={many}
     {accept}
-    disabled={!!progress}
+    disabled={!!uploader.progress}
     data-error={hasError ? '' : undefined}
     onfiles={upload}
   >
     {#snippet children({ browse })}
-      {#if progress}
+      {#if uploader.progress}
         <SpinLoader />
-        <span aria-live="polite">{@render uploading(progress)}</span>
+        <span aria-live="polite">{uploadingLabel(uploader.progress)}</span>
       {:else}
         <Upload size={18} />
         <span>
@@ -198,8 +179,10 @@
       {/if}
     {/snippet}
   </FileDrop>
-  {#if failed.length}
-    <p class="rz-relation-upload__failed">{t__('fields.upload_failed', failed.join(', '))}</p>
+  {#if uploader.failed.length}
+    <p class="rz-relation-upload__failed">
+      {t__('fields.upload_failed', uploader.failed.join(', '))}
+    </p>
   {/if}
 {/if}
 

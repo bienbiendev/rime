@@ -1,15 +1,14 @@
-import { splitRootData } from '$lib/core/fields/util.js';
-import type { WritePlan } from '$lib/core/adapter.js';
-import type { OperationContext } from '$lib/core/pipeline/types.js';
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
+import { splitRootData } from '#lib/core/fields/util.js';
+import type { WritePlan } from '#lib/core/adapter.js';
+import type { OperationContext } from '#lib/core/pipeline/types.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
 import { VersionOperations } from './strategy.js';
 
 /**
  * A versioned document's write lands on two rows: its identity on the base row, its content on a
  * version row.
  *
- * This is the three-way branch `updatePrototype` used to decode out of `versionOperation`, stated
- * once, above the adapter, in the feature that owns the distinction:
+ * Stated once, above the adapter, in the feature that owns the distinction:
  *
  * ```
  * not versioned        the plan untouched — the base row holds everything
@@ -21,10 +20,9 @@ import { VersionOperations } from './strategy.js';
  * `splitRootData` is what makes a versioned config keep its `$root()` fields on the base row, and
  * it is this feature's rule to apply, not the adapter's.
  *
- * `context.contentOwnerId` is the row, and it is not the same question as this plan's `content`.
- * That one is "where do this document's blocks, tree nodes and relations hang", which has an
- * answer in all three cases; this is "which rows does *this write* touch", which has none in the
- * third. They name the same row when they are both set.
+ * `context.contentOwnerId` is where this document's blocks, tree nodes and relations hang. The
+ * plan's `content` is the version row this write touches: none for a new version, which
+ * `handleNewVersion` already wrote. They name the same row when both are set.
  */
 export const versionsWritePlan = (
   plan: WritePlan,

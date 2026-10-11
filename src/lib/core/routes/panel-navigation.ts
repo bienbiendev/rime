@@ -1,35 +1,26 @@
-import type { BuildConfig } from '$lib/core/config/index.server.js';
-import type { Config } from '$lib/types.js';
-import type { Dic } from '$lib/util/types.js';
+import type { BuildConfig } from '#lib/core/config/index.server.js';
+import type { Config } from '#lib/types.js';
+import type { Dic } from '#lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Route } from '../../panel/types.js';
 
 /**
- * Builds navigation structure based on config and user permissions. Called
- * directly from the routes handle hook, before resolve() — page.params isn't
- * populated yet at that point, so the panel segment is passed in explicitly
- * (from the same event.params.panel the caller already has) rather than
- * relying on panelUrl()'s page-based default.
- * @param config - Compiled configuration object
- * @param user - Current user object (optional)
- * @param panelSegment - The resolved [panel=panel] segment for this request
- * @returns Dictionary of navigation groups
+ * Builds the panel navigation groups: the collections and areas the request's user may read, then
+ * the custom panel routes.
+ * @param config - the built config.
+ * @param event - the request; gives the user and `rime.routes.panelUrl`.
+ * @returns the routes, by group.
  */
 const buildNavigation = <C extends Config>(config: BuildConfig<C>, event: RequestEvent): Dic => {
   const groups: Dic = {};
   const { user, rime } = event.locals;
   /**
-   * Adds a route to the appropriate navigation group
+   * Adds a route to its navigation group. A route without one goes to `none`, which the sidebar
+   * lists under the Dashboard link.
    */
-  const addRouteToGroup = (route: Route, group?: string) => {
-    if (group) {
-      if (!(group in groups)) {
-        groups[group] = [];
-      }
-      groups[group].push(route);
-    } else {
-      groups.none.push(route);
-    }
+  const addRouteToGroup = (route: Route, group = 'none') => {
+    groups[group] ??= [];
+    groups[group].push(route);
   };
 
   // Process collections
@@ -47,16 +38,18 @@ const buildNavigation = <C extends Config>(config: BuildConfig<C>, event: Reques
     });
 
   // Process areas
-  config.areas.forEach((area) => {
-    if (user && area.access.read(user, {})) {
-      const route: Route = {
-        title: area.label,
-        icon: area.slug,
-        url: rime.routes.panelUrl(area.kebab)
-      };
-      addRouteToGroup(route, (area.panel && area.panel?.group) || 'areas');
-    }
-  });
+  config.areas
+    .filter((area) => area.panel !== false)
+    .forEach((area) => {
+      if (user && area.access.read(user, {})) {
+        const route: Route = {
+          title: area.label,
+          icon: area.slug,
+          url: rime.routes.panelUrl(area.kebab)
+        };
+        addRouteToGroup(route, (area.panel && area.panel?.group) || 'areas');
+      }
+    });
 
   // Process custom panel routes
   Object.entries(config.panel.routes).forEach(([routePath, routeConfig]) => {

@@ -1,4 +1,4 @@
-import { PANEL_AUTH_IMAGE } from '$lib/core/constants.server.js';
+import { PANEL_AUTH_IMAGE } from '#lib/core/constants.server.js';
 import { error, redirect, type ServerLoadEvent } from '@sveltejs/kit';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -22,7 +22,6 @@ export const resetPasswordLoad = async ({ locals, url }: ServerLoadEvent) => {
   }
 
   return {
-    image: imageExist ? PANEL_AUTH_IMAGE : null,
-    token: token
+    image: imageExist ? PANEL_AUTH_IMAGE : null
   };
 };

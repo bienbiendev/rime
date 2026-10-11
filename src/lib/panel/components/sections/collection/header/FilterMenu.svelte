@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
-  import { ListFilter } from '@lucide/svelte';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import * as DropdownMenu from '#lib/panel/components/ui/dropdown-menu/index.js';
+  import ListFilter from '@lucide/svelte/icons/list-filter';
 
   type Props = {
     /** What the button says while everything shows: "Status", "All types". */

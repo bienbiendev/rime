@@ -1,4 +1,4 @@
-import type { Dic, WithRequired } from '$lib/util/types.js';
+import type { Dic, WithRequired } from '#lib/util/types.js';
 import { normalizeFieldPath } from './string.js';
 
 /**
@@ -239,16 +239,11 @@ export const getValueAtPath = <T>(path: string, obj: Dic): T | undefined => {
   path = normalizeFieldPath(path);
   const parts = path.split('.');
   let current = obj;
+  // `list['0']` reads the same element as `list[0]`. A step into anything but an object or an
+  // array finds nothing.
   for (const part of parts) {
-    if (/^d+$/.test(part)) {
-      current = current[parseInt(part)];
-    } else {
-      current = current[part];
-    }
-    if (current === undefined) {
-      // console.warn(`getValueAtPath: Path "${path}" not found in object`, obj);
-      return undefined;
-    }
+    if (current === null || typeof current !== 'object') return undefined;
+    current = current[part];
   }
   return current as T;
 };
@@ -283,8 +278,8 @@ export const setValueAtPath = <T extends Dic>(path: string, obj: T, value: unkno
     previous = current;
     previousKey = index;
 
-    // Create the object path if it doesn't exist
-    if (!current[index]) {
+    // A missing parent, or one that holds no keys (a string, a number), becomes a list or an object
+    if (typeof current[index] !== 'object' || current[index] === null) {
       // If the next part is a number, create an array, otherwise create an object
       const nextPart = parts[i + 1];
       const isNextPartNumeric = /^\d+$/.test(nextPart);
@@ -334,17 +329,18 @@ export function deleteValueAtPath<T>(obj: T, path: string): T {
   let current: any = obj;
   for (const part of parts) {
     const key = !isNaN(Number(part)) ? Number(part) : part;
-    if (!(key in current)) return obj;
+    if (current === null || typeof current !== 'object' || !(key in current)) return obj;
     current = current[key];
   }
 
-  const finalKey = !isNaN(Number(last)) ? Number(last) : last;
-  delete current[finalKey];
+  if (current !== null && typeof current === 'object') {
+    delete current[!isNaN(Number(last)) ? Number(last) : last];
+  }
   return obj;
 }
 
 /**
- * Check whether two object have the same structure
+ * Whether two objects have the same top-level keys.
  */
 export function matchStructure(source?: Dic, target?: Dic): boolean {
   if (!source || !target) return false;

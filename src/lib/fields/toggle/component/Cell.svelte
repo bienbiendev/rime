@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Switch from '$lib/panel/components/ui/switch/switch.svelte';
+  import Switch from '#lib/panel/components/ui/switch/switch.svelte';
 
   type Props = {
     value: boolean | null;

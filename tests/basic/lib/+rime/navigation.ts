@@ -1,7 +1,7 @@
-import { tab, tabs, tree, text, link } from '$lib/fields/index.js';
-import { access } from '$lib/core/auth/access.js';
+import { tab, tabs, tree, text, link } from '#lib/fields/index.js';
+import { access } from '#lib/core/auth/access.js';
 import { Area } from '$rime/config';
-import { Menu } from '@lucide/svelte';
+import Menu from '@lucide/svelte/icons/menu';
 
 const Link = [
   text('label').layout('compact'),

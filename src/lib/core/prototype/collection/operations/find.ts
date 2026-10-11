@@ -1,10 +1,11 @@
-import { readableReferences } from '$lib/core/fields/util.js';
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { logger } from '$lib/core/logger.server.js';
-import { readDocuments, runBeforeOperation } from '$lib/core/pipeline/run.server.js';
-import type { OperationContext, OperationQuery } from '$lib/core/pipeline/types.js';
-import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
-import type { CollectionSlug, GenericDoc } from '$lib/core/prototype/types.js';
+import { readableReferences } from '#lib/core/fields/util.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { logger } from '#lib/core/logger.server.js';
+import { assertReadableQuery } from '#lib/core/pipeline/query.js';
+import { readDocuments, runBeforeOperation } from '#lib/core/pipeline/run.server.js';
+import type { OperationContext, OperationQuery } from '#lib/core/pipeline/types.js';
+import type { PrototypeApiContext } from '#lib/core/prototype/define.js';
+import type { CollectionSlug, GenericDoc } from '#lib/core/prototype/types.js';
 
 export type FindArgs = {
   query?: OperationQuery;
@@ -23,7 +24,6 @@ export type FindArgs = {
 type Args = FindArgs & { ctx: PrototypeApiContext<BuiltCollection> };
 
 export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
-  //
   const {
     ctx,
     locale,
@@ -59,6 +59,10 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
     operation: 'read',
     context
   });
+
+  if (!isSystemOperation) {
+    assertReadableQuery({ config, event, query, sort });
+  }
 
   const documentsRaw = await rime.adapter.collection(config.slug).findMany({
     query,

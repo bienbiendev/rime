@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { panelPath } from '$lib/core/routes/util.js';
-  import CommandButton from '$lib/panel/components/sections/commands/CommandButton.svelte';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import { getNavContext } from '$lib/panel/context/nav.svelte.js';
-  import type { Route } from '$lib/panel/types';
-  import { PanelLeft, PanelsTopLeft } from '@lucide/svelte';
+  import { panelPath } from '#lib/core/routes/util.js';
+  import CommandButton from '#lib/panel/components/sections/commands/CommandButton.svelte';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { getNavContext } from '#lib/panel/context/nav.svelte.js';
+  import type { Route } from '#lib/panel/types.js';
+  import PanelLeft from '@lucide/svelte/icons/panel-left';
+  import PanelsTopLeft from '@lucide/svelte/icons/panels-top-left';
   import ScrollArea from '../scroll-area/scroll-area.svelte';
   import NavGroup from './NavGroup.svelte';
   import NavItem from './NavItem.svelte';

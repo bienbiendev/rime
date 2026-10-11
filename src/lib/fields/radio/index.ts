@@ -1,4 +1,4 @@
-import type { DefaultValueFn, FormField, Option } from '$lib/fields/types.js';
+import type { DefaultValueFn, FormField, Option } from '#lib/fields/types.js';
 import { PickOneFieldBuilder } from '../../core/fields/builders/select-builder.js';
 import Radio from './component/Radio.svelte';
 
@@ -18,18 +18,19 @@ export class RadioFieldBuilder extends PickOneFieldBuilder<RadioField> {
     return this;
   }
 
-  compile() {
-    super.compile();
-    if (!this.field.defaultValue) {
-      const defaultOption = this.field.options[0].value;
-      this.field.defaultValue = defaultOption;
+  override options(...options: (Option | string)[]) {
+    super.options(...options);
+    // A radio starts on one of its options: its first, unless its default is one of them
+    const current = this.field.defaultValue;
+    const isOption = this.field.options.some((option) => option.value === current);
+    if (typeof current !== 'function' && !isOption) {
+      this.field.defaultValue = this.field.options[0]?.value ?? null;
     }
-    return this.field;
+    return this;
   }
 
   protected override generateType(): string {
-    const optionsString = this.get.options.map((option) => `'${option.value}'`).join(' | ');
-    return `${this.name}${this.get.required ? '' : '?'}: ${optionsString}`;
+    return `${this.name}${this.get.required ? '' : '?'}: ${this.optionsType()}`;
   }
 }
 

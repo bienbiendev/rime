@@ -1,11 +1,11 @@
-import type { VersionsStatus } from '$lib/core/prototype/shared/versions/constant.js';
-import type { AutoSaves } from '$lib/core/prototype/shared/versions/types.js';
-import type { GenericDoc } from '$lib/core/prototype/types.js';
+import type { VersionsStatus } from '#lib/core/prototype/shared/versions/constant.js';
+import type { AutoSaves } from '#lib/core/prototype/shared/versions/types.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
 import type { Snippet } from 'svelte';
 import { Field } from './components/fields/index.js';
-import RelationInline from '$lib/fields/relation/component/RelationInline.svelte';
-import RichTextInline from '$lib/fields/rich-text/component/RichTextInline.svelte';
-import TextInline from '$lib/fields/text/component/TextInline.svelte';
+import RelationInline from '#lib/fields/relation/component/RelationInline.svelte';
+import RichTextInline from '#lib/fields/rich-text/component/RichTextInline.svelte';
+import TextInline from '#lib/fields/text/component/TextInline.svelte';
 import RenderFields from './components/fields/RenderFields.svelte';
 import Panel from './components/Root.svelte';
 import Doc from './components/sections/document/Document.svelte';
@@ -14,7 +14,7 @@ import Input from './components/ui/input/input.svelte';
 import SpinLoader from './components/ui/spin-loader/SpinLoader.svelte';
 import { API_PROXY } from './context/api-proxy.svelte.js';
 import { COLLECTION_CTX } from './context/collection.svelte.js';
-import { LIVE_KEY } from '$lib/live/context.svelte.js';
+import { LIVE_KEY } from '#lib/live/context.svelte.js';
 import { LOCALE_CTX } from './context/locale.svelte.js';
 import { USER_CTX } from './context/user.svelte.js';
 
@@ -25,7 +25,7 @@ import Collection from './pages/collection/Collection.svelte';
 import Dashboard from './pages/dashboard/Dashboard.svelte';
 import Live from './pages/live/Live.svelte';
 import type { Route } from './types.js';
-import { populate } from '$lib/fields/relation/populate.js';
+import { populate } from '#lib/fields/relation/populate.js';
 import { useCommands } from './context/commands.svelte.js';
 
 export {
@@ -61,7 +61,6 @@ export const CONTEXT = {
   TITLE: TITLE_CTX
 };
 
-// Types used in generated routes
 export type { DocumentFormContext } from './context/documentForm.svelte.js';
 export type { Command } from './context/commands.svelte.js';
 export type CollectionProps = {
@@ -81,22 +80,14 @@ export type DocVersion = {
   updatedBy?: { id: string; name?: string; email?: string } | null;
 };
 
-type BaseDocData =
-  | {
-      aria: Partial<Route>[];
-      doc: GenericDoc;
-      status: 200;
-      readOnly: boolean;
-      /** The document's auto-saved rows. Absent on a config that does not auto-save. */
-      autoSaves?: AutoSaves;
-    }
-  | {
-      aria: Partial<Route>[];
-      // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-      doc: {};
-      status: 401;
-      readOnly: true;
-    };
+type BaseDocData = {
+  aria: Partial<Route>[];
+  doc: GenericDoc;
+  status: 200;
+  readOnly: boolean;
+  /** The document's auto-saved rows. Absent on a config that does not auto-save. */
+  autoSaves?: AutoSaves;
+};
 
 export type CollectionDocData = BaseDocData & {
   operation: 'create' | 'update';

@@ -5,10 +5,11 @@ import {
   date,
   number,
   relation,
+  select,
   text,
   toggle,
   tree
-} from '$lib/fields/index.js';
+} from '#lib/fields/index.js';
 import { Collection } from '$rime/config';
 
 /**
@@ -30,6 +31,13 @@ export const Defaults = Collection.create('defaults', {
     checkbox('checkboxSave').defaultValue(true, { fill: 'save' }),
     date('dateCreate').defaultValue(() => new Date()),
     date('dateSave').defaultValue(() => new Date(), { fill: 'save' }),
+    // A single select's default is one value; the builder types it as a list
+    // @ts-expect-error
+    select('selectCreate').options('a', 'b').defaultValue('a'),
+    // @ts-expect-error
+    select('selectSave').options('a', 'b').defaultValue('a', { fill: 'save' }),
+    select('selectManyCreate').options('a', 'b').many().defaultValue(['a']),
+    select('selectManySave').options('a', 'b').many().defaultValue(['a'], { fill: 'save' }),
     relation('relationCreate').to('targets').defaultValue('defaults-target-1'),
     relation('relationSave').to('targets').defaultValue('defaults-target-1', { fill: 'save' }),
     blocks('blocksCreate', [memo]).defaultValue([{ type: 'memo', text: 'Default' }]),

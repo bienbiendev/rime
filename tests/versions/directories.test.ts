@@ -1,7 +1,7 @@
-import { filePathToBase64 } from '$lib/core/prototype/collection/upload/util/converter.server.js';
-import test, { expect, type Page } from '@playwright/test';
+import { filePathToBase64 } from '#lib/core/prototype/collection/upload/util/converter.server.js';
+import test, { expect } from '@playwright/test';
 import path from 'path';
-import { API_BASE_URL, panelUrl, signIn } from '../util.js';
+import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -13,15 +13,6 @@ const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
  * The directories collection writes its own `id` (`parent:name`) as the name is typed, so the
  * create form must still post as a create once the id is there.
  */
-
-async function loginAs(page: Page, email: string, password: string) {
-  await page.context().clearCookies();
-  await page.goto(panelUrl('sign-in'));
-  await page.locator('input[name="email"]').pressSequentially(email, { delay: 30 });
-  await page.locator('input[name="password"]').pressSequentially(password, { delay: 30 });
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL(panelUrl());
-}
 
 test('The panel create action makes a directory', async ({ request }) => {
   const headers = await signInSuperAdmin(request);
@@ -51,10 +42,12 @@ test('A folder is created from the grid', async ({ page, request }) => {
 
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('medias'));
-  await page.waitForLoadState('networkidle');
 
   // The listing opens as a list; the context menu belongs to the grid.
-  await page.locator('.rz-header-display-mode button').nth(1).click();
+  await page
+    .locator('.rz-header-display-mode')
+    .getByRole('button', { name: 'Show as a grid' })
+    .click();
   await expect(page.locator('.rz-page-collection__grid')).toBeVisible();
 
   // The trigger sits behind the grid's items, so the event is dispatched rather than clicked.
@@ -85,4 +78,46 @@ test('A folder is created from the grid', async ({ page, request }) => {
   });
   expect(read.status()).toBe(200);
   expect((await read.json()).doc.parent).toBe('root');
+});
+
+/**
+ * A folder moves the way the panel drops it on another: a PATCH of its `id`. Its sub-folders
+ * follow, and so do the files in them.
+ */
+test('Moving a folder moves its sub-folders and the files in them', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  // A media in root:move-a:sub, which creates both folders
+  const base64 = await filePathToBase64(path.resolve(process.cwd(), 'tests/versions/leaves.jpg'));
+  const uploaded = await request.post(`${API_BASE_URL}/medias`, {
+    headers,
+    data: { file: { base64, filename: 'leaves.jpg' }, alt: 'moved', _path: 'root:move-a:sub' }
+  });
+  expect(uploaded.status()).toBe(200);
+  const media = (await uploaded.json()).doc;
+  expect(media._path).toBe('root:move-a:sub');
+
+  const target = await request.post(`${API_BASE_URL}/medias-directories`, {
+    headers,
+    data: { id: 'root:move-b', name: 'move-b', parent: 'root' }
+  });
+  expect(target.status()).toBe(200);
+
+  const moved = await request.patch(`${API_BASE_URL}/medias-directories/root:move-a`, {
+    headers,
+    data: { id: 'root:move-b:move-a' }
+  });
+  expect(moved.status()).toBe(200);
+
+  const folder = (id: string) =>
+    request.get(`${API_BASE_URL}/medias-directories/${id}`, { headers });
+  expect((await folder('root:move-a')).status()).toBe(404);
+  expect((await folder('root:move-a:sub')).status()).toBe(404);
+  const sub = await folder('root:move-b:move-a:sub');
+  expect(sub.status()).toBe(200);
+  expect((await sub.json()).doc.parent).toBe('root:move-b:move-a');
+
+  const read = await request.get(`${API_BASE_URL}/medias/${media.id}`, { headers });
+  expect(read.status()).toBe(200);
+  expect((await read.json()).doc._path).toBe('root:move-b:move-a:sub');
 });

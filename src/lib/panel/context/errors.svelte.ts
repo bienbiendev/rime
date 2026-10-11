@@ -1,7 +1,6 @@
-import type { FormErrors } from '$lib/panel/types.js';
-import { getContext, setContext } from 'svelte';
+import type { FormErrors } from '#lib/panel/types.js';
 
-function createErrorsStore() {
+export function createErrorsStore() {
   let errors: FormErrors = $state({});
 
   return {
@@ -15,10 +14,6 @@ function createErrorsStore() {
 
     set value(val) {
       errors = val;
-    },
-
-    get first() {
-      return Object.values(errors)[0];
     },
 
     has(key: string) {
@@ -42,23 +37,11 @@ function createErrorsStore() {
     },
 
     deleteAllThatStartWith(path: string) {
-      const basePath = path.replace('*', '');
       for (const key of Object.keys(errors)) {
-        if (key.startsWith(basePath)) {
+        if (key.startsWith(path)) {
           delete errors[key];
         }
       }
     }
   };
-}
-
-export const ERRORS_KEY = 'rime.errors';
-
-export function setErrorsContext(key: string = 'root') {
-  const errors = createErrorsStore();
-  return setContext(`${ERRORS_KEY}.${key}`, errors);
-}
-
-export function getErrorsContext(key: string = 'root') {
-  return getContext<ReturnType<typeof setErrorsContext>>(`${ERRORS_KEY}.${key}`);
 }

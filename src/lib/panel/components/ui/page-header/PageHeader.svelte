@@ -2,9 +2,7 @@
   import { type Snippet } from 'svelte';
   import BreadCrumb from '../breadcrumb/BreadCrumb.svelte';
 
-  // Props
   type Props = {
-    children?: Snippet;
     title?: Snippet;
     /** A line under the title: a count, a date. */
     meta?: Snippet;
@@ -12,88 +10,60 @@
     aside?: Snippet;
     /** The toolbar under the title, its left side. */
     bottomLeft?: Snippet;
-    /** The toolbar under the title, its right side. */
-    bottomRight?: Snippet;
     topLeft?: Snippet;
-    topCenter?: Snippet;
     topRight?: Snippet;
   };
-  const {
-    children,
-    bottomRight,
-    bottomLeft,
-    topRight,
-    topCenter,
-    topLeft,
-    title,
-    meta,
-    aside
-  }: Props = $props();
+  const { bottomLeft, topRight, topLeft, title, meta, aside }: Props = $props();
 </script>
 
-{#if children}
-  {@render children()}
-{:else}
-  <div class="rz-page-header__row rz-page-header__row-top">
-    <div>
-      {#if topLeft}
-        {@render topLeft()}
-      {:else}
-        <BreadCrumb />
-      {/if}
-    </div>
-
-    <div class="rz-page-header__top-center">
-      {@render topCenter?.()}
-    </div>
-
-    <div class="rz-page-header__top-right">
-      {@render topRight?.()}
-    </div>
+<div class="rz-page-header__row rz-page-header__row-top">
+  <div>
+    {#if topLeft}
+      {@render topLeft()}
+    {:else}
+      <BreadCrumb />
+    {/if}
   </div>
 
-  {#if title || meta || aside}
-    <div class="rz-page-header__head">
-      {#if title}
-        <h1 class="rz-page-header__title">{@render title()}</h1>
-      {/if}
-      {#if meta}
-        <p class="rz-page-header__meta">{@render meta()}</p>
-      {/if}
-      {@render aside?.()}
-    </div>
-  {/if}
+  <div class="rz-page-header__top-right">
+    {@render topRight?.()}
+  </div>
+</div>
 
-  {#if bottomLeft || bottomRight}
-    <div class="rz-page-header__toolbar">
-      <div class="rz-page-header__bottom-left">
-        {@render bottomLeft?.()}
-      </div>
-      <div class="rz-page-header__bottom-right">
-        {@render bottomRight?.()}
-      </div>
+{#if title || meta || aside}
+  <div class="rz-page-header__head">
+    {#if title}
+      <h1 class="rz-page-header__title">{@render title()}</h1>
+    {/if}
+    {#if meta}
+      <p class="rz-page-header__meta">{@render meta()}</p>
+    {/if}
+    {@render aside?.()}
+  </div>
+{/if}
+
+{#if bottomLeft}
+  <div class="rz-page-header__toolbar">
+    <div class="rz-page-header__bottom-left">
+      {@render bottomLeft?.()}
     </div>
-  {/if}
+  </div>
 {/if}
 
 <style type="postcss">
   @import '../../../style/mixins/index.css';
 
-  .rz-page-header__row {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--rz-size-4);
-    align-items: center;
-    padding-inline: var(--rz-page-gutter, var(--rz-size-6));
-  }
-
-  /* A bar over the page. Three columns, so the middle one sits in the middle whatever the sides hold. */
+  /*
+   * A bar over the page: the left column takes the free room, the right one sits at the end.
+   */
   .rz-page-header__row-top {
     position: sticky;
     top: 0;
     z-index: 100;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--rz-size-4);
+    align-items: center;
     height: var(--rz-size-11);
     margin-bottom: var(--rz-size-6);
     padding-inline: var(--rz-size-5) var(--rz-size-3);
@@ -109,9 +79,7 @@
   }
 
   .rz-page-header__row-top > div,
-  .rz-page-header__top-center,
-  .rz-page-header__bottom-left,
-  .rz-page-header__bottom-right {
+  .rz-page-header__bottom-left {
     display: flex;
     align-items: center;
     gap: var(--rz-size-2);
@@ -121,10 +89,6 @@
     display: flex;
     align-items: center;
     gap: var(--rz-size-1);
-  }
-
-  .rz-page-header__top-center {
-    justify-content: center;
   }
 
   .rz-page-header__top-right {

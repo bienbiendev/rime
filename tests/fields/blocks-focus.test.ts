@@ -1,5 +1,5 @@
 import test, { expect, type APIRequestContext, type Page } from '@playwright/test';
-import { API_BASE_URL, panelUrl, signIn } from '../util.js';
+import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -37,15 +37,6 @@ async function createPage(request: APIRequestContext) {
   return (await response.json()).doc.id as string;
 }
 
-async function loginAs(page: Page) {
-  await page.context().clearCookies();
-  await page.goto(panelUrl('sign-in'));
-  await page.locator('input[name="email"]').pressSequentially(ADMIN_EMAIL, { delay: 30 });
-  await page.locator('input[name="password"]').pressSequentially(PASSWORD, { delay: 30 });
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL(panelUrl());
-}
-
 const rows = (page: Page) => page.locator('.rz-layers__row');
 const selectedRow = (page: Page) => page.locator('.rz-layers__row--selected');
 const dialog = (page: Page) => page.locator('[role="dialog"][data-state="open"]');
@@ -55,6 +46,17 @@ async function readSections(page: Page, docId: string) {
   expect(response.status()).toBe(200);
   return (await response.json()).doc.sections as any[];
 }
+
+/** The `extras` summary field's blocks; an empty list reads back absent. */
+async function readExtras(page: Page, docId: string) {
+  const response = await page.request.get(`${API_BASE_URL}/pages/${docId}`);
+  expect(response.status()).toBe(200);
+  return ((await response.json()).doc.extras ?? []) as any[];
+}
+
+/** A block as one word: a paragraph's first text (`''` when empty), any other block's type. */
+const labelOf = (block: any): string =>
+  block.type === 'paragraph' ? (block.text?.content?.[0]?.content?.[0]?.text ?? '') : block.type;
 
 /** The focus overlay covers the document header, so its own save button is the one to click. */
 async function save(page: Page) {
@@ -85,9 +87,8 @@ test('Focus opens from the field, carries the address, and closes with the chang
   request
 }) => {
   const docId = await createPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', docId));
-  await page.waitForLoadState('networkidle');
 
   await page.locator('[data-focus-open="sections"]').click();
   await expect(page.locator('.rz-blocks-focus')).toBeVisible();
@@ -125,9 +126,8 @@ test('Focus opens from the field, carries the address, and closes with the chang
 
 test('The keys select, add, duplicate, move and remove', async ({ page, request }) => {
   const docId = await createPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
-  await page.waitForLoadState('networkidle');
   await expect(page.locator('.rz-blocks-focus')).toBeVisible();
   await expect(rows(page)).toHaveCount(4);
 
@@ -158,10 +158,53 @@ test('The keys select, add, duplicate, move and remove', async ({ page, request 
   await selectedRow(page).press('Alt+ArrowUp');
   await expect(rows(page).nth(3)).toHaveClass(/rz-layers__row--selected/);
 
+  // Beta moved above the empty paragraph the palette added
   await save(page);
   await expect
-    .poll(async () => (await readSections(page, docId)).map((block) => block.type))
-    .toEqual(['paragraph', 'grid', 'paragraph', 'paragraph']);
+    .poll(async () => (await readSections(page, docId)).map(labelOf))
+    .toEqual(['Alpha', 'grid', 'Beta', '']);
+});
+
+test('Removing a selection that holds a block under a folded row removes that block', async ({
+  page,
+  request
+}) => {
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      title: 'Folded removal',
+      sections: [
+        { type: 'paragraph', text: richTextOf('Alpha') },
+        { type: 'grid', title: 'A', items: [{ type: 'paragraph', text: richTextOf('P1') }] },
+        { type: 'grid', title: 'B', items: [{ type: 'paragraph', text: richTextOf('P2') }] }
+      ]
+    }
+  });
+  expect(response.status()).toBe(200);
+  const docId = (await response.json()).doc.id as string;
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
+
+  // Rows: Alpha, A, P1, B, P2. Select P1, fold A, then add Alpha to the selection.
+  await expect(rows(page)).toHaveCount(5);
+  await rows(page).nth(2).click();
+  await rows(page).nth(1).locator('.rz-layers__toggle').click();
+  await expect(rows(page)).toHaveCount(4);
+  await rows(page)
+    .first()
+    .click({ modifiers: ['Shift'] });
+  await selectedRow(page).first().press('Backspace');
+
+  await save(page);
+  await expect
+    .poll(async () =>
+      // An empty list reads back absent
+      (await readSections(page, docId)).map((block) => [block.type, block.items?.length ?? 0])
+    )
+    .toEqual([
+      ['grid', 0],
+      ['grid', 1]
+    ]);
 });
 
 test('⌘K moves a block into a nested list, and never into one that refuses its type', async ({
@@ -169,9 +212,8 @@ test('⌘K moves a block into a nested list, and never into one that refuses its
   request
 }) => {
   const docId = await createPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
-  await page.waitForLoadState('networkidle');
   await expect(rows(page)).toHaveCount(4);
 
   // The grid itself cannot go into `items`: no move target is offered for it.
@@ -214,9 +256,8 @@ test('A nested list adds blocks from its +, from the inspector, or under the sta
   request
 }) => {
   const docId = await createPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
-  await page.waitForLoadState('networkidle');
 
   const focus = page.locator('.rz-blocks-focus');
   const panel = focus.locator('.rz-blocks-focus__panel');
@@ -285,9 +326,8 @@ test('A nested list adds blocks from its +, from the inspector, or under the sta
 
 test('A summary field is one row that opens focus', async ({ page, request }) => {
   const docId = await createPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', docId));
-  await page.waitForLoadState('networkidle');
 
   // The list field keeps its cards; the summary field has one row, the count and Edit.
   await expect(page.locator('fieldset[data-path="sections"] > .rz-blocks__list')).toBeVisible();
@@ -303,6 +343,12 @@ test('A summary field is one row that opens focus', async ({ page, request }) =>
   await page.locator('.rz-blocks-focus .rz-blocks-focus__crumb').first().click();
   await expect(page.locator('.rz-blocks-focus')).toHaveCount(0);
   await expect(extras.locator('.rz-blocks__count')).toHaveText(/1 block/);
+
+  // The block added in focus is saved with the document
+  await save(page);
+  await expect
+    .poll(async () => (await readExtras(page, docId)).map((block) => block.type))
+    .toEqual(['paragraph']);
 });
 
 test('The renders draw the blocks, a click selects one, the panel follows', async ({
@@ -310,9 +356,8 @@ test('The renders draw the blocks, a click selects one, the panel follows', asyn
   request
 }) => {
   const docId = await createPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
-  await page.waitForLoadState('networkidle');
 
   // The stack of renders beside one panel, open on its Layers tab.
   const focus = page.locator('.rz-blocks-focus');
@@ -371,9 +416,8 @@ test('The renders draw the blocks, a click selects one, the panel follows', asyn
 
 test('A text field is edited where the render draws it', async ({ page, request }) => {
   const docId = await createPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
-  await page.waitForLoadState('networkidle');
 
   const focus = page.locator('.rz-blocks-focus');
   const panel = focus.locator('.rz-blocks-focus__panel');
@@ -401,10 +445,14 @@ test('A text field is edited where the render draws it', async ({ page, request 
   await expect(rows(page)).toHaveCount(4);
   await page.keyboard.type('e');
 
-  // Typed in the inspector, it shows on the stage.
+  // Typed in the inspector, it shows on the stage. Backspace in the input edits the text too:
+  // the block stays selected, and is not removed.
   await input.click();
   await page.keyboard.press('End');
-  await page.keyboard.type('!');
+  await page.keyboard.type('!?');
+  await page.keyboard.press('Backspace');
+  await expect(input).toHaveValue('Grid one!');
+  await expect(rows(page)).toHaveCount(4);
   await expect(title).toHaveText('Grid one!');
 
   await save(page);
@@ -422,9 +470,8 @@ test('An empty list opens the panel on the types to add', async ({ page, request
   });
   expect(response.status()).toBe(200);
   const docId = (await response.json()).doc.id as string;
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
-  await page.waitForLoadState('networkidle');
 
   const panel = page.locator('.rz-blocks-focus__panel');
   await expect(panel.getByRole('tab', { name: 'Blocks' })).toHaveAttribute('data-state', 'active');
@@ -436,9 +483,8 @@ test('The selected render has a bar above with its arrows, the panel three tabs'
   request
 }) => {
   const docId = await createPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
-  await page.waitForLoadState('networkidle');
 
   const focus = page.locator('.rz-blocks-focus');
   const items = focus.locator('.rz-blocks-focus__renders > .rz-renders > .rz-renders__item');
@@ -512,9 +558,8 @@ test('A list without renders is rows, its nested lists under them, its fields in
   request
 }) => {
   const docId = await createPlainPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('pages', docId)}?focus=plain`);
-  await page.waitForLoadState('networkidle');
 
   const focus = page.locator('.rz-blocks-focus');
   const panel = focus.locator('.rz-blocks-focus__panel');
@@ -547,9 +592,8 @@ test('A list without renders is rows, its nested lists under them, its fields in
 
 test('A list of one type adds it at once, without the picker', async ({ page, request }) => {
   const docId = await createPlainPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('pages', docId)}?focus=plain`);
-  await page.waitForLoadState('networkidle');
 
   // The columns' cells take notes only: their + adds one straight away.
   const focus = page.locator('.rz-blocks-focus');
@@ -569,9 +613,8 @@ test('A type drags from the Blocks tab into a list without renders, shaped as a 
   request
 }) => {
   const docId = await createPlainPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('pages', docId)}?focus=plain`);
-  await page.waitForLoadState('networkidle');
 
   const focus = page.locator('.rz-blocks-focus');
   const panel = focus.locator('.rz-blocks-focus__panel');
@@ -592,10 +635,11 @@ test('A type drags from the Blocks tab into a list without renders, shaped as a 
   await page.mouse.up();
 
   await expect(top).toHaveCount(3);
+  // Dropped on the lower edge of the first note: the new note comes right after it
   await save(page);
   await expect
-    .poll(async () => (await readPlain(page, docId)).map((block) => block.type).sort())
-    .toEqual(['columns', 'note', 'note']);
+    .poll(async () => (await readPlain(page, docId)).map((block) => block.type))
+    .toEqual(['note', 'note', 'columns']);
 });
 
 test('Focus on a block narrows the stage to it and its lists, Escape widens it again', async ({
@@ -603,9 +647,8 @@ test('Focus on a block narrows the stage to it and its lists, Escape widens it a
   request
 }) => {
   const docId = await createPlainPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('pages', docId)}?focus=plain`);
-  await page.waitForLoadState('networkidle');
 
   const focus = page.locator('.rz-blocks-focus');
   const panel = focus.locator('.rz-blocks-focus__panel');
@@ -655,9 +698,8 @@ test('Opened from a nested list in the document, focus narrows to its block, sel
   request
 }) => {
   const docId = await createPlainPage(request);
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', docId));
-  await page.waitForLoadState('networkidle');
 
   // The columns open in the document, then their cells open the editor.
   await page.locator('.rz-block__title-button', { hasText: 'Columns' }).click();
@@ -676,14 +718,67 @@ test('Opened from a nested list in the document, focus narrows to its block, sel
   await expect(panel.locator('input.rz-input')).toHaveValue('Cols');
 });
 
+test('The list in the document adds, duplicates, moves and deletes its blocks', async ({
+  page,
+  request
+}) => {
+  const docId = await createPlainPage(request);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', docId));
+
+  const plain = page.locator('fieldset[data-path="plain"]');
+  const blocks = plain.locator(':scope > .rz-blocks__list > .rz-block');
+  const headingOf = (index: number) =>
+    blocks.nth(index).locator(':scope > .rz-block__header .rz-block__heading');
+  /** Picks one line of the ⋯ menu of the block at `index`. */
+  const act = async (index: number, name: string) => {
+    await blocks
+      .nth(index)
+      .locator(':scope > .rz-block__header')
+      .getByRole('button', { name: 'Block actions' })
+      .click();
+    await page.getByRole('menuitem', { name }).click();
+  };
+
+  // One, Columns, then the note "Add a block" adds last
+  await plain
+    .locator(':scope > .rz-blocks__actions-bottom')
+    .getByRole('button', { name: 'Add a block' })
+    .click();
+  await dialog(page).locator('.rz-block-tile', { hasText: 'Note' }).click();
+  await expect(blocks).toHaveCount(3);
+
+  // One, Columns, the new note, its copy
+  await act(2, 'Duplicate');
+  await expect(blocks).toHaveCount(4);
+
+  // One, the new note, Columns, the copy: the move takes the note past the columns
+  await act(2, 'Move up');
+  await expect(headingOf(1)).toHaveText('Note');
+  await expect(headingOf(2)).toHaveText('Columns');
+
+  // The new note, Columns, the copy
+  await act(0, 'Delete block');
+  await expect(blocks).toHaveCount(3);
+
+  // A note reads as its text, '' when empty
+  await save(page);
+  await expect
+    .poll(async () =>
+      (await readPlain(page, docId)).map((block) =>
+        block.type === 'note' ? (block.text ?? '') : block.type
+      )
+    )
+    .toEqual(['', 'columns', '']);
+});
+
 test.describe('On a narrow screen', () => {
   test.use({ viewport: { width: 700, height: 900 } });
 
   test('the stage stays, the panel is a sheet', async ({ page, request }) => {
     const docId = await createPage(request);
-    await loginAs(page);
+    await loginAs(page, ADMIN_EMAIL, PASSWORD);
     await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
-    await page.waitForLoadState('networkidle');
 
     const focus = page.locator('.rz-blocks-focus');
     const renders = focus.locator('.rz-blocks-focus__renders');

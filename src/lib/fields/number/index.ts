@@ -1,12 +1,7 @@
-import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type {
-  DefaultOptions,
-  DefaultValueFn,
-  FieldValidationFunc,
-  FormField
-} from '$lib/fields/types.js';
-import Number from './component/Number.svelte';
+import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import type { DefaultValueFn, FieldValidationFunc, FormField } from '#lib/fields/types.js';
+import NumberComponent from './component/Number.svelte';
 
 export const number = (name: string) => new NumberFieldBuilder(name);
 
@@ -14,10 +9,10 @@ const validateNumber: FieldValidationFunc<NumberField> = (value, { config }) => 
   if (typeof value !== 'number') {
     return 'Should be a number';
   }
-  if (config.min && value < config.min) {
+  if (config.min !== undefined && value < config.min) {
     return 'Should be greater than ' + config.min;
   }
-  if (config.max && value > config.max) {
+  if (config.max !== undefined && value > config.max) {
     return 'Should be lower than ' + config.max;
   }
   return true;
@@ -28,16 +23,18 @@ export class NumberFieldBuilder extends FormFieldBuilder<NumberField> {
     super(name, 'number');
     this.field.validate = validateNumber;
     this.field.isEmpty = (value) => typeof value !== 'number';
+    // A form sends a number as text, and an emptied input as ''
+    this.beforeValidate((value) => {
+      if (value === '') return null;
+      if (typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Number(value))) {
+        return Number(value);
+      }
+      return value;
+    });
   }
 
   get component() {
-    return Number;
-  }
-
-  defaultValue(value: number | DefaultValueFn<number>, options?: DefaultOptions) {
-    this.field.defaultValue = value;
-    this.field.defaultFill = options?.fill;
-    return this;
+    return NumberComponent;
   }
 
   min(value: number) {
@@ -52,13 +49,6 @@ export class NumberFieldBuilder extends FormFieldBuilder<NumberField> {
 
   get dataType(): DataType {
     return 'number';
-  }
-
-  compile() {
-    if (!this.field.defaultValue) {
-      this.field.defaultValue = this.field.min || 0;
-    }
-    return super.compile();
   }
 
   protected override generateType(): string {

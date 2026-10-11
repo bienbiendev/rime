@@ -1,27 +1,32 @@
+import type { UploadPath } from '#lib/core/prototype/collection/upload/util/path.js';
+import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
 import { invalidateAll } from '$app/navigation';
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { PARAMS } from '$lib/core/constants.js';
-import type { FieldBuilder } from '$lib/core/fields/builders/index.js';
-import { isFormField } from '$lib/core/fields/util.js';
-import { walkFields } from '$lib/core/fields/walk.js';
-import { directoriesKebab } from '$lib/core/prototype/collection/upload/naming.js';
-import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
-import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config.js';
-import { toNestedStructure } from '$lib/core/prototype/collection/nested/tree.js';
-import type { GenericDoc, GenericNestedDoc } from '$lib/core/prototype/types.js';
-import { apiUrl, panelUrl } from '$lib/core/routes/util.js';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
-import type { FormField } from '$lib/fields/types.js';
-import type { FieldPanelTableConfig } from '$lib/panel/types.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { PARAMS } from '#lib/core/constants.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/index.js';
+import { isFormField } from '#lib/core/fields/util.js';
+import { walkFields } from '#lib/core/fields/walk.js';
+import type { Directory } from '#lib/core/prototype/collection/upload/types.js';
+import { isUploadConfig } from '#lib/core/prototype/collection/upload/util/config.js';
+import { toNestedStructure } from '#lib/core/prototype/collection/nested/tree.js';
+import type { GenericDoc, GenericNestedDoc } from '#lib/core/prototype/types.js';
+import { apiUrl } from '#lib/core/routes/util.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+import type { FormField } from '#lib/fields/types.js';
+import type { FieldPanelTableConfig } from '#lib/panel/types.js';
+import { deletedToast } from '#lib/panel/context/bulk-delete.js';
+import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
 import {
   fileSizeBytes,
   mediaKind,
   MEDIA_KINDS,
   type MediaKind
-} from '$lib/panel/util/upload-file.js';
-import { trycatch, trycatchFetch } from '$lib/util/function.js';
-import { getValueAtPath, hasProp } from '$lib/util/object.js';
-import type { WithRequired } from '$lib/util/types.js';
+} from '#lib/panel/util/upload-file.js';
+import { titleText } from '#lib/panel/util/title.js';
+import { withLocale } from '#lib/panel/util/url.js';
+import { trycatchFetch } from '#lib/util/function.js';
+import { getValueAtPath, hasProp } from '#lib/util/object.js';
+import type { WithRequired } from '#lib/util/types.js';
 import { computeCommandScore } from 'bits-ui';
 import { getContext, onMount, setContext, untrack, type Component } from 'svelte';
 import { toast } from 'svelte-sonner';
@@ -36,7 +41,7 @@ type TableColumn = {
 };
 
 type SortMode = 'asc' | 'dsc';
-export type DisplayMode = (typeof DISPLAY_MODE)[keyof typeof DISPLAY_MODE];
+type DisplayMode = (typeof DISPLAY_MODE)[keyof typeof DISPLAY_MODE];
 export type StatusFilter = 'all' | typeof VERSIONS_STATUS.DRAFT | typeof VERSIONS_STATUS.PUBLISHED;
 export type KindFilter = 'all' | MediaKind;
 
@@ -48,6 +53,7 @@ export const DISPLAY_MODE = {
 
 function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>) {
   const { initial, config, canCreate, upload: incomingUpload } = args;
+  const locale = getLocaleContext();
 
   // The latest edit first, until another order is picked.
   let sortingOrder = $state<SortMode>('dsc');
@@ -60,14 +66,14 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
   let displayMode = $state<DisplayMode>(DISPLAY_MODE.LIST);
   let upload = $state({
     directories: incomingUpload?.directories || [],
-    currentPath: incomingUpload?.currentPath || 'root',
+    currentPath: incomingUpload?.currentPath || UPLOAD_PATH.ROOT_NAME,
     parentDirectory: incomingUpload?.parentDirectory || null
   });
   let isFiltered = $state(false);
   /** The search as typed. */
   let query = '';
-  let stamp = $state(Date.now()); // Timestamp to invalidate on changes
-  const hasVersions = $derived(!!config.versions);
+  // A new stamp remounts the tree (CollectionTree.svelte:97).
+  let stamp = $state(Date.now());
   const hasDraft = $derived(config.versions && config.versions.draft);
 
   onMount(() => {
@@ -119,7 +125,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
   )?.path;
 
   /**
-   * The path of a document, after its title: the pathname of its url, else its slug.
+   * The path a list row shows after the document's title: the pathname of its url, else its slug.
    *
    * ```ts
    * pathOf({ url: 'https://site.com/studio' }) // '/studio'
@@ -156,27 +162,22 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     return columns;
   };
 
-  const columns = buildFieldColumns(config.fields)
-    .map((col) => {
-      // Set column position
-      let tableConfig: FieldPanelTableConfig = { position: 99 };
-      if (typeof col.table === 'number') {
-        tableConfig.position = col.table;
-      } else if (typeof col.table === 'object' && 'position' in col.table) {
-        tableConfig = { ...col.table, position: col.table.position || 99 };
-      }
-      return { ...col, table: tableConfig };
-    })
-    .sort((a, b) => a.table.position - b.table.position);
+  // The builder stores every column's position: `.table(0)` comes first
+  const columns = buildFieldColumns(config.fields).sort(
+    (a, b) => a.table.position - b.table.position
+  );
 
   /** The documents in the order picked, by `sortingBy` then `sortingOrder`. */
   function sorted(list: T[]) {
     const orderMult = sortingOrder === 'asc' ? 1 : -1;
+    // A column inside a group sorts by its path: `seo.score`
     return list.sort((a, b) => {
-      if (a[sortingBy] < b[sortingBy]) {
+      const left = getValueAtPath<any>(sortingBy, a);
+      const right = getValueAtPath<any>(sortingBy, b);
+      if (left < right) {
         return -1 * orderMult;
       }
-      if (a[sortingBy] > b[sortingBy]) {
+      if (left > right) {
         return 1 * orderMult;
       }
       return 0;
@@ -189,7 +190,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
         sortingOrder = sortingOrder === 'asc' ? 'dsc' : 'asc';
       }
     } else {
-      // Else sort by field asc
+      // Another field: sort by it, in the current order.
       sortingBy = fieldName;
     }
     docs = sorted(docs);
@@ -204,7 +205,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     initialDocs = docs;
 
     const deleteUrl = `${apiUrl(config.kebab)}?where[id][in_array]=${toDelete.map((d) => d.id).join(',')}`;
-    const [error] = await trycatchFetch(deleteUrl, {
+    const [error, response] = await trycatchFetch(deleteUrl, {
       method: 'DELETE'
     });
 
@@ -212,14 +213,17 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       console.error(error);
       toast.error('An error occured while deleting documents');
     } else {
-      toast.success(`Successfully deleted ${ids.length} docs`);
+      // The answer lists what went: a row the caller may not delete stays
+      const { docs: deleted = [] } = await response.json();
+      const told = deletedToast(toDelete.length, deleted.length);
+      toast[told.kind](told.message);
     }
     await invalidateAll();
   };
 
   /**
-   * Handle document move operations with parent-child relationships
-   * @param params Object containing from and to information
+   * Moves `documentId` under `to.parent` at `to.index`, renumbers its new siblings, and saves the
+   * changed documents.
    */
   const handleNestedDocumentMove = async ({
     from,
@@ -230,15 +234,12 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     from: { parent: string | null; index: number };
     to: { parent: string | null; index: number };
   }) => {
-    // 1. Create a new array to track changes
     const updatedDocs = [...docs] as GenericNestedDoc[];
     const docToMove = updatedDocs.find((d) => d.id === documentId);
     if (!docToMove) return;
 
-    // 2. Track all documents that need updating
     const docsToUpdate = new Map<string, GenericDoc>();
 
-    // 3. Remove from old parent's children
     if (from.parent !== null) {
       const oldParent = updatedDocs.find((d) => d.id === from.parent);
       if (oldParent) {
@@ -252,7 +253,6 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       }
     }
 
-    // 4. Add to new parent's children
     if (to.parent !== null) {
       const newParent = updatedDocs.find((d) => d.id === to.parent);
       if (newParent) {
@@ -263,12 +263,10 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       }
     }
 
-    // 5. Update the moved document
     docToMove._parent = to.parent;
     docToMove._position = to.index;
     docsToUpdate.set(docToMove.id, docToMove);
 
-    // 6. Update positions for all affected siblings
     const siblings = updatedDocs
       .filter((doc) => doc._parent === to.parent && doc.id !== documentId)
       .sort((a, b) => (a._position || 0) - (b._position || 0));
@@ -283,18 +281,16 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       position++;
     }
 
-    // 7. Update local state optimistically
     docs = updatedDocs as T[];
     stamp = Date.now();
 
-    // 8. Send updates to API
     try {
       await apiUpdateNestedStructure(Array.from(docsToUpdate.values()));
       return true;
     } catch (error) {
       console.error('Failed to update documents:', error);
-      // Revert to current database docs
-      docs = await fetch(apiUrl(config.kebab))
+      // Revert to the stored docs, read as the page loads them: drafts included
+      docs = await fetch(withLocale(`${apiUrl(config.kebab)}?${PARAMS.LATEST}=true`, locale.code))
         .then((r) => r.json())
         .then((r) => r.docs);
       stamp = Date.now();
@@ -302,39 +298,30 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     }
   };
 
-  /**
-   * Update the nested structure via API calls and regenerate URLs for documents
-   * @param docsToUpdate Array of documents that need updating
-   * @returns Promise that resolves to true if all updates succeeded
-   */
+  /** PATCHes each document's `_parent` and `_position`; throws when one fails. */
   const apiUpdateNestedStructure = async (docsToUpdate: GenericDoc[]) => {
-    const promises = docsToUpdate.map((doc) => {
-      let url = apiUrl(config.kebab, doc.id);
-      if (doc.versionId) {
-        url += `?${PARAMS.VERSION_ID}=${doc.versionId}`;
-      }
-      return fetch(url, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          _parent: doc._parent,
-          _position: doc._position
-        }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-    });
-    const [error] = await trycatch(() => Promise.all(promises));
-
-    if (error) {
-      console.error('API update failed:', error);
-      throw error;
-    }
-
+    const responses = await Promise.all(
+      docsToUpdate.map((doc) => {
+        let url = apiUrl(config.kebab, doc.id);
+        if (doc.versionId) {
+          url += `?${PARAMS.VERSION_ID}=${doc.versionId}`;
+        }
+        return fetch(url, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            _parent: doc._parent,
+            _position: doc._position
+          }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+      })
+    );
+    // A refused PATCH (403, 500) throws too
+    const refused = responses.find((response) => !response.ok);
+    if (refused) throw new Error(`${refused.url} answered ${refused.status}`);
     return true;
   };
 
-  function isList() {
-    return displayMode === DISPLAY_MODE.LIST;
-  }
   function isGrid() {
     return displayMode === DISPLAY_MODE.GRID;
   }
@@ -360,37 +347,25 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     await deleteDocs(ids);
   }
 
+  /** The text the search matches: the title field's, as text. */
+  const searchText = (doc: GenericDoc) => titleText(getValueAtPath(config.asTitle, doc));
+
   function filterBy(inputValue: string) {
     query = inputValue;
-    if (inputValue !== '') {
-      isFiltered = true;
-      const scores: any[] = [];
-      for (const doc of initialDocs) {
-        const asTitle = getValueAtPath<string>(config.asTitle, doc);
-        if (!asTitle) continue;
-        const score = computeCommandScore(asTitle, inputValue);
-        if (score > 0) {
-          scores.push({
-            doc,
-            score
-          });
-        }
-      }
-      const results = scores.sort(function (a, b) {
-        if (a.score === b.score) {
-          const titleA = getValueAtPath<string>(config.asTitle, a.doc);
-          const titleB = getValueAtPath<string>(config.asTitle, b.doc);
-          if (titleA && titleB) {
-            return titleA.localeCompare(titleB);
-          }
-        }
-        return b.score - a.score;
-      });
-      docs = results.map((r) => r.doc);
-    } else {
+    if (inputValue === '') {
       isFiltered = false;
       docs = sorted([...initialDocs]);
+      return;
     }
+    isFiltered = true;
+    const scored = initialDocs
+      .map((doc) => ({ doc, text: searchText(doc) }))
+      .filter(({ text }) => text)
+      .map((entry) => ({ ...entry, score: computeCommandScore(entry.text, inputValue) }))
+      .filter(({ score }) => score > 0);
+    // The best match first, then by title
+    scored.sort((a, b) => b.score - a.score || a.text.localeCompare(b.text));
+    docs = scored.map(({ doc }) => doc);
   }
 
   return {
@@ -406,26 +381,12 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       return hasDraft;
     },
 
-    get hasVersions() {
-      return hasVersions;
-    },
-
-    get panelUrl() {
-      return panelUrl(config.kebab);
-    },
-
     get apiUrl() {
       return apiUrl(config.kebab);
     },
 
-    get apiDirectoriesUrl() {
-      if (!config.upload) throw new Error(`${config.slug} is not an upload collection`);
-      return apiUrl(directoriesKebab(config.slug));
-    },
-
     config,
     canCreate,
-    isList,
     isGrid,
     isNested,
 
@@ -462,12 +423,9 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     set selected(value) {
       selected = value;
     },
-    /** On while a document is checked; turning it off drops the selection. */
+    /** On while a document is checked. */
     get selectMode() {
       return selected.length > 0;
-    },
-    set selectMode(bool) {
-      if (!bool) selected = [];
     },
     get isAllSelected() {
       return shown.length > 0 && shown.every((doc) => selected.includes(doc.id));
@@ -532,7 +490,6 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       upload = value;
     },
 
-    deleteDocs,
     get docs() {
       return docs;
     },
@@ -541,9 +498,6 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       initialDocs = value;
       untrack(() => filterBy(query));
       stamp = Date.now();
-    },
-    get length() {
-      return docs.length;
     },
 
     get nested() {
@@ -572,7 +526,7 @@ type Args<T extends GenericDoc = GenericDoc> = {
   canCreate: boolean;
   upload?: {
     directories?: Directory[];
-    currentPath?: `root${string}`;
+    currentPath?: UploadPath;
     parentDirectory?: Directory;
   };
 };

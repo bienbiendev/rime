@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Calendar as CalendarPrimitive } from 'bits-ui';
-  import { ChevronRight } from '@lucide/svelte';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
 
   let {
     ref = $bindable(null),
@@ -16,7 +16,7 @@
 
 <CalendarPrimitive.NextButton
   bind:ref
-  class="rz-calendar-next-button rz-button rz-button--outline {className}"
+  class="rz-calendar-next-button {className}"
   children={children || Fallback}
   {...restProps}
 />

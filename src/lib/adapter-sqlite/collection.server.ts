@@ -1,6 +1,6 @@
-import type { CollectionHandle } from '$lib/core/adapter.js';
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import type { RawDoc } from '$lib/core/prototype/types.js';
+import type { CollectionHandle } from '#lib/core/adapter.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import type { RawDoc } from '#lib/core/prototype/types.js';
 import { bundles, type HandleDeps } from './rows.server.js';
 import { findManyPrototypes, readPrototype } from './read.server.js';
 import {
@@ -13,11 +13,8 @@ import {
 /**
  * What the adapter can do to one registered collection.
  *
- * Many documents, addressed by id: every verb here takes one, and `insert` makes a new one. The
- * area's builder is `area.server.ts` beside this, and the two are separate files because they are
- * separate things — one handle with a `singleton` flag meant `id: singleton ? undefined : args.id`
- * on every read, `resolveSingletonId()` on every write, and two throws for verbs an area was never
- * offered.
+ * Many documents, addressed by id: `find`, `update` and `delete` take one, and `insert` makes a
+ * new one. The area's builder is `area.server.ts` beside this.
  */
 export const createCollectionHandle = (deps: HandleDeps): CollectionHandle => {
   const { write, read, self } = bundles(deps);

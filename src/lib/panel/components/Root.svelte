@@ -1,14 +1,14 @@
 <script lang="ts">
-  import type { User } from '$lib/core/auth/types.js';
-  import type { BuiltConfigClient } from '$lib/core/config/types.js';
-  import Commands from '$lib/panel/components/sections/commands/Commands.svelte';
-  import Nav from '$lib/panel/components/ui/nav/Nav.svelte';
-  import { Toaster } from '$lib/panel/components/ui/sonner';
-  import { setConfigContext } from '$lib/panel/context/config.svelte.js';
-  import { setLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { setNavContext } from '$lib/panel/context/nav.svelte.js';
-  import { setUserContext } from '$lib/panel/context/user.svelte.js';
-  import type { Route } from '$lib/panel/types.js';
+  import type { User } from '#lib/core/auth/types.js';
+  import type { BuiltConfigClient } from '#lib/core/config/types.js';
+  import Commands from '#lib/panel/components/sections/commands/Commands.svelte';
+  import Nav from '#lib/panel/components/ui/nav/Nav.svelte';
+  import { Toaster } from '#lib/panel/components/ui/sonner/index.js';
+  import { setConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { setLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { setNavContext } from '#lib/panel/context/nav.svelte.js';
+  import { setUserContext } from '#lib/panel/context/user.svelte.js';
+  import type { Route } from '#lib/panel/types.js';
   import type { Snippet } from 'svelte';
   import { setAPIProxyContext } from '../context/api-proxy.svelte.js';
   import { setTitleContext } from '../context/title.js';
@@ -28,14 +28,14 @@
   setConfigContext(config);
   // svelte-ignore state_referenced_locally
   setUserContext(user);
-  setTitleContext('[untitled]');
-  setAPIProxyContext();
+  setTitleContext('');
 
   // svelte-ignore state_referenced_locally
   const locale = setLocaleContext(initialeLocale);
+  setAPIProxyContext(() => locale.code);
 
-  // The layout reloads the locale after a switch; the store follows it in place, and whatever
-  // shows locale-dependent content is keyed on it where it stands.
+  // The layout reloads the locale after a switch, and the store follows it in place. The document
+  // forms are keyed on the document's locale (DocumentPage.svelte:23, LiveEditPanel.svelte:49).
   $effect(() => {
     locale.code = initialeLocale;
   });

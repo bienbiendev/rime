@@ -1,4 +1,4 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
 
 /**
  * Drops the edit lock from every read that is not a panel read.
@@ -8,7 +8,7 @@ import { Hooks } from '$lib/core/pipeline/define-hook.js';
  * panel, and a staff member reading through the API is still staff, so the field access alone
  * would hand them a lock they cannot act on.
  */
-export const deletePanelLockMetas = Hooks.beforeRead(async (args) => {
+export const deletePanelLockMetas = Hooks.beforeRead(async function deletePanelLockMetas(args) {
   const { rime } = args.event.locals;
 
   if (args.context.isSystemOperation) return args;

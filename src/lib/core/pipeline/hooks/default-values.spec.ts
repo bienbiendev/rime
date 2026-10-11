@@ -1,19 +1,22 @@
-import { buildDocument } from '$lib/core/pipeline/build-document.server.js';
-import { create } from '$lib/core/prototype/collection/definition.js';
-import { mergeWithInitialDocument } from '$lib/core/prototype/collection/hooks/merge-with-initial.server.js';
+import { buildDocument } from '#lib/core/pipeline/build-document.server.js';
+import { create } from '#lib/core/prototype/collection/definition.js';
+import { mergeWithInitialDocument } from '#lib/core/prototype/collection/hooks/merge-with-initial.server.js';
 import {
   block,
   blocks,
   checkbox,
   date,
+  group,
   number,
   relation,
   text,
   toggle,
   tree
-} from '$lib/fields/index.js';
-import type { DefaultOptions } from '$lib/fields/types.js';
+} from '#lib/fields/index.js';
+import type { DefaultOptions } from '#lib/fields/types.js';
 import { describe, expect, test, vi } from 'vitest';
+import { buildConfigMap } from '../config-map/index.js';
+import { saveBlocks } from '../persist/blocks/index.server.js';
 import { processDocumentFields } from './process-document-fields.server.js';
 import { setDefaultValues } from './set-default-values.server.js';
 
@@ -36,10 +39,12 @@ import { setDefaultValues } from './set-default-values.server.js';
 
 vi.mock('$app/server', () => ({ getRequestEvent: () => ({}) }));
 
+// A relation's default keeps the ids that name a document that exists: here, 'target-1' only.
+const existing = new Set(['target-1']);
 const adapter = {
-  // A relation's default keeps the ids that name a document that exists: here, every one.
   collection: () => ({
-    findMany: async ({ query }: any) => query.where.id.in_array.map((id: string) => ({ id }))
+    findMany: async ({ query }: any) =>
+      query.where.id.in_array.filter((id: string) => existing.has(id)).map((id: string) => ({ id }))
   })
 };
 const event = { locals: { user: undefined, rime: { adapter } }, params: {} };
@@ -217,6 +222,16 @@ test('a required field sent empty is not filled unless it says fill: save', asyn
   expect((await post(saved, { f: null })).f).toBe('Default');
 });
 
+test('a relation default keeps the ids that name a document, and drops the others', async () => {
+  const config = configWith(
+    (relation('f') as any).to('targets').defaultValue(['target-1', 'gone'], { fill: 'save' })
+  );
+
+  const data = await patch(config, { f: [] }, { f: [] });
+
+  expect(data.f.map((ref: any) => ref.documentId)).toEqual(['target-1']);
+});
+
 test('a value sent empty in a block takes its default when its field says fill: save', async () => {
   const note = block('note').fields(text('text').defaultValue('Default', { fill: 'save' }));
   const config = configWith(blocks('f', [note]));
@@ -224,4 +239,49 @@ test('a value sent empty in a block takes its default when its field says fill: 
   const data = await patch(config, { f: [{ id: 'b', type: 'note', text: null }] }, { f: [] });
 
   expect(data.f[0].text).toBe('Default');
+});
+
+test('a group member filled on save leaves the blocks of the group as they are', async () => {
+  const image = block('image').fields(text('alt'));
+  const config = configWith(
+    group('meta').fields(
+      text('label').defaultValue('L', { fill: 'save' }),
+      blocks('gallery', [image])
+    )
+  );
+  const stored = {
+    id: 'p1',
+    title: 'T',
+    meta: {
+      label: null,
+      gallery: [{ id: 'g1', type: 'image', alt: 'A', path: 'meta.gallery', position: 0 }]
+    }
+  };
+
+  const data = await patch(config, { title: 'T' }, stored);
+  expect(data.meta).toEqual({ label: 'L' });
+
+  const db = {
+    blocks: {
+      delete: vi.fn(async () => true),
+      create: vi.fn(async () => true),
+      update: vi.fn(async () => true)
+    }
+  };
+  const configMap = buildConfigMap(data, config.fields);
+  await saveBlocks({
+    context: {
+      params: {},
+      originalDoc: stored,
+      configMap,
+      originalConfigMap: buildConfigMap(stored, config.fields)
+    } as any,
+    ownerId: 'p1',
+    data,
+    incomingPaths: Object.keys(configMap),
+    adapter: db as any,
+    ownerSlug: 'pages' as never
+  });
+
+  expect(db.blocks.delete).not.toHaveBeenCalled();
 });

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { DropdownMenu as DropdownMenuPrimitive, type WithoutChild } from 'bits-ui';
-  import { Check } from '@lucide/svelte';
+  import Check from '@lucide/svelte/icons/check';
   import './dropdown-menu-radio-item.css';
 
   let {

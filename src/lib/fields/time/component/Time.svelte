@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import { Input } from '$lib/panel/components/ui/input/index.js';
-  import { Clock } from '@lucide/svelte';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import { Input } from '#lib/panel/components/ui/input/index.js';
+  import Clock from '@lucide/svelte/icons/clock';
   import type { TimeFieldProps } from './props.js';
 
   const { path, config, form }: TimeFieldProps = $props();

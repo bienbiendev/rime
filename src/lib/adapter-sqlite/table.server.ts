@@ -1,8 +1,8 @@
-import type { TableHandle } from '$lib/core/adapter.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import type { GetRegisterType } from '$lib/index.js';
-import type { Dic } from '$lib/util/types.js';
-import { and, eq } from 'drizzle-orm';
+import type { TableHandle } from '#lib/core/adapter.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import type { GetRegisterType } from '#lib/index.js';
+import type { Dic } from '#lib/util/types.js';
+import { and, eq, getTableColumns, isNull } from 'drizzle-orm';
 import { declaredTableProperty } from './naming.server.js';
 import type { GenericTable, SqliteDatabase } from './types.server.js';
 
@@ -10,8 +10,8 @@ import type { GenericTable, SqliteDatabase } from './types.server.js';
  * Handles for the tables a config declares in `$tables`, the ones no prototype owns: better-auth's
  * users, sessions and accounts (`core/auth/configure.ts`).
  *
- * The counterpart to `prototype.server.ts`, and much smaller for one reason: a declared table has
- * no config behind it. Nothing to resolve a path against, no locales branch, no children, no
+ * The counterpart to the prototype handles (`collection.server.ts`, `area.server.ts`), and much
+ * smaller for one reason: a declared table has no config behind it. Nothing to resolve a path against, no locales branch, no children, no
  * empty fields to add. So the filter is a flat column-to-value map and the verbs are three.
  */
 export const createTableHandles = (args: {
@@ -31,14 +31,19 @@ export const createTableHandles = (args: {
       );
     }
 
-    /** Every condition, ANDed. An unknown column is a caller error, not an empty filter. */
+    /** The column named `name`. An unknown column is a caller error, not an empty filter. */
+    const columnOf = (name: string) => {
+      if (!Object.hasOwn(getTableColumns(table), name)) {
+        throw new RimeError(RimeError.OPERATION_ERROR, `"${slug}" has no column "${name}"`);
+      }
+      return table[name];
+    };
+
+    /** Every condition, ANDed. A `null` value matches the rows holding none. */
     const conditions = (where: Dic) =>
-      Object.entries(where).map(([column, value]) => {
-        if (!(column in table)) {
-          throw new RimeError(RimeError.OPERATION_ERROR, `"${slug}" has no column "${column}"`);
-        }
-        return eq(table[column], value);
-      });
+      Object.entries(where).map(([name, value]) =>
+        value === null ? isNull(columnOf(name)) : eq(columnOf(name), value)
+      );
 
     /**
      * The filter for a write. Empty is refused rather than treated as "everything": `and()` of
@@ -58,7 +63,7 @@ export const createTableHandles = (args: {
     return {
       find: async ({ where = {}, select, limit } = {}) => {
         const columns = select?.length
-          ? Object.fromEntries(select.map((column) => [column, table[column]]))
+          ? Object.fromEntries(select.map((name) => [name, columnOf(name)]))
           : undefined;
 
         let query = (columns ? db.select(columns) : db.select()).from(table) as any;

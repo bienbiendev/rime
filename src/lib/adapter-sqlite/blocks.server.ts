@@ -1,133 +1,26 @@
-import type { AdapterDeps } from '$lib/adapter-sqlite/types.server.js';
-import { baseTableName, tableName as buildTableName } from './naming.server.js';
-import type { GenericBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
-import type { WithOptional } from '$lib/util/types.js';
-import { and, eq, getTableColumns } from 'drizzle-orm';
-import { omit } from '../util/object.js';
-import { generatePK, transformDataToSchema } from './columns.server.js';
+import type { AdapterDeps } from '#lib/adapter-sqlite/types.server.js';
+import type { BlocksHandle } from '#lib/core/adapter.js';
+import type { PrototypeSlug } from '#lib/core/prototype/types.js';
+import type { Dic } from '#lib/util/types.js';
+import { baseTableName, tableName } from './naming.server.js';
+import { createRepeatable, deleteRepeatable, updateRepeatable } from './repeatable.server.js';
 
-const createBlocksHandle = ({ db, tables }: AdapterDeps) => {
-  /**
-   * Callers name the owner by slug — the prototype's own, or its versions table's — and the
-   * mapping to a table happens here, so that a table name never travels in a parameter that
-   * names a slug.
-   */
-  const buildBlockTableName = (parentSlug: PrototypeSlug, blockName: string) =>
-    buildTableName({
-      owner: baseTableName(parentSlug),
-      child: { kind: 'blocks', name: blockName }
-    });
+/**
+ * A block goes to the table of its type: `pages__$blocks_hero`. Callers name the owner by slug,
+ * the prototype's own or its versions', and the table is derived here.
+ */
+const blockTable = (parentSlug: PrototypeSlug, block: Dic) =>
+  tableName({
+    owner: baseTableName(parentSlug),
+    child: { kind: 'blocks', name: String(block.type) }
+  });
 
-  const update: UpdateBlock = async ({ parentSlug, block, locale }) => {
-    const table = buildBlockTableName(parentSlug, block.type);
-    const columns = getTableColumns(tables[table]);
-    const values = transformDataToSchema(omit(['id'], block), columns);
-
-    if (Object.keys(values).length) {
-      await db.update(tables[table]).set(values).where(eq(tables[table].id, block.id));
-    }
-
-    const keyTableLocales = buildTableName({ owner: table, branch: 'locales' });
-    if (locale && keyTableLocales in tables) {
-      const tableLocales = tables[keyTableLocales];
-      const localizedColumns = getTableColumns(tableLocales);
-      const localizedValues = transformDataToSchema(
-        omit(['ownerId', 'id'], block),
-        localizedColumns
-      );
-
-      if (!Object.keys(localizedValues).length) return true;
-
-      // @ts-expect-error suck
-      const localizedRow = await db.query[keyTableLocales].findFirst({
-        where: { ownerId: block.id, locale }
-      });
-
-      if (!localizedRow) {
-        await db.insert(tableLocales).values({
-          ...localizedValues,
-          id: generatePK(),
-          locale: locale,
-          ownerId: block.id
-        });
-      } else {
-        await db
-          .update(tableLocales)
-          .set(localizedValues)
-          .where(and(eq(tableLocales.ownerId, block.id), eq(tableLocales.locale, locale)));
-      }
-    }
-    return true;
-  };
-
-  const deleteBlock: DeleteBlock = async ({ parentSlug, block }) => {
-    const table = buildBlockTableName(parentSlug, block.type);
-    await db.delete(tables[table]).where(eq(tables[table].id, block.id));
-    return true;
-  };
-
-  const create: CreateBlock = async ({ parentSlug, block, ownerId, locale }) => {
-    const tableName = buildBlockTableName(parentSlug, block.type);
-    const blockId = generatePK();
-    const tableNameLocales = buildTableName({ owner: tableName, branch: 'locales' });
-
-    if (locale && tableNameLocales in tables) {
-      const unlocalizedColumns = getTableColumns(tables[tableName]);
-      const localizedColumns = getTableColumns(tables[tableNameLocales]);
-
-      const unlocalizedData = transformDataToSchema(block, unlocalizedColumns);
-      const localizedData = transformDataToSchema(block, localizedColumns);
-
-      await db.insert(tables[tableName]).values({
-        ...unlocalizedData,
-        id: blockId,
-        ownerId: ownerId,
-        locale
-      });
-
-      await db.insert(tables[tableNameLocales]).values({
-        ...localizedData,
-        id: generatePK(),
-        ownerId: blockId,
-        locale
-      });
-    } else {
-      const columns = getTableColumns(tables[tableName]);
-      const schemaData = transformDataToSchema(block, columns);
-
-      await db.insert(tables[tableName]).values({
-        ...schemaData,
-        ownerId,
-        id: generatePK()
-      });
-    }
-    return true;
-  };
-
-  return {
-    delete: deleteBlock,
-    create,
-    update
-  };
-};
+const createBlocksHandle = (deps: AdapterDeps): BlocksHandle => ({
+  create: ({ parentSlug, block, ownerId, locale }) =>
+    createRepeatable(deps, blockTable(parentSlug, block), block, ownerId, locale),
+  update: ({ parentSlug, block, locale }) =>
+    updateRepeatable(deps, blockTable(parentSlug, block), block, locale),
+  delete: ({ parentSlug, block }) => deleteRepeatable(deps, blockTable(parentSlug, block), block.id)
+});
 
 export default createBlocksHandle;
-
-/****************************************************/
-/* Types
-/****************************************************/
-
-type UpdateBlock = (args: {
-  parentSlug: PrototypeSlug;
-  block: GenericBlock;
-  locale?: string;
-}) => Promise<boolean>;
-
-type CreateBlock = (args: {
-  parentSlug: PrototypeSlug;
-  block: WithOptional<GenericBlock, 'id'>;
-  ownerId: string;
-  locale?: string;
-}) => Promise<boolean>;
-
-type DeleteBlock = (args: { parentSlug: PrototypeSlug; block: GenericBlock }) => Promise<boolean>;

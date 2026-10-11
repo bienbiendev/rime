@@ -1,5 +1,5 @@
 import { VERSIONS_STATUS } from './constant.js';
-import type { Dic } from '$lib/util/types.js';
+import type { Dic } from '#lib/util/types.js';
 
 /**
  * A bootstrapped document's first version is the published one.

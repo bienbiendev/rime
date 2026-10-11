@@ -29,7 +29,6 @@
   @import '../../../style/mixins/index.css';
 
   :root {
-    --rz-input-border-color: var(--rz-border);
     --rz-input-padding-x: var(--rz-size-3);
     --rz-input-padding-y: var(--rz-size-1);
   }

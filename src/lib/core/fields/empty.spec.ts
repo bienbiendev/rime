@@ -1,4 +1,4 @@
-import { blocks, block, group, relation, tab, tabs, text, tree } from '$lib/fields/index.js';
+import { blocks, block, group, relation, tab, tabs, text, tree } from '#lib/fields/index.js';
 import { expect, test } from 'vitest';
 import { withEmptyFields } from './empty.js';
 

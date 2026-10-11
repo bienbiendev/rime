@@ -1,15 +1,15 @@
-import type { CollectionHooks } from '$lib/types.js';
-import { exctractPath } from '$lib/core/prototype/collection/upload/hooks/extract-path.server.js';
+import type { CollectionHooks } from '#lib/types.js';
+import { exctractPath } from '#lib/core/prototype/collection/upload/hooks/extract-path.server.js';
 import {
   prepareDirectoryChildren,
   updateDirectoryChildren
-} from '$lib/core/prototype/collection/upload/hooks/update-directory-children.server.js';
+} from '#lib/core/prototype/collection/upload/hooks/update-directory-children.server.js';
 
 /**
- * The hooks for an upload collection's derived `<slug>_directories` collection.
+ * The hooks for an upload collection's derived `$<slug>Directories` collection.
  *
- * Upload's own derived collection, so its pipeline belongs to upload — the same rule that puts
- * `uploadHooks` here. The result goes through `augmentHooks` like an author-written collection.
+ * Upload's own derived collection, so its pipeline belongs to upload. The result goes through
+ * `augmentHooks` like an author-written collection.
  */
 export const directoriesPipeline = (
   directoriesConfig: { $hooks?: CollectionHooks<any> } | undefined

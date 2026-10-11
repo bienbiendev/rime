@@ -1,18 +1,39 @@
-import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
-import { access } from '$lib/core/auth/access.js';
+import { SMTP_HOST, SMTP_PASSWORD, SMTP_PORT, SMTP_USER } from '$app/env/private';
+import { adapterSqlite } from '#lib/adapter-sqlite/index.server.js';
+import { access } from '#lib/core/auth/access.js';
 import { rime } from '$rime/config';
+import { Articles } from './articles';
+import { ContactLogs, Contacts, Notices, PrivateDocs, PrivateMedias, Reports } from './safety';
 import { Defaults } from './defaults';
 import { Homepage } from './homepage';
 import { HooksTest } from './hooks-test';
 import { Medias } from './medias';
 import { Pages } from './pages';
+import { Bulletins } from './read-only';
+import { Listings } from './listings';
 import { Settings } from './settings';
-import { Targets } from './targets';
+import { ProductIdeas, Targets } from './targets';
 
 export default rime({
   $adapter: adapterSqlite('fields.sqlite'),
 
-  collections: [HooksTest, Targets, Medias, Pages, Defaults],
+  collections: [
+    HooksTest,
+    Targets,
+    ProductIdeas,
+    Medias,
+    Pages,
+    Defaults,
+    Articles,
+    Contacts,
+    ContactLogs,
+    PrivateMedias,
+    PrivateDocs,
+    Notices,
+    Reports,
+    Bulletins,
+    Listings
+  ],
   areas: [Settings, Homepage],
 
   // Defaults to admin-only (features/panel/augment.server.ts) — relaxed to any
@@ -24,12 +45,12 @@ export default rime({
   },
 
   $smtp: {
-    from: process.env.RIME_SMTP_USER,
-    host: process.env.RIME_SMTP_HOST,
-    port: parseInt(process.env.RIME_SMTP_PORT || '465'),
+    from: SMTP_USER,
+    host: SMTP_HOST,
+    port: SMTP_PORT,
     auth: {
-      user: process.env.RIME_SMTP_USER,
-      password: process.env.RIME_SMTP_PASSWORD
+      user: SMTP_USER,
+      password: SMTP_PASSWORD
     }
   },
 

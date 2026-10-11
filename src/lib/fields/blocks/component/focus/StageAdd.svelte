@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { Button } from '$lib/panel/components/ui/button/index.js';
-  import Kbd from '$lib/panel/components/ui/kbd/Kbd.svelte';
-  import { Plus } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { Button } from '#lib/panel/components/ui/button/index.js';
+  import Kbd from '#lib/panel/components/ui/kbd/Kbd.svelte';
+  import Plus from '@lucide/svelte/icons/plus';
   import { getBlocksFocusContext } from './focus.svelte.js';
 
   type Props = { list: string };

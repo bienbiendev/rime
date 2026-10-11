@@ -1,14 +1,15 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { isAuthConfig } from '$lib/core/auth/util';
-  import type { BuiltCollection } from '$lib/core/config/types.js';
-  import validate from '$lib/core/fields/validate';
-  import { t__ } from '$lib/core/i18n';
-  import { panelUrl } from '$lib/core/routes/util.js';
-  import { text } from '$lib/fields';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import { authClient } from '$lib/panel/util/auth';
+  import { isAuthConfig } from '#lib/core/auth/util.js';
+  import type { BuiltCollection } from '#lib/core/config/types.js';
+  import { RimeFormError } from '#lib/core/errors/index.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { panelUrl } from '#lib/core/routes/util.js';
+  import { text } from '#lib/fields/index.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { confirmPasswordField, newPasswordField } from '#lib/panel/pages/auth/fields.js';
+  import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import { authClient } from '#lib/panel/util/auth.js';
   import { toast } from 'svelte-sonner';
   import Button from '../../ui/button/button.svelte';
 
@@ -17,18 +18,20 @@
 
   const user = getUserContext();
 
+  // Keeps Save disabled while the passwords differ, also after the password is edited again.
+  // No component shows a `_form` error: the confirmation field shows the message.
   $effect(() => {
-    if (form.values.password !== form.values.confirmPassword && operation === 'create') {
-      form.errors.set('__form', 'password_mismatch');
+    if (operation === 'create' && form.values.password !== form.values.confirmPassword) {
+      form.errors.set('_form', RimeFormError.PASSWORD_MISMATCH);
     } else {
-      form.errors.delete('__form');
+      form.errors.delete('_form');
     }
   });
 
   async function sendPasswordResetLink() {
     const { data, error } = await authClient.requestPasswordReset({
       email: form.values.email,
-      redirectTo: `${panelUrl('reset-password')}?slug=staff`
+      redirectTo: panelUrl('reset-password')
     });
     if (error && error.message) {
       toast.error(error.message);
@@ -38,22 +41,12 @@
     }
   }
 
-  const passwordConfig = text('password')
-    .placeholder(t__('fields.password'))
-    .required()
-    .validate(validate.password);
+  const passwordConfig = newPasswordField().placeholder(t__('fields.password'));
   const Text = text('mock').component;
 
-  const confirmPasswordConfig = text('confirmPassword')
+  const confirmPasswordConfig = confirmPasswordField()
     .label(t__('common.confirmPassword'))
-    .placeholder(t__('common.confirmPassword'))
-    .required()
-    .validate((value, metas) => {
-      if (metas.data.password !== value) {
-        return 'password_mismatch';
-      }
-      return true;
-    });
+    .placeholder(t__('common.confirmPassword'));
 </script>
 
 <!-- For creation show passwords fields -->

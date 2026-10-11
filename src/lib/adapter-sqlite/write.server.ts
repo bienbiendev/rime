@@ -1,9 +1,10 @@
-import type { VersionsTable } from '$lib/core/adapter.js';
-import { normalizeQuery } from '$lib/core/pipeline/query.js';
-import type { OperationQuery } from '$lib/core/pipeline/types.js';
-import type { PrototypeSlug } from '$lib/core/prototype/types.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
-import type { Dic } from '$lib/util/types.js';
+import type { VersionsTable } from '#lib/core/adapter.js';
+import { normalizeQuery } from '#lib/core/pipeline/query.js';
+import type { OperationQuery } from '#lib/core/pipeline/types.js';
+import type { PrototypeSlug } from '#lib/core/prototype/types.js';
+import type { ConfigContext } from '#lib/core/rime.server.js';
+import { omit } from '#lib/util/object.js';
+import type { Dic } from '#lib/util/types.js';
 import { and, eq, inArray } from 'drizzle-orm';
 import { RimeError } from '../core/errors/index.js';
 import { baseTableName, tableName, type TableName } from './naming.server.js';
@@ -13,25 +14,18 @@ import { buildWhereParam } from './where.server.js';
 /**
  * Writing a prototype's rows — insert, update, delete, and the bootstrap a singleton needs.
  *
- * The other half of `read.server.ts`; the vocabulary is written down there. `singleton` decides
- * what `insert` and `delete` refuse outright, and which row an update resolves when it was handed
- * no id.
- *
- * Two apparent differences between the collection and area facades this replaces turned out to be
- * nothing: an area's update reset every content row's status with no `where` while a collection
- * scoped it to `ownerId = id` — the same set for a single row; and a collection split off its
- * `$root()` fields before writing while an area did not — `splitRootData` returns an empty half
- * when a config marks none. Both are core's now, and this is handed both halves.
+ * The other half of `read.server.ts`; the vocabulary is written down there.
  */
 
 /**
  * Writes a row and, when it has localized columns, its `__$$locales` half.
  *
- * Every insert goes through here, a document's and a singleton's bootstrap alike.
+ * Every content row goes through here. A versioned config's base row is written with
+ * `insertTableRecord` directly.
  *
  * Returns the id actually written, which insertTableRecord derives from `row.id` or generates.
  */
-export const insertRowWithLocales = async (
+const insertRowWithLocales = async (
   { db, tables }: Deps,
   args: {
     table: TableName;
@@ -59,7 +53,7 @@ export const insertRowWithLocales = async (
       tables,
       tableName({ owner: args.table, branch: 'locales' }),
       {
-        ...data,
+        ...omit(['id'], data),
         ownerId: id,
         locale: locale!
       }
@@ -94,9 +88,8 @@ type Deps = {
  * The content row's *table* is still the adapter's to know: registration carries the versions table, and
  * where rows live is storage. Which row, and whether to touch it, is the caller's.
  *
- * Returns `{ id: data.id || id }`. For an area the two always agree — it is a single row, so any
- * `id` in its data is that row's — and preferring `data.id` keeps a disagreement visible instead
- * of silently picking the id of the row that was written.
+ * Returns `{ id }`, the row it wrote. An `id` in `data` neither moves that row nor changes the
+ * answer.
  */
 export const updatePrototype = async (
   { db, tables }: Deps,
@@ -121,7 +114,7 @@ export const updatePrototype = async (
     );
   }
 
-  return { id: data.id || id };
+  return { id };
 };
 
 /** One row and its locales, which is what both halves of an update come down to. */
@@ -132,12 +125,11 @@ const writeRow = async (
   const { table, recordId, data, locale, now } = args;
   const localesTable = tableName({ owner: table, branch: 'locales' });
 
-  const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
-    tables,
-    mainTableName: table,
-    localesTableName: localesTable,
-    locale
-  });
+  // The row is addressed by `recordId`: an `id` or `ownerId` in the data would move it.
+  const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(
+    omit(['id', 'ownerId'], data),
+    { tables, mainTableName: table, localesTableName: localesTable, locale }
+  );
 
   await adapterUtil.updateTableRecord(db, tables, table, {
     recordId,
@@ -158,9 +150,9 @@ const writeRow = async (
  *
  * A primitive: a table, a filter, a patch. It writes exactly the columns it is given — no
  * `updatedAt`, no children — because the callers that want a bulk column write want the rows left
- * otherwise alone. Its one caller flips a status column across a document's other content rows,
- * and depends on `updatedAt` *not* moving: that caller prunes by `updatedAt`, so touching it here
- * would silently re-order which rows survive.
+ * otherwise alone. Its callers demote a document's other content rows, flag an autosave and
+ * write the edit lock, and none may move `updatedAt`: versions are pruned by it, so touching it
+ * here would re-order which rows survive.
  *
  * With `locale`, a localized column lands on the `__$$locales` branch instead — resolved by
  * `prepareSchemaData`, the same split every other write goes through, so a caller says "set this
@@ -180,7 +172,18 @@ export const updateWherePrototype = async (
 ): Promise<void> => {
   const table = baseTableName(slug);
   const localesTable = tableName({ owner: table, branch: 'locales' });
-  const where = buildWhereParam({ query: normalizeQuery(query), slug, db, tables, configCtx });
+  const where = buildWhereParam({
+    query: normalizeQuery(query),
+    slug,
+    locale,
+    db,
+    tables,
+    configCtx
+  });
+  // `false` (an empty and/or) or nothing at all would reach drizzle as "no WHERE": every row
+  if (!where) {
+    throw new RimeError(RimeError.OPERATION_ERROR, `refusing to update every row of "${slug}"`);
+  }
 
   const { mainData, localizedData, isLocalized } = adapterUtil.prepareSchemaData(data, {
     tables,
@@ -196,10 +199,8 @@ export const updateWherePrototype = async (
   if (isLocalized && Object.keys(localizedData).length) {
     // The branch is keyed by its owner, so the rows to touch are the ones this filter matched.
     //
-    // An update, never an upsert — `upsertLocalizedData` would *insert* a locales row for a
-    // document that has none yet, and its caller runs during reads. A half-populated
-    // locales row written ahead of the real one is how the multilingual duplicate tests started
-    // failing when this was first written as an upsert.
+    // An update, never an upsert: `upsertLocalizedData` would insert a locales row for a document
+    // that has none yet, and a caller runs during reads.
     const owners = await db.select({ id: tables[table].id }).from(tables[table]).where(where);
     const ownerIds = (owners as { id: string }[]).map((owner) => owner.id);
 
@@ -258,7 +259,7 @@ export const insertPrototype = async (
       { db, tables },
       {
         table: contentTable,
-        row: { id: adapterUtil.generatePK(), ownerId: docId, ...mainData },
+        row: { ...mainData, id: adapterUtil.generatePK(), ownerId: docId },
         now,
         localized: { data: localizedData, isLocalized, locale }
       }
@@ -292,13 +293,6 @@ export const insertPrototype = async (
   return { id: docId, contentId: docId };
 };
 
-/**
- * Reads many documents, merged with the content row each should show.
- *
- * The versioned branch queries the base table and pulls one content row per document, because
- * pagination and ordering are properties of the document rather than of one of its rows.
- */
-
 export const deletePrototype = async (
   { db, tables }: Deps,
   { slug, id }: { slug: string; id: string }
@@ -311,13 +305,6 @@ export const deletePrototype = async (
   return docs[0].id;
 };
 
-/**
- * The ids of the documents whose `_parent` is `parentId`, in `_position` order.
- *
- * Cannot go through `findMany`: hierarchy lives on the base table while a versioned prototype's
- * `where` resolves against the content table. `_parent` and `_position` are columns the adapter
- * writes itself, so answering this is its job.
- */
 /**
  * Brings a singleton's row into being if it is not already there. Boot only.
  *
@@ -357,7 +344,7 @@ export const ensurePrototypeExists = async (
       { db, tables },
       {
         table: contentTable,
-        row: { ownerId: docId, ...mainData },
+        row: { ...mainData, ownerId: docId },
         now,
         localized: { data: localizedData, isLocalized, locale }
       }

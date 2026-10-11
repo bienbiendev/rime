@@ -1,5 +1,5 @@
 <script lang="ts">
-  import * as random from '$lib/util/random.js';
+  import * as random from '#lib/util/random.js';
   import type { Editor } from '@tiptap/core';
   import { BubbleMenuPlugin } from '@tiptap/extension-bubble-menu';
   import { onDestroy, onMount } from 'svelte';
@@ -52,7 +52,6 @@
         name: item.label,
         options: feature.extension?.options
       }))
-      .filter((item) => !!item.name)
       .filter((item) => !!item.bubbleMenu);
 
   const bubbleMenuItems = $derived([
@@ -100,11 +99,14 @@
     });
 
     editor.registerPlugin(plugin);
+    // A mark toggled on a selection changes the document, not the selection
+    editor.on('update', setActiveItems);
     editor.on('selectionUpdate', setActiveItems);
     setActiveItems();
   });
 
   onDestroy(() => {
+    editor.off('update', setActiveItems);
     editor.off('selectionUpdate', setActiveItems);
     editor.unregisterPlugin(pluginKey);
   });

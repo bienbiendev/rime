@@ -1,9 +1,9 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import * as Tooltip from '$lib/panel/components/ui/tooltip';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import type { Route } from '$lib/panel/types';
-  import { File } from '@lucide/svelte';
+  import * as Tooltip from '#lib/panel/components/ui/tooltip/index.js';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import type { Route } from '#lib/panel/types.js';
+  import File from '@lucide/svelte/icons/file';
   import NavItemButton from './NavItemButton.svelte';
 
   type Props = {

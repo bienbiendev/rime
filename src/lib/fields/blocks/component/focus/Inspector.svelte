@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { getFieldListAtPath } from '$lib/core/fields/util.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
-  import { Button } from '$lib/panel/components/ui/button/index.js';
-  import { withBlockTypes } from '$lib/panel/context/blocks-ops.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { Focus, Plus, ToyBrick } from '@lucide/svelte';
+  import { getFieldListAtPath } from '#lib/core/fields/util.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import RenderFields from '#lib/panel/components/fields/RenderFields.svelte';
+  import { Button } from '#lib/panel/components/ui/button/index.js';
+  import { withBlockTypes } from '#lib/panel/context/blocks-ops.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import Focus from '@lucide/svelte/icons/focus';
+  import Plus from '@lucide/svelte/icons/plus';
+  import ToyBrick from '@lucide/svelte/icons/toy-brick';
   import { getBlocksFocusContext } from './focus.svelte.js';
 
   type Props = { form: DocumentFormContext };

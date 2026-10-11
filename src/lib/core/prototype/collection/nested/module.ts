@@ -1,6 +1,6 @@
-import { number } from '$lib/fields/number/index.js';
-import { text } from '$lib/fields/text/index.js';
-import type { Collection } from '$lib/core/config/types.js';
+import { number } from '#lib/fields/number/index.js';
+import { text } from '#lib/fields/text/index.js';
+import type { Collection } from '#lib/core/config/types.js';
 
 type IncomingConfig = { slug: string; nested?: boolean; fields?: Collection<any>['fields'] };
 
@@ -8,8 +8,9 @@ type IncomingConfig = { slug: string; nested?: boolean; fields?: Collection<any>
  * Adds the root-table fields a nested collection is addressed by: who its parent is, and where it
  * sits among its siblings.
  *
- * The client half. `module.server.ts` adds the self-referencing foreign key on `_parent`; whether
- * a config uses this at all is the feature's `enabled`, so there is no condition here.
+ * The client half. `module.server.ts` adds the self-referencing foreign key on `_parent`.
+ * `when(isNested, …)` in the collection's `augments` decides whether a config runs this, so there
+ * is no condition here.
  */
 export const augmentNested = <T extends IncomingConfig>(config: T): T => ({
   ...config,

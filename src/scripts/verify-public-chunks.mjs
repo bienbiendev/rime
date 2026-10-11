@@ -47,9 +47,12 @@ const ROUTES = [
 ];
 
 const manifest = JSON.parse(fs.readFileSync(path.join(OUT, '.vite/manifest.json'), 'utf-8'));
-const app = fs.readFileSync('.svelte-kit/generated/client-optimized/app.js', 'utf-8');
+const app = fs.readFileSync('.svelte-kit/generated/build/client-optimized/app.js', 'utf-8');
 
-/** `"/(rime)/[panel=panel]/sign-in": [~13,[2],[3]]`: the page's node, then its layouts' */
+/**
+ * `"/(rime)/[panel=panel]/sign-in": [~13,[2],[3]]`: the page's node, then its layouts'
+ * @param {string} id
+ */
 const nodesOf = (id) => {
   const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = app.match(new RegExp(`"${escaped}": \\[~?(\\d+)(?:,\\[([\\d,]*)\\])?`));
@@ -59,9 +62,13 @@ const nodesOf = (id) => {
   return [...new Set(['0', ...layouts, match[1]])];
 };
 
-/** Every module the chunks of a route bundle, read from their source maps. */
+/**
+ * Every module the chunks of a route bundle, read from their source maps.
+ * @param {string} id
+ */
 const modulesOf = (id) => {
   const chunks = new Set();
+  /** @param {string} key */
   const visit = (key) => {
     if (chunks.has(key) || !manifest[key]) return;
     chunks.add(key);

@@ -5,7 +5,6 @@
     ref = $bindable(null),
     class: className,
     orientation = 'vertical',
-    children,
     ...restProps
   }: WithoutChild<ScrollAreaPrimitive.ScrollbarProps> = $props();
 </script>
@@ -16,6 +15,5 @@
   class="rz-scroll-area-scroll-bar rz-scroll-area-scroll-bar--{orientation}  {className}"
   {...restProps}
 >
-  {@render children?.()}
   <ScrollAreaPrimitive.Thumb class="rz-scroll-area-scroll-bar__thumb" />
 </ScrollAreaPrimitive.Scrollbar>

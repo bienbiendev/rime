@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import i18n, { createI18n, t__ } from './index.js';
 
 describe('createI18n', () => {
@@ -14,6 +14,11 @@ describe('createI18n', () => {
     expect(t__('site.saved')).toBe('He saved it');
     expect(t__('site.saved|f')).toBe('She saved it');
     expect(t__('site.saved|m|p')).toBe('They saved them');
+  });
+
+  it('leaves a brace with no variant list as written', () => {
+    const { t__ } = createI18n({ site: { hint: 'Use {name} here, {a|b}' } });
+    expect(t__('site.hint')).toBe('Use {name} here, a');
   });
 
   it('returns a key it has nothing for, as is', () => {
@@ -42,13 +47,13 @@ describe('createI18n', () => {
 describe("the panel's i18n", () => {
   it('translates what init loaded, and warns on a panel namespace it has not', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    onTestFinished(() => warn.mockRestore());
     i18n.init({ common: { doc_updated: 'Document updated' } });
     expect(t__('common.doc_updated')).toBe('Document updated');
     expect(warn).not.toHaveBeenCalled();
 
     expect(t__('errors.generic')).toBe('errors.generic');
     expect(warn).toHaveBeenCalledWith('Namespace errors not loaded');
-    warn.mockRestore();
   });
 
   it('is not what createI18n hands out', () => {

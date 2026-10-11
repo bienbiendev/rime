@@ -1,13 +1,13 @@
-import type { VersionsConfig } from '$lib/core/prototype/shared/versions/types.js';
-import type { VersionsTable } from '$lib/core/adapter.js';
+import type { VersionsConfig } from '#lib/core/prototype/shared/versions/types.js';
+import type { VersionsTable } from '#lib/core/adapter.js';
 import { withVersionsSuffix } from './naming.js';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
-import { text } from '$lib/fields/text/index.js';
-import { toggle } from '$lib/fields/toggle/index.js';
-import type { Collection } from '$lib/core/config/types.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+import { text } from '#lib/fields/text/index.js';
+import { toggle } from '#lib/fields/toggle/index.js';
+import type { Collection } from '#lib/core/config/types.js';
 
 type Input = {
-  slug?: string;
+  slug: string;
   versions?: Collection<any>['versions'];
   fields?: Collection<any>['fields'];
 };
@@ -20,8 +20,8 @@ export type WithVersionsConfig<T> = Omit<T, 'versions'> & {
  * Normalises `versions`, adds the `status` field when drafts are on and `isAutoSave` when
  * auto-save is, and — when this config is versioned — states **where its content lives**.
  *
- * `_versions` is a config member rather than a call because two of its readers are in
- * `adapter-sqlite/`: reading it keeps the adapter naming no feature.
+ * `_versions` is a config member rather than a call so that `adapter-sqlite/` reads it and names
+ * no feature.
  */
 export const augmentVersions = <T extends Input>(config: T): WithVersionsConfig<T> => {
   const fields = [...(config.fields || [])];
@@ -54,10 +54,7 @@ export const augmentVersions = <T extends Input>(config: T): WithVersionsConfig<
     ...rest,
     versions: normalizedVersions,
     fields,
-    // Only a versioned config has a second table. `slug` is always set by `create` before the
-    // augments run; the guard is for the derived configs that are built without one.
-    ...(normalizedVersions && config.slug
-      ? { _versions: { slug: withVersionsSuffix(config.slug) } }
-      : {})
+    // Only a versioned config has a second table.
+    ...(normalizedVersions ? { _versions: { slug: withVersionsSuffix(config.slug) } } : {})
   };
 };

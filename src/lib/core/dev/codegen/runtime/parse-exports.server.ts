@@ -4,8 +4,8 @@ import fs from 'node:fs';
 
 /**
  * Top-level named + default export identifiers of a module — the names a half pair's missing side
- * has to declare as `undefined`. Read by the Vite plugin in dev and by `generate-exports` at
- * prepack, which writes the same stub out as a file.
+ * has to declare as `undefined`. Read by the Vite plugin in dev and by `generate-exports` during
+ * `rime package`, which writes the same stub out as a file.
  *
  * **Values only.** A type export has no runtime existence, so collecting one is never right: it
  * would be stubbed as `export const Foo = undefined` on a missing side, and indexed as a name a

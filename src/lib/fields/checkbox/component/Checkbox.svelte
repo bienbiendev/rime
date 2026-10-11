@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import '$lib/panel/components/fields/setting.css';
-  import { Checkbox } from '$lib/panel/components/ui/checkbox/index.js';
-  import { slugify } from '$lib/util/string.js';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import '#lib/panel/components/fields/setting.css';
+  import { Checkbox } from '#lib/panel/components/ui/checkbox/index.js';
+  import { slugify } from '#lib/util/string.js';
   import type { CheckboxProps } from './props';
 
   const { path, config, form }: CheckboxProps = $props();

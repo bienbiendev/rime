@@ -1,26 +1,18 @@
-import type { BaseDoc } from '$lib/core/prototype/types.js';
+import type { BaseDoc } from '#lib/core/prototype/types.js';
 import type { VersionsStatus } from './constant.js';
 
-/**
- * What a version row reads as.
- *
- * Was in `core/prototype/types.ts`, which is what made that file import `VersionsStatus` out of
- * this feature to describe its own registry.
- */
+/** What a version row reads as. */
 export type VersionDoc = BaseDoc & {
   status: VersionsStatus;
 };
 
-declare module '$lib/core/prototype/types.js' {
+declare module '../../types.js' {
   interface FeatureDocTypes {
     version: VersionDoc;
   }
 }
 
-/**
- * What an author writes under `versions`. Lived in `core/config/types.ts`, which is what made
- * core own the shape of a thing only this folder reads.
- */
+/** What an author writes under `versions`. */
 export type VersionsConfig = { draft?: boolean; autoSave?: boolean; maxVersions?: number };
 
 /** An auto-saved row, as the panel load hands it to the page: whose typing, and from when. */

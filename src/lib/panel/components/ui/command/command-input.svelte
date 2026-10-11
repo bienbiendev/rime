@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Search } from '@lucide/svelte';
+  import Search from '@lucide/svelte/icons/search';
   import { Command as CommandPrimitive } from 'bits-ui';
   import type { Snippet } from 'svelte';
 
@@ -15,7 +15,7 @@
   } = $props();
 </script>
 
-<div class="rz-command-input" data-command-input-wrapper="">
+<div class="rz-command-input">
   <Search class="rz-command-input__icon" size={14} />
   <CommandPrimitive.Input
     class="rz-command-input__input {className}"
@@ -37,14 +37,6 @@
     border-top-right-radius: var(--rz-radius-md);
     padding-inline: var(--rz-size-3);
     padding-block: var(--rz-size-1);
-
-    &:global([data-focused]) {
-      @mixin focus-field;
-    }
-
-    &:global([data-error]) {
-      @mixin invalid-field;
-    }
 
     & :global(.rz-command-input__icon) {
       margin-right: var(--rz-size-2);

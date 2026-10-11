@@ -1,9 +1,10 @@
 <script lang="ts">
-  import type { BuiltCollection } from '$lib/core/config/types.js';
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import { panelPath } from '$lib/core/routes/util.js';
-  import Checkbox from '$lib/panel/components/ui/checkbox/checkbox.svelte';
-  import { getValueAtPath } from '$lib/util/object';
+  import type { BuiltCollection } from '#lib/core/config/types.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import { panelPath } from '#lib/core/routes/util.js';
+  import Checkbox from '#lib/panel/components/ui/checkbox/checkbox.svelte';
+  import { titleOrUntitled } from '#lib/panel/util/title.js';
+  import { getValueAtPath } from '#lib/util/object.js';
   import Avatar from '../../Avatar.svelte';
   import DocStatus from '../../DocStatus.svelte';
   import UploadThumbCell from '../../upload-thumb-cell/UploadThumbCell.svelte';
@@ -26,7 +27,7 @@
   const { checked, doc, config, isSelectMode, toggleSelectOf, columns, path, draggable }: Props =
     $props();
 
-  const title = $derived(doc.title || '[untitled]');
+  const title = $derived(titleOrUntitled(doc.title));
   const hasDraft = $derived(!!(config.versions && config.versions.draft));
   const author = $derived<string>(doc.updatedBy?.name ?? '');
   // "Anthony Ivol" -> "Anthony"

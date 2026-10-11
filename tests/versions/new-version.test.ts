@@ -1,5 +1,5 @@
-import { PARAMS } from '$lib/core/constants';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant';
+import { PARAMS } from '#lib/core/constants.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
 import test, { expect, type APIRequestContext } from '@playwright/test';
 import { API_BASE_URL, signIn } from '../util.js';
 

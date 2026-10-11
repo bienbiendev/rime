@@ -1,10 +1,20 @@
-import cache from '$lib/core/dev/cache.server.js';
-import { getPackageManager } from '$lib/core/dev/cli/util/package-manager.server.js';
-import { schemaPath } from '$lib/core/dev/constants.server.js';
-import { logger } from '$lib/core/logger.server.js';
+import cache from '#lib/core/dev/cache.server.js';
+import { getPackageManager } from '#lib/core/dev/cli/util/package-manager.server.js';
+import { schemaPath } from '#lib/core/dev/constants.server.js';
+import { logger } from '#lib/core/logger.server.js';
+import type { Dic } from '#lib/util/types.js';
 import fs from 'fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+
+/** How each package manager runs drizzle-kit. */
+const DRIZZLE_KIT: Record<string, string[]> = {
+  npm: ['npx', 'drizzle-kit'],
+  yarn: ['npx', 'drizzle-kit'],
+  pnpm: ['pnpm', 'drizzle-kit'],
+  bun: ['bun', 'drizzle-kit'],
+  deno: ['deno', 'run', '-A', 'npm:drizzle-kit']
+};
 
 const write = (schema: string) => {
   const outputFile = schemaPath();
@@ -22,6 +32,19 @@ const write = (schema: string) => {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
+  const [command, ...prefix] = DRIZZLE_KIT[getPackageManager()];
+
+  // A migrations folder with `meta/_journal.json` is in the pre-1.0 drizzle-kit layout, which kit
+  // refuses to read. `drizzle-kit up` converts it in place — files git tracks — before anything
+  // below compares folders, so the converted migrations are not taken as new.
+  if (fs.existsSync(path.resolve(process.cwd(), 'db', 'meta', '_journal.json'))) {
+    logger.debug('Migrations folder predates drizzle 1.0 — converting with `drizzle-kit up`.');
+    const upResult = spawnSync(command, [...prefix, 'up'], { stdio: 'inherit' });
+    if (upResult.error || upResult.status !== 0) {
+      throw new Error('drizzle-kit up failed — the migrations folder could not be converted');
+    }
+  }
+
   // What to put back if a migration that loses data is refused below.
   const migrationsBefore = new Set(listMigrations());
   const previousSchema = fs.existsSync(outputFile) ? fs.readFileSync(outputFile, 'utf8') : null;
@@ -32,35 +55,10 @@ const write = (schema: string) => {
     throw new Error(`Error writing schema: ${err.message}`);
   }
 
-  const pm = getPackageManager();
-  const commandMap = {
-    npm: 'npx',
-    pnpm: 'pnpm',
-    bun: 'bun',
-    yarn: 'npx',
-    deno: 'npx'
-  };
-  const command = commandMap[pm];
+  logger.debug(`[✓] Schema: generated at ${outputFile}`);
 
-  logger.info(`[✓] Schema: generated at ${outputFile}`);
-
-  // Drizzle 1.0 restructured the migrations folder: `meta/_journal.json` is gone and each
-  // migration's snapshot moved beside its SQL. Kit refuses to read the old shape at all, so an
-  // app whose `db/` predates the upgrade cannot generate or migrate until it is converted.
-  //
-  // Converted here rather than left to the app, because rime is what runs kit — the alternative
-  // is a first `rime dev` after upgrading that fails on a message about a command the app never
-  // calls itself. Said out loud, because it rewrites files git is tracking.
-  if (fs.existsSync(path.resolve(process.cwd(), 'db', 'meta', '_journal.json'))) {
-    logger.info('Migrations folder predates drizzle 1.0 — converting with `drizzle-kit up`.');
-    const upResult = spawnSync(command, ['drizzle-kit', 'up'], { stdio: 'inherit' });
-    if (upResult.error || upResult.status !== 0) {
-      throw new Error('drizzle-kit up failed — the migrations folder could not be converted');
-    }
-  }
-
-  console.log(`\n ⚡︎ ${command} drizzle-kit generate \n`);
-  const generateResult = spawnSync(command, ['drizzle-kit', 'generate'], { stdio: 'inherit' });
+  console.log(`\n ⚡︎ ${[command, ...prefix].join(' ')} generate \n`);
+  const generateResult = spawnSync(command, [...prefix, 'generate'], { stdio: 'inherit' });
   if (generateResult.error || generateResult.status !== 0) {
     throw new Error('drizzle-kit generate failed');
   }
@@ -68,9 +66,14 @@ const write = (schema: string) => {
   // drizzle-kit applies whatever it generated, a dropped table included. A migration that loses
   // data waits for a yes; without one nothing is applied and the boot stops.
   const created = listMigrations().filter((name) => !migrationsBefore.has(name));
-  const losses = created.flatMap((name) =>
-    dataLoss(fs.readFileSync(path.join(migrationsDir(), name, 'migration.sql'), 'utf8'))
-  );
+  // A rebuilt table loses the columns it leaves out of the copy: compared with the newest
+  // migration from before
+  const previous = snapshotOf([...migrationsBefore].sort().at(-1));
+  const losses = created.flatMap((name) => {
+    const sql = fs.readFileSync(path.join(migrationsDir(), name, 'migration.sql'), 'utf8');
+    const after = snapshotOf(name);
+    return [...dataLoss(sql), ...(previous && after ? rebuildLoss(sql, previous, after) : [])];
+  });
   if (losses.length) {
     const question = `\n ⚠︎ This migration will lose data:\n   ${losses.join('\n   ')}\n Continue? [y/N] `;
     if (!confirm(question)) {
@@ -79,16 +82,14 @@ const write = (schema: string) => {
       }
       if (previousSchema === null) fs.rmSync(outputFile, { force: true });
       else fs.writeFileSync(outputFile, previousSchema);
-      // The next boot asks again, rather than taking this config as already generated.
-      cache.delete('config');
       throw new Error(
         'Migration cancelled: it would lose data. db/ and the schema are left as they were.'
       );
     }
   }
 
-  console.log(`\n ⚡︎ ${command} drizzle-kit migrate \n`);
-  const migrateResult = spawnSync(command, ['drizzle-kit', 'migrate'], { stdio: 'inherit' });
+  console.log(`\n ⚡︎ ${[command, ...prefix].join(' ')} migrate \n`);
+  const migrateResult = spawnSync(command, [...prefix, 'migrate'], { stdio: 'inherit' });
   if (migrateResult.error || migrateResult.status !== 0) {
     throw new Error('drizzle-kit migrate failed');
   }
@@ -109,6 +110,48 @@ const listMigrations = () => {
   const dir = migrationsDir();
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir).filter((name) => fs.existsSync(path.join(dir, name, 'migration.sql')));
+};
+
+/** The snapshot drizzle-kit wrote beside a migration, when there is one. */
+const snapshotOf = (name?: string): Snapshot | undefined => {
+  if (!name) return undefined;
+  const file = path.join(migrationsDir(), name, 'snapshot.json');
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : undefined;
+};
+
+/**
+ * A drizzle-kit snapshot: each column is `{ entityType: 'columns', table, name }`, and each rename
+ * the migration made is `'pages.title->pages.heading'`.
+ */
+type Snapshot = { ddl: Dic[]; renames?: string[] };
+
+/** `table.column` of every column in a snapshot. */
+const columnsOf = (snapshot: Snapshot) =>
+  new Set(
+    snapshot.ddl
+      .filter((entity) => entity.entityType === 'columns')
+      .map((entity) => `${entity.table}.${entity.name}`)
+  );
+
+/**
+ * The columns of the tables a migration rebuilds that the new snapshot no longer has, a renamed
+ * one aside. A rebuild drops such a column by leaving it out of the copy, with no `DROP COLUMN`.
+ *
+ * ```ts
+ * rebuildLoss(sql, before, after) // ['column pages.summary (table rebuilt)']
+ * ```
+ */
+export const rebuildLoss = (sql: string, before: Snapshot, after: Snapshot) => {
+  const rebuilt = new Set(
+    [...sql.matchAll(/ALTER TABLE `__new_([^`]+)` RENAME TO/g)].map((match) => match[1])
+  );
+  const kept = columnsOf(after);
+  const renamed = new Set((after.renames ?? []).map((rename) => rename.split('->')[0]));
+  return [...columnsOf(before)]
+    .filter(
+      (column) => rebuilt.has(column.split('.')[0]) && !kept.has(column) && !renamed.has(column)
+    )
+    .map((column) => `column ${column} (table rebuilt)`);
 };
 
 /**

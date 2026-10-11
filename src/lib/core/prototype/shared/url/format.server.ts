@@ -1,11 +1,12 @@
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import type { GenericDoc } from '$lib/core/prototype/types.js';
-import { slugify } from '$lib/util/string.js';
+import { SITE_URL } from '$app/env/public';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
+import { slugify } from '#lib/util/string.js';
 
 /**
  * A page's url: `$url` with its path, slug, locale and document, made absolute against
- * `PUBLIC_RIME_URL`.
+ * `SITE_URL`.
  *
  * ```ts
  * formatUrl({ config, doc, path: 'services/web', locale: 'en' }) // 'https://site.test/en/services/web'
@@ -24,8 +25,7 @@ export const formatUrl = (args: {
   if (typeof url !== 'string') {
     throw new RimeError(RimeError.CONFIG_ERROR, `$url of ${config.slug} must answer a string`);
   }
-  const origin = process.env.PUBLIC_RIME_URL;
-  return origin ? new URL(url, origin).href : url;
+  return new URL(url, SITE_URL).href;
 };
 
 /** A slug made from any text: `'Web design!'` -> `'web-design'`. Empty when nothing is left. */

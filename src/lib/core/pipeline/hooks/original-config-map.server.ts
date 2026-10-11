@@ -1,5 +1,5 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { RimeError } from '$lib/core/errors/index.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { RimeError } from '#lib/core/errors/index.js';
 import { buildConfigMap } from '../config-map/index.js';
 
 /**
@@ -14,7 +14,10 @@ export const buildOriginalDocConfigMap = Hooks.beforeUpsert(
     const { originalDoc } = args.context;
 
     if (!originalDoc)
-      throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @buildDataConfigMap');
+      throw new RimeError(
+        RimeError.OPERATION_ERROR,
+        'missing originalDoc @buildOriginalDocConfigMap'
+      );
 
     const originalConfigMap = buildConfigMap(originalDoc, args.config.fields);
 

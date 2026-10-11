@@ -1,33 +1,20 @@
-import type { BuiltArea } from '$lib/core/config/types.js';
-import { runUpdate } from '$lib/core/pipeline/run.server.js';
-import type { OperationContext } from '$lib/core/pipeline/types.js';
-import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
-import type { AreaSlug, GenericDoc } from '$lib/core/prototype/types.js';
-import type { WithRelationInput } from '$lib/core/fields/types.js';
-import type { DeepPartial } from '$lib/util/types.js';
+import type { BuiltArea } from '#lib/core/config/types.js';
+import { runUpdate } from '#lib/core/pipeline/run.server.js';
+import type { OperationContext } from '#lib/core/pipeline/types.js';
+import type { PrototypeApiContext } from '#lib/core/prototype/define.js';
+import type { AreaSlug, GenericDoc } from '#lib/core/prototype/types.js';
+import type { UpdateArgs } from '#lib/core/prototype/shared/operations/update-args.js';
 
-export type UpdateArgs<T> = {
-  data: DeepPartial<WithRelationInput<T>>;
-  locale?: string | undefined;
-  versionId?: string;
-  /** Start from the newest version rather than the published one. `PARAMS.LATEST`. */
-  latest?: boolean;
-  /** Make a new version from the selected row rather than write it. `PARAMS.FORK`. */
-  fork?: boolean;
-  /** Write the caller's auto-saved row of the version `versionId` names. Panel only. */
-  autoSave?: boolean;
-  /** This write copies another locale's rows onto the row — see `copyLocales`. */
-  isLocaleCopy?: boolean;
-};
+export type { UpdateArgs };
 
 type Args<T> = UpdateArgs<T> & { ctx: PrototypeApiContext<BuiltArea> };
 
 /**
  * Updates an area's single document.
  *
- * The pipeline itself lives in operations/run.server.ts — shared with a collection's
- * updateById. Only the two prototype-specific pieces are here: which adapter method writes the
- * root row, and how the saved document is read back.
+ * The pipeline itself is `runUpdate` in `core/pipeline/run.server.ts` — shared with a
+ * collection's updateById. Only the two prototype-specific pieces are here: which adapter method
+ * writes the root row, and how the saved document is read back.
  */
 export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) => {
   const { ctx, locale, latest, fork, versionId, autoSave, isLocaleCopy } = args;
@@ -54,17 +41,18 @@ export const update = async <T extends GenericDoc = GenericDoc>(args: Args<T>) =
     locale,
     where: 'update',
 
-    // No `id`: an area's handle resolves its single row. See the collection's for the plan.
+    // No `id`: an area's handle resolves its single row. The plan says which rows this write
+    // touches.
     write: ({ plan, config }) => rime.adapter.area(config.slug).update({ ...plan, locale }),
 
     /**
-     * Read back **the row the write went to** — see the collection's `reread` for the full note.
+     * Read back **the row the write went to**.
      *
      * Not `versionId`, the caller's parameter: the hooks answer "which row holds the content" on
      * `context.contentOwnerId`, and on a new-version update that is a row the caller never named.
      */
     reread: ({ config, context }) =>
-      rime.area(config.slug).find({
+      rime.area(config.slug).system().find({
         locale,
         versionId: context.contentOwnerId
       }) as unknown as Promise<T>

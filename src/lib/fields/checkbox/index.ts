@@ -1,4 +1,4 @@
-import type { FormField } from '$lib/fields/types.js';
+import type { FormField } from '#lib/fields/types.js';
 import { BooleanFieldBuilder } from '../../core/fields/builders/boolean-builder.js';
 import Checkbox from './component/Checkbox.svelte';
 
@@ -8,7 +8,7 @@ export class CheckboxFieldBuilder extends BooleanFieldBuilder<CheckboxField> {
   }
 
   protected override generateType(): string {
-    return `${this.name}: boolean`;
+    return `${this.name}${this.get.required ? '' : '?'}: boolean`;
   }
 }
 

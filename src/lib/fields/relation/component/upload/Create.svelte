@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { BuiltCollection } from '$lib/core/config/types.js';
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import Doc from '$lib/panel/components/sections/document/Document.svelte';
-  import * as Sheet from '$lib/panel/components/ui/sheet/index.js';
+  import type { BuiltCollection } from '#lib/core/config/types.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import Doc from '#lib/panel/components/sections/document/Document.svelte';
+  import * as Sheet from '#lib/panel/components/ui/sheet/index.js';
 
   type Props = {
     open: boolean;

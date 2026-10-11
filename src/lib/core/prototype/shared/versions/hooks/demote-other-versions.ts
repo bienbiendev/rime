@@ -1,6 +1,6 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
-import { VersionOperations } from '$lib/core/prototype/shared/versions/strategy.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+import { VersionOperations } from '#lib/core/prototype/shared/versions/strategy.js';
 
 /**
  * Exactly one version of a document is published at a time, so publishing one steps the others
@@ -12,7 +12,7 @@ import { VersionOperations } from '$lib/core/prototype/shared/versions/strategy.
  * and it is left alone. An auto-save carries the status of the row it branched from and
  * publishes nothing, so it is left out.
  *
- * The two statements are not in a transaction (there are none in the adapter), so a reader
+ * This statement and the write `runUpdate` makes after it are not in one transaction, so a reader
  * between them sees the document with no published version.
  *
  * Isomorphic: it reaches the adapter through `event.locals`, so it imports nothing server-only

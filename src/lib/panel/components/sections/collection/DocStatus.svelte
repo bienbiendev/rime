@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
+  import { t__ } from '#lib/core/i18n/index.js';
   import {
     VERSIONS_STATUS,
     type VersionsStatus
-  } from '$lib/core/prototype/shared/versions/constant.js';
+  } from '#lib/core/prototype/shared/versions/constant.js';
   import StatusDot from './StatusDot.svelte';
 
   type Props = { status: VersionsStatus };

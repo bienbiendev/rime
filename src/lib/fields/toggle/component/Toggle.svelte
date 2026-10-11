@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import '$lib/panel/components/fields/setting.css';
-  import { Switch } from '$lib/panel/components/ui/switch/index.js';
-  import { slugify } from '$lib/util/string.js';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import '#lib/panel/components/fields/setting.css';
+  import { Switch } from '#lib/panel/components/ui/switch/index.js';
+  import { slugify } from '#lib/util/string.js';
   import type { ToggleProps } from './props.js';
 
   const { path, config, form }: ToggleProps = $props();

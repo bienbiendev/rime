@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { capitalize } from '$lib/util/string.js';
-  import { ToyBrick } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { capitalize } from '#lib/util/string.js';
+  import ToyBrick from '@lucide/svelte/icons/toy-brick';
   import type { Snippet } from 'svelte';
   import type { LayerRow } from './focus.svelte.js';
 

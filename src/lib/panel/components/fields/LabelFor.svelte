@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { FormFieldBuilder } from '$lib/fields/index.js';
-  import type { FormField } from '$lib/fields/types.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
+  import type { FormFieldBuilder } from '#lib/fields/index.js';
+  import type { FormField } from '#lib/fields/types.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
   import { Label } from '../ui/label/index.js';
 
   type Props = { config: FormFieldBuilder<FormField>; for: string };

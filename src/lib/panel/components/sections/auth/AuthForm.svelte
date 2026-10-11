@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Toaster } from '$lib/panel/components/ui/sonner';
+  import { Toaster } from '#lib/panel/components/ui/sonner/index.js';
   import type { Snippet } from 'svelte';
 
   type Props = {
@@ -11,11 +11,7 @@
 </script>
 
 <Toaster />
-<div
-  class="rz-auth"
-  class:rz-auth--image={!!image}
-  style={image ? `background-image:url(${image})` : null}
->
+<div class="rz-auth" style={image ? `background-image:url(${image})` : null}>
   <div class="rz-auth__left"></div>
   <div class="rz-auth__right">
     <div>
@@ -97,9 +93,5 @@
     @media (min-width: 1024px) {
       display: block;
     }
-  }
-
-  .rz-auth.rz-auth--image {
-    background-size: cover;
   }
 </style>

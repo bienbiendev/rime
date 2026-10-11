@@ -9,7 +9,7 @@ import {
   tab,
   text,
   tree
-} from '$lib/fields/index.js';
+} from '#lib/fields/index.js';
 
 const blockKeyFacts = block('keyFacts').fields(
   tree('facts')

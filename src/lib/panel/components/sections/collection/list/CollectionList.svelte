@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
+  import type { CollectionContext } from '#lib/panel/context/collection.svelte.js';
   import Empty from '../Empty.svelte';
   import Folders from '../folder/Folders.svelte';
   import { listColumns } from './columns.js';

@@ -1,7 +1,6 @@
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import type { CollectionSlug } from '$lib/core/prototype/types.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import type { CollectionSlug } from '#lib/core/prototype/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import { withVersionsSuffix } from './naming.js';
 
 /**
  * Deletes a user's auto-saved rows — of one document, or of every document of the config when
@@ -18,9 +17,9 @@ export const retireAutoSaves = async (args: {
   keep?: string;
 }): Promise<string[]> => {
   const { event, config, docId, userId, keep } = args;
-  if (!config.versions?.autoSave) return [];
+  if (!config.versions?.autoSave || !config._versions) return [];
 
-  const versionsSlug = withVersionsSuffix(config.slug) as CollectionSlug;
+  const versionsSlug = config._versions.slug as CollectionSlug;
 
   return event.locals.rime
     .collection(versionsSlug)

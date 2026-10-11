@@ -2,12 +2,11 @@ import type {
   BuiltAreaClient,
   BuiltCollectionClient,
   BuiltConfigClient
-} from '$lib/core/config/types.js';
-import type { Prototype, PrototypeSlug } from '$lib/core/prototype/types.js';
+} from '#lib/core/config/types.js';
+import type { Prototype, PrototypeSlug } from '#lib/core/prototype/types.js';
 import { getContext, setContext } from 'svelte';
 
 function createConfigStore(config: BuiltConfigClient) {
-  //
   function getArea(slug: string): BuiltAreaClient {
     return config.areas.filter((c) => c.slug === slug)[0];
   }
@@ -24,7 +23,6 @@ function createConfigStore(config: BuiltConfigClient) {
     get raw() {
       return config;
     },
-    getArea,
     getCollection,
     getDocumentConfig
   };

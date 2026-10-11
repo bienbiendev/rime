@@ -1,21 +1,22 @@
 <script lang="ts">
-  import * as random from '$lib/util/random.js';
-  import { Editor, type JSONContent } from '@tiptap/core';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { Editor, getSchema, type JSONContent } from '@tiptap/core';
   import { onMount } from 'svelte';
   import EditorBubbleMenu from '../component/bubble-menu/bubble-menu.svelte';
-  import { setRichTextContext } from '../component/context.svelte.js';
+  import { createRichTextState } from '../component/context.svelte.js';
   import DragHandler from '../component/drag-handle/drag-handle.svelte';
   import '../component/styles/editor.css';
   import Suggestion from '../component/suggestion/suggestion.svelte';
   import { hasSuggestion } from '../util.js';
   import { buildEditorConfig } from './build-editor-config.js';
+  import { editorContent } from './content.js';
   import { defaultFeatures } from './features/index.js';
   import type { RichTextFeature } from './types.js';
 
   type Props = {
     path: string;
     features?: RichTextFeature[];
-    value?: JSONContent | null;
+    value?: JSONContent | string | null;
     editable?: boolean;
     error?: boolean;
     class?: string;
@@ -36,24 +37,27 @@
 
   let editor = $state<Editor>();
   let features = $state<RichTextFeature[]>([]);
-  const instanceId = random.randomId(8);
 
-  const ctx = setRichTextContext(instanceId);
+  const ctx = createRichTextState();
 
   const withSuggestion = $derived(hasSuggestion(wanted));
 
-  // The editor starts with its content, and goes with the component.
+  /** The node and mark types of the value that the features do not register. */
+  let unsupported = $state<string[]>([]);
+
+  // The editor starts with its content, and goes with the component. A value it cannot hold
+  // whole stays read-only, so no edit saves over it.
   onMount(() => {
     const richTextEditorConfig = buildEditorConfig({ features: wanted });
     features = richTextEditorConfig.features;
-    const options = { ...richTextEditorConfig.tiptap, element, editable };
-
-    try {
-      editor = new Editor({ ...options, content: value?.content ? value : undefined });
-    } catch (err) {
-      console.log(err);
-      editor = new Editor(options);
-    }
+    const opened = editorContent(value, getSchema(richTextEditorConfig.tiptap.extensions ?? []));
+    unsupported = opened.unsupported;
+    editor = new Editor({
+      ...richTextEditorConfig.tiptap,
+      element,
+      editable: editable && !unsupported.length,
+      content: opened.doc
+    });
 
     editor.on('update', ({ editor }) => {
       onUpdate?.(editor.getJSON());
@@ -67,7 +71,12 @@
   $effect(() => {
     if (!editor) return;
     if (JSON.stringify(value ?? null) === JSON.stringify(editor.getJSON())) return;
-    editor.commands.setContent(value?.content ? value : '', { emitUpdate: false });
+    const opened = editorContent(value, editor.schema);
+    // Read from `opened`, not the state: reading `unsupported` here would rerun this effect
+    unsupported = opened.unsupported;
+    // `false`: switching back to editable emits no update, which would save the opened copy
+    editor.setEditable(editable && !opened.unsupported.length, false);
+    editor.commands.setContent(opened.doc ?? '', { emitUpdate: false });
   });
 </script>
 
@@ -79,7 +88,13 @@
     class="rz-rich-text__editor {className ?? ''}"
   ></div>
 
-  {#if editor && editor.isEditable}
+  {#if unsupported.length}
+    <p class="rz-rich-text__unsupported">
+      {t__('fields.rich_text_unsupported', unsupported.join(', '))}
+    </p>
+  {/if}
+
+  {#if editor && editor.isEditable && !unsupported.length}
     <DragHandler {editor} />
 
     {#if withSuggestion}
@@ -99,5 +114,11 @@
         border-top: 1px solid var(--rz-fg);
       }
     }
+  }
+
+  .rz-rich-text__unsupported {
+    margin-top: var(--rz-size-2);
+    color: var(--rz-fg-muted);
+    font-size: var(--rz-text-sm);
   }
 </style>

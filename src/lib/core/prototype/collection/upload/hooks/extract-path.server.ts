@@ -1,12 +1,11 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { trycatchSync } from '$lib/util/function.js';
-import { getSegments } from '$lib/core/prototype/collection/upload/util/path.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { trycatchSync } from '#lib/util/function.js';
+import { getSegments } from '#lib/core/prototype/collection/upload/util/path.js';
 
 /**
- * Hook executed before save/update operations on {uploadSlug}_directories collections
- * the function normalize and validate path ({slug}_directories.id).
- * Then extract parent, name from the given path.
+ * Runs before a create or update on a `$<slug>Directories` collection: normalises and validates
+ * the path in `id`, then derives `parent` and `name` from it.
  */
 export const exctractPath = Hooks.beforeUpsert<'directory'>(async function exctractPath(args) {
   let data = args.data;

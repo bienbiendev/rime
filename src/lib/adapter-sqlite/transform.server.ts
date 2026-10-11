@@ -1,8 +1,9 @@
-import type { DocumentRows } from '$lib/core/adapter.js';
-import type { Config } from '$lib/core/config/types.js';
-import type { GenericBlock, PrototypeSlug, RawDoc } from '$lib/core/prototype/types.js';
-import type { ConfigContext } from '$lib/core/rime.server.js';
-import type { Dic } from '$lib/util/types.js';
+import { junctionTarget } from './naming.server.js';
+import type { DocumentRows } from '#lib/core/adapter.js';
+import type { Config } from '#lib/core/config/types.js';
+import type { GenericBlock, PrototypeSlug, RawDoc } from '#lib/core/prototype/types.js';
+import type { ConfigContext } from '#lib/core/rime.server.js';
+import type { Dic } from '#lib/util/types.js';
 import { getTableColumns } from 'drizzle-orm';
 import { flatten } from 'flat';
 import { logger } from '../core/logger.server.js';
@@ -17,7 +18,7 @@ import {
 } from './naming.server.js';
 import { databaseColumnToPath, transformDatabaseColumnsToPaths } from './columns.server.js';
 import { localeOrder, mergeLocaleRows } from './locales.server.js';
-import { resolvedReferencesOf } from '$lib/core/fields/util.js';
+import { resolvedReferencesOf } from '#lib/core/fields/util.js';
 
 /**
  * Turns the rows a read returned into the four piles core builds a document from.
@@ -34,11 +35,9 @@ export const createTransformHandle = <const C extends Config>(args: {
   const { configCtx, tables } = args;
 
   /**
-   * Merges a child row's locales branch onto it — the rows the read returned, one per locale in
-   * the fallback order, each column from the first that holds it — and nulls the localized
-   * columns no locale has saved yet: a localized block fetched in a locale it was never written
-   * in reads as absent columns otherwise: the empty fields a read adds stop at the list, and never
-   * reach into a block.
+   * Merges a child row's locales branch onto it: one branch row per locale in fallback order,
+   * each column from the first that holds it. Localized columns no locale has saved come back
+   * `null` rather than absent, because the empty fields a read adds do not reach into a block.
    */
   const withLocalesBranch = (row: Dic, branchTable: TableName, order: string[]): Dic => {
     const merged = {
@@ -119,8 +118,9 @@ export const createTransformHandle = <const C extends Config>(args: {
           if (locale && branchTable in tables) node = withLocalesBranch(node, branchTable, order);
 
           return [omit([branchTable], transformDatabaseColumnsToPaths(node))];
-        } catch {
-          logger.error('error in ', node.path);
+        } catch (error) {
+          // A node that cannot be read is left out, not the whole read
+          logger.error(`tree node ${node.id} at ${node.path} left out of the read`, error);
           return [];
         }
       });
@@ -162,21 +162,25 @@ export const createTransformHandle = <const C extends Config>(args: {
     for (const [key, value] of Object.entries(doc)) {
       if (childTables.has(key)) continue;
       if (isObjectLiteral(value) || Array.isArray(value)) {
+        const path = databaseColumnToPath(key);
         for (const [flatKey, flatValue] of Object.entries(flatten<Dic, Dic>({ [key]: value }))) {
-          base[databaseColumnToPath(flatKey)] = flatValue;
+          // The column becomes its path; the keys inside the JSON value stay as written
+          base[path + flatKey.slice(key.length)] = flatValue;
         }
       } else {
         base[databaseColumnToPath(key)] = value;
       }
     }
 
-    // The page's address in the locale read: `url`, `_urlPath` and `_slug` on the document. Not
-    // `_path`, which an upload collection already names.
+    // The document's address in the locale read: `url`, and for a page `_urlPath` and `_slug`.
+    // Not `_path`, which an upload collection already names.
     if (tableNamePaths in doc) {
       const [address] = (doc[tableNamePaths] as Dic[] | undefined) ?? [];
       base.url = address?.url ?? null;
-      base._urlPath = address?.path ?? null;
-      base._slug = address?.slug ?? null;
+      if (configCtx.getBySlug(slug).type === 'collection') {
+        base._urlPath = address?.path ?? null;
+        base._slug = address?.slug ?? null;
+      }
     }
 
     return { base, blocks, tree, relations };
@@ -192,19 +196,20 @@ export const createTransformHandle = <const C extends Config>(args: {
  * — and exactly one is set. That shape is the adapter's; `relationTo` and `documentId` are what
  * core reads. Null columns go with it, including the other targets'.
  */
-const resolveRelationTarget = (relation: Dic): Dic => {
-  const targetKey = Object.keys(relation).filter(
-    (key) => key.endsWith('Id') && key !== 'ownerId' && relation[key] !== null
-  )[0];
+export const resolveRelationTarget = (relation: Dic): Dic => {
+  const targetKey = Object.keys(relation).find(
+    (key) => junctionTarget(key) && relation[key] !== null
+  );
 
   // No target column set: an orphan. Left as it came so core can name it in the warning.
   if (!targetKey || !relation[targetKey]) return relation;
 
   for (const key of Object.keys(relation)) {
+    const target = junctionTarget(key);
     if (relation[key] === null) {
       delete relation[key];
-    } else if (key.endsWith('Id') && key !== 'ownerId') {
-      relation.relationTo = key.replace('Id', '');
+    } else if (target) {
+      relation.relationTo = target;
       relation.documentId = relation[key];
       delete relation[key];
     }

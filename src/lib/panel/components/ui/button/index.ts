@@ -25,7 +25,5 @@ type Props = PrimitiveButtonAttributes &
 export {
   //
   Root as Button,
-  Root,
-  type Props as ButtonProps,
   type Props
 };

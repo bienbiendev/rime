@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { TextFieldBuilder } from '$lib/fields/text/index.js';
-  import type { BlockRenderProps } from '$lib/fields/types.js';
-  import { TextInline } from '$lib/panel/index.js';
+  import type { TextFieldBuilder } from '#lib/fields/text/index.js';
+  import type { BlockRenderProps } from '#lib/fields/types.js';
+  import { TextInline } from '#lib/panel/index.js';
 
   const { path, fields, form, children }: BlockRenderProps = $props();
   const title = $derived(fields.find((field) => field.name === 'title') as TextFieldBuilder);

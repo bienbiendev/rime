@@ -54,9 +54,6 @@ export const mimeTypesMap: Record<string, string[]> = {
   'font/otf': ['otf'],
   'font/woff': ['woff'],
   'font/woff2': ['woff2']
-
-  // Others
-  // 'application/octet-stream': ['bin']
 } as const;
 
 export function getExtensionFromMimeType(mimeType: string): string | null {

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import Button from '../../ui/button/button.svelte';
   import type { ButtonSize, ButtonVariant } from '../../ui/button/index.js';
   import SpinLoader from '../../ui/spin-loader/SpinLoader.svelte';
@@ -15,23 +15,9 @@
 
   const label = $derived(form.values.id ? t__('common.save') : t__('common.create'));
 
-  /**
-   * What the save does, said on the button and read off the submitter by the form:
-   *
-   * ```
-   * no versions                       save in place
-   * versions, no draft                data-fork: a version per save
-   * versions and draft, published     data-status: the save keeps it published
-   * versions and draft, draft         save the draft
-   * ```
-   *
-   * `data-submit` is how ⌘S and the settings menu find the button.
-   */
-  const versions = $derived(form.config.versions);
-  const fork = $derived(!!versions && !versions.draft);
-  const status = $derived(
-    versions && versions.draft && form.values.status === 'published' ? 'published' : undefined
-  );
+  // The form's plain save, written on the button. `data-submit` is how ⌘S and the settings menu
+  // find the button.
+  const intent = $derived(form.saveIntent);
 </script>
 
 <Button
@@ -41,8 +27,8 @@
   type="submit"
   disabled={!form.canSubmit}
   data-submit
-  data-fork={fork ? '' : undefined}
-  data-status={status}
+  data-fork={intent.fork ? 'true' : undefined}
+  data-status={intent.status}
 >
   {#if form.processing}
     <SpinLoader />

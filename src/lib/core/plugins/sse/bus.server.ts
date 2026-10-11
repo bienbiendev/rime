@@ -9,12 +9,29 @@ import type { SSEAccess } from './types.js';
  * everything. In memory, so an event reaches the clients this process is serving and no further.
  */
 
-type Client = { writer: WritableStreamDefaultWriter<string>; keys: Set<string> };
+type Client = {
+  writer: WritableStreamDefaultWriter<string>;
+  keys: Set<string>;
+  /** Forgets the client and ends its stream, unread frames included. */
+  leave: () => void;
+};
 
 const clients = new Set<Client>();
 
 /** Long enough to be cheap, short enough to beat the usual proxy idle timeout. */
 const KEEP_ALIVE_MS = 30_000;
+
+/** How many frames a client may leave unread before the server drops it. */
+const MAX_QUEUED_FRAMES = 100;
+
+/** Writes a frame, or drops the client when it has stopped reading. */
+const send = (client: Client, frame: string) => {
+  if ((client.writer.desiredSize ?? 0) <= 0) {
+    client.leave();
+    return;
+  }
+  void client.writer.write(frame).catch(client.leave);
+};
 
 /**
  * Sends one event to every client listening on `key`.
@@ -28,8 +45,7 @@ export const emit = (key: string, event: string, payload: Record<string, any> = 
   const frame = `data: ${JSON.stringify({ event, payload })}\n\n`;
 
   for (const client of clients) {
-    if (!client.keys.has(key)) continue;
-    void client.writer.write(frame).catch(() => clients.delete(client));
+    if (client.keys.has(key)) send(client, frame);
   }
 };
 
@@ -56,29 +72,31 @@ export const connect = (access: SSEAccess): RequestHandler => {
       if (!allowed(key, locals.user)) error(403);
     }
 
-    const { readable, writable } = new TransformStream<string, string>();
+    // A bounded queue: a client that stops reading fills it, and is dropped rather than queue
+    // every event in memory
+    const { readable, writable } = new TransformStream<string, string>(undefined, {
+      highWaterMark: MAX_QUEUED_FRAMES
+    });
     const writer = writable.getWriter();
-    const client: Client = { writer, keys };
+    const client: Client = { writer, keys, leave };
     clients.add(client);
 
     // A comment frame, so the client's `onopen` fires before the first real event.
-    // Every write and the close are caught: a client that goes away mid-write rejects, and an
+    // Every write and the abort are caught: a client that goes away mid-write rejects, and an
     // uncaught one takes the process down rather than just dropping that client.
-    void writer.write(`: open ${new Date().toISOString()}\n\n`).catch(leave);
+    send(client, `: open ${new Date().toISOString()}\n\n`);
 
-    const keepAlive = setInterval(() => {
-      void writer.write(`: keep-alive\n\n`).catch(leave);
-    }, KEEP_ALIVE_MS);
+    const keepAlive = setInterval(() => send(client, `: keep-alive\n\n`), KEEP_ALIVE_MS);
 
     function leave() {
       clearInterval(keepAlive);
       clients.delete(client);
+      // Abort, not close: a close waits for the queued frames to be read, which a stalled client
+      // never does
+      void writer.abort().catch(() => {});
     }
 
-    request.signal.addEventListener('abort', () => {
-      leave();
-      void writer.close().catch(() => {});
-    });
+    request.signal.addEventListener('abort', leave);
 
     return new Response(readable, {
       headers: {

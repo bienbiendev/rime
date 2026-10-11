@@ -1,8 +1,9 @@
-import { RimeFormError } from '$lib/core/errors/index.js';
+import { RimeFormError } from '#lib/core/errors/index.js';
 
 /**
  * Validates a password string against security requirements.
- * Checks for minimum length, lowercase, uppercase, numbers, and special characters.
+ * Checks for minimum length, lowercase, uppercase, numbers, and a special character: anything that
+ * is not a letter or a digit.
  *
  * @example
  * // Returns true for a valid password
@@ -23,7 +24,7 @@ export const password = (value: unknown) => {
     return RimeFormError.PASSWORD_UPPERCASE_MISSING;
   } else if (!/\d/.test(value)) {
     return RimeFormError.PASSWORD_NUMBER_MISSING;
-  } else if (!/[#.?"'(§)_=!+:;@$%^&*-]/.test(value)) {
+  } else if (!/[^a-zA-Z0-9]/.test(value)) {
     return RimeFormError.PASSWORD_SPECIAL_CHAR_MISSING;
   }
   return true;
@@ -44,20 +45,17 @@ export const email = (value: unknown) => {
   if (typeof value !== 'string') {
     return RimeFormError.NOT_A_STRING;
   }
-  // This regex ensures:
-  // 1. Starts with letter/number
-  // 2. Can contain .-_ between letters/numbers
-  // 3. Can't have consecutive dots
-  // 4. Can't end with .-_ before @
-  if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?@[^\s@]+\.[^\s@]+$/.test(value)) {
+  // The part before the @ is words of letters, digits and !#$%&'*+/=?^_`{|}~-
+  // joined by single dots: ann+news@x.com and o'brien@x.io pass, a..b@x.io and .a@x.io do not.
+  if (!/^[\w!#$%&'*+/=?^`{|}~-]+(?:\.[\w!#$%&'*+/=?^`{|}~-]+)*@[^\s@]+\.[^\s@]+$/.test(value)) {
     return RimeFormError.INVALID_EMAIL;
   }
   return true;
 };
 
 /**
- * Validates a telephone number string.
- * Ensures the phone number contains only digits, spaces, and the plus sign.
+ * Validates a telephone number string: an optional leading `+`, digits, and spaces, dots, dashes
+ * or parentheses between them.
  *
  * @example
  * // Returns true for a valid phone number
@@ -70,7 +68,7 @@ export const tel = (value: unknown) => {
   if (typeof value !== 'string') {
     return RimeFormError.NOT_A_STRING;
   }
-  if (!/^[+\d\s]+$/.test(value)) {
+  if (!/^\+?[\d\s().-]+$/.test(value) || !/\d/.test(value)) {
     return RimeFormError.INVALID_PHONE;
   }
   return true;
@@ -127,17 +125,24 @@ export const slug = (value: unknown) => {
 
 /**
  * Validates a link object with different validation based on link type.
- * Supports tel, email, url, and anchor link types.
+ * Supports tel, email, url, and anchor link types. A value that is not an object is refused, and
+ * so is a type the field's `types` do not name, when the field is given.
  *
  * @example
  * // Returns true for a valid email link
  * link({ type: 'email', value: 'user@example.com' });
  *
  * // Returns an error string for an invalid URL link
- * link({ type: 'url', value: 'invalid-url' }); // Returns "url::INVALID_URL"
+ * link({ type: 'url', value: 'invalid-url' }); // Returns "url::invalid_url"
+ *
+ * link(null); // Returns RimeFormError.INVALID_FIELD
+ * link({ type: 'other', value: 'x' }, { config: { types: ['url'] } }); // RimeFormError.INVALID_FIELD
  */
-export const link = (link: any) => {
-  const { type, value } = link;
+export const link = (link: unknown, context?: { config?: { types?: string[] } }) => {
+  if (!link || typeof link !== 'object') return RimeFormError.INVALID_FIELD;
+  const { type, value } = link as { type?: string; value?: string };
+  const types = context?.config?.types;
+  if (types && !types.includes(type ?? '')) return RimeFormError.INVALID_FIELD;
   if (value === '') return true;
 
   if (type === 'tel') {

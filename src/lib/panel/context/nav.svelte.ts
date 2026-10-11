@@ -1,6 +1,6 @@
 import { getContext, setContext } from 'svelte';
 
-export const NAV_CTX = 'rime.nav';
+const NAV_CTX = 'rime.nav';
 
 const STORAGE_KEY = 'rz-panel-collapsed';
 /** Under this width the navigation is folded whatever was chosen. */
@@ -58,7 +58,7 @@ export function setNavContext() {
   return setContext(NAV_CTX, store);
 }
 
-export type NavStore = ReturnType<typeof setNavContext>;
+type NavStore = ReturnType<typeof setNavContext>;
 
 /** The navigation, or nothing on a page without one: the live edit page. */
 export const getNavContext = () => getContext<NavStore | undefined>(NAV_CTX);

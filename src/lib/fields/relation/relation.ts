@@ -1,5 +1,5 @@
-import type { RelationRef, RelationValue } from '$lib/fields/types.js';
-import { isObjectLiteral } from '$lib/util/object.js';
+import type { RelationRef, RelationValue } from '#lib/fields/types.js';
+import { isObjectLiteral } from '#lib/util/object.js';
 import { fetchDoc } from './fetch.js';
 
 type Resolution<T> = {
@@ -30,16 +30,19 @@ const livePreviewOf = (ref: RelationRef) => (ref as { livePreview?: unknown }).l
  * `first()` and `all()` answer the documents themselves when nothing has to be fetched, and a
  * promise otherwise; `await` and `{#await}` take either. A ref that cannot be fetched is left out.
  * During server rendering a ref is not fetched: its promise stays pending, and the browser fetches
- * it once the page hydrates.
+ * it once the page hydrates. A ref is fetched in `options.locale`, the default locale without one.
  *
  * ```svelte
  * {#await Relation.resolve(block.image).first() then image}
  *   {#if image}<img src={image.sizes.md} alt={image.alt} />{/if}
  * {/await}
+ * <!-- `doc` read in fr: its author in fr too -->
+ * {#await Relation.resolve(doc.author, { locale: doc.locale }).first() then author}
  * ```
  */
 function resolve<T>(
-  value: RelationValue<T> | T | RelationRef | null | undefined | false
+  value: RelationValue<T> | T | RelationRef | null | undefined | false,
+  options: { locale?: string } = {}
 ): Resolution<T> {
   const entries = (Array.isArray(value) ? value : [value]).filter(
     (entry) => isRef(entry) || isDocument(entry)
@@ -55,7 +58,7 @@ function resolve<T>(
     return Promise.all(
       entries.map((entry) =>
         toFetch(entry)
-          ? (fetchDoc(entry.relationTo, entry.documentId) as Promise<T | null>)
+          ? (fetchDoc(entry.relationTo, entry.documentId, options.locale) as Promise<T | null>)
           : read(entry)
       )
     ).then((docs) => docs.filter((doc): doc is Awaited<T> => !!doc) as T[]);

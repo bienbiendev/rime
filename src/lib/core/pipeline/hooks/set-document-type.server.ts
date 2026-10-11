@@ -1,7 +1,8 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
 
 /**
- * Puts `_prototype` and `_type` on the document — `'collection'` and its slug.
+ * Puts `_prototype` and `_type` on the document: the config's type (`'collection'` or `'area'`) and
+ * its slug.
  *
  * Skipped entirely under a `select`: a caller naming the fields they want has not asked for these.
  */

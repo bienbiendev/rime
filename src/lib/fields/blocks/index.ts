@@ -2,18 +2,25 @@ import type {
   FieldBuilder,
   FieldNode,
   ValueNode
-} from '$lib/core/fields/builders/field-builder.js';
+} from '#lib/core/fields/builders/field-builder.js';
 import {
   FormFieldBuilder,
   type FormFieldUse
-} from '$lib/core/fields/builders/form-field-builder.js';
-import type { CompletesDefault } from '$lib/core/fields/complete.js';
-import type { WithoutBuilders } from '$lib/core/fields/types.js';
-import type { GenericBlock } from '$lib/core/prototype/types.js';
-import type { DefaultOptions, DefaultValueFn, Field, FormField } from '$lib/fields/types.js';
-import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-import { toPascalCase, joinMemberTypes } from '$lib/util/string.js';
-import type { Dic } from '$lib/util/types.js';
+} from '#lib/core/fields/builders/form-field-builder.js';
+import type { CompletesDefault } from '#lib/core/fields/complete.js';
+import type { WithoutBuilders } from '#lib/core/fields/types.js';
+import type { GenericBlock } from '#lib/core/prototype/types.js';
+import { RimeFormError } from '#lib/core/errors/index.js';
+import type {
+  DefaultOptions,
+  DefaultValueFn,
+  Field,
+  FieldValidationFunc,
+  FormField
+} from '#lib/fields/types.js';
+import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+import { toPascalCase, joinMemberTypes } from '#lib/util/string.js';
+import type { Dic } from '#lib/util/types.js';
 import type { IconProps } from '@lucide/svelte';
 import type { RequestEvent } from '@sveltejs/kit';
 import dedent from 'dedent';
@@ -22,9 +29,17 @@ import { number } from '../number/index.js';
 import { text } from '../text/index.js';
 import Blocks from './component/Blocks.svelte';
 import Cell from './component/Cell.svelte';
+import { isEmptyList, localizeRepeatableFields } from '../repeatable.js';
 import { completeBlocks, type BlockDefault } from './defaults.js';
 
 export const blocks = (name: string, blocks: BlockBuilder[]) => new BlocksBuilder(name, blocks);
+
+/** Each item names a block type of the list: another type has no table to be stored in. */
+const ensureDeclaredTypes: FieldValidationFunc<BlocksField> = (value, { config }) => {
+  if (!Array.isArray(value)) return true;
+  const declared = config.blocks.map((block) => block.name);
+  return value.every((item) => declared.includes(item?.type)) || RimeFormError.UNKNOWN_BLOCK;
+};
 
 export const block = (name: string) => new BlockBuilder(name);
 
@@ -33,9 +48,8 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
     super(name, 'blocks');
     this.field.blocks = blocks;
     this.field.defaultValue = [];
-    this.field.isEmpty = (value) => {
-      return !value || (Array.isArray(value) && value.length === 0);
-    };
+    this.field.isEmpty = isEmptyList;
+    this.field.validate = ensureDeclaredTypes;
   }
 
   get component() {
@@ -55,9 +69,9 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
   }
 
   /**
-   * The blocks a new document starts with, and a block inserted in the panel when the list sits
-   * inside it. Each names its `type` and the values it starts with; the rest comes from its
-   * fields.
+   * The blocks a new document starts with. When this list sits inside a block, a block inserted in
+   * the panel starts with them too. Each names its `type` and the values it starts with; the rest
+   * comes from its fields.
    *
    * ```ts
    * blocks('sections', [paragraph, grid]).defaultValue([
@@ -86,36 +100,26 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
     };
   }
 
+  /**
+   * The list and its blocks' content fields, localized. The list gets its own copies of its block
+   * types: a block shared with another list stays as it is.
+   */
   localized() {
     if (this.field.blocks.length === 0) {
-      throw new Error('localized() must be called after blocks assignment');
+      throw new Error('localized() needs at least one block type');
     }
     this.field.localized = true;
 
-    // Set all descendant fields localized
+    // A block's own members are not content: type, position, path and locale stay as they are
     this.field.blocks = this.field.blocks.map((blockBuilder) => {
-      // Add a locale prop in each block
-      const hasAlreadyLocale = blockBuilder.block.fields.some((field) => field.name === 'locale');
-      if (!hasAlreadyLocale) {
-        blockBuilder.block.fields.push(text('locale').hidden());
-      }
-      // In each block process fields
-      blockBuilder.block.fields = blockBuilder.block.fields.map((field) => {
-        // A block's own members are not content: type, position, path and locale stay as they are.
-        if (['position', 'type', 'path', 'locale'].includes(field.name)) {
-          return field;
-        }
-        // For all others fields set as localized
-        if ('localized' in field && field instanceof FormFieldBuilder) {
-          // Clone to prevent localizing a field used elsewhere
-          const fieldClone = field.clone();
-          fieldClone.localized();
-          return fieldClone;
-        }
-        return field;
-      });
-
-      return blockBuilder;
+      const copy = blockBuilder.clone();
+      copy.block.fields = localizeRepeatableFields(blockBuilder.block.fields, [
+        'position',
+        'type',
+        'path',
+        'locale'
+      ]);
+      return copy;
     });
 
     return this;
@@ -139,7 +143,7 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
       .map((block) => {
         const blockTypeName = `Block${toPascalCase(block.name)}`;
         blockNames.push(blockTypeName);
-        // `type` is written above as the block's name, so its hidden field stays out.
+        // The template below writes `type` as the block's name, so its hidden field stays out.
         const fields = block.get.fields.filter((f) => f.name !== 'type');
         const fieldsType = joinMemberTypes(fields.map((f) => f.use.generateType()));
 
@@ -184,16 +188,6 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
   }
 }
 
-/**
- * Checks if a field is a blocks field.
- */
-export const isBlocksField = (field: Field): field is BlocksField => field.type === 'blocks';
-
-/**
- * Checks if a field is a blocks field (raw type).
- */
-export const isBlocksFieldRaw = (field: Field): field is BlocksFieldRaw => field.type === 'blocks';
-
 export class BlockBuilder {
   block: BlocksFieldBlock;
 
@@ -206,7 +200,7 @@ export class BlockBuilder {
   /**
    * Sets the icon, must be a @lucide/svelte component
    * @example
-   * import { Home } from '@lucide/svelte'
+   * import Home from '@lucide/svelte/icons/home'
    * block('home').icon(Home)
    */
   icon(component: Component<IconProps>) {
@@ -231,8 +225,9 @@ export class BlockBuilder {
   }
   /**
    * The component drawn for the block on the stage of focus mode.
-   * It gets the block value, its path, its fields and the form, so it can show the value,
-   * read its relations with `Relation.resolve` and mount panel fields with `RenderFields`.
+   * It gets the block value, its path, its fields, the form and the locale the document is edited
+   * in, so it can show the value, read its relations in that locale with
+   * `Relation.resolve(block.image, { locale })` and mount panel fields with `RenderFields`.
    *
    * `controls: false` drops the bar above the selected block, for a small one like a button.
    * Keys, ⌘K and the layers still move, duplicate and remove it.
@@ -258,6 +253,13 @@ export class BlockBuilder {
     return this;
   }
 
+  /** A copy with its own list of fields: the fields themselves are shared. */
+  clone() {
+    const copy = new BlockBuilder(this.block.name);
+    copy.block = { ...this.block, fields: [...this.block.fields] };
+    return copy;
+  }
+
   get get() {
     return { ...this.block };
   }
@@ -276,7 +278,6 @@ export class BlockBuilder {
 /****************************************************/
 export type BlocksField = FormField & {
   type: 'blocks';
-  tree?: boolean;
   /** `summary`: one row in the form, the blocks edited in focus mode. */
   layout?: 'default' | 'summary';
   blocks: BlockBuilder[];
@@ -286,17 +287,19 @@ export type BlocksFieldBlockRenderTitle = (args: { values: Dic; position: number
 
 /** What a block's render component receives. */
 export type BlockRenderProps = {
-  /** The block value; read a relation with `Relation.resolve(block.image).first()`. */
+  /** The block value; read a relation with `Relation.resolve(block.image, { locale }).first()`. */
   block: GenericBlock;
   /** `layout.sections.0` */
   path: string;
   /** The block's field builders, for `RenderFields`. */
   fields: FieldBuilder<Field>[];
   form: DocumentFormContext;
+  /** The locale the document is edited in, `undefined` without localization. */
+  locale: string | undefined;
   /**
-   * The block's nested lists, each block in its own selectable wrapper, `.rz-renders`, and a `+`
-   * after them, `.rz-renders__add`. `children('items')` draws one list; `class` names its wrapper,
-   * for the render to lay it out.
+   * The block's nested lists. Each list is a `.rz-renders`, each block in it a selectable
+   * `.rz-renders__item`, and a `+` follows them, `.rz-renders__add`. `children('items')` draws one
+   * list; `class` names its `.rz-renders`, for the render to lay it out.
    * @example
    * {@render children?.('items', { class: 'cards' })}
    *
@@ -317,11 +320,4 @@ export type BlocksFieldBlock = {
   /** `false`: no bar above the block when it is selected on the stage. */
   controls?: boolean;
   fields: FieldBuilder<Field>[];
-};
-
-export type BlocksFieldRaw = FormField & {
-  type: 'blocks';
-  tree?: boolean;
-  layout?: 'default' | 'summary';
-  blocks: WithoutBuilders<BlocksFieldBlock>[];
 };

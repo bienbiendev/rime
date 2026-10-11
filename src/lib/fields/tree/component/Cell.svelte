@@ -1,23 +1,21 @@
 <script lang="ts">
-  type Dic = Record<string, any>;
+  import { t__ } from '#lib/core/i18n/index.js';
 
-  type Props = {
-    value: Dic | null;
-  };
+  type Item = { _children?: Item[] };
+  const { value }: { value: Item[] | null } = $props();
 
-  const { value }: Props = $props();
-
-  const blockCount = $derived(value ? value.length : 0);
-  const blockLabel = $derived(blockCount === 1 ? 'block' : 'blocks');
+  /** Every item, children included. */
+  const countItems = (items: Item[]): number =>
+    items.reduce((sum, item) => sum + 1 + countItems(item._children ?? []), 0);
+  const count = $derived(countItems(value ?? []));
 </script>
 
-<div class="rz-blocks-cell">
-  {blockCount}
-  {blockLabel}
+<div class="rz-tree-cell">
+  {count === 1 ? t__('fields.items_count', '1') : t__('fields.items_count|m|p', String(count))}
 </div>
 
 <style type="postcss">
-  .rz-blocks-cell {
+  .rz-tree-cell {
     min-width: var(--rz-size-24);
   }
 </style>

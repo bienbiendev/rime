@@ -1,20 +1,21 @@
 <script lang="ts">
-  import type { ResolvedPathname } from '$app/types';
-  import { PARAMS } from '$lib/core/constants.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import { apiUrl, panelPath } from '$lib/core/routes/util.js';
-  import Avatar from '$lib/panel/components/sections/collection/Avatar.svelte';
-  import DocStatus from '$lib/panel/components/sections/collection/DocStatus.svelte';
-  import When from '$lib/panel/components/sections/collection/When.svelte';
-  import BulkUploadDialog from '$lib/panel/components/sections/collection/bulk-upload/BulkUploadDialog.svelte';
-  import GridItem from '$lib/panel/components/sections/collection/grid/grid-item/GridItem.svelte';
-  import ButtonCreate from '$lib/panel/components/sections/collection/header/ButtonCreate.svelte';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import { capitalize } from '$lib/util/string.js';
-  import { ChevronRight, Upload } from '@lucide/svelte';
+  import { createPath } from '#lib/panel/util/url.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import { apiUrl, panelPath } from '#lib/core/routes/util.js';
+  import Avatar from '#lib/panel/components/sections/collection/Avatar.svelte';
+  import DocStatus from '#lib/panel/components/sections/collection/DocStatus.svelte';
+  import When from '#lib/panel/components/sections/collection/When.svelte';
+  import BulkUploadDialog from '#lib/panel/components/sections/collection/bulk-upload/BulkUploadDialog.svelte';
+  import GridItem from '#lib/panel/components/sections/collection/grid/grid-item/GridItem.svelte';
+  import { titleOrUntitled } from '#lib/panel/util/title.js';
+  import ButtonCreate from '#lib/panel/components/sections/collection/header/ButtonCreate.svelte';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { capitalize } from '#lib/util/string.js';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Upload from '@lucide/svelte/icons/upload';
   import DashboardCard from './DashboardCard.svelte';
   import DashboardRow from './DashboardRow.svelte';
   import type { DashboardEntry } from './types.js';
@@ -31,12 +32,7 @@
   const isPeople = $derived(!!collectionConfig.auth);
   let uploadOpen = $state(false);
 
-  // /panel/pages/create, and /panel/medias/create?uploadPath=root for an upload collection
-  const createHref = $derived.by((): ResolvedPathname => {
-    const createPath = panelPath(collectionConfig.kebab, 'create');
-    if (!isUpload) return createPath;
-    return `${createPath}?${PARAMS.UPLOAD_PATH}=${UPLOAD_PATH.ROOT_NAME}` as ResolvedPathname;
-  });
+  const createHref = $derived(createPath(collectionConfig));
 
   // The files uploaded from the dashboard land in the root folder.
   const uploadTarget = $derived({
@@ -45,7 +41,7 @@
     accept: collectionConfig.upload?.accept
   });
 
-  const nameOf = (doc: GenericDoc): string => doc.name || doc.title || '[untitled]';
+  const nameOf = (doc: GenericDoc): string => titleOrUntitled(doc.name || doc.title);
 
   // ['editor'] -> 'Editor'
   const roleOf = (doc: GenericDoc): string =>
@@ -106,7 +102,7 @@
         {:else}
           <DashboardRow
             href={panelPath(collectionConfig.kebab, doc.id)}
-            title={doc.title || '[untitled]'}
+            title={titleOrUntitled(doc.title)}
           >
             {#if hasDrafts && doc.status}
               <DocStatus status={doc.status} />

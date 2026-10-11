@@ -1,12 +1,12 @@
-import { PARAMS } from '$lib/core/constants';
-import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant';
+import { PARAMS } from '#lib/core/constants.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
 import test, { expect, type APIRequestContext } from '@playwright/test';
-import { API_BASE_URL, signIn } from '../util.js';
+import { API_BASE_URL, BASE_URL, signIn } from '../util.js';
 
 // Pages: nested, versions with drafts, fr, en and de (en by default).
 // $url: ({ path, locale }) => `${origin}/${locale}/${path.join('/')}`
 
-const BASE = process.env.PUBLIC_RIME_URL;
+const BASE = BASE_URL;
 const signInSuperAdmin = signIn(
   process.env.TESTS_ADMIN_EMAIL || 'admin@email.com',
   process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A'
@@ -41,8 +41,11 @@ const create = async (
   return doc;
 };
 
-const read = async (request: APIRequestContext, id: string, query = '') =>
-  (await (await request.get(`${API_BASE_URL}/pages/${id}${query}`, { headers })).json()).doc;
+const read = async (request: APIRequestContext, id: string, query = '') => {
+  const response = await request.get(`${API_BASE_URL}/pages/${id}${query}`, { headers });
+  expect(response.status()).toBe(200);
+  return (await response.json()).doc;
+};
 
 const findBy = async (
   request: APIRequestContext,

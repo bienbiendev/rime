@@ -1,9 +1,9 @@
 <script lang="ts">
-  import RichText from '$lib/fields/rich-text/component/RichText.svelte';
-  import { RichTextFieldBuilder } from '$lib/fields/rich-text/index.js';
-  import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
-  import * as Tabs from '$lib/panel/components/ui/tabs/index.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+  import RichText from '#lib/fields/rich-text/component/RichText.svelte';
+  import { RichTextFieldBuilder } from '#lib/fields/rich-text/index.js';
+  import RenderFields from '#lib/panel/components/fields/RenderFields.svelte';
+  import * as Tabs from '#lib/panel/components/ui/tabs/index.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import type { TabBuilder, TabsBuilder } from '../index.js';
 
   type Props = { config: TabsBuilder; path: string; form: DocumentFormContext };
@@ -19,20 +19,16 @@
     config.get.tabs.map((tab) => `${tab.name}-${new Date().getTime().toString()}`)
   );
 
-  // Retrieve active tab from localStorage, if not found use the first tab.
-  // If the stored active tab is not available in live mode, fallback to the first tab.
+  // The stored tab when it still exists and is shown, else the first tab.
   // The server has no storage: it renders the first tab. Node 25+ warns on any read of its
   // `localStorage`, so the check is on `window`.
   let activeTabName = $derived.by(() => {
-    if (typeof window === 'undefined') return config.get.tabs[0].name;
-    let storedActiveTab = localStorage.getItem(storageActiveKey);
-    if (storedActiveTab && form.isLive) {
-      const activeTab = config.get.tabs.find((tab) => tab.name === storedActiveTab);
-      if (!activeTab || activeTab.get.live === false) {
-        return config.get.tabs[0].name;
-      }
-    }
-    return storedActiveTab || config.get.tabs[0].name;
+    const first = config.get.tabs[0].name;
+    if (typeof window === 'undefined') return first;
+    const stored = localStorage.getItem(storageActiveKey);
+    const tab = config.get.tabs.find((tab) => tab.name === stored);
+    if (!tab || !isTabVisible(tab)) return first;
+    return tab.name;
   });
 
   // On live mode only show tabs with live=true
@@ -50,11 +46,9 @@
     if (form.errors.length) {
       const selector = '.rz-tabs-content:has(*[data-error])';
       const errorsTabs = document.querySelectorAll<HTMLElement>(selector);
-      if (errorsTabs) {
-        errorTabs = Array.from(errorsTabs)
-          .map((el) => el.dataset.tabId)
-          .filter((str) => typeof str === 'string');
-      }
+      errorTabs = Array.from(errorsTabs)
+        .map((el) => el.dataset.tabId)
+        .filter((str) => typeof str === 'string');
     } else {
       errorTabs = [];
     }
@@ -70,10 +64,10 @@
           {#if isTabVisible(tab)}
             <Tabs.Trigger
               data-error={errorTabs.includes(tabIds[index]) ? 'true' : null}
-              data-label={tab.get.label || tab.name}
+              data-label={tab.get.label}
               value={tab.name}
             >
-              {tab.get.label || tab.name}
+              {tab.get.label}
             </Tabs.Trigger>
           {/if}
         {/each}

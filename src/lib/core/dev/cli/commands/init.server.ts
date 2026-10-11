@@ -1,8 +1,5 @@
-import { logger } from '$lib/core/logger.server.js';
-import { PANEL_ROUTE } from '$lib/core/routes/constants.server.js';
-import { trycatchSync } from '$lib/util/function.js';
-import { randomId } from '$lib/util/random.js';
-import { isValidSlug, slugify } from '$lib/util/string.js';
+import { logger } from '#lib/core/logger.server.js';
+import { trycatchSync } from '#lib/util/function.js';
 import { generate as generateCode } from '@babel/generator';
 import * as t from '@babel/types';
 import { babelParse, getLang } from 'ast-kit';
@@ -13,9 +10,11 @@ import fs from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { CONFIG_DIR, OUTPUT_DIR } from '../../constants.server.js';
+import { devEnv, missingEnv, renderEnv } from '../templates/env.js';
 import * as templates from '../templates/init.js';
 import { installDependencies, SVELTEKIT_ADAPTER } from '../util/package-manager.server.js';
 import { getPackageInfoByKey, MIN_BUN, setBunScripts } from '../util/package.server.js';
+import { projectName } from '../util/project-name.js';
 import { prompt } from '../util/prompt.server.js';
 import { generate } from './generate.server.js';
 
@@ -35,42 +34,57 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
 
   function setEnv() {
     const envPath = path.resolve(root, '.env');
+    const blocks = devEnv();
 
-    // Define variables with their update behavior
-    const envUpdates: Record<string, string> = {
-      BETTER_AUTH_SECRET: randomId(32),
-      PUBLIC_RIME_URL: 'http://localhost:5173',
-      RIME_CONFIG_DIR: CONFIG_DIR,
-      RIME_PANEL_ROUTE: PANEL_ROUTE,
-      '# RIME_SMTP_USER': 'user@mail.com',
-      '# RIME_SMTP_PASSWORD': 'supersecret',
-      '# RIME_SMTP_PORT': '465',
-      '# RIME_SMTP_HOST': 'smtphost.com',
-      RIME_LOG_LEVEL: 'TRACE',
-      RIME_LOG_TO_FILE: 'true',
-      RIME_LOG_TO_FILE_MAX_DAYS: '1'
-    };
-
-    if (existsSync(envPath)) {
-      logger.info('[✓] .env file found');
-      let envContent = readFileSync(envPath, 'utf-8');
-
-      Object.entries(envUpdates).forEach(([key, value]) => {
-        const exists = envContent.match(new RegExp(`^${key}=`, 'm'));
-
-        if (!exists) {
-          // Add new value if doesn't exist
-          envContent += `\n${key}=${value}`;
-          logger.info(`- ${key} added`);
-        }
-      });
-
-      writeFileSync(envPath, envContent);
-      logger.info('[✓] .env file populated');
-    } else {
-      writeFileSync(envPath, templates.env());
-      logger.info('[✓] .env file created');
+    if (!existsSync(envPath)) {
+      writeFileSync(envPath, renderEnv(blocks));
+      logger.debug('[✓] .env file created');
+      return;
     }
+
+    logger.debug('[✓] .env file found');
+    // PUBLIC_RIME_URL -> SITE_URL, RIME_SMTP_HOST -> SMTP_HOST, commented out or not
+    const content = readFileSync(envPath, 'utf-8')
+      .replace(/^(#\s*)?PUBLIC_RIME_URL=/gm, '$1SITE_URL=')
+      .replace(/^(#\s*)?RIME_SMTP_/gm, '$1SMTP_');
+
+    // Only the missing blocks are appended, each with its comment
+    const missing = missingEnv(content, blocks);
+    for (const key of missing.flatMap((block) => Object.keys(block.values))) {
+      logger.debug(`- ${key} added`);
+    }
+    const next = missing.length ? `${content.trimEnd()}\n\n${renderEnv(missing)}` : content;
+    writeFileSync(envPath, next);
+    logger.debug('[✓] .env file populated');
+  }
+
+  function setEnvVars() {
+    const envVarsPath = ['src/env.ts', 'src/env.js']
+      .map((file) => path.resolve(root, file))
+      .find((file) => existsSync(file));
+    if (!envVarsPath) {
+      writeFileSync(path.resolve(root, 'src/env.ts'), templates.envVars());
+      logger.debug('[✓] src/env.ts created');
+      return;
+    }
+
+    const file = path.relative(root, envVarsPath);
+    const content = readFileSync(envVarsPath, 'utf-8');
+    const missing = templates.missingEnvVars(content);
+    if (!missing.length) {
+      logger.debug(`[✓] ${file} declares every rime variable (skip)`);
+      return;
+    }
+    const next = templates.addEnvVars(content, missing);
+    if (!next) {
+      logger.warn(
+        `${file} has no defineEnvVars({ ... }) to declare rime's variables in. Add them:\n\n` +
+          `${templates.envVarDeclarations(missing)}\n`
+      );
+      return;
+    }
+    writeFileSync(envVarsPath, next);
+    logger.debug(`[✓] ${file}: ${missing.join(', ')} declared`);
   }
 
   function setConfig(name: string) {
@@ -82,9 +96,9 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
         mkdirSync(configDirPath);
       }
       writeFileSync(configPath, templates.defaultConfig(name.toString(), driver));
-      logger.info(`[✓] Config created at ${configDirPath}/rime.config.server.ts`);
+      logger.debug(`[✓] Config created at ${configDirPath}/rime.config.server.ts`);
     } else {
-      logger.info('[✓] Config already exists (skip)');
+      logger.debug('[✓] Config already exists (skip)');
     }
   }
 
@@ -92,9 +106,9 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
     const dbPath = path.join(root, 'db');
     if (!existsSync(dbPath)) {
       mkdirSync(dbPath);
-      logger.info('[✓] Database folder created');
+      logger.debug('[✓] Database folder created');
     } else {
-      logger.info('[✓] Database folder already exists (skip)');
+      logger.debug('[✓] Database folder already exists (skip)');
     }
   }
 
@@ -107,14 +121,15 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
 
     let gitignoreContent = readFileSync(gitignorePath, 'utf-8');
 
-    // OUTPUT_DIR is derived from RIME_CONFIG_DIR, so its first character isn't always '+' —
-    // escape every regex metacharacter generically instead of hand-picking one to backslash.
+    // OUTPUT_DIR comes from RIME_CONFIG_DIR and may hold any regex metacharacter, so all of
+    // them are escaped.
     const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     const updates = [
       '.cache',
       '/logs',
       '/db',
+      '/storage',
       OUTPUT_DIR,
       'src/app.generated.d.ts',
       'src/rime.generated.d.ts'
@@ -128,17 +143,17 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
       }
     }
     writeFileSync(gitignorePath, gitignoreContent);
-    logger.info('[✓] .gitignore populated');
+    logger.debug('[✓] .gitignore populated');
   }
 
   function setDrizzle(name: string) {
     const drizzleConfigPath = path.join(root, 'drizzle.config.ts');
     if (!existsSync(drizzleConfigPath)) {
       writeFileSync(drizzleConfigPath, templates.drizzleConfig(name.toString()));
-      logger.info('[✓] Drizzle config added');
+      logger.debug('[✓] Drizzle config added');
       return;
     }
-    logger.info(
+    logger.debug(
       templates.regenerateDrizzleConfig(root)
         ? '[✓] Drizzle config schema path updated'
         : '[✓] Drizzle config already exists (skip)'
@@ -156,7 +171,7 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
         `Bun ${version ?? 'not found'}: the Bun pack needs >= ${MIN_BUN} (older versions boot dev ~2x slower). Run \`bun upgrade\`.`
       );
     }
-    logger.info(
+    logger.debug(
       setBunScripts()
         ? '[✓] package.json scripts run vite with bun --bun'
         : '[✓] package.json scripts already set (skip)'
@@ -165,7 +180,7 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
 
   function setAdapter() {
     const patched = templates.setSvelteKitAdapter(root);
-    logger.info(
+    logger.debug(
       patched.length
         ? `[✓] SvelteKit adapter set to ${SVELTEKIT_ADAPTER} in ${patched.join(', ')}`
         : `[✓] SvelteKit adapter already set (skip)`
@@ -206,7 +221,7 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
     );
 
     if (alreadyPresent) {
-      logger.info('[✓] Vite plugin already present (skip)');
+      logger.debug('[✓] Vite plugin already present (skip)');
       return;
     }
 
@@ -242,7 +257,7 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
     const file = t.file(program);
     const { code } = generateCode(file, {}, content);
     fs.writeFileSync(configPath, code);
-    logger.info('[✓] Vite plugin added');
+    logger.debug('[✓] Vite plugin added');
   }
 
   function findSvelteConfigObject(body: t.Statement[]): t.ObjectExpression | null {
@@ -287,55 +302,30 @@ export const init = async ({ force, name: incomingName, skipInstall, bun }: Args
           recursive: true
         }
       );
-      logger.info('[✓] Copied assets');
+      logger.debug('[✓] Copied assets');
     } catch (err) {
       console.error('Error copying fonts:', err);
     }
   }
 
-  if (force || incomingName) {
-    const name = incomingName || packageName;
-    setEnv();
-    addToGitignore();
-    setConfig(name);
-    setDatabase();
-    setDrizzle(name);
-    setBun();
-    setAdapter();
-    configureVite();
-    await copyAssets();
-    !skipInstall && installDependencies();
-    await generate({ force: true });
-  } else {
-    let name = '';
-    const defaultName = slugify(packageName);
-    let tries = 0;
-    while (!isValidSlug(name)) {
-      name = await prompt(
-        tries > 0
-          ? 'Error: should contains only letters, numbers, hyphens, underscores\nWhat is your project name (will be used as database name) ?'
-          : 'What is your project name (will be used as database name) ?',
-        defaultName || 'app'
-      );
-      tries++;
-    }
-
-    if (!name) {
-      logger.error('Operation cancelled');
-      process.exit(0);
-    }
-
-    setEnv();
-    addToGitignore();
-    setConfig(name);
-    setDatabase();
-    setDrizzle(name);
-    setBun();
-    setAdapter();
-    configureVite();
-    await copyAssets();
-    !skipInstall && installDependencies();
-    await generate({ force: true });
-    logger.info('[✓] done');
+  const name = await projectName({ incomingName, packageName, force: !!force, ask: prompt });
+  if (!name) {
+    logger.error(`--name "${incomingName}": use letters, numbers, hyphens and underscores`);
+    process.exitCode = 1;
+    return;
   }
+
+  setEnv();
+  setEnvVars();
+  addToGitignore();
+  setConfig(name);
+  setDatabase();
+  setDrizzle(name);
+  setBun();
+  setAdapter();
+  configureVite();
+  await copyAssets();
+  !skipInstall && installDependencies();
+  await generate({ force: true });
+  logger.debug('[✓] done');
 };

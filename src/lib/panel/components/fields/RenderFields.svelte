@@ -1,13 +1,13 @@
 <script lang="ts">
-  import type { FieldBuilder } from '$lib/core/fields/builders';
-  import { isFormField, isLiveField, isNotHidden, isPresentative } from '$lib/core/fields/util';
-  import { ComponentFieldBuilder } from '$lib/fields/component';
-  import { isTabsField } from '$lib/fields/tabs';
-  import type { FormField } from '$lib/fields/types.js';
-  import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import type { GenericDoc } from '$lib/types';
-  import type { WithOptional } from '$lib/util/types';
+  import type { FieldBuilder } from '#lib/core/fields/builders/index.js';
+  import { isFormField, isLiveField, isNotHidden, isPresentative } from '#lib/core/fields/util.js';
+  import { ComponentFieldBuilder } from '#lib/fields/component/index.js';
+  import { isTabsField } from '#lib/fields/tabs/index.js';
+  import type { FormField } from '#lib/fields/types.js';
+  import { type DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import type { GenericDoc } from '#lib/types.js';
+  import type { WithOptional } from '#lib/util/types.js';
 
   type Props = {
     path?: string;
@@ -15,7 +15,7 @@
     form: DocumentFormContext<WithOptional<GenericDoc, 'id'>>;
   };
 
-  const { form, fields, path: initialPath = '' }: Props = $props();
+  const { form, fields, path = '' }: Props = $props();
 
   const user = getUserContext();
 
@@ -23,26 +23,27 @@
     fields.filter((field) => field.use.accessRead(user.attributes, { id: form.values.id }))
   );
 
-  const path = $derived(initialPath === '' ? '' : `${initialPath}.`);
+  /** What goes before a field name: `meta` -> `meta.`, the root -> ``. */
+  const prefix = $derived(path === '' ? '' : `${path}.`);
 
   const widthClassModifier = (field: FormField) =>
     `rz-render-fields__field--${field.width || 'full'}`;
-
-  //
 </script>
 
 <div class="rz-render-fields">
   {#each authorizedFields as field, index (index)}
     {#if !form.isLive || (form.isLive && isLiveField(field.get))}
       {#if field instanceof ComponentFieldBuilder}
-        {@const FieldComponent = field.get.component}
-        <div data-type={field.type} class="rz-render-fields__field rz-render-fields__field--full">
-          <FieldComponent {path} config={field} {form} />
-        </div>
+        {#if field.use.isVisible(form.values)}
+          {@const FieldComponent = field.get.component}
+          <div data-type={field.type} class="rz-render-fields__field rz-render-fields__field--full">
+            <FieldComponent path={prefix} config={field} {form} />
+          </div>
+        {/if}
       {:else if isPresentative(field.get)}
         {@const Separator = field.component}
         <div data-type={field.type} class="rz-render-fields__field rz-render-fields__field--full">
-          <Separator />
+          <Separator class={field.get.className} />
         </div>
       {:else if isTabsField(field.get)}
         {@const Tabs = field.component}
@@ -57,7 +58,7 @@
           data-type={field.type}
           data-compact={isCompact ? '' : null}
         >
-          <FieldComponent path={path + field.name} config={field} {form} />
+          <FieldComponent path={prefix + field.name} config={field} {form} />
         </div>
       {/if}
     {/if}
@@ -86,7 +87,7 @@
     }
   }
 
-  /** minimize gap when all fields have no label **/
+  /** A smaller gap when every field is compact. */
   .rz-render-fields:not(:has(> :not(.rz-render-fields__field[data-compact]))) {
     row-gap: var(--rz-size-4);
   }

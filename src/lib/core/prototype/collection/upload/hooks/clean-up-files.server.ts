@@ -1,20 +1,49 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { cleanUpDocumentFile } from '$lib/core/prototype/collection/upload/disk/delete.server.js';
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import type { WithUpload } from '$lib/core/prototype/collection/upload/util/config.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import {
+  removeUnusedFiles,
+  rowFiles,
+  type RowFiles
+} from '#lib/core/prototype/collection/upload/disk/delete.server.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import type { CollectionSlug } from '#lib/core/prototype/types.js';
+import type { WithUpload } from '#lib/core/prototype/collection/upload/util/config.js';
 
 /**
- * Hook executed before deleting a document to clean up associated files from storage.
- *
- * This hook performs the following operations:
- * 1. Retrieves the document ID from the deletion event
- * 2. Locates and removes all files associated with the document from storage
- * 3. Ensures no orphaned files remain after document deletion
- *
+ * Runs before a delete on an upload collection: notes the files of every row of the document,
+ * each version's included, for `cleanUpFiles` to remove once the rows are gone.
  */
-export const cleanUpFiles = Hooks.beforeDelete(async function cleanUpFiles(args) {
+export const collectFiles = Hooks.beforeDelete(async function collectFiles(args) {
+  const { rime } = args.event.locals;
   const config = args.config as WithUpload<BuiltCollection>;
-  const id = args.context.params.id || '';
-  await cleanUpDocumentFile({ config, rime: args.event.locals.rime, id });
+  const rows = config._versions
+    ? await rime
+        .collection(config._versions.slug as CollectionSlug)
+        .system()
+        .find({ query: { where: { ownerId: { equals: args.doc.id } } } })
+    : [await rime.collection(config.slug).system().findById({ id: args.doc.id })];
+
+  const uploadFiles = rows.map(rowFiles).filter((row) => row !== null);
+  return { ...args, context: { ...args.context, uploadFiles } };
+});
+
+/**
+ * Runs after a delete on an upload collection: deletes the files `collectFiles` noted, unless
+ * another row uses them.
+ */
+export const cleanUpFiles = Hooks.afterDelete(async function cleanUpFiles(args) {
+  const config = args.config as BuiltCollection;
+  const stored: RowFiles[] = args.context.uploadFiles ?? [];
+  await removeUnusedFiles({ rime: args.event.locals.rime, config, stored });
+  return args;
+});
+
+/**
+ * Runs after an update on an upload collection: deletes the files the update replaced, unless
+ * another row uses them.
+ */
+export const cleanUpReplacedFiles = Hooks.afterUpdate(async function cleanUpReplacedFiles(args) {
+  const config = args.config as BuiltCollection;
+  const stored: RowFiles[] = args.context.replacedFiles ?? [];
+  await removeUnusedFiles({ rime: args.event.locals.rime, config, stored });
   return args;
 });

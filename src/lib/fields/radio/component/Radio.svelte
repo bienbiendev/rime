@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import { Label } from '$lib/panel/components/ui/label/index.js';
-  import * as RadioGroup from '$lib/panel/components/ui/radio-group/index.js';
-  import * as RadioRowGroup from '$lib/panel/components/ui/radio-row-group/index.js';
-  import { capitalize, slugify } from '$lib/util/string.js';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import { Label } from '#lib/panel/components/ui/label/index.js';
+  import * as RadioGroup from '#lib/panel/components/ui/radio-group/index.js';
+  import * as RadioRowGroup from '#lib/panel/components/ui/radio-row-group/index.js';
+  import { capitalize, slugify } from '#lib/util/string.js';
   import type { RadioFieldProps } from './props.js';
 
   const { path, config, form }: RadioFieldProps = $props();

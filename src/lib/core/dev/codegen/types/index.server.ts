@@ -1,15 +1,19 @@
 import { contributionsFor } from './contributions.server.js';
-import { IS_RIME_REPO, PACKAGE_NAME } from '$lib/core/constants.server.js';
-import cache from '$lib/core/dev/cache.server.js';
-import type { BuiltArea, BuiltCollection, Config } from '$lib/core/config/types.js';
+import { IS_RIME_REPO, PACKAGE_NAME } from '#lib/core/constants.server.js';
+import cache from '#lib/core/dev/cache.server.js';
+import type { BuiltArea, BuiltCollection, Config } from '#lib/core/config/types.js';
 
-import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import { logger } from '$lib/core/logger.server.js';
-import type { Field } from '$lib/fields/types.js';
-import { trycatchSync } from '$lib/util/function.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
+import { logger } from '#lib/core/logger.server.js';
+import type { Field } from '#lib/fields/types.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { GENERATED_DIR, relativeImportSpecifier } from '../../constants.server.js';
+import {
+  GENERATED_DIR,
+  libImportSpecifier,
+  relativeImportSpecifier,
+  schemaPath
+} from '../../constants.server.js';
 import {
   templateDeclareVirtualModule,
   templateDocType,
@@ -21,10 +25,8 @@ import {
  * Generates the complete TypeScript type definitions string based on the built configuration
  * @returns A string containing all type definitions
  */
-export async function generateTypesString<T extends Config>(config: T) {
-  logger.info('Types generation...');
-  // const registeredBlocks: string[] = [];
-  // const registeredTreeBlocks: string[] = [];
+async function generateTypesString<T extends Config>(config: T) {
+  logger.debug('Types generation...');
   let imports = new Set<string>(['BaseDoc', 'Navigation', 'RouteHandlers', 'User']);
 
   const addImport = (string: string) => {
@@ -41,11 +43,6 @@ export async function generateTypesString<T extends Config>(config: T) {
 
   /**
    * One prototype's document type.
-   *
-   * Was two functions, `processCollection` and `processArea`, differing only in the feature
-   * branches the first one carried: `isUploadConfig(collection)` three times and
-   * `if (collection.versions)` once. Both are `docType` contributions now, so what is left is the
-   * same for either kind — which is why there is one function.
    */
   const processPrototype = async (config: BuiltArea | BuiltCollection) => {
     const contribution = contributionsFor(config);
@@ -76,57 +73,6 @@ export async function generateTypesString<T extends Config>(config: T) {
     path.resolve(process.cwd(), GENERATED_DIR, 'rime.config.server.ts')
   );
 
-  function parseSharedTypes(content: string): {
-    content: string;
-    shared: string;
-  } {
-    // Field builders emit reusable type definitions wrapped between `//@shared:start <name>` and
-    // `//@shared:end`, each on its own line. Extracted once per name, deduped, and hoisted above
-    // the doc types that reference them.
-    //
-    // One pair can sit inside another — a relation field inside a block emits its own:
-    //
-    //   //@shared:start BlockImage
-    //   export type BlockImage = {
-    //     //@shared:start RelationValue
-    //     ...
-    //     //@shared:end
-    //   }
-    //   //@shared:end
-    //
-    // So the innermost pair is taken first and the pass repeats until none is left. Matching the
-    // outer start against the first `//@shared:end` would hoist half of BlockImage and leave the
-    // other half inline in the doc type. Innermost-first also emits RelationValue above the block
-    // that names it.
-    //
-    // Neither marker is anchored to the start of a line, because a start marker does not always
-    // get one — a blocks field inside a group emits `layout: {//@shared:start BlockParagraph`.
-    // Only the text from the marker to its `//@shared:end` is taken, so whatever sits in front of
-    // it stays where it is.
-    const innermost =
-      /\/\/@shared:start[ \t]+(\S+)[ \t]*\r?\n((?:(?!\/\/@shared:start[ \t])[\s\S])*?)\r?\n[ \t]*\/\/@shared:end[ \t]*(?=\r?\n|$)/;
-
-    const seen = new Set<string>();
-    const shared: string[] = [];
-    let remaining = content;
-
-    for (let match = innermost.exec(remaining); match; match = innermost.exec(remaining)) {
-      const [whole, name, body] = match;
-
-      if (!seen.has(name)) {
-        seen.add(name);
-        shared.push(body.trim());
-      }
-
-      remaining = remaining.slice(0, match.index) + remaining.slice(match.index + whole.length);
-    }
-
-    return {
-      content: remaining,
-      shared: shared.join('\n\n')
-    };
-  }
-
   const { shared: sharedTypes, content: prototypesTypes } = parseSharedTypes(
     [collectionsTypes, areasTypes].join('\n')
   );
@@ -149,18 +95,63 @@ export async function generateTypesString<T extends Config>(config: T) {
   return content;
 }
 
+/** Two bodies of one type, compared without their indentation. */
+const sameType = (a: string, b: string) => a.replace(/\s+/g, ' ') === b.replace(/\s+/g, ' ');
+
 /**
- * Writes the generated types to the app.generated.d.ts file
- * @param content The string containing all type definitions
+ * Hoists the types field builders wrap in `//@shared:start <name>` … `//@shared:end` out of
+ * `content`, innermost first, once per name. Throws when one name wraps two different types:
+ * two blocks named `image` with different fields, in two collections.
+ *
+ * One pair can sit inside another — a relation field inside a block emits its own:
+ *
+ * ```ts
+ * //@shared:start BlockImage
+ * export type BlockImage = {
+ *   //@shared:start RelationValue
+ *   ...
+ *   //@shared:end
+ * }
+ * //@shared:end
+ * ```
+ *
+ * So the innermost pair is taken first and the pass repeats until none is left. Matching the
+ * outer start against the first `//@shared:end` would hoist half of BlockImage and leave the
+ * other half inline in the doc type. Innermost-first also emits RelationValue above the block
+ * that names it.
+ *
+ * Neither marker is anchored to the start of a line, because a start marker does not always
+ * get one — a blocks field inside a group emits `layout: {//@shared:start BlockParagraph`.
+ * Only the text from the marker to its `//@shared:end` is taken, so whatever sits in front of
+ * it stays where it is.
  */
+export function parseSharedTypes(content: string): { content: string; shared: string } {
+  const innermost =
+    /\/\/@shared:start[ \t]+(\S+)[ \t]*\r?\n((?:(?!\/\/@shared:start[ \t])[\s\S])*?)\r?\n[ \t]*\/\/@shared:end[ \t]*(?=\r?\n|$)/;
+  const bodies = new Map<string, string>();
+  let remaining = content;
+
+  for (let match = innermost.exec(remaining); match; match = innermost.exec(remaining)) {
+    const [whole, name, body] = match;
+    const known = bodies.get(name);
+    if (known === undefined) {
+      bodies.set(name, body.trim());
+    } else if (!sameType(known, body.trim())) {
+      throw new Error(
+        `Two different types are named ${name}: blocks and trees with the same name must declare the same fields`
+      );
+    }
+    remaining = remaining.slice(0, match.index) + remaining.slice(match.index + whole.length);
+  }
+
+  return { content: remaining, shared: [...bodies.values()].join('\n\n') };
+}
+
+/** Writes `content` to `filePath` when it differs from the last write under `key`. */
 function write(key: string, content: string, filePath: string) {
   if (cache.matches(key, content)) return;
+  fs.writeFileSync(filePath, content);
   cache.remember(key, content);
-
-  const [error] = trycatchSync(() => fs.writeFileSync(filePath, content));
-  if (error) {
-    logger.error(error);
-  }
 }
 
 /**
@@ -169,10 +160,10 @@ function write(key: string, content: string, filePath: string) {
  */
 async function generateTypes<T extends Config>(config: T) {
   const mainTypes = await generateTypesString(config);
-  const declarations = templateDeclareVirtualModule();
 
   const appGeneratedPath = path.resolve(process.cwd(), 'src', 'app.generated.d.ts');
   const virtualModuleGeneratedPath = path.resolve(process.cwd(), 'src', 'rime.generated.d.ts');
+  const declarations = templateDeclareVirtualModule(libImportSpecifier(schemaPath()));
 
   write('app.generated', mainTypes, appGeneratedPath);
   write('rime.generated', declarations, virtualModuleGeneratedPath);

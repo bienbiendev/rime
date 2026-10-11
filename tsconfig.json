@@ -1,20 +1,15 @@
 {
-	"extends": "./.svelte-kit/tsconfig.json",
-	"compilerOptions": {
-		"allowJs": true,
-		"checkJs": true,
-		"esModuleInterop": true,
-		"forceConsistentCasingInFileNames": true,
-		"resolveJsonModule": true,
-		"skipLibCheck": true,
-		"sourceMap": true,
-		"strict": true,
-		"strictNullChecks": true,
-		"moduleResolution": "bundler"
-	},
-	"exclude": [
-		"./tests/**/routes/**",
-		"./tests/**/lib/**",
-		"./tests/**/+rime/**"
-	]
+  "extends": "$app/tsconfig",
+  "compilerOptions": {
+    "sourceMap": true,
+    "strict": true,
+    "strictNullChecks": true
+  },
+  "exclude": [
+    "./tests/**/routes/**",
+    "./tests/**/lib/**",
+    "./tests/**/+rime/**",
+    "./tests/*/params.ts"
+  ],
+  "include": ["src", "tests", "vite.config.ts"]
 }

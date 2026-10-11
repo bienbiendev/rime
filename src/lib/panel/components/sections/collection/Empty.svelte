@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { BuiltCollection } from '$lib/types';
+  import type { BuiltCollection } from '#lib/types.js';
   import { t__ } from '../../../../core/i18n/index.js';
 
   type Props = { config: BuiltCollection };

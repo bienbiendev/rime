@@ -1,6 +1,7 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { getValueAtPath, isObjectLiteral, setValueAtPath } from '#lib/util/object.js';
+import type { Dic } from '#lib/util/types.js';
 
 /**
  * Writes a resolved reference as the id it stores.
@@ -11,10 +12,11 @@ import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
  * 'abc'                        'abc'
  * { id: 'abc', name: 'Ann' }   'abc'
  * '', null, { name: 'Ann' }    null
+ * 42, { id: 42 }               as sent: validation refuses it
  * ```
  *
- * A pipeline hook rather than a field `$beforeSave`: field hooks are skipped on the
- * locale-fallback pass and under `?skipValidation`, and both still write the column.
+ * A pipeline hook rather than a field `$beforeSave`: field hooks are skipped on a locale copy,
+ * which still writes the column.
  */
 export const normalizeResolvedReferences = Hooks.beforeUpsert(
   async function normalizeResolvedReferences(args) {
@@ -26,22 +28,33 @@ export const normalizeResolvedReferences = Hooks.beforeUpsert(
         'missing configMap @normalizeResolvedReferences'
       );
 
-    let data = { ...args.data };
-    for (const [path, config] of Object.entries(configMap)) {
-      if (!config._references?.resolve) continue;
-      const value = getValueAtPath(path, data);
-      if (value === undefined) continue;
-      data = setValueAtPath(path, data, toReferenceId(value));
-    }
+    const paths = Object.entries(configMap)
+      .filter(([, config]) => config._references?.resolve)
+      .map(([path]) => path);
 
-    return { ...args, data };
+    return { ...args, data: withReferenceIds({ ...args.data }, paths) };
   }
 );
 
-export const toReferenceId = (value: unknown): string | null => {
-  if (typeof value === 'string') return value || null;
-  if (value && typeof value === 'object' && typeof (value as { id?: unknown }).id === 'string') {
-    return (value as { id: string }).id;
-  }
-  return null;
+/**
+ * `data` with the value at each path written as the id it stores. An absent value is left out.
+ *
+ * ```ts
+ * withReferenceIds({ author: { id: 'u1', name: 'Ann' } }, ['author']); // { author: 'u1' }
+ * ```
+ */
+export const withReferenceIds = (data: Dic, paths: string[]): Dic =>
+  paths.reduce((result, path) => {
+    const value = getValueAtPath(path, result);
+    return value === undefined ? result : setValueAtPath(path, result, toReferenceId(value));
+  }, data);
+
+/** The id a reference value names: an id as is, a document's own id, `null` for nothing. */
+export const toReferenceId = (value: unknown): unknown => {
+  if (value === null || value === '') return null;
+  if (isObjectLiteral(value) && typeof value.id === 'string') return value.id || null;
+  // A document read without its id names nothing
+  if (isObjectLiteral(value) && !('id' in value)) return null;
+  // An id, or what validation refuses: 42, { id: 42 }
+  return value;
 };

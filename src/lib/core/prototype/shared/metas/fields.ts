@@ -1,7 +1,7 @@
-import { isStaff } from '$lib/core/auth/access.js';
-import { date } from '$lib/fields/date/index.js';
-import { text } from '$lib/fields/text/index.js';
-import type { FieldAccess } from '$lib/fields/types.js';
+import { isStaff } from '#lib/core/auth/access.js';
+import { date } from '#lib/fields/date/index.js';
+import { text } from '#lib/fields/text/index.js';
+import type { FieldAccess } from '#lib/fields/types.js';
 
 /**
  * The metas fields, declared once for both halves of the module.
@@ -16,7 +16,8 @@ import type { FieldAccess } from '$lib/fields/types.js';
  * pipeline enforces it for every caller — `processDocumentFields` drops what a reader may not
  * see, `validateFields` drops what a writer may not set — rather than each read path remembering.
  */
-const staffOnly: { read: FieldAccess; update: FieldAccess } = {
+const staffOnly: { create: FieldAccess; read: FieldAccess; update: FieldAccess } = {
+  create: (user) => isStaff(user),
   read: (user) => isStaff(user),
   update: (user) => isStaff(user)
 };

@@ -1,4 +1,4 @@
-import { adapterSqlite } from '$lib/adapter-sqlite/index.server';
+import { adapterSqlite } from '#lib/adapter-sqlite/index.server.js';
 import { rime } from '$rime/config';
 
 export default rime({

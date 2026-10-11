@@ -1,4 +1,4 @@
-import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
+import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
 import type { SelectFieldBuilder } from '../index.js';
 
 export type SelectFieldProps = {

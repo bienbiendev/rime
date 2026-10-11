@@ -1,4 +1,4 @@
-import { relation } from '$lib/fields/index.js';
+import { relation } from '#lib/fields/index.js';
 import { describe, expect, it } from 'vitest';
 import { extractRelations } from './extract.server.js';
 

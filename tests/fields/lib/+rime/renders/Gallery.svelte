@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { RelationFieldBuilder } from '$lib/fields/relation/index.js';
-  import type { BlockRenderProps } from '$lib/fields/types.js';
-  import { RelationInline } from '$lib/panel/index.js';
+  import type { RelationFieldBuilder } from '#lib/fields/relation/index.js';
+  import type { BlockRenderProps } from '#lib/fields/types.js';
+  import { RelationInline } from '#lib/panel/index.js';
 
   const { path, fields, form }: BlockRenderProps = $props();
   const images = $derived(fields.find((field) => field.name === 'images') as RelationFieldBuilder);

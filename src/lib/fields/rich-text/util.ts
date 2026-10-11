@@ -1,4 +1,4 @@
-import type { RichTextFeature } from '$lib/types.js';
+import type { RichTextFeature } from '#lib/types.js';
 
 /**
  * Check that in given features at least one has a suggestion

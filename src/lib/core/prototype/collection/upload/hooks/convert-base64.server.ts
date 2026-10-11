@@ -1,7 +1,7 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { jsonFileToFile } from '$lib/core/prototype/collection/upload/util/converter.server.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import { isFile } from '$lib/util/file.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { jsonFileToFile } from '#lib/core/prototype/collection/upload/util/converter.server.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { isFile } from '#lib/util/file.js';
 
 /**
  * Hook executed before save/update operations to convert base64 encoded files to File objects.
@@ -28,6 +28,7 @@ export const castBase64ToFile = Hooks.beforeUpsert<'upload'>(async function cast
         mimeType: data.mimeType || mimeType
       };
     } catch (err: any) {
+      if (err instanceof RimeError) throw err;
       args.event.locals.rime.logger.error(
         'Failed to convert base64 string to File object',
         err.message

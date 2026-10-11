@@ -1,14 +1,18 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import type { TreeBlock } from '$lib/core/prototype/types.js';
-  import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
-  import { useOnce } from '$lib/panel/util/once.svelte.js';
-  import { capitalize } from '$lib/util/string.js';
-  import { ChevronDown, ChevronRight, GripVertical } from '@lucide/svelte';
-  import { extractFieldName } from '../util.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import type { TreeBlock } from '#lib/core/prototype/types.js';
+  import RenderFields from '#lib/panel/components/fields/RenderFields.svelte';
+  import { useOnce } from '#lib/panel/util/once.svelte.js';
+  import { capitalize } from '#lib/util/string.js';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
+  import { extractFieldName, levelsBelow } from '../util.js';
   import AddItemButton from './AddItemButton.svelte';
   import TreeBlockComp from './TreeBlock.svelte';
-  import TreeBlockActions from './TreeBlockActions.svelte';
+  import RepeatableActions from '../../repeatable/RepeatableActions.svelte';
+  import { isRememberedOpen, rememberOpen, repeatableTitle } from '../../repeatable.js';
+  import { isTempId } from '#lib/util/random.js';
   import type { TreeBlockProps } from './props.js';
 
   const { config, treeKey, treeState, form, sorting = false, path }: TreeBlockProps = $props();
@@ -24,10 +28,10 @@
   const children = $derived(itemValue?._children ?? []);
   const parentPath = $derived(path.split('.').slice(0, -1).join('.'));
   const siblingsCount = $derived(form.getValue<TreeBlock[]>(parentPath)?.length ?? 0);
-  /** Deep enough that nothing more goes inside. */
+  /** Shallow enough that more items can go inside. */
   const canHoldItems = $derived(depth <= config.get.maxDepth);
 
-  // tree.0._children.2 -> 1.3
+  // tree.0._children.2 -> 1.
   const parentPathFormated = $derived.by(() => {
     if (depth === 1) return '';
     const [, relativePath] = extractFieldName(parentPath);
@@ -48,27 +52,22 @@
   // A new item opens, its fields ready to fill; a saved one as it was left.
   once(() => {
     if (!itemValue) return;
-    isOpen =
-      itemValue.id.startsWith('temp-') || localStorage.getItem(`${itemValue.id}:open`) === 'true';
+    isOpen = isTempId(itemValue.id) || isRememberedOpen(itemValue.id);
   });
 
   const toggleOpen = () => {
     isOpen = !isOpen;
-    if (itemValue) localStorage.setItem(`${itemValue.id}:open`, isOpen.toString());
+    if (itemValue) rememberOpen(itemValue.id, isOpen);
   };
 
   /** `renderTitle`, else the field's label and the item's place: `Links 1.2`. */
   const title = $derived.by(() => {
     const place = `${parentPathFormated}${position + 1}`;
-    if (config.get.renderTitle) {
-      try {
-        const rendered = config.get.renderTitle({ position: place, values: itemValue || {} });
-        if (rendered) return rendered;
-      } catch (err) {
-        console.error(`Can't render title in treeBlock`, err);
-      }
-    }
-    return `${config.get.label || capitalize(config.name)} ${place}`;
+    return repeatableTitle(
+      config.get.renderTitle,
+      { position: place, values: itemValue || {} },
+      `${config.get.label || capitalize(config.name)} ${place}`
+    );
   });
 
   // Paths relative to the tree: the move of a sibling up or down.
@@ -89,12 +88,12 @@
 <div
   class="rz-tree-item"
   data-path={path}
-  data-tree-children={children.length}
+  data-tree-levels={itemValue ? levelsBelow(itemValue) : 0}
   data-sorting={sorting}
   data-open={isOpen ? '' : null}
   data-deep={depth > 2 ? '' : null}
 >
-  <div class="rz-tree-item__header">
+  <div class="rz-tree-item__header" data-repeatable-header>
     <span class="rz-tree-item__grip" aria-hidden="true"><GripVertical size={12} /></span>
 
     <button
@@ -113,10 +112,12 @@
       {/if}
     </button>
 
-    <TreeBlockActions
+    <RepeatableActions
+      label={t__('fields.item_actions')}
+      deleteLabel={t__('fields.delete_item')}
+      onDelete={() => treeState.deleteItem(parentPath, position)}
       {moveUp}
       {moveDown}
-      deleteItem={() => treeState.deleteItem(parentPath, position)}
     />
   </div>
 

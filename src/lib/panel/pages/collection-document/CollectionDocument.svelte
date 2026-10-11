@@ -1,30 +1,8 @@
 <script lang="ts">
-  import Document from '$lib/panel/components/sections/document/Document.svelte';
-  import Versions from '$lib/panel/components/sections/document/Versions.svelte';
-  import Page from '$lib/panel/components/sections/page-layout/Page.svelte';
-  import Unauthorized from '$lib/panel/components/sections/unauthorized/Unauthorized.svelte';
-  import { setVersionsContext } from '$lib/panel/context/versions.svelte.js';
-  import type { CollectionDocData } from '$lib/panel/index.js';
+  import type { CollectionDocData } from '#lib/panel/index.js';
+  import DocumentPage from '../shared/DocumentPage.svelte';
 
   const { data }: { data: CollectionDocData } = $props();
-
-  const versions = setVersionsContext();
 </script>
 
-{#if data.status === 200}
-  <Page>
-    {#snippet main()}
-      {#key `${data.doc.id}|${data.doc.versionId ?? ''}|${data.doc.locale ?? ''}`}
-        <Document
-          class="rz-collection-container__doc"
-          doc={data.doc}
-          operation={data.operation}
-          readOnly={data.readOnly}
-        />
-      {/key}
-    {/snippet}
-  </Page>
-  <Versions doc={data.doc} bind:open={versions.open} versionId={versions.versionId} />
-{:else}
-  <Unauthorized />
-{/if}
+<DocumentPage {data} operation={data.operation} class="rz-collection-container__doc" />

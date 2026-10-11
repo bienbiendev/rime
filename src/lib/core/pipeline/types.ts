@@ -1,8 +1,8 @@
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import type { Docs, DocType, RawDoc } from '$lib/core/prototype/types.js';
-import type { RegisterArea, RegisterCollection } from '$lib/index.js';
-import type { PrototypeSlug } from '$lib/types.js';
-import type { DeepPartial, Dic } from '$lib/util/types.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import type { Docs, DocType, RawDoc } from '#lib/core/prototype/types.js';
+import type { RegisterArea, RegisterCollection } from '#lib/index.js';
+import type { PrototypeSlug } from '#lib/types.js';
+import type { DeepPartial, Dic } from '#lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { ConfigMap } from './config-map/types.js';
 
@@ -28,9 +28,9 @@ export type HookTiming =
 /**
  * A hook as a written list holds it.
  *
- * Each timing has its own argument shape (see `hooks.ts`), which a list covering every timing
- * cannot express. Sound for the reason the erasure elsewhere is: a hook only ever reaches the
- * timing it is placed under.
+ * Each timing has its own argument shape (see `HookContext` and `define-hook.ts`), which a list
+ * covering every timing cannot express. Sound for the reason the erasure elsewhere is: a hook only
+ * ever reaches the timing it is placed under.
  */
 export type AnyHook = (args: any) => any;
 
@@ -158,10 +158,10 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
    * The row this document's content lives on, which is what its blocks, tree nodes and relations
    * hang off.
    *
-   * The base row for a plain document, and the version row for one that is versioned — `versions`
-   * is the feature that makes those differ, and it is what sets this (see
-   * features/versions/hooks/handle-new-version.server.ts). `params.versionId` above stays what the
-   * caller asked for; this is where the answer goes.
+   * The base row for a plain document, and the version row for one that is versioned.
+   * `resolveContentOwner` sets the document's row; versions' `handleNewVersion`
+   * (prototype/shared/versions/hooks/handle-new-version.server.ts) points it at the version row.
+   * `params.versionId` above stays what the caller asked for.
    */
   contentOwnerId?: string;
   /**
@@ -185,9 +185,9 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
    * the per-field write-access check in `validateFields`, and `deletePanelLockMetas` (the lock
    * fields stay on the document). Validation itself still runs.
    *
-   * Who sets it: the edit-lock endpoints reading the document they are about to mark, the
-   * locale-fallback pass a create runs for the other locales, and any feature doing bookkeeping
-   * the requesting user holds no permission for. It travels on one operation's context only —
+   * Who sets it: the edit-lock endpoints reading the document they are about to mark, the locale
+   * copy (`copyLocales`), and any feature doing bookkeeping the requesting user holds no
+   * permission for. It travels on one operation's context only —
    * a call that operation makes through the plain accessor starts without it.
    */
   isSystemOperation?: boolean;
@@ -200,13 +200,3 @@ export type OperationQuery = string | ParsedOperationQuery;
 export type ParsedOperationQuery = {
   where: Dic;
 };
-
-/**
- * A hook's name lives on the function at runtime and deliberately **not** in its type.
- *
- * Putting the name in the type breaks every consumer: intersecting a
- * function type with an object loses the assignability that lets a `Hook<'raw', 'read', 'before'>`
- * — what `Hooks.beforeRead(fn)` infers when the handler carries no explicit slug — land in a
- * `CollectionHooks<'pages'>`. Nothing needs it there: only the pipeline chart reads it, through
- * `hookName()`.
- */

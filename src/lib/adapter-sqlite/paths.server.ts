@@ -1,12 +1,13 @@
-import type { PathRow, PathsHandle } from '$lib/core/adapter.js';
-import type { PrototypeSlug } from '$lib/core/prototype/types.js';
+import type { PathRow, PathsHandle } from '#lib/core/adapter.js';
+import type { PrototypeSlug } from '#lib/core/prototype/types.js';
 import { and, eq, gt, isNull, lt, notInArray, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { baseTableName, tableName } from './naming.server.js';
+import { inTransaction } from './transaction.server.js';
 import type { AdapterDeps, GenericTable } from './types.server.js';
 
 /**
- * The addresses of a collection's pages, in its `__$paths` table.
+ * The addresses of a collection's pages, and of an area, in its `__$paths` table.
  *
  * Every statement names one page. The pages under it follow through the foreign key on
  * `(locale, parent_path)`: SQLite rewrites their `parent_path`, which regenerates their `path`.
@@ -72,21 +73,19 @@ const createPathsHandle = ({ db, tables }: AdapterDeps): PathsHandle => {
     // locale, and its slug there.
     moveUnder: async ({ slug, ownerId, parentId, slugs }) => {
       const { paths } = tablesOf(slug);
-      return db.transaction(async (tx) => {
-        const moved: unknown[] = [];
-        for (const [locale, value] of Object.entries(slugs)) {
-          const rows = await tx
+      const moved = await inTransaction(db, (tx) =>
+        Object.entries(slugs).map(([locale, value]) =>
+          tx
             .update(paths)
             .set({
               slug: value,
               parentPath: parentId ? parentPathIn(paths, parentId, locale) : null
             })
             .where(and(eq(paths.ownerId, ownerId), eq(paths.locale, locale)))
-            .returning();
-          moved.push(...rows);
-        }
-        return rowsOf(moved);
-      });
+            .returning()
+        )
+      );
+      return rowsOf(moved.flat());
     },
 
     children: async ({ slug, ownerId }) => {
@@ -138,14 +137,14 @@ const createPathsHandle = ({ db, tables }: AdapterDeps): PathsHandle => {
     setUrls: async ({ slug, rows }) => {
       if (!rows.length) return;
       const { paths } = tablesOf(slug);
-      await db.transaction(async (tx) => {
-        for (const { ownerId, locale, url } of rows) {
-          await tx
+      await inTransaction(db, (tx) =>
+        rows.map(({ ownerId, locale, url }) =>
+          tx
             .update(paths)
             .set({ url })
-            .where(and(eq(paths.ownerId, ownerId), eq(paths.locale, locale)));
-        }
-      });
+            .where(and(eq(paths.ownerId, ownerId), eq(paths.locale, locale)))
+        )
+      );
     }
   };
 };

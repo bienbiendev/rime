@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { env } from '$env/dynamic/public';
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import { apiUrl } from '$lib/core/routes/util.js';
-  import UploadThumbCell from '$lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
-  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
-  import { toKebabCase } from '$lib/util/string';
+  import { SITE_URL } from '$app/env/public';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import { apiUrl } from '#lib/core/routes/util.js';
+  import UploadThumbCell from '#lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
+  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import { toKebabCase } from '#lib/util/string.js';
 
   type Props = {
     value: {
@@ -40,7 +40,7 @@
     {#if ressource.data.doc._thumbnail}
       <UploadThumbCell
         mimeType={ressource.data.doc.mimeType}
-        url="{env.PUBLIC_RIME_URL}{ressource.data.doc._thumbnail}"
+        url="{SITE_URL}{ressource.data.doc._thumbnail}"
       />
       <span class="rz-relation-cell__title">{ressource.data.doc.title}</span>
     {:else}

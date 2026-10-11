@@ -1,5 +1,5 @@
-import buildRootTable from '$lib/adapter-sqlite/generate-schema/root.server.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
+import buildRootTable from '#lib/adapter-sqlite/generate-schema/root.server.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
 import {
   block,
   blocks,
@@ -10,7 +10,7 @@ import {
   text,
   toggle,
   tree
-} from '$lib/fields/index.js';
+} from '#lib/fields/index.js';
 import { expect, test } from 'vitest';
 
 // Field order is column order, and nothing else catches a reorder.
@@ -84,7 +84,7 @@ test('the columns a config generates, in order', async () => {
     'ownerId'
   ]);
 
-  expect(out.relationFieldsMap).toEqual({ image: { localized: false, to: 'medias' } });
+  expect([...out.relationTargets]).toEqual(['medias']);
   expect(out.referenceJoins).toEqual([]);
   expect(out.relationsDic).toEqual({
     pages: ['pages__$blocks_hero', 'pages__$tree_nav', 'pages__$$locales']
@@ -122,5 +122,45 @@ test('a relation from a second copy of its class still gets junction rows, not a
   });
 
   expect(columns(out.schema, 'pages')).toEqual(['id', 'title']);
-  expect(out.relationFieldsMap).toEqual({ image: { localized: false, to: 'medias' } });
+  expect([...out.relationTargets]).toEqual(['medias']);
+});
+
+test('a field inside tabs, in a localized group, gets its column in the locales table', async () => {
+  const out = await buildRootTable({
+    fields: [
+      group('meta')
+        .fields(text('label'), tabs(tab('seo').fields(text('title'))))
+        .localized()
+    ] as any,
+    tableName: 'pages' as any,
+    rootName: 'pages' as any,
+    locales: [{ code: 'en', label: 'English' }] as any,
+    blocksRegister: []
+  });
+
+  expect(columns(out.schema, 'pages')).toEqual(['id']);
+  expect(columns(out.schema, 'pages__$$locales')).toEqual([
+    'id',
+    'meta__label',
+    'meta__seo__title',
+    'locale',
+    'ownerId'
+  ]);
+});
+
+test('two relation fields with the same name keep both targets', async () => {
+  const out = await buildRootTable({
+    fields: [
+      blocks('layout', [
+        block('cta').fields(relation('link').to('pages' as never)),
+        block('card').fields(relation('link').to('posts' as never))
+      ])
+    ] as any,
+    tableName: 'news' as any,
+    rootName: 'news' as any,
+    locales: [] as any,
+    blocksRegister: []
+  });
+
+  expect([...out.relationTargets].sort()).toEqual(['pages', 'posts']);
 });

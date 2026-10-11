@@ -1,4 +1,5 @@
-import type { User } from '$lib/core/auth/types.js';
+import { ROLES } from './constant.js';
+import type { User } from '#lib/core/auth/types.js';
 
 /**
  * Checks if a user has admin privileges.
@@ -9,18 +10,13 @@ import type { User } from '$lib/core/auth/types.js';
  *   // Perform admin-only operations
  * }
  */
-export const isAdmin = (user?: User) => !!user && hasRoles(user, 'admin');
+export const isAdmin = (user?: User) => !!user && hasRoles(user, ROLES.ADMIN);
 
 /**
  * Checks if a user is from the staff collection.
  *
  * @example
- * // const user = {
- * //  isStaff: true
- * //  ...
- * // }
- * isStaff(user) // true
- *
+ * isStaff({ isStaff: true, ... }) // true
  */
 export const isStaff = (user?: User) => !!user && !!user.isStaff;
 
@@ -37,20 +33,6 @@ export const hasRoles = (user?: User, ...roles: string[]) =>
   !!user && user.roles.some((role) => roles.includes(role));
 
 /**
- * Checks if a user is an admin or matches the specified ID.
- * Useful for operations that should be allowed for admins or the user themselves.
- *
- * @example
- * // Check if user can edit a profile (either as admin or as the profile owner)
- * if (isAdminOrMe(currentUser, profileId)) {
- *   // Allow profile editing
- * }
- */
-export const isAdminOrMe = (user?: User, id?: string) => {
-  return isAdmin(user) || user?.id === id;
-};
-
-/**
  * Checks if a user's ID matches the specified ID.
  * Used for operations that should only be allowed for the user themselves.
  *
@@ -65,9 +47,16 @@ export const isMe = (user?: User, id?: string) => {
 };
 
 /**
- * Collection of access control utility functions.
- * Provides methods for checking user permissions and roles.
+ * Checks if a user is an admin or matches the specified ID.
+ * Useful for operations that should be allowed for admins or the user themselves.
+ *
+ * @example
+ * // Check if user can edit a profile (either as admin or as the profile owner)
+ * if (isAdminOrMe(currentUser, profileId)) {
+ *   // Allow profile editing
+ * }
  */
-export const access = { isAdmin, hasRoles, isAdminOrMe, isMe, isStaff };
+export const isAdminOrMe = (user?: User, id?: string) => isAdmin(user) || isMe(user, id);
 
-export default { isAdmin, hasRoles, isAdminOrMe, isMe };
+/** The access helpers, as `rimecms/util` publishes them. */
+export const access = { isAdmin, hasRoles, isAdminOrMe, isMe, isStaff };

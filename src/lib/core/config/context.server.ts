@@ -1,4 +1,4 @@
-import type { AreaSlug, CollectionSlug, Config, PrototypeSlug } from '$lib/types.js';
+import type { AreaSlug, CollectionSlug, Config } from '#lib/types.js';
 import { RimeError } from '../errors/index.js';
 import type { BuildConfig } from './build.server.js';
 
@@ -41,13 +41,13 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
   const isValidLocale = (locale: string) => getLocalesCodes().includes(locale);
 
   const getArea = (slug: string) => {
-    const areaConfig = (config.areas || []).find((g) => g.slug === slug);
+    const areaConfig = config.areas.find((area) => area.slug === slug);
     if (!areaConfig) throw new RimeError(RimeError.BAD_REQUEST, `${slug} is not an area`);
     return areaConfig;
   };
 
   const getCollection = (slug: string) => {
-    const collectionConfig = (config.collections || []).find((c) => c.slug === slug);
+    const collectionConfig = config.collections.find((collection) => collection.slug === slug);
     if (!collectionConfig)
       throw new RimeError(RimeError.BAD_REQUEST, `${slug} is not a collection`);
     return collectionConfig;
@@ -66,9 +66,9 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
   };
 
   const isCollection = (slug?: string): slug is CollectionSlug =>
-    !!mapCollectionsSlug.includes(slug as any);
+    mapCollectionsSlug.includes(slug as any);
 
-  const isArea = (slug?: string): slug is AreaSlug => !!mapAreasSlug.includes(slug as any);
+  const isArea = (slug?: string): slug is AreaSlug => mapAreasSlug.includes(slug as any);
 
   return {
     /**
@@ -139,15 +139,6 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
     /**
      * Checks if a slug represents an area
      */
-    isArea,
-
-    /**
-     * Determines the prototype (collection or area) of a document by its slug
-     */
-    getDocumentPrototype(slug: PrototypeSlug) {
-      if (isCollection(slug)) return 'collection';
-      if (isArea(slug)) return 'area';
-      throw new RimeError(RimeError.BAD_REQUEST, slug + ' is neither a collection nor an area');
-    }
+    isArea
   };
 }

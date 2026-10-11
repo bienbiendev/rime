@@ -1,6 +1,8 @@
-import { dev } from '$app/environment';
-import { createAuthInstance } from '$lib/core/auth/better-auth/instance.server.js';
-import type { Config } from '$lib/core/config/types.js';
+import { dev } from '$app/env';
+import { RIME_LOG_LEVEL, RIME_LOG_TO_FILE, RIME_LOG_TO_FILE_MAX_DAYS } from '$app/env/private';
+import { logger } from '#lib/core/logger.server.js';
+import { createAuthInstance } from '#lib/core/auth/better-auth/instance.server.js';
+import type { Config } from '#lib/core/config/types.js';
 import { bootUpload } from './prototype/collection/upload/boot/index.server.js';
 import { createConfigContext } from './config/context.server.js';
 import type { BuildConfig } from './config/index.server.js';
@@ -9,7 +11,8 @@ import { registerTranslation } from './i18n/register.server.js';
 import { area } from './prototype/area/definition.server.js';
 
 /**
- * Phase 2 of three — everything that happens once, when the process starts.
+ * Phases 1 and 2 of three: codegen (dev only, step 4), then everything that happens once, when the
+ * process starts.
  *
  * A numbered sequence rather than a list of uniform steps, because each one feeds the next: the
  * config context feeds the adapter, the adapter feeds better-auth. Two of those dependencies —
@@ -17,8 +20,15 @@ import { area } from './prototype/area/definition.server.js';
  * else, which is why the order is written out.
  */
 export const bootRime = async <const C extends Config>(config: BuildConfig<C>) => {
-  // 1. Plugins, flattened to a name -> actions map. First because codegen and better-auth both
-  //    read it (the mailer plugin supplies better-auth's transport).
+  // 0. The logger's level and file.
+  logger.configure({
+    level: RIME_LOG_LEVEL,
+    toFile: RIME_LOG_TO_FILE,
+    maxDays: RIME_LOG_TO_FILE_MAX_DAYS
+  });
+
+  // 1. Plugins, flattened to a name -> actions map. Better-auth reads it: the mailer plugin
+  //    supplies its transport.
   const plugins = Object.fromEntries(
     config.plugins.map((plugin) => [plugin.name, plugin.actions ?? {}])
     // Named as `BuildConfig<C>['$InferPluginsServer']`, the same way `Rime` declares it, so the
@@ -29,7 +39,7 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   // 2. The config interface — every lookup by slug, the locale list, the raw config.
   const configCtx = createConfigContext(config);
 
-  // 3. Upload makes sure the static directory it writes into exists.
+  // 3. Upload makes sure the folder of each upload collection exists.
   bootUpload(config);
 
   // 4. Phase 1, in dev only: write routes, schema and types. Before the adapter, which imports
@@ -46,8 +56,8 @@ export const bootRime = async <const C extends Config>(config: BuildConfig<C>) =
   //    collection handle or an area handle; `adapter.collection(slug)` and `adapter.area(slug)`
   //    serve them from then on.
   //
-  //    The first step here that touches the database, deliberately: a prototype whose tables are
-  //    missing fails at boot, naming itself, instead of on whichever request first reaches it.
+  //    A prototype whose table is missing from the generated schema fails here, at boot, naming
+  //    itself, instead of on the first request that reaches it.
   for (const prototypeConfig of [...config.collections, ...config.areas]) {
     adapter.registerPrototype(prototypeConfig);
   }

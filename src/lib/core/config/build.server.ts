@@ -1,9 +1,9 @@
-import type { SMTPConfig } from '$lib/core/plugins/mailer/index.server.js';
+import type { SMTPConfig } from '#lib/core/plugins/mailer/index.server.js';
 import { configureConfig } from './configure.js';
 import { withPrototypeLists } from './build.js';
-import { resolvePipelines } from '$lib/core/pipeline/build.server.js';
+import { resolvePipelines } from '#lib/core/pipeline/build.server.js';
 import { createRime, type Rime } from '../rime.server.js';
-import { configurePlugins } from '$lib/core/plugins/configure.js';
+import { configurePlugins } from '#lib/core/plugins/configure.js';
 import type { Config } from './types.js';
 
 export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>> => {
@@ -15,7 +15,7 @@ export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>>
  * The config chain, one named step at a time:
  *
  * 1. `withPrototypeLists` — `collections` and `areas` exist, empty if the author named none.
- * 2. `configureConfig` — the five whole-config steps, in `config/configure.ts`.
+ * 2. `configureConfig` — the six whole-config steps, in `config/configure.ts`.
  * 3. `configurePlugins` — the plugin layer, which can add collections of its own.
  * 4. `resolvePipelines` — every prototype config's `$hooks`, last.
  *
@@ -27,8 +27,7 @@ function augmentConfig<T extends Config>(config: T) {
   const configured = configureConfig(withLists);
   const withPlugins = configurePlugins(configured);
   // Last, so *every* prototype config gets its pipeline from the same line — authored, derived by
-  // a feature, or added by a plugin. A plugin's own collection used to arrive after this ran and
-  // so carried no pipeline at all: its first create failed on `missing configMap @create`.
+  // a feature, or added by a plugin.
   //
   // A plugin appending to a collection's `$hooks` still lands where it should — `buildPipeline`
   // reads `$hooks` as the consumer layer and appends it after the placed hooks either way.
@@ -60,27 +59,11 @@ type InferAreas<C> = C extends { areas?: readonly any[] }
     }
   : Record<string, never>;
 
-type InferCollectionsSlug<C> = C extends { collections?: readonly any[] }
-  ? NonNullable<C['collections']>[number] extends { slug: infer N }
-    ? N extends string
-      ? N
-      : never
-    : never
-  : Array<never>;
-
-type InferAreasSlug<C> = C extends { areas?: readonly any[] }
-  ? NonNullable<C['areas']>[number] extends { slug: infer N }
-    ? N extends string
-      ? N
-      : never
-    : never
-  : Array<never>;
-
 type InferCorePlugins<C extends Config> = {
-  cache: import('$lib/core/plugins/cache/module.server.js').CacheActions;
-  sse: import('$lib/core/plugins/sse/index.server.js').SSEActions;
+  cache: import('#lib/core/plugins/cache/module.server.js').CacheActions;
+  sse: import('#lib/core/plugins/sse/index.server.js').SSEActions;
 } & (C['$smtp'] extends SMTPConfig
-  ? { mailer: import('$lib/core/plugins/mailer/index.server.js').MailerActions }
+  ? { mailer: import('#lib/core/plugins/mailer/index.server.js').MailerActions }
   : Record<string, never>);
 
 // Helper type to extract custom plugins from original config
@@ -96,10 +79,7 @@ type InferPluginsServer<C extends Config> = InferCorePlugins<C> & ExtractCustomP
 
 export type BuildConfig<C extends Config = Config> = ReturnType<typeof augmentConfig<C>> & {
   readonly $InferAuthPlugins: C['$auth'] extends { plugins: any } ? C['$auth']['plugins'] : [];
-  readonly $InferRoutes: C['$routes'] extends Record<string, any> ? C['$routes'] : unknown;
   readonly $InferPluginsServer: InferPluginsServer<C>;
   readonly $InferCollections: InferCollections<C>;
   readonly $InferAreas: InferAreas<C>;
-  readonly $InferAreasSlug: InferAreasSlug<C>;
-  readonly $InferCollectionsSlug: InferCollectionsSlug<C>;
 };

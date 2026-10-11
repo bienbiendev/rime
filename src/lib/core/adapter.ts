@@ -1,22 +1,19 @@
-import type { BuiltArea, BuiltCollection } from '$lib/core/config/types.js';
-import type { OperationQuery } from '$lib/core/pipeline/types.js';
-import type { GenericBlock, PrototypeSlug, RawDoc, TreeBlock } from '$lib/core/prototype/types.js';
-import type { BeforeOperationRelation, RelationRow } from '$lib/fields/relation/index.js';
-import type { Dic, WithOptional, WithRequired } from '$lib/util/types.js';
+import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
+import type { OperationQuery } from '#lib/core/pipeline/types.js';
+import type { GenericBlock, PrototypeSlug, RawDoc, TreeBlock } from '#lib/core/prototype/types.js';
+import type { BeforeOperationRelation, RelationRow } from '#lib/fields/relation/index.js';
+import type { Dic, WithOptional, WithRequired } from '#lib/util/types.js';
 
 /**
  * What core requires of a database adapter.
- *
- * Written here, in core's vocabulary, rather than read off an implementation: an interface
- * inferred from what one adapter returns is not something a second adapter can conform to.
  *
  * The rule that decides what may appear below: **every argument and return type is something core
  * can name**. Slugs, documents, blocks, relations, queries, locales. No tables, no columns, no
  * drizzle. A method that cannot be phrased that way is work on the wrong side of the line — a
  * parameter like `parentSlug: TableName`, naming a slug and carrying a table, is the tell.
  *
- * The escape hatch is deliberately **not** here. `rime.adapter.db` is documented for consumers
- * who need to drop to SQL, and adapter-sqlite still exposes it; core is what must not use it.
+ * The escape hatch is deliberately **not** here. `rime.adapter.db` is for consumers who need to
+ * drop to SQL; core must not use it.
  * See `SqliteAdapter` in adapter-sqlite/index.server.ts for the full concrete surface.
  */
 export interface Adapter {
@@ -138,9 +135,7 @@ export interface CollectionHandle extends BaseHandle {
      * Narrows which content row this read means, for a config that has one. The newest when
      * omitted, which is what "the content of this document" means with nothing else said.
      *
-     * This is what `draft` and `versionId` were. They were request parameters the adapter decoded
-     * against `config.versions.draft`; the caller decodes them now (`versionsReadQuery`) and hands
-     * down a filter, so the adapter applies one rather than choosing one.
+     * The caller builds this filter (`versionsReadQuery`); the adapter applies it.
      */
     content?: OperationQuery;
   }): Promise<RawDoc | undefined>;
@@ -168,10 +163,8 @@ export interface CollectionHandle extends BaseHandle {
    * Writes the rows a write plan names: the document's own row always, and the content row when
    * the caller names one.
    *
-   * There is no `versionOperation` and no `versionId` here. The caller decided which rows this
-   * write touches before calling — `pipeline/run.server.ts` builds the plan and
-   * `versionsWritePlan` refines it — so the adapter executes a plan rather than decoding an enum
-   * into three branches.
+   * The caller decides which rows this write touches: `pipeline/run.server.ts` builds the plan and
+   * `versionsWritePlan` refines it. The adapter executes the plan.
    */
   update(args: {
     id: string;
@@ -218,9 +211,9 @@ export interface AreaHandle extends BaseHandle {
 }
 
 /**
- * `parentSlug` is the slug that owns the children — the prototype's versions when it has one, the
- * prototype itself when not. `pipeline/run.server.ts` resolves it off `PrototypeHandle.versions`,
- * which is what registration was handed; nothing works it out from a config member.
+ * `parentSlug` is the slug that owns the children: the prototype's versions slug
+ * (`config._versions.slug`) when it has one, its own slug otherwise. `pipeline/run.server.ts`
+ * resolves it.
  */
 export interface BlocksHandle {
   create(args: {
@@ -279,10 +272,12 @@ export interface RelationsHandle {
 }
 
 /**
- * A page's address in one locale, as a collection with `$url` stores it.
+ * A page's address in one locale, as a config with `$url` stores it. An area's row holds its slug,
+ * with no parent.
  *
  * ```
  * { ownerId: 'web', locale: 'en', slug: 'web', path: 'services/web', url: 'https://site.test/en/services/web' }
+ * { ownerId: 'i1', locale: 'en', slug: 'infos', path: 'infos', url: 'https://site.test/en/about' }
  * ```
  *
  * `locale` is `''` when the config has no localization. `path` is the slugs from the top page down
@@ -297,7 +292,8 @@ export type PathRow = {
 };
 
 /**
- * The addresses of a collection's pages. Every verb names one page; the pages under it follow.
+ * The addresses of a collection's pages, and of an area. Every verb names one page; the pages
+ * under it follow.
  */
 export interface PathsHandle {
   /** One row per locale for a new page, under its parent's row in each locale. */
@@ -422,7 +418,8 @@ export interface TableHandle {
  * `removeUser` all sit behind `adminMiddleware`, and every caller runs where no admin session
  * exists: `hasAuthUser` gates the init route, which only runs when there is no user at all;
  * `setAuthUserRole` promotes the first signup; and `deleteAuthUser` rolls back a failed one,
- * which `removeUser` refuses outright with `YOU_CANNOT_REMOVE_YOURSELF`.
+ * which `removeUser` refuses outright with `YOU_CANNOT_REMOVE_YOURSELF`. After an auth document
+ * is deleted, `deleteAuthUser` and `deleteAuthApiKey` remove its twin whoever the caller is.
  */
 export interface AuthHandle {
   /** The Better-auth database adapter. Opaque to core, which only hands it to Better-auth. */
@@ -444,13 +441,11 @@ export type WritePlan = {
 /**
  * A versions table, as the feature that owns it describes it.
  *
- * Only `slug` for now, and deliberately: it is what the schema needs, and an unread member is
- * exactly the mistake this declaration replaces. The read selector and the owner column join it
- * when there is something reading them.
+ * Only `slug`: it is what the schema needs.
  */
 export type VersionsTable = {
   /**
-   * The versions's own slug — `$pages__versions`. In slug space, never a table name: what a slug
+   * The versions table's own slug — `$pages__versions`. In slug space, never a table name: what a slug
    * is called in the database is the adapter's business, and it maps.
    */
   slug: string;
@@ -459,10 +454,8 @@ export type VersionsTable = {
 /**
  * What a column holds.
  *
- * Six values, and deliberately only six: it is what the templates this replaces actually emit, and
- * a wider set is a schema DSL nobody asked for. `timestamp` and `timestampMs` are two entries
- * rather than one because they are two storage formats — epoch seconds and epoch milliseconds —
- * and better-auth's own tables use both.
+ * Six values. `timestamp` and `timestampMs` are two entries because they are two storage formats,
+ * epoch seconds and epoch milliseconds, and better-auth's own tables use both.
  */
 export type ColumnType =
   'text' | 'integer' | 'real' | 'boolean' | 'timestamp' | 'timestampMs' | 'json';
@@ -477,9 +470,9 @@ export type ColumnDeclaration = {
   /** Written into the schema as the column's `DEFAULT`, so only a literal. */
   defaultValue?: string | number | boolean;
   /**
-   * A foreign key, named in slug space — never as a table.
+   * A foreign key onto a declared table, named by its slug (`$authUsers`).
    *
-   * `column` defaults to `id` and `onDelete` to `cascade`, which is every case there is today.
+   * `column` defaults to `id` and `onDelete` to `cascade`.
    * A declaration may point at its own `table`: a directory's parent is a directory, which is the
    * one shape a prototype's own fields never produce.
    */

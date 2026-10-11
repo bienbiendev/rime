@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import { apiUrl } from '$lib/core/routes/util.js';
-  import * as Command from '$lib/panel/components/ui/command/index.js';
-  import Tag from '$lib/panel/components/ui/tag/tag.svelte';
-  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
-  import type { PrototypeSlug } from '$lib/types';
-  import { toKebabCase } from '$lib/util/string';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import { apiUrl } from '#lib/core/routes/util.js';
+  import * as Command from '#lib/panel/components/ui/command/index.js';
+  import Tag from '#lib/panel/components/ui/tag/tag.svelte';
+  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import type { PrototypeSlug } from '#lib/types.js';
+  import { toKebabCase } from '#lib/util/string.js';
 
   type Ressource = {
     label: string;
@@ -39,12 +39,12 @@
     };
   }
 
-  // When reactiveStateValue changes, update the resource
+  // Fetch the documents of `ressourceType`.
   $effect(() => {
     resource = APIProxy.getRessource(apiUrl(toKebabCase(ressourceType)));
   });
 
-  // Get resources
+  // Turn the fetched documents into choices.
   $effect(() => {
     if (resource && resource.data) {
       const docs = 'docs' in resource.data ? resource.data.docs : [resource.data.doc];
@@ -66,7 +66,7 @@
     }
   });
 
-  // Whenver bindable ressourceId change set internal selected
+  // Whenever bindable ressourceId change set internal selected
   $effect(() => {
     if (!ressourceId) {
       selected = null;

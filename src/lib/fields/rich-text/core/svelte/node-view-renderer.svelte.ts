@@ -41,7 +41,6 @@ export interface SvelteNodeViewRendererOptions extends NodeViewRendererOptions {
   update: ((props: RendererUpdateProps) => boolean) | null;
   as?: string;
   attrs?: AttrProps;
-  context?: Map<string, any>;
 }
 
 class SvelteNodeView extends NodeView<
@@ -252,7 +251,7 @@ class SvelteNodeView extends NodeView<
   }
 
   /**
-   * Update the attributes of the top-level element that holds the React component.
+   * Update the attributes of the top-level element that holds the Svelte component.
    * Applying the attributes defined in the `attrs` option.
    */
   updateElementAttributes() {

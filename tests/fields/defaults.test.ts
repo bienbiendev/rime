@@ -7,7 +7,8 @@ const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
 /**
  * Default values through the API, on the `defaults` fixture: each kind of field twice, once per
- * fill. Every assertion reads the document back.
+ * fill. One test per case and fill, whose requests carry every kind at once. Every assertion
+ * reads the document back and names the field it checks.
  *
  * ```
  *                                    fill: 'create'   fill: 'save'
@@ -75,6 +76,22 @@ const kinds: Kind[] = [
     isEmpty: isNull
   },
   {
+    name: 'select',
+    value: 'b',
+    empty: null,
+    isValue: (value) => value === 'b',
+    isDefault: (value) => value === 'a',
+    isEmpty: isNull
+  },
+  {
+    name: 'selectMany',
+    value: ['b'],
+    empty: [],
+    isValue: (value) => Array.isArray(value) && value.join() === 'b',
+    isDefault: (value) => Array.isArray(value) && value.join() === 'a',
+    isEmpty: isEmptyList
+  },
+  {
     name: 'date',
     value: '2026-01-01T00:00:00.000Z',
     empty: null,
@@ -140,95 +157,111 @@ const patch = async (request: APIRequestContext, id: string, data: Record<string
   expect(response.status()).toBe(200);
 };
 
-const read = async (request: APIRequestContext, id: string, field: string) => {
+const read = async (request: APIRequestContext, id: string) => {
   const response = await request.get(`${API_BASE_URL}/defaults/${id}`, { headers });
   expect(response.status()).toBe(200);
-  return (await response.json()).doc[field];
+  return (await response.json()).doc;
 };
 
-for (const kind of kinds) {
-  const field = `${kind.name}Create`;
+type Fill = 'Create' | 'Save';
 
-  test.describe(`${kind.name}, fill 'create'`, () => {
-    test('POST sent a value: the value', async ({ request }) => {
-      const id = await post(request, { [field]: kind.value });
-      expect(kind.isValue(await read(request, id, field))).toBe(true);
-    });
+/** Every kind's field of one fill, each sent its value or its empty. */
+const every = (fill: Fill, sent: 'value' | 'empty') =>
+  Object.fromEntries(kinds.map((kind) => [kind.name + fill, kind[sent]]));
 
-    test('POST not sent: the default', async ({ request }) => {
-      const id = await post(request, {});
-      expect(kind.isDefault(await read(request, id, field))).toBe(true);
-    });
+/** Reads the document back and checks every kind's field of one fill, each check named by its field. */
+const expectEvery = async (
+  request: APIRequestContext,
+  id: string,
+  fill: Fill,
+  holds: 'isValue' | 'isDefault' | 'isEmpty'
+) => {
+  const doc = await read(request, id);
+  for (const kind of kinds) {
+    const field = kind.name + fill;
+    expect.soft(kind[holds](doc[field]), `${field}: ${JSON.stringify(doc[field])}`).toBe(true);
+  }
+};
 
-    test('POST sent empty: empty, and read empty', async ({ request }) => {
-      const id = await post(request, { [field]: kind.empty });
-      expect(kind.isEmpty(await read(request, id, field))).toBe(true);
-    });
+test.describe("fill 'create'", () => {
+  const fill = 'Create';
 
-    test('PATCH sent a value: the value', async ({ request }) => {
-      const id = await post(request, { [field]: kind.empty });
-      await patch(request, id, { [field]: kind.value });
-      expect(kind.isValue(await read(request, id, field))).toBe(true);
-    });
-
-    test('PATCH not sent, stored a value: unchanged', async ({ request }) => {
-      const id = await post(request, { [field]: kind.value });
-      await patch(request, id, { title: 'Patched' });
-      expect(kind.isValue(await read(request, id, field))).toBe(true);
-    });
-
-    test('PATCH not sent, stored empty: empty', async ({ request }) => {
-      const id = await post(request, { [field]: kind.empty });
-      await patch(request, id, { title: 'Patched' });
-      expect(kind.isEmpty(await read(request, id, field))).toBe(true);
-    });
-
-    test('PATCH sent empty: empty', async ({ request }) => {
-      const id = await post(request, { [field]: kind.value });
-      await patch(request, id, { [field]: kind.empty });
-      expect(kind.isEmpty(await read(request, id, field))).toBe(true);
-    });
+  test('POST sent a value: the value', async ({ request }) => {
+    const id = await post(request, every(fill, 'value'));
+    await expectEvery(request, id, fill, 'isValue');
   });
-}
 
-for (const kind of kinds) {
-  const field = `${kind.name}Save`;
-
-  test.describe(`${kind.name}, fill 'save'`, () => {
-    test('POST sent a value: the value', async ({ request }) => {
-      const id = await post(request, { [field]: kind.value });
-      expect(kind.isValue(await read(request, id, field))).toBe(true);
-    });
-
-    test('POST not sent: the default', async ({ request }) => {
-      const id = await post(request, {});
-      expect(kind.isDefault(await read(request, id, field))).toBe(true);
-    });
-
-    test('POST sent empty: the default', async ({ request }) => {
-      const id = await post(request, { [field]: kind.empty });
-      expect(kind.isDefault(await read(request, id, field))).toBe(true);
-    });
-
-    test('PATCH sent a value: the value', async ({ request }) => {
-      const id = await post(request, {});
-      await patch(request, id, { [field]: kind.value });
-      expect(kind.isValue(await read(request, id, field))).toBe(true);
-    });
-
-    test('PATCH not sent, stored a value: unchanged', async ({ request }) => {
-      const id = await post(request, { [field]: kind.value });
-      await patch(request, id, { title: 'Patched' });
-      expect(kind.isValue(await read(request, id, field))).toBe(true);
-    });
-
-    test('PATCH sent empty: the default', async ({ request }) => {
-      const id = await post(request, { [field]: kind.value });
-      await patch(request, id, { [field]: kind.empty });
-      expect(kind.isDefault(await read(request, id, field))).toBe(true);
-    });
+  test('POST not sent: the default', async ({ request }) => {
+    const id = await post(request, {});
+    await expectEvery(request, id, fill, 'isDefault');
   });
-}
+
+  test('POST sent empty: empty, and read empty', async ({ request }) => {
+    const id = await post(request, every(fill, 'empty'));
+    await expectEvery(request, id, fill, 'isEmpty');
+  });
+
+  test('PATCH sent a value: the value', async ({ request }) => {
+    const id = await post(request, every(fill, 'empty'));
+    await patch(request, id, every(fill, 'value'));
+    await expectEvery(request, id, fill, 'isValue');
+  });
+
+  test('PATCH not sent, stored a value: unchanged', async ({ request }) => {
+    const id = await post(request, every(fill, 'value'));
+    await patch(request, id, { title: 'Patched' });
+    await expectEvery(request, id, fill, 'isValue');
+  });
+
+  test('PATCH not sent, stored empty: empty', async ({ request }) => {
+    const id = await post(request, every(fill, 'empty'));
+    await patch(request, id, { title: 'Patched' });
+    await expectEvery(request, id, fill, 'isEmpty');
+  });
+
+  test('PATCH sent empty: empty', async ({ request }) => {
+    const id = await post(request, every(fill, 'value'));
+    await patch(request, id, every(fill, 'empty'));
+    await expectEvery(request, id, fill, 'isEmpty');
+  });
+});
+
+test.describe("fill 'save'", () => {
+  const fill = 'Save';
+
+  test('POST sent a value: the value', async ({ request }) => {
+    const id = await post(request, every(fill, 'value'));
+    await expectEvery(request, id, fill, 'isValue');
+  });
+
+  test('POST not sent: the default', async ({ request }) => {
+    const id = await post(request, {});
+    await expectEvery(request, id, fill, 'isDefault');
+  });
+
+  test('POST sent empty: the default', async ({ request }) => {
+    const id = await post(request, every(fill, 'empty'));
+    await expectEvery(request, id, fill, 'isDefault');
+  });
+
+  test('PATCH sent a value: the value', async ({ request }) => {
+    const id = await post(request, {});
+    await patch(request, id, every(fill, 'value'));
+    await expectEvery(request, id, fill, 'isValue');
+  });
+
+  test('PATCH not sent, stored a value: unchanged', async ({ request }) => {
+    const id = await post(request, every(fill, 'value'));
+    await patch(request, id, { title: 'Patched' });
+    await expectEvery(request, id, fill, 'isValue');
+  });
+
+  test('PATCH sent empty: the default', async ({ request }) => {
+    const id = await post(request, every(fill, 'value'));
+    await patch(request, id, every(fill, 'empty'));
+    await expectEvery(request, id, fill, 'isDefault');
+  });
+});
 
 test("An area's first boot writes its defaults, blocks and tree items included", async ({
   request
@@ -247,5 +280,10 @@ test("An area's first boot writes its defaults, blocks and tree items included",
 
 test("a text sent as '' is empty like null", async ({ request }) => {
   const id = await post(request, { textSave: '' });
-  expect(await read(request, id, 'textSave')).toBe('Default');
+  expect((await read(request, id)).textSave).toBe('Default');
+});
+
+test("a text sent as '' to a create field is empty", async ({ request }) => {
+  const id = await post(request, { textCreate: '' });
+  expect([null, '']).toContain((await read(request, id)).textCreate);
 });

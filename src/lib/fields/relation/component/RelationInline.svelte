@@ -1,19 +1,19 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import type { UploadDoc } from '$lib/core/prototype/collection/upload/types.js';
-  import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config.js';
-  import { apiUrl } from '$lib/core/routes/util.js';
-  import { Relation } from '$lib/fields/relation/relation.js';
-  import FileDrop from '$lib/panel/components/sections/collection/bulk-upload/FileDrop.svelte';
-  import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
-  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { uploadFiles, type UploadProgress } from '$lib/panel/util/upload-file.js';
-  import { Image as ImageIcon, Trash2 } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import type { UploadDoc } from '#lib/core/prototype/collection/upload/types.js';
+  import { isUploadConfig } from '#lib/core/prototype/collection/upload/util/config.js';
+  import { apiUrl } from '#lib/core/routes/util.js';
+  import { Relation } from '#lib/fields/relation/relation.js';
+  import FileDrop from '#lib/panel/components/sections/collection/bulk-upload/FileDrop.svelte';
+  import SpinLoader from '#lib/panel/components/ui/spin-loader/SpinLoader.svelte';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { createUploader, uploadingLabel } from '#lib/panel/util/uploader.svelte.js';
+  import ImageIcon from '@lucide/svelte/icons/image';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import type { Snippet } from 'svelte';
-  import { SvelteMap } from 'svelte/reactivity';
+  import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import type { RelationFieldBuilder, RelationRow } from '../index.js';
   import { toRelationValue } from '../value.js';
   import Browse from './upload/Browse.svelte';
@@ -47,16 +47,25 @@
 
   /** The docs drawn: a pick brings its own, a relation there on load is resolved once. */
   const known = new SvelteMap<string, UploadDoc>();
+  /** The ids whose document could not be fetched: nothing to draw for them. */
+  const unreadable = new SvelteSet<string>();
   $effect(() => {
     for (const ref of refs) {
-      if (known.has(ref.documentId)) continue;
+      if (known.has(ref.documentId) || unreadable.has(ref.documentId)) continue;
       const lookup = { relationTo: ref.relationTo, documentId: ref.documentId };
-      Promise.resolve(Relation.resolve<UploadDoc>([lookup]).first()).then((doc) => {
-        if (doc) known.set(ref.documentId, doc);
+      const resolved = Relation.resolve<UploadDoc>([lookup], { locale: locale.code });
+      Promise.resolve(resolved.first()).then((doc) => {
+        if (doc) {
+          known.set(ref.documentId, doc);
+        } else {
+          unreadable.add(ref.documentId);
+        }
       });
     }
   });
   const docs = $derived(ids.flatMap((id) => known.get(id) ?? []));
+  /** A document is still on its way: one neither drawn nor known to be unreadable. */
+  const loading = $derived(ids.some((id) => !known.has(id) && !unreadable.has(id)));
 
   let browsing = $state(false);
   const open = () => (browsing = true);
@@ -81,21 +90,17 @@
 
   /* ------------------------------------------------------------ uploading */
 
-  const APIProxy = getAPIProxyContext();
-  let progress = $state<UploadProgress | null>(null);
-  let failed = $state<string[]>([]);
+  const uploader = createUploader(() => ({
+    url: apiUrl(relationConfig.kebab),
+    accept: relationConfig.upload?.accept
+  }));
 
   /** Each file becomes a media of the library, then the pick: after the others, or in place. */
   async function upload(files: File[]) {
-    failed = [];
-    const target = { url: apiUrl(relationConfig.kebab), accept: relationConfig.upload?.accept };
-    const result = await uploadFiles(files, target, (state) => (progress = state));
-    progress = null;
-    failed = result.failed;
-    if (!result.docs.length) return;
-    const added = result.docs.map((doc) => doc.id);
-    onChange(many ? [...ids, ...added] : added.slice(0, 1), result.docs);
-    APIProxy.invalidate(apiUrl(relationConfig.kebab));
+    const docs = await uploader.upload(files);
+    if (!docs.length) return;
+    const added = docs.map((doc) => doc.id);
+    onChange(many ? [...ids, ...added] : added.slice(0, 1), docs);
   }
 
   /** A control does its job and stops there, before the block under it selects itself again. */
@@ -139,7 +144,7 @@
         {/if}
       </div>
     {/if}
-  {:else if ids.length}
+  {:else if loading}
     <div class="rz-relation-inline__loading" aria-busy="true"></div>
   {:else if empty}
     {@render empty({ open, upload })}
@@ -148,19 +153,13 @@
       class="rz-relation-inline__empty"
       multiple={many}
       accept={relationConfig.upload?.accept}
-      disabled={!canPick || !!progress}
+      disabled={!canPick || !!uploader.progress}
       onfiles={upload}
     >
       {#snippet children({ browse })}
-        {#if progress}
+        {#if uploader.progress}
           <SpinLoader />
-          <span aria-live="polite">
-            {t__(
-              'fields.uploading',
-              String(Math.min(progress.uploaded + progress.failed.length + 1, progress.total)),
-              String(progress.total)
-            )}
-          </span>
+          <span aria-live="polite">{uploadingLabel(uploader.progress)}</span>
         {:else}
           <ImageIcon size={18} />
           <span>
@@ -176,8 +175,8 @@
               {t__('fields.choose_in_library')}
             </button>
           </small>
-          {#if failed.length}
-            <small>{t__('fields.upload_failed', failed.join(', '))}</small>
+          {#if uploader.failed.length}
+            <small>{t__('fields.upload_failed', uploader.failed.join(', '))}</small>
           {/if}
         {/if}
       {/snippet}

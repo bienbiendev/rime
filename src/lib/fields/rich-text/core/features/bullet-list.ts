@@ -1,4 +1,4 @@
-import { List } from '@lucide/svelte';
+import List from '@lucide/svelte/icons/list';
 import { BulletList } from '@tiptap/extension-list';
 import type { RichTextFeature, RichTextFeatureNode } from '../types.js';
 

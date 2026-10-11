@@ -1,6 +1,6 @@
-// @decouple the collection type should not appear or at least not being imported from features
-import type { Collection } from '$lib/core/config/types.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
+import { STAFF_SLUG } from '#lib/core/auth/constant.js';
+import type { Collection } from '#lib/core/config/types.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
 import { augmentAuth as augmentAuthBase, type WithNormalizedAuth } from './augment.js';
 
 export const augmentAuth = <T extends Collection<any>>(config: T): WithNormalizedAuth<T> => {
@@ -16,7 +16,7 @@ export const augmentAuth = <T extends Collection<any>>(config: T): WithNormalize
   function addSchemaStaffReferenceForAPIKeys() {
     (collection.fields || []).forEach((field) => {
       if (field instanceof FormFieldBuilder && field.name === 'ownerId') {
-        field.$references('staff', { onDelete: 'cascade' });
+        field.$references(STAFF_SLUG, { onDelete: 'cascade' });
       }
     });
     return collection;

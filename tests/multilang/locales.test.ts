@@ -14,6 +14,9 @@ const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
  * another.
  */
 
+// The tests run in order and share the page they create: one failure skips the rest.
+test.describe.configure({ mode: 'serial' });
+
 type Headers = { cookie: string };
 
 const read = async (request: APIRequestContext, id: string, locale: string, headers: Headers) => {
@@ -71,13 +74,14 @@ test('A field written in EN is EN; the others still fall back', async ({ request
 test('Writing EN, blocks included, changes nothing in FR', async ({ request }) => {
   const headers = await signInSuperAdmin(request);
 
-  // The whole merged EN document written back, as a client that reads then writes would.
+  // The whole merged EN document written back, as a client that reads then writes would, with
+  // an EN meta title the FR fallback cannot give.
   const en = await read(request, pageId, 'en', headers);
   const written = await request.patch(`${API_BASE_URL}/pages/${pageId}?locale=en`, {
     headers,
     data: {
       attributes: { ...en.attributes, title: 'Page in English, again' },
-      seo: en.seo,
+      seo: { ...en.seo, metaTitle: 'Meta EN' },
       layout: {
         components: [
           { type: 'paragraph', text: 'Paragraph' },
@@ -88,12 +92,14 @@ test('Writing EN, blocks included, changes nothing in FR', async ({ request }) =
   });
   expect(written.status()).toBe(200);
 
+  // FR keeps its own values, `Meta FR` included
   const fr = await read(request, pageId, 'fr', headers);
   expect({ attributes: fr.attributes, layout: fr.layout, seo: fr.seo }).toEqual(frBefore);
 
+  // The write landed in EN rows: EN reads its own values, and keeps the slug it sent back
   const enAfter = await read(request, pageId, 'en', headers);
   expect(enAfter.attributes.title).toBe('Page in English, again');
   expect(enAfter.layout.components).toHaveLength(2);
-  // The write landed in EN: its own rows now hold what the fallback used to show.
-  expect(enAfter.seo.metaTitle).toBe('Meta FR');
+  expect(enAfter.seo.metaTitle).toBe('Meta EN');
+  expect(enAfter.attributes.slug).toBe('page-en-francais');
 });

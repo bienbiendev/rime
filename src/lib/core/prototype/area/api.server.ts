@@ -1,17 +1,18 @@
-import type { BuiltArea } from '$lib/core/config/types.js';
-import type { RegisterArea } from '$lib/index.js';
+import type { BuiltArea } from '#lib/core/config/types.js';
+import type { RegisterArea } from '#lib/index.js';
 import type { PrototypeApiContext } from '../define.js';
 import type { RequestEvent } from '@sveltejs/kit';
-import type { Dic } from '$lib/util/types.js';
-import type { WithRelationResolved } from '$lib/core/fields/types.js';
+import type { Dic } from '#lib/util/types.js';
+import type { WithRelationResolved } from '#lib/core/fields/types.js';
 import type { GenericDoc } from '../types.js';
-import type { OperationQuery } from '$lib/core/pipeline/types.js';
-import { versionsReadQuery } from '$lib/core/prototype/shared/versions/read-query.js';
+import type { OperationQuery } from '#lib/core/pipeline/types.js';
+import { versionsReadQuery } from '#lib/core/prototype/shared/versions/read-query.js';
+import { cachedRead, fallbackLocale } from '#lib/core/prototype/shared/api.server.js';
 import { find, type FindArgs } from './operations/find.js';
 import { update, type UpdateArgs } from './operations/update.js';
 
 /** What building an area's API for one request needs. */
-export type AreaApiArgs = {
+type AreaApiArgs = {
   config: BuiltArea;
   event: RequestEvent;
   defaultLocale: string | undefined;
@@ -22,8 +23,7 @@ export type AreaApiArgs = {
  *
  * There is no `create` and no `delete` — not switched off, absent, because a singleton has no
  * second document to make and nothing left to read if its only one goes. Nor is there an id
- * anywhere in these signatures. That is the whole difference from a collection, and it is why
- * this is its own class rather than a collection with a flag.
+ * anywhere in these signatures.
  *
  * `initial()` is the document as its fields default it, full stop: no auth step, because an area
  * lists no `auth`. The collection's strips auth's private members.
@@ -63,7 +63,7 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
 
   /** The locale to act in: the one asked for, else the request's, else the config's default. */
   fallbackLocale(locale?: string): string | undefined {
-    return locale || this.event.locals.locale || this.defaultLocale;
+    return fallbackLocale(this, locale);
   }
 
   /** Which version row a read means — see `versionsReadQuery`. */
@@ -73,16 +73,7 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
 
   /** Read through the API cache when it is on and this is not a system call. */
   cached<T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T> {
-    if (!this.event.locals.cacheEnabled || this.isSystemOperation) return read();
-
-    const cacheKey = this.event.locals.rime.cache.createKey(operation, {
-      slug: this.config.slug,
-      userEmail: this.event.locals.user?.email,
-      userRoles: this.event.locals.user?.roles,
-      ...key
-    });
-
-    return this.event.locals.rime.cache.get(cacheKey, read);
+    return cachedRead(this, operation, key, read);
   }
 
   /**
@@ -94,7 +85,7 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
    * - For versioned areas with draft support:
    *   - If versionId is provided: Returns that specific version
    *   - If latest=true: Returns the newest version (regardless of status)
-   *   - If draft=false: Returns the published version
+   *   - Otherwise: Returns the published version
    *
    * @example
    * const doc = await rime.area('settings').find({ locale })
@@ -107,9 +98,10 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
   find<D extends number = 0>(
     args: FindArgs & { depth?: D } = {}
   ): Promise<WithRelationResolved<Doc, D>> {
-    const { locale, select = [], depth = 0, versionId, latest, localeFallback } = args;
+    const { locale: askedLocale, select = [], depth = 0, versionId, latest, localeFallback } = args;
+    // The locale the read runs in, for the key as for the read
+    const locale = this.fallbackLocale(askedLocale);
 
-    // As on a collection's find: the key holds the caller's locale, not the resolved one.
     return this.cached(
       'area.find',
       { select, versionId, depth, latest, locale, localeFallback },
@@ -121,7 +113,7 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
           depth,
           latest,
           localeFallback,
-          locale: this.fallbackLocale(locale)
+          locale
         })
     ) as Promise<WithRelationResolved<Doc, D>>;
   }
@@ -136,16 +128,10 @@ class AreaAPI<Doc extends GenericDoc> implements PrototypeApiContext<BuiltArea> 
    * rime.area('settings').update({ data, locale })
    */
   update(args: UpdateArgs<Doc>): Promise<Doc> {
-    const { data, locale, versionId, latest, fork, autoSave } = args;
-
     return update<Doc>({
+      ...args,
       ctx: this,
-      data,
-      versionId,
-      latest,
-      fork,
-      autoSave,
-      locale: this.fallbackLocale(locale)
+      locale: this.fallbackLocale(args.locale)
     });
   }
 }

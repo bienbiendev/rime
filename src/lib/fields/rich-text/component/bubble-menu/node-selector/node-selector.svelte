@@ -1,12 +1,14 @@
 <script module lang="ts">
-  import type { RichTextFeatureNode } from '$lib/fields/rich-text/core/types.js';
+  import type { RichTextFeatureNode } from '#lib/fields/rich-text/core/types.js';
   export type NodeSelectorItem = RichTextFeatureNode & { name: string; options?: any };
 </script>
 
 <script lang="ts">
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import * as Popover from '$lib/panel/components/ui/popover/index.js';
-  import { Asterisk, Check, ChevronDown } from '@lucide/svelte';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import * as Popover from '#lib/panel/components/ui/popover/index.js';
+  import Asterisk from '@lucide/svelte/icons/asterisk';
+  import Check from '@lucide/svelte/icons/check';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import type { Editor } from '@tiptap/core';
   import { onDestroy, onMount } from 'svelte';
   import './node-selector.css';
@@ -25,14 +27,8 @@
     if (activeCount === 1) {
       // Find the active item name
       const activeItemName = Object.keys(activeItems).find((name) => activeItems[name]);
-      // Return the matching item or default to paragraph
-      return (
-        items.find((item) => item.name === activeItemName) || {
-          name: 'paragraph',
-          label: 'Paragraph',
-          icon: Asterisk
-        }
-      );
+      // Return the matching item
+      return items.find((item) => item.name === activeItemName)!;
     } else if (activeCount > 1) {
       return { name: 'multiple', label: 'Multiple', icon: Asterisk };
     } else {

@@ -1,4 +1,4 @@
-import test, { expect } from '@playwright/test';
+import test, { expect, type APIRequestContext } from '@playwright/test';
 import { API_BASE_URL, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
@@ -7,9 +7,48 @@ const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 const signInEditor = signIn('editor@email.com', PASSWORD);
 
+// The tests share the editor account, the targets and one document: one failing skips the rest
+test.describe.configure({ mode: 'serial' });
+
 let docId: string;
 let targetAId: string;
 let targetBId: string;
+
+/** The document ids a relation value holds, in order. */
+const refIds = (value: { documentId: string }[]) => value.map((ref) => ref.documentId);
+
+/** The hooks-test document, read as the super admin. */
+async function readDoc(request: APIRequestContext) {
+  const response = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect(response.status()).toBe(200);
+  return (await response.json()).doc;
+}
+
+/**
+ * PATCHes `data` and expects it refused on `field`: a 400 whose message names the field, and the
+ * stored value unchanged.
+ *
+ * ```ts
+ * await expectRefused(request, 'priority', { priority: 'bogus' });
+ * // 400 "form_error — priority: …", and priority still reads as before
+ * ```
+ */
+async function expectRefused(
+  request: APIRequestContext,
+  field: string,
+  data: Record<string, unknown>
+) {
+  const before = (await readDoc(request))[field];
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers: await signInSuperAdmin(request),
+    data
+  });
+  expect(response.status()).toBe(400);
+  expect((await response.json()).message).toContain(`${field}: `);
+  expect((await readDoc(request))[field]).toEqual(before);
+}
 
 /****************************************************/
 /* Setup: editor staff account + relation targets
@@ -129,7 +168,7 @@ test('Should uppercase shoutedText via $beforeRead', async ({ request }) => {
 
 /** ---------------- BEFOREVALIDATE -> VALIDATE ("published"), SELECT ---------------- */
 
-test('Should coerce status to published, overriding the built-in select validator', async ({
+test('Should coerce status to published before the select check and the rule', async ({
   request
 }) => {
   const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
@@ -144,11 +183,7 @@ test('Should coerce status to published, overriding the built-in select validato
 /** ---------------- BUILT-IN SELECT VALIDATION, SINGLE ---------------- */
 
 test('Should reject statusPlain with an out-of-list option', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
-    headers: await signInSuperAdmin(request),
-    data: { statusPlain: 'not-an-option' }
-  });
-  expect(response.status()).toBe(400);
+  await expectRefused(request, 'statusPlain', { statusPlain: 'not-an-option' });
 });
 
 test('Should accept statusPlain with a valid option', async ({ request }) => {
@@ -164,11 +199,17 @@ test('Should accept statusPlain with a valid option', async ({ request }) => {
 /** ---------------- BUILT-IN SELECT VALIDATION, MANY ---------------- */
 
 test('Should reject tags containing an out-of-list option', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
-    headers: await signInSuperAdmin(request),
-    data: { tags: ['a', 'x'] }
-  });
-  expect(response.status()).toBe(400);
+  await expectRefused(request, 'tags', { tags: ['a', 'x'] });
+});
+
+test('Should refuse a required many-select with nothing picked', async ({ request }) => {
+  await expectRefused(request, 'requiredTags', { requiredTags: [] });
+});
+
+test('Should refuse a number in a text field, and a string in a checkbox', async ({ request }) => {
+  await expectRefused(request, 'title', { title: 5 });
+  // restrictedCheckbox has no validate of its own: the built-in boolean check refuses it
+  await expectRefused(request, 'restrictedCheckbox', { restrictedCheckbox: 'yes' });
 });
 
 test('Should accept tags with only valid options', async ({ request }) => {
@@ -191,7 +232,7 @@ test('Should stamp readAt on body via $beforeRead without losing the original co
   // isEmpty() check, which would make set-default-values overwrite it with
   // the field's default (null) before any hook sees it — so this needs real
   // (non-empty) content to actually exercise $beforeRead.
-  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+  const patched = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers,
     data: {
       body: {
@@ -200,11 +241,58 @@ test('Should stamp readAt on body via $beforeRead without losing the original co
       }
     }
   });
+  expect(patched.status()).toBe(200);
   const response = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, { headers });
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
   expect(doc.body.type).toBe('doc');
+  expect(doc.body.content[0].content[0].text).toBe('hello');
   expect(doc.body.readAt).toBe(true);
+});
+
+test('Should keep text and textarea values as typed', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const typed = 'x < y and I <3 rime & <div> too';
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers,
+    data: { title: typed, notes: typed }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await request
+    .get(`${API_BASE_URL}/hooks-test/${docId}`, { headers })
+    .then((r) => r.json());
+  expect(doc.title).toBe(typed);
+  expect(doc.notes).toBe(typed);
+});
+
+test('Should store a rich-text link without a script href, and keep its text as typed', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const text = (href: string) => ({
+    type: 'text',
+    text: 'a < b',
+    marks: [{ type: 'link', attrs: { href, target: '_blank' } }]
+  });
+  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+    headers,
+    data: {
+      body: {
+        type: 'doc',
+        content: [
+          { type: 'paragraph', content: [text('javascript:alert(1)'), text('https://rime.dev')] }
+        ]
+      }
+    }
+  });
+  expect(response.status()).toBe(200);
+  const { doc } = await request
+    .get(`${API_BASE_URL}/hooks-test/${docId}`, { headers })
+    .then((r) => r.json());
+  const [unsafe, safe] = doc.body.content[0].content;
+  expect(unsafe.marks[0].attrs).toEqual({ target: '_blank' });
+  expect(unsafe.text).toBe('a < b');
+  expect(safe.marks[0].attrs.href).toBe('https://rime.dev');
 });
 
 /** ---------------- RELATION EXISTENCE, SINGLE ---------------- */
@@ -216,7 +304,7 @@ test('Should keep a valid related reference', async ({ request }) => {
   });
   expect(response.status()).toBe(200);
   const { doc } = await response.json();
-  expect(doc.related.map((ref: any) => ref.documentId)).toContain(targetAId);
+  expect(refIds(doc.related)).toEqual([targetAId]);
 });
 
 test('Should refuse a related reference to a nonexistent document, and keep the stored one', async ({
@@ -232,19 +320,15 @@ test('Should refuse a related reference to a nonexistent document, and keep the 
   const { doc } = await (
     await request.get(`${API_BASE_URL}/hooks-test/${docId}`, { headers })
   ).json();
-  expect(doc.related.map((ref: any) => ref.documentId)).toEqual([targetAId]);
+  expect(refIds(doc.related)).toEqual([targetAId]);
 });
 
 /** ---------------- RELATION EXISTENCE, MANY ---------------- */
 
 test('Should refuse relatedMany when one reference names no document', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
-    headers: await signInSuperAdmin(request),
-    data: {
-      relatedMany: [targetAId, targetBId, '00000000-0000-0000-0000-000000000000']
-    }
+  await expectRefused(request, 'relatedMany', {
+    relatedMany: [targetAId, targetBId, '00000000-0000-0000-0000-000000000000']
   });
-  expect(response.status()).toBe(400);
 });
 
 test('Should keep every valid reference in relatedMany', async ({ request }) => {
@@ -291,6 +375,22 @@ test('Should silently drop an editor write to adminOnly', async ({ request }) =>
   });
   const { doc } = await verifyResponse.json();
   expect(doc.adminOnly).toBe('secret');
+});
+
+test('Should silently drop the adminOnly fields of an editor create', async ({ request }) => {
+  const created = await request.post(`${API_BASE_URL}/hooks-test`, {
+    headers: await signInEditor(request),
+    data: { title: 'Editor doc', agree: true, adminOnly: 'hacked', restrictedNumber: 9 }
+  });
+  expect(created.status()).toBe(200);
+  const { id } = (await created.json()).doc;
+
+  const { doc } = await request
+    .get(`${API_BASE_URL}/hooks-test/${id}`, { headers: await signInSuperAdmin(request) })
+    .then((r) => r.json());
+  expect(doc.title).toBe('Editor doc');
+  expect(doc.adminOnly ?? null).toBeNull();
+  expect(doc.restrictedNumber ?? null).toBeNull();
 });
 
 test('Should let a super admin update adminOnly', async ({ request }) => {
@@ -340,10 +440,12 @@ async function expectFieldLevelAccess({
   const { doc: editorDoc } = await editorReadResponse.json();
   expect(field in editorDoc).toBe(false);
 
-  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+  // Answered 200: the field is dropped, not the request refused
+  const editorPatch = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: editorHeaders,
     data: { [field]: editorValue }
   });
+  expect(editorPatch.status()).toBe(200);
   const unchangedResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: superAdminHeaders
   });
@@ -412,10 +514,11 @@ test('Should enforce read/create/update access on adminOnlyRelation', async ({ r
   const superAdminHeaders = await signInSuperAdmin(request);
   const editorHeaders = await signInEditor(request);
 
-  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+  const setResponse = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: superAdminHeaders,
     data: { adminOnlyRelation: targetAId }
   });
+  expect(setResponse.status()).toBe(200);
 
   const editorReadResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: editorHeaders
@@ -423,22 +526,24 @@ test('Should enforce read/create/update access on adminOnlyRelation', async ({ r
   const { doc: editorDoc } = await editorReadResponse.json();
   expect('adminOnlyRelation' in editorDoc).toBe(false);
 
-  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+  // Answered 200: the field is dropped, not the request refused
+  const editorPatch = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: editorHeaders,
     data: { adminOnlyRelation: targetBId }
   });
+  expect(editorPatch.status()).toBe(200);
   const unchangedResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: superAdminHeaders
   });
   const { doc: unchangedDoc } = await unchangedResponse.json();
-  expect(unchangedDoc.adminOnlyRelation.map((ref: any) => ref.documentId)).toContain(targetAId);
+  expect(refIds(unchangedDoc.adminOnlyRelation)).toEqual([targetAId]);
 
   const updateResponse = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: superAdminHeaders,
     data: { adminOnlyRelation: targetBId }
   });
   const { doc: updatedDoc } = await updateResponse.json();
-  expect(updatedDoc.adminOnlyRelation.map((ref: any) => ref.documentId)).toContain(targetBId);
+  expect(refIds(updatedDoc.adminOnlyRelation)).toEqual([targetBId]);
 });
 
 /** ---------------- FIELD-LEVEL ACCESS, SECOND TIER: READABLE, WRITE-RESTRICTED ---------------- */
@@ -475,10 +580,12 @@ async function expectWriteRestrictedAccess({
   expect(field in editorDoc).toBe(true);
   expect(editorDoc[field]).toEqual(adminValue);
 
-  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+  // Answered 200: the field is dropped, not the request refused
+  const editorPatch = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: editorHeaders,
     data: { [field]: editorValue }
   });
+  expect(editorPatch.status()).toBe(200);
   const unchangedResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: superAdminHeaders
   });
@@ -535,37 +642,36 @@ test('Should let an editor read but not write restrictedRelation', async ({ requ
   const superAdminHeaders = await signInSuperAdmin(request);
   const editorHeaders = await signInEditor(request);
 
-  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+  const setResponse = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: superAdminHeaders,
     data: { restrictedRelation: targetAId }
   });
+  expect(setResponse.status()).toBe(200);
 
   const editorReadResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: editorHeaders
   });
   const { doc: editorDoc } = await editorReadResponse.json();
   expect('restrictedRelation' in editorDoc).toBe(true);
-  expect(editorDoc.restrictedRelation.map((ref: any) => ref.documentId)).toContain(targetAId);
+  expect(refIds(editorDoc.restrictedRelation)).toEqual([targetAId]);
 
-  await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
+  // Answered 200: the field is dropped, not the request refused
+  const editorPatch = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: editorHeaders,
     data: { restrictedRelation: targetBId }
   });
+  expect(editorPatch.status()).toBe(200);
   const unchangedResponse = await request.get(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers: superAdminHeaders
   });
   const { doc: unchangedDoc } = await unchangedResponse.json();
-  expect(unchangedDoc.restrictedRelation.map((ref: any) => ref.documentId)).toContain(targetAId);
+  expect(refIds(unchangedDoc.restrictedRelation)).toEqual([targetAId]);
 });
 
 /** ---------------- CUSTOM VALIDATE, CHECKBOX ---------------- */
 
 test('Should reject agree when false', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
-    headers: await signInSuperAdmin(request),
-    data: { agree: false }
-  });
-  expect(response.status()).toBe(400);
+  await expectRefused(request, 'agree', { agree: false });
 });
 
 test('Should accept agree when true', async ({ request }) => {
@@ -653,11 +759,7 @@ test('Should lowercase contact via $beforeSave', async ({ request }) => {
 });
 
 test('Should reject a malformed contact email', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
-    headers: await signInSuperAdmin(request),
-    data: { contact: 'not-an-email' }
-  });
-  expect(response.status()).toBe(400);
+  await expectRefused(request, 'contact', { contact: 'not-an-email' });
 });
 
 /** ---------------- BEFOREVALIDATE BEFORE THE BUILT-IN FORMAT VALIDATOR, SLUG ---------------- */
@@ -675,11 +777,7 @@ test('Should lowercase slugField before the built-in slug format validator runs'
 });
 
 test('Should reject slugField that is still invalid after lowercasing', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
-    headers: await signInSuperAdmin(request),
-    data: { slugField: 'Invalid Slug!' }
-  });
-  expect(response.status()).toBe(400);
+  await expectRefused(request, 'slugField', { slugField: 'Invalid Slug!' });
 });
 
 /** ---------------- $BEFORESAVE (server-only), TEXTAREA ---------------- */
@@ -719,11 +817,7 @@ test('Should accept a priority option unchanged', async ({ request }) => {
 });
 
 test('Should still reject a priority option the remap does not cover', async ({ request }) => {
-  const response = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
-    headers: await signInSuperAdmin(request),
-    data: { priority: 'bogus' }
-  });
-  expect(response.status()).toBe(400);
+  await expectRefused(request, 'priority', { priority: 'bogus' });
 });
 
 /** ---------------- $BEFORESAVE (server-only) SUBSTITUTION, COMBOBOX ---------------- */
@@ -828,4 +922,66 @@ test('Should keep sibling group fields untouched when updating only one nested f
   // survive untouched rather than being wiped or reset to defaults.
   expect(doc.nested.nestedMagicText).toBe('foo');
   expect(doc.nested.nestedTaggedText).toBe('seed-tag-tagged');
+});
+
+/** ---------------- SQLITE NAMING ---------------- */
+
+test('A relation to a slug holding Id reads back, and can be queried by a property', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const idea = await request
+    .post(`${API_BASE_URL}/product-ideas`, { headers, data: { title: 'Bright idea' } })
+    .then((r) => r.json());
+  const page = await request
+    .post(`${API_BASE_URL}/pages`, { headers, data: { title: 'Idea page', idea: idea.doc.id } })
+    .then((r) => r.json());
+
+  const read = await request.get(`${API_BASE_URL}/pages/${page.doc.id}`, { headers });
+  expect((await read.json()).doc.idea[0].relationTo).toBe('productIdeas');
+
+  const found = await request.get(
+    `${API_BASE_URL}/pages?where[idea.title][equals]=${encodeURIComponent('Bright idea')}`,
+    { headers }
+  );
+  expect(found.status()).toBe(200);
+  expect((await found.json()).docs.map((doc: any) => doc.id)).toEqual([page.doc.id]);
+});
+
+/** ---------------- RELATION DEPTH ---------------- */
+
+test('A read resolves 3 levels of relations at most, whatever depth it asks for', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const run = Date.now();
+
+  // articles relate to articles: A → B → C → D → E, written from E up
+  const ids: string[] = [];
+  for (const name of ['E', 'D', 'C', 'B', 'A']) {
+    const related = ids[0];
+    const response = await request.post(`${API_BASE_URL}/articles`, {
+      headers,
+      data: related ? { title: `Chain ${name} ${run}`, related } : { title: `Chain ${name} ${run}` }
+    });
+    expect(response.status()).toBe(200);
+    ids.unshift((await response.json()).doc.id);
+  }
+  const [a, b, c, d, e] = ids;
+
+  const response = await request.get(`${API_BASE_URL}/articles/${a}?depth=50`, { headers });
+  expect(response.status()).toBe(200);
+  const { doc } = await response.json();
+
+  // B, C and D come back as documents
+  const docB = doc.related[0];
+  const docC = docB.related[0];
+  const docD = docC.related[0];
+  expect([docB.id, docC.id, docD.id]).toEqual([b, c, d]);
+
+  // E, one level deeper, stays a reference
+  expect(docD.related).toEqual([
+    expect.objectContaining({ relationTo: 'articles', documentId: e })
+  ]);
+  expect(docD.related[0]).not.toHaveProperty('title');
 });

@@ -1,6 +1,6 @@
-import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
-import type { Dic } from '$lib/util/types.js';
-import type { ConfigMap } from '$lib/core/pipeline/config-map/types.js';
+import { getValueAtPath, setValueAtPath } from '#lib/util/object.js';
+import type { Dic } from '#lib/util/types.js';
+import type { ConfigMap } from '#lib/core/pipeline/config-map/types.js';
 
 /**
  * A new version holds the whole document: each field the update did not send takes the previous

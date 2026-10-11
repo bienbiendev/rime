@@ -1,31 +1,15 @@
 import { type PlaywrightTestConfig, defineConfig } from '@playwright/test';
-import { config as loadDotenv } from 'dotenv';
 import path from 'path';
+import { env } from './util.js';
 
-/**
- * Load `.env`, then refuse to start without what the suite cannot run without.
- *
- * Vite loads `.env` for the dev server, but Playwright's own process never goes through vite —
- * so a repo set up exactly as CONTRIBUTING describes still had no `PUBLIC_RIME_URL` in the
- * process running the tests. `setup.test.ts` reads it unguarded, so every suite died on its
- * first test with `POST /undefined/api/init` → 404, which says nothing about the cause and
- * takes a while to trace. Loading it here is what makes the check below meaningful: the
- * variables are supposed to live in `.env`, so that is where we have to look for them.
- *
- * dotenv does not overwrite anything already in the environment, so an exported value or a CI
- * secret still wins, and a missing `.env` file is a silent no-op.
- */
-loadDotenv();
-
-/** Variable -> why the run cannot proceed without it. */
+/** Variable -> why the run cannot proceed without it. The suite refuses to start without them. */
 const REQUIRED_ENV: Record<string, string> = {
-  PUBLIC_RIME_URL:
-    'the origin every request is built from; tests/util.ts and setup.test.ts read it with no fallback',
+  SITE_URL: 'the origin every request is built from; tests/util.ts reads it with no fallback',
   RIME_CONFIG_DIR:
     'where the config lives. Must be `src/lib/+rime` in this repo — `rime:use` copies each fixture there, while rime itself defaults to `src/+rime`'
 };
 
-const missing = Object.entries(REQUIRED_ENV).filter(([key]) => !process.env[key]);
+const missing = Object.entries(REQUIRED_ENV).filter(([key]) => !env[key]);
 
 if (missing.length) {
   throw new Error(
@@ -35,22 +19,18 @@ if (missing.length) {
   );
 }
 
-// Not required — five of the six suites never send mail — but `basic` creates an API key, which
-// really sends one, so warn rather than let those five tests fail later with `mail_error`.
-if (!process.env.RIME_SMTP_HOST) {
-  console.warn(
-    '[e2e] RIME_SMTP_HOST is not set. The `basic` suite creates an API key, which sends real\n' +
-      '      mail — its api-key tests will fail with `mail_error`. Every other suite is fine.'
-  );
-}
-
 type Args = {
   name: string;
+  /**
+   * Test files run at once, against the one server and database. Only a suite whose files read
+   * nothing another file writes may raise it: a file's tests always run in order, in one worker.
+   */
+  workers?: number;
 };
 
-export function createPlaywrightConfig({ name }: Args): PlaywrightTestConfig {
+export function createPlaywrightConfig({ name, workers = 1 }: Args): PlaywrightTestConfig {
   return defineConfig({
-    workers: 1,
+    workers,
     reporter: 'line',
     webServer: {
       command: `echo "==========================================\n# Running rime:use ${name}\n" && bun run rime:use ${name} && bunx vite dev`,
@@ -66,7 +46,7 @@ export function createPlaywrightConfig({ name }: Args): PlaywrightTestConfig {
       // `/` cannot be relied on for that. Every suite starts on a fresh database, so a fixture
       // whose home page loads a document (basic, versions) 404s until the tests create one.
       // Sign-in is generated for every config, needs no auth, and returns 200 immediately.
-      url: `${process.env.PUBLIC_RIME_URL || 'http://localhost:5173'}/${process.env.RIME_PANEL_ROUTE || 'panel'}/sign-in`,
+      url: `${env.SITE_URL}/${env.RIME_PANEL_ROUTE || 'panel'}/sign-in`,
       timeout: 180000,
       stdout: 'pipe',
       stderr: 'pipe'
@@ -75,9 +55,9 @@ export function createPlaywrightConfig({ name }: Args): PlaywrightTestConfig {
       timeout: 30000
     },
     use: {
-      baseURL: process.env.PUBLIC_RIME_URL || 'http://localhost:5173',
+      baseURL: env.SITE_URL,
       extraHTTPHeaders: {
-        origin: process.env.PUBLIC_RIME_URL || 'http://localhost:5173'
+        origin: env.SITE_URL
       }
     },
     projects: [

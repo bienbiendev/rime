@@ -1,8 +1,9 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { getTitleContext } from '$lib/panel/context/title';
-  import type { Route } from '$lib/types';
-  import { ChevronRight } from '@lucide/svelte';
+  import { getTitleContext } from '#lib/panel/context/title.js';
+  import { titleOrUntitled } from '#lib/panel/util/title.js';
+  import type { Route } from '#lib/types.js';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
 
   const titleContext = getTitleContext();
 
@@ -18,7 +19,9 @@
       <a class="rz-aria__link" href={route.url}>{route.title}</a>
       <ChevronRight class="rz-aria__separator" size={13} aria-hidden="true" />
     {:else}
-      <span class="rz-aria__last" aria-current="page">{route.title || titleContext.value}</span>
+      <span class="rz-aria__last" aria-current="page"
+        >{route.title || titleOrUntitled(titleContext.value)}</span
+      >
     {/if}
   {/each}
 </nav>

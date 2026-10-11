@@ -1,21 +1,27 @@
-import type { DataType } from '$lib/core/fields/builders/form-field-builder.js';
-import { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { DefaultOptions, DefaultValueFn, FormField } from '$lib/fields/types.js';
+import { RimeFormError } from '#lib/core/errors/index.js';
+import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
+import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import type { DefaultValueFn, FormField } from '#lib/fields/types.js';
 import Cell from './component/Cell.svelte';
 import DateComponent from './component/Date.svelte';
 
 export const date = (name: string) => new DateFieldBuilder(name);
 
-const stringToDate = (value: string) => {
-  return new Date(value);
+/** A date sent as a string or a timestamp becomes a `Date`; `null` and `undefined` stay empty. */
+const toDate = (value: unknown) => {
+  if (value === null || value === undefined) return value;
+  return new Date(value as string | number | Date);
 };
 
 export class DateFieldBuilder extends FormFieldBuilder<DateField> {
   constructor(name: string) {
     super(name, 'date');
     this.field.defaultValue = () => new Date();
+    // `toDate` runs first: an unparsable string arrives here as an Invalid Date
+    this.field.validate = (value) =>
+      (value instanceof Date && !isNaN(value.getTime())) || RimeFormError.INVALID_DATE;
     this.field.hooks = {
-      beforeValidate: [stringToDate]
+      beforeValidate: [toDate]
     };
   }
 
@@ -29,12 +35,6 @@ export class DateFieldBuilder extends FormFieldBuilder<DateField> {
 
   get cell() {
     return Cell;
-  }
-
-  defaultValue(value: Date | DefaultValueFn<Date>, options?: DefaultOptions) {
-    this.field.defaultValue = value;
-    this.field.defaultFill = options?.fill;
-    return this;
   }
 
   isTitle() {
@@ -53,6 +53,5 @@ export class DateFieldBuilder extends FormFieldBuilder<DateField> {
 export type DateField = FormField & {
   type: 'date';
   defaultValue?: Date | DefaultValueFn<Date>;
-  unique?: boolean;
   isTitle?: true;
 };

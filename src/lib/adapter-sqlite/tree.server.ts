@@ -1,136 +1,25 @@
-import type { AdapterDeps } from '$lib/adapter-sqlite/types.server.js';
-import { baseTableName, tableName as buildTableName } from './naming.server.js';
-import type { PrototypeSlug, TreeBlock } from '$lib/core/prototype/types.js';
-import { extractFieldName } from '$lib/fields/tree/util.js';
-import type { WithRequired } from '$lib/util/types.js';
-import { and, eq, getTableColumns } from 'drizzle-orm';
-import { omit } from '../util/object.js';
-import { generatePK, transformDataToSchema } from './columns.server.js';
+import type { AdapterDeps } from '#lib/adapter-sqlite/types.server.js';
+import type { TreeHandle } from '#lib/core/adapter.js';
+import type { PrototypeSlug } from '#lib/core/prototype/types.js';
+import type { Dic } from '#lib/util/types.js';
+import { extractFieldName } from '#lib/fields/tree/util.js';
+import { baseTableName, tableName } from './naming.server.js';
+import { createRepeatable, deleteRepeatable, updateRepeatable } from './repeatable.server.js';
 
-const createTreeHandle = ({ db, tables }: AdapterDeps) => {
-  //
-  /** As in the blocks facade: callers name the owner by slug, the table is derived here. */
-  const buildBlockTableName = (parentSlug: PrototypeSlug, blockPath: string) => {
-    const [fieldName] = extractFieldName(blockPath);
-    return buildTableName({
-      owner: baseTableName(parentSlug),
-      child: { kind: 'tree', name: fieldName }
-    });
-  };
+/** A tree item goes to the table of its tree field: `pages__$tree_nav`. */
+const treeTable = (parentSlug: PrototypeSlug, item: Dic) =>
+  tableName({
+    owner: baseTableName(parentSlug),
+    child: { kind: 'tree', name: extractFieldName(String(item.path))[0] }
+  });
 
-  const update: UpdateBlock = async ({ parentSlug, block, locale }) => {
-    const tableName = buildBlockTableName(parentSlug, block.path);
-    const columns = getTableColumns(tables[tableName]);
-    const values = transformDataToSchema(omit(['id'], block), columns);
-
-    if (Object.keys(values).length) {
-      await db.update(tables[tableName]).set(values).where(eq(tables[tableName].id, block.id));
-    }
-
-    const tableLocalesName = buildTableName({ owner: tableName, branch: 'locales' });
-    if (locale && tableLocalesName in tables) {
-      const tableLocales = tables[tableLocalesName];
-      const localizedColumns = getTableColumns(tableLocales);
-      const localizedValues = transformDataToSchema(
-        omit(['ownerId', 'id'], block),
-        localizedColumns
-      );
-
-      if (!Object.keys(localizedValues).length) return true;
-
-      //@ts-expect-error tableLocalesName is key of db.query
-      const localizedRow = await db.query[tableLocalesName].findFirst({
-        where: { ownerId: block.id, locale }
-      });
-
-      if (!localizedRow) {
-        await db.insert(tableLocales).values({
-          ...localizedValues,
-          id: generatePK(),
-          locale: locale,
-          ownerId: block.id
-        });
-      } else {
-        await db
-          .update(tableLocales)
-          .set(localizedValues)
-          .where(and(eq(tableLocales.ownerId, block.id), eq(tableLocales.locale, locale)));
-      }
-    }
-    return true;
-  };
-
-  const deleteBlock: DeleteBlock = async ({ parentSlug, block }) => {
-    const table = buildBlockTableName(parentSlug, block.path);
-    await db.delete(tables[table]).where(eq(tables[table].id, block.id));
-    return true;
-  };
-
-  const create: CreateBlock = async ({ parentSlug, block, ownerId, locale }) => {
-    const table = buildBlockTableName(parentSlug, block.path);
-    const blockId = generatePK();
-    const tableLocales = buildTableName({ owner: table, branch: 'locales' });
-
-    if (locale && tableLocales in tables) {
-      const unlocalizedColumns = getTableColumns(tables[table]);
-      const localizedColumns = getTableColumns(tables[tableLocales]);
-
-      const unlocalizedData = transformDataToSchema(block, unlocalizedColumns);
-      const localizedData = transformDataToSchema(block, localizedColumns);
-
-      await db.insert(tables[table]).values({
-        ...unlocalizedData,
-        id: blockId,
-        ownerId: ownerId,
-        locale
-      });
-
-      await db.insert(tables[tableLocales]).values({
-        ...localizedData,
-        id: generatePK(),
-        ownerId: blockId,
-        locale
-      });
-    } else {
-      const columns = getTableColumns(tables[table]);
-      const schemaData = transformDataToSchema(block, columns);
-
-      await db.insert(tables[table]).values({
-        ...schemaData,
-        ownerId,
-        id: generatePK()
-      });
-    }
-    return true;
-  };
-
-  return {
-    delete: deleteBlock,
-    create,
-    update
-  };
-};
+const createTreeHandle = (deps: AdapterDeps): TreeHandle => ({
+  create: ({ parentSlug, block, ownerId, locale }) =>
+    createRepeatable(deps, treeTable(parentSlug, block), block, ownerId, locale),
+  update: ({ parentSlug, block, locale }) =>
+    updateRepeatable(deps, treeTable(parentSlug, block), block, locale),
+  delete: ({ parentSlug, block }) =>
+    deleteRepeatable(deps, treeTable(parentSlug, block), String(block.id))
+});
 
 export default createTreeHandle;
-
-/****************************************************/
-/* Types
-/****************************************************/
-
-type UpdateBlock = (args: {
-  parentSlug: PrototypeSlug;
-  block: WithRequired<TreeBlock, 'path'>;
-  locale?: string;
-}) => Promise<boolean>;
-
-type CreateBlock = (args: {
-  parentSlug: PrototypeSlug;
-  block: WithRequired<TreeBlock, 'path'>;
-  ownerId: string;
-  locale?: string;
-}) => Promise<boolean>;
-
-type DeleteBlock = (args: {
-  parentSlug: PrototypeSlug;
-  block: WithRequired<TreeBlock, 'path'>;
-}) => Promise<boolean>;

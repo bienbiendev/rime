@@ -1,6 +1,6 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { isNested } from '$lib/core/prototype/collection/nested/enabled.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { isNested } from '#lib/core/prototype/collection/nested/enabled.js';
 import { addAddresses, movePage, withAddress } from '../addresses.server.js';
 import { refreshUrls } from '../refresh.server.js';
 

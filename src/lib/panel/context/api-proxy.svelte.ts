@@ -1,16 +1,19 @@
+import { withLocale } from '#lib/panel/util/url.js';
 import { getContext, setContext } from 'svelte';
 
-function createAPIProxy() {
+/**
+ * `getLocale` answers the panel's locale, which every resource names: the resource is keyed by
+ * its url with that locale, so after a switch the same url is a new resource.
+ */
+function createAPIProxy(getLocale: () => string | undefined) {
   const resources = $state<Map<string, Resource>>(new Map());
 
   function getRessource<T>(url: string, options?: GetResourcesOptions<T>) {
-    // Check if we already have this resource
-    if (!resources.has(url)) {
-      // Create a new resource
-      const resource = createResource<T>(url, options);
-      resources.set(url, resource);
+    const target = withLocale(url, getLocale());
+    if (!resources.has(target)) {
+      resources.set(target, createResource<T>(target, options));
     }
-    return resources.get(url) as Resource<T>;
+    return resources.get(target) as Resource<T>;
   }
 
   function createResource<T>(url: string, options?: GetResourcesOptions<T>): Resource<T> {
@@ -19,7 +22,6 @@ function createAPIProxy() {
     let isLoading = $state(true);
     let error = $state(null);
 
-    // Fetch the data immediately
     fetchData();
 
     function fetchData() {
@@ -66,12 +68,6 @@ function createAPIProxy() {
     };
   }
 
-  function invalidateAll() {
-    resources.forEach((resource) => {
-      resource.refresh();
-    });
-  }
-
   function invalidate(pattern: string | RegExp) {
     resources.forEach((resource, url) => {
       if (typeof pattern === 'string' ? url.includes(pattern) : pattern.test(url)) {
@@ -82,17 +78,12 @@ function createAPIProxy() {
 
   return {
     getRessource,
-    invalidateAll,
-    invalidate,
-    get urls() {
-      return Array.from(resources.entries()).map(([url]) => url);
-    }
+    invalidate
   };
 }
 
-export function setAPIProxyContext() {
-  const apiProxy = createAPIProxy();
-  return setContext(API_PROXY, apiProxy);
+export function setAPIProxyContext(getLocale: () => string | undefined) {
+  return setContext(API_PROXY, createAPIProxy(getLocale));
 }
 
 export function getAPIProxyContext() {

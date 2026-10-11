@@ -1,14 +1,12 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { UPLOAD_PATH } from '$lib/core/prototype/collection/upload/constant.js';
-import { logger } from '$lib/core/logger.server.js';
-import { directoriesOf } from '$lib/core/prototype/collection/upload/naming.js';
-import { trycatch } from '$lib/util/function.js';
-import { getSegments } from '$lib/core/prototype/collection/upload/util/path.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
+import { directoriesOf } from '#lib/core/prototype/collection/upload/naming.js';
+import { trycatch } from '#lib/util/function.js';
+import { getSegments } from '#lib/core/prototype/collection/upload/util/path.js';
 
 /**
- * Hook executed before save/update operations on an upload collections
- * the function get the document _path and check if it exists,
- * if it doesn't it create {upload_slug}_directories entries recursively
+ * Runs before a create or update on an upload collection: creates the `$<slug>Directories` rows
+ * for the document's `_path`, segment by segment, when they do not exist.
  */
 export const handlePathCreation = Hooks.beforeUpsert<'upload'>(
   async function handlePathCreation(args) {
@@ -30,22 +28,16 @@ export const handlePathCreation = Hooks.beforeUpsert<'upload'>(
      * collapses a one-segment path to `root`. What is stored has to be the normalised form,
      * because every directory row below is created under it and every lookup goes against it.
      *
-     * The **adapter** did this, in `insertPrototype`, behind `'upload' in config` — a feature
-     * reaching into a write. It also re-created the directory row for the normalised path,
-     * which is what this hook already does and does properly: recursively, for every segment,
-     * through the public API. Only the assignment was missing here, and it had to move above
-     * the early return below to happen at all.
-     *
-     * `getSegments` throws `BAD_REQUEST` on an invalid path, which is the same rejection the
-     * adapter made, one layer earlier.
+     * `getSegments` throws `BAD_REQUEST` on an invalid path.
      */
     const pathInfo = getSegments(args.data._path);
     args.data._path = pathInfo.path;
 
-    const directorySlug = directoriesOf(args.config);
+    // The directories are the upload's own bookkeeping: read and created as rime
+    const directories = rime.collection(directoriesOf(args.config)).system();
 
     const [, dir] = await trycatch(() =>
-      rime.collection(directorySlug).findById({
+      directories.findById({
         select: ['id'],
         id: data._path
       })
@@ -68,7 +60,7 @@ export const handlePathCreation = Hooks.beforeUpsert<'upload'>(
 
       // Check if this segment exists
       const [, segExists] = await trycatch(() =>
-        rime.collection(directorySlug).findById({
+        directories.findById({
           select: ['id'],
           id: currentPath
         })
@@ -77,7 +69,7 @@ export const handlePathCreation = Hooks.beforeUpsert<'upload'>(
       // If the segment doesn't exist, create it
       if (!segExists) {
         const [createError] = await trycatch(() =>
-          rime.collection(directorySlug).create({
+          directories.create({
             data: {
               id: currentPath,
               parent: parentPath,
@@ -89,10 +81,11 @@ export const handlePathCreation = Hooks.beforeUpsert<'upload'>(
         );
 
         if (createError) {
-          logger.error(`Failed to create directory segment ${currentPath}`, createError);
-          // If we can't create a segment, fall back to root
-          args.data._path = UPLOAD_PATH.ROOT_NAME;
-          return args;
+          // Another request may have created it between the read and the create
+          const [, createdMeanwhile] = await trycatch(() =>
+            directories.findById({ select: ['id'], id: currentPath })
+          );
+          if (!createdMeanwhile) throw createError;
         }
       }
     }

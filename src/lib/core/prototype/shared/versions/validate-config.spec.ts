@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { text } from '$lib/fields/text/index.js';
-import { create as createCollection } from '$lib/core/prototype/collection/definition.js';
-import { create as createArea } from '$lib/core/prototype/area/definition.js';
+import { text } from '#lib/fields/text/index.js';
+import { create as createCollection } from '#lib/core/prototype/collection/definition.js';
+import { create as createArea } from '#lib/core/prototype/area/definition.js';
 import { validateVersions } from './validate-config.server.js';
 
 describe('validateVersions', () => {

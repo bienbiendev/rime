@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import ContextMenu from '$lib/panel/components/ui/context-menu/ContextMenu.svelte';
-  import ContextMenuItem from '$lib/panel/components/ui/context-menu/ContextMenuItem.svelte';
-  import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
-  import { FolderPlus } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import ContextMenu from '#lib/panel/components/ui/context-menu/ContextMenu.svelte';
+  import ContextMenuItem from '#lib/panel/components/ui/context-menu/ContextMenuItem.svelte';
+  import type { CollectionContext } from '#lib/panel/context/collection.svelte.js';
+  import FolderPlus from '@lucide/svelte/icons/folder-plus';
   import Empty from '../Empty.svelte';
   import Folders from '../folder/Folders.svelte';
   import GridItem from './grid-item/GridItem.svelte';

@@ -1,9 +1,14 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { useCommands } from '$lib/panel/context/commands.svelte.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import type { ActivePanel } from '$lib/panel/context/livePanel.svelte';
-  import { ChevronLeft, Form, Laptop, Save, Smartphone, X } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { useCommands } from '#lib/panel/context/commands.svelte.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import type { ActivePanel } from '#lib/panel/context/livePanel.svelte.js';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import Form from '@lucide/svelte/icons/form';
+  import Laptop from '@lucide/svelte/icons/laptop';
+  import Save from '@lucide/svelte/icons/save';
+  import Smartphone from '@lucide/svelte/icons/smartphone';
+  import X from '@lucide/svelte/icons/x';
   import Button from '../../ui/button/button.svelte';
   import SpinLoader from '../../ui/spin-loader/SpinLoader.svelte';
 

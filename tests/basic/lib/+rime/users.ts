@@ -1,11 +1,11 @@
-import { text } from '$lib/fields/index.js';
-import { access } from '$lib/core/auth/access.js';
+import { text } from '#lib/fields/index.js';
+import { access } from '#lib/core/auth/access.js';
 import { Collection } from '$rime/config';
 
 export const Users = Collection.create('users', {
   auth: {
     type: 'password',
-    roles: ['user']
+    roles: ['user', 'member']
   },
   fields: [text('website')],
   access: {

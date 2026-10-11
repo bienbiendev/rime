@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
   import type { Snippet } from 'svelte';
 
   type Props = { readOnly: boolean; children: Snippet; onRemove: () => void };
@@ -10,17 +10,13 @@
   <span>
     {@render children?.()}
   </span>
-  <button
-    class="rz-tag__button"
-    class:rz-tag__button--readonly={readOnly}
-    type="button"
-    onclick={onRemove}
-  >
+  <!-- Disabled when read-only: no click, so the value stays -->
+  <button class="rz-tag__button" type="button" disabled={readOnly} onclick={onRemove}>
     <X size={13} />
   </button>
 </div>
 
-<style type="postcss" global>
+<style type="postcss">
   @import '../../../style/mixins/index.css';
 
   :root {
@@ -53,7 +49,7 @@
     @mixin focus-ring;
   }
 
-  .rz-tag__button--readonly {
+  .rz-tag__button:disabled {
     cursor: no-drop;
   }
 </style>

@@ -2,7 +2,7 @@
   import {
     VERSIONS_STATUS,
     type VersionsStatus
-  } from '$lib/core/prototype/shared/versions/constant.js';
+  } from '#lib/core/prototype/shared/versions/constant.js';
 
   type Props = { status: VersionsStatus };
 

@@ -1,18 +1,22 @@
-import { PACKAGE_NAME } from '$lib/core/constants.server.js';
+import { PACKAGE_NAME } from '#lib/core/constants.server.js';
+import { logger } from '#lib/core/logger.server.js';
+import type { CustomPanelRoute } from '#lib/core/panel/types.js';
 import path from 'node:path';
-import { configImportPaths } from '../../constants.server.js';
+import { configImportPaths, relativeImportSpecifier } from '../../constants.server.js';
 import type { Routes } from './util.server.js';
 
 const PANEL_LAYOUT_DIR = path.resolve(process.cwd(), 'src/routes/(rime)/[panel=panel]');
 const LIVE_PAGE_DIR = path.resolve(process.cwd(), 'src/routes/(rime)/[panel=panel]/live-edit');
 
 /**
- * Main base layout
- * /+layout.server.ts
+ * The app's root layout server, src/routes/+layout.server.ts. Written once, when the app has
+ * none: see `writeAppLayoutServer` in index.server.ts.
  */
-const mainLayout = (): string => `
+export const mainLayout = (): string => `
 import { toPublicUser } from '${PACKAGE_NAME}/server';
 import type { ServerLoadEvent } from '@sveltejs/kit';
+
+// rime's LiveEdit reads \`user\` from the page data: keep it in what this load returns.
 export const load = async ({ locals }: ServerLoadEvent) => {
 	return { user: toPublicUser(locals.user) };
 };`;
@@ -93,7 +97,7 @@ export const load = async ({ locals }: ServerLoadEvent) => {
 
 /**
  * Login page template
- * (rime)/[panel=panel]/sign-in/+page.svelte
+ * (rime)/[panel=panel]/sign-in/+page@(rime).svelte
  */
 const signInPage = () => `
 <script>
@@ -105,7 +109,7 @@ const signInPage = () => `
 
 /**
  * Login page server template
- * (rime)/auth/sign-in/+page@(rime).server.ts
+ * (rime)/[panel=panel]/sign-in/+page.server.ts
  */
 const signInPageServer = () => `
 import { type ServerLoadEvent, type RequestEvent } from '@sveltejs/kit';
@@ -118,7 +122,7 @@ export const actions = {
 
 /**
  * Forgot password page template
- * (rime)/[panel=panel]/forgot-password/+page.svelte
+ * (rime)/[panel=panel]/forgot-password/+page@(rime).svelte
  */
 const forgotPasswordPage = () => `
 <script>
@@ -139,7 +143,7 @@ export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.f
 
 /**
  * Reset password page template
- * (rime)/[panel=panel]/reset-password/+page.svelte
+ * (rime)/[panel=panel]/reset-password/+page@(rime).svelte
  */
 const resetPasswordPage = () => `
 <script>
@@ -215,7 +219,7 @@ export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.d
 
 /**
  * Live page template
- * (rime)/live/+page.svelte
+ * (rime)/[panel=panel]/live-edit/+page@(rime).svelte
  */
 const livePage = () => `
 <script>
@@ -230,7 +234,7 @@ const livePage = () => `
 
 /**
  * Live page server template
- * (rime)/live/+page.server.ts
+ * (rime)/[panel=panel]/live-edit/+page.server.ts
  */
 const livePageServer = () => `
 import { type ServerLoadEvent } from '@sveltejs/kit';
@@ -240,8 +244,8 @@ export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.l
 /****************************************************/
 /* The panel's /[slug=<prototype>]/... routes — fixed, generic,
 /* matcher-disambiguated, generated once regardless of how many prototypes of
-/* that kind are configured. The per-prototype param matchers (src/params/,
-/* see paramMatcher below) route each slug to the right folder at the
+/* that kind are configured. The per-prototype param matchers (params.ts in the
+/* generated dir, see paramsModule below) route each slug to the right folder at the
 /* SvelteKit router level, so a collection page and an area page are
 /* genuinely separate routes — no runtime kind-branching inside a shared
 /* component, no unauthenticated-branch union fighting the component's data
@@ -249,11 +253,9 @@ export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.l
 /* param) via event.locals.routes, so none of these import anything from
 /* rimecms besides the panel components.
 /*
-/* These stay written out per kind while the panel does: its loads, actions
-/* and components are per-kind too, so generating the routes from the
-/* registry alone would move that seam rather than close it. The /api tree,
-/* whose handlers a prototype now declares, is generated instead — see
-/* prototypeApiServer below.
+/* These are written out per kind because the panel's loads, actions and
+/* components are per kind. The /api tree is generated from each prototype's
+/* declaration instead — see prototypeApiServer below.
 /****************************************************/
 
 /**
@@ -276,7 +278,7 @@ import { type ServerLoadEvent } from '@sveltejs/kit';
 
 export const load = async (event: ServerLoadEvent) => {
   const data = await event.locals.routes.panel.load.collection(event);
-  return { ...data, slug: event.params.slug || '' };
+  return { ...data, slug: event.locals.rime.routes.slug || '' };
 };`;
 
 /**
@@ -331,13 +333,12 @@ export const actions = {
 /**
  * A prototype's REST endpoint, one file per declared sub-path.
  *
- * There is no per-kind template any more: `name`, `path` and `methods` all come from what the
- * prototype declared in its own `rest/index.server.ts`, so an area's file has no POST for the
- * same reason an area has no create — nobody declared one. An undeclared method stays
- * unexported and SvelteKit answers it with its own 405, exactly as before.
+ * `name`, `path` and `methods` all come from what the prototype declared in its own
+ * `rest/index.server.ts`, so an area's file has no POST because an area declares no create. An
+ * undeclared method stays unexported and SvelteKit answers it with 405.
  *
- * The body dispatches by name and path (see `rest` in handlers/routes.server.ts) so this file,
- * like every other generated route, imports nothing from rimecms.
+ * The body dispatches by name and path (see `rest` in core/routes/handler.server.ts), so this
+ * file imports nothing from rimecms.
  *
  * (rime)/api/[slug=<name>]/<path>/+server.ts
  */
@@ -349,30 +350,38 @@ const handle = (event: RequestEvent) => event.locals.routes.rest('${name}', '${p
 ${methods.map((method) => `export const ${method} = handle;`).join('\n')}`;
 
 /**
- * Param matchers backing [slug=<prototype>] — bake in the actual configured
- * slug list at generation time so they stay isomorphic (no server-only config
- * import; SvelteKit resolves matchers on the client too for client-side
- * navigation), same approach as this repo's own hand-written
- * src/params/news.ts, lang.ts.
+ * The matchers backing [panel=panel], [slug=<prototype>] and, for a config with locales, the
+ * site's [[locale=locale]], keyed by matcher name — the key is what makes `[slug=collection]`
+ * mean "a slug of the collection prototype". Each one bakes in its list at generation time, so
+ * the module imports no config and stays isomorphic: SvelteKit runs matchers on the client too.
  *
- * One file per prototype name, named *after* that prototype — see the loop in
- * index.server.ts, where that naming is what makes `[slug=collection]` mean
- * "a slug of the collection prototype".
- * src/params/<prototype>.ts
+ * ```ts
+ * export const params = {
+ *   panel: oneOf(['panel']),
+ *   collection: oneOf(['pages', 'news']),
+ *   locale: oneOf(['fr', 'en'])
+ * };
+ * ```
+ * <GENERATED_DIR>/params.ts, spread into the app's src/params.ts
  */
-const paramMatcher = (slugs: string[]) => `
-import type { ParamMatcher } from '@sveltejs/kit';
+const paramsModule = (slugsByMatcher: Record<string, string[]>) => `
+const oneOf =
+  <const T extends string>(slugs: readonly T[]) =>
+  (param: string): T | undefined =>
+    (slugs as readonly string[]).includes(param) ? (param as T) : undefined;
 
-const slugs = ${JSON.stringify(slugs)} as const;
-
-export const match: ParamMatcher = (param): param is (typeof slugs)[number] =>
-  (slugs as readonly string[]).includes(param);`;
+export const params = {
+${Object.entries(slugsByMatcher)
+  .map(([name, slugs]) => `  ${name}: oneOf(${JSON.stringify(slugs)})`)
+  .join(',\n')}
+};
+`;
 
 /**
  * Catch-all so /api/* stays a literal, static-prefixed SvelteKit route —
  * without it, an unmatched /api/* request (unknown slug, wrong shape) would
  * fall through to the next candidate in the manifest, e.g. the public site's
- * (front)/[[locale]]/[[id]] route, silently binding garbage params instead
+ * (front)/[[locale=locale]]/[[id]] route, silently binding garbage params instead
  * of 404ing.
  * (rime)/api/[...rest]/+server.ts
  */
@@ -384,48 +393,62 @@ export const fallback = async () => {
 };`;
 
 /**
- * Custom route template generator
- * Used for generating custom routes
+ * The file of a component compiled in dev mode. Svelte keeps it under its own
+ * `Symbol('filename')`, which only its description can find.
+ *
+ * ```ts
+ * import Stats from './Stats.svelte';
+ * componentFilename(Stats); // 'src/+rime/Stats.svelte'
+ * ```
  */
-const customRoute = (config: any): string => {
-  let componentPath: string = '';
-  let componentName: string = '';
+const componentFilename = (component: object): string | undefined => {
+  const key = Object.getOwnPropertySymbols(component).find((s) => s.description === 'filename');
+  return key ? (component as Record<symbol, string>)[key] : undefined;
+};
 
-  const rawPath =
-    typeof config.component === 'string'
-      ? config.component
-      : config.component[Symbol.for('filename')] || (config.component as any)[Symbol('filename')];
-
-  if (rawPath) {
-    const componentReg = /([A-Z][a-zA-Z0-9]+)\.svelte$/;
-    const match = rawPath.match(componentReg);
-    if (match) {
-      componentName = match[1];
-
-      if (rawPath.includes('node_modules/')) {
-        componentPath = 'node_modules/' + rawPath.split('node_modules/').at(-1);
-      } else {
-        componentPath = '$lib/' + rawPath.split('lib/').at(-1);
-      }
-    }
+/**
+ * The `+page.svelte` of one `panel.routes` entry, written in `fromDir`: it imports the entry's
+ * component by a path relative to `fromDir` and renders it with the page data. `component` is a
+ * path from the project root, or a component compiled in dev mode, which carries its own file.
+ *
+ * ```ts
+ * customRoute({ label: 'Stats', component: Stats }, '/site/src/routes/(rime)/[panel=panel]/stats');
+ * // <script lang="ts">
+ * //   import Page from '../../../../+rime/Stats.svelte'
+ * //   const { data } = $props()
+ * // </script>
+ * // <Page {data} />
+ * ```
+ */
+const customRoute = (
+  config: CustomPanelRoute | { label: string; component: string },
+  fromDir: string
+): string => {
+  const file =
+    typeof config.component === 'string' ? config.component : componentFilename(config.component);
+  if (!file) {
+    logger.error(`panel.routes: the component of "${config.label}" has no file to import`);
+    return 'Cannot find the file of this route component';
   }
-
-  if (componentName && componentPath) {
-    return `<script lang="ts">
-  import ${componentName} from '${componentPath}'
+  // A package's file goes through the project's own node_modules, not the versioned folder the
+  // package manager stores it in, which an update deletes:
+  // node_modules/.pnpm/@acme+stats@1.0.0/node_modules/@acme/stats/dist/Stats.svelte
+  // -> node_modules/@acme/stats/dist/Stats.svelte
+  const inPackage = file.split('node_modules/').at(-1)!;
+  const target =
+    inPackage === file
+      ? path.resolve(process.cwd(), file)
+      : path.resolve(process.cwd(), 'node_modules', inPackage);
+  const specifier = relativeImportSpecifier(fromDir, target);
+  return `<script lang="ts">
+  import Page from '${specifier}'
   const { data } = $props()
 </script>
-<${componentName} {data} />`;
-  }
-
-  return `Cannot parse provided component path`;
+<Page {data} />`;
 };
 
 // Shared routes dictionary
 export const commonRoutes: Routes = {
-  '': {
-    layoutServer: mainLayout
-  },
   '(rime)': {
     layout: rootLayout,
     layoutServer: rootLayoutServer,
@@ -470,12 +493,13 @@ export const commonRoutes: Routes = {
   }
 };
 
-export { customRoute, paramMatcher, prototypeApiServer };
+export { customRoute, paramsModule, prototypeApiServer };
 
 /** Every fixed route file as the templates write it: a template that changes regenerates them. */
 export const templatesSurface = (): string =>
-  Object.entries(commonRoutes)
-    .flatMap(([pattern, files]) =>
+  [
+    ...Object.entries(commonRoutes).flatMap(([pattern, files]) =>
       Object.entries(files).map(([type, render]) => `${pattern}/${type}:${render()}`)
-    )
-    .join('\n');
+    ),
+    `params:${paramsModule({})}`
+  ].join('\n');

@@ -1,30 +1,32 @@
+import { documentSegments } from '../util/url.js';
+import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
 import { applyAction, deserialize } from '$app/forms';
 import { replaceState } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { page } from '$app/state';
-import type { BuiltAreaClient, BuiltCollectionClient } from '$lib/core/config/types.js';
-import { PARAMS } from '$lib/core/constants.js';
-import type { FormFieldBuilder } from '$lib/core/fields/builders/index.js';
-import { getFieldAtPath } from '$lib/core/fields/util.js';
-import { buildConfigMap } from '$lib/core/pipeline/config-map/index.js';
+import type { BuiltAreaClient, BuiltCollectionClient } from '#lib/core/config/types.js';
+import { PARAMS } from '#lib/core/constants.js';
+import type { FormFieldBuilder } from '#lib/core/fields/builders/index.js';
+import { getFieldAtPath } from '#lib/core/fields/util.js';
+import { buildConfigMap } from '#lib/core/pipeline/config-map/index.js';
 import {
   AUTO_SAVE_DELAY_MS,
   VERSIONS_STATUS
-} from '$lib/core/prototype/shared/versions/constant.js';
-import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '$lib/core/prototype/types.js';
-import { apiUrl, panelUrl } from '$lib/core/routes/util.js';
-import type { BlocksBuilder } from '$lib/fields/blocks/index.js';
-import { isJSONContent, RichText } from '$lib/fields/rich-text/json.js';
-import type { FormField } from '$lib/types.js';
-import { isObjectLiteral, omit } from '$lib/util/object.js';
-import { normalizeFieldPath } from '$lib/util/string.js';
-import { randomId } from '$lib/util/random.js';
-import type { Dic, WithOptional } from '$lib/util/types.js';
-import type { ActionResult } from '@sveltejs/kit';
+} from '#lib/core/prototype/shared/versions/constant.js';
+import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '#lib/core/prototype/types.js';
+import { apiUrl, panelUrl } from '#lib/core/routes/util.js';
+import type { BlocksBuilder } from '#lib/fields/blocks/index.js';
+import { isJSONContent, RichText } from '#lib/fields/rich-text/json.js';
+import type { FormField } from '#lib/types.js';
+import { isObjectLiteral, omit } from '#lib/util/object.js';
+import { writeFormData } from '#lib/util/form-data.js';
+import { normalizeFieldPath } from '#lib/util/string.js';
+import { tempId } from '#lib/util/random.js';
+import type { Dic, WithOptional } from '#lib/util/types.js';
+import type { ActionResult } from '$app/forms';
 import cloneDeep from 'clone-deep';
 import { diff } from 'deep-object-diff';
-import { flatten } from 'flat';
-import { getContext, setContext } from 'svelte';
+import { setContext } from 'svelte';
 import { toast } from 'svelte-sonner';
 import { SvelteURLSearchParams } from 'svelte/reactivity';
 import { t__ } from '../../core/i18n/index.js';
@@ -35,10 +37,12 @@ import {
   duplicateBlock as duplicateBlockIn,
   fromClipboard,
   insertBlock,
+  mergeTypedSince,
   moveBlock as moveBlockIn,
   parseBlockPath,
   readList,
   rebuildPaths,
+  rekeyErrors,
   removeBlock,
   toClipboard,
   withBlockTypes,
@@ -46,9 +50,10 @@ import {
   type BlockAt,
   type NewBlock
 } from './blocks-ops.js';
-import { setErrorsContext } from './errors.svelte.js';
+import { createErrorsStore } from './errors.svelte.js';
 import { getLocaleContext } from './locale.svelte.js';
 import { getTitleContext } from './title.js';
+import { errorText } from '../util/error-text.js';
 import { getUserContext } from './user.svelte.js';
 
 function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = GenericDoc>({
@@ -60,10 +65,8 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   afterSuccess,
   onDataChange,
   beforeSubmit,
-  beforeRedirect,
-  onFieldFocus
+  beforeRedirect
 }: Args<T>) {
-  //
   let initialDoc = $state(initial);
   let doc = $state<T>(initial);
   let formElement = $state<HTMLFormElement>();
@@ -78,7 +81,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
    */
   const operation = $derived(initialDoc.id ? 'update' : 'create');
   const user = getUserContext();
-  const errors = setErrorsContext(key);
+  const errors = createErrorsStore();
   const isCollection = documentConfig.type === 'collection';
   const hasError = $derived(errors.length);
   const hasChanges = $derived(Object.keys(changes).length > 0);
@@ -129,18 +132,18 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
         if (typeof value === 'string') {
           return value;
         }
-        return initialTitle || doc.id || '[untitled]';
+        return initialTitle || doc.id || '';
       }
 
       $effect(() => {
-        const rawTitle = getValueAtPath(documentConfig.asTitle, doc) || '[untitled]';
+        const rawTitle = getValueAtPath(documentConfig.asTitle, doc) || '';
         title = computeTitleFromValue(rawTitle);
         if (nestedLevel === 0) {
           titleContext.value = title;
         }
       });
       const initialTitle = getValueAtPath<string>(documentConfig.asTitle, doc);
-      return doc && initialTitle ? initialTitle : '[untitled]';
+      return doc && initialTitle ? initialTitle : '';
     }
   }
 
@@ -156,16 +159,8 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   }
 
   /**
-   * Function that return a possible reactive value given a path.
-   *
-   * @param path Field path ex: blocks.0.title
-   * @returns the document nested value wich can be a $state or anything else
-   *
-   * @example
-   * const form = getDocumentFormContext()
-   * const value = form.getValue('blocks.0.title')
-   *
-   * //value will update if doc.blocks.0.title update
+   * The document's value at `path`, or `null` for a falsy one. Read in a `$derived`, it follows
+   * the document: `form.getValue('blocks.0.title')`.
    */
   function getValue<T>(path: string): T | null {
     return getValueAtPath(path, doc) || null;
@@ -175,14 +170,14 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     // Stamp used for re-render
     let stamp = $state(new Date().getTime().toString());
 
-    const generateTempId = () => 'temp-' + new Date().getTime().toString();
-
     const getItems = (): TreeBlock[] => {
       return getValueAtPath(path, doc) || [];
     };
 
     const assignItemsToDoc = (items: TreeBlock[]) => {
-      doc = setValueAtPath(path, doc, items);
+      const next = setValueAtPath(path, doc, items);
+      errors.value = rekeyErrors(errors.value, doc, next);
+      doc = next;
       if (onDataChange) onDataChange({ path, value: snapshot(items) });
       /** update stamp to rerender */
       stamp = new Date().getTime().toString();
@@ -203,7 +198,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       }
       target.push({
         ...emptyFields,
-        id: generateTempId(),
+        id: tempId(),
         path: atPath,
         position: target.length,
         _children: []
@@ -219,12 +214,9 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       const targetArray =
         getValueAtPath<TreeBlock[]>(atPath.replace(`${path}.`, ''), items) || items;
 
-      // Perform the move operation
+      // Remove the item, then renumber the paths and positions
       targetArray.splice(index, 1);
-
-      // Rebuild all paths and positions
       items = rebuildPaths(items, path);
-      errors.deleteAllThatStartWith(`${path}.${index}.`);
       assignItemsToDoc(items);
     };
 
@@ -311,8 +303,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     },
 
     remove(path: string): void {
-      const at = parseBlockPath(path);
-      errors.deleteAllThatStartWith(`${at.list}.${at.index}.`);
       apply(removeBlock(doc, path));
     },
 
@@ -358,6 +348,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
   function apply(change: { doc: T; lists: string[] }) {
     if (!change.lists.length) return;
+    errors.value = rekeyErrors(errors.value, doc, change.doc);
     doc = change.doc;
     if (onDataChange) {
       for (const list of change.lists) {
@@ -403,7 +394,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
    * @returns an unreactive snapshot
    *
    * @example
-   * const form = getDocumentFormContext()
    * const initialValue = form.getRawValue('blocks.0.title')
    *
    * // value will not update if doc.blocks.0.title update
@@ -412,46 +402,12 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     return (snapshot(getValueAtPath(path, doc)) as T) || null;
   }
 
-  // Recursively remove id property from blocks/tree/relations
-  // This ensure elements to be threated as new,
-  // preventing an unwanted delete or update with the wrong locale
-  const removeIds = <T>(data: T): T => {
-    // Handle arrays
-    if (Array.isArray(data)) {
-      return data.map((item) => removeIds(item)) as unknown as T;
-    }
-    // Handle objects
-    if (typeof data === 'object' && data !== null) {
-      // First omit the id and locale properties
-      const withoutId = omit(['id', 'locale'], data as Dic);
-      const result: Dic = { ...withoutId, id: 'temp-' + randomId(8) };
-      // Replace with the current locale if present
-      if (locale.code && 'locale' in data) {
-        result.locale = locale.code;
-      }
-      // Then recursively process all remaining properties
-      for (const key in result) {
-        if (key !== 'id' && typeof result[key] === 'object' && result[key] !== null) {
-          result[key] = removeIds(result[key]);
-        }
-      }
-      return result as unknown as T;
-    }
-    // Return primitive values as is
-    return data;
-  };
+  /** A copy of another locale's value, as new rows in this locale. */
+  const asNewRows = <V>(value: V): V => withFreshIds(value, { locale: locale.code });
 
   /**
-   * `config` is the raw compiled field data, same as every field component
-   * (Text.svelte, Group.svelte, ...) already works with — this mirrors
-   * `form.svelte.ts`'s `useField` on purpose, since both read plain field
-   * data (`.required`, `.isEmpty(value)`, `.validate(...)`, `.access.read`,
-   * `.condition(...)`), never builder methods. `config` is only omitted by
-   * callers with just a path in hand (e.g. `Group.svelte`'s `getField`), in
-   * which case it's resolved from `documentConfig.fields` and unwrapped via
-   * `.get` — the field must exist in the document's own field tree for that
-   * to work, which doesn't hold for standalone fields like the panel's
-   * password inputs (see AuthFooter.svelte), so those always pass `config`.
+   * The field at `path`, read and written through the form. `config` is the field's builder;
+   * without it, the builder is looked up in the document's fields by `path`.
    */
   function useField<TValue>(path: string, config?: FormFieldBuilder<FormField>) {
     if (!config) {
@@ -462,7 +418,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
     path = path ? normalizeFieldPath(path) : config.name;
 
-    const parts = $derived(path.split('.'));
+    const parts = path.split('.');
 
     const validate = (value: any) => {
       if (config.get.required && config.use.isEmpty(value)) {
@@ -509,9 +465,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
         fetchURL += `?locale=${locale.defaultCode}${draftParam}`;
       }
 
-      // Fetch data
       const result = await fetch(fetchURL).then((r) => r.json());
-      // Process data
       if ((isCollection && Array.isArray(result.docs) && result.docs.length) || result.doc) {
         // Extract data from the appropriate response structure:
         // - For collections: data is in result.docs[0]
@@ -519,8 +473,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
         const document = isCollection ? result.docs[0] : result.doc;
         const defaultLocaleValue = getValueAtPath<Dic[]>(path, document) || [];
 
-        // Remove ids from blocks before setting the value
-        setFieldValue(removeIds(defaultLocaleValue));
+        setFieldValue(asNewRows(defaultLocaleValue));
       }
     };
 
@@ -573,10 +526,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
       get error() {
         return errors.value[path] || false;
-      },
-
-      get isEmpty() {
-        return config.use.isEmpty(getValueAtPath(path, doc));
       }
     };
   }
@@ -590,26 +539,17 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     return data;
   };
 
-  /** Flattened into form fields, one per leaf: `attributes.title`. */
+  /** The values, nested as they are, as FormData the server reads with their types. */
   const toFormData = (data: Dic) => {
-    const flatData: Dic = flatten(data);
-
-    const formData = new FormData();
-    for (const key of Object.keys(flatData)) {
-      let value = flatData[key];
-      // Prevent empty array to be passed to formData as empty string
-      if (Array.isArray(value) && value.length === 0) {
-        value = '[]';
-      }
-      formData.set(key, value);
-    }
-
+    // An upload names its folder. The file's name stays on the form for the header to show: the
+    // server names the saved file itself.
     if (isCollection && documentConfig.upload) {
-      const uploadPath = page.url.searchParams.get(PARAMS.UPLOAD_PATH);
-      formData.set('_path', uploadPath || 'root');
+      data = {
+        ...omit(['filename'], data),
+        _path: page.url.searchParams.get(PARAMS.UPLOAD_PATH) || UPLOAD_PATH.ROOT_NAME
+      };
     }
-
-    return formData;
+    return writeFormData(data);
   };
 
   /**
@@ -625,9 +565,31 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     return toFormData(data);
   };
 
-  /** One POST to a panel action, read back as the action's result. */
+  /** A request that got no answer, or an answer that is not an action result. */
+  const NO_RESULT: ActionResult<FormSuccessData> = {
+    type: 'error',
+    error: { status: 0, message: '' }
+  };
+
+  /**
+   * One POST to a panel action, read back as the action's result. A request that gets no answer,
+   * or an answer that is not an action result, reads as an `error` result with no message.
+   */
   const send = (action: string, body: FormData): Promise<ActionResult<FormSuccessData>> =>
-    fetch(action, { method: 'POST', body }).then(async (r) => deserialize(await r.text()));
+    fetch(action, { method: 'POST', body })
+      .then(async (r) => deserialize<FormSuccessData, Dic>(await r.text()))
+      .catch(() => NO_RESULT);
+
+  /** One save at a time. A save that throws still frees the form for the next one. */
+  const submit = async (action: string, status?: string) => {
+    if (processing) return;
+    processing = true;
+    try {
+      await save(action, status);
+    } finally {
+      processing = false;
+    }
+  };
 
   /**
    * Submit the form data to the server.
@@ -635,18 +597,16 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
    * An auto-save in flight is waited for rather than raced: both write the same row, and the
    * save is the one whose answer replaces the document.
    */
-  const submit = async (action: string) => {
-    if (processing) return;
-    processing = true;
+  const save = async (action: string, status?: string) => {
     if (autoSaveInFlight) await autoSaveInFlight;
 
-    const result = await send(action, await prepareData());
+    const result = await send(action, await prepareData(withStatus(changedData(), status)));
 
     async function handleSuccess(data?: FormSuccessData) {
       const redirect = data?.redirectUrl || false;
       const message = data?.message || t__('common.generic_success');
       // Invalidate all queries to ensure data consistency across the app
-      apiProxy.invalidate(documentConfig.slug);
+      apiProxy.invalidate(apiUrl(documentConfig.kebab));
 
       if (redirect) {
         if (beforeRedirect) {
@@ -665,7 +625,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       lastAutoSavedAt = null;
       toast.success(message);
 
-      // Callbacks
       if (nestedLevel !== 0) {
         if (onNestedDocumentCreated) onNestedDocumentCreated(doc);
       }
@@ -673,14 +632,13 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     }
 
     async function handleError(data?: Dic) {
-      // Handle error
       if (data?.errors) {
         errors.value = data.errors;
         for (const [key, error] of Object.entries(errors.value)) {
-          toast.error(key + ': ' + error);
+          toast.error(`${key}: ${errorText(String(error))}`);
         }
       } else {
-        toast.error('An error occured');
+        toast.error(t__('common.generic_error'));
       }
     }
 
@@ -694,13 +652,12 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       case 'redirect':
         await applyAction(result);
         break;
-      // A `RimeError` out of an action arrives here: `handleError` answers it with `error(status)`.
+      // A `RimeError` out of an action arrives with its status and message, set by the server hook
+      // `handleError` (core/errors/handler.server.ts:20).
       case 'error':
-        toast.error(result.error?.message || t__('error.generic'));
+        toast.error(result.error?.message || t__('common.generic_error'));
         break;
     }
-
-    processing = false;
   };
 
   /****************************************************/
@@ -725,11 +682,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
    * which brings `versionId`, `isAutoSave`, `updatedAt` and the children's ids.
    */
   const mergeServerDoc = (server: T, sent: T) => {
-    const typedSince: Dic = flatten(diff(sent, snapshot(doc) as T));
-    let next = server;
-    for (const path of Object.keys(typedSince)) {
-      next = setValueAtPath(path, next, getValueAtPath(path, doc));
-    }
+    const next = mergeTypedSince(server, sent, snapshot(doc) as T);
     initialDoc = server;
     doc = next;
   };
@@ -738,10 +691,10 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     const data = result.type === 'failure' ? result.data : undefined;
     if (data?.errors && isObjectLiteral(data.errors)) {
       const [field, error] = Object.entries(data.errors as Dic)[0] ?? [];
-      if (field) return `${field}: ${error}`;
+      if (field) return `${field}: ${errorText(String(error))}`;
     }
     if (data?.message) return String(data.message);
-    return t__('error.generic');
+    return t__('common.generic_error');
   };
 
   /**
@@ -787,13 +740,15 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       autoSaveReason = null;
       pausedFor = null;
       // The versions history lists the row now; whoever shows it re-reads.
-      apiProxy.invalidate(documentConfig.slug);
+      apiProxy.invalidate(apiUrl(documentConfig.kebab));
       return true;
     })();
 
-    const landed = await autoSaveInFlight;
-    autoSaveInFlight = null;
-    return landed;
+    try {
+      return await autoSaveInFlight;
+    } finally {
+      autoSaveInFlight = null;
+    }
   };
 
   /** Send what is pending now, before leaving. Answers whether it landed. */
@@ -821,40 +776,60 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   });
 
   /**
+   * The changes, with the status a save asks for when it differs from the form's. The form keeps
+   * its own status until the server answers: a refused save leaves it as it was.
+   */
+  const withStatus = (data: Dic, status: string | undefined) =>
+    status && documentConfig.versions?.draft && status !== doc.status ? { ...data, status } : data;
+
+  /**
+   * What a plain save does:
+   *
+   * ```
+   * no versions                       save in place
+   * versions, no draft                fork: a version per save
+   * versions and draft, published     status 'published': the save keeps it published
+   * versions and draft, draft         save the draft
+   * ```
+   */
+  const saveIntent = (): { fork: boolean; status?: string } => {
+    const versions = documentConfig.versions;
+    return {
+      fork: !!versions && !versions.draft,
+      status: versions && versions.draft && doc.status === 'published' ? 'published' : undefined
+    };
+  };
+
+  /**
    * Enhance the form element to handle submission.
    * This function attaches a submit event listener to the form element,
    * which prevents the default submission behavior, sets the status field
    * if applicable, and calls the submit function with the appropriate action URL.
    */
   const enhance = (node: HTMLFormElement) => {
-    // Assign form element
     formElement = node;
-    // Set status field if submitter has a data-status attribute
-    const setStatus = (submitter: SubmitEvent['submitter']) => {
-      const SUBMITER_HAS_DATA_STATUS = !!submitter?.dataset.status;
-      if (SUBMITER_HAS_DATA_STATUS && documentConfig.versions && documentConfig.versions.draft) {
-        setValue('status', submitter?.dataset.status);
-      }
-    };
-    // The action names the row on screen, and says `fork` when the button asked for a new version.
-    // Not on an auto-saved row: saving that row promotes it into the version the button meant,
+    // What the submit asks for: the button's data-fork and data-status, or a plain save when no
+    // button submitted the form (the live-edit save).
+    const intentOf = (submitter: SubmitEvent['submitter']) =>
+      submitter
+        ? { fork: submitter.dataset.fork === 'true', status: submitter.dataset.status }
+        : saveIntent();
+
+    // The action names the row on screen, and says `fork` when the save asks for a new version.
+    // Not on an auto-saved row: saving that row promotes it into the version the save meant,
     // and forking it would leave what it holds behind.
-    const enhanceAction = (submitter: SubmitEvent['submitter']) => {
+    const enhanceAction = (fork: boolean) => {
       let actionUrl = buildPanelActionUrl();
-      const SUBMITER_FORKS = !!submitter?.dataset.fork && !doc.isAutoSave;
-      const DOC_HAS_VERSION = documentConfig.versions && !!doc.versionId;
       const { FORK, VERSION_ID } = PARAMS;
-
-      if (DOC_HAS_VERSION) actionUrl += `&${VERSION_ID}=${doc.versionId}`;
-      if (SUBMITER_FORKS) actionUrl += `&${FORK}=true`;
-
+      if (documentConfig.versions && doc.versionId) actionUrl += `&${VERSION_ID}=${doc.versionId}`;
+      if (fork && !doc.isAutoSave) actionUrl += `&${FORK}=true`;
       return actionUrl;
     };
 
     const listener = async (event: SubmitEvent) => {
       event.preventDefault();
-      setStatus(event.submitter);
-      submit(enhanceAction(event.submitter));
+      const { fork, status } = intentOf(event.submitter);
+      submit(enhanceAction(fork), status);
     };
 
     node.addEventListener('submit', listener);
@@ -872,18 +847,15 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
    * This function constructs the appropriate URL to which the form data will be submitted.
    */
   const buildPanelActionUrl = () => {
-    // Start with the base URI for the panel, adding the item ID if we're updating a collection doc
     const panelUri =
-      operation === 'update' && initial._prototype === 'collection' && initial.id
-        ? panelUrl(config.kebab, initial.id)
+      operation === 'update'
+        ? panelUrl(...documentSegments(config.kebab, initial))
         : panelUrl(config.kebab);
-    // Determine the appropriate action based on whether we're creating or updating
     const actionSuffix = operation === 'create' ? '/create?/create' : '?/update';
-    // Add a redirect parameter if we're in a nested form ex: relation creation
-    // to prevent redirect after creation
     const redirectParam = nestedLevel > 0 ? `&${PARAMS.REDIRECT}=false` : '';
-    // Combine all parts to form the final action URL
-    return `${panelUri}${actionSuffix}${redirectParam}`;
+    // The locale of the row on screen: a switch elsewhere, in this tab or another, cannot move it
+    const localeParam = locale.code ? `&${PARAMS.LOCALE}=${locale.code}` : '';
+    return `${panelUri}${actionSuffix}${redirectParam}${localeParam}`;
   };
 
   /**
@@ -900,9 +872,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     } else {
       fetchURL += `?locale=${locale.defaultCode}${draftParam}`;
     }
-    // Fetch data
     const result = await fetch(fetchURL).then((r) => r.json());
-    // Process data
     if ((isCollection && Array.isArray(result.docs) && result.docs.length) || result.doc) {
       const defaultLocaleDoc = isCollection ? result.docs[0] : result.doc;
       let data = { ...defaultLocaleDoc, locale: locale.code };
@@ -910,7 +880,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       for (const [key, field] of Object.entries(configMap)) {
         if (field.get.localized) {
           let value = getValueAtPath<Dic[]>(key, data);
-          value = removeIds(value);
+          value = asNewRows(value);
           data = setValueAtPath(key, data, value);
         }
       }
@@ -930,7 +900,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     useTree,
     blocks,
     nestedLevel,
-    buildPanelActionUrl,
     readOnly,
     importDataFromDefaultLocale,
     flushAutoSave,
@@ -965,6 +934,10 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       return formElement;
     },
 
+    get saveIntent() {
+      return saveIntent();
+    },
+
     get canSubmit() {
       return canSubmit;
     },
@@ -985,10 +958,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       return errors;
     },
 
-    set values(v) {
-      doc = v;
-    },
-
     get config() {
       return config;
     },
@@ -1003,12 +972,6 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
     reset() {
       doc = initialDoc;
-    },
-
-    setFocusedField(path: string) {
-      if (isLiveEdit && onFieldFocus) {
-        onFieldFocus(path);
-      }
     }
   };
 }
@@ -1023,12 +986,6 @@ export function setDocumentFormContext<T extends WithOptional<GenericDoc, 'id'>>
   };
   const store = createDocumentFormState({ ...args, initial });
   return setContext(`${FORM_KEY}.${args.key}`, store);
-}
-
-export function getDocumentFormContext<
-  T extends WithOptional<GenericDoc, 'id'> = WithOptional<GenericDoc, 'id'>
->(key: string = 'root') {
-  return getContext<DocumentFormContext<T>>(`${FORM_KEY}.${key}`);
 }
 
 export type DocumentFormContext<
@@ -1050,6 +1007,5 @@ type Args<T> = {
   readOnly: boolean;
   onDataChange?: any;
   onNestedDocumentCreated?: any;
-  onFieldFocus?: any;
   key: string;
 };

@@ -1,5 +1,5 @@
-import type { DataType, FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import type { FormField } from '$lib/fields/types.js';
+import type { DataType, FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import type { FormField } from '#lib/fields/types.js';
 import { templateReferences, templateUniqueRequired } from './templates.server.js';
 import { getSchemaColumnNames } from '../naming.server.js';
 
@@ -11,50 +11,44 @@ const COLUMN_EXPR: Record<DataType, (snake: string) => string> = {
   json: (snake) => `text('${snake}', { mode: 'json' })`
 };
 
-// Single-call type guards for RESOLVE_DEFAULT below — calling
-// f.get.defaultValue itself has no reason to run twice per branch.
-// `ensureObject` intentionally matches `typeof v === 'object'` including
-// `null` (not `v !== null`), since that's what the pre-refactor per-field
-// toSchema checks did — a field with no explicit default (constructor sets
-// `defaultValue = null`) will keep `null`, not fall back to `{}`. Not
-// touching that here, even though it looks like a latent bug.
-const ensureString = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
-const ensureNumber = (v: unknown): number | undefined => (typeof v === 'number' ? v : undefined);
-const ensureBoolean = (v: unknown): boolean | undefined => (typeof v === 'boolean' ? v : undefined);
-const ensureDate = (v: unknown): Date | undefined => (v instanceof Date ? v : undefined);
-const ensureObject = (v: unknown): object | undefined =>
-  typeof v === 'object' ? (v as object) : undefined;
+/** Whether a value can be written as a column's DEFAULT, by the column's storage type. */
+const FITS: Record<DataType, (value: unknown) => boolean> = {
+  text: (value) => typeof value === 'string',
+  boolean: (value) => typeof value === 'boolean',
+  number: (value) => typeof value === 'number',
+  timestamp: (value) => value instanceof Date,
+  json: (value) => typeof value === 'object' && value !== null
+};
+
+/** The empty value of each storage type: what rows written before the column was added hold. */
+const EMPTY: Record<DataType, unknown> = {
+  text: '',
+  boolean: false,
+  number: 0,
+  timestamp: new Date(0),
+  json: {}
+};
+
+/** The field types whose empty value is not their storage type's. */
+const EMPTY_BY_TYPE: Record<string, (field: FormFieldBuilder<FormField>) => unknown> = {
+  time: () => '00:00',
+  select: (field) => ((field.get as { many?: boolean }).many ? [] : '')
+};
 
 /**
- * Resolves the `.default(...)` fallback used when a field is required but has
- * no usable value in `field.defaultValue` — SQLite needs a type-correct
- * DEFAULT to add a NOT NULL column via drizzle-kit migration on a table with
- * existing rows. Keyed by field type (not dataType) and reading
- * `field.get.defaultValue` directly, exactly mirroring what each field's own
- * `toSchema` did before this refactor — kept here, not on the field builders,
- * since it's schema-generation-only and not part of a field's public API.
+ * The DEFAULT of a required column: the field's own `defaultValue` when the column can hold it,
+ * else an empty value of the column's type. A function default is not a value and is skipped.
+ *
+ * ```ts
+ * columnDefault(select('kind').options('a').required())          // ''
+ * columnDefault(number('n').required().defaultValue(3))          // 3
+ * columnDefault(checkbox('ok').required().defaultValue(() => 1)) // false
+ * ```
  */
-const RESOLVE_DEFAULT: Record<string, (field: FormFieldBuilder<FormField>) => unknown> = {
-  text: (f) => ensureString(f.get.defaultValue) ?? '',
-  email: (f) => ensureString(f.get.defaultValue) ?? '',
-  slug: (f) => ensureString(f.get.defaultValue) ?? '',
-  combobox: (f) => ensureString(f.get.defaultValue) ?? '',
-  radio: (f) => ensureString(f.get.defaultValue) ?? '',
-  textarea: (f) => ensureString(f.get.defaultValue) ?? '',
-  time: (f) => ensureString(f.get.defaultValue) ?? '00:00',
-  checkbox: (f) => f.get.defaultValue ?? false,
-  toggle: (f) => ensureBoolean(f.get.defaultValue) ?? false,
-  number: (f) => ensureNumber(f.get.defaultValue) ?? 0,
-  date: (f) => ensureDate(f.get.defaultValue) ?? new Date(0),
-  link: (f) => ensureObject(f.get.defaultValue) ?? {},
-  richText: (f) => ensureObject(f.get.defaultValue) ?? {},
-  relation: () => ({}),
-  select: (f) => {
-    const many = (f.get as { many?: boolean }).many;
-    const empty = many ? [] : '';
-    const value = f.get.defaultValue;
-    return typeof value === 'undefined' ? empty : value;
-  }
+const columnDefault = (field: FormFieldBuilder<FormField>) => {
+  const own = field.get.defaultValue;
+  if (FITS[field.dataType](own)) return own;
+  return EMPTY_BY_TYPE[field.type]?.(field) ?? EMPTY[field.dataType];
 };
 
 /**
@@ -69,13 +63,11 @@ const RESOLVE_DEFAULT: Record<string, (field: FormFieldBuilder<FormField>) => un
  */
 export function toSchemaColumn(field: FormFieldBuilder<FormField>, parentPath?: string): string {
   const { camel, snake } = getSchemaColumnNames({ name: field.name, parentPath });
-  // `unique` only exists on the field types that support it (text/email/slug);
-  // reading it off the generic FormField base needs a narrow cast, same as
-  // each field's own toSchema did today by typing against its concrete field.
+  // `unique` only exists on text, email and slug, so reading it off the generic FormField needs
+  // a narrow cast.
   const { unique, required } = field.get as { unique?: boolean; required?: boolean };
   const columnExpr = COLUMN_EXPR[field.dataType](snake);
   const referencesStr = field._references ? templateReferences(field._references) : '';
-  const defaultValue = RESOLVE_DEFAULT[field.type]?.(field);
-  const suffix = templateUniqueRequired({ unique, required }, defaultValue as any);
+  const suffix = templateUniqueRequired({ unique, required }, columnDefault(field) as any);
   return `${camel}: ${columnExpr}${referencesStr}${suffix}`;
 }

@@ -1,5 +1,5 @@
-import { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import type { Field } from '$lib/fields/types.js';
+import { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
+import type { Field } from '#lib/fields/types.js';
 import Separator from './component/Separator.svelte';
 
 class SeparatorFieldBuilder extends FieldBuilder<SeparatorField> {

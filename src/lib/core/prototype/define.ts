@@ -1,13 +1,12 @@
-import type { Adapter } from '$lib/core/adapter.js';
-import type { BuiltArea, BuiltCollection, RouteConfig } from '$lib/core/config/types.js';
-import { isStaff } from '$lib/core/auth/access.js';
-import type { AnyHook, HookTiming, OperationQuery } from '$lib/core/pipeline/types.js';
-import type { Dic } from '$lib/util/types.js';
-import { FileText } from '@lucide/svelte';
+import type { Adapter } from '#lib/core/adapter.js';
+import type { Access, BuiltArea, BuiltCollection, RouteConfig } from '#lib/core/config/types.js';
+import { isStaff } from '#lib/core/auth/access.js';
+import type { OperationQuery } from '#lib/core/pipeline/types.js';
+import type { Dic } from '#lib/util/types.js';
+import FileText from '@lucide/svelte/icons/file-text';
 import type { RequestEvent } from '@sveltejs/kit';
 import { initial } from './initial.js';
 import { prototypeKebab } from './naming.js';
-import type { GenericDoc } from './types.js';
 
 /**
  * A prototype **defines** a kind of thing rime stores, and brings its own surface with it.
@@ -19,11 +18,10 @@ import type { GenericDoc } from './types.js';
  * | **plugin**    | *augments*             | small                        |
  *
  * So `collection` and `area` are two definitions built to the same pattern, not one
- * implementation with a discriminator. Nothing here knows there are two of them, which is what
- * makes a third cost only its own folder.
+ * implementation with a discriminator.
  *
- * A definition carries no config — it is the kind, not an instance. `config.type` is the name it
- * is registered under, and that is what pairs the two.
+ * A definition carries no config — it is the kind, not an instance. Every config it builds
+ * carries its `name` as `type`.
  */
 export type BuiltPrototype = BuiltArea | BuiltCollection;
 
@@ -40,7 +38,7 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype> = {
    *
    * **A function returning the list, not the list.** Several steps come from `$rime/modules`, and
    * a feature reached through the barrel imports `create` back out of this definition —
-   * `auth/staff/configure.ts` and `versions/configure.server.ts` both do. Entered from the
+   * `auth/staff/configure.ts` and `auth/staff/configure.server.ts` both do. Entered from the
    * feature's side, an array literal captures bindings the barrel has not initialised, and the
    * config builds without those fields: no error, no type change, just a document with no title.
    * Building the list on first `create` reads every binding after every module has finished.
@@ -51,16 +49,8 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype> = {
   augments?: () => readonly ((config: any) => any)[];
 
   /**
-   * Every hook this prototype can run, in the order it runs them — including its features'.
-   *
-   * The order is written down, not computed; see `collection/hooks.server.ts`. `buildPipeline`
-   * decides only *which* of them a config runs, from the feature each hook names.
-   */
-  hooks?: Partial<Record<HookTiming, AnyHook[]>>;
-
-  /**
-   * The config factory. **Composed by `definePrototype`, never passed in**: `augments`, then
-   * `features`, then the shaping every prototype does the same way.
+   * The config factory. **Composed by `definePrototype`, never passed in**: `augments`, then the
+   * shaping every prototype does the same way.
    *
    * Typed loosely here and narrowed where it is re-exported — a prototype's authoring type is
    * generic in the slug and no type parameter can carry a generic type, so
@@ -76,14 +66,15 @@ export type PrototypeDefinition<C extends BuiltPrototype = BuiltPrototype> = {
    * `'[id]/duplicate'`. Not an absolute pathname like a plugin's: a prototype has no URL of its
    * own, only slugs the author's config supplies.
    *
-   * `dev/codegen/routes/` writes the `+server.ts` files from this and `handlers/routes.server.ts`
-   * dispatches through it, so an endpoint exists by being declared here and nowhere else.
+   * `dev/codegen/routes/` writes the `+server.ts` files from this and
+   * `core/routes/handler.server.ts` dispatches through it, so an endpoint exists by being declared
+   * here and nowhere else.
    */
   rest?: Record<string, RouteConfig>;
 };
 
-export type PrototypeBootArgs<C extends BuiltPrototype = BuiltPrototype> = {
-  /** A config of this definition's own kind — boot.server.ts pairs them by name. */
+type PrototypeBootArgs<C extends BuiltPrototype = BuiltPrototype> = {
+  /** A config of this definition's own kind. */
   config: C;
   adapter: Adapter;
   defaultLocale?: string;
@@ -107,9 +98,6 @@ export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
   /** The locale to act in: the one asked for, else the request's, else the config's default. */
   fallbackLocale(locale?: string): string | undefined;
 
-  /** What a new document of this config starts with: every default applied, and no id. */
-  initial(): GenericDoc;
-
   /**
    * Which **version row** a read means. `undefined` for a config that is not versioned, which is
    * "the document's own row". See `versionsReadQuery`.
@@ -123,14 +111,19 @@ export type PrototypeApiContext<C extends BuiltPrototype = BuiltPrototype> = {
   cached<T>(operation: string, key: Dic, read: () => Promise<T>): Promise<T>;
 };
 
-type PrototypeOptions<C extends BuiltPrototype> = Partial<Omit<PrototypeDefinition<C>, 'create'>>;
+type PrototypeOptions<C extends BuiltPrototype> = Partial<
+  Omit<PrototypeDefinition<C>, 'create' | 'name'>
+> & { name: string };
+
+/** The rules an author wrote, without the ones written as `undefined`. */
+const writtenRules = (access: Dic = {}): Access =>
+  Object.fromEntries(Object.entries(access).filter(([, rule]) => rule !== undefined));
 
 export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
-  options: PrototypeOptions<C> = {}
+  options: PrototypeOptions<C>
 ): PrototypeDefinition<C> => {
-  const name = options.name ?? '';
-  // Defaulted rather than optional: `buildPipeline` filters it on every config, and a prototype
-  // with no features is a real case. `hooks` stays optional — a missing timing is already none.
+  const name = options.name;
+  // Defaulted, so `create` calls it unconditionally.
   const augments = options.augments ?? (() => []);
 
   /**
@@ -157,14 +150,15 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
       icon: augmented.icon || FileText,
       live: augmented.live || false,
       /**
-       * Staff-only until the author says otherwise, and the policy is auth's own `isStaff`.
+       * Staff-only until the author says otherwise, and the policy is auth's own `isStaff`. A rule
+       * written as `undefined` keeps the default.
        */
       access: {
         create: isStaff,
         read: isStaff,
         update: isStaff,
         delete: isStaff,
-        ...augmented.access
+        ...writtenRules(augmented.access)
       }
     } as C;
   };
@@ -173,7 +167,6 @@ export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
     name,
     augments,
     create,
-    hooks: options.hooks,
     boot: options.boot,
     rest: options.rest
   } as PrototypeDefinition<C>;

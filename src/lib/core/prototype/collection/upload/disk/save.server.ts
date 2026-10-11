@@ -1,13 +1,12 @@
-import type { ImageSizesConfig } from '$lib/core/prototype/collection/upload/types.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import type { UploadDoc } from '$lib/types.js';
-import { normalizeFileName } from '$lib/util/file.js';
-import { pick } from '$lib/util/object.js';
-import { toCamelCase } from '$lib/util/string.js';
-import type { Dic } from '$lib/util/types.js';
+import { mediaFilePath, type FilesConfig } from './medias.server.js';
+import type { ImageSizesConfig } from '#lib/core/prototype/collection/upload/types.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import type { UploadDoc } from '#lib/types.js';
+import { joinFileName, normalizeFileName } from '#lib/util/file.js';
+import { pick } from '#lib/util/object.js';
+import type { Dic } from '#lib/util/types.js';
 import crypto from 'crypto';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'fs';
-import path from 'path';
 import sharp from 'sharp';
 
 /**
@@ -41,15 +40,31 @@ const isSameFile = (buffer: Buffer, filePath: string): boolean => {
 };
 
 /**
- * Verifies if all image size variations already exist for a given base filename
+ * The file a generated image size is written to.
+ *
+ * ```ts
+ * sizeFileName('photo', { name: 'thumbnail', width: 400 }, 'jpg'); // 'photo-thumbnail-400.jpg'
+ * sizeFileName('photo', { name: 'card', width: 800, height: 600 }, 'webp'); // 'photo-card-800x600.webp'
+ * sizeFileName('photo', { name: 'tall', height: 900 }, 'jpg'); // 'photo-tall-900.jpg'
+ * ```
+ */
+export const sizeFileName = (name: string, size: ImageSizesConfig, extension: string) => {
+  const dimensions = [size.width, size.height].filter(Boolean).join('x');
+  return `${name}-${size.name}-${dimensions}.${extension}`;
+};
+
+/**
+ * Verifies if all image size variations already exist for a given base filename, in the
+ * collection's folder.
  * Returns a record of size names to filenames if all exist, empty object otherwise
  * @example
- * const sizes = checkImageSizesExist('image', 'jpg', imageSizesConfig);
+ * const sizes = checkImageSizesExist(config, 'image', 'jpg', imageSizesConfig);
  * if (Object.keys(sizes).length > 0) {
  *   console.log('All image sizes already exist');
  * }
  */
-const checkImageSizesExist = (
+export const checkImageSizesExist = (
+  config: FilesConfig,
   name: string,
   extension: string,
   imagesSizes: ImageSizesConfig[]
@@ -57,25 +72,23 @@ const checkImageSizesExist = (
   const sizes: Record<string, string> = {};
 
   for (const size of imagesSizes) {
-    const whString = `${size.width}x${size.height}`;
-
     if (!size.out || !size.out.length) {
       // Check if the resized image exists
-      const filename = `${name}-${toCamelCase(size.name)}-${whString}.${extension}`;
-      const filePath = path.resolve(process.cwd(), `static/medias/${filename}`);
+      const filename = sizeFileName(name, size, extension);
+      const filePath = mediaFilePath(config, filename);
 
       if (!existsSync(filePath)) {
         return {}; // If any size doesn't exist, return empty object
       }
 
-      sizes[toCamelCase(size.name)] = filename;
+      sizes[size.name] = filename;
     } else {
       // Check if all format conversions exist
       const convertedFilenames: string[] = [];
 
       for (const format of size.out) {
-        const filename = `${name}-${toCamelCase(size.name)}-${whString}.${format}`;
-        const filePath = path.resolve(process.cwd(), `static/medias/${filename}`);
+        const filename = sizeFileName(name, size, format);
+        const filePath = mediaFilePath(config, filename);
 
         if (!existsSync(filePath)) {
           return {}; // If any format doesn't exist, return empty object
@@ -84,7 +97,7 @@ const checkImageSizesExist = (
         convertedFilenames.push(filename);
       }
 
-      sizes[toCamelCase(size.name)] = convertedFilenames.join('|');
+      sizes[size.name] = convertedFilenames.join('|');
     }
   }
 
@@ -92,18 +105,22 @@ const checkImageSizesExist = (
 };
 
 /**
- * Saves a file to disk with deduplication and generates image sizes if needed
- * Checks if identical file already exists before creating a new one
+ * Saves a file to the collection's folder with deduplication and generates image sizes if needed
+ * Checks if identical file already exists in that folder before creating a new one
  * @example
  * const file = event.request.formData.get('file');
- * const { filename, imageSizes } = await saveFile(file, config.imageSizes);
+ * const { filename, imageSizes } = await saveFile(config, file, config.upload.imageSizes);
  */
-export const saveFile = async (file: File, imagesSizes: ImageSizesConfig[] | false) => {
+export const saveFile = async (
+  config: FilesConfig,
+  file: File,
+  imagesSizes: ImageSizesConfig[] | false
+) => {
   const { name: initialName, extension } = normalizeFileName(file.name);
   let name = initialName;
   let sizes: UploadDoc['sizes'] = {};
-  let filename = `${name}.${extension}`;
-  let filePath = path.resolve(process.cwd(), `static/medias/${filename}`);
+  let filename = joinFileName(name, extension);
+  let filePath = mediaFilePath(config, filename);
 
   // Get buffer once to avoid multiple arrayBuffer() calls
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -114,7 +131,7 @@ export const saveFile = async (file: File, imagesSizes: ImageSizesConfig[] | fal
 
     // Check if image sizes already exist
     if (imagesSizes && file.type.includes('image') && !file.type.includes('svg')) {
-      const existingSizes = checkImageSizesExist(name, extension, imagesSizes);
+      const existingSizes = checkImageSizesExist(config, name, extension, imagesSizes);
 
       // If all sizes exist, use them
       if (Object.keys(existingSizes).length > 0) {
@@ -123,6 +140,7 @@ export const saveFile = async (file: File, imagesSizes: ImageSizesConfig[] | fal
 
       // Otherwise, we'll need to generate the sizes
       sizes = await generateSizes({
+        config,
         name,
         extension,
         sizes: imagesSizes,
@@ -136,14 +154,15 @@ export const saveFile = async (file: File, imagesSizes: ImageSizesConfig[] | fal
   // File doesn't exist or is different, find a unique name
   while (existsSync(filePath)) {
     name += `-${new Date().getTime().toString()}`;
-    filename = `${name}.${extension}`;
-    filePath = path.resolve(process.cwd(), `static/medias/${filename}`);
+    filename = joinFileName(name, extension);
+    filePath = mediaFilePath(config, filename);
   }
 
   try {
     writeFileSync(filePath, buffer);
     if (imagesSizes && file.type.includes('image') && !file.type.includes('svg')) {
       sizes = await generateSizes({
+        config,
         name,
         extension,
         sizes: imagesSizes,
@@ -162,19 +181,19 @@ export const saveFile = async (file: File, imagesSizes: ImageSizesConfig[] | fal
  * Creates resized versions and format conversions as specified
  * @example
  * const sizes = await generateSizes({
+ *   config,
  *   name: 'image',
  *   extension: 'jpg',
  *   sizes: imageSizesConfig,
  *   buffer: imageBuffer
  * });
  */
-export const generateSizes = async ({ sizes, buffer, name, extension }: GenerateSizeArgs) => {
+const generateSizes = async ({ config, sizes, buffer, name, extension }: GenerateSizeArgs) => {
   const imageSizes: Dic = {};
 
   for (const size of sizes) {
     const wh = pick(['width', 'height'], size);
     const resizedImage = sharp(buffer).resize(wh);
-    const whString = `${wh.width || ''}${wh.height && wh.width ? 'x' : ''}${wh.height || ''}`;
 
     // If no output formats specified, keep original format
     if (!size.out?.length) {
@@ -192,10 +211,10 @@ export const generateSizes = async ({ sizes, buffer, name, extension }: Generate
         resizedBuffer = await resizedImage.toBuffer();
       }
 
-      const filename = `${name}-${toCamelCase(size.name)}-${whString}.${extension}`;
-      const filePath = path.resolve(process.cwd(), `static/medias/${filename}`);
+      const filename = sizeFileName(name, size, extension);
+      const filePath = mediaFilePath(config, filename);
       writeFileSync(filePath, resizedBuffer);
-      imageSizes[toCamelCase(size.name)] = filename;
+      imageSizes[size.name] = filename;
       continue;
     }
 
@@ -211,21 +230,22 @@ export const generateSizes = async ({ sizes, buffer, name, extension }: Generate
           convertedImage = await resizedImage.webp({ quality: compression }).toBuffer();
         }
 
-        const filename = `${name}-${toCamelCase(size.name)}-${whString}.${format}`;
-        const filePath = path.resolve(process.cwd(), `static/medias/${filename}`);
+        const filename = sizeFileName(name, size, format);
+        const filePath = mediaFilePath(config, filename);
         writeFileSync(filePath, convertedImage);
 
         return filename;
       })
     );
 
-    imageSizes[toCamelCase(size.name)] = convertedFiles.join('|');
+    imageSizes[size.name] = convertedFiles.join('|');
   }
 
   return imageSizes;
 };
 
 type GenerateSizeArgs = {
+  config: FilesConfig;
   sizes: ImageSizesConfig[];
   buffer: Buffer;
   name: string;

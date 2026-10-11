@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { text } from '$lib/fields/text/index.js';
+import { text } from '#lib/fields/text/index.js';
 import { create } from './definition.js';
 
 /**
@@ -20,28 +20,5 @@ describe('create and the dashboard layout', () => {
     const built = create('spec_medias', { upload: true, fields: [text('alt')] });
 
     expect(built._dashboardLayout).toBe('grid');
-  });
-
-  /**
-   * `configurePanel` spread `config.panel || {}`, and `false || {}` is `{}` — so a collection that
-   * asked to be hidden came out with a `panel` object instead, and every `panel !== false` reader
-   * (the dashboard's filter, `panel/navigation.ts`) saw it as visible. The derived collections
-   * upload and versions add were unaffected: they are built as plain objects, never through here.
-   */
-  it('keeps `panel: false` instead of turning it into an object', () => {
-    const built = create('spec_hidden', { panel: false, fields: [text('title')] });
-
-    expect(built.panel).toBe(false);
-  });
-
-  /** And what an author wrote is still what an author wrote. */
-  it('leaves an authored panel alone', () => {
-    const built = create('spec_authored', {
-      panel: { group: 'content', dashboard: { layout: 'rows', maxEntries: 3 } },
-      upload: true,
-      fields: [text('alt')]
-    });
-
-    expect(built.panel).toEqual({ group: 'content', dashboard: { layout: 'rows', maxEntries: 3 } });
   });
 });

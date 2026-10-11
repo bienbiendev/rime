@@ -1,29 +1,33 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { directoriesKebab } from '$lib/core/prototype/collection/upload/naming.js';
-  import type { Directory } from '$lib/core/prototype/collection/upload/types';
-  import { apiUrl } from '$lib/core/routes/util.js';
-  import Empty from '$lib/panel/components/sections/collection/Empty.svelte';
-  import FileDrop from '$lib/panel/components/sections/collection/bulk-upload/FileDrop.svelte';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-  import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
-  import Input from '$lib/panel/components/ui/input/input.svelte';
-  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
-  import { getUserContext } from '$lib/panel/context/user.svelte.js';
-  import { typeLabel, uploadFiles, type UploadProgress } from '$lib/panel/util/upload-file.js';
-  import type { BuiltCollection, GenericDoc, UploadDoc } from '$lib/types';
   import {
-    Check,
-    CornerLeftUp,
-    Folder,
-    ImagePlus,
-    ListFilter,
-    Plus,
-    Search,
-    Upload,
-    X
-  } from '@lucide/svelte';
+    getParentPath,
+    type UploadPath
+  } from '#lib/core/prototype/collection/upload/util/path.js';
+  import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { directoriesKebab } from '#lib/core/prototype/collection/upload/naming.js';
+  import type { Directory } from '#lib/core/prototype/collection/upload/types.js';
+  import { apiUrl } from '#lib/core/routes/util.js';
+  import Empty from '#lib/panel/components/sections/collection/Empty.svelte';
+  import FileDrop from '#lib/panel/components/sections/collection/bulk-upload/FileDrop.svelte';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
+  import * as DropdownMenu from '#lib/panel/components/ui/dropdown-menu/index.js';
+  import Input from '#lib/panel/components/ui/input/input.svelte';
+  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import { typeLabel } from '#lib/panel/util/upload-file.js';
+  import { createUploader, uploadingLabel } from '#lib/panel/util/uploader.svelte.js';
+  import type { BuiltCollection, GenericDoc, UploadDoc } from '#lib/types.js';
+  import Check from '@lucide/svelte/icons/check';
+  import CornerLeftUp from '@lucide/svelte/icons/corner-left-up';
+  import Folder from '@lucide/svelte/icons/folder';
+  import ImagePlus from '@lucide/svelte/icons/image-plus';
+  import ListFilter from '@lucide/svelte/icons/list-filter';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Search from '@lucide/svelte/icons/search';
+  import Upload from '@lucide/svelte/icons/upload';
+  import X from '@lucide/svelte/icons/x';
   import { untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import Create from './Create.svelte';
@@ -52,7 +56,7 @@
     onCreating
   }: Props = $props();
 
-  let path = $state('root');
+  let path = $state<UploadPath>(UPLOAD_PATH.ROOT_NAME);
   let searchValue = $state('');
   let typeFilterValue = $state('');
   let initialDocs = $state<UploadDoc[]>([]);
@@ -69,27 +73,21 @@
     return '';
   });
 
-  const parentPath = $derived.by(() => {
-    if (path.includes(':')) {
-      const segments = path.split(':');
-      return segments.slice(0, -1).join(':');
-    } else {
-      return null;
-    }
-  });
+  /** The search as a `like` value: the text anywhere in the file name. */
+  const encodedSearch = $derived(encodeURIComponent(`%${searchValue.trim()}%`));
+
+  const parentPath = $derived(getParentPath(path));
 
   const filesURL = $derived.by(() => {
     if (!isFiltered) {
       return `${apiUrl(config.kebab)}?where[_path][equals]=${path}`;
     } else {
       if (typeFilterValue && searchValue.trim()) {
-        return `${apiUrl(config.kebab)}?where[and][0][mimeType][equals]=${encodedMime}&where[and][1][filename][like]=%${searchValue.trim()}%`;
+        return `${apiUrl(config.kebab)}?where[and][0][mimeType][equals]=${encodedMime}&where[and][1][filename][like]=${encodedSearch}`;
       } else if (typeFilterValue) {
         return `${apiUrl(config.kebab)}?where[mimeType][equals]=${encodedMime}`;
-      } else if (searchValue.trim()) {
-        return `${apiUrl(config.kebab)}?where[filename][like]=%${searchValue.trim()}%`;
       } else {
-        return `${apiUrl(config.kebab)}?where[_path][equals]=${path}`;
+        return `${apiUrl(config.kebab)}?where[filename][like]=${encodedSearch}`;
       }
     }
   });
@@ -215,23 +213,17 @@
 
   const accept = $derived(config.upload?.accept);
   let uploadInput = $state<HTMLInputElement>();
-  let progress = $state<UploadProgress | null>(null);
-  let failed = $state<string[]>([]);
+  const uploader = createUploader(() => ({ url: apiUrl(config.kebab), path, accept }));
 
   /** Files land in the folder on screen, then show there, picked. */
   async function upload(list: File[]) {
-    failed = [];
-    const target = { url: apiUrl(config.kebab), path, accept };
-    const result = await uploadFiles(list, target, (state) => (progress = state));
-    progress = null;
-    failed = result.failed;
-    if (!result.docs.length) return;
-    for (const doc of result.docs) seen.set(doc.id, doc);
+    const docs = await uploader.upload(list);
+    if (!docs.length) return;
+    for (const doc of docs) seen.set(doc.id, doc);
     searchValue = '';
     typeFilterValue = '';
-    APIProxy.invalidate(apiUrl(config.kebab));
-    if (!many) return toggle(result.docs[0].id);
-    const ids = result.docs.map((doc) => doc.id);
+    if (!many) return toggle(docs[0].id);
+    const ids = docs.map((doc) => doc.id);
     draft = [...draft, ...ids.filter((id) => !draft.includes(id))];
   }
 
@@ -305,7 +297,7 @@
             {/snippet}
           </DropdownMenu.Trigger>
 
-          <DropdownMenu.Content class="rz-link__type-content" align="start">
+          <DropdownMenu.Content align="start">
             <DropdownMenu.Item onclick={() => (typeFilterValue = '')}>
               {t__('fields.all_types')}
             </DropdownMenu.Item>
@@ -326,15 +318,11 @@
             variant="secondary"
             size="sm"
             icon={Upload}
-            disabled={!!progress}
+            disabled={!!uploader.progress}
             onclick={() => uploadInput?.click()}
           >
-            {#if progress}
-              {t__(
-                'fields.uploading',
-                String(Math.min(progress.uploaded + progress.failed.length + 1, progress.total)),
-                String(progress.total)
-              )}
+            {#if uploader.progress}
+              {uploadingLabel(uploader.progress)}
             {:else}
               {t__('fields.upload')}
             {/if}
@@ -355,9 +343,9 @@
       </div>
 
       <div class="rz-relation-browse__body">
-        {#if failed.length}
+        {#if uploader.failed.length}
           <p class="rz-relation-browse__notice" role="status">
-            {t__('fields.upload_failed', failed.join(', '))}
+            {t__('fields.upload_failed', uploader.failed.join(', '))}
           </p>
         {/if}
 
@@ -366,7 +354,7 @@
             class="rz-relation-browse__empty"
             multiple={many}
             {accept}
-            disabled={!canCreate || !!progress}
+            disabled={!canCreate || !!uploader.progress}
             onfiles={upload}
           >
             {#snippet children({ browse })}

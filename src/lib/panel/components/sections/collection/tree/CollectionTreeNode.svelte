@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import { panelUrl } from '$lib/core/routes/util.js';
-  import type { CollectionContext } from '$lib/panel/context/collection.svelte.js';
-  import { ChevronDown, ChevronRight, GripVertical } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import { panelPath } from '#lib/core/routes/util.js';
+  import type { CollectionContext } from '#lib/panel/context/collection.svelte.js';
+  import { titleOrUntitled } from '#lib/panel/util/title.js';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
   import Avatar from '../Avatar.svelte';
   import DocStatus from '../DocStatus.svelte';
   import When from '../When.svelte';
@@ -60,8 +63,11 @@
       {/if}
 
       <!-- The title covers the whole row: a click anywhere but the grip and the chevron opens it. -->
-      <a href={panelUrl(doc._type, doc.id)} class="rz-tree-row__title rz-collection-node__title">
-        {doc.title || '[untitled]'}
+      <a
+        href={panelPath(collection.config.kebab, doc.id)}
+        class="rz-tree-row__title rz-collection-node__title"
+      >
+        {titleOrUntitled(doc.title)}
       </a>
 
       {#if folded && children.length}

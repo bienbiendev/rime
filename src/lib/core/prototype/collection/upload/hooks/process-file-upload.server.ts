@@ -1,33 +1,27 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
-import { cleanUpDocumentFile } from '$lib/core/prototype/collection/upload/disk/delete.server.js';
-import { saveFile } from '$lib/core/prototype/collection/upload/disk/save.server.js';
-import { omit } from '$lib/util/object.js';
-import { toCamelCase } from '$lib/util/string.js';
-import { isUploadConfig } from '$lib/core/prototype/collection/upload/util/config.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { rowFiles } from '#lib/core/prototype/collection/upload/disk/delete.server.js';
+import { filesOwner } from '#lib/core/prototype/collection/upload/disk/medias.server.js';
+import { saveFile } from '#lib/core/prototype/collection/upload/disk/save.server.js';
+import { omit } from '#lib/util/object.js';
+import { isUploadConfig } from '#lib/core/prototype/collection/upload/util/config.js';
+import type { Dic } from '#lib/util/types.js';
 
 /**
- * Hook that handles file upload processing and image resizing operations.
+ * Saves the file a write sends, with its image sizes, in the collection's folder, and puts its
+ * name on the row.
  *
- * @description
- * This hook performs the following operations:
- * 1. For new files:
- *    - Saves the uploaded file to storage
- *    - Generates different image sizes if configured
- *    - Updates document with file metadata and image variations
+ * ```
+ * file: File    saved; `filename` and each size column name the saved files
+ * file: null    the row names no file: `filename`, `mimeType`, `filesize` and the sizes are null
+ * no file       nothing changes
+ * ```
  *
- * 2. For file updates:
- *    - Removes old files from storage
- *    - Processes new file as above
- *
- * 3. For file deletions:
- *    - Removes files from storage
- *    - Cleans up image variations
- *    - Nullifies related document fields
+ * On an update that sends `file`, the files of the row it writes go in `context.replacedFiles`:
+ * `cleanUpReplacedFiles` deletes them once the write is done, if no row uses them any more.
  */
 export const processFileUpload = Hooks.beforeUpsert<'upload'>(
   async function processFileUpload(args) {
-    const { operation, config, event } = args;
-    const { rime } = event.locals;
+    const { operation, config } = args;
 
     if (!isUploadConfig(config)) throw new Error('Should never throw');
 
@@ -35,12 +29,13 @@ export const processFileUpload = Hooks.beforeUpsert<'upload'>(
     const hasSizeConfig = 'imageSizes' in config.upload && Array.isArray(config.upload.imageSizes);
     const sizesConfig = hasSizeConfig ? config.upload.imageSizes : [];
 
-    if (data.file) {
-      if (operation === 'update' && args.context.originalDoc) {
-        await cleanUpDocumentFile({ config, rime, id: args.context.originalDoc.id });
-      }
+    // The row this update writes: its files go once the write is done, if nothing else uses them
+    const replaced = operation === 'update' ? rowFiles(args.context.originalDoc) : null;
+    const replacesFile = data.file !== undefined;
 
-      const { filename, imageSizes } = await saveFile(data.file, sizesConfig!);
+    if (data.file) {
+      const owner = filesOwner(args.event.locals.rime.config, config);
+      const { filename, imageSizes } = await saveFile(owner, data.file, sizesConfig!);
       data = {
         ...omit(['file'], data),
         filename,
@@ -48,21 +43,14 @@ export const processFileUpload = Hooks.beforeUpsert<'upload'>(
       };
     }
 
-    // If data.file is explicitly set to null : delete file
+    // `file: null` removes the file: the row keeps no name of it, so nothing uses it after the write
     if (data.file === null) {
-      // delete files
-      if (operation === 'update' && args.context.originalDoc) {
-        await cleanUpDocumentFile({ config, rime, id: args.context.originalDoc.id });
-      }
-      // update data for DB update
-      for (const size of sizesConfig!) {
-        data = {
-          ...data,
-          [toCamelCase(size.name)]: null
-        };
-      }
+      const noFile: Dic = { filename: null, mimeType: null, filesize: null };
+      for (const size of sizesConfig!) noFile[size.name] = null;
+      data = { ...data, ...noFile };
     }
 
-    return { ...args, data };
+    const replacedFiles = replacesFile && replaced ? [replaced] : [];
+    return { ...args, data, context: { ...args.context, replacedFiles } };
   }
 );

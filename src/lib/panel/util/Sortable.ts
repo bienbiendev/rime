@@ -7,7 +7,7 @@ export const useSortable = ({ ...sortableProps }: SortableType.Options) => {
     let from: HTMLElement | null = null;
     const existing = Sortable.get(el);
     if (existing) {
-      // Better safe than sorry. At least we know this ain't the case.
+      // One Sortable per element: a second one on it is a bug.
       throw new Error('Instance exist. Should never happen.');
     }
 
@@ -44,7 +44,6 @@ export const useSortable = ({ ...sortableProps }: SortableType.Options) => {
       }
     });
     return sortableInstance;
-    // });
   };
 
   return { sortable };

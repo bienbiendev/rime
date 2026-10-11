@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import SpinLoader from '$lib/panel/components/ui/spin-loader/SpinLoader.svelte';
-  import { acceptLabel } from '$lib/panel/util/upload-file.js';
-  import type { BuiltCollection } from '$lib/types.js';
-  import { Upload } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import SpinLoader from '#lib/panel/components/ui/spin-loader/SpinLoader.svelte';
+  import { acceptLabel } from '#lib/panel/util/upload-file.js';
+  import type { BuiltCollection } from '#lib/types.js';
+  import Upload from '@lucide/svelte/icons/upload';
   import { toast } from 'svelte-sonner';
 
-  import type { WithUpload } from '$lib/core/prototype/collection/upload/util/config';
+  import type { WithUpload } from '#lib/core/prototype/collection/upload/util/config.js';
   import type { ChangeEventHandler } from 'svelte/elements';
 
   type Props = {
@@ -48,14 +48,12 @@
     }
   };
 
+  /** A drop of text or a link carries no file: nothing happens. */
   const handleDrop = (event: DragEvent) => {
     dragOver = false;
     event.preventDefault();
-
-    if ('dataTransfer' in event && event.dataTransfer && event.dataTransfer.files) {
-      const droppedFiles = Array.from(event.dataTransfer.files);
-      processFile(droppedFiles[0]);
-    }
+    const dropped = event.dataTransfer?.files[0];
+    if (dropped) processFile(dropped);
   };
 
   const processFile = (value: File) => {
@@ -113,6 +111,7 @@
     id="file"
     name="file"
     type="file"
+    accept={accept?.join(',')}
   />
 </label>
 

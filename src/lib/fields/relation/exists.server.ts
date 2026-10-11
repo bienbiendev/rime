@@ -1,5 +1,5 @@
-import type { Adapter } from '$lib/core/adapter.js';
-import type { PrototypeSlug } from '$lib/core/prototype/types.js';
+import type { Adapter } from '#lib/core/adapter.js';
+import type { PrototypeSlug } from '#lib/core/prototype/types.js';
 import { Relation } from './relation.js';
 
 /**

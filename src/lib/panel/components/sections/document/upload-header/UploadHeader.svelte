@@ -1,12 +1,12 @@
 <script lang="ts">
-  import type { BuiltCollection } from '$lib/core/config/types.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import type { WithUpload } from '$lib/core/prototype/collection/upload/util/config.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { mimeTypeToIcon } from '$lib/panel/util/upload.js';
-  import * as util from '$lib/util/file.js';
-  import { fileSizeLabel } from '$lib/panel/util/upload-file.js';
+  import type { BuiltCollection } from '#lib/core/config/types.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import type { WithUpload } from '#lib/core/prototype/collection/upload/util/config.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import { type DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { mimeTypeToIcon } from '#lib/panel/util/upload.js';
+  import * as util from '#lib/util/file.js';
+  import { fileSizeLabel, isAccepted } from '#lib/panel/util/upload-file.js';
   import { toast } from 'svelte-sonner';
   import DropZone from './drop-zone/DropZone.svelte';
 
@@ -20,9 +20,6 @@
   let preview = $state<string | null>(null);
   let file = $state<File | null>(null);
   let isValidFile = $state(false);
-
-  const hasAccept = $derived('accept' in form.config);
-  const allowedMimeTypes = $derived(accept || []);
 
   const deleteFile = () => {
     preview = null;
@@ -47,19 +44,16 @@
   const onGeneratingPreviewEnd = () => (form.isDisabled = false);
 
   $effect(() => {
-    if (file) {
-      const validMimeType =
-        !hasAccept || (allowedMimeTypes.length && allowedMimeTypes.includes(file.type));
-      if (!validMimeType) {
-        const error = `File should be type of ${allowedMimeTypes.join(' | ')}, received ${file.type}`;
-        form.errors.set('mimeType', error);
-        toast.error(error);
-        isValidFile = false;
-        file = null;
-      } else {
-        form.errors.delete('mimeType');
-        isValidFile = true;
-      }
+    if (!file) return;
+    if (isAccepted(file, accept)) {
+      form.errors.delete('mimeType');
+      isValidFile = true;
+    } else {
+      const error = `File should be type of ${(accept ?? []).join(' | ')}, received ${file.type}`;
+      form.errors.set('mimeType', error);
+      toast.error(error);
+      isValidFile = false;
+      file = null;
     }
   });
 
@@ -80,9 +74,7 @@
       <div class="rz-doc-upload-header__preview">
         {#if form.values.mimeType.includes('image')}
           <div class="rz-doc-upload-header__prewiew-grid">
-            {#key form.values.title}
-              <img src={form.values.url || form.values._thumbnail || preview} alt="preview" />
-            {/key}
+            <img src={form.values.url || form.values._thumbnail || preview} alt="preview" />
           </div>
         {:else}
           {@const FileIcon = mimeTypeToIcon(form.values.mimeType)}
@@ -97,7 +89,7 @@
           <div class="rz-doc-upload-header__fact">
             <span class="rz-doc-upload-header__label">{label}</span>
             {#if !create && key === 'filename'}
-              <a target="_blank" rel="external" href="/medias/{form.values[key]}">
+              <a target="_blank" rel="external" href={form.values.url}>
                 {form.values[key]}
               </a>
             {:else if key === 'filesize'}

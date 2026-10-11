@@ -1,22 +1,18 @@
 <script lang="ts" generics="T">
-  import { getLiveContext } from './context.svelte.js';
-  import type { WithRelationResolved } from '$lib/core/fields/types.js';
+  import type { WithRelationResolved } from '#lib/core/fields/types.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
   import type { Snippet } from 'svelte';
+  import { updateURI } from './context.svelte.js';
+  import LiveEdit from './LiveEdit.svelte';
 
-  let { child, data } = $props<{
+  let { child: render, data } = $props<{
     child: Snippet<[doc: WithRelationResolved<T>]>;
     data: { doc: T };
   }>();
-
-  const live = getLiveContext();
-
-  $effect(() => {
-    if (live.enabled) {
-      live.doc = data.doc;
-    }
-  });
-
-  const doc = $derived(live.doc || data.doc) as WithRelationResolved<T>;
 </script>
 
-{@render child(doc)}
+<LiveEdit data={data.doc} update={updateURI(data.doc as GenericDoc)}>
+  {#snippet child(doc)}
+    {@render render(doc as WithRelationResolved<T>)}
+  {/snippet}
+</LiveEdit>

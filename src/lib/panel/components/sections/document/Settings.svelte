@@ -1,18 +1,27 @@
 <script lang="ts">
+  import { documentSegments } from '#lib/panel/util/url.js';
   import { goto } from '$app/navigation';
-  import { PARAMS } from '$lib/core/constants.js';
-  import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
-  import { apiUrl, panelPath } from '$lib/core/routes/util.js';
-  import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-  import * as DropdownMenu from '$lib/panel/components/ui/dropdown-menu/index.js';
-  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
-  import { useCommands } from '$lib/panel/context/commands.svelte.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte.js';
-  import { getVersionsContext } from '$lib/panel/context/versions.svelte.js';
-  import type { GenericDoc } from '$lib/types.js';
-  import { trycatchFetch } from '$lib/util/function.js';
-  import { Copy, Ellipsis, Hash, History, Import, Pickaxe, Trash2 } from '@lucide/svelte';
+  import { PARAMS } from '#lib/core/constants.js';
+  import { canDuplicate } from '#lib/core/prototype/collection/can-duplicate.js';
+  import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+  import { apiUrl, panelPath } from '#lib/core/routes/util.js';
+  import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
+  import * as DropdownMenu from '#lib/panel/components/ui/dropdown-menu/index.js';
+  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import { useCommands } from '#lib/panel/context/commands.svelte.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { titleOrUntitled } from '#lib/panel/util/title.js';
+  import { getVersionsContext } from '#lib/panel/context/versions.svelte.js';
+  import type { GenericDoc } from '#lib/types.js';
+  import { trycatchFetch } from '#lib/util/function.js';
+  import Copy from '@lucide/svelte/icons/copy';
+  import Ellipsis from '@lucide/svelte/icons/ellipsis';
+  import Hash from '@lucide/svelte/icons/hash';
+  import History from '@lucide/svelte/icons/history';
+  import Import from '@lucide/svelte/icons/import';
+  import Pickaxe from '@lucide/svelte/icons/pickaxe';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import { toast } from 'svelte-sonner';
   import { t__ } from '../../../../core/i18n/index.js';
   import Button from '../../ui/button/button.svelte';
@@ -26,15 +35,11 @@
   let deleteVersionConfirmOpen = $state(false);
   let dupplicateConfirmOpen = $state(false);
   const isCollection = $derived(form.config.type === 'collection');
-  const allowDuplicate = $derived(
-    form.config.type === 'collection' && !form.config.auth && !form.config.upload
-  );
+  const allowDuplicate = $derived(canDuplicate(form.config));
   const locale = getLocaleContext();
   const APIProxy = getAPIProxyContext();
 
-  const documentPath = $derived(
-    isCollection ? panelPath(form.config.kebab, form.values.id) : panelPath(form.config.kebab)
-  );
+  const documentPath = $derived(panelPath(...documentSegments(form.config.kebab, form.values)));
 
   /**
    * How many versions the document has, off the same list the history shows. A document keeps at
@@ -54,27 +59,38 @@
     });
     deleteVersionConfirmOpen = false;
     if (!response.ok) {
-      toast.error(t__('error.generic'));
+      toast.error(t__('common.generic_error'));
       return;
     }
     toast.success(t__('common.version_deleted'));
-    APIProxy.invalidate(form.config.slug);
+    APIProxy.invalidate(apiUrl(form.config.kebab));
     await goto(documentPath);
   }
 
+  /** Sets a `data-*` attribute, or removes it when the value is `undefined`. */
+  function setData(element: HTMLElement, key: string, value: string | undefined) {
+    if (value === undefined) {
+      delete element.dataset[key];
+    } else {
+      element.dataset[key] = value;
+    }
+  }
+
+  /**
+   * Submits through the Save button as a new draft, then gives the button its own attributes back.
+   * The submit listener reads them before its first `await`, so they are back once it has.
+   */
   function handleNewDraft() {
     if (form.readOnly || !form.element) return;
-    const saveButton = form.element.querySelector('button[data-submit]') as HTMLButtonElement;
-    const initialFork = saveButton.dataset.fork;
-    if (saveButton) {
-      saveButton.dataset.fork = 'true';
-      saveButton.dataset.status = VERSIONS_STATUS.DRAFT;
-      form.element.requestSubmit(saveButton as HTMLButtonElement);
-    } else {
-      // Fallback to default submit if no specific button found
-      form.element.requestSubmit();
-    }
-    saveButton.dataset.fork = initialFork;
+    const saveButton = form.element.querySelector<HTMLButtonElement>('button[data-submit]');
+    if (!saveButton) return;
+
+    const { fork, status } = saveButton.dataset;
+    setData(saveButton, 'fork', 'true');
+    setData(saveButton, 'status', VERSIONS_STATUS.DRAFT);
+    form.element.requestSubmit(saveButton);
+    setData(saveButton, 'fork', fork);
+    setData(saveButton, 'status', status);
   }
 
   /** The history lives on the document page; `undefined` where a document is shown without one. */
@@ -96,7 +112,7 @@
         toast.success(t__('common.doc_deleted'));
         goto(panelPath(form.config.kebab));
       } else {
-        toast.error(t__('error.generic'));
+        toast.error(t__('common.generic_error'));
       }
     });
   }
@@ -126,7 +142,7 @@
       await navigator.clipboard.writeText(String(form.values.id));
       toast.success(t__('common.id_copied'));
     } catch {
-      toast.error(t__('error.generic'));
+      toast.error(t__('common.generic_error'));
     }
   }
 
@@ -297,9 +313,9 @@
 <Dialog.Root bind:open={deleteConfirmOpen}>
   <Dialog.Content>
     <Dialog.Header>
-      {t__('common.delete_dialog_title')}
+      {t__('common.delete_dialog_title', titleOrUntitled(form.title))}
     </Dialog.Header>
-    <p>{t__('common.delete_dialog_text')}</p>
+    <p>{t__('common.delete_dialog_text', titleOrUntitled(form.title))}</p>
     <Dialog.Footer>
       <Button onclick={handleDelete} kbd="enter">Delete</Button>
       <Button onclick={() => (deleteConfirmOpen = false)} variant="secondary" kbd="escape">

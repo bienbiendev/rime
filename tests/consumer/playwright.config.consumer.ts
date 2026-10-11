@@ -10,7 +10,7 @@ import path from 'path';
  */
 
 const PORT = Number(process.env.CONSUMER_SERVER_PORT || '5173');
-const PUBLIC_URL = process.env.PUBLIC_RIME_URL || `http://localhost:${PORT}`;
+const SITE_URL = process.env.SITE_URL || `http://localhost:${PORT}`;
 // Lets local-pack-test.sh narrow a given pass to a single test file without a second
 // playwright config to keep in sync with this one.
 const TEST_MATCH = new RegExp(process.env.CONSUMER_TEST_MATCH || 'consumer(-plugin)?\\.test\\.ts$');
@@ -32,9 +32,9 @@ export default defineConfig({
     stderr: 'pipe'
   },
   use: {
-    baseURL: PUBLIC_URL,
+    baseURL: SITE_URL,
     extraHTTPHeaders: {
-      origin: PUBLIC_URL
+      origin: SITE_URL
     }
   }
 });

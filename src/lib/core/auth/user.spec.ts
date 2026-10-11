@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Adapter } from '$lib/core/adapter.js';
-import type { CollectionSlug } from '$lib/core/prototype/types.js';
-import { betterAuthUserId, isSuperAdmin, userAttributes } from './user.server.js';
+import type { Adapter } from '#lib/core/adapter.js';
+import type { CollectionSlug } from '#lib/core/prototype/types.js';
+import { betterAuthApiKey, betterAuthUserId, isSuperAdmin, userAttributes } from './user.server.js';
 
 /**
  * What these three reads ask for, pinned.
@@ -90,6 +90,21 @@ describe('userAttributes', () => {
     });
   });
 
+  it('reads a flag that is not `true` as not super-admin', async () => {
+    for (const flag of [1, null, 'true']) {
+      const { adapter } = stubAdapter([
+        { id: 'u1', name: 'A', email: 'a@b.c', roles: ['admin'], isSuperAdmin: flag }
+      ]);
+
+      const user = await userAttributes(adapter, {
+        authUserId: 'au1',
+        slug: 'staff' as CollectionSlug
+      });
+
+      expect(user?.isSuperAdmin, String(flag)).toBe(false);
+    }
+  });
+
   it('does not ask any other collection for a flag it has no column for', async () => {
     const { adapter, calls } = stubAdapter([
       { id: 'u1', name: 'A', email: 'a@b.c', roles: ['user'] }
@@ -122,5 +137,26 @@ describe('userAttributes', () => {
     expect(
       await userAttributes(adapter, { authUserId: 'au1', slug: 'users' as CollectionSlug })
     ).toBeUndefined();
+  });
+});
+
+describe('betterAuthApiKey', () => {
+  it('reads the key and its creator off the row', async () => {
+    const { adapter, calls } = stubAdapter([{ id: 'a1', apiKeyId: 'k1', authUserId: 'au1' }]);
+
+    expect(await betterAuthApiKey(adapter, { slug: 'apps' as CollectionSlug, id: 'a1' })).toEqual({
+      keyId: 'k1',
+      userId: 'au1'
+    });
+    expect(calls[0].slug).toBe('apps');
+    expect(calls[0].args.query.where).toEqual({ id: { equals: 'a1' } });
+    expect(calls[0].args.select).toEqual(['apiKeyId', 'authUserId']);
+  });
+
+  it('is null for a row without a key', async () => {
+    const { adapter } = stubAdapter([{ id: 'a1', apiKeyId: null, authUserId: 'au1' }]);
+    expect(await betterAuthApiKey(adapter, { slug: 'apps' as CollectionSlug, id: 'a1' })).toBe(
+      null
+    );
   });
 });

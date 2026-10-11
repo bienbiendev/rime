@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { getFieldListAtPath } from '$lib/core/fields/util.js';
-  import RenderFields from '$lib/panel/components/fields/RenderFields.svelte';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import { setDocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { getLivePanelContext } from '$lib/panel/context/livePanel.svelte.js';
-  import type { GenericDoc } from '$lib/types';
+  import { getFieldListAtPath } from '#lib/core/fields/util.js';
+  import RenderFields from '#lib/panel/components/fields/RenderFields.svelte';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { setDocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { getLivePanelContext } from '#lib/panel/context/livePanel.svelte.js';
+  import type { GenericDoc } from '#lib/types.js';
   import { onMount } from 'svelte';
   import ScrollArea from '../../ui/scroll-area/scroll-area.svelte';
   import './live-edit-panel.css';

@@ -1,10 +1,9 @@
-import type { Adapter } from '$lib/core/adapter.js';
-import { RimeError } from '$lib/core/errors/index.js';
-import type { GenericBlock, PrototypeSlug } from '$lib/core/prototype/types.js';
-import { isWithin } from '$lib/util/string.js';
-import type { Dic } from '$lib/util/types.js';
+import type { Adapter } from '#lib/core/adapter.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import type { GenericBlock, PrototypeSlug } from '#lib/core/prototype/types.js';
+import type { Dic } from '#lib/util/types.js';
 import type { OperationContext } from '../../types.js';
-import { defineBlocksDiff } from './diff.server.js';
+import { diffRepeatables, replacedPaths, withinPaths } from '../repeatable.server.js';
 import { extractBlocks } from './extract.server.js';
 
 /**
@@ -22,8 +21,7 @@ export const saveBlocks = async (args: {
   data: Dic;
   incomingPaths: string[];
   adapter: Adapter;
-  /** Whose children these are — the versions's slug when the prototype has one. Resolved by
-   *  `persistRelational` from what the prototype was registered with. */
+  /** Whose children these are: the versions table's slug when the config has one, else its own. */
   ownerSlug: PrototypeSlug;
 }) => {
   //
@@ -51,22 +49,15 @@ export const saveBlocks = async (args: {
       configMap: originalConfigMap
     });
 
-    // Only consider existing blocks that are in paths being updated
-    // This optimization prevents deletion of blocks in unmodified form sections
-    // For example, if only "content.hero" was modified, we don't want to
-    // accidentally delete blocks in "content.footer"
-    existingBlocks = blocks.filter((block) => {
-      return incomingPaths.some((path) => !!block.path && isWithin(block.path, path));
-    });
+    // Only the blocks inside the paths this save replaces: blocks of a member it does not send
+    // stay as they are
+    existingBlocks = withinPaths(blocks, replacedPaths(incomingPaths, configMap));
   }
 
-  // Calculate what blocks need to be added, updated, or deleted
-  // This handles localization logic and compares block properties
-  const blocksDiff = defineBlocksDiff({
+  const blocksDiff = diffRepeatables<GenericBlock>(
     existingBlocks,
-    incomingBlocks,
-    context
-  });
+    incomingBlocks as GenericBlock[]
+  );
 
   // Execute delete operations first to avoid potential conflicts
   if (blocksDiff.toDelete.length) {

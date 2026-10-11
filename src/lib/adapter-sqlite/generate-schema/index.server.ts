@@ -1,12 +1,12 @@
-import type { BuiltConfig } from '$lib/core/config/types.js';
-import { authColumns } from '$lib/core/auth/tables.js';
+import type { BuiltConfig } from '#lib/core/config/types.js';
+import { authColumns } from '#lib/core/auth/tables.js';
 import {
   baseTableName,
   declaredTableProperty,
   tableName,
   type TableName
 } from '../naming.server.js';
-import { date } from '$lib/fields/date/index.js';
+import { date } from '#lib/fields/date/index.js';
 import { generateJunctionTableDefinition } from './relations/junction.server.js';
 import buildRootTable, { type ReferenceJoin } from './root.server.js';
 import {
@@ -20,16 +20,11 @@ import {
 } from './templates.server.js';
 import write from './write.server.js';
 
-export async function generateSchemaString(config: BuiltConfig) {
-  // Every prototype config in the build, each paired with the features that extend its kind —
-  // which is what says whether the config's content lives somewhere other than its own row.
-  // One list rather than a loop per kind: the body below is two hundred lines and identical
-  // for either.
-  const allEntries = [
-    ...config.collections.map((config) => ({ config })),
-    ...config.areas.map((config) => ({ config }))
-  ];
-  const entries = allEntries.filter((entry) => entry.config._generateSchema !== false);
+async function generateSchemaString(config: BuiltConfig) {
+  // Every prototype config that generates a schema, collections and areas alike.
+  const prototypes = [...config.collections, ...config.areas].filter(
+    (prototype) => prototype._generateSchema !== false
+  );
 
   const schema: string[] = [templateImports];
   let enumTables: string[] = [];
@@ -39,12 +34,8 @@ export async function generateSchemaString(config: BuiltConfig) {
   /** Every resolved reference, joined onto its owner in the same `defineRelations`. */
   const referenceJoins: ReferenceJoin[] = [];
 
-  for (const entry of entries) {
-    const prototype = entry.config;
-
-    // Whether this config's content lives on its own row or on a second table, asked of the
-    // features that extend the prototype rather than of a member the adapter recognises by name.
-    // A feature declaring a versions table is the only thing that makes two tables here.
+  for (const prototype of prototypes) {
+    // A versions table moves the config's content off its own row onto a second table.
     const versions = prototype._versions;
 
     // The prototype's own table, resolved from its slug rather than case-converted here —
@@ -84,7 +75,7 @@ export async function generateSchemaString(config: BuiltConfig) {
     const {
       schema: prototypeSchema,
       relationsDic,
-      relationFieldsMap,
+      relationTargets,
       relationFieldsHasLocale,
       referenceJoins: contentReferenceJoins
     } = await buildRootTable({
@@ -100,7 +91,7 @@ export async function generateSchemaString(config: BuiltConfig) {
 
     const { junctionTable, junctionTableName } = generateJunctionTableDefinition({
       tableName: rootTableName,
-      relationFieldsMap,
+      relationTargets,
       hasLocale: relationFieldsHasLocale
     });
 
@@ -117,9 +108,10 @@ export async function generateSchemaString(config: BuiltConfig) {
     }
     schema.push(prototypeSchema, junctionTable);
 
-    // A collection with `$url` keeps its pages' addresses in a table of their own, off the base
-    // table: an address belongs to the page, not to one of its versions.
-    if (prototype.type === 'collection' && prototype.$url) {
+    // A config with `$url` keeps its addresses in a table of their own, off the base table: an
+    // address belongs to the document, not to one of its versions. An area's one row per locale
+    // holds the area's slug and no parent.
+    if (prototype.$url) {
       const pathsTable = tableName({ owner: baseName, child: { kind: 'paths' } });
       schema.push(templatePathsTable(baseName));
       enumTables = [...enumTables, pathsTable];

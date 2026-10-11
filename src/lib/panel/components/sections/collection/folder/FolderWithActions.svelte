@@ -1,19 +1,23 @@
 <script lang="ts">
+  import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
   import { goto, invalidateAll } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import type { BuiltCollectionClient } from '$lib/core/config/types.js';
-  import { PARAMS } from '$lib/core/constants.js';
-  import { directoriesKebab } from '$lib/core/prototype/collection/upload/naming.js';
-  import type { Directory } from '$lib/core/prototype/collection/upload/types.js';
-  import type { GenericDoc } from '$lib/core/prototype/types.js';
-  import { apiUrl, panelPath } from '$lib/core/routes/util.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import ContextMenu from '$lib/panel/components/ui/context-menu/ContextMenu.svelte';
-  import ContextMenuItem from '$lib/panel/components/ui/context-menu/ContextMenuItem.svelte';
-  import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
-  import { trycatchFetch } from '$lib/util/function.js';
-  import { Folder, FolderUp, Pencil, Trash2 } from '@lucide/svelte';
+  import type { BuiltCollectionClient } from '#lib/core/config/types.js';
+  import { PARAMS } from '#lib/core/constants.js';
+  import { directoriesKebab } from '#lib/core/prototype/collection/upload/naming.js';
+  import type { Directory } from '#lib/core/prototype/collection/upload/types.js';
+  import type { GenericDoc } from '#lib/core/prototype/types.js';
+  import { apiUrl, panelPath } from '#lib/core/routes/util.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import ContextMenu from '#lib/panel/components/ui/context-menu/ContextMenu.svelte';
+  import ContextMenuItem from '#lib/panel/components/ui/context-menu/ContextMenuItem.svelte';
+  import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
+  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import { trycatchFetch } from '#lib/util/function.js';
+  import Folder from '@lucide/svelte/icons/folder';
+  import FolderUp from '@lucide/svelte/icons/folder-up';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import { toast } from 'svelte-sonner';
   import { t__ } from '../../../../../core/i18n/index.js';
   import FolderEdit from './FolderEdit.svelte';
@@ -52,7 +56,7 @@
       : null
   );
 
-  async function handleGetDeleteInfos() {
+  function handleGetDeleteInfos() {
     message = t__(
       'common.delete_dialog_text',
       `wich contains ${childFilesCount} file(s) and ${childFoldersCount} folder(s)`
@@ -66,7 +70,7 @@
     if (error) {
       return toast.error('Error deleting folder');
     }
-    toast.success(t__('delete_success'));
+    toast.success(t__('common.folder_deleted'));
     deleteConfirmOpen = false;
     if (onDelete) {
       onDelete(folder.id);
@@ -75,7 +79,8 @@
 
   async function handleDropFolder(folderId: string) {
     const movedFolderPath = folderId;
-    const newFolderPath = `${folder.id}:${movedFolderPath.split(':').at(-1)}`;
+    const name = movedFolderPath.split(UPLOAD_PATH.SEPARATOR).at(-1);
+    const newFolderPath = `${folder.id}${UPLOAD_PATH.SEPARATOR}${name}`;
     const moveAPICallURL = `${baseFolderApiURL}/${folderId}`;
     const [error] = await trycatchFetch(moveAPICallURL, {
       method: 'PATCH',
@@ -103,9 +108,7 @@
       return toast.error('Error moving document');
     }
     toast.success('Document moved successfully');
-    if (onDocumentDrop) {
-      onDocumentDrop({ documentId: docId, path: folder.id });
-    }
+    onDocumentDrop({ documentId: docId, path: folder.id });
     childFiles.refresh();
   }
 
@@ -117,7 +120,7 @@
 
     if (!docId) return;
     // Handle drop folder
-    if (docId.includes(':')) {
+    if (docId.includes(UPLOAD_PATH.SEPARATOR)) {
       if (docId === folder.id) return;
       return handleDropFolder(docId);
     }
@@ -135,7 +138,8 @@
   }
 
   function handleGoToFolder() {
-    goto(resolve(`${panelPath(collection.kebab)}?${PARAMS.UPLOAD_PATH}=${folder.id}`));
+    const href: string = `${panelPath(collection.kebab)}?${PARAMS.UPLOAD_PATH}=${folder.id}`;
+    goto(resolve(href));
   }
 
   function handleDragStart(e: DragEvent) {

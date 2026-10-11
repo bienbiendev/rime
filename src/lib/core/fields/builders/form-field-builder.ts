@@ -1,14 +1,17 @@
-import type { FieldPanelTableConfig } from '$lib/types.js';
-import { capitalize } from '$lib/util/string.js';
-import type { Dic } from '$lib/util/types.js';
+import type { FieldPanelTableConfig } from '#lib/types.js';
+import { makeDocTypeName } from '#lib/core/prototype/naming.js';
+import { capitalize } from '#lib/util/string.js';
+import type { Dic } from '#lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import cloneDeep from 'clone-deep';
 import type {
+  DefaultOptions,
   DefaultValueFn,
   FieldAccess,
   FieldHook,
   FieldHookClient,
   FieldHookContext,
+  FieldHookDuplicate,
   FieldHookShared,
   FieldValidationFunc,
   FieldWidth,
@@ -19,9 +22,9 @@ import { FieldBuilder, type FieldNode, type FieldUse, type ValueNode } from './f
 /** Adapter-agnostic storage primitive — column syntax only, not default-value semantics. */
 export type DataType = 'text' | 'boolean' | 'number' | 'timestamp' | 'json';
 
-/** Method-syntax, same reasoning as `FieldUse` — keeps `run`'s params
- *  bivariant across concrete field types so e.g. `SlugFieldBuilder` still
- *  satisfies a prop typed `FormFieldBuilder<FormField>`. */
+/** Method-syntax, same reasoning as `FieldUse`: keeps the params bivariant
+ *  across concrete field types, so e.g. `SlugFieldBuilder` still satisfies a
+ *  prop typed `FormFieldBuilder<FormField>`. */
 export type FormFieldUse<T extends FormField> = FieldUse & {
   isEmpty(value: unknown): boolean;
   validate(value: unknown, context: Parameters<FieldValidationFunc<T>>[1]): true | string;
@@ -30,12 +33,16 @@ export type FormFieldUse<T extends FormField> = FieldUse & {
   beforeRead(value: unknown, context: Omit<FieldHookContext<T>, 'config'>): Promise<any>;
   beforeSave(value: unknown, context: FieldHookContext<T>): Promise<any>;
   beforeValidate(value: unknown, context: Parameters<FieldHookShared>[1]): Promise<any>;
+  beforeDuplicate(
+    value: unknown,
+    context: Omit<Parameters<FieldHookDuplicate<T>>[1], 'config'>
+  ): Promise<any>;
   /** Resolves `field.defaultValue` — calling it if it's a `DefaultValueFn`,
    *  returning it as-is otherwise. Every field type stores `defaultValue` as
    *  plain data (never a fluent-setter name collision on `.field` itself),
-   *  but several concrete builders (Select, Link, Slug, Relation) *do* expose
-   *  a `.defaultValue(...)` fluent setter — bare `config.defaultValue` on
-   *  those would silently return that setter, not the stored value. */
+   *  but every form field builder *does* expose a `.defaultValue(...)` fluent
+   *  setter — bare `config.defaultValue` on a builder would silently return
+   *  that setter, not the stored value. */
   defaultValue(context?: { event?: RequestEvent }): unknown;
 };
 
@@ -95,13 +102,37 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
+  /**
+   * The value a new document starts with, or a function that answers it.
+   * With `{ fill: 'save' }`, a save that leaves the field empty also gets it.
+   */
+  defaultValue(value: NonNullable<T['defaultValue']>, options?: DefaultOptions) {
+    this.field.defaultValue = value;
+    this.field.defaultFill = options?.fill;
+    return this;
+  }
+
   localized() {
     this.field.localized = true;
     return this;
   }
 
-  validate(validateFunction: FieldValidationFunc<T>) {
-    this.field.validate = validateFunction as FieldValidationFunc<T>;
+  /**
+   * Adds a rule to the field's own check. The value reaches `rule` only once the field type's
+   * check (a number, an address, an option of the list) accepts it; `true` passes, a string is the
+   * message.
+   *
+   * ```ts
+   * number('age').min(0).validate((value) => Number.isInteger(value) || 'Whole years');
+   * // -5 -> 'Should be greater than 0'   2.5 -> 'Whole years'   7 -> true
+   * ```
+   */
+  validate(rule: FieldValidationFunc<T>) {
+    const own = this.field.validate;
+    this.field.validate = ((value, context) => {
+      const checked = own ? own(value, context) : true;
+      return checked === true ? rule(value, context) : checked;
+    }) as FieldValidationFunc<T>;
     return this;
   }
 
@@ -189,6 +220,8 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return {
       isEmpty: (value: unknown): boolean => this.field.isEmpty(value),
       validate: (value: unknown, context: Parameters<FieldValidationFunc<T>>[1]): true | string => {
+        // An empty value has nothing to check: `required` reports it when the field needs one
+        if (value === null || value === undefined || value === '') return true;
         if (this.field.validate) {
           return this.field.validate(value, { ...context, config: this.field });
         }
@@ -243,6 +276,16 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
         }
         return result;
       },
+      beforeDuplicate: async (
+        value: unknown,
+        context: Omit<Parameters<FieldHookDuplicate<T>>[1], 'config'>
+      ): Promise<any> => {
+        let result = value;
+        for (const hook of this.field.hooks?.beforeDuplicate ?? []) {
+          result = await hook(result, { ...context, config: this.field });
+        }
+        return result;
+      },
       defaultValue: (context: { event?: RequestEvent } = {}): unknown => {
         const value = this.field.defaultValue;
         return typeof value === 'function' ? (value as DefaultValueFn<unknown>)(context) : value;
@@ -261,7 +304,7 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
       "export type ResolvedReference<T> = (Pick<T, 'id'> & Partial<T>) | null;",
       '//@shared:end'
     ].join('\n');
-    const target = `${capitalize(this._references!.table)}Doc`;
+    const target = makeDocTypeName(this._references!.table);
     return [
       shared,
       `${this.field.name}${this.get.required ? '' : '?'}: ResolvedReference<${target}>`
@@ -273,21 +316,19 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
+  /** A copy of the builder: its field, deep, and its `$references`. */
   clone(): typeof this {
-    // Create a new instance of the same class
     const Constructor = this.constructor as new (...args: any[]) => typeof this;
-    // Get constructor parameters from the current instance
-    const name = this.field.name;
-    const type = this.field.type;
-    // Create a new instance
-    const clone = new Constructor(name, type);
-    // Deep clone the field object to avoid reference issues
+    const clone = new Constructor(this.field.name, this.field.type);
     clone.field = cloneDeep(this.field);
-
+    clone._references = this._references ? { ...this._references } : null;
     return clone;
   }
 
-  /** Server-side schema concern, same family as $beforeRead/$beforeSave. */
+  /**
+   * Makes this field a foreign key to the prototype `table` names (a slug). With `resolve`, a read
+   * joins the referenced document.
+   */
   $references(table: string, options?: FieldReferenceOptions) {
     this._references = { table, ...options };
     return this;
@@ -308,6 +349,22 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
   beforeValidate(hook: FieldHookShared) {
     this.field.hooks!.beforeValidate ??= [];
     this.field.hooks!.beforeValidate.push(hook);
+    return this;
+  }
+
+  /**
+   * The value this field takes on a copy of its document. It runs after the field's own copy and
+   * gets its value: a text title already reads `Title (copy)`.
+   *
+   * ```ts
+   * text('code').$beforeDuplicate(() => null)
+   * text('title').isTitle().$beforeDuplicate((title) => title.toUpperCase())  // 'TITLE (COPY)'
+   * email('contact').unique().$beforeDuplicate(() => null)
+   * ```
+   */
+  $beforeDuplicate(hook: FieldHookDuplicate<T>) {
+    this.field.hooks!.beforeDuplicate ??= [];
+    this.field.hooks!.beforeDuplicate.push(hook);
     return this;
   }
 

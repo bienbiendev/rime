@@ -1,7 +1,7 @@
-import type { BuiltArea } from '$lib/core/config/types.js';
+import type { BuiltArea } from '#lib/core/config/types.js';
 import { augmentMetas } from '$rime/modules:core/prototype/shared/metas';
-import { augmentTitle } from '$lib/core/prototype/shared/title/augment.js';
-import { augmentVersions } from '$lib/core/prototype/shared/versions/augment.js';
+import { augmentTitle } from '#lib/core/prototype/shared/title/augment.js';
+import { augmentVersions } from '#lib/core/prototype/shared/versions/augment.js';
 import { definePrototype } from '../define.js';
 import { augmentAreaLabel } from './augment-label.js';
 import type { AreaWithoutSlug } from './types.js';
@@ -13,7 +13,7 @@ import type { AreaWithoutSlug } from './types.js';
  * The adapter reads `config.type` and builds an `AreaHandle` accordingly —
  * `adapter-sqlite/area.server.ts`.
  *
- * The client half of the pair — what an area *is*. `api`, `rest` and `boot` are server-only and
+ * The client half of the pair — what an area *is*. `rest`, `hooks` and `boot` are server-only and
  * live in `definition.server.ts`.
  */
 export const area = definePrototype({
@@ -36,5 +36,5 @@ export const area = definePrototype({
  * signature is stated here rather than on the definition.
  */
 export const create = <S extends string>(slug: S, config: AreaWithoutSlug<S>): BuiltArea =>
-  // See the collection's for the cast.
+  // The definition is typed against `BuiltPrototype`; the cast narrows the result to an area.
   area.create(slug, config) as BuiltArea;

@@ -1,4 +1,4 @@
-import type { GenericDoc } from '$lib/core/prototype/types.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
 import { EDIT_LOCK_TTL_MS } from './constant.js';
 
 /**

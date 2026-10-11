@@ -1,5 +1,5 @@
 import test, { expect, type APIRequestContext, type Page } from '@playwright/test';
-import { API_BASE_URL, panelUrl, signIn } from '../util.js';
+import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -32,15 +32,6 @@ async function createPage(request: APIRequestContext, title: string) {
   return (await response.json()).doc.id as string;
 }
 
-async function loginAs(page: Page) {
-  await page.context().clearCookies();
-  await page.goto(panelUrl('sign-in'));
-  await page.locator('input[name="email"]').pressSequentially(ADMIN_EMAIL, { delay: 30 });
-  await page.locator('input[name="password"]').pressSequentially(PASSWORD, { delay: 30 });
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL(panelUrl());
-}
-
 async function readSections(page: Page, docId: string) {
   const response = await page.request.get(`${API_BASE_URL}/pages/${docId}`);
   expect(response.status()).toBe(200);
@@ -68,9 +59,10 @@ const line = (page: Page, heading: string, label: RegExp) =>
 
 test('⌘K puts the page on top, the panel below, and goes there', async ({ page, request }) => {
   const docId = await createPage(request, 'Commands');
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', docId));
-  await page.waitForLoadState('networkidle');
+  // The shortcut listens once the panel is mounted
+  await expect(page.locator('main')).toBeVisible();
 
   await page.keyboard.press('Control+k');
   await expect(dialog(page)).toBeVisible();
@@ -87,15 +79,22 @@ test('⌘K puts the page on top, the panel below, and goes there', async ({ page
 });
 
 test('⌘K searches the documents by their title', async ({ page, request }) => {
-  const docId = await createPage(request, 'Palette page');
-  await loginAs(page);
+  // A title no other test writes: pages created in parallel cannot crowd it out of the results
+  const title = `Palette ${Date.now()}`;
+  // Among the newest pages too, but its title does not hold the query
+  await createPage(request, 'Decoy');
+  const docId = await createPage(request, title);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl());
+  // The shortcut listens once the panel is mounted
+  await expect(page.locator('main')).toBeVisible();
 
   await page.keyboard.press('Control+k');
   await expect(dialog(page)).toBeVisible();
-  await page.keyboard.type('pa');
-  await expect(line(page, 'Go to', /^Pages$/)).toHaveCount(1);
-  const found = group(page, 'Pages').filter({ hasText: 'Palette page' });
+  await page.keyboard.type(title);
+  const found = group(page, 'Pages').filter({ hasText: title });
   await expect(found).toHaveCount(1);
+  await expect(group(page, 'Pages').filter({ hasText: 'Decoy' })).toHaveCount(0);
   await found.click();
   await page.waitForURL(panelUrl('pages', docId));
 });
@@ -105,9 +104,10 @@ test('The collection list offers a document, the search and the display', async 
   request
 }) => {
   await createPage(request, 'Listed');
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages'));
-  await page.waitForLoadState('networkidle');
+  // The shortcut listens once the panel is mounted
+  await expect(page.locator('main')).toBeVisible();
 
   await page.keyboard.press('Control+k');
   await expect(dialog(page)).toBeVisible();
@@ -129,9 +129,8 @@ test('In focus mode, ⌘K in the editor lists the text first, and Escape closes 
   request
 }) => {
   const docId = await createPage(request, 'Focus commands');
-  await loginAs(page);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
-  await page.waitForLoadState('networkidle');
   const focus = page.locator('.rz-blocks-focus');
   await expect(focus).toBeVisible();
 

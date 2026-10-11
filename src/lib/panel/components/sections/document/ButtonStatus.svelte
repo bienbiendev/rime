@@ -1,14 +1,14 @@
 <script lang="ts">
+  import { documentSegments } from '#lib/panel/util/url.js';
   import { invalidateAll } from '$app/navigation';
-  import { PARAMS } from '$lib/core/constants.js';
-  import { VERSIONS_STATUS } from '$lib/core/prototype/shared/versions/constant.js';
-  import { apiUrl } from '$lib/core/routes/util.js';
-  import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-  import * as Radio from '$lib/panel/components/ui/radio-group/index.js';
-  import { getAPIProxyContext } from '$lib/panel/context/api-proxy.svelte.js';
-  import { useCommands } from '$lib/panel/context/commands.svelte.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { toKebabCase } from '$lib/util/string';
+  import { PARAMS } from '#lib/core/constants.js';
+  import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+  import { apiUrl } from '#lib/core/routes/util.js';
+  import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
+  import * as Radio from '#lib/panel/components/ui/radio-group/index.js';
+  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import { useCommands } from '#lib/panel/context/commands.svelte.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import { toast } from 'svelte-sonner';
   import { t__ } from '../../../../core/i18n/index.js';
   import Button from '../../ui/button/button.svelte';
@@ -23,16 +23,13 @@
   let dialogOpen = $state(false);
 
   async function handleValidateStatus(next: string = status) {
-    const urlId = form.values._prototype === 'collection' ? `/${form.values.id}` : '/';
-    await fetch(
-      `${apiUrl(toKebabCase(form.values._type))}${urlId}?${PARAMS.VERSION_ID}=${form.values.versionId}`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify({
-          status: next
-        })
-      }
-    )
+    const url = apiUrl(...documentSegments(form.config.kebab, form.values));
+    await fetch(`${url}?${PARAMS.VERSION_ID}=${form.values.versionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status: next
+      })
+    })
       .then((r) => {
         if (r.status === 200) {
           toast.success(t__('common.doc_updated'));
@@ -42,13 +39,13 @@
           dialogOpen = false;
           invalidateAll();
           // The write went around the form: the version history re-reads its statuses.
-          APIProxy.invalidate(form.config.slug);
+          APIProxy.invalidate(apiUrl(form.config.kebab));
         } else {
-          toast.error(t__('error.generic'));
+          toast.error(t__('common.generic_error'));
         }
       })
       .catch(() => {
-        toast.error(t__('error.generic'));
+        toast.error(t__('common.generic_error'));
       });
   }
 
@@ -82,7 +79,7 @@
       </Button>
     {/snippet}
   </Dialog.Trigger>
-  <Dialog.Content class="rz-status-dialog">
+  <Dialog.Content>
     <Radio.Root bind:value={status}>
       {#each statusList as status, index (index)}
         <div class="rz-radio__option">

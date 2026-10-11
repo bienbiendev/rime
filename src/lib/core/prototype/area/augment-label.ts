@@ -1,4 +1,4 @@
-import { capitalize } from '$lib/util/string.js';
+import { capitalize } from '#lib/util/string.js';
 
 type WithAreaLabel<T> = Omit<T, 'label'> & { label: string };
 
@@ -7,8 +7,7 @@ type WithAreaLabel<T> = Omit<T, 'label'> & { label: string };
  *
  * The area's one own augment, and the mirror of the collection's — which normalises a string or
  * an object into `{ singular, plural }`, because a collection is named in two numbers and an area
- * in one. The kind's own statement about itself, so it belongs to the kind rather than to a
- * shared factory.
+ * in one.
  */
 export const augmentAreaLabel = <T extends { slug: string; label?: string }>(
   config: T

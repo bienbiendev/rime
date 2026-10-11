@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import Input from '$lib/panel/components/ui/input/input.svelte';
-  import { getCollectionContext } from '$lib/panel/context/collection.svelte.js';
-  import { Search } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import Input from '#lib/panel/components/ui/input/input.svelte';
+  import { getCollectionContext } from '#lib/panel/context/collection.svelte.js';
+  import Search from '@lucide/svelte/icons/search';
 
   const collection = getCollectionContext();
   let searchValue = $state('');

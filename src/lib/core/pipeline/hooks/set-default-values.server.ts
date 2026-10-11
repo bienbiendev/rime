@@ -1,20 +1,20 @@
-import { Hooks } from '$lib/core/pipeline/define-hook.js';
+import { Hooks } from '#lib/core/pipeline/define-hook.js';
 import { getRequestEvent } from '$app/server';
-import type { Adapter } from '$lib/core/adapter.js';
-import type { FormFieldBuilder } from '$lib/core/fields/builders/form-field-builder.js';
-import { isFormField } from '$lib/core/fields/util.js';
-import { walkFields } from '$lib/core/fields/walk.js';
-import { logger } from '$lib/core/logger.server.js';
-import { isRelationField, type RelationFieldBuilder } from '$lib/fields/relation/index.js';
-import { getValueAtPath, setValueAtPath } from '$lib/util/object.js';
-import type { Dic } from '$lib/util/types.js';
+import type { Adapter } from '#lib/core/adapter.js';
+import type { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import { isFormField } from '#lib/core/fields/util.js';
+import { walkFields } from '#lib/core/fields/walk.js';
+import { logger } from '#lib/core/logger.server.js';
+import { isRelationField, type RelationFieldBuilder } from '#lib/fields/relation/index.js';
+import { getValueAtPath, setValueAtPath } from '#lib/util/object.js';
+import type { Dic } from '#lib/util/types.js';
 import { buildConfigMap } from '../config-map/index.js';
 
 /**
  * Gives an empty value its default on every save, for a field that says `fill: 'save'`: a value
  * sent empty and, on an update, a field not sent whose stored value is empty. Any other field
  * keeps what it was sent; a create gives a field not sent its default before this, in
- * `mergeWithInitialDocument`.
+ * `mergeWithInitialDocument`, and a new block or tree item in `completeNewRows`.
  *
  * ```ts
  * date('publishedAt').defaultValue(() => new Date(), { fill: 'save' });
@@ -68,12 +68,6 @@ const isEmpty = (config: FormFieldBuilder, key: string, value: unknown) => {
   }
 };
 
-type GetDefaultValue = (args: {
-  key: string;
-  config: FormFieldBuilder;
-  adapter: Adapter;
-}) => Promise<any>;
-
 /**
  * A relation's default, as junction rows: the refs `use.defaultValue` answers, kept in their
  * order, those that name no document left out.
@@ -86,8 +80,8 @@ const defaultRelationValue = async (
   const refs = config.use.defaultValue({ event: getRequestEvent() });
   const ids = refs.map((ref) => ref.documentId);
 
-  // `existingIds` on the adapter, written out: which of these ids name a document that exists.
-  // The ordinary read, projected — see collection/nested/hooks/add-children.server.ts.
+  // Which of these ids name a document that exists: the same projected read as
+  // collection/nested/hooks/add-children.server.ts.
   //
   // `relationTo` is typed `CollectionSlug` by `RelationFieldBuilder.to`, so a relation names a
   // collection by construction.
@@ -109,8 +103,19 @@ const defaultRelationValue = async (
     }));
 };
 
-/** A relation's default becomes junction rows, checked against the collection. */
-export const getDefaultValue: GetDefaultValue = async ({ key, config, adapter }) => {
+/**
+ * A field's default value. A relation's default becomes junction rows, checked against the
+ * collection.
+ */
+const getDefaultValue = async ({
+  key,
+  config,
+  adapter
+}: {
+  key: string;
+  config: FormFieldBuilder;
+  adapter: Adapter;
+}): Promise<any> => {
   if (isRelationField(config)) {
     return await defaultRelationValue(config, key, adapter);
   }

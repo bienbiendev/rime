@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { text } from '$lib/fields/text/index.js';
-import { ToggleFieldBuilder } from '$lib/fields/toggle/index.js';
-import { isFormField } from '$lib/core/fields/util.js';
-import { create } from '$lib/core/prototype/collection/definition.js';
-import { toSchemaColumn } from '$lib/adapter-sqlite/generate-schema/column.server.js';
+import { text } from '#lib/fields/text/index.js';
+import { ToggleFieldBuilder } from '#lib/fields/toggle/index.js';
+import { isFormField } from '#lib/core/fields/util.js';
+import { create } from '#lib/core/prototype/collection/definition.js';
+import { toSchemaColumn } from '#lib/adapter-sqlite/generate-schema/column.server.js';
 
 /**
  * The `isAutoSave` column. It has to reach the database as not null with a false default: the

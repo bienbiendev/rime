@@ -1,9 +1,13 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { shiftListPath } from '$lib/panel/context/blocks-ops.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { useSortable } from '$lib/panel/util/Sortable.js';
-  import { ChevronDown, ChevronRight, GripVertical, Pencil, ToyBrick } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { shiftListPath } from '#lib/panel/context/blocks-ops.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { useSortable } from '#lib/panel/util/Sortable.js';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import ToyBrick from '@lucide/svelte/icons/toy-brick';
   import type Sortable from 'sortablejs';
   import { getBlocksFocusContext } from './focus.svelte.js';
   import LayersList from './LayersList.svelte';

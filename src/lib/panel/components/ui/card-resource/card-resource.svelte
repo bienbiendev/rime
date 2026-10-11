@@ -1,8 +1,11 @@
 <script lang="ts">
-  import { panelPath } from '$lib/core/routes/util.js';
-  import { mimeTypeToIcon } from '$lib/panel/util/upload.js';
-  import { mediaMeta } from '$lib/panel/util/upload-file.js';
-  import { Edit, FileIcon, X } from '@lucide/svelte';
+  import { prototypeKebab } from '#lib/core/prototype/naming.js';
+  import { panelPath } from '#lib/core/routes/util.js';
+  import { mimeTypeToIcon } from '#lib/panel/util/upload.js';
+  import { mediaMeta } from '#lib/panel/util/upload-file.js';
+  import Edit from '@lucide/svelte/icons/edit';
+  import FileIcon from '@lucide/svelte/icons/file';
+  import X from '@lucide/svelte/icons/x';
 
   type Resource = {
     id: string;
@@ -43,7 +46,10 @@
   <div class="rz-card-resource__info">
     <p class="rz-card-resource__title">
       <span>{resource.title}</span>
-      <a href={panelPath(resource._type, resource.id)}><Edit size="12" /></a>
+      <!-- A document that is missing, or the reader may not read, has no _type and no link -->
+      {#if resource._type}
+        <a href={panelPath(prototypeKebab(resource._type), resource.id)}><Edit size="12" /></a>
+      {/if}
     </p>
     {#if isUpload}
       <p class="rz-card-resource__info-text">{mediaMeta(resource)}</p>
@@ -65,21 +71,19 @@
   }
 
   .rz-card-resource {
-    --padding: var(--rz-card-padding, var(--rz-size-2));
-    --rz-size: var(--rz-thumbnail-size, var(--rz-size-20));
     @mixin surface raised;
     background-color: var(--rz-ressource-card-bg);
     position: relative;
     display: flex;
     gap: var(--rz-size-6);
     border-radius: var(--rz-border-radius);
-    padding: var(--padding);
+    padding: var(--rz-size-2);
     max-width: 400px;
   }
 
   .rz-card-resource__thumbnail {
-    width: var(--rz-size);
-    height: var(--rz-size);
+    width: var(--rz-size-20);
+    height: var(--rz-size-20);
     flex-shrink: 0;
     overflow: hidden;
     background-color: var(--rz-ressource-card-thumbnail-bg);

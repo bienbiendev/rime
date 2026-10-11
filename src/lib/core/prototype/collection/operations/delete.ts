@@ -1,8 +1,11 @@
-import type { BuiltCollection } from '$lib/core/config/types.js';
-import { runBeforeOperation } from '$lib/core/pipeline/run.server.js';
-import type { OperationQuery } from '$lib/core/pipeline/types.js';
-import type { PrototypeApiContext } from '$lib/core/prototype/define.js';
-import type { CollectionSlug } from '$lib/core/prototype/types.js';
+import type { BuiltCollection } from '#lib/core/config/types.js';
+import { RimeError } from '#lib/core/errors/index.js';
+import { assertReadableQuery } from '#lib/core/pipeline/query.js';
+import { runBeforeOperation } from '#lib/core/pipeline/run.server.js';
+import type { OperationQuery } from '#lib/core/pipeline/types.js';
+import type { PrototypeApiContext } from '#lib/core/prototype/define.js';
+import type { CollectionSlug } from '#lib/core/prototype/types.js';
+import { trycatch } from '#lib/util/function.js';
 
 export type DeleteArgs = {
   query?: OperationQuery;
@@ -29,6 +32,11 @@ export const deleteDocs = async (args: Args): Promise<string[]> => {
     }
   });
 
+  // The ids a delete answers tell what its filter matched, as a list read does.
+  if (!isSystemOperation) {
+    assertReadableQuery({ config, event, query, sort });
+  }
+
   const documentsToDelete = await rime.adapter.collection(config.slug).findMany({
     query,
     limit,
@@ -46,10 +54,16 @@ export const deleteDocs = async (args: Args): Promise<string[]> => {
     : rime.collection(config.slug);
 
   // One after the other: rows sharing an uploaded file each check whether another still uses it,
-  // and the last one deleted is the one that finds none and removes the file.
+  // and the last one deleted is the one that finds none and removes the file. A row the caller may
+  // not delete stays and is left out of the answer; any other error throws.
   const ids: string[] = [];
   for (const { id } of documentsToDelete) {
-    ids.push(await collection.deleteById({ id }));
+    const [error] = await trycatch(() => collection.deleteById({ id }));
+    if (!error) {
+      ids.push(id);
+    } else if (!(error instanceof RimeError && error.code === RimeError.UNAUTHORIZED)) {
+      throw error;
+    }
   }
 
   return ids;

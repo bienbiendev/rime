@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import type { User } from '$lib/core/auth/types.js';
-  import { t__ } from '$lib/core/i18n/index.js';
-  import When from '$lib/panel/components/sections/collection/When.svelte';
-  import Page from '$lib/panel/components/sections/page-layout/Page.svelte';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import LanguageSwitcher from '$lib/panel/components/ui/language-switcher/LanguageSwitcher.svelte';
-  import PageHeader from '$lib/panel/components/ui/page-header/PageHeader.svelte';
-  import { getConfigContext } from '$lib/panel/context/config.svelte.js';
-  import { Eye } from '@lucide/svelte';
+  import type { User } from '#lib/core/auth/types.js';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import When from '#lib/panel/components/sections/collection/When.svelte';
+  import Page from '#lib/panel/components/sections/page-layout/Page.svelte';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import LanguageSwitcher from '#lib/panel/components/ui/language-switcher/LanguageSwitcher.svelte';
+  import PageHeader from '#lib/panel/components/ui/page-header/PageHeader.svelte';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { switchLocale } from '#lib/panel/util/locale-cookie.js';
+  import Eye from '@lucide/svelte/icons/eye';
   import DashboardCard from './DashboardCard.svelte';
   import DashboardCollection from './DashboardCollection.svelte';
   import DashboardRow from './DashboardRow.svelte';
@@ -66,7 +66,7 @@
             <CustomHeaderComponent />
           {/each}
 
-          <LanguageSwitcher onLocalClick={() => invalidateAll()} />
+          <LanguageSwitcher onLocalClick={switchLocale} />
         {/snippet}
       </PageHeader>
 

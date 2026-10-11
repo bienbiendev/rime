@@ -3,12 +3,6 @@ import type { Editor, EditorOptions, JSONContent, Range } from '@tiptap/core';
 import type { Component, Snippet } from 'svelte';
 import type { RichTextContext } from '../component/context.svelte.js';
 
-export type RichTextFeatureType = 'mark' | 'node';
-
-export type RichTextFeatureSuggestion = {
-  command: (args: { editor: Editor; range?: Range }) => void;
-};
-
 export type RichTextFeature = {
   extension?: EditorOptions['extensions'][number];
   marks?: RichTextFeatureMark[];
@@ -47,12 +41,20 @@ export interface TiptapNodeViewContext {
   onDragStart: (event: DragEvent) => void;
 }
 
-export type ComponentInputProps<T> = Partial<T> & {
-  editor: Editor;
-  class?: string;
-  children?: Snippet;
-};
-
+/**
+ * What `RenderRichText` passes a component of `components`: the stored node, as saved. A `link`
+ * component writes `href` itself, so it checks it first:
+ *
+ * ```svelte
+ * <a href={isSafeUrl(href) ? href : undefined}>{@render children?.()}</a>
+ * ```
+ *
+ * with `isSafeUrl` from `rimecms/util` (`url.isSafeUrl`).
+ *
+ * A `media` component gets the media as the reader sees it now, in `attrs`: `url`, `sizes`,
+ * `title`, `mimeType`, `filename`. A `resource` component gets its document the same way: `title`,
+ * `_type`, `_thumbnail`. They are `null` for a document the reader may not read, or a missing one.
+ */
 export type RichTextNodeRendererProps = {
   node: JSONContent;
   components?: Record<string, RichTextNodeRenderer>;

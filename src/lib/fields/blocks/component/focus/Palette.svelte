@@ -1,17 +1,16 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import type { DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import Input from '$lib/panel/components/ui/input/input.svelte';
-  import { useSortable } from '$lib/panel/util/Sortable.js';
-  import { capitalize } from '$lib/util/string.js';
-  import { Search } from '@lucide/svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import Input from '#lib/panel/components/ui/input/input.svelte';
+  import { useSortable } from '#lib/panel/util/Sortable.js';
+  import { capitalize } from '#lib/util/string.js';
+  import Search from '@lucide/svelte/icons/search';
   import { computeCommandScore } from 'bits-ui';
   import BlockTile from '../picker/BlockTile.svelte';
   import { getBlocksFocusContext } from './focus.svelte.js';
 
-  /** `heading` off where a tab names it already. */
-  type Props = { form: DocumentFormContext; heading?: boolean };
-  const { form, heading = true }: Props = $props();
+  type Props = { form: DocumentFormContext };
+  const { form }: Props = $props();
 
   const focus = getBlocksFocusContext()!;
   /** The block types of the list the next insert goes to. */
@@ -52,9 +51,6 @@
 </script>
 
 <div class="rz-palette">
-  {#if heading}
-    <h3 class="rz-palette__heading">{t__('fields.add_block')}</h3>
-  {/if}
   {#if searchable}
     <div class="rz-palette__search">
       <Input
@@ -66,7 +62,7 @@
       />
     </div>
   {/if}
-  <!-- Two tiles a row, as in the picker. A click adds the type, a drag drops it in place. -->
+  <!-- Two tiles a row. A click adds the type, a drag drops it in place. -->
   <div class="rz-palette__list" use:dragSource>
     {#each shown as blockBuilder (blockBuilder.name)}
       {@const block = blockBuilder.block}
@@ -86,17 +82,6 @@
 </div>
 
 <style lang="postcss">
-  @import '../../../../panel/style/mixins/index.css';
-
-  .rz-palette__heading {
-    @mixin font-medium;
-    margin-bottom: var(--rz-size-3);
-    font-size: var(--rz-text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--rz-fg-subtle);
-  }
-
   .rz-palette__search {
     margin-bottom: var(--rz-size-3);
   }

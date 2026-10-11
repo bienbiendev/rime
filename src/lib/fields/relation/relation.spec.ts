@@ -1,4 +1,4 @@
-import type { RelationValue } from '$lib/fields/types.js';
+import type { RelationValue } from '#lib/fields/types.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearFetchedDocs } from './fetch.js';
 import { Relation } from './relation.js';
@@ -21,6 +21,8 @@ afterEach(() => {
   clearFetchedDocs();
   fetchMock.mockClear();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 /** In the browser: what fetches a ref. */
@@ -47,9 +49,10 @@ describe('Relation.resolve', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('takes a document outside an array', () => {
+  it('takes a document or a ref outside an array', async () => {
     expect(Relation.resolve(m1).all()).toEqual([m1]);
-    expect(Relation.resolve<Doc>(ref1).first()).toBeInstanceOf(Promise);
+    inBrowser();
+    expect(await Relation.resolve<Doc>(ref1).first()).toEqual(m1);
   });
 
   it('fetches refs in the browser, in their order', async () => {
@@ -59,6 +62,12 @@ describe('Relation.resolve', () => {
     expect(await all).toEqual([m2, m1]);
     expect(await Relation.resolve<Doc>([ref1]).first()).toEqual(m1);
     expect(fetchMock).toHaveBeenCalledWith('/api/medias/m1?depth=1');
+  });
+
+  it('fetches refs in the locale given', async () => {
+    inBrowser();
+    await Relation.resolve<Doc>(ref1, { locale: 'fr' }).first();
+    expect(fetchMock).toHaveBeenCalledWith('/api/medias/m1?depth=1&locale=fr');
   });
 
   it('fetches only the refs when documents and refs are mixed', async () => {
@@ -83,13 +92,14 @@ describe('Relation.resolve', () => {
   });
 
   it('does not fetch during server rendering: the promise stays pending', async () => {
+    vi.useFakeTimers();
     const all = Relation.resolve<Doc>([ref1]).all();
     expect(all).toBeInstanceOf(Promise);
-    const settled = await Promise.race([
-      all,
-      new Promise((done) => setTimeout(done, 10, 'pending'))
-    ]);
-    expect(settled).toBe('pending');
+    let settled = false;
+    void Promise.resolve(all).finally(() => (settled = true));
+    // A second of timers and the microtasks between them: still nothing
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(settled).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

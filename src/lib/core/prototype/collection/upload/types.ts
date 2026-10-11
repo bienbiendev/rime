@@ -1,16 +1,13 @@
-import type { FieldBuilder } from '$lib/core/fields/builders/field-builder.js';
-import type { Field } from '$lib/fields/types.js';
-import type { Access } from '$lib/core/config/types.js';
-import type { CollectionHooks } from '$lib/core/config/types.js';
-import type { BaseDoc, GenericDoc } from '$lib/core/prototype/types.js';
-import type { Dic } from '$lib/util/types.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
+import type { Field } from '#lib/fields/types.js';
+import type { Access } from '#lib/core/config/types.js';
+import type { CollectionHooks } from '#lib/core/config/types.js';
+import type { BaseDoc, GenericDoc } from '#lib/core/prototype/types.js';
+import type { Dic } from '#lib/util/types.js';
 import type { UploadPath } from './util/path.js';
 
 /**
  * What a document of an upload collection carries beyond a plain one.
- *
- * Was in `core/prototype/types.ts`, in the `Docs` registry, which is what made that file import
- * `UploadPath` out of this feature to describe its own type.
  */
 export type UploadDoc = BaseDoc & {
   mimeType: string;
@@ -29,7 +26,7 @@ export type DirectoryDoc = {
   updatedAt: Date;
 };
 
-declare module '$lib/core/prototype/types.js' {
+declare module '../../types.js' {
   interface FeatureDocTypes {
     upload: UploadDoc;
     directory: DirectoryDoc;
@@ -53,10 +50,20 @@ export type Directory = GenericDoc & {
   parent: UploadPath | null;
 };
 
-import type { AtLeastOne } from '$lib/util/types.js';
+import type { AtLeastOne } from '#lib/util/types.js';
 
 /** What an author writes under `upload`, and the image sizes it may ask for. */
 export type UploadConfig = {
+  /**
+   * The folder the collection's files live in, under `storage/uploads/` at the app root, and the
+   * URL segment they are served at. One lowercase segment, its own. The collection's kebab by
+   * default.
+   * @example
+   * ```typescript
+   * folder: 'invoices' // storage/uploads/invoices/a.pdf, served at /uploads/invoices/a.pdf
+   * ```
+   */
+  folder?: string;
   /**
    * Define image sizes that will be generated when an image is uploaded.
    * A 'thumbnail' size will be added, if none provided with this name.
@@ -91,7 +98,6 @@ export type UploadConfig = {
   directories?: {
     fields: FieldBuilder<Field>[];
     access?: Access;
-    // @TODO better types
     $hooks?: CollectionHooks<any>;
   };
 };

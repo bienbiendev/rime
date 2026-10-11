@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import { Button } from '$lib/panel/components/ui/button/index.js';
-  import { Calendar } from '$lib/panel/components/ui/calendar/index.js';
-  import * as Dialog from '$lib/panel/components/ui/dialog/index.js';
-  import { type DocumentFormContext } from '$lib/panel/context/documentForm.svelte.js';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte';
+  import { t__ } from '#lib/core/i18n/index.js';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import { Button } from '#lib/panel/components/ui/button/index.js';
+  import { Calendar } from '#lib/panel/components/ui/calendar/index.js';
+  import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
+  import { type DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
   import { CalendarDate, getLocalTimeZone, type DateValue } from '@internationalized/date';
-  import { Calendar as CalendarIcon } from '@lucide/svelte';
+  import CalendarIcon from '@lucide/svelte/icons/calendar';
   import type { DateFieldBuilder } from '../index.js';
 
   type Props = { path: string; config: DateFieldBuilder; form: DocumentFormContext };
@@ -19,12 +19,10 @@
   let dialogOpen = $state(false);
   const field = $derived(form.useField(path, config));
 
-  // Derive date from field.value
   const date = $derived.by(() => {
     return field.value instanceof Date ? field.value : null;
   });
 
-  // Derive calendarDate from date
   const calendarDate = $derived.by(() => {
     if (date) {
       return new CalendarDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
@@ -32,7 +30,6 @@
     return undefined;
   });
 
-  // Handle calendar selection changes
   function handleCalendarChange(newCalendarDate: DateValue | undefined) {
     if (newCalendarDate) {
       const newDate = newCalendarDate.toDate(timeZone);
@@ -65,7 +62,7 @@
   </Button>
 
   <Dialog.Root bind:open={dialogOpen}>
-    <Dialog.Content size="sm" class="rz-date__dialog-content">
+    <Dialog.Content size="sm">
       <Calendar
         type="single"
         value={calendarDate}
@@ -82,10 +79,6 @@
   @import '../../../panel/style/mixins/index.css';
 
   .rz-date-field :global {
-    .rz-dialog-content.rz-date__dialog-content {
-      width: 100px;
-      padding: 12rem;
-    }
     /* A well like an input: an icon, then the date or a quiet placeholder. */
     .rz-date__button.rz-button {
       width: var(--rz-size-52);

@@ -1,4 +1,4 @@
-import type { Collection } from '$lib/core/config/types.js';
+import type { Collection } from '#lib/core/config/types.js';
 import { findTitleField } from './find-title.js';
 
 type Input = {
@@ -22,14 +22,14 @@ type WithAsTitle<T> = T & { asTitle: string };
  * with `filename`); this reads whatever is left.
  *
  * The precedence: a field marked as the title wins, then the last override, then the prototype's
- * own fallback. "Last override" is registry order — upload comes after auth, so upload wins for a
- * config carrying both.
+ * own fallback. "Last override" is the order of the prototype's `augments` list — upload comes
+ * after auth, so upload wins for a config carrying both.
  */
 export const augmentTitle = <T extends Input>(config: T): WithAsTitle<T> => {
-  const titleField = findTitleField(config.fields);
+  const titlePath = findTitleField(config.fields);
 
   return {
     ...config,
-    asTitle: titleField?.path ?? config._titleFallback
+    asTitle: titlePath ?? config._titleFallback
   };
 };

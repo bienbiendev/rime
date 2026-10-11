@@ -9,4 +9,4 @@
   }: CommandPrimitive.EmptyProps = $props();
 </script>
 
-<CommandPrimitive.Empty class="rz-command-empty {className}" {...restProps} />
+<CommandPrimitive.Empty bind:ref class="rz-command-empty {className}" {...restProps} />

@@ -1,20 +1,15 @@
 <script lang="ts">
-  import { t__ } from '$lib/core/i18n/index.js';
-  import { fieldset } from '$lib/panel/components/fields/fieldset.svelte.js';
-  import { Field } from '$lib/panel/components/fields/index.js';
-  import Button from '$lib/panel/components/ui/button/button.svelte';
-  import { getLocaleContext } from '$lib/panel/context/locale.svelte';
-  import type { Dic } from '$lib/util/types.js';
-  import { watch } from 'runed';
+  import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
+  import { Field } from '#lib/panel/components/fields/index.js';
+  import type { Dic } from '#lib/util/types.js';
   import Sortable from 'sortablejs';
-  import { onDestroy } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
+  import DefaultLocaleButton from '../../repeatable/DefaultLocaleButton.svelte';
   import AddItemButton from './AddItemButton.svelte';
   import type { TreeProps } from './props.js';
   import TreeBlock from './TreeBlock.svelte';
 
   const { path, config, form }: TreeProps = $props();
-
-  const locale = getLocaleContext();
 
   const treeState = $derived(form.useTree(path));
   const field = $derived(form.useField(path, config));
@@ -24,7 +19,8 @@
   let sortableInstances = $state<ReturnType<typeof Sortable.create>[]>([]);
 
   const hasBlocks = $derived(treeState.items && treeState.items.length);
-  const key = $state(new Date().getTime().toString());
+  // Unique per tree: two trees mounted together keep their drag lists apart
+  const key = $props.id();
   const nested = $derived(path.split('.').length > 1);
   const shouldInit = $derived(!sortingInitialized && treeState.items.length > 0);
 
@@ -47,9 +43,10 @@
       name: `list-${key}`,
       put: (to, _, el) => {
         if (!el.classList.contains('rz-tree-item')) return false;
+        // The dragged item's deepest descendant lands `levels` under the target list
         const targetDepth = parseInt(to.el.dataset.treeDepth || '0');
-        const childrenCount = parseInt(el.dataset.treeChildren || '0');
-        return targetDepth + childrenCount <= config.get.maxDepth;
+        const levels = parseInt(el.dataset.treeLevels || '0');
+        return targetDepth + levels <= config.get.maxDepth;
       }
     },
     onStart: () => {
@@ -101,7 +98,10 @@
     resetSortable();
   };
 
-  watch(() => treeState.stamp, resetSortable);
+  $effect(() => {
+    void treeState.stamp;
+    untrack(resetSortable);
+  });
 
   $effect(() => {
     if (shouldInit) {
@@ -153,12 +153,10 @@
       {config.get.addItemLabel}
     </AddItemButton>
 
-    {#if locale && locale.code !== locale.defaultCode && config.get.localized}
-      <Button size="sm" onclick={field.setValueFromDefaultLocale} variant="secondary">
-        {t__('fields.get_data_from')}
-        {locale.defaultCode}
-      </Button>
-    {/if}
+    <DefaultLocaleButton
+      localized={config.get.localized}
+      onclick={field.setValueFromDefaultLocale}
+    />
   </div>
 </fieldset>
 

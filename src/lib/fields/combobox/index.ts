@@ -1,9 +1,4 @@
-import type {
-  DefaultOptions,
-  DefaultValueFn,
-  FormField,
-  OptionWithIcon
-} from '$lib/fields/types.js';
+import type { DefaultValueFn, FormField, OptionWithIcon } from '#lib/fields/types.js';
 import { PickOneFieldBuilder } from '../../core/fields/builders/select-builder.js';
 import Combobox from './component/ComboBox.svelte';
 
@@ -16,15 +11,8 @@ export class ComboBoxFieldBuilder extends PickOneFieldBuilder<ComboBoxField> {
     return super.options(...options);
   }
 
-  defaultValue(value: string | DefaultValueFn<string>, options?: DefaultOptions) {
-    this.field.defaultValue = value;
-    this.field.defaultFill = options?.fill;
-    return this;
-  }
-
   protected override generateType(): string {
-    const optionsJoinedType = this.get.options.map((o) => `'${o.value}'`).join(' | ');
-    return `${this.name}${this.get.required ? '' : '?'}: ${optionsJoinedType}`;
+    return `${this.name}${this.get.required ? '' : '?'}: ${this.optionsType()}`;
   }
 }
 
@@ -37,5 +25,4 @@ export type ComboBoxField = FormField & {
   type: 'combobox';
   options: OptionWithIcon[];
   defaultValue: string | DefaultValueFn<string>;
-  unique?: boolean;
 };

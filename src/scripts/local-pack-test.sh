@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Smoke tests the published package: packs this repo, installs the tarball into a throwaway
-# SvelteKit app, runs it in dev then prod. Also verifies a plugin and field package mount.
+# Smoke tests the published package: packs this repo, installs the tarball into throwaway
+# SvelteKit apps, runs each in dev then prod. Also verifies a plugin and field package mount.
 #
 # Passes, each a fresh app:
 #   npm           npm, Node
@@ -10,24 +10,38 @@
 #   custom-route  npm, Node, dev only: RIME_PANEL_ROUTE and RIME_CONFIG_DIR set as
 #                 shell-prefixed env vars on `rime init` itself both take
 #
+# Each pass has its own app, ports and log, so up to --jobs of them run at once:
+#
+#   ~/consumer/consumer-npm           :5181 dev  :3101 prod  ~/consumer/npm.log
+#   ~/consumer/consumer-pnpm          :5182      :3102       ~/consumer/pnpm.log
+#   ~/consumer/consumer-bun           :5183      :3103       ~/consumer/bun.log
+#   ~/consumer/consumer-custom-route  :5184                  ~/consumer/custom-route.log
+#
+# Away from 5173 and 3000, so a dev server already running elsewhere does not take a pass's port.
+#
 # Usage: bash src/scripts/local-pack-test.sh --plugin-package <path> --field-package <path>
-#          [--only npm,pnpm,bun,custom-route] [--keep] [--skip-pack] [--skip-pack-libs]
-#          [--base-dir <path>]
+#          [--only npm,pnpm,bun,custom-route] [--jobs <n>] [--keep] [--skip-pack]
+#          [--skip-pack-libs] [--npm-force] [--base-dir <path>]
 #
 #   --plugin-package <path>, --field-package <path>
 #       local tarball path for consumer-<plugin|field>, or a directory to rebuild from source
 #   --only <passes>   Run only these passes, comma-separated (default: all four)
-#   --keep            Keep the scaffolded app after a successful run, for debugging.
+#   --jobs <n>        How many passes run at once (default: 2)
+#   --keep            Keep the scaffolded apps after a successful run, for debugging.
 #   --skip-pack       Reuse the newest rimecms-*.tgz instead of packing this repo
 #   --skip-pack-libs  Reuse the newest *.tgz in the plugin and field directories instead of
 #                     rebuilding them against the rime tarball
-#   --base-dir <path> Where to scaffold the consumer app. Defaults to $HOME.
+#   --npm-force       Every npm command runs with --force, `rime init`'s installs included: npm
+#                     installs a peer range no published version satisfies anyway, and still
+#                     installs the other peers.
+#   --base-dir <path> Where to scaffold the consumer apps. Defaults to $HOME.
 set -euo pipefail
 
 ROOT_DIR="$(pwd)"
 # Must match tests/consumer/lib/+rime/rime.config.server.ts's adapterSqlite('consumer.sqlite')
 APP_NAME="consumer"
 BASE_DIR="$HOME"
+JOBS=2
 KEEP_ON_SUCCESS=0
 SKIP_PACK=0
 SKIP_PACK_LIBS=0
@@ -39,7 +53,10 @@ while [[ $# -gt 0 ]]; do
     --keep) KEEP_ON_SUCCESS=1; shift ;;
     --skip-pack) SKIP_PACK=1; shift ;;
     --skip-pack-libs) SKIP_PACK_LIBS=1; shift ;;
+    # npm reads its config from npm_config_* variables, in this script and in every child it starts
+    --npm-force) export npm_config_force=true; shift ;;
     --only) ONLY="$2"; shift 2 ;;
+    --jobs) JOBS="$2"; shift 2 ;;
     --base-dir) BASE_DIR="$2"; shift 2 ;;
     --plugin-package) PLUGIN_PACKAGE="$2"; shift 2 ;;
     --field-package) FIELD_PACKAGE="$2"; shift 2 ;;
@@ -53,14 +70,13 @@ command -v sqlite3 >/dev/null || { echo "sqlite3 is required (used to verify the
 for pass in ${ONLY//,/ }; do
   [[ "$pass" =~ ^(npm|pnpm|bun|custom-route)$ ]] || { echo "--only: unknown pass '$pass' (npm, pnpm, bun, custom-route)"; exit 1; }
 done
+[[ "$JOBS" =~ ^[1-9][0-9]*$ ]] || { echo "--jobs: expected a positive number, got '$JOBS'"; exit 1; }
 
-# Always test the CLI's actual default. Without this, this repo's own .env (RIME_CONFIG_DIR=
-# src/lib/+rime, picked up by an autoenv-style shell plugin on cd into this repo) leaks into
-# every child process spawned below, including the scaffolded test apps' own `rime init`.
-unset RIME_CONFIG_DIR
-unset RIME_PANEL_ROUTE
-
-WORK_DIR="$BASE_DIR/$APP_NAME"
+# $RUN_DIR/consumer-npm   the npm pass's app, WORK_DIR while that pass runs
+# $RUN_DIR/npm.log        everything the pass prints
+# $RUN_DIR/npm.status     its exit code, once it ends
+RUN_DIR="$BASE_DIR/$APP_NAME"
+WORK_DIR=""
 ADMIN_EMAIL="${TESTS_ADMIN_EMAIL:-admin@email.com}"
 ADMIN_PASSWORD="${TESTS_ADMIN_PASSWORD:-a&1Aa&1A}"
 
@@ -80,15 +96,13 @@ cleanup() {
   local status=$?
   if [[ $status -ne 0 ]]; then
     echo ""
-    echo "[x] consumer test failed (exit $status) - workspace kept at $WORK_DIR"
-    [[ -f "$WORK_DIR/dev.log" ]] && { echo "--- last 40 lines of dev.log ---"; tail -40 "$WORK_DIR/dev.log"; }
-    [[ -f "$WORK_DIR/app/prod.log" ]] && { echo "--- last 40 lines of app/prod.log ---"; tail -40 "$WORK_DIR/app/prod.log"; }
+    echo "[x] consumer test failed (exit $status)"
   fi
   exit $status
 }
 trap cleanup EXIT
-
-wants() { [[ ",$ONLY," == *",$1,"* ]]; }
+# Passes in the background ignore Ctrl-C, so it stops them with a TERM to the whole group.
+trap 'trap - INT TERM; kill 0' INT TERM
 
 # Rebuilds a directory package from source against the packed rime tarball (pnpm add + pnpm
 # local-pack); a tarball path or registry spec passes through unchanged. With --skip-pack-libs,
@@ -116,11 +130,10 @@ resolve_package_spec() {
       fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\\n');
       " || exit 1
       pnpm install >&2 || exit 1
-      # local-pack only builds — it never runs `rime generate`, so without this src/routes,
-      # +rime.generated, hooks.server.ts, and drizzle.config.ts stay whatever they were the
-      # last time *anyone* generated them, possibly with an older rime, not the tarball just
-      # installed above.
-      pnpm exec rime generate >&2 || exit 1
+      # local-pack only builds. `rime init -f` brings the package up to the tarball just
+      # installed: it adds what is missing (src/env.ts, rime's deps), keeps what exists, and
+      # regenerates src/routes, src/params.ts, +rime.generated and hooks.server.ts.
+      pnpm exec rime init -f >&2 || exit 1
       local pack_output
       pack_output=$(pnpm local-pack) || exit 1
       local tarball
@@ -149,9 +162,17 @@ run_ui_tests() {
   # when this is empty, matching the other passes' default configuration.
   local panel_route=${7:-}
   log "Running UI tests against $url ($test_match)"
+  # The server playwright starts inherits this environment, which wins over the app's .env
   (
     cd "$ROOT_DIR"
-    PUBLIC_RIME_URL="$url" \
+    # An empty one would still win, as an empty panel route
+    if [[ -n $panel_route ]]; then
+      export RIME_PANEL_ROUTE="$panel_route"
+    fi
+    # The cache plugin on, as an app would run it; the config's `$cache.isEnabled` picks the
+    # requests it caches
+    RIME_CACHE_ENABLED=true \
+    SITE_URL="$url" \
     TESTS_ADMIN_EMAIL="$ADMIN_EMAIL" \
     TESTS_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
     CONSUMER_TEST_SUFFIX="$suffix" \
@@ -159,8 +180,8 @@ run_ui_tests() {
     CONSUMER_SERVER_CWD="$server_cwd" \
     CONSUMER_SERVER_PORT="$port" \
     CONSUMER_TEST_MATCH="$test_match" \
-    RIME_PANEL_ROUTE="$panel_route" \
-      bunx playwright test -c tests/consumer/playwright.config.consumer.ts
+      bunx playwright test -c tests/consumer/playwright.config.consumer.ts \
+        --output "test-results/$(basename "$WORK_DIR")-$suffix"
   )
 }
 
@@ -175,8 +196,9 @@ copy_plugin_config() {
   local runtime=${2:-node}
   mkdir -p "$WORK_DIR/$config_dir"
   cp -rf "$ROOT_DIR/tests/consumer/+rime/"* "$WORK_DIR/$config_dir/"
-  # The front page imports rimecms/public, what verify_public_chunks checks after the build.
-  cp -f "$ROOT_DIR/tests/consumer/routes/+page.svelte" "$WORK_DIR/src/routes/+page.svelte"
+  # The front page imports rimecms/public, what verify_public_chunks checks after the build. The
+  # routes under /cache answer with and without a cache-control of their own.
+  cp -rf "$ROOT_DIR/tests/consumer/routes/"* "$WORK_DIR/src/routes/"
   if [[ $runtime == "bun" ]]; then
     local config="$WORK_DIR/$config_dir/rime.config.server.ts"
     sed -i.bak "s/adapterSqlite('consumer.sqlite')/adapterSqlite('consumer.sqlite', { driver: 'bun' })/" "$config"
@@ -224,16 +246,22 @@ run_pass() {
   local pm=$1
   local runtime="node"
   [[ $pm == "bun" ]] && runtime="bun"
+  local dev_port prod_port
+  case "$pm" in
+    npm) dev_port=5181; prod_port=3101 ;;
+    pnpm) dev_port=5182; prod_port=3102 ;;
+    bun) dev_port=5183; prod_port=3103 ;;
+  esac
+  WORK_DIR="$RUN_DIR/$APP_NAME-$pm"
 
   log "[$pm] Scaffolding fresh SvelteKit app"
-  cd "$BASE_DIR"
-  rm -rf "$APP_NAME"
+  cd "$RUN_DIR"
   case "$pm" in
-    npm) npx sv create --template minimal --types ts --add eslint --install npm "$APP_NAME" ;;
-    pnpm) pnpm dlx sv create --template minimal --types ts --add eslint --install pnpm "$APP_NAME" ;;
-    bun) bunx sv create --template minimal --types ts --add eslint --install bun "$APP_NAME" ;;
+    npm) npx sv create --template minimal --types ts --add eslint --install npm "$APP_NAME-$pm" ;;
+    pnpm) pnpm dlx sv create --template minimal --types ts --add eslint --install pnpm "$APP_NAME-$pm" ;;
+    bun) bunx sv create --template minimal --types ts --add eslint --install bun "$APP_NAME-$pm" ;;
   esac
-  cd "$APP_NAME"
+  cd "$WORK_DIR"
 
   log "[$pm] Installing packed rimecms, plugin and field"
   case "$pm" in
@@ -256,12 +284,12 @@ run_pass() {
 
   local vite="./node_modules/.bin/vite"
   [[ $runtime == "bun" ]] && vite="bun --bun ./node_modules/.bin/vite"
-  log "[$pm] UI tests (dev, :5173)"
+  log "[$pm] UI tests (dev, :$dev_port)"
   run_ui_tests \
-    "http://localhost:5173" \
-    "$vite dev --port 5173 2>&1 | tee \"$WORK_DIR/dev.log\"" \
+    "http://localhost:$dev_port" \
+    "$vite dev --port $dev_port --strictPort 2>&1 | tee \"$WORK_DIR/dev.log\"" \
     "$WORK_DIR" \
-    5173 \
+    "$dev_port" \
     "dev"
 
   log "[$pm] Building for production"
@@ -310,12 +338,12 @@ run_pass() {
   # Bun loads ./.env itself
   local server="node --env-file=.env index.js"
   [[ $runtime == "bun" ]] && server="bun index.js"
-  log "[$pm] UI tests (production, :3000)"
+  log "[$pm] UI tests (production, :$prod_port)"
   run_ui_tests \
-    "http://localhost:3000" \
-    "PORT=3000 HOST=localhost ORIGIN=http://localhost:3000 $server 2>&1 | tee \"$WORK_DIR/app/prod.log\"" \
+    "http://localhost:$prod_port" \
+    "PORT=$prod_port HOST=localhost $server 2>&1 | tee \"$WORK_DIR/app/prod.log\"" \
     "$WORK_DIR/app" \
-    3000 \
+    "$prod_port" \
     "prod"
 }
 
@@ -328,11 +356,13 @@ run_pass() {
 # up by any build anyway, and that's already what this pass does; re-verifying the npm/pnpm/bun
 # split or a second production build here would just re-test what the other passes cover.
 run_custom_route_pass() {
+  local dev_port=5184
+  WORK_DIR="$RUN_DIR/$APP_NAME-custom-route"
+
   log "[custom-route] Scaffolding fresh SvelteKit app (custom panel route + config dir)"
-  cd "$BASE_DIR"
-  rm -rf "$APP_NAME"
-  npx sv create --template minimal --types ts --add eslint --install npm "$APP_NAME"
-  cd "$APP_NAME"
+  cd "$RUN_DIR"
+  npx sv create --template minimal --types ts --add eslint --install npm "$APP_NAME-custom-route"
+  cd "$WORK_DIR"
 
   log "[custom-route] Installing packed rimecms, plugin and field"
   npm install "$TARBALL" "$PLUGIN_PACKAGE" "$FIELD_PACKAGE"
@@ -341,7 +371,11 @@ run_custom_route_pass() {
   # generate() mounts them cold at the right location.
   log "[custom-route] Copying plugin+field config, running rime init with RIME_PANEL_ROUTE + RIME_CONFIG_DIR"
   copy_plugin_config "$CUSTOM_CONFIG_DIR"
-  RIME_PANEL_ROUTE="$CUSTOM_PANEL_ROUTE" RIME_CONFIG_DIR="$CUSTOM_CONFIG_DIR" npx rime init -n "$APP_NAME"
+  # Init with the default panel route, then move it in .env as a user would: the dev boot below
+  # has to regenerate the routes for it, the panel route being part of the codegen memo
+  RIME_PANEL_ROUTE=panel RIME_CONFIG_DIR="$CUSTOM_CONFIG_DIR" npx rime init -n "$APP_NAME"
+  sed -i.bak "s/^RIME_PANEL_ROUTE=.*/RIME_PANEL_ROUTE=$CUSTOM_PANEL_ROUTE/" .env
+  rm -f .env.bak
 
   # Confirms the custom .env values actually stuck and generation landed under the custom dir,
   # not silently at the CLI's default (src/+rime) — the failure mode if copy_plugin_config or
@@ -356,15 +390,37 @@ run_custom_route_pass() {
 
   # consumer.test.ts reused as-is (its panelUrl()/panelUrlRe() helpers read RIME_PANEL_ROUTE
   # from tests/util.ts), plus the dedicated custom-route assertions.
-  log "[custom-route] UI tests (dev, :5173, custom panel route)"
+  log "[custom-route] UI tests (dev, :$dev_port, custom panel route)"
   run_ui_tests \
-    "http://localhost:5173" \
-    "./node_modules/.bin/vite dev --port 5173 2>&1 | tee \"$WORK_DIR/dev.log\"" \
+    "http://localhost:$dev_port" \
+    "./node_modules/.bin/vite dev --port $dev_port --strictPort 2>&1 | tee \"$WORK_DIR/dev.log\"" \
     "$WORK_DIR" \
-    5173 \
+    "$dev_port" \
     "custom-route" \
     'consumer\.test\.ts$|consumer-custom-panel-route\.test\.ts$' \
     "$CUSTOM_PANEL_ROUTE"
+}
+
+# Runs a pass in the background, its output in $RUN_DIR/<pass>.log and its exit code in
+# $RUN_DIR/<pass>.status. A failing command stops the pass, not the others.
+start_pass() {
+  local pass=$1
+  log "[$pass] started - $RUN_DIR/$pass.log"
+  {
+    set +e
+    started=$SECONDS
+    (
+      set -e
+      case "$pass" in
+        custom-route) run_custom_route_pass ;;
+        *) run_pass "$pass" ;;
+      esac
+    ) > "$RUN_DIR/$pass.log" 2>&1
+    status=$?
+    echo "$status" > "$RUN_DIR/$pass.status"
+    took="$(( (SECONDS - started) / 60 ))m$(( (SECONDS - started) % 60 ))s"
+    if [[ $status -eq 0 ]]; then echo " [✓] $pass passed in $took"; else echo " [x] $pass failed in $took"; fi
+  } &
 }
 
 # Packing rime
@@ -388,20 +444,34 @@ FIELD_PACKAGE=$(resolve_package_spec "$FIELD_PACKAGE")
 echo "  plugin: $PLUGIN_PACKAGE"
 echo "  field:  $FIELD_PACKAGE"
 
-wants npm && run_pass npm
-wants pnpm && run_pass pnpm
-wants bun && run_pass bun
-wants custom-route && run_custom_route_pass
+rm -rf "$RUN_DIR"
+mkdir -p "$RUN_DIR"
+for pass in ${ONLY//,/ }; do
+  while (( $(jobs -rp | wc -l) >= JOBS )); do sleep 1; done
+  start_pass "$pass"
+done
+wait
+
+FAILED=0
+for pass in ${ONLY//,/ }; do
+  [[ "$(cat "$RUN_DIR/$pass.status" 2>/dev/null)" == 0 ]] && continue
+  FAILED=1
+  echo ""
+  echo "[x] $pass failed - workspace kept at $RUN_DIR/$APP_NAME-$pass"
+  echo "--- last 60 lines of $RUN_DIR/$pass.log ---"
+  tail -60 "$RUN_DIR/$pass.log"
+done
+[[ $FAILED -eq 0 ]] || exit 1
 
 echo ""
 
 # Clean up
 if [[ $KEEP_ON_SUCCESS -eq 1 ]]; then
-  echo "[✓] consumer test passed ($ONLY) - workspace kept at $WORK_DIR (--keep)"
+  echo "[✓] consumer test passed ($ONLY) - workspaces kept at $RUN_DIR (--keep)"
 else
-  rm -rf "$WORK_DIR"
+  rm -rf "$RUN_DIR"
   [[ -n "$TARBALL" && $SKIP_PACK -eq 0 ]] && rm -f "$TARBALL"
-  echo "[✓] consumer test passed ($ONLY), workspace cleaned"
+  echo "[✓] consumer test passed ($ONLY), workspaces cleaned"
 fi
 
 log "All good."
