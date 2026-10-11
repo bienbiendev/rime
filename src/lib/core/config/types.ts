@@ -11,7 +11,7 @@ import type { CollectionAuthConfig, AdditionalStaffConfig } from '#lib/core/auth
 import type { CollectionLabel } from '#lib/core/prototype/collection/types.js';
 import type { UploadConfig } from '#lib/core/prototype/collection/upload/types.js';
 import type { VersionsConfig } from '#lib/core/prototype/shared/versions/types.js';
-import type { Adapter } from '#lib/core/adapter.js';
+import type { Adapter, AdapterHooks } from '#lib/core/adapter.js';
 import type { Hook, HookBeforeOperation } from '#lib/core/pipeline/types.js';
 import type { Plugin } from '#lib/core/plugins/index.js';
 import type { SMTPConfig } from '#lib/core/plugins/mailer/index.server.js';
@@ -44,12 +44,14 @@ export interface Config {
    * Database adapter
    * @example
    * export default rime({
-   *   $adapter: adapterSqlite(drizzleConfig)
+   *   $adapter: adapterSqlite('app.sqlite')
    * }
    */
   $adapter: {
     createAdapter: (config: any) => Promise<Adapter>;
     generateSchema: (config: any) => Promise<void>;
+    /** What the adapter does to the project in dev and from the CLI. */
+    hooks: AdapterHooks;
   };
   /** Transversal auth config */
   $auth?: {

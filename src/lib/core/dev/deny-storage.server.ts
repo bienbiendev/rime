@@ -21,8 +21,8 @@ export const isStorageUrl = (url = '/') => {
 
 /**
  * A dev server middleware that answers 404 for `/storage` and `/storage/*`. `storage/` holds the
- * uploads and other server files, and Vite's own static middleware would otherwise answer 403
- * for a file it finds there.
+ * uploads and the database, and Vite's own static middleware would otherwise answer 403 for a
+ * file it finds there.
  */
 export const denyStorage = (req: IncomingMessage, res: ServerResponse, next: () => void) => {
   if (!isStorageUrl(req.url)) return next();

@@ -1,12 +1,12 @@
 @font-face {
   font-family: 'geist';
-  src: url('/assets/panel/fonts/Geist-VariableFont_wght.ttf') format('truetype');
+  src: url('../fonts/Geist-VariableFont_wght.ttf') format('truetype');
   font-weight: 100 1000;
 }
 
 @font-face {
   font-family: 'geist-mono';
-  src: url('/assets/panel/fonts/GeistMono-VariableFont_wght.ttf') format('truetype');
+  src: url('../fonts/GeistMono-VariableFont_wght.ttf') format('truetype');
   font-weight: 100 1000;
 }
 

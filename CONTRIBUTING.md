@@ -76,9 +76,9 @@ bun ./src/lib/core/dev/cli/index.ts clear --force
 Build the project with adapter-node
 
 ```bash
-bun ./src/lib/core/dev/cli/build.ts build
-# Also copy database to the app folder
-bun ./src/lib/core/dev/cli/build.ts build -d
+bun ./src/lib/core/dev/cli/index.ts build
+# Also copy storage/, the database and the uploads, to the app folder
+bun ./src/lib/core/dev/cli/index.ts build -w
 # Also add a .env file to the app folder
-bun ./src/lib/core/dev/cli/build.ts build -e
+bun ./src/lib/core/dev/cli/index.ts build -e
 ```

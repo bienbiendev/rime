@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { runCodegen } from './codegen.server.js';
 import validate from './config/validate.server.js';
-import { regenerateDrizzleConfig } from './dev/cli/templates/init.js';
 import configMemo from './dev/config-memo.server.js';
 import { logger } from './logger.server.js';
 
@@ -16,7 +15,6 @@ vi.mock('#lib/core/dev/cache.server.js', () => ({
   }
 }));
 vi.mock('./dev/cli/templates/init.js', () => ({
-  regenerateDrizzleConfig: vi.fn(),
   regenerateHooks: vi.fn(),
   regenerateParams: vi.fn()
 }));
@@ -82,16 +80,6 @@ describe('runCodegen', () => {
     vi.mocked(validate).mockReturnValueOnce(false);
     await expect(runCodegen({ config, generateSchema })).rejects.toThrow('Config not valid');
     expect(generateSchema).toHaveBeenCalledTimes(1);
-  });
-
-  it('writes drizzle.config.ts before the schema', async () => {
-    vi.mocked(regenerateDrizzleConfig).mockClear();
-    const generateSchema = vi.fn(async () => {});
-    await runCodegen({ config, generateSchema });
-
-    const [drizzleConfigCall] = vi.mocked(regenerateDrizzleConfig).mock.invocationCallOrder;
-    const [schemaCall] = generateSchema.mock.invocationCallOrder;
-    expect(drizzleConfigCall).toBeLessThan(schemaCall);
   });
 });
 

@@ -6,6 +6,8 @@ import type { Dic } from '#lib/util/types.js';
 import fs from 'fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { SQLITE_DIRECTORY } from '../constant.js';
+import { regenerateDrizzleConfig } from '../drizzle-config.server.js';
 
 /** How each package manager runs drizzle-kit. */
 const DRIZZLE_KIT: Record<string, string[]> = {
@@ -17,6 +19,9 @@ const DRIZZLE_KIT: Record<string, string[]> = {
 };
 
 const write = (schema: string) => {
+  // drizzle-kit reads the schema path off drizzle.config.ts: current before anything runs it
+  regenerateDrizzleConfig();
+
   const outputFile = schemaPath();
   // The output path is part of what "unchanged" means here, not just the schema string — a
   // RIME_CONFIG_DIR change can leave the schema content byte-identical while the file it needs
@@ -37,7 +42,7 @@ const write = (schema: string) => {
   // A migrations folder with `meta/_journal.json` is in the pre-1.0 drizzle-kit layout, which kit
   // refuses to read. `drizzle-kit up` converts it in place — files git tracks — before anything
   // below compares folders, so the converted migrations are not taken as new.
-  if (fs.existsSync(path.resolve(process.cwd(), 'db', 'meta', '_journal.json'))) {
+  if (fs.existsSync(path.join(migrationsDir(), 'meta', '_journal.json'))) {
     logger.debug('Migrations folder predates drizzle 1.0 — converting with `drizzle-kit up`.');
     const upResult = spawnSync(command, [...prefix, 'up'], { stdio: 'inherit' });
     if (upResult.error || upResult.status !== 0) {
@@ -83,7 +88,7 @@ const write = (schema: string) => {
       if (previousSchema === null) fs.rmSync(outputFile, { force: true });
       else fs.writeFileSync(outputFile, previousSchema);
       throw new Error(
-        'Migration cancelled: it would lose data. db/ and the schema are left as they were.'
+        `Migration cancelled: it would lose data. ${SQLITE_DIRECTORY}/ and the schema are left as they were.`
       );
     }
   }
@@ -103,7 +108,7 @@ const write = (schema: string) => {
 export default write;
 
 /** Where drizzle-kit writes migrations: `out` in the drizzle.config.ts rime generates. */
-const migrationsDir = () => path.resolve(process.cwd(), 'db');
+const migrationsDir = () => path.resolve(process.cwd(), SQLITE_DIRECTORY);
 
 /** The migration folders, by name: `20261001194217_dazzling_wallflower`. */
 const listMigrations = () => {

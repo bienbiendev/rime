@@ -1,4 +1,4 @@
-import type { Adapter } from '#lib/core/adapter.js';
+import type { Adapter, AdapterHooks } from '#lib/core/adapter.js';
 import type { Config } from '#lib/core/config/types.js';
 import type { ConfigContext } from '#lib/core/rime.server.js';
 import type { GetRegisterType } from '#lib/index.js';
@@ -6,6 +6,7 @@ import path from 'path';
 import createAuthHandle from './auth.server.js';
 import createBlocksHandle from './blocks.server.js';
 import { connect, type SqliteDriver } from './connect.server.js';
+import { HOOKS_MODULE, SQLITE_DIRECTORY } from './constant.js';
 import { baseTableName } from './naming.server.js';
 import createPathsHandle from './paths.server.js';
 import { createPrototypeRegistry } from './registry.server.js';
@@ -30,12 +31,20 @@ export type AdapterSqliteOptions = {
   driver?: SqliteDriver;
 };
 
+/**
+ * The SQLite adapter. `database` names the file in `storage/sqlite/`.
+ *
+ * ```ts
+ * adapterSqlite('app.sqlite'); // <root>/storage/sqlite/app.sqlite
+ * ```
+ */
 export function adapterSqlite(
   database: string,
   options: AdapterSqliteOptions = {}
 ): {
   createAdapter: <C extends Config>(configCtx: ConfigContext<C>) => Promise<SqliteAdapter>;
   generateSchema: GenerateSchema;
+  hooks: AdapterHooks;
 } {
   const driver = options.driver ?? 'libsql';
   return {
@@ -43,7 +52,15 @@ export function adapterSqlite(
       createAdapter({ database, driver, configCtx }),
     // Dev only: loaded on its first call, codegen stays out of a production build
     generateSchema: (config) =>
-      import('./generate-schema/index.server.js').then((m) => m.default(config))
+      import('./generate-schema/index.server.js').then((m) => m.default(config)),
+    // Dev and CLI only: loaded on first call, like generateSchema, so a production build never
+    // imports drizzle-kit's side
+    hooks: {
+      module: HOOKS_MODULE,
+      init: (args) => import('./hooks.server.js').then((m) => m.hooks.init(args)),
+      boot: () => import('./hooks.server.js').then((m) => m.hooks.boot()),
+      clear: () => import('./hooks.server.js').then((m) => m.hooks.clear())
+    }
   };
 }
 
@@ -60,7 +77,7 @@ const createAdapter = async <const C extends Config>(args: {
     relations: any;
   };
 
-  const dbPath = path.join(process.cwd(), 'db', database);
+  const dbPath = path.join(process.cwd(), SQLITE_DIRECTORY, database);
   // `relations`, not `schema`: a relational query resolves through the one `defineRelations`
   // block the generator emits. `tables` is still read straight off the module everywhere else.
   const db = await connect({ driver, dbPath, relations: schema.relations });

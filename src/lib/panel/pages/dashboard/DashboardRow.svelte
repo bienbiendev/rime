@@ -61,6 +61,19 @@
     }
   }
 
+  .rz-dashboard-row:has(.rz-dashboard-row__description) {
+    min-height: --size(15);
+    align-items: flex-start;
+    padding-block: var(--rz-size-3-5);
+
+    .rz-dashboard-row__description {
+      margin-top: var(--rz-size-1-5);
+      white-space: unset;
+      overflow: unset;
+      text-overflow: unset;
+    }
+  }
+
   .rz-dashboard-row__text {
     display: flex;
     flex: 1;

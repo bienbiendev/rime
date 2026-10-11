@@ -1,11 +1,11 @@
 import { filePathToBase64 } from '#lib/core/prototype/collection/upload/util/converter.server.js';
 import test, { expect } from '@playwright/test';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'path';
 import { API_BASE_URL, BASE_URL, signIn } from '../util.js';
 
 /**
- * `storage/` holds the uploads and other server files: no URL reaches it. An upload is served at
+ * `storage/` holds the uploads and the database: no URL reaches it. An upload is served at
  * `/uploads/<folder>/<file>` only.
  */
 
@@ -25,9 +25,18 @@ test.afterAll(() => {
 });
 
 test('a file of storage answers 404, whatever the path', async ({ request }) => {
-  for (const url of ['/storage/probe.txt', '/storage', '/storage/']) {
+  for (const url of [
+    '/storage/probe.txt',
+    '/storage',
+    '/storage/',
+    '/storage/sqlite/basic.sqlite'
+  ]) {
     expect((await request.get(`${BASE_URL}${url}`)).status(), url).toBe(404);
   }
+});
+
+test('the database is in storage/sqlite', () => {
+  expect(existsSync(path.resolve(process.cwd(), 'storage/sqlite/basic.sqlite'))).toBe(true);
 });
 
 test('an upload answers at its url, and 404 at its place in storage', async ({ request }) => {

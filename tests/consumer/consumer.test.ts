@@ -1,5 +1,6 @@
 import test, { expect } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   BASE_URL,
@@ -20,7 +21,7 @@ const FIXTURE_IMAGE = readFileSync(
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 
-// dev/prod passes share the same sqlite db (built with `rime build -d`), so
+// dev/prod passes share the same sqlite db (built with `rime build -w`), so
 // suffix anything that must be unique (staff email) per pass.
 const SUFFIX = process.env.CONSUMER_TEST_SUFFIX || 'run';
 
@@ -36,6 +37,13 @@ test.beforeAll(async ({ request }) => {
   if (initResponse.status() === 200) {
     adminId = (await initResponse.json()).user?.id;
   }
+});
+
+test('the database is in storage/sqlite, which no URL reaches', async ({ request }) => {
+  // The folder the server runs in: the project in the dev pass, app/ in the production pass
+  const serverRoot = process.env.CONSUMER_SERVER_CWD || process.cwd();
+  expect(existsSync(join(serverRoot, 'storage/sqlite/consumer.sqlite'))).toBe(true);
+  expect((await request.get(`${BASE_URL}/storage/sqlite/consumer.sqlite`)).status()).toBe(404);
 });
 
 test('unauthenticated visit to /panel redirects to sign-in', async ({ page }) => {

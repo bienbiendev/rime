@@ -62,14 +62,6 @@ function ensureEnv() {
 }
 
 /**
- * Ensure drizzle config exists
- */
-function ensureDirzzle() {
-  const drizzleConfigFile = path.resolve(projectRoot, './drizzle.config.ts');
-  if (!existsSync(drizzleConfigFile)) throw new Error('Missing drizzle.config.ts file');
-}
-
-/**
  * Ensure hooks.server exists
  */
 function ensureHooks() {
@@ -77,19 +69,9 @@ function ensureHooks() {
   if (!existsSync(hooksServerFile)) throw new Error('Missing src/hooks.server.ts file');
 }
 
-/**
- * Ensure db directory exists
- */
-function ensureDatabase() {
-  const dbDirectory = path.resolve(projectRoot, './db');
-  if (!existsSync(dbDirectory)) throw new Error('Missing db directory');
-}
-
 export const ensureHasInit = () => {
   ensureEnv();
-  ensureDirzzle();
   ensureHooks();
-  ensureDatabase();
   ensureUserConfigExist();
   ensureGeneratedConfig();
   ensureSchema();

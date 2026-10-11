@@ -15,9 +15,11 @@ vi.mock('#lib/core/dev/cli/util/package-manager.server.js', () => ({
 
 let cwd: string;
 vi.mock('#lib/core/dev/constants.server.js', () => ({
+  GENERATED_DIR: 'src/+rime.generated',
   schemaPath: () => path.join(cwd, 'src/+rime.generated/schema.server.ts')
 }));
 
+const { SQLITE_DIRECTORY } = await import('../constant.js');
 const { default: write, dataLoss, confirm } = await import('./write.server.js');
 
 /** The SQL of 20261001201736_noisy_purple_man, which dropped a site's news and relations. */
@@ -73,7 +75,7 @@ describe('confirm', () => {
 });
 
 describe('write', () => {
-  const migrations = () => fs.readdirSync(path.join(cwd, 'db'));
+  const migrations = () => fs.readdirSync(path.join(cwd, SQLITE_DIRECTORY));
   const schemaFile = () => path.join(cwd, 'src/+rime.generated/schema.server.ts');
   let isTTY: boolean;
 
@@ -81,7 +83,7 @@ describe('write', () => {
   const drizzleWrites = (sql: string) =>
     spawnSync.mockImplementation((_command: string, args: string[]) => {
       if (args[1] === 'generate') {
-        const dir = path.join(cwd, 'db', '20261001201736_noisy_purple_man');
+        const dir = path.join(cwd, SQLITE_DIRECTORY, '20261001201736_noisy_purple_man');
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, 'migration.sql'), sql);
       }
@@ -93,8 +95,8 @@ describe('write', () => {
   beforeEach(() => {
     cwd = fs.mkdtempSync(path.join(tmpdir(), 'rime-write-'));
     vi.spyOn(process, 'cwd').mockReturnValue(cwd);
-    fs.mkdirSync(path.join(cwd, 'db', '20260930000000_first'), { recursive: true });
-    fs.writeFileSync(path.join(cwd, 'db', '20260930000000_first', 'migration.sql'), '');
+    fs.mkdirSync(path.join(cwd, SQLITE_DIRECTORY, '20260930000000_first'), { recursive: true });
+    fs.writeFileSync(path.join(cwd, SQLITE_DIRECTORY, '20260930000000_first', 'migration.sql'), '');
     fs.mkdirSync(path.dirname(schemaFile()), { recursive: true });
     fs.writeFileSync(schemaFile(), 'the schema before');
     isTTY = process.stdin.isTTY;
@@ -110,7 +112,7 @@ describe('write', () => {
     cache.delete.mockClear();
   });
 
-  test('a migration that loses data, refused, leaves db/ and the schema as they were', () => {
+  test('a migration that loses data, refused, leaves storage/sqlite/ and the schema as they were', () => {
     drizzleWrites(NOISY_PURPLE_MAN);
 
     expect(() => write('the new schema')).toThrow(/Migration cancelled/);
@@ -139,7 +141,7 @@ describe('write', () => {
     spawnSync.mockImplementation((command: string, args: string[]) => {
       if (args[0] === '-e') return { status: 0 };
       if (args[1] === 'generate') {
-        const dir = path.join(cwd, 'db', '20261001201736_noisy_purple_man');
+        const dir = path.join(cwd, SQLITE_DIRECTORY, '20261001201736_noisy_purple_man');
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, 'migration.sql'), NOISY_PURPLE_MAN);
       }
@@ -153,15 +155,15 @@ describe('write', () => {
   });
 
   test('a converted old folder is not taken as a new migration', () => {
-    fs.mkdirSync(path.join(cwd, 'db', 'meta'), { recursive: true });
-    fs.writeFileSync(path.join(cwd, 'db', 'meta', '_journal.json'), '{}');
+    fs.mkdirSync(path.join(cwd, SQLITE_DIRECTORY, 'meta'), { recursive: true });
+    fs.writeFileSync(path.join(cwd, SQLITE_DIRECTORY, 'meta', '_journal.json'), '{}');
     // `drizzle-kit up` moves an old migration into its own folder and removes meta/
     spawnSync.mockImplementation((_command: string, args: string[]) => {
       if (args[1] === 'up') {
-        const dir = path.join(cwd, 'db', '20250101000000_old');
+        const dir = path.join(cwd, SQLITE_DIRECTORY, '20250101000000_old');
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, 'migration.sql'), 'DROP TABLE `news`;');
-        fs.rmSync(path.join(cwd, 'db', 'meta'), { recursive: true });
+        fs.rmSync(path.join(cwd, SQLITE_DIRECTORY, 'meta'), { recursive: true });
       }
       return { status: 0 };
     });
@@ -184,10 +186,13 @@ describe('write', () => {
 
   /** The first migration holds `before`; `generate` writes a rebuild of `pages` holding `after`. */
   const rebuildPages = (before: string, after: string) => {
-    fs.writeFileSync(path.join(cwd, 'db', '20260930000000_first', 'snapshot.json'), before);
+    fs.writeFileSync(
+      path.join(cwd, SQLITE_DIRECTORY, '20260930000000_first', 'snapshot.json'),
+      before
+    );
     spawnSync.mockImplementation((_command: string, args: string[]) => {
       if (args[1] === 'generate') {
-        const dir = path.join(cwd, 'db', '20261001201736_rebuild');
+        const dir = path.join(cwd, SQLITE_DIRECTORY, '20261001201736_rebuild');
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, 'migration.sql'), REBUILD);
         fs.writeFileSync(path.join(dir, 'snapshot.json'), after);
@@ -237,5 +242,21 @@ describe('write', () => {
       ['run', '-A', 'npm:drizzle-kit', 'migrate'],
       expect.anything()
     );
+  });
+
+  test('a stale schema line in drizzle.config.ts is current before drizzle-kit runs', () => {
+    const config = path.join(cwd, 'drizzle.config.ts');
+    fs.writeFileSync(config, "export default {\n  schema: './old/schema.server.ts'\n};\n");
+    let schemaLineAtGenerate = '';
+    spawnSync.mockImplementation((_command: string, args: string[]) => {
+      if (args.includes('generate')) {
+        schemaLineAtGenerate = fs.readFileSync(config, 'utf8');
+      }
+      return { status: 0 };
+    });
+
+    write('the new schema');
+
+    expect(schemaLineAtGenerate).toContain("schema: './src/+rime.generated/schema.server.ts'");
   });
 });

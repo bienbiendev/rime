@@ -1,10 +1,6 @@
 import devCache from '#lib/core/dev/cache.server.js';
 import type { Config } from '#lib/core/config/types.js';
-import {
-  regenerateDrizzleConfig,
-  regenerateHooks,
-  regenerateParams
-} from './dev/cli/templates/init.js';
+import { regenerateHooks, regenerateParams } from './dev/cli/templates/init.js';
 import generateRoutes from './dev/codegen/routes/index.server.js';
 import generateTypes from './dev/codegen/types/index.server.js';
 import { RimeError } from './errors/index.js';
@@ -40,9 +36,8 @@ const cliRunning = () => {
  * Phase 1 of three — everything rime writes to disk, in the order it writes it.
  *
  * The one place the build sequence is written down. Unlike the hook pipeline in `core/pipeline/`
- * it cannot be a flat array, because each step's output is the next step's input on disk —
- * drizzle.config.ts must be current before generateSchema shells out to drizzle-kit, which reads
- * it straight off the filesystem.
+ * it cannot be a flat array, because each step's output is the next step's input on disk: the
+ * schema is written before the types that declare its module.
  *
  * Runs *inside* boot, and only under `dev`: in development codegen is on the fly — editing a collection invalidates the config module, the app reboots,
  * and this runs again as part of that reload. There is no separate codegen program, and
@@ -85,26 +80,22 @@ export const runCodegen = async <const C extends Config>(args: {
   // 3. SvelteKit routes — the (rime) panel tree and /api, plus the param matchers.
   generateRoutes(config);
 
-  // 4. drizzle.config.ts, before generateSchema: it shells out to drizzle-kit generate/migrate,
-  //    which read the schema path straight off disk — stale here means the wrong (or missing)
-  //    schema file.
-  regenerateDrizzleConfig();
-
-  // 5. The drizzle schema. Owned by the adapter, which is why it arrives as an argument: this
-  //    is the one codegen step rime does not implement itself.
+  // 4. The drizzle schema. Owned by the adapter, which is why it arrives as an argument: this
+  //    is the one codegen step rime does not implement itself. The adapter keeps its own
+  //    drizzle.config.ts current.
   await generateSchema(config);
 
-  // 6. app.generated.d.ts — the types that carry collection and area slugs into consumer code.
+  // 5. app.generated.d.ts — the types that carry collection and area slugs into consumer code.
   await generateTypes(config);
 
-  // 7. src/hooks.server.ts, if the consumer has not written one.
+  // 6. src/hooks.server.ts, if the consumer has not written one.
   regenerateHooks();
 
-  // 8. src/params.ts, if the consumer has not written one — the file that spreads the matchers
+  // 7. src/params.ts, if the consumer has not written one — the file that spreads the matchers
   //    generateRoutes wrote.
   regenerateParams();
 
-  // 9. Every step wrote its files: the next boot with this config has nothing to do. A step that
+  // 8. Every step wrote its files: the next boot with this config has nothing to do. A step that
   //    threw leaves the memo unstored, so the next boot runs them again.
   devCache.remember('config', memo);
 };

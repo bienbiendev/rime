@@ -1,8 +1,9 @@
 import { logger } from '#lib/core/logger.server.js';
-import { UPLOADS } from '#lib/core/prototype/collection/upload/constant.js';
 import chalk from 'chalk';
 import { spawnSync } from 'child_process';
 import { copyFileSync, cpSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'fs';
+import { trycatch } from '#lib/util/function.js';
+import { importAdapterHooks, recordedHooksModule } from '../util/adapter-hooks.server.js';
 import { getInvokingPackageManager } from '../util/package-manager.server.js';
 import { usesBunScripts } from '../util/package.server.js';
 import { envProduction, nodeServer } from '../templates/build.js';
@@ -25,12 +26,25 @@ const installCommands = {
   }
 } as const;
 
-export const build = (args: {
-  withDatabase?: boolean;
+export const build = async (args: {
   withEnv?: boolean;
   withStatic?: boolean;
+  withStorage?: boolean;
 }) => {
   const bun = usesBunScripts();
+
+  // -w ships the database: refused while the adapter asks for a step first, `rime db:move` for a
+  // project whose database is not in storage/ yet, as a dev boot is
+  if (args.withStorage) {
+    const [error] = await trycatch(async () =>
+      (await importAdapterHooks(recordedHooksModule())).boot()
+    );
+    if (error) {
+      logger.error(`[✗] ${error.message}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
 
   // Delete app folder if it exists
   if (existsSync('./app')) {
@@ -62,20 +76,19 @@ export const build = (args: {
   copyFileSync('./package.json', './app/package.json');
   logger.debug('[✓] package.json copied');
 
-  // Copy db folder if flag is set
-  if (args.withDatabase) {
-    cpSync('./db', './app/db', { recursive: true });
-    logger.debug('[✓] database copied');
+  // storage/: the database and the uploads
+  if (args.withStorage) {
+    if (existsSync('./storage')) {
+      cpSync('./storage', './app/storage', { recursive: true });
+      logger.debug('[✓] storage directory copied');
+    } else {
+      logger.warn('No storage directory to copy (skip)');
+    }
   }
 
-  // Copy the static folder and the uploads if flag is set
   if (args.withStatic) {
     cpSync('./static', './app/static', { recursive: true });
     logger.debug('[✓] static directory copied');
-    if (existsSync(`./${UPLOADS.DIRECTORY}`)) {
-      cpSync(`./${UPLOADS.DIRECTORY}`, `./app/${UPLOADS.DIRECTORY}`, { recursive: true });
-      logger.debug('[✓] uploads directory copied');
-    }
   }
 
   // Create main entry server file

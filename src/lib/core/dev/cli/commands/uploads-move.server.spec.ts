@@ -3,7 +3,25 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { moveUploads } from './uploads-move.server.js';
+import { moveUploads, uploadsMove } from './uploads-move.server.js';
+
+/** What `RIME_CLI` reads while the command loads the project's config. */
+const loaded = vi.hoisted(() => ({ rimeCli: undefined as string | undefined }));
+
+vi.mock('#lib/core/dev/codegen/sanitize/index.server.js', () => ({ sanitize: async () => {} }));
+vi.mock('#lib/core/dev/ensure.server.js', () => ({
+  ensureUserConfigExist: () => {},
+  ensureGeneratedConfig: () => 'config.generated.js'
+}));
+vi.mock('vite', () => ({
+  createServer: async () => ({
+    ssrLoadModule: async () => {
+      loaded.rimeCli = process.env.RIME_CLI;
+      return { default: Promise.resolve({ config: { raw: { collections: [] } } }) };
+    },
+    close: async () => {}
+  })
+}));
 
 let root: string;
 beforeEach(() => {
@@ -76,4 +94,19 @@ test('a second run moves nothing', async () => {
   expect(moved).toBe(0);
   expect(unreferenced).toEqual(['orphan.jpg']);
   expect(readFileSync(at('storage/uploads/medias/a.jpg'), 'utf8')).toBe('a.jpg');
+});
+
+test('the command loads the config as a CLI run, so a bun driver falls back to libsql on Node', async () => {
+  const previous = process.env.RIME_CLI;
+  delete process.env.RIME_CLI;
+  try {
+    await uploadsMove();
+    expect(loaded.rimeCli).toBe('true');
+  } finally {
+    if (previous === undefined) {
+      delete process.env.RIME_CLI;
+    } else {
+      process.env.RIME_CLI = previous;
+    }
+  }
 });
