@@ -7,7 +7,8 @@ import { betterAuthApiKey, betterAuthUserId } from '#lib/core/auth/user.server.j
 
 /**
  * Syncs a staff document's `roles` to its better-auth role: 'admin' when an admin grants admin,
- * 'staff' otherwise.
+ * 'staff' otherwise. Placed after `validateFields`: `roles` is in `data` only when the caller may
+ * change it, and a save refused by validation never reaches better-auth.
  *
  * Better-auth only knows one `role`: admin, staff, or user. On every other collection it is 'user'
  * from creation on and never changes, so there is nothing to forward.
@@ -45,8 +46,7 @@ export const forwardRolesToBetterAuth = Hooks.beforeUpdate<'auth'>(
         ? BETTER_AUTH_ROLES.ADMIN
         : BETTER_AUTH_ROLES.STAFF;
 
-    // With the caller's headers: better-auth's `set-role` check and the `roles` field's `update`
-    // rule both say admins only.
+    // With the caller's headers: better-auth's `set-role` check asks for an admin too.
     await rime.auth.api.setRole({
       headers: args.event.request.headers,
       body: { userId: authUserId, role }

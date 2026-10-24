@@ -111,13 +111,12 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     when(isNested, nested.refuseCyclicParent),
     buildOriginalDocConfigMap,
     resolveContentOwner,
-    // The three guards read the caller's submission *as sent*, so they run before anything adds
+    // The two guards read the caller's submission *as sent*, so they run before anything adds
     // to it. `auth.preventUserMutations` rejects on `'name' in args.data` and
     // `auth.preventSuperAdminMutation` on `'isSuperAdmin' in args.data` — a default filled in above
     // either of them turns an ordinary update into a 401.
     when(isAuth, auth.preventSuperAdminMutation),
     when(isAuth, auth.preventUserMutations),
-    when(isAuth, auth.forwardRolesToBetterAuth),
     // Also reads the submission as sent, and overrides the content row core resolved above.
     when(isVersioned, versions.defineVersionOperation),
     when(isVersioned, versions.handleNewVersion),
@@ -132,7 +131,9 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     buildDataConfigMap,
     normalizeResolvedReferences,
     validateFields,
-    // Before the upload hooks: a refusal from better-auth fails the save before anything is written.
+    // After validation, before the upload hooks: `roles` is in `data` only when the caller may
+    // change it, and a refusal from better-auth fails the save before anything is written.
+    when(isAuth, auth.forwardRolesToBetterAuth),
     when(isAuth, auth.forwardRolesToApiKey),
     when(isUpload, upload.handlePathCreation),
     when(isUpload, upload.castBase64ToFile),

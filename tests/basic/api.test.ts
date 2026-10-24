@@ -1,6 +1,6 @@
 import { filePathToBase64 } from '#lib/core/prototype/collection/upload/util/converter.server.js';
 import { EDIT_LOCK_TTL_AFTER_CLOSE_MS } from '#lib/core/prototype/shared/metas/constant.js';
-import test, { expect } from '@playwright/test';
+import test, { expect, type APIRequestContext } from '@playwright/test';
 import { readFileSync, rmSync } from 'fs';
 import path from 'path';
 import { API_BASE_URL, BASE_URL, panelUrl, signIn } from '../util.js';
@@ -767,6 +767,42 @@ test('Editor should not change its roles', async ({ request }) => {
   const data = await verification.json();
   expect(data.doc.roles.includes('admin')).toBe(false);
   expect(data.doc.roles.includes('editor')).toBe(true);
+});
+
+/** The editor's better-auth role, as its session answers it. */
+const editorAuthRole = async (request: APIRequestContext) => {
+  const session = await request
+    .get(`${API_BASE_URL}/auth/get-session`, { headers: await signInEditor(request) })
+    .then((r) => r.json());
+  return session.user.role;
+};
+
+// 'ghost' is no option of `roles`: validation refuses the save
+test('A refused save should not change the better-auth role', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/staff/${editorId}`, {
+    headers: await signInAdmin(request),
+    data: { roles: ['admin', 'ghost'] }
+  });
+  expect(response.status()).toBe(400);
+  expect(await editorAuthRole(request)).toBe('staff');
+});
+
+test('Admin should promote an editor, then demote them back', async ({ request }) => {
+  const headers = await signInAdmin(request);
+
+  const promote = await request.patch(`${API_BASE_URL}/staff/${editorId}`, {
+    headers,
+    data: { roles: ['admin', 'editor'] }
+  });
+  expect(promote.status()).toBe(200);
+  expect(await editorAuthRole(request)).toBe('admin');
+
+  const demote = await request.patch(`${API_BASE_URL}/staff/${editorId}`, {
+    headers,
+    data: { roles: ['editor'] }
+  });
+  expect(demote.status()).toBe(200);
+  expect(await editorAuthRole(request)).toBe('staff');
 });
 
 test('Editor should not create a user', async ({ request }) => {
