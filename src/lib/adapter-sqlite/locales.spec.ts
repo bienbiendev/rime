@@ -49,12 +49,20 @@ describe('mergeLocaleRows', () => {
     expect(mergeLocaleRows(undefined, ['fr'])).toEqual({});
   });
 
-  it('reads an empty string as unwritten, the way a required column defaults to it', () => {
+  it('reads an empty string as unwritten', () => {
     const partial = [
       { id: 'r-en', locale: 'en', ownerId: 'o', title: 'Home', slug: '' },
       { id: 'r-fr', locale: 'fr', ownerId: 'o', title: 'Accueil', slug: 'accueil' }
     ];
     expect(mergeLocaleRows(partial, ['en', 'fr'])).toEqual({ title: 'Home', slug: 'accueil' });
+  });
+
+  it('keeps 0 and false as written values', () => {
+    const written = [
+      { id: 'r-fr', locale: 'fr', ownerId: 'o', stock: 0, active: false },
+      { id: 'r-en', locale: 'en', ownerId: 'o', stock: 12, active: true }
+    ];
+    expect(mergeLocaleRows(written, ['fr', 'en'])).toEqual({ stock: 0, active: false });
   });
 
   it('never carries a row key over', () => {

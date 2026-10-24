@@ -81,6 +81,8 @@ export type FormField = Field & {
   root?: boolean;
   /** The column gets a database index. Set by `$index()`. */
   index?: boolean;
+  /** The column is `NOT NULL`, with this `DEFAULT`. Set by `$notNull()`. */
+  notNull?: { default: string | number | boolean };
 };
 
 export type DefaultValueFn<T> = ({ event }: { event?: RequestEvent }) => T;

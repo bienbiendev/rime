@@ -1,7 +1,6 @@
 import { RimeError } from '#lib/core/errors/index.js';
 import type { RawDoc } from '#lib/core/prototype/types.js';
 import { omit, pick } from '#lib/util/object.js';
-import { randomId } from '#lib/util/random.js';
 import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
 import { baseFieldNames } from '#lib/core/fields/util.js';
 import type { Dic } from '#lib/util/types.js';
@@ -96,8 +95,7 @@ export async function upsertLocalizedData(
 /**
  * Splits a document's data between a table and its `__$$locales` branch: each key named like a
  * column of one of them is copied there, bookkeeping columns (`id`, `ownerId`, `locale`)
- * included. Without a `locale`, or without a branch, everything goes to the table. `fillNotNull`
- * is handed to `transformDataToSchema`.
+ * included. Without a `locale`, or without a branch, everything goes to the table.
  *
  * ```ts
  * // title localized, slug not
@@ -115,24 +113,23 @@ export function prepareSchemaData(
     localesTableName: string;
     locale?: string;
     tables: any;
-    fillNotNull?: boolean;
   }
 ) {
-  const { mainTableName, localesTableName, locale, tables, fillNotNull } = options;
+  const { mainTableName, localesTableName, locale, tables } = options;
 
   if (locale && localesTableName in tables) {
     const unlocalizedColumns = getTableColumns(tables[mainTableName]);
     const localizedColumns = getTableColumns(tables[localesTableName]);
 
     return {
-      mainData: transformDataToSchema(data, unlocalizedColumns, { fillNotNull }),
-      localizedData: transformDataToSchema(data, localizedColumns, { fillNotNull }),
+      mainData: transformDataToSchema(data, unlocalizedColumns),
+      localizedData: transformDataToSchema(data, localizedColumns),
       isLocalized: true
     };
   } else {
     const columns = getTableColumns(tables[mainTableName]);
     return {
-      mainData: transformDataToSchema(data, columns, { fillNotNull }),
+      mainData: transformDataToSchema(data, columns),
       localizedData: {},
       isLocalized: false
     };
@@ -282,25 +279,19 @@ export const transformDatabaseColumnsToPaths = (obj: Record<string, any>): Recor
  * nested data (`attributes__title` from `data.attributes.title`). A missing value is left out,
  * `null` is kept.
  *
- * With `fillNotNull`, an empty NOT NULL column gets a placeholder of its type (`''`, `0`, …),
- * unless it has a default of its own, and `id` gets a random id. Any other empty column is left
- * out, `null` included.
- *
  * ```ts
- * const columns = { attributes__title: { dataType: 'string', notNull: true } };
  * transformDataToSchema({ attributes: { title: 'Home' } }, columns) // { attributes__title: 'Home' }
- * transformDataToSchema({ attributes: {} }, columns, { fillNotNull: true }) // { attributes__title: '' }
+ * transformDataToSchema({ attributes: {} }, columns)                // {}
+ * transformDataToSchema({ attributes: null }, columns)              // { attributes__title: null }
  * ```
  */
 export const transformDataToSchema = (
   data: Record<string, any>,
-  columns: Record<string, any>,
-  params: { fillNotNull?: boolean } = { fillNotNull: false }
+  columns: Record<string, any>
 ): Record<string, any> => {
   const result: Record<string, any> = {};
 
   for (const column of Object.keys(columns)) {
-    const columnConfig = columns[column];
     // Convert schema path (with __) to doc path (with .)
     const docPath = databaseColumnToPath(column);
 
@@ -313,44 +304,10 @@ export const transformDataToSchema = (
       value = value[part];
     }
 
-    // Case 1: Value exists and is not null - always use it
-    if (value !== undefined && value !== null) {
+    if (value !== undefined) {
       result[column] = value;
-      continue;
-    }
-
-    // Case 2: Value is null - use it unless we need to fill it
-    if (value === null && !params.fillNotNull) {
-      result[column] = null;
-      continue;
-    }
-
-    // Case 3: Add placeholders for missing or null values in not-null columns
-    if (params.fillNotNull && columnConfig.notNull) {
-      if (column === 'id') {
-        result[column] = randomId(32);
-        continue;
-      }
-      // A column with a default of its own takes it: the insert leaves it out
-      if (columnConfig.hasDefault) continue;
-
-      console.warn(`No default value provided for ${column}, setting it with a placeholder`);
-      const empty = placeholder(columnConfig.dataType);
-      if (empty !== undefined) {
-        result[column] = empty;
-      }
     }
   }
 
   return result;
-};
-
-/** A placeholder of a column's type, by drizzle's `dataType`: `'number double'`, `'object date'`… */
-const placeholder = (dataType: string) => {
-  if (dataType.startsWith('string')) return '';
-  if (dataType.startsWith('number')) return 0;
-  if (dataType === 'boolean') return false;
-  if (dataType === 'object date') return new Date();
-  if (dataType === 'object json') return {};
-  return undefined;
 };

@@ -167,44 +167,6 @@ export const ${declaredTableProperty(table.slug)} = sqliteTable('${baseTableName
 `;
 
 /**
- * Generates unique and required modifiers for a field
- * Combines .unique() and .notNull() based on field configuration
- *
- * @example
- * ```typescript
- * // For a unique and required field:
- * .unique().notNull()
- *
- * // For just a unique field:
- * .unique()
- *
- * // For just a required field:
- * .notNull()
- * ```
- */
-export const templateUniqueRequired = (
-  field: { unique?: boolean; required?: boolean },
-  defaultValue?: string | number | boolean | object | unknown[]
-) => {
-  const { unique, required } = field;
-  const defaultStr =
-    required && defaultValue !== undefined ? `.default(${templateDefault(defaultValue)})` : '';
-  return `${unique ? '.unique()' : ''}${required ? `.notNull()${defaultStr}` : ''}`;
-};
-
-/**
- * A default value as drizzle wants it written. A timestamp column takes a `Date`, which
- * drizzle-kit stores as the same integer a number would have been.
- *
- * ```ts
- * templateDefault('')            // ""
- * templateDefault(new Date(0))   // new Date(0)
- * ```
- */
-const templateDefault = (value: unknown): string =>
-  value instanceof Date ? `new Date(${value.getTime()})` : JSON.stringify(value);
-
-/**
  * The addresses of a config with `$url`: one row per page and per locale, off its base table. An
  * area has one row per locale, its slug and no parent.
  *

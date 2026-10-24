@@ -6,6 +6,7 @@ import {
   date,
   group,
   link,
+  number,
   radio,
   relation,
   richText,
@@ -252,6 +253,29 @@ const Notes = Collection.create('notes', {
 });
 
 /****************************************************
+/* Articles
+/****************************************************/
+
+// Required and localized, of each storage type: a locale written in part falls back for the rest
+const Articles = Collection.create('articles', {
+  icon: Text,
+  panel: {
+    group: 'Content'
+  },
+  fields: [
+    text('title').isTitle().localized().required(),
+    richText('body').localized().required(),
+    number('readingTime').localized().required()
+  ],
+  access: {
+    read: () => true,
+    create: (user) => access.isAdmin(user),
+    update: (user) => access.isAdmin(user),
+    delete: (user) => access.isAdmin(user)
+  }
+});
+
+/****************************************************
 /* Medias
 /****************************************************/
 
@@ -279,7 +303,7 @@ export default rime({
   $adapter: adapterSqlite('multilang.sqlite'),
   siteUrl: SITE_URL,
 
-  collections: [Pages, Medias, Notes],
+  collections: [Pages, Medias, Notes, Articles],
   areas: [Settings, Informations, Menu],
 
   localization: {

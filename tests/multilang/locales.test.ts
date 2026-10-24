@@ -103,3 +103,72 @@ test('Writing EN, blocks included, changes nothing in FR', async ({ request }) =
   expect(enAfter.seo.metaTitle).toBe('Meta EN');
   expect(enAfter.attributes.slug).toBe('page-en-francais');
 });
+
+/**
+ * `articles`: a required localized text, rich text and number. A locale that writes only the
+ * title holds no value for the others, so a read falls back for them, whichever locale came first.
+ */
+const richTextOf = (text: string) => ({
+  type: 'doc',
+  content: [{ type: 'paragraph', content: [{ type: 'text', text }] }]
+});
+
+const readArticle = async (
+  request: APIRequestContext,
+  id: string,
+  locale: string,
+  headers: Headers
+) => {
+  const response = await request.get(`${API_BASE_URL}/articles/${id}?locale=${locale}`, {
+    headers
+  });
+  expect(response.status()).toBe(200);
+  return (await response.json()).doc;
+};
+
+test('A locale that writes only the title falls back for the other required fields', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+
+  const created = await request.post(`${API_BASE_URL}/articles?locale=en`, {
+    headers,
+    data: { title: 'Home', body: richTextOf('Welcome'), readingTime: 5 }
+  });
+  expect(created.status()).toBe(200);
+  const id = (await created.json()).doc.id;
+
+  // The stored body and reading time are what the update leaves: it passes
+  const written = await request.patch(`${API_BASE_URL}/articles/${id}?locale=fr`, {
+    headers,
+    data: { title: 'Accueil' }
+  });
+  expect(written.status()).toBe(200);
+
+  const fr = await readArticle(request, id, 'fr', headers);
+  expect(fr.title).toBe('Accueil');
+  expect(fr.body.content[0].content[0].text).toBe('Welcome');
+  expect(fr.readingTime).toBe(5);
+});
+
+test('The same with the article created in FR and read in EN', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+
+  const created = await request.post(`${API_BASE_URL}/articles?locale=fr`, {
+    headers,
+    data: { title: 'Accueil', body: richTextOf('Bienvenue'), readingTime: 7 }
+  });
+  expect(created.status()).toBe(200);
+  const id = (await created.json()).doc.id;
+
+  const written = await request.patch(`${API_BASE_URL}/articles/${id}?locale=en`, {
+    headers,
+    data: { title: 'Home' }
+  });
+  expect(written.status()).toBe(200);
+
+  const en = await readArticle(request, id, 'en', headers);
+  expect(en.title).toBe('Home');
+  expect(en.body.content[0].content[0].text).toBe('Bienvenue');
+  expect(en.readingTime).toBe(7);
+});

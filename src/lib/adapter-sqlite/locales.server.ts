@@ -30,10 +30,7 @@ export const localeOrder = (
   return order.filter((code, index) => order.indexOf(code) === index);
 };
 
-/**
- * Nothing written. `''` counts: a required localized column is `NOT NULL DEFAULT ''`, and that is
- * what it holds when another field's write creates the locale's row.
- */
+/** Nothing written: an empty text counts, and falls back like a column never written. */
 const unwritten = (value: unknown) => value === undefined || value === null || value === '';
 
 /**

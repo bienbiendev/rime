@@ -183,6 +183,20 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
+  /**
+   * Makes the field's column `NOT NULL`, with `default` as its `DEFAULT`: a migration that adds
+   * the column writes it into every row already there.
+   *
+   * ```ts
+   * toggle('isAutoSave').$notNull({ default: false })
+   * // isAutoSave: integer('is_auto_save', { mode: 'boolean' }).notNull().default(false)
+   * ```
+   */
+  $notNull(options: { default: string | number | boolean }) {
+    this.field.notNull = { default: options.default };
+    return this;
+  }
+
   /** `label`/`localized`/`root`/`required` are the only properties that need
    *  anything beyond a plain `this.field` read (a fallback default, or a
    *  boolean coercion) — everything else a concrete field type adds

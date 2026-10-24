@@ -40,11 +40,17 @@ export const augmentVersions = <T extends Input>(config: T): WithVersionsConfig<
       fields.push(text('status').defaultValue(VERSIONS_STATUS.DRAFT, { fill: 'save' }).hidden());
     }
 
-    // `required()` makes the column not null with a default, so a migration backfills every
-    // existing row as `false`. Reads filter on `isAutoSave != true`, and SQLite does not count a
-    // null row as passing that.
+    // `$notNull({ default: false })` makes the column not null with a default, so a migration
+    // backfills every existing row as `false`. Reads filter on `isAutoSave != true`, and SQLite
+    // does not count a null row as passing that.
     if (normalizedVersions.draft && normalizedVersions.autoSave) {
-      fields.push(toggle('isAutoSave').defaultValue(false, { fill: 'save' }).required().hidden());
+      fields.push(
+        toggle('isAutoSave')
+          .defaultValue(false, { fill: 'save' })
+          .required()
+          .hidden()
+          .$notNull({ default: false })
+      );
     }
   } else {
     normalizedVersions = undefined;

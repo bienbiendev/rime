@@ -4,6 +4,7 @@ import {
   block,
   blocks,
   group,
+  number,
   relation,
   tab,
   tabs,
@@ -163,4 +164,17 @@ test('two relation fields with the same name keep both targets', async () => {
   });
 
   expect([...out.relationTargets].sort()).toEqual(['pages', 'posts']);
+});
+
+test('a required field column is nullable, with no default', async () => {
+  const out = await buildRootTable({
+    fields: [number('price').required(), number('stock').localized().required()] as any,
+    tableName: 'pages' as any,
+    rootName: 'pages' as any,
+    locales: [{ code: 'en', label: 'English' }] as any,
+    blocksRegister: []
+  });
+
+  expect(out.schema).toContain("price: real('price'),");
+  expect(out.schema).toContain("stock: real('stock'),");
 });

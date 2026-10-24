@@ -42,7 +42,7 @@ const insertRowWithLocales = async (
 
   // A locales row says the locale was written. With nothing to say there is no row, and the
   // first write in that locale makes one — the same for a document and for a singleton's
-  // bootstrap, whose seeded `id` is not a value.
+  // bootstrap. An `id` is not a value.
   const { data, isLocalized, locale } = args.localized;
   const written = Object.entries(data).some(
     ([key, value]) => key !== 'id' && value !== null && value !== undefined
@@ -340,8 +340,7 @@ export const ensurePrototypeExists = async (
       tables,
       mainTableName: contentTable,
       localesTableName: tableName({ owner: contentTable, branch: 'locales' }),
-      locale,
-      fillNotNull: true
+      locale
     });
 
     const contentId = await insertRowWithLocales(
@@ -363,8 +362,7 @@ export const ensurePrototypeExists = async (
     tables,
     mainTableName: table,
     localesTableName: localesTable,
-    locale,
-    fillNotNull: true
+    locale
   });
 
   const contentId = await insertRowWithLocales(
