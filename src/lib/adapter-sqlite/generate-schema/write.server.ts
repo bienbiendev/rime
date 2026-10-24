@@ -18,6 +18,12 @@ const DRIZZLE_KIT: Record<string, string[]> = {
   deno: ['deno', 'run', '-A', 'npm:drizzle-kit']
 };
 
+/**
+ * Writes the schema file and brings the database to it: converts a pre-1.0 migrations folder,
+ * runs `drizzle-kit generate`, asks before applying a migration that loses a table or a column,
+ * then runs `migrate`. Only drizzle.config.ts is rewritten when the cache holds the same path and
+ * schema.
+ */
 const write = (schema: string) => {
   // drizzle-kit reads the schema path off drizzle.config.ts: current before anything runs it
   regenerateDrizzleConfig();

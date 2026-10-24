@@ -12,8 +12,8 @@ import { baseTableName } from './naming.server.js';
  *
  * Prototypes register at boot. That is the whole reason this file exists: the adapter is handed
  * the prototypes it will serve *once*, rather than working one out from a slug on every request.
- * It also means a prototype whose tables are missing fails at boot, loudly, in a place that names
- * it — instead of on whichever request first happened to touch it.
+ * It also means a prototype whose base table is missing fails at boot, in a place that names it.
+ * A missing versions, branch or child table fails on the first request that reads it.
  *
  * `config.type` decides which handle a slug gets:
  *

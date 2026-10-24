@@ -3,6 +3,7 @@ import type { FormField } from '#lib/fields/types.js';
 import { templateReferences, templateUniqueRequired } from './templates.server.js';
 import { getSchemaColumnNames } from '../naming.server.js';
 
+/** How each field `dataType` is spelled in drizzle. */
 const COLUMN_EXPR: Record<DataType, (snake: string) => string> = {
   text: (snake) => `text('${snake}')`,
   boolean: (snake) => `integer('${snake}', { mode: 'boolean' })`,

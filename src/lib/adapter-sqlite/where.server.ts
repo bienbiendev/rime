@@ -46,6 +46,17 @@ type BuildWhereArgs = {
   rootTable?: GenericTable;
 };
 
+/**
+ * A REST `where` as one drizzle condition on `slug`'s table. A key is a document path
+ * (`attributes.title`), a field of a related document (`author.name`), `url`, or `and`/`or`
+ * holding a list. Several keys, or several operators on one key, must all match. With `base`,
+ * `slug` is that prototype's versions table: `id` then means the document and `versionId` the
+ * row. `false` for an empty `and`/`or`.
+ *
+ * ```ts
+ * buildWhereParam({ query: { where: { 'attributes.title': { like: 'home' } } }, slug: 'pages', … })
+ * ```
+ */
 export const buildWhereParam = ({
   query,
   slug,
@@ -61,6 +72,10 @@ export const buildWhereParam = ({
   /** The generated table named `key`. */
   const getTable = (key: string) => tables[key as keyof typeof tables] as unknown as GenericTable;
 
+  /**
+   * The table of `slug`, its locales branch, and their column names. No localized column
+   * without a `locale`.
+   */
   function getTablesAndColumns(slug: string) {
     // Get main table and localized table if applicable
     const table = getTable(baseTableName(slug));
@@ -91,6 +106,12 @@ export const buildWhereParam = ({
   const baseTable = isShadow ? getTable(baseTableName(base!)) : undefined;
   const baseColumns = baseTable ? Object.keys(getTableColumns(baseTable)) : [];
 
+  /**
+   * One condition: an `and`/`or` list, or `{ path: { operator: value } }` resolved against, in
+   * this order, the paths table (`url`, `_urlPath`), a column of the table, a localized column, a
+   * base-row column of a versions table, and a relation field. A path none of them knows matches
+   * nothing.
+   */
   const buildCondition = (conditionObject: Dic): any | false => {
     // `{ a: …, b: … }` is `a` and `b`; `{ price: { greater_than: 1, less_than: 10 } }` is both bounds.
     const entries = Object.entries(conditionObject);
@@ -527,7 +548,11 @@ const castTo = (column: { dataType: string }, value: unknown): unknown => {
   return value;
 };
 
-// Extract column, operator, and raw value from condition object
+/**
+ * The column, operator and value of a `{ path: { operator: value } }` condition, and the drizzle
+ * function of its operator. Only the first key, and the first operator, are read. An unknown
+ * operator throws.
+ */
 function getConditionMembers(obj: Dic) {
   const [column, operatorObj] = Object.entries(obj)[0];
   const [operator, rawValue] = Object.entries(operatorObj)[0];

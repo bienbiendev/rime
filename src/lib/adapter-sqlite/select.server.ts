@@ -81,6 +81,12 @@ export const pathsJoin = (args: {
   };
 };
 
+/**
+ * The drizzle `with` of a read of `table`: which child tables, branches, junction rows, resolved
+ * references and addresses load with each row. Without `select`, all of them. With it, only where
+ * the selected paths are stored: a relation by its `path`, a blocks or tree field by the rows
+ * below it. `undefined` when a `select` joins nothing.
+ */
 export const buildWithParam = (args: {
   table: TableName;
   select?: string[];
@@ -247,7 +253,6 @@ export const buildWithParam = (args: {
     }
   }
 
-  // If withParam is empty
   if (Object.keys(withParam).length === 0) {
     return undefined;
   }
@@ -255,7 +260,6 @@ export const buildWithParam = (args: {
   return withParam;
 };
 
-/** The filter on a locales branch: every locale in the fallback order, else the one requested. */
 /**
  * Rows stored below a container: `layout` -> `layout.0.image`, not `layoutCover` nor
  * `layoutXcover`. A range, not `LIKE`, where `_` would match any character: `/` is the character
@@ -263,9 +267,15 @@ export const buildWithParam = (args: {
  */
 const below = (path: string) => ({ path: { gte: `${path}.`, lt: `${path}/` } });
 
+/** The filter on a locales branch: every locale in the fallback order, else the one requested. */
 const branchFilter = (locale?: string, fallback?: string[]): Dic =>
   fallback && fallback.length > 1 ? { locale: { in: fallback } } : { locale };
 
+/**
+ * The `with` of a read without `select`: every child table of `table` and its locales branch, the
+ * table's own branch, and its junction rows. A child row is kept to `locale` when its table has a
+ * `locale` column.
+ */
 const buildFullWithParam = ({
   table,
   locale,

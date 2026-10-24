@@ -237,8 +237,6 @@ export const ${table} = sqliteTable('${table}', {
 `;
 };
 
-/** Template rows Relation */
-
 /**
  * The drizzle relations of the whole schema. A read lists them in its `with` to load related rows
  * in the same query, by the names given here.
@@ -311,8 +309,6 @@ ${entries.join(',\n')}
 }));
 `;
 };
-
-/** Templates Field Relations */
 
 /**
  * The junction column pointing at one target collection. The property is keyed by the slug, which

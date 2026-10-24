@@ -39,10 +39,7 @@ export async function updateTableRecord(
   }
 }
 
-/**
- * Inserts a new record into a database table
- * @returns The ID of the inserted record
- */
+/** Inserts `data` as a new row of `tableName` and answers its id: `data.id`, or a new UUID. */
 export async function insertTableRecord(
   db: any,
   tables: any,
@@ -58,8 +55,9 @@ export async function insertTableRecord(
 }
 
 /**
- * Updates or inserts localized data for a record. The row is the one `ownerId` and `locale` name;
- * the `ROW_ADDRESS` keys of `data` are dropped.
+ * Writes `data` on the locales row of `ownerId` in `locale`: updates the row when it exists,
+ * inserts it otherwise. The `ROW_ADDRESS` keys of `data` are dropped. Empty `data` writes nothing,
+ * so a locale nothing was written in has no row.
  */
 export async function upsertLocalizedData(
   db: any,
@@ -80,13 +78,11 @@ export async function upsertLocalizedData(
     });
 
     if (localizedRow) {
-      // Update existing localized data
       await db
         .update(tableLocales)
         .set(data)
         .where(and(eq(tableLocales.ownerId, ownerId), eq(tableLocales.locale, locale)));
     } else {
-      // Insert new localized data
       await db.insert(tableLocales).values({
         ...data,
         id: generatePK(),
@@ -98,7 +94,19 @@ export async function upsertLocalizedData(
 }
 
 /**
- * Prepares data for database operations by transforming it according to table schemas
+ * Splits a document's data between a table and its `__$$locales` branch: each key named like a
+ * column of one of them is copied there, bookkeeping columns (`id`, `ownerId`, `locale`)
+ * included. Without a `locale`, or without a branch, everything goes to the table. `fillNotNull`
+ * is handed to `transformDataToSchema`.
+ *
+ * ```ts
+ * // title localized, slug not
+ * prepareSchemaData(
+ *   { title: 'Home', slug: 'home' },
+ *   { mainTableName: 'pages', localesTableName: 'pages__$$locales', locale: 'en', tables }
+ * )
+ * // { mainData: { slug: 'home' }, localizedData: { title: 'Home' }, isLocalized: true }
+ * ```
  */
 export function prepareSchemaData(
   data: any,
@@ -113,7 +121,6 @@ export function prepareSchemaData(
   const { mainTableName, localesTableName, locale, tables, fillNotNull } = options;
 
   if (locale && localesTableName in tables) {
-    // Handle localized fields
     const unlocalizedColumns = getTableColumns(tables[mainTableName]);
     const localizedColumns = getTableColumns(tables[localesTableName]);
 
@@ -123,7 +130,6 @@ export function prepareSchemaData(
       isLocalized: true
     };
   } else {
-    // Handle non-localized fields
     const columns = getTableColumns(tables[mainTableName]);
     return {
       mainData: transformDataToSchema(data, columns, { fillNotNull }),
@@ -157,8 +163,7 @@ export function mergeContentRow(
   config: { fields: FieldBuilder[] },
   select?: string[]
 ): RawDoc {
-  // A base row with no content row is as good as absent — note this can be empty when a query
-  // returns no result.
+  // A base row with no content row is as good as absent.
   if (!doc[contentTable] || doc[contentTable].length === 0) {
     throw new RimeError(RimeError.NOT_FOUND);
   }
@@ -178,7 +183,7 @@ export function mergeContentRow(
       : pick(['id', ...joined], doc);
 
     // Filter out root props as they should come from the doc,
-    // plus the ownerId wich is equals to doc.id
+    // plus the ownerId which is equals to doc.id
     const contentFields = omit([...rootProps, 'ownerId'], contentRow);
 
     // `pick`/`omit` return generic Dic types, so TS can't statically confirm
@@ -202,17 +207,20 @@ export function mergeContentRow(
   } as unknown as RawDoc;
 }
 
+/**
+ * The drizzle `columns` of a read with `select`: `id`, plus each selected path that is a column
+ * of `table` (`attributes.title` -> `attributes__title`). `undefined` without a `select`, which
+ * reads every column.
+ */
 export function columnsParams({ table, select }: { table: Dic; select?: string[] }) {
   // Create an object to hold the columns we want to select
   const selectColumns: Dic = {};
   // If select fields are specified, build the select columns object
   if (select && select.length > 0) {
-    // Always include the ID column for the version
     selectColumns.id = true;
     // Process each requested field
     for (const path of select) {
       const sqlPath = pathToDatabaseColumn(path);
-      // If this column exists on the content table, add it to our select
       if (sqlPath in table) {
         selectColumns[sqlPath] = true;
       }
@@ -222,28 +230,20 @@ export function columnsParams({ table, select }: { table: Dic; select?: string[]
 }
 
 /**
- * Convert a document path using dot notation to a database schema path using double underscores.
- * This transformation is needed because SQL databases don't support dots in column names.
+ * A document path as a column name: SQL names hold no dot, so `.` becomes `__`.
  *
- * @param path - The document path with dot notation
- * @returns The database column path with double underscore notation
- *
- * @example
- * // Returns 'attributes__hero__title'
- * pathToDatabaseColumn('attributes.hero.title');
+ * ```ts
+ * pathToDatabaseColumn('attributes.hero.title') // 'attributes__hero__title'
+ * ```
  */
 export const pathToDatabaseColumn = (path: string): string => path.replace(/\./g, '__');
 
 /**
- * Convert a database schema path using double underscores to a document path using dot notation.
- * This transforms database column names back to document property paths.
+ * A column name as a document path. A table key (it holds a `$`) stays as it is.
  *
- * @param path - The database column path with double underscore notation
- * @returns The document path with dot notation
- *
- * @example
- * // Returns 'attributes.hero.title'
- * databaseColumnToPath('attributes__hero__title');
+ * ```ts
+ * databaseColumnToPath('attributes__hero__title') // 'attributes.hero.title'
+ * ```
  */
 export const databaseColumnToPath = (path: string): string =>
   isStructuralKey(path) ? path : path.replace(/__/g, '.');
@@ -263,17 +263,11 @@ export const databaseColumnToPath = (path: string): string =>
 const isStructuralKey = (key: string) => key.includes('$');
 
 /**
- * Converts an object's keys from database schema format (double underscores) to document format (dot notation).
+ * The object with each key turned from a column name into a document path.
  *
- * This function takes an object with keys using database column naming (e.g., 'attributes__title')
- * and transforms them to document path format (e.g., 'attributes.title') while preserving the values.
- *
- * @param obj - The object with database column keys
- * @returns A new object with keys converted to document paths
- *
- * @example
- * // Returns { 'attributes.title': 'Home' }
- * transformDatabaseColumnsToPaths({ 'attributes__title': 'Home' });
+ * ```ts
+ * transformDatabaseColumnsToPaths({ attributes__title: 'Home' }) // { 'attributes.title': 'Home' }
+ * ```
  */
 export const transformDatabaseColumnsToPaths = (obj: Record<string, any>): Record<string, any> => {
   const result: Record<string, any> = {};
@@ -284,31 +278,19 @@ export const transformDatabaseColumnsToPaths = (obj: Record<string, any>): Recor
 };
 
 /**
- * Extracts values from a data object and maps them to database column names using schema paths.
+ * The values of `data` for `columns`, keyed by column name: each column's path is read from the
+ * nested data (`attributes__title` from `data.attributes.title`). A missing value is left out,
+ * `null` is kept.
  *
- * This function converts document data (which may use nested objects with dot notation paths)
- * into a flat object with keys that match the database schema (using double underscore notation).
- * It only includes fields that exist in the provided columns schema.
+ * With `fillNotNull`, an empty NOT NULL column gets a placeholder of its type (`''`, `0`, …),
+ * unless it has a default of its own, and `id` gets a random id. Any other empty column is left
+ * out, `null` included.
  *
- * @param data - The document data object (may be nested)
- * @param columns - The database schema columns definition
- * @param params - Optional parameters for transformation
- * @param params.fillNotNull - If true, adds default values for NOT NULL columns
- * @returns A flat object with database column names and values
- *
- * @example
- * // Returns { 'attributes__title': 'Home' }
- * transformDataToSchema(
- *   { attributes: { title: 'Home' } },
- *   { 'attributes__title': { dataType: 'string', notNull: true } }
- * );
- *
- * // With fillNotNull, provides defaults for missing NOT NULL columns
- * transformDataToSchema(
- *   { attributes: {} },
- *   { 'attributes__title': { dataType: 'string', notNull: true } },
- *   { fillNotNull: true }
- * ); // Returns { 'attributes__title': '' }
+ * ```ts
+ * const columns = { attributes__title: { dataType: 'string', notNull: true } };
+ * transformDataToSchema({ attributes: { title: 'Home' } }, columns) // { attributes__title: 'Home' }
+ * transformDataToSchema({ attributes: {} }, columns, { fillNotNull: true }) // { attributes__title: '' }
+ * ```
  */
 export const transformDataToSchema = (
   data: Record<string, any>,

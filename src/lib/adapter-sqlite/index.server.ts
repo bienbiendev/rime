@@ -64,6 +64,10 @@ export function adapterSqlite(
   };
 }
 
+/**
+ * Opens the database and builds the `Adapter` handles over the generated schema, plus the SQL
+ * escape hatch: `db`, `tables`, `getTable`, `tableForSlug`, `schema`.
+ */
 const createAdapter = async <const C extends Config>(args: {
   database: string;
   driver: SqliteDriver;
@@ -114,6 +118,7 @@ const createAdapter = async <const C extends Config>(args: {
     db,
     tables: tables as GetRegisterType<'Tables'>,
 
+    /** A generated table by its key in the schema: `pages__$blocks_hero`. */
     getTable<T = GenericTable>(key: string): T {
       return tables[key as keyof typeof tables] as T;
     },

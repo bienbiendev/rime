@@ -53,6 +53,12 @@ export const createTransformHandle = <const C extends Config>(args: {
     };
   };
 
+  /**
+   * One raw row of a read as the four piles core builds a document from: `base` (the row's own
+   * columns as document paths, localized values merged in the fallback order, and its address),
+   * `blocks` and `tree` (child rows, their locales merged), and `relations` (junction rows as
+   * `relationTo`/`documentId`).
+   */
   const rows = async (args: {
     doc: RawDoc;
     slug: PrototypeSlug;
@@ -64,8 +70,8 @@ export const createTransformHandle = <const C extends Config>(args: {
 
     let doc: Dic = args.doc;
 
-    // The table this document's content is in — its own, unless the config is versioned. Read off
-    // the config rather than asked of a feature, which is what keeps this file naming none.
+    // The table this document's content is in: the versions table of a versioned config, else
+    // its own.
     const tableName = baseTableName(configCtx.getBySlug(slug)._versions?.slug ?? slug);
     const tableNameRelationFields = buildTableName({ owner: tableName, child: { kind: 'rels' } });
     // The addresses hang off the base row, whether or not the content is on a versions table.

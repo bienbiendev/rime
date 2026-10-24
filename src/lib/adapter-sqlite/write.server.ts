@@ -288,11 +288,15 @@ export const insertPrototype = async (
     }
   );
 
-  // No second row exists, so the two ids are the same thing.
-  // No versions: the content is on the base row, so that is the row children hang off.
+  // No versions: the content is on the base row, the one children hang off.
   return { id: docId, contentId: docId };
 };
 
+/**
+ * Deletes the document's base row by id and answers the id. Its blocks, tree rows, junction rows,
+ * locales rows, addresses and versions go with it through `ON DELETE CASCADE`, which needs
+ * foreign keys on (connect.server.ts). Throws NOT_FOUND when no row has that id.
+ */
 export const deletePrototype = async (
   { db, tables }: Deps,
   { slug, id }: { slug: string; id: string }

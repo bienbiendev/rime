@@ -54,7 +54,10 @@ export const updateRepeatable = async (
   return true;
 };
 
-/** Deletes the stored row. */
+/**
+ * Deletes the row by id. Its locales row goes with it through the `ON DELETE CASCADE` foreign
+ * key, which needs foreign keys on (connect.server.ts).
+ */
 export const deleteRepeatable = async (
   { db, tables }: AdapterDeps,
   table: TableName,

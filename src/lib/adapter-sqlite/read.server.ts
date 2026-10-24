@@ -284,7 +284,9 @@ export const findManyPrototypes = async (
         return adapterUtil.mergeContentRow(doc, contentTable, config, select);
       } catch (err: any) {
         // A document left with no content row drops out of the result rather than failing the
-        // whole read. The `where` above keeps such a document off the page in the first place.
+        // whole read. The `where` above, present with a `query` or a `content` filter, keeps such a
+        // document off the page; without either, it is dropped after `limit`, and the page comes
+        // back one short.
         if (err instanceof RimeError && err.code === RimeError.NOT_FOUND) return false;
         throw err;
       }

@@ -20,6 +20,7 @@ export const createTableHandles = (args: {
 }) => {
   const { db, tables } = args;
 
+  /** The handle of the declared table `slug` (`$authUsers`). Throws when the schema has none. */
   const get = (slug: string): TableHandle => {
     const name = declaredTableProperty(slug);
     const table = tables[name as keyof typeof tables] as unknown as GenericTable;
@@ -61,6 +62,10 @@ export const createTableHandles = (args: {
     };
 
     return {
+      /**
+       * The rows matching every condition of `where`, with only the `select` columns when given.
+       * An empty `where` reads every row; no `limit`, or 0, reads them all.
+       */
       find: async ({ where = {}, select, limit } = {}) => {
         const columns = select?.length
           ? Object.fromEntries(select.map((name) => [name, columnOf(name)]))
@@ -75,10 +80,12 @@ export const createTableHandles = (args: {
         return (await query) as Dic[];
       },
 
+      /** Writes `data` on the rows matching `where`; an empty `where` is refused. */
       update: async ({ where, data }) => {
         await db.update(table).set(data).where(writeFilter(where, 'update'));
       },
 
+      /** Deletes the rows matching `where`; an empty `where` is refused. */
       delete: async ({ where }) => {
         await db.delete(table).where(writeFilter(where, 'delete'));
       }

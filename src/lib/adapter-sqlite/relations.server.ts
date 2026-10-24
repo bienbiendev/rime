@@ -9,7 +9,17 @@ import { and, eq, getTableColumns, inArray, isNull, or, type SQLWrapper } from '
 import { transformDataToSchema } from './columns.server.js';
 import { resolveRelationTarget } from './transform.server.js';
 
+/**
+ * The junction rows of a prototype's relation fields, in its `__$relations` table: one row per
+ * related document, at the field's `path`, in `position` order, the target in a column of its
+ * own (`mediasId`).
+ */
 const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
+  /**
+   * Deletes the junction rows at or below each of `paths`: `sections.1` takes `sections.1.image`,
+   * not `sections.10.image`. With `locale`, on a junction that has a `locale` column, only rows of
+   * that locale go; unlocalized rows stay.
+   */
   const deleteFromPaths: DeleteFromPaths = async ({ parentSlug, ownerId, paths, locale }) => {
     if (paths.length === 0) return true;
 
@@ -20,10 +30,8 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
     const table = tables[relationTableName];
     if (!table) return true;
 
-    // Only some relation tables have a `locale` column at all — it's added
-    // only when the collection has at least one .localized() relation field
-    // (see getAll's identical guard below). Without this check, eq(undefined,
-    // locale) produces SQL with a missing column reference.
+    // Only a junction holding a localized relation has a `locale` column (getAll checks the same).
+    // Unlike getAll, this keeps the rows of `locale` only, not the unlocalized ones.
     const columns = Object.keys(getTableColumns(table));
     const conditions: SQLWrapper[] = [eq(table.ownerId, ownerId)];
     if (locale && columns.includes('locale')) {
@@ -45,6 +53,11 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
     return true;
   };
 
+  /**
+   * Inserts one junction row per relation that names a document, in order; one with no
+   * `documentId` is skipped. The first insert that fails throws, naming its path, and the rows
+   * before it stay written.
+   */
   const create: Create = async ({ parentSlug, ownerId, relations }) => {
     const relationTableName = tableName({
       owner: baseTableName(parentSlug),
@@ -79,6 +92,10 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
     return true;
   };
 
+  /**
+   * Writes each row's `path`, `position` and target, by its id. On a junction with a `locale`
+   * column, its `locale` too.
+   */
   const update: Update = async ({ parentSlug, relations }) => {
     const relationTableName = tableName({
       owner: baseTableName(parentSlug),
@@ -110,6 +127,7 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
     return true;
   };
 
+  /** Deletes the junction rows named by id. */
   const deleteRelations: Delete = async ({ parentSlug, relations }) => {
     const relationTableName = tableName({
       owner: baseTableName(parentSlug),
@@ -133,15 +151,17 @@ const createRelationsHandle = ({ db, tables }: AdapterDeps) => {
     return true;
   };
 
+  /**
+   * Every junction row of `ownerId`, read as `relationTo` and `documentId`. With `locale`, the rows
+   * of that locale and the unlocalized ones.
+   */
   const getAll: GetAllRelations = async ({ parentSlug, ownerId, locale }) => {
     const relationTableName = tableName({
       owner: baseTableName(parentSlug),
       child: { kind: 'rels' }
     });
 
-    // If the collection doesn't have relation
-    // relationTableName doesn't exist
-    // then there are no relations
+    // No relation field, no junction table: no rows.
     if (!(relationTableName in tables)) {
       return [];
     }

@@ -28,6 +28,7 @@ type Args = {
   locales?: LocaleConfig[];
   hasParent?: boolean;
   relationTargets?: RelationTargets;
+  /** Parent table -> its child tables, for the `defineRelations` block. */
   relationsDic?: Record<string, string[]>;
   /**
    * Storage-only columns to append to this config's table, in order.
@@ -114,6 +115,8 @@ const buildRootTable = async ({
 
   /**
    * The columns of one table, and in `indexed` the ones a field asked `$index()` for.
+   * `withLocalized`: `true` keeps the localized leaves only (the locales branch), `false` the
+   * others (the table), `undefined` all of them (a table with no branch).
    */
   const generateFieldsTemplates = async (
     fields: FieldBuilder<Field>[],
@@ -123,6 +126,7 @@ const buildRootTable = async ({
   ): Promise<string[]> => {
     let templates: string[] = [];
 
+    /** Whether `field` is a column of the table being built: see `withLocalized`. */
     const checkLocalized = (field: FormFieldBuilder<FormField>) => {
       return (
         (withLocalized && field.get.localized) ||

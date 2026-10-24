@@ -48,6 +48,12 @@ type Args = {
   rootTable?: any;
 };
 
+/**
+ * The drizzle `orderBy` of a list, from the REST `sort`: a document path, with `-` in front for
+ * descending (`-attributes.title`). A localized field orders by the value a read in `locale`
+ * shows, a field of a versioned prototype by the content row each document shows. No `sort`
+ * orders by `updatedAt`, newest first. A path the prototype cannot sort by throws.
+ */
 export const buildOrderByParam = ({
   slug,
   locale,

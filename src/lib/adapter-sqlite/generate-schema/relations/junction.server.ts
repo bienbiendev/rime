@@ -4,9 +4,9 @@ import type { RelationTargets } from '../root.server.js';
 import type { TableName } from '../../naming.server.js';
 
 /**
- * Generates a junction table definition for many-to-many relationships
- * Takes a table name, the collections its relation fields point at, and locale flag to create:
- * - A junction table (e.g. 'pages__$relations') with references to related tables
+ * The one junction table of a prototype: the rows of every relation field, told apart by `path`,
+ * with one target column per related collection. `junctionTable` is empty when no relation field
+ * points anywhere.
  *
  * @example
  * {

@@ -20,6 +20,11 @@ import {
 } from './templates.server.js';
 import write from './write.server.js';
 
+/**
+ * The source of the generated drizzle schema: per prototype its table (two for a versioned one),
+ * locales branches, child tables, relations junction and, with `$url`, paths table; then the
+ * declared tables, the `tables` export, the one `relations` block and the `schema` export.
+ */
 async function generateSchemaString(config: BuiltConfig) {
   // Every prototype config that generates a schema, collections and areas alike.
   const prototypes = [...config.collections, ...config.areas].filter(
@@ -134,6 +139,7 @@ async function generateSchemaString(config: BuiltConfig) {
   return schema.join('\n').replace(/\n{3,}/g, '\n\n');
 }
 
+/** Builds the schema source and hands it to `write`, which writes the file and runs drizzle-kit. */
 const generateSchema = async (config: BuiltConfig) => {
   const result = await generateSchemaString(config);
   write(result);
