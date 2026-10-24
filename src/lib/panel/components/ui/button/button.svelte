@@ -295,9 +295,6 @@
   }
 
   .rz-button--size-xs .rz-button__icon {
-    display: grid;
-    place-content: center;
-    border-radius: var(--rz-radius-sm);
     height: var(--rz-size-2);
     width: var(--rz-size-2);
   }

@@ -15,6 +15,6 @@
   <ScrollAreaPrimitive.Viewport class="rz-scroll-area__viewport rz-scroll-area {className}">
     {@render children?.()}
   </ScrollAreaPrimitive.Viewport>
-  <Scrollbar orientation="vertical" />
+  <Scrollbar />
   <ScrollAreaPrimitive.Corner />
 </ScrollAreaPrimitive.Root>

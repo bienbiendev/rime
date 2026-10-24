@@ -14,11 +14,11 @@
     checked: boolean;
     doc: GenericDoc;
     /** On while a row is checked: the title then picks its row. */
-    isSelectMode?: boolean;
+    isSelectMode: boolean;
     config: BuiltCollection;
-    /** Given, the row has a checkbox: shown on hover, and always once a row is checked. */
-    toggleSelectOf?: (id: string) => void;
-    columns?: Array<{ path: string; cell?: any }>;
+    /** Checks or unchecks the row. The checkbox shows on hover, and once a row is checked. */
+    toggleSelectOf: (id: string) => void;
+    columns: Array<{ path: string; cell?: any }>;
     /** The document's path, after its title: `/studio`. */
     path?: string;
     draggable?: 'true';
@@ -47,17 +47,13 @@
   draggable={draggable || null}
   ondragstart={draggable ? handleDragStart : null}
 >
-  {#if toggleSelectOf}
-    <Checkbox
-      id="checkbox-{doc.id}"
-      class="rz-list-row__checkbox"
-      aria-label={title}
-      {checked}
-      onCheckedChange={() => toggleSelectOf(doc.id)}
-    />
-  {:else}
-    <span></span>
-  {/if}
+  <Checkbox
+    id="checkbox-{doc.id}"
+    class="rz-list-row__checkbox"
+    aria-label={title}
+    {checked}
+    onCheckedChange={() => toggleSelectOf(doc.id)}
+  />
 
   <div class="rz-list-row__main">
     {#if config.upload || doc._thumbnail}

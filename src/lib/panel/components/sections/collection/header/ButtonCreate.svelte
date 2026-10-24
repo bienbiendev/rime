@@ -1,7 +1,5 @@
 <script lang="ts">
   import { createPath } from '#lib/panel/util/url.js';
-  import { page } from '$app/state';
-  import { PARAMS } from '#lib/core/constants.js';
   import { t__ } from '#lib/core/i18n/index.js';
   import Button from '#lib/panel/components/ui/button/button.svelte';
   import type { BuiltCollection } from '#lib/types.js';
@@ -20,9 +18,7 @@
     config.label.create || t__(`common.create_new`, config.label.singular)
   );
 
-  const createPathname = $derived(
-    createPath(config, page.url.searchParams.get(PARAMS.UPLOAD_PATH))
-  );
+  const createPathname = $derived(createPath(config));
 </script>
 
 {#if size === 'sm'}

@@ -4,15 +4,14 @@
   let {
     ref = $bindable(null),
     class: className,
-    orientation = 'vertical',
     ...restProps
-  }: WithoutChild<ScrollAreaPrimitive.ScrollbarProps> = $props();
+  }: Omit<WithoutChild<ScrollAreaPrimitive.ScrollbarProps>, 'orientation'> = $props();
 </script>
 
 <ScrollAreaPrimitive.Scrollbar
   bind:ref
-  {orientation}
-  class="rz-scroll-area-scroll-bar rz-scroll-area-scroll-bar--{orientation}  {className}"
+  orientation="vertical"
+  class="rz-scroll-area-scroll-bar rz-scroll-area-scroll-bar--vertical {className}"
   {...restProps}
 >
   <ScrollAreaPrimitive.Thumb class="rz-scroll-area-scroll-bar__thumb" />

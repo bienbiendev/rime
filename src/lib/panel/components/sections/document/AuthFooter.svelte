@@ -1,7 +1,5 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { isAuthConfig } from '#lib/core/auth/util.js';
-  import type { BuiltCollection } from '#lib/core/config/types.js';
   import { RimeFormError } from '#lib/core/errors/index.js';
   import { t__ } from '#lib/core/i18n/index.js';
   import { panelUrl } from '#lib/core/routes/util.js';
@@ -13,8 +11,8 @@
   import { toast } from 'svelte-sonner';
   import Button from '../../ui/button/button.svelte';
 
-  type Props = { operation: string; form: DocumentFormContext; collection: BuiltCollection };
-  const { operation, form, collection }: Props = $props();
+  type Props = { operation: string; form: DocumentFormContext };
+  const { operation, form }: Props = $props();
 
   const user = getUserContext();
 
@@ -51,22 +49,18 @@
 
 <!-- For creation show passwords fields -->
 <!-- For updates show reset password if mailer plugin exists -->
-{#if operation === 'create' || (user.attributes.isStaff && page.data?.hasMailer)}
+{#if operation === 'create'}
   <div class="rz-document-auth">
-    {#if operation === 'create'}
-      {#if isAuthConfig(collection) && collection.auth.type === 'password'}
-        <Text {form} type="password" config={passwordConfig} path="password" />
-        <Text {form} type="password" config={confirmPasswordConfig} path="confirmPassword" />
-      {/if}
-    {:else if user.attributes.isStaff && page.data?.hasMailer}
-      {#if isAuthConfig(collection) && collection.auth.type === 'password'}
-        <div>
-          <Button onclick={sendPasswordResetLink} variant="secondary" size="sm">
-            {t__('common.sendPasswordResetLink')}
-          </Button>
-        </div>
-      {/if}
-    {/if}
+    <Text {form} type="password" config={passwordConfig} path="password" />
+    <Text {form} type="password" config={confirmPasswordConfig} path="confirmPassword" />
+  </div>
+{:else if user.attributes.isStaff && page.data?.hasMailer}
+  <div class="rz-document-auth">
+    <div>
+      <Button onclick={sendPasswordResetLink} variant="secondary" size="sm">
+        {t__('common.sendPasswordResetLink')}
+      </Button>
+    </div>
   </div>
 {/if}
 

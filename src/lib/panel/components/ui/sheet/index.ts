@@ -14,4 +14,4 @@ export {
   Portal as SheetPortal
 };
 
-export type Side = 'top' | 'left' | 'bottom' | 'right';
+export type Side = 'right';

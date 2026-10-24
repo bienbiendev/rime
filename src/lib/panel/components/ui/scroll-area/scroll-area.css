@@ -1,6 +1,5 @@
 .rz-scroll-area {
   position: relative;
-  overflow: hidden;
 }
 .rz-scroll-area__viewport {
   height: 100%;
@@ -17,11 +16,6 @@
   user-select: none;
   transition-property: background-color, border-color, fill, stroke;
   padding: 1px;
-}
-.rz-scroll-area-scroll-bar--horizontal {
-  height: var(--rz-size-2-5);
-  width: 100%;
-  border-top: 1px solid transparent;
 }
 .rz-scroll-area-scroll-bar--vertical {
   width: var(--rz-size-2-5);

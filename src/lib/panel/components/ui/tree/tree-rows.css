@@ -17,7 +17,7 @@
 }
 
 /* The card around a tree: its rows, and whatever heads them. */
-.rz-tree-card:not([data-empty]) {
+.rz-tree-card {
   @mixin surface raised;
   border-radius: var(--rz-radius-xl);
   overflow: hidden;
@@ -26,13 +26,6 @@
   > :first-child > .rz-tree-row {
     box-shadow: none;
   }
-}
-
-/* Inside a group, a block, a tree item or the inspector: a hairline, no second fill. */
-:is(.rz-group-field__content, .rz-block__fields, .rz-tree-item__fields, .rz-inspector__fields)
-  .rz-tree-card:not([data-empty]) {
-  background-color: transparent;
-  box-shadow: 0 0 0 1px var(--rz-border);
 }
 
 /* A nested list: the guide down from its parent's chevron, through every row under it. */

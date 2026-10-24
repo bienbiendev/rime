@@ -41,19 +41,22 @@
   const childFilesURL = $derived(
     `${apiUrl(collection.kebab)}?where[_path][equals]=${folder.id}&select=id`
   );
-  const childFiles = $derived(APIProxy.getRessource<{ docs: GenericDoc[] }>(childFilesURL));
-  const childFilesCount = $derived(childFiles.data?.docs?.length || 0);
+  const childFiles = $derived(
+    isFolderUpperPath ? null : APIProxy.getRessource<{ docs: GenericDoc[] }>(childFilesURL)
+  );
+  const childFilesCount = $derived(childFiles?.data?.docs?.length || 0);
   const baseFolderApiURL = $derived(`${apiUrl(directoriesKebab(collection.slug))}`);
   const childFoldersURL = $derived(
     `${baseFolderApiURL}?where[parent][equals]=${folder.id}&select=id`
   );
-  const childFolders = $derived(APIProxy.getRessource<{ docs: GenericDoc[] }>(childFoldersURL));
-  const childFoldersCount = $derived(childFolders.data?.docs?.length || 0);
+  const childFolders = $derived(
+    isFolderUpperPath ? null : APIProxy.getRessource<{ docs: GenericDoc[] }>(childFoldersURL)
+  );
+  const childFoldersCount = $derived(childFolders?.data?.docs?.length || 0);
   // What the folder holds, files and folders, once both counts are in.
+  // The parent tile asks for nothing and shows no count.
   const itemsCount = $derived(
-    !isFolderUpperPath && childFiles.data && childFolders.data
-      ? childFilesCount + childFoldersCount
-      : null
+    childFiles?.data && childFolders?.data ? childFilesCount + childFoldersCount : null
   );
 
   function handleGetDeleteInfos() {
@@ -78,8 +81,7 @@
   }
 
   async function handleDropFolder(folderId: string) {
-    const movedFolderPath = folderId;
-    const name = movedFolderPath.split(UPLOAD_PATH.SEPARATOR).at(-1);
+    const name = folderId.split(UPLOAD_PATH.SEPARATOR).at(-1);
     const newFolderPath = `${folder.id}${UPLOAD_PATH.SEPARATOR}${name}`;
     const moveAPICallURL = `${baseFolderApiURL}/${folderId}`;
     const [error] = await trycatchFetch(moveAPICallURL, {
@@ -93,7 +95,7 @@
     }
 
     toast.success('Folder moved successfully');
-    childFolders.refresh();
+    childFolders?.refresh();
     return invalidateAll();
   }
 
@@ -109,7 +111,7 @@
     }
     toast.success('Document moved successfully');
     onDocumentDrop({ documentId: docId, path: folder.id });
-    childFiles.refresh();
+    childFiles?.refresh();
   }
 
   async function handleDrop(e: DragEvent) {

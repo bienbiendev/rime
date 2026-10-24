@@ -18,7 +18,6 @@
     background-color: var(--rz-accent-tint);
   }
   &:focus-within {
-    position: relative;
     z-index: 20;
   }
   &:has([data-selected]) {

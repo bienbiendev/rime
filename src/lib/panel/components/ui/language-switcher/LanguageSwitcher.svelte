@@ -16,7 +16,7 @@
 
   const locale = getLocaleContext();
   const config = getConfigContext();
-  const locales = $state(config.raw.localization?.locales || []);
+  const locales = config.raw.localization?.locales || [];
 
   function isActive(code: string) {
     return code === locale.code;

@@ -86,12 +86,7 @@
   }
 
   .rz-page-header__top-right {
-    display: flex;
-    align-items: center;
     gap: var(--rz-size-1);
-  }
-
-  .rz-page-header__top-right {
     justify-content: flex-end;
   }
 

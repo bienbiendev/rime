@@ -338,7 +338,7 @@
       <RenderFields fields={config.fields} {form} />
     {/if}
     {#if config.type === 'collection' && isAuthConfig(config) && config.auth.type === 'password'}
-      <AuthFooter collection={config} {operation} {form} />
+      <AuthFooter {operation} {form} />
     {/if}
   </div>
 

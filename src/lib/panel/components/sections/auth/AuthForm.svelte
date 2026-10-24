@@ -78,7 +78,6 @@
         @mixin font-semibold;
       }
       :global(form) {
-        flex-direction: column;
         display: flex;
         flex-direction: column;
         justify-content: center;

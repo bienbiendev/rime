@@ -6,9 +6,8 @@
   type Props = {
     url?: string;
     mimeType?: string;
-    class?: string;
   };
-  const { url, class: className, mimeType }: Props = $props();
+  const { url, mimeType }: Props = $props();
 
   const mimeTypeResolved = $derived.by(() => {
     if (mimeType) return mimeType;
@@ -23,7 +22,7 @@
   });
 </script>
 
-<div class="rz-upload-preview-cell {mimeClass} {className}">
+<div class="rz-upload-preview-cell {mimeClass}">
   <div>
     {#if url && mimeTypeResolved.includes('image')}
       <img class="rz-upload-preview-cell__image" src={url} alt="preview" />

@@ -21,7 +21,6 @@
 
 .rz-radio__option {
   display: flex;
-  flex-shrink: 0;
   flex: 1;
 }
 
