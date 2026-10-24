@@ -8,16 +8,20 @@ import { missingRelations } from '#lib/fields/relation/exists.server.js';
 import { isRelationField } from '#lib/fields/relation/index.js';
 import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
 import { isFormField } from '#lib/core/fields/util.js';
-import { walkFields } from '#lib/core/fields/walk.js';
+import { walkFields, walkValues } from '#lib/core/fields/walk.js';
 import type { Dic } from '#lib/util/types.js';
 import type { FormErrors } from '#lib/panel/types.js';
 import {
   deleteValueAtPath,
   getValueAtPath,
   isObjectLiteral,
-  setValueAtPath
+  setValueAtPath,
+  withDefaultValues
 } from '#lib/util/object.js';
 import { isWithin } from '#lib/util/string.js';
+import { buildConfigMap } from '../config-map/index.js';
+import { fallbackDataFromOriginal } from '../fallback-data-from-original.js';
+import { isSaved } from '../persist/repeatable.server.js';
 import { withoutDeniedFields } from '../without-denied-fields.js';
 
 /**
@@ -31,6 +35,14 @@ import { withoutDeniedFields } from '../without-denied-fields.js';
  * ```ts
  * // group('meta').access({ update: isAdmin }).fields(blocks('gallery', [image]))
  * // an editor: PATCH { meta: { gallery: [] } }  ->  data {}, configMap {}: the gallery stays
+ * ```
+ *
+ * An update is checked as the document it leaves: `validate` reads that document, and `required`
+ * holds on it, sent value or stored. Only the sent values run their hooks.
+ *
+ * ```ts
+ * // text('title').required(), text('summary').required(), stored { title: 'Home', summary: '' }
+ * // PATCH { title: 'Home 2' }  ->  summary: required_field
  * ```
  *
  * A staff request with `?skipValidation=true` may leave required fields empty; a locale copy
@@ -60,10 +72,9 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
   /* Access
   /****************************************************/
 
-  // A denied field leaves the data, and the map with every key below it. It is never validated nor
-  // reported missing, and never written: a create leaves its column to the column's own default,
-  // an update leaves the stored column as it is. Inside a stored list row, an update writes back
-  // the stored value instead, unchecked.
+  // A denied field leaves the data, and the map with every key below it. It is never validated and
+  // never written: a create leaves its column empty, an update leaves the stored column as it is.
+  // Inside a stored list row, an update writes back the stored value instead, unchecked.
   //
   // FormFieldBuilder's default `access.create` is `(user) => !!user`, so an anonymous create is
   // denied most fields.
@@ -84,6 +95,21 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
   // Own copy: the steps below write into it
   let output = { ...allowed.data };
   const configMap = allowed.configMap;
+
+  // The document this save leaves: on an update, what it sends over what is stored
+  const merged =
+    operation === 'update' && originalDoc && originalConfigMap
+      ? withStoredRows(
+          fallbackDataFromOriginal({
+            data: allowed.data,
+            original: originalDoc,
+            configMap: originalConfigMap,
+            ignore: []
+          }),
+          originalDoc,
+          args.config.fields
+        )
+      : allowed.data;
 
   for (const [key, config] of Object.entries(configMap)) {
     if (allowed.kept.some((path) => isWithin(key, path))) continue;
@@ -106,7 +132,7 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
     if (config.get.validate && value !== undefined && value !== null && !skipHooks) {
       try {
         const valid = config.use.validate(value, {
-          data: output as Partial<GenericDoc>,
+          data: merged as Partial<GenericDoc>,
           operation,
           id: operation === 'update' ? args.context.originalDoc?.id : undefined,
           user: user,
@@ -171,20 +197,25 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
       if (missing.length) errors[key] = RimeFormError.RELATION_NOT_FOUND;
     }
 
-    // Required: an empty value is reported missing
-    if (config.get.required && config.use.isEmpty(value)) {
-      if (skipRequired) {
-        // The field's own default, else nothing is written: a create leaves the column to its own
-        // default, of the right type, and an update leaves the stored column as it is. The key
-        // stays in the map, so a list or a relation sent empty is emptied.
-        const fallback = config.use.defaultValue({ event });
-        output =
-          fallback === null || fallback === undefined
-            ? deleteValueAtPath(output, key)
-            : setValueAtPath(key, output, fallback);
-      } else {
-        errors[key] = RimeFormError.REQUIRED_FIELD;
-      }
+    // A required value left empty without the check takes the field's own default, else nothing
+    // is written: a create leaves the column empty, and an update leaves the stored column as it
+    // is. The key stays in the map, so a list or a relation sent empty is emptied.
+    if (skipRequired && config.get.required && config.use.isEmpty(value)) {
+      const fallback = config.use.defaultValue({ event });
+      output =
+        fallback === null || fallback === undefined
+          ? deleteValueAtPath(output, key)
+          : setValueAtPath(key, output, fallback);
+    }
+  }
+
+  // Required: the document as saved holds a value, sent or stored. A sent value is read after its
+  // hooks.
+  if (!skipRequired) {
+    for (const [key, config] of Object.entries(buildConfigMap(merged, args.config.fields))) {
+      if (!config.get.required) continue;
+      const value = getValueAtPath(key, key in configMap ? output : merged);
+      if (config.use.isEmpty(value)) errors[key] = RimeFormError.REQUIRED_FIELD;
     }
   }
 
@@ -231,3 +262,39 @@ const requiredUnderNull = (data: Dic, fields: FieldBuilder[]) =>
       }
       return false;
     });
+
+/**
+ * `data` with each saved row it sends laid over the stored row of the same `id`, wherever that row
+ * sat: the fields the row leaves out take their stored values. A new row, and a block sent as
+ * another type, stay as sent.
+ *
+ * ```ts
+ * // stored { layout: [{ id: 'b1', type: 'hero', title: 'Home', label: 'Go' }] }
+ * withStoredRows({ layout: [{ id: 'b1', type: 'hero', label: 'Start' }] }, stored, fields)
+ * // { layout: [{ id: 'b1', type: 'hero', title: 'Home', label: 'Start' }] }
+ * ```
+ */
+const withStoredRows = (data: Dic, stored: Dic, fields: FieldBuilder[]): Dic => {
+  const storedRows = new Map<string, Dic>();
+  for (const { row } of savedRows(fields, stored)) storedRows.set(row.id, row);
+
+  let output = data;
+  for (const { path, row } of savedRows(fields, data)) {
+    const storedRow = storedRows.get(row.id);
+    if (!storedRow || storedRow.type !== row.type) continue;
+    // `layout.0:hero` is set at `layout.0`: setValueAtPath drops the block type
+    output = setValueAtPath(path, output, withDefaultValues(row, storedRow));
+  }
+  return output;
+};
+
+/** Every saved block and tree item of `data`, at any depth, with the path it sits at. */
+function* savedRows(fields: FieldBuilder[], data: Dic) {
+  for (const { field, path, value } of walkValues(fields, data)) {
+    for (const node of field.use.nodesFor(value)) {
+      if (node.storage && isObjectLiteral(node.value) && isSaved(node.value)) {
+        yield { path: `${path}.${node.segment}`, row: node.value as Dic & { id: string } };
+      }
+    }
+  }
+}

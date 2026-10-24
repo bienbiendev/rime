@@ -1247,10 +1247,12 @@ test('Should get settings FR with still FR data', async ({ request }) => {
   expect(doc.legalMention).toBe('mentions légales');
 });
 
+// The area's row from boot holds no `email`: its first save fills the required field
 test('Should update infos', async ({ request }) => {
   const response = await request.patch(`${API_BASE_URL}/infos`, {
     headers: await signInSuperAdmin(request),
     data: {
+      email: 'contact@email.com',
       instagram: '@fooo',
       legals: {
         label: 'Google',
@@ -1271,6 +1273,7 @@ test('Should update infos EN', async ({ request }) => {
   const response = await request.patch(`${API_BASE_URL}/infos?locale=en`, {
     headers: await signInSuperAdmin(request),
     data: {
+      email: 'contact@email.com',
       legals: {
         label: 'Google-en',
         type: 'url',

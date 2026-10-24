@@ -541,3 +541,73 @@ describe('validateFields: a block row sent without a required field', () => {
     expect(result.context.configMap).not.toHaveProperty(['layout.0.title']);
   });
 });
+
+describe('validateFields: an update is checked as the document it leaves', () => {
+  const user = { id: 'u1' };
+  const fields = [text('title').required(), text('summary').required()];
+
+  test('a required field left out and stored empty is reported missing', async () => {
+    const promise = runValidate({
+      fields,
+      data: { title: 'Home 2' },
+      user,
+      originalDoc: { id: 'p1', title: 'Home', summary: null }
+    });
+
+    await expect(promise).rejects.toMatchObject({
+      errors: { summary: RimeFormError.REQUIRED_FIELD }
+    });
+  });
+
+  test('a required field left out and stored filled passes, and is not written', async () => {
+    const result = await runValidate({
+      fields,
+      data: { title: 'Home 2' },
+      user,
+      originalDoc: { id: 'p1', title: 'Home', summary: 'Welcome' }
+    });
+
+    expect(result.data).toEqual({ title: 'Home 2' });
+    expect(result.context.configMap).not.toHaveProperty('summary');
+  });
+
+  test('a saved block row sent without its required field is checked against the stored row', async () => {
+    const layout = [
+      blocks('layout', [block('cta').fields(text('title').required(), text('label'))])
+    ];
+    const data = { layout: [{ id: 'b1', type: 'cta', label: 'Go' }] };
+
+    await expect(
+      runValidate({
+        fields: layout,
+        data,
+        user,
+        originalDoc: { id: 'p1', layout: [{ id: 'b1', type: 'cta', title: 'Act', label: 'Old' }] }
+      })
+    ).resolves.toBeDefined();
+
+    await expect(
+      runValidate({
+        fields: layout,
+        data,
+        user,
+        originalDoc: { id: 'p1', layout: [{ id: 'b1', type: 'cta', title: null, label: 'Old' }] }
+      })
+    ).rejects.toMatchObject({ errors: { 'layout.0.title': RimeFormError.REQUIRED_FIELD } });
+  });
+
+  test('a validate that reads another field gets its stored value when it is not sent', async () => {
+    const { number } = await import('#lib/fields/number/index.js');
+    const range = [
+      number('start'),
+      number('end').validate((end, { data }) => Number(end) > data.start || 'Before start')
+    ];
+
+    await expect(
+      runValidate({ fields: range, data: { end: 3 }, user, originalDoc: { id: 'p1', start: 5 } })
+    ).rejects.toMatchObject({ errors: { end: 'Before start' } });
+    await expect(
+      runValidate({ fields: range, data: { end: 8 }, user, originalDoc: { id: 'p1', start: 5 } })
+    ).resolves.toBeDefined();
+  });
+});

@@ -16,7 +16,7 @@ import type { BuiltArea, BuiltCollection, CollectionSlug } from '#lib/types.js';
 import { getValueAtPath, isObjectLiteral, omit, setValueAtPath } from '#lib/util/object.js';
 import type { Dic } from '#lib/util/types.js';
 import { retireAutoSaves } from '../retire-auto-saves.server.js';
-import { fallbackDataFromOriginal } from './fallback-data-from-original.js';
+import { fallbackDataFromOriginal } from '#lib/core/pipeline/fallback-data-from-original.js';
 
 /**
  * Where a versioned document's content lives for *this* update — overriding the default.

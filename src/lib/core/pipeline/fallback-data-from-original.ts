@@ -1,19 +1,19 @@
 import { getValueAtPath, setValueAtPath } from '#lib/util/object.js';
 import type { Dic } from '#lib/util/types.js';
-import type { ConfigMap } from '#lib/core/pipeline/config-map/types.js';
+import type { ConfigMap } from './config-map/types.js';
 
 /**
- * A new version holds the whole document: each field the update did not send takes the previous
- * version's value. A field sent empty stays empty, so a field cleared on purpose stays cleared.
+ * The document an update leaves: each field the update did not send takes the stored value. A
+ * field sent empty stays empty, so a field cleared on purpose stays cleared.
  *
  * ```ts
- * // previous version: { title: 'A', intro: 'B' }
+ * // stored: { title: 'A', intro: 'B' }
  * fallbackDataFromOriginal({ data: { title: 'C' }, … })               // { title: 'C', intro: 'B' }
  * fallbackDataFromOriginal({ data: { title: 'C', intro: null }, … })  // { title: 'C', intro: null }
  * ```
  *
  * A list sent — blocks, tree items, relations — is the update's as sent: nothing is taken into it
- * from the previous version's list.
+ * from the stored list.
  */
 export const fallbackDataFromOriginal = <T extends Dic>(args: {
   data: T;
