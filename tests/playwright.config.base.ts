@@ -28,6 +28,13 @@ type Args = {
   workers?: number;
 };
 
+/**
+ * One suite's Playwright config: `rime:use <name>` copies tests/<name> into place, `vite dev`
+ * serves it, then tests/setup.test.ts creates the admin before every tests/<name>/*.test.ts.
+ *
+ * @example
+ * export default createPlaywrightConfig({ name: 'basic' });
+ */
 export function createPlaywrightConfig({ name, workers = 1 }: Args): PlaywrightTestConfig {
   return defineConfig({
     workers,
@@ -35,17 +42,8 @@ export function createPlaywrightConfig({ name, workers = 1 }: Args): PlaywrightT
     webServer: {
       command: `echo "==========================================\n# Running rime:use ${name}\n" && bun run rime:use ${name} && bunx vite dev`,
       cwd: process.cwd(),
-      // `url`, not `port`: a port check passes the moment vite binds the socket, while the
-      // first request still has to pull the whole SSR module graph through vite — tens of
-      // seconds on a cold cache or a slow machine. That warm-up then lands inside the first
-      // test instead of the startup budget, and setup.test.ts fails on its own 30s timeout
-      // with the server perfectly healthy. Waiting on a real response moves it where it
-      // belongs, under `timeout` below.
-      //
-      // The panel sign-in page rather than `/`: playwright polls until it gets a 2xx/3xx, and
-      // `/` cannot be relied on for that. Every suite starts on a fresh database, so a fixture
-      // whose home page loads a document (basic, versions) 404s until the tests create one.
-      // Sign-in is generated for every config, needs no auth, and returns 200 immediately.
+      // Waits for the sign-in page to answer: it exists in every config, needs no session and no
+      // document, and answers once vite has loaded the server modules.
       url: `${env.SITE_URL}/${env.RIME_PANEL_ROUTE || 'panel'}/sign-in`,
       timeout: 180000,
       stdout: 'pipe',

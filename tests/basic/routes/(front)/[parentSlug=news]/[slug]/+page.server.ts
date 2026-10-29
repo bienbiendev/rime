@@ -1,6 +1,10 @@
 import { checkLiveRedirect } from '#lib/panel/util/live.server.js';
 import { error, type ServerLoadEvent } from '@sveltejs/kit';
 
+/**
+ * Serves the news whose slug is the last segment of `/news/<slug>`. Staff asking `?live=1` go to
+ * the live editor.
+ */
 export const load = async (event: ServerLoadEvent) => {
   const { rime } = event.locals;
   const { parentSlug, slug } = event.params;

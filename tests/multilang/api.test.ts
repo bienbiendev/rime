@@ -228,7 +228,6 @@ test('Should create a page', async ({ request }) => {
         title: 'Page',
         slug: 'page'
       },
-      // status: 'published',
       layout: {
         components: [
           {
@@ -628,7 +627,7 @@ test('Should resolve title from asTitle when selecting title by id', async ({ re
 });
 
 /****************************************************
-/* LOCALE-FALLBACK HOOK PROPAGATION (createMarker regression)
+/* A $beforeSave that is not idempotent runs once, whatever locale reads the page
 /****************************************************/
 
 test('Should run a non-idempotent $beforeSave once, whatever locale reads it', async ({
@@ -1106,8 +1105,8 @@ test('Should duplicate a page with localized blocks, each locale keeping its own
   const { doc: frDoc } = await frResponse.json();
   expect(frDoc.layout.components).toHaveLength(1);
   expect(frDoc.layout.components[0].legend).toBe('FR legend');
-  // Relation fields are always array-wrapped, even single (non-many) ones
-  // at depth > 0 — see transform.server.ts's flatDoc[relationPath] push.
+  // A relation reads as a list, even a single one, at any depth
+  // (core/pipeline/build-document.server.ts).
   expect(frDoc.layout.components[0].image.at(0).id).toBe(mediaFr.id);
   // Localized blocks get a fresh id per locale, not reused from the source.
   expect(frDoc.layout.components[0].id).not.toBe(originalFrBlockId);

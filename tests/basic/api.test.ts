@@ -225,7 +225,8 @@ test('Should get correct offset / limit', async ({ request }) => {
   // Every page this test makes, deleted at the end
   const created: string[] = [];
 
-  // Home leaves for the test, and is made again at the end
+  // Home leaves for the test, and is made again at the end: sorted by title, `Home` comes before
+  // `Page 001`
   const homeRemoved = await request.delete(`${API_BASE_URL}/pages/${homeId}`, { headers });
   expect(homeRemoved.status()).toBe(200);
 
@@ -924,6 +925,9 @@ test('Should logout editor', async ({ request }) => {
 /* Users access
 /****************************************************/
 
+// `users` lets anyone create, but only through a sign-up: a direct REST create with no session
+// is refused by the create-better-auth-user hook
+// (core/auth/hooks/create-better-auth-user.server.ts).
 test('Should not create a user', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/users`, {
     data: {

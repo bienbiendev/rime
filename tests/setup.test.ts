@@ -2,7 +2,7 @@ import test, { expect } from '@playwright/test';
 import { execSync } from 'node:child_process';
 import { BASE_URL } from './util.js';
 
-execSync('rm -fr ./debug.md');
+// Clears what the previous run left: the logger's files (logs/).
 execSync('rm -fr ./logs');
 
 test('First init should work', async ({ request }) => {

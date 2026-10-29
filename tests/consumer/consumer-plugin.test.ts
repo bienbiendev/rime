@@ -1,14 +1,11 @@
 import test, { expect } from '@playwright/test';
 import { BASE_URL, panelUrl, panelUrlRe, panelPath } from '../util.js';
 
-// Exercises tests/consumer/lib/+rime/rime.config.server.ts, which local-pack-test.sh copies
-// into place *before* `rime init` runs (see copy_plugin_config in that script), so init's own
-// cold-start generate() mounts the plugin+field for real - not a live dev-server hot-reload.
-// Both @bienbien/rime-consumer-plugin and @bienbien/rime-consumer-field are real, separately
-// packed npm packages installed into the scaffolded app — this is the one place their
-// $rime/modules resolution (see findInstalledPackageRoot in
-// core/dev/codegen/runtime/index.server.ts) gets exercised as an *installed* dependency
-// rather than a package's own dev sandbox.
+// Runs against tests/consumer/+rime/rime.config.server.ts, which local-pack-test.sh copies into
+// the scaffolded app before `rime init`, so init's own generate mounts the plugin and the field.
+// @rimecms/test-consumer-plugin and @rimecms/test-consumer-field are packed and installed like
+// any npm dependency: this suite is where their `$rime/modules` pairs are resolved from
+// node_modules (`findModulePair`, core/dev/codegen/runtime/index.server.ts).
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';

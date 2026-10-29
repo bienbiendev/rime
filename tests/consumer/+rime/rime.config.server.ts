@@ -6,11 +6,12 @@ import { relation, text, toggle } from 'rimecms/fields';
 import Banner from './Banner.svelte';
 import Stats from './Stats.svelte';
 
-// Exercises a third-party field's own client/server split (consumerField's server hook
-// prefixes the saved value — see @bienbien/rime-consumer-field/module.server.ts) on a
-// collection the plugin below also extends, so both packages touch the same document.
-// Two foreign key cascades, checked on either driver: `related` rows go when the page they point
-// at is deleted, and a rename is carried down the addresses of the nested pages under it.
+// consumerField's server hook prefixes the saved value (@rimecms/test-consumer-field's
+// module.server.ts), on a collection the plugin below also extends: both packages touch the
+// same document.
+//
+// `related` and `nested` carry the two foreign-key cascades consumer.test.ts checks on either
+// driver: deleting a page drops the relations to it, renaming one rewrites its children's urls.
 const Pages = Collection.create('pages', {
   nested: true,
   $url: ({ path }) => `/${path.join('/')}`,
@@ -58,6 +59,6 @@ export default rime({
   },
   // consumerPlugin() adds its own `pluginVisits` collection, a `consumerPluginNote` field +
   // an afterUpdate hook on `pages`, a header button, an /api/consumer-plugin/ping route, and
-  // an x-consumer-plugin response header — see @bienbien/rime-consumer-plugin's module.server.ts.
+  // an x-consumer-plugin response header — see @rimecms/test-consumer-plugin's module.server.ts.
   plugins: [consumerPlugin()]
 });

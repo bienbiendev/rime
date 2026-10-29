@@ -95,7 +95,7 @@ const Informations = Area.create('infos', {
 /****************************************************/
 
 /** When a save marks a page as home, the other pages marked home lose the mark. */
-const setHome = Hooks.beforeUpsert<'pages'>(async (args) => {
+const setHome = Hooks.beforeUpsert<'pages'>(async function setHome(args) {
   const { data, event, context } = args;
   if (!data?.attributes?.isHome) return args;
 

@@ -9,4 +9,6 @@
 </script>
 
 <RenderRichText json={text} />
+<!-- The button keeps `openSse` in the front page's chunks: verify-public-chunks.mjs checks they
+     still carry no panel. -->
 <button onclick={() => openSse('public:site', () => {})}>Listen</button>

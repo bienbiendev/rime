@@ -71,6 +71,8 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   await signInButton.click();
   await page.waitForURL(panelUrl());
 
+  // A fresh install: open the admin's own staff document, so a client error there lands in
+  // `pageErrors`.
   if (adminId) {
     await page.goto(panelUrl('staff', adminId));
     await page.waitForLoadState('networkidle');
@@ -104,6 +106,7 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   // Create a staff member
   await nav.locator(`a[href="${panelPath('staff')}"]`).click();
   await page.waitForLoadState('networkidle');
+  // "^=": a create link may carry a query string (an upload collection adds ?uploadPath=…).
   await page.locator(`a[href^="${panelPath('staff', 'create')}"]`).click();
   await page.waitForLoadState('networkidle');
   const staffEmail = `staff-${SUFFIX}@email.com`;

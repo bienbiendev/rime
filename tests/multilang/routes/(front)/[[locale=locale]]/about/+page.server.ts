@@ -1,5 +1,9 @@
 import { error, redirect, type ServerLoadEvent } from '@sveltejs/kit';
 
+/**
+ * Serves the `infos` area in the request's locale, its relations resolved one level. Staff asking
+ * `?live=1` go to the live editor.
+ */
 export const load = async (event: ServerLoadEvent) => {
   const { rime, user, locale } = event.locals;
 

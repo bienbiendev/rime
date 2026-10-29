@@ -3,9 +3,10 @@ import path from 'path';
 
 /**
  * Test config for consumer-apps that install rimecms.
- * These tests cover pages/staff/media creation and sign-in/up on a basic configuration
- * (consumer.test.ts) plus a third-party plugin+field mounted into that same config
- * (consumer-plugin.test.ts) - both run by default.
+ * Sign-in and the creation of a page, a staff member and a media (consumer.test.ts), and a
+ * third-party plugin and field in that same config (consumer-plugin.test.ts): both run by
+ * default. consumer-custom-panel-route.test.ts runs only in the custom-route pass, which names
+ * it in CONSUMER_TEST_MATCH.
  * see: src/scripts/local-pack-test.sh
  */
 

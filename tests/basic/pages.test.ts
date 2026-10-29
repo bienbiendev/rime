@@ -29,9 +29,7 @@ test.describe('Login form', () => {
     // Wait for navigation after login
     await page.waitForURL(panelUrl());
 
-    // Add assertions based on successful login
-    // For example, check if redirected to dashboard or check for success message
-    expect(page.url()).toBe(panelUrl()); // Adjust URL based on your app
+    expect(page.url()).toBe(panelUrl());
   });
 
   test('should show error with invalid credentials', async ({ page }) => {
@@ -198,14 +196,8 @@ test.describe('Admin panel', () => {
 });
 
 test.describe('Layout tab: group + separator + blocks persistence', () => {
-  // tab-layout.ts's exact shape — group('hero').fields(...), separator(),
-  // blocks('sections', [...]) — is the real-world config that surfaced the
-  // empty-name-key bug (separator() fields never got a name, so
-  // reduceFieldsToBlankDocument stamped prev[''] = null next to hero/sections,
-  // which corrupted the whole tab's data into looking array-like once
-  // flattened/unflattened through a real form submission — see core/prototype/doc.ts).
-  // This is a direct regression guard for that exact config shape, not the
-  // synthetic one in tests/fields.
+  // A group, a separator and a blocks field in one tab (tab-layout.ts): the group's values survive
+  // a save through the form and a reload.
   test('Should persist hero group fields across the separator+blocks tab after save and reload', async ({
     page
   }) => {

@@ -1,5 +1,14 @@
 import { error, redirect, type ServerLoadEvent } from '@sveltejs/kit';
 
+/**
+ * Serves the page whose slug, in the request's locale, is `id`, or the page marked home when
+ * there is none. A first segment that is not a locale is read as the slug:
+ *
+ *   /fr/about-us → slug `about-us`, locale fr
+ *   /about-us    → slug `about-us`, the default locale
+ *
+ * Staff asking `?live=1` go to the live editor.
+ */
 export const load = async (event: ServerLoadEvent) => {
   const { rime, user, locale } = event.locals;
   const { id } = event.params;

@@ -7,7 +7,7 @@ const lorems = [
   'Cras tincidunt dapibus sem, imperdiet pretium mi faucibus sed. Ut tincidunt nunc ligula, vitae gravida mauris lacinia at.'
 ];
 
-// Create bold feature item
+/** A slash-menu entry of the news rich text: inserts one of the paragraphs above, at random. */
 const fillWithLorem: RichTextFeatureNode = {
   label: 'Fill with Lorem',
   icon: SquarePilcrow,
