@@ -3,12 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { RIME_DEV_CACHE_DIR } from '../constants.server.js';
 
-const dev = process.env.NODE_ENV === 'development';
-
-if (!fs.existsSync(RIME_DEV_CACHE_DIR) && dev) {
-  fs.mkdirSync(RIME_DEV_CACHE_DIR);
-}
-
+/** The string stored under `key`, false when nothing is. */
 function get(key: string): string | false {
   const keyPath = path.join(RIME_DEV_CACHE_DIR, key + '.txt');
   const exist = fs.existsSync(keyPath);

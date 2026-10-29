@@ -29,14 +29,12 @@ export default rime({
 });
 `;
 
-// src/, where hooks.server.ts lives: its config import is relative to it.
-const HOOKS_DIR = path.resolve(process.cwd(), 'src');
-
 const HANDLE_ERROR_EXPORT = `export { handleError } from '${PACKAGE}/server';`;
 
-export const hooks = () => `import { sequence } from '@sveltejs/kit/hooks';
+/** src/hooks.server.ts as `rime init` writes it; `srcDir` is the folder it lands in. */
+export const hooks = (srcDir: string) => `import { sequence } from '@sveltejs/kit/hooks';
 import { handlers } from '${PACKAGE}/server';
-import config from '${configImportPaths(HOOKS_DIR).server}';
+import config from '${configImportPaths(srcDir).server}';
 
 export const handle = sequence(...(await handlers(config)));
 ${HANDLE_ERROR_EXPORT}
@@ -51,18 +49,18 @@ const HOOKS_CONFIG_IMPORT_LINE_REGEX = /^import config from ['"][^'"]*['"];\s*$/
  * at `rime init` and whenever the dev server detects a config change, so the import path never
  * goes stale between the two. Returns whether it wrote anything. */
 export function regenerateHooks(root: string = process.cwd()): boolean {
-  const hooksPath = path.join(root, 'src', 'hooks.server.ts');
   const srcDir = path.join(root, 'src');
+  const hooksPath = path.join(srcDir, 'hooks.server.ts');
 
   if (!existsSync(hooksPath)) {
     if (!existsSync(srcDir)) {
       mkdirSync(srcDir, { recursive: true });
     }
-    writeFileSync(hooksPath, hooks(), 'utf-8');
+    writeFileSync(hooksPath, hooks(srcDir), 'utf-8');
     return true;
   }
 
-  const expectedImportLine = `import config from '${configImportPaths(HOOKS_DIR).server}';`;
+  const expectedImportLine = `import config from '${configImportPaths(srcDir).server}';`;
   const content = readFileSync(hooksPath, 'utf-8');
   let next = content;
   if (HOOKS_CONFIG_IMPORT_LINE_REGEX.test(next) && !next.includes(expectedImportLine)) {

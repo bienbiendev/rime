@@ -40,13 +40,6 @@ export const generate = async (args: { force?: boolean }) => {
   }
 
   /**
-   * Sanitize the user config into GENERATED_DIR (`src/+rime.generated` by default)
-   */
-  async function sanitizeConfig() {
-    await sanitize();
-  }
-
-  /**
    * Create the vite devServer
    */
   async function createServer() {
@@ -84,7 +77,7 @@ export const generate = async (args: { force?: boolean }) => {
     cache.set('.cli', `${process.pid} ${Date.now()}`);
     try {
       ensureUserConfigExist();
-      await sanitizeConfig();
+      await sanitize();
       // Normal `vite dev` writes this from `configureServer`'s `listening` event, which never
       // fires here — this command's own Vite server runs in `middlewareMode` (no `httpServer`).
       regenerateModulesDeclaration();

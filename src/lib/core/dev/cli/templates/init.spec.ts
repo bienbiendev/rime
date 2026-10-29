@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { configImportPaths, paramsPath, relativeImportSpecifier } from '../../constants.server.js';
 import {
@@ -54,24 +54,25 @@ describe("the patchers of a project's own files", () => {
   /** The content of `file`, a path below the temporary project root. */
   const read = (file: string) => readFileSync(join(root, file), 'utf8');
 
-  // hooks.server.ts imports the config relative to this repository's src/
-  const hooksImportLine = `import config from '${configImportPaths(resolve(process.cwd(), 'src')).server}';`;
+  // hooks.server.ts imports the config relative to the project's src/
+  const hooksImportLine = () =>
+    `import config from '${configImportPaths(join(root, 'src')).server}';`;
 
   it('writes hooks.server.ts when the project has none', () => {
     expect(regenerateHooks(root)).toBe(true);
-    expect(read('src/hooks.server.ts')).toBe(hooks());
+    expect(read('src/hooks.server.ts')).toBe(hooks(join(root, 'src')));
   });
 
   it('patches only a stale config import in hooks.server.ts, and adds handleError', () => {
     write('src/hooks.server.ts', "import config from './old.js';\n// mine\n");
     expect(regenerateHooks(root)).toBe(true);
     expect(read('src/hooks.server.ts')).toBe(
-      `${hooksImportLine}\n// mine\nexport { handleError } from 'rimecms/server';\n`
+      `${hooksImportLine()}\n// mine\nexport { handleError } from 'rimecms/server';\n`
     );
   });
 
   it("leaves a current hooks.server.ts with the app's own handleError alone", () => {
-    const own = `${hooksImportLine}\nexport const handleError = () => {};\n`;
+    const own = `${hooksImportLine()}\nexport const handleError = () => {};\n`;
     write('src/hooks.server.ts', own);
     expect(regenerateHooks(root)).toBe(false);
     expect(read('src/hooks.server.ts')).toBe(own);

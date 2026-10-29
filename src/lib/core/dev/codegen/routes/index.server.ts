@@ -141,12 +141,9 @@ function generateRoutes<T extends Config>(config: T): void {
     }
   }
 
-  // 8. Handle custom CSS in layout file
-  const layoutPath = path.join(rimeRoutes, '+layout.svelte');
-  if (fs.existsSync(layoutPath)) {
-    if (config.panel?.css) {
-      injectCustomCSS(layoutPath, config.panel.css);
-    }
+  // 8. The panel's custom stylesheet, linked from the (rime) layout written in step 4
+  if (config.panel?.css) {
+    injectCustomCSS(path.join(rimeRoutes, '+layout.svelte'), config.panel.css);
   }
 
   // The tree is written: the next run with the same memo has nothing to do
