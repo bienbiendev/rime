@@ -16,15 +16,13 @@ import {
 import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '#lib/core/prototype/types.js';
 import { apiUrl, panelUrl } from '#lib/core/routes/util.js';
 import type { BlocksBuilder } from '#lib/fields/blocks/index.js';
-import { isJSONContent, RichText } from '#lib/fields/rich-text/json.js';
+import { isJSONContent } from '#lib/fields/rich-text/json.js';
 import type { FormField } from '#lib/types.js';
 import { isObjectLiteral, omit } from '#lib/util/object.js';
 import { writeFormData } from '#lib/util/form-data.js';
 import { normalizeFieldPath } from '#lib/util/string.js';
-import { tempId } from '#lib/util/random.js';
 import type { Dic, WithOptional } from '#lib/util/types.js';
 import type { ActionResult } from '$app/forms';
-import cloneDeep from 'clone-deep';
 import { diff } from 'deep-object-diff';
 import { setContext } from 'svelte';
 import { toast } from 'svelte-sonner';
@@ -41,7 +39,6 @@ import {
   moveBlock as moveBlockIn,
   parseBlockPath,
   readList,
-  rebuildPaths,
   rekeyErrors,
   removeBlock,
   toClipboard,
@@ -50,10 +47,16 @@ import {
   type BlockAt,
   type NewBlock
 } from './blocks-ops.js';
+import {
+  addItem as addItemIn,
+  deleteItem as deleteItemIn,
+  moveItem as moveItemIn
+} from './tree-ops.js';
 import { createErrorsStore } from './errors.svelte.js';
 import { getLocaleContext } from './locale.svelte.js';
 import { getTitleContext } from './title.js';
 import { errorText } from '../util/error-text.js';
+import { titleText } from '../util/title.js';
 import { getUserContext } from './user.svelte.js';
 
 function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = GenericDoc>({
@@ -108,8 +111,22 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   );
   const locale = getLocaleContext();
   const titleContext = getTitleContext();
-  const initialTitle = initTitle();
-  let title = $state(initialTitle);
+  const initialTitle = getValueAtPath<string>(documentConfig.asTitle, doc);
+  /**
+   * The area's label, or the `asTitle` value as text. A value that is neither text nor rich text
+   * falls back to the value the form opened with, then the id.
+   */
+  const title = $derived.by(() => {
+    if (documentConfig.type === 'area') return documentConfig.label;
+    const value = getValueAtPath(documentConfig.asTitle, doc) || '';
+    if (typeof value === 'string' || isJSONContent(value)) return titleText(value);
+    return initialTitle || doc.id || '';
+  });
+
+  // The root form names the page.
+  $effect(() => {
+    if (nestedLevel === 0) titleContext.value = title;
+  });
 
   const apiProxy = getAPIProxyContext();
 
@@ -120,34 +137,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     return isDigit ? parseInt(last) : 0;
   }
 
-  function initTitle() {
-    if (documentConfig.type === 'area') {
-      titleContext.value = documentConfig.label;
-      return documentConfig.label;
-    } else {
-      function computeTitleFromValue(value: unknown): string {
-        // Handle rich text value
-        if (isJSONContent(value)) {
-          return RichText.toText(value as any);
-        }
-        if (typeof value === 'string') {
-          return value;
-        }
-        return initialTitle || doc.id || '';
-      }
-
-      $effect(() => {
-        const rawTitle = getValueAtPath(documentConfig.asTitle, doc) || '';
-        title = computeTitleFromValue(rawTitle);
-        if (nestedLevel === 0) {
-          titleContext.value = title;
-        }
-      });
-      const initialTitle = getValueAtPath<string>(documentConfig.asTitle, doc);
-      return doc && initialTitle ? initialTitle : '';
-    }
-  }
-
+  /** Sets the value at `path`, and hands it to live edit when the form is a live one. */
   function setValue(path: string, value: any) {
     doc = setValueAtPath(path, doc, value);
     if (onDataChange) onDataChange({ path, value });
@@ -191,81 +181,16 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
     /** A new item at the end of a list: the tree's own, or one inside an item, `links.0._children`. */
     const addItem = (emptyFields: Dic, atPath: string = path) => {
-      let items = cloneDeep(snapshot(getItems()));
-      let target = items;
-      if (atPath !== path) {
-        const parent = getValueAtPath<TreeBlock>(
-          atPath.replace(`${path}.`, '').replace(/\._children$/, ''),
-          items
-        );
-        if (!parent) return;
-        parent._children ??= [];
-        target = parent._children;
-      }
-      target.push({
-        ...emptyFields,
-        id: tempId(),
-        path: atPath,
-        position: target.length,
-        _children: []
-      });
-      items = rebuildPaths(items, path);
-      assignItemsToDoc(items);
+      const items = addItemIn(snapshot(getItems()), path, emptyFields, atPath);
+      if (items) assignItemsToDoc(items);
     };
 
     const deleteItem = (atPath: string, index: number) => {
-      let items = cloneDeep(snapshot(getItems()));
-
-      // Get target array
-      const targetArray =
-        getValueAtPath<TreeBlock[]>(atPath.replace(`${path}.`, ''), items) || items;
-
-      // Remove the item, then renumber the paths and positions
-      targetArray.splice(index, 1);
-      items = rebuildPaths(items, path);
-      assignItemsToDoc(items);
+      assignItemsToDoc(deleteItemIn(snapshot(getItems()), path, atPath, index));
     };
 
     const moveItem = (fromPath: string, toPath: string) => {
-      let items = cloneDeep(snapshot(getItems()));
-
-      const getArrayAndIndex = (path: string) => {
-        const parts = normalizeFieldPath(path).split('.');
-        let current = items;
-        let parentArray = items;
-        const finalIndex = parseInt(parts[parts.length - 1]);
-
-        for (let i = 0; i < parts.length - 1; i++) {
-          const part = parts[i];
-          if (part === '_children') {
-            continue;
-          }
-          const index = parseInt(part);
-          parentArray = current;
-          if (!current[index]._children) {
-            current[index]._children = [];
-          }
-          current = current[index]._children;
-        }
-
-        return {
-          array: parts.includes('_children') ? current : parentArray,
-          index: finalIndex,
-          fullPath: parts.slice(0, -1).join('.')
-        };
-      };
-
-      // Get source and target information
-      const source = getArrayAndIndex(fromPath);
-      const target = getArrayAndIndex(toPath);
-
-      // Perform the move operation
-      const [itemToMove] = source.array.splice(source.index, 1);
-      target.array.splice(target.index, 0, itemToMove);
-
-      // Rebuild paths and positions
-      items = rebuildPaths(items, path);
-      assignItemsToDoc(items);
+      assignItemsToDoc(moveItemIn(snapshot(getItems()), path, fromPath, toPath));
     };
 
     return {
@@ -402,6 +327,18 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   /** A copy of another locale's value, as new rows in this locale: the save creates them. */
   const asNewRows = <V>(value: V): V => withFreshIds(value, { locale: locale.code });
 
+  /** The document in the default locale, its newest row for a draft; `undefined` when none. */
+  const fetchDefaultLocaleDoc = async (): Promise<T | undefined> => {
+    const draftParam = doc.status === VERSIONS_STATUS.DRAFT ? `&${PARAMS.LATEST}=true` : '';
+    const query = isCollection
+      ? `?where[id][equals]=${doc.id}&locale=${locale.defaultCode}${draftParam}`
+      : `?locale=${locale.defaultCode}${draftParam}`;
+    const result = await fetch(`${apiUrl(documentConfig.kebab)}${query}`).then((r) => r.json());
+    if ((isCollection && Array.isArray(result.docs) && result.docs.length) || result.doc) {
+      return isCollection ? result.docs[0] : result.doc;
+    }
+  };
+
   /**
    * The field at `path`, read and written through the form. `config` is the field's builder;
    * without it, the builder is looked up in the document's fields by `path`.
@@ -458,25 +395,8 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     };
 
     const setValueFromDefaultLocale = async () => {
-      const BASE_API_URL = apiUrl(documentConfig.kebab);
-      let fetchURL: string = BASE_API_URL;
-      const draftParam = doc.status === VERSIONS_STATUS.DRAFT ? `&${PARAMS.LATEST}=true` : '';
-      if (isCollection) {
-        fetchURL += `?where[id][equals]=${doc.id}&locale=${locale.defaultCode}${draftParam}`;
-      } else {
-        fetchURL += `?locale=${locale.defaultCode}${draftParam}`;
-      }
-
-      const result = await fetch(fetchURL).then((r) => r.json());
-      if ((isCollection && Array.isArray(result.docs) && result.docs.length) || result.doc) {
-        // Extract data from the appropriate response structure:
-        // - For collections: data is in result.docs[0]
-        // - For areas: data is in result.doc
-        const document = isCollection ? result.docs[0] : result.doc;
-        const defaultLocaleValue = getValueAtPath<Dic[]>(path, document) || [];
-
-        setFieldValue(asNewRows(defaultLocaleValue));
-      }
+      const source = await fetchDefaultLocaleDoc();
+      if (source) setFieldValue(asNewRows(getValueAtPath<Dic[]>(path, source) || []));
     };
 
     const setFieldValue = async (value: any) => {
@@ -863,17 +783,8 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
    * It processes localized fields to ensure they are correctly set for the current locale.
    */
   const importDataFromDefaultLocale = async () => {
-    const BASE_API_URL = `${apiUrl(documentConfig.kebab)}`;
-    let fetchURL: string = BASE_API_URL;
-    const draftParam = doc.status === VERSIONS_STATUS.DRAFT ? `&${PARAMS.LATEST}=true` : '';
-    if (isCollection) {
-      fetchURL += `?where[id][equals]=${doc.id}&locale=${locale.defaultCode}${draftParam}`;
-    } else {
-      fetchURL += `?locale=${locale.defaultCode}${draftParam}`;
-    }
-    const result = await fetch(fetchURL).then((r) => r.json());
-    if ((isCollection && Array.isArray(result.docs) && result.docs.length) || result.doc) {
-      const defaultLocaleDoc = isCollection ? result.docs[0] : result.doc;
+    const defaultLocaleDoc = await fetchDefaultLocaleDoc();
+    if (defaultLocaleDoc) {
       let data = { ...defaultLocaleDoc, locale: locale.code };
       const configMap = buildConfigMap(defaultLocaleDoc, documentConfig.fields);
       for (const [key, field] of Object.entries(configMap)) {

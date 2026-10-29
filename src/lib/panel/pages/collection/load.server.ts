@@ -11,7 +11,7 @@ import {
   removePathFromLastAria,
   type UploadPath
 } from '#lib/core/prototype/collection/upload/util/path.js';
-import type { GenericDoc } from '#lib/core/prototype/types.js';
+import type { CollectionSlug, GenericDoc } from '#lib/core/prototype/types.js';
 import { slugOf } from '#lib/core/routes/context.server.js';
 import type { Route } from '#lib/panel/types.js';
 import { trycatch } from '#lib/util/function.js';
@@ -22,7 +22,7 @@ type Data = {
   docs: GenericDoc[];
   canCreate: boolean;
   status: number;
-  upload?: { directories: Directory[]; currentPath: UploadPath; parentDirectory: Directory };
+  upload?: { directories: Directory[]; currentPath: UploadPath; parentDirectory?: Directory };
 };
 
 /**
@@ -36,71 +36,57 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
   if (!rime.config.isCollection(slug)) throw new RimeError(RimeError.NOT_FOUND);
 
   const collection = rime.collection(slug);
-  const authorizedCreate = collection.config.access.create(user, {});
+  const canCreate = collection.config.access.create(user, {});
+  const docs = await collection.find({ locale, latest: true });
+  const aria: Partial<Route>[] = [dashboardCrumb(rime), { title: collection.config.label.plural }];
 
-  const docs = await collection.find({
-    locale,
-    latest: true
-  });
+  if (!collection.config.upload) return { aria, docs, canCreate, status: 200 };
 
-  let aria: Partial<Route>[] = [dashboardCrumb(rime), { title: collection.config.label.plural }];
+  const upload = await uploadListing(event, slug);
+  return { aria: upload.aria ?? aria, docs, canCreate, status: 200, upload: upload.listing };
+}
 
-  let data: Data = {
-    aria,
-    docs,
-    canCreate: authorizedCreate,
-    status: 200
-  };
+/**
+ * The folder in `?uploadPath` (root by default, created on the first visit), its sub-folders, its
+ * parent, and the breadcrumb down to it; an unknown folder redirects to the root.
+ */
+async function uploadListing(
+  event: ServerLoadEvent,
+  slug: CollectionSlug
+): Promise<{ aria?: Partial<Route>[]; listing: NonNullable<Data['upload']> }> {
+  const { rime } = event.locals;
+  const paramUploadPath = event.url.searchParams.get(PARAMS.UPLOAD_PATH) as UploadPath | null;
+  const currentPath = paramUploadPath || UPLOAD_PATH.ROOT_NAME;
+  const directoryCollection = rime.collection<any>(withDirectoriesSuffix(slug));
+  const [error, currentDirectory] = await trycatch(() =>
+    directoryCollection.findById({ id: currentPath })
+  );
 
-  if (collection.config.upload) {
-    let directories: any[] = [];
-    const paramUploadPath = event.url.searchParams.get(PARAMS.UPLOAD_PATH) as UploadPath | null;
-    const currentDirectoryPath = paramUploadPath || UPLOAD_PATH.ROOT_NAME;
-    const directoryCollection = rime.collection<any>(withDirectoriesSuffix(slug));
-    const [error, currentDirectory] = await trycatch(() =>
-      directoryCollection.findById({
-        id: currentDirectoryPath
-      })
-    );
-
-    if (!currentDirectory && currentDirectoryPath === UPLOAD_PATH.ROOT_NAME) {
-      await directoryCollection.create({
-        data: { id: UPLOAD_PATH.ROOT_NAME }
-      });
-    } else if (error) {
-      logger.error(`${paramUploadPath} doesn't exists`);
-      return redirect(301, event.url.pathname);
-    }
-
-    directories = await directoryCollection.find({
-      query: `where[parent][equals]=${currentDirectoryPath}`,
-      sort: 'name'
-    });
-
-    const parentPath = getParentPath(currentDirectoryPath);
-    let parentDirectory;
-
-    if (parentPath) {
-      parentDirectory = await directoryCollection.findById({ id: parentPath });
-
-      const collectionAria = {
-        title: collection.config.label.plural,
-        url: rime.routes.panelUrl(collection.config.kebab)
-      };
-      aria = [...aria].slice(0, -1);
-      aria = [
-        ...aria,
-        collectionAria,
-        ...buildUploadAria({ path: currentDirectoryPath, slug, panelSegment: rime.routes.panel })
-      ];
-      data.aria = removePathFromLastAria(aria);
-    }
-
-    data = {
-      ...data,
-      upload: { directories, currentPath: currentDirectoryPath, parentDirectory }
-    };
+  if (!currentDirectory && currentPath === UPLOAD_PATH.ROOT_NAME) {
+    await directoryCollection.create({ data: { id: UPLOAD_PATH.ROOT_NAME } });
+  } else if (error) {
+    logger.error(`${paramUploadPath} doesn't exists`);
+    return redirect(301, event.url.pathname);
   }
 
-  return data;
+  const directories = await directoryCollection.find({
+    query: `where[parent][equals]=${currentPath}`,
+    sort: 'name'
+  });
+
+  const parentPath = getParentPath(currentPath);
+  const parentDirectory = parentPath
+    ? await directoryCollection.findById({ id: parentPath })
+    : undefined;
+  const listing = { directories, currentPath, parentDirectory };
+  if (!parentPath) return { listing };
+
+  const config = rime.config.getCollection(slug);
+  const collectionCrumb = { title: config.label.plural, url: rime.routes.panelUrl(config.kebab) };
+  const aria = removePathFromLastAria([
+    dashboardCrumb(rime),
+    collectionCrumb,
+    ...buildUploadAria({ path: currentPath, slug, panelSegment: rime.routes.panel })
+  ]);
+  return { aria, listing };
 }

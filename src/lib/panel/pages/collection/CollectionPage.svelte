@@ -45,7 +45,7 @@
       upload?: {
         directories: Directory[];
         currentPath: UploadPath;
-        parentDirectory: Directory;
+        parentDirectory?: Directory;
       };
     };
   };
