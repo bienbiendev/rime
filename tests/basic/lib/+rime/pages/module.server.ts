@@ -17,6 +17,8 @@ const throwOnDemand = (url?: URL) => {
       throw error(418, 'probe: http error');
     case 'rime':
       throw new RimeError(RimeError.NOT_FOUND, 'probe: rime error');
+    case 'rime-server':
+      throw new RimeError(RimeError.OPERATION_ERROR, 'probe: rime server error');
     case 'form':
       throw new RimeFormError({ 'attributes.title': RimeFormError.INVALID_FIELD });
   }

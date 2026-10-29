@@ -5,10 +5,11 @@ import { API_BASE_URL, panelUrl, signIn } from '../util.js';
  * How an error comes back from each place a request can fail. The pages hooks in
  * lib/+rime/pages/module.server.ts throw on `?throw=<kind>`:
  *
- *   unknown  new Error(…)                → 500, its message never sent
- *   http     error(418, …)               → 418
- *   rime     new RimeError(NOT_FOUND, …) → 404
- *   form     new RimeFormError({ … })    → 400, a failure an action can show on its form
+ *   unknown      new Error(…)                      → 500, its message never sent
+ *   http         error(418, …)                     → 418
+ *   rime         new RimeError(NOT_FOUND, …)       → 404
+ *   rime-server  new RimeError(OPERATION_ERROR, …) → 500, its code only: "operation_error"
+ *   form         new RimeFormError({ … })          → 400, a failure an action can show on its form
  */
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
@@ -72,6 +73,15 @@ test('API create: a RimeError keeps its status', async ({ request }) => {
   expect(response.status()).toBe(404);
 });
 
+test('API create: a 5xx RimeError answers its code, not its message', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/pages?throw=rime-server`, {
+    headers,
+    data: PAGE
+  });
+  expect(response.status()).toBe(500);
+  expect((await response.json()).message).toBe('operation_error');
+});
+
 test('API create: a form error is a 400 that names the field', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/pages?throw=form`, { headers, data: PAGE });
   expect(response.status()).toBe(400);
@@ -95,6 +105,14 @@ test('API read: an http error keeps its status', async ({ request }) => {
 test('API read: a RimeError keeps its status', async ({ request }) => {
   const response = await request.get(`${API_BASE_URL}/pages/${pageId}?throw=rime`, { headers });
   expect(response.status()).toBe(404);
+});
+
+test('API read: a 5xx RimeError answers its code, not its message', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/pages/${pageId}?throw=rime-server`, {
+    headers
+  });
+  expect(response.status()).toBe(500);
+  expect((await response.json()).message).toBe('operation_error');
 });
 
 /****************************************************/
@@ -127,6 +145,14 @@ test('Action: a RimeError keeps its status', async ({ request }) => {
   expect((await response.json()).type).toBe('error');
 });
 
+test('Action: a 5xx RimeError answers its code, not its message', async ({ request }) => {
+  const response = await panelCreate(request, 'rime-server', FORM);
+  expect(response.status()).toBe(500);
+  const result = await response.json();
+  expect(result.type).toBe('error');
+  expect(result.error.message).toBe('operation_error');
+});
+
 test('Action: a form error is a failure the form can show', async ({ request }) => {
   const response = await panelCreate(request, 'form', FORM);
   expect(response.status()).toBe(400);
@@ -151,4 +177,10 @@ test('Load: an http error keeps its status', async ({ request }) => {
 
 test('Load: a RimeError keeps its status', async ({ request }) => {
   expect((await loadError(request, 'rime')).status).toBe(404);
+});
+
+test('Load: a 5xx RimeError answers its code, not its message', async ({ request }) => {
+  const error = await loadError(request, 'rime-server');
+  expect(error.status).toBe(500);
+  expect(error.message).toBe('operation_error');
 });

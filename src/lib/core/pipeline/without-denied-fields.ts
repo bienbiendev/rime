@@ -3,6 +3,8 @@ import type { FormFieldBuilder } from '#lib/core/fields/builders/form-field-buil
 import { getValueAtPath, isObjectLiteral, omit, setValueAtPath } from '#lib/util/object.js';
 import { enclosingRowPath, isWithin } from '#lib/util/string.js';
 import type { Dic } from '#lib/util/types.js';
+import type { RequestEvent } from '@sveltejs/kit';
+import { buildConfigMap } from './config-map/index.js';
 import type { ConfigMap } from './config-map/types.js';
 
 /**
@@ -24,6 +26,17 @@ import type { ConfigMap } from './config-map/types.js';
  * // stored [b1 (image m1), b2 (image m2)], an editor: PATCH { layout: [b2, b1] }
  * // -> layout.0.image is m2's row, layout.1.image m1's, kept: ['layout.0.image', 'layout.1.image']
  * ```
+ *
+ * On a create, a denied field that has a default takes it, whatever was sent, and so does each
+ * field of a denied group. Its path comes back in `kept` too. A denied field without a default
+ * goes, and when it is required its path comes back in `missing`.
+ *
+ * ```ts
+ * // select('roles').defaultValue(['user']), text('nickname'), text('code').required(): all three
+ * // `access.create: isStaff`
+ * // anonymous: POST { roles: ['admin'], nickname: 'x', code: 'A1' }
+ * // -> { roles: ['user'] }, kept: ['roles'], missing: ['code']
+ * ```
  */
 export const withoutDeniedFields = (args: {
   data: Dic;
@@ -34,13 +47,16 @@ export const withoutDeniedFields = (args: {
   id?: string;
   /** On an update, the document as stored, and its config map. */
   stored?: { doc: Dic; configMap: ConfigMap };
+  /** On a create, the request a default function is called with. */
+  event?: RequestEvent;
 }) => {
   const { operation, user, id, stored } = args;
   const canWrite = (config: FormFieldBuilder) => mayWrite(config, operation, user, id);
   let data = args.data;
   const configMap = { ...args.configMap };
 
-  for (const key of deniedKeys(args.configMap, canWrite)) {
+  const denied = deniedKeys(args.configMap, canWrite);
+  for (const key of denied) {
     data = withoutValueAt(data, key);
     for (const path of Object.keys(configMap)) {
       if (isWithin(path, key)) delete configMap[path];
@@ -48,6 +64,33 @@ export const withoutDeniedFields = (args: {
   }
 
   const kept: string[] = [];
+  const missing: string[] = [];
+  if (operation === 'create') {
+    const closed = Object.keys(args.configMap).filter((path) =>
+      denied.some((key) => isFieldOf(path, key))
+    );
+    for (const path of closed) {
+      const config = args.configMap[path];
+      const value = config.use.defaultValue({ event: args.event });
+      // An empty default, `null` or a relation's `[]`, is none
+      if (config.use.isEmpty(value)) continue;
+
+      data = setValueAtPath(path, data, value);
+      // The field and every field its default holds: `layout` and `layout.0.title`
+      const parent = path.slice(0, path.length - config.name.length);
+      const held = buildConfigMap({ [config.name]: value }, [config]);
+      for (const [heldPath, field] of Object.entries(held)) {
+        configMap[parent + heldPath] = field;
+      }
+      kept.push(path);
+    }
+    for (const path of closed) {
+      const config = args.configMap[path];
+      if (config.get.required && config.use.isEmpty(getValueAtPath(path, data))) {
+        missing.push(path);
+      }
+    }
+  }
   if (stored) {
     const sentRows = rowPathsById(data);
     for (const key of deniedKeys(stored.configMap, canWrite)) {
@@ -69,7 +112,21 @@ export const withoutDeniedFields = (args: {
     }
   }
 
-  return { data, configMap, kept };
+  return { data, configMap, kept, missing };
+};
+
+/**
+ * Whether `path` is the field `key` or one of its fields, a list row of it aside: a denied group
+ * closes its fields, a denied list takes its rows away.
+ *
+ * ```ts
+ * isFieldOf('meta.title', 'meta') // true
+ * isFieldOf('layout.0.title', 'layout') // false
+ * ```
+ */
+const isFieldOf = (path: string, key: string) => {
+  const row = enclosingRowPath(path);
+  return isWithin(path, key) && !(row && isWithin(row, key));
 };
 
 /** The keys of `configMap` whose field the caller may not write, none below another. */

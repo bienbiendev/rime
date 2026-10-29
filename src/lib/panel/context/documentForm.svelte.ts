@@ -575,9 +575,9 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
         await applyAction(result);
         break;
       // A `RimeError` out of an action arrives with its status and message, set by the server hook
-      // `handleError` (core/errors/handler.server.ts:20).
+      // `handleError`: a 5xx carries its code alone, shown translated.
       case 'error':
-        toast.error(result.error?.message || t__('common.generic_error'));
+        toast.error(errorText(result.error?.message ?? '') || t__('common.generic_error'));
         break;
     }
   };

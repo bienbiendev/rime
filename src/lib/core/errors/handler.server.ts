@@ -13,9 +13,15 @@ import { RimeError, RimeFormError } from './index.js';
  * if (!doc) throw new RimeError(RimeError.NOT_FOUND);
  * ```
  *
- * A `RimeError` or a better-auth `APIError` answers with its own status and message.
- * Anything else is a 500 whose message stays on the server, logged with its stack. An `error()`
- * already has its status, and SvelteKit answers it as is.
+ * A `RimeError` answers with its own status; a 4xx keeps its message, a 5xx sends its code only
+ * and logs the message with its stack. A better-auth `APIError` answers with its own status and
+ * message. Anything else is a 500 whose message stays on the server, logged with its stack. An
+ * `error()` already has its status, and SvelteKit answers it as is.
+ *
+ * ```ts
+ * new RimeError(RimeError.NOT_FOUND, 'no page home'); // 404 "not_found — no page home"
+ * new RimeError(RimeError.UPLOAD, 'File not found: /srv/x.jpg'); // 500 "upload_error"
+ * ```
  */
 export const handleError: HandleServerError = ({ error, event, kind }) => {
   if (kind !== 'unknown') return;
@@ -25,9 +31,9 @@ export const handleError: HandleServerError = ({ error, event, kind }) => {
   if (error instanceof RimeError) {
     if (error.status >= 500) {
       logger.error(`${error.status} ${line}\n${error.stack}`);
-    } else {
-      logger.debug(`${error.status} ${line} — ${error.message}`);
+      return { status: error.status, message: error.code };
     }
+    logger.debug(`${error.status} ${line} — ${error.message}`);
     return { status: error.status, message: error.message };
   }
 

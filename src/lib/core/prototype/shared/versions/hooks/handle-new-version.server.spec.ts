@@ -148,6 +148,24 @@ describe('a field the caller may not write', () => {
     // The rest of the update gets the submission as sent, for `validateFields` to drop them
     expect(result.data).toEqual({ alt: 'B', secret: 'leak', meta: { note: 'leak' } });
   });
+
+  test('keeps the value of the previous version, not the default', async () => {
+    const withDefault = [
+      text('alt'),
+      text('secret')
+        .defaultValue('D')
+        .access({ update: () => false })
+    ];
+    const { created } = await newVersion(
+      withDefault,
+      original,
+      { alt: 'B', secret: 'leak' },
+      {},
+      user
+    );
+
+    expect(created[0].secret).toBe('S');
+  });
 });
 
 test('a denied field inside a stored list row keeps its stored value in the new row', async () => {

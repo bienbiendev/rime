@@ -30,7 +30,9 @@ import { withoutDeniedFields } from '../without-denied-fields.js';
  *
  * A field the caller may not write is deleted from **both** the data and `context.configMap`,
  * with every field below it. Leaving its path in the map would make the dropped write look like an
- * explicit "nothing here any more" and delete the existing rows.
+ * explicit "nothing here any more" and delete the existing rows. On a create, such a field that
+ * has a default is stored with it instead, unchecked, and a required one without a default
+ * refuses the create with a 403.
  *
  * ```ts
  * // group('meta').access({ update: isAdmin }).fields(blocks('gallery', [image]))
@@ -72,15 +74,16 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
   /* Access
   /****************************************************/
 
-  // A denied field leaves the data, and the map with every key below it. It is never validated and
-  // never written: a create leaves its column empty, an update leaves the stored column as it is.
-  // Inside a stored list row, an update writes back the stored value instead, unchecked.
+  // A denied field leaves the data, and the map with every key below it. It is never validated.
+  // A create writes its default, or leaves its column empty without one; an update leaves the
+  // stored column as it is. Inside a stored list row, an update writes back the stored value
+  // instead, unchecked.
   //
   // FormFieldBuilder's default `access.create` is `(user) => !!user`, so an anonymous create is
   // denied most fields.
   const { originalDoc, originalConfigMap } = args.context;
   const allowed = skipAccess
-    ? { data: args.data, configMap: { ...args.context.configMap }, kept: [] }
+    ? { data: args.data, configMap: { ...args.context.configMap }, kept: [], missing: [] }
     : withoutDeniedFields({
         data: args.data,
         configMap: args.context.configMap ?? {},
@@ -90,8 +93,22 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
         stored:
           operation === 'update' && originalDoc && originalConfigMap
             ? { doc: originalDoc, configMap: originalConfigMap }
-            : undefined
+            : undefined,
+        event
       });
+
+  // A create that leaves a required field it may not write empty, without a default, is refused
+  if (allowed.missing.length && !skipRequired) {
+    const paths = allowed.missing.map((path) => `\`${path}\``).join(', ');
+    logger.warn(
+      `${slug}: a create was refused, ${paths} is required, has no default and is closed to this caller. Give it a defaultValue or open its access.create.`
+    );
+    throw new RimeError(
+      RimeError.UNAUTHORIZED,
+      `may not create: ${paths} is required and closed to you`
+    );
+  }
+
   // Own copy: the steps below write into it
   let output = { ...allowed.data };
   const configMap = allowed.configMap;
@@ -112,6 +129,7 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
       : allowed.data;
 
   for (const [key, config] of Object.entries(configMap)) {
+    // A kept value, a stored one or a create's default, is written unchecked
     if (allowed.kept.some((path) => isWithin(key, path))) continue;
 
     let value: any = getValueAtPath(key, output);

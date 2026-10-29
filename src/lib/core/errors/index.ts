@@ -3,7 +3,7 @@ import type { FormErrors } from '#lib/panel/types.js';
 
 /**
  * The HTTP status of each code that is the client's doing. Any other code is the server's: 500,
- * logged with its stack.
+ * logged with its stack, and answered with the code alone.
  */
 const CLIENT_STATUS: Record<string, number> = {
   bad_request: 400,

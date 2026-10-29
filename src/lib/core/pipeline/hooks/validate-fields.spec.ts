@@ -1,4 +1,5 @@
-import { RimeFormError } from '#lib/core/errors/index.js';
+import { RimeError, RimeFormError } from '#lib/core/errors/index.js';
+import { logger } from '#lib/core/logger.server.js';
 import { block, blocks } from '#lib/fields/blocks/index.js';
 import { group } from '#lib/fields/group/index.js';
 import { relation } from '#lib/fields/relation/index.js';
@@ -14,8 +15,9 @@ import { validateFields } from './validate-fields.server.js';
 
 /**
  * Field write access and `required`: a field the request may not write is dropped, and never
- * reported missing. `FormFieldBuilder`'s default `create: (user) => !!user` makes this the case
- * for most fields of an anonymous create.
+ * reported missing. On a create, one with a default is stored with it, and a required one without
+ * a default refuses the create. `FormFieldBuilder`'s default `create: (user) => !!user` makes this
+ * the case for most fields of an anonymous create.
  */
 
 const runValidate = (args: {
@@ -58,25 +60,117 @@ const runValidate = (args: {
 };
 
 describe('validateFields: required vs. field access on create', () => {
-  test('a required field the request may not write is dropped, not reported missing', async () => {
+  test('a required field the request may not write, without a default, refuses the create', async () => {
     // No .access() — so it keeps FormFieldBuilder's default `create: (user) => !!user`,
     // which an anonymous request fails.
     const fields = [text('nickname').required()];
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+    const promise = runValidate({ fields, data: { nickname: 'anon' }, user: undefined });
+
+    await expect(promise).rejects.toMatchObject({
+      code: RimeError.UNAUTHORIZED,
+      status: 403,
+      message: expect.stringContaining('`nickname`')
+    });
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn.mock.calls[0][0]).toContain('members: a create was refused, `nickname`');
+    warn.mockRestore();
+  });
+
+  test('...and so does one of a new block row', async () => {
+    const fields = [
+      blocks('layout', [
+        block('hero').fields(
+          text('tag')
+            .required()
+            .access({ create: () => false })
+        )
+      ])
+    ] as any[];
+
+    await expect(
+      runValidate({ fields, data: { layout: [{ type: 'hero', tag: 'x' }] }, user: { id: 'u1' } })
+    ).rejects.toMatchObject({ message: expect.stringContaining('`layout.0.tag`') });
+  });
+
+  test('...while one that is not required is dropped, as before', async () => {
+    const fields = [text('nickname')];
 
     const result = await runValidate({ fields, data: { nickname: 'anon' }, user: undefined });
 
-    // Dropped from both the data and the config map.
     expect(result.data).not.toHaveProperty('nickname');
     expect(result.context.configMap).not.toHaveProperty('nickname');
   });
 
-  test('...and that drop does not turn into an unsatisfiable REQUIRED_FIELD', async () => {
-    const fields = [text('nickname').required()];
+  test('...and with a default, stores the default', async () => {
+    const fields = [text('nickname').required().defaultValue('guest')];
 
-    // An anonymous create must resolve here rather than throw.
+    const result = await runValidate({ fields, data: { nickname: 'anon' }, user: undefined });
+
+    expect(result.data.nickname).toBe('guest');
+  });
+
+  test('...and a required field of a denied group refuses it too', async () => {
+    const fields = [
+      group('meta')
+        .access({ create: () => false })
+        .fields(text('title').required())
+    ];
+
     await expect(
-      runValidate({ fields, data: { nickname: 'anon' }, user: undefined })
-    ).resolves.toBeDefined();
+      runValidate({ fields, data: { meta: { title: 'x' } }, user: { id: 'u1' } })
+    ).rejects.toMatchObject({ code: RimeError.UNAUTHORIZED });
+  });
+
+  test('...but not a required field of a row in a denied list: the list goes', async () => {
+    const fields = [
+      blocks('layout', [block('hero').fields(text('title').required())]).access({
+        create: () => false
+      })
+    ] as any[];
+
+    const result = await runValidate({
+      fields,
+      data: { layout: [{ type: 'hero', title: 'x' }] },
+      user: { id: 'u1' }
+    });
+
+    expect(result.data).not.toHaveProperty('layout');
+  });
+
+  test('...nor a staff create with ?skipValidation=true', async () => {
+    const fields = [
+      text('code')
+        .required()
+        .access({ create: () => false })
+    ];
+
+    const result = await runValidate({
+      fields,
+      data: { code: 'x' },
+      user: { id: 'u1', isStaff: true },
+      search: '?skipValidation=true'
+    });
+
+    expect(result.data).not.toHaveProperty('code');
+  });
+
+  test('...nor an update, which keeps the stored value', async () => {
+    const fields = [
+      text('code')
+        .required()
+        .access({ update: () => false })
+    ];
+
+    const result = await runValidate({
+      fields,
+      data: { code: 'x' },
+      user: { id: 'u1' },
+      originalDoc: { id: 'd1', code: 'stored' }
+    });
+
+    expect(result.data).not.toHaveProperty('code');
   });
 
   test('required still fires when the request may write the field but sent nothing', async () => {
@@ -313,7 +407,7 @@ describe('validateFields: a field the request may not write', () => {
     const fields = [
       group('meta')
         .access({ create: () => false })
-        .fields(text('title').required())
+        .fields(text('title'))
     ];
     const result = await runValidate({ fields, data: { meta: { title: 'x' } }, user });
 
@@ -350,6 +444,96 @@ describe('validateFields: a field the request may not write', () => {
 
     expect(find).not.toHaveBeenCalled();
     expect(result.data).not.toHaveProperty('code');
+  });
+});
+
+describe('validateFields: a create stores a denied field with its default', () => {
+  const user = { id: 'u1' };
+
+  test('a denied field with a default stores its default, whatever was sent', async () => {
+    const fields = [
+      text('nickname')
+        .defaultValue('anon')
+        .access({ create: () => false })
+    ];
+    const result = await runValidate({ fields, data: { nickname: 'x' }, user });
+
+    expect(result.data.nickname).toBe('anon');
+    expect(result.context.configMap).toHaveProperty('nickname');
+  });
+
+  test('a denied field without a default is dropped', async () => {
+    const fields = [text('nickname').access({ create: () => false })];
+    const result = await runValidate({ fields, data: { nickname: 'x' }, user });
+
+    expect(result.data).not.toHaveProperty('nickname');
+    expect(result.context.configMap).not.toHaveProperty('nickname');
+  });
+
+  test('the default is not validated nor hooked, and passes required', async () => {
+    const fields = [
+      text('code')
+        .required()
+        .defaultValue('AB')
+        .validate(() => 'never')
+        .$beforeSave(() => 'hooked')
+        .access({ create: () => false })
+    ];
+    const result = await runValidate({ fields, data: { code: 'x' }, user });
+
+    expect(result.data.code).toBe('AB');
+  });
+
+  test('a denied field of a new block row takes its default', async () => {
+    const fields = [
+      blocks('layout', [
+        block('hero').fields(
+          text('title'),
+          text('tag')
+            .defaultValue('t')
+            .access({ create: () => false })
+        )
+      ])
+    ] as any[];
+    const result = await runValidate({
+      fields,
+      data: { layout: [{ type: 'hero', title: 'A', tag: 'x' }] },
+      user
+    });
+
+    expect(result.data.layout[0]).toEqual({ type: 'hero', title: 'A', tag: 't' });
+    expect(result.context.configMap).toHaveProperty('layout.0.tag');
+  });
+
+  test('a denied list takes its default rows, and the map holds their fields', async () => {
+    const fields = [
+      blocks('layout', [block('hero').fields(text('title'))])
+        .defaultValue([{ type: 'hero', title: 'Default' }])
+        .access({ create: () => false })
+    ] as any[];
+    const result = await runValidate({ fields, data: { layout: [] }, user });
+
+    expect(result.data.layout).toHaveLength(1);
+    expect(result.data.layout[0]).toMatchObject({ type: 'hero', title: 'Default' });
+    expect(result.context.configMap).toHaveProperty('layout');
+    expect(result.context.configMap).toHaveProperty('layout.0.title');
+  });
+
+  test('an update keeps the stored value: the default is never written', async () => {
+    const fields = [
+      text('nickname')
+        .defaultValue('anon')
+        .access({ update: () => false })
+    ];
+    const result = await runValidate({
+      fields,
+      data: { nickname: 'x' },
+      user,
+      originalDoc: { id: 'd1', nickname: 'stored' }
+    });
+
+    expect(result.data).not.toHaveProperty('nickname');
+    expect(result.context.configMap).not.toHaveProperty('nickname');
   });
 });
 

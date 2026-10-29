@@ -1158,6 +1158,15 @@ test('Regular should not update his email', async ({ request }) => {
   expect(response.status()).toBe(403);
 });
 
+// `authUserId` links the document to its better-auth user: a delete would remove the user it names
+test('Regular should not relink his document to another better-auth user', async ({ request }) => {
+  const response = await request.patch(`${API_BASE_URL}/users/${regularId}`, {
+    headers: await signInRegular(request),
+    data: { authUserId: 'x' }
+  });
+  expect(response.status()).toBe(403);
+});
+
 test('Regular should not update his own roles', async ({ request }) => {
   await request.patch(`${API_BASE_URL}/users/${regularId}`, {
     headers: await signInRegular(request),
@@ -1300,6 +1309,44 @@ test('Should public sign-up as a user', async ({ request }) => {
     })
     .then((r) => r.json());
   expect(docs).toHaveLength(1);
+});
+
+// A sign-up follows the password policy of rime's own creates: `aaaaaaaa` has no uppercase
+test('Should not public sign-up with a weak password', async ({ request }) => {
+  const email = `signup-weak-${Date.now()}@public.com`;
+  const response = await request.post(`${API_BASE_URL}/auth/sign-up/email`, {
+    data: { email, name: 'Weak', password: 'aaaaaaaa', type: 'users' }
+  });
+  expect(response.status()).toBe(400);
+
+  const signedIn = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
+    data: { email, password: 'aaaaaaaa' }
+  });
+  expect(signedIn.status()).toBe(401);
+
+  const { docs } = await request
+    .get(`${API_BASE_URL}/users?where[email][equals]=${encodeURIComponent(email)}`, {
+      headers: await signInSuperAdmin(request)
+    })
+    .then((r) => r.json());
+  expect(docs).toHaveLength(0);
+});
+
+// Only staff pick roles on create: a public sign-up gets the default role, whatever it sends
+test('A public sign-up that sends roles gets the default role', async ({ request }) => {
+  const email = `signup-roles-${Date.now()}@public.com`;
+  const response = await request.post(`${API_BASE_URL}/auth/sign-up/email`, {
+    data: { email, name: 'Member', password: 'e"3Ee"3E', type: 'users', roles: ['member'] }
+  });
+  expect(response.status()).toBe(200);
+
+  const { docs } = await request
+    .get(`${API_BASE_URL}/users?where[email][equals]=${encodeURIComponent(email)}`, {
+      headers: await signInSuperAdmin(request)
+    })
+    .then((r) => r.json());
+  expect(docs).toHaveLength(1);
+  expect(docs[0].roles).toEqual(['user']);
 });
 
 // apps is an API-key collection, pages is no auth collection, nope is none at all: each is refused

@@ -5,6 +5,7 @@ import { deleteAuthUser, setAuthUserRole } from '#lib/core/auth/better-auth-tabl
 import { BETTER_AUTH_ROLES } from '#lib/core/auth/constant.server.js';
 import type { BuiltCollection } from '#lib/core/config/types.js';
 import { userAttributes } from '#lib/core/auth/user.server.js';
+import validate from '#lib/core/fields/validate.js';
 import { logger } from '#lib/core/logger.server.js';
 import { trycatch } from '#lib/util/function.js';
 import { omit } from '#lib/util/object.js';
@@ -134,11 +135,12 @@ const handleUserCreation = async (ctx: CTX) => {
  * in; checked before better-auth writes its account. Over HTTP the caller is anonymous:
  * better-auth answers `/api/auth/*` before `handleAuth` sets a user. An app's form action calling
  * `auth.api.signUpEmail` is judged as its signed-in user. The init, which creates the first admin,
- * is rime's own.
+ * is rime's own. The password follows the policy of rime's own creates.
  *
  * ```ts
  * // users: access.create () => true
- * { type: 'users' }  // signs up
+ * { type: 'users', password: 'a&1Aa&1A' }  // signs up
+ * { type: 'users', password: 'aaaaaaaa' }  // BAD_REQUEST: password_uppercase_missing
  * { type: 'staff' }  // UNAUTHORIZED: staff create is admin-only
  * { type: 'pages' }  // UNAUTHORIZED: not an auth collection
  * ```
@@ -153,6 +155,9 @@ const preventRefusedSignUp = (ctx: CTX): void => {
   if (!signsUp || !config.access.create(event.locals.user, { event })) {
     throw new APIError('UNAUTHORIZED');
   }
+
+  const valid = validate.password(ctx.body.password);
+  if (valid !== true) throw new APIError('BAD_REQUEST', { message: valid });
 };
 
 /****************************************************/

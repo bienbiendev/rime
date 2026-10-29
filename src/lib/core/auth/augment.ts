@@ -84,7 +84,8 @@ export const augmentAuth = <T extends Input>(config: T): WithNormalizedAuth<T> =
 
   if (IS_GENERIC_COLLECTION) {
     rolesField.access({
-      create: () => true,
+      // Only staff pick roles on create; anyone else, a public sign-up included, gets the default
+      create: (user) => access.isStaff(user),
       read: (user) => !!user,
       update: (user) => access.isStaff(user)
     });
