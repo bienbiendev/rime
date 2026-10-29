@@ -4,8 +4,6 @@
   const { children } = $props();
 </script>
 
-<svelte:body />
-
 <LiveProvider>
   {@render children()}
 </LiveProvider>

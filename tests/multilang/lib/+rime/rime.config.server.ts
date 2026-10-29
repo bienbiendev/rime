@@ -107,49 +107,36 @@ const setHome = Hooks.beforeUpsert<'pages'>(async function setHome(args) {
   return args;
 });
 
-const formatslug = Hooks.beforeUpsert<'pages'>(async (args) => {
-  const { operation, event } = args;
-  let data = args.data;
+/**
+ * Keeps slugs unique per locale: a slug another page holds in the locale of the write gets the
+ * first free suffix.
+ *
+ * @example
+ * // `concert` is taken in fr, `concert-1` too
+ * // a write of { attributes: { slug: 'concert' } } in fr saves `concert-2`
+ */
+const formatslug = Hooks.beforeUpsert<'pages'>(async function formatslug(args) {
+  const { event, data, context } = args;
+  const baseSlug = data.attributes?.slug;
+  if (!baseSlug) return args;
 
-  const queryPagesWithSlug = async ({ slug }: { slug: string }) => {
-    const query = `where[attributes.slug][equals]=${slug}`;
-    return event.locals.rime.collection('pages').find({
-      query,
-      locale: args.context.params.locale
+  // A slug held by the page being updated is free.
+  const takenByOther = async (slug: string) => {
+    const pages = await event.locals.rime.collection('pages').find({
+      query: `where[attributes.slug][equals]=${slug}`,
+      locale: context.params.locale
     });
+    return pages.some((page) => page.id !== context.params.id && page.attributes.slug === slug);
   };
 
-  if (operation === 'create' || operation === 'update') {
-    let slug = data.attributes?.slug;
-    if (slug) {
-      const baseSlug = slug;
-      let suffix = 0;
-      let pagesWithCurrentSlug = await queryPagesWithSlug({ slug: baseSlug });
-      // A slug held by the page being updated is free.
-      const ownId = args.context.params.id;
-      const takenByOther = (pages: { id: string; attributes: { slug?: string } }[], slug: string) =>
-        pages.some((page) => page.id !== ownId && page.attributes.slug === slug);
-
-      while (takenByOther(pagesWithCurrentSlug, slug)) {
-        suffix++;
-        slug = `${baseSlug}-${suffix}`;
-        pagesWithCurrentSlug = await queryPagesWithSlug({ slug });
-      }
-      data = {
-        ...data,
-        attributes: {
-          ...(data.attributes || {}),
-          slug
-        }
-      };
-    }
-
-    return {
-      ...args,
-      data
-    };
+  let slug = baseSlug;
+  let suffix = 0;
+  while (await takenByOther(slug)) {
+    suffix++;
+    slug = `${baseSlug}-${suffix}`;
   }
-  return args;
+
+  return { ...args, data: { ...data, attributes: { ...data.attributes, slug } } };
 });
 
 const blockParagraph = block('paragraph')

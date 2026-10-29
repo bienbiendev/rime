@@ -7,12 +7,10 @@ import { error, type ServerLoadEvent } from '@sveltejs/kit';
  */
 export const load = async (event: ServerLoadEvent) => {
   const { rime } = event.locals;
-  const { parentSlug, slug } = event.params;
-
-  const locale = parentSlug === 'news' ? 'en' : 'fr';
+  const { slug } = event.params;
 
   const query = `where[attributes.slug][equals]=${encodeURIComponent(slug ?? '')}`;
-  const docs = await rime.collection('news').find({ query, locale, depth: 2, latest: true });
+  const docs = await rime.collection('news').find({ query, depth: 2 });
 
   if (!docs.length) {
     throw error(404, 'Not found');

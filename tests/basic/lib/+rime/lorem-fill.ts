@@ -20,6 +20,5 @@ const fillWithLorem: RichTextFeatureNode = {
 };
 
 export default {
-  name: 'lorem-fill',
   marks: [fillWithLorem]
 };
