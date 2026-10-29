@@ -22,7 +22,7 @@ export type CacheActions = {
  * // Returns the same hex string for the same input
  * toHash("hello");
  */
-export const toHash = (str: string): string => {
+const toHash = (str: string): string => {
   return createHash('sha256').update(str).digest('hex'); // Full 64-char hex string
 };
 
