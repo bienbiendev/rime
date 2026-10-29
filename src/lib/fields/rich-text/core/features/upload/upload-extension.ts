@@ -2,9 +2,13 @@ import type { CollectionSlug } from '#lib/types.js';
 import { Node, mergeAttributes } from '@tiptap/core';
 import SvelteNodeViewRenderer from '../../svelte/node-view-renderer.svelte';
 import { jsonAttribute } from '../json-attribute.js';
-import CounterComponent from './upload.svelte';
+import UploadView from './upload.svelte';
 
 export interface UploadFeatureExtensionOptions {
+  /**
+   * The collection slug, with an optional query that filters the picker:
+   * `'medias?where[mimeType][like]=image'`.
+   */
   source: `${CollectionSlug}${string}`;
 }
 
@@ -39,6 +43,6 @@ export const Upload = Node.create<UploadFeatureExtensionOptions>({
   },
 
   addNodeView() {
-    return SvelteNodeViewRenderer(CounterComponent);
+    return SvelteNodeViewRenderer(UploadView);
   }
 });

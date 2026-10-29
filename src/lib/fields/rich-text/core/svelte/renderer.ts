@@ -9,6 +9,7 @@ interface RendererOptions {
 
 type App = ReturnType<typeof mount>;
 
+/** A mounted Svelte component and its element, as a tiptap node view holds them. */
 class SvelteRenderer {
   component: App;
   props: NodeViewProps;

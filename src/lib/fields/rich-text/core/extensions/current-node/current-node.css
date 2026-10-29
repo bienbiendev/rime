@@ -1,3 +1,4 @@
+/** While the editor has the focus, the top-level node holding the caret sits above the others. */
 .ProseMirror-focused > *:has([data-current]),
 .ProseMirror-focused > *[data-current] {
   border-color: transparent;

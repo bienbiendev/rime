@@ -21,13 +21,14 @@
   let activeItems = $state<Record<string, boolean>>({});
   const activeItem = $derived.by(getActiveItem);
 
+  /**
+   * The dropdown's title: the one active block type, "Multiple" for several, "Paragraph" for
+   * none.
+   */
   function getActiveItem() {
-    // Count active items
     const activeCount = Object.values(activeItems).filter(Boolean).length;
     if (activeCount === 1) {
-      // Find the active item name
       const activeItemName = Object.keys(activeItems).find((name) => activeItems[name]);
-      // Return the matching item
       return items.find((item) => item.name === activeItemName)!;
     } else if (activeCount > 1) {
       return { name: 'multiple', label: 'Multiple', icon: Asterisk };
@@ -37,8 +38,8 @@
     }
   }
 
+  /** Which block types the selection is in, from each item's `isActive`. */
   function setActiveItems() {
-    // Update active states for all items
     activeItems = items.reduce(
       (acc, item) => {
         acc[item.name] = item.isActive?.({ editor }) || false;
@@ -59,6 +60,7 @@
     editor.off('selectionUpdate', setActiveItems);
   });
 
+  // The dropdown closes with the bubble menu
   $effect(() => {
     if (!isMenuOpen) {
       open = false;

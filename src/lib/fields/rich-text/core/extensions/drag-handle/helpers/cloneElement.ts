@@ -1,3 +1,4 @@
+/** Every computed style of an element, as a `style` attribute value. */
 function getCSSText(element: Element) {
   let value = '';
   const style = getComputedStyle(element);
@@ -9,6 +10,10 @@ function getCSSText(element: Element) {
   return value;
 }
 
+/**
+ * A deep copy of an element whose elements carry their computed styles inline, so it keeps its
+ * look once detached.
+ */
 export function cloneElement(node: HTMLElement) {
   const clonedNode = node.cloneNode(true) as HTMLElement;
   const sourceElements = [node, ...Array.from(node.getElementsByTagName('*'))] as HTMLElement[];

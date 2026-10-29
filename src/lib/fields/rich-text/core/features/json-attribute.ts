@@ -1,7 +1,7 @@
 import type { Attribute } from '@tiptap/core';
 
 /**
- * A node attribute that holds an object. Copy and paste carry nodes through HTML, so the object
+ * A node attribute that holds a JSON value. Copy and paste carry nodes through HTML, so the value
  * is written there as JSON and read back from it.
  *
  * ```ts

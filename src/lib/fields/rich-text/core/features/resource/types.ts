@@ -1,3 +1,4 @@
+/** A resource node's attributes: a picked document, or all null when none is picked yet. */
 export type RichTextResource =
   | {
       id: string;

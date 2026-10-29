@@ -20,14 +20,19 @@
   import './link-selector.css';
 
   type Props = {
+    /** The link extension's options; `sources` lists what the document picker offers. */
     options?: LinkFeatureOptions;
     editor: Editor;
+    /** The editor's shared state: the form closes with the bubble menu. */
     context: RichTextContext;
+    /** Whether the selection is in a link: the button lights up. */
     active: boolean;
   };
   type LinkResource = { title: string; url: string };
   let { options, editor, context, active }: Props = $props();
 
+  // The selected link's href and target, read here and again each time the form opens:
+  // `editor.getAttributes` is not reactive
   let value = $derived((editor && editor.getAttributes('link').href) || '');
   let error = $state(false);
   let open = $state(false);
@@ -129,6 +134,7 @@
     };
   });
 
+  /** Sets the typed link on the selection and closes the form, or marks the input invalid. */
   function onSubmit(event?: SubmitEvent) {
     event && event.preventDefault();
     if (!urlState.isValid) return (error = true);
@@ -163,6 +169,7 @@
     open = false;
   }
 
+  /** Escape closes the form and the document picker. */
   function handleEscape(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       open = false;

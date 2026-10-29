@@ -7,6 +7,7 @@ import { LinkFeature } from './link/index.js';
 import { OrderedListFeature } from './ordered-list.js';
 import { ParagraphFeature } from './paragraph.js';
 
+/** The features of an editor whose field sets none. */
 export const defaultFeatures = [
   ParagraphFeature,
   HeadingFeature(2, 3, 4),

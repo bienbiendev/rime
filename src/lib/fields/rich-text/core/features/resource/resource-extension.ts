@@ -6,6 +6,7 @@ import ResourceComponent from './resource.svelte';
 
 export interface ResourceFeatureExtensionOptions {
   label?: string;
+  /** The collection slug, with an optional query that filters the picker: `<slug>?<query>`. */
   source: `${PrototypeSlug}${string}`;
 }
 

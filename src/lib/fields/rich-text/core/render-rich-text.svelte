@@ -1,3 +1,12 @@
+<!--
+  A stored rich text as HTML: paragraphs, headings, lists, quotes, bold, italic, links, breaks and
+  rules. `components` replaces an element by its key: `paragraph`, `heading`, `blockquote`,
+  `bold`, `italic`, `link`, `ul` (bullet lists), `ol` (ordered lists), `li`, `media` (upload
+  nodes), `resource` (resource nodes), `fields` (fields nodes), and any other node or mark type
+  by its own name.
+
+  <RenderRichText json={page.body} components={{ link: SiteLink, fields: Cta }} />
+-->
 <script lang="ts">
   import { isSafeUrl } from '#lib/util/url.js';
   import type { JSONContent } from '@tiptap/core';
@@ -21,6 +30,7 @@
     } & Record<string, RichTextNodeRenderer>;
   };
 
+  /** The first item of a list and the rest, the list itself unchanged. */
   function shiftAndReturn<T>(arr: T[]): [T | undefined, T[]] {
     const arrayClone = [...arr];
     const item = arrayClone.shift(); // removes and returns the first element

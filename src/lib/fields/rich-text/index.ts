@@ -12,7 +12,7 @@ import { isJSONContent } from './json.js';
 import { sanitizeJSONContent } from './sanitize.js';
 import { storedReferences } from './reference-nodes.js';
 
-// Blocks that only hold text: empty when they hold none
+// Nodes that hold nothing when they hold no text: the document, paragraphs, headings, line breaks
 const TEXT_BLOCKS = new Set(['doc', 'paragraph', 'heading', 'hardBreak']);
 
 // A node holds content when it has text, or is a leaf such as an image or a rule
@@ -75,6 +75,7 @@ export class RichTextFieldBuilder extends FormFieldBuilder<RichTextField> {
     return Cell;
   }
 
+  /** The field gives the document its title, as the text it holds. */
   isTitle() {
     this.field.isTitle = true;
     return this;
@@ -134,6 +135,7 @@ export class RichTextFieldBuilder extends FormFieldBuilder<RichTextField> {
   static readonly storeReferences = (value: unknown) =>
     isJSONContent(value) ? storedReferences(value) : value;
 
+  /** The document as the JSON string the adapter stores; a string is stored as it is. */
   static readonly stringify = (value: string) => {
     if (typeof value === 'string') return value;
     try {

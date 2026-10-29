@@ -6,6 +6,7 @@
   import { TIPTAP_NODE_VIEW } from './constant.js';
 
   type Props = SvelteHTMLElements[T] & {
+    /** The wrapping element, a div by default. */
     as?: T;
   };
 

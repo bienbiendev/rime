@@ -4,8 +4,8 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import './current-node.css';
 
 /**
- * Extension to add a "data-current" attributes
- * on the currently edited node
+ * Marks with `data-current` the innermost block where the selection starts, a paragraph inside
+ * a list item for example. current-node.css lifts the top-level node that holds it.
  */
 export const CurrentNodeAttribute = Extension.create({
   name: 'currentNodeAttribute',
@@ -20,13 +20,11 @@ export const CurrentNodeAttribute = Extension.create({
             const { selection } = tr;
             const { $from } = selection;
 
+            // A selection at the top level, a selected block or the whole document, marks nothing
             if ($from.depth === 0) return;
 
-            // Get the position + node at selection
             const pos = $from.before();
             const node = $from.node();
-
-            // Mark the node as current with `data-current`.
             const deco = Decoration.node(pos, pos + node.nodeSize, {
               'data-current': ''
             });

@@ -10,12 +10,17 @@ import type { RichTextFeature, RichTextFeatureNode } from '../types.js';
 
 const ALL_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
 
+/** The tiptap heading extension, offering the levels given. */
 const headingExtension = (levels: Level[]) =>
   Heading.configure({
     levels,
     HTMLAttributes: { class: 'rz-rich-text-heading' }
   });
 
+/**
+ * The palette's heading command. On a caret it turns the current block into a heading, or adds
+ * one at a gap cursor; over a selection it toggles the heading.
+ */
 function toggleOrCreate(level: Level, { editor, range }: { editor: Editor; range?: Range }) {
   if (!range || range.from === range.to) {
     return editor.chain().focus().createParagraphNear().setHeading({ level }).run();

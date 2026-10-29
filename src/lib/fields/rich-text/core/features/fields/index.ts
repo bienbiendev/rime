@@ -6,6 +6,7 @@ import type { RichTextFeature, RichTextFeatureNode } from '../../../../../types.
 import { FieldsExtension } from './extension.js';
 
 export interface FieldsFeatureOptions {
+  /** The node type is `rich-text-fields-<name>`: a rename leaves stored nodes without a feature. */
   name: string;
   label?: string;
   fields: FieldBuilder[];
@@ -27,6 +28,7 @@ const fieldsFeatureNode = (args: FieldsFeatureOptions): RichTextFeatureNode => (
   }
 });
 
+/** A block of fields inside the text, edited in a sheet, stored as `rich-text-fields-<name>`. */
 export const FieldsFeature = (args: FieldsFeatureOptions): RichTextFeature => ({
   extension: FieldsExtension.configure({ fields: args.fields, preview: args.preview }).extend({
     name: 'rich-text-fields-' + args.name

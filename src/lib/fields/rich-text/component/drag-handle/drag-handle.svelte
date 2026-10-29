@@ -14,6 +14,7 @@
   let { editor }: Props = $props();
   let element = $state<HTMLElement>();
 
+  // The key the handle's plugin is registered and unregistered under
   const pluginKey = new Date().getTime().toString();
 
   $effect(() => {

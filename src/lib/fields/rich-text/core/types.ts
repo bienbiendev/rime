@@ -3,6 +3,10 @@ import type { Editor, EditorOptions, JSONContent, Range } from '@tiptap/core';
 import type { Component, Snippet } from 'svelte';
 import type { RichTextContext } from '../component/context.svelte.js';
 
+/**
+ * One editor feature: the tiptap extension it registers, and the marks and nodes it offers in
+ * the editor's menus. A feature without an extension adds menu entries over another one's.
+ */
 export type RichTextFeature = {
   extension?: EditorOptions['extensions'][number];
   marks?: RichTextFeatureMark[];
@@ -10,6 +14,13 @@ export type RichTextFeature = {
 };
 
 export type RichTextFeatureMark = Omit<RichTextFeatureNode, 'nodeSelector'>;
+
+/**
+ * A mark or node in the editor's menus. `nodeSelector` puts it in the bubble menu's block
+ * dropdown, `bubbleMenu` gives it a button (or its own component) in the bubble menu,
+ * `suggestion` lists it in the palette that "/" opens. `isActive` lights its button and its
+ * dropdown entry.
+ */
 export type RichTextFeatureNode = {
   label: string;
   icon: Component<IconProps>;
@@ -37,6 +48,7 @@ export type RichTextEditorConfig = {
   features: RichTextFeature[];
 };
 
+/** What a node view hands its `NodeViewWrapper`: the drag start of the node. */
 export interface TiptapNodeViewContext {
   onDragStart: (event: DragEvent) => void;
 }

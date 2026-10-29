@@ -2,6 +2,7 @@ import Images from '@lucide/svelte/icons/images';
 import type { RichTextFeature } from '../../types.js';
 import { Resource, type ResourceFeatureExtensionOptions } from './resource-extension.js';
 
+/** A document of a collection, picked from the palette, stored as `rich-text-resource-<slug>`. */
 export const ResourceFeature = (args: ResourceFeatureExtensionOptions): RichTextFeature => {
   const slug = args.source.split('?')[0];
   return {

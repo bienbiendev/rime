@@ -14,6 +14,7 @@
   import type { RichTextFeature } from './types.js';
 
   type Props = {
+    /** The field's path, passed on to the bubble menu's components. */
     path: string;
     features?: RichTextFeature[];
     value?: JSONContent | string | null;

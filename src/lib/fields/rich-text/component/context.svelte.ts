@@ -1,3 +1,4 @@
+/** One editor's shared state: whether its bubble menu is open, which the link form reads. */
 export function createRichTextState() {
   let bubbleOpen = $state(false);
 

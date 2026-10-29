@@ -19,7 +19,6 @@ const linkExtension = import.meta.env.SSR
       HTMLAttributes: { class: 'rz-rich-text-link' }
     });
 
-// Create link feature item
 const linkItem: RichTextFeatureMark = {
   label: 'Link',
   icon: LinkIcon,
@@ -30,8 +29,14 @@ const linkItem: RichTextFeatureMark = {
 };
 
 export type LinkFeatureOptions = LinkOptions & {
+  /**
+   * The collections or areas whose documents the link form offers: `<slug>` or
+   * `<slug>?<query>`.
+   */
   sources?: Array<`${PrototypeSlug}${string}`>;
 };
+
+/** Links, set from the bubble menu; the options are tiptap Link's, plus `sources`. */
 export const LinkFeature = (options?: Partial<LinkFeatureOptions>): RichTextFeature => ({
   extension: linkExtension
     ? linkExtension.configure({

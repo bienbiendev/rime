@@ -3,6 +3,7 @@ import type { EditorView } from '@tiptap/pm/view';
 import { getComputedStyle } from './getComputedStyle.js';
 import { minMax } from './minMax.js';
 
+/** The pointer's coordinates with `x` held inside the editor's content box. */
 export function getInnerCoords(
   view: EditorView,
   x: number,

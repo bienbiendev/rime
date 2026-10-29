@@ -1,9 +1,9 @@
 import SeparatorHorizontal from '@lucide/svelte/icons/separator-horizontal';
 import HorizontalRule from '@tiptap/extension-horizontal-rule';
-import type { RichTextFeature, RichTextFeatureMark } from '../../types.js';
+import type { RichTextFeature, RichTextFeatureNode } from '../../types.js';
 import './hr.css';
 
-const hrItem: RichTextFeatureMark = {
+const hrItem: RichTextFeatureNode = {
   label: 'Horizontal Rule',
   icon: SeparatorHorizontal,
   isActive: () => false,

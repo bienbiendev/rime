@@ -51,6 +51,10 @@ class SvelteNodeView extends NodeView<
   declare renderer: SvelteRenderer;
   declare contentDOMElement: HTMLElement | null;
 
+  /**
+   * Mounts the component in its own element, with the node-view props as state and the
+   * extension's contexts.
+   */
   override mount(): void {
     const Component = this.component;
 
@@ -73,9 +77,8 @@ class SvelteNodeView extends NodeView<
       : document.createElement(this.node.isInline ? 'span' : 'div');
 
     if (this.contentDOMElement) {
-      // For some reason the whiteSpace prop is not inherited properly in Chrome and Safari
-      // With this fix it seems to work fine
-      // See: https://github.com/ueberdosis/tiptap/issues/1197
+      // Chrome and Safari do not pass `white-space` down to the content element: it is set here
+      // (https://github.com/ueberdosis/tiptap/issues/1197)
       this.contentDOMElement.style.whiteSpace = 'inherit';
     }
 
@@ -96,12 +99,10 @@ class SvelteNodeView extends NodeView<
     this.handleSelectionUpdate = this.handleSelectionUpdate.bind(this);
     this.editor.on('selectionUpdate', this.handleSelectionUpdate);
 
+    // A click in the node view selects the whole node and focuses the editor
     target.addEventListener('click', () => {
-      // Create a NodeSelection for this node
       const nodeSelection = NodeSelection.create(this.editor.state.doc, this.getPos() || 0);
-      // Dispatch a transaction to update the selection
       this.editor.view.dispatch(this.editor.state.tr.setSelection(nodeSelection));
-      // Focus the editor
       this.editor.view.focus();
     });
 
@@ -148,6 +149,7 @@ class SvelteNodeView extends NodeView<
     return this.contentDOMElement;
   }
 
+  /** Marks the node selected while the editor's selection covers it whole, unselected otherwise. */
   handleSelectionUpdate() {
     const { from, to } = this.editor.state.selection;
     const pos = this.getPos();
@@ -269,6 +271,16 @@ class SvelteNodeView extends NodeView<
   }
 }
 
+/**
+ * A tiptap node view drawn by a Svelte component. The component gets `NodeViewProps` as props,
+ * and reads with `getContext` the contexts its extension carries in `options.contexts`. Its
+ * markup must sit in a `NodeViewWrapper`. `options.as` is the element that holds it (a div, a
+ * span for an inline node), `options.attrs` the attributes set on that element.
+ *
+ * ```ts
+ * addNodeView() { return SvelteNodeViewRenderer(QuoteView); }
+ * ```
+ */
 const SvelteNodeViewRenderer = (
   component: Component<NodeViewProps>,
   options?: Partial<SvelteNodeViewRendererOptions>

@@ -11,6 +11,7 @@ export interface FieldsFeatureExtensionOptions {
   preview?: Component<FieldsPreviewProps>;
 }
 
+/** An atom block whose `json` attribute holds the values of its fields, drawn by fields.svelte. */
 export const FieldsExtension = Node.create<FieldsFeatureExtensionOptions>({
   name: 'rich-text-fields',
   group: 'block',

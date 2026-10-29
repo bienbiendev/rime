@@ -7,6 +7,7 @@ import { findElementNextToCoords } from './findNextElementFromCursor.js';
 import { getInnerCoords } from './getInnerCoords.js';
 import { removeNode } from './removeNode.js';
 
+/** The range of the top-level block right of the pointer, or none. */
 function getDragHandleRanges(event: DragEvent, editor: Editor): SelectionRange[] {
   const { doc } = editor.view.state;
 
@@ -24,6 +25,7 @@ function getDragHandleRanges(event: DragEvent, editor: Editor): SelectionRange[]
   const coords = getInnerCoords(editor.view, event.clientX, event.clientY);
   const posAtCoords = editor.view.posAtCoords(coords);
 
+  // No position at the pointer's height: nothing to drag
   if (!posAtCoords) {
     return [];
   }
@@ -34,6 +36,11 @@ function getDragHandleRanges(event: DragEvent, editor: Editor): SelectionRange[]
   return getSelectionRanges($from, $to, 0);
 }
 
+/**
+ * Starts a drag from the handle: the hovered block, or the whole selection when the block is
+ * part of it. It selects what moves, hands ProseMirror the content to move, and draws a copy
+ * of the blocks as the drag image.
+ */
 export function dragHandler(event: DragEvent, editor: Editor) {
   const { view } = editor;
 

@@ -63,12 +63,14 @@
   const pluginKey = `rz-bubble-menu-${random.randomId(8)}`;
   const updateDelay = 250;
 
+  // The menu shows for a selection that holds something, inside a block
   const shouldShow = ({ editor }: { editor: Editor }) => {
     return (
       editor.view.state.selection.$head.depth > 0 && editor.view.state.selection.content().size > 0
     );
   };
 
+  // Which items light up, from each item's `isActive`
   function setActiveItems() {
     activeItems = bubbleMenuItems.reduce(
       (acc, item) => {

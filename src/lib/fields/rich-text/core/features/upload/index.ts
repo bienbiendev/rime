@@ -2,6 +2,7 @@ import Images from '@lucide/svelte/icons/images';
 import type { RichTextFeature } from '../../types.js';
 import { Upload, type UploadFeatureExtensionOptions } from './upload-extension.js';
 
+/** A media of a collection, picked from the palette, stored as `rich-text-upload-<slug>`. */
 export const UploadFeature = (args: UploadFeatureExtensionOptions): RichTextFeature => {
   const slug = args.source.split('?')[0];
   return {

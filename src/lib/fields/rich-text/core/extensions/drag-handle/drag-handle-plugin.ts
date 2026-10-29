@@ -10,6 +10,7 @@ import { findElementNextToCoords } from './helpers/findNextElementFromCursor.js'
 import { getOuterNode, getOuterNodePos } from './helpers/getOuterNode.js';
 import { removeNode } from './helpers/removeNode.js';
 
+/** The child of the editor's root element that holds `domNode`. */
 const getOuterDomNode = (view: EditorView, domNode: HTMLElement) => {
   let tmpDomNode = domNode;
 
@@ -32,6 +33,11 @@ export interface DragHandlePluginProps {
   computePositionConfig?: ComputePositionConfig;
 }
 
+/**
+ * The drag handle as a ProseMirror plugin. It moves `element` into a wrapper placed beside the
+ * editor, shows it next to the top-level block under the pointer, and starts a drag of that
+ * block from it. drag-handle.svelte registers `plugin` and calls `unbind` when it goes.
+ */
 export const DragHandlePlugin = ({
   pluginKey,
   element,
@@ -181,7 +187,7 @@ export const DragHandlePlugin = ({
               return;
             }
 
-            // Recalculate popup position if doc has changed and drag handler is visible.
+            // A change moved the hovered block: the handle follows it.
             if (view.state.doc.eq(oldState.doc) || currentNodePos === -1) {
               return;
             }

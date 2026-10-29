@@ -2,12 +2,10 @@ import BoldIcon from '@lucide/svelte/icons/bold';
 import Bold from '@tiptap/extension-bold';
 import type { RichTextFeature, RichTextFeatureMark } from '../types.js';
 
-// Create the bold extension
 const boldExtension = Bold.configure({
   HTMLAttributes: { class: 'rz-rich-text-bold' }
 });
 
-// Create bold feature item
 const boldItem: RichTextFeatureMark = {
   label: 'Bold',
   icon: BoldIcon,
@@ -17,7 +15,6 @@ const boldItem: RichTextFeatureMark = {
   }
 };
 
-// Export the bold feature
 export const BoldFeature: RichTextFeature = {
   extension: boldExtension,
   marks: [boldItem]

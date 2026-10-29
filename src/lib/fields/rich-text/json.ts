@@ -1,11 +1,13 @@
 import type { JSONContent } from '@tiptap/core';
 
 /**
- * Type guard to check if a value is a JSONContent object.
+ * Whether a value has the shape of a tiptap document: an object with `content`.
  *
- * @example
- * isJSONContent({ type: 'paragraph', content: [] }) // true
- * isJSONContent('Just a string') // false
+ * ```ts
+ * isJSONContent({ type: 'paragraph', content: [] }); // true
+ * isJSONContent({ type: 'doc' });                    // false
+ * isJSONContent('Just a string');                    // false
+ * ```
  */
 export const isJSONContent = (value: any): value is JSONContent => {
   return typeof value === 'object' && value !== null && 'content' in value;
