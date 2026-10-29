@@ -1,6 +1,6 @@
 import { create } from '#lib/core/prototype/collection/definition.js';
 import { logger } from '#lib/core/logger.server.js';
-import { block, blocks, tab, tabs, text } from '#lib/fields/index.js';
+import { block, blocks, group, relation, tab, tabs, text } from '#lib/fields/index.js';
 import { describe, expect, test, vi } from 'vitest';
 import validate from './validate.server.js';
 
@@ -75,5 +75,69 @@ describe('validate: derived slugs', () => {
       expect.stringContaining('Slug $My-thing is not a valid derived slug')
     );
     error.mockRestore();
+  });
+});
+
+describe('validate: field rules', () => {
+  const configOf = (slug: string, fields: unknown[]) =>
+    ({ collections: [create(slug, { fields } as never)], areas: [], $adapter: {} }) as any;
+
+  /** The messages `validate` logs for `fields` on a `slug` collection. */
+  const errorsOf = (slug: string, fields: unknown[]) => {
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+    const valid = validate(configOf(slug, fields));
+    const messages = error.mock.calls.map(([message]) => message);
+    error.mockRestore();
+    return { valid, messages };
+  };
+
+  test('a relation to an unknown collection is refused', () => {
+    const { valid, messages } = errorsOf('specRelUnknown', [
+      relation('author').to('nowhere' as never)
+    ]);
+    expect(valid).toBe(false);
+    expect(messages).toEqual([
+      'Relation field author references unknown collection nowhere, in collection specRelUnknown'
+    ]);
+  });
+
+  test('a $root() relation is refused', () => {
+    const { messages } = errorsOf('specRelRoot', [
+      relation('author')
+        .to('specRelRoot' as never)
+        .$root()
+    ]);
+    expect(messages).toEqual(["Relation field author can't be $root(), in collection specRelRoot"]);
+  });
+
+  test('a localized $root() field is refused', () => {
+    const { messages } = errorsOf('specRootLocalized', [text('title').$root().localized()]);
+    expect(messages).toEqual([
+      "Field title of collection specRootLocalized with $root(), can't be localized"
+    ]);
+  });
+
+  test('a field name starting with a digit is refused, a leading _ is accepted', () => {
+    expect(errorsOf('specFieldName', [text('1title')]).messages).toEqual([
+      expect.stringContaining('Field 1title of collection specFieldName should')
+    ]);
+    expect(errorsOf('specUnderscore', [text('_title')]).valid).toBe(true);
+  });
+
+  test('two blocks of one name and different fields are refused, at any level', () => {
+    const fields = [
+      blocks('layout', [block('hero').fields(text('title'))]),
+      group('aside').fields(blocks('more', [block('hero').fields(text('summary'))]))
+    ];
+    expect(errorsOf('specBlockTwice', fields).messages).toEqual([
+      expect.stringContaining('Each block with same name should be')
+    ]);
+  });
+
+  test('a duplicate name is found below the first level', () => {
+    const fields = [group('seo').fields(text('title'), text('title'))];
+    expect(errorsOf('specNestedDup', fields).messages).toEqual([
+      "Duplicate field or tab 'title' in collection 'specNestedDup'"
+    ]);
   });
 });

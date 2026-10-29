@@ -81,140 +81,140 @@ function validateSlugs(config: BuildConfig) {
   return errors;
 }
 
-/**
- * Validate documents fields for each collections
- * and areas
- */
-const validateFields = (config: BuildConfig) => {
-  let errors: string[] = [];
-  for (const collection of config.collections) {
-    const collectionErrors = validateDocumentFields(collection, config);
-    errors = [...errors, ...collectionErrors];
-  }
-  for (const area of config.areas) {
-    const collectionErrors = validateDocumentFields(area, config);
-    errors = [...errors, ...collectionErrors];
-  }
-  return errors;
+type Prototype = BuiltCollection | BuiltArea;
+type Block = BlocksField['blocks'][number];
+
+/** What the field rules of one prototype share: the collection slugs, and each block met so far. */
+type Scope = {
+  prototype: Prototype;
+  collectionSlugs: string[];
+  blocks: Record<string, Block>;
 };
 
-const validateDocumentFields = (
-  documentConfig: BuiltCollection | BuiltArea,
-  config: BuildConfig
-) => {
+/** Where a message points: `collection pages`. */
+const where = ({ prototype }: Scope) => `${prototype.type} ${prototype.slug}`;
+
+/** The names a level writes under: each form field's, and each tab's. */
+const namesAtLevel = (fields: FieldBuilder[]) =>
+  fields.flatMap((field) => {
+    if (field instanceof TabsBuilder) return field.get.tabs.map((tab) => tab.name);
+    return isFormField(field) ? [field.name] : [];
+  });
+
+/** A relation names a collection that exists, and is not `$root()`. */
+const relationRules = (field: RelationFieldBuilder, scope: Scope): string[] => {
   const errors: string[] = [];
-  const registeredBlocks: Record<string, BlocksField['blocks'][number]> = {};
+  if (!scope.collectionSlugs.includes(field.get.relationTo)) {
+    errors.push(
+      `Relation field ${field.name} references unknown collection ${field.get.relationTo}, in ${where(scope)}`
+    );
+  }
 
-  const validateRelationField = (field: RelationFieldBuilder) => {
-    const collectionsSlugs = config.collections.map((c) => c.slug);
-    if (!collectionsSlugs.includes(field.get.relationTo)) {
-      errors.push(
-        `Relation field ${field.name} references unknown collection ${field.get.relationTo}, in ${documentConfig.type} ${documentConfig.slug}`
-      );
-    }
-
-    // A relation is junction rows, and the base row has no junction. A reference that must sit
-    // there is a text column with `$references(slug, { resolve: true })`.
-    if (field.get.root) {
-      errors.push(
-        `Relation field ${field.name} can't be $root(), in ${documentConfig.type} ${documentConfig.slug}`
-      );
-    }
-  };
-
-  /** The names this level writes under: each form field's, and each tab's. */
-  const namesAtLevel = (fields: FieldBuilder[]) =>
-    fields.flatMap((field) => {
-      if (field instanceof TabsBuilder) return field.get.tabs.map((tab) => tab.name);
-      return isFormField(field) ? [field.name] : [];
-    });
-
-  const validateFields = (fields: FieldBuilder[]) => {
-    for (const duplicate of hasDuplicates(namesAtLevel(fields))) {
-      errors.push(
-        `Duplicate field or tab '${duplicate}' in ${documentConfig.type} '${documentConfig.slug}'`
-      );
-    }
-
-    for (const field of fields) {
-      if (isFormField(field)) {
-        // A `$root()` field sits on the base row, which has no locales branch.
-        if (field.get.root && field.get.localized) {
-          errors.push(
-            `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with $root(), can't be localized`
-          );
-        }
-
-        // A resolved reference is joined from a column of the row; a localized column is on the
-        // locales branch, where no join reaches it.
-        if (field._references?.resolve && field.get.localized) {
-          errors.push(
-            `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} with a resolved reference, can't be localized`
-          );
-        }
-
-        // Check for malformed field.name
-        if (!FIELD_NAME.test(field.name)) {
-          errors.push(
-            `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} should be camelCase`
-          );
-        }
-
-        // A blocks rule, not a walk: it compares whole block builders, which a node does not carry.
-        if (field instanceof BlocksBuilder) {
-          for (const block of field.get.blocks) {
-            // A "." splits the path segment that carries the block name
-            if (block.name.includes('.')) {
-              errors.push(
-                `Block ${block.name} of ${documentConfig.type} ${documentConfig.slug} can't hold a "."`
-              );
-            }
-            if (block.name in registeredBlocks) {
-              const blockDefinedButDiffer =
-                JSON.stringify(registeredBlocks[block.name]) !== JSON.stringify(block);
-              if (blockDefinedButDiffer) {
-                errors.push(`Each block with same name should be identique (block ${block.name})`);
-              }
-            } else {
-              registeredBlocks[block.name] = block;
-            }
-          }
-          // A default names block types this list declares. A function default is checked when
-          // it runs.
-          const initial = field.get.defaultValue;
-          if (Array.isArray(initial)) {
-            try {
-              field.use.completeDefault(initial);
-            } catch (error) {
-              errors.push(
-                `${(error as Error).message}, in ${documentConfig.type} ${documentConfig.slug}`
-              );
-            }
-          }
-        } else if (field instanceof RelationFieldBuilder) {
-          validateRelationField(field);
-        } else if (
-          (field instanceof PickOneFieldBuilder || field instanceof PickManyFieldBuilder) &&
-          !field.get.options?.length
-        ) {
-          errors.push(
-            `Field ${field.name} of ${documentConfig.type} ${documentConfig.slug} should have at least one option`
-          );
-        }
-      }
-
-      // Every block type, every tab, a group's and a tree row's fields: one level each.
-      for (const node of field.use.nodes()) {
-        validateFields(node.fields);
-      }
-    }
-  };
-
-  validateFields(documentConfig.fields);
-
+  // A relation is junction rows, and the base row has no junction. A reference that must sit
+  // there is a text column with `$references(slug, { resolve: true })`.
+  if (field.get.root) {
+    errors.push(`Relation field ${field.name} can't be $root(), in ${where(scope)}`);
+  }
   return errors;
 };
 
+/**
+ * A block name holds no ".", two blocks of one name in a prototype are the same block, and an
+ * array default names only the block types the field declares.
+ *
+ * A blocks rule, not a walk: it compares whole block builders, which a node does not carry.
+ */
+const blocksRules = (field: BlocksBuilder, scope: Scope): string[] => {
+  const errors: string[] = [];
+  for (const block of field.get.blocks) {
+    // A "." splits the path segment that carries the block name
+    if (block.name.includes('.')) {
+      errors.push(`Block ${block.name} of ${where(scope)} can't hold a "."`);
+    }
+    if (block.name in scope.blocks) {
+      if (JSON.stringify(scope.blocks[block.name]) !== JSON.stringify(block)) {
+        errors.push(`Each block with same name should be identical (block ${block.name})`);
+      }
+    } else {
+      scope.blocks[block.name] = block;
+    }
+  }
+
+  // A function default is checked when it runs.
+  const initial = field.get.defaultValue;
+  if (Array.isArray(initial)) {
+    try {
+      field.use.completeDefault(initial);
+    } catch (error) {
+      errors.push(`${(error as Error).message}, in ${where(scope)}`);
+    }
+  }
+  return errors;
+};
+
+/** The rules one form field follows, whatever its level. */
+const fieldRules = (field: FieldBuilder, scope: Scope): string[] => {
+  if (!isFormField(field)) return [];
+  const errors: string[] = [];
+
+  // A `$root()` field sits on the base row, which has no locales branch.
+  if (field.get.root && field.get.localized) {
+    errors.push(`Field ${field.name} of ${where(scope)} with $root(), can't be localized`);
+  }
+
+  // A resolved reference is joined from a column of the row; a localized column is on the
+  // locales branch, where no join reaches it.
+  if (field._references?.resolve && field.get.localized) {
+    errors.push(
+      `Field ${field.name} of ${where(scope)} with a resolved reference, can't be localized`
+    );
+  }
+
+  if (!FIELD_NAME.test(field.name)) {
+    errors.push(
+      `Field ${field.name} of ${where(scope)} should hold only letters, digits and underscores, with a letter first after any leading underscore`
+    );
+  }
+
+  if (field instanceof BlocksBuilder) {
+    errors.push(...blocksRules(field, scope));
+  }
+  if (field instanceof RelationFieldBuilder) {
+    errors.push(...relationRules(field, scope));
+  }
+  if (
+    (field instanceof PickOneFieldBuilder || field instanceof PickManyFieldBuilder) &&
+    !field.get.options?.length
+  ) {
+    errors.push(`Field ${field.name} of ${where(scope)} should have at least one option`);
+  }
+  return errors;
+};
+
+/**
+ * The rules of one level of fields, then of each level below it: every block type, every tab, a
+ * group's and a tree row's fields.
+ */
+const fieldErrors = (fields: FieldBuilder[], scope: Scope): string[] => [
+  ...hasDuplicates(namesAtLevel(fields)).map(
+    (name) =>
+      `Duplicate field or tab '${name}' in ${scope.prototype.type} '${scope.prototype.slug}'`
+  ),
+  ...fields.flatMap((field) => [
+    ...fieldRules(field, scope),
+    ...field.use.nodes().flatMap((node) => fieldErrors(node.fields, scope))
+  ])
+];
+
+/** The field rules of every collection, then of every area. */
+const validateFields = (config: BuildConfig) => {
+  const collectionSlugs = config.collections.map((c) => c.slug);
+  return [...config.collections, ...config.areas].flatMap((prototype) =>
+    fieldErrors(prototype.fields, { prototype, collectionSlugs, blocks: {} })
+  );
+};
+
+/** `config.$adapter` is set. */
 const hasDatabase = (config: BuildConfig) => {
   const hasDatabaseName = '$adapter' in config;
   if (!hasDatabaseName) {
