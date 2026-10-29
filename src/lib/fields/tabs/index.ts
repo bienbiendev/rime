@@ -10,9 +10,12 @@ import { capitalize, isCamelCase, joinMemberTypes } from '#lib/util/string.js';
 import type { WithoutBuilders } from '#lib/core/fields/types.js';
 import Tabs from './component/Tabs.svelte';
 
+/** Fields in tabs: each tab's values sit under its name, `seo.title`. */
 export const tabs = (...tabs: TabBuilder[]) => new TabsBuilder(...tabs);
+/** A tab, given to `tabs()`; its name is camelCase and names its values. */
 export const tab = (name: string) => new TabBuilder(name);
 
+/** Tabs of fields; the builder has no name and no value of its own. */
 export class TabsBuilder extends FieldBuilder<TabsField> {
   constructor(...tabs: TabBuilder[]) {
     super('tabs');
@@ -38,6 +41,7 @@ export class TabsBuilder extends FieldBuilder<TabsField> {
     return this;
   }
 
+  /** The config as the panel and the server read it, each tab's fields compiled too. */
   override compile() {
     return {
       ...this.field,
@@ -47,6 +51,7 @@ export class TabsBuilder extends FieldBuilder<TabsField> {
     };
   }
 
+  /** One member per tab with fields: `seo: { title?: string }`. */
   protected override generateType(): string {
     const types: string[] = [];
     for (const tab of this.field.tabs) {
@@ -71,6 +76,7 @@ export class TabsBuilder extends FieldBuilder<TabsField> {
   }
 }
 
+/** One tab: its name, label, fields, and whether live mode shows it. */
 export class TabBuilder {
   #tab: TabsFieldTab;
 
@@ -79,6 +85,7 @@ export class TabBuilder {
     this.#tab = { name, label: capitalize(name), fields: [], live: true };
   }
 
+  /** The tab's name on screen; without it, its name capitalized. */
   label(label: string) {
     this.#tab.label = label;
     return this;
@@ -95,11 +102,13 @@ export class TabBuilder {
     return clone;
   }
 
+  /** The tab's fields, in place of any given before. */
   fields(...fields: FieldBuilder<Field>[]) {
     this.#tab.fields = fields;
     return this;
   }
 
+  /** A copy of the tab's settings. */
   get get() {
     return { ...this.#tab };
   }
@@ -108,6 +117,7 @@ export class TabBuilder {
     return { ...this.#tab, fields: this.#tab.fields.map((f) => f.compile()) };
   }
 
+  /** Live mode shows the tab unless `live(false)`. */
   live(bool: boolean) {
     this.#tab.live = bool;
     return this;

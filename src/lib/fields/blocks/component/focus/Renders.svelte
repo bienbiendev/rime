@@ -19,7 +19,8 @@
   /**
    * `only` narrows the list to the block at that index, focus on one block: it does not move
    * then, its own lists do. `onRemove` asks first when the block holds blocks of its own.
-   * `holder` is the block a nested list belongs to, and `class` what its render names it.
+   * `holder` is the block a nested list belongs to; `class` is the class the parent's render gives
+   * this list through `children(name, { class })`.
    */
   type Props = {
     form: DocumentFormContext;

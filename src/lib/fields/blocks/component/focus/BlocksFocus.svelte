@@ -76,12 +76,13 @@
   const narrow = $derived(width > 0 && width < 52 * remPx());
   let panelOpen = $state(false);
 
+  /** The root font size in pixels: the breakpoint is in rem. */
   function remPx() {
     return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
   }
 
-  // The selection moved. Nothing left to inspect: the types to add. Picked from the layers in the
-  // sheet: put it away, to see the block.
+  // The selection changed. With nothing selected, an Inspector tab turns to Add; a pick from the
+  // Layers tab closes the sheet, so the block shows.
   $effect(() => {
     const picked = !!focus.current;
     untrack(() => {
@@ -106,7 +107,8 @@
     });
   });
 
-  // A focus session starts with fresh relations in the renders.
+  // A focus session starts with fresh relations in the renders. It runs on the server too,
+  // where the cache is empty.
   populate.clear();
 
   // The overlay owns the viewport while it is up; the document under it stays where it was.
@@ -118,6 +120,7 @@
     };
   });
 
+  /** A dialog is open: the arrow, copy and delete keys are its own then. */
   const dialogOpen = () => !!document.querySelector('[role="dialog"][data-state="open"]');
 
   /** Removes the selection, after asking when the block holds blocks of its own. */
@@ -135,6 +138,7 @@
     else focus.up();
   }
 
+  /** Pastes after the selection, and warns when nothing was copied or the list refuses its type. */
   async function paste() {
     const id = await focus.pasteAfterSelection();
     if (!id) toast.warning(t__('fields.paste_refused'));
@@ -153,6 +157,7 @@
     const types = addable;
     const row = focus.currentRow;
     const editing = !focus.locked;
+    /** No dialog open: the keys below act. */
     const free = () => !dialogOpen();
     return [
       ...(editing

@@ -21,6 +21,7 @@ import Tree from './component/Tree.svelte';
 import { isEmptyList, localizeRepeatableFields } from '../repeatable.js';
 import { completeTree, type TreeItemDefault } from './defaults.js';
 
+/** A list of items that nest: each item has the fields, and its own items in `_children`. */
 export const tree = (name: string) => new TreeBuilder(name);
 
 // A row's own members are not content: position, path and locale stay as they are
@@ -44,6 +45,7 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
     return Cell;
   }
 
+  /** The fields of every item. The hidden `path` and `position` stay before them. */
   fields(...fields: FieldBuilder<Field>[]) {
     this.field.fields = [...(this.field.fields || []), ...fields];
     if (this.field.localized) {
@@ -52,16 +54,24 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
     return this;
   }
 
+  /** The text of the button that adds an item at the root. */
   addItemLabel(label: string) {
     this.field.addItemLabel = label;
     return this;
   }
 
+  /**
+   * The title of an item's card: `position` is its place, `1.2` for the second item of the first.
+   */
   renderTitle(render: TreeFieldBlockRenderTitle) {
     this.field.renderTitle = render;
     return this;
   }
 
+  /**
+   * How many levels may sit under a first-level item: `0` keeps the tree flat, `1` lets a
+   * first-level item hold items that hold none. 8 by default.
+   */
   maxDepth(n: number) {
     this.field.maxDepth = n;
     return this;
@@ -100,7 +110,7 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
 
   /**
    * The tree and its items' content fields localized, whichever of `fields()` and this comes
-   * first.
+   * first. `path`, `position` and `locale` stay as they are.
    */
   localized() {
     this.field.localized = true;
@@ -108,6 +118,7 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
     return this;
   }
 
+  /** The config as the panel and the server read it, the items' fields compiled too. */
   compile() {
     return {
       ...this.field,
@@ -115,6 +126,7 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
     };
   }
 
+  /** A shared item type, `TreeNav`, holding its own `_children`, then `nav: Array<TreeNav>`. */
   protected override generateType(): string {
     const blockTypeName = `Tree${toPascalCase(this.name)}`;
     const fieldsType = joinMemberTypes(this.get.fields.map((f) => f.use.generateType()));

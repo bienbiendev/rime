@@ -8,6 +8,7 @@ class SeparatorFieldBuilder extends FieldBuilder<SeparatorField> {
   }
 }
 
+/** A line between two fields; it holds no value. */
 export const separator = () => new SeparatorFieldBuilder('separator');
 
 /****************************************************/

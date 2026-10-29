@@ -94,6 +94,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   /** The block the path ends on, the one the stage is narrowed to. */
   const narrowed = $derived(path && endsOnBlock(path) ? parseBlockPath(path) : null);
 
+  /** The address on screen, with `?focus=` set to `list`, or without it for `null`. */
   const urlWith = (list: string | null) => {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity -- a copy handed to pushState, not state
     const url = new URL(page.url.href);
@@ -146,6 +147,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   const configOf = (list: string, block: GenericBlock) =>
     builderOf(list)?.get.blocks.find((candidate) => candidate.name === block.type)?.get;
 
+  /** A row's title: `renderTitle`, else the block's label, else its type capitalized. */
   const titleOf = (config: BlocksFieldBlock | undefined, block: GenericBlock, index: number) =>
     repeatableTitle(
       config?.renderTitle,
@@ -153,6 +155,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
       config?.label || capitalize(block.type)
     );
 
+  /** One list's rows, each with the `blocks` lists its block holds. `depth` is the layers' indent. */
   function rowsOf(list: string, depth = 0): LayerRow[] {
     return form.blocks.list(list).map((block, index) => {
       const config = configOf(list, block);
@@ -281,8 +284,12 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
 
   /* ----------------------------------------------------------- selection */
 
+  /** The first selected block, `{ list, index }`, or none. */
   const currentAt = (): BlockAt | null => (selection[0] ? parseBlockPath(selection[0]) : null);
 
+  /**
+   * Selects a row. With `extend`, the row joins the selection first, or leaves it when it was in.
+   */
   function select(rowPath: string, options: { extend?: boolean } = {}) {
     if (options.extend && selection.length) {
       selection = selection.includes(rowPath)
@@ -293,7 +300,10 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     }
   }
 
-  /** Up from the first row lands on the root node; down from the root on the first row. */
+  /**
+   * Up from the first row lands on the root node, down from the root on the first row; down from
+   * the last stays. `extend` adds or drops the row as `select` does.
+   */
   function selectRelative(delta: number, extend = false) {
     const rows = visibleRows();
     if (!rows.length) return;
@@ -331,6 +341,10 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     return { list, index: form.blocks.list(list).length };
   }
 
+  /**
+   * Inserts a block of `type` at `at`, after the selection by default, and selects it. The new
+   * id, or `null` when the form is locked or the list does not take the type.
+   */
   function insertType(type: string, at = insertionPoint()): string | null {
     if (locked || !at) return null;
     const config = builderOf(at.list)?.get.blocks.find((candidate) => candidate.name === type)?.get;
@@ -367,6 +381,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
   /** Adds the type picked where the picker was opened. */
   const insertPicked = (type: string) => insertType(type, pickPoint());
 
+  /** Duplicates the selected block right after it, and selects the copy. */
   function duplicateSelection() {
     const current = movableAt();
     if (locked || !current) return;
@@ -395,6 +410,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     select(blockPath({ list: first.list, index: Math.min(first.index, remaining.length - 1) }));
   }
 
+  /** Moves the selected block `delta` places within its list; past either end, nothing moves. */
   function moveSelection(delta: number) {
     const current = movableAt();
     if (locked || !current) return;
@@ -404,6 +420,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     select(blockPath({ list: current.list, index }));
   }
 
+  /** Moves the selected block to the end of `list`, and selects it where it lands. */
   function moveSelectionInto(list: string) {
     const current = movableAt();
     if (locked || !current) return;
@@ -413,12 +430,17 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     select(blockPath({ list: landed, index }));
   }
 
+  /** Copies the first selected block to the clipboard. */
   function copySelection() {
     const current = currentAt();
     if (!current) return Promise.resolve();
     return form.blocks.copy(blockPath(current));
   }
 
+  /**
+   * Pastes the copied block after the selection. The new id, or `null` when nothing was copied or
+   * the list refuses its type.
+   */
   async function pasteAfterSelection() {
     const at = insertionPoint();
     if (locked || !at) return null;
@@ -444,6 +466,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     else collapsed.delete(id);
   };
 
+  /** Folds every row that holds a list. */
   const collapseAll = () => {
     for (const row of allRows()) if (row.children.length) collapsed.add(row.block.id);
   };

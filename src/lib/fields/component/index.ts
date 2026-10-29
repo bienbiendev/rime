@@ -12,6 +12,7 @@ type TypedComponent = Component<{
   form: DocumentFormContext<WithOptional<GenericDoc, 'id'>>;
 }>;
 
+/** A Svelte component drawn among the fields; it holds no value. */
 export const component = (component: TypedComponent) => new ComponentFieldBuilder(component);
 
 export class ComponentFieldBuilder extends FieldBuilder<ComponentField> {
@@ -19,10 +20,12 @@ export class ComponentFieldBuilder extends FieldBuilder<ComponentField> {
     super('component');
     this.field.component = component;
   }
+  /** Shown only while `func(doc)` is true; a throw hides it. */
   condition(func: (doc: any) => boolean) {
     this.field.condition = func;
     return this;
   }
+  /** Who sees it: only `read` is read, the component holding no value to create or update. */
   access(access: { create: FieldAccess; read: FieldAccess; update: FieldAccess }) {
     this.field.access = access;
     return this;

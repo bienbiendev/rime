@@ -19,6 +19,10 @@
   const focus = getBlocksFocusContext()!;
   const rows = $derived(focus.rowsOf(list, depth));
 
+  /**
+   * The row, or a field inside it, has an error: error keys are normalized paths,
+   * `sections.0.title`.
+   */
   const hasError = (rowPath: string) =>
     Object.keys(form.errors.value).some((key) => key === rowPath || key.startsWith(`${rowPath}.`));
 
@@ -58,6 +62,7 @@
     }
   });
 
+  /** Makes this list of layers sortable, for as long as it is on the page. */
   function sortableList(node: HTMLElement) {
     const instance = sortable(node);
     return { destroy: () => instance.destroy() };

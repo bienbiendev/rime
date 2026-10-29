@@ -39,7 +39,8 @@
 
   const user = getUserContext() || undefined;
 
-  // The preview shows the values of the form fields the user can read.
+  // The preview shows the values of the form fields the user can read, and in live mode the
+  // live ones.
   const previewFields = $derived.by(() => {
     return config.get.fields
       .filter((field) => field instanceof FormFieldBuilder)

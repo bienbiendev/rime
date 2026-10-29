@@ -23,10 +23,14 @@
       .split('.')
       .filter((str) => str !== '_children').length
   );
+  /** 1 for a first-level item, 2 for one inside it: `links.0._children.2` → 2. */
+  const depth = $derived(indexes.length);
+  /** The item's index among its siblings, from 0. */
   const position = $derived(parseInt(path.split('.').pop() || '0'));
   const itemValue = $derived(form.getValue<TreeBlock>(path));
   const children = $derived(itemValue?._children ?? []);
   const parentPath = $derived(path.split('.').slice(0, -1).join('.'));
+  /** How many items share the item's list: the last one has no "move down". */
   const siblingsCount = $derived(form.getValue<TreeBlock[]>(parentPath)?.length ?? 0);
   /** Shallow enough that more items can go inside. */
   const canHoldItems = $derived(depth <= config.get.maxDepth);

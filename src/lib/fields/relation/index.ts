@@ -14,6 +14,7 @@ import { isEmptyList } from '../repeatable.js';
 import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
 
+/** A link to documents of another collection, stored as `{ relationTo, documentId }` refs. */
 export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends FormFieldBuilder<
   RelationField<Doc>
 > {
@@ -53,26 +54,40 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
     return Cell;
   }
 
+  /**
+   * This relation gives the document its thumbnail
+   * (core/prototype/collection/thumbnail/find-thumbnail.ts).
+   */
   isThumbnail(bool = true) {
     this.field.isThumbnail = bool;
     return this;
   }
 
+  /**
+   * Narrows the documents the panel offers: a query string, `where[mimeType][like]=image%`, or a
+   * function of the form values that answers one. The server does not apply it to a write.
+   */
   query(query: string | QueryResolver<Doc>) {
     (this.field as RelationField<Doc>).query = query;
     return this;
   }
 
+  /** The collection the relation points to. */
   to<Slug extends CollectionSlug>(slug: Slug): RelationFieldBuilder<RegisterCollection[Slug]> {
     this.field.relationTo = slug;
     return this as unknown as RelationFieldBuilder<RegisterCollection[Slug]>;
   }
 
+  /** Takes several documents, in order; one without it. */
   many() {
     this.field.many = true;
     return this;
   }
 
+  /**
+   * The documents a new document starts with, by id: `'a1'` or `['a1', 'b2']`, or a function
+   * answering them.
+   */
   defaultValue(
     value: string | string[] | DefaultValueFn<string | string[]>,
     options?: DefaultOptions
@@ -88,6 +103,7 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
     return 'json';
   }
 
+  /** The shared `RelationValue<T>` type, then `author?: RelationValue<UsersDoc>`. */
   protected override generateType(): string {
     const relationValueType = dedent`
     //@shared:start RelationValue
@@ -124,6 +140,7 @@ export type RelationField<Doc extends GenericDoc = GenericDoc> = FormField & {
   isThumbnail?: boolean;
 };
 
+/** One stored relation: the owner, where it sits in it, and the document it names. */
 export type RelationRow = {
   id?: string;
   ownerId: string;

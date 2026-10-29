@@ -32,6 +32,7 @@ import Cell from './component/Cell.svelte';
 import { isEmptyList, localizeRepeatableFields } from '../repeatable.js';
 import { completeBlocks, type BlockDefault } from './defaults.js';
 
+/** A list of blocks, each one of the `blocks` types: `blocks('sections', [hero, text])`. */
 export const blocks = (name: string, blocks: BlockBuilder[]) => new BlocksBuilder(name, blocks);
 
 /** Each item names a block type of the list: another type has no table to be stored in. */
@@ -41,6 +42,7 @@ const ensureDeclaredTypes: FieldValidationFunc<BlocksField> = (value, { config }
   return value.every((item) => declared.includes(item?.type)) || RimeFormError.UNKNOWN_BLOCK;
 };
 
+/** A block type, given to `blocks()`: `block('hero').fields(text('title'))`. */
 export const block = (name: string) => new BlockBuilder(name);
 
 export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
@@ -125,6 +127,7 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
     return this;
   }
 
+  /** The config as the panel and the server read it: block types and fields compiled too. */
   override compile() {
     return {
       ...this.field,
@@ -136,6 +139,9 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
     } as any;
   }
 
+  /**
+   * One shared type per block type, `BlockHero`, then the member, `sections: Array<BlockHero | …>`.
+   */
   protected override generateType(): string {
     const blockNames: string[] = [];
 
@@ -170,11 +176,11 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
     }));
   }
 
+  /** One branch per block in the value, `0:hero`; a block of a type the config lacks has none. */
   protected override nodesFor(value: unknown): ValueNode[] {
     if (!Array.isArray(value)) return [];
     return value.flatMap((item, index) => {
       const block = this.field.blocks.find((candidate) => candidate.name === item?.type);
-      // Residual data for a block type the config no longer declares.
       if (!block) return [];
       return [
         {
@@ -219,6 +225,10 @@ export class BlockBuilder {
     this.block.thumbnail = component;
     return this;
   }
+  /**
+   * The title of the block's row: `position` is its index in the list, from 0. Without it, or when
+   * it answers nothing, the row shows the block's label.
+   */
   renderTitle(render: BlocksFieldBlockRenderTitle) {
     this.block.renderTitle = render;
     return this;
@@ -240,14 +250,17 @@ export class BlockBuilder {
     if (options.controls === false) this.block.controls = false;
     return this;
   }
+  /** The line under the block's name in the pickers. */
   description(description: string) {
     this.block.description = description;
     return this;
   }
+  /** The block's name in the panel; without it, its name capitalized: `hero` → `Hero`. */
   label(label: string) {
     this.block.label = label;
     return this;
   }
+  /** The block's fields. The hidden `type`, `path` and `position` stay after them. */
   fields(...fields: FieldBuilder<Field>[]) {
     this.block.fields = [...fields, ...this.block.fields];
     return this;
@@ -283,6 +296,7 @@ export type BlocksField = FormField & {
   blocks: BlockBuilder[];
 };
 
+/** `values` is the block value, `position` its index in the list, from 0. */
 export type BlocksFieldBlockRenderTitle = (args: { values: Dic; position: number }) => string;
 
 /** What a block's render component receives. */
@@ -309,6 +323,7 @@ export type BlockRenderProps = {
   children?: Snippet<[name?: string, options?: { class?: string }]>;
 };
 
+/** A block type as `block()` builds it. */
 export type BlocksFieldBlock = {
   name: string;
   label?: string;

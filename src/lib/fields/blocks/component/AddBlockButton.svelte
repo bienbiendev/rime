@@ -19,6 +19,7 @@
   /** The one type of a list that has one: the button adds it without a menu. */
   const single = $derived(config.get.blocks.length === 1 ? config.get.blocks[0].block : null);
 
+  /** Closes the picker and adds a block of this type, its fields at their initial values. */
   const add = (block: BlocksFieldBlock) => {
     open = false;
     const empty = {

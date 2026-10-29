@@ -42,7 +42,10 @@
     onChange: (ids: string[], seen: UploadDoc[]) => void;
     /** The level of a document created from the picker. */
     nestedLevel: number;
-    /** A document is being created, or no longer: the one underneath holds its saves meanwhile. */
+    /**
+     * A document is being created, or no longer: the parent form holds its saves meanwhile
+     * (`form.isDisabled`).
+     */
     onCreating?: (creating: boolean) => void;
   };
 
@@ -78,6 +81,7 @@
 
   const parentPath = $derived(getParentPath(path));
 
+  /** The files of the open folder, or, with a type or a search, the files matching them. */
   const filesURL = $derived.by(() => {
     if (!isFiltered) {
       return `${apiUrl(config.kebab)}?where[_path][equals]=${path}`;
@@ -92,6 +96,7 @@
     }
   });
 
+  /** The folders inside the open folder. */
   const foldersURL = $derived.by(() => {
     return `${apiUrl(directoriesKebab(config.slug))}?where[parent][equals]=${path}`;
   });
@@ -127,6 +132,7 @@
 
   const commit = (ids: string[]) => onChange(ids, [...seen.values()]);
 
+  /** Adds the picks and closes. */
   function confirm() {
     commit(draft);
     open = false;
@@ -148,6 +154,10 @@
   /** The last doc picked or unpicked, where a shift-click range starts. */
   let last: string | null = null;
 
+  /**
+   * Shift-click: picks every doc between the last pick and this one; it never unpicks. Without a
+   * last one in the grid, it toggles the doc.
+   */
   function range(id: string) {
     const order = (files.data?.docs ?? []).map((doc) => doc.id);
     const from = last ? order.indexOf(last) : -1;
@@ -196,6 +206,9 @@
   const label = $derived(config.label.singular || config.slug);
   let creating = $state(false);
 
+  /**
+   * Opens a new document of the collection in a sheet; the parent form holds its saves meanwhile.
+   */
   function startCreate() {
     creating = true;
     onCreating?.(true);

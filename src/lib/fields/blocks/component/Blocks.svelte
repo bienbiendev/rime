@@ -32,6 +32,7 @@
     if (last === -1 || !form.blocks.builder(parts.slice(0, last).join('.'))) return list;
     return parts.slice(0, last + 1).join('.');
   });
+  /** The summary layout asks for focus mode: a nested form, which has none, keeps the list. */
   const summary = $derived(config.get.layout === 'summary' && !!focus);
 
   const field = $derived(form.useField(path, config));
@@ -39,7 +40,10 @@
   const count = $derived(blockState.blocks.length);
   let sorting = $state(false);
 
-  /** The blocks shown open, by id; the others are rows. The browser remembers the open ones. */
+  /**
+   * The blocks shown open, by id; the others are rows. The browser remembers a saved block open,
+   * by its id.
+   */
   const opened = new SvelteSet<string>();
   const anyOpen = $derived(blockState.blocks.some((block) => opened.has(block.id)));
 
@@ -58,6 +62,7 @@
     rememberOpen(id, open);
   }
 
+  /** Opens every block when none is open, else closes them all. */
   function toggleAll() {
     const open = !anyOpen;
     for (const block of blockState.blocks) setOpen(block.id, open);
@@ -94,11 +99,13 @@
     }
   });
 
+  /** Makes the list's rows draggable by their grip, for as long as the list is on the page. */
   function sortableList(node: HTMLElement) {
     const instance = sortable(node);
     return { destroy: () => instance.destroy() };
   }
 
+  /** The block type a row's `type` names; a type the config lacks throws. */
   function getConfigByBlockType(type: string): BlocksFieldBlock {
     const blockConfig = config.get.blocks.find((b) => type === b.name);
     if (!blockConfig) {

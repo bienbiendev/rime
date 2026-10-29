@@ -12,13 +12,17 @@
   type Props = {
     /** The menu's name for screen readers: `fields.block_actions` or `fields.item_actions`. */
     label: string;
+    /** The menu entry that removes the row: `fields.delete_block` or `fields.delete_item`. */
     deleteLabel: string;
+    /** Removes the row. */
     onDelete: () => void;
     /** Absent on the first row of its list. */
     moveUp?: () => void;
     /** Absent on the last row of its list. */
     moveDown?: () => void;
+    /** Adds a copy after the row; without it, no Duplicate entry. */
     onDuplicate?: () => void;
+    /** Opens the row in focus mode ("Open in editor"); without it, no such entry. */
     onFocus?: () => void;
   };
 

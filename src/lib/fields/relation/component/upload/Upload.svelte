@@ -54,6 +54,7 @@
 
   let list = $state<HTMLElement>();
 
+  // Dragging a thumbnail reorders the picks.
   $effect(() => {
     if (!many || !list || readOnly) return;
     const sortable = Sortable.create(list, {
@@ -187,6 +188,7 @@
 {/if}
 
 {#if many}
+  <!-- Sortable moves the DOM nodes; the key rebuilds the list from the picks after each move. -->
   {#key stamp}
     <div bind:this={list} class="rz-relation-upload__list" data-error={hasError ? '' : null}>
       {#each selectedItems as item (item.documentId)}

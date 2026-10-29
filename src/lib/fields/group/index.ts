@@ -10,6 +10,7 @@ import type { Field, FieldsPreviewProps, FormField } from '#lib/fields/types.js'
 import type { Component } from 'svelte';
 import Group from './component/Group.svelte';
 
+/** Empty: no value, or an object with no key. */
 const isEmpty = (value: unknown) =>
   !!value === false ||
   (typeof value === 'object' &&
@@ -45,15 +46,18 @@ export class GroupFieldBuilder extends FormFieldBuilder<GroupField> {
     return this;
   }
 
+  /** What the folded group shows: a component given the fields and their values. */
   preview(component: Component<FieldsPreviewProps>) {
     this.field.preview = component;
     return this;
   }
 
+  /** The config as the panel and the server read it, its fields compiled too. */
   compile() {
     return { ...this.field, fields: this.field.fields.map((f) => f.compile()) };
   }
 
+  /** `seo: { title?: string … }`, or nothing for a group with no field. */
   protected override generateType(): string {
     const fieldsTypes = joinMemberTypes(this.field.fields.map((field) => field.use.generateType()));
     return fieldsTypes ? `${this.name}: {${fieldsTypes}}` : '';

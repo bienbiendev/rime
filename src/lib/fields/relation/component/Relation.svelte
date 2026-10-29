@@ -46,7 +46,7 @@
   let initialItems: RelationFieldItem[] = $state([]);
   // value from the form
   let initialValue = $derived(form.getRawValue<RelationRow[]>(path) || []);
-  // timestamp to force re-render
+  // Bumped after a drag reorder: Upload.svelte rebuilds its list of thumbnails from the picks.
   let stamp = $state(new Date().getTime().toString());
 
   let selectedItems = $state<RelationFieldItem[]>([]);
@@ -117,7 +117,7 @@
 
   const ressourceURL = makeRessourceURL();
 
-  // Fetch the collection data
+  // Every document of the related collection the query names, no limit.
   const ressource = APIProxy.getRessource<{ docs: GenericDoc[] }>(ressourceURL);
 
   // Initialize the initial items and selected items
@@ -185,6 +185,7 @@
   });
 
   // Actions
+  /** The field's value for the picks, in order. */
   const buildRelationFieldValue = () => {
     const live = 'isLive' in form && form.isLive;
     const items = selectedItems.map((item) => ({
@@ -213,7 +214,11 @@
     }
   };
 
-  const onRelationCreated = async (doc: GenericDoc) => {
+  /**
+   * A document created from the field: listed, picked unless the field is full, and the form
+   * enabled again.
+   */
+  const onRelationCreated = (doc: GenericDoc) => {
     if ('isDisabled' in form) {
       form.isDisabled = false;
     }
@@ -223,13 +228,15 @@
     field.value = buildRelationFieldValue();
   };
 
-  const onOrderChange = async (oldIndex: number, newIndex: number) => {
+  /** A drag moved a pick from `oldIndex` to `newIndex`. */
+  const onOrderChange = (oldIndex: number, newIndex: number) => {
     selectedItems = moveItem(selectedItems, oldIndex, newIndex);
     field.value = buildRelationFieldValue();
     stamp = new Date().getTime().toString();
   };
 
-  const addValue = async (documentId: string) => {
+  /** Picks a candidate by its document id; a full field ignores it. */
+  const addValue = (documentId: string) => {
     if (isFull) return;
     const itemToAdd = availableItems.find((item) => item.documentId === documentId);
     if (!itemToAdd) {
@@ -255,7 +262,8 @@
     field.value = buildRelationFieldValue();
   };
 
-  const removeValue = async (incomingId: string) => {
+  /** Removes a pick by its document id. */
+  const removeValue = (incomingId: string) => {
     selectedItems = selectedItems.filter((item) => item.documentId !== incomingId);
     field.value = buildRelationFieldValue();
   };

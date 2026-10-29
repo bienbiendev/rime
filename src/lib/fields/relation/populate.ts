@@ -3,6 +3,7 @@ import type { Dic } from '#lib/util/types.js';
 import { clearFetchedDocs, fetchDoc } from './fetch.js';
 import { Relation } from './relation.js';
 
+/** A link field value whose `type` names a collection: its `value` is a document id. */
 const isLink = (value: Dic) =>
   'value' in value &&
   'target' in value &&
