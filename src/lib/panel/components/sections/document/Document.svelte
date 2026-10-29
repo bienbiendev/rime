@@ -295,21 +295,17 @@
     else formElement.requestSubmit();
   }
 
+  /** Lets a held redirect go; the API key dialog calls it when it closes. */
+  let releaseRedirect = () => {};
+
+  /**
+   * Runs before the form follows a save's redirect. After creating an API-key account, it holds
+   * the redirect until the key dialog is closed, so the key shows once.
+   */
   async function beforeRedirect(data?: FormSuccessData) {
-    const IS_API_AUTH = config.type === 'collection' && config.auth?.type === 'apiKey';
-    if (IS_API_AUTH) {
-      apiKey = data?.document?.apiKey || null;
-      return new Promise<boolean>((resolve) => {
-        function checkAndResolve() {
-          if (!apiKey) {
-            isRedirect = !!data?.redirectUrl;
-            resolve(true);
-            clearInterval(intervalId);
-          }
-        }
-        const intervalId = setInterval(checkAndResolve, 100);
-      });
-    }
+    const isApiKeyAuth = config.type === 'collection' && config.auth?.type === 'apiKey';
+    if (isApiKeyAuth) apiKey = data?.document?.apiKey || null;
+    if (apiKey) await new Promise<void>((resolve) => (releaseRedirect = resolve));
     isRedirect = !!data?.redirectUrl;
     return true;
   }
@@ -377,7 +373,7 @@
 
   <!-- This shows the create API Key after creation, for apiKey auth type collection -->
   {#if apiKey}
-    <AuthApiKeyDialog bind:apiKey />
+    <AuthApiKeyDialog bind:apiKey onClose={() => releaseRedirect()} />
   {/if}
 
   <Dialog.Root

@@ -148,90 +148,94 @@
     }
   }
 
-  /** The menu's entries, in the palette as well. */
-  useCommands(() => {
-    const group = t__('common.document');
-    return [
-      ...(form.config.versions && history
-        ? [
-            {
-              id: 'document.versions',
-              label: t__('common.versions_history'),
-              group,
-              icon: History,
-              run: () => (history.open = true)
-            }
-          ]
-        : []),
-      ...(form.config.versions?.draft && form.values.status === VERSIONS_STATUS.PUBLISHED
-        ? [
-            {
-              id: 'document.new_draft',
-              label: t__('common.save_new_draft'),
-              group,
-              icon: Pickaxe,
-              run: handleNewDraft
-            }
-          ]
-        : []),
-      ...(allowDuplicate
-        ? [
-            {
-              id: 'document.duplicate',
-              label: t__('common.duplicate'),
-              group,
-              icon: Copy,
-              run: handleDuplicate
-            }
-          ]
-        : []),
-      {
-        id: 'document.copy_id',
-        label: t__('common.copy_id'),
-        group,
-        icon: Hash,
-        run: copyId
-      },
-      ...(locale.defaultCode && locale.code !== locale.defaultCode
-        ? [
-            {
-              id: 'document.import_locale',
-              label: t__('common.import_default_locale', locale.defaultCode),
-              group,
-              icon: Import,
-              run: () => form.importDataFromDefaultLocale()
-            }
-          ]
-        : []),
-      ...(form.config.versions && form.values.versionId
-        ? [
-            {
-              id: 'document.delete_version',
-              label: t__('common.delete_version'),
-              group,
-              icon: Trash2,
-              when: () => canDeleteVersion,
-              run: () => (deleteVersionConfirmOpen = true)
-            }
-          ]
-        : []),
-      ...(isCollection
-        ? [
-            {
-              id: 'document.delete',
-              label: t__('common.delete_document'),
-              group,
-              icon: Trash2,
-              run: () => (deleteConfirmOpen = true)
-            }
-          ]
-        : [])
-    ];
-  });
+  type Action = {
+    id: string;
+    label: string;
+    icon: typeof History;
+    run: () => unknown;
+    /** A deletion: last, under a separator, in red. */
+    danger?: boolean;
+    /** Shown greyed in the menu, left out of the palette. */
+    disabled?: boolean;
+  };
 
-  /** Deletions sit last, under a separator. */
-  const canDeleteSomething = $derived(
-    (!!form.config.versions && !!form.values.versionId) || isCollection
+  /** The document's actions, the deletions last: the menu's entries and the palette's lines. */
+  const actions = $derived<Action[]>([
+    ...(form.config.versions && history
+      ? [
+          {
+            id: 'document.versions',
+            label: t__('common.versions_history'),
+            icon: History,
+            run: () => (history.open = true)
+          }
+        ]
+      : []),
+    ...(form.config.versions?.draft && form.values.status === VERSIONS_STATUS.PUBLISHED
+      ? [
+          {
+            id: 'document.new_draft',
+            label: t__('common.save_new_draft'),
+            icon: Pickaxe,
+            run: handleNewDraft
+          }
+        ]
+      : []),
+    ...(allowDuplicate
+      ? [
+          {
+            id: 'document.duplicate',
+            label: t__('common.duplicate'),
+            icon: Copy,
+            run: handleDuplicate
+          }
+        ]
+      : []),
+    {
+      id: 'document.copy_id',
+      label: t__('common.copy_id'),
+      icon: Hash,
+      run: copyId
+    },
+    ...(locale.defaultCode && locale.code !== locale.defaultCode
+      ? [
+          {
+            id: 'document.import_locale',
+            label: t__('common.import_default_locale', locale.defaultCode),
+            icon: Import,
+            run: () => form.importDataFromDefaultLocale()
+          }
+        ]
+      : []),
+    ...(form.config.versions && form.values.versionId
+      ? [
+          {
+            id: 'document.delete_version',
+            label: t__('common.delete_version'),
+            icon: Trash2,
+            danger: true,
+            disabled: !canDeleteVersion,
+            run: () => (deleteVersionConfirmOpen = true)
+          }
+        ]
+      : []),
+    ...(isCollection
+      ? [
+          {
+            id: 'document.delete',
+            label: t__('common.delete_document'),
+            icon: Trash2,
+            danger: true,
+            run: () => (deleteConfirmOpen = true)
+          }
+        ]
+      : [])
+  ]);
+
+  useCommands(() =>
+    actions
+      .filter((action) => !action.disabled)
+      .map(({ id, label, icon, run }) => ({ id, label, icon, run, group: t__('common.document') }))
   );
 </script>
 
@@ -251,63 +255,20 @@
 
   <DropdownMenu.Portal>
     <DropdownMenu.Content align="end" sideOffset={6} class="rz-document-menu">
-      {#if form.config.versions && history}
-        <DropdownMenu.Item onclick={() => (history.open = true)}>
-          <History size="14" />
-          {t__('common.versions_history')}
-        </DropdownMenu.Item>
-      {/if}
-
-      {#if form.config.versions && form.config.versions.draft && form.values.status === VERSIONS_STATUS.PUBLISHED}
-        <DropdownMenu.Item onclick={() => handleNewDraft()}>
-          <Pickaxe size="14" />
-          {t__('common.save_new_draft')}
-        </DropdownMenu.Item>
-      {/if}
-
-      {#if allowDuplicate}
-        <DropdownMenu.Item onclick={handleDuplicate}>
-          <Copy size="14" />
-          {t__('common.duplicate')}
-        </DropdownMenu.Item>
-      {/if}
-
-      <DropdownMenu.Item onclick={copyId}>
-        <Hash size="14" />
-        {t__('common.copy_id')}
-      </DropdownMenu.Item>
-
-      {#if locale.defaultCode && locale.code !== locale.defaultCode}
-        <DropdownMenu.Item onclick={() => form.importDataFromDefaultLocale()}>
-          <Import size="14" />
-          {t__('common.import_default_locale', locale.defaultCode)}
-        </DropdownMenu.Item>
-      {/if}
-
-      {#if canDeleteSomething}
-        <DropdownMenu.Separator />
-      {/if}
-
-      {#if form.config.versions && form.values.versionId}
+      {#each actions as action, index (action.id)}
+        {@const Icon = action.icon}
+        {#if action.danger && !actions[index - 1]?.danger}
+          <DropdownMenu.Separator />
+        {/if}
         <DropdownMenu.Item
-          class="rz-document-menu__danger"
-          disabled={!canDeleteVersion}
-          onclick={() => (deleteVersionConfirmOpen = true)}
+          class={action.danger ? 'rz-document-menu__danger' : undefined}
+          disabled={action.disabled}
+          onclick={action.run}
         >
-          <Trash2 size="14" />
-          {t__('common.delete_version')}
+          <Icon size="14" />
+          {action.label}
         </DropdownMenu.Item>
-      {/if}
-
-      {#if isCollection}
-        <DropdownMenu.Item
-          class="rz-document-menu__danger"
-          onclick={() => (deleteConfirmOpen = true)}
-        >
-          <Trash2 size="14" />
-          {t__('common.delete_document')}
-        </DropdownMenu.Item>
-      {/if}
+      {/each}
     </DropdownMenu.Content>
   </DropdownMenu.Portal>
 </DropdownMenu.Root>

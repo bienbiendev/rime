@@ -6,11 +6,20 @@
   import { t__ } from '../../../../core/i18n/index.js';
   import Button from '../../ui/button/button.svelte';
 
-  type Props = { apiKey: string | null };
+  type Props = {
+    apiKey: string | null;
+    /** The key was dismissed: the Close button, Escape or a click outside. */
+    onClose: () => void;
+  };
 
-  let { apiKey = $bindable() }: Props = $props();
+  let { apiKey = $bindable(), onClose }: Props = $props();
   let dialogOpen = $derived(!!apiKey);
   let copied = $state(false);
+
+  function close() {
+    apiKey = null;
+    onClose();
+  }
 
   function copyAPIKey() {
     if (!apiKey) return;
@@ -39,7 +48,7 @@
 <Dialog.Root
   open={dialogOpen}
   onOpenChange={(open) => {
-    if (!open) apiKey = null;
+    if (!open) close();
   }}
 >
   <Dialog.Content size="lg">
@@ -56,7 +65,7 @@
       />
     </p>
     <Dialog.Footer>
-      <Button onclick={() => (apiKey = null)}>{t__('common.close')}</Button>
+      <Button onclick={close}>{t__('common.close')}</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
