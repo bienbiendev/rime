@@ -12,6 +12,7 @@ type Args = {
   locale: string | undefined;
 };
 
+/** The junction rows the data names, one per document, numbered in each list from 0. */
 export const extractRelations = ({ ownerId, data, configMap, locale }: Args) => {
   const relations: BeforeOperationRelation[] = [];
 
@@ -48,6 +49,7 @@ export const extractRelations = ({ ownerId, data, configMap, locale }: Args) => 
   return relations;
 };
 
+/** The id an entry names: a bare id, a ref's document, or a document read and sent back. */
 const documentIdOf = (entry: unknown): string | null => {
   if (typeof entry === 'string') return entry || null;
   if (Relation.isRef(entry)) return entry.documentId;

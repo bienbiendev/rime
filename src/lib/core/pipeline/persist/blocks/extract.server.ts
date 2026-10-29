@@ -10,6 +10,11 @@ type ExtractBlocksArgs = {
   configMap: ConfigMap;
 };
 
+/**
+ * Every block of every blocks field in the map, as one flat list. Each block's `path` and
+ * `position` come from where it sits in the data; a block list nested in a block is left out of
+ * its parent row and listed as rows of its own.
+ */
 export function extractBlocks({ data, configMap }: ExtractBlocksArgs) {
   const blocks: GenericBlock[] = [];
 

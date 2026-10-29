@@ -10,6 +10,7 @@ import type { RequestEvent } from '@sveltejs/kit';
  */
 export type Populated = Map<string, GenericDoc>;
 
+/** The key a target is stored under, and looked up by in buildDocument: slug, locale, id. */
 export const populatedKey = (slug: string, locale: string | undefined, id: string) =>
   `${slug}:${locale ?? ''}:${id}`;
 

@@ -69,6 +69,11 @@ export type FieldReferenceOptions = {
 
 export type FieldReference = FieldReferenceOptions & { table: string };
 
+/**
+ * A field that holds a value: a name, a column, write and read access, hooks and a check.
+ * A new one may be created and updated by any signed-in user and read by everyone, until
+ * `access()` says otherwise.
+ */
 export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuilder<T> {
   /** Column storage type, used to generate the DB schema. Every field
    *  builder that stores data must define its own. */
@@ -76,6 +81,7 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     throw new Error(`${this.constructor.name} does not implement dataType`);
   }
 
+  /** The table this field's column points at, set by `$references`; `null` for a plain column. */
   _references: FieldReference | null = null;
 
   constructor(name: string, type: string) {
@@ -136,11 +142,22 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
+  /**
+   * Shown when `doc` (the whole document) and `siblings` (the values next to the field: the
+   * group's, the block's) make it answer `true`; a condition that throws hides the field.
+   */
   condition(conditionFunction: (doc: Dic, siblings: Dic) => boolean) {
     this.field.condition = conditionFunction;
     return this;
   }
 
+  /**
+   * A column in the panel's list. A number is its position; no argument puts it last (99).
+   *
+   * ```ts
+   * text('title').table(1)   date('publishedAt').table({ position: 2, sort: true })
+   * ```
+   */
   table(params?: FieldPanelTableConfig | number) {
     if (params === undefined) {
       this.field.table = { position: 99 };
@@ -217,11 +234,13 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     } as T & { localized: boolean; root: boolean; label: string; required: boolean };
   }
 
+  /** Who may create, read and update this field, over the defaults: only the keys given change. */
   access(access: { create?: FieldAccess; read?: FieldAccess; update?: FieldAccess }) {
     this.field.access = { ...this.field.access, ...access };
     return this;
   }
 
+  /** Runs in the panel after each change the field accepts: after `beforeValidate`, once valid. */
   onChange(hook: FieldHookClient) {
     this.field.hooks!.onChange ??= [];
     this.field.hooks!.onChange.push(hook);
@@ -330,7 +349,11 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
-  /** A copy of the builder: its field, deep, and its `$references`. */
+  /**
+   * A copy of the builder: its field, with every plain object and list copied, and its
+   * `$references`. Builders held in the field (a group's fields, a blocks list's blocks) are the
+   * same builders: a container that changes them overrides `clone` (tabs does).
+   */
   clone(): typeof this {
     const Constructor = this.constructor as new (...args: any[]) => typeof this;
     const clone = new Constructor(this.field.name, this.field.type);
@@ -348,18 +371,27 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
     return this;
   }
 
+  /**
+   * Turns the value on the server as a read hands it back. Hooks run in the order they are
+   * added.
+   */
   $beforeRead(hook: FieldHook<T>) {
     this.field.hooks!.beforeRead ??= [];
     this.field.hooks!.beforeRead.push(hook);
     return this;
   }
 
+  /**
+   * Turns the value on the server before it is written, after `validate`. Hooks run in the order
+   * they are added.
+   */
   $beforeSave(hook: FieldHook<T>) {
     this.field.hooks!.beforeSave ??= [];
     this.field.hooks!.beforeSave.push(hook);
     return this;
   }
 
+  /** Turns the value before `validate`, in the panel as the value changes and on the server. */
   beforeValidate(hook: FieldHookShared) {
     this.field.hooks!.beforeValidate ??= [];
     this.field.hooks!.beforeValidate.push(hook);

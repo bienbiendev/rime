@@ -11,8 +11,8 @@ import { logger } from '../logger.server.js';
 import { populatedKey, type Populated } from './populate-relations.server.js';
 
 /**
- * Assembles one document out of the rows it is stored across. Rows arrive keyed by document path,
- * and what happens to them from here is a question about documents, not about tables.
+ * One document out of the rows it is stored across: the base row, then each block, tree item
+ * and relation placed at its path. Rows arrive keyed by document path.
  */
 export const buildDocument = async <T extends GenericDoc = GenericDoc>(
   rows: DocumentRows,

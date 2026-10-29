@@ -6,7 +6,7 @@ import type { DeepPartial, Dic } from '#lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { ConfigMap } from './config-map/types.js';
 
-// Operation and timing types
+/** What an operation does to a document. */
 export type Operation = 'read' | 'create' | 'update' | 'delete';
 export type Timing = 'before' | 'after';
 
@@ -54,7 +54,10 @@ export type ConfigForSlug<S extends DocType = PrototypeSlug> = S extends keyof R
       ? BuiltCollection
       : BuiltArea | BuiltCollection;
 
-// Universal hook context with all possible properties
+/**
+ * What a hook of operation `O` at timing `T` receives and returns: the data before a create or
+ * update, the document on a read or a delete, and both after a create or update.
+ */
 export type HookContext<
   S extends DocType = PrototypeSlug,
   O extends Operation = Operation,
@@ -117,7 +120,7 @@ export type HookContext<
             : object
     : object);
 
-// Hook function type
+/** A document hook: it answers the arguments it was handed, changed or not. */
 export type Hook<
   S extends DocType = PrototypeSlug,
   O extends Operation = Operation,
@@ -172,9 +175,9 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
   isLocaleCopy?: boolean;
   /** The original document if on an update operation */
   originalDoc?: DocTypeForSlugs<S>;
-  /** An map to get a field config by path on the original doc */
+  /** The config map of the document as stored, before this save. */
   originalConfigMap?: ConfigMap;
-  /** An map to get a field config by path on incoming data */
+  /** The config map of the data this save sends: every path it writes. */
   configMap?: ConfigMap;
   /**
    * True when rime is the caller rather than a request's user — `rime.collection('x').system()`
@@ -193,8 +196,7 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
   isSystemOperation?: boolean;
 };
 
-/** A REST-style query string, or its parsed form. Lives here because an operation's params
- *  carry it; the adapter consumes it from there. */
+/** A REST-style query string, or its parsed form. */
 export type OperationQuery = string | ParsedOperationQuery;
 
 export type ParsedOperationQuery = {

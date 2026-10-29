@@ -13,19 +13,9 @@ import { completeNewRows } from './complete-new-rows.server.js';
 import { validateFields } from './validate-fields.server.js';
 
 /**
- * Guards the interaction between field-level write access and `required`.
- *
- * The two can contradict each other: the access block empties a field the request may not write,
- * and the required block then reports the now-empty field as missing — leaving the caller unable
- * to win, since it was not allowed to send the value that would satisfy the check.
- *
- * It is easy to read this as an auth-collection quirk, since that is where it shows up first
- * (`confirmPassword` with no `.access()` makes an anonymous `POST /api/users` 400 on a field it
- * could not send, instead of 403ing on access). It is not. `FormFieldBuilder` defaults to
- * `access.create: (user) => !!user`, so this hits *any* publicly-creatable collection whose
- * fields do not each override it — a sign-up form, a contact form, a comment.
- *
- * No e2e fixture covers it: they all declare `create: () => true` on the fields they post.
+ * Field write access and `required`: a field the request may not write is dropped, and never
+ * reported missing. `FormFieldBuilder`'s default `create: (user) => !!user` makes this the case
+ * for most fields of an anonymous create.
  */
 
 const runValidate = (args: {
@@ -75,7 +65,7 @@ describe('validateFields: required vs. field access on create', () => {
 
     const result = await runValidate({ fields, data: { nickname: 'anon' }, user: undefined });
 
-    // Dropped from both the data and the config map, exactly as before...
+    // Dropped from both the data and the config map.
     expect(result.data).not.toHaveProperty('nickname');
     expect(result.context.configMap).not.toHaveProperty('nickname');
   });
@@ -145,8 +135,8 @@ describe('validateFields: a container sent as null', () => {
 });
 
 /**
- * A relation names documents that exist, checked before anything is written. A stale id fails
- * the save; it is never dropped from it, which used to leave the save to delete its row.
+ * A relation names documents that exist, checked before anything is written: a stale id fails
+ * the save.
  */
 describe('validateFields: relations name documents that exist', () => {
   /** `m1` and `m2` exist in medias; anything else does not. */

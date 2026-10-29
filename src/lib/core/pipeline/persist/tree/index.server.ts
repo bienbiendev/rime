@@ -6,6 +6,11 @@ import type { OperationContext } from '../../types.js';
 import { diffRepeatables, replacedPaths, withinPaths } from '../repeatable.server.js';
 import { extractTreeBlocks } from './extract.server.js';
 
+/**
+ * Writes a save's tree items: compares the stored items inside the paths the save replaces with
+ * the items it sends, then deletes, adds and updates rows. Answers the diff, whose deleted rows
+ * `saveRelations` reads to drop their relations.
+ */
 export const saveTreeBlocks = async (args: {
   context: OperationContext;
   ownerId: string;

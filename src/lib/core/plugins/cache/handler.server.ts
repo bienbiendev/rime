@@ -1,6 +1,11 @@
 import { RIME_CACHE_ENABLED } from '$app/env/private';
 import type { Handle } from '@sveltejs/kit/hooks';
 
+/**
+ * Turns the cache on for an anonymous GET outside the panel, when `RIME_CACHE_ENABLED` is on
+ * (`isEnabled` decides who counts as anonymous), and gives a 200 answer a `cache-control` when the
+ * route set none.
+ */
 export const handler: Handle = async ({ event, resolve }) => {
   const { rime } = event.locals;
 

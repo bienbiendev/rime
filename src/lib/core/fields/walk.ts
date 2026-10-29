@@ -5,11 +5,11 @@ import type { FieldBuilder } from './builders/field-builder.js';
 /** A field the walk reached, the path it sits at, and the data there when the walk has data. */
 type Visit = { field: FieldBuilder; path: string; value: unknown };
 
-/** The document grammar's join. A joiner is never handed an empty part — a branch that
- *  contributes no segment keeps its parent's path — so it only guards the empty parent. */
+/** Joins a parent path and a segment with a dot; a field at the root has no parent to join. */
 const joinPath = (parent: string, part: string) => (parent ? `${parent}.${part}` : part);
 
 type WalkOptions = {
+  /** The path the fields sit under: '' at the root. */
   path?: string;
   /** Skip branches whose segment holds a `#` — a path no config alone can name. */
   determinate?: boolean;

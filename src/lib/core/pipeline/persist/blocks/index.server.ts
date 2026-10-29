@@ -7,13 +7,9 @@ import { diffRepeatables, replacedPaths, withinPaths } from '../repeatable.serve
 import { extractBlocks } from './extract.server.js';
 
 /**
- * Saves blocks to the database by comparing incoming blocks with existing ones
- * and performing create, update, and delete operations as needed.
- *
- * This function handles the complete lifecycle of block persistence:
- * 1. Extract blocks from form data
- * 2. Compare with existing blocks to determine changes
- * 3. Execute database operations (create/update/delete)
+ * Writes a save's blocks: compares the stored blocks inside the paths the save replaces with the
+ * blocks it sends, then deletes, adds and updates rows. Answers the diff, whose deleted rows
+ * `saveRelations` reads to drop their relations.
  */
 export const saveBlocks = async (args: {
   context: OperationContext;
@@ -24,7 +20,6 @@ export const saveBlocks = async (args: {
   /** Whose children these are: the versions table's slug when the config has one, else its own. */
   ownerSlug: PrototypeSlug;
 }) => {
-  //
   const { context, ownerId, data, incomingPaths, adapter, ownerSlug } = args;
   const { locale } = context.params;
   const { originalDoc: original, configMap, originalConfigMap } = context;

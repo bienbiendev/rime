@@ -14,6 +14,7 @@ export type Plugin = {
   handler?: Handle;
 };
 
+/** Types a plugin factory: answers it as is. */
 export function definePlugin<const F extends (options?: any) => Plugin>(factory: F): F {
   return factory;
 }

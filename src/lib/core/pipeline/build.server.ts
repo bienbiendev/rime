@@ -32,20 +32,10 @@ const buildPipeline = (hooks: HookLists, consumer: Dic | undefined): Dic => {
 
   for (const timing of TIMINGS) {
     pipeline[timing] = [
-      // Every placed hook. Which of them *applies* to this config is the guard beside it in the
-      // list — `when(isAuth, …)` — asked when the hook runs rather than filtered here, so a
-      // config and its pipeline are the same list.
       ...(hooks[timing] ?? []),
-      // A consumer's hooks are appended. They cannot interleave with the placed ones, which is
-      // the cost of a written order.
+      // A consumer's hooks are appended. They cannot interleave with the placed ones.
       ...((consumer?.[timing] as unknown[]) ?? []),
-      /**
-       * And then the finaliser, after everything including the consumer's.
-       *
-       * `sortDocumentProps` is not a participant — nothing may precede it and nothing may follow,
-       * so it is appended rather than placed. In no list, because a list is for things whose
-       * position is a choice.
-       */
+      // Then `sortDocumentProps`, after the consumer's hooks.
       ...(timing === 'beforeRead' ? [sortDocumentProps] : [])
     ];
   }

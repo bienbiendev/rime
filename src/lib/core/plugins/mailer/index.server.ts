@@ -4,6 +4,10 @@ import nodemailer from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { type Plugin, definePlugin } from '../index.js';
 
+/**
+ * The mail plugin, added when the config has `$smtp`: `rime.mailer.sendMail` over one SMTP
+ * transport.
+ */
 export const mailer = definePlugin((smtpConfig: SMTPConfig) => {
   const { password, ...restAuth } = smtpConfig.auth;
   const options: SMTPTransport.Options = {

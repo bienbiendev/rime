@@ -31,7 +31,8 @@ export const withoutUnreadableFields = <T extends Dic>(
  * each value to the field's own `hooks.beforeRead`. An empty value stays empty: a default is what
  * a new document starts with, never what a read shows.
  *
- * A system read is rime's own and keeps every field. One copy of the document, walked in place. A
+ * A system read is rime's own and keeps every field. The fields are walked on a copy of the
+ * document's top level; nested objects are the read's own, built for it by buildDocument. A
  * config-map key is already normalized, so it splits straight into its segments.
  */
 export const processDocumentFields = Hooks.beforeRead(async function processDocumentFields(args) {
@@ -59,14 +60,8 @@ export const processDocumentFields = Hooks.beforeRead(async function processDocu
 
     if (config.type === 'blocks') {
       const blocks = getAt(doc, parts) as (GenericBlock | undefined)[] | undefined;
-      // Filter out possible undefined block or residual
-      // Case undefined : When in dev mode, if a block table is deleted in a migration, a blocks array value could includes undefined ex :
-      // * blocks: [ { ... }, undefined, { ... } ]
-      // * Because blocks are populated based on path.position
-      // Case residual : a block type has been removed but was including a relation, this gives ex :
-      // * blocks: [ { id:..., values,... }, { image: {...}} ]
-      //                                         ^
-      // * the image has been placed but the block doesn't exist anymore
+      // A block row whose table is gone reads as `undefined`, and a relation of a removed block
+      // type reads as an object without `id`: both are dropped, and the rest renumbered.
       if (blocks) {
         const withoutResidualBlock = blocks
           .filter((b) => b && 'id' in b) // get only blocks that have .id

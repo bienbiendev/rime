@@ -36,6 +36,15 @@ class PickFieldBuilder<T extends FieldWithOptions = FieldWithOptions> extends Fo
     this.field.validate = ensureSelectIsOption;
   }
 
+  /**
+   * The options to pick from. A string is its own value, its label capitalized; an object without
+   * a label gets one the same way.
+   *
+   * ```ts
+   * select('size').options('small', { value: 'xl', label: 'Extra large' })
+   * // [{ value: 'small', label: 'Small' }, { value: 'xl', label: 'Extra large' }]
+   * ```
+   */
   options(...options: (Option | string)[]) {
     this.field.options = options.map((option) => {
       if (typeof option === 'string') {
@@ -62,6 +71,7 @@ class PickFieldBuilder<T extends FieldWithOptions = FieldWithOptions> extends Fo
   }
 }
 
+/** A field that holds one option: radio, combobox. Stored as text. */
 export class PickOneFieldBuilder<
   T extends FieldWithOptions = FieldWithOptions
 > extends PickFieldBuilder<T> {
@@ -76,6 +86,7 @@ export class PickOneFieldBuilder<
   }
 }
 
+/** A field that holds one option, or a list of them after `many()`: select. */
 export class PickManyFieldBuilder<
   T extends FieldWithOptions = FieldWithOptions
 > extends PickFieldBuilder<T> {

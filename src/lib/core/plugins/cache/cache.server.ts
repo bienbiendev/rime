@@ -18,6 +18,10 @@ const fileOf = (key: string) =>
 
 type CacheStrategy = 'memory' | 'disk';
 
+/**
+ * Read answers kept in memory or in `.cache/` under the working directory, by
+ * `RIME_CACHE_STRATEGY`.
+ */
 export class Cache {
   private static memoryCache = new Map<string, any>();
   private static readonly MAX_MEMORY_ENTRIES = 1000;
@@ -27,6 +31,11 @@ export class Cache {
     return strategy === 'memory' || strategy === 'disk' ? strategy : 'memory';
   }
 
+  /**
+   * The answer kept under `key`, or `loadData`'s, kept for next time. Read through only when the
+   * request's `locals.cacheEnabled` (set by the cache handler) and `RIME_CACHE_ENABLED` are both
+   * on.
+   */
   static async get<T>(key: string, loadData: () => Promise<T>): Promise<T> {
     const event = getRequestEvent();
     if (!event.locals.cacheEnabled || !RIME_CACHE_ENABLED) {

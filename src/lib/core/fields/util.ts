@@ -6,7 +6,7 @@ import type { FieldBuilder } from './builders/index.js';
 import { matchesSegment, walkFields } from './walk.js';
 
 /**
- * Checks if a field is a presentative field (currently only separator fields).
+ * Checks if a field is a presentative field (separator fields).
  * Presentative fields are used for UI organization and don't store data.
  */
 export const isPresentative = (field: Field): field is SeparatorField =>
@@ -31,14 +31,12 @@ export const isNotHidden = <T extends FormField>(field: FormFieldBuilder<T>) => 
 export const isLiveField = (field: Field) => field.live;
 
 /**
- * Retrieves a field configuration by its dot-notation path
- * @example
- * // Get the title field in the attributes group
- * const titleField = getFieldAtPath('attributes.title', collection.fields);
+ * The form field at a document path, or `undefined`. A block's segment names its type, as the
+ * walk writes it: `layout.0:hero.title`; `layout.0.title` finds nothing.
  *
- * // Get the title field in a specific block
- * const titleField = getFieldAtPath('attributes.layout.2:blockType.title', collection.fields);
- *
+ * ```ts
+ * getFieldAtPath('attributes.title', fields) // the `title` builder
+ * ```
  */
 export const getFieldAtPath = (path: string, fields: FieldBuilder[]) => {
   const findInFields = (
@@ -98,12 +96,9 @@ export const getFieldAtPath = (path: string, fields: FieldBuilder[]) => {
 };
 
 /**
- * Traverses a FieldBuilder[] tree and returns the subset of builders to pass to
- * RenderFields, along with the path prefix those builders should be rendered at.
- *
- * Containers (tabs, groups) are treated as transparent navigation layers.
- * Blocks are treated as endpoints — the blocks builder itself is returned
- * regardless of any index:blockType suffix in the path.
+ * The fields to render at `fieldPath`, and the path to render them at. Tabs and groups are passed
+ * through; a block segment with its type (`layout.0:slider`) answers that block's fields, a path
+ * ending at a blocks field answers the blocks field itself.
  */
 export function getFieldListAtPath(
   fieldPath: string,
@@ -173,7 +168,7 @@ export function getFieldListAtPath(
       : { fields: node.fields, path };
   }
 
-  console.warn(`[LiveEditPanel] fieldPath "${fieldPath}" not found in config fields`);
+  console.warn(`[getFieldListAtPath] fieldPath "${fieldPath}" not found in config fields`);
   return { fields, path: parentPath };
 }
 

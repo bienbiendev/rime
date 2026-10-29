@@ -14,6 +14,10 @@ export const sortDocumentProps = Hooks.beforeRead<'generic'>(
   }
 );
 
+/**
+ * The document with its keys sorted at every depth: `id`, `title`, `status` first, the
+ * bookkeeping keys (`locale` … `_thumbnail`) last in that order, the rest alphabetical.
+ */
 function sortDocumentKeys<T extends Dic>(obj: T): T {
   const specificOrder = ['id', 'title', 'status'];
   const endOrder = [
@@ -36,7 +40,6 @@ function sortDocumentKeys<T extends Dic>(obj: T): T {
   ];
 
   function sortObjectKeys(obj: Dic): Dic {
-    // If not an object or is null, return the value as-is
     if (!obj || typeof obj !== 'object') return obj;
 
     // A list: each list or plain object in it is sorted, anything else (a Date) kept as it is
@@ -46,7 +49,6 @@ function sortDocumentKeys<T extends Dic>(obj: T): T {
       );
     }
 
-    // Sort the keys
     const keys = Object.keys(obj).sort((a, b) => {
       const aIndexSpecific = specificOrder.indexOf(a);
       const bIndexSpecific = specificOrder.indexOf(b);
@@ -66,7 +68,6 @@ function sortDocumentKeys<T extends Dic>(obj: T): T {
       return a.localeCompare(b);
     });
 
-    // Create new object with sorted keys
     const sorted: Dic = {};
     keys.forEach((key) => {
       const shouldOrder = Array.isArray(obj[key]) || isObjectLiteral(obj[key]);

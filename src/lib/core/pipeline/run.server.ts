@@ -14,16 +14,14 @@ import { saveTreeBlocks } from './persist/tree/index.server.js';
 import { seenBy } from './seen-by.server.js';
 import type { Operation, OperationContext } from './types.js';
 
-/**
- * The steps every document operation shares, written once.
- *
- * Collections and areas differ in how a document is addressed (an id vs. a singleton) and in
- * which adapter method writes it — not in the shape of the pipeline around that write. These
- * helpers hold that shape; the per-prototype operations (`prototype/collection/operations/`,
- * `prototype/area/operations/`) supply the two or three pieces that genuinely differ, as callbacks.
- *
- * Hook order is written in each prototype's `hooks.server.ts`.
- */
+// The steps every document operation shares, written once.
+//
+// Collections and areas differ in how a document is addressed (an id vs. a singleton) and in
+// which adapter method writes it — not in the shape of the pipeline around that write. These
+// helpers hold that shape; the per-prototype operations (`prototype/collection/operations/`,
+// `prototype/area/operations/`) supply the two or three pieces that genuinely differ, as callbacks.
+//
+// Hook order is written in each prototype's `hooks.server.ts`.
 
 type AnyConfig = BuiltCollection | BuiltArea;
 type AnyHook = (args: any) => Promise<any>;
@@ -287,7 +285,8 @@ export const readDocuments = async <S extends DocType, T extends GenericDoc>(
         allFields: !hasSelect,
         /**
          * The panel edits blocks and tree nodes in place, so it needs each child row's own
-         * bookkeeping — `position`, `path`, `ownerId`, `locale` — kept on it.
+         * bookkeeping — `position`, `path`, `ownerId`, `locale` — kept on it. A panel request is
+         * one whose route has the `panel` param.
          */
         withRowMeta: event.params.panel !== undefined
       });
@@ -316,10 +315,10 @@ export const readDocument = async <S extends DocType, T extends GenericDoc>(
 /**
  * The update pipeline, prototype-parameterized.
  *
- * Collections and areas run exactly these eight steps in exactly this order; they differ only
- * in `write` (which adapter method persists the root row) and `reread` (how the saved document
- * is fetched back). Everything between — the hook chains, the context assertions, the
- * relational persistence — is identical, so it is written once.
+ * Collections and areas run these steps in this order; they differ only in `write` (which adapter
+ * method persists the root row) and `reread` (how the saved document is fetched back). Everything
+ * between — the hook chains, the context assertions, the relational persistence — is identical, so
+ * it is written once.
  */
 export const runUpdate = async <
   S extends DocType,
@@ -330,8 +329,9 @@ export const runUpdate = async <
   config: C;
   event: RequestEvent;
   context: OperationContext<S>;
+  /** Names the caller in the `missing … @<where>` errors: 'updateById', 'update'. */
   where: string;
-  /** Passed explicitly rather than read off the context. */
+  /** The locale the relations are written in. */
   locale?: string | undefined;
   /** Persists the write plan. Returns whatever `reread` needs to find the document again. */
   write: (ctx: { plan: UpdateWritePlan; config: C; context: OperationContext<S> }) => Promise<any>;

@@ -8,6 +8,10 @@ type BooleanField = FormField & {
   validate?: FieldValidationFunc<BooleanField>;
 };
 
+/**
+ * A checkbox or a toggle: starts `false`, and only a missing value is empty (`false` is an
+ * answer). Its own check refuses anything but a boolean.
+ */
 export class BooleanFieldBuilder<
   T extends BooleanField = BooleanField
 > extends FormFieldBuilder<T> {

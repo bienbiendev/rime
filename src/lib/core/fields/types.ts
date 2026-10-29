@@ -1,11 +1,6 @@
 import type { RelationInput, RelationRef, RelationValue } from '#lib/fields/types.js';
 
-/**
- * Type utilities that know about fields.
- *
- * They name rime types (relation values, field builders), so they live with the concept rather
- * than in util/types.ts.
- */
+/** Document types as reads and writes see them, relation by relation. */
 
 /**
  * The depths a read resolves, up to `MAX_DEPTH`, each mapped to the one its related documents are
@@ -28,6 +23,10 @@ export type WithRelationResolved<T, D extends number = 1> = D extends keyof Less
   ? Resolved<T, D>
   : T;
 
+/**
+ * `T` with each relation holding its documents, read at one depth less. Objects and lists — a
+ * group, blocks, tree items — are walked at the same depth.
+ */
 type Resolved<T, D extends keyof LessDepth> = {
   [K in keyof T]: Required<T>[K] extends string | number | boolean | null
     ? T[K]

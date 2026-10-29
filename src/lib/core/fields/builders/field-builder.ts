@@ -2,11 +2,12 @@ import type { Component } from 'svelte';
 import type { Field, FieldAccess } from '../../../fields/types.js';
 
 /**
- * Strips FieldBuilder wrappers off a config tree, yielding the compiled field shape.
+ * The compiled shape of a config tree: every FieldBuilder replaced by its plain field, at every
+ * depth.
  *
- * Defined here rather than in ../types.ts because it is mutually recursive with FieldBuilder
- * below — separating them would only mean the two files importing each other. ../types.ts
- * re-exports it, so the concept still has one public entry point.
+ * ```ts
+ * WithoutBuilders<BlocksField>['blocks'] // the compiled blocks, not BlockBuilder[]
+ * ```
  */
 export type WithoutBuilders<T> =
   T extends FieldBuilder<infer F>
@@ -81,9 +82,14 @@ export type NodeStorage = { kind: 'blocks' | 'tree'; name: string };
 /** A branch a real value has: a concrete segment, no `#`, and the data under it. */
 export type ValueNode = FieldNode & { value: unknown };
 
+/**
+ * What every field is built from: the plain `field` object a config holds, the setters an author
+ * chains, and `get`/`use` to read it and run it.
+ */
 export class FieldBuilder<T extends Field = Field> {
   field: T;
 
+  /** A field with no name yet, of `type`, shown in the live-edit panel until `live(false)`. */
   constructor(type: string) {
     this.field = {
       name: '',
@@ -96,11 +102,16 @@ export class FieldBuilder<T extends Field = Field> {
     return this.field.name;
   }
 
+  /** A CSS class the field's component adds to its root element. */
   className(str: string) {
     this.field.className = str;
     return this;
   }
 
+  /**
+   * The field as plain data, for the client config and the panel: `field` with its `component`
+   * and its table `cell`.
+   */
   compile(): WithoutBuilders<T> & {
     component: Component<any>;
     cell?: Component<{ value: any }> | null;
@@ -115,6 +126,7 @@ export class FieldBuilder<T extends Field = Field> {
     };
   }
 
+  /** Whether the field shows in the live-edit panel beside the site preview. On by default. */
   live(bool: boolean) {
     this.field.live = bool;
     return this;

@@ -40,6 +40,10 @@ type Connection = { source: EventSource; handlers: Set<SSEHandler>; keys: string
 /** One entry per distinct set of keys — a different set is a different URL, so a new stream. */
 const shared = new Map<string, Connection>();
 
+/**
+ * The open stream for these keys, or a new one: callers naming the same keys, in any order, share
+ * it.
+ */
 const connect = (keys: string | string[]): Connection => {
   // Sorted, so two callers naming the same keys in a different order share one stream.
   const id = [...new Set(typeof keys === 'string' ? [keys] : keys)].sort().join(',');

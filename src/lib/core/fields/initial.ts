@@ -5,7 +5,10 @@ import type { Dic } from '#lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { isFormField } from './util.js';
 
-/** What a field is handed to build its initial value. The event is a default's, and boot has none. */
+/**
+ * The request a default function is called with. A call outside a request (boot, the panel)
+ * passes none.
+ */
 type InitialContext = { event?: RequestEvent };
 
 /** The errors already logged: an outer container passes them on without a line of its own. */

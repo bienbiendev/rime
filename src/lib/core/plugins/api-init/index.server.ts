@@ -9,6 +9,10 @@ import { dev } from '$app/env';
 import { type RequestHandler } from '@sveltejs/kit';
 import { definePlugin, type Plugin } from '../index.js';
 
+/**
+ * `POST /api/init`, in dev only: creates the first staff user, and answers 404 once any auth user
+ * exists.
+ */
 export const apiInit = definePlugin(() => {
   const requestHandler: RequestHandler = async (event) => {
     if (!dev) throw new RimeError(RimeError.NOT_FOUND);
@@ -48,6 +52,10 @@ export const apiInit = definePlugin(() => {
   } as const satisfies Plugin;
 });
 
+/**
+ * Whether `data` holds a name, a valid email and a strong password; throws the form errors
+ * otherwise.
+ */
 export const validateForm = (
   data: Record<string, string>
 ): data is { email: string; name: string; password: string } => {

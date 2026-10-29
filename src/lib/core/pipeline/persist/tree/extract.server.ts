@@ -9,6 +9,11 @@ type ExtractTreesArgs = {
   configMap: ConfigMap;
 };
 
+/**
+ * Every item of every tree field in the map, as one flat list: each item a row of its own, its
+ * `path` the list it sits in (`nav`, `nav.0._children`) and `position` its index there,
+ * `_children` emptied.
+ */
 export function extractTreeBlocks({ data, configMap }: ExtractTreesArgs) {
   const blocks: WithRequired<TreeBlock, 'path'>[] = [];
 
@@ -18,23 +23,17 @@ export function extractTreeBlocks({ data, configMap }: ExtractTreesArgs) {
     rootPath: string,
     parentPath?: string
   ): void {
-    // Create a copy of the item to avoid modifying the original
     const processedItem: TreeBlock = cloneDeep({ ...item });
-    // Position is the index in its list
     processedItem.position = index;
-    // Set path based on whether it's a root level or nested item
     processedItem.path = parentPath ? `${parentPath}` : rootPath;
-    // Empty `_children`: each child becomes its own row
     processedItem._children = [];
-    // Add the processed item to the flat array
     blocks.push(processedItem as WithRequired<TreeBlock, 'path'>);
-    // Process children recursively
     (item._children || []).forEach((child, childIndex) => {
       processTreeItem(
         child,
         childIndex,
         rootPath,
-        `${processedItem.path}.${processedItem.position}._children` // Create new parent path based on current item's position
+        `${processedItem.path}.${processedItem.position}._children`
       );
     });
   }

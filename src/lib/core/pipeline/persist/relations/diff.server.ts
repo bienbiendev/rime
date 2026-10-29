@@ -16,6 +16,7 @@ type Args = {
 const sameLocale = (existing: RelationRow, incoming: BeforeOperationRelation) =>
   (existing.locale ?? null) === (incoming.locale ?? null);
 
+/** Whether the stored row must change to become the incoming one: place, document or locale. */
 const needUpdate = (existing: RelationRow, incoming: BeforeOperationRelation) =>
   existing.position !== incoming.position ||
   existing.documentId !== incoming.documentId ||

@@ -6,6 +6,11 @@ import { replacedPaths, withinPaths, type RepeatablesDiff } from '../repeatable.
 import { defineRelationsDiff } from './diff.server.js';
 import { extractRelations } from './extract.server.js';
 
+/**
+ * Writes a save's relations: drops the relations under the block and tree rows the save
+ * deleted, then compares the stored relations inside the paths the save replaces (a group's own
+ * path excluded) with the ones the data names, and deletes, updates and adds rows.
+ */
 export const saveRelations = async (args: {
   data: Dic;
   configMap: ConfigMap;
@@ -30,7 +35,6 @@ export const saveRelations = async (args: {
     data
   } = args;
 
-  /** Delete relations from deletedBlocks */
   await adapter.relations.deleteFromPaths({
     parentSlug: ownerSlug,
     ownerId,
@@ -38,7 +42,6 @@ export const saveRelations = async (args: {
     locale
   });
 
-  /** Delete relations from deletedTreeItems */
   await adapter.relations.deleteFromPaths({
     parentSlug: ownerSlug,
     ownerId,
@@ -46,7 +49,6 @@ export const saveRelations = async (args: {
     locale
   });
 
-  /** Get relations in data */
   const incomingRelations = extractRelations({
     ownerId,
     data,
@@ -62,7 +64,6 @@ export const saveRelations = async (args: {
     })
     .then((relations) => withinPaths(relations, replacedPaths(incomingPaths, configMap)));
 
-  /** get difference between them */
   const relationsDiff = defineRelationsDiff({
     existingRelations,
     incomingRelations,

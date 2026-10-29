@@ -6,8 +6,9 @@ import { buildConfigMap } from '../config-map/index.js';
  * The same map as `buildDataConfigMap`, over the document as it is now rather than as it is being
  * sent — on `context.originalConfigMap`.
  *
- * What a step comparing the two needs: `prepareDataForNewVersion` reads it to carry forward a
- * field the caller did not send, and `validateFields` to check the document the update leaves.
+ * Read where a save compares with what is stored: `prepareDataForNewVersion` to carry forward a
+ * field the caller did not send, `validateFields` to check the document the update leaves, and
+ * `saveBlocks` and `saveTreeBlocks` for the rows a save replaces.
  */
 export const buildOriginalDocConfigMap = Hooks.beforeUpsert(
   async function buildOriginalDocConfigMap(args) {
