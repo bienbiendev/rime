@@ -5,6 +5,7 @@ import type { DefaultValueFn, FormField } from '#lib/fields/types.js';
 import Cell from './component/Cell.svelte';
 import DateComponent from './component/Date.svelte';
 
+/** A day picked on a calendar, stored as a timestamp. A new document starts on the current date. */
 export const date = (name: string) => new DateFieldBuilder(name);
 
 /** A date sent as a string or a timestamp becomes a `Date`; `null` and `undefined` stay empty. */

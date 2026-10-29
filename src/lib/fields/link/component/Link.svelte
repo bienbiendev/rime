@@ -66,11 +66,16 @@
   let isLinkValueError = $state(false);
   let isLinkRequiredError = $derived(!!field.error && field.error.includes(`required::`));
 
+  /** The typed text is the link's value. */
   const onInput = (event: Event) => {
     linkValue = (event.target as HTMLInputElement).value;
     setValue();
   };
 
+  /**
+   * A new type starts empty: the value and the picked document are cleared, and so is an error
+   * that is not `required`.
+   */
   const onTypeChange = (type: string | undefined) => {
     linkType = (type || 'url') as LinkType;
     linkValue = '';
@@ -91,11 +96,13 @@
     }
   });
 
+  /** Whether the link opens in a new tab. */
   const onTargetChange = (value: boolean) => {
     targetBlank = value;
     setValue();
   };
 
+  /** Writes the link the inputs show into the form: `{ type, value, target }`. */
   const setValue = () => {
     const value: Link = {
       type: linkType,

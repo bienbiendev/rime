@@ -13,6 +13,7 @@ export class RadioFieldBuilder extends PickOneFieldBuilder<RadioField> {
     return Radio;
   }
 
+  /** `row` shows the options as one segmented row, `default` as a list of radios. */
   layout(value: 'default' | 'row') {
     this.field.layout = value;
     return this;

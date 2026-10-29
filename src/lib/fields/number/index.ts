@@ -5,6 +5,7 @@ import NumberComponent from './component/Number.svelte';
 
 export const number = (name: string) => new NumberFieldBuilder(name);
 
+/** A number within the field's `min` and `max`, both included. */
 const validateNumber: FieldValidationFunc<NumberField> = (value, { config }) => {
   if (typeof value !== 'number') {
     return 'Should be a number';

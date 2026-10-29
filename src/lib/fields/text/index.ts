@@ -14,6 +14,10 @@ export class TextFieldBuilder extends FormFieldBuilder<TextField> {
     this.$beforeDuplicate(duplicateText);
   }
 
+  /**
+   * No other document of the collection may hold the same value. A duplicate takes the first free
+   * copy: `Sale (copy)`, then `Sale (copy 2)`.
+   */
   unique(bool?: boolean) {
     this.field.unique = typeof bool === 'boolean' ? bool : true;
     return this;
@@ -31,6 +35,7 @@ export class TextFieldBuilder extends FormFieldBuilder<TextField> {
     return 'text';
   }
 
+  /** The document's title in the panel and its lists; a duplicate gets ` (copy)`. */
   isTitle() {
     this.field.isTitle = true;
     return this;
@@ -41,6 +46,7 @@ export class TextFieldBuilder extends FormFieldBuilder<TextField> {
     return this;
   }
 
+  /** `compact` hides the label: the placeholder names the field. */
   layout(layout: 'compact') {
     this.field.layout = layout;
     return this;
@@ -51,6 +57,7 @@ export class TextFieldBuilder extends FormFieldBuilder<TextField> {
   }
 }
 
+/** A one-line text, stored as text. */
 export const text = (name: string) => new TextFieldBuilder(name);
 
 /****************************************************/

@@ -21,6 +21,7 @@ export class ToggleFieldBuilder extends BooleanFieldBuilder<ToggleField> {
   }
 }
 
+/** A yes/no switch, stored as a boolean. A new document starts off. */
 export const toggle = (name: string) => new ToggleFieldBuilder(name);
 
 /****************************************************/

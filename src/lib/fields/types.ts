@@ -30,6 +30,12 @@ export type { TimeField } from './time/index.js';
 export type { ToggleField } from './toggle/index.js';
 export type { TreeField } from './tree/index.js';
 
+/**
+ * A field's own check of a value: `true`, or an error (a `RimeFormError` code or a message).
+ * It runs in the panel as the user types and on the server before a save. `operation`, `id`,
+ * `user` and `locale` are `undefined` in a panel form that edits no document (sign-in, password
+ * reset).
+ */
 export type FieldValidationFunc<TConfig extends FormField = FormField, TData extends Dic = Dic> = (
   value: unknown,
   metas: {
@@ -42,6 +48,7 @@ export type FieldValidationFunc<TConfig extends FormField = FormField, TData ext
   }
 ) => true | string;
 
+/** `id` is the document's id when the check has one; a create has none. */
 type FieldAccessParams = { id?: string };
 export type FieldAccess = (user: User | undefined, params?: FieldAccessParams) => boolean;
 export type FieldWidth = '1/3' | '1/2' | '2/3';
@@ -115,7 +122,10 @@ export type FieldHookShared<T extends FormField = any> = (
   context: { config: T; data: Dic }
 ) => any;
 
-/** Field hook for client-side operations */
+/**
+ * An `onChange` hook: runs in the panel when the field takes a valid new value, with its siblings
+ * and the form's field accessors.
+ */
 export type FieldHookClient = (
   value: any,
   context: {
@@ -156,23 +166,30 @@ type FieldHooks = {
   onChange?: FieldHookClient[];
 };
 
+/**
+ * A choice of a select, radio or combobox: `value` is stored, `label` is shown (the value,
+ * capitalised, without it).
+ */
 export type Option = {
   value: string;
   label?: string;
 };
 
+/** An option with an icon shown beside its label, for a combobox. */
 export type OptionWithIcon = {
   value: string;
   label?: string;
   icon?: Component<IconProps>;
 };
 
+/** A relation as stored: the target collection and document, with the row's own `id` once saved. */
 export type RelationRef = { id?: string; relationTo: string; documentId: string };
 /** A relation as a read answers it: the documents at depth 1 or more, refs at depth 0. */
 export type RelationValue<T> = T[] | RelationRef[];
 /** What a write takes for a relation: what a read answers, or bare ids. */
 export type RelationInput<T> = RelationValue<T> | string[] | string;
 
+/** What `form.useField(path)` answers: the value to read and write, and its state in the form. */
 export type BaseUseFieldReturn = {
   path: string;
   value: any;
@@ -181,6 +198,7 @@ export type BaseUseFieldReturn = {
   readonly error: string | false;
 };
 
+/** The props of a group's `preview()` component: the group's fields, keyed by field name. */
 export type FieldsPreviewProps = {
   fields: Record<string, BaseUseFieldReturn>;
 };

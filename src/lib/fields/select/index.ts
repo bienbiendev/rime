@@ -17,6 +17,7 @@ export class SelectFieldBuilder extends PickManyFieldBuilder<SelectField> {
   }
 }
 
+/** A pick among options: one, stored as text, or several with `.many()`, stored as a JSON list. */
 export const select = (name: string) => new SelectFieldBuilder(name, 'select');
 
 /****************************************************/

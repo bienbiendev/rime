@@ -7,6 +7,7 @@ export class ComboBoxFieldBuilder extends PickOneFieldBuilder<ComboBoxField> {
     return Combobox;
   }
 
+  /** The options to pick from; an option may carry an icon shown beside its label. */
   options(...options: OptionWithIcon[] | string[]) {
     return super.options(...options);
   }

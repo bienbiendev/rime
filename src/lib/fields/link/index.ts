@@ -36,6 +36,7 @@ export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
     return Cell;
   }
 
+  /** `compact` hides the label. */
   layout(str: 'compact' | 'default') {
     this.field.layout = str;
     return this;
@@ -45,14 +46,26 @@ export class LinkFieldBuilder extends FormFieldBuilder<LinkField> {
     return 'json';
   }
 
+  /**
+   * What the link may point at: `url`, `email`, `tel`, `anchor`, and collection or area slugs.
+   * The first one is the type a new link starts with.
+   *
+   * ```ts
+   * link('cta').types('url', 'pages')
+   * ```
+   */
   types(...values: LinkType[]) {
     this.field.types = values;
     return this;
   }
 
+  /**
+   * Runs before a save: drops a `url` that would run script, and stores an empty value as `null`.
+   */
   static readonly sanitize = (link: unknown): Link | undefined => {
     if (!link) return undefined;
-    // Kept as sent, except a `url` that would run script: every renderer escapes the rest
+    // Kept as sent, except a `url` that would run script. `validate.link` has already refused a
+    // script `value` for the url, email, tel and anchor types.
     const isLinkValue = (v: any): v is Link =>
       typeof v === 'object' && !Array.isArray(v) && 'value' in v;
 

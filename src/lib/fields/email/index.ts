@@ -18,6 +18,7 @@ export class EmailFieldBuilder extends FormFieldBuilder<EmailField> {
     return EmailComp;
   }
 
+  /** `compact` hides the label: the placeholder names the field. */
   layout(layout: 'compact' | 'default') {
     this.field.layout = layout;
     return this;

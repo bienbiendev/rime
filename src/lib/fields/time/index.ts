@@ -3,6 +3,7 @@ import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.j
 import type { DefaultValueFn, FormField } from '#lib/fields/types.js';
 import TimeComponent from './component/Time.svelte';
 
+/** A time of day as `hh:mm`, stored as text. A new document starts at `08:00`. */
 export const time = (name: string) => new TimeFieldBuilder(name);
 
 export class TimeFieldBuilder extends FormFieldBuilder<TimeField> {

@@ -56,6 +56,7 @@
     initialized = true;
   });
 
+  /** A many-select lists only the options not picked yet. */
   $effect(() => {
     if (config.get.many) {
       const currentValue = $state.snapshot(field.value);
@@ -124,6 +125,7 @@
         {/if}
 
         {#if !form.readOnly && !isFull}
+          <!-- The list closes 200 ms after the blur, so a click on an item lands first. -->
           <Command.InputSelect
             name={path || config.name}
             autocomplete="off"
