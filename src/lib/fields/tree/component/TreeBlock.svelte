@@ -7,7 +7,7 @@
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import GripVertical from '@lucide/svelte/icons/grip-vertical';
-  import { extractFieldName, levelsBelow } from '../util.js';
+  import { levelsBelow } from '../util.js';
   import AddItemButton from './AddItemButton.svelte';
   import TreeBlockComp from './TreeBlock.svelte';
   import RepeatableActions from '../../repeatable/RepeatableActions.svelte';
@@ -17,11 +17,13 @@
 
   const { config, treeKey, treeState, form, sorting = false, path }: TreeBlockProps = $props();
 
-  const depth = $derived(
+  /** The item's index at each level, from the root: `links.0._children.2` → `[0, 2]`. */
+  const indexes = $derived(
     path
       .replace(`${treeState.path}.`, '')
       .split('.')
-      .filter((str) => str !== '_children').length
+      .filter((segment) => segment !== '_children')
+      .map(Number)
   );
   /** 1 for a first-level item, 2 for one inside it: `links.0._children.2` → 2. */
   const depth = $derived(indexes.length);
@@ -35,18 +37,8 @@
   /** Shallow enough that more items can go inside. */
   const canHoldItems = $derived(depth <= config.get.maxDepth);
 
-  // tree.0._children.2 -> 1.
-  const parentPathFormated = $derived.by(() => {
-    if (depth === 1) return '';
-    const [, relativePath] = extractFieldName(parentPath);
-    return (
-      relativePath
-        .split('.')
-        .filter((str) => str !== '_children')
-        .map((str) => parseInt(str) + 1)
-        .join('.') + '.'
-    );
-  });
+  /** The item's place in the tree, counted from 1: `links.0._children.2` → `1.3`. */
+  const place = $derived(indexes.map((index) => index + 1).join('.'));
 
   /** Open: its fields, then the items inside it, under its header. */
   let isOpen = $state(true);
@@ -65,14 +57,13 @@
   };
 
   /** `renderTitle`, else the field's label and the item's place: `Links 1.2`. */
-  const title = $derived.by(() => {
-    const place = `${parentPathFormated}${position + 1}`;
-    return repeatableTitle(
+  const title = $derived(
+    repeatableTitle(
       config.get.renderTitle,
       { position: place, values: itemValue || {} },
-      `${config.get.label || capitalize(config.name)} ${place}`
-    );
-  });
+      `${config.get.label} ${place}`
+    )
+  );
 
   // Paths relative to the tree: the move of a sibling up or down.
   const relative = (to: number) => `${parentPath}.${to}`.replace(`${treeState.path}.`, '');

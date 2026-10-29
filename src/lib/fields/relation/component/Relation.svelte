@@ -50,8 +50,12 @@
   let stamp = $state(new Date().getTime().toString());
 
   let selectedItems = $state<RelationFieldItem[]>([]);
-  // fetched items minus selected items
-  let availableItems = $state<RelationFieldItem[]>([]);
+  /** The candidates not picked yet. */
+  const availableItems = $derived(
+    initialItems.filter(
+      (item) => !selectedItems.some((picked) => picked.documentId === item.documentId)
+    )
+  );
   const nothingToSelect = $derived(initialItems.length === 0);
 
   let isFull = $derived.by(() => {
@@ -147,16 +151,9 @@
     }
   });
 
-  const retreiveRelation = (documentId: string) => {
-    if (initialValue && Array.isArray(initialValue) && initialValue.length) {
-      for (const relation of initialValue) {
-        if (relation.documentId === documentId) {
-          return relation;
-        }
-      }
-    }
-    return null;
-  };
+  /** The stored relation row for this document, to keep its id, or none. */
+  const retreiveRelation = (documentId: string) =>
+    initialValue.find((relation) => relation.documentId === documentId) ?? null;
 
   // The value changed elsewhere, a render beside the field picking in place: the picks follow.
   // A change of the field's own ends here equal to its picks and changes nothing.
@@ -171,17 +168,6 @@
         initialItems.find((item) => item.documentId === id);
       selectedItems = ids.map(itemOf).filter((item) => !!item);
     });
-  });
-
-  const getAvailableItems = () => {
-    return initialItems.filter(
-      (initialItem) =>
-        !selectedItems.some((selectedItem) => selectedItem.documentId === initialItem.documentId)
-    );
-  };
-
-  $effect(() => {
-    availableItems = getAvailableItems();
   });
 
   // Actions
