@@ -16,8 +16,7 @@ export const validateVersions = (config: BuiltCollection | BuiltArea): string[] 
     errors.push(`Versions autoSave requires draft: true (${config.slug})`);
   }
 
-  // The upload file-reference check reads the newest real row of every document, so a file
-  // only an auto-saved row still names could be removed from disk.
+  // An upload collection does not auto-save.
   if (config.versions.autoSave && 'upload' in config && config.upload) {
     errors.push(`Versions autoSave is not supported on an upload collection (${config.slug})`);
   }

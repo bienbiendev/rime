@@ -8,7 +8,7 @@ import { mergeWithInitialDocument } from './merge-with-initial.server.js';
  * The initial merge, and the one value it must not touch.
  *
  * `file` is the upload payload — a `File`, or the JSON stand-in `castBase64ToFile` has not
- * converted yet, since that hook runs five places later. A merge that clones every plain object it
+ * converted yet, since that hook runs later in beforeCreate. A merge that clones every plain object it
  * walks turns a `File` into a plain object with none of its methods; this one merges only the keys
  * the initial document has. The assertion is **identity**: `toEqual` would pass on a clone, and a
  * clone is the bug.
@@ -29,8 +29,8 @@ describe('mergeWithInitialDocument', () => {
   });
 
   it('does the same for a payload that is not a File yet', async () => {
-    // `castBase64ToFile` is hook 6 of beforeCreate; this is hook 1, so the payload can still be
-    // the JSON shape. An `instanceof File` guard here would have been wrong for exactly this.
+    // `castBase64ToFile` runs after this hook in beforeCreate, so the payload can still be the
+    // JSON shape here.
     const payload = { base64: 'zzz', filename: 'a.png' };
 
     const data = await run(uploads, { file: payload });

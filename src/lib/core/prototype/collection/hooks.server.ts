@@ -45,12 +45,8 @@ import { mergeWithInitialDocument } from './hooks/merge-with-initial.server.js';
  *
  * A consumer's hooks are appended after these, per timing, and before the finaliser.
  *
- * **In its own file rather than in `definition.server.ts`, and that is load-bearing.** A derived
- * collection needs the same list — `upload` derives a `<slug>Directories`, `versions` one per
- * versioned area, and both must run authorize, validation and the rest as an authored collection
- * does. This file depends on nothing, so anything can import it. `definition.server.ts` spreads
- * `{ ...base }` at module scope, so an importer of it depends on evaluation order, and the only
- * symptom of a wrong order is a missing title.
+ * A derived collection runs this list too: `upload`'s `$<slug>Directories`, and the
+ * `$<slug>__versions` of every versioned collection and area.
  */
 export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
   beforeOperation: [authorize],

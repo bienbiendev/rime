@@ -10,9 +10,8 @@ import { rest } from './rest/index.server.js';
 /**
  * The server half: the same area, plus `rest` and the boot step.
  *
- * `boot` is the consequence of `singleton: true`: nothing at runtime may create the row, so it has
- * to exist before requests arrive. Doing it here keeps writes off the read path, and makes an
- * area's creation time and locale a property of the config rather than of its first reader.
+ * `boot` writes the area's one row before requests arrive: no operation creates it. The first
+ * boot also writes the blocks, tree items and relations of the initial document.
  */
 export const area = definePrototype<BuiltArea>({
   ...base,

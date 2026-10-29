@@ -7,9 +7,9 @@ type AreaApi = ReturnType<App.Locals['rime']['area']>;
 type Run = (args: { event: RequestEvent; area: AreaApi }) => Promise<Response>;
 
 /**
- * The area counterpart of the collection wrapper — see the note there for why the check stays
- * per-prototype rather than being folded into one shared helper: `isArea` narrows the slug, and
- * that narrowing is what the accessor needs.
+ * Wraps an area REST handler: reads the slug the URL names, refuses what is not an area, and
+ * hands `rime.area(slug)` to the handler. `isArea` is a type guard, and its narrowing is what
+ * lets the accessor typecheck, as in collection/rest/endpoint.server.ts.
  */
 export const endpoint =
   (run: Run): RequestHandler =>

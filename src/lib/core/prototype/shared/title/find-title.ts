@@ -7,6 +7,7 @@ import type { SlugField } from '#lib/fields/slug/index.js';
 import type { TextField } from '#lib/fields/text/index.js';
 import type { Field, RichTextField } from '#lib/fields/types.js';
 
+/** The field types a title can be read from: text, date, slug, email and rich text. */
 const hasMaybeTitle = (
   field: Field
 ): field is TextField | DateField | SlugField | EmailField | RichTextField =>

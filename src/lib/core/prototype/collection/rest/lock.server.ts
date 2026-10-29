@@ -7,11 +7,6 @@ import { endpoint } from './endpoint.server.js';
 /**
  * The edit lock on one document: POST to take it, DELETE to give it back.
  *
- * A route rather than a panel form action, because a prototype adds a route by declaring it in
- * `rest` and codegen writes the file — while a form action has to be listed by name in the
- * generated `+page.server.ts`, so one that is not listed answers 404 and every claim quietly does
- * nothing.
- *
  * Neither method goes near the write pipeline: `claimEditLock`/`releaseEditLock` set the two lock
  * columns through the adapter's `updateWhere`, so holding a document leaves `updatedAt` and
  * `updatedBy` alone and cuts no version. Only staff may call it, since the lock names a staff

@@ -4,6 +4,15 @@ import type { Collection } from '#lib/types.js';
 
 type WithNormalizedLabel<T> = Omit<T, 'label'> & { label: CollectionLabel };
 
+/**
+ * A collection's label as `{ singular, plural }`: a string label is both, an object is kept, and
+ * no label is the capitalised slug for both.
+ *
+ * ```ts
+ * augmentLabel({ slug: 'pages', label: 'Page' }).label // { singular: 'Page', plural: 'Page' }
+ * augmentLabel({ slug: 'news' }).label                 // { singular: 'News', plural: 'News' }
+ * ```
+ */
 export const augmentLabel = <T extends Collection<any>>(config: T): WithNormalizedLabel<T> => {
   let label: CollectionLabel;
 

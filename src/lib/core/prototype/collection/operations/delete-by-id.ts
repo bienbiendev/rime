@@ -11,6 +11,11 @@ export type DeleteByIdArgs = {
 
 type Args = DeleteByIdArgs & { ctx: PrototypeApiContext<BuiltCollection> };
 
+/**
+ * Deletes one document, every version with it: beforeOperation, the newest row read raw,
+ * beforeDelete, the delete, afterDelete. afterDelete gets the row as first read, not what
+ * beforeDelete handed back. Answers the id; throws `NOT_FOUND` when there is no such document.
+ */
 export const deleteById = async <T extends GenericDoc>(args: Args): Promise<string> => {
   const { ctx, id } = args;
   const { config, event, isSystemOperation } = ctx;

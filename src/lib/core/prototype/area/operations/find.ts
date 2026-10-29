@@ -11,6 +11,11 @@ export type FindArgs = ReadArgs;
 
 type Args = FindArgs & { ctx: PrototypeApiContext<BuiltArea> };
 
+/**
+ * The area's one document: beforeOperation, the row `versionId` names, else the newest with
+ * `latest`, else the published one, then the beforeRead hooks. Throws `NOT_FOUND` when the row is
+ * missing, which only a failed boot leaves.
+ */
 export const find = async <T extends GenericDoc>(args: Args): Promise<T> => {
   const { ctx, locale, depth, select, versionId, latest, localeFallback } = args;
   const { config, event, isSystemOperation } = ctx;

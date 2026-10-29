@@ -12,9 +12,9 @@ import type { Dic } from '#lib/util/types.js';
  * // POST { title: null }  -> { title: null }
  * ```
  *
- * An upload's `File` is not a plain object and is not walked, a key no field declares has no
- * initial value to fill from. The data's own nested objects are shared with the caller's payload
- * from here on, not copied.
+ * An upload's `File` is not a plain object, so it is kept as sent. A key no field declares has no
+ * initial value, and is kept as sent. A value the merge does not walk into, a list included, is
+ * the caller's own object, not a copy.
  */
 export const mergeWithInitialDocument = Hooks.beforeCreate(
   async function mergeWithInitialDocument(args) {

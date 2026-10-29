@@ -17,6 +17,14 @@ export type DeleteArgs = {
 
 type Args = DeleteArgs & { ctx: PrototypeApiContext<BuiltCollection> };
 
+/**
+ * Deletes the documents `query` matches, one at a time through `deleteById`, so each runs its own
+ * access check and hooks. No `query` matches every document. Answers the ids deleted.
+ *
+ * ```ts
+ * await rime.collection('pages').delete({ query: { where: { isHome: { equals: false } } } });
+ * ```
+ */
 export const deleteDocs = async (args: Args): Promise<string[]> => {
   const { ctx, locale, limit, offset, sort, query } = args;
   const { config, event, isSystemOperation } = ctx;

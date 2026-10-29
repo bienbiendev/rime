@@ -17,12 +17,17 @@ export type FindArgs = {
   select?: string[];
   /** The newest version of each, whatever its status; the published one otherwise. */
   latest?: boolean;
-  /** See the collection's findById. */
+  /** See `ReadArgs`. */
   localeFallback?: boolean;
 };
 
 type Args = FindArgs & { ctx: PrototypeApiContext<BuiltCollection> };
 
+/**
+ * The documents `query` matches, sorted and paged: beforeOperation once for the list, each
+ * document's published row (the newest with `latest`), then the beforeRead hooks per document. A
+ * document that fails to build is logged and left out.
+ */
 export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
   const {
     ctx,
@@ -73,8 +78,8 @@ export const find = async <T extends GenericDoc>(args: Args): Promise<T[]> => {
     localeFallback,
     select,
     resolve: isSystemOperation ? undefined : readableReferences(config.fields, event.locals.user),
-    // Which content row each document shows. `and`ed with `query` by the adapter, rather than
-    // spliced into it — see the collection's findById for where the answer comes from.
+    // Which content row each document shows, from `versionsReadQuery`. The adapter `and`s it with
+    // `query`.
     content: ctx.versionQuery({ latest })
   });
 

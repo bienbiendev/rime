@@ -211,6 +211,11 @@ export const handleNewVersion = Hooks.beforeUpdate(async function handleNewVersi
   return args;
 });
 
+/**
+ * The data of a new version row: the submission, with the upload's file read from disk when none
+ * was sent, every unsent field taken from the original, `status` defaulting to draft, relations
+ * read at depth 1 turned back into refs, no row ids, and `ownerId` naming the document.
+ */
 async function prepareDataForNewVersion(args: {
   data: Dic;
   config: BuiltCollection | BuiltArea;
@@ -243,7 +248,6 @@ async function prepareDataForNewVersion(args: {
     ignore: ['status']
   });
 
-  // Set default status to "draft" if no data.status
   if (!data.status) {
     data.status = VERSIONS_STATUS.DRAFT;
   }

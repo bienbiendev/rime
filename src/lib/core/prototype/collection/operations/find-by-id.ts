@@ -11,6 +11,11 @@ export type FindByIdArgs = ReadArgs & { id: string };
 
 type Args = FindByIdArgs & { ctx: PrototypeApiContext<BuiltCollection> };
 
+/**
+ * One document by id: beforeOperation, then the row `versionId` names, else the newest with
+ * `latest`, else the published one, then the beforeRead hooks. Throws `NOT_FOUND` when no row
+ * matches.
+ */
 export const findById = async <T extends GenericDoc>(args: Args) => {
   const { ctx, id, versionId, locale, depth, select, latest, localeFallback } = args;
   const { config, event, isSystemOperation } = ctx;

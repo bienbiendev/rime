@@ -7,12 +7,7 @@ import { VERSIONS_OPERATIONS } from './strategy.js';
 /**
  * Which rows an update writes.
  *
- * This was three branches inside `updatePrototype`, decoded from a `versionOperation` the
- * operation passed down. Getting it wrong is **silent**: a plan that names no content row writes
- * only the base row and returns 200, and a plan that names the wrong one writes the wrong version
- * — no error either way, and the document reads back through a different query.
- *
- * So each case is asserted through the same function the pipeline calls, on a real built config —
+ * Each case is asserted through the same function the pipeline calls, on a real built config —
  * including the create, where the plan names no row because the adapter has yet to make one.
  */
 /** The pipeline hands a whole `OperationContext`; each case here names only what it reads. */
@@ -82,9 +77,6 @@ describe('the write plan', () => {
   });
 
   it('splits on a create and names no row, because there is none yet', () => {
-    // `insertPrototype` used to call `splitRootData` itself for any prototype with a versions table, which
-    // is this feature's rule applied by the database layer. The plan says it instead, and the
-    // adapter makes the row and answers with its id.
     const plan = planFor(versioned, { title: 'a', body: 'b' }, {}, 'create');
 
     expect(plan.data).toEqual({});

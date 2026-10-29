@@ -329,6 +329,8 @@ export const collectionApi = <Doc extends RegisterCollection[CollectionSlug]>(
  * this accessor's owner, so a surface that reached `RequestEvent` would be defined in terms of
  * itself and every `rime.collection(...)` in the repo would resolve to `never`. Each operation
  * exports its caller-facing arguments separately for the same reason.
+ *
+ * `system()` hands back the class itself, plumbing included: escalating is rime's own code.
  */
 export type CollectionApi<
   Doc extends RegisterCollection[CollectionSlug] = RegisterCollection[CollectionSlug]

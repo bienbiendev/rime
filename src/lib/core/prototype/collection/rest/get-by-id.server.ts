@@ -3,7 +3,8 @@ import { readParams } from '#lib/core/prototype/shared/rest/params.server.js';
 import { endpoint } from './endpoint.server.js';
 
 /**
- * GET handler for the collection API endpoint to retrieve a document by its ID.
+ * `GET /api/<collection>/<id>`: one document, with `depth`, `select`, and `latest`/`versionId`
+ * for staff. Answers `{ doc }`.
  */
 export const restGetById = endpoint(async ({ event, collection }) => {
   const id = event.params.id;

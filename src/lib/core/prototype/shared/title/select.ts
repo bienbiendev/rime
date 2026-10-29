@@ -10,8 +10,8 @@
  * Every read endpoint goes through here, so `?select=title` means the same thing on `/pages` and
  * on `/pages/<id>`.
  *
- * @param raw The `select` search param as sent — comma separated, or null when absent.
- * @param asTitle The config's resolved title path (`BuiltCollection`/`BuiltArea`).
+ * `raw` is the `select` search param as sent, comma separated, or null when absent; `asTitle` is
+ * the config's resolved title path.
  */
 export const selectWithTitle = (raw: string | null, asTitle: string): string[] | undefined => {
   if (!raw) return undefined;

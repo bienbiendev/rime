@@ -24,6 +24,14 @@ export type DuplicateArgs = {
 
 type Args = DuplicateArgs & { ctx: PrototypeApiContext<BuiltCollection> };
 
+/**
+ * Copies a document and answers the copy's id. The default locale is copied first: the row
+ * `versionId` names, else the newest real one for staff and rime and the published one for anyone
+ * else, its references as ids, each field through its `$beforeDuplicate` hooks, without ids, row
+ * metas and the drafts `status`. A required field the source never wrote in that locale takes the
+ * value a read falls back to. The other locales are then copied from the source onto the copy.
+ * Auth and upload documents are refused.
+ */
 export const duplicate = async (args: Args): Promise<string> => {
   const { ctx, id, versionId } = args;
   const { config, event } = ctx;

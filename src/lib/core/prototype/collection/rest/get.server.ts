@@ -2,7 +2,8 @@ import { listParams, readParams } from '#lib/core/prototype/shared/rest/params.s
 import { endpoint } from './endpoint.server.js';
 
 /**
- * GET handler for the collection API endpoint.
+ * `GET /api/<collection>`: the documents a `where…` filter matches, with `sort`, `limit`,
+ * `offset`, `depth`, `select`, and `latest` for staff. Answers `{ docs }`.
  */
 export const restGet = endpoint(async ({ event, collection }) => {
   // A list reads no `versionId`: each document answers its own row

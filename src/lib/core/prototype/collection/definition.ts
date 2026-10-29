@@ -18,7 +18,7 @@ import type { CollectionWithoutSlug } from './types.js';
  * A collection: many documents, addressed by id, with the full set of operations.
  *
  * The client half of the pair: what a collection *is*. `definition.server.ts` spreads it and adds
- * `rest` and `hooks`.
+ * `rest`; the hooks are `collectionHooks` (`hooks.server.ts`), which `resolvePipelines` attaches.
  *
  * The augments live here because `create` runs them on both sides, so a client build has to reach
  * them.

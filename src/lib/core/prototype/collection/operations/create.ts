@@ -26,6 +26,11 @@ export type CreateArgs<T> = {
 
 type Args<T> = CreateArgs<T> & { ctx: PrototypeApiContext<BuiltCollection> };
 
+/**
+ * Creates a document: beforeOperation, beforeCreate, the write plan, the insert, its blocks, tree
+ * items and relations, a read back as rime, afterCreate. The caller gets the document as far as
+ * they may read it (`seenBy`); a system create gets all of it.
+ */
 export const create = async <T extends RegisterCollection[CollectionSlug]>(args: Args<T>) => {
   const { ctx, locale } = args;
   const { config, event, isSystemOperation } = ctx;

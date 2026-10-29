@@ -3,7 +3,9 @@ import { requestData, writeParams } from '#lib/core/prototype/shared/rest/params
 import { endpoint } from './endpoint.server.js';
 
 /**
- * PATCH handler for the collection API endpoint to update a document by its ID.
+ * `PATCH /api/<collection>/<id>`: updates a document from the body, in the locale `?locale=`
+ * names. The query names the row: `versionId`, else the newest with `latest`, else the published
+ * one; `fork` makes a new version from it. Answers `{ doc }`.
  */
 export const restUpdateById = endpoint(async ({ event, collection }) => {
   const id = event.params.id;

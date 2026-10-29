@@ -119,6 +119,20 @@ type PrototypeOptions<C extends BuiltPrototype> = Partial<
 const writtenRules = (access: Dic = {}): Access =>
   Object.fromEntries(Object.entries(access).filter(([, rule]) => rule !== undefined));
 
+/**
+ * Builds a prototype definition from its name, augments, boot and REST surface. Its `create`
+ * turns an authored config into a built one: `_titleFallback: 'id'`, every augment in order,
+ * then `type`, `slug`, `initial`, `kebab`, `fields`, the icon, `live` and `access` defaulting
+ * each rule to staff.
+ *
+ * ```ts
+ * export const area = definePrototype({
+ *   name: 'area',
+ *   augments: () => [augmentAreaLabel, augmentVersions, augmentTitle, augmentMetas]
+ * });
+ * area.create('settings', { fields: [...] });
+ * ```
+ */
 export const definePrototype = <C extends BuiltPrototype = BuiltPrototype>(
   options: PrototypeOptions<C>
 ): PrototypeDefinition<C> => {

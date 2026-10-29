@@ -3,7 +3,9 @@ import { Hooks } from '#lib/core/pipeline/define-hook.js';
 import { versionsReadQuery } from '#lib/core/prototype/shared/versions/read-query.js';
 
 /**
- * Hook to populate _children property on document from a nested collection
+ * Puts `_children` on a nested document: the ids of the documents whose `_parent` is this one,
+ * ordered by `_position`. Skipped when the read's `select` names fields and `_children` is not
+ * one of them.
  */
 export const addChildrenProperty = Hooks.beforeRead(async function addChildrenProperty(args) {
   // No `config.nested` check: `when(isNested, …)` in `hooks.server.ts` places this hook on nested

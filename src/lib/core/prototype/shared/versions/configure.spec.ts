@@ -7,15 +7,15 @@ import { text } from '#lib/fields/text/index.js';
 import { configureVersions } from './configure.server.js';
 
 /**
- * What a versions table versions's pipeline is made of.
+ * What the pipeline of a versions collection is made of.
  *
- * A versions is a collection, so it resolves like one: the prototype's own hooks, the hooks of the
- * features **its own** config enables, and the author's `$hooks`. Inheriting the parent's resolved
- * `_pipeline` instead runs hooks for features the versions table does not enable — a versioned + nested
- * collection queries `_parent` on a versions table whose table has never had that column — and stacks the
- * core steps twice when the parent is an area.
+ * A versions collection resolves like any collection: the prototype's own hooks, the hooks of the
+ * features its own config enables, and the author's `$hooks`. The parent's resolved `$hooks` would
+ * run hooks for features the versions table does not enable — a versioned and nested collection
+ * would query `_parent` on a table that has no such column — and stack the core steps twice when
+ * the parent is an area.
  */
-describe('a versions versions', () => {
+describe('a versions collection', () => {
   const authorHook = Hooks.beforeRead(async function authorBeforeRead(args) {
     return args;
   });
@@ -65,7 +65,7 @@ describe('a versions versions', () => {
 });
 
 /**
- * A versions says whose content it holds.
+ * A versions collection names the config whose content it holds, in `_shadowOf`.
  *
  * What upload does with the answer is asserted in `upload/naming.spec.ts`, against a plain object
  * rather than against this feature — which is the point: neither spec names the other.

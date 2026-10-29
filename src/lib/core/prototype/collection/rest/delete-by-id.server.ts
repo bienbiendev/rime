@@ -1,8 +1,6 @@
 import { endpoint } from './endpoint.server.js';
 
-/**
- * DELETE handler for the collection API endpoint to delete a document by its ID.
- */
+/** `DELETE /api/<collection>/<id>`: deletes the document and answers `{ id }`. */
 export const restDeleteById = endpoint(async ({ event, collection }) => {
   const id = event.params.id || '';
   await collection.deleteById({ id });
