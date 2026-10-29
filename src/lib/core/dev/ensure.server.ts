@@ -69,6 +69,11 @@ function ensureHooks() {
   if (!existsSync(hooksServerFile)) throw new Error('Missing src/hooks.server.ts file');
 }
 
+/**
+ * Throws on the first piece `rime init` should have written and is missing: .env,
+ * src/hooks.server.ts, the config, its generated copy, the schema. Runs in dev when the dev
+ * server starts listening (vite.server.ts).
+ */
 export const ensureHasInit = () => {
   ensureEnv();
   ensureHooks();

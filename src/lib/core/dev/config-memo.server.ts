@@ -23,9 +23,8 @@ const serializeValue = (value: any): string => {
 
     case 'object':
       try {
-        // Builder instances (fields, tabs, blocks, ...) may keep their state in private class
-        // fields, which JSON.stringify() cannot see. Their `compile()` returns a plain, fully
-        // resolved copy, so that is what gets serialized.
+        // A builder that keeps its state in private class fields (`TabBuilder`) has no own keys
+        // for `flattenConfig` to walk: its `compile()` output is serialized instead.
         if (typeof value.compile === 'function') {
           return serializeValue(value.compile());
         }

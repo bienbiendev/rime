@@ -18,6 +18,7 @@ function get(key: string): string | false {
   return false;
 }
 
+/** Stores `value` under `key`, creating node_modules/.rime when needed. */
 function set(key: string, value: string) {
   if (!fs.existsSync(RIME_DEV_CACHE_DIR)) {
     fs.mkdirSync(RIME_DEV_CACHE_DIR);
@@ -29,11 +30,12 @@ function set(key: string, value: string) {
 const digest = (content: string) => createHash('sha256').update(content).digest('hex');
 
 /**
- * The two verbs for a memo — content that is only ever compared, never read back.
+ * Whether `content` hashes to what is stored under `key`. Stores nothing.
  *
- * Every codegen step asks the same question: is this the string I was given last time? Storing
- * the answer as a digest keeps a 400KB serialized config out of `node_modules/.rime` and makes
- * the comparison a fixed 64 bytes:
+ * `matches` and `remember` are the two verbs for a memo — content that is only ever compared,
+ * never read back. Every codegen step asks the same question: is this the string I was given
+ * last time? Storing the answer as a digest keeps a 400KB serialized config out of
+ * `node_modules/.rime` and makes the comparison a fixed 64 bytes:
  *
  * ```ts
  * if (cache.matches('config', memo)) return;
@@ -41,11 +43,9 @@ const digest = (content: string) => createHash('sha256').update(content).digest(
  * cache.remember('config', memo);
  * ```
  *
- * Split in two rather than one `changed()` because a step stores its memo only once its work
- * succeeded: a memo written before would skip the work forever after a failure.
+ * A step stores its memo only once its work succeeded: a memo written before would skip the
+ * work forever after a failure.
  */
-
-/** Whether `content` hashes to what is stored under `key`. Stores nothing. */
 function matches(key: string, content: string): boolean {
   return get(key) === digest(content);
 }
@@ -55,6 +55,7 @@ function remember(key: string, content: string) {
   set(key, digest(content));
 }
 
+/** Removes what is stored under `key`. */
 function del(key: string) {
   const keyPath = path.join(RIME_DEV_CACHE_DIR, key + '.txt');
   if (fs.existsSync(keyPath)) {

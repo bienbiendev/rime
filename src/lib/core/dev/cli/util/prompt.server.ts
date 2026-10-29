@@ -1,7 +1,8 @@
 import readline from 'node:readline';
 
 /**
- * Simple function to ask a question and get user input
+ * Asks `query` on the terminal, followed by `(default: <defaultValue>)`. An empty answer is
+ * `defaultValue`.
  */
 export function prompt(query: string, defaultValue: string): Promise<string> {
   const rl = readline.createInterface({

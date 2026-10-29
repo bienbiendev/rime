@@ -5,8 +5,10 @@ import { loadEnv } from 'vite';
  * plugin. Read the way SvelteKit reads it, the shell first:
  *
  * ```
- * shell > .env.development.local > .env.development > .env.local > .env
+ * shell > .env.<mode>.local > .env.<mode> > .env.local > .env
  * ```
+ *
+ * where <mode> is NODE_ENV, `development` when it is unset.
  *
  * The app itself reads `$app/env/private` and `$app/env/public`.
  */

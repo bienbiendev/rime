@@ -53,11 +53,10 @@ export const matcherValues = (config: Config, kebabsByPrototype: Record<string, 
 /**
  * Writes the (rime) route tree — panel pages and /api — and the generated params.ts.
  *
- * Every file written here is a fixed set of dynamic-segment routes — the count never grows with
- * how many collections or areas are configured, only with how many prototype *kinds* exist and
- * what each one declares. `commonRoutes` holds the ones that are the same for everybody plus the
- * panel's own [slug=<name>] tree; the /api tree is written from each prototype's `rest`
- * declaration.
+ * The fixed files do not grow with the number of collections or areas, only with the prototype
+ * kinds and what each declares; a `panel.routes` entry adds one page. `commonRoutes` holds the
+ * ones that are the same for everybody plus the panel's own [slug=<name>] tree; the /api tree is
+ * written from each prototype's `rest` declaration.
  *
  * The folder is always the literal `[panel=panel]` segment; only the `panel` matcher's content
  * varies with RIME_PANEL_ROUTE, so the URL itself can be hidden from admin-path scanners without

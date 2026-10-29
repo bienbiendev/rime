@@ -27,8 +27,8 @@ export const projectName = async (args: {
   while (!isValidSlug(name)) {
     name = await ask(
       tries > 0
-        ? 'Error: should contains only letters, numbers, hyphens, underscores\nWhat is your project name (will be used as database name) ?'
-        : 'What is your project name (will be used as database name) ?',
+        ? 'Error: use only letters, numbers, hyphens and underscores, starting with a letter\nWhat is your project name (it names the database)?'
+        : 'What is your project name (it names the database)?',
       defaultName
     );
     tries++;

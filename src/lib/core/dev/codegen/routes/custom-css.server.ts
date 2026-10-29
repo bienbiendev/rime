@@ -2,15 +2,9 @@ import { logger } from '#lib/core/logger.server.js';
 import fs from 'fs';
 
 /**
- * Injects a custom CSS link into the layout file
- * @param layoutFilePath Path to the layout file
- * @param cssPath Custom CSS path from config
- * @example
- * // Inject custom CSS into a layout file
- * const layoutPath = '/path/to/src/routes/(rime)/+layout.svelte';
- * const cssPath = '/assets/custom-styles.css';
- * injectCustomCSS(layoutPath, cssPath);
- * // This will add a <svelte:head> tag with a link to the CSS file
+ * Adds a `<svelte:head>` linking the stylesheet `cssPath` (config.panel.css) right after the first
+ * `</script>` of the layout at `layoutFilePath`, in place. Runs once on a freshly written layout:
+ * a second call adds a second link.
  */
 export function injectCustomCSS(layoutFilePath: string, cssPath: string): void {
   try {

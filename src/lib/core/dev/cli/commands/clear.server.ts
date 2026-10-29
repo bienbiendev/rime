@@ -25,6 +25,7 @@ const clearMessage = `Are you sure you want to delete all related rime files (Y/
  * `rime clear`: removes the database adapter's files, then everything rime generated or keeps for
  * itself. Loads no config: the adapter's hooks come from the module `rime init` or the last dev
  * boot recorded in `node_modules/.rime`, else from the default adapter's, as after a fresh install.
+ * Asks first, with the list above, unless `force`.
  */
 export const clear = async (args: { force?: boolean }) => {
   let shouldProceed = true;

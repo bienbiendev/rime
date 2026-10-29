@@ -21,10 +21,8 @@ import {
   templateRegister
 } from './templates.server.js';
 
-/**
- * Generates the complete TypeScript type definitions string based on the built configuration
- * @returns A string containing all type definitions
- */
+/** The text of src/app.generated.d.ts for `config`: shared types, one doc type per prototype,
+ * `App.Locals` and the slug registry. Writes nothing. */
 async function generateTypesString<T extends Config>(config: T) {
   logger.debug('Types generation...');
   let imports = new Set<string>(['BaseDoc', 'Navigation', 'RouteHandlers', 'User']);
@@ -154,10 +152,8 @@ function write(key: string, content: string, filePath: string) {
   cache.remember(key, content);
 }
 
-/**
- * Generates and writes TypeScript type definitions based on the built configuration
- * @param config The built configuration containing collections, areas, and fields
- */
+/** Writes src/app.generated.d.ts and src/rime.generated.d.ts (the `$rime/config` and
+ * `$rime/schema` declarations), each only when its content changed. */
 async function generateTypes<T extends Config>(config: T) {
   const mainTypes = await generateTypesString(config);
 

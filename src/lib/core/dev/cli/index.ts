@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { program } from 'commander';
 import { existsSync, writeFileSync } from 'fs';
 import { logSettings } from '../env.server.js';
+import { rimeVersion } from '../version.server.js';
 import { envProduction } from './templates/build.js';
 import { DEFAULT_ADAPTER } from './util/adapter-hooks.server.js';
 
@@ -11,7 +12,7 @@ logger.configure(logSettings);
 // The commands report their steps at debug: shown here even without a level set
 if (!['TRACE', 'DEBUG'].includes(logger.getLevel() ?? '')) logger.setLevel('DEBUG');
 
-program.version('0.1').description('Rime utilities');
+program.version(rimeVersion()).description('Rime utilities');
 
 program
   .command('init')

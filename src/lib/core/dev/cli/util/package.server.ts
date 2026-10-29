@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 
+/** The value of `key` in the project's package.json, '' when it is missing or unreadable. */
 export function getPackageInfoByKey(key: string): string {
   try {
     // Read the package.json file
@@ -10,7 +11,6 @@ export function getPackageInfoByKey(key: string): string {
     // Parse the JSON content
     const packageJson = JSON.parse(packageJsonContent);
 
-    // Return the name
     return packageJson[key] || '';
   } catch (error) {
     console.error('Error reading package.json:', error);

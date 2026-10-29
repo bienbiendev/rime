@@ -18,6 +18,11 @@ import { logSettings } from './env.server.js';
 
 const dev = process.env.NODE_ENV === 'development';
 
+/**
+ * Writes src/rime.modules.generated.d.ts: one `declare module '$rime/modules:<path>'` per pair
+ * under src/lib, re-exporting the server half (the client half when there is none). Removes the
+ * file when src/lib holds no pair.
+ */
 export function regenerateModulesDeclaration() {
   const libDir = path.resolve(process.cwd(), 'src/lib');
   const blocks = Array.from(scanModulePairs(libDir))
@@ -50,6 +55,11 @@ export function regenerateModulesDeclaration() {
 export const isInConfigDir = (file: string, configDir: string) =>
   path.resolve(file).startsWith(path.resolve(process.cwd(), configDir) + path.sep);
 
+/**
+ * The `rimecms/vite` plugin. It resolves `$rime/config`, `$rime/schema` and `$rime/modules:<path>`,
+ * and in dev it checks that `rime init` ran, keeps the modules declaration current, and
+ * re-sanitizes the config folder on every edit, which reloads the config and runs codegen.
+ */
 export function rime(): Plugin {
   logger.configure(logSettings);
 
@@ -97,7 +107,8 @@ export function rime(): Plugin {
       // Ahead of Vite's own middlewares: no request reaches storage/, the uploads and the database
       server.middlewares.use(denyStorage);
 
-      // Add a listener for when the server starts
+      // Once the server listens: check the init files, write the modules declaration, and empty
+      // node_modules/.rime when started with --rebuild
       server.httpServer?.once('listening', () => {
         dev && ensureHasInit();
         regenerateModulesDeclaration();
@@ -207,6 +218,7 @@ export function rime(): Plugin {
       };
     },
 
+    /** Inside this repo only: an edit under src/lib/core/config reloads `$rime/config`. */
     async handleHotUpdate({ server, file }) {
       function invalidateVModule(moduleId: string) {
         const module = server.moduleGraph.getModuleById(resolvedVModule(moduleId));

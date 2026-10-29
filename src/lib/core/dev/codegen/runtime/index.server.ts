@@ -51,9 +51,8 @@ function findModuleFile(dir: string, baseName: string): string | null {
 }
 
 /**
- * Direct, single-lookup check for one `<root>/<name>/module(.server)?.ts|js` pair — no
- * directory walk, just the two `fs.existsSync`-style checks `findModuleFile` already does.
- * Used by the Vite plugin's `resolveId`/`load` to resolve one `$rime/modules` specifier.
+ * The pair at `<root>/<name>`, or null: up to four `existsSync` checks, `module.ts|js` and
+ * `module.server.ts|js`, no folder walk. The Vite plugin's `resolveId` and `load` call it.
  */
 export function findModulePair(root: string, name: string): RuntimeRegistryEntry | null {
   const dir = path.join(root, name);

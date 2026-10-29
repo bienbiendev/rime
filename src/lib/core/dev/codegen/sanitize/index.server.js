@@ -14,11 +14,9 @@ import {
 } from '../../constants.server.js';
 
 /**
- * $ prefix-based sanitizer that rules:
- * - All server-only config properties begin with $ (e.g., $url, $hooks)
- * - All server-only field methods begin with $ (e.g., $beforeSave, $beforeRead)
- * - Content must be pure functions or imports from .server.ts files
- * - Outputs to .generated folder, preserving original folder structure
+ * Server-only config is written with a `$`: a `$` member (`$url`, `$hooks`), a `.$method()` call
+ * (`.$beforeSave()`), or an import of a `.server` file. `sanitize` keeps a config file as it is
+ * when it holds none, and writes two halves when it does: the client one without any of it.
  */
 
 // The top-level config — real, hand-authored. Unlike every other .server.ts file under
@@ -34,6 +32,13 @@ const isServerFile = (name) => name.endsWith('.server.ts');
 /** Where a split file's server copy goes: `news.ts` → `news.server.ts`, `news.js` → `news.server.js`. */
 const serverHalfOf = (filePath) => filePath.replace(/\.(ts|js)$/, '.server.$1');
 
+/**
+ * Writes CONFIG_DIR into GENERATED_DIR. A `.ts` or `.js` file with server content becomes `X.ts`
+ * (client half) and `X.server.ts`, and so does every file importing one; other files are copied,
+ * and `rime.config.server.ts` always gets both halves. A generated file no source produces any
+ * more is deleted, except schema.server.ts and params.ts, which other steps write. Throws when a
+ * config file `X.ts` has an `X.server.ts` beside it.
+ */
 export async function sanitize() {
   const root = process.cwd();
   const configDir = path.resolve(root, CONFIG_DIR);
@@ -194,6 +199,8 @@ function scanFiles(dir, keep) {
   });
 }
 
+/** Writes one config file into `outputDir`: as it is when it is not split, else its client copy
+ * and its server copy with imports pointed at server halves. */
 async function processConfigFile(originalPath, configDir, outputDir, outputFiles, splitFiles) {
   const content = fs.readFileSync(originalPath, 'utf-8');
   const relativePath = path.relative(configDir, originalPath);
@@ -238,6 +245,12 @@ const isDollarMember = (node) =>
 /** What a `$` member runs or holds: a method's body, a property's value. */
 const dollarMemberValue = (node) => (t.isObjectMethod(node) ? node.body : node.value);
 
+/**
+ * What a config file holds that the client must not get. `hasServerContent`: an import of a
+ * `.server` module, a `$` member or a `.$method()` call. `serverFunctions`: local functions handed
+ * to a `.$method()` or set as a `$` member. `functionsUsedInDollarProps`: every identifier inside
+ * a `$` member.
+ */
 function analyzeFile(ast) {
   const analysis = {
     hasServerContent: false,
@@ -309,8 +322,12 @@ function analyzeFile(ast) {
   return analysis;
 }
 
+/**
+ * Whether `functionName` is an argument of a `.$method()` call, or the value of a `$` member,
+ * directly or in an object or array literal. An argument nested in a literal,
+ * `.$beforeSave({ run: fn })`, is not seen.
+ */
 function isFunctionUsedByServerContent(functionName, ast) {
-  // Simple heuristic: if function is used as argument to $ methods or imported from server
   let isUsedByServer = false;
 
   function checkUsage(node) {
@@ -384,6 +401,11 @@ function collectIdentifiers(node, names) {
   }
 }
 
+/**
+ * The client copy of a config file's AST: `.server` imports, `$` members and `.$method()` calls
+ * removed (a call keeps the object it was called on), `rime` imported as `rimeClient`, then the
+ * declarations only that content read and the bare `name;` statements left behind.
+ */
 function sanitizeClientAst(ast, analysis) {
   const clonedAst = JSON.parse(JSON.stringify(ast));
 
@@ -679,7 +701,10 @@ function removeUnusedImports(ast) {
 }
 
 /**
- * Updates imports in server files to use server versions of split modules
+ * `content` with each relative import or re-export of a split file pointed at its server half:
+ * `'./pages'` → `'./pages.server.js'`, `'./blocks'` → `'./blocks/index.server.js'`. `currentDir`
+ * is the folder of the file, relative to CONFIG_DIR (`'.'` at the top). Unchanged when nothing
+ * matches or the file does not parse.
  */
 export function updateServerImports(content, splitFiles, currentDir) {
   try {

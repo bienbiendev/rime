@@ -2,6 +2,10 @@ import { productionEnv, renderEnv } from './env.js';
 
 export const envProduction = () => renderEnv(productionEnv());
 
+/**
+ * The app/index.js `rime build` writes: a Node server that serves static/ first, then hands the
+ * request to adapter-node, with the protocol and host headers set from SITE_URL.
+ */
 export const nodeServer = `import { createServer } from 'node:http';
 import serveStatic from 'serve-static';
 import { handler } from './build/handler.js';

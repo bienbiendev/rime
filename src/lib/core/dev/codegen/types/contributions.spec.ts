@@ -6,12 +6,9 @@ import { block, blocks } from '#lib/fields/blocks/index.js';
 import { contributionsFor } from './contributions.server.js';
 
 /**
- * What each feature adds to a generated document type, read through `contributionsFor`, the
- * function codegen calls, on real built configs.
- *
- * `bun run check` does not catch a lost contribution: without versions' one, every generated doc
- * type loses `versionId`, and the `versions` fixture still type-checks, since nothing in it reads
- * `doc.versionId` in a typed position.
+ * What each feature adds to a generated document type, asserted through `contributionsFor`, the
+ * function codegen calls, on real built configs. `bun run check` does not catch a lost
+ * contribution: no fixture reads `doc.versionId` in a typed position.
  */
 describe('docType contributions', () => {
   it('adds nothing for a config whose features contribute nothing', () => {

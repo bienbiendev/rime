@@ -8,6 +8,11 @@ import { trycatch } from '#lib/util/function.js';
 import { mkdirSync, rmSync } from 'fs';
 import path from 'path';
 
+/**
+ * Sanitizes the config, writes the modules declaration, then loads the config once in a
+ * throwaway Vite server, which runs codegen: routes, schema, types. `force` first empties
+ * node_modules/.rime and src/routes/(rime).
+ */
 export const generate = async (args: { force?: boolean }) => {
   const { force } = args;
 
@@ -23,7 +28,7 @@ export const generate = async (args: { force?: boolean }) => {
     }
   }
 
-  /*
+  /**
    * Delete routes/(rime) folder
    */
   function clearRoutes() {

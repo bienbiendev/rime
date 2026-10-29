@@ -57,14 +57,7 @@ export function routesMemo<T extends Config>(config: T): string {
   `;
 }
 
-/**
- * Creates a directory if it doesn't exist
- * @example
- * // Ensure a directory exists
- * const dirPath = '/path/to/directory';
- * ensureDir(dirPath);
- * // The directory will be created if it doesn't exist
- */
+/** Creates `dirPath` and its parents when missing. */
 export function ensureDir(dirPath: string): void {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
@@ -72,21 +65,18 @@ export function ensureDir(dirPath: string): void {
 }
 
 /**
- * Writes a route file with its content
- * @param basePath The base path where routes are generated
- * @param routePath The specific route path
- * @param fileType layout, layoutServer, page, pageServer, error, server, or any other name for
- * `+<name>.svelte`; an `@<group>` suffix goes before the extension: `page@(rime)` ->
- * `+page@(rime).svelte`
- * @param content The content to write to the file
- * @example
- * // Write a page file for a collection
- * const basePath = '/path/to/src/routes';
- * const routePath = '(rime)/[panel=panel]/news';
- * const fileType = 'page';
- * const content = '<script>\n  import { Collection } from "rimecms/panel"\n</script>...';
- * writeRouteFile(basePath, routePath, fileType, content);
- * // Creates /path/to/src/routes/(rime)/[panel=panel]/news/+page.svelte with the provided content
+ * Writes `content` to `<basePath>/<routePath>/+<file>`, where `fileType` names the file:
+ *
+ * ```
+ * layout          +layout.svelte
+ * layoutServer    +layout.server.ts
+ * page            +page.svelte
+ * pageServer      +page.server.ts
+ * error           +error.svelte
+ * server          +server.ts
+ * page@(rime)     +page@(rime).svelte
+ * anything else   +<fileType>.svelte
+ * ```
  */
 export function writeRouteFile(
   basePath: string,

@@ -3,8 +3,8 @@ import { IS_RIME_REPO, PACKAGE_NAME } from '#lib/core/constants.server.js';
 import { makeDocTypeName } from '#lib/core/prototype/naming.js';
 
 /**
- * Generate the document's type definition
- * @returns the full document type
+ * A doc type: `BaseDoc`, the `extendsTypes`, and `content`, the member lines the caller joined.
+ * The index signature lets a document carry keys no field declares.
  */
 export const templateDocType = (
   slug: string,
@@ -81,6 +81,8 @@ export const templateDeclareVirtualModule = (schemaSpecifier: string | null) =>
       : [])
   ].join('\n');
 
+/** The `App.Locals` declaration. `rimeConfigServerPath` imports the generated server config from
+ * src/, for the type of `locals.rime`. */
 export const templateLocals = (rimeConfigServerPath: string) => `declare global {
   namespace App {
     interface Locals {
@@ -111,7 +113,7 @@ export const templateLocals = (rimeConfigServerPath: string) => `declare global 
 					type: string;
 				}
 			| undefined;
-			/** Singleton providing access to auth, config and the local API */
+			/** The request's rime context: config, auth and the local API (createRimeContext(event)). */
       rime: ReturnType<
 				Awaited<
 					typeof import('${rimeConfigServerPath}').default

@@ -35,6 +35,13 @@ type Args = {
 const PACKAGE = 'rimecms';
 const root = process.cwd();
 
+/**
+ * `rime init`: sets a SvelteKit app up for rime. Writes .env, src/env.ts and the .gitignore
+ * entries, records the database adapter and lets it write its own files, then writes the config,
+ * the Bun scripts (with `bun`), adapter-node and the Vite plugin. Installs the dependencies unless
+ * `skipInstall`, then runs `generate({ force: true })`. `name` names the database; without it the
+ * package name is used, asked for unless `force`.
+ */
 export const init = async ({
   force,
   name: incomingName,
@@ -44,6 +51,10 @@ export const init = async ({
 }: Args) => {
   const packageName = getPackageInfoByKey('name');
 
+  /**
+   * Writes .env when missing. An existing one has its old names renamed (PUBLIC_RIME_URL,
+   * RIME_SMTP_*) and gets only the blocks it lacks appended.
+   */
   function setEnv() {
     const envPath = path.resolve(root, '.env');
     const blocks = devEnv();
@@ -114,6 +125,10 @@ export const init = async ({
     }
   }
 
+  /**
+   * Appends to .gitignore the entries it lacks, under a `# rime` line added when missing. Warns
+   * when there is no .gitignore.
+   */
   function addToGitignore() {
     const gitignorePath = path.join(root, '.gitignore');
     if (!existsSync(gitignorePath)) {
@@ -147,6 +162,10 @@ export const init = async ({
     logger.debug('[✓] .gitignore populated');
   }
 
+  /**
+   * With `bun` only: warns when the Bun on PATH is older than MIN_BUN, runs the vite scripts with
+   * `bun --bun` and sets `engines.bun`.
+   */
   function setBun() {
     if (!bun) return;
     // init itself runs on Node (the bin's shebang): ask the bun on PATH
@@ -174,6 +193,11 @@ export const init = async ({
     );
   }
 
+  /**
+   * Adds `rime()` to the plugins of vite.config.ts, right after `sveltekit()` (last when there is
+   * none), with its import from `rimecms/vite`. Throws when the file, its config object or its
+   * `plugins: [...]` array is missing.
+   */
   function configureVite(): void {
     const configPath = path.resolve(root, 'vite.config.ts');
     if (!fs.existsSync(configPath)) {
@@ -184,7 +208,7 @@ export const init = async ({
     const program = babelParse(content, getLang(configPath));
     const programBody = program.body;
 
-    const configObject = findSvelteConfigObject(programBody);
+    const configObject = findViteConfigObject(programBody);
     if (!configObject) {
       throw new Error(
         "Couldn't find the Vite config object (defineConfig({...}) or export default {...})"
@@ -247,7 +271,11 @@ export const init = async ({
     logger.debug('[✓] Vite plugin added');
   }
 
-  function findSvelteConfigObject(body: t.Statement[]): t.ObjectExpression | null {
+  /**
+   * The object literal of vite.config.ts: the argument of `defineConfig({...})`, as a statement or
+   * as the default export, or a default-exported `{...}`. Null for any other shape.
+   */
+  function findViteConfigObject(body: t.Statement[]): t.ObjectExpression | null {
     for (const node of body) {
       if (
         t.isExpressionStatement(node) &&

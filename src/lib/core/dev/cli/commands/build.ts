@@ -26,6 +26,11 @@ const installCommands = {
   }
 } as const;
 
+/**
+ * Runs `vite build` and packs a deployable ./app: the build, package.json and an index.js server
+ * (templates/build.ts). `withStorage` adds ./storage, `withStatic` ./static, `withEnv` a
+ * production .env. Prints the commands to run next.
+ */
 export const build = async (args: {
   withEnv?: boolean;
   withStatic?: boolean;

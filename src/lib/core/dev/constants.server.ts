@@ -10,7 +10,8 @@ export const GENERATED_DIR = `${CONFIG_DIR}.generated`;
 const INPUT_DIR = path.basename(CONFIG_DIR);
 export const OUTPUT_DIR = `${INPUT_DIR}.generated`;
 
-// Folders under src/ the config may not live in: SvelteKit's lib, routes and params, and static.
+// The folders under src/ the config may not be: SvelteKit's lib, routes and params, and static.
+// A subfolder of one is allowed (`src/lib/+rime`).
 const RESERVED_DIRS = new Set(
   ['lib', 'routes', 'static', 'params'].map((d) => path.resolve(SRC_ROOT, d))
 );
@@ -70,6 +71,8 @@ function generatedFilePath(file: string): string {
     .join('/');
 }
 
+/** The generated server config, as a root-relative path:
+ * `src/+rime.generated/rime.config.server.ts`. */
 export function generatedConfigServerPath(): string {
   return generatedFilePath('rime.config.server.ts');
 }
@@ -89,8 +92,8 @@ export function configImportPaths(fromDir: string) {
   };
 }
 
-/** Same idea as configImportPaths — one source of truth for where the generated schema
- * lives instead of hardcoding the path at each call site. */
+/** The absolute path of the generated drizzle schema, `<GENERATED_DIR>/schema.server.ts` under
+ * `projectRoot`. */
 export function schemaPath(projectRoot: string = process.cwd()): string {
   return path.resolve(projectRoot, GENERATED_DIR, 'schema.server.ts');
 }

@@ -242,20 +242,11 @@ import { type ServerLoadEvent } from '@sveltejs/kit';
 export const load = (event: ServerLoadEvent) => event.locals.routes.panel.load.live(event);`;
 
 /****************************************************/
-/* The panel's /[slug=<prototype>]/... routes — fixed, generic,
-/* matcher-disambiguated, generated once regardless of how many prototypes of
-/* that kind are configured. The per-prototype param matchers (params.ts in the
-/* generated dir, see paramsModule below) route each slug to the right folder at the
-/* SvelteKit router level, so a collection page and an area page are
-/* genuinely separate routes — no runtime kind-branching inside a shared
-/* component, no unauthenticated-branch union fighting the component's data
-/* prop type. Each reads slug/id off event.params (a real dynamic route
-/* param) via event.locals.routes, so none of these import anything from
-/* rimecms besides the panel components.
-/*
-/* These are written out per kind because the panel's loads, actions and
-/* components are per kind. The /api tree is generated from each prototype's
-/* declaration instead — see prototypeApiServer below.
+/* The panel's /[slug=<prototype>]/... routes: one folder per prototype kind, written once
+/* whatever the number of prototypes. The generated matchers (params.ts, see paramsModule) send a
+/* slug to the folder of its kind, and each page reads slug and id from event.params through
+/* event.locals.routes. The /api tree is written from each prototype's declaration instead, see
+/* prototypeApiServer.
 /****************************************************/
 
 /**
@@ -447,7 +438,8 @@ const customRoute = (
 <Page {data} />`;
 };
 
-// Shared routes dictionary
+/** The fixed route files: a folder under src/routes → the file type `writeRouteFile` names → its
+ * template. */
 export const commonRoutes: Routes = {
   '(rime)': {
     layout: rootLayout,

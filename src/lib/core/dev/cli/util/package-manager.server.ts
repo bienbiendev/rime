@@ -44,6 +44,10 @@ const packageManagerConfigs: PMConfig = {
   }
 };
 
+/**
+ * The package manager whose lockfile sits in the project root, npm when there is none.
+ * generate-schema runs drizzle-kit through it.
+ */
 export function getPackageManager(): PackageManagerName {
   for (const [packageManager, lockFile] of Object.entries(packageManagersMap)) {
     const pathToLockFile = path.resolve(process.cwd(), lockFile);
@@ -70,7 +74,8 @@ export function getInvokingPackageManager(): PackageManagerName {
   return 'npm';
 }
 
-/** Installs rime's own packages, and the ones the database adapter asks for. */
+/** Installs rime's own packages, and the ones the database adapter asks for, with the package
+ * manager that runs this command. Throws for yarn and deno. */
 export function installDependencies(adapter: {
   dependencies: string[];
   devDependencies: string[];
