@@ -1,3 +1,7 @@
+/**
+ * The file types rime knows, each with its extensions, the canonical one first. A base64 upload
+ * of a type outside this map is refused (`jsonFileToFile`).
+ */
 export const mimeTypesMap: Record<string, string[]> = {
   // Images
   'image/jpeg': ['jpg', 'jpeg'],
@@ -56,6 +60,13 @@ export const mimeTypesMap: Record<string, string[]> = {
   'font/woff2': ['woff2']
 } as const;
 
+/**
+ * The canonical extension of a type, `null` for an unknown one.
+ *
+ * ```ts
+ * getExtensionFromMimeType('image/jpeg'); // 'jpg'
+ * ```
+ */
 export function getExtensionFromMimeType(mimeType: string): string | null {
   const extensions = mimeTypesMap[mimeType];
   return extensions ? extensions[0] : null;

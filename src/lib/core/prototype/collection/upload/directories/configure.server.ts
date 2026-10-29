@@ -3,13 +3,12 @@ import { isUploadConfig, type WithUpload } from '../util/config.js';
 import { makeUploadDirectoriesCollectionClient } from './derive.js';
 import { directoriesPipeline } from './pipeline.server.js';
 
+/** The `$<slug>Directories` collection of one upload collection, with its hooks. */
 const makeUploadDirectoriesCollection = (
   collection: WithUpload<BuiltCollection>
 ): BuiltCollection => {
   const collectionClient = makeUploadDirectoriesCollectionClient(collection);
 
-  // Hook order for a directories collection sits beside this file, in ./pipeline.server.ts —
-  // upload's own derived collection, so upload owns its order.
   const directoriesCollection: BuiltCollection = {
     ...collectionClient,
     $hooks: directoriesPipeline(collection.upload.directories)

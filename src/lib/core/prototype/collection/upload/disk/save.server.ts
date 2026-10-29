@@ -105,11 +105,15 @@ export const checkImageSizesExist = (
 };
 
 /**
- * Saves a file to the collection's folder with deduplication and generates image sizes if needed
- * Checks if identical file already exists in that folder before creating a new one
- * @example
- * const file = event.request.formData.get('file');
- * const { filename, imageSizes } = await saveFile(config, file, config.upload.imageSizes);
+ * Writes an uploaded file to the collection's folder under its slugged name, and generates its
+ * image sizes when it is an image other than SVG. A byte-identical file already there is reused,
+ * so both documents then share it; a different file with the same name gets a `-<timestamp>`
+ * suffix.
+ *
+ * ```ts
+ * await saveFile(medias, photo, sizes);
+ * // { filename: 'photo.jpg', imageSizes: { thumbnail: 'photo-thumbnail-400.jpg' } }
+ * ```
  */
 export const saveFile = async (
   config: FilesConfig,

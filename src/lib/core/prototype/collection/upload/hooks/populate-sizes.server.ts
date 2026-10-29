@@ -8,8 +8,10 @@ import type { BuiltCollection } from '#lib/core/config/types.js';
 import type { WithUpload } from '#lib/core/prototype/collection/upload/util/config.js';
 
 /**
- * Puts `url` and `sizes` on an upload document — the URL of its file and of each generated image
- * size, keyed by its name, in the collection's folder:
+ * Runs on every read of an upload document: puts the URL of each image size in `sizes` (one key
+ * per format, `hero_webp`, when a size has several), `_thumbnail` (the `thumbnail` size or its
+ * first format, else the file) and `url`, and removes the raw size columns. The URLs point into
+ * the collection's folder:
  *
  * ```
  * medias           /uploads/medias/photo.jpg
@@ -27,21 +29,18 @@ export const populateSizes = Hooks.beforeRead(async function populateSizes(args)
     doc.sizes = {};
     for (const size of config.upload.imageSizes) {
       if (doc[size.name]) {
-        // Handle multiple formats
         const formats = doc[size.name].split('|') as string[];
-        // Multiple formats
         if (formats.length > 1) {
           formats.forEach((format) => {
             const extension = format.split('.').pop()!;
             doc.sizes[`${size.name}_${extension}`] = mediaUrl(format);
           });
-          // Single format
         } else {
           doc.sizes[size.name] = mediaUrl(formats[0]);
         }
         delete doc[size.name];
       } else {
-        // Default case: use original file as string
+        // A size with no file of its own: the original
         doc.sizes[size.name] = mediaUrl(doc.filename);
       }
     }

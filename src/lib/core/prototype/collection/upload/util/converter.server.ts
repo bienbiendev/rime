@@ -11,8 +11,12 @@ import fs from 'fs';
 import path from 'path';
 import { getExtensionFromMimeType, getMimeTypeFromExtension } from './mime.js';
 
+/**
+ * A file sent as JSON, as a `File` with its name, size and type. `base64` is a data URI; the
+ * JSON's `mimeType` wins over the URI's, and a type outside `mimeTypesMap` throws "File type not
+ * supported", even with a `filename`. Without one, the file is named `file-<timestamp>.<ext>`.
+ */
 export const jsonFileToFile = (jsonFile: JsonFile) => {
-  // Convert base64 to Blob
   const base64String = jsonFile.base64;
   // Extract the actual base64 content after the data URI prefix
   const base64Content = base64String.split(',')[1];

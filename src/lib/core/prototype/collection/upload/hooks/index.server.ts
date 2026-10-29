@@ -1,9 +1,6 @@
 /**
- * This feature's hooks, by name, so a prototype can place them as `upload.someHook`.
- *
- * A barrel and nothing else.
- * It exists because a prototype's `hooks.server.ts` writes the run order and would otherwise carry
- * one import line per hook.
+ * The upload hooks `collection/hooks.server.ts` places, by name. The directories collection's
+ * hooks are imported by path in `directories/pipeline.server.ts`.
  */
 export { castBase64ToFile } from './convert-base64.server.js';
 export { cleanUpFiles, cleanUpReplacedFiles, collectFiles } from './clean-up-files.server.js';

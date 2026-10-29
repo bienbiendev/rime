@@ -11,7 +11,7 @@ import { directoriesKebab, directoriesOf, withDirectoriesSuffix } from './naming
  * plain object on purpose: nothing in this file knows that `versions` exists.
  */
 describe('directoriesOf', () => {
-  it('is a config’s own directories when it version tables nothing', () => {
+  it('is the config’s own directories when it holds no other config’s content', () => {
     expect(directoriesOf({ slug: 'medias' })).toBe('$mediasDirectories');
   });
 

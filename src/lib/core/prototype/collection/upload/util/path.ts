@@ -8,6 +8,7 @@ import { toKebabCase } from '#lib/util/string.js';
 import type { WithRequired } from '#lib/util/types.js';
 
 export type UploadPath = `${typeof UPLOAD_PATH.ROOT_NAME}${string}`;
+/** A breadcrumb entry: a title, and a url on every entry but the last. */
 type Aria = WithRequired<Partial<Route>, 'title'>;
 
 /**
@@ -25,10 +26,9 @@ export function getSegments(path?: UploadPath | null): {
   path: UploadPath;
   parent: UploadPath | null;
 } {
-  // Use nullish coalescing to handle both undefined and null
   const safePath = path ?? UPLOAD_PATH.ROOT_NAME;
 
-  // Validate and normalize the path
+  // Refuse an invalid path; the normalised path is built from the segments below
   const isValid = validatePath(safePath);
   if (typeof isValid === 'string') {
     throw new RimeError(RimeError.BAD_REQUEST, isValid);
@@ -46,7 +46,6 @@ export function getSegments(path?: UploadPath | null): {
 
   const name = segments[segments.length - 1];
   const parent = segments.slice(0, -1).join(UPLOAD_PATH.SEPARATOR);
-  // Reconstruct the normalized path from filtered segments
   const normalizedPath = segments.join(UPLOAD_PATH.SEPARATOR) as UploadPath;
 
   return {
@@ -108,6 +107,7 @@ export function buildUploadAria({
   return result;
 }
 
+/** Drops the url of the last breadcrumb: the folder on screen is not a link. */
 export function removePathFromLastAria(aria: Partial<Route>[]) {
   return aria.map((route, index) => {
     if (index === aria.length - 1) {
@@ -141,10 +141,8 @@ export const validatePath = (value: unknown): string | true => {
     return `Path must start with "${UPLOAD_PATH.ROOT_NAME}"`;
   }
 
-  // Create a mutable copy for normalization
   let normalizedPath = value;
 
-  // Remove trailing separator if present
   while (
     normalizedPath !== UPLOAD_PATH.ROOT_NAME &&
     normalizedPath.endsWith(UPLOAD_PATH.SEPARATOR)

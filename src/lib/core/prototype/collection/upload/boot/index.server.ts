@@ -2,11 +2,9 @@ import type { BuiltCollection } from '#lib/core/config/types.js';
 import { ensureMedias } from '#lib/core/prototype/collection/upload/ensure.server.js';
 
 /**
- * Upload's boot step, in a module of its own **with no `module.ts` beside it**.
+ * Upload's boot step: creates the folder of each upload collection under `storage/uploads/`.
  *
- * That placement is the whole point. `upload/module.server.ts` has a client half, and a name only
- * the server half declares is *not exported* on a client build rather than `undefined` — which
- * fails at link time with "does not provide an export named" the moment `index.ts`, which is
- * client-reachable, imports it. See `core/dev/codegen/runtime/index.server.ts`.
+ * Not in `upload/module.server.ts`: `core/boot.server.ts` imports it, and a name only a server half
+ * declares does not exist on a client build.
  */
 export const bootUpload = (config: { collections?: BuiltCollection[] }) => ensureMedias(config);

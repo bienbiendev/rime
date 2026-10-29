@@ -2,7 +2,8 @@ import { Hooks } from '#lib/core/pipeline/define-hook.js';
 import { RimeError } from '#lib/core/errors/index.js';
 import { trycatch } from '#lib/util/function.js';
 
-type Update = { id: string; data: { parent: string } };
+/** One child folder's new path, written by `updateDirectoryChildren`. */
+type Update = { id: string; data: { id: string } };
 
 /**
  * When a directory's path changes, works out the new path of each direct child, for
@@ -14,11 +15,12 @@ export const prepareDirectoryChildren = Hooks.beforeUpdate<'directory'>(
     const { event, config, context } = args;
     const originalDoc = context.originalDoc;
 
-    if (!originalDoc)
+    if (!originalDoc) {
       throw new RimeError(
         RimeError.OPERATION_ERROR,
         'missing originalDoc @prepareDirectoryChildren'
       );
+    }
 
     if (data.id) {
       // `parent` is an ordinary field on the directories collection, which is never versioned,

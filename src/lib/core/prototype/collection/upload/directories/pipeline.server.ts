@@ -1,5 +1,5 @@
 import type { CollectionHooks } from '#lib/types.js';
-import { exctractPath } from '#lib/core/prototype/collection/upload/hooks/extract-path.server.js';
+import { extractPath } from '#lib/core/prototype/collection/upload/hooks/extract-path.server.js';
 import {
   prepareDirectoryChildren,
   updateDirectoryChildren
@@ -15,10 +15,10 @@ export const directoriesPipeline = (
   directoriesConfig: { $hooks?: CollectionHooks<any> } | undefined
 ): CollectionHooks<any> => ({
   beforeOperation: directoriesConfig?.$hooks?.beforeOperation || [],
-  beforeCreate: [exctractPath, ...(directoriesConfig?.$hooks?.beforeCreate || [])],
+  beforeCreate: [extractPath, ...(directoriesConfig?.$hooks?.beforeCreate || [])],
   beforeRead: directoriesConfig?.$hooks?.beforeRead || [],
   beforeUpdate: [
-    exctractPath,
+    extractPath,
     prepareDirectoryChildren,
     ...(directoriesConfig?.$hooks?.beforeUpdate || [])
   ],

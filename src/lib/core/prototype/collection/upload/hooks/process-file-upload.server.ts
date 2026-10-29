@@ -23,7 +23,9 @@ export const processFileUpload = Hooks.beforeUpsert<'upload'>(
   async function processFileUpload(args) {
     const { operation, config } = args;
 
-    if (!isUploadConfig(config)) throw new Error('Should never throw');
+    if (!isUploadConfig(config)) {
+      throw new Error('processFileUpload runs on an upload collection only');
+    }
 
     let data = args.data || {};
     const hasSizeConfig = 'imageSizes' in config.upload && Array.isArray(config.upload.imageSizes);

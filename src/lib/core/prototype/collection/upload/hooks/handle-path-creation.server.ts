@@ -45,20 +45,16 @@ export const handlePathCreation = Hooks.beforeUpsert<'upload'>(
 
     if (dir) return args;
 
-    // Split the path into segments
     const segments = pathInfo.path.split(UPLOAD_PATH.SEPARATOR);
 
-    // Process all segments, including root
     let currentPath = '';
 
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i];
       const parentPath = currentPath || null; // For root, parent is null
 
-      // Build the current path
       currentPath = currentPath ? `${currentPath}${UPLOAD_PATH.SEPARATOR}${segment}` : segment;
 
-      // Check if this segment exists
       const [, segExists] = await trycatch(() =>
         directories.findById({
           select: ['id'],
@@ -66,7 +62,6 @@ export const handlePathCreation = Hooks.beforeUpsert<'upload'>(
         })
       );
 
-      // If the segment doesn't exist, create it
       if (!segExists) {
         const [createError] = await trycatch(() =>
           directories.create({

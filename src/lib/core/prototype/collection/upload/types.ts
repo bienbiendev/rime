@@ -3,7 +3,7 @@ import type { Field } from '#lib/fields/types.js';
 import type { Access } from '#lib/core/config/types.js';
 import type { CollectionHooks } from '#lib/core/config/types.js';
 import type { BaseDoc, GenericDoc } from '#lib/core/prototype/types.js';
-import type { Dic } from '#lib/util/types.js';
+import type { AtLeastOne, Dic } from '#lib/util/types.js';
 import type { UploadPath } from './util/path.js';
 
 /**
@@ -36,6 +36,10 @@ declare module '../../types.js' {
 /** A config whose `upload` has been normalised from `true` to an object by the upload augment. */
 export type WithNormalizedUpload<T> = Omit<T, 'upload'> & { upload?: UploadConfig };
 
+/**
+ * A file sent as JSON: a data URI (`data:image/png;base64,…`) and what the client knows of it.
+ * `castBase64ToFile` turns it into a `File`.
+ */
 export type JsonFile = {
   base64: string;
   filename?: string;
@@ -44,13 +48,12 @@ export type JsonFile = {
   lastModified?: number;
 };
 
+/** A folder as the panel reads it: `id` is its path (`root:press`), `parent` the path above it. */
 export type Directory = GenericDoc & {
   id: UploadPath;
   name: string;
   parent: UploadPath | null;
 };
-
-import type { AtLeastOne } from '#lib/util/types.js';
 
 /** What an author writes under `upload`, and the image sizes it may ask for. */
 export type UploadConfig = {
@@ -94,7 +97,10 @@ export type UploadConfig = {
    * ```
    */
   accept?: string[];
-  /** Directories */
+  /**
+   * The derived folders collection: extra fields, its access (the upload collection's by
+   * default) and its hooks.
+   */
   directories?: {
     fields: FieldBuilder<Field>[];
     access?: Access;
@@ -102,9 +108,14 @@ export type UploadConfig = {
   };
 };
 
+/**
+ * An image size generated on upload. `name` is a column of the collection; `width`, `height` or
+ * both set the box; `out` lists the formats written (the original's when empty); `compression`
+ * is the quality, 60 by default.
+ */
 export type ImageSizesConfig = {
   name: string;
-  /** If none provided, will fallback to original file extesion */
+  /** If none provided, will fall back to the original file extension */
   out?: Array<'jpg' | 'webp'>;
   /** Default compression: 60 */
   compression?: number;

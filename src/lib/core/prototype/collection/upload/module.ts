@@ -18,12 +18,17 @@ import { validatePath } from './util/path.js';
  * value on the client.
  */
 
+/**
+ * `upload: true` becomes `{}`, `false` becomes `undefined`, an object stays as it is.
+ *
+ * ```ts
+ * withNormalizedUpload({ slug: 'medias', upload: true }); // { slug: 'medias', upload: {} }
+ * ```
+ */
 const withNormalizedUpload = <T extends { upload?: boolean | UploadConfig }>(
   config: T
 ): WithNormalizedUpload<T> => {
-  // Create a new object without the upload property
   const { upload, ...rest } = config;
-  // Determine the normalized upload value
   let normalizedUpload: undefined | UploadConfig;
 
   if (typeof upload === 'boolean') {
@@ -32,7 +37,6 @@ const withNormalizedUpload = <T extends { upload?: boolean | UploadConfig }>(
     normalizedUpload = upload;
   }
 
-  // Return the new object with the normalized upload
   return {
     ...rest,
     upload: normalizedUpload
@@ -40,8 +44,10 @@ const withNormalizedUpload = <T extends { upload?: boolean | UploadConfig }>(
 };
 
 /**
- * Normalize config.upload and imagesSizes
- * add corresponding fields with validation if config.upload.accept is defined
+ * Adds what an upload collection stores beside the author's fields: one hidden column per image
+ * size (a 400px `thumbnail` first, unless the config names one), `mimeType` (checked against
+ * `accept` when it is set), `filename`, `filesize` and `_path`. Documents are named by their
+ * `filename`, and the dashboard shows the collection as a grid.
  */
 export const augmentUpload = <T extends Collection<any>>(config: T): WithNormalizedUpload<T> => {
   const normalizedUploadConfig = withNormalizedUpload(config);
@@ -68,10 +74,8 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
   const sizesFields = upload.imageSizes.map((size) => text(size.name).hidden().access(serverOnly));
   fields = [...fields, ...sizesFields];
 
-  // Add mimeType field
   const mimeType = text('mimeType').table({ sort: true, position: 99 }).hidden();
 
-  // Add validation if accept is defined
   if ('accept' in upload && Array.isArray(upload.accept)) {
     const allowedMimeTypes = upload.accept;
     mimeType.validate((value) => {
@@ -84,7 +88,6 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
 
   const _pathField = text('_path').$root().hidden().validate(validatePath);
 
-  // Add hidden fields
   fields.push(
     mimeType,
     text('filename').hidden().access(serverOnly),

@@ -12,10 +12,9 @@ import type { WithNormalizedUpload } from './types.js';
  */
 
 /**
- * The client augment, plus the one thing a client config must not carry: `_path` points at the
- * collection's directories table, and that foreign key is what makes the schema's cascade work.
- * Get this half onto the wrong build and the FK silently vanishes — which is why the golden
- * schema diff is the check that matters for this feature.
+ * The client augment, plus a foreign key from `_path` to the collection's directories table:
+ * deleting a folder deletes the documents filed in it, and renaming it moves them. The client
+ * config does not carry it.
  */
 export const augmentUpload = <T extends Collection<any>>(config: T): WithNormalizedUpload<T> => {
   const collection = augmentUploadBase(config);

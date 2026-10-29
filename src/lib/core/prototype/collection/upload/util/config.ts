@@ -1,5 +1,6 @@
 import type { UploadConfig } from '#lib/core/prototype/collection/upload/types.js';
 
+/** A config whose `upload` is an object, as the upload augment leaves it. */
 export type WithUpload<T extends { upload?: boolean | UploadConfig }> = T & {
   upload: UploadConfig;
 };
