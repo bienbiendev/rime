@@ -74,7 +74,7 @@ const News = Collection.create('news', {
   access: {
     read: () => true,
     create: (user) => access.isAdmin(user),
-    update: (user) => access.hasRoles(user, 'admin', 'editor')
+    update: (user) => access.isAdmin(user)
   },
   versions: { draft: true, autoSave: true }
 });
@@ -144,9 +144,6 @@ export default rime({
   $adapter: adapterSqlite('versions.sqlite'),
   collections: [News, Medias, Pdf, Pages, BlogPosts, BlogPages],
   areas: [Settings, Infos],
-  staff: {
-    roles: [{ value: 'editor' }]
-  },
   $sse: {
     access: (key, user) => key.startsWith('public:') || key === `user:${user?.id}`
   }

@@ -24,7 +24,7 @@ let mediaId: string;
 
 test('Should create a Media', async ({ request }) => {
   const base64 = await filePathToBase64(
-    path.resolve(process.cwd(), 'tests/versions/landscape.jpg')
+    path.resolve(process.cwd(), 'tests/versions-multilang/landscape.jpg')
   );
   const response = await request.post(`${API_BASE_URL}/medias`, {
     headers: await signInSuperAdmin(request),
@@ -155,7 +155,9 @@ test('Should get a 404 when fetching a wrong Medias version', async ({ request }
 
 let secondMediaId: string;
 test('Should create an other Media', async ({ request }) => {
-  const base64 = await filePathToBase64(path.resolve(process.cwd(), 'tests/versions/leaves.jpg'));
+  const base64 = await filePathToBase64(
+    path.resolve(process.cwd(), 'tests/versions-multilang/leaves.jpg')
+  );
   const response = await request.post(`${API_BASE_URL}/medias`, {
     headers: await signInSuperAdmin(request),
     data: {

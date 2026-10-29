@@ -11,7 +11,6 @@ import { Medias } from './medias';
 import { Pages } from './pages';
 import { Bulletins } from './read-only';
 import { Listings } from './listings';
-import { Settings } from './settings';
 import { ProductIdeas, Targets } from './targets';
 
 export default rime({
@@ -34,7 +33,7 @@ export default rime({
     Bulletins,
     Listings
   ],
-  areas: [Settings, Homepage],
+  areas: [Homepage],
 
   // Any staff member enters the panel, not only admins (the default): the editor accounts of the
   // pages, hooks-ui, read-only and edit-lock tests sign in to it.

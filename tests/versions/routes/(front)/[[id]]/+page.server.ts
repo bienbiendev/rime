@@ -1,8 +1,8 @@
-import { error, redirect, type ServerLoadEvent } from '@sveltejs/kit';
+import { error, type ServerLoadEvent } from '@sveltejs/kit';
 
 /** The page whose `attributes.slug` is the URL segment, or the `isHome` page at `/`. */
 export const load = async (event: ServerLoadEvent) => {
-  const { rime, user } = event.locals;
+  const { rime } = event.locals;
   const { id } = event.params;
 
   const query = id
@@ -11,10 +11,6 @@ export const load = async (event: ServerLoadEvent) => {
   const docs = await rime.collection('pages').find({ query, depth: 2 });
   if (!docs.length) {
     throw error(404, 'Not found');
-  }
-
-  if (user && docs[0]._live && event.url.searchParams.get('live') === '1') {
-    return redirect(302, docs[0]._live);
   }
 
   return { doc: docs[0] };

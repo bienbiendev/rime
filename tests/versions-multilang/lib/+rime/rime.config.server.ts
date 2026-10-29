@@ -16,13 +16,7 @@ import {
   toggle,
   tree
 } from '#lib/fields/index.js';
-import {
-  bold,
-  heading,
-  italic,
-  link as linkFeature,
-  upload
-} from '#lib/fields/rich-text/client.js';
+import { bold, link as linkFeature } from '#lib/fields/rich-text/client.js';
 import { Area, Collection, rime } from '$rime/config';
 
 // A versioned area with drafts, read by admins
@@ -62,16 +56,6 @@ const Contact = Area.create('contact', {
   versions: true
 });
 
-const tabWriter = tab('writer').fields(
-  richText('text').features(
-    bold(),
-    italic(),
-    upload({ source: 'medias?where[mimeType][like]=image' }),
-    heading(2, 3),
-    linkFeature()
-  )
-);
-
 const tabNewsAttributes = tab('attributes').fields(
   text('title').isTitle().localized().required(),
   slug('slug')
@@ -91,7 +75,7 @@ const tabNewsAttributes = tab('attributes').fields(
 
 // Localized news with drafts, live: editors update, admins create
 const News = Collection.create('news', {
-  fields: [tabs(tabNewsAttributes, tabWriter)],
+  fields: [tabs(tabNewsAttributes)],
   live: true,
   $url: ({ slug, locale }) => `${SITE_URL}/${locale}/actualites/${slug}`,
   access: {
@@ -122,18 +106,7 @@ const Medias = Collection.create('medias', {
   versions: true
 });
 
-const Pdf = Collection.create('pdf', {
-  upload: true,
-  panel: {
-    group: 'content'
-  },
-  fields: [text('alt').required()],
-  access: {
-    read: () => true
-  },
-  versions: { draft: true }
-});
-
+// Nested pages with drafts, an address per locale: urls.test.ts
 const Pages = Collection.create('pages', {
   panel: {
     group: 'content'
@@ -173,7 +146,7 @@ const Pages = Collection.create('pages', {
 
 export default rime({
   $adapter: adapterSqlite('versions-multilang.sqlite'),
-  collections: [News, Medias, Pdf, Pages],
+  collections: [News, Medias, Pages],
   areas: [Settings, Infos, Contact],
   localization: {
     locales: [
