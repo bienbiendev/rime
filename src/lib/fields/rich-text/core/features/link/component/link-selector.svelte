@@ -17,7 +17,6 @@
   import { untrack } from 'svelte';
   import type { LinkFeatureOptions } from '..';
   import type { RichTextContext } from '../../../types';
-  import './link-selector.css';
 
   type Props = {
     /** The link extension's options; `sources` lists what the document picker offers. */
@@ -207,7 +206,7 @@
 
 <PickDialog
   bind:open={resourceDialogOpen}
-  items={(resourcesFlatMap ?? []).filter(Boolean)}
+  items={resourcesFlatMap}
   label={(item) => item.title}
   onPick={(item) => {
     value = item.url.replace(SITE_URL, '');

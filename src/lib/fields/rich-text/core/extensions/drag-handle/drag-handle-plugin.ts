@@ -62,19 +62,11 @@ export const DragHandlePlugin = ({
   let pendingMouseCoords: { x: number; y: number } | null = null;
 
   function hideHandle() {
-    if (!element) {
-      return;
-    }
-
     element.style.visibility = 'hidden';
     element.style.pointerEvents = 'none';
   }
 
   function showHandle() {
-    if (!element) {
-      return;
-    }
-
     if (!editor.isEditable) {
       hideHandle();
       return;
@@ -130,17 +122,13 @@ export const DragHandlePlugin = ({
     // The handle stops catching the pointer once the drag has started. Done at once, the drag
     // position is wrong when the handle is `position: absolute`.
     setTimeout(() => {
-      if (element) {
-        element.style.pointerEvents = 'none';
-      }
+      element.style.pointerEvents = 'none';
     }, 0);
   }
 
   function onDragEnd() {
     hideHandle();
-    if (element) {
-      element.style.pointerEvents = 'auto';
-    }
+    element.style.pointerEvents = 'auto';
   }
 
   element.addEventListener('dragstart', onDragStart);
@@ -166,9 +154,9 @@ export const DragHandlePlugin = ({
           return null;
         },
         apply(tr: Transaction) {
-          // Something has changed and drag handler is visible: map the position through the change.
-          // The view's update method then reads the outer node at the new position.
-          if (tr.docChanged && currentNodePos !== -1 && element) {
+          // A change moves the hovered block: its position follows, and the view's update reads
+          // the block at the new position. The plugin state itself stays null.
+          if (tr.docChanged && currentNodePos !== -1) {
             currentNodePos = tr.mapping.map(currentNodePos);
           }
 
@@ -189,10 +177,6 @@ export const DragHandlePlugin = ({
 
         return {
           update(_, oldState) {
-            if (!element) {
-              return;
-            }
-
             if (!editor.isEditable) {
               hideHandle();
               return;
@@ -219,9 +203,7 @@ export const DragHandlePlugin = ({
               pendingMouseCoords = null;
             }
 
-            if (element) {
-              removeNode(wrapper);
-            }
+            removeNode(wrapper);
           }
         };
       },
@@ -229,39 +211,25 @@ export const DragHandlePlugin = ({
       props: {
         handleDOMEvents: {
           keydown(view) {
-            if (!element) {
-              return false;
-            }
-
+            // Typing hides the handle; the key still reaches the editor.
             if (view.hasFocus()) {
               hideHandle();
               currentNode = null;
               currentNodePos = -1;
-
-              // We want to still continue with other keydown events.
-              return false;
             }
-
             return false;
           },
           mouseleave(_view, e) {
             // Hide unless the pointer moved into the wrapper.
-            if (e.target && !wrapper.contains(e.relatedTarget as HTMLElement)) {
+            if (!wrapper.contains(e.relatedTarget as HTMLElement)) {
               hideHandle();
-
               currentNode = null;
               currentNodePos = -1;
             }
-
             return false;
           },
 
           mousemove(view, e) {
-            // Do not continue if popup is not initialized.
-            if (!element) {
-              return false;
-            }
-
             // Store latest mouse coords and schedule a single RAF per frame
             pendingMouseCoords = { x: e.clientX, y: e.clientY };
 

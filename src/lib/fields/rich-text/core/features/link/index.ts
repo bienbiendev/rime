@@ -5,19 +5,7 @@ import type { RichTextFeature, RichTextFeatureMark } from '../../types.js';
 import LinkSelector from './component/link-selector.svelte';
 
 // No extension on the server, where the editor never runs.
-const linkExtension = import.meta.env.SSR
-  ? undefined
-  : Link.extend({
-      // @ts-expect-error @tiptap error
-      addOptions() {
-        return {
-          ...this.parent?.(),
-          types: []
-        };
-      },
-      openOnClick: false,
-      HTMLAttributes: { class: 'rz-rich-text-link' }
-    });
+const linkExtension = import.meta.env.SSR ? undefined : Link;
 
 const linkItem: RichTextFeatureMark = {
   label: 'Link',

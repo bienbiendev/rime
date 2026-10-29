@@ -1,22 +1,14 @@
 import type { Editor } from '@tiptap/core';
 
-export type FindElementNextToCoords = {
-  x: number;
-  y: number;
-  direction?: 'left' | 'right';
-  editor: Editor;
-  bandHeight?: number;
-};
+export type FindElementNextToCoords = { x: number; y: number; editor: Editor };
 
-export const findElementNextToCoords = (options: FindElementNextToCoords) => {
-  const { x, y, direction = 'right', editor, bandHeight = 5 } = options;
-
-  const rect = {
-    top: y - bandHeight,
-    bottom: y + bandHeight,
-    left: direction === 'right' ? x : 0,
-    right: direction === 'right' ? window.innerWidth : x
-  };
+/**
+ * The first top-level element of the editor crossing a 10px band around the pointer, to its
+ * right, with its node and position; all null when there is none.
+ */
+export const findElementNextToCoords = ({ x, y, editor }: FindElementNextToCoords) => {
+  // A band 5px above and below the pointer, from the pointer to the window's right edge
+  const rect = { top: y - 5, bottom: y + 5, left: x, right: window.innerWidth };
 
   const root = editor.view.dom as HTMLElement;
 
@@ -41,10 +33,6 @@ export const findElementNextToCoords = (options: FindElementNextToCoords) => {
 
   const finalCandidate = candidates[0];
   const candidatePos = editor.view.posAtDOM(finalCandidate, 0);
-  if (candidatePos === -1) {
-    return { resultElement: finalCandidate, resultNode: null, pos: null };
-  }
-
   const $pos = editor.state.doc.resolve(candidatePos);
 
   if ($pos.nodeAfter) {

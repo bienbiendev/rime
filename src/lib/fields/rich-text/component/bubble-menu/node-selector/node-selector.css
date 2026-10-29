@@ -21,7 +21,6 @@
   overflow: hidden;
   overflow-y: auto;
   transform: translateX(calc(-1 * var(--rz-size-1)));
-  /* border-radius: var(--rz-radius-xl); */
   @mixin surface float;
   padding: var(--rz-size-1);
 }

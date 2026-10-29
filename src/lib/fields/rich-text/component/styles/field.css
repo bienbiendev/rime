@@ -4,12 +4,6 @@
  */
 .rz-field-rich-text {
   --margin-bottom: 0;
-  @container rz-document (min-width:620px) {
-    --text-size: var(--rz-text-lg);
-  }
-  @container rz-document (min-width:960px) {
-    --text-size: var(--rz-text-xl);
-  }
 
   .rz-rich-text__editor {
     --left-spacing: var(--rz-size-12);

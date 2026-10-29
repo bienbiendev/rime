@@ -11,12 +11,7 @@ import { removeNode } from './removeNode.js';
 function getDragHandleRanges(event: DragEvent, editor: Editor): SelectionRange[] {
   const { doc } = editor.view.state;
 
-  const result = findElementNextToCoords({
-    editor,
-    x: event.clientX,
-    y: event.clientY,
-    direction: 'right'
-  });
+  const result = findElementNextToCoords({ editor, x: event.clientX, y: event.clientY });
 
   if (!result.resultNode || result.pos === null) {
     return [];

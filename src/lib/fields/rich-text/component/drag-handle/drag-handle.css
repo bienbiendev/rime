@@ -1,7 +1,6 @@
 .rz-rich-text-drag-handle {
   position: absolute;
   left: -1000px;
-  display: none;
   align-items: center;
   border-radius: 0.25rem;
   cursor: grab;

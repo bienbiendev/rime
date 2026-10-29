@@ -3,7 +3,6 @@
   position: relative;
 
   .ProseMirror-trailingBreak {
-    content: '&nbsp;';
     display: inline-block;
   }
 

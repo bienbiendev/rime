@@ -14,14 +14,13 @@
 
   const { class: className, icon: Icon, active, type = 'button', ...restProps }: Props = $props();
 
-  const buttonActiveClass = $derived(active ? 'rz-icon-button--active' : '');
   const iconActiveClass = $derived(active ? 'rz-icon-button__icon--active' : '');
 </script>
 
 <Button
   size="icon-sm"
   variant={active ? 'secondary' : 'ghost'}
-  class="rz-icon-button {buttonActiveClass} {className}"
+  class="rz-icon-button {className}"
   {type}
   {...restProps}
 >

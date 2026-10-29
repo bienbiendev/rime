@@ -4,8 +4,6 @@
   padding-top: 0;
   background-color: var(--rz-bg-well);
   padding-bottom: 0;
-  /*border-top-color: none;*/
-  border-left-color: none;
   cursor: pointer;
   min-height: var(--rz-size-6);
 
