@@ -1,6 +1,10 @@
 import { checkLiveRedirect } from '#lib/panel/util/live.server.js';
 import { error, type ServerLoadEvent } from '@sveltejs/kit';
 
+/**
+ * The news whose `attributes.slug` is the segment, under `/news` (the `news` matcher). A signed-in
+ * visitor reads the newest version; staff asking `?live=1` go to the live editor.
+ */
 export const load = async (event: ServerLoadEvent) => {
   const { rime, user } = event.locals;
   const { parentSlug, slug } = event.params;

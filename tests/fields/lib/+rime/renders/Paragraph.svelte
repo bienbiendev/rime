@@ -7,7 +7,7 @@
   const text = $derived(fields.find((field) => field.name === 'text') as RichTextFieldBuilder);
 </script>
 
-<!-- The rich text edited in place, in the site's colour. -->
+<!-- The rich text edited in place, in the render's own size. -->
 <RichTextInline path="{path}.text" config={text} {form} class="site-paragraph" />
 
 <style>

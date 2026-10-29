@@ -33,6 +33,7 @@ import GridThumbnail from './thumbnails/Grid.svelte';
 import ImageThumbnail from './thumbnails/Image.svelte';
 import ParagraphThumbnail from './thumbnails/Paragraph.svelte';
 
+// A rich text, edited in place by its render
 const blockParagraph = block('paragraph')
   .fields(richText('text'))
   .render(Paragraph)
@@ -48,8 +49,8 @@ const blockGallery = block('gallery')
   .render(Gallery)
   .thumbnail(GalleryThumbnail);
 
-// A relation nested inside a tree nested inside a block — three levels
-// deep, mirroring the real keyFacts pattern used in +rime/pages/tab-layout.ts.
+// A relation inside a tree inside a block, three levels deep, the shape of the keyFacts block of
+// tests/basic/lib/+rime/pages/tab-layout.ts
 const blockKeyFacts = block('keyFacts').fields(
   tree('facts')
     .fields(text('label'), relation('image').to('targets'))
@@ -85,8 +86,7 @@ export const Pages = Collection.create('pages', {
       .slugify('title')
       .condition((_, siblings) => siblings.isHome !== true),
 
-    // onChange sync between sibling fields, mirrors
-    // core/config/shared/upload-directories.ts's name -> id derivation
+    // onChange between sibling fields: fullName follows firstName and lastName
     text('firstName'),
     text('lastName').onChange((value, { useField }) => {
       const first = useField('firstName');
@@ -143,12 +143,7 @@ export const Pages = Collection.create('pages', {
     radio('layoutStyle').options('a', 'b', 'c'),
     combobox('tag').options('x', 'y', 'z'),
 
-    // Presentational field sitting alongside a group at the same nesting
-    // level — regression guard for the empty-name-key bug (separator()
-    // fields never get a name; reduceFieldsToBlankDocument used to stamp
-    // `prev[''] = null` here, which corrupted this whole fields level into
-    // looking array-like once flattened/unflattened through a real form
-    // submission — see util/doc.ts).
+    // A field with no name beside a group: the group's values stay an object through a form save
     separator(),
 
     // Group with many different field types inside — each one needs to

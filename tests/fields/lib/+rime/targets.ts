@@ -1,6 +1,7 @@
 import { text } from '#lib/fields/index.js';
 import { Collection } from '$rime/config';
 
+// The plain relation target of pages, hooksTest and defaults
 export const Targets = Collection.create('targets', {
   fields: [text('title').isTitle()]
 });

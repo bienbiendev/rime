@@ -21,11 +21,13 @@ let admin: Headers;
 let editor: Headers;
 let base64: string;
 
+/** Asserts a 200, showing the body when it is not one, and answers the parsed body. */
 const json = async (response: Awaited<ReturnType<APIRequestContext['get']>>) => {
   expect(response.status(), await response.text()).toBe(200);
   return response.json();
 };
 
+/** Uploads landscape.jpg into private-medias as admin, named `filename`. */
 const uploadMedia = async (request: APIRequestContext, filename: string) =>
   (
     await json(

@@ -13,8 +13,7 @@ test.describe.configure({ mode: 'serial' });
  *
  * api.test.ts exercises hooks by PATCHing JSON straight at the REST API —
  * it never goes through the panel form's submit path (flatten -> FormData ->
- * unflatten on the server, see extract-data.server.ts), which is exactly
- * the path a real empty-name-key/array-corruption-style bug lives in. These
+ * unflatten on the server, see extract-data.server.ts). These
  * tests fill the real form, click Save, reload, and check the value that
  * actually came back from the server — only field types/hooks a person
  * could genuinely trigger by typing/clicking are covered here (e.g. radio's
@@ -22,6 +21,7 @@ test.describe.configure({ mode: 'serial' });
  * UI at all, since the UI never offers that option — that one stays API-only).
  */
 
+/** Opens a new hooks-test document as admin, with a title and `agree` checked, unsaved. */
 async function createHooksTestDoc(page: Page) {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('hooks-test', 'create'));
@@ -151,12 +151,9 @@ test('Should create a relation target for the adminOnlyRelation field', async ({
   expect(response.status()).toBe(200);
 });
 
-// Two distinct access tiers, matching config/hooks-test.ts's two
-// "field-level access" blocks — read() is what gates whether the field
-// renders at all (RenderFields.svelte's authorizedFields filter runs
-// canRead before a FieldComponent is ever mounted, so a read-denied field
-// has no DOM node whatsoever, not just a disabled one), independent of
-// create()/update().
+// Two access tiers, as in tests/fields/lib/+rime/hooks-test.ts: a field an editor may not read
+// is not rendered at all (RenderFields.svelte filters on `field.use.accessRead`); a field an
+// editor may not write is rendered disabled.
 const hiddenFromEditorLocators = [
   'fieldset[data-path="adminOnlyCheckbox"] .rz-checkbox-field__input',
   'fieldset[data-path="adminOnlyToggle"] .rz-switch',

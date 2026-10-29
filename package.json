@@ -20,7 +20,7 @@
     "test:empty": "playwright test -c ./tests/empty/playwright.config.empty.ts",
     "test:fields": "playwright test -c ./tests/fields/playwright.config.fields.ts",
     "test:versions": "playwright test -c ./tests/versions/playwright.config.versions.ts",
-    "test:versions-multilang": "playwright test -c ./tests/versions-multilang/playwright.config.versions.ts",
+    "test:versions-multilang": "playwright test -c ./tests/versions-multilang/playwright.config.versions-multilang.ts",
     "test:unit": "bun run rime:use basic && vitest run src",
     "test": "bun run test:empty && bun run test:fields && bun run test:multilang && bun run test:versions && bun run test:versions-multilang && bun run test:basic",
     "check:circular-deps": "bunx madge -c --extensions ts ./src/",

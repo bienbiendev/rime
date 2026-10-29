@@ -25,6 +25,7 @@ import {
 } from '#lib/fields/rich-text/client.js';
 import { Area, Collection, rime } from '$rime/config';
 
+// A versioned area with drafts, read by admins
 const Settings = Area.create('settings', {
   fields: [
     text('title'),
@@ -37,6 +38,7 @@ const Settings = Area.create('settings', {
   versions: { draft: true }
 });
 
+// A versioned area without drafts, localized: its versions per locale
 const Infos = Area.create('infos', {
   fields: [text('title').localized(), text('email').localized()],
   access: {
@@ -87,6 +89,7 @@ const tabNewsAttributes = tab('attributes').fields(
     .access({ read: (user) => access.isAdmin(user), update: (user) => access.isAdmin(user) })
 );
 
+// Localized news with drafts, live: editors update, admins create
 const News = Collection.create('news', {
   fields: [tabs(tabNewsAttributes, tabWriter)],
   live: true,
@@ -99,6 +102,7 @@ const News = Collection.create('news', {
   versions: { draft: true }
 });
 
+// A versioned upload collection with a localized alt
 const Medias = Collection.create('medias', {
   panel: {
     group: 'content'

@@ -10,6 +10,7 @@ const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
  * and shows the stored order again.
  */
 
+/** The titles of the tree's rows, top to bottom. */
 const titles = (page: Page) => page.locator('.rz-collection-node__title').allTextContents();
 
 test('A refused move shows an error and keeps the stored order', async ({ page, request }) => {
@@ -41,6 +42,7 @@ test('A refused move shows an error and keeps the stored order', async ({ page, 
         : route.continue()
   );
 
+  /** The tree row whose title is exactly `title`. */
   const row = (title: string) =>
     page.locator('.rz-collection-node__row', { has: page.getByText(title, { exact: true }) });
   await row(lower)

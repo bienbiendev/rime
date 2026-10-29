@@ -1,5 +1,6 @@
 import { error, redirect, type ServerLoadEvent } from '@sveltejs/kit';
 
+/** The page whose `attributes.slug` is the URL segment, or the `isHome` page at `/`. */
 export const load = async (event: ServerLoadEvent) => {
   const { rime, user } = event.locals;
   const { id } = event.params;

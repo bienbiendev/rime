@@ -3,7 +3,7 @@ import {
   AUTO_SAVE_DELAY_MS,
   VERSIONS_STATUS
 } from '#lib/core/prototype/shared/versions/constant.js';
-import test, { expect, type APIRequestContext, type Page } from '@playwright/test';
+import test, { expect, type APIRequestContext, type Page, type Response } from '@playwright/test';
 import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
@@ -39,10 +39,12 @@ async function openHistory(page: Page) {
   await expect(page.locator(HISTORY)).toBeVisible();
 }
 
-const isAutoSavePost = (response: import('@playwright/test').Response) =>
+/** The form's auto-save POST. */
+const isAutoSavePost = (response: Response) =>
   response.request().method() === 'POST' && response.url().includes(`${PARAMS.AUTO_SAVE}=true`);
 
-const isSavePost = (response: import('@playwright/test').Response) =>
+/** The form's own save: a POST to the panel's `?/update` action that is not an auto-save. */
+const isSavePost = (response: Response) =>
   response.request().method() === 'POST' &&
   response.url().includes('/update') &&
   !response.url().includes(`${PARAMS.AUTO_SAVE}=true`);
@@ -52,11 +54,13 @@ let publishedVersionId: string;
 let autoSaveId: string;
 let otherAutoSaveId: string;
 
+/** The news document in the panel, on `versionId` when given. */
 const documentUrl = (versionId?: string) =>
   versionId
     ? `${panelUrl('news', newsId)}?${PARAMS.VERSION_ID}=${versionId}`
     : panelUrl('news', newsId);
 
+/** The news document's versions, newest first. */
 const versionsOf = async (request: APIRequestContext) => {
   const response = await request.get(
     `${API_BASE_URL}/news--versions?where[ownerId][equals]=${newsId}&sort=-updatedAt`,
@@ -71,6 +75,7 @@ const versionsOf = async (request: APIRequestContext) => {
   }[];
 };
 
+/** The news document over the API, as admin; `query` picks the row. */
 const readNews = async (request: APIRequestContext, query = '') => {
   const response = await request.get(`${API_BASE_URL}/news/${newsId}${query}`, {
     headers: await signInSuperAdmin(request)

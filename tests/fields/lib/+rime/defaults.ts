@@ -12,12 +12,13 @@ import {
 } from '#lib/fields/index.js';
 import { Collection } from '$rime/config';
 
+// The one block of the blocks fields
+const memo = block('memo').fields(text('text'));
+
 /**
  * Each kind of field twice, once per fill, for `tests/fields/defaults.test.ts`. A relation's
  * default names targets the test creates with these ids.
  */
-const memo = block('memo').fields(text('text'));
-
 export const Defaults = Collection.create('defaults', {
   fields: [
     text('title').isTitle(),

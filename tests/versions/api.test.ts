@@ -257,7 +257,7 @@ test('Should return 2 versions of infos', async ({ request }) => {
   expect(data.docs.at(1).title).toBe('latest');
 });
 
-test('Should return versions with only id versionId and email', async ({ request }) => {
+test('Should return only the email of infos, with its versionId', async ({ request }) => {
   const response = await request.get(`${API_BASE_URL}/infos?select=email`, {
     headers: await signInSuperAdmin(request)
   });
@@ -718,8 +718,7 @@ test('A POST with another document as ownerId makes a document of its own', asyn
 });
 
 /*********************************************************
-/* Nested + versioned collection (never exercised before —
-/* Pages combines nested: true with versions: { draft: true })
+/* Nested + versioned collection: Pages combines nested: true with versions: { draft: true }
 /*********************************************************/
 
 let parentPageId: string;
@@ -753,8 +752,7 @@ test('Should create a child Page as a draft under the parent', async ({ request 
   const { doc } = await response.json();
   expect(doc.attributes.title).toBe('Child page');
   expect(doc._parent).toBe(parentPageId);
-  // No status supplied on create -> defaults to draft (see
-  // handle-new-version.server.ts's prepareDataForNewVersion).
+  // No status on create: the status field's default, draft
   expect(doc.status).toBe(VERSIONS_STATUS.DRAFT);
   expect(doc.versionId).toBeDefined();
   childPageId = doc.id;
@@ -810,14 +808,7 @@ test('Should publish the child page and then find it by parent', async ({ reques
   expect(docs).toHaveLength(1);
   expect(docs[0].attributes.title).toBe('Child page');
 
-  /**
-   * And the other direction: the parent lists the child on `_children`.
-   *
-   * `nested` populates it on every read, and nothing asserted it — so the read it does could be
-   * replaced with an empty array and the whole suite would stay green. It is a filter and an
-   * order over columns the feature itself put on the row (`_parent`, `_position`), which is why
-   * it can be an ordinary query rather than a method on the adapter named after the question.
-   */
+  /** And the other direction: the parent lists the child on `_children`, filled on every read. */
   const parent = await request.get(`${API_BASE_URL}/pages/${parentPageId}`, { headers });
   expect(parent.status()).toBe(200);
   const { doc: parentDoc } = await parent.json();
@@ -825,15 +816,9 @@ test('Should publish the child page and then find it by parent', async ({ reques
 });
 
 /**
- * Sorting a versioned collection by one of its **base-row** columns.
- *
- * `pages` is versioned and nested, so `_position` is on `pages` and every content column is on
- * `pages__versions`. `buildOrderByParam` only looked at the shadow's columns once a prototype had
- * one, so this warned `"_position" is not a property of pages` and silently ordered by `createdAt`
- * — which for two documents created in order is the same answer, and is why nothing caught it.
- *
- * Asserted in both directions for that reason: ascending agrees with creation order, descending
- * does not, so only a real sort passes both.
+ * Sorting a versioned collection by a base-row column: `_position` is on `pages`, every content
+ * column on `pages__versions`. Ascending agrees with creation order and descending does not, so
+ * only a real sort passes both.
  */
 test('Should sort a versioned collection by a base-row column', async ({ request }) => {
   const headers = await signInSuperAdmin(request);
@@ -899,8 +884,7 @@ test('Should duplicate a published News as a draft copy with a new id', async ({
 });
 
 test('Should require create access to duplicate (no credentials)', async ({ request }) => {
-  // News.access.create is admin-only — duplicate internally does a create,
-  // so it must be gated the same way (see restDuplicate's error handling).
+  // News.access.create is admin-only, and a duplicate is a create
   const response = await request.post(`${API_BASE_URL}/news/${newsId}/duplicate`);
   expect(response.status()).toBe(403);
 });
@@ -962,14 +946,12 @@ test('Should duplicate a nested child Page, keeping it under the same parent', a
   );
   expect(draftResponse.status()).toBe(200);
   const { doc: draftDoc } = await draftResponse.json();
-  // _parent is preserved as-is by normalizeProps — a duplicated child stays
-  // a child of the same parent, as a sibling of the page it was copied from.
+  // The copy keeps _parent: a sibling of the page it was copied from
   expect(draftDoc._parent).toBe(parentPageId);
   expect(draftDoc.attributes.title).toBe('Child page (copy)');
   expect(draftDoc.status).toBe(VERSIONS_STATUS.DRAFT);
 
-  // Still just the one published child — the copy is a draft, so it must
-  // not show up in the public parent query.
+  // The copy is a draft: a published-only read, staff's included, still lists one child
   const response = await request.get(
     `${API_BASE_URL}/pages?where[_parent][equals]=${parentPageId}`
   );
@@ -1216,16 +1198,11 @@ test('Should remove all versions when the owning document is deleted', async ({ 
 /*********************************************************/
 
 /**
- * A versioned collection's sortable columns are not on the row being listed.
+ * A versioned collection's content columns are not on the row being listed: a sort on one goes
+ * through a subquery on the shadow, and for a localized column through the shadow's locales
+ * table too. A wrong table is silent: the sort falls back to `createdAt` and the list answers 200.
  *
- * `findMany` queries the base table and pulls the content in through a `with`, so ordering by a
- * content column has to go through a correlated subquery against the shadow — and, for a localized
- * one, a second subquery through the shadow's locales branch. `buildOrderByParam` used to decide
- * which of those to build by asking `config.versions` and then rebuilding the shadow's name with
- * the versions feature's own `withVersionsSuffix`; it is handed the table name now, and a wrong
- * one is silent: the sort simply falls back to `createdAt` and the list still returns 200.
- *
- * `attributes.slug` is localized, so this covers the deeper of the two branches.
+ * `attributes.slug` is localized, so this covers the deeper of the two.
  */
 test('Should sort a versioned list by a localized content column', async ({ request }) => {
   const headers = await signInSuperAdmin(request);
@@ -1243,6 +1220,7 @@ test('Should sort a versioned list by a localized content column', async ({ requ
     expect(response.status()).toBe(200);
   }
 
+  /** The positions of sort-probe-a and sort-probe-b in the list under `sort`, -1 when unlisted. */
   const positions = async (sort: string) => {
     const response = await request.get(`${API_BASE_URL}/news?sort=${sort}`, { headers });
     expect(response.status()).toBe(200);
@@ -1265,15 +1243,9 @@ test('Should sort a versioned list by a localized content column', async ({ requ
 /*********************************************************/
 
 /**
- * The other half of the duplicate test above, and the one that was missing.
- *
- * That test proves a shared file **survives** a delete; nothing proved an unshared one is
- * **removed**. The difference matters because the failure is one-sided: `removeUnusedFiles` asks
- * `isFilenameReferenced`, and every way of getting that wrong answers "yes, still referenced"
- * — so the file is silently kept forever and every assertion in the suite still passes.
- *
- * The check runs after the delete, over one table per upload collection, so the document's own
- * rows are gone by then and cannot keep its file.
+ * Deleting the last document that references a file deletes the file. `removeUnusedFiles` asks
+ * `isFilenameReferenced`, and a wrong answer is always "still referenced": the file stays and
+ * nothing else in the suite fails.
  *
  * Bytes unique to this test, so `saveFile`'s dedup cannot point it at a file another test owns.
  */
@@ -1554,19 +1526,14 @@ test('A Pdf branched with ?fork=true keeps no thumbnail a PATCH names', async ({
 });
 
 /*********************************************************
-/* The computed url is stored, on the row that holds the content
+/* The computed url is stored, in the collection's paths table
 /*********************************************************/
 
 /**
- * `populateURL` computes `$url` on every read and puts it on the document — so every assertion
- * about `doc.url` passes whether or not the value was ever written to the database.
- *
- * The write is what this asserts, by filtering on the column: a `where[url]` query reads the
- * stored value and nothing else does. Nothing covered it before, which is how the whole
- * `updateDocumentUrl` branch could be replaced with a silent no-op and stay green — writing `url`
- * to a versioned collection's *base* table simply finds no such column and writes nothing.
+ * Every read puts `url` on the document, so a `doc.url` check passes whether or not it was
+ * stored. A `where[url]` query reads the stored value: that is what this checks.
  */
-test('Should store the computed url on the version row', async ({ request }) => {
+test('Should store the computed url in the paths table', async ({ request }) => {
   const headers = await signInSuperAdmin(request);
 
   const slug = 'url-probe';
@@ -1730,7 +1697,7 @@ test('The next area version records the next user, the previous one is unchanged
 });
 
 /*********************************************************
-/* Auto-save — the column, the guards, the reads (news opts in)
+/* Version rows: updatedAt per version, auto-save, versions access and the API cache
 /*********************************************************/
 
 test('A version reports the time it was written, not the time the document was', async ({

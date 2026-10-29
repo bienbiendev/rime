@@ -41,12 +41,14 @@ const panelUpdate = (
     form
   });
 
+/** The news document over the API; `query` picks the row. */
 const readNews = async (request: APIRequestContext, headers: Headers, query = '') => {
   const response = await request.get(`${API_BASE_URL}/news/${newsId}${query}`, { headers });
   expect(response.status()).toBe(200);
   return (await response.json()).doc;
 };
 
+/** The news document's versions, newest first. */
 const versionsOf = async (request: APIRequestContext, headers: Headers) => {
   const response = await request.get(
     `${API_BASE_URL}/news--versions?where[ownerId][equals]=${newsId}&sort=-updatedAt`,

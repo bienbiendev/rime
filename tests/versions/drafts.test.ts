@@ -19,6 +19,7 @@ test.describe.configure({ mode: 'serial' });
 type Headers = { cookie: string };
 type Row = { id: string; status: string; attributes: { title: string } };
 
+/** Creates a news with a slug made from its title, published when `status` says so. */
 const createNews = async (
   request: APIRequestContext,
   headers: Headers,
@@ -36,6 +37,7 @@ const createNews = async (
   return (await response.json()).doc as Row & { id: string; versionId: string };
 };
 
+/** The document's versions, newest first. */
 const versionsOf = async (request: APIRequestContext, headers: Headers, id: string) => {
   const response = await request.get(
     `${API_BASE_URL}/news--versions?where[ownerId][equals]=${id}&sort=-updatedAt`,
@@ -45,6 +47,7 @@ const versionsOf = async (request: APIRequestContext, headers: Headers, id: stri
   return (await response.json()).docs as Row[];
 };
 
+/** The title at `url`: the document's, or the first document's for a list URL. */
 const readTitle = async (request: APIRequestContext, url: string, headers?: Headers) => {
   const response = await request.get(url, headers ? { headers } : {});
   expect(response.status()).toBe(200);

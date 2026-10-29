@@ -5,12 +5,13 @@ const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
-const staffUser = async (request: APIRequestContext) => {
+/** The superadmin's user id, read from a sign-in. */
+const superAdminId = async (request: APIRequestContext) => {
   const response = await request.post(`${API_BASE_URL}/auth/sign-in/email`, {
     data: { email: ADMIN_EMAIL, password: PASSWORD }
   });
   const { user } = await response.json();
-  return user as { id: string };
+  return user.id as string;
 };
 
 test('A connection without keys is a 400', async () => {
@@ -50,7 +51,7 @@ test('A panel key needs staff', async ({ request }) => {
 });
 
 test('A per-user key is open to that user only', async ({ request }) => {
-  const { id } = await staffUser(request);
+  const id = await superAdminId(request);
   const { cookie } = await signInSuperAdmin(request);
 
   const own = await openStream(`user:${id}`, cookie);

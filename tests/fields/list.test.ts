@@ -15,7 +15,9 @@ test.describe.configure({ mode: 'serial' });
 /**
  * The `listings` fixture: its list page searches titles, sorts by paths and deletes checked rows,
  * its select searches labels, its link clears on a type switch, and the command palette names its
- * documents by their nested title. The status filter runs on `reports`, which has drafts.
+ * documents by their nested title. Its form renders rich-text field nodes, hides components, gives
+ * a separator its class and opens a stored tab. The status filter runs on `reports`, which has
+ * drafts.
  */
 
 const createListing = async (request: APIRequestContext, heading: string, score: number) => {

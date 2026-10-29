@@ -14,7 +14,8 @@ const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
 type Headers = { cookie: string };
 
-const latestPublished = async (request: APIRequestContext, headers: Headers, id: string) => {
+/** The `published` date of the document's newest version. */
+const newestPublishedDate = async (request: APIRequestContext, headers: Headers, id: string) => {
   const response = await request.get(`${API_BASE_URL}/news/${id}?${PARAMS.LATEST}=true`, {
     headers
   });
@@ -46,7 +47,7 @@ test('A new draft keeps a field not sent, and keeps a field cleared on purpose c
     data: { attributes: { title: 'New version, drafted' } }
   });
   expect(titled.status()).toBe(200);
-  expect(Date.parse((await latestPublished(request, headers, id))!)).toBe(
+  expect(Date.parse((await newestPublishedDate(request, headers, id))!)).toBe(
     Date.parse('2026-01-01T00:00:00.000Z')
   );
 
@@ -56,5 +57,5 @@ test('A new draft keeps a field not sent, and keeps a field cleared on purpose c
     data: { attributes: { published: null } }
   });
   expect(cleared.status()).toBe(200);
-  expect(await latestPublished(request, headers, id)).toBe(null);
+  expect(await newestPublishedDate(request, headers, id)).toBe(null);
 });

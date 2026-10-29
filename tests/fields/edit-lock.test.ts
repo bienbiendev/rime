@@ -42,6 +42,7 @@ test.describe.configure({ mode: 'serial', timeout: 90_000 });
  * and read from the page, so a browser that has the document open is the only place it is visible.
  */
 
+/** Signs `email` in through a new browser context and opens `url`; close it with `leave`. */
 async function openAs(browser: Browser, email: string, url: string) {
   const context = await browser.newContext();
   const page = await context.newPage();

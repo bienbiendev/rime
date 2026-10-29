@@ -36,10 +36,8 @@ export default rime({
   ],
   areas: [Settings, Homepage],
 
-  // Defaults to admin-only (features/panel/augment.server.ts) — relaxed to any
-  // staff member so the editor account can reach the panel UI at all, which
-  // is the precondition for testing field-level .access() restrictions
-  // through the panel (see pages.test.ts's disabled/access test).
+  // Any staff member enters the panel, not only admins (the default): the editor accounts of the
+  // pages, hooks-ui, read-only and edit-lock tests sign in to it.
   panel: {
     $access: (user) => access.isStaff(user)
   },

@@ -4,7 +4,7 @@ import test, { expect, type APIRequestContext } from '@playwright/test';
 import { API_BASE_URL, BASE_URL, signIn } from '../util.js';
 
 // Pages: nested, versions with drafts, fr, en and de (en by default).
-// $url: ({ path, locale }) => `${origin}/${locale}/${path.join('/')}`
+// $url: ({ path, locale }) => `${SITE_URL}/${locale}/${path.join('/')}`
 
 const BASE = BASE_URL;
 const signInSuperAdmin = signIn(
@@ -23,6 +23,10 @@ test.describe.configure({ mode: 'serial' });
 let headers: { cookie: string };
 const ids: Record<string, string> = {};
 
+/**
+ * Creates a page, published and top-level unless told otherwise, and records its id in `ids`
+ * under its slug.
+ */
 const create = async (
   request: APIRequestContext,
   args: { title: string; slug: string; parent?: string; status?: string }
@@ -41,12 +45,14 @@ const create = async (
   return doc;
 };
 
+/** A page as staff read it; `query` adds the locale or `latest`. */
 const read = async (request: APIRequestContext, id: string, query = '') => {
   const response = await request.get(`${API_BASE_URL}/pages/${id}${query}`, { headers });
   expect(response.status()).toBe(200);
   return (await response.json()).doc;
 };
 
+/** The ids of the pages whose `url` or `_urlPath` equals `value`. */
 const findBy = async (
   request: APIRequestContext,
   member: 'url' | '_urlPath',

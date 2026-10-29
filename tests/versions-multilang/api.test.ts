@@ -763,9 +763,7 @@ test('Should return one news (collection query)', async ({ request }) => {
 });
 
 /*********************************************************
-/* Duplicating a versioned + localized document — the
-/* locale-looping branch in duplicate.ts (id-mapping,
-/* per-locale title/status) is exercised nowhere else
+/* Duplicating a versioned + localized document: per-locale titles, as drafts
 /*********************************************************/
 
 test('Should duplicate a News keeping each locale’s own title, as drafts', async ({ request }) => {
@@ -824,11 +822,8 @@ test('Should duplicate a News keeping each locale’s own title, as drafts', asy
 test('Should duplicate a never-published News across every locale', async ({ request }) => {
   const headers = await signInSuperAdmin(request);
 
-  // No status supplied -> draft-only, no published version at all, in any
-  // locale. Combines both duplicate.ts gaps: the initial default-locale
-  // fetch needs latest: true (no published row to fall back to), and the
-  // per-locale loop needs newDocument's own versionId (no published row to
-  // update either).
+  // No status: a draft with no published version in any locale. The copy reads the newest row and
+  // writes each locale onto its own version.
   const createResponse = await request.post(`${API_BASE_URL}/news`, {
     headers,
     data: { attributes: { title: 'Never EN', slug: 'never-published-multi' } }
@@ -837,10 +832,7 @@ test('Should duplicate a never-published News across every locale', async ({ req
   expect(original.status).toBe(VERSIONS_STATUS.DRAFT);
   expect(original.versionId).toBeDefined();
 
-  // ?fork=true means "branch a new draft from the published version" —
-  // there isn't one here (draft-only from create), so it would 404. Target
-  // the existing draft version directly instead, same pattern as the
-  // maxVersions test above.
+  // No published version to fork from: write the draft itself, by its versionId
   const frPatch = await request.patch(
     `${API_BASE_URL}/news/${original.id}?locale=fr&${PARAMS.VERSION_ID}=${original.versionId}`,
     {
@@ -887,10 +879,7 @@ test('Should duplicate a never-published News across every locale', async ({ req
 });
 
 /*********************************************************
-/* Duplicating a nested + versioned Page in a localized app
-/* (the collection's own fields aren't .localized() here — this
-/* exercises the locale loop running over a document whose data
-/* doesn't actually vary by locale)
+/* Duplicating a nested + versioned Page in a localized app: the copy stays under its parent
 /*********************************************************/
 
 test('Should duplicate a nested child Page, keeping it under the same parent', async ({
@@ -934,8 +923,7 @@ test('Should duplicate a nested child Page, keeping it under the same parent', a
   expect(draftDoc.attributes.title).toBe('ML Child page (copy)');
   expect(draftDoc.status).toBe(VERSIONS_STATUS.DRAFT);
 
-  // The copy is a draft, so the public parent query must still see only
-  // the one originally-published child.
+  // The copy is a draft: a published-only read still lists one child
   const response = await request.get(`${API_BASE_URL}/pages?where[_parent][equals]=${parent.id}`);
   const { docs } = await response.json();
   expect(docs).toHaveLength(1);

@@ -31,6 +31,7 @@ export const Listings = Collection.create('listings', {
       fields({ name: 'hero', label: 'Hero', fields: [text('heroTitle')] }),
       fields({ name: 'quote', label: 'Quote', fields: [text('quoteText')] })
     ),
+    // A separator with a class: list.test.ts checks it lands on the <hr>
     separator().className('rz-fixture-wide'),
     // Read by anybody: rendered
     component(Notice),
@@ -38,6 +39,7 @@ export const Listings = Collection.create('listings', {
     component(Notice).access({ create: () => true, read: () => false, update: () => true }),
     // A condition that fails: hidden
     component(Notice).condition(() => false),
+    // Two tabs: list.test.ts stores a tab name and checks which one opens
     tabs(tab('first').fields(text('firstText')), tab('second').fields(text('secondText')))
   ]
 });

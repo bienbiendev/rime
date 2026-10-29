@@ -34,6 +34,7 @@ function richTextOf(text: string) {
   return { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] };
 }
 
+/** The text of a rich-text doc's top-level paragraphs, joined with no separator. */
 function richTextToString(json: any): string {
   return (json?.content ?? [])
     .flatMap((node: any) => node.content ?? [])
@@ -166,12 +167,7 @@ test('Should still have the correct block content after a fresh read', async ({ 
   expect(richTextToString(doc.sections[1].text)).toBe('Alpha content');
 });
 
-/****************************************************/
-/* RELATION NESTED INSIDE TREE NESTED INSIDE BLOCK —
-/* three levels deep (sections.N.facts.M.image), the
-/* real-world shape from rime/pages/tab-layout.ts's
-/* keyFacts block
-/****************************************************/
+// A relation inside a tree inside a block, three levels deep: sections.N.facts.M.image
 
 let deepDocId: string;
 
@@ -254,7 +250,7 @@ test('Should persist a nested child fact with its own relation under the blocks 
   expect(doc.sections[0].facts[0]._children).toHaveLength(1);
   expect(doc.sections[0].facts[0]._children[0].label).toBe('Fact two child');
   expect(refIds(doc.sections[0].facts[0]._children[0].image)).toEqual([targetAId]);
-  // siblings at every level survive the update
+  // The sibling fact survives the update
   expect(doc.sections[0].facts[1].label).toBe('Fact one');
 });
 

@@ -1,6 +1,6 @@
 import { PARAMS } from '#lib/core/constants.js';
 import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
-import test, { expect, type Page } from '@playwright/test';
+import test, { expect, type APIRequestContext, type Page } from '@playwright/test';
 import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
@@ -43,10 +43,12 @@ let newsId: string;
 let publishedVersionId: string;
 let draftVersionId: string;
 
+/** The news document in the panel, on `versionId`. */
 const documentUrl = (versionId: string) =>
   `${panelUrl('news', newsId)}?${PARAMS.VERSION_ID}=${versionId}`;
 
-const read = async (request: import('@playwright/test').APIRequestContext, query = '') => {
+/** The news document over the API, as admin; `query` picks the row. */
+const read = async (request: APIRequestContext, query = '') => {
   const response = await request.get(`${API_BASE_URL}/news/${newsId}${query}`, {
     headers: await signInSuperAdmin(request)
   });

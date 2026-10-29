@@ -7,19 +7,19 @@ const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
-/**
- * A new version and the locales of the version it branches from. The default locale is `en`,
- * `infos` is a versioned area with a localized `title` and `email`.
- */
-
 type Headers = { cookie: string };
 
+/** `infos` read in `locale`, as admin. */
 const read = async (request: APIRequestContext, locale: string, headers: Headers) => {
   const response = await request.get(`${API_BASE_URL}/infos?locale=${locale}`, { headers });
   expect(response.status()).toBe(200);
   return (await response.json()).doc;
 };
 
+/**
+ * A new version and the locales of the version it branches from. The default locale is `en`,
+ * `infos` is a versioned area with a localized `title` and `email`.
+ */
 test('A new version carries the translations its original has', async ({ request }) => {
   const headers = await signInSuperAdmin(request);
 

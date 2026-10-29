@@ -16,7 +16,8 @@ export const ContactLogs = Collection.create('contactLogs', {
   fields: [text('payload')]
 });
 
-const logContact = Hooks.afterCreate<'contacts'>(async (args) => {
+// Copies what afterCreate received into contactLogs, as system, for read-safety.test.ts to read
+const logContact = Hooks.afterCreate<'contacts'>(async function logContact(args) {
   const { name, message, internalNote } = args.doc as any;
   await args.event.locals.rime
     .collection('contactLogs')

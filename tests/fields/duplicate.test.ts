@@ -20,6 +20,7 @@ let staffId: string;
 // A title and slug no earlier run of the suite holds
 const run = Date.now();
 
+/** Duplicates an article and reads the copy back: two requests. */
 const duplicate = async (request: APIRequestContext, id: string) => {
   const response = await request.post(`${API_BASE_URL}/articles/${id}/duplicate`, { headers });
   expect(response.status()).toBe(200);

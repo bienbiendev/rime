@@ -3,7 +3,10 @@ import { access } from '#lib/core/auth/access.js';
 import { select, text } from '#lib/fields/index.js';
 import { Collection } from '$rime/config';
 
-/** Read by any staff member, updated by an admin only: an editor opens it read-only. */
+/**
+ * Read by any staff member, updated by an admin only: an editor opens it read-only. Live, so
+ * read-only.test.ts can check that the live button is disabled; no front route serves its url.
+ */
 export const Bulletins = Collection.create('bulletins', {
   fields: [text('title').isTitle(), select('topics').options('news', 'events', 'jobs').many()],
   live: true,

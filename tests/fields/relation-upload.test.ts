@@ -62,7 +62,7 @@ const marked = (page: Page) => dialog(page).locator('.rz-relation-browse__item[d
 const card = (page: Page, id: string) =>
   dialog(page).locator(`.rz-relation-browse__item[data-id="${id}"]`);
 
-/** Adds a type through ⌘K. */
+/** Adds a block type through ⌘K: the line of the Add group whose label is exactly `label`. */
 async function add(page: Page, label: string) {
   // Focus mode offers its Add lines once it is on screen
   await expect(page.locator('.rz-blocks-focus')).toBeVisible();
@@ -79,6 +79,7 @@ async function add(page: Page, label: string) {
   await expect(dialog(page)).toHaveCount(0);
 }
 
+/** Clicks the focus mode's own save button. */
 async function save(page: Page) {
   await page.locator('.rz-blocks-focus button[type="submit"]').first().click();
 }

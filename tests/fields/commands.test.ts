@@ -5,7 +5,7 @@ const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
-// Wide enough for focus mode's three columns; a narrow screen has its own test.
+// Wide enough for focus mode's three columns
 test.use({ viewport: { width: 1600, height: 900 } });
 
 /**

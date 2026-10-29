@@ -14,6 +14,7 @@ test.use({ viewport: { width: 1600, height: 900 } });
  * a nested item leaves behind.
  */
 
+/** A page with a slug, so it opens with nothing to save, holding `links`. */
 async function createPage(request: APIRequestContext, title: string, links: unknown[]) {
   const slug = `${title.toLowerCase().replace(/\W+/g, '-')}-${Date.now()}`;
   const response = await request.post(`${API_BASE_URL}/pages`, {

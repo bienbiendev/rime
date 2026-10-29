@@ -228,10 +228,7 @@ test('Should stamp readAt on body via $beforeRead without losing the original co
   request
 }) => {
   const headers = await signInSuperAdmin(request);
-  // A doc with an empty content array is considered empty by richText's own
-  // isEmpty() check, which would make set-default-values overwrite it with
-  // the field's default (null) before any hook sees it — so this needs real
-  // (non-empty) content to actually exercise $beforeRead.
+  // A doc with a paragraph of text: the content the stamped read must keep
   const patched = await request.patch(`${API_BASE_URL}/hooks-test/${docId}`, {
     headers,
     data: {
@@ -407,10 +404,8 @@ test('Should let a super admin update adminOnly', async ({ request }) => {
 /** ---------------- FIELD-LEVEL ACCESS, ACROSS MORE FIELD TYPES ---------------- */
 
 /**
- * Same {read, create, update} shape as adminOnly, run once per field type —
- * set as admin, confirm an editor can neither read nor write it, confirm
- * the editor's write was silently dropped rather than applied, then confirm
- * the admin can still update it afterwards.
+ * One field type at a time: set as admin, hidden from an editor's read, an editor's write
+ * dropped, then updated by the admin again.
  */
 async function expectFieldLevelAccess({
   request,

@@ -17,7 +17,7 @@ test('A null in a relation list is dropped, not a 500', async ({ request }) => {
   expect(uploaded.status()).toBe(200);
   const mediaId = (await uploaded.json()).doc.id;
 
-  // `[mediaId, undefined]` over JSON: the null goes, the media stays.
+  // An `undefined` id in a list arrives as `null` over JSON: the null goes, the media stays.
   const response = await request.patch(`${API_BASE_URL}/settings`, {
     headers,
     data: { logo: [mediaId, null] }

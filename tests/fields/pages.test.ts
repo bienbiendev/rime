@@ -103,9 +103,7 @@ test('Should persist the text, textarea, checkbox, toggle, select and number of 
   // still-blank create form.
   await page.waitForURL(/\/panel\/pages\/(?!create$)[^/]+$/);
 
-  // Reload from the server — this is the part that would have silently
-  // dropped everything except the first field if the group's container had
-  // been corrupted into an array (the separator-empty-name-key bug).
+  // Reload from the server: every field of the group comes back
   await page.reload();
 
   await expect(page.locator('input[name="title"]')).toHaveValue('Group save test');

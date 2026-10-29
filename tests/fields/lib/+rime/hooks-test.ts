@@ -19,6 +19,10 @@ import {
 } from '#lib/fields/index.js';
 import { Collection } from '$rime/config';
 
+/**
+ * Field hooks and field access, one field per case: tests/fields/api.test.ts drives them over
+ * the API, hooks-ui.test.ts through the panel form.
+ */
 export const HooksTest = Collection.create('hooksTest', {
   fields: [
     text('title').isTitle(),
@@ -40,11 +44,7 @@ export const HooksTest = Collection.create('hooksTest', {
     // server-only beforeRead
     text('shoutedText').$beforeRead((value) => (value ? String(value).toUpperCase() : value)),
 
-    // field-level access — same {read, create, update} shape checked across
-    // a spread of structurally different field types (plain scalar,
-    // boolean x2, options-based, numeric, relational, temporal), since the
-    // access mechanism lives once on FormFieldBuilder but every leaf field
-    // component reads it independently.
+    // Field access across field types: an editor neither reads nor writes these
     text('adminOnly').access({
       read: (user) => access.isAdmin(user),
       create: (user) => access.isAdmin(user),
@@ -85,11 +85,7 @@ export const HooksTest = Collection.create('hooksTest', {
       update: (user) => access.isAdmin(user)
     }),
 
-    // Second access tier: readable by anyone (so RenderFields.svelte's
-    // authorizedFields filter still renders it — that filter runs on
-    // canRead alone), but only an admin can create/update it. Distinct from
-    // adminOnly* above: an editor sees these fields disabled rather than
-    // not seeing them at all. Same spread of field types.
+    // Read by anyone, written by an admin only: an editor sees these, disabled
     checkbox('restrictedCheckbox').access({
       read: () => true,
       create: (user) => access.isAdmin(user),
@@ -137,13 +133,13 @@ export const HooksTest = Collection.create('hooksTest', {
     // no custom hooks: built-in ensureSelectIsOption default validator, many values
     select('tags').options('a', 'b', 'c').many(),
 
-    // required many-select: an empty selection is empty
+    // A required many-select: [] counts as missing
     select('requiredTags').options('a', 'b').many().required().defaultValue(['a']),
 
     // server-only beforeRead on a structured (JSONContent) value, not a string
     richText('body').$beforeRead((value) => (value ? { ...value, readAt: true } : value)),
 
-    // beforeValidate running through $rime/runtime (relation/runtime.server.ts), single
+    // A relation: the reference must name a document that exists, single
     relation('related').to('targets'),
 
     // same, many
@@ -201,9 +197,7 @@ export const HooksTest = Collection.create('hooksTest', {
       .options('svelte', 'react', 'vue')
       .$beforeSave((value) => (value === 'react' ? 'svelte' : value)),
 
-    // beforeValidate forcing a property on an object value; beforeRead
-    // (populateRessourceURL) also goes through $rime/runtime (see
-    // link/index.ts) — a second, independent consumer besides relation
+    // beforeValidate forcing a property on an object value
     link('resourceLink')
       .types('url')
       .beforeValidate((value) =>
