@@ -54,6 +54,10 @@
   }
 </script>
 
+<!--
+  One folder's fields in a dialog, through the form of the `$<slug>Directories` collection.
+  Renaming a folder changes its id, which is its path: `root:press` -> `root:news`.
+-->
 <Dialog.Root bind:open>
   <Dialog.Content>
     {#snippet child({ props })}

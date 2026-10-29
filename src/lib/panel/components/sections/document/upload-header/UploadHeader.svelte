@@ -12,7 +12,9 @@
 
   type Props = {
     form: DocumentFormContext;
+    /** Creating: the file name shows as text, the file has no address yet. */
     create: boolean;
+    /** The mime types the collection takes; none means any. */
     accept: WithUpload<BuiltCollection>['upload']['accept'];
   };
   const { form, create, accept }: Props = $props();
@@ -21,6 +23,7 @@
   let file = $state<File | null>(null);
   let isValidFile = $state(false);
 
+  /** Removes the file and its facts from the form; the drop zone shows again. */
   const deleteFile = () => {
     preview = null;
     file = null;
@@ -40,9 +43,11 @@
     { key: 'mimeType', label: t__('fields.file_type') }
   ]);
 
+  /** Save waits while the preview of a picked file is read. */
   const onGeneratingPreviewStart = () => (form.isDisabled = true);
   const onGeneratingPreviewEnd = () => (form.isDisabled = false);
 
+  /** A picked file of a type the collection refuses is dropped, with an error on `mimeType`. */
   $effect(() => {
     if (!file) return;
     if (isAccepted(file, accept)) {
@@ -57,6 +62,7 @@
     }
   });
 
+  /** A picked file's facts go into the form: name, size, type and the file itself. */
   $effect(() => {
     if (file && isValidFile && form.values.filename !== file.name) {
       form.setValue('filename', file.name);

@@ -15,6 +15,8 @@
     return t__('common.search', count);
   });
 
+  // Every keystroke filters the list. The search also runs again on what `filterBy` reads: the
+  // loaded documents, and the sort while the search is empty.
   $effect(() => {
     collection.filterBy(searchValue);
   });

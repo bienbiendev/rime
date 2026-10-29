@@ -33,14 +33,9 @@
   // config.siteName, else the host of config.siteUrl, else "rime"
   const siteName = config.raw.siteName || hostOf(config.raw.siteUrl) || 'rime';
 
-  const getGroupIcon = (groupName: string) => {
-    if (!navigationGroupsConfig) return null;
-    const group = navigationGroupsConfig.find((group) => group.label === groupName);
-    if (group) {
-      return group.icon;
-    }
-    return null;
-  };
+  /** The icon `panel.navigation.groups` gives the group of this label, or none. */
+  const getGroupIcon = (groupName: string) =>
+    navigationGroupsConfig?.find((group) => group.label === groupName)?.icon ?? null;
 
   const dashBoardRoute: Route = {
     title: 'Dashboard',

@@ -38,6 +38,7 @@
   /** What the server will keep: lowercase, dashes, no dash at either end. */
   const next = $derived(slugify(value).replace(/^-+|-+$/g, ''));
 
+  /** Sends the new slug for the locale on screen: `PATCH /api/<kebab>/<id>/slug`. */
   async function save() {
     if (!next) {
       error = t__('common.url_slug_required');

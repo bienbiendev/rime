@@ -10,6 +10,7 @@
     aside?: Snippet;
     /** The toolbar under the title, its left side. */
     bottomLeft?: Snippet;
+    /** Replaces the breadcrumb, top left: a nested document's Close. */
     topLeft?: Snippet;
     topRight?: Snippet;
   };

@@ -12,6 +12,12 @@
   const { fields, getField, preview }: Props = $props();
 </script>
 
+<!--
+  The summary of a folded group, or of a rich-text fields node: one row per visible field, its
+  label and its value, the value drawn by the field's table cell, else its cell, else as text.
+  A config `preview` component replaces the rows.
+-->
+
 <div class="rz-render-fields-preview">
   {#if preview}
     {@const Preview = preview}

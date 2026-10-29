@@ -37,11 +37,13 @@
     over = !disabled;
   }
 
+  /** Leaving the zone for outside it, not for one of its children, ends the hover. */
   function onDragLeave(event: DragEvent) {
     const zone = event.currentTarget as HTMLElement;
     if (!zone.contains(event.relatedTarget as Node | null)) over = false;
   }
 
+  /** Dropped files are taken unless the zone is disabled; a dropped link or text is ignored. */
   function onDrop(event: DragEvent) {
     over = false;
     if (!carriesFiles(event)) return;
@@ -49,6 +51,7 @@
     if (!disabled) take(event.dataTransfer?.files);
   }
 
+  /** Hands the files over, the first one alone unless `multiple`; an empty list is dropped. */
   function take(list?: FileList | null) {
     const files = Array.from(list ?? []);
     if (files.length) onfiles(multiple ? files : files.slice(0, 1));

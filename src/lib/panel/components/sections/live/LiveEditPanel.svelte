@@ -2,7 +2,10 @@
   import { getFieldListAtPath } from '#lib/core/fields/util.js';
   import RenderFields from '#lib/panel/components/fields/RenderFields.svelte';
   import { getConfigContext } from '#lib/panel/context/config.svelte.js';
-  import { setDocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import {
+    setDocumentFormContext,
+    type DocumentFormContext
+  } from '#lib/panel/context/documentForm.svelte.js';
   import { getLivePanelContext } from '#lib/panel/context/livePanel.svelte.js';
   import type { GenericDoc } from '#lib/types.js';
   import { onMount } from 'svelte';
@@ -11,9 +14,12 @@
 
   type Props = {
     doc: GenericDoc;
-    onDataChange: any;
-    afterSuccess: (savedDoc: any) => void;
-    onFormReady: (form: any) => void;
+    /** Called on every change with the field's path and value, so the page previews it. */
+    onDataChange: (change: { path: string; value: unknown }) => void;
+    /** Called with the saved document. */
+    afterSuccess: (savedDoc?: GenericDoc) => void;
+    /** Receives the form once mounted, so the floating bar can save it. */
+    onFormReady: (form: DocumentFormContext) => void;
   };
 
   const { doc, onDataChange, afterSuccess, onFormReady }: Props = $props();
@@ -37,7 +43,7 @@
     key: `${doc._type}_0`
   });
 
-  // Register form with parent after mount so parent can drive save/revert
+  // The form goes to the parent after mount: the floating bar's Save submits it.
   onMount(() => onFormReady(form));
 
   // Reactive: re-derives when fieldPath changes (no remount needed)

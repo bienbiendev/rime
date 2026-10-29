@@ -10,6 +10,11 @@
   }: CommandPrimitive.InputProps = $props();
 </script>
 
+<!--
+  The search line of the select, relation and link pickers: no well and a smaller icon than the
+  palette's (command-input.svelte). `class` goes on the wrapper, not on the input.
+-->
+
 <div class="rz-command-input-select {className}">
   <Search class="rz-command-input-select__icon" size={12} />
   <CommandPrimitive.Input

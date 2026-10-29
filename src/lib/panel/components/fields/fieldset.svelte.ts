@@ -6,7 +6,13 @@ type FieldState = {
   readonly error: string | false;
 };
 
-/** Marks a field's root with its path, visibility and editable state, and follows a new field. */
+/**
+ * Marks a field's root with its path, visibility and editable state, and follows a new field.
+ *
+ * The marks are read elsewhere: RenderFields.svelte hides a field without `data-visible`,
+ * setting.css joins the yes/no rows that have it, and `disabled` greys the label
+ * (LabelFor.svelte). The e2e tests find a field by `fieldset[data-path="…"]`.
+ */
 export function fieldset(node: HTMLElement, initial: FieldState) {
   let field = $state.raw(initial);
 

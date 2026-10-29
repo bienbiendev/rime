@@ -11,6 +11,8 @@
   const locale = getLocaleContext();
 </script>
 
+<!-- A field's title above it, with the locale code (`FR`) after it when the field is localized. -->
+
 <Label class="rz-field-label" title={config.get.label} for={forAttribute || null}>
   {config.get.label}
   {#if config.get.localized}

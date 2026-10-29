@@ -13,8 +13,11 @@
   import SpinLoader from '../../ui/spin-loader/SpinLoader.svelte';
 
   type Props = {
+    /** One form per opened document (`update` key); a closed panel's form stays here. */
     forms: Record<string, DocumentFormContext>;
+    /** Steps back one panel; with none open, leaves the live editor. */
     onClose: () => void;
+    /** Shows or hides the whole document's form; `null` before one was opened. */
     toggleRootPanel: (() => void) | null;
     activePanel: ActivePanel | null;
     currentDevice: 'desktop' | 'mobile';
@@ -30,12 +33,14 @@
   const formsWithChanges = $derived(Object.values(forms).filter((form) => form.canSubmit));
   const isProcessing = $derived(Object.values(forms).some((form) => form.processing));
 
+  /** Submits every form with changes; a form never mounted is skipped. */
   function saveAll() {
     for (const form of formsWithChanges) {
       try {
         form.element.requestSubmit();
       } catch {
-        // form element not yet mounted — skip
+        // `form.element` throws for a form never mounted; a closed panel's form is detached and
+        // does not submit.
       }
     }
   }

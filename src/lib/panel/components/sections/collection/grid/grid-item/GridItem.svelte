@@ -64,6 +64,10 @@
     return `${panelPath(config.kebab, doc.id)}${params}` as ResolvedPathname;
   });
 
+  /**
+   * Puts the document's id on the drag: a folder tile it is dropped on moves it
+   * (FolderWithActions.svelte).
+   */
   function handleDragStart(e: DragEvent) {
     e.dataTransfer?.setData('text/plain', doc.id);
   }

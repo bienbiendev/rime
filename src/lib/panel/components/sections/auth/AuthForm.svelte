@@ -10,6 +10,10 @@
   const { image, children, title }: Props = $props();
 </script>
 
+<!--
+  The frame of the sign-in, forgot-password and reset-password pages: the app's
+  `static/assets/panel/panel.jpg` as background when there is one, the title, then the form.
+-->
 <Toaster />
 <div class="rz-auth" style={image ? `background-image:url(${image})` : null}>
   <div class="rz-auth__left"></div>

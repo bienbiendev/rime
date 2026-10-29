@@ -5,9 +5,12 @@
   import { SheetOverlay, SheetPortal, type Side } from './index.js';
 
   type Props = WithoutChildrenOrChild<SheetPrimitive.ContentProps> & {
+    /** The edge it slides from; `right` is the only one. */
     side?: Side;
+    /** `sm`: a narrow side panel beside the page, 20rem at most. */
     size?: 'default' | 'sm';
     children: Snippet;
+    /** A ✕ in the top right corner, styled by sheet.css and by dialog-content.css. */
     showCloseButton?: boolean;
   };
 

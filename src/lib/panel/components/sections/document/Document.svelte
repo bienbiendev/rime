@@ -71,7 +71,8 @@
   // A leave held back by unsaved changes: what to do once the user confirms. A navigation goes
   // on to its URL; a locale switch reloads in place.
   let interceptedLeave = $state<{ proceed: () => unknown } | null>(null);
-  // This is used to prevent the beforeNavigate from triggering when we programmatically navigate
+  // Set before a navigation the form starts itself — the save's redirect (beforeRedirect) and the
+  // auto-save flush (beforeNavigate) — so beforeNavigate lets it through.
   let isRedirect = $state(false);
   // Dialog for unsaved changes confirmation
   const isConfirmLeaveOpen = $derived(!!interceptedLeave);
@@ -283,6 +284,9 @@
     }
   ]);
 
+  /**
+   * Submits through the Save button, so the save reads the button's `data-fork` and `data-status`.
+   */
   function submit() {
     if (!formElement) throw Error('formElement is not defined');
     if (!form.canSubmit) return;

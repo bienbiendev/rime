@@ -41,6 +41,8 @@
   }
 </script>
 
+<!-- A node remounts when its parent or position changes: the tree moves rows itself while
+     dragging, and the remount puts the DOM back in step with the data. -->
 {#key `${parentId}-${doc.id}-${doc._position}`}
   <!-- A row, then the list of its children: the depth is the list's, so a dragged row takes the depth of the list it is over. -->
   <div data-parent={parentId} data-id={doc.id} class="rz-collection-node">

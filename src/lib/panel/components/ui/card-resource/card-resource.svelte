@@ -18,7 +18,12 @@
     _thumbnail?: string;
   };
 
-  type Props = { resource: Resource; onCloseClick: () => void };
+  type Props = {
+    /** The linked document; one with a `mimeType` key is an upload and shows its file facts. */
+    resource: Resource;
+    /** The ✕: removes the link. */
+    onCloseClick: () => void;
+  };
   const { resource, onCloseClick }: Props = $props();
 
   const isUpload = $derived('mimeType' in resource);

@@ -15,6 +15,9 @@
   }: WithoutChildren<PrimitiveInputAttributes> & { icon?: Component<IconProps> } = $props();
 </script>
 
+<!-- A text input in a wrapper. `icon` draws a Lucide icon before the text; `class` styles the
+     wrapper, every other attribute goes on the `<input>`. -->
+
 <div class="rz-input-wrapper {className}">
   {#if icon}
     {@const Icon = icon}

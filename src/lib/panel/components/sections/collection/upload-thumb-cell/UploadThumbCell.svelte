@@ -9,12 +9,15 @@
   };
   const { url, mimeType }: Props = $props();
 
+  // The file's type, else the one its url's extension names.
   const mimeTypeResolved = $derived.by(() => {
     if (mimeType) return mimeType;
     if (url) return getMimeTypeFromExtension(url.split('.').pop() || '') || '';
     return '';
   });
 
+  // A class per type, `rz-upload-preview-cell--image-jpeg`: a photo fills its frame, other
+  // images show whole.
   const mimeClass = $derived.by(() => {
     if (!mimeTypeResolved) return '';
     const [type, subType] = mimeTypeResolved.split('/');

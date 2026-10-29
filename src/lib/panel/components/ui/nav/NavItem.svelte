@@ -9,6 +9,7 @@
   type Props = {
     isCollapsed: boolean;
     route: Route;
+    /** The link's own attributes, `href` first. */
     [x: string]: any;
   };
   const { isCollapsed, route, ...rest }: Props = $props();

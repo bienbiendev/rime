@@ -11,6 +11,9 @@
   }: WithoutChild<ScrollAreaPrimitive.RootProps> = $props();
 </script>
 
+<!-- A scroll area with a thin vertical bar. `class` styles the viewport, the element that
+     scrolls. -->
+
 <ScrollAreaPrimitive.Root bind:ref {...restProps}>
   <ScrollAreaPrimitive.Viewport class="rz-scroll-area__viewport rz-scroll-area {className}">
     {@render children?.()}

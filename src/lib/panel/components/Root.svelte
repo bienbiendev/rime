@@ -35,12 +35,18 @@
   setAPIProxyContext(() => locale.code);
 
   // The layout reloads the locale after a switch, and the store follows it in place. The document
-  // forms are keyed on the document's locale (DocumentPage.svelte:23, LiveEditPanel.svelte:49).
+  // forms are keyed on the document's locale (the {#key} of DocumentPage.svelte and of
+  // LiveEditPanel.svelte).
   $effect(() => {
     locale.code = initialeLocale;
   });
 </script>
 
+<!--
+  The signed-in panel's shell: it sets the contexts every page reads (config, user, locale,
+  navigation, title, API proxy), mounts the toaster and the commands (⌘K and the keys), and
+  lays the navigation beside the page.
+-->
 <Toaster />
 
 <Commands {routes}>

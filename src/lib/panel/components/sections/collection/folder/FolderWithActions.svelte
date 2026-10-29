@@ -59,6 +59,7 @@
     childFiles?.data && childFolders?.data ? childFilesCount + childFoldersCount : null
   );
 
+  /** Opens the delete dialog with the folder's counts. */
   function handleGetDeleteInfos() {
     message = t__(
       'common.delete_dialog_text',
@@ -67,6 +68,7 @@
     deleteConfirmOpen = true;
   }
 
+  /** Deletes the folder, then lets the list drop its tile. */
   async function handleDelete() {
     const url = `${baseFolderApiURL}/${folder.id}`;
     const [error] = await trycatchFetch(url, { method: 'DELETE' });
@@ -80,6 +82,9 @@
     }
   }
 
+  /**
+   * Moves the dropped folder under this one: its id, which is its path, takes this folder's path.
+   */
   async function handleDropFolder(folderId: string) {
     const name = folderId.split(UPLOAD_PATH.SEPARATOR).at(-1);
     const newFolderPath = `${folder.id}${UPLOAD_PATH.SEPARATOR}${name}`;
@@ -99,6 +104,7 @@
     return invalidateAll();
   }
 
+  /** Moves the dropped document into this folder by setting its `_path`. */
   async function handleDropDocument(docId: string) {
     const moveDocumentAPICallURL = apiUrl(collection.kebab, docId);
     const [error] = await trycatchFetch(moveDocumentAPICallURL, {
@@ -114,10 +120,13 @@
     childFiles?.refresh();
   }
 
+  /**
+   * A tile dropped on this one: the dragged id is a folder's path when it holds `:`
+   * (`root:press`), else a document's id (GridItem.svelte and Row.svelte set it).
+   */
   async function handleDrop(e: DragEvent) {
-    e.preventDefault(); // prevent default browser behavior
+    e.preventDefault();
     rootElement?.classList.remove('rz-folder--dragover');
-    // Get the document ID from dataTransfer
     const docId = e.dataTransfer?.getData('text/plain');
 
     if (!docId) return;
@@ -130,6 +139,7 @@
     return handleDropDocument(docId);
   }
 
+  /** Marks the tile while something is dragged over it; bound to `dragover`, so it repeats. */
   function handleDragEnter(e: DragEvent) {
     e.preventDefault();
     rootElement?.classList.add('rz-folder--dragover');
@@ -139,11 +149,13 @@
     rootElement?.classList.remove('rz-folder--dragover');
   }
 
+  /** Opens the folder: the collection page at `?uploadPath=<path>`. */
   function handleGoToFolder() {
     const href: string = `${panelPath(collection.kebab)}?${PARAMS.UPLOAD_PATH}=${folder.id}`;
     goto(resolve(href));
   }
 
+  /** Puts the folder's path on the drag, for the tile it is dropped on. */
   function handleDragStart(e: DragEvent) {
     isDragging = true;
     e.dataTransfer?.setData('text/plain', folder.id);

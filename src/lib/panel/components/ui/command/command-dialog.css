@@ -2,6 +2,8 @@
 .rz-dialog-content.rz-command-dialog-content {
   overflow: hidden;
   gap: 0;
+  /* `--gutter` and the side margins come from dialog-content.css: with the margin, `left` lands
+     on 50%. */
   width: min(38rem, calc(100% - 2 * var(--gutter)));
   padding: 0;
   border-radius: var(--rz-radius-xl);

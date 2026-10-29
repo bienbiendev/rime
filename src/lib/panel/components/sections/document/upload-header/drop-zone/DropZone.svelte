@@ -11,8 +11,11 @@
 
   type Props = {
     accept: WithUpload<BuiltCollection>['upload']['accept'] | undefined;
+    /** Out: the picked file as a data URL, which the header previews when it is an image. */
     preview: string | null;
+    /** Out: the picked file. */
     file: File | null;
+    /** Called around the read of the preview: the header holds Save meanwhile. */
     onGeneratingPreviewStart: () => void;
     onGeneratingPreviewEnd: () => void;
   };
@@ -41,6 +44,7 @@
     if (!zone.contains(event.relatedTarget as Node | null)) dragOver = false;
   };
 
+  /** A file picked through the file chooser. */
   const handleChange: ChangeEventHandler<HTMLInputElement> = () => {
     const files = input.files;
     if (files && files.length) {

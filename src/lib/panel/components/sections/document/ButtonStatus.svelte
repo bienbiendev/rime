@@ -22,6 +22,10 @@
 
   let dialogOpen = $state(false);
 
+  /**
+   * Sets the status of the row on screen (`?versionId=`), then takes it into the form without
+   * dirtying it, reloads the page data and the version history.
+   */
   async function handleValidateStatus(next: string = status) {
     const url = apiUrl(...documentSegments(form.config.kebab, form.values));
     await fetch(`${url}?${PARAMS.VERSION_ID}=${form.values.versionId}`, {
@@ -39,6 +43,8 @@
           dialogOpen = false;
           invalidateAll();
           // The write went around the form: the version history re-reads its statuses.
+          // `apiUrl(kebab)` reaches `/api/<kebab>--versions` because `invalidate` matches by
+          // substring (api-proxy.svelte.ts).
           APIProxy.invalidate(apiUrl(form.config.kebab));
         } else {
           toast.error(t__('common.generic_error'));

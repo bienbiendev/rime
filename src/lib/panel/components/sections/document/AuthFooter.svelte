@@ -26,6 +26,10 @@
     }
   });
 
+  /**
+   * Asks better-auth to mail a reset link to the account's email, the link leading to the
+   * panel's `reset-password` page.
+   */
   async function sendPasswordResetLink() {
     const { data, error } = await authClient.requestPasswordReset({
       email: form.values.email,
@@ -47,8 +51,8 @@
     .placeholder(t__('common.confirmPassword'));
 </script>
 
-<!-- For creation show passwords fields -->
-<!-- For updates show reset password if mailer plugin exists -->
+<!-- A new account sets its password here. On an existing one, staff can send a reset link
+     when a mailer is configured. -->
 {#if operation === 'create'}
   <div class="rz-document-auth">
     <Text {form} type="password" config={passwordConfig} path="password" />

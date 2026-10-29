@@ -4,6 +4,7 @@
   type Props = {
     /** The staff member holding the lock, as the read joined them. */
     holder?: { name?: string | null; email?: string | null } | null;
+    /** Takes the lock from its holder, then reloads the page on the holder's last content. */
     takeControl: () => void;
   };
   const { holder, takeControl }: Props = $props();

@@ -63,6 +63,8 @@
       return;
     }
     toast.success(t__('common.version_deleted'));
+    // The version history drops the deleted row. `apiUrl(kebab)` reaches `/api/<kebab>--versions`
+    // because `invalidate` matches by substring (api-proxy.svelte.ts).
     APIProxy.invalidate(apiUrl(form.config.kebab));
     await goto(documentPath);
   }

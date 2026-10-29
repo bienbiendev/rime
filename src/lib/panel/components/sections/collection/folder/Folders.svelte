@@ -12,6 +12,7 @@
       !!(collection.upload.parentDirectory || collection.upload.directories.length)
   );
 
+  /** Drops a deleted folder's tile from the list on screen. */
   function onDeleteFolder(path: string) {
     collection.upload.directories = collection.upload.directories.filter((dir) => dir.id !== path);
   }

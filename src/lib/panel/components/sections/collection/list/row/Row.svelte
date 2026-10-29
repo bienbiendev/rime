@@ -33,6 +33,10 @@
   // "Email Zola" -> "Email"
   const firstName = $derived(author.split(/\s+/)[0]);
 
+  /**
+   * Puts the document's id on the drag: a folder tile it is dropped on moves it
+   * (FolderWithActions.svelte).
+   */
   function handleDragStart(e: DragEvent) {
     e.dataTransfer?.setData('text/plain', doc.id);
   }

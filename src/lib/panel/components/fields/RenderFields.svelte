@@ -30,6 +30,14 @@
     `rz-render-fields__field--${field.width || 'full'}`;
 </script>
 
+<!--
+  A list of fields on a 12-column grid, each in the width its config asks. Only the fields the
+  user may read render; in live edit, only the `live` ones.
+
+  `path` is where the list sits in the document: `''` at the root, `meta` inside the group
+  `meta`. A form field gets its full path (`meta.title`); a component field gets the prefix
+  (`meta.`) and builds its own paths; a tabs field gets the list's `path` and adds each tab's.
+-->
 <div class="rz-render-fields">
   {#each authorizedFields as field, index (index)}
     {#if !form.isLive || (form.isLive && isLiveField(field.get))}
@@ -92,7 +100,10 @@
     row-gap: var(--rz-size-4);
   }
 
-  /** hide fields that doesn't have any data-visible children */
+  /**
+   * A field whose root is not marked `data-visible` takes no room: the `fieldset` action
+   * (fieldset.svelte.ts) sets the mark while the field's condition holds.
+   */
   .rz-render-fields__field:not(.rz-render-fields__field[data-type='component']):not(
       .rz-render-fields__field[data-type='separator']
     ):not(:has([data-visible])) {

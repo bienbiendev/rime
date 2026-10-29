@@ -10,13 +10,16 @@
 
   const { collection }: Props = $props();
 
+  // The folders show above the rows (Folders.svelte, same rule): the empty state shows only
+  // without them.
   const hasFolders = $derived(
     collection.isUpload &&
       !collection.isFiltered &&
       !!(collection.upload.directories.length || collection.upload.parentDirectory)
   );
 
-  // A row is dragged onto a folder only when there is one to drop it on.
+  // A row is dragged onto a folder only when there is one; during a search the folders hide and
+  // a drag finds no target.
   const dragEnabled = $derived(
     collection.isUpload &&
       !!(collection.upload.directories.length || collection.upload.parentDirectory)
