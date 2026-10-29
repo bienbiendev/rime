@@ -1,6 +1,6 @@
 import { namespaces, type Dictionaries, type PanelLanguage } from './index.js';
 
-// Static imports, so the bundler can analyze them.
+// One `import()` per dictionary, with a literal path, so the bundler can analyze them.
 const translationModules = {
   en: {
     common: () => import('./en/common.js'),

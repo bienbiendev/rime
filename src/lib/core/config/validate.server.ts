@@ -21,6 +21,7 @@ import { isCamelCase } from '#lib/util/string.js';
 /** A field name: letters, digits and `_`, a letter first after any `_`: `_hello_guys`, `fooBar` */
 const FIELD_NAME = /^_*[a-zA-Z][a-zA-Z0-9_]*$/;
 
+/** The values that appear more than once, each once: `['a', 'b', 'a']` -> `['a']`. */
 function hasDuplicates(arr: string[]): string[] {
   return [...new Set(arr.filter((e, i, a) => a.indexOf(e) !== i))];
 }
@@ -266,6 +267,10 @@ function validateKebabs(config: BuildConfig) {
   return errors;
 }
 
+/**
+ * Runs each rule group in turn and stops at the first that fails: clears the dev cache, logs the
+ * group's errors, and answers `false`.
+ */
 function validate(config: BuildConfig): boolean {
   const validateFunctions = [
     hasDuplicateSlug,

@@ -12,7 +12,7 @@ export type NavigationConfig = {
 
 /** What an author writes under `panel`. */
 export type PanelConfig = {
-  /** who can access the panel */
+  /** Whether a user enters the panel. Without it, admins only; checked by the auth handler. */
   $access?: (user: User | undefined) => boolean;
   /** Custom panel routes that render a given component */
   routes?: Record<string, CustomPanelRoute>;
@@ -40,14 +40,16 @@ export type PanelConfig = {
 export type CollectionPanelConfig =
   | false
   | {
-      /** Description for the collection/area, basically displayed on the dashboard */
+      /** Description for the collection, shown on its dashboard card */
       description?: string;
       /** Sidebar navigation group */
       group?: string;
       /** Dashboard settings */
       dashboard?:
         | {
+            /** `'rows'` unless a feature prefers otherwise (upload: `'grid'`). */
             layout?: 'rows' | 'grid';
+            /** How many documents the dashboard card lists: 3 in rows, 4 in a grid by default. */
             maxEntries?: number;
           }
         | false;

@@ -1,3 +1,4 @@
+/** The panel's dictionary namespaces: the first segment of a key, `common.save`. */
 export const namespaces = ['errors', 'fields', 'common', 'mail'] as const;
 
 export type PanelLanguage = 'fr' | 'en';
@@ -33,6 +34,10 @@ export function createI18n(source: Dictionaries | (() => Dictionaries) = {}): I1
   const read = typeof source === 'function' ? source : () => source;
   const templateCache = new Map<string, (gender?: string, plural?: string) => string>();
 
+  /**
+   * A text with its `{m|f|m-plural|f-plural}` variants picked: `|f` takes the second, `|m|p` the
+   * third, `|f|p` the fourth, and a missing variant falls back to the first.
+   */
   const compileTemplate = (text: string) => {
     const cached = templateCache.get(text);
     if (cached) return cached;
@@ -81,10 +86,12 @@ function createPanelI18n() {
   let dictionaries: Dictionaries = {};
   const { t__ } = createI18n(() => dictionaries);
 
+  /** Replaces the panel dictionaries, by namespace. */
   const init = (loaded: Partial<Dictionaries>) => {
     dictionaries = loaded as Dictionaries;
   };
 
+  /** `t__`, warning when a panel namespace is asked for before it is loaded. */
   const translate: Translate = (key, ...params) => {
     const namespace = key.split('|')[0].split('.')[0] as Namespace;
     if (namespaces.includes(namespace) && !dictionaries[namespace]) {

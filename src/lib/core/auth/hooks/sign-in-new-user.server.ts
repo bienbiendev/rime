@@ -3,13 +3,12 @@ import { Hooks } from '#lib/core/pipeline/define-hook.js';
 import { userAttributes } from '../user.server.js';
 
 /**
- * Signs a user in as soon as their own sign-up created them.
+ * Sets `event.locals.user` to the user a sign-up just created, for the rest of this request: the
+ * hooks and the read that follow the create, and — when an app's form action calls
+ * `auth.api.signUpEmail` — the loads after that action. The session cookie is better-auth's.
  *
- * Rime's better-auth after-hook (`better-auth/hooks.server.ts`) sets
- * `event.locals.pendingSignInAfterSignUp`, and this reads it: the document exists by now, so
- * `event.locals.user` can be populated from it and the response comes back already
- * authenticated. Only the public sign-up path sets that flag — an admin creating a user from the
- * panel must not be signed in as them.
+ * Only the public sign-up path sets the flag this reads (`better-auth/hooks.server.ts`): an admin
+ * creating a user from the panel is not signed in as them.
  */
 export const signInNewUser = Hooks.afterCreate<'auth'>(async function signInNewUser(args) {
   const { config, event, data } = args;

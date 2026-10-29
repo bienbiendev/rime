@@ -18,6 +18,11 @@ function logResponse(event: RequestEvent, status: number) {
   logger.response(status, `${event.request.method} ${pathname}${search}`, { console: !dev });
 }
 
+/**
+ * The first handle: puts the request's `rime` on `event.locals`, gives every `$url` page its
+ * address once per process, lets better-auth answer `/api/auth/*`, and logs the status of every
+ * response.
+ */
 function createCMSHandler<const C extends Config>(rime: Rime<C>) {
   const handleCMS: Handle = async ({ event, resolve }) => {
     event.locals.rime = rime.createRimeContext(event) as any;
@@ -37,6 +42,11 @@ function createCMSHandler<const C extends Config>(rime: Rime<C>) {
   return handleCMS;
 }
 
+/**
+ * The handle list an app spreads into `sequence()` in `src/hooks.server.ts`. The order matters:
+ * CORS before auth, auth before the uploads, the plugins and the routes that read
+ * `event.locals.user`.
+ */
 export default async function <const C extends Config>(rime: Promise<Rime<C>>) {
   return [
     createCMSHandler(await rime),

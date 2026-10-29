@@ -116,19 +116,13 @@ export function createConfigContext<const C extends Config>(config: BuildConfig<
      */
     isValidLocale,
 
-    /**
-     * Retrieves an area configuration by its slug
-     */
+    /** An area's config by its slug. An unknown slug throws a 400 `RimeError`. */
     getArea,
 
-    /**
-     * Retrieves a collection configuration by its slug
-     */
+    /** A collection's config by its slug. An unknown slug throws a 400 `RimeError`. */
     getCollection,
 
-    /**
-     * Retrieves either an area or collection configuration by its slug
-     */
+    /** A collection's or an area's config by its slug. An unknown slug throws a 400 `RimeError`. */
     getBySlug,
 
     /**

@@ -11,4 +11,5 @@ export const accessControl = createAccessControl(defaultStatements);
 export const admin = accessControl.newRole(adminAc.statements);
 /** Panel users who are not admins: no better-auth admin endpoint, rime's access rules decide. */
 export const staff = accessControl.newRole({ user: [], session: [] });
+/** Members of other auth collections: no better-auth admin statement. */
 export const user = accessControl.newRole(userAc.statements);

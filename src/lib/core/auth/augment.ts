@@ -31,12 +31,11 @@ type Input = {
 };
 export type WithNormalizedAuth<T> = Omit<T, 'auth'> & { auth?: CollectionAuthConfig };
 
+/** A boolean `auth` as `{ type: 'password' }`; an `auth` object, or none, as it is. */
 const withNormalizedAuth = <T extends { auth?: boolean | CollectionAuthConfig }>(
   config: T
 ): WithNormalizedAuth<T> => {
-  // Create a new object without the auth property
   const { auth, ...rest } = config;
-  // Determine the normalized auth value
   let normalizedAuth: undefined | CollectionAuthConfig;
 
   if (typeof auth === 'boolean') {
@@ -45,7 +44,6 @@ const withNormalizedAuth = <T extends { auth?: boolean | CollectionAuthConfig }>
     normalizedAuth = auth;
   }
 
-  // Return the new object with the normalized auth
   return {
     ...rest,
     auth: normalizedAuth

@@ -14,6 +14,15 @@ const CLIENT_STATUS: Record<string, number> = {
   not_found: 404
 };
 
+/**
+ * An error rime throws to answer a request: `code` is one of the static codes, the message reads
+ * `code — message`, and `status` is the code's HTTP status (500 for a code that has none).
+ *
+ * ```ts
+ * throw new RimeError(RimeError.NOT_FOUND); // 404 "not_found"
+ * throw new RimeError(RimeError.BAD_REQUEST, 'pages is not an area'); // 400 "bad_request — pages…"
+ * ```
+ */
 class RimeError extends Error {
   static BAD_REQUEST = 'bad_request';
   static CONFIG_ERROR = 'config_error';
@@ -37,6 +46,10 @@ class RimeError extends Error {
   }
 }
 
+/**
+ * A 400 carrying one error code per field path, which the panel shows beside each field. The
+ * message lists them, translated: `title: Required, link: Invalid URL`.
+ */
 class RimeFormError extends RimeError {
   static INVALID_DATE = 'invalid_date';
   static INVALID_EMAIL = 'invalid_email';

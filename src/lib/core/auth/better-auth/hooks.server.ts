@@ -24,6 +24,11 @@ type CTX = MiddlewareContext<
 /* After hooks
 /****************************************************/
 
+/**
+ * Answers a sign-in or a sign-up with the rime document's `{ email, name, id }` — `id` is the
+ * document's, not better-auth's — and refuses a better-auth user with no document. With no new
+ * session, better-auth's own answer stands.
+ */
 const getUserAttributes = async (ctx: CTX) => {
   const newSession = ctx.context.newSession;
 
@@ -96,7 +101,7 @@ const handleUserCreation = async (ctx: CTX) => {
   const [error] = await trycatch(() =>
     event.locals.rime
       .collection(ctx.body.type)
-      // As rime only for the init; a sign-up is checked as the caller, like any create
+      // A system operation (no access check) for the init; a sign-up is checked as its caller
       .system(!!event.locals.isInit)
       .create({
         data: {
@@ -125,9 +130,11 @@ const handleUserCreation = async (ctx: CTX) => {
 /****************************************************/
 
 /**
- * A sign-up goes to an auth collection of `password` type that lets this request create, as any
- * create would; checked before better-auth writes its account. The init, which creates the first
- * admin, is rime's own.
+ * A sign-up goes to an auth collection of `password` type whose `access.create` lets the caller
+ * in; checked before better-auth writes its account. Over HTTP the caller is anonymous:
+ * better-auth answers `/api/auth/*` before `handleAuth` sets a user. An app's form action calling
+ * `auth.api.signUpEmail` is judged as its signed-in user. The init, which creates the first admin,
+ * is rime's own.
  *
  * ```ts
  * // users: access.create () => true

@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { isExpired, retentionDays } from './logger.server.js';
 
-// West of UTC, where a day's file read as UTC midnight looked a day old by the evening. Put back
-// after, since the worker may run other files.
+// West of UTC, where a day's file name and the local day differ by the evening. Put back after,
+// since the worker may run other files.
 const tz = process.env.TZ;
 process.env.TZ = 'America/New_York';
 afterAll(() => {

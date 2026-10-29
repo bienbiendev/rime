@@ -4,16 +4,10 @@ import type { CollectionSlug } from '#lib/core/prototype/types.js';
 import { betterAuthApiKey, betterAuthUserId, isSuperAdmin, userAttributes } from './user.server.js';
 
 /**
- * What these three reads ask for, pinned.
- *
- * They moved off the `Adapter` interface, where they were hand-written SQL, onto
- * `collection(slug).findMany`. The queries are the whole of what changed, and two of the three are
- * access decisions: a wrong `isSuperAdmin` is a privilege escalation, and it fails *open* — the
- * caller only ever asks "is this the super-admin?", so a query that matches nothing reads as "no"
- * and a query that matches too much reads as "yes". Neither is visible in a passing suite.
- *
- * So this asserts the call, not the result. The rows come from a stub; what is under test is the
- * slug, the filter and the projection.
+ * What these reads ask for, pinned. Two of them are access decisions: a wrong `isSuperAdmin` is a
+ * privilege escalation, and it fails open — a query that matches nothing reads as "no", one that
+ * matches too much as "yes". So this asserts the call, not the result: the rows come from a stub;
+ * what is under test is the slug, the filter and the projection.
  */
 
 type Call = { slug: string; args: any };

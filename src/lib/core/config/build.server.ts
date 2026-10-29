@@ -6,6 +6,7 @@ import { createRime, type Rime } from '../rime.server.js';
 import { configurePlugins } from '#lib/core/plugins/configure.js';
 import type { Config } from './types.js';
 
+/** `rime(config)`: runs the config chain below, then boots rime with the result (`createRime`). */
 export const buildConfig = <const C extends Config>(config: C): Promise<Rime<C>> => {
   const output = augmentConfig(config);
   return createRime(output as any as BuildConfig<C>);

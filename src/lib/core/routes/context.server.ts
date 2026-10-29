@@ -32,22 +32,33 @@ export function createRoutesContext(event: RequestEvent) {
       return slugOf(event);
     },
 
+    /** Whether the request is under `/api`. */
     get isAPI() {
       return routes.isApiPathname(event.url.pathname);
     },
 
+    /** Whether the route is the panel's sign-in, forgot-password or reset-password page. */
     get isPublicAuthRoute() {
       return routes.isPublicPanelAuthRoute(event.route.id);
     },
 
+    /**
+     * Whether the request is a panel page that needs a session: a route with the `[panel]` param,
+     * sign-in, forgot-password and reset-password excepted. False on a URL no route matched.
+     */
     get isPanel() {
       return event.params.panel !== undefined && !routes.isPublicPanelAuthRoute(event.route.id);
     },
 
+    /** The panel's path segment, `RIME_PANEL_ROUTE`. Private: never send it to the client. */
     get panel() {
       return RIME_PANEL_ROUTE;
     },
 
+    /**
+     * A root-relative panel path, `/panel/pages/12`. Unlike `panelUrl` in `routes/util.ts`, which
+     * the browser uses, this is not an absolute URL.
+     */
     panelUrl(...args: string[]): ResolvedPathname {
       return routes.joinPath(RIME_PANEL_ROUTE, ...args) as ResolvedPathname;
     },

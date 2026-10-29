@@ -34,6 +34,16 @@ const staffCollection = {
   } as Access
 };
 
+/**
+ * The staff collection, from `config.staff`. `admin` goes first among its roles when they do not
+ * list it, and `staff` is added when no other role is listed. `fields` go after the default ones,
+ * an authored `access` is merged over the defaults, and `panel.group` and `label` replace them.
+ *
+ * ```ts
+ * getStaffCollection({ roles: ['editor'] }).auth.roles // [{ value: 'admin' }, { value: 'editor' }]
+ * getStaffCollection().auth.roles                      // [{ value: 'admin' }, { value: 'staff' }]
+ * ```
+ */
 export const getStaffCollection = ({
   roles: incomingRoles = [],
   fields = [],

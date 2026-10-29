@@ -34,9 +34,6 @@ const restRoutes: Record<string, Record<string, RouteConfig>> = {
  * Each generated file passes `event` straight through and imports nothing — slug and id are real
  * route params, and the matchers rime generates into `+rime.generated/params.ts`, which the app's
  * `src/params.ts` spreads, have already sorted out which prototype the URL names.
- *
- * Lives here rather than on `rime.server.ts`, because these handlers read `event.locals.rime`.
- * Naming them there would make `RimeContext` depend on its own type.
  */
 export const routeHandlers = {
   checkLiveRedirect,
@@ -77,6 +74,10 @@ export const routeHandlers = {
   }
 };
 
+/**
+ * The last handle: builds the panel sidebar for a panel GET, puts `routeHandlers` on
+ * `event.locals.routes`, and answers a `$routes` pathname before SvelteKit's own routing.
+ */
 export const handleRoutes: Handle = async ({ event, resolve }) => {
   const { rime } = event.locals;
   const { isPanel } = rime.routes;

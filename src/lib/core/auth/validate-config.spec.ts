@@ -6,12 +6,8 @@ import { create } from '#lib/core/prototype/collection/definition.js';
 import { validateAuth } from './validate-config.js';
 
 /**
- * Auth's config rules, and the contract member that now carries them.
- *
- * They used to sit in `config/validate.server.ts` behind an `isAuthConfig` test. The risk in
- * moving them is not that they break — it is that they silently stop running, which no other gate
- * would notice: a config that should be rejected would simply be accepted, and the first symptom
- * is a sign-in path reading a collection that cannot serve it.
+ * Auth's config rules. A rule that stops running lets a collection through that cannot serve
+ * sign-in, and nothing else would notice.
  */
 describe('validateAuth', () => {
   it('passes a collection auth built itself', () => {
@@ -24,7 +20,7 @@ describe('validateAuth', () => {
     const built = create('spec_versioned_users', { auth: true, versions: true, fields: [] });
 
     expect(validateAuth(built)).toContain(
-      "Auth collections can't be versionned (spec_versioned_users)"
+      "Auth collections can't be versioned (spec_versioned_users)"
     );
   });
 
@@ -48,11 +44,7 @@ describe('validateAuth', () => {
     expect(errors).not.toContain('Field email is missing in collection spec_keys');
   });
 
-  /**
-   * The old code read `rolesField.get.many` without checking `rolesField` existed, so a collection
-   * whose `roles` is not a select crashed codegen with a TypeError instead of reporting the two
-   * things actually wrong with it.
-   */
+  /** A `roles` field that is not a select is reported, not read. */
   it('reports a non-select roles field instead of throwing on it', () => {
     const errors = validateAuth({
       slug: 'spec_badroles',

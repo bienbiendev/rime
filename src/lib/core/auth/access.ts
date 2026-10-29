@@ -2,13 +2,11 @@ import { ROLES } from './constant.js';
 import type { User } from '#lib/core/auth/types.js';
 
 /**
- * Checks if a user has admin privileges.
+ * Whether the user's `roles` hold `admin`. Only `roles` is read, whatever collection the user
+ * comes from: `handleAuth` has already refused an `admin` that better-auth does not back.
  *
  * @example
- * // Check if current user is an admin
- * if (isAdmin(currentUser)) {
- *   // Perform admin-only operations
- * }
+ * isAdmin({ roles: ['admin'], ... }) // true
  */
 export const isAdmin = (user?: User) => !!user && hasRoles(user, ROLES.ADMIN);
 

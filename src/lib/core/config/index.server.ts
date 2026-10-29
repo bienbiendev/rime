@@ -7,8 +7,10 @@ export type { BuildConfig } from './build.server.js';
 
 /**
  * Types only. `$rime/config` is typed as `rimecms/config/server`, so the sanitized client config's
- * `rimeClient(...)` call needs a name here. The client build runs `rimecms/config`'s
- * `buildConfigClient` instead.
+ * `rimeClient(...)` call needs a name here. On the server `$rime/config` is this module, and this
+ * `rimeClient` throws: the panel routes that import the client config are `ssr = false`, so it
+ * never runs there, but a server-rendered route that imports the client config reaches it. The
+ * client build runs `rimecms/config`'s `buildConfigClient` instead.
  */
 const rimeClient = (config: SanitizedConfigClient): BuiltConfigClient => {
   throw new Error("Don't use this function, this is a placeholder for types only");

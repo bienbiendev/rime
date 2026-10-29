@@ -5,11 +5,10 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { Route } from '../../panel/types.js';
 
 /**
- * Builds the panel navigation groups: the collections and areas the request's user may read, then
- * the custom panel routes.
- * @param config - the built config.
- * @param event - the request; gives the user and `rime.routes.panelUrl`.
- * @returns the routes, by group.
+ * The panel sidebar, by group: the collections and areas the request's user may read, then the
+ * custom panel routes. A collection goes to its `panel.group`, else `collections`; an area to its
+ * `panel.group`, else `areas`; a custom route without a group to `none`. A config with
+ * `panel: false` is left out.
  */
 const buildNavigation = <C extends Config>(config: BuildConfig<C>, event: RequestEvent): Dic => {
   const groups: Dic = {};
@@ -23,7 +22,6 @@ const buildNavigation = <C extends Config>(config: BuildConfig<C>, event: Reques
     groups[group].push(route);
   };
 
-  // Process collections
   config.collections
     .filter((collection) => collection.panel !== false)
     .forEach((collection) => {
@@ -37,7 +35,6 @@ const buildNavigation = <C extends Config>(config: BuildConfig<C>, event: Reques
       }
     });
 
-  // Process areas
   config.areas
     .filter((area) => area.panel !== false)
     .forEach((area) => {
@@ -51,7 +48,6 @@ const buildNavigation = <C extends Config>(config: BuildConfig<C>, event: Reques
       }
     });
 
-  // Process custom panel routes
   Object.entries(config.panel.routes).forEach(([routePath, routeConfig]) => {
     const route: Route = {
       title: routeConfig.label,

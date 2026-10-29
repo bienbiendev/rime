@@ -37,6 +37,11 @@ const CLOSED_PATHS = [
   '/admin/has-permission'
 ];
 
+/**
+ * The better-auth options rime always sets: model names matching the tables of `tables.ts`, the
+ * `type` field naming the user's collection, rime's before and after hooks, the closed paths, a
+ * rate limit outside dev, and a password reset sent through the mailer.
+ */
 export function getBaseAuthConfig<const C extends Config>(ctx: {
   mailer: MailerActions | undefined;
   config: ConfigContext<C>;
@@ -90,6 +95,7 @@ export function getBaseAuthConfig<const C extends Config>(ctx: {
   return betterAuthOptions;
 }
 
+/** better-auth's admin plugin, with rime's three roles, and the api-key plugin. */
 const configurePlugins = <const C extends Config>(config: BuildConfig<C>) => {
   const hasApiKeyCollection = (config.collections || []).some((c) => c.auth?.type === 'apiKey');
 

@@ -66,8 +66,9 @@ export type Rime<C extends Config = Config> = {
 };
 
 /**
- * Creates the main Rime object
- * that provides access to cms API
+ * Boots rime for one config — codegen in dev, the adapter, better-auth, the panel translations —
+ * and answers the process-wide object. Its `createRimeContext` builds `event.locals.rime` for each
+ * request.
  */
 export async function createRime<const C extends Config>(config: BuildConfig<C>): Promise<Rime<C>> {
   // Phases 1 and 2 — codegen (dev only) then boot, in that order, written out in

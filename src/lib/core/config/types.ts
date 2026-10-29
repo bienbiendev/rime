@@ -35,8 +35,7 @@ export interface Config {
   collections?: BuiltCollection[];
   /** The areas an author writes. Optional here, defaulted to `[]` by the config chain. */
   areas?: BuiltArea[];
-  /** If config.siteUrl is defined, a preview button is added
-	on the panel dahsboard, pointing to this url  */
+  /** On the panel dashboard, a preview button pointing to `siteUrl`. */
   siteUrl?: string;
   /** The name at the top of the panel's sidebar. Without it, the host of `siteUrl`, then "rime". */
   siteName?: string;
@@ -87,6 +86,7 @@ export interface Config {
   $trustedOrigins?: string[];
   /** Additional panel users config  */
   staff?: AdditionalStaffConfig;
+  /** The panel: who enters, its language, custom routes, navigation, components. */
   panel?: PanelConfig;
   /** Enable built-in API cache */
   $cache?: CacheConfig;
@@ -125,6 +125,10 @@ type AccessOptions = {
   event?: RequestEvent;
 };
 
+/**
+ * An access rule. `id` is the document's on a read, update or delete by id; `event` is the
+ * request when the caller has one.
+ */
 export type Access = {
   create?: (user: User | undefined, options: AccessOptions) => boolean;
   read?: (user: User | undefined, options: AccessOptions) => boolean;
@@ -132,6 +136,7 @@ export type Access = {
   delete?: (user: User | undefined, options: AccessOptions) => boolean;
 };
 
+/** A custom route's handler per method. */
 export type RouteConfig = {
   POST?: RequestHandler;
   GET?: RequestHandler;
@@ -211,7 +216,7 @@ export type Area<S> = PrototypeConfig & {
   panel?:
     | false
     | {
-        /** Description for the collection/area, basically displayed on the dashboard */
+        /** Description for the area, shown on the dashboard */
         description?: string;
         /** Sidebar navigation group */
         group?: string;
@@ -256,7 +261,9 @@ export type BuiltCollection = Omit<Collection<string>, 'icon' | 'versions' | 'up
    * what an author wrote beats both.
    */
   _dashboardLayout?: 'rows' | 'grid';
+  /** `false` leaves the config out of the generated types. */
   _generateTypes?: false;
+  /** `false` leaves the config out of the generated schema. */
   _generateSchema?: false;
   /**
    * Whose content this config holds, in slug space — the inverse of `_versions`.
@@ -315,7 +322,7 @@ export type BuiltConfig = {
   siteUrl?: string;
   /** The name at the top of the panel's sidebar. */
   siteName?: string;
-  /** Define wich language the cms support */
+  /** Which languages the documents are written in. */
   localization?: LocalizationConfig;
   icons: Record<string, any>;
   $trustedOrigins: string[];
@@ -331,6 +338,7 @@ export type BuiltConfig = {
   panel: {
     routes: Record<string, CustomPanelRoute>;
     navigation: NavigationConfig;
+    /** Whether a user enters the panel. Admins only when the author sets none (`handleAuth`). */
     $access: (user?: User) => boolean;
     components: {
       header: Component[];
@@ -348,9 +356,7 @@ export type BuiltConfig = {
 /** The config members the sanitizer drops from the client build: every `$` key. */
 type ServerConfigProps = Extract<keyof Config | keyof BuiltConfig, `$${string}`>;
 
-// The prototype lists are not omitted and re-added: `BuiltCollectionClient` and `BuiltAreaClient`
-// are aliases of the server types (see the note on `BuiltAreaClient`), so re-stating them named
-// two kinds to say nothing. What the client build drops is the server-only config members.
+/** The author's config, minus what the sanitizer drops from the client build. */
 export type SanitizedConfigClient = Omit<Config, ServerConfigProps>;
 
 export type BuiltConfigClient = Omit<BuiltConfig, ServerConfigProps | 'panel'> & {

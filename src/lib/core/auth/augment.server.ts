@@ -3,6 +3,10 @@ import type { Collection } from '#lib/core/config/types.js';
 import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
 import { augmentAuth as augmentAuthBase, type WithNormalizedAuth } from './augment.js';
 
+/**
+ * The isomorphic `augmentAuth`, plus, on an api-key collection, a foreign key from `ownerId` to
+ * the staff collection with cascade: deleting a staff member deletes their key documents.
+ */
 export const augmentAuth = <T extends Collection<any>>(config: T): WithNormalizedAuth<T> => {
   const collection = augmentAuthBase(config);
 

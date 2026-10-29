@@ -17,11 +17,11 @@ export const PRIVATE_FIELDS = [
 ];
 
 export const BETTER_AUTH_ROLES = {
-  /** Panel users admin */
+  /** A staff member whose roles hold `admin` */
   ADMIN: 'admin',
-  /** Panel users any role */
+  /** A staff member who is not an admin */
   STAFF: 'staff',
-  /** All other users */
+  /** A user of any other auth collection */
   USER: 'user'
 } as const;
 

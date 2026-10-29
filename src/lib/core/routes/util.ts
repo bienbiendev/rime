@@ -30,18 +30,17 @@ export function isApiPathname(pathname: string): boolean {
   return pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`);
 }
 
+/** Whether a route id is the panel's sign-in, forgot-password or reset-password page. */
 export function isPublicPanelAuthRoute(routeId: string | null): boolean {
   return !!routeId && PANEL_PUBLIC_AUTH_ROUTE_IDS.has(routeId);
 }
 
 /**
- * Panel-only. Reads `page.params.panel`, which is undefined server-side
+ * Panel-only, inside a component: the panel path from `page.params.panel`. Throws on a route with
+ * no `[panel]` param.
  */
 export function panelPath(...args: string[]): ResolvedPathname {
-  if (!page.params.panel)
-    throw new Error(
-      'panelPath called outside of component environment, page.params.panel is not defined'
-    );
+  if (!page.params.panel) throw new Error('panelPath called on a route without a [panel] param');
   return joinPath(page.params.panel, ...args) as ResolvedPathname;
 }
 

@@ -8,7 +8,10 @@ export const PARAMS = {
    */
   AUTO_SAVE: 'autoSave',
 
-  /** Fetch nested documents in relation / link at a specific depth */
+  /**
+   * How many levels of relations a read resolves into documents.
+   * @example ?depth=1
+   */
   DEPTH: 'depth',
 
   /**
@@ -36,12 +39,13 @@ export const PARAMS = {
   LATEST: 'latest',
 
   /**
-   * GET operations limit number of documents
+   * At most this many documents in a list.
    * @example ?limit=4
    */
   LIMIT: 'limit',
 
-  /** GET / CREATE / UPDATE a specific document locale
+  /**
+   * The locale a read or a write is for.
    * @example ?locale=en
    */
   LOCALE: 'locale',
@@ -52,7 +56,8 @@ export const PARAMS = {
   OFFSET: 'offset',
 
   /**
-   * Redirect or not after creation operation
+   * `false` keeps the panel's create action from redirecting to the new document: a create made
+   * from a nested form stays where it is (panel/pages/collection-document/actions.server.ts).
    * @example ?redirect=false
    */
   REDIRECT: 'redirect',
@@ -68,7 +73,10 @@ export const PARAMS = {
    */
   SORT: 'sort',
 
-  /** GET / UPDATE a specific version*/
+  /**
+   * The version a read or an update is for, by its id.
+   * @example ?versionId=abc
+   */
   VERSION_ID: 'versionId',
 
   /**

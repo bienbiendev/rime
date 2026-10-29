@@ -63,7 +63,8 @@ export const runCodegen = async <const C extends Config>(args: {
     return;
   }
 
-  // 1. Has anything changed since the last run? Everything below is skipped if not.
+  // 1. Has anything changed since the last run? Steps 3 to 8 are skipped if not; the validation
+  //    below runs either way.
   const memo = configMemo(config);
   const changed = !devCache.matches('config', memo);
 

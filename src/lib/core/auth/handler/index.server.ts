@@ -22,9 +22,7 @@ interface UserData {
   authUser: any;
 }
 
-/**
- * Ensures panel is properly set up before allowing access
- */
+/** Outside dev, a panel page answers 404 until a first user exists: the init is dev-only. */
 async function ensureFirstAuthSetup<C extends Config>(rime: RimeContext<C>): Promise<void> {
   if (!(await hasAuthUser(rime.adapter)) && !dev) {
     throw new RimeError(RimeError.NOT_FOUND);
@@ -47,9 +45,7 @@ async function authenticateRequest(
   return await auth.api.getSession({ headers });
 }
 
-/**
- * Handles unauthenticated users based on route requirements
- */
+/** A panel page goes to sign-in; any other request goes on with no user and no session. */
 function handleUnauthenticated(event: RequestEvent, resolve: any): any {
   const { isPanel, panelUrl } = event.locals.rime.routes;
 

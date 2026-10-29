@@ -17,6 +17,10 @@ const authUserRef = {
   onDelete: 'cascade'
 } as const;
 
+/**
+ * The tables auth needs when some collection declares `auth`: better-auth's four (users,
+ * sessions, accounts, verifications) and `$apikey`. None otherwise.
+ */
 export const authTables = (config: {
   collections?: { auth?: unknown; slug: string }[];
 }): TableDeclaration[] => {

@@ -33,6 +33,7 @@ const formatMessage = (args, colors) =>
 const CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 let lastCleanup = 0;
 
+/** Deletes the log files past `logMaxDays`, at most once an hour. */
 const cleanupOldLogs = async () => {
   if (Date.now() - lastCleanup < CLEANUP_INTERVAL_MS) return;
   lastCleanup = Date.now();
@@ -142,6 +143,10 @@ const mark = (level, message, colors) => {
   return `${colors ? color(marker) : marker} ${message}`;
 };
 
+/**
+ * One line at `level`, when that level is on: on the terminal in colour, and in the day's file
+ * without when logging to a file.
+ */
 const log = (level, args) => {
   if (!isLevelEnabled(LogLevel[level])) return;
   const date = new Date();
@@ -149,6 +154,7 @@ const log = (level, args) => {
   writeToFile(date, mark(level, formatMessage(args, false), false));
 };
 
+/** The colour of a status: red 5xx, yellow 4xx, cyan 3xx, green otherwise. */
 const statusColor = (status) => {
   if (status >= 500) {
     return chalk.red;
@@ -161,7 +167,7 @@ const statusColor = (status) => {
   }
 };
 
-// Base logger implementation
+/** The logger every rime module imports. */
 const logger = {
   /**
    * The level and the log file, from the environment: the app's `$app/env/private`, the env files
@@ -178,7 +184,7 @@ const logger = {
     logMaxDays = retentionDays(maxDays);
   },
 
-  // Set the log level
+  /** The level by name (`'DEBUG'`, an unknown name is `INFO`) or by its number. */
   setLevel: (level) => {
     if (typeof level === 'string') {
       currentLogLevel = LogLevel[level] ?? LogLevel.INFO;

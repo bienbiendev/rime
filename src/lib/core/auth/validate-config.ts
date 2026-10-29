@@ -3,9 +3,7 @@ import { SelectFieldBuilder } from '#lib/fields/select/index.js';
 
 /**
  * What a collection declaring `auth` has to look like. `config/validate.server.ts` asks it of every
- * collection.
- *
- * The messages are what a config author sees, and the e2e suite matches on some of them.
+ * collection. The messages are what a config author sees.
  */
 export const validateAuth = (config: BuiltCollection): string[] => {
   // Not an auth collection: nothing here applies.
@@ -16,7 +14,7 @@ export const validateAuth = (config: BuiltCollection): string[] => {
   // A versioned auth collection would put credentials on a version row and leave the sign-in path
   // reading whichever version happened to be published.
   if (config.versions) {
-    errors.push(`Auth collections can't be versionned (${config.slug})`);
+    errors.push(`Auth collections can't be versioned (${config.slug})`);
   }
 
   const rolesField = config.fields

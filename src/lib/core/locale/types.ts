@@ -1,9 +1,4 @@
-/**
- * Which languages a config speaks.
- *
- * `core/locale/` because locales are something core and the adapter may name (see `Adapter`), and
- * it extends no prototype.
- */
+/** Which languages a config's documents are written in, and the default one. */
 export type LocalizationConfig = {
   locales: LocaleConfig[];
   default: string;
@@ -15,6 +10,7 @@ export type LocalizationConfig = {
   fallback?: boolean;
 };
 
+/** One language: its code, `fr`, and the label the panel shows, `Français`. */
 export type LocaleConfig = {
   code: string;
   label: string;

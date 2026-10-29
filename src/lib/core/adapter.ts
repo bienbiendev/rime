@@ -196,7 +196,7 @@ export interface CollectionHandle extends BaseHandle {
     locale?: string;
   }): Promise<{ id: string }>;
 
-  /** Removes one document. */
+  /** Removes one document and the rows that hang off it. Answers the removed document's id. */
   delete(args: { id: string }): Promise<string | undefined>;
 }
 
@@ -234,6 +234,9 @@ export interface AreaHandle extends BaseHandle {
 }
 
 /**
+ * What the adapter does to one document's block rows. Each verb answers `true` once written and
+ * throws on a failure.
+ *
  * `parentSlug` is the slug that owns the children: the prototype's versions slug
  * (`config._versions.slug`) when it has one, its own slug otherwise. `pipeline/run.server.ts`
  * resolves it.
@@ -253,6 +256,10 @@ export interface BlocksHandle {
   delete(args: { parentSlug: PrototypeSlug; block: GenericBlock }): Promise<boolean>;
 }
 
+/**
+ * What the adapter does to one document's tree rows, each addressed by its `path`. See
+ * `BlocksHandle`.
+ */
 export interface TreeHandle {
   create(args: {
     parentSlug: PrototypeSlug;
@@ -271,6 +278,10 @@ export interface TreeHandle {
   }): Promise<boolean>;
 }
 
+/**
+ * What the adapter does to one document's relation rows. Each write answers `true` once written
+ * and throws on a failure. See `BlocksHandle` for `parentSlug`.
+ */
 export interface RelationsHandle {
   create(args: {
     parentSlug: PrototypeSlug;
@@ -438,11 +449,12 @@ export interface TableHandle {
  * own tables are `table(slug)`, since those are declared tables.
  *
  * **Better-auth's admin API cannot stand in for the latter.** `listUsers`, `setRole` and
- * `removeUser` all sit behind `adminMiddleware`, and every caller runs where no admin session
- * exists: `hasAuthUser` gates the init route, which only runs when there is no user at all;
- * `setAuthUserRole` promotes the first signup; and `deleteAuthUser` rolls back a failed one,
- * which `removeUser` refuses outright with `YOU_CANNOT_REMOVE_YOURSELF`. After an auth document
- * is deleted, `deleteAuthUser` and `deleteAuthApiKey` remove its twin whoever the caller is.
+ * `removeUser` all sit behind `adminMiddleware`, and the reads and writes of
+ * `core/auth/better-auth-tables.server.ts` run where no admin session exists: `hasAuthUser` gates
+ * the init route, which only runs when there is no user at all; `setAuthUserRole` promotes the
+ * first signup; and `deleteAuthUser` rolls back a failed one, which `removeUser` refuses outright
+ * with `YOU_CANNOT_REMOVE_YOURSELF`. After an auth document is deleted, `deleteAuthUser` and
+ * `deleteAuthApiKey` remove its twin whoever the caller is.
  */
 export interface AuthHandle {
   /** The Better-auth database adapter. Opaque to core, which only hands it to Better-auth. */
@@ -475,10 +487,8 @@ export type VersionsTable = {
 };
 
 /**
- * What a column holds.
- *
- * Six values. `timestamp` and `timestampMs` are two entries because they are two storage formats,
- * epoch seconds and epoch milliseconds, and better-auth's own tables use both.
+ * What a column holds. `timestamp` and `timestampMs` are two storage formats, epoch seconds and
+ * epoch milliseconds; better-auth's own tables use both.
  */
 export type ColumnType =
   'text' | 'integer' | 'real' | 'boolean' | 'timestamp' | 'timestampMs' | 'json';
@@ -511,7 +521,8 @@ export type ColumnDeclaration = {
  */
 export type TableDeclaration = {
   /**
-   * The table's slug, `$`-prefixed to mark it rime-derived — `$authUsers`.
+   * The table's slug, `$authUsers`. A leading `$` marks it rime-derived and is optional:
+   * `authTwoFactor` names `auth_two_factor` the same way.
    *
    * It is an identifier, not a table name: the adapter maps it to both the name the schema exports
    * it under and the name it has in the database.

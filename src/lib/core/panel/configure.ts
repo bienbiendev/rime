@@ -20,7 +20,6 @@ const withIcons = <const T extends { collections?: BuiltCollection[]; areas?: Bu
 ) => {
   const icons: Dic<Component<IconProps>> = {};
 
-  // Add icons
   for (const collection of config.collections || []) {
     icons[collection.slug] = collection.icon;
   }
@@ -32,7 +31,8 @@ const withIcons = <const T extends { collections?: BuiltCollection[]; areas?: Bu
 };
 
 /**
- * The panel's own config defaults: navigation groups, language, header components.
+ * The panel's defaults: navigation groups after the author's, `language` `'en'`, `routes` `{}`,
+ * `header` `[]`.
  */
 const withDefaults = <const T extends { panel?: Omit<PanelConfig, '$access'> }>(config: T) => {
   const panelNavigationGroups = [

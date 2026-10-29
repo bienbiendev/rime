@@ -59,10 +59,9 @@ export const setAuthUserRole = async (
 };
 
 /**
- * Removes an auth user and everything hanging off it.
- *
- * Sessions and accounts first, then the user: they reference it, and nothing here relies on a
- * cascade. No session is left behind that would still authenticate.
+ * Removes an auth user: its sessions and accounts, then the user. The cascade removes the rest:
+ * the user's `$apikey` rows and the api-key documents they created, whose `authUserId` is theirs,
+ * with no rime hook. No session is left behind that would still authenticate.
  *
  * Used to undo a half-made signup and after an auth document is deleted. Better-auth's
  * `removeUser` refuses both when the caller is the user being removed
