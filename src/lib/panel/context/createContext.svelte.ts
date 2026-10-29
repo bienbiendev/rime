@@ -12,6 +12,7 @@ function createStore<T>(initial: T) {
   };
 }
 
+/** A `{ value }` store set as context under `name`: the document title (title.ts) uses it. */
 function createContext<T>(name: string, initial: T) {
   const store = createStore(initial);
   setContext(name, store);

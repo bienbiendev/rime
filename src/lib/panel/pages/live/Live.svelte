@@ -71,10 +71,12 @@
   // Compare URLs regardless of trailing slash
   let sync = $derived(normalizeUrl(iframeSrc) === normalizeUrl(data.src));
 
-  // Send a snapshot of the current state to the iframe
+  // Sends one field's change to the page in the iframe: `{ update, path, value }`.
   function makePanelOnDataChange(update: string) {
     return ({ path, value }: { path: string; value: any }) => {
       if (!iframe?.contentWindow) return;
+      // With no target origin, a message reaches a page of the panel's own origin only: live edit
+      // needs the site on the panel's origin.
       iframe.contentWindow.postMessage(snapshot({ update, path, value }));
     };
   }
@@ -111,6 +113,10 @@
     }
   });
 
+  /**
+   * Opens the panel `key` on top of the stack. On its first opening, the document is read and the
+   * page is seeded with it.
+   */
   async function activatePanel(key: string, update: string, fieldPath: string) {
     if (!VALID_UPDATE.test(update)) {
       return console.warn(
@@ -140,6 +146,7 @@
     panelStack = [...panelStack.filter((item) => item.key !== key), { key, update, fieldPath }];
   }
 
+  /** The page's messages: its handshake answer, a navigation, a panel to open or to close. */
   const onIframeMessage = async (e: MessageEvent) => {
     // Only accept messages from the expected iframe origin
     if (!iframeOrigin || e.origin !== iframeOrigin) return;

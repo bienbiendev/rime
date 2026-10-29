@@ -47,6 +47,7 @@ export function setCommandsContext() {
   let listed = $state.raw<Command[]>([]);
   let mounted = 0;
 
+  /** Adds a scope of commands; answers the function that removes it. */
   function register(scope: Omit<Scope, 'order'>) {
     const entry = { ...scope, order: mounted++ };
     scopes = [...scopes, entry];
@@ -63,6 +64,10 @@ export function setCommandsContext() {
       .filter((command) => !command.when || command.when());
   }
 
+  /**
+   * Runs the first command whose keys match the event, innermost scope first. While a field has
+   * the keyboard, only an `inField` command runs.
+   */
   function dispatch(event: KeyboardEvent) {
     // Taken already: a dialog closing on Escape, an editor's own shortcut.
     if (event.defaultPrevented) return;

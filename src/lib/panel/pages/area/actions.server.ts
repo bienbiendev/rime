@@ -6,6 +6,7 @@ import { trycatch } from '#lib/util/function.js';
 import { type Actions, type RequestEvent } from '@sveltejs/kit';
 
 export const areaFormActions: Actions = {
+  /** Saves the area form. `versionId`, `fork` and `autoSave` come from the URL. */
   update: async (event: RequestEvent) => {
     const { rime, locale } = event.locals;
     const area = rime.area((rime.routes.slug || '') as AreaSlug);

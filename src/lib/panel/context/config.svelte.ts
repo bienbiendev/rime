@@ -6,11 +6,13 @@ import type {
 import type { Prototype, PrototypeSlug } from '#lib/core/prototype/types.js';
 import { getContext, setContext } from 'svelte';
 
+/** The panel's view of the built config: a collection or area found by slug. */
 function createConfigStore(config: BuiltConfigClient) {
   function getArea(slug: string): BuiltAreaClient {
     return config.areas.filter((c) => c.slug === slug)[0];
   }
 
+  /** The collection with this slug; `undefined` for an unknown slug, whatever the type says. */
   function getCollection(slug: string): BuiltCollectionClient {
     return config.collections.filter((c) => c.slug === slug)[0];
   }

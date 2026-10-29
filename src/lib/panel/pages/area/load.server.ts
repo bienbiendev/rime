@@ -8,6 +8,7 @@ import type { AreaDocData } from '#lib/panel/index.js';
 import type { Route } from '#lib/panel/types.js';
 import type { ServerLoadEvent } from '@sveltejs/kit';
 
+/** The area page, `/panel/[slug]`: the newest row unless `?versionId` names one. */
 export async function areaLoad(event: ServerLoadEvent) {
   const { locals, url } = event;
   const { rime, locale } = locals;

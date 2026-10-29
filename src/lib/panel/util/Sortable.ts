@@ -1,7 +1,12 @@
 import Sortable from 'sortablejs';
 import type SortableType from 'sortablejs';
 
-export const useSortable = ({ ...sortableProps }: SortableType.Options) => {
+/**
+ * A Svelte action over SortableJS, `use:sortable`. After a drop the DOM is put back as it was, so
+ * the caller's `onEnd` moves its own state and Svelte redraws. A drop in place does not call
+ * `onEnd`: a caller that marks "sorting" resets it in `onUnchoose`.
+ */
+export const useSortable = (sortableProps: SortableType.Options) => {
   const sortable = (el: HTMLElement) => {
     let childNodes: HTMLElement[] = [];
     let from: HTMLElement | null = null;

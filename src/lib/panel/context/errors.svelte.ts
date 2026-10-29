@@ -1,5 +1,13 @@
 import type { FormErrors } from '#lib/panel/types.js';
 
+/**
+ * A form's errors, keyed by normalized field path. `length` counts the keys that hold an error;
+ * `get` answers the error, or `false`.
+ *
+ * ```ts
+ * { 'sections.2.title': 'required::required_field' }
+ * ```
+ */
 export function createErrorsStore() {
   let errors: FormErrors = $state({});
 

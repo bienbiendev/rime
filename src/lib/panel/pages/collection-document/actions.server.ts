@@ -9,11 +9,7 @@ import { type Actions, type RequestEvent } from '@sveltejs/kit';
 import { t__ } from '../../../core/i18n/index.js';
 
 export const collectionFormActions: Actions = {
-  /**
-   * Create a document.
-   * Action called when posting a form from the panel :
-   * /panel/{slug}/create
-   */
+  /** Creates a document from the form on /panel/{kebab}/create. */
   create: async (event: RequestEvent) => {
     const { rime, locale } = event.locals;
 
@@ -39,7 +35,7 @@ export const collectionFormActions: Actions = {
       };
     }
 
-    // Redirect to proper upload directory if collection.upload
+    // The new document's page, with its folder in the URL for the breadcrumb
     const params = collection.config.upload
       ? `?${PARAMS.UPLOAD_PATH}=${data._path || UPLOAD_PATH.ROOT_NAME}`
       : '';
@@ -52,11 +48,7 @@ export const collectionFormActions: Actions = {
     };
   },
 
-  /**
-   * Update a document.
-   * Action called when posting a form from the panel :
-   * /panel/{slug}/{documentId}
-   */
+  /** Saves the form on /panel/{kebab}/{id}; `versionId`, `fork` and `autoSave` are in the URL. */
   update: async (event: RequestEvent) => {
     const { rime, locale } = event.locals;
     const slug = rime.routes.slug || '';

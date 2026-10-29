@@ -4,6 +4,11 @@ import type { PrototypeSlug } from '#lib/core/prototype/types.js';
 import type { ServerLoadEvent } from '@sveltejs/kit';
 import { error, redirect } from '@sveltejs/kit';
 
+/**
+ * The live edit page, `/panel/live-edit?src=…&slug=…&id=…&versionId=…&locale=…` as `setLiveUrl`
+ * builds it. A visitor who is not signed in gets a 404, `src` must be on `SITE_URL`'s origin, and
+ * without `src`, `slug` and `id` the visitor goes to the site root.
+ */
 export async function liveLoad(event: ServerLoadEvent) {
   const { user, rime } = event.locals;
   const params = event.url.searchParams;

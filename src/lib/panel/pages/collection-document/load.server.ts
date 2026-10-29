@@ -14,6 +14,10 @@ import type { CollectionDocData } from '#lib/panel/index.js';
 import type { Route } from '#lib/panel/types.js';
 import { error, type ServerLoadEvent } from '@sveltejs/kit';
 
+/**
+ * The document page, `/panel/[slug]/[id]`. `id` `create` opens a blank document; otherwise
+ * `?versionId` picks the row, and `?uploadPath` names the folder for the breadcrumb.
+ */
 export async function documentLoad(event: ServerLoadEvent) {
   const { locale, user, rime } = event.locals;
   const { id } = event.params;

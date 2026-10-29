@@ -4,6 +4,11 @@ import { RimeFormError } from '#lib/core/errors/index.js';
 import { redirect, type Actions } from '@sveltejs/kit';
 
 export const signInActions: Actions = {
+  /**
+   * Signs in through better-auth's email and password sign-in, copies the cookie it sets onto the
+   * panel's answer, and goes to the panel; a refused sign-in answers the form with
+   * `invalid_credentials`.
+   */
   default: async ({ cookies, request, locals, params }) => {
     const { rime } = locals;
 

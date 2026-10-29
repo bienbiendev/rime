@@ -25,6 +25,10 @@ type Data = {
   upload?: { directories: Directory[]; currentPath: UploadPath; parentDirectory: Directory };
 };
 
+/**
+ * The list page, `/panel/[slug]`: every document of the collection, newest rows. An upload
+ * collection also loads the folder on screen, see `uploadListing`.
+ */
 export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
   const { rime, locale, user } = event.locals;
 

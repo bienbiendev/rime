@@ -8,6 +8,11 @@ import type { SubmitFunction } from '$app/forms';
 import { diff } from 'deep-object-diff';
 import { createErrorsStore } from './errors.svelte';
 
+/**
+ * The store of the small forms outside a document: sign-in, forgot and reset password, and a
+ * rich-text node's fields. Values are flat, one key per field (`setValue('email', …)`), and a
+ * value its field refuses is not stored.
+ */
 export function createFormStore(initial: Dic) {
   const errors = createErrorsStore();
 
@@ -23,17 +28,7 @@ export function createFormStore(initial: Dic) {
     }
   });
 
-  /**
-   * Function that return an unreactive snapshot of a value given a path.
-   *
-   * @param path Field path ex: blocks.0.title
-   * @returns an unreactive snapshot
-   *
-   * @example
-   * const initialValue = form.getRawValue('blocks.0.title')
-   *
-   * // value will not update if doc.blocks.0.title update
-   */
+  /** The value at `path` as it is now, a copy that does not follow changes; `null` if falsy. */
   function getRawValue<T>(path: string) {
     return (snapshot(getValueAtPath(path, form)) as T) || null;
   }

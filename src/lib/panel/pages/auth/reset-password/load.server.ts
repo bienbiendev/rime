@@ -3,6 +3,9 @@ import { error, redirect, type ServerLoadEvent } from '@sveltejs/kit';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
+/**
+ * 404 without a mailer. A link with no query goes to the site root, one without `?token` is a 400.
+ */
 export const resetPasswordLoad = async ({ locals, url }: ServerLoadEvent) => {
   const hasParams = url.searchParams.toString() !== '';
 

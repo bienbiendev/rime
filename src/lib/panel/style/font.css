@@ -16,7 +16,7 @@
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
   --rz-font-mono: 'geist-mono', Consolas, Liberation Mono, Menlo, Courier, monospace;
 
-  /* 13px body, one pixel a step around it, then a tighter scale for titles. */
+  /* 13px body, one pixel a step around it, then wider steps for titles. */
   --rz-text-2xs: 0.625rem;
   --rz-text-xs: 0.6875rem;
   --rz-text-sm: 0.75rem;

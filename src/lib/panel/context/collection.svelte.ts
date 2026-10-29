@@ -51,6 +51,7 @@ export const DISPLAY_MODE = {
   NESTED: 'display_nested'
 } as const;
 
+/** The state of one collection's list page: its documents, order, search, filters and selection. */
 function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>) {
   const { initial, config, canCreate, upload: incomingUpload } = args;
   const locale = getLocaleContext();
@@ -72,7 +73,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
   let isFiltered = $state(false);
   /** The search as typed. */
   let query = '';
-  // A new stamp remounts the tree (CollectionTree.svelte:97).
+  // A new stamp remounts the tree (the {#key} in CollectionTree.svelte).
   let stamp = $state(Date.now());
   const hasDraft = $derived(config.versions && config.versions.draft);
 
@@ -184,6 +185,10 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     });
   }
 
+  /**
+   * Sorts by `fieldName`. The same field again flips the order, unless `toggle` is false: the
+   * stored choice is re-applied on mount that way. The choice is kept in localStorage.
+   */
   const sortBy = (fieldName: string, toggle: boolean = true) => {
     if (sortingBy === fieldName) {
       if (toggle) {
@@ -194,11 +199,14 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       sortingBy = fieldName;
     }
     docs = sorted(docs);
-    // Save to local storage
     localStorage.setItem(`collection.${config.slug}.sortBy`, fieldName);
     localStorage.setItem(`collection.${config.slug}.sortOrder`, sortingOrder);
   };
 
+  /**
+   * Deletes the documents with these ids in one request. They leave the list at once, and the
+   * page data reloads after.
+   */
   const deleteDocs = async (ids: string[]) => {
     const toDelete = [...docs].filter((doc) => ids.includes(doc.id));
     docs = docs.filter((doc) => !ids.includes(doc.id));
@@ -350,6 +358,10 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
   /** The text the search matches: the title field's, as text. */
   const searchText = (doc: GenericDoc) => titleText(getValueAtPath(config.asTitle, doc));
 
+  /**
+   * Narrows the list to the documents whose title matches `inputValue`, the best match first.
+   * An empty search shows every document again, in the order picked.
+   */
   function filterBy(inputValue: string) {
     query = inputValue;
     if (inputValue === '') {

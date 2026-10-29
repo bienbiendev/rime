@@ -113,6 +113,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
   const apiProxy = getAPIProxyContext();
 
+  /** How deep the form sits: the number after the last `_` of `key` (`pages_2` -> 2), else 0. */
   function initLevel() {
     const last = key.split('_').pop() as string;
     const isDigit = /[\d]+/.test(last);
@@ -166,6 +167,11 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     return getValueAtPath(path, doc) || null;
   }
 
+  /**
+   * The tree field at `path`, as add, delete and move. `addItem` and `deleteItem` name a list by
+   * its full path, `links.0._children`; `moveItem` names items relative to the tree,
+   * `0._children.1`.
+   */
   function useTree(path: string) {
     // Stamp used for re-render
     let stamp = $state(new Date().getTime().toString());
@@ -346,6 +352,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
   let clipboard: ReturnType<typeof toClipboard> | null = null;
 
+  /** Takes a block operation's result: the new document, then each changed list to live edit. */
   function apply(change: { doc: T; lists: string[] }) {
     if (!change.lists.length) return;
     errors.value = rekeyErrors(errors.value, doc, change.doc);
@@ -387,22 +394,12 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     };
   }
 
-  /**
-   * Function that return an unreactive snapshot of a value given a path.
-   *
-   * @param path Field path ex: blocks.0.title
-   * @returns an unreactive snapshot
-   *
-   * @example
-   * const initialValue = form.getRawValue('blocks.0.title')
-   *
-   * // value will not update if doc.blocks.0.title update
-   */
+  /** The value at `path` as it is now, a copy that does not follow changes; `null` if falsy. */
   function getRawValue<T>(path: string) {
     return (snapshot(getValueAtPath(path, doc)) as T) || null;
   }
 
-  /** A copy of another locale's value, as new rows in this locale. */
+  /** A copy of another locale's value, as new rows in this locale: the save creates them. */
   const asNewRows = <V>(value: V): V => withFreshIds(value, { locale: locale.code });
 
   /**
@@ -420,6 +417,11 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
     const parts = path.split('.');
 
+    /**
+     * Checks `value` and records its error. Answers `true` when it passes, `false` when the field
+     * refuses it, and `'required'` for an empty required field, which is still set: the field can
+     * be emptied, with its error shown.
+     */
     const validate = (value: any) => {
       if (config.get.required && config.use.isEmpty(value)) {
         errors.set(path, 'required::required_field');
@@ -572,8 +574,9 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   };
 
   /**
-   * One POST to a panel action, read back as the action's result. A request that gets no answer,
-   * or an answer that is not an action result, reads as an `error` result with no message.
+   * One POST to a panel action, read back as the action's result. No answer, or a body that is not
+   * JSON, reads as an `error` result with no message; a JSON body that is not an action result
+   * comes back as it is, with no `type`.
    */
   const send = (action: string, body: FormData): Promise<ActionResult<FormSuccessData>> =>
     fetch(action, { method: 'POST', body })
@@ -801,15 +804,11 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   };
 
   /**
-   * Enhance the form element to handle submission.
-   * This function attaches a submit event listener to the form element,
-   * which prevents the default submission behavior, sets the status field
-   * if applicable, and calls the submit function with the appropriate action URL.
+   * Takes over the form's submit: the submitter's `data-fork` and `data-status` say what the save
+   * asks for, and a submit with no button (live edit) makes a plain save.
    */
   const enhance = (node: HTMLFormElement) => {
     formElement = node;
-    // What the submit asks for: the button's data-fork and data-status, or a plain save when no
-    // button submitted the form (the live-edit save).
     const intentOf = (submitter: SubmitEvent['submitter']) =>
       submitter
         ? { fork: submitter.dataset.fork === 'true', status: submitter.dataset.status }
@@ -970,6 +969,7 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
       return isLiveEdit;
     },
 
+    /** Puts the document back as it was loaded or last saved. The errors stay. */
     reset() {
       doc = initialDoc;
     }

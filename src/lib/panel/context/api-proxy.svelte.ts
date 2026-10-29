@@ -2,12 +2,19 @@ import { withLocale } from '#lib/panel/util/url.js';
 import { getContext, setContext } from 'svelte';
 
 /**
+ * The panel's cache of API reads, one per panel root (Root.svelte, Live.svelte): each URL is
+ * fetched once and shared.
+ *
  * `getLocale` answers the panel's locale, which every resource names: the resource is keyed by
  * its url with that locale, so after a switch the same url is a new resource.
  */
 function createAPIProxy(getLocale: () => string | undefined) {
   const resources = $state<Map<string, Resource>>(new Map());
 
+  /**
+   * The cached read of `url`, fetched on first ask. It is not fetched again until `invalidate`
+   * names it. `transformData` shapes the JSON as it arrives; the options of the first ask stay.
+   */
   function getRessource<T>(url: string, options?: GetResourcesOptions<T>) {
     const target = withLocale(url, getLocale());
     if (!resources.has(target)) {
@@ -17,7 +24,6 @@ function createAPIProxy(getLocale: () => string | undefined) {
   }
 
   function createResource<T>(url: string, options?: GetResourcesOptions<T>): Resource<T> {
-    // Use $state for the resource data to make it reactive
     let data = $state<T | null>(null);
     let isLoading = $state(true);
     let error = $state(null);
@@ -48,7 +54,6 @@ function createAPIProxy(getLocale: () => string | undefined) {
         });
     }
 
-    // The resource object with reactive properties
     return {
       get url() {
         return url;
@@ -68,6 +73,13 @@ function createAPIProxy(getLocale: () => string | undefined) {
     };
   }
 
+  /**
+   * Fetches again every cached read whose URL contains `pattern`, or matches it as a regex.
+   *
+   * ```ts
+   * invalidate('/api/pages') // also /api/pages-versions?… and /api/pages-categories
+   * ```
+   */
   function invalidate(pattern: string | RegExp) {
     resources.forEach((resource, url) => {
       if (typeof pattern === 'string' ? url.includes(pattern) : pattern.test(url)) {

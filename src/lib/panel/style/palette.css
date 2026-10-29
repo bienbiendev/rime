@@ -1,6 +1,6 @@
 /*
  * The palette: grays and an accent in OKLCH, set by four numbers. 0 is the darkest gray.
- * Only scheme.css reads it; components read the scheme's tokens.
+ * scheme.css turns it into light and dark tokens; the accent and status colors are also read as is.
  */
 :root {
   --rz-gray-hue: 0;

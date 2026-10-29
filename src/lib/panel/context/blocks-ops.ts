@@ -35,6 +35,7 @@ export const parseBlockPath = (path: string): BlockAt => {
   return { list: normalized.slice(0, dot), index: parseInt(normalized.slice(dot + 1)) };
 };
 
+/** `{ list: 'sections', index: 2 }` -> `sections.2` */
 export const blockPath = (at: BlockAt) => `${at.list}.${at.index}`;
 
 /**
@@ -124,6 +125,7 @@ export const withFreshIds = <T>(value: T, options: { locale?: string } = {}): T 
   return reset(cloneDeep(value), true) as T;
 };
 
+/** A deep copy of the list at `list`, `[]` when the document has none. */
 export const readList = (doc: Dic, list: string): GenericBlock[] =>
   cloneDeep(getValueAtPath<GenericBlock[]>(list, doc)) || [];
 
@@ -133,6 +135,7 @@ const writeList = <D extends Dic>(doc: D, list: string, blocks: GenericBlock[]):
 
 type BlocksChange<D extends Dic> = { doc: D; lists: string[] };
 
+/** `block` inserted at `at`, with a new temporary id; answers that id. */
 export const insertBlock = <D extends Dic>(
   doc: D,
   at: BlockAt,
@@ -151,12 +154,14 @@ export const insertBlock = <D extends Dic>(
   return { doc: writeList(doc, at.list, blocks), lists: [at.list], id };
 };
 
+/** The document without the block at `path`, the list renumbered. */
 export const removeBlock = <D extends Dic>(doc: D, path: string): BlocksChange<D> => {
   const at = parseBlockPath(path);
   const blocks = readList(doc, at.list).filter((_, index) => index !== at.index);
   return { doc: writeList(doc, at.list, blocks), lists: [at.list] };
 };
 
+/** A copy of the block at `path`, fresh ids, right below it; `id` is `null` when there is none. */
 export const duplicateBlock = <D extends Dic>(
   doc: D,
   path: string
@@ -197,6 +202,7 @@ export const moveBlock = <D extends Dic>(doc: D, from: string, to: BlockAt): Blo
   return { doc: next, lists: [source.list, targetList] };
 };
 
+/** What the clipboard carries for `block`: `{ rime: 'block', type, block }`. */
 export const toClipboard = (block: GenericBlock): BlockClipboardData => ({
   rime: CLIPBOARD_KIND,
   type: block.type,

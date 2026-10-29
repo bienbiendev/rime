@@ -3,6 +3,10 @@ import { redirect, type ServerLoadEvent } from '@sveltejs/kit';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
+/**
+ * Sends a signed-in visitor to the panel; otherwise the form, the forgot-password flag (a mailer
+ * is set) and the image.
+ */
 export const signInLoad = async ({ locals }: ServerLoadEvent) => {
   const { session, rime } = locals;
 

@@ -9,6 +9,9 @@ function createStore(initial?: string) {
 
   const config = getConfigContext();
 
+  /**
+   * Switches the content locale. A falsy code, or any code when localization is off, is ignored.
+   */
   const setValue = (value?: string) => {
     if (config && config.raw.localization && value) {
       code = value;

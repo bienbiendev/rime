@@ -3,6 +3,7 @@ import { error, redirect, type ServerLoadEvent } from '@sveltejs/kit';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
+/** 404 without a mailer; a signed-in visitor goes to the site root. */
 export const forgotPasswordLoad = async ({ locals }: ServerLoadEvent) => {
   const { session, rime } = locals;
   if (!('mailer' in rime)) {

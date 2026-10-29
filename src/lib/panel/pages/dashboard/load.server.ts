@@ -8,6 +8,9 @@ import type { DashboardEntry } from './types.js';
 
 type CollectionEntry = Extract<DashboardEntry, { prototype: 'collection' }>;
 
+/**
+ * The dashboard: per readable collection its newest documents and counts, per area its last save.
+ */
 export const dashboardLoad = async (event: ServerLoadEvent) => {
   const { locale, user, rime } = event.locals;
 
@@ -16,10 +19,10 @@ export const dashboardLoad = async (event: ServerLoadEvent) => {
   /**
    * The dashboard's own defaults — and the only place they live.
    *
-   * `panel !== false` is already filtered below, so `c.panel` here is either what the author wrote
-   * or nothing at all. Layout precedence, widest to narrowest: what the author put on the
-   * collection, then what a feature offered through `_dashboardLayout` (`upload` asks for a grid),
-   * then rows. The author's `maxEntries` wins, else 3 rows or 4 grid items.
+   * The caller has filtered `panel: false` out already, so `c.panel` is what the author wrote or
+   * nothing. Layout precedence, widest to narrowest: what the author put on the collection, then
+   * what a feature offered through `_dashboardLayout` (`upload` asks for a grid), then rows. The
+   * author's `maxEntries` wins, else 3 rows or 4 grid items.
    */
   const normalizedPanelConfig = (c: BuiltCollection) => {
     const incomingConfig = c.panel || {};
