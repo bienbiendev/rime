@@ -140,8 +140,7 @@ export const toSnakeCase = (str: string): string => {
     str = str.slice(1);
   }
 
-  // First convert to space case (similar to to-space-case)
-  // Handle special characters and replace with spaces
+  // First, the words separated by spaces
   let result = str
     // Handle camel case
     .replace(/([a-z\d])([A-Z])/g, '$1 $2')
@@ -171,12 +170,12 @@ export const toSnakeCase = (str: string): string => {
  */
 export const slugify = (text: string): string => {
   return text
-    .toString() // Cast to string (optional)
-    .normalize('NFKD') // The normalize() using NFKD method returns the Unicode Normalization Form of a given string.
-    .toLowerCase() // Convert the string to lowercase letters
-    .trim() // Remove whitespace from both sides of a string (optional)
-    .replace(/\s+/g, '-') // Replace spaces with -
-    .replace(/[^\w-]+/g, '') // Remove all non-word chars
+    .toString()
+    .normalize('NFKD')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
     .replace(/--+/g, '-');
 };
 

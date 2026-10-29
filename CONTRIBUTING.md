@@ -18,8 +18,8 @@ bun install
 ## Add your .env file
 
 ```bash
-# Must be at least 32 characters, or better-auth warns on every boot
-BETTER_AUTH_SECRET=supersecret
+# At least 32 characters, or better-auth warns on every boot
+BETTER_AUTH_SECRET=change-me-to-32-characters-or-more
 
 SITE_URL=http://localhost:5173
 
@@ -49,13 +49,14 @@ bun run dev
 
 [Configuration Overview](https://github.com/bienbiendev/rime-doc/blob/master/docs/03-configuration/00-overview.md)
 
-## Use a predifined config as a starting point
+## Use a predefined config as a starting point
 
 ```bash
 bun run rime:use basic
 ```
 
-Available names are `empty`, `basic`, `multilang`, `versions`, `versions-multilang`, respective config live inside the /tests directory.
+Available names are `empty`, `basic`, `fields`, `multilang`, `versions` and
+`versions-multilang`; each config lives in /tests/<name>.
 
 ## CLI commands
 

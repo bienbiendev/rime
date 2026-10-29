@@ -7,8 +7,8 @@
 #   pnpm          pnpm, Node
 #   bun           the Bun pack: bun install, `rime init --bun` (bun:sqlite, vite on Bun),
 #                 `rime build`, the built server on Bun
-#   custom-route  npm, Node, dev only: RIME_PANEL_ROUTE and RIME_CONFIG_DIR set as
-#                 shell-prefixed env vars on `rime init` itself both take
+#   custom-route  npm, Node, dev only: RIME_CONFIG_DIR set on `rime init`'s command line,
+#                 RIME_PANEL_ROUTE moved in .env after init, as a user would
 #
 # Each pass has its own app, ports and log, so up to --jobs of them run at once:
 #
@@ -38,7 +38,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(pwd)"
-# Must match tests/consumer/lib/+rime/rime.config.server.ts's adapterSqlite('consumer.sqlite')
+# Must match tests/consumer/+rime/rime.config.server.ts's adapterSqlite('consumer.sqlite')
 APP_NAME="consumer"
 BASE_DIR="$HOME"
 JOBS=2
@@ -80,8 +80,8 @@ WORK_DIR=""
 ADMIN_EMAIL="${TESTS_ADMIN_EMAIL:-admin@email.com}"
 ADMIN_PASSWORD="${TESTS_ADMIN_PASSWORD:-a&1Aa&1A}"
 
-# Values for the custom-route pass, proving RIME_PANEL_ROUTE + RIME_CONFIG_DIR both take
-# via a shell-prefixed `rime init` invocation (see run_custom_route_pass).
+# The custom-route pass's panel route, moved in .env after init, and its config dir, set on
+# `rime init`'s command line (see run_custom_route_pass).
 CUSTOM_PANEL_ROUTE="backoffice"
 CUSTOM_CONFIG_DIR="src/custom-rime"
 
@@ -92,6 +92,7 @@ log() {
   echo " ⚡︎ $*";
 }
 
+# On exit: prints that the run failed when it did, and exits with the failing command's code.
 cleanup() {
   local status=$?
   if [[ $status -ne 0 ]]; then
@@ -150,6 +151,8 @@ resolve_package_spec() {
   fi
 }
 
+# Runs the consumer Playwright suite against a server it starts:
+#   run_ui_tests <url> <server command> <server cwd> <port> <results suffix> [test regex] [panel route]
 run_ui_tests() {
   local url=$1
   local server_command=$2
@@ -353,13 +356,9 @@ run_pass() {
 }
 
 # CUSTOM ROUTE + CONFIG DIR (npm, dev only)
-# Proves RIME_PANEL_ROUTE and RIME_CONFIG_DIR both take when set as a shell-prefixed env var
-# on `rime init` itself (they're read once at process start, and only override the .env file
-# on a project's *first* init — setEnv() is add-only, so this only works against a project
-# with no existing .env, which is exactly what a fresh scaffold is). Dev-only and no separate
-# prod build: a route/config-dir change requires a fresh rime init/generate before it's picked
-# up by any build anyway, and that's already what this pass does; re-verifying the npm/pnpm/bun
-# split or a second production build here would just re-test what the other passes cover.
+# RIME_CONFIG_DIR is set on `rime init`'s command line: init writes it into the .env it creates,
+# as a fresh scaffold has none. RIME_PANEL_ROUTE is then moved in .env, as a user would, and the
+# dev boot regenerates the routes for it. The other passes cover the production build.
 run_custom_route_pass() {
   local dev_port=5184
   WORK_DIR="$RUN_DIR/$APP_NAME-custom-route"

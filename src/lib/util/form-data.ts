@@ -27,7 +27,9 @@ export const writeFormData = (values: Dic) => {
 };
 
 /**
- * The values `writeFormData` wrote, files included. `null` for a FormData it did not write.
+ * The values `writeFormData` wrote: the `_data` JSON, with every other entry of the FormData set
+ * on top of it (a file, or a string that then replaces the JSON value of the same key). `null`
+ * for a FormData with no `_data`.
  *
  * ```ts
  * readFormData(writeFormData({ title: '2024', file: photo })) // { title: '2024', file: photo }

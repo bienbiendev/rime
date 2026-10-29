@@ -18,7 +18,7 @@ const getPanelOrigin = () =>
   (panelOrigin ??= import('$app/env/public').then(({ SITE_URL }) => new URL(SITE_URL).origin));
 
 /**
- * Live Editing Flow:
+ * Live Editing Flow (src/lib/panel/pages/live/Live.svelte is the panel side):
  * 1. Live.svelte sends handshake message to iframe
  * 2. Live context in iframe receives it, enables itself
  * 3. Live context sends handshake response with its href
@@ -68,7 +68,11 @@ function createStore(href: string) {
   };
 
   /**
-   * Processes messages from parent window
+   * A message from the panel, one of three:
+   * - `{ handshake: true }`: live view is on; the answer is this page's `href`
+   * - `{ update, path, value }`: a value typed in the panel, at `path` of the document `update`
+   *   names
+   * - `{ activePanel }`: the key of the panel open now, or null
    */
   const onMessage = async (e: MessageEvent) => {
     // Only accept messages from the trusted panel origin
@@ -106,7 +110,7 @@ function createStore(href: string) {
   let queue: Promise<void> = Promise.resolve();
 
   /**
-   * Writes a panel update into the store of its `update` key, one store per key. Updates apply
+   * Writes a panel update into the store of its `update` URI: one store per document. Updates apply
    * one at a time, in the order they arrive: each waits for the one before it to finish.
    */
   const handlePanelUpdate = (data: { update: string; path: string; value: any }) => {
@@ -160,7 +164,8 @@ function createStore(href: string) {
 }
 
 /**
- * Creates and sets the live context for the current component
+ * Creates the live store of the page and gives it to every component below. `href` is the URL
+ * the handshake answers with.
  */
 export function setLiveContext(href: string) {
   const store = createStore(href);
@@ -168,9 +173,7 @@ export function setLiveContext(href: string) {
   return store;
 }
 
-/**
- * Gets the live context from the current component
- */
+/** The live store of the page; `undefined` outside a `<LiveProvider>`. */
 export function getLiveContext() {
   return getContext<LiveStore>(LIVE_KEY);
 }

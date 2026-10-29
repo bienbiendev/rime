@@ -50,7 +50,8 @@ const manifest = JSON.parse(fs.readFileSync(path.join(OUT, '.vite/manifest.json'
 const app = fs.readFileSync('.svelte-kit/generated/build/client-optimized/app.js', 'utf-8');
 
 /**
- * `"/(rime)/[panel=panel]/sign-in": [~13,[2],[3]]`: the page's node, then its layouts'
+ * `"/(rime)/[panel=panel]/sign-in": [~13,[2],[3]]`: the page's node, its layouts', then its
+ * error pages' (not read: an error page loads only on an error)
  * @param {string} id
  */
 const nodesOf = (id) => {

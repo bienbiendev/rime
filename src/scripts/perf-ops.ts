@@ -38,6 +38,7 @@ const page = (index: number, related: string[]) => ({
   ]
 });
 
+/** Creates page `index`, related to `related`; answers its id. */
 const create = async (index: number, related: string[] = []) => {
   const response = await call('POST', '/pages', page(index, related));
   const json = (await response.json()) as { doc?: { id: string }; id?: string };

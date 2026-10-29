@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 // @ts-nocheck
 
+// Finds the imports of the .ts and .js files under src/ that start with `.`, `$` or `#` and end
+// in no .js, .ts, .svelte or .json, suggests the specifier Node resolves, and offers to write it.
+
 import fs from 'fs';
 import path from 'path';
 import { createInterface } from 'readline';

@@ -49,6 +49,7 @@ export default defineConfig({
   },
   ssr: { external: ['sharp'] },
   build: { rollupOptions: { external: ['sharp'] } },
+  // Under vitest, packages resolve to their browser build, the one a component spec renders with
   resolve: process.env.VITEST ? { conditions: ['browser'] } : undefined,
   test: {
     expect: { requireAssertions: true },

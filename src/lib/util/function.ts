@@ -1,6 +1,6 @@
 /**
- * Safely executes a promise and returns a tuple containing either an error or the result.
- * This utility helps with error handling without try/catch blocks throughout the codebase.
+ * Runs a promise, or a function that returns one, and answers `[error, null]` or `[null, result]`
+ * instead of throwing.
  *
  * @example
  * // Handle API calls without try/catch
@@ -27,8 +27,8 @@ export const trycatch = async <T>(
 };
 
 /**
- * Safely executes a synchronous function and returns a tuple containing either an error or the result.
- * This utility helps with error handling without try/catch blocks throughout the codebase.
+ * Runs a synchronous function and answers `[error, null]` or `[null, result]` instead of
+ * throwing.
  *
  * @example
  * // Using trycatchSync to handle synchronous operations without try/catch
@@ -51,8 +51,9 @@ export const trycatchSync = <T>(fn: () => T): [Error, never] | [never, T] => {
 };
 
 /**
- * Safely executes a fetch request and treats both network errors and HTTP error status codes as errors.
- * Returns a tuple containing either an error or the successful response.
+ * Runs `fetch` and answers `[error, null]` for a network failure or a non-2xx status, else
+ * `[null, response]`. The error's message is the `message` of a JSON error body, the one rime's
+ * API answers with (core/errors/handler.server.ts), else `HTTP error! Status: <code>`.
  *
  * @example
  * // Using trycatchFetch to handle both network and HTTP errors

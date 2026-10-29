@@ -22,10 +22,10 @@
 #          [--bun] [--mode dev|prod|both] [--fixture pages|relations] [--runs 5] [--pages 100] [--cache]
 #          [--base-dir <path>] [--keep] [--fresh] [--npm-force]
 #
-#   <spec>[:bun] an npm spec (rimecms@0.29.0, rimecms@latest) or a tarball from `npm pack`; `:bun`
-#                runs it as the Bun pack (bun install, `rime init --bun`, bun:sqlite, vite and the
-#                built server on Bun), else it runs on Node. Its peer range is read with
-#                `npm view <spec> peerDependencies`, or from the tarball's package.json
+#   <spec>[:bun|:node] an npm spec (rimecms@0.29.0, rimecms@latest) or a tarball from `npm pack`;
+#                `:bun` runs it as the Bun pack (bun install, `rime init --bun`, bun:sqlite, vite
+#                and the built server on Bun), `:node` on Node even with --bun. Its peer range is
+#                read with `npm view <spec> peerDependencies`, or from the tarball's package.json
 #   --bun        every spec on Bun
 #   --mode       dev: codegen, dev boot, API on the dev server; prod: build, production boot, API on
 #                the built server; both (default)
@@ -101,8 +101,10 @@ log() {
   echo " ⚡︎ $*"
 }
 
+# The time now, in ms.
 now_ms() { perl -MTime::HiRes=time -e 'printf "%.0f", time * 1000'; }
 
+# The median of the numbers on stdin.
 median() { sort -n | awk '{ a[NR] = $1 } END { print (NR % 2) ? a[(NR + 1) / 2] : (a[NR / 2] + a[NR / 2 + 1]) / 2 }'; }
 
 # Waits until nothing answers on the url.
@@ -113,16 +115,19 @@ wait_down() {
   done
 }
 
+# Stops the bench's dev server on :5173.
 stop_dev() {
   pkill -f "vite dev --port 5173" 2>/dev/null || true
   wait_down "$DEV_URL"
 }
 
+# Stops the built server that PID_FILE names.
 stop_prod() {
   [[ -f "$PID_FILE" ]] && { kill "$(cat "$PID_FILE")" 2>/dev/null || true; rm -f "$PID_FILE"; }
   wait_down "$PROD_URL"
 }
 
+# Stops both servers on exit. On a failure it keeps the apps and prints the end of each log.
 cleanup() {
   local status=$?
   stop_dev
@@ -591,7 +596,7 @@ RESULTS_JSON="[$(IFS=,; echo "${RESULTS[*]}")]" RUNS="$RUNS" PAGES="$PAGES" CACH
   } else {
     console.log(`          create, read, update: one page a call; list: 20 pages a call, from offsets 0 to ${PAGES - 1}`);
     if (process.env.CACHE === "1") console.log(`          (cache): the same calls again, hitting the API cache, on for every request, emptied before each run`);
-    else console.log(`          again: the same calls again; no cache but the default one, for signed-out requests`);
+    else console.log(`          again: the same calls again; the dev server has no cache, the built one caches signed-out reads`);
     console.log(`          anon: the same reads and lists, signed out`);
   }
 

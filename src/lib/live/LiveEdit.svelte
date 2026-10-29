@@ -6,7 +6,7 @@
   import { onDestroy, type Snippet } from 'svelte';
 
   type Props = {
-    /** Initial value */
+    /** The value shown until the panel sends one. Without it: the page's whole `data.doc`. */
     data?: T;
     /** Full path to the field being edited from the root of the document, e.g. `attributes.title` or `layout.sections.2:paragraph.text` */
     path?: string;
@@ -31,6 +31,7 @@
   // Fallback to doc api url if prop not present
   const update = $derived(incomingUpdate ? incomingUpdate : live.documentUpdateURI);
 
+  // A LiveEdit for the whole document opens its panel as soon as it mounts in the live view
   $effect(() => {
     if (path === '') {
       window.top?.postMessage({
@@ -51,6 +52,7 @@
   const value = $derived(liveValue ?? data);
   const isActive = $derived(live?.activePanelKey === key);
 
+  /** Escape closes this panel and goes back to the one under it. */
   function onKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       window.top?.postMessage({
@@ -59,6 +61,7 @@
     }
   }
 
+  /** Opens this panel in the live view, and listens for Escape. Nothing outside live view. */
   function activate() {
     if (!live?.enabled) return;
     window.top?.postMessage({
@@ -71,6 +74,10 @@
     if (browser) window.removeEventListener('keydown', onKeyDown);
   });
 
+  /**
+   * The props of the element `child` renders: for a signed-in user in live view, a trigger that
+   * opens this panel, inert while it is open; an empty object for everyone else.
+   */
   function makeChildProps(): PanelProps {
     if (!page.data.user || !live?.enabled) return {};
 

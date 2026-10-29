@@ -1,3 +1,6 @@
+// rimecms/server: what the app's server imports from rime: the hooks (`handlers`,
+// `handleError`), the plugins that run on the server, and their helpers. A browser bundle never
+// reaches it.
 import { toPublicUser } from '#lib/core/auth/constant.server.js';
 import { handleError } from '#lib/core/errors/handler.server.js';
 import handlers from '#lib/core/handler.server.js';

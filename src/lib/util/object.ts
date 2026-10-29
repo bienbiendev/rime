@@ -62,8 +62,8 @@ export const omitId = <T extends { id?: string; [k: string]: any }>(obj: T): Omi
   omit(['id'], obj) as Omit<T, 'id'>;
 
 /**
- * `obj` with every key it lacks taken from `defaults`, an object both hold merged the same way.
- * Anything the object holds is the object's — `null` included, an array as it is.
+ * `obj` with every key it lacks taken from `defaults`; where both hold a plain object at a key,
+ * the two are merged the same way. Anything `obj` holds is kept: `null`, a list, a Date.
  *
  * ```
  * withDefaultValues({ title: 'T', seo: { og: null } }, { title: null, body: null, seo: { og: null, meta: null } })
@@ -315,7 +315,8 @@ export const setValueAtPath = <T extends Dic>(path: string, obj: T, value: unkno
 };
 
 /**
- * Deletes a value at a specified path in an object.
+ * Deletes the value at `path`, in place: `obj` itself is changed and returned (setValueAtPath
+ * copies instead). The arguments are `(obj, path)`, the other way round from get and set.
  *
  * @example
  * // Returns { user: { name: "John" } }
@@ -400,7 +401,7 @@ type RemoveKeysDeep<T, K extends string> = T extends (infer U)[]
     : T;
 
 /**
- * Ensure path exists, meaning the path hold anything else than undefined.
+ * Whether `obj` holds something other than `undefined` at `path`. It checks; it creates nothing.
  *
  * @example
  * const obj = { foo: { baz: null }, bar: 1 };

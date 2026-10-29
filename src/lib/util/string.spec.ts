@@ -262,9 +262,7 @@ describe('sanitize', () => {
 
 describe('mapSegments', () => {
   test('keeps a segment boundary distinct from a word break', () => {
-    // The whole naming scheme rests on this: `__` marks "shadow of", camelCase marks a word.
-    // Plain toSnakeCase collapses the two, so `someSlug__versions` and `someSlugVersions` both
-    // become `some_slug_versions` and a user collection can forge a shadow table.
+    // `__` marks a shadow table, camelCase a word: the two stay apart
     expect(mapSegments('someSlug__versions', toSnakeCase, '__')).toBe('some_slug__versions');
     expect(mapSegments('someSlugVersions', toSnakeCase, '__')).toBe('some_slug_versions');
     expect(mapSegments('someSlug__versions', toSnakeCase, '__')).not.toBe(
@@ -279,8 +277,7 @@ describe('mapSegments', () => {
   });
 
   test('a directories slug is one segment, so it snake-cases straight through', () => {
-    // No `__`: directories is a sibling collection, not a shadow, so its table name carries no
-    // relationship marker — and stays what it is today.
+    // No `__`: a directories collection sits beside its owner, it is no shadow of it
     expect(mapSegments('mediasDirectories', toSnakeCase, '__')).toBe('medias_directories');
   });
 

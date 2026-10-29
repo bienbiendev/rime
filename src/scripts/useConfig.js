@@ -7,6 +7,8 @@ program.version('0.1').description('CMS utilities');
 
 const projectRoot = process.cwd();
 
+// Applies the test fixture `name`: clears rime's files, copies tests/<name>/lib into src/lib,
+// runs `rime init`, then copies the fixture's (front) routes and its params.ts.
 program
   .description('Use a specific config')
   .argument('<name>', 'Specify the name')
@@ -38,10 +40,8 @@ program
       // Init files and DB
       execSync(`bun ./src/lib/core/dev/cli/index.ts init -s --name ${name}`, { stdio: 'inherit' });
 
-      // Copy routes. The rm has to happen here, immediately before the copy, not at the top:
-      // `cp -rf A B` nests as B/(front) when B already exists, and `init` above regenerates
-      // routes in between — so an interrupted run used to leave a stale (front) behind and the
-      // next one produced (front)/(front), which SvelteKit rejects as conflicting routes.
+      // The routes are removed right before the copy: `cp -rf A B` nests as B/(front) when B
+      // exists, and `init` above regenerates the routes.
       const testFrontRoutesPath = path.join(projectRoot, 'tests', name, 'routes', '\\(front\\)');
 
       execSync(`rm -fr ${frontRoutesPath}`);
