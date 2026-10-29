@@ -8,7 +8,8 @@ import type { ConfigMap } from './config-map/types.js';
 
 /** What an operation does to a document. */
 export type Operation = 'read' | 'create' | 'update' | 'delete';
-export type Timing = 'before' | 'after';
+/** Whether a hook runs before or after the operation. */
+type Timing = 'before' | 'after';
 
 /**
  * The points a document hook can run at.
@@ -34,8 +35,8 @@ export type HookTiming =
  */
 export type AnyHook = (args: any) => any;
 
-// Helper type for document types based on slugs
-export type DocTypeForSlugs<S extends DocType = PrototypeSlug> = S extends PrototypeSlug
+/** The document type of a slug, `RawDoc` for one no app registered. */
+type DocTypeForSlugs<S extends DocType = PrototypeSlug> = S extends PrototypeSlug
   ? S extends keyof RegisterCollection
     ? RegisterCollection[S]
     : S extends keyof RegisterArea
@@ -45,8 +46,8 @@ export type DocTypeForSlugs<S extends DocType = PrototypeSlug> = S extends Proto
     ? Docs[S]
     : RawDoc;
 
-// Config type based on slug
-export type ConfigForSlug<S extends DocType = PrototypeSlug> = S extends keyof RegisterCollection
+/** The built config of a slug. */
+type ConfigForSlug<S extends DocType = PrototypeSlug> = S extends keyof RegisterCollection
   ? BuiltCollection & { slug: S }
   : S extends keyof RegisterArea
     ? BuiltArea & { slug: S }

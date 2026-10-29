@@ -5,23 +5,13 @@ import { definePlugin, type Plugin } from '../index.js';
 import { Cache } from './cache.server.js';
 import { handler } from './handler.server.js';
 import HeaderButton from './HeaderButton.svelte';
+import type { CacheConfig } from './types.js';
 
 export type CacheActions = {
   get: <T>(name: string, get: () => Promise<T>) => Promise<T>;
   clear: () => ReturnType<RequestHandler>;
   isEnabled: (event: RequestEvent) => boolean;
   createKey: (namespace: string, params?: Record<string, unknown>) => string;
-};
-
-type CacheOptions = {
-  /**
-   * A function that define if the API cache should be enabled.
-   * Only GET requests from non-panel routes are cached
-   *
-   * @example
-   * isEnabled: (event) => !event.locals.user // default
-   */
-  isEnabled?: (event: RequestEvent) => boolean;
 };
 
 /**
@@ -36,7 +26,11 @@ export const toHash = (str: string): string => {
   return createHash('sha256').update(str).digest('hex'); // Full 64-char hex string
 };
 
-export const cache = definePlugin((options?: CacheOptions) => {
+/**
+ * The cache plugin: `rime.cache.get/clear/createKey/isEnabled`, the clear route and the panel
+ * button.
+ */
+export const cache = definePlugin((options?: CacheConfig) => {
   //
   async function getAction<T>(key: string, get: () => Promise<T>): Promise<T> {
     return await Cache.get<T>(key, get);

@@ -44,7 +44,7 @@ const answerOf = <R>(hook: AnyHook, result: unknown, keys: string[]): R => {
  * The shared type leaves `content.id` optional for inserts; `runUpdate` checks it once and hands
  * this down, so a `write` callback can pass the plan straight to `adapter.update`.
  */
-export type UpdateWritePlan = WritePlan & { content?: { id: string; data: Dic } };
+type UpdateWritePlan = WritePlan & { content?: { id: string; data: Dic } };
 
 /**
  * Runs the beforeOperation chain. These hooks see no document and no data — only the context,

@@ -239,15 +239,6 @@ test('should return the list of fields inside a tree', () => {
   expect(path).toBe('footer.nav');
 });
 
-// const tabFooter = tab('footer').fields(
-//   tree('nav').fields(
-//     //
-//     text('label'),
-//     text('link'),
-//     tree('group').fields(text('metaTitle'))
-//   )
-// );
-
 test('should return the list of fields inside a group inside a tree', () => {
   const { fields: fieldList, path } = getFieldListAtPath('footer.nav.0.group', [builders]);
   expect(fieldList).toBeDefined();

@@ -50,7 +50,7 @@ export function* walkFields(
 export function* walkValues(
   fields: FieldBuilder[],
   data: unknown,
-  { path = '' }: WalkOptions = {}
+  { path = '' }: { path?: string } = {}
 ): Generator<Visit> {
   for (const field of fields) {
     if (field.name && !(isObjectLiteral(data) && field.name in data)) continue;

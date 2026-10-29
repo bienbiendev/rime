@@ -26,7 +26,7 @@ export const isSaved = <R extends Row>(row: R): row is SavedRow<R> => !!row.id &
  * changesRow({ label: 'A' }, { label: 'A', subtitle: 'B' }); // true
  * ```
  */
-export const changesRow = (stored: Dic, incoming: Dic) =>
+const changesRow = (stored: Dic, incoming: Dic) =>
   Object.entries(incoming).some(([key, value]) => {
     if (key === '_children') return false;
     if (Array.isArray(value) && value[0]?.type) return false;
