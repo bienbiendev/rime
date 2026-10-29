@@ -334,45 +334,34 @@ saved_row() {
   ' "$1"
 }
 
-bench_one() {
-  local spec=$1
-  local runtime="node"
-  [[ $ALL_BUN -eq 1 ]] && runtime="bun"
-  case "$spec" in
-    *:bun) runtime="bun"; spec=${spec%:bun} ;;
-    *:node) runtime="node"; spec=${spec%:node} ;;
-  esac
-
-  # A published release: its exact version, and the row saved for it
-  local saved=""
-  if [[ ! -f "$spec" ]]; then
-    spec=$(resolve_spec "$spec")
-    saved=$(baseline_file "$spec" "$runtime")
-  fi
-
-  local label
-  label=$(basename "$spec" .tgz | tr '@/' '--')
-  [[ $runtime == "bun" ]] && label="$label-bun"
-  [[ -f "$spec" ]] && spec="$(cd "$(dirname "$spec")" && pwd)/$(basename "$spec")"
-
-  if [[ -n "$saved" && -f "$saved" && $FRESH -eq 0 ]]; then
-    log "[$label] Saved row: $saved"
-    RESULTS+=("$(saved_row "$saved")")
-    return 0
-  fi
-
-  # rime on the runtime: codegen and the build's vite run where the app does.
-  local rime_cli=(npx rime)
-  local vite_dev=(./node_modules/.bin/vite dev --port 5173)
-  local prod_server=(node --env-file=.env index.js)
-  if [[ $runtime == "bun" ]]; then
-    rime_cli=(bunx --bun rime)
-    vite_dev=(bun --bun ./node_modules/.bin/vite dev --port 5173)
+# Sets the commands of a runtime, node or bun: rime, vite and the built app all run on it.
+# RIME_CLI runs codegen, RIME_BUILD the build, VITE_DEV and VITE_BUILD vite, PROD_SERVER the
+# built app.
+use_runtime() {
+  if [[ $1 == "bun" ]]; then
+    RIME_CLI=(bunx --bun rime)
+    RIME_BUILD=(bunx rime build)
+    VITE_DEV=(bun --bun ./node_modules/.bin/vite dev --port 5173)
+    VITE_BUILD=(bun --bun ./node_modules/.bin/vite build)
     # Bun loads ./.env itself
-    prod_server=(bun index.js)
+    PROD_SERVER=(bun index.js)
+  else
+    RIME_CLI=(npx rime)
+    RIME_BUILD=(npx rime build)
+    VITE_DEV=(./node_modules/.bin/vite dev --port 5173)
+    VITE_BUILD=(./node_modules/.bin/vite build)
+    PROD_SERVER=(node --env-file=.env index.js)
   fi
+}
 
-  local work_dir="$BASE_DIR/$label"
+# Makes the app of a spec in <work dir> and leaves the shell in it: scaffold, install,
+# `rime init`, then the bench config in place of init's own.
+#   scaffold_app <spec> <runtime> <label> <work dir>
+scaffold_app() {
+  local spec=$1
+  local runtime=$2
+  local label=$3
+  local work_dir=$4
   rm -rf "$work_dir" "$BASE_DIR/current"
 
   # sv 0.17.1 scaffolds kit ^2.63, vite ^8 and vite-plugin-svelte ^7; sv 1.1.1 kit 3
@@ -436,122 +425,165 @@ bench_one() {
   if [[ $CACHE -eq 1 ]]; then
     grep -q '^RIME_CACHE_ENABLED=' .env && sed -i '' 's/^RIME_CACHE_ENABLED=.*/RIME_CACHE_ENABLED=true/' .env || echo 'RIME_CACHE_ENABLED=true' >> .env
   fi
+}
 
-  log "[$label] Codegen, $RUNS runs"
+# Times `rime generate --force`, $RUNS times. GENERATE_MS is the median, in ms.
+#   bench_codegen <label>
+bench_codegen() {
+  log "[$1] Codegen, $RUNS runs"
   local generate=()
   for _ in $(seq 1 "$RUNS"); do
     local start; start=$(now_ms)
-    "${rime_cli[@]}" generate --force > generate.log 2>&1
+    "${RIME_CLI[@]}" generate --force > generate.log 2>&1
     generate+=("$(( $(now_ms) - start ))")
   done
-  local generate_ms; generate_ms=$(printf '%s\n' "${generate[@]}" | median)
-  echo "    generate: ${generate[*]} → median $generate_ms ms"
+  GENERATE_MS=$(printf '%s\n' "${generate[@]}" | median)
+  echo "    generate: ${generate[*]} → median $GENERATE_MS ms"
+}
 
-  local dev="null"
-  if [[ $MODE != "prod" ]]; then
-    log "[$label] Dev boot, $RUNS runs"
-    local boots=()
-    for _ in $(seq 1 "$RUNS"); do
-      boots+=("$(boot_ms "$DEV_URL" dev.log "${vite_dev[@]}")")
-      stop_dev
-    done
-    local boot_cold=${boots[0]}
-    local boot_warm; boot_warm=$(printf '%s\n' "${boots[@]:1}" | median)
-    # One run has no warm boot but the cold one
-    [[ -n "$boot_warm" ]] || boot_warm=$boot_cold
-    echo "    boot: ${boots[*]} → cold $boot_cold ms, warm median $boot_warm ms"
-
-    log "[$label] API on the dev server, $PAGES pages"
-    boot_ms "$DEV_URL" dev.log "${vite_dev[@]}" > /dev/null
-    create_admin "$DEV_URL"
-    local ops; ops=$(api_ops "$DEV_URL")
+# Times the dev boot $RUNS times, then the API passes on the dev server. DEV is the row's dev
+# part: {"bootCold":…,"bootWarm":…,"ops":…}.
+#   bench_dev <label>
+bench_dev() {
+  local label=$1
+  log "[$label] Dev boot, $RUNS runs"
+  local boots=()
+  for _ in $(seq 1 "$RUNS"); do
+    boots+=("$(boot_ms "$DEV_URL" dev.log "${VITE_DEV[@]}")")
     stop_dev
-    dev="{\"bootCold\":$boot_cold,\"bootWarm\":$boot_warm,\"ops\":$ops}"
+  done
+  local boot_cold=${boots[0]}
+  local boot_warm; boot_warm=$(printf '%s\n' "${boots[@]:1}" | median)
+  # One run has no warm boot but the cold one
+  [[ -n "$boot_warm" ]] || boot_warm=$boot_cold
+  echo "    boot: ${boots[*]} → cold $boot_cold ms, warm median $boot_warm ms"
+
+  log "[$label] API on the dev server, $PAGES pages"
+  boot_ms "$DEV_URL" dev.log "${VITE_DEV[@]}" > /dev/null
+  create_admin "$DEV_URL"
+  local ops; ops=$(api_ops "$DEV_URL")
+  stop_dev
+  DEV="{\"bootCold\":$boot_cold,\"bootWarm\":$boot_warm,\"ops\":$ops}"
+}
+
+# Builds the app, then times the built server's boot $RUNS times and the API passes on it. PROD
+# is the row's prod part: {"build":…,"bootCold":…,"bootWarm":…,"ops":…}.
+#   bench_prod <label> <runtime>
+bench_prod() {
+  local label=$1
+  local runtime=$2
+  # A database with the schema and the admin alone: the dev passes' pages stay out of the built
+  # one.
+  rm -rf db storage/sqlite
+  "${RIME_CLI[@]}" generate --force > generate.log 2>&1
+  boot_ms "$DEV_URL" dev.log "${VITE_DEV[@]}" > /dev/null
+  create_admin "$DEV_URL"
+  stop_dev
+
+  log "[$label] Build"
+  # A release with --with-storage copies the database with -w, one without it with -d. Releases
+  # before --with-static have no static copy; the bench needs no static file either way.
+  local build_flags=(-e)
+  if npx rime build --help 2>/dev/null | grep -q -- '--with-storage'; then
+    build_flags+=(-w)
+  else
+    build_flags+=(-d)
   fi
+  npx rime build --help 2>/dev/null | grep -q -- '--with-static' && build_flags+=(-s)
+  local start; start=$(now_ms)
+  "${RIME_BUILD[@]}" "${build_flags[@]}" > build.log 2>&1
+  # Up to 0.29, rime build only packs ./build: the vite build is the app's own, before it.
+  if [[ ! -f app/build/handler.js ]]; then
+    "${VITE_BUILD[@]}" >> build.log 2>&1
+    "${RIME_BUILD[@]}" "${build_flags[@]}" >> build.log 2>&1
+  fi
+  [[ -f app/build/handler.js ]] || { echo "the build wrote no app/build/handler.js"; exit 1; }
+  local build_ms=$(( $(now_ms) - start ))
+  echo "    build: $build_ms ms"
 
-  local prod="null"
-  if [[ $MODE != "dev" ]]; then
-    # A database with the schema and the admin alone: the dev passes' pages stay out of the built
-    # one.
-    rm -rf db storage/sqlite
-    "${rime_cli[@]}" generate --force > generate.log 2>&1
-    boot_ms "$DEV_URL" dev.log "${vite_dev[@]}" > /dev/null
-    create_admin "$DEV_URL"
-    stop_dev
-
-    log "[$label] Build"
-    # A release with --with-storage copies the database with -w, one without it with -d. Older
-    # releases have no --with-static: the bench serves no static file, it goes when there.
-    local build_flags=(-e)
-    if npx rime build --help 2>/dev/null | grep -q -- '--with-storage'; then
-      build_flags+=(-w)
-    else
-      build_flags+=(-d)
-    fi
-    npx rime build --help 2>/dev/null | grep -q -- '--with-static' && build_flags+=(-s)
-    local rime_build=(npx rime build "${build_flags[@]}")
-    local vite_build=(./node_modules/.bin/vite build)
-    if [[ $runtime == "bun" ]]; then
-      rime_build=(bunx rime build "${build_flags[@]}")
-      vite_build=(bun --bun ./node_modules/.bin/vite build)
-    fi
-    local start; start=$(now_ms)
-    "${rime_build[@]}" > build.log 2>&1
-    # Up to 0.29, rime build only packs ./build: the vite build is the app's own, before it.
-    if [[ ! -f app/build/handler.js ]]; then
-      "${vite_build[@]}" >> build.log 2>&1
-      "${rime_build[@]}" >> build.log 2>&1
-    fi
-    [[ -f app/build/handler.js ]] || { echo "the build wrote no app/build/handler.js"; exit 1; }
-    local build_ms=$(( $(now_ms) - start ))
-    echo "    build: $build_ms ms"
-
-    cd app
-    # A tarball dependency written relative to the app sits one level up from ./app
-    node -e "
-      const fs = require('fs');
-      const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
-      for (const key of ['dependencies', 'devDependencies']) {
-        for (const [name, dep] of Object.entries(pkg[key] || {})) {
-          if (typeof dep === 'string' && dep.startsWith('file:') && !dep.startsWith('file:/')) {
-            pkg[key][name] = 'file:../' + dep.slice('file:'.length);
-          }
+  cd app
+  # A tarball dependency written relative to the app sits one level up from ./app
+  node -e "
+    const fs = require('fs');
+    const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
+    for (const key of ['dependencies', 'devDependencies']) {
+      for (const [name, dep] of Object.entries(pkg[key] || {})) {
+        if (typeof dep === 'string' && dep.startsWith('file:') && !dep.startsWith('file:/')) {
+          pkg[key][name] = 'file:../' + dep.slice('file:'.length);
         }
       }
-      fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
-    "
-    # What this release's server needs, from its own next steps: polka and serve-static up to
-    # 0.29, serve-static since.
-    local add_deps
-    add_deps=$(grep -E '^[[:space:]]+(npm install|bun add) ' ../build.log | grep -v -e '--production' -e '--omit' | head -1 |
-      sed -E 's/^[[:space:]]+//' || true)
-    if [[ -z "$add_deps" ]]; then
-      add_deps="npm install serve-static sharp"
-      [[ $runtime == "bun" ]] && add_deps="bun add serve-static sharp"
-    fi
-    echo "    $add_deps"
-    eval "$add_deps" > /dev/null
+    }
+    fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
+  "
+  # What this release's server needs, from its own next steps: polka and serve-static up to
+  # 0.29, serve-static since.
+  local add_deps
+  add_deps=$(grep -E '^[[:space:]]+(npm install|bun add) ' ../build.log | grep -v -e '--production' -e '--omit' | head -1 |
+    sed -E 's/^[[:space:]]+//' || true)
+  if [[ -z "$add_deps" ]]; then
+    add_deps="npm install serve-static sharp"
+    [[ $runtime == "bun" ]] && add_deps="bun add serve-static sharp"
+  fi
+  echo "    $add_deps"
+  eval "$add_deps" > /dev/null
 
-    log "[$label] Production boot, $RUNS runs"
-    local prod_boots=()
-    for _ in $(seq 1 "$RUNS"); do
-      prod_boots+=("$(boot_ms "$PROD_URL" prod.log "${prod_server[@]}")")
-      stop_prod
-    done
-    local prod_cold=${prod_boots[0]}
-    local prod_warm; prod_warm=$(printf '%s\n' "${prod_boots[@]:1}" | median)
-    [[ -n "$prod_warm" ]] || prod_warm=$prod_cold
-    echo "    boot: ${prod_boots[*]} → cold $prod_cold ms, warm median $prod_warm ms"
-
-    log "[$label] API on the built server, $PAGES pages"
-    boot_ms "$PROD_URL" prod.log "${prod_server[@]}" > /dev/null
-    local prod_ops; prod_ops=$(api_ops "$PROD_URL")
+  log "[$label] Production boot, $RUNS runs"
+  local prod_boots=()
+  for _ in $(seq 1 "$RUNS"); do
+    prod_boots+=("$(boot_ms "$PROD_URL" prod.log "${PROD_SERVER[@]}")")
     stop_prod
-    cd "$work_dir"
-    prod="{\"build\":$build_ms,\"bootCold\":$prod_cold,\"bootWarm\":$prod_warm,\"ops\":$prod_ops}"
+  done
+  local prod_cold=${prod_boots[0]}
+  local prod_warm; prod_warm=$(printf '%s\n' "${prod_boots[@]:1}" | median)
+  [[ -n "$prod_warm" ]] || prod_warm=$prod_cold
+  echo "    boot: ${prod_boots[*]} → cold $prod_cold ms, warm median $prod_warm ms"
+
+  log "[$label] API on the built server, $PAGES pages"
+  boot_ms "$PROD_URL" prod.log "${PROD_SERVER[@]}" > /dev/null
+  local prod_ops; prod_ops=$(api_ops "$PROD_URL")
+  stop_prod
+  cd ..
+  PROD="{\"build\":$build_ms,\"bootCold\":$prod_cold,\"bootWarm\":$prod_warm,\"ops\":$prod_ops}"
+}
+
+# Measures one spec, or reads the row saved for it, and adds the row to RESULTS.
+bench_one() {
+  local spec=$1
+  local runtime="node"
+  [[ $ALL_BUN -eq 1 ]] && runtime="bun"
+  case "$spec" in
+    *:bun) runtime="bun"; spec=${spec%:bun} ;;
+    *:node) runtime="node"; spec=${spec%:node} ;;
+  esac
+
+  # A published release: its exact version, and the row saved for it
+  local saved=""
+  if [[ ! -f "$spec" ]]; then
+    spec=$(resolve_spec "$spec")
+    saved=$(baseline_file "$spec" "$runtime")
   fi
 
-  local row="{\"label\":\"$label\",\"generate\":$generate_ms,\"dev\":$dev,\"prod\":$prod}"
+  local label
+  label=$(basename "$spec" .tgz | tr '@/' '--')
+  [[ $runtime == "bun" ]] && label="$label-bun"
+  [[ -f "$spec" ]] && spec="$(cd "$(dirname "$spec")" && pwd)/$(basename "$spec")"
+
+  if [[ -n "$saved" && -f "$saved" && $FRESH -eq 0 ]]; then
+    log "[$label] Saved row: $saved"
+    RESULTS+=("$(saved_row "$saved")")
+    return 0
+  fi
+
+  local work_dir="$BASE_DIR/$label"
+  use_runtime "$runtime"
+  scaffold_app "$spec" "$runtime" "$label" "$work_dir"
+  bench_codegen "$label"
+  DEV="null"
+  PROD="null"
+  [[ $MODE != "prod" ]] && bench_dev "$label"
+  [[ $MODE != "dev" ]] && bench_prod "$label" "$runtime"
+
+  local row="{\"label\":\"$label\",\"generate\":$GENERATE_MS,\"dev\":$DEV,\"prod\":$PROD}"
   RESULTS+=("$row")
 
   cd "$ROOT_DIR"

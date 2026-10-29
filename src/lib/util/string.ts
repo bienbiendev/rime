@@ -214,6 +214,75 @@ export const isCamelCase = (str: string) => /^[a-z][a-zA-Z0-9]*$/.test(str);
  */
 export const isValidSlug = (str: string): boolean => /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(str);
 
+const KEPT_TAGS = new Set(['strong', 'b', 'em', 'i', 'u', 'br', 'a']);
+const DROPPED_TAGS = new Set(['script', 'style', 'iframe', 'object', 'embed', 'svg']);
+// Marks a space of the text, which the parser would otherwise trim
+const SPACE_MARKER = '';
+const ENTITIES: [RegExp, string][] = [
+  [/&amp;/g, '&'],
+  [/&quot;/g, '"'],
+  [/&lt;/g, '<'],
+  [/&gt;/g, '>'],
+  [/&#x27;/g, "'"],
+  [/&#39;/g, "'"],
+  [/&#38;/g, '&']
+];
+const ENCODED = /&amp;|&quot;|&lt;|&gt;|&#x27;|&#39;|&#38;/;
+// A tag with its quoted values, `<a href="?q=1<2">`, or a `<` that opens none: `1 < 2`, `a<3`
+const TAG_OR_LONE_BRACKET = /<[a-zA-Z/!](?:"[^"]*"|'[^']*'|[^"'>])*>?|<(?![a-zA-Z/!])/g;
+
+/** The entities decoded until none is left: `&amp;lt;b&amp;gt;` → `<b>`. */
+const decodeEntities = (html: string) => {
+  let out = html;
+  while (ENCODED.test(out)) {
+    out = ENTITIES.reduce((text, [entity, char]) => text.replace(entity, char), out);
+  }
+  return out;
+};
+
+/**
+ * The text's spaces as markers, and a `<` that opens no tag as `&lt;`; tags as they are. A
+ * marker already in the input is dropped.
+ */
+const protectText = (html: string) =>
+  html
+    .replaceAll(SPACE_MARKER, '')
+    .replace(TAG_OR_LONE_BRACKET, (match) => (match === '<' ? '&lt;' : match))
+    .split(/(<[^>]*>)/g)
+    .map((part) =>
+      part.startsWith('<') && part.endsWith('>') ? part : part.replaceAll(' ', SPACE_MARKER)
+    )
+    .join('');
+
+/** An attribute value made safe to write between double quotes. */
+const escapeAttribute = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+/** The `href` (a safe one) and `target` of a link; any other tag keeps no attribute. */
+const keptAttributes = (tag: string, attributes: Record<string, string> = {}) => {
+  if (tag !== 'a') return '';
+  return Object.entries(attributes)
+    .map(([name, value]) => [name.toLowerCase(), value] as const)
+    .filter(([name, value]) => name === 'target' || (name === 'href' && isSafeUrl(value)))
+    .map(([name, value]) => ` ${name}="${escapeAttribute(value)}"`)
+    .join('');
+};
+
+/**
+ * A parsed node as sanitized HTML: text as it is, a kept tag with its children, any other tag as
+ * its children alone, a dropped tag and a comment as nothing.
+ */
+const renderNode = (node: any): string => {
+  if (node.nodeName === '#text') return node.nodeValue ?? '';
+  if (!node.tagName) return '';
+  const tag = node.tagName.toLowerCase();
+  if (DROPPED_TAGS.has(tag)) return '';
+  const children = (node.children ?? []).map(renderNode).join('');
+  if (!KEPT_TAGS.has(tag)) return children;
+  if (tag === 'br') return '<br>';
+  return `<${tag}${keptAttributes(tag, node.attributes)}>${children}</${tag}>`;
+};
+
 /**
  * Removes every HTML tag except `strong`, `b`, `em`, `i`, `u`, `br` and `a`, and every attribute
  * except the `href` and `target` of a link. Entities in the input are decoded first; a `<` that
@@ -227,141 +296,10 @@ export const isValidSlug = (str: string): boolean => /^[a-zA-Z][a-zA-Z0-9_-]*$/.
  * ```
  */
 export const sanitize = (value?: string): string => {
-  if (!value) return value || '';
+  if (!value) return '';
   if (!parser) parser = Parser();
-
-  const WHITESPACE_MARKER = '\uE000';
-  const decode = (value: string) =>
-    value
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&#x27;/g, "'")
-      .replace(/&#39;/g, "'")
-      .replace(/&#38;/g, '&');
-
-  const encodeTextSpace = (html: string): string =>
-    html
-      .split(/(<[^>]*>)/g)
-      .map((segment) =>
-        segment.startsWith('<') && segment.endsWith('>')
-          ? segment
-          : segment.replace(/ /g, WHITESPACE_MARKER)
-      )
-      .join('');
-
-  const restoreWhitespace = (str: string) => str.replace(new RegExp(WHITESPACE_MARKER, 'g'), ' ');
-
-  /** An attribute value made safe to write between double quotes. */
-  const escapeAttribute = (value: string) =>
-    value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-
-  // Decode multiple levels of encoding on input
-  let decodedValue = value;
-  while (decodedValue.match(/&amp;|&quot;|&lt;|&gt;|&#x27;|&#39;|&#38;/)) {
-    decodedValue = decode(decodedValue);
-  }
-
-  // A `<` that opens no tag is text: `1 < 2`, `a<3`. A tag stays as it is, its quoted values
-  // included: `<a href="?q=1<2">`
-  const tagOrLoneBracket = /<[a-zA-Z/!](?:"[^"]*"|'[^']*'|[^"'>])*>?|<(?![a-zA-Z/!])/g;
-  // A U+E000 in the input is dropped: the sanitizer marks the spaces with it
-  const escaped = decodedValue
-    .replaceAll(WHITESPACE_MARKER, '')
-    .replace(tagOrLoneBracket, (match) => (match === '<' ? '&lt;' : match));
-  const protectedInput = encodeTextSpace(escaped);
-
-  const { root } = parser.parseFromString(protectedInput);
-
-  const allowedTags = new Set(['strong', 'b', 'em', 'i', 'u', 'br', 'a']);
-  const dangerousTags = new Set(['script', 'style', 'iframe', 'object', 'embed', 'svg']);
-  const eventHandlers = /^on[a-z]+$/i;
-
-  const processNode = (node: any): string => {
-    if (!node) return '';
-
-    // Handle text nodes
-    if (node.nodeName === '#text') {
-      return (node.nodeValue || '').replace(new RegExp(WHITESPACE_MARKER, 'g'), ' ');
-    }
-
-    // Handle comment nodes - remove them
-    if (node.nodeName === '#comment') {
-      return '';
-    }
-
-    // Handle element nodes
-    if (node.tagName) {
-      const tagName = node.tagName.toLowerCase();
-
-      // Remove dangerous tags entirely (including their content)
-      if (dangerousTags.has(tagName)) {
-        return '';
-      }
-
-      // Process children first
-      const childContent = node.children ? node.children.map(processNode).join('') : '';
-
-      // If not an allowed tag, return only the child content (strip the tag)
-      if (!allowedTags.has(tagName)) {
-        return childContent;
-      }
-
-      // For allowed tags, filter attributes
-      const safeAttributes: string[] = [];
-
-      if (node.attributes) {
-        for (const [key, value] of Object.entries(node.attributes)) {
-          const attrName = key.toLowerCase();
-          const attrValue = value as string;
-
-          // Remove event handlers
-          if (eventHandlers.test(attrName)) {
-            continue;
-          }
-
-          // For 'a' tags, only allow specific attributes
-          if (tagName === 'a') {
-            if (attrName === 'href') {
-              // Remove dangerous URLs
-              if (!isSafeUrl(attrValue)) {
-                continue;
-              }
-              safeAttributes.push(`${attrName}="${escapeAttribute(attrValue)}"`);
-            } else if (attrName === 'target') {
-              safeAttributes.push(`${attrName}="${escapeAttribute(attrValue)}"`);
-            }
-            // Skip all other attributes for 'a' tags
-            continue;
-          }
-
-          // For other allowed tags, remove dangerous attributes
-          if (attrName === 'href' || attrName === 'src') {
-            if (!isSafeUrl(attrValue)) {
-              continue;
-            }
-          }
-        }
-      }
-
-      // Build the tag
-      const attributeString = safeAttributes.length > 0 ? ' ' + safeAttributes.join(' ') : '';
-
-      // Handle self-closing tags
-      if (tagName === 'br') {
-        return `<${tagName}${attributeString}>`;
-      }
-
-      return `<${tagName}${attributeString}>${childContent}</${tagName}>`;
-    }
-
-    return '';
-  };
-
-  const sanitized = root.children ? root.children.map(processNode).join('') : '';
-
-  return restoreWhitespace(sanitized);
+  const { root } = parser.parseFromString(protectText(decodeEntities(value)));
+  return (root.children ?? []).map(renderNode).join('').replaceAll(SPACE_MARKER, ' ');
 };
 
 /**

@@ -248,70 +248,30 @@ export const getValueAtPath = <T>(path: string, obj: Dic): T | undefined => {
   return current as T;
 };
 
+const holdsKeys = (value: unknown) => typeof value === 'object' && value !== null;
+
+/** An empty list for an index (`'0'`), an empty object for a key. */
+const emptyFor = (key: string) => (/^\d+$/.test(key) ? [] : {});
+
 /**
- * Sets a value in a nested object using a dot notation path.
- * Creates the path if it doesn't exist and returns a new object without modifying the original.
+ * A copy of `obj` with `value` at the dot-notation `path`. Every level on the path is copied, a
+ * missing level is created (a list before an index), and `obj` is left as it is.
  *
  * @example
- * // Returns { user: { address: { city: "Boston" } } }
- * setValueAtPath('user.address.city', { user: { address: { city: "New York" } } }, 'Boston');
- *
- * // Creates missing path and returns { user: { phone: "555-1234" } }
- * setValueAtPath('user.phone', { user: {} }, '555-1234');
+ * setValueAtPath('user.address.city', { user: { address: { city: 'New York' } } }, 'Boston');
+ * // { user: { address: { city: 'Boston' } } }
+ * setValueAtPath('tags.0', {}, 'a'); // { tags: ['a'] }
  */
 export const setValueAtPath = <T extends Dic>(path: string, obj: T, value: unknown): T => {
-  path = normalizeFieldPath(path);
-  const parts = path.split('.');
-
-  // Create a shallow copy of the root object
-  const result = { ...obj };
-
-  let current: any = result;
-  let previous = null;
-  let previousKey: string | number = '';
-
-  // Navigate to the parent of the target property
-  for (let i = 0; i < parts.length - 1; i++) {
-    const part = parts[i];
-    const index = /^\d+$/.test(part) ? parseInt(part) : part;
-
-    previous = current;
-    previousKey = index;
-
-    // A missing parent, or one that holds no keys (a string, a number), becomes a list or an object
-    if (typeof current[index] !== 'object' || current[index] === null) {
-      // If the next part is a number, create an array, otherwise create an object
-      const nextPart = parts[i + 1];
-      const isNextPartNumeric = /^\d+$/.test(nextPart);
-      current[index] = isNextPartNumeric ? [] : {};
-    }
-
-    // Create a shallow copy of the current level before moving deeper
-    if (Array.isArray(current[index])) {
-      current[index] = [...current[index]];
-    } else if (typeof current[index] === 'object' && current[index] !== null) {
-      current[index] = { ...current[index] };
-    }
-
-    current = current[index];
+  const [head, ...rest] = normalizeFieldPath(path).split('.');
+  const copy: any = Array.isArray(obj) ? [...obj] : { ...obj };
+  if (!rest.length) {
+    copy[head] = value;
+    return copy;
   }
-
-  // Set the value at the final path segment
-  const lastPart = parts[parts.length - 1];
-  const lastIndex = /^\d+$/.test(lastPart) ? parseInt(lastPart) : lastPart;
-
-  if (previous !== null) {
-    if (Array.isArray(previous[previousKey])) {
-      previous[previousKey][lastIndex] = value;
-    } else if (typeof previous[previousKey] === 'object' && previous[previousKey] !== null) {
-      previous[previousKey][lastIndex] = value;
-    }
-  } else {
-    // Use a type assertion only for the assignment
-    (result as any)[lastIndex] = value;
-  }
-
-  return result;
+  const child = holdsKeys(copy[head]) ? copy[head] : emptyFor(rest[0]);
+  copy[head] = setValueAtPath(rest.join('.'), child, value);
+  return copy;
 };
 
 /**
