@@ -102,6 +102,7 @@ export const buildWithParam = (args: {
   // A child row — a block, a tree node — belongs to one locale. Its locales branch, and the
   // document's, are read for every locale in the order and merged in `transform`.
   const branchWhere = branchFilter(locale, fallback);
+  const read = { tables, locale, branchWhere };
   // On the base table only: a versioned read joins it above the content row.
   const paths =
     table === baseTableName(documentConfig.slug)
@@ -148,25 +149,8 @@ export const buildWithParam = (args: {
     } else if (fieldConfig && storageKinds(fieldConfig).length) {
       for (const kind of storageKinds(fieldConfig)) {
         childPaths[kind].push(path);
-        for (const childTable of childTableNames(table, kind, tables)) {
-          if (withParam[childTable]) continue;
-
-          let params: Dic = { orderBy: { position: 'asc' } };
-          const columns = getColumns(tables[childTable]);
-          const hasLocale = Object.keys(columns).includes('locale');
-          if (locale && hasLocale) {
-            params = { ...params, where: { locale } };
-          }
-          withParam[childTable] = params;
-
-          // Its locales branch with it.
-          const localesTable = tableName({ owner: childTable, branch: 'locales' });
-          if (locale && localesTable in tables) {
-            withParam[childTable] = {
-              ...withParam[childTable],
-              with: { [localesTable]: { where: branchWhere } }
-            };
-          }
+        for (const child of childTableNames(table, kind, tables)) {
+          withParam[child] ??= childJoin(child, read);
         }
       }
     } else if (fieldConfig) {
@@ -201,55 +185,17 @@ export const buildWithParam = (args: {
     withParam[rels] = { where: { OR: relationPaths }, orderBy: { path: 'asc', position: 'asc' } };
   }
 
-  // 2. Include tree tables for blocks that might contain trees
-  if (childPaths.blocks.length > 0) {
-    const treeTables = childTableNames(table, 'tree', tables);
-    for (const treeTable of treeTables) {
-      if (!withParam[treeTable]) {
-        withParam[treeTable] = {
-          where: { OR: childPaths.blocks.map(below) },
-          orderBy: { position: 'asc' }
-        };
-
-        // Handle localized trees
-        const localesTreeTable = tableName({ owner: treeTable, branch: 'locales' });
-        if (locale && localesTreeTable in tables) {
-          withParam[treeTable] = {
-            ...withParam[treeTable],
-            with: {
-              [localesTreeTable]: {
-                where: branchWhere
-              }
-            }
-          };
-        }
-      }
+  // 2. The trees inside the selected blocks, by the rows below them.
+  if (childPaths.blocks.length) {
+    for (const child of childTableNames(table, 'tree', tables)) {
+      withParam[child] ??= childJoin(child, read, { OR: childPaths.blocks.map(below) });
     }
   }
 
-  // 3. Include block tables for trees that might contain blocks
-  if (childPaths.tree.length > 0) {
-    const blocksTables = childTableNames(table, 'blocks', tables);
-    for (const blocksTable of blocksTables) {
-      if (!withParam[blocksTable]) {
-        withParam[blocksTable] = {
-          where: { OR: childPaths.tree.map(below) },
-          orderBy: { position: 'asc' }
-        };
-
-        // Handle localized blocks
-        const localesBlockTable = tableName({ owner: blocksTable, branch: 'locales' });
-        if (locale && localesBlockTable in tables) {
-          withParam[blocksTable] = {
-            ...withParam[blocksTable],
-            with: {
-              [localesBlockTable]: {
-                where: branchWhere
-              }
-            }
-          };
-        }
-      }
+  // 3. The blocks inside the selected trees, by the rows below them.
+  if (childPaths.tree.length) {
+    for (const child of childTableNames(table, 'blocks', tables)) {
+      withParam[child] ??= childJoin(child, read, { OR: childPaths.tree.map(below) });
     }
   }
 
@@ -271,6 +217,30 @@ const below = (path: string) => ({ path: { gte: `${path}.`, lt: `${path}/` } });
 const branchFilter = (locale?: string, fallback?: string[]): Dic =>
   fallback && fallback.length > 1 ? { locale: { in: fallback } } : { locale };
 
+/** The read a child table joins in: the generated tables, the locale, and its branch filter. */
+type ChildRead = { tables: Dic; locale?: string; branchWhere: Dic };
+
+/**
+ * How a child table joins its owner in a read: its rows by `position`, with its locales branch.
+ * `where` picks the rows; without it, those of `locale` when the table has a `locale` column.
+ *
+ * ```ts
+ * childJoin('pages__$blocks_hero', { tables, locale: 'en', branchWhere: { locale: 'en' } })
+ * // { orderBy: { position: 'asc' }, where: { locale: 'en' },
+ * //   with: { 'pages__$blocks_hero__$$locales': { where: { locale: 'en' } } } }
+ * ```
+ */
+const childJoin = (child: TableName, read: ChildRead, where?: Dic): Dic => {
+  const { tables, locale, branchWhere } = read;
+  const branch = tableName({ owner: child, branch: 'locales' });
+  const rows = where ?? (locale && 'locale' in getColumns(tables[child]) ? { locale } : undefined);
+
+  const join: Dic = { orderBy: { position: 'asc' } };
+  if (rows) join.where = rows;
+  if (locale && branch in tables) join.with = { [branch]: { where: branchWhere } };
+  return join;
+};
+
 /**
  * The `with` of a read without `select`: every child table of `table` and its locales branch, the
  * table's own branch, and its junction rows. A child row is kept to `locale` when its table has a
@@ -287,62 +257,23 @@ const buildFullWithParam = ({
   fallback?: string[];
   tables: Dic;
 }): Dic => {
-  const branchWhere = branchFilter(locale, fallback);
-  const blocksTables = childTableNames(table, 'blocks', tables);
-  const treeTables = childTableNames(table, 'tree', tables);
-
+  const read = { tables, locale, branchWhere: branchFilter(locale, fallback) };
+  const children = [
+    ...childTableNames(table, 'blocks', tables),
+    ...childTableNames(table, 'tree', tables)
+  ];
   const withParam: Dic = Object.fromEntries(
-    [...blocksTables, ...treeTables].map((key) => {
-      const blockOrTreeTable = tables[key];
-      type Params = { orderBy: Dic; where?: Dic };
-      let params: Params = { orderBy: { position: 'asc' } };
-      const columns = getColumns(blockOrTreeTable);
-      const hasLocale = Object.keys(columns).includes('locale');
-      if (locale && hasLocale) {
-        params = { ...params, where: { locale } };
-      }
-      return [key, params];
-    })
+    children.map((child) => [child, childJoin(child, read)])
   );
 
-  if (locale) {
-    const localesTableName = tableName({ owner: table, branch: 'locales' });
-    if (localesTableName in tables) {
-      withParam[localesTableName] = { where: branchWhere };
-    }
-    for (const blocksTable of blocksTables) {
-      const localesBlockTable = tableName({ owner: blocksTable, branch: 'locales' });
-      if (localesBlockTable in tables) {
-        withParam[blocksTable] = {
-          ...withParam[blocksTable],
-          with: {
-            [localesBlockTable]: {
-              where: branchWhere
-            }
-          }
-        };
-      }
-    }
-    for (const treeTable of treeTables) {
-      const localesTreeTable = tableName({ owner: treeTable, branch: 'locales' });
-      if (localesTreeTable in tables) {
-        withParam[treeTable] = {
-          ...withParam[treeTable],
-          with: {
-            [localesTreeTable]: {
-              where: branchWhere
-            }
-          }
-        };
-      }
-    }
+  const branch = tableName({ owner: table, branch: 'locales' });
+  if (locale && branch in tables) {
+    withParam[branch] = { where: read.branchWhere };
   }
 
-  if (tableName({ owner: table, child: { kind: 'rels' } }) in tables) {
-    const tableNameRelationFields = tableName({ owner: table, child: { kind: 'rels' } });
-    withParam[tableNameRelationFields] = {
-      orderBy: { path: 'asc', position: 'asc' }
-    };
+  const rels = tableName({ owner: table, child: { kind: 'rels' } });
+  if (rels in tables) {
+    withParam[rels] = { orderBy: { path: 'asc', position: 'asc' } };
   }
 
   return withParam;

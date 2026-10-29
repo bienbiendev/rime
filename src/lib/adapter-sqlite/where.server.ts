@@ -1,14 +1,15 @@
 import { pathToDatabaseColumn } from './columns.server.js';
 import { RimeError } from '#lib/core/errors/index.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
 import { getFieldAtPath } from '#lib/core/fields/util.js';
 import { logger } from '#lib/core/logger.server.js';
 import type { ConfigContext } from '#lib/core/rime.server.js';
-import { isRelationField } from '#lib/fields/relation/index.js';
+import { isRelationField, type RelationFieldBuilder } from '#lib/fields/relation/index.js';
 import { type GetRegisterType } from '#lib/index.js';
 import { isObjectLiteral } from '#lib/util/object.js';
 import type { Dic } from '#lib/util/types.js';
 import * as drizzleORM from 'drizzle-orm';
-import { and, eq, getTableColumns, inArray, or, type SQL } from 'drizzle-orm';
+import { and, eq, getTableColumns, inArray, notInArray, or, type SQL } from 'drizzle-orm';
 import type { ParsedQs } from 'qs';
 import type { PrototypeSlug } from '../types.js';
 import { localeOrder } from './locales.server.js';
@@ -106,6 +107,13 @@ export const buildWhereParam = ({
   const baseTable = isShadow ? getTable(baseTableName(base!)) : undefined;
   const baseColumns = baseTable ? Object.keys(getTableColumns(baseTable)) : [];
 
+  /** The addresses of a collection with `$url`, kept off the base table. */
+  const pathsTable = getTable(
+    tableName({ owner: baseTableName(base ?? slug), child: { kind: 'paths' } })
+  );
+  /** The junction rows of `slug`'s relation fields. */
+  const relsTable = getTable(tableName({ owner: baseTableName(slug), child: { kind: 'rels' } }));
+
   /**
    * One condition: an `and`/`or` list, or `{ path: { operator: value } }` resolved against, in
    * this order, the paths table (`url`, `_urlPath`), a column of the table, a localized column, a
@@ -129,345 +137,242 @@ export const buildWhereParam = ({
       );
     }
 
-    // Handle nested AND conditions
-    if ('and' in conditionObject && Array.isArray(conditionObject.and)) {
-      const subConditions = conditionObject.and
-        .map((condition) => buildCondition(condition as Dic))
-        .filter(Boolean);
-      return subConditions.length ? and(...subConditions) : false;
-    }
+    if (Array.isArray(conditionObject.and)) return combine(and, conditionObject.and);
+    if (Array.isArray(conditionObject.or)) return combine(or, conditionObject.or);
 
-    // Handle nested OR conditions
-    if ('or' in conditionObject && Array.isArray(conditionObject.or)) {
-      const subConditions = conditionObject.or
-        .map((condition) => buildCondition(condition as Dic))
-        .filter(Boolean);
-      return subConditions.length ? or(...subConditions) : false;
-    }
-
-    conditionObject = normalizedForShadow(conditionObject, isShadow);
-
-    const {
-      // Get condition members
-      column,
-      sqlColumn,
-      fn,
-      operator,
-      rawValue,
-      value
-    } = getConditionMembers(conditionObject);
-
-    /**
-     * `fn` on `column`, the value cast for `cast` (the column itself, unless it is an expression).
-     * A `like` pattern is text whatever the column, and is never cast.
-     */
-    const compare = (column: any, cast: { dataType: string } = column) =>
-      fn(column, LIKE_OPERATORS.includes(operator) ? value : castTo(cast, value));
-
-    // A collection with `$url` finds its pages by url or by path through its paths table, in the
-    // locale read. A versions table is matched through its `ownerId`, like any base-row filter.
-    const pathsTable = getTable(
-      tableName({ owner: baseTableName(base ?? slug), child: { kind: 'paths' } })
+    const condition = getConditionMembers(normalizedForShadow(conditionObject, isShadow));
+    return (
+      pathsCondition(condition) ??
+      columnCondition(condition) ??
+      localizedCondition(condition) ??
+      baseColumnCondition(condition) ??
+      relationCondition(condition)
     );
-    if (pathsTable && (column === 'url' || column === '_urlPath')) {
-      const owners = db
-        .select({ id: pathsTable.ownerId })
-        .from(pathsTable)
-        .where(
-          and(
-            eq(pathsTable.locale, locale ?? ''),
-            compare(column === 'url' ? pathsTable.url : pathsTable.path)
-          )
-        );
-      return inArray(isShadow ? table.ownerId : table.id, owners);
-    }
+  };
 
-    // Handle regular fields
-    if (unlocalizedColumns.includes(sqlColumn)) {
-      return compare(table[sqlColumn]);
-    }
+  /** `join` of the conditions of a list; `false` when none is left. */
+  const combine = (join: typeof and, list: Dic[]) => {
+    const conditions = list.map((condition) => buildCondition(condition)).filter(Boolean);
+    return conditions.length ? join(...conditions) : false;
+  };
 
-    // A localized column is compared as a read would show it: the first locale in the fallback
-    // order that holds a value, `''` counting as none — so a page found by its slug in one locale
-    // is found by the same slug in a locale it was not translated to yet.
-    if (locale && localizedColumns.includes(sqlColumn)) {
-      const { sql } = drizzleORM;
-      const order = localeOrder(configCtx, locale) ?? [locale];
-      const valueIn = (code: string) =>
-        sql`NULLIF((SELECT ${tableLocales[sqlColumn]} FROM ${tableLocales} WHERE ${tableLocales.ownerId} = ${table.id} AND ${tableLocales.locale} = ${code}), '')`;
-      const resolved =
-        order.length > 1
-          ? sql`COALESCE(${sql.join(order.map(valueIn), sql`, `)})`
-          : valueIn(order[0]);
+  /** A condition no row meets, with the reason in the log. */
+  const matchNothing = (reason: string) => {
+    logger.warn(reason);
+    return eq(table.id, '-1');
+  };
 
-      if (operator !== 'equals' && operator !== 'in_array') {
-        return compare(resolved, tableLocales[sqlColumn]);
-      }
+  // Each kind of path below answers a condition, or `undefined` for a path of another kind.
 
-      // A document whose read value matches has a locales row holding it, so the documents with
-      // one are asked first: that is what an index on the column answers, and the comparison
-      // above then runs on those alone.
-      return and(
-        inArray(
-          table.id,
-          db
-            .select({ ownerId: tableLocales.ownerId })
-            .from(tableLocales)
-            .where(compare(tableLocales[sqlColumn]))
-        ),
-        compare(resolved, tableLocales[sqlColumn])
-      );
-    }
-
-    // A column the base row keeps — the hierarchy columns, and any `$root()` field — reached
-    // through `ownerId` when the table queried is the versions table.
-    if (baseTable && baseColumns.includes(sqlColumn)) {
-      return inArray(
-        table.ownerId,
-        db.select({ ownerId: baseTable.id }).from(baseTable).where(compare(baseTable[sqlColumn]))
-      );
-    }
-
-    // Look for a relation field
-    // Get document config
-    const documentConfig = configCtx.getBySlug(slug);
-    let fieldConfig = getFieldAtPath(column, documentConfig.fields);
-    // Track relation-property detection (e.g. attributes.author.name)
-    let matchedPrefix = column;
-    let relationPropertyPath: string | null = null;
-    let isRelationProperty = false;
-    // If the exact path isn't found, try progressively shorter prefixes to support
-    // relation property queries like `attributes.author.name` -> `attributes.author`
-    if (!fieldConfig) {
-      const parts = column.split('.');
-      for (let i = parts.length - 1; i > 0; i--) {
-        const prefix = parts.slice(0, i).join('.');
-        const candidate = getFieldAtPath(prefix, documentConfig.fields);
-        if (candidate) {
-          fieldConfig = candidate;
-          matchedPrefix = prefix;
-          relationPropertyPath = parts.slice(i).join('.');
-          isRelationProperty = true;
-          break;
-        }
-      }
-    }
-
-    // If still not found or not a relation field, log warning and return false condition
-    if (!isRelationField(fieldConfig)) {
-      const message = `the query contains the field "${column}", not found for ${documentConfig.slug} document`;
-      logger.warn(message);
-      // Return a condition that will always be false instead of returning false
-      // This ensures no documents match when a non-existent field is queried
-      return eq(table.id, '-1');
-    }
-
-    // Helper: normalize various input forms (rawValue, CSV string, or formatted array)
-    // into a unique array of values used for multi-valued relation comparisons.
-    const normalizeValues = (raw: any, formatted: any) => {
-      let out;
-      if (Array.isArray(raw)) out = raw;
-      else if (typeof raw === 'string' && raw.includes(',')) out = raw.split(',');
-      else if (Array.isArray(formatted)) out = formatted;
-      else out = [formatted];
-      return Array.from(new Set(out));
-    };
-
-    // Handle relation property queries (e.g., attributes.author.name)
-    // by building a subquery on the related collection
-    const buildRelationPropertyCondition = () => {
-      const relatedSlug = fieldConfig.get.relationTo as PrototypeSlug;
-      // A versioned target keeps its fields on its versions table: match a version, answer its
-      // document. A document matches when any of its versions holds the value, a draft included.
-      const versions = configCtx.getBySlug(relatedSlug)._versions;
-      const searched = versions ? (versions.slug as PrototypeSlug) : relatedSlug;
-      const searchedTable = getTable(baseTableName(searched));
-
-      // Build a where clause for the related collection using the same operator/value
-      const relatedWhere = { [relationPropertyPath!]: { [operator]: rawValue } } as any;
-      // Recursive call to buildWhereParam for the related collection
-      const relatedCondition = buildWhereParam({
-        query: { where: relatedWhere } as any,
-        slug: searched,
-        base: versions ? relatedSlug : undefined,
-        db,
-        locale,
-        tables,
-        configCtx
-      });
-
-      // Subquery of related document ids that match the property condition
-      const matchingRelatedIds = db
-        .select({ id: versions ? searchedTable.ownerId : searchedTable.id })
-        .from(searchedTable)
-        .where(relatedCondition);
-
-      const relsTable = getTable(
-        tableName({ owner: baseTableName(slug), child: { kind: 'rels' } })
-      );
-      // Join relation rows to documents by matching the related id and the relation path
-      const ownersWithMatching = db
-        .select({ id: relsTable.ownerId })
-        .from(relsTable)
-        .where(
-          and(
-            inArray(relsTable[junctionKey(relatedSlug)], matchingRelatedIds),
-            eq(relsTable.path, matchedPrefix),
-            ...(fieldConfig.get.localized ? [eq(relsTable.locale, locale)] : [])
-          )
-        );
-
-      return inArray(table.id, ownersWithMatching);
-    };
-
-    // If this is a relation property query, delegate to the relation property handler
-    if (isRelationProperty && relationPropertyPath) {
-      return buildRelationPropertyCondition();
-    }
-
-    // Handle direct relation field queries (e.g., attributes.author)
-    // only support a subset of operators for multi-valued relations
-    const supportedRelationManyOperators = ['equals', 'not_equals', 'in_array', 'not_in_array'];
-
-    if (fieldConfig.get.many && !supportedRelationManyOperators.includes(operator)) {
-      const unsupportedMessage = `the operator "${operator}" is not supported for multi-valued relation field "${column}" in ${documentConfig.slug} document`;
-      logger.warn(unsupportedMessage);
-      // Return a condition that will always be false
-      return eq(table.id, '-1');
-    }
-
-    // Build relation condition
-    const [to, localized, many] = [
-      fieldConfig.get.relationTo,
-      fieldConfig.get.localized,
-      fieldConfig.get.many
-    ];
-    const relsTableName = tableName({ owner: baseTableName(slug), child: { kind: 'rels' } });
-    const relsTable = getTable(relsTableName);
-
-    // Helpers for building common relation-owner subqueries (operate on the relations table)
-    const buildOwnersWithTotalCount = (count: number) =>
-      db
-        .select({ id: relsTable.ownerId })
-        .from(relsTable)
-        .where(
-          and(eq(relsTable.path, column), ...(localized ? [eq(relsTable.locale, locale)] : []))
+  /**
+   * `url` or `_urlPath` of a collection with `$url`: its pages found by url or by path through
+   * its paths table, in the locale read. A versions table is matched through its `ownerId`, like
+   * any base-row filter.
+   */
+  const pathsCondition = ({ column, compare }: Condition) => {
+    if (!pathsTable || (column !== 'url' && column !== '_urlPath')) return undefined;
+    const owners = db
+      .select({ id: pathsTable.ownerId })
+      .from(pathsTable)
+      .where(
+        and(
+          eq(pathsTable.locale, locale ?? ''),
+          compare(column === 'url' ? pathsTable.url : pathsTable.path)
         )
-        .groupBy(relsTable.ownerId)
-        .having(drizzleORM.eq(drizzleORM.count(relsTable.id), count));
-
-    // Owners that have total relation count equal to the number of provided values
-    const buildOwnersWithMatchingCount = (values: any[]) =>
-      db
-        .select({ id: relsTable.ownerId })
-        .from(relsTable)
-        .where(
-          and(
-            drizzleORM.inArray(relsTable[junctionKey(to)], values),
-            eq(relsTable.path, column),
-            ...(localized ? [eq(relsTable.locale, locale)] : [])
-          )
-        )
-        .groupBy(relsTable.ownerId)
-        .having(drizzleORM.eq(drizzleORM.count(relsTable.id), values.length));
-
-    // Owners that have at least one relation row NOT in the provided values
-    const buildOwnersWithNonMatching = (values: any[]) =>
-      db
-        .select({ id: relsTable.ownerId })
-        .from(relsTable)
-        .where(
-          and(
-            drizzleORM.notInArray(relsTable[junctionKey(to)], values),
-            eq(relsTable.path, column),
-            ...(localized ? [eq(relsTable.locale, locale)] : [])
-          )
-        )
-        .groupBy(relsTable.ownerId)
-        .having(drizzleORM.gt(drizzleORM.count(relsTable.id), 0));
-
-    // Owners that have any relation rows (to exclude docs with no relations)
-    const buildOwnersWithRelations = () =>
-      db
-        .select({ id: relsTable.ownerId })
-        .from(relsTable)
-        .where(
-          and(eq(relsTable.path, column), ...(localized ? [eq(relsTable.locale, locale)] : []))
-        )
-        .groupBy(relsTable.ownerId)
-        .having(drizzleORM.gt(drizzleORM.count(relsTable.id), 0));
-
-    // Handle multi-valued relations specially when operator is `equals` to provide
-    // strict equality semantics (the relation set must equal the provided value(s)).
-    if (many && operator === 'equals') {
-      // Accept various input forms and normalize to a unique array
-      const values = normalizeValues(rawValue, value);
-      // Owners with total relation count equal to values.length
-      const ownersWithTotalCount = buildOwnersWithTotalCount(values.length);
-      // Owners with matching relations count equal to values.length
-      const ownersWithMatchingCount = buildOwnersWithMatchingCount(values);
-      return and(
-        inArray(table.id, ownersWithTotalCount),
-        inArray(table.id, ownersWithMatchingCount)
       );
+    return inArray(isShadow ? table.ownerId : table.id, owners);
+  };
+
+  /** A column of the table itself. */
+  const columnCondition = ({ sqlColumn, compare }: Condition) =>
+    unlocalizedColumns.includes(sqlColumn) ? compare(table[sqlColumn]) : undefined;
+
+  /**
+   * A localized column, compared as a read would show it: the first locale in the fallback order
+   * that holds a value, `''` counting as none — so a page found by its slug in one locale is found
+   * by the same slug in a locale it was not translated to yet.
+   */
+  const localizedCondition = ({ sqlColumn, operator, compare }: Condition) => {
+    if (!locale || !localizedColumns.includes(sqlColumn)) return undefined;
+    const { sql } = drizzleORM;
+    const order = localeOrder(configCtx, locale) ?? [locale];
+    const valueIn = (code: string) =>
+      sql`NULLIF((SELECT ${tableLocales[sqlColumn]} FROM ${tableLocales} WHERE ${tableLocales.ownerId} = ${table.id} AND ${tableLocales.locale} = ${code}), '')`;
+    const resolved =
+      order.length > 1
+        ? sql`COALESCE(${sql.join(order.map(valueIn), sql`, `)})`
+        : valueIn(order[0]);
+
+    if (operator !== 'equals' && operator !== 'in_array') {
+      return compare(resolved, tableLocales[sqlColumn]);
     }
 
-    // For multi-valued relations, allow `in_array` to act as a subset check:
-    // The provided values must contain ALL relation values of the document.
-    if (many && operator === 'in_array') {
-      // Accept various input forms and normalize to a unique array
-      const values = normalizeValues(rawValue, value);
-      // Owners that have at least one relation row not included in the provided set
-      const ownersWithNonMatching = buildOwnersWithNonMatching(values);
-      // Owners that have any relation rows (to exclude docs with no relations)
-      const ownersWithRelations = buildOwnersWithRelations();
-      // Match documents that have relations and do NOT have any non-matching relation rows
-      return and(
-        drizzleORM.notInArray(table.id, ownersWithNonMatching),
-        inArray(table.id, ownersWithRelations)
-      );
-    }
+    // A document whose read value matches has a locales row holding it, so the documents with
+    // one are asked first: that is what an index on the column answers, and the comparison
+    // above then runs on those alone.
+    return and(
+      inArray(
+        table.id,
+        db
+          .select({ ownerId: tableLocales.ownerId })
+          .from(tableLocales)
+          .where(compare(tableLocales[sqlColumn]))
+      ),
+      compare(resolved, tableLocales[sqlColumn])
+    );
+  };
 
-    // For multi-valued relations, `not_in_array` should match documents where the provided
-    // set does NOT contain all of the document's relation values (inverse of `in_array`).
-    if (many && operator === 'not_in_array') {
-      // Accept various input forms and normalize to a unique array
-      const values = normalizeValues(rawValue, value);
-      const ownersWithNonMatching = buildOwnersWithNonMatching(values);
-      return inArray(table.id, ownersWithNonMatching);
-    }
-
-    // For multi-valued relations, `not_equals` is the inverse of `equals` (exact-set inequality)
-    if (many && operator === 'not_equals') {
-      // Accept various input forms and normalize to a unique array
-      const values = normalizeValues(rawValue, value);
-      const ownersWithTotalCount = buildOwnersWithTotalCount(values.length);
-      const ownersWithMatchingCount = buildOwnersWithMatchingCount(values);
-      return or(
-        drizzleORM.notInArray(table.id, ownersWithTotalCount),
-        drizzleORM.notInArray(table.id, ownersWithMatchingCount)
-      );
-    }
-
-    // Handle single-valued relations and other operators
-    // Default behavior (membership checks with in_array etc.)
-    const conditions = [
-      eq(relsTable.path, column),
-      compare(relsTable[junctionKey(to)]),
-      ...(localized ? [eq(relsTable.locale, locale)] : [])
-    ];
-
+  /**
+   * A column the base row keeps — the hierarchy columns, and any `$root()` field — reached
+   * through `ownerId` when the table queried is the versions table.
+   */
+  const baseColumnCondition = ({ sqlColumn, compare }: Condition) => {
+    if (!baseTable || !baseColumns.includes(sqlColumn)) return undefined;
     return inArray(
-      table.id,
-      db
-        .select({ id: relsTable.ownerId })
-        .from(relsTable)
-        .where(and(...conditions))
+      table.ownerId,
+      db.select({ ownerId: baseTable.id }).from(baseTable).where(compare(baseTable[sqlColumn]))
     );
+  };
+
+  /**
+   * A relation field, `author`, or a field of the documents it points at, `author.name`. Any
+   * other path matches nothing, and so does an operator a relation with many values cannot answer.
+   */
+  const relationCondition = (condition: Condition) => {
+    const { column, operator, rawValue, value, compare } = condition;
+    const documentConfig = configCtx.getBySlug(slug);
+    const { field, path, property } = fieldAtPrefix(column, documentConfig.fields);
+    if (!isRelationField(field)) {
+      return matchNothing(
+        `the query contains the field "${column}", not found for ${documentConfig.slug} document`
+      );
+    }
+    if (property) return relationPropertyCondition(field, path, property, condition);
+
+    const rows = junctionRows(column, !!field.get.localized);
+    const target = relsTable[junctionKey(field.get.relationTo)];
+    if (!field.get.many) {
+      return inArray(
+        table.id,
+        db
+          .select({ id: relsTable.ownerId })
+          .from(relsTable)
+          .where(and(...rows, compare(target)))
+      );
+    }
+
+    const set = relationSets[operator];
+    if (!set) {
+      return matchNothing(
+        `the operator "${operator}" is not supported for multi-valued relation field "${column}" in ${documentConfig.slug} document`
+      );
+    }
+    return set(rows, target, normalizeValues(rawValue, value));
+  };
+
+  /**
+   * `property` of the documents the relation at `path` points at, with the condition's operator
+   * and value. A versioned target keeps its fields on its versions table: a version is matched
+   * and its document answered, so a document matches when any of its versions holds the value,
+   * a draft included.
+   */
+  const relationPropertyCondition = (
+    relation: RelationFieldBuilder,
+    path: string,
+    property: string,
+    { operator, rawValue }: Condition
+  ) => {
+    const relatedSlug = relation.get.relationTo as PrototypeSlug;
+    const versions = configCtx.getBySlug(relatedSlug)._versions;
+    const searched = versions ? (versions.slug as PrototypeSlug) : relatedSlug;
+    const searchedTable = getTable(baseTableName(searched));
+
+    const relatedCondition = buildWhereParam({
+      query: { where: { [property]: { [operator]: rawValue } } } as any,
+      slug: searched,
+      base: versions ? relatedSlug : undefined,
+      db,
+      locale,
+      tables,
+      configCtx
+    });
+    const matchingIds = db
+      .select({ id: versions ? searchedTable.ownerId : searchedTable.id })
+      .from(searchedTable)
+      .where(relatedCondition);
+
+    const owners = db
+      .select({ id: relsTable.ownerId })
+      .from(relsTable)
+      .where(
+        and(
+          inArray(relsTable[junctionKey(relatedSlug)], matchingIds),
+          ...junctionRows(path, !!relation.get.localized)
+        )
+      );
+    return inArray(table.id, owners);
+  };
+
+  /** The junction rows of the relation at `path`, those of the locale read when it is localized. */
+  const junctionRows = (path: string, localized: boolean) => [
+    eq(relsTable.path, path),
+    ...(localized ? [eq(relsTable.locale, locale)] : [])
+  ];
+
+  /** The documents with exactly `count` of the junction rows `where` picks. */
+  const ownersWithCount = (where: SQL[], count: number) =>
+    db
+      .select({ id: relsTable.ownerId })
+      .from(relsTable)
+      .where(and(...where))
+      .groupBy(relsTable.ownerId)
+      .having(eq(drizzleORM.count(relsTable.id), count));
+
+  /** The documents with at least one of the junction rows `where` picks. */
+  const ownersWithAny = (where: SQL[]) =>
+    db
+      .select({ id: relsTable.ownerId })
+      .from(relsTable)
+      .where(and(...where))
+      .groupBy(relsTable.ownerId)
+      .having(drizzleORM.gt(drizzleORM.count(relsTable.id), 0));
+
+  /**
+   * A relation with many values compared as a set, by operator. `rows` picks its junction rows,
+   * `target` is their column of related ids, and `values` the ids sent.
+   *
+   * ```
+   * equals        the same set, in any order
+   * not_equals    any other set, an empty one included
+   * in_array      a set inside the list, and not an empty one
+   * not_in_array  a set with a value outside the list
+   * ```
+   */
+  const relationSets: Record<string, RelationSet> = {
+    equals: (rows, target, values) =>
+      and(
+        inArray(table.id, ownersWithCount(rows, values.length)),
+        inArray(table.id, ownersWithCount([inArray(target, values), ...rows], values.length))
+      ),
+    not_equals: (rows, target, values) =>
+      or(
+        notInArray(table.id, ownersWithCount(rows, values.length)),
+        notInArray(table.id, ownersWithCount([inArray(target, values), ...rows], values.length))
+      ),
+    in_array: (rows, target, values) =>
+      and(
+        notInArray(table.id, ownersWithAny([notInArray(target, values), ...rows])),
+        inArray(table.id, ownersWithAny(rows))
+      ),
+    not_in_array: (rows, target, values) =>
+      inArray(table.id, ownersWithAny([notInArray(target, values), ...rows]))
   };
 
   return buildCondition(query.where as Dic);
 };
+
+/** A relation with many values compared as a set: see `relationSets`. */
+type RelationSet = (rows: SQL[], target: any, values: any[]) => SQL | undefined;
 
 /**
  * Each REST operator as a condition on a column. SQLite's `LIKE` already ignores the case of
@@ -549,8 +454,8 @@ const castTo = (column: { dataType: string }, value: unknown): unknown => {
 };
 
 /**
- * The column, operator and value of a `{ path: { operator: value } }` condition, and the drizzle
- * function of its operator. Only the first key, and the first operator, are read. An unknown
+ * The column, operator and value of a `{ path: { operator: value } }` condition, and `compare`,
+ * its operator on a column. Only the first key, and the first operator, are read. An unknown
  * operator throws.
  */
 function getConditionMembers(obj: Dic) {
@@ -564,7 +469,57 @@ function getConditionMembers(obj: Dic) {
   const sqlColumn = pathToDatabaseColumn(column);
   // Shaped for its operator: a list, two bounds or a pattern
   const value = formatValue({ operator, value: rawValue });
-  return { column, sqlColumn, fn, operator, rawValue, value };
+  /**
+   * The operator on `column`, the value cast for `cast` (the column itself, unless it is an
+   * expression). A `like` pattern is text whatever the column, and is never cast.
+   */
+  const compare = (column: any, cast: { dataType: string } = column) =>
+    fn(column, LIKE_OPERATORS.includes(operator) ? value : castTo(cast, value));
+  return { column, sqlColumn, operator, rawValue, value, compare };
+}
+
+type Condition = ReturnType<typeof getConditionMembers>;
+
+/**
+ * The field at `path`, or else the field at its longest prefix and the rest of the path, a field
+ * of the related document.
+ *
+ * ```ts
+ * fieldAtPrefix('attributes.author.name', fields)
+ * // { field: <attributes.author>, path: 'attributes.author', property: 'name' }
+ * ```
+ */
+function fieldAtPrefix(path: string, fields: FieldBuilder[]) {
+  const field = getFieldAtPath(path, fields);
+  if (field) return { field, path, property: '' };
+  const parts = path.split('.');
+  for (let i = parts.length - 1; i > 0; i--) {
+    const prefix = parts.slice(0, i).join('.');
+    const candidate = getFieldAtPath(prefix, fields);
+    if (candidate) return { field: candidate, path: prefix, property: parts.slice(i).join('.') };
+  }
+  return { field: undefined, path, property: '' };
+}
+
+/**
+ * The ids a relation set is compared with, each once: the list sent, a CSV string, or one id.
+ *
+ * ```ts
+ * normalizeValues('a,b,a', ['a', 'b', 'a']) // ['a', 'b']
+ * ```
+ */
+function normalizeValues(raw: any, formatted: any) {
+  let out;
+  if (Array.isArray(raw)) {
+    out = raw;
+  } else if (typeof raw === 'string' && raw.includes(',')) {
+    out = raw.split(',');
+  } else if (Array.isArray(formatted)) {
+    out = formatted;
+  } else {
+    out = [formatted];
+  }
+  return Array.from(new Set(out));
 }
 
 /**

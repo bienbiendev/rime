@@ -28,7 +28,10 @@ type Args = {
   locales?: LocaleConfig[];
   hasParent?: boolean;
   relationTargets?: RelationTargets;
-  /** Parent table -> its child tables, for the `defineRelations` block. */
+  /**
+   * Parent table -> its child tables, for the `defineRelations` block. The nested calls add to
+   * the same one.
+   */
   relationsDic?: Record<string, string[]>;
   /**
    * Storage-only columns to append to this config's table, in order.
@@ -95,7 +98,7 @@ const buildRootTable = async ({
     const name = buildTableName({ owner: rootName, child: storage });
     if (blocksRegister.includes(name)) return;
 
-    relationsDic = { ...relationsDic, [rootName]: [...(relationsDic[rootName] || []), name] };
+    (relationsDic[rootName] ??= []).push(name);
     const nested = await buildRootTable({
       blocksRegister,
       fields,
@@ -106,7 +109,6 @@ const buildRootTable = async ({
       locales,
       rootName
     });
-    relationsDic = nested.relationsDic;
     if (nested.relationFieldsHasLocale) relationFieldsHasLocale = true;
     referenceJoins.push(...nested.referenceJoins);
     blocksRegister.push(name);
@@ -179,47 +181,35 @@ const buildRootTable = async ({
 
   // A child row is read by its owner. A field's `$index()` adds its own column below.
   const indexed = hasParent || versionsOf ? ['ownerId'] : [];
+  // A locales branch takes the localized columns and the table keeps the others. With no
+  // branch, the table keeps them all.
+  const hasBranch = !!locales?.length && hasLocalizedField(incomingFields);
+  const branchName = buildTableName({ owner: tableName, branch: 'locales' });
+  const branchIndexed: string[] = [];
 
-  let table: string;
+  const localized = hasBranch
+    ? await generateFieldsTemplates(incomingFields, true, '', branchIndexed)
+    : [];
+  const own = await generateFieldsTemplates(
+    incomingFields,
+    hasBranch ? false : undefined,
+    '',
+    indexed
+  );
+  const tail = [
+    hasParent && templateParent(rootName),
+    versionsOf && templateParent(versionsOf),
+    ...featureColumns.map((column) => templateDeclaredColumn(column) + ',')
+  ].filter(Boolean);
 
-  if (locales && locales.length && hasLocalizedField(incomingFields)) {
-    const tableNameLocales = buildTableName({ owner: tableName, branch: 'locales' });
-    const localizedIndexed: string[] = [];
-    const strLocalizedFields = await generateFieldsTemplates(
-      incomingFields,
-      true,
-      '',
-      localizedIndexed
-    );
-    relationsDic[tableName] = [...(relationsDic[tableName] || []), tableNameLocales];
-    const strUnlocalizedFields = await generateFieldsTemplates(incomingFields, false, '', indexed);
-    if (hasParent) {
-      strUnlocalizedFields.push(templateParent(rootName));
-    }
-    if (versionsOf) {
-      strUnlocalizedFields.push(templateParent(versionsOf));
-    }
-    for (const column of featureColumns) {
-      strUnlocalizedFields.push(templateDeclaredColumn(column) + ',');
-    }
-    table = templateTable(tableName, strUnlocalizedFields.join('\n  '), indexed);
+  let table = templateTable(tableName, [...own, ...tail].join('\n  '), indexed);
+  if (hasBranch) {
+    (relationsDic[tableName] ??= []).push(branchName);
     table += templateTable(
-      tableNameLocales,
-      [...strLocalizedFields, templateLocale(), templateParent(tableName)].join('\n  '),
-      ['ownerId', ...localizedIndexed]
+      branchName,
+      [...localized, templateLocale(), templateParent(tableName)].join('\n  '),
+      ['ownerId', ...branchIndexed]
     );
-  } else {
-    const strFields = await generateFieldsTemplates(incomingFields, undefined, '', indexed);
-    if (hasParent) {
-      strFields.push(templateParent(rootName));
-    }
-    if (versionsOf) {
-      strFields.push(templateParent(versionsOf));
-    }
-    for (const column of featureColumns) {
-      strFields.push(templateDeclaredColumn(column) + ',');
-    }
-    table = templateTable(tableName, strFields.join('\n  '), indexed);
   }
 
   return {
