@@ -11,11 +11,7 @@ const config = {
   plugins: [
     postcssImport(),
     mixins({
-      mixinsFiles: [path.join(__dirname, './src/lib/site/styles/*.mixins.css')],
-      mixinsDir: [
-        path.join(__dirname, './src/lib/panel/style/mixins'),
-        path.join(__dirname, './src/lib/site/styles/mixins')
-      ]
+      mixinsDir: [path.join(__dirname, './src/lib/panel/style/mixins')]
     }),
     sizeFunction(),
     autoprefixer

@@ -3,7 +3,7 @@
 // fixture: lists and reads at depth 0, 1 and 2, the menu's links, and a page found by its url.
 //
 // Usage: bun src/scripts/perf-ops-relations.ts --url http://localhost:5173 [--n 100] [--runs 5]
-//          [--email admin@email.com] [--password 'a&1Aa&1A'] [--cache]
+//          [--email admin@email.com] [--password 'a&1Aa&1A']
 //
 // Seeds once, then `runs` times over makes `n` calls a pass and prints each pass's median total
 // and its time per call. The seed:

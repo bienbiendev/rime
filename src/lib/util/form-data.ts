@@ -1,7 +1,7 @@
 import type { Dic } from './types.js';
 
 /** The FormData entry that carries a form's values as JSON. */
-export const FORM_JSON_ENTRY = '_data';
+const FORM_JSON_ENTRY = '_data';
 
 /**
  * A document's values to FormData: a file at the top level as an entry of its own, everything

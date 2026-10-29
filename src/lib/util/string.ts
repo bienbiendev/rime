@@ -67,7 +67,7 @@ export function toKebabCase(str: string) {
   // 1) treat cap + lower as start of new word
   str = str.replace(capital_plus_lower, function (match) {
     // match is one caps followed by one non-cap
-    return ' ' + (match[0].toLowerCase() || match[0]) + match[1];
+    return ' ' + match[0].toLowerCase() + match[1];
   });
   // 2) treat all remaining capitals as words
   str = str.replace(capitals, function (match) {

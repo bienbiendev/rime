@@ -1,32 +1,27 @@
+const ALPHANUMERIC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const PASSWORD_KINDS = [
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  'abcdefghijklmnopqrstuvwxyz',
+  '0123456789',
+  '!@#$%^&*()_-+=[]{}|:;<>,.?/~'
+];
+const PASSWORD_CHARS = PASSWORD_KINDS.join('');
+
+/** `count` random 32-bit integers from `crypto`. */
+const randomValues = (count: number) => crypto.getRandomValues(new Uint32Array(count));
+
+/** The character of `chars` a random integer picks. */
+const pick = (chars: string, value: number) => chars.charAt(value % chars.length);
+
 /**
- * Generates a random alphanumeric string of specified length.
- * Useful for creating unique identifiers, temporary tokens, or random keys.
+ * A random alphanumeric string of `length` characters, from `crypto.getRandomValues`.
+ * `randomId(32)` is the `BETTER_AUTH_SECRET` that `rime init` writes.
  *
  * @example
- * // Generate a random ID with 10 characters
- * const id = randomId(10);
- * // Result example: "a7bF9cD3eZ"
+ * randomId(10); // "a7bF9cD3eZ"
  */
-export const randomId = (length: number): string => {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const charactersLength = characters.length;
-  let result = '';
-  const randomValues = new Uint32Array(length);
-
-  // Use crypto.getRandomValues for better randomness when available
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(randomValues);
-    for (let i = 0; i < length; i++) {
-      result += characters.charAt(randomValues[i] % charactersLength);
-    }
-  } else {
-    // Fallback to Math.random
-    for (let i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    }
-  }
-  return result;
-};
+export const randomId = (length: number): string =>
+  Array.from(randomValues(length), (value) => pick(ALPHANUMERIC, value)).join('');
 
 /** The id of a row not saved yet: a save adds it and gives it a real one. `temp-3f9aK2bQ` */
 export const tempId = () => `temp-${randomId(8)}`;
@@ -34,86 +29,31 @@ export const tempId = () => `temp-${randomId(8)}`;
 /** Whether a row id is a temp id: the row is not saved yet. */
 export const isTempId = (id: string) => id.startsWith('temp-');
 
+/** `array` shuffled in place (Fisher-Yates), from `crypto`. */
+const shuffle = <T>(array: T[]) => {
+  const values = randomValues(array.length);
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = values[i] % (i + 1);
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+};
+
 /**
- * Generate a secure random password with uppercase, lowercase, numbers and symbols. It holds one
- * character of each kind, so a length under 4 throws a `RangeError`.
+ * A random password of `length` characters, from `crypto`, holding at least one upper-case
+ * letter, one lower-case letter, one digit and one symbol. A length under 4 throws a
+ * `RangeError`.
  *
  * @example
- * // Generate a password with default length (12)
- * const password = randomPassword();
- *
- * // Generate a password with custom length
- * const longPassword = randomPassword(16);
+ * randomPassword(); // 12 characters
+ * randomPassword(16); // 16 characters
  */
 export const randomPassword = (length = 12): string => {
   if (length < 4) {
     throw new RangeError(`A password holds one character of each kind: 4 at least, got ${length}`);
   }
-  const uppercaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const lowercaseChars = 'abcdefghijklmnopqrstuvwxyz';
-  const numberChars = '0123456789';
-  const symbolChars = '!@#$%^&*()_-+=[]{}|:;<>,.?/~';
-
-  // All possible characters
-  const allChars = uppercaseChars + lowercaseChars + numberChars + symbolChars;
-
-  let password = '';
-
-  // Use crypto.getRandomValues for better randomness when available
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    const randomValues = new Uint32Array(length);
-    crypto.getRandomValues(randomValues);
-
-    // First add one character from each required set
-    password += uppercaseChars.charAt(randomValues[0] % uppercaseChars.length);
-    password += lowercaseChars.charAt(randomValues[1] % lowercaseChars.length);
-    password += numberChars.charAt(randomValues[2] % numberChars.length);
-    password += symbolChars.charAt(randomValues[3] % symbolChars.length);
-
-    // Fill the rest with random characters
-    for (let i = 4; i < length; i++) {
-      password += allChars.charAt(randomValues[i] % allChars.length);
-    }
-
-    // Shuffle the password
-    const shuffleValues = new Uint32Array(length);
-    crypto.getRandomValues(shuffleValues);
-
-    password = shuffleString(password, shuffleValues);
-  } else {
-    // Fallback to Math.random
-    password += uppercaseChars.charAt(Math.floor(Math.random() * uppercaseChars.length));
-    password += lowercaseChars.charAt(Math.floor(Math.random() * lowercaseChars.length));
-    password += numberChars.charAt(Math.floor(Math.random() * numberChars.length));
-    password += symbolChars.charAt(Math.floor(Math.random() * symbolChars.length));
-
-    // Fill the rest with random characters
-    for (let i = 4; i < length; i++) {
-      password += allChars.charAt(Math.floor(Math.random() * allChars.length));
-    }
-
-    // Shuffle the password
-    password = shuffleString(password);
-  }
-
-  return password;
-};
-
-/**
- * Shuffle a string using Fisher-Yates algorithm
- */
-const shuffleString = (str: string, randomValues?: Uint32Array): string => {
-  const array = str.split('');
-
-  for (let i = array.length - 1; i > 0; i--) {
-    let j;
-    if (randomValues && i < randomValues.length) {
-      j = randomValues[i] % (i + 1);
-    } else {
-      j = Math.floor(Math.random() * (i + 1));
-    }
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-
-  return array.join('');
+  const values = randomValues(length);
+  const oneOfEach = PASSWORD_KINDS.map((chars, index) => pick(chars, values[index]));
+  const rest = Array.from(values.slice(4), (value) => pick(PASSWORD_CHARS, value));
+  return shuffle([...oneOfEach, ...rest]).join('');
 };

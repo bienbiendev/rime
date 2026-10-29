@@ -297,7 +297,7 @@ create_admin() {
 api_ops() {
   local url=$1
   local cache_flag=()
-  [[ $CACHE -eq 1 ]] && cache_flag=(--cache)
+  [[ $CACHE -eq 1 && $FIXTURE == "pages" ]] && cache_flag=(--cache)
   local script="perf-ops.ts"
   [[ $FIXTURE == "relations" ]] && script="perf-ops-relations.ts"
   bun "$ROOT_DIR/src/scripts/$script" --url "$url" --n "$PAGES" --runs "$RUNS" \

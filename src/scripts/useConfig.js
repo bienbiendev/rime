@@ -3,7 +3,7 @@ import { program } from 'commander';
 import { existsSync } from 'fs';
 import path from 'path';
 
-program.version('0.1').description('CMS utilities');
+program.version('0.1');
 
 const projectRoot = process.cwd();
 
