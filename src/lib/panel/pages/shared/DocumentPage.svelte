@@ -7,10 +7,9 @@
 
   type Props = {
     data: AreaDocData | CollectionDocData;
-    operation: 'create' | 'update';
     class?: string;
   };
-  const { data, operation, class: className }: Props = $props();
+  const { data, class: className }: Props = $props();
 
   const versions = setVersionsContext();
 </script>
@@ -19,7 +18,12 @@
 <Page>
   {#snippet main()}
     {#key `${data.doc.id}|${data.doc.versionId ?? ''}|${data.doc.locale ?? ''}`}
-      <Document class={className} doc={data.doc} {operation} readOnly={data.readOnly} />
+      <Document
+        class={className}
+        doc={data.doc}
+        operation={data.operation}
+        readOnly={data.readOnly}
+      />
     {/key}
   {/snippet}
 </Page>

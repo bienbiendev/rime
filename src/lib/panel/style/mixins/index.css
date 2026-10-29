@@ -58,24 +58,6 @@
   box-shadow: 0 0 0 3px oklch(from var(--rz-danger) l c h / 0.15);
 }
 
-@define-mixin radius-left $size {
-  border-top-left-radius: var(--rz-radius-$(size));
-  border-bottom-left-radius: var(--rz-radius-$(size));
-}
-
-@define-mixin radius-top $size {
-  border-top-right-radius: var(--rz-radius-$(size));
-  border-top-left-radius: var(--rz-radius-$(size));
-}
-@define-mixin radius-bottom $size {
-  border-bottom-right-radius: var(--rz-radius-$(size));
-  border-bottom-left-radius: var(--rz-radius-$(size));
-}
-
-@define-mixin font-light {
-  font-variation-settings: 'wght' 300;
-  font-weight: 300;
-}
 @define-mixin font-normal {
   font-variation-settings: 'wght' 400;
   font-weight: 400;

@@ -28,7 +28,7 @@
       name: `list-nested`
     },
     onEnd: function (evt) {
-      const { newIndex, oldIndex } = evt;
+      const { newIndex } = evt;
 
       const fromParentId = evt.item.getAttribute('data-parent');
       const toParentId = evt.to.getAttribute('data-id');
@@ -38,8 +38,7 @@
         .handleNestedDocumentMove({
           documentId: nodeId,
           from: {
-            parent: fromParentId === 'root' ? null : fromParentId,
-            index: oldIndex || 0
+            parent: fromParentId === 'root' ? null : fromParentId
           },
           to: {
             parent: toParentId === 'root' ? null : toParentId,

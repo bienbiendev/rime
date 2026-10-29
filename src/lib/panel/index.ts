@@ -1,7 +1,6 @@
 import type { VersionsStatus } from '#lib/core/prototype/shared/versions/constant.js';
 import type { AutoSaves } from '#lib/core/prototype/shared/versions/types.js';
 import type { GenericDoc } from '#lib/core/prototype/types.js';
-import type { Snippet } from 'svelte';
 import { Field } from './components/fields/index.js';
 import RelationInline from '#lib/fields/relation/component/RelationInline.svelte';
 import RichTextInline from '#lib/fields/rich-text/component/RichTextInline.svelte';
@@ -63,14 +62,7 @@ export const CONTEXT = {
 
 export type { DocumentFormContext } from './context/documentForm.svelte.js';
 export type { Command } from './context/commands.svelte.js';
-export type CollectionProps = {
-  data: {
-    docs: GenericDoc[];
-    status: number;
-    canCreate: boolean;
-  };
-  children: Snippet;
-};
+export type { CollectionProps } from './types.js';
 export type DocVersion = {
   id: string;
   updatedAt: Date;

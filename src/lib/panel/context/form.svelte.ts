@@ -117,9 +117,6 @@ export function createFormStore(initial: Dic) {
           if (result.data?.errors) {
             errors.value = result.data.errors;
           }
-          if (result.data?.error) {
-            errors.value = result.data.errors;
-          }
           form = result.data?.form || {};
           initial = form;
           break;

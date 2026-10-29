@@ -24,7 +24,6 @@ import { normalizeFieldPath } from '#lib/util/string.js';
 import type { Dic, WithOptional } from '#lib/util/types.js';
 import type { ActionResult } from '$app/forms';
 import { diff } from 'deep-object-diff';
-import { setContext } from 'svelte';
 import { toast } from 'svelte-sonner';
 import { SvelteURLSearchParams } from 'svelte/reactivity';
 import { t__ } from '../../core/i18n/index.js';
@@ -887,16 +886,13 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   };
 }
 
-const FORM_KEY = 'rime.form';
-
 export function setDocumentFormContext<T extends WithOptional<GenericDoc, 'id'>>(args: Args<T>) {
   const initial = {
     ...args.initial,
     _type: args.initial._type || args.config.type,
     _prototype: args.initial._prototype || args.config.slug
   };
-  const store = createDocumentFormState({ ...args, initial });
-  return setContext(`${FORM_KEY}.${args.key}`, store);
+  return createDocumentFormState({ ...args, initial });
 }
 
 export type DocumentFormContext<

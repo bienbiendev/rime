@@ -5,4 +5,4 @@
   const { data }: { data: AreaDocData } = $props();
 </script>
 
-<DocumentPage {data} operation="update" />
+<DocumentPage {data} />

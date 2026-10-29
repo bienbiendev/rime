@@ -9,7 +9,7 @@ import { getContext, setContext } from 'svelte';
  * its url with that locale, so after a switch the same url is a new resource.
  */
 function createAPIProxy(getLocale: () => string | undefined) {
-  const resources = $state<Map<string, Resource>>(new Map());
+  const resources = new Map<string, Resource>();
 
   /**
    * The cached read of `url`, fetched on first ask. It is not fetched again until `invalidate`

@@ -239,7 +239,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     documentId
   }: {
     documentId: string;
-    from: { parent: string | null; index: number };
+    from: { parent: string | null };
     to: { parent: string | null; index: number };
   }) => {
     const updatedDocs = [...docs] as GenericNestedDoc[];

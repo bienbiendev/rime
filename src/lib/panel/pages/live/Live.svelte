@@ -242,10 +242,6 @@
       }
     }
   }
-
-  function handleIFrameError() {
-    console.error('Error loading iframe:', data.src);
-  }
 </script>
 
 <Commands>
@@ -284,13 +280,7 @@
 
       <PaneResizer />
       <Pane class="rz-live-container__pane-right" defaultSize={70}>
-        <iframe
-          class={currentDevice}
-          bind:this={iframe}
-          title="edit"
-          src={data.src}
-          onerror={handleIFrameError}
-        ></iframe>
+        <iframe class={currentDevice} bind:this={iframe} title="edit" src={data.src}></iframe>
       </Pane>
     </PaneGroup>
   </div>

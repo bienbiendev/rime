@@ -5,4 +5,4 @@
   const { data }: { data: CollectionDocData } = $props();
 </script>
 
-<DocumentPage {data} operation={data.operation} class="rz-collection-container__doc" />
+<DocumentPage {data} class="rz-collection-container__doc" />

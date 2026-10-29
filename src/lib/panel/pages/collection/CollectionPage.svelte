@@ -158,13 +158,7 @@
         icon: CirclePlus,
         // An upload collection creates its documents through the upload.
         when: () => collection.canCreate && !collection.isUpload,
-        run: () =>
-          goto(
-            createPath(
-              collection.config,
-              collection.isUpload ? collection.upload.currentPath : null
-            )
-          )
+        run: () => goto(createPath(collection.config))
       },
       {
         id: 'collection.search',
