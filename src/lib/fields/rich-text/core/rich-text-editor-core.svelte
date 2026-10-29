@@ -8,7 +8,7 @@
   import '../component/styles/editor.css';
   import Suggestion from '../component/suggestion/suggestion.svelte';
   import { hasSuggestion } from '../util.js';
-  import { buildEditorConfig } from './build-editor-config.js';
+  import { buildEditorConfig, panelContexts } from './build-editor-config.js';
   import { editorContent } from './content.js';
   import { defaultFeatures } from './features/index.js';
   import type { RichTextFeature } from './types.js';
@@ -40,6 +40,7 @@
   let features = $state<RichTextFeature[]>([]);
 
   const ctx = createRichTextState();
+  const contexts = panelContexts();
 
   const withSuggestion = $derived(hasSuggestion(wanted));
 
@@ -49,7 +50,7 @@
   // The editor starts with its content, and goes with the component. A value it cannot hold
   // whole stays read-only, so no edit saves over it.
   onMount(() => {
-    const richTextEditorConfig = buildEditorConfig({ features: wanted });
+    const richTextEditorConfig = buildEditorConfig(wanted, contexts);
     features = richTextEditorConfig.features;
     const opened = editorContent(value, getSchema(richTextEditorConfig.tiptap.extensions ?? []));
     unsupported = opened.unsupported;

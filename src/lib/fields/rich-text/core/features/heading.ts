@@ -28,81 +28,24 @@ function toggleOrCreate(level: Level, { editor, range }: { editor: Editor; range
   editor.chain().focus().toggleHeading({ level }).run();
 }
 
-// Create heading feature items for each level
-const headingItems: RichTextFeatureNode[] = [
-  {
-    label: 'Heading 1',
-    icon: Heading1Icon,
-    isActive: ({ editor }) => editor.isActive('heading', { level: 1 }),
-    nodeSelector: {
-      command: ({ editor }) => editor.chain().focus().toggleHeading({ level: 1 }).run()
-    },
-    suggestion: {
-      command: ({ editor, range }) => toggleOrCreate(1, { range, editor })
-    }
+const ICONS = [Heading1Icon, Heading2Icon, Heading3Icon, Heading4Icon, Heading5Icon, Heading6Icon];
+
+// The node-selector and palette entries of one heading level
+const headingItem = (level: Level): RichTextFeatureNode => ({
+  label: `Heading ${level}`,
+  icon: ICONS[level - 1],
+  isActive: ({ editor }) => editor.isActive('heading', { level }),
+  nodeSelector: {
+    command: ({ editor }) => editor.chain().focus().toggleHeading({ level }).run()
   },
-  {
-    label: 'Heading 2',
-    icon: Heading2Icon,
-    isActive: ({ editor }) => editor.isActive('heading', { level: 2 }),
-    nodeSelector: {
-      command: ({ editor }) => editor.chain().focus().toggleHeading({ level: 2 }).run()
-    },
-    suggestion: {
-      command: ({ editor, range }) => toggleOrCreate(2, { range, editor })
-    }
-  },
-  {
-    label: 'Heading 3',
-    icon: Heading3Icon,
-    isActive: ({ editor }) => editor.isActive('heading', { level: 3 }),
-    nodeSelector: {
-      command: ({ editor }) => editor.chain().focus().toggleHeading({ level: 3 }).run()
-    },
-    suggestion: {
-      command: ({ editor, range }) => toggleOrCreate(3, { range, editor })
-    }
-  },
-  {
-    label: 'Heading 4',
-    icon: Heading4Icon,
-    isActive: ({ editor }) => editor.isActive('heading', { level: 4 }),
-    nodeSelector: {
-      command: ({ editor }) => editor.chain().focus().toggleHeading({ level: 4 }).run()
-    },
-    suggestion: {
-      command: ({ editor, range }) => toggleOrCreate(4, { range, editor })
-    }
-  },
-  {
-    label: 'Heading 5',
-    icon: Heading5Icon,
-    isActive: ({ editor }) => editor.isActive('heading', { level: 5 }),
-    nodeSelector: {
-      command: ({ editor }) => editor.chain().focus().toggleHeading({ level: 5 }).run()
-    },
-    suggestion: {
-      command: ({ editor, range }) => toggleOrCreate(5, { range, editor })
-    }
-  },
-  {
-    label: 'Heading 6',
-    icon: Heading6Icon,
-    isActive: ({ editor }) => editor.isActive('heading', { level: 6 }),
-    nodeSelector: {
-      command: ({ editor }) => editor.chain().focus().toggleHeading({ level: 6 }).run()
-    },
-    suggestion: {
-      command: ({ editor, range }) => toggleOrCreate(6, { range, editor })
-    }
-  }
-];
+  suggestion: { command: (args) => toggleOrCreate(level, args) }
+});
 
 /** The heading feature with the levels given, or all six when none is given. */
 export const HeadingFeature = (...levels: Level[]): RichTextFeature => {
   const used = levels.length ? levels : ALL_LEVELS;
   return {
     extension: headingExtension(used),
-    nodes: used.map((level) => headingItems[level - 1])
+    nodes: used.map(headingItem)
   };
 };

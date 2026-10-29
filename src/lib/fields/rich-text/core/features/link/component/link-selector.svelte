@@ -6,7 +6,7 @@
   import Button from '#lib/panel/components/ui/button/button.svelte';
   import PickDialog from '../../pick-dialog.svelte';
   import Input from '#lib/panel/components/ui/input/input.svelte';
-  import { getAPIProxyContext, type Resource } from '#lib/panel/context/api-proxy.svelte.js';
+  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
   import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
   import CornerDownLeft from '@lucide/svelte/icons/corner-down-left';
   import ExternalLink from '@lucide/svelte/icons/external-link';
@@ -41,39 +41,19 @@
     (editor && editor.getAttributes('link').target === '_blank') || false
   );
 
-  /**
-   * Logic to get internal resources e.g., collections, areas
-   */
+  // The documents a link can point to: one request per source, in the panel's locale, made once
   const APIProxy = getAPIProxyContext();
   const locale = getLocaleContext();
-  let resources = $state<Resource<LinkResource[]>[]>([]);
-  let resourcesFlatMap = $state<LinkResource[]>();
-
-  $effect(() => {
-    if (Array.isArray(options?.sources) && !resources.length) {
-      resources = options.sources.map((source) => {
-        const [slug, query] = source.split('?');
-        let params = query || '' ? `?${query}&select=title,url` : '?select=title,url';
-        params = locale.code ? `${params}&locale=${locale.code}` : params;
-        const url = `${apiUrl(slug)}${params}`;
-        return APIProxy.getRessource<LinkResource[]>(url, {
-          transformData: (data) => {
-            return 'docs' in data ? data.docs : 'doc' in data ? [data.doc] : data;
-          }
-        });
-      });
-    }
+  const transformData = (data: any) =>
+    'docs' in data ? data.docs : 'doc' in data ? [data.doc] : data;
+  // svelte-ignore state_referenced_locally
+  const resources = (options?.sources ?? []).map((source) => {
+    const [slug, query] = source.split('?');
+    const params = `${query ? `?${query}&` : '?'}select=title,url`;
+    const url = `${apiUrl(slug)}${params}${locale.code ? `&locale=${locale.code}` : ''}`;
+    return APIProxy.getRessource<LinkResource[]>(url, { transformData });
   });
-
-  /** Create a flat map of all resources */
-  $effect(() => {
-    const notNull = (d: LinkResource[] | null): d is LinkResource[] => d !== null;
-    resourcesFlatMap = resources
-      .map((r) => r.data)
-      .filter(notNull)
-      .flatMap((r) => r)
-      .filter((r) => !!r.url);
-  });
+  const resourcesFlatMap = $derived(resources.flatMap((r) => r.data ?? []).filter((r) => !!r.url));
 
   /**
    * Whenever the url input opened and the selection is active

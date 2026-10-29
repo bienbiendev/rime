@@ -1,8 +1,6 @@
 import { t__ } from '#lib/core/i18n/index.js';
 import type { RichTextEditorConfig, RichTextFeature } from '#lib/fields/rich-text/core/types.js';
 import { getTitleContext, TITLE_CTX } from '#lib/panel/context/title.js';
-import type { WithRequired } from '#lib/util/types.js';
-import type { EditorOptions } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
 import HardBreak from '@tiptap/extension-hard-break';
 import { ListItem } from '@tiptap/extension-list';
@@ -17,88 +15,61 @@ import { hasSuggestion } from '../util.js';
 import { CurrentNodeAttribute } from './extensions/current-node/current-node.js';
 import { ParagraphFeature } from './features/paragraph.js';
 
-type BuildEditorConfigArgs = {
-  features: Array<RichTextFeature>;
-};
+/**
+ * The panel contexts a node view reads. Node views mount outside the component tree, so they
+ * get these through their extension's `contexts` option; collect them in a component's script,
+ * where `getContext` works.
+ */
+export function panelContexts() {
+  return new Map<unknown, unknown>([
+    [TITLE_CTX, getTitleContext()],
+    [CONFIG_CTX, getConfigContext()],
+    [API_PROXY, getAPIProxyContext()],
+    [USER_CTX, getUserContext()],
+    [LOCALE_CTX, getLocaleContext()]
+  ]);
+}
 
 /**
- * Builds a rich text editor configuration based on the provided features
+ * The editor's features and its tiptap options. Paragraph is added when the features lack it,
+ * list items when a list is there, and each extension drawn by a Svelte component is configured
+ * with `contexts` for this editor alone.
+ *
+ * ```ts
+ * const contexts = panelContexts();
+ * onMount(() => new Editor({ ...buildEditorConfig(features, contexts).tiptap, element }));
+ * ```
  */
-export function buildEditorConfig(args: BuildEditorConfigArgs): RichTextEditorConfig {
-  const { features } = args;
-
-  const withSuggestion = hasSuggestion(features);
-
-  // Add mandatory paragraph feature if not provided
-  const hasParagraph = features
-    .filter((feature) => !!feature.extension)
-    .some((feature) => feature.extension!.name === 'paragraph');
-  if (!hasParagraph) {
-    features.push(ParagraphFeature);
-  }
-
-  // Create base editor configuration with essential extensions
-  const baseEditorConfig: Partial<EditorOptions> = {
-    extensions: [
-      Document,
-      Text,
-      UndoRedo,
-      Dropcursor,
-      HardBreak,
-      Gapcursor,
-      CurrentNodeAttribute,
-      Typography,
-      Placeholder.configure({
-        placeholder: withSuggestion ? t__('fields.write_or_slash') : t__('fields.write_something')
-      })
-    ]
-  };
-
-  // Add list item extension if bulletList or orderedList provided
-  const hasList = features
-    .filter((feature) => !!feature.extension)
-    .some((feature) => ['orderedList', 'bulletList'].includes(feature.extension!.name));
-  if (hasList) {
-    baseEditorConfig.extensions?.push(ListItem);
-  }
-
-  // Add all feature extensions to the editor
-  // We need to track which extensions we've already added to avoid duplicates
-  const addedExtensions = new Set();
-
-  const hasExtension = (
-    f: (typeof features)[number]
-  ): f is WithRequired<RichTextFeature, 'extension'> => !!f.extension;
-
-  features.forEach((feature) => {
-    if (hasExtension(feature) && !addedExtensions.has(feature.extension)) {
-      // Populate contexts
-      if ('addNodeView' in feature.extension.config) {
-        const originalAddOption = feature.extension.config.addOptions || (() => ({}));
-        const contexts = new Map();
-        const localeContext = getLocaleContext();
-        const configContext = getConfigContext();
-        const apiProxyContext = getAPIProxyContext();
-        const userContext = getUserContext();
-        const titleContext = getTitleContext();
-        contexts.set(TITLE_CTX, titleContext);
-        contexts.set(CONFIG_CTX, configContext);
-        contexts.set(API_PROXY, apiProxyContext);
-        contexts.set(USER_CTX, userContext);
-        contexts.set(LOCALE_CTX, localeContext);
-        feature.extension.config.addOptions = () => {
-          // @ts-expect-error
-          return { ...originalAddOption(), contexts };
-        };
-      }
-      // Push extension
-      baseEditorConfig.extensions?.push(feature.extension);
-      addedExtensions.add(feature.extension);
-    }
-  });
-
+export function buildEditorConfig(
+  features: RichTextFeature[],
+  contexts: Map<unknown, unknown>
+): RichTextEditorConfig {
+  const hasParagraph = features.some((feature) => feature.extension?.name === 'paragraph');
+  const all = hasParagraph ? features : [...features, ParagraphFeature];
+  const names = all.flatMap((feature) => feature.extension?.name ?? []);
+  const hasList = names.includes('bulletList') || names.includes('orderedList');
+  const shared = [...new Set(all.flatMap((feature) => feature.extension ?? []))];
+  const placeholder = hasSuggestion(all)
+    ? t__('fields.write_or_slash')
+    : t__('fields.write_something');
   return {
-    tiptap: baseEditorConfig,
-    features: features
+    features: all,
+    tiptap: {
+      extensions: [
+        Document,
+        Text,
+        UndoRedo,
+        Dropcursor,
+        HardBreak,
+        Gapcursor,
+        CurrentNodeAttribute,
+        Typography,
+        Placeholder.configure({ placeholder }),
+        ...(hasList ? [ListItem] : []),
+        ...shared.map((extension) =>
+          'addNodeView' in extension.config ? extension.configure({ contexts }) : extension
+        )
+      ]
+    }
   };
 }

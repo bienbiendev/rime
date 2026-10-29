@@ -26,6 +26,17 @@ const getOuterDomNode = (view: EditorView, domNode: HTMLElement) => {
   return tmpDomNode;
 };
 
+// The top-level block holding `dom`: its element, node and position; null outside a block
+const outerBlockAt = (view: EditorView, dom: globalThis.Node | null) => {
+  const outer = dom && getOuterDomNode(view, dom as HTMLElement);
+  if (!outer || outer === view.dom || outer.nodeType !== 1) {
+    return null;
+  }
+  const pos = view.posAtDOM(outer, 0);
+  const { doc } = view.state;
+  return { dom: outer, node: getOuterNode(doc, pos), pos: getOuterNodePos(doc, pos) };
+};
+
 export interface DragHandlePluginProps {
   pluginKey: PluginKey | string;
   editor: Editor;
@@ -192,31 +203,13 @@ export const DragHandlePlugin = ({
               return;
             }
 
-            // Get domNode from (new) position.
-            let domNode = view.nodeDOM(currentNodePos) as HTMLElement;
-
-            // Since old element could have been wrapped, we need to find
-            // the outer node and take its position and node data.
-            domNode = getOuterDomNode(view, domNode);
-
-            // Skip if domNode is editor dom.
-            if (domNode === view.dom) {
+            const block = outerBlockAt(view, view.nodeDOM(currentNodePos));
+            if (!block) {
               return;
             }
-
-            // We only want `Element`.
-            if (domNode?.nodeType !== 1) {
-              return;
-            }
-
-            const domNodePos = view.posAtDOM(domNode, 0);
-            const outerNode = getOuterNode(editor.state.doc, domNodePos);
-            const outerNodePos = getOuterNodePos(editor.state.doc, domNodePos);
-
-            currentNode = outerNode;
-            currentNodePos = outerNodePos;
-
-            repositionDragHandle(domNode as Element);
+            currentNode = block.node;
+            currentNodePos = block.pos;
+            repositionDragHandle(block.dom);
           },
 
           destroy() {
@@ -286,46 +279,15 @@ export const DragHandlePlugin = ({
               const { x, y } = pendingMouseCoords;
               pendingMouseCoords = null;
 
-              const nodeData = findElementNextToCoords({
-                x,
-                y,
-                direction: 'right',
-                editor
-              });
-
-              // Skip if there is no node next to coords
-              if (!nodeData.resultElement) {
+              const found = findElementNextToCoords({ x, y, editor });
+              const block = outerBlockAt(view, found.resultElement);
+              if (!block || block.node === currentNode) {
                 return;
               }
-
-              let domNode = nodeData.resultElement as HTMLElement;
-
-              domNode = getOuterDomNode(view, domNode);
-
-              // Skip if domNode is editor dom.
-              if (domNode === view.dom) {
-                return;
-              }
-
-              // We only want `Element`.
-              if (domNode?.nodeType !== 1) {
-                return;
-              }
-
-              const domNodePos = view.posAtDOM(domNode, 0);
-              const outerNode = getOuterNode(editor.state.doc, domNodePos);
-
-              if (outerNode !== currentNode) {
-                const outerNodePos = getOuterNodePos(editor.state.doc, domNodePos);
-
-                currentNode = outerNode;
-                currentNodePos = outerNodePos;
-
-                // Set nodes clientRect.
-                repositionDragHandle(domNode as Element);
-
-                showHandle();
-              }
+              currentNode = block.node;
+              currentNodePos = block.pos;
+              repositionDragHandle(block.dom);
+              showHandle();
             });
 
             return false;

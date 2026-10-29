@@ -20,9 +20,8 @@ export const findElementNextToCoords = (options: FindElementNextToCoords) => {
 
   const root = editor.view.dom as HTMLElement;
 
-  // Get potential candidates from prosemirror child elements and filter
-  // by removing decorations and non prosemirror-elements
-  const candidates = [...root.querySelectorAll<HTMLElement>('*')]
+  // The editor's top-level elements that cross the band, in document order
+  const candidates = [...root.children]
     .filter((candidate) => {
       return editor.view.posAtDOM(candidate, 0) >= 0;
     })

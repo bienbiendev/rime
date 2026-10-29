@@ -1,5 +1,4 @@
 import type { PrototypeSlug } from '#lib/core/prototype/types.js';
-import type { Dic } from '#lib/util/types.js';
 import { Node, mergeAttributes } from '@tiptap/core';
 import SvelteNodeViewRenderer from '../../svelte/node-view-renderer.svelte';
 import ResourceComponent from './resource.svelte';
@@ -18,14 +17,14 @@ export const Resource = Node.create<ResourceFeatureExtensionOptions>({
   inline: false,
 
   addAttributes() {
-    return ['id', 'title', '_type', '_thumbnail'].reduce(
-      (acc: Dic, key) => {
-        acc[key] = { default: null };
-        return acc;
-      },
+    return {
       // A node just inserted opens its dialog; one read from stored content does not.
-      { _fresh: { default: false } }
-    );
+      _fresh: { default: false },
+      id: { default: null },
+      title: { default: null },
+      _type: { default: null },
+      _thumbnail: { default: null }
+    };
   },
 
   parseHTML() {
