@@ -40,7 +40,6 @@
     group: { name: 'rz-blocks-layers', pull: 'clone', put: false },
     sort: false,
     animation: 150,
-    disabled: focus.locked,
     onEnd: (event) => event.clone?.remove()
   });
 

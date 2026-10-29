@@ -165,7 +165,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
         .map((field) => ({
           list: `${rowPath}.${field.name}`,
           builder: field,
-          label: field.get.label || capitalize(field.name)
+          label: field.get.label
         }));
       return {
         path: rowPath,
@@ -218,7 +218,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     if (!path) return '';
     if (narrowed) return rootRows()[0]?.title ?? '';
     const builder = builderOf(path);
-    const fieldLabel = builder?.get.label || capitalize(builder?.name || '');
+    const fieldLabel = builder?.get.label ?? '';
     const crumbs = breadcrumb();
     const parent = crumbs.length > 1 ? crumbs[crumbs.length - 2] : undefined;
     if (!parent?.block) return fieldLabel;
@@ -251,7 +251,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
       }
       list = list ? `${list}.${part}` : part;
       const builder = builderOf(list);
-      if (builder) crumbs.push({ label: builder.get.label || capitalize(part), list });
+      if (builder) crumbs.push({ label: builder.get.label, list });
     }
     return crumbs;
   }
@@ -268,7 +268,7 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
     if (!narrowed && form.blocks.accepts(path, type) && current.list !== path) {
       targets.push({
         list: path,
-        label: rootBuilder?.get.label || capitalize(rootBuilder?.name || '')
+        label: rootBuilder?.get.label ?? ''
       });
     }
     for (const row of allRows()) {

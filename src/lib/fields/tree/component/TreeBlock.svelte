@@ -3,7 +3,6 @@
   import type { TreeBlock } from '#lib/core/prototype/types.js';
   import RenderFields from '#lib/panel/components/fields/RenderFields.svelte';
   import { useOnce } from '#lib/panel/util/once.svelte.js';
-  import { capitalize } from '#lib/util/string.js';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import GripVertical from '@lucide/svelte/icons/grip-vertical';
@@ -15,7 +14,7 @@
   import { isTempId } from '#lib/util/random.js';
   import type { TreeBlockProps } from './props.js';
 
-  const { config, treeKey, treeState, form, sorting = false, path }: TreeBlockProps = $props();
+  const { config, treeKey, treeState, form, path }: TreeBlockProps = $props();
 
   /** The item's index at each level, from the root: `links.0._children.2` → `[0, 2]`. */
   const indexes = $derived(
@@ -84,7 +83,6 @@
   class="rz-tree-item"
   data-path={path}
   data-tree-levels={itemValue ? levelsBelow(itemValue) : 0}
-  data-sorting={sorting}
   data-open={isOpen ? '' : null}
   data-deep={depth > 2 ? '' : null}
 >
@@ -128,7 +126,6 @@
             {t__('fields.inside', title)}{#if children.length}&nbsp;· {children.length}{/if}
           </span>
           <AddItemButton
-            class="rz-tree-item__add"
             size="sm"
             fields={config.get.fields}
             addItem={(values) => treeState.addItem(values, `${path}._children`)}
@@ -145,14 +142,7 @@
           data-empty-label={t__('fields.nothing_inside')}
         >
           {#each children as child, index (child.id)}
-            <TreeBlockComp
-              {treeState}
-              {form}
-              {sorting}
-              {treeKey}
-              path="{path}._children.{index}"
-              {config}
-            />
+            <TreeBlockComp {treeState} {form} {treeKey} path="{path}._children.{index}" {config} />
           {/each}
         </div>
       </div>

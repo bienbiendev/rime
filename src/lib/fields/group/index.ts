@@ -29,11 +29,7 @@ export class GroupFieldBuilder extends FormFieldBuilder<GroupField> {
     return Group;
   }
 
-  label(label: string) {
-    this.field.label = label;
-    return this;
-  }
-
+  /** The fields inside; their values sit under the group's name: `seo.title`. */
   fields(...fields: FieldBuilder<Field>[]) {
     this.field.fields = this.field.localized ? localizeFields(fields) : fields;
     return this;

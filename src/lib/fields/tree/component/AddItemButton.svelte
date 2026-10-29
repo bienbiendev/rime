@@ -10,7 +10,7 @@
   type AddItem = (values: Dic) => void;
   type Props = {
     size: 'default' | 'sm';
-    class: string;
+    class?: string;
     fields: FieldBuilder<Field>[];
     addItem: AddItem;
     children: Snippet;
@@ -25,7 +25,7 @@
 <!-- A ghost "+" button that adds an item, its fields at their initial values. -->
 <Button
   icon={Plus}
-  class="rz-add-item-button {className}"
+  class="rz-add-item-button {className ?? ''}"
   onclick={() => add()}
   variant="ghost"
   {size}

@@ -264,8 +264,8 @@
     min-height: var(--rz-size-8);
   }
 
-  /* An empty nested list: somewhere to drop a type, its `+` inside. */
-  .rz-renders[data-empty]:not([data-list='']) {
+  /* An empty list: somewhere to drop a type. A nested one has its `+` inside. */
+  .rz-renders[data-empty] {
     padding: var(--rz-size-2);
     border: 1px dashed var(--rz-border-strong);
     border-radius: var(--rz-radius-md);

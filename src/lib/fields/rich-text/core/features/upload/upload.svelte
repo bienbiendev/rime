@@ -12,6 +12,7 @@
   import type { NodeViewProps } from '@tiptap/core';
   import { onMount } from 'svelte';
   import NodeViewWrapper from '../../svelte/node-view-wrapper.svelte';
+  import './upload.css';
 
   type NodeAttributes = {
     id: string | null;

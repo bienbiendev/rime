@@ -24,8 +24,7 @@
   @mixin font-medium;
 }
 
-.rz-relation-upload__grid-filesize,
-.rz-relation-upload__grid-mimetype {
+.rz-relation-upload__grid-filesize {
   text-align: left;
   color: var(--rz-fg-subtle);
   font-size: var(--rz-text-sm);

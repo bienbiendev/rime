@@ -15,10 +15,9 @@
   const field = $derived(form.useField(path, config));
   let sortingInitialized = $state(false);
   let fieldElement = $state<HTMLFieldSetElement>();
-  let sorting = $state(false);
   let sortableInstances = $state<ReturnType<typeof Sortable.create>[]>([]);
 
-  const hasBlocks = $derived(treeState.items && treeState.items.length);
+  const hasBlocks = $derived(treeState.items.length > 0);
   // Unique per tree: two trees mounted together keep their drag lists apart
   const key = $props.id();
   const nested = $derived(path.split('.').length > 1);
@@ -49,14 +48,12 @@
         return targetDepth + levels <= config.get.maxDepth;
       }
     },
-    onStart: () => {
-      sorting = true;
-      holdHeight(true);
-    },
-    onUnchoose: () => {
-      sorting = false;
-      holdHeight(false);
-    },
+    onStart: () => holdHeight(true),
+    onUnchoose: () => holdHeight(false),
+    /**
+     * A drop writes the move: the root list's path is the tree's, `links.2`; an item's list is under
+     * its `_children`, `links.0._children.2`.
+     */
     onEnd: function (evt) {
       const { newIndex, to } = evt;
 
@@ -69,8 +66,6 @@
         treeState.moveItem(initialPath.replace(`${path}.`, ''), targetPath.replace(`${path}.`, ''));
         resetSortable();
       }
-
-      sorting = false;
     }
   };
 
@@ -137,19 +132,14 @@
     >
       {#if hasBlocks}
         {#each treeState.items as item, index (item.id)}
-          <TreeBlock {treeState} treeKey={key} path="{path}.{index}" {form} {sorting} {config} />
+          <TreeBlock {treeState} treeKey={key} path="{path}.{index}" {form} {config} />
         {/each}
       {/if}
     </div>
   {/key}
 
   <div class="rz-tree__actions">
-    <AddItemButton
-      addItem={add}
-      class="rz-tree__add-button"
-      size={nested ? 'sm' : 'default'}
-      fields={config.get.fields}
-    >
+    <AddItemButton addItem={add} size={nested ? 'sm' : 'default'} fields={config.get.fields}>
       {config.get.addItemLabel}
     </AddItemButton>
 

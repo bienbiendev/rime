@@ -47,7 +47,7 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
 
   /** The fields of every item. The hidden `path` and `position` stay before them. */
   fields(...fields: FieldBuilder<Field>[]) {
-    this.field.fields = [...(this.field.fields || []), ...fields];
+    this.field.fields = [...this.field.fields, ...fields];
     if (this.field.localized) {
       this.field.fields = localizeRepeatableFields(this.field.fields, OWN);
     }

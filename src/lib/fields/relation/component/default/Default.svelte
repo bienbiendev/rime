@@ -66,7 +66,6 @@
 
   const { sortable } = useSortable({
     animation: 150,
-    filter: '.rz-command-input .rz-command-list',
     draggable: '.rz-relation__item',
     onEnd: function (evt) {
       if (evt.oldIndex !== undefined && evt.newIndex !== undefined) {

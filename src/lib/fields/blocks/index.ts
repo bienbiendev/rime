@@ -135,7 +135,7 @@ export class BlocksBuilder extends FormFieldBuilder<BlocksField> {
         return block.compile();
       }),
       component: this.component,
-      cell: this.cell || undefined
+      cell: this.cell
     } as any;
   }
 

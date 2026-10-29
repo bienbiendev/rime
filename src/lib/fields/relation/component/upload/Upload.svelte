@@ -10,7 +10,6 @@
   import Sortable from 'sortablejs';
   import type { RelationComponentProps } from '../types.js';
   import Browse from './Browse.svelte';
-  import './upload.css';
 
   type Props = RelationComponentProps & {
     /** The library picker is open. */

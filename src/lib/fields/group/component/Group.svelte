@@ -37,7 +37,7 @@
     groupOpen = localStorage.getItem(key) === 'true';
   });
 
-  const user = getUserContext() || undefined;
+  const user = getUserContext();
 
   // The preview shows the values of the form fields the user can read, and in live mode the
   // live ones.
@@ -101,12 +101,6 @@
   :global(.rz-inspector__fields) .rz-group-field__wrapper {
     background-color: transparent;
     box-shadow: 0 0 0 1px var(--rz-border);
-  }
-
-  /* The closed group's preview keeps to the card's rounded corners. */
-  :global(.rz-group-field__preview) {
-    overflow: hidden;
-    border-radius: 0 0 var(--rz-radius-xl) var(--rz-radius-xl);
   }
 
   .rz-group-field__wrapper:global(:has(.rz-field-error)) {
@@ -186,6 +180,7 @@
 
   /* Folded: the values under a hairline, the card's bottom corners kept. */
   .rz-group-field__wrapper :global(.rz-group-field__preview) {
+    overflow: hidden;
     border-radius: 0 0 var(--rz-radius-xl) var(--rz-radius-xl);
     box-shadow: inset 0 1px 0 var(--rz-border);
   }

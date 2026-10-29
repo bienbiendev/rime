@@ -11,7 +11,6 @@ export type TreeProps = {
 
 export type TreeBlockProps = {
   path: string;
-  sorting: boolean;
   treeState: {
     /** At the end of the tree, or of the list `atPath` names: `links.0._children`. */
     addItem: (emptyValues: Dic, atPath?: string) => void;
