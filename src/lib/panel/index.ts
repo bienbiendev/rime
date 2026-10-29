@@ -75,7 +75,6 @@ export type DocVersion = {
 type BaseDocData = {
   aria: Partial<Route>[];
   doc: GenericDoc;
-  status: 200;
   readOnly: boolean;
   /** The document's auto-saved rows. Absent on a config that does not auto-save. */
   autoSaves?: AutoSaves;

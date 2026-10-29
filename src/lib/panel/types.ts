@@ -17,7 +17,6 @@ export type FieldPanelTableConfig = {
 export type CollectionProps = {
   data: {
     docs: GenericDoc[];
-    status: number;
     canCreate: boolean;
   };
   children: Snippet;

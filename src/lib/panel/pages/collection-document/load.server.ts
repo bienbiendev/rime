@@ -84,7 +84,6 @@ export async function documentLoad(event: ServerLoadEvent) {
     aria,
     doc,
     operation,
-    status: 200,
     hasMailer: 'mailer' in rime,
     readOnly,
     autoSaves

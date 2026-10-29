@@ -21,7 +21,6 @@ type Data = {
   aria: Partial<Route>[];
   docs: GenericDoc[];
   canCreate: boolean;
-  status: number;
   upload?: { directories: Directory[]; currentPath: UploadPath; parentDirectory?: Directory };
 };
 
@@ -40,10 +39,10 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
   const docs = await collection.find({ locale, latest: true });
   const aria: Partial<Route>[] = [dashboardCrumb(rime), { title: collection.config.label.plural }];
 
-  if (!collection.config.upload) return { aria, docs, canCreate, status: 200 };
+  if (!collection.config.upload) return { aria, docs, canCreate };
 
   const upload = await uploadListing(event, slug);
-  return { aria: upload.aria ?? aria, docs, canCreate, status: 200, upload: upload.listing };
+  return { aria: upload.aria ?? aria, docs, canCreate, upload: upload.listing };
 }
 
 /**

@@ -30,7 +30,6 @@ export async function areaLoad(event: ServerLoadEvent) {
     aria,
     doc,
     operation: 'update',
-    status: 200,
     readOnly: !authorizedUpdate,
     autoSaves: await autoSavesOf({ event, config: area.config, doc })
   };
