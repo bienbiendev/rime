@@ -22,7 +22,7 @@ afterEach(() => {
 /**
  * Writes `content` at `file`, a path below the temporary project root.
  * @param {string} file
- * @param {string} content
+ * @param {string | Buffer} content
  */
 const write = (file, content) => {
   mkdirSync(dirname(join(root, file)), { recursive: true });
@@ -105,3 +105,13 @@ test.each(['helpers.server.ts', 'helpers.server.js'])(
     expect(read(`${GENERATED_DIR}/${helpers}`)).toContain("from './fields.server.js'");
   }
 );
+
+test('sanitize() copies a binary file byte for byte', async () => {
+  write(`${CONFIG_DIR}/rime.config.server.ts`, 'export default rime({});\n');
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0xff]);
+  write(`${CONFIG_DIR}/hero.png`, png);
+
+  await sanitize();
+
+  expect(readFileSync(join(root, GENERATED_DIR, 'hero.png'))).toEqual(png);
+});

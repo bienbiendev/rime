@@ -140,10 +140,10 @@ export async function sanitize() {
     writeOutput(outputDir, relativePath, content, outputFiles);
   }
 
-  // Copy other files (.svelte, .json, etc.)
+  // Copy other files (.svelte, .json, images, etc.) byte for byte
   for (const filePath of otherFiles) {
     const relativePath = path.relative(configDir, filePath);
-    writeOutput(outputDir, relativePath, fs.readFileSync(filePath, 'utf-8'), outputFiles);
+    writeOutput(outputDir, relativePath, fs.readFileSync(filePath), outputFiles);
   }
 
   // Delete files that exist in current list but not in output list. Two files are excluded:
@@ -753,14 +753,7 @@ function writeOutput(outputDir, relativePath, content, outputFiles) {
   }
 }
 
-/**
- * Checks if a file should be written by comparing content with existing file
- */
+/** Whether `filePath` is missing or holds something other than `newContent` (text or bytes). */
 function shouldWriteFile(filePath, newContent) {
-  if (!fs.existsSync(filePath)) {
-    return true;
-  }
-
-  const existingContent = fs.readFileSync(filePath, 'utf-8');
-  return existingContent !== newContent;
+  return !fs.existsSync(filePath) || !fs.readFileSync(filePath).equals(Buffer.from(newContent));
 }
