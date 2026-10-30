@@ -83,3 +83,25 @@ export const News = Collection.create('news', {
   expect(read(`${GENERATED_DIR}/news.server.js`)).toBe(news);
   expect(read(`${GENERATED_DIR}/rime.config.server.ts`)).toContain("from './news.server.js'");
 });
+
+test.each(['helpers.server.ts', 'helpers.server.js'])(
+  "sanitize() points %s's import of a split file at its server half",
+  async (helpers) => {
+    write(
+      `${CONFIG_DIR}/rime.config.server.ts`,
+      `import { Pages } from './${helpers.replace(/\.ts$/, '.js')}';\nexport default rime({ collections: [Pages] });\n`
+    );
+    write(
+      `${CONFIG_DIR}/fields.ts`,
+      "export const title = text('title').$beforeSave((value) => value.trim());\n"
+    );
+    write(
+      `${CONFIG_DIR}/${helpers}`,
+      "import { title } from './fields';\nexport const Pages = Collection.create('pages', { fields: [title] });\n"
+    );
+
+    await sanitize();
+
+    expect(read(`${GENERATED_DIR}/${helpers}`)).toContain("from './fields.server.js'");
+  }
+);

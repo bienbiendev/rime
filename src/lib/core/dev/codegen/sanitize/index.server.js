@@ -19,15 +19,15 @@ import {
  * when it holds none, and writes two halves when it does: the client one without any of it.
  */
 
-// The top-level config — real, hand-authored. Unlike every other .server.ts file under
-// +rime/ (copied verbatim, server-only, no client counterpart needed), this one always needs
-// a sanitized client copy too — the panel still needs +rime.generated/rime.config.ts.
+// The top-level config — real, hand-authored. Every other .server file under +rime/ is
+// server-only and gets one copy; this one also gets a sanitized client copy — the panel still
+// needs +rime.generated/rime.config.ts.
 const TOP_LEVEL_CONFIG = 'rime.config.server.ts';
 
 /** Whether the sanitizer reads `name` as code, and splits it when it holds `$` content. */
 const isConfigModule = (name) => /\.(ts|js)$/.test(name) && !/\.server\.(ts|js)$/.test(name);
 
-const isServerFile = (name) => name.endsWith('.server.ts');
+const isServerFile = (name) => /\.server\.(ts|js)$/.test(name);
 
 /** Where a split file's server copy goes: `news.ts` → `news.server.ts`, `news.js` → `news.server.js`. */
 const serverHalfOf = (filePath) => filePath.replace(/\.(ts|js)$/, '.server.$1');
@@ -94,14 +94,17 @@ export async function sanitize() {
 
   splitImporters(sourcesByFile, splitFiles);
 
-  // Also scan and copy all existing .server.ts files — except the top-level config, which
-  // gets its own client+server split below instead of a plain verbatim copy.
+  // Also scan and copy all existing .server.ts and .server.js files — except the top-level
+  // config, which gets its own client+server split below.
   const serverFiles = scanFiles(configDir, isServerFile).filter(
     (filePath) => path.relative(configDir, filePath) !== TOP_LEVEL_CONFIG
   );
 
-  // Scan and copy all other files (.server.js, .svelte, .json, etc.)
-  const otherFiles = scanFiles(configDir, (name) => !name.endsWith('.ts') && !isConfigModule(name));
+  // Scan and copy all other files (.svelte, .json, etc.)
+  const otherFiles = scanFiles(
+    configDir,
+    (name) => !name.endsWith('.ts') && !isConfigModule(name) && !isServerFile(name)
+  );
 
   // Top-level config split: same client/server treatment as every other split file below,
   // just addressed by its fixed name instead of found via the scan (it's .server.ts-suffixed,
@@ -126,13 +129,18 @@ export async function sanitize() {
     await processConfigFile(filePath, configDir, outputDir, outputFiles, splitFiles);
   }
 
-  // Copy existing .server.ts files
+  // Copy existing .server files, their imports of split files pointed at the server halves
   for (const filePath of serverFiles) {
     const relativePath = path.relative(configDir, filePath);
-    writeOutput(outputDir, relativePath, fs.readFileSync(filePath, 'utf-8'), outputFiles);
+    const content = updateServerImports(
+      fs.readFileSync(filePath, 'utf-8'),
+      splitFiles,
+      path.dirname(relativePath)
+    );
+    writeOutput(outputDir, relativePath, content, outputFiles);
   }
 
-  // Copy other files (.server.js, .svelte, .json, etc.)
+  // Copy other files (.svelte, .json, etc.)
   for (const filePath of otherFiles) {
     const relativePath = path.relative(configDir, filePath);
     writeOutput(outputDir, relativePath, fs.readFileSync(filePath, 'utf-8'), outputFiles);
