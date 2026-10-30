@@ -10,7 +10,7 @@
     as?: T;
   };
 
-  const { as = 'div' as T, children, ...rest }: Props = $props();
+  const { as = 'div' as T, children, ondragstart, ...rest }: Props = $props();
 
   const { onDragStart } = getContext<TiptapNodeViewContext>(TIPTAP_NODE_VIEW);
   let element: HTMLElement;
@@ -28,7 +28,10 @@
   data-node-view-wrapper
   role="none"
   {...rest}
-  ondragstart={onDragStart}
+  ondragstart={(event) => {
+    ondragstart?.(event as any);
+    onDragStart(event);
+  }}
 >
   {#if children}
     {@render children()}
