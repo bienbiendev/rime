@@ -13,6 +13,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const OUT = '.svelte-kit/output/client';
+// Where kit 3 writes the client app and its nodes for the build
+const GENERATED = '.svelte-kit/generated/build/client-optimized';
 const DIST = String.raw`[/\\]rimecms[/\\]dist[/\\]`;
 
 const CONFIG = [
@@ -47,7 +49,7 @@ const ROUTES = [
 ];
 
 const manifest = JSON.parse(fs.readFileSync(path.join(OUT, '.vite/manifest.json'), 'utf-8'));
-const app = fs.readFileSync('.svelte-kit/generated/build/client-optimized/app.js', 'utf-8');
+const app = fs.readFileSync(`${GENERATED}/app.js`, 'utf-8');
 
 /**
  * `"/(rime)/[panel=panel]/sign-in": [~13,[2],[3]]`: the page's node, its layouts', then its
@@ -75,7 +77,7 @@ const modulesOf = (id) => {
     chunks.add(key);
     for (const next of manifest[key].imports ?? []) visit(next);
   };
-  for (const node of nodesOf(id)) visit(`.svelte-kit/generated/client-optimized/nodes/${node}.js`);
+  for (const node of nodesOf(id)) visit(`${GENERATED}/nodes/${node}.js`);
 
   const modules = [];
   for (const key of chunks) {
@@ -99,6 +101,8 @@ const modulesOf = (id) => {
 const refused = [];
 for (const route of ROUTES) {
   const { chunks, modules } = modulesOf(route.id);
+  // A route always loads its root layout: no chunk means the manifest keys were not found
+  if (!chunks) throw new Error(`no chunk for ${route.id} in ${OUT}/.vite/manifest.json`);
   for (const { chunk, file } of modules) {
     const rule = route.refused.find(({ test }) => test.test(file));
     if (rule) {
