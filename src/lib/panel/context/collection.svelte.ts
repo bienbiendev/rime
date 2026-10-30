@@ -14,6 +14,7 @@ import { apiUrl } from '#lib/core/routes/util.js';
 import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
 import type { FormField } from '#lib/fields/types.js';
 import type { FieldPanelTableConfig } from '#lib/panel/types.js';
+import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
 import { deletedToast } from '#lib/panel/context/bulk-delete.js';
 import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
 import {
@@ -56,6 +57,7 @@ export const DISPLAY_MODE = {
 function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>) {
   const { initial, config, canCreate, upload: incomingUpload } = args;
   const locale = getLocaleContext();
+  const APIProxy = getAPIProxyContext();
 
   /** The browser keeps each list's display and sort: `collection.<slug>.display`. */
   const storageKey = (name: 'display' | 'sortBy' | 'sortOrder') =>
@@ -221,6 +223,8 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       const told = deletedToast(toDelete.length, deleted.length);
       toast[told.kind](told.message);
     }
+    // The API proxy's reads of the collection (a page's children) drop the deleted documents.
+    APIProxy.invalidate(apiUrl(config.kebab));
     await invalidateAll();
   };
 
@@ -298,6 +302,9 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
         .then((r) => r.docs);
       stamp = Date.now();
       return false;
+    } finally {
+      // A refused move may have saved some rows: the proxy's reads of the collection read again.
+      APIProxy.invalidate(apiUrl(config.kebab));
     }
   };
 

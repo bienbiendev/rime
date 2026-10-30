@@ -1,5 +1,5 @@
-import test, { expect } from '@playwright/test';
-import { API_BASE_URL, loginAs, panelUrl, panelUrlRe, signIn } from '../util.js';
+import test, { expect, type APIRequestContext, type Page } from '@playwright/test';
+import { API_BASE_URL, loginAs, panelPath, panelUrl, panelUrlRe, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -479,4 +479,138 @@ test('Should disable restrictedField for a non-admin editor, enable it for the s
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', 'create'));
   await expect(page.locator('fieldset[data-path="restrictedField"] input')).toBeEnabled();
+});
+
+/** ---------------- THE CHILDREN UNDER A PAGE ---------------- */
+
+// In every title, so a rerun on the same database finds its own pages
+const run = Date.now();
+
+/** A page, under `parent` at `position` when given; answers its id. */
+async function createPage(
+  request: APIRequestContext,
+  title: string,
+  under?: { parent: string; position: number }
+) {
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signIn(ADMIN_EMAIL, PASSWORD)(request),
+    data: {
+      title,
+      slug: title.toLowerCase().replace(/\W+/g, '-'),
+      ...(under && { _parent: under.parent, _position: under.position })
+    }
+  });
+  expect(response.status()).toBe(200);
+  return (await response.json()).doc.id as string;
+}
+
+const childNames = (page: Page) => page.locator('.rz-document-children__name');
+const childCount = (page: Page) => page.locator('.rz-document-children__count');
+
+test('A page lists its children 20 at a time, the rest on "Load more"', async ({
+  page,
+  request
+}) => {
+  const blog = await createPage(request, `Blog ${run}`);
+  const titles = Array.from(
+    { length: 30 },
+    (_, n) => `Blog child ${String(n + 1).padStart(2, '0')}`
+  );
+  for (const [position, title] of titles.entries()) {
+    await createPage(request, `${title} ${run}`, { parent: blog, position });
+  }
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', blog));
+
+  await expect(childCount(page)).toHaveText('30');
+  await expect(childNames(page)).toHaveCount(20);
+  await expect(page.getByRole('link', { name: 'View all' })).toHaveCount(0);
+  const more = page.getByRole('button', { name: 'Load 10 more (10 left)' });
+  await more.click();
+
+  await expect(childNames(page)).toHaveText(titles.map((title) => `${title} ${run}`));
+  await expect(more).toHaveCount(0);
+});
+
+test("A page's save reads its children again", async ({ page, request }) => {
+  const parent = await createPage(request, `Saved parent ${run}`);
+  const child = await createPage(request, `Before rename ${run}`, { parent, position: 0 });
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', parent));
+  await expect(childNames(page)).toHaveText([`Before rename ${run}`]);
+
+  const renamed = await request.patch(`${API_BASE_URL}/pages/${child}`, {
+    headers: await signIn(ADMIN_EMAIL, PASSWORD)(request),
+    data: { title: `After rename ${run}` }
+  });
+  expect(renamed.status()).toBe(200);
+  await page.locator('input[name="title"]').fill(`Saved parent ${run}, edited`);
+  await page.locator('button[type="submit"]').click();
+
+  await expect(childNames(page)).toHaveText([`After rename ${run}`]);
+});
+
+test("A child moved out in the tree leaves its old parent's list", async ({ page, request }) => {
+  const title = `Move parent ${run}`;
+  const parent = await createPage(request, title);
+  await createPage(request, `Stays under ${run}`, { parent, position: 0 });
+  await createPage(request, `Moves out ${run}`, { parent, position: 1 });
+
+  await page.addInitScript(() =>
+    localStorage.setItem('collection.pages.display', 'display_nested')
+  );
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', parent));
+  await expect(childCount(page)).toHaveText('2');
+
+  // Within the panel, no new load: the children's reads stay in the API proxy
+  await page.locator(`.rz-nav a[href="${panelPath('pages')}"]`).click();
+  const row = (name: string) =>
+    page.locator('.rz-collection-node__row', { has: page.getByText(name, { exact: true }) });
+  // Above the parent's row: a page of the root
+  await row(`Moves out ${run}`)
+    .locator('.rz-collection-node__grip')
+    .dragTo(row(title), { targetPosition: { x: 20, y: 2 } });
+  await expect(page.getByText('Order updated')).toBeVisible();
+
+  await page.goBack();
+  await expect(childCount(page)).toHaveText('1');
+  await expect(childNames(page)).toHaveText([`Stays under ${run}`]);
+});
+
+test("A child deleted from the list leaves its parent's list", async ({ page, request }) => {
+  const parent = await createPage(request, `Delete parent ${run}`);
+  await createPage(request, `Kept child ${run}`, { parent, position: 0 });
+  const doomed = await createPage(request, `Deleted child ${run}`, { parent, position: 1 });
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', parent));
+  await expect(childCount(page)).toHaveText('2');
+
+  // Within the panel, no new load: the children's reads stay in the API proxy
+  await page.locator(`.rz-nav a[href="${panelPath('pages')}"]`).click();
+  await page.locator('.rz-header-search-input input').fill(`Deleted child ${run}`);
+  await page.getByRole('checkbox', { name: `Deleted child ${run}`, exact: true }).click();
+  await page
+    .locator('.rz-header-select')
+    .getByRole('button', { name: /^Delete/ })
+    .click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^Delete/ })
+    .click();
+  await expect
+    .poll(async () => {
+      const response = await request.get(`${API_BASE_URL}/pages/${doomed}`, {
+        headers: await signIn(ADMIN_EMAIL, PASSWORD)(request)
+      });
+      return response.status();
+    })
+    .toBe(404);
+
+  await page.goBack();
+  await expect(childCount(page)).toHaveText('1');
+  await expect(childNames(page)).toHaveText([`Kept child ${run}`]);
 });

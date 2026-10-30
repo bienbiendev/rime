@@ -1,6 +1,6 @@
 import qs from 'qs';
 import { describe, expect, test } from 'vitest';
-import { candidatesURL, countURL, picksURL } from './candidates.svelte.js';
+import { candidatesURL, countURL, pageURL, picksURL } from './candidates.svelte.js';
 
 const targets = { kebab: 'targets', asTitle: 'title' };
 
@@ -67,5 +67,23 @@ describe('countURL', () => {
 
   test('is the bare count route when there is nothing to filter', () => {
     expect(countURL({ config: targets })).toBe('/api/targets/count');
+  });
+});
+
+describe('pageURL', () => {
+  test('holds the where, the sort, the limit and the offset of one step', () => {
+    const where = {
+      config: { kebab: 'pages', asTitle: 'title' },
+      query: 'where[_parent][equals]=blog'
+    };
+    expect(parse(pageURL(where, { sort: '_position', limit: 20, offset: 20 }))).toEqual({
+      path: '/api/pages',
+      params: {
+        where: { and: [{ _parent: { equals: 'blog' } }] },
+        sort: '_position',
+        limit: '20',
+        offset: '20'
+      }
+    });
   });
 });

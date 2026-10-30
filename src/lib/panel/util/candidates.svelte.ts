@@ -62,6 +62,21 @@ export const countURL = (where: PickerWhere) => {
 };
 
 /**
+ * `limit` documents from `offset`, in `sort` order: one step of a list read in steps.
+ *
+ * ```ts
+ * const children = { config: pages, query: 'where[_parent][equals]=blog' };
+ * pageURL(children, { sort: '_position', limit: 20, offset: 20 })
+ * // /api/pages?where[and][0][_parent][equals]=blog&sort=_position&limit=20&offset=20,
+ * // brackets encoded
+ * ```
+ */
+export const pageURL = (
+  where: PickerWhere,
+  page: { sort: string; limit: number; offset: number }
+) => `${apiUrl(where.config.kebab)}?${qs.stringify({ where: whereOf(where), ...page })}`;
+
+/**
  * Reads `url` through the API proxy while it is set. While a new url loads, `data` keeps the last
  * answer, so a list or a count does not blank between two reads. A search's read leaves the cache
  * once the search changes or the picker closes, so past searches are not refreshed for the page's

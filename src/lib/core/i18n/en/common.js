@@ -62,6 +62,7 @@ export default {
   leave_confirm_text: 'The changes you made will be lost',
   live_edit: 'Live edit',
   live_in_sync: 'Establishing connection with container',
+  load_more: 'Load $1 more ($2 left)',
   newPassword: 'New password',
   no_document: 'No $1 found',
   or: 'or',

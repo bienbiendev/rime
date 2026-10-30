@@ -63,6 +63,7 @@ export default {
   leave_confirm_text: 'Vous avez des modifications non-enregistrées qui seront perdues.',
   live_edit: 'Édition en direct',
   live_in_sync: 'Synchronisation avec le container',
+  load_more: 'Afficher $1 de plus (reste $2)',
   newPassword: 'Nouveau mot de passe',
   no_document: 'Aucun résultat : $1',
   or: 'ou',

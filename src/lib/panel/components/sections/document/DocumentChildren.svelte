@@ -1,43 +1,45 @@
 <script lang="ts">
   import type { BuiltCollection } from '#lib/core/config/types.js';
-  import { PARAMS } from '#lib/core/constants.js';
   import { t__ } from '#lib/core/i18n/index.js';
   import type { GenericDoc } from '#lib/core/prototype/types.js';
-  import { apiUrl, panelUrl } from '#lib/core/routes/util.js';
-  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { panelUrl } from '#lib/core/routes/util.js';
+  import Button from '#lib/panel/components/ui/button/button.svelte';
+  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import { pageURL, useCount } from '#lib/panel/util/candidates.svelte.js';
   import { titleOrUntitled } from '#lib/panel/util/title.js';
 
   type Props = { config: BuiltCollection; id: string };
   const { config, id }: Props = $props();
 
-  const locale = getLocaleContext();
+  const APIProxy = getAPIProxyContext();
 
-  /** The first ones: past that, the collection's list. */
-  const LIMIT = 20;
+  /** The children each step reads: the first ones, then each "Load more". */
+  const STEP = 20;
 
-  let children = $state<GenericDoc[]>([]);
-  let more = $state(false);
+  /** The pages whose parent this is. */
+  const where = $derived({ config, query: `where[_parent][equals]=${id}` });
+  /** How many steps are shown. */
+  let steps = $state(1);
 
-  // One query: the pages whose parent this is, with their addresses.
-  $effect(() => {
-    const params = new URLSearchParams({
-      'where[_parent][equals]': id,
-      sort: '_position',
-      limit: String(LIMIT + 1)
-    });
-    if (locale.code) params.set(PARAMS.LOCALE, locale.code);
+  // Through the API proxy: each write's `invalidate(apiUrl(kebab))` reads them again.
+  const reads = $derived(
+    Array.from({ length: steps }, (_, step) =>
+      APIProxy.getRessource<{ docs: GenericDoc[] }>(
+        pageURL(where, { sort: '_position', limit: STEP, offset: step * STEP })
+      )
+    )
+  );
+  const total = useCount(() => ({ open: true, ...where }));
 
-    let cancelled = false;
-    fetch(`${apiUrl(config.kebab)}?${params}`)
-      .then((response) => (response.ok ? response.json() : { docs: [] }))
-      .then(({ docs }: { docs: GenericDoc[] }) => {
-        if (cancelled) return;
-        more = docs.length > LIMIT;
-        children = docs.slice(0, LIMIT);
-      })
-      .catch(() => {});
-    return () => (cancelled = true);
-  });
+  /** The children read so far, in order, each once: a write between two steps may shift one. */
+  const children = $derived(
+    reads
+      .flatMap((read) => read.data?.docs ?? [])
+      .filter((doc, index, all) => all.findIndex((other) => other.id === doc.id) === index)
+  );
+  const count = $derived(total.count ?? children.length);
+  const left = $derived(Math.max(count - children.length, 0));
+  const loading = $derived(reads.some((read) => read.isLoading));
 
   /** The path part of a child's url, or its path when it has no url. */
   const pathOf = (doc: GenericDoc) => {
@@ -54,13 +56,8 @@
     <header class="rz-document-children__head">
       <h2 class="rz-document-children__title" id="rz-document-children-title">
         {t__('common.under_this_page')}
-        <span class="rz-document-children__count">{more ? `${LIMIT}+` : children.length}</span>
+        <span class="rz-document-children__count">{count}</span>
       </h2>
-      {#if more}
-        <a class="rz-document-children__all" href={panelUrl(config.kebab)}
-          >{t__('common.view_all')}</a
-        >
-      {/if}
     </header>
 
     <div class="rz-document-children__list">
@@ -71,6 +68,18 @@
         </a>
       {/each}
     </div>
+
+    {#if left > 0}
+      <Button
+        class="rz-document-children__more"
+        variant="ghost"
+        size="sm"
+        disabled={loading}
+        onclick={() => steps++}
+      >
+        {t__('common.load_more', String(Math.min(left, STEP)), String(left))}
+      </Button>
+    {/if}
   </section>
 {/if}
 
@@ -107,10 +116,8 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .rz-document-children__all {
-    color: var(--rz-accent-text);
-    font-size: var(--rz-text-xs);
-    text-decoration: none;
+  .rz-document-children :global(.rz-document-children__more) {
+    justify-self: center;
   }
 
   .rz-document-children__list {
