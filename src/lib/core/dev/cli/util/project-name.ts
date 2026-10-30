@@ -2,7 +2,8 @@ import { isValidSlug, slugify } from '#lib/util/string.js';
 
 /**
  * The project name, which also names the database file: the one given, checked, else the
- * package's own name made a slug, asked for unless `force`.
+ * package's own name made a slug (`app` when that slug is not a valid name), asked for unless
+ * `force`.
  *
  * ```ts
  * await projectName({ packageName: '@acme/site', force: true, ask });  // 'acmesite'
@@ -19,7 +20,8 @@ export const projectName = async (args: {
   if (incomingName) {
     return isValidSlug(incomingName) ? incomingName : null;
   }
-  const defaultName = slugify(packageName) || 'app';
+  const slug = slugify(packageName);
+  const defaultName = isValidSlug(slug) ? slug : 'app';
   if (force) return defaultName;
 
   let name = '';

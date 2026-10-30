@@ -12,6 +12,18 @@ describe('projectName', () => {
     expect(asking).not.toHaveBeenCalled();
   });
 
+  it('falls back to app when the slug of the package name is not a valid name', async () => {
+    expect(await projectName({ packageName: '1password-clone', force: true, ask })).toBe('app');
+    // Enter answers the default; a second question gets `other`
+    const asking = vi
+      .fn<(question: string, defaultName: string) => Promise<string>>(async () => 'other')
+      .mockImplementationOnce(async (_question, defaultName) => defaultName);
+    expect(await projectName({ packageName: '1password-clone', force: false, ask: asking })).toBe(
+      'app'
+    );
+    expect(asking).toHaveBeenCalledTimes(1);
+  });
+
   it('refuses a --name that is not a slug', async () => {
     expect(
       await projectName({ incomingName: '@acme/site', packageName: 'x', force: true, ask })
