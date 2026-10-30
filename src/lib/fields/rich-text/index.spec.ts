@@ -122,6 +122,30 @@ describe('RichText.appendText', () => {
   });
 });
 
+describe('richText().use.isEmpty', () => {
+  const isEmpty = (input: unknown) => richText('body').use.isEmpty(input);
+  const empty = { type: 'doc', content: [{ type: 'paragraph' }] };
+
+  it('reads JSON that is not a document as empty, as the object it holds', () => {
+    expect(isEmpty('{}')).toBe(true);
+    expect(isEmpty('[]')).toBe(true);
+    expect(isEmpty({})).toBe(true);
+  });
+
+  it('reads any other string as text', () => {
+    expect(isEmpty('Hello')).toBe(false);
+    expect(isEmpty('42')).toBe(false);
+    expect(isEmpty('  ')).toBe(true);
+  });
+
+  it('reads a document and its JSON string alike', () => {
+    expect(isEmpty(value)).toBe(false);
+    expect(isEmpty(JSON.stringify(value))).toBe(false);
+    expect(isEmpty(empty)).toBe(true);
+    expect(isEmpty(JSON.stringify(empty))).toBe(true);
+  });
+});
+
 describe('richText().features', () => {
   const nodeFeature = (name: string) => ({ extension: Node.create({ name }) });
 

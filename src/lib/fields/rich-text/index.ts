@@ -22,11 +22,11 @@ const hasContent = (node: JSONContent): boolean => {
   return !TEXT_BLOCKS.has(node.type ?? '');
 };
 
-// The document a string holds, or null when the string is not a JSON document
-const parseDocument = (value: string): JSONContent | null => {
+// The object or array a string holds as JSON, or null when it holds neither
+const parseJSONObject = (value: string): object | null => {
   try {
     const parsed = JSON.parse(value);
-    return isJSONContent(parsed) ? parsed : null;
+    return typeof parsed === 'object' && parsed !== null ? parsed : null;
   } catch {
     return null;
   }
@@ -34,19 +34,22 @@ const parseDocument = (value: string): JSONContent | null => {
 
 /**
  * Whether a rich text holds nothing: no text and no leaf, as a document or as the JSON string
- * the server stores. A plain string is empty when it is blank.
+ * the server stores. JSON that is not a document holds nothing either. A plain string is empty
+ * when it is blank.
  *
  * ```ts
  * isEmpty({ type: 'doc', content: [{ type: 'paragraph' }] });                     // true
  * isEmpty('{"type":"doc","content":[{"type":"paragraph"}]}');                      // true
  * isEmpty({ type: 'doc', content: [{ type: 'image', attrs: { src: 'a.png' } }] }); // false
+ * isEmpty('{}');                                                                   // true
  * isEmpty('Hello');                                                                // false
+ * isEmpty('42');                                                                   // false
  * ```
  */
 const isEmpty = (value: unknown): boolean => {
   if (typeof value === 'string') {
-    const document = parseDocument(value);
-    return document ? !hasContent(document) : value.trim() === '';
+    const parsed = parseJSONObject(value);
+    return parsed ? isEmpty(parsed) : value.trim() === '';
   }
   return !isJSONContent(value) || !hasContent(value);
 };
