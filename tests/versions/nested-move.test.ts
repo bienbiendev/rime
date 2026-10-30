@@ -103,6 +103,13 @@ test('A folded page whose children are gone shows its list open, and forgets the
   });
   expect(child.status()).toBe(200);
   const childId = (await child.json()).doc.id as string;
+  // A root page, dropped under the parent once its child is gone
+  const newcomer = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { attributes: { title: 'Fold newcomer', slug: 'fold-newcomer' } }
+  });
+  expect(newcomer.status()).toBe(200);
+  const newcomerId = (await newcomer.json()).doc.id as string;
 
   await page.addInitScript(() =>
     localStorage.setItem('collection.pages.display', 'display_nested')
@@ -112,10 +119,10 @@ test('A folded page whose children are gone shows its list open, and forgets the
 
   // The parent's list of children, which is also where a row drops under it
   const list = page.locator(`.rz-collection-sortable[data-id="${parentId}"]`);
-  await page
-    .locator('.rz-collection-node__row', { has: page.getByText('Fold parent', { exact: true }) })
-    .locator('.rz-collection-node__fold')
-    .click();
+  /** The tree row whose title is exactly `title`. */
+  const row = (title: string) =>
+    page.locator('.rz-collection-node__row', { has: page.getByText(title, { exact: true }) });
+  await row('Fold parent').locator('.rz-collection-node__fold').click();
   await expect(list).toHaveAttribute('hidden');
 
   const removed = await request.delete(`${API_BASE_URL}/pages/${childId}`, { headers });
@@ -125,13 +132,25 @@ test('A folded page whose children are gone shows its list open, and forgets the
   await expect(page.getByText('Fold parent', { exact: true })).toBeVisible();
   await expect(list).not.toHaveAttribute('hidden');
 
-  // The fold is forgotten: a page added under it later shows
-  const added = await request.post(`${API_BASE_URL}/pages`, {
-    headers,
-    data: { attributes: { title: 'Fold newcomer', slug: 'fold-newcomer' }, _parent: parentId }
-  });
-  expect(added.status()).toBe(200);
-  await page.reload();
+  // The fold is forgotten: a row dropped under the parent shows. The parent's empty list has no
+  // height, and a drop just under the parent's row lands in it (CollectionTree.svelte's
+  // emptyInsertThreshold).
+  const grip = (await row('Fold newcomer').locator('.rz-collection-node__grip').boundingBox())!;
+  const target = (await row('Fold parent').boundingBox())!;
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(target.x + 40, target.y + target.height + 2, { steps: 12 });
+  await page.mouse.up();
+  await expect(page.getByText('Order updated')).toBeVisible();
+
+  await expect
+    .poll(async () => {
+      const response = await request.get(`${API_BASE_URL}/pages/${newcomerId}?latest=true`, {
+        headers
+      });
+      return (await response.json()).doc._parent;
+    })
+    .toBe(parentId);
   await expect(page.getByText('Fold newcomer', { exact: true })).toBeVisible();
   await expect(list).not.toHaveAttribute('hidden');
 });
