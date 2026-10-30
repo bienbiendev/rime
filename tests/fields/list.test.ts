@@ -365,3 +365,44 @@ test("A relation's candidates follow the form values its query reads", async ({
   await expect(city.getByRole('option', { name: berlin })).toBeVisible();
   await expect(city.getByRole('option', { name: paris })).toHaveCount(0);
 });
+
+test('The list sorts titles in reading order, case aside, and a row without the value last', async ({
+  page,
+  request
+}) => {
+  const run = Date.now();
+  const apple = `apple ${run}`;
+  const zebra = `Zebra ${run}`;
+  const unscored = `No score ${run}`;
+  await createListing(request, apple, 1);
+  await createListing(request, zebra, 2);
+  const created = await request.post(`${API_BASE_URL}/listings`, {
+    headers: await signInSuperAdmin(request),
+    data: { attributes: { heading: unscored } }
+  });
+  expect(created.status()).toBe(200);
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('listings'));
+  /** Where a row sits in the list. */
+  const at = async (title: string) => (await rowTitles(page)).indexOf(title);
+
+  // The list opens sorted down; a new column keeps that order, then a second click turns it up
+  const title = page.getByRole('button', { name: /Sort by Title/i });
+  await title.click();
+  await expect.poll(async () => (await at(zebra)) < (await at(apple))).toBe(true);
+  await title.click();
+  await expect.poll(async () => (await at(apple)) < (await at(zebra))).toBe(true);
+
+  // The row without a score comes after the scored ones: up (1, 2), the order kept from the
+  // title, then down (2, 1)
+  const score = page.getByRole('button', { name: /Sort by Score/i });
+  const placed = async () => ({
+    appleFirst: (await at(apple)) < (await at(zebra)),
+    unscoredLast: (await at(unscored)) > Math.max(await at(apple), await at(zebra))
+  });
+  await score.click();
+  await expect.poll(placed).toEqual({ appleFirst: true, unscoredLast: true });
+  await score.click();
+  await expect.poll(placed).toEqual({ appleFirst: false, unscoredLast: true });
+});

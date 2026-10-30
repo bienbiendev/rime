@@ -51,6 +51,16 @@ export const DISPLAY_MODE = {
   NESTED: 'display_nested'
 } as const;
 
+const isBlank = (value: unknown) => value === undefined || value === null || value === '';
+
+/** Strings in reading order, case aside; anything else as `<` sees it. */
+const compareValues = (left: any, right: any) => {
+  if (typeof left === 'string' && typeof right === 'string') {
+    return left.localeCompare(right, undefined, { sensitivity: 'base' });
+  }
+  return left < right ? -1 : left > right ? 1 : 0;
+};
+
 /** The state of one collection's list page: its documents, order, search, filters and selection. */
 function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>) {
   const { initial, config, canCreate, upload: incomingUpload } = args;
@@ -167,15 +177,13 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     const orderMult = sortingOrder === 'asc' ? 1 : -1;
     // A column inside a group sorts by its path: `seo.score`
     return list.sort((a, b) => {
-      const left = getValueAtPath<any>(sortingBy, a);
-      const right = getValueAtPath<any>(sortingBy, b);
-      if (left < right) {
-        return -1 * orderMult;
+      const left = getValueAtPath(sortingBy, a);
+      const right = getValueAtPath(sortingBy, b);
+      // A document without the value goes last, in either order
+      if (isBlank(left) || isBlank(right)) {
+        return Number(isBlank(left)) - Number(isBlank(right));
       }
-      if (left > right) {
-        return 1 * orderMult;
-      }
-      return 0;
+      return compareValues(left, right) * orderMult;
     });
   }
 
