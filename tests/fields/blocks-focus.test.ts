@@ -247,6 +247,18 @@ test('Removing a selection asks first when any selected block holds blocks', asy
   await expect(rows(page)).toHaveCount(4);
 });
 
+test('Focus on a field that is not a blocks list opens nothing', async ({ page, request }) => {
+  const docId = await createPage(request);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(`${panelUrl('pages', docId)}?focus=title`);
+
+  await expect(
+    page.locator('fieldset[data-path="sections"] > .rz-blocks__list > .rz-block')
+  ).toHaveCount(3);
+  await expect(page.locator('.rz-blocks-focus')).toHaveCount(0);
+  await expect(page).not.toHaveURL(/focus=/);
+});
+
 test('Space selects a block on the stage, as Enter does', async ({ page, request }) => {
   const docId = await createPage(request);
   await loginAs(page, ADMIN_EMAIL, PASSWORD);

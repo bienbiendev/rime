@@ -64,7 +64,15 @@ export type LayerRow = {
 export function setBlocksFocusContext(form: DocumentFormContext) {
   const initial = page.url.searchParams.get(FOCUS_PARAM);
   let fromUrl = $state<string | null>(initial);
-  const path = $derived(((page.state as PageState).blocksFocus ?? fromUrl) || null);
+
+  /** A blocks list, or one block of a list: anything else in the address opens nothing. */
+  const isTarget = (target: string) =>
+    !!form.blocks.builder(endsOnBlock(target) ? parseBlockPath(target).list : target);
+
+  const path = $derived.by(() => {
+    const target = (page.state as PageState).blocksFocus ?? fromUrl;
+    return target && isTarget(target) ? target : null;
+  });
   /** Narrowed by the address, the block is selected and its fields show. */
   const narrowedFromUrl = !!initial && endsOnBlock(initial);
   let selection = $state<string[]>(narrowedFromUrl ? [initial] : []);
