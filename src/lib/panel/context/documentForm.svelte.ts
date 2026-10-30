@@ -889,8 +889,8 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 export function setDocumentFormContext<T extends WithOptional<GenericDoc, 'id'>>(args: Args<T>) {
   const initial = {
     ...args.initial,
-    _type: args.initial._type || args.config.type,
-    _prototype: args.initial._prototype || args.config.slug
+    _type: args.initial._type || args.config.slug,
+    _prototype: args.initial._prototype || args.config.type
   };
   return createDocumentFormState({ ...args, initial });
 }
