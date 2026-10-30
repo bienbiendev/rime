@@ -24,7 +24,7 @@
     "test:unit": "bun run rime:use basic && vitest run src",
     "test": "bun run test:empty && bun run test:fields && bun run test:multilang && bun run test:versions && bun run test:versions-multilang && bun run test:basic",
     "check:circular-deps": "bunx madge -c --extensions ts ./src/",
-    "local-pack": "npm run build && npm pack && echo \"Package created at: $(pwd)/$(npm pack | tail -1)\""
+    "local-pack": "bun run build && echo \"Package created at: $(pwd)/$(npm pack | tail -1)\""
   },
   "license": "MIT",
   "type": "module",
