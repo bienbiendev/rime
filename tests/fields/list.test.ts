@@ -286,7 +286,7 @@ test('The status filter keeps the rows of the status it names', async ({ page, r
     .toEqual(expect.arrayContaining(['Filtered draft', 'Filtered published']));
 });
 
-test('Two checked rows are deleted together, and the other rows stay', async ({
+test('Two checked rows are deleted together once confirmed, and the other rows stay', async ({
   page,
   request
 }) => {
@@ -308,10 +308,22 @@ test('Two checked rows are deleted together, and the other rows stay', async ({
 
   await page.getByRole('checkbox', { name: 'Doomed one', exact: true }).click();
   await page.getByRole('checkbox', { name: 'Doomed two', exact: true }).click();
-  await page
+  const deleteButton = page
     .locator('.rz-header-select')
-    .getByRole('button', { name: /^Delete/ })
-    .click();
+    .getByRole('button', { name: 'Delete 2 documents' });
+  const dialog = page.getByRole('dialog');
+
+  // The button asks first: a Cancel deletes nothing
+  await deleteButton.click();
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('2 documents');
+  expect(await rowTitles(page)).toEqual(expect.arrayContaining(['Doomed one', 'Doomed two']));
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(await stored()).toEqual(expect.arrayContaining(doomed));
+
+  await deleteButton.click();
+  await dialog.getByRole('button', { name: 'Delete 2 documents' }).click();
 
   await expect.poll(stored).toEqual(kept);
   await expect.poll(() => rowTitles(page)).not.toContain('Doomed one');
