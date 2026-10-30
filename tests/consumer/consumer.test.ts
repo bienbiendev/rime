@@ -131,7 +131,7 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
   await page.waitForLoadState('networkidle');
   const mediaFilename = `landscape-${SUFFIX}.jpg`;
   await page
-    .locator('input#file')
+    .locator('input[name="file"]')
     .setInputFiles({ name: mediaFilename, mimeType: 'image/jpeg', buffer: FIXTURE_IMAGE });
   // Upload header swaps the dropzone for the file-info block once the picked file has
   // been processed (see UploadHeader.svelte) - waiting on its filename text confirms

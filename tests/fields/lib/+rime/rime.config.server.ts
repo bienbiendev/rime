@@ -7,7 +7,7 @@ import { ContactLogs, Contacts, Notices, PrivateDocs, PrivateMedias, Reports } f
 import { Defaults } from './defaults';
 import { Homepage } from './homepage';
 import { HooksTest } from './hooks-test';
-import { Medias } from './medias';
+import { Medias, Posters } from './medias';
 import { Pages, Subscribers } from './pages';
 import { BulletinFiles, Bulletins } from './read-only';
 import { Listings } from './listings';
@@ -21,6 +21,7 @@ export default rime({
     Targets,
     ProductIdeas,
     Medias,
+    Posters,
     Pages,
     Defaults,
     Articles,

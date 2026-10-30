@@ -28,6 +28,9 @@
     onGeneratingPreviewEnd
   }: Props = $props();
 
+  // One id per drop zone: a "Create new" sheet can mount a second one on the page.
+  const inputId = $props.id();
+
   let input: HTMLInputElement;
   let dragOver = $state(false);
   let processingFile = $state(false);
@@ -85,7 +88,6 @@
 
 <!-- A dashed well: an icon, "Drop your file here or browse", the accepted types. -->
 <label
-  for="file"
   class="rz-doc-upload-dropzone"
   class:rz-doc-upload-dropzone--dragover={dragOver}
   ondragover={handleDragOver}
@@ -112,7 +114,7 @@
     disabled={processingFile}
     bind:this={input}
     onchange={handleChange}
-    id="file"
+    id={inputId}
     name="file"
     type="file"
     accept={accept?.join(',')}

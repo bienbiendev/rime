@@ -1,4 +1,4 @@
-import { text } from '#lib/fields/index.js';
+import { relation, text } from '#lib/fields/index.js';
 import { Collection } from '$rime/config';
 
 /** An upload collection, for the relation picker and the inline relation of block renders. */
@@ -11,4 +11,13 @@ export const Medias = Collection.create('medias', {
   access: {
     read: () => true
   }
+});
+
+/**
+ * An upload collection with an upload relation: the relation's "Create new" sheet holds a second
+ * drop zone.
+ */
+export const Posters = Collection.create('posters', {
+  upload: true,
+  fields: [text('alt'), relation('artwork').to('medias')]
 });

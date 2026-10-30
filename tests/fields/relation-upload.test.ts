@@ -457,3 +457,28 @@ test('Inline: an image whose fetch fails gives the empty state, not a loading bo
   ).toBeVisible();
   await expect(block.locator('.rz-relation-inline__loading')).toHaveCount(0);
 });
+
+test('A file picked in the "Create new" sheet lands in the sheet, not in the document behind', async ({
+  page
+}) => {
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(`${panelUrl('posters', 'create')}?uploadPath=root`);
+
+  const artwork = page.locator('fieldset[data-path="artwork"]');
+  await artwork.getByRole('button', { name: 'Choose from the library' }).click();
+  await dialog(page)
+    .getByRole('button', { name: /Create new/ })
+    .click();
+  const sheet = page.locator('.rz-sheet-content');
+  await expect(sheet.locator('.rz-doc-upload-dropzone')).toBeVisible();
+
+  // A click on the sheet's drop zone opens the sheet's own input.
+  const chooser = page.waitForEvent('filechooser');
+  await sheet.locator('.rz-doc-upload-dropzone').click();
+  await (await chooser).setFiles(path.resolve(process.cwd(), 'tests/basic/landscape.jpg'));
+
+  await expect(sheet.locator('.rz-doc-upload-header__info p').first()).toHaveText('landscape.jpg');
+  const parent = page.getByRole('main');
+  await expect(parent.locator('.rz-doc-upload-dropzone')).toBeVisible();
+  await expect(parent.locator('.rz-doc-upload-header__file')).toHaveCount(0);
+});
