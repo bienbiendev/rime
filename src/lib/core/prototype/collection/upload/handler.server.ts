@@ -64,18 +64,28 @@ const matchesETag = (header: string | null, etag: string) =>
  * A file on disk as a response: 304 when the caller holds it already, the bytes a `Range` names
  * (206, or 416 outside the file), the whole file otherwise. Streamed, and with no body to a
  * `HEAD`. 404 when there is no file.
+ *
+ * Each answer carries `x-content-type-options: nosniff`, so a browser takes the served type as
+ * given, and every type but a PDF `content-security-policy: sandbox`, so an HTML or SVG file
+ * opened at its URL runs no script. An `<img>` or a `<video>` reads the file as before.
  */
 export const fileResponse = async (request: Request, filePath: string, cacheControl: string) => {
   const [error, stats] = await trycatch(() => stat(filePath));
   if (error || !stats.isFile()) return notFound();
 
+  const type = servedMimeType(path.extname(filePath).slice(1));
   const etag = `"${stats.size.toString(16)}-${Math.floor(stats.mtimeMs).toString(16)}"`;
   const headers = new Headers({
     etag,
     'last-modified': stats.mtime.toUTCString(),
     'cache-control': cacheControl,
-    'accept-ranges': 'bytes'
+    'accept-ranges': 'bytes',
+    'x-content-type-options': 'nosniff'
   });
+  // A PDF is left out: the browser's PDF viewer does not run in a sandbox
+  if (type !== 'application/pdf') {
+    headers.set('content-security-policy', 'sandbox');
+  }
 
   if (matchesETag(request.headers.get('if-none-match'), etag)) {
     return new Response(null, { status: 304, headers });
@@ -88,7 +98,7 @@ export const fileResponse = async (request: Request, filePath: string, cacheCont
   }
 
   const { start, end } = range ?? { start: 0, end: stats.size - 1 };
-  headers.set('content-type', servedMimeType(path.extname(filePath).slice(1)));
+  headers.set('content-type', type);
   headers.set('content-length', String(end - start + 1));
   if (range) {
     headers.set('content-range', `bytes ${start}-${end}/${stats.size}`);

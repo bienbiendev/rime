@@ -134,6 +134,32 @@ describe('handleUploads', () => {
     expect(outside.response.headers.get('content-range')).toBe('bytes */10');
   });
 
+  test('serves every answer sandboxed, with its type never sniffed', async () => {
+    const holding = (await request('/uploads/medias/a.txt')).response.headers.get('etag')!;
+    const answers = [
+      await request('/uploads/medias/a.txt'),
+      await request('/uploads/medias/a.txt', { method: 'HEAD' }),
+      await request('/uploads/medias/a.txt', { headers: { range: 'bytes=2-4' } }),
+      await request('/uploads/medias/a.txt', { headers: { range: 'bytes=10-' } }),
+      await request('/uploads/medias/a.txt', { headers: { 'if-none-match': holding } }),
+      await request('/uploads/private-medias/b.txt', { user: staff })
+    ];
+    for (const { response } of answers) {
+      expect(response.headers.get('content-security-policy')).toBe('sandbox');
+      expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    }
+    expect(answers.map(({ response }) => response.status)).toEqual([200, 200, 206, 416, 304, 200]);
+  });
+
+  test('serves a PDF unsandboxed, for the browser to show it, and never sniffed', async () => {
+    writeFileSync(join(root, 'storage/uploads/medias/c.pdf'), '%PDF-1.4');
+    const { response } = await request('/uploads/medias/c.pdf');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('application/pdf');
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(response.headers.has('content-security-policy')).toBe(false);
+  });
+
   test('answers HEAD with the headers and no body', async () => {
     const { response } = await request('/uploads/medias/a.txt', { method: 'HEAD' });
     expect(response.status).toBe(200);
