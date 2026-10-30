@@ -73,7 +73,10 @@
   });
 </script>
 
-<!-- The file: a preview beside its name, size and type; before one is picked, a drop zone. -->
+<!--
+  The file: a preview beside its name, size and type; before one is picked, a drop zone. A
+  read-only form shows the file without Remove, and no drop zone.
+-->
 <div class="rz-doc-upload-header">
   {#if form.values.mimeType}
     <div class="rz-doc-upload-header__file">
@@ -105,12 +108,16 @@
             {/if}
           </div>
         {/each}
-        <div class="rz-doc-upload-header__actions">
-          <Button onclick={deleteFile} size="sm" variant="secondary">{t__('fields.remove')}</Button>
-        </div>
+        {#if !form.readOnly}
+          <div class="rz-doc-upload-header__actions">
+            <Button onclick={deleteFile} size="sm" variant="secondary">
+              {t__('fields.remove')}
+            </Button>
+          </div>
+        {/if}
       </div>
     </div>
-  {:else}
+  {:else if !form.readOnly}
     <DropZone bind:preview bind:file {onGeneratingPreviewStart} {onGeneratingPreviewEnd} {accept} />
   {/if}
 </div>

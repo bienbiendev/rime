@@ -27,3 +27,14 @@ export const Bulletins = Collection.create('bulletins', {
     update: (user) => access.isAdmin(user)
   }
 });
+
+/** An upload collection with the same rules: an editor opens a file read-only. */
+export const BulletinFiles = Collection.create('bulletinFiles', {
+  upload: true,
+  fields: [text('alt')],
+  access: {
+    read: (user) => access.isStaff(user),
+    create: (user) => access.isAdmin(user),
+    update: (user) => access.isAdmin(user)
+  }
+});

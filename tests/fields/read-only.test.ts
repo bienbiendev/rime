@@ -10,7 +10,7 @@ const EDITOR_EMAIL = 'ro-editor@email.com';
 /**
  * A `bulletins` document opened by an editor, who may read it but not update it: no control
  * changes the value, the media library does not open, the live editor does not open, and focus
- * mode offers no types to add.
+ * mode offers no types to add. A `bulletinFiles` document likewise keeps its file.
  */
 
 // The tests open the bulletin and sign in the editor the first test creates: one failing skips the
@@ -110,4 +110,20 @@ test('Should turn the focus panel to Layers when the selection empties', async (
   await expect(note.first()).not.toHaveAttribute('data-selected');
   await expect(panel.getByRole('tab', { name: 'Layers' })).toHaveAttribute('data-state', 'active');
   await expect(page.locator('.rz-layers__row')).toHaveCount(2);
+});
+
+test('Should not remove the file of a read-only upload document', async ({ page, request }) => {
+  const base64 = await filePathToBase64(path.resolve(process.cwd(), 'tests/basic/landscape.jpg'));
+  const created = await request.post(`${API_BASE_URL}/bulletin-files`, {
+    headers: await signIn(ADMIN_EMAIL, PASSWORD)(request),
+    data: { file: { base64, filename: 'weekly.jpg' }, alt: 'Weekly' }
+  });
+  expect(created.status()).toBe(200);
+
+  await loginAs(page, EDITOR_EMAIL, PASSWORD);
+  await page.goto(panelUrl('bulletin-files', (await created.json()).doc.id));
+
+  await expect(page.locator('.rz-doc-upload-header__file')).toBeVisible();
+  await expect(page.locator('.rz-doc-upload-header__actions')).toHaveCount(0);
+  await expect(page.locator('.rz-doc-upload-dropzone')).toHaveCount(0);
 });
