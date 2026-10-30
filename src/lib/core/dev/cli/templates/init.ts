@@ -75,6 +75,16 @@ export function regenerateHooks(root: string = process.cwd()): boolean {
   return true;
 }
 
+/** A whole-number variable: `fallback` when unset, and a value that is not all digits stops the
+ * app at startup. */
+const wholeNumber = (fallback: number) => `{
+    schema: (value) => {
+      if (value === undefined) return ${fallback};
+      if (!/^\\d+$/.test(value)) throw new Error('Expected a whole number');
+      return Number(value);
+    }
+  }`;
+
 /** The variables rime reads from `$app/env/public` and `$app/env/private`, as src/env.ts declares
  * them. One without a `schema` is required: the app refuses to start without it. */
 const ENV_VARS: Record<string, string> = {
@@ -83,11 +93,11 @@ const ENV_VARS: Record<string, string> = {
   RIME_PANEL_ROUTE: "{ schema: (value) => value ?? 'panel' }",
   RIME_LOG_LEVEL: "{ schema: (value) => value ?? 'INFO' }",
   RIME_LOG_TO_FILE: "{ schema: (value) => value === 'true' }",
-  RIME_LOG_TO_FILE_MAX_DAYS: '{ schema: (value) => Number(value ?? 30) }',
+  RIME_LOG_TO_FILE_MAX_DAYS: wholeNumber(30),
   RIME_CACHE_ENABLED: "{ schema: (value) => value === 'true' }",
   RIME_CACHE_STRATEGY: "{ schema: (value) => value ?? 'memory' }",
   SMTP_HOST: '{ schema: (value) => value }',
-  SMTP_PORT: '{ schema: (value) => Number(value ?? 465) }',
+  SMTP_PORT: wholeNumber(465),
   SMTP_USER: '{ schema: (value) => value }',
   SMTP_PASSWORD: '{ schema: (value) => value }'
 };

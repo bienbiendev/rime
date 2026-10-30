@@ -6,6 +6,7 @@ import { configImportPaths, paramsPath, relativeImportSpecifier } from '../../co
 import {
   addEnvVars,
   appParams,
+  envVarDeclarations,
   envVars,
   hooks,
   missingEnvVars,
@@ -33,6 +34,18 @@ describe('src/env.ts declarations', () => {
 
   it('answers null without a defineEnvVars call', () => {
     expect(addEnvVars('export const variables = {};', ['SITE_URL'])).toBeNull();
+  });
+
+  it('declares number variables that refuse anything but digits', () => {
+    const { SMTP_PORT, RIME_LOG_TO_FILE_MAX_DAYS } = new Function(
+      `return {\n${envVarDeclarations(['SMTP_PORT', 'RIME_LOG_TO_FILE_MAX_DAYS'])}\n}`
+    )();
+    expect(SMTP_PORT.schema(undefined)).toBe(465);
+    expect(SMTP_PORT.schema('587')).toBe(587);
+    expect(() => SMTP_PORT.schema('46S')).toThrow('Expected a whole number');
+    expect(() => SMTP_PORT.schema('')).toThrow('Expected a whole number');
+    expect(RIME_LOG_TO_FILE_MAX_DAYS.schema(undefined)).toBe(30);
+    expect(() => RIME_LOG_TO_FILE_MAX_DAYS.schema('3O')).toThrow('Expected a whole number');
   });
 });
 
