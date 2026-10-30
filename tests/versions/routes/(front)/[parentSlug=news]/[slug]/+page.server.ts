@@ -9,7 +9,7 @@ export const load = async (event: ServerLoadEvent) => {
   const { rime, user } = event.locals;
   const { slug } = event.params;
 
-  const query = `where[attributes.slug][equals]=${slug}`;
+  const query = { where: { 'attributes.slug': { equals: slug } } };
   const docs = await rime.collection('news').find({ query, depth: 2, latest: !!user });
 
   if (!docs.length) {
