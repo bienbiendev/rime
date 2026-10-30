@@ -5,7 +5,8 @@ import type { OperationQuery } from '#lib/core/pipeline/types.js';
 import type { PrototypeSlug, RawDoc } from '#lib/core/prototype/types.js';
 import type { ConfigContext } from '#lib/core/rime.server.js';
 import type { Dic } from '#lib/util/types.js';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, gt, inArray, notExists, type SQL } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
 import { RimeError } from '../core/errors/index.js';
 import type { GenericTable } from './types.server.js';
 import { baseTableName } from './naming.server.js';
@@ -148,28 +149,18 @@ export const readPrototype = async (
  * pagination and ordering are properties of the document rather than of one of its rows.
  */
 export const findManyPrototypes = async (
-  { db, tables, configCtx }: DepsWithConfig,
+  deps: DepsWithConfig,
   args: FindManyArgs
 ): Promise<RawDoc[]> => {
-  const {
-    select,
-    resolve,
-    query: incomingQuery,
-    sort,
-    limit,
-    offset,
-    locale,
-    localeFallback,
-    content,
-    config,
-    versions
-  } = args;
+  const { db, tables, configCtx } = deps;
+  const { select, resolve, sort, limit, offset, locale, localeFallback, config, versions } = args;
   // buildOrderByParam and buildWhereParam resolve fields against the config, so they take a
   // prototype slug. Registration guarantees this one is registered, hence is one.
   const slug = args.slug as PrototypeSlug;
   const table = baseTableName(slug);
-  const query = incomingQuery ? normalizeQuery(incomingQuery) : undefined;
   const fallback = localeOrder(configCtx, locale, localeFallback);
+  // Which documents the list holds: the same filter `countPrototypes` counts with
+  const where = documentsWhere(deps, args);
 
   // No versions: everything is on the base table, so this is one plain query.
   if (!versions) {
@@ -181,12 +172,7 @@ export const findManyPrototypes = async (
       ...pageParams(limit, offset)
     };
 
-    if (query) {
-      params.where = {
-        RAW: (t: GenericTable) =>
-          buildWhereParam({ query, slug, locale, db, configCtx, tables, rootTable: t })
-      };
-    }
+    if (where) params.where = { RAW: where };
 
     Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);
 
@@ -208,29 +194,10 @@ export const findManyPrototypes = async (
     buildWithParam({ table: contentTable, select, resolve, tables, config, locale, fallback }) ||
     undefined;
 
-  // The caller's own filter, and the one saying which content row each document shows. Both
-  // resolve against the versions table, so they are two wheres to `and`.
-  const contentWhere = (rootTable: GenericTable) => {
-    const wheres = [query, content && normalizeQuery(content)]
-      .filter((one) => !!one)
-      .map((one) =>
-        buildWhereParam({
-          query: one,
-          slug: versionsSlug,
-          base: slug,
-          locale,
-          db,
-          configCtx,
-          tables,
-          rootTable
-        })
-      )
-      // Only `undefined` drops out: `buildWhereParam` answers `false` for a degenerate query (an
-      // empty `and`/`or`), which goes to drizzle as is.
-      .filter((one) => one !== undefined);
-
-    return wheres.length > 1 ? and(...wheres) : wheres[0];
-  };
+  // The caller's filter and `content`, on the versions table. `where` keeps a document only when
+  // its newest allowed row matches, so the newest row passing both is that row: the join shows
+  // it, and the sort reads it.
+  const contentWhere = contentWhereOf(deps, { ...args, versions });
 
   const params: Dic = {
     ...pageParams(limit, offset),
@@ -248,18 +215,8 @@ export const findManyPrototypes = async (
       })
   };
 
-  // Only the documents that have a matching content row, before `limit` and `offset` cut the page.
-  // The same `contentWhere` as the join below, run on the versions table itself.
-  if (query || content) {
-    const contentRows = tables[contentTable];
-    params.where = {
-      RAW: (t: GenericTable) =>
-        inArray(
-          t.id,
-          db.select({ id: contentRows.ownerId }).from(contentRows).where(contentWhere(contentRows))
-        )
-    };
-  }
+  // Only the documents whose shown row matches, before `limit` and `offset` cut the page
+  if (where) params.where = { RAW: where };
   Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);
 
   const rawDocs = await (db.query as Record<string, any>)[table].findMany({
@@ -292,6 +249,128 @@ export const findManyPrototypes = async (
       }
     })
     .filter(Boolean);
+};
+
+/** What decides which documents a list holds; `findManyPrototypes` and `countPrototypes` share it. */
+type ListArgs = {
+  slug: string;
+  versions?: VersionsTable;
+  query?: OperationQuery;
+  /** Per document, which content rows it may show — see `readPrototype`. */
+  content?: OperationQuery;
+  locale?: string;
+};
+
+/**
+ * The caller's `query` and `content` on a versions table, `and`ed: both resolve against it.
+ * `undefined` when there is neither.
+ */
+const contentWhereOf = (
+  { db, tables, configCtx }: DepsWithConfig,
+  args: ListArgs & { versions: VersionsTable }
+) => {
+  const queries = [args.query, args.content].flatMap((one) => (one ? [normalizeQuery(one)] : []));
+
+  return (rootTable: GenericTable) => {
+    const wheres = queries
+      .map((query) =>
+        buildWhereParam({
+          query,
+          slug: args.versions.slug as PrototypeSlug,
+          base: args.slug as PrototypeSlug,
+          locale: args.locale,
+          db,
+          configCtx,
+          tables,
+          rootTable
+        })
+      )
+      // Only `undefined` drops out: `buildWhereParam` answers `false` for a degenerate query (an
+      // empty `and`/`or`), which goes to drizzle as is.
+      .filter((one) => one !== undefined);
+
+    return wheres.length > 1 ? and(...wheres) : wheres[0];
+  };
+};
+
+/**
+ * `rowWhere`, kept to each document's newest row among those `content` allows: a row passes when
+ * no newer row of the same document is allowed.
+ *
+ * ```ts
+ * // news, latest (no `content`), ?where[status][equals]=draft
+ * // v.status = 'draft' and not exists (select id from news__versions newer
+ * //   where newer.owner_id = v.owner_id and newer.updated_at > v.updated_at)
+ * ```
+ */
+const newestOnly = (
+  deps: DepsWithConfig,
+  args: ListArgs & { versions: VersionsTable },
+  rowWhere: (rows: GenericTable) => SQL | false | undefined
+) => {
+  const newer = alias(deps.tables[baseTableName(args.versions.slug)] as GenericTable, 'newer');
+  const allowed = contentWhereOf(deps, { ...args, query: undefined });
+
+  return (rows: GenericTable) =>
+    and(
+      rowWhere(rows) || undefined,
+      notExists(
+        deps.db
+          .select({ id: newer.id })
+          .from(newer)
+          .where(
+            and(
+              eq(newer.ownerId, rows.ownerId),
+              gt(newer.updatedAt, rows.updatedAt),
+              allowed(newer) || undefined
+            )
+          )
+      )
+    );
+};
+
+/**
+ * Which documents a list holds, as a filter on the base table: `query` itself without versions;
+ * with versions, the documents whose newest row among those `content` allows matches `query`.
+ * `undefined` when nothing narrows the list.
+ *
+ * ```ts
+ * // news, ?where[title][equals]=Hi, published rows only
+ * // news.id in (select owner_id from news__versions v where v.title = 'Hi'
+ * //   and v.status = 'published' and not exists (a newer published row of the same news))
+ * ```
+ */
+const documentsWhere = (deps: DepsWithConfig, args: ListArgs) => {
+  const { db, tables, configCtx } = deps;
+  const { versions, query, content, locale } = args;
+  const slug = args.slug as PrototypeSlug;
+
+  if (!versions) {
+    if (!query) return undefined;
+    const parsed = normalizeQuery(query);
+    return (t: GenericTable) =>
+      buildWhereParam({ query: parsed, slug, locale, db, configCtx, tables, rootTable: t });
+  }
+
+  if (!query && !content) return undefined;
+  const contentRows = tables[baseTableName(versions.slug)];
+  const rowWhere = newestOnly(
+    deps,
+    { ...args, versions },
+    contentWhereOf(deps, { ...args, versions })
+  );
+  return (t: GenericTable) =>
+    inArray(
+      t.id,
+      db.select({ id: contentRows.ownerId }).from(contentRows).where(rowWhere(contentRows))
+    );
+};
+
+/** How many documents `findManyPrototypes` lists for the same arguments, before paging. */
+export const countPrototypes = async (deps: DepsWithConfig, args: ListArgs): Promise<number> => {
+  const table = deps.tables[baseTableName(args.slug)];
+  const where = documentsWhere(deps, args);
+  return deps.db.$count(table, where?.(table));
 };
 
 /**

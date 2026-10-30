@@ -9,6 +9,7 @@ import { versionsReadQuery } from '#lib/core/prototype/shared/versions/read-quer
 import { cachedRead, fallbackLocale } from '#lib/core/prototype/shared/api.server.js';
 import type { CollectionSlug } from '../types.js';
 import type { OperationQuery } from '#lib/core/pipeline/types.js';
+import { count, type CountArgs } from './operations/count.js';
 import { create, type CreateArgs } from './operations/create.js';
 import { deleteById, type DeleteByIdArgs } from './operations/delete-by-id.js';
 import { deleteDocs, type DeleteArgs } from './operations/delete.js';
@@ -163,6 +164,24 @@ class CollectionAPI<
           locale
         })
     ) as Promise<WithRelationResolved<Doc, D>[]>;
+  }
+
+  /**
+   * How many documents `find` lists for the same query, with the same read access
+   *
+   * @example
+   * // The posts whose newest version is a draft
+   * const drafts = await rime.collection('posts').count({
+   *   latest: true,
+   *   query: { where: { status: { equals: 'draft' } } }
+   * });
+   */
+  count(args: CountArgs = {}): Promise<number> {
+    const { query, latest } = args;
+    const locale = this.fallbackLocale(args.locale);
+    return this.cached('collection.count', { query, latest, locale }, () =>
+      count({ ctx: this, query, latest, locale })
+    );
   }
 
   /**
@@ -341,6 +360,7 @@ export type CollectionApi<
   | 'create'
   | 'duplicate'
   | 'find'
+  | 'count'
   | 'findById'
   | 'findByIds'
   | 'updateById'

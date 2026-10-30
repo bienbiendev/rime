@@ -113,7 +113,11 @@ export interface BaseHandle {
      * field the pipeline goes on to drop.
      */
     resolve?: string[];
-    /** Per document, which content row — see `find`. Filters the list as well as picking rows. */
+    /**
+     * Per document, which content row — see `find`. Filters the list as well as picking rows:
+     * `query` is checked on each document's newest row among those `content` allows, the row it
+     * shows.
+     */
     content?: OperationQuery;
   }): Promise<RawDoc[]>;
 
@@ -162,6 +166,16 @@ export interface CollectionHandle extends BaseHandle {
      */
     content?: OperationQuery;
   }): Promise<RawDoc | undefined>;
+
+  /**
+   * How many documents `findMany` lists for the same `query`, `content` and `locale`, before any
+   * `limit` or `offset`: one per document, however many version rows it has.
+   */
+  count(args?: {
+    query?: OperationQuery;
+    content?: OperationQuery;
+    locale?: string;
+  }): Promise<number>;
 
   /**
    * Makes a document. The difference from `update` is the one an insert has by definition:

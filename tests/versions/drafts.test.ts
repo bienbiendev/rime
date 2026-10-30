@@ -1,6 +1,11 @@
 import { PARAMS } from '#lib/core/constants.js';
 import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
-import test, { expect, request as anonymous, type APIRequestContext } from '@playwright/test';
+import test, {
+  expect,
+  request as anonymous,
+  type APIRequestContext,
+  type Page
+} from '@playwright/test';
 import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
@@ -75,6 +80,63 @@ test('Publishing through a new-version write leaves one published version', asyn
   expect(await readTitle(request, `${API_BASE_URL}/news/${doc.id}`)).toBe(
     'Publish by branching, again'
   );
+});
+
+/** How many drafts the dashboard says wait, 0 when it names none. */
+const draftsWaiting = async (page: Page) => {
+  await page.goto(panelUrl());
+  const meta = await page.locator('.rz-dashboard__meta').innerText();
+  return Number(meta.match(/(\d+) drafts? waiting/)?.[1] ?? 0);
+};
+
+test('A latest list on drafts holds the news whose newest version is a draft, and its count agrees', async ({
+  page,
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  const waiting = await draftsWaiting(page);
+
+  // Published, then published again through a new version: its first version is a draft now
+  const republished = await createNews(request, headers, 'Republished', VERSIONS_STATUS.PUBLISHED);
+  const again = await request.patch(`${API_BASE_URL}/news/${republished.id}?${PARAMS.FORK}=true`, {
+    headers,
+    data: { status: VERSIONS_STATUS.PUBLISHED, attributes: { title: 'Republished, again' } }
+  });
+  expect(again.status()).toBe(200);
+  expect(await draftsWaiting(page)).toBe(waiting);
+
+  // Published, then a newer draft
+  const drafted = await createNews(request, headers, 'Drafted', VERSIONS_STATUS.PUBLISHED);
+  const draft = await request.patch(`${API_BASE_URL}/news/${drafted.id}?${PARAMS.FORK}=true`, {
+    headers,
+    data: { attributes: { title: 'Drafted, newer' } }
+  });
+  expect(draft.status()).toBe(200);
+  expect(await draftsWaiting(page)).toBe(waiting + 1);
+
+  const search = `?${PARAMS.LATEST}=true&where[status][equals]=${VERSIONS_STATUS.DRAFT}`;
+  const listed = await request.get(`${API_BASE_URL}/news${search}`, { headers });
+  const { docs } = (await listed.json()) as { docs: Row[] };
+  const ids = docs.map((doc) => doc.id);
+  expect(ids).toContain(drafted.id);
+  expect(ids).not.toContain(republished.id);
+  expect(docs.every((doc) => doc.status === VERSIONS_STATUS.DRAFT)).toBe(true);
+
+  const counted = await request.get(`${API_BASE_URL}/news/count${search}`, { headers });
+  expect(await counted.json()).toEqual({ count: docs.length });
+
+  // One document, two versions: counted once, by staff on its newest and by a visitor on its
+  // published one
+  const one = `where[id][equals]=${drafted.id}`;
+  const byStaff = await request.get(`${API_BASE_URL}/news/count?${PARAMS.LATEST}=true&${one}`, {
+    headers
+  });
+  expect(await byStaff.json()).toEqual({ count: 1 });
+  const visitor = await anonymous.newContext();
+  const byVisitor = await visitor.get(`${API_BASE_URL}/news/count?${one}`);
+  expect(await byVisitor.json()).toEqual({ count: 1 });
+  await visitor.dispose();
 });
 
 test('A document nobody has published yet is written through latest', async ({ request }) => {

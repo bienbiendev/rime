@@ -140,6 +140,12 @@ test('Should give a new page its own id, whatever id the body sends', async ({ r
   }
 });
 
+// `apps` lets admins and the `reports` role read it: a visitor may not count it either
+test('Should refuse to count a collection the caller may not read', async ({ request }) => {
+  const response = await request.get(`${API_BASE_URL}/apps/count`);
+  expect(response.status()).toBe(403);
+});
+
 test('Should return the home page', async ({ request }) => {
   const response = await request.get(`${API_BASE_URL}/pages/${homeId}`).then((response) => {
     return response.json();
@@ -309,6 +315,13 @@ test('Should get correct offset / limit', async ({ request }) => {
     expect(titles.at(0)).toBe('Other ' + pad(COUNT - offset));
     expect(titles.at(-1)).toBe('Other ' + pad(COUNT + 1 - last));
   }
+
+  // The count of the same filter, without reading a page
+  const counted = await request.get(
+    `${API_BASE_URL}/pages/count?where[attributes.slug][like]=other-`
+  );
+  expect(counted.status()).toBe(200);
+  expect(await counted.json()).toEqual({ count: COUNT });
 
   const removed = await request.delete(
     `${API_BASE_URL}/pages?where[id][in_array]=${created.join(',')}`,

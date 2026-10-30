@@ -1,4 +1,5 @@
 import type { RouteConfig } from '#lib/core/config/types.js';
+import { restCount } from './count.server.js';
 import { restCreate } from './create.server.js';
 import { restDelete } from './delete.server.js';
 import { restDeleteById } from './delete-by-id.server.js';
@@ -21,6 +22,8 @@ import { restUpdateSlugById } from './update-slug-by-id.server.js';
  */
 export const rest: Record<string, RouteConfig> = {
   '': { GET: restGet, POST: restCreate, DELETE: restDelete },
+  // A static segment: SvelteKit matches `/api/pages/count` here before it tries `[id]`
+  count: { GET: restCount },
   '[id]': { GET: restGetById, PATCH: restUpdateById, DELETE: restDeleteById },
   '[id]/duplicate': { POST: restDuplicate },
   '[id]/lock': { POST: restLock, DELETE: restUnlock },

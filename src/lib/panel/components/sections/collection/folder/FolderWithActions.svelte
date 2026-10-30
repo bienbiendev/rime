@@ -6,7 +6,6 @@
   import { PARAMS } from '#lib/core/constants.js';
   import { directoriesKebab } from '#lib/core/prototype/collection/upload/naming.js';
   import type { Directory } from '#lib/core/prototype/collection/upload/types.js';
-  import type { GenericDoc } from '#lib/core/prototype/types.js';
   import { apiUrl, panelPath } from '#lib/core/routes/util.js';
   import Button from '#lib/panel/components/ui/button/button.svelte';
   import ContextMenu from '#lib/panel/components/ui/context-menu/ContextMenu.svelte';
@@ -38,21 +37,20 @@
   let isDragging = $state(false);
   const isFolderUpperPath = $derived(folder.name === '...');
   const APIProxy = getAPIProxyContext();
+  // Counts, through the API proxy: a save's `invalidate('/api/<slug>')` fetches them again
   const childFilesURL = $derived(
-    `${apiUrl(collection.kebab)}?where[_path][equals]=${folder.id}&select=id`
+    `${apiUrl(collection.kebab, 'count')}?where[_path][equals]=${folder.id}`
   );
   const childFiles = $derived(
-    isFolderUpperPath ? null : APIProxy.getRessource<{ docs: GenericDoc[] }>(childFilesURL)
+    isFolderUpperPath ? null : APIProxy.getRessource<{ count: number }>(childFilesURL)
   );
-  const childFilesCount = $derived(childFiles?.data?.docs?.length || 0);
+  const childFilesCount = $derived(childFiles?.data?.count ?? 0);
   const baseFolderApiURL = $derived(`${apiUrl(directoriesKebab(collection.slug))}`);
-  const childFoldersURL = $derived(
-    `${baseFolderApiURL}?where[parent][equals]=${folder.id}&select=id`
-  );
+  const childFoldersURL = $derived(`${baseFolderApiURL}/count?where[parent][equals]=${folder.id}`);
   const childFolders = $derived(
-    isFolderUpperPath ? null : APIProxy.getRessource<{ docs: GenericDoc[] }>(childFoldersURL)
+    isFolderUpperPath ? null : APIProxy.getRessource<{ count: number }>(childFoldersURL)
   );
-  const childFoldersCount = $derived(childFolders?.data?.docs?.length || 0);
+  const childFoldersCount = $derived(childFolders?.data?.count ?? 0);
   // What the folder holds, files and folders, once both counts are in.
   // The parent tile asks for nothing and shows no count.
   const itemsCount = $derived(

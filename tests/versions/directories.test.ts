@@ -1,5 +1,5 @@
 import { filePathToBase64 } from '#lib/core/prototype/collection/upload/util/converter.server.js';
-import test, { expect } from '@playwright/test';
+import test, { expect, type APIRequestContext } from '@playwright/test';
 import path from 'path';
 import { API_BASE_URL, BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
@@ -195,6 +195,29 @@ test('Moving a folder moves its sub-folders and the files in them', async ({ req
 });
 
 /**
+ * Uploads a text file named `name` into `_path`. Its bytes are its name: a unique name makes a
+ * file no other row shares.
+ */
+const uploadText = async (
+  request: APIRequestContext,
+  headers: { cookie: string },
+  name: string,
+  _path: string
+) => {
+  const payload = Buffer.from(name).toString('base64');
+  const response = await request.post(`${API_BASE_URL}/medias`, {
+    headers,
+    data: {
+      file: { base64: `data:text/plain;base64,${payload}`, filename: `${name}.txt` },
+      alt: name,
+      _path
+    }
+  });
+  expect(response.status()).toBe(200);
+  return (await response.json()).doc;
+};
+
+/**
  * Deleting a folder deletes its sub-folders and the documents filed in them, each through its own
  * delete, so their files leave the disk.
  */
@@ -204,22 +227,8 @@ test('Deleting a folder deletes its sub-folders, their documents and their files
   const headers = await signInSuperAdmin(request);
   const run = Date.now();
 
-  // Bytes unique to each upload, so no file is shared with another row
-  const upload = async (name: string, _path: string) => {
-    const payload = Buffer.from(`${name}-${run}`).toString('base64');
-    const response = await request.post(`${API_BASE_URL}/medias`, {
-      headers,
-      data: {
-        file: { base64: `data:text/plain;base64,${payload}`, filename: `${name}-${run}.txt` },
-        alt: name,
-        _path
-      }
-    });
-    expect(response.status()).toBe(200);
-    return (await response.json()).doc;
-  };
-  const top = await upload('top', `root:del-${run}`);
-  const nested = await upload('nested', `root:del-${run}:sub`);
+  const top = await uploadText(request, headers, `top-${run}`, `root:del-${run}`);
+  const nested = await uploadText(request, headers, `nested-${run}`, `root:del-${run}:sub`);
 
   const deleted = await request.delete(`${API_BASE_URL}/medias-directories/root:del-${run}`, {
     headers
@@ -236,6 +245,35 @@ test('Deleting a folder deletes its sub-folders, their documents and their files
   );
   expect((await request.get(`${BASE_URL}${top.url}`)).status()).toBe(404);
   expect((await request.get(`${BASE_URL}${nested.url}`)).status()).toBe(404);
+});
+
+test('A folder tile shows what it holds, read from the count route', async ({ page, request }) => {
+  const headers = await signInSuperAdmin(request);
+  const folder = `counted-${Date.now()}`;
+  await uploadText(request, headers, `${folder}-one`, `root:${folder}`);
+  await uploadText(request, headers, `${folder}-two`, `root:${folder}`);
+  await uploadText(request, headers, `${folder}-inner`, `root:${folder}:inner`);
+
+  // A list read only to count its length, as the tile did before
+  const lists: string[] = [];
+  page.on('request', (sent) => {
+    const url = new URL(sent.url());
+    if (url.pathname.startsWith('/api/medias') && url.searchParams.get('select') === 'id') {
+      lists.push(sent.url());
+    }
+  });
+  const counted = page.waitForRequest((sent) =>
+    sent.url().includes(`/api/medias/count?where[_path][equals]=root:${folder}`)
+  );
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('medias'));
+  await counted;
+
+  // Two files and one folder
+  const tile = page.locator('.rz-folder', { hasText: folder });
+  await expect(tile.locator('.rz-folder__count')).toHaveText('3');
+  expect(lists).toEqual([]);
 });
 
 test('The upload veil goes when a file drag leaves the window from the navigation', async ({

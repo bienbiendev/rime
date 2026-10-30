@@ -2,7 +2,7 @@ import type { CollectionHandle } from '#lib/core/adapter.js';
 import type { BuiltCollection } from '#lib/core/config/types.js';
 import type { RawDoc } from '#lib/core/prototype/types.js';
 import { bundles, type HandleDeps } from './rows.server.js';
-import { findManyPrototypes, readPrototype } from './read.server.js';
+import { countPrototypes, findManyPrototypes, readPrototype } from './read.server.js';
 import {
   deletePrototype,
   insertPrototype,
@@ -28,6 +28,8 @@ export const createCollectionHandle = (deps: HandleDeps): CollectionHandle => {
     find: (args) => readPrototype(read, { ...args, ...self }) as Promise<RawDoc | undefined>,
 
     findMany: (args = {}) => findManyPrototypes(read, { ...args, ...self }),
+
+    count: (args = {}) => countPrototypes(read, { ...args, ...self }),
 
     insert: (args) => insertPrototype(write, { ...args, slug, versions: deps.versions }),
 

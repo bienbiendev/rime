@@ -64,14 +64,22 @@ export const dashboardLoad = async (event: ServerLoadEvent) => {
     }
   };
 
-  /** How many documents a collection holds, and how many of them wait as drafts. */
+  /**
+   * How many documents a collection holds, and how many of them wait as drafts: those whose
+   * newest version is a draft.
+   */
   const countDocuments = async (c: BuiltCollection) => {
+    const collection = rime.collection(c.slug);
     try {
-      const docs = await rime.collection(c.slug).find({ locale, latest: true, select: ['status'] });
+      const count = await collection.count({ locale, latest: true });
       const drafts = c.versions?.draft
-        ? docs.filter((doc) => doc.status === VERSIONS_STATUS.DRAFT).length
+        ? await collection.count({
+            locale,
+            latest: true,
+            query: { where: { status: { equals: VERSIONS_STATUS.DRAFT } } }
+          })
         : 0;
-      return { count: docs.length, drafts };
+      return { count, drafts };
     } catch (err: any) {
       console.error(`Error counting documents of collection ${c.slug}:`);
       console.error(err);
