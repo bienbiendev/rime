@@ -91,3 +91,31 @@ test('A link holds the last document picked', async ({ page, request }) => {
   await page.locator(SAVE).click();
   await expect.poll(() => savedLink(request, id)).toEqual({ type: 'pages', value: secondId });
 });
+
+test('Of two documents with the same title, the keyboard picks the highlighted one', async ({
+  page,
+  request
+}) => {
+  const title = `Contact ${Date.now()}`;
+  await createPage(request, title);
+  await createPage(request, title);
+  const id = await createPage(request, 'Link same title', [{ label: 'Item', _children: [] }]);
+  const fieldset = await openLink(page, id);
+
+  await pickType(page, fieldset, 'Page');
+  const search = fieldset.locator('.rz-ressource-input input');
+  await search.click();
+  await search.pressSequentially(title, { delay: 30 });
+  const options = page.getByRole('option', { name: title });
+  await expect(options).toHaveCount(2);
+
+  // The down arrow moves the highlight to the second entry alone
+  await search.press('ArrowDown');
+  await expect(page.locator('[role="option"][aria-selected="true"]')).toHaveCount(1);
+  await expect(options.nth(1)).toHaveAttribute('aria-selected', 'true');
+  const secondId = await options.nth(1).getAttribute('data-value');
+
+  await search.press('Enter');
+  await page.locator(SAVE).click();
+  await expect.poll(() => savedLink(request, id)).toEqual({ type: 'pages', value: secondId });
+});

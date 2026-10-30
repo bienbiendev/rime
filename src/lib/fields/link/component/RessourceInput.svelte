@@ -91,7 +91,8 @@
           <Command.List>
             {#each resources as ressource, index (index)}
               <Command.Item
-                value={ressource.label}
+                value={ressource.id}
+                keywords={[ressource.label]}
                 onSelect={() => {
                   ressourceId = ressource.id;
                   search = '';
