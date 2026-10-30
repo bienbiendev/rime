@@ -106,6 +106,30 @@ test.each(['helpers.server.ts', 'helpers.server.js'])(
   }
 );
 
+test('sanitize() copies a module.ts without $ content and its module.server.ts as they are', async () => {
+  write(`${CONFIG_DIR}/rime.config.server.ts`, 'export default rime({});\n');
+  const client = "export const label = 'News';\n";
+  const server = "export const secret = 'abc';\n";
+  write(`${CONFIG_DIR}/news/module.ts`, client);
+  write(`${CONFIG_DIR}/news/module.server.ts`, server);
+
+  await sanitize();
+
+  expect(read(`${GENERATED_DIR}/news/module.ts`)).toBe(client);
+  expect(read(`${GENERATED_DIR}/news/module.server.ts`)).toBe(server);
+});
+
+test('sanitize() refuses a news.ts with a $url beside a news.server.ts', async () => {
+  write(`${CONFIG_DIR}/rime.config.server.ts`, 'export default rime({});\n');
+  write(
+    `${CONFIG_DIR}/news.ts`,
+    "export const News = Collection.create('news', { $url: (doc) => doc.id });\n"
+  );
+  write(`${CONFIG_DIR}/news.server.ts`, "export const secret = 'abc';\n");
+
+  await expect(sanitize()).rejects.toThrow('news.server.ts');
+});
+
 test('sanitize() copies a binary file byte for byte', async () => {
   write(`${CONFIG_DIR}/rime.config.server.ts`, 'export default rime({});\n');
   const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0xff]);

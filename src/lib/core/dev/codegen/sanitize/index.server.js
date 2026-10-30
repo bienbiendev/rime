@@ -37,7 +37,7 @@ const serverHalfOf = (filePath) => filePath.replace(/\.(ts|js)$/, '.server.$1');
  * (client half) and `X.server.ts`, and so does every file importing one; other files are copied,
  * and `rime.config.server.ts` always gets both halves. A generated file no source produces any
  * more is deleted, except schema.server.ts and params.ts, which other steps write. Throws when a
- * config file `X.ts` has an `X.server.ts` beside it.
+ * split file `X.ts` has an `X.server.ts` beside it.
  */
 export async function sanitize() {
   const root = process.cwd();
@@ -117,11 +117,12 @@ export async function sanitize() {
     const relativePath = path.relative(configDir, filePath);
     logger.debug(`   Processing: ${relativePath}`);
 
-    // Check if corresponding .server.ts or .server.js already exists
-    const originalServerPath = serverHalfOf(filePath);
-    if (fs.existsSync(originalServerPath)) {
+    // A split file writes its server half as X.server.ts: one already there would be overwritten
+    const isSplit = splitFiles.has(relativePath.split(path.sep).join('/'));
+    if (isSplit && fs.existsSync(serverHalfOf(filePath))) {
       throw new Error(
-        `Error: ${originalServerPath} already exists. Remove it before running sanitization.`
+        `${relativePath} holds or imports server content, so its server half is written as ` +
+          `${serverHalfOf(relativePath)}, which ${CONFIG_DIR} already has: rename one of them`
       );
     }
 
