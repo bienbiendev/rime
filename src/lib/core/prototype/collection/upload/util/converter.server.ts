@@ -6,10 +6,9 @@ import type { JsonFile } from '#lib/core/prototype/collection/upload/types.js';
 import { RimeError } from '#lib/core/errors/index.js';
 import { logger } from '#lib/core/logger.server.js';
 import { fileSizeToString } from '#lib/util/file.js';
-import { readFile } from 'fs/promises';
-import fs from 'fs';
+import { readFile, stat } from 'fs/promises';
 import path from 'path';
-import { getExtensionFromMimeType, getMimeTypeFromExtension } from './mime.js';
+import { getExtensionFromMimeType, getMimeTypeFromExtension, servedMimeType } from './mime.js';
 
 /**
  * A file sent as JSON, as a `File` with its name, size and type. `base64` is a data URI; the
@@ -91,34 +90,19 @@ export async function filePathToBase64(filePath: string): Promise<string> {
 }
 
 /**
- * Convert a filepath to a File like object
- * @param filePath - Absolute path to the file
- * @returns A File-like object with necessary properties and methods
- * @example
+ * A file of the uploads folder as a `File`, typed by its extension (`application/octet-stream`
+ * for an unknown one). Read without blocking; throws `RimeError.UPLOAD` when the file cannot be
+ * read.
+ *
+ * ```ts
  * const file = await filePathToFile('/path/to/image.jpg');
+ * ```
  */
 async function filePathToFile(filePath: string): Promise<File> {
   try {
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      throw new RimeError(RimeError.UPLOAD, `File not found: ${filePath}`);
-    }
-
-    // Read file stats and content
-    const fileStats = fs.statSync(filePath);
-    const buffer = fs.readFileSync(filePath);
-
-    // Get filename and extension
-    const filename = path.basename(filePath);
-    const ext = path.extname(filePath).slice(1).toLowerCase();
-    const mimeType = getMimeTypeFromExtension(ext) || 'application/octet-stream';
-
-    // Create a Blob with the file content
-    const blob = new Blob([new Uint8Array(buffer)], { type: mimeType });
-
-    // Create and return a File object
-    return new File([blob], filename, {
-      type: mimeType,
+    const [fileStats, buffer] = await Promise.all([stat(filePath), readFile(filePath)]);
+    return new File([new Uint8Array(buffer)], path.basename(filePath), {
+      type: servedMimeType(path.extname(filePath).slice(1)),
       lastModified: fileStats.mtimeMs
     });
   } catch (error: any) {
