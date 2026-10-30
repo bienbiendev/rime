@@ -565,11 +565,12 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
     }
 
     switch (result.type) {
+      // Waited for: no other save starts before the redirect is done, the API key dialog included
       case 'success':
-        handleSuccess(result.data);
+        await handleSuccess(result.data);
         break;
       case 'failure':
-        handleError(result.data);
+        await handleError(result.data);
         break;
       case 'redirect':
         await applyAction(result);

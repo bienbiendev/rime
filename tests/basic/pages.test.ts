@@ -337,6 +337,33 @@ test.describe('API Key dialog', () => {
     await expect(page.locator('.rz-dialog-content')).toHaveCount(0);
     await expect(page.getByText(keyText)).toHaveCount(0);
   });
+
+  test('Should create the api key once when ⌘S is pressed while its dialog is open', async ({
+    page,
+    request
+  }) => {
+    await loginAs(page, ADMIN_EMAIL, PASSWORD);
+    await page.goto(panelUrl('apps', 'create'));
+
+    await page.locator('input.rz-input[name="name"]').fill('CI App saved twice');
+    await page.locator('.rz-page-header__row button[type="submit"]').click();
+
+    const dialog = page.locator('.rz-dialog-content');
+    await expect(dialog).toBeVisible();
+    // The redirect waits for the dialog: a second save must not start
+    await page.keyboard.press('Control+s');
+
+    await page.locator('.rz-dialog-footer button', { hasText: 'Close' }).click();
+    await page.waitForURL(panelUrlRe('apps'));
+
+    const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+    const response = await request.get(
+      `${API_BASE_URL}/apps?where[name][equals]=${encodeURIComponent('CI App saved twice')}`,
+      { headers }
+    );
+    expect(response.status()).toBe(200);
+    expect((await response.json()).docs).toHaveLength(1);
+  });
 });
 
 test.describe('Change url', () => {
