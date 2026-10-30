@@ -146,6 +146,8 @@
           class="rz-button-live"
           icon={PencilRuler}
           href={form.values._live}
+          aria-label={t__('common.live_edit')}
+          title={t__('common.live_edit')}
         ></Button>
       {/if}
 

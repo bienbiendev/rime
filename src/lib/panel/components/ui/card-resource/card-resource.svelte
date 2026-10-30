@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t__ } from '#lib/core/i18n/index.js';
   import { prototypeKebab } from '#lib/core/prototype/naming.js';
   import { panelPath } from '#lib/core/routes/util.js';
   import { mimeTypeToIcon } from '#lib/panel/util/upload.js';
@@ -53,7 +54,10 @@
       <span>{resource.title}</span>
       <!-- A document that is missing, or the reader may not read, has no _type and no link -->
       {#if resource._type}
-        <a href={panelPath(prototypeKebab(resource._type), resource.id)}><Edit size="12" /></a>
+        <a
+          href={panelPath(prototypeKebab(resource._type), resource.id)}
+          aria-label={t__('common.edit_item', resource.title)}><Edit size="12" /></a
+        >
       {/if}
     </p>
     {#if isUpload}
@@ -61,7 +65,12 @@
     {/if}
   </div>
 
-  <button type="button" class="rz-card-resource__remove" onclick={() => onCloseClick()}>
+  <button
+    type="button"
+    class="rz-card-resource__remove"
+    onclick={() => onCloseClick()}
+    aria-label={t__('fields.remove_item', resource.title)}
+  >
     <X size={11} />
   </button>
 </div>

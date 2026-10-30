@@ -328,6 +328,8 @@ test.describe('API Key dialog', () => {
     await expect(dialog).toBeVisible();
     const keyText = (await page.locator('.rz-dialog-api__key').innerText()).trim();
     expect(keyText.length).toBeGreaterThan(0);
+    // The icon-only copy button is named by its action
+    await expect(dialog.getByRole('button', { name: 'Copy the API key' })).toBeVisible();
 
     // Redirect is held back while the dialog is open — still on the create route
     expect(page.url()).toBe(panelUrl('apps', 'create'));
@@ -443,7 +445,8 @@ test.describe('Live Edit', () => {
     await saveButton.click();
     await page.waitForURL(panelUrlRe('pages'));
 
-    const liveEditButton = page.locator('.rz-button-live');
+    // The icon-only live button is named by its action
+    const liveEditButton = page.getByRole('link', { name: 'Live edit' });
     await liveEditButton.click();
     await page.waitForURL((url) => url.pathname === panelPath('live-edit'));
 

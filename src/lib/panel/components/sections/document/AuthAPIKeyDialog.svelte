@@ -62,6 +62,7 @@
         class="rz-dialog-api__copy {copied ? 'rz-dialog-api--copied' : ''}"
         onclick={copyAPIKey}
         icon={copied ? Check : Copy}
+        aria-label={t__('common.copy_api_key')}
       />
     </p>
     <Dialog.Footer>

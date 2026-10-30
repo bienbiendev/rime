@@ -59,7 +59,13 @@
 </script>
 
 <div class="rz-live-floating-ui">
-  <Button icon={activePanel ? ChevronLeft : X} onclick={onClose} variant="secondary" size="icon" />
+  <Button
+    icon={activePanel ? ChevronLeft : X}
+    onclick={onClose}
+    variant="secondary"
+    size="icon"
+    aria-label={activePanel ? t__('common.back') : t__('common.close')}
+  />
 
   {#if toggleRootPanel}
     <Button
@@ -67,6 +73,7 @@
       variant={activePanel && activePanel.fieldPath === '' ? 'secondary' : 'ghost'}
       size="icon"
       icon={Form}
+      aria-label={t__('common.document_form')}
     />
   {/if}
 
@@ -75,12 +82,16 @@
     variant={currentDevice === 'mobile' ? 'secondary' : 'ghost'}
     size="icon"
     icon={Smartphone}
+    aria-label={t__('common.preview_mobile')}
+    aria-pressed={currentDevice === 'mobile'}
   />
   <Button
     onclick={() => (currentDevice = 'desktop')}
     variant={currentDevice === 'desktop' ? 'secondary' : 'ghost'}
     size="icon"
     icon={Laptop}
+    aria-label={t__('common.preview_desktop')}
+    aria-pressed={currentDevice === 'desktop'}
   />
 
   <Button

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t__ } from '#lib/core/i18n/index.js';
   import X from '@lucide/svelte/icons/x';
   import type { Snippet } from 'svelte';
 
@@ -11,7 +12,13 @@
     {@render children?.()}
   </span>
   <!-- Disabled when read-only: no click, so the value stays -->
-  <button class="rz-tag__button" type="button" disabled={readOnly} onclick={onRemove}>
+  <button
+    class="rz-tag__button"
+    type="button"
+    disabled={readOnly}
+    onclick={onRemove}
+    aria-label={t__('fields.remove')}
+  >
     <X size={13} />
   </button>
 </div>
