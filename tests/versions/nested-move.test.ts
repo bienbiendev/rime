@@ -85,3 +85,53 @@ test('A row released where it was taken sends nothing', async ({ page, request }
   await expect(page.getByText('Order updated')).toHaveCount(0);
   expect(await titles(page)).toEqual(before);
 });
+
+test('A folded page whose children are gone shows its list open, and forgets the fold', async ({
+  page,
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const parent = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { attributes: { title: 'Fold parent', slug: 'fold-parent' } }
+  });
+  expect(parent.status()).toBe(200);
+  const parentId = (await parent.json()).doc.id as string;
+  const child = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { attributes: { title: 'Fold child', slug: 'fold-child' }, _parent: parentId }
+  });
+  expect(child.status()).toBe(200);
+  const childId = (await child.json()).doc.id as string;
+
+  await page.addInitScript(() =>
+    localStorage.setItem('collection.pages.display', 'display_nested')
+  );
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages'));
+
+  // The parent's list of children, which is also where a row drops under it
+  const list = page.locator(`.rz-collection-sortable[data-id="${parentId}"]`);
+  await page
+    .locator('.rz-collection-node__row', { has: page.getByText('Fold parent', { exact: true }) })
+    .locator('.rz-collection-node__fold')
+    .click();
+  await expect(list).toHaveAttribute('hidden');
+
+  const removed = await request.delete(`${API_BASE_URL}/pages/${childId}`, { headers });
+  expect(removed.status()).toBe(200);
+  await page.reload();
+
+  await expect(page.getByText('Fold parent', { exact: true })).toBeVisible();
+  await expect(list).not.toHaveAttribute('hidden');
+
+  // The fold is forgotten: a page added under it later shows
+  const added = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { attributes: { title: 'Fold newcomer', slug: 'fold-newcomer' }, _parent: parentId }
+  });
+  expect(added.status()).toBe(200);
+  await page.reload();
+  await expect(page.getByText('Fold newcomer', { exact: true })).toBeVisible();
+  await expect(list).not.toHaveAttribute('hidden');
+});

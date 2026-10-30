@@ -30,11 +30,20 @@
   /** The browser keeps the folded ones: `rz-tree-folded:<id>` is set while one is folded. */
   // svelte-ignore state_referenced_locally
   const storageKey = `rz-tree-folded:${doc.id}`;
-  let folded = $state(readStored(storageKey) === '1');
+  let foldedStored = $state(readStored(storageKey) === '1');
+  // A page without children shows its (empty) list open, so a row can be dropped under it.
+  const folded = $derived(foldedStored && children.length > 0);
+
+  // It also forgets the fold, so a row dropped under it later shows.
+  $effect(() => {
+    if (children.length || !foldedStored) return;
+    foldedStored = false;
+    writeStored(storageKey, null);
+  });
 
   function toggleFolded() {
-    folded = !folded;
-    writeStored(storageKey, folded ? '1' : null);
+    foldedStored = !foldedStored;
+    writeStored(storageKey, foldedStored ? '1' : null);
   }
 </script>
 
