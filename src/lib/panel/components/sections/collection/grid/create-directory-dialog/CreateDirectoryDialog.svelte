@@ -28,9 +28,11 @@
     beforeRedirect: beforeRedirect
   });
 
-  // Once the directory is created: close the dialog, reload the data, and stay on the page.
+  // Once the directory is created: close the dialog, empty the form, reload the data, and stay
+  // on the page.
   async function beforeRedirect() {
     open = false;
+    form.reset();
     invalidateAll();
     return false;
   }

@@ -80,6 +80,42 @@ test('A folder is created from the grid', async ({ page, request }) => {
   expect((await read.json()).doc.parent).toBe('root');
 });
 
+test('The new-folder dialog opens empty after a folder is created', async ({ page, request }) => {
+  const headers = await signInSuperAdmin(request);
+  const base64 = await filePathToBase64(path.resolve(process.cwd(), 'tests/versions/leaves.jpg'));
+  const uploaded = await request.post(`${API_BASE_URL}/medias`, {
+    headers,
+    data: { file: { base64, filename: 'leaves.jpg' }, alt: 'leaves' }
+  });
+  expect(uploaded.status()).toBe(200);
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('medias'));
+  await page
+    .locator('.rz-header-display-mode')
+    .getByRole('button', { name: 'Show as a grid' })
+    .click();
+  await expect(page.locator('.rz-page-collection__grid')).toBeVisible();
+
+  const openDialog = async () => {
+    await page
+      .locator('.rz-collection-grid__context-menu-trigger')
+      .dispatchEvent('contextmenu', { clientX: 20, clientY: 20 });
+    await page.getByRole('menuitem', { name: 'New folder' }).click();
+    return page.getByRole('dialog');
+  };
+
+  const first = await openDialog();
+  await first.locator('input[name="name"]').fill('first-in-a-row');
+  await first.getByRole('button', { name: 'Create' }).click();
+  await expect(page.locator('.rz-folder', { hasText: 'first-in-a-row' })).toBeVisible();
+  await expect(first).toBeHidden();
+
+  const second = await openDialog();
+  await expect(second.locator('input[name="name"]')).toHaveValue('');
+  await expect(second.getByRole('button', { name: 'Create' })).toBeDisabled();
+});
+
 /**
  * A folder moves the way the panel drops it on another: a PATCH of its `id`. Its sub-folders
  * follow, and so do the files in them.
