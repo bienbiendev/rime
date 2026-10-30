@@ -143,7 +143,7 @@ export const saveFile = async (
       }
 
       // Otherwise, we'll need to generate the sizes
-      sizes = await generateSizes({
+      sizes = await generateSizesOrFail({
         config,
         name,
         extension,
@@ -246,6 +246,15 @@ const generateSizes = async ({ config, sizes, buffer, name, extension }: Generat
   }
 
   return imageSizes;
+};
+
+/** `generateSizes`, with a failure answered as an upload error. */
+const generateSizesOrFail = async (args: GenerateSizeArgs) => {
+  try {
+    return await generateSizes(args);
+  } catch (error: any) {
+    throw new RimeError(RimeError.UPLOAD, `Error while generating image sizes: ${error.message}`);
+  }
 };
 
 type GenerateSizeArgs = {

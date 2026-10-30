@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, mkdtempSync } from 'node:fs';
+import { RimeError } from '#lib/core/errors/index.js';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
@@ -43,6 +44,16 @@ test('reuses a file of its own folder only', async () => {
   await saveFile(medias, await png('a.png', 'red'), false);
   expect((await saveFile(privateMedias, await png('a.png', 'red'), false)).filename).toBe('a.png');
   expect(existsSync(mediaFilePath(privateMedias, 'a.png'))).toBe(true);
+});
+
+test('a reused file that is not an image fails its sizes as an upload error', async () => {
+  writeFileSync(mediaFilePath(medias, 'photo.jpg'), 'not an image');
+  const file = new File(['not an image'], 'photo.jpg', { type: 'image/jpeg' });
+
+  await expect(saveFile(medias, file, [{ name: 'sm', width: 640 }])).rejects.toMatchObject({
+    code: RimeError.UPLOAD,
+    message: expect.stringContaining('Error while generating image sizes')
+  });
 });
 
 test('writes each size in each format', async () => {
