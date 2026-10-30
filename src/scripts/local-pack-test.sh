@@ -60,7 +60,7 @@ while [[ $# -gt 0 ]]; do
     --base-dir) BASE_DIR="$2"; shift 2 ;;
     --plugin-package) PLUGIN_PACKAGE="$2"; shift 2 ;;
     --field-package) FIELD_PACKAGE="$2"; shift 2 ;;
-    *) shift ;;
+    *) echo "unknown argument: $1 (see the usage at the top of this script)"; exit 1 ;;
   esac
 done
 
