@@ -209,8 +209,9 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
    * the array, `sections` or `sections.0.items`. Every view of the blocks calls these.
    */
   const blocks = {
-    list(list: string): GenericBlock[] {
-      return readList(doc, list);
+    /** The blocks of a list, as stored: read-only, the operations below change them. */
+    list(list: string): readonly GenericBlock[] {
+      return getValueAtPath<GenericBlock[]>(list, doc) ?? [];
     },
 
     /** The `BlocksBuilder` a list path names, read through the document for the block types. */
