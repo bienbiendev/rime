@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "bun run package && bun run build:css",
-    "build:css": "postcss dist/**/*.css --replace --config ./postcss.config.cjs",
+    "build:css": "postcss dist/**/*.css --replace --config .",
     "rime:use": "bun ./src/scripts/useConfig.js",
     "preview": "vite preview",
     "package": "bun ./src/lib/core/dev/cli/index.ts clear --force && bun ./src/lib/core/dev/cli/index.ts package && publint",
