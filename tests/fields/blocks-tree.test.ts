@@ -1,7 +1,7 @@
 import { filePathToBase64 } from '#lib/core/prototype/collection/upload/util/converter.server.js';
-import test, { expect, type APIRequestContext } from '@playwright/test';
+import test, { expect, type APIRequestContext, type Locator } from '@playwright/test';
 import path from 'path';
-import { API_BASE_URL, signIn } from '../util.js';
+import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -165,6 +165,80 @@ test('Should still have the correct block content after a fresh read', async ({ 
   expect(refIds(doc.sections[0].image)).toEqual([mediaBId]);
   expect(doc.sections[1].type).toBe('paragraph');
   expect(richTextToString(doc.sections[1].text)).toBe('Alpha content');
+});
+
+/**
+ * Two grids' `items` lists that once stood at the same path: the grid that moved up and a grid
+ * added in its old place. A row drags within its own list only.
+ */
+test('Should keep a block in its list when dragged into another grid', async ({
+  page,
+  request
+}) => {
+  const created = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      title: 'Drag group test',
+      sections: [
+        { type: 'grid', title: 'Gone', items: [{ type: 'paragraph', text: richTextOf('Gone') }] },
+        {
+          type: 'grid',
+          title: 'Kept',
+          items: [
+            { type: 'paragraph', text: richTextOf('One') },
+            { type: 'paragraph', text: richTextOf('Two') }
+          ]
+        }
+      ]
+    }
+  });
+  expect(created.status()).toBe(200);
+  const id = (await created.json()).doc.id as string;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', id));
+
+  const blocksOf = (list: string) =>
+    page.locator(`fieldset[data-path="${list}"] > .rz-blocks__list > .rz-block`);
+  const header = (block: Locator) => block.locator(':scope > .rz-block__header');
+  const addTo = async (list: string, type: string) => {
+    await page
+      .locator(`fieldset[data-path="${list}"] > .rz-blocks__actions-bottom`)
+      .getByRole('button', { name: 'Add a block' })
+      .click();
+    await page
+      .locator('[role="dialog"][data-state="open"] .rz-block-tile', { hasText: type })
+      .click();
+  };
+
+  // The first grid goes: the second, now at index 0, mounted its items at `sections.1`
+  await header(blocksOf('sections').nth(0)).getByRole('button', { name: 'Block actions' }).click();
+  await page.getByRole('menuitem', { name: 'Delete block' }).click();
+  await expect(blocksOf('sections')).toHaveCount(1);
+
+  // A new grid at index 1, opened, with a paragraph, folded to its row
+  await addTo('sections', 'Grid');
+  await addTo('sections.1.items', 'Paragraph');
+  await expect(blocksOf('sections.1.items')).toHaveCount(1);
+  await header(blocksOf('sections.1.items').nth(0)).locator('.rz-block__title-button').click();
+  await header(blocksOf('sections').nth(0)).locator('.rz-block__title-button').click();
+
+  // "One" dropped under the new grid's paragraph
+  const target = blocksOf('sections.1.items').nth(0);
+  const box = (await target.boundingBox())!;
+  await header(blocksOf('sections.0.items').nth(0))
+    .locator('.rz-block__grip')
+    .dragTo(target, { targetPosition: { x: 20, y: box.height - 4 } });
+
+  await page.locator('button[type="submit"]').first().click();
+  await expect
+    .poll(async () => {
+      const { sections } = await readPage(request, id);
+      return sections.map((grid: any) =>
+        grid.items.map((item: any) => richTextToString(item.text))
+      );
+    })
+    .toEqual([['One', 'Two'], ['']]);
 });
 
 // A relation inside a tree inside a block, three levels deep: sections.N.facts.M.image

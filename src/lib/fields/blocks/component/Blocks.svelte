@@ -83,10 +83,11 @@
     if (source && copy && opened.has(source.id)) setOpen(copy.id, true);
   };
 
-  // svelte-ignore state_referenced_locally
+  // Unique per list: a row drags within its own list only
+  const key = $props.id();
   const { sortable } = useSortable({
     handle: '.rz-block__grip',
-    group: path,
+    group: `rz-blocks-${key}`,
     animation: 150,
     onStart: () => (sorting = true),
     onUnchoose: () => (sorting = false),
