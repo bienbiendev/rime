@@ -28,10 +28,13 @@ function createAPIProxy(getLocale: () => string | undefined) {
     let data = $state<T | null>(null);
     let isLoading = $state(true);
     let error = $state(null);
+    // The number of the newest fetch: only its answer is written
+    let latest = 0;
 
     fetchData();
 
     function fetchData() {
+      const request = ++latest;
       isLoading = true;
       error = null;
 
@@ -45,10 +48,13 @@ function createAPIProxy(getLocale: () => string | undefined) {
           return response.json();
         })
         .then((json) => {
+          // A newer refresh started meanwhile: its answer is the one to keep
+          if (request !== latest) return;
           data = options?.transformData ? options?.transformData(json) : json;
           isLoading = false;
         })
         .catch((err) => {
+          if (request !== latest) return;
           error = err;
           isLoading = false;
           console.error(`Error fetching ${url}:`, err);
