@@ -160,6 +160,9 @@ const buildRootTable = async ({
           ];
         }
       } else if (field instanceof FormFieldBuilder) {
+        // Every table's `id` is `pk()` (`templateTable`): a field named `id` fills it, as an
+        // upload folder's path does, and declares no column of its own
+        if (!parentPath && field.name === 'id') continue;
         if (checkLocalized(field)) {
           templates.push(toSchemaColumn(field, parentPath) + ',');
           if (field.get.index) {

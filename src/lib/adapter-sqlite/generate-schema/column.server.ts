@@ -16,22 +16,19 @@ const COLUMN_EXPR: Record<DataType, (snake: string) => string> = {
  * Renders a single Drizzle column definition for any leaf FormFieldBuilder, driven by the
  * field's own `dataType` (storage type) and `_references` (foreign key). A field column is
  * nullable and has no default, `NULL` being a value nobody wrote, unless the field says
- * `$notNull()`.
+ * `$notNull()`. A `.unique()` field gets no constraint either: `validateFields` checks it.
  *
  * @example
  * toSchemaColumn(text('title').required())     // "title: text('title')"
- * toSchemaColumn(slug('slug').unique())        // "slug: text('slug').unique()"
+ * toSchemaColumn(slug('slug').unique())        // "slug: text('slug')"
  * toSchemaColumn(toggle('ok').$notNull({ default: false }))
  * // "ok: integer('ok', { mode: 'boolean' }).notNull().default(false)"
  */
 export function toSchemaColumn(field: FormFieldBuilder<FormField>, parentPath?: string): string {
   const { camel, snake } = getSchemaColumnNames({ name: field.name, parentPath });
-  // `unique` only exists on text, email and slug, so reading it off the generic FormField needs
-  // a narrow cast.
-  const { unique } = field.get as { unique?: boolean };
   const { notNull } = field.get;
   const columnExpr = COLUMN_EXPR[field.dataType](snake);
   const referencesStr = field._references ? templateReferences(field._references) : '';
   const notNullStr = notNull ? `.notNull().default(${JSON.stringify(notNull.default)})` : '';
-  return `${camel}: ${columnExpr}${referencesStr}${unique ? '.unique()' : ''}${notNullStr}`;
+  return `${camel}: ${columnExpr}${referencesStr}${notNullStr}`;
 }

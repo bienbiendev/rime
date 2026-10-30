@@ -26,11 +26,15 @@ const runValidate = (args: {
   user?: unknown;
   /** The unique lookup: `rime.collection(slug).system().find`. */
   find?: (args: any) => Promise<unknown[]>;
+  /** Called with the slug the unique lookup reads. */
+  collection?: (slug: string) => void;
+  /** Members of the config beside `slug` and `fields`, `_shadowOf` or `versions`. */
+  config?: Record<string, unknown>;
   /** An update of this document, instead of a create. */
   originalDoc?: { id: string; [key: string]: unknown };
   search?: string;
 }) => {
-  const config = { slug: 'members', fields: args.fields } as any;
+  const config = { slug: 'members', fields: args.fields, ...args.config } as any;
   const find = args.find ?? (async () => []);
 
   const event = {
@@ -40,7 +44,10 @@ const runValidate = (args: {
       locale: undefined,
       rime: {
         config: { isCollection: () => true },
-        collection: () => ({ system: () => ({ find }) })
+        collection: (slug: string) => {
+          args.collection?.(slug);
+          return { system: () => ({ find }) };
+        }
       }
     }
   } as any;
@@ -397,6 +404,55 @@ describe('validateFields: unique', () => {
     });
 
     expect(find.mock.calls[0][0].query).toEqual({ where: { code: { equals: 'ab' } } });
+  });
+
+  test('a new version row is looked up on the collection it versions, its document left out', async () => {
+    const find = vi.fn().mockResolvedValue([]);
+    const collection = vi.fn();
+    await runValidate({
+      fields: [text('code').unique()],
+      config: { slug: '$pages__versions', _shadowOf: 'pages' },
+      data: { code: 'a', ownerId: 'p1' },
+      user,
+      find,
+      collection
+    });
+
+    expect(collection).toHaveBeenCalledWith('pages');
+    expect(find.mock.calls[0][0].query).toEqual({
+      where: { and: [{ code: { equals: 'a' } }, { id: { not_equals: 'p1' } }] }
+    });
+  });
+
+  test('a publish looks up every unique value of the version, sent or not', async () => {
+    const find = vi.fn().mockResolvedValue([{ id: 'other' }]);
+    const promise = runValidate({
+      fields: [text('code').unique(), text('status')],
+      config: { versions: { draft: true } },
+      data: { status: 'published' },
+      user,
+      find,
+      originalDoc: { id: 'd1', code: 'a', status: 'draft' }
+    });
+
+    await expect(promise).rejects.toMatchObject({ errors: { code: RimeFormError.UNIQUE_FIELD } });
+    expect(find.mock.calls[0][0].query).toEqual({
+      where: { and: [{ code: { equals: 'a' } }, { id: { not_equals: 'd1' } }] }
+    });
+  });
+
+  test('a draft save looks up only the unique values it sends', async () => {
+    const find = vi.fn().mockResolvedValue([{ id: 'other' }]);
+    await runValidate({
+      fields: [text('code').unique(), text('status')],
+      config: { versions: { draft: true } },
+      data: { status: 'draft' },
+      user,
+      find,
+      originalDoc: { id: 'd1', code: 'a', status: 'draft' }
+    });
+
+    expect(find).not.toHaveBeenCalled();
   });
 });
 

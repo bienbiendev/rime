@@ -128,7 +128,8 @@ const Pages = Collection.create('pages', {
 // camelCase slugs: the panel and the API reach them by their kebab, `blog-posts` and `blog-pages`
 const BlogPosts = Collection.create('blogPosts', {
   panel: { group: 'content' },
-  fields: [text('title').isTitle(), link('next').types('pages')],
+  // `code` is unique: drafts.test.ts checks it across documents and versions
+  fields: [text('title').isTitle(), link('next').types('pages'), text('code').unique()],
   access: { read: () => true },
   versions: { draft: true }
 });

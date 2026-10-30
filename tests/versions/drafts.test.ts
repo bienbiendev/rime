@@ -249,3 +249,49 @@ test('A link to a page carries its id, url and title once the page is published'
 
   expect(await next()).toMatchObject({ id: page.id, url: doc.url, title: doc.title });
 });
+
+/**
+ * A unique value is shared by a document and its own versions only. The other documents count
+ * by their published version, so a publish checks the values it puts live, sent or not.
+ */
+test('A unique value belongs to one document and its versions', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const ids: string[] = [];
+  const post = async (data: object) => {
+    const response = await request.post(`${API_BASE_URL}/blog-posts`, { headers, data });
+    if (response.ok()) ids.push((await response.json()).doc.id);
+    return response;
+  };
+  const published = VERSIONS_STATUS.PUBLISHED;
+
+  const first = await post({ title: 'Unique first', code: 'u-1', status: published });
+  expect(first.status()).toBe(200);
+  const { doc } = await first.json();
+
+  // A new draft of the same document carries the value
+  const draft = await request.patch(`${API_BASE_URL}/blog-posts/${doc.id}?${PARAMS.FORK}=true`, {
+    headers,
+    data: { title: 'Unique first, draft' }
+  });
+  expect(draft.status()).toBe(200);
+
+  // Another document may not take it
+  const taken = await post({ title: 'Unique second', code: 'u-1' });
+  expect(taken.status()).toBe(400);
+  expect((await taken.json()).message).toContain('code');
+
+  // A draft holds a value; another document publishes it; the draft's publish is refused
+  const pending = await post({ title: 'Unique pending', code: 'u-2' });
+  expect(pending.status()).toBe(200);
+  const pendingId = (await pending.json()).doc.id;
+  expect((await post({ title: 'Unique live', code: 'u-2', status: published })).status()).toBe(200);
+  const publish = await request.patch(
+    `${API_BASE_URL}/blog-posts/${pendingId}?${PARAMS.LATEST}=true`,
+    { headers, data: { status: published } }
+  );
+  expect(publish.status()).toBe(400);
+
+  for (const id of ids) {
+    await request.delete(`${API_BASE_URL}/blog-posts/${id}`, { headers });
+  }
+});

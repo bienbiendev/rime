@@ -3,7 +3,8 @@ import { isStaff } from '#lib/core/auth/access.js';
 import { PARAMS } from '#lib/core/constants.js';
 import { RimeError, RimeFormError } from '#lib/core/errors/index.js';
 import { logger } from '#lib/core/logger.server.js';
-import type { GenericDoc } from '#lib/core/prototype/types.js';
+import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
+import type { CollectionSlug, GenericDoc } from '#lib/core/prototype/types.js';
 import { missingRelations } from '#lib/fields/relation/exists.server.js';
 import { isRelationField } from '#lib/fields/relation/index.js';
 import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
@@ -47,6 +48,10 @@ import { withoutDeniedFields } from '../without-denied-fields.js';
  * // PATCH { title: 'Home 2' }  ->  summary: required_field
  * ```
  *
+ * A unique value may be shared by a document and its own versions only. On a config with drafts,
+ * the other documents count by their published version, so a publish checks every unique value
+ * of the version it puts live, sent or not.
+ *
  * A staff request with `?skipValidation=true` may leave required fields empty; a locale copy
  * (`context.isLocaleCopy`) skips every check, its values were validated where they came from.
  */
@@ -56,7 +61,6 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
   const { rime, user } = event.locals;
   const locale = args.context.params.locale || args.event.locals.locale;
   const slug = args.config.slug;
-  const isCollection = rime.config.isCollection(slug);
 
   // The panel's bulk upload sends a file before its other fields: a staff request may leave
   // required fields empty with ?skipValidation=true
@@ -112,6 +116,34 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
   // Own copy: the steps below write into it
   let output = { ...allowed.data };
   const configMap = allowed.configMap;
+
+  // A versions collection holds the versions of a collection's documents: a unique value is looked
+  // up on that collection, which reads each document's published version (its newest without
+  // drafts). The document this save writes is left out: the one updated, or the owner of a new
+  // version row. A create has none yet.
+  //
+  // `$pages__versions` create { slug: 'about', ownerId: 'p1' }
+  // -> pages where slug = 'about' and id != 'p1'
+  // Only a collection can be a versions collection
+  const { _shadowOf: shadowOf } = args.config as { _shadowOf?: string };
+  const uniqueSlug = (shadowOf ?? slug) as CollectionSlug;
+  const checksUnique = !skipUnique && rime.config.isCollection(uniqueSlug);
+  const ownId = shadowOf ? (args.data as Dic).ownerId : originalDoc?.id;
+
+  /** Whether another document holds `value` at `key`. */
+  const isTaken = async (key: string, value: unknown) => {
+    if (operation === 'update' && !ownId) {
+      throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @validateFields');
+    }
+    // An object, never re-parsed: `a+b` is looked up as is
+    const sameValue = { [key]: { equals: value } };
+    const where = ownId ? { and: [sameValue, { id: { not_equals: ownId } }] } : sameValue;
+    const existing = await rime
+      .collection(uniqueSlug)
+      .system()
+      .find({ locale, query: { where }, select: ['id'] });
+    return existing.length > 0;
+  };
 
   // The document this save leaves: on an update, what it sends over what is stored
   const merged =
@@ -181,31 +213,8 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
 
     // Unique: another document holds the value this save writes. An empty value has nothing to
     // collide with, and a value `validate` refused is reported as that.
-    const hasValue = value !== undefined && value !== null && value !== '';
-    const isUnique = 'unique' in config.get && !!config.get.unique;
-    if (isUnique && isCollection && !skipUnique && hasValue && !errors[key]) {
-      // An object, never re-parsed: `a+b` is looked up as is
-      const sameValue = { [key]: { equals: value } };
-      let where;
-      switch (operation) {
-        case 'create':
-          where = sameValue;
-          break;
-        case 'update':
-          if (!args.context.originalDoc) {
-            throw new RimeError(RimeError.OPERATION_ERROR, 'missing originalDoc @validateFields');
-          }
-          where = { and: [sameValue, { id: { not_equals: args.context.originalDoc.id } }] };
-      }
-
-      const existing = await rime
-        .collection(slug)
-        .system()
-        .find({ locale, query: { where }, select: ['id'] });
-
-      if (existing.length) {
-        errors[key] = RimeFormError.UNIQUE_FIELD;
-      }
+    if (checksUnique && isUnique(config) && hasValue(value) && !errors[key]) {
+      if (await isTaken(key, value)) errors[key] = RimeFormError.UNIQUE_FIELD;
     }
 
     // A relation names documents that exist. Checked here, before anything is written: a stale
@@ -224,6 +233,17 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
         fallback === null || fallback === undefined
           ? deleteValueAtPath(output, key)
           : setValueAtPath(key, output, fallback);
+    }
+  }
+
+  // A publish puts every value of the version live, sent or stored: each unique one is checked
+  const publishes =
+    !!args.config.versions?.draft && allowed.data.status === VERSIONS_STATUS.PUBLISHED;
+  if (checksUnique && publishes) {
+    for (const [key, config] of Object.entries(buildConfigMap(merged, args.config.fields))) {
+      if (key in configMap || errors[key] || !isUnique(config)) continue;
+      const value = getValueAtPath(key, merged);
+      if (hasValue(value) && (await isTaken(key, value))) errors[key] = RimeFormError.UNIQUE_FIELD;
     }
   }
 
@@ -257,6 +277,12 @@ export const validateFields = Hooks.beforeUpsert(async function validateFields(a
     }
   };
 });
+
+/** Whether the field says `.unique()`: only text, email and slug can. */
+const isUnique = (config: { get: object }) => !!(config.get as { unique?: boolean }).unique;
+
+/** A value a unique lookup can collide with: an empty one has nothing to collide with. */
+const hasValue = (value: unknown) => value !== undefined && value !== null && value !== '';
 
 /**
  * The paths of the required fields below a container `data` holds as `null`. Blocks and tree rows

@@ -178,3 +178,32 @@ test('a required field column is nullable, with no default', async () => {
   expect(out.schema).toContain("price: real('price'),");
   expect(out.schema).toContain("stock: real('stock'),");
 });
+
+test('no table writes UNIQUE for a unique field, localized or in a block', async () => {
+  const out = await buildRootTable({
+    fields: [
+      text('code').unique(),
+      text('ref').unique().localized(),
+      blocks('layout', [block('cta').fields(text('key').unique())])
+    ] as any,
+    tableName: 'pages' as any,
+    rootName: 'pages' as any,
+    locales: [{ code: 'en', label: 'English' }] as any,
+    blocksRegister: []
+  });
+
+  expect(out.schema).not.toContain('.unique()');
+});
+
+test('a field named id fills the pk() id, with no column of its own', async () => {
+  const out = await buildRootTable({
+    fields: [text('id').unique().required(), text('name')] as any,
+    tableName: 'medias_directories' as any,
+    rootName: 'medias_directories' as any,
+    locales: [] as any,
+    blocksRegister: []
+  });
+
+  expect(columns(out.schema, 'medias_directories')).toEqual(['id', 'name']);
+  expect(out.schema).toContain('id: pk(),');
+});

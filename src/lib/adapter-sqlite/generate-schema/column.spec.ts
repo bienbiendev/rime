@@ -23,8 +23,8 @@ describe('toSchemaColumn', () => {
     );
   });
 
-  it('keeps unique', () => {
-    expect(toSchemaColumn(slug('slug').unique().required())).toBe(`slug: text('slug').unique()`);
+  it('gives a unique field no UNIQUE constraint: validateFields checks it', () => {
+    expect(toSchemaColumn(slug('slug').unique().required())).toBe(`slug: text('slug')`);
   });
 
   it('spells a field from a package by its storage type', () => {
