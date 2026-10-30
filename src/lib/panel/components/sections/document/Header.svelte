@@ -6,7 +6,7 @@
   import { getConfigContext } from '#lib/panel/context/config.svelte.js';
   import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
-  import { formatWhen } from '#lib/panel/util/time.js';
+  import { formatWhen, isRelative } from '#lib/panel/util/time.js';
   import { capitalize } from '#lib/util/string.js';
   import ExternalLink from '@lucide/svelte/icons/external-link';
   import PencilRuler from '@lucide/svelte/icons/pencil-ruler';
@@ -60,15 +60,15 @@
    *
    * A relative time reads mid-sentence, lowercased; a date keeps its case.
    */
-  const WEEK = 7 * 24 * 60 * 60 * 1000;
   const meta = $derived.by(() => {
     const parts: string[] = [];
     if (config.type === 'collection') parts.push(config.label.singular);
     if (form.values.id && form.values.updatedAt) {
       const now = new Date();
       const formatted = formatWhen(form.values.updatedAt, now, raw.panel.language);
-      const isRelative = now.getTime() - new Date(form.values.updatedAt).getTime() < WEEK;
-      const when = isRelative ? formatted.charAt(0).toLowerCase() + formatted.slice(1) : formatted;
+      const when = isRelative(form.values.updatedAt, now)
+        ? formatted.charAt(0).toLowerCase() + formatted.slice(1)
+        : formatted;
       const who = form.values.updatedBy?.name;
       parts.push(who ? t__('common.edited_by', who, when) : t__('common.edited', when));
     }
