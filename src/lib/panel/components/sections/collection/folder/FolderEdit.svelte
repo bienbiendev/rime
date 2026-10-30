@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { invalidateAll } from '$app/navigation';
   import type { BuiltCollectionClient } from '#lib/core/config/types.js';
   import { t__ } from '#lib/core/i18n/index.js';
   import { withDirectoriesSuffix } from '#lib/core/prototype/collection/upload/naming.js';
@@ -29,7 +30,11 @@
     config,
     readOnly: !config.access.update(user.attributes, { id: folder.id }),
     key: folder._type,
-    afterSuccess: () => (open = false)
+    // The tiles read the page data: a rename changes the folder's name and its id.
+    afterSuccess: () => {
+      open = false;
+      invalidateAll();
+    }
   });
 
   /** ⌘S while the dialog is up. */

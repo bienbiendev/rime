@@ -116,6 +116,42 @@ test('The new-folder dialog opens empty after a folder is created', async ({ pag
   await expect(second.getByRole('button', { name: 'Create' })).toBeDisabled();
 });
 
+test('A renamed folder shows its new name and opens its new path', async ({ page, request }) => {
+  const headers = await signInSuperAdmin(request);
+  const base64 = await filePathToBase64(path.resolve(process.cwd(), 'tests/versions/leaves.jpg'));
+  const uploaded = await request.post(`${API_BASE_URL}/medias`, {
+    headers,
+    data: { file: { base64, filename: 'leaves.jpg' }, alt: 'leaves' }
+  });
+  expect(uploaded.status()).toBe(200);
+  const created = await request.post(`${API_BASE_URL}/medias-directories`, {
+    headers,
+    data: { id: 'root:rename-me', name: 'rename-me', parent: 'root' }
+  });
+  expect(created.status()).toBe(200);
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('medias'));
+  await page
+    .locator('.rz-header-display-mode')
+    .getByRole('button', { name: 'Show as a grid' })
+    .click();
+  await expect(page.locator('.rz-page-collection__grid')).toBeVisible();
+
+  await page.locator('.rz-folder', { hasText: 'rename-me' }).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Edit' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.locator('input[name="name"]').fill('renamed');
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog).toBeHidden();
+
+  const renamed = page.locator('.rz-folder', { hasText: 'renamed' });
+  await expect(renamed).toBeVisible();
+  await expect(page.locator('.rz-folder', { hasText: 'rename-me' })).toHaveCount(0);
+  await renamed.click();
+  await page.waitForURL((url) => url.searchParams.get('uploadPath') === 'root:renamed');
+});
+
 /**
  * A folder moves the way the panel drops it on another: a PATCH of its `id`. Its sub-folders
  * follow, and so do the files in them.
