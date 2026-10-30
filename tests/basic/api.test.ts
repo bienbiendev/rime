@@ -120,6 +120,26 @@ test('Should create a page', async ({ request }) => {
   pageId = doc.id;
 });
 
+// `pages` declares no `id` field: the id a body sends is dropped, a free one and a taken one alike
+test('Should give a new page its own id, whatever id the body sends', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  for (const [id, slug] of [
+    ['count', 'sent-count'],
+    [homeId, 'sent-home']
+  ]) {
+    const response = await request.post(`${API_BASE_URL}/pages`, {
+      headers,
+      data: { id, attributes: { title: `Sent ${slug}`, slug } }
+    });
+    expect(response.status()).toBe(200);
+    const { doc } = await response.json();
+    expect(doc.id).not.toBe(id);
+
+    const removed = await request.delete(`${API_BASE_URL}/pages/${doc.id}`, { headers });
+    expect(removed.status()).toBe(200);
+  }
+});
+
 test('Should return the home page', async ({ request }) => {
   const response = await request.get(`${API_BASE_URL}/pages/${homeId}`).then((response) => {
     return response.json();

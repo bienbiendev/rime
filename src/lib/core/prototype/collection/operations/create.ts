@@ -1,4 +1,5 @@
 import type { BuiltCollection } from '#lib/core/config/types.js';
+import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
 import { versionsWritePlan } from '#lib/core/prototype/shared/versions/write-plan.js';
 import {
   assertUpsertContext,
@@ -14,6 +15,7 @@ import type { PrototypeApiContext } from '#lib/core/prototype/define.js';
 import type { CollectionSlug } from '#lib/core/prototype/types.js';
 import type { RegisterCollection } from '#lib/index.js';
 import type { WithRelationInput } from '#lib/core/fields/types.js';
+import { omitId } from '#lib/util/object.js';
 import type { DeepPartial, Dic } from '#lib/util/types.js';
 
 /**
@@ -26,6 +28,18 @@ export type CreateArgs<T> = {
 };
 
 type Args<T> = CreateArgs<T> & { ctx: PrototypeApiContext<BuiltCollection> };
+
+/**
+ * The data a create starts from: without `id`, unless the config declares an `id` field, as
+ * upload directories do. A new document's id is the adapter's to make.
+ *
+ * ```ts
+ * withoutUndeclaredId({ id: 'count', title: 'x' }, [text('title')]); // { title: 'x' }
+ * withoutUndeclaredId({ id: 'root:press' }, [text('id')]); // { id: 'root:press' }
+ * ```
+ */
+export const withoutUndeclaredId = <T extends object>(data: T, fields: FieldBuilder[]): T =>
+  fields.some((field) => field.name === 'id') ? data : (omitId(data as Dic) as T);
 
 /**
  * Creates a document: beforeOperation, beforeCreate, the write plan, the insert, its blocks, tree
@@ -55,7 +69,7 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
       BuiltCollection
     >({
       hooks: config.$hooks?.beforeCreate,
-      data: args.data,
+      data: withoutUndeclaredId(args.data, config.fields),
       config,
       event,
       operation: 'create',
