@@ -1,7 +1,7 @@
 import { filePathToBase64 } from '#lib/core/prototype/collection/upload/util/converter.server.js';
 import test, { expect } from '@playwright/test';
 import path from 'path';
-import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
+import { API_BASE_URL, BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -120,4 +120,48 @@ test('Moving a folder moves its sub-folders and the files in them', async ({ req
   const read = await request.get(`${API_BASE_URL}/medias/${media.id}`, { headers });
   expect(read.status()).toBe(200);
   expect((await read.json()).doc._path).toBe('root:move-b:move-a:sub');
+});
+
+/**
+ * Deleting a folder deletes its sub-folders and the documents filed in them, each through its own
+ * delete, so their files leave the disk.
+ */
+test('Deleting a folder deletes its sub-folders, their documents and their files', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const run = Date.now();
+
+  // Bytes unique to each upload, so no file is shared with another row
+  const upload = async (name: string, _path: string) => {
+    const payload = Buffer.from(`${name}-${run}`).toString('base64');
+    const response = await request.post(`${API_BASE_URL}/medias`, {
+      headers,
+      data: {
+        file: { base64: `data:text/plain;base64,${payload}`, filename: `${name}-${run}.txt` },
+        alt: name,
+        _path
+      }
+    });
+    expect(response.status()).toBe(200);
+    return (await response.json()).doc;
+  };
+  const top = await upload('top', `root:del-${run}`);
+  const nested = await upload('nested', `root:del-${run}:sub`);
+
+  const deleted = await request.delete(`${API_BASE_URL}/medias-directories/root:del-${run}`, {
+    headers
+  });
+  expect(deleted.status()).toBe(200);
+
+  const sub = await request.get(`${API_BASE_URL}/medias-directories/root:del-${run}:sub`, {
+    headers
+  });
+  expect(sub.status()).toBe(404);
+  expect((await request.get(`${API_BASE_URL}/medias/${top.id}`, { headers })).status()).toBe(404);
+  expect((await request.get(`${API_BASE_URL}/medias/${nested.id}`, { headers })).status()).toBe(
+    404
+  );
+  expect((await request.get(`${BASE_URL}${top.url}`)).status()).toBe(404);
+  expect((await request.get(`${BASE_URL}${nested.url}`)).status()).toBe(404);
 });

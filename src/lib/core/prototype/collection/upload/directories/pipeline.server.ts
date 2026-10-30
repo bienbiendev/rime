@@ -1,4 +1,5 @@
 import type { CollectionHooks } from '#lib/types.js';
+import { deleteFolderContents } from '#lib/core/prototype/collection/upload/hooks/delete-folder-contents.server.js';
 import { extractPath } from '#lib/core/prototype/collection/upload/hooks/extract-path.server.js';
 import {
   prepareDirectoryChildren,
@@ -22,7 +23,7 @@ export const directoriesPipeline = (
     prepareDirectoryChildren,
     ...(directoriesConfig?.$hooks?.beforeUpdate || [])
   ],
-  beforeDelete: directoriesConfig?.$hooks?.beforeDelete || [],
+  beforeDelete: [deleteFolderContents, ...(directoriesConfig?.$hooks?.beforeDelete || [])],
   afterCreate: directoriesConfig?.$hooks?.afterCreate || [],
   afterUpdate: [updateDirectoryChildren, ...(directoriesConfig?.$hooks?.afterUpdate || [])],
   afterDelete: directoriesConfig?.$hooks?.afterDelete || []
