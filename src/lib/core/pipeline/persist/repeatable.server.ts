@@ -13,8 +13,9 @@ export type RepeatablesDiff<R extends Row> = {
   toUpdate: SavedRow<R>[];
 };
 
-/** A row the store holds: an id that is not a temporary one. */
-export const isSaved = <R extends Row>(row: R): row is SavedRow<R> => !!row.id && !isTempId(row.id);
+/** A row the store holds: a string id that is not a temporary one. */
+export const isSaved = <R extends Row>(row: R): row is SavedRow<R> =>
+  typeof row.id === 'string' && row.id !== '' && !isTempId(row.id);
 
 /**
  * Whether the incoming row changes the stored one: a value it sends differs. Nested rows

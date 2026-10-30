@@ -79,6 +79,10 @@ describe('diffRepeatables, add and delete', () => {
     expect(diff.toUpdate).toEqual([]);
   });
 
+  test('a numeric id is a new row, not an error', () => {
+    expect(diffRepeatables([], [{ id: 5 as any, path: 'layout' }]).toAdd).toHaveLength(1);
+  });
+
   test('withinPaths keeps rows under a saved path only', () => {
     const list = [
       { id: '1', path: 'nav' },
