@@ -71,6 +71,7 @@ while [[ $# -gt 0 ]]; do
     --fresh) FRESH=1; shift ;;
     # npm reads its config from npm_config_* variables, in this script and in every child it starts
     --npm-force) export npm_config_force=true; shift ;;
+    --*) echo "unknown option: $1 (see the usage at the top of this script)"; exit 1 ;;
     *) SPECS+=("$1"); shift ;;
   esac
 done
