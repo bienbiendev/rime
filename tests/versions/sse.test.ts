@@ -61,6 +61,11 @@ test('A per-user key is open to that user only', async ({ request }) => {
   const other = await openStream('user:somebody-else', cookie);
   expect(other.response.status).toBe(403);
   other.close();
+
+  // An anonymous caller is refused the key of no user
+  const anonymous = await openStream('user:undefined');
+  expect(anonymous.response.status).toBe(403);
+  anonymous.close();
 });
 
 test('Taking the edit lock reaches whoever listens to the document', async ({ request }) => {

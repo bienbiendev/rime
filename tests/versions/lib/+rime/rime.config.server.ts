@@ -146,6 +146,6 @@ export default rime({
   collections: [News, Medias, Pdf, Pages, BlogPosts, BlogPages],
   areas: [Settings, Infos],
   $sse: {
-    access: (key, user) => key.startsWith('public:') || key === `user:${user?.id}`
+    access: (key, user) => key.startsWith('public:') || (!!user && key === `user:${user.id}`)
   }
 });
