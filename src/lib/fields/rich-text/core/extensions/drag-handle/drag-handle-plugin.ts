@@ -126,9 +126,12 @@ export const DragHandlePlugin = ({
     }, 0);
   }
 
+  // The handle hides; the next hover shows it again, on whichever block it is
   function onDragEnd() {
     hideHandle();
     element.style.pointerEvents = 'auto';
+    currentNode = null;
+    currentNodePos = -1;
   }
 
   element.addEventListener('dragstart', onDragStart);
