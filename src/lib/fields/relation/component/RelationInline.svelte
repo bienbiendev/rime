@@ -69,7 +69,10 @@
   const loading = $derived(ids.some((id) => !known.has(id) && !unreadable.has(id)));
 
   let browsing = $state(false);
-  const open = () => (browsing = true);
+  /** Opens the library, on a field that may change only. */
+  const open = () => {
+    if (canPick) browsing = true;
+  };
 
   $effect(() => {
     if (!isUpload) console.warn(`RelationInline at ${path}: ${config.get.relationTo} is no upload`);
