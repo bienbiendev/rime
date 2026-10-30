@@ -13,7 +13,6 @@
   import Newspaper from '@lucide/svelte/icons/newspaper';
   import Trash from '@lucide/svelte/icons/trash';
   import type { Editor } from '@tiptap/core';
-  import { untrack } from 'svelte';
   import type { LinkFeatureOptions } from '..';
   import type { RichTextContext } from '../../../types';
 
@@ -124,22 +123,13 @@
     open = false;
   }
 
-  /** The target changed: the link takes it. Not on mount, which would focus the editor. */
-  let previousTargetBlank: boolean | undefined;
-  $effect(() => {
-    const current = isTargetBlank;
-    const changed = previousTargetBlank !== undefined && current !== previousTargetBlank;
-    previousTargetBlank = current;
-    if (!changed) return;
-    untrack(() => {
-      if (!urlState.isValid) return;
-      editor
-        .chain()
-        .focus()
-        .setLink({ href: urlState.url, target: current ? '_blank' : '_self' })
-        .run();
-    });
-  });
+  /** Flips the link's target, on the link the form shows. */
+  function toggleTarget() {
+    isTargetBlank = !isTargetBlank;
+    if (!urlState.isValid) return;
+    const target = isTargetBlank ? '_blank' : '_self';
+    editor.chain().focus().setLink({ href: urlState.url, target }).run();
+  }
 
   function onDelete() {
     editor.chain().focus().unsetLink().run();
@@ -181,7 +171,7 @@
         {#if editor.getAttributes('link').href}
           <Button
             --rz-button-ghost-fg={isTargetBlank ? 'var(--rz-accent-text)' : 'var(--rz-fg)'}
-            onclick={() => (isTargetBlank = !isTargetBlank)}
+            onclick={toggleTarget}
             variant="ghost"
             size="icon-sm"
             icon={ExternalLink}
