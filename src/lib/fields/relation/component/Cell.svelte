@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t__ } from '#lib/core/i18n/index.js';
   import type { GenericDoc } from '#lib/core/prototype/types.js';
   import { absolute, apiUrl } from '#lib/core/routes/util.js';
   import UploadThumbCell from '#lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
@@ -34,7 +35,7 @@
 
 <span class="rz-relation-cell">
   {#if displayCount}
-    {value.length} items
+    {t__('fields.items_count|m|p', String(value.length))}
   {:else if ressource?.data?.doc}
     {#if ressource.data.doc._thumbnail}
       <UploadThumbCell
