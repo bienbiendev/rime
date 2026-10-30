@@ -1,18 +1,20 @@
-import { group, relation, text } from '#lib/fields/index.js';
+import { block, blocks, group, relation, text, tree } from '#lib/fields/index.js';
 import { describe, expect, it, vi } from 'vitest';
 import { saveRelations } from './index.server.js';
 
 // Cast: `medias` is only a registered slug in the fixture that declares it.
-const image = (relation('image') as any).to('medias');
+const imageField = () => (relation('image') as any).to('medias');
+const image = imageField();
 
 /** A stored junction row, as `relations.getAll` answers it. */
-const stored = (id: string, path: string, documentId: string) => ({
+const stored = (id: string, path: string, documentId: string, locale: string | null = null) => ({
   id,
   path,
   position: 0,
   ownerId: 'p1',
   relationTo: 'medias',
-  documentId
+  documentId,
+  locale
 });
 
 const adapterWith = (rows: ReturnType<typeof stored>[]) => ({
@@ -25,7 +27,7 @@ const adapterWith = (rows: ReturnType<typeof stored>[]) => ({
   }
 });
 
-const noDiff = { toAdd: [], toDelete: [], toUpdate: [] };
+const noDiff = { toAdd: [], toDelete: [], toUpdate: [], moved: [] };
 
 describe('saveRelations', () => {
   it('a save of `image` leaves the rows of `images` alone', async () => {
@@ -108,25 +110,119 @@ describe('saveRelations', () => {
       configMap: {} as any,
       incomingPaths: [],
       blocksDiff: {
-        toAdd: [],
-        toUpdate: [],
+        ...noDiff,
         toDelete: [{ id: 'b1', type: 'image', path: 'layout', position: 2 }]
       } as any,
       treeDiff: {
-        toAdd: [],
-        toUpdate: [],
+        ...noDiff,
         toDelete: [{ id: 't1', path: 'nav.0._children', position: 1 }]
       } as any,
       adapter: adapter as any,
       ownerSlug: 'pages' as never,
       ownerId: 'p1'
     });
-    const deletedPaths = adapter.relations.deleteFromPaths.mock.calls.map(
+    const deletedPaths = adapter.relations.deleteFromPaths.mock.calls.flatMap(
       ([args]: any) => args.paths
     );
-    expect(deletedPaths).toEqual([['layout.2'], ['nav.0._children.1']]);
+    expect(deletedPaths).toEqual(['layout.2', 'nav.0._children.1']);
     expect(adapter.relations.deleteFromPaths).toHaveBeenCalledWith(
       expect.objectContaining({ parentSlug: 'pages', ownerId: 'p1' })
     );
+  });
+
+  /** The `deleteFromPaths` calls that delete something, as `{ paths, locale }`. */
+  const deletions = (adapter: ReturnType<typeof adapterWith>) =>
+    adapter.relations.deleteFromPaths.mock.calls
+      .map(([args]: any) => ({ paths: args.paths, locale: args.locale }))
+      .filter((args) => args.paths.length);
+
+  const removeRow = async (configMap: object, removed: object, diff: 'blocksDiff' | 'treeDiff') => {
+    const adapter = adapterWith([]);
+    await saveRelations({
+      data: {},
+      configMap: configMap as any,
+      incomingPaths: [],
+      blocksDiff: noDiff,
+      treeDiff: noDiff as any,
+      [diff]: { ...noDiff, toDelete: [removed] },
+      adapter: adapter as any,
+      locale: 'en',
+      ownerSlug: 'pages' as never,
+      ownerId: 'p1'
+    });
+    return deletions(adapter);
+  };
+
+  it('a removed block of a shared list takes its relations in every locale', async () => {
+    const sections = blocks('sections', [block('hero').fields(imageField().localized())]);
+    const removed = { id: 'b2', type: 'hero', path: 'sections', position: 1 };
+    expect(await removeRow({ sections }, removed, 'blocksDiff')).toEqual([
+      { paths: ['sections.1'], locale: undefined }
+    ]);
+  });
+
+  it('a removed block of a localized list takes its relations in the request locale', async () => {
+    const sections = blocks('sections', [block('hero').fields(imageField())]).localized();
+    const removed = { id: 'b2', type: 'hero', path: 'sections', position: 1 };
+    expect(await removeRow({ sections }, removed, 'blocksDiff')).toEqual([
+      { paths: ['sections.1'], locale: 'en' }
+    ]);
+  });
+
+  it('a removed child item of a shared tree takes its relations in every locale', async () => {
+    const menu = tree('menu').fields(imageField().localized());
+    const removed = { id: 't2', path: 'menu.0._children', position: 1 };
+    expect(await removeRow({ menu }, removed, 'treeDiff')).toEqual([
+      { paths: ['menu.0._children.1'], locale: undefined }
+    ]);
+  });
+
+  it("a moved block of a shared list moves the other locales' relations under it", async () => {
+    const sections = blocks('sections', [block('hero').fields(imageField().localized())]);
+    const adapter = adapterWith([
+      stored('r9', 'sections.2.image', 'f3', 'fr'),
+      stored('r8', 'sections.2.image', 'm3', 'en'),
+      stored('r7', 'sections.2.image', 'm7')
+    ]);
+    await saveRelations({
+      data: {},
+      configMap: { sections } as any,
+      incomingPaths: [],
+      blocksDiff: {
+        ...noDiff,
+        moved: [{ path: 'sections', from: 'sections.2', to: 'sections.1' }]
+      },
+      treeDiff: noDiff as any,
+      adapter: adapter as any,
+      locale: 'en',
+      ownerSlug: 'pages' as never,
+      ownerId: 'p1'
+    });
+    expect(adapter.relations.update).toHaveBeenCalledTimes(1);
+    expect(adapter.relations.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        relations: [expect.objectContaining({ id: 'r9', path: 'sections.1.image' })]
+      })
+    );
+  });
+
+  it("a moved block of a localized list leaves the other locales' relations", async () => {
+    const sections = blocks('sections', [block('hero').fields(imageField())]).localized();
+    const adapter = adapterWith([stored('r9', 'sections.2.image', 'f3', 'fr')]);
+    await saveRelations({
+      data: {},
+      configMap: { sections } as any,
+      incomingPaths: [],
+      blocksDiff: {
+        ...noDiff,
+        moved: [{ path: 'sections', from: 'sections.2', to: 'sections.1' }]
+      },
+      treeDiff: noDiff as any,
+      adapter: adapter as any,
+      locale: 'en',
+      ownerSlug: 'pages' as never,
+      ownerId: 'p1'
+    });
+    expect(adapter.relations.update).not.toHaveBeenCalled();
   });
 });

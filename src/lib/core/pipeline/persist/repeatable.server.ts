@@ -7,11 +7,18 @@ import type { ConfigMap } from '../config-map/types.js';
 type Row = Dic & { id?: string; path?: string };
 type SavedRow<R extends Row> = R & { id: string };
 
+/** Where a kept row went: its list, and its `path.position` before the save and after. */
+export type RowMove = { path: string; from: string; to: string };
+
 export type RepeatablesDiff<R extends Row> = {
   toAdd: R[];
   toDelete: SavedRow<R>[];
   toUpdate: SavedRow<R>[];
+  moved: RowMove[];
 };
+
+/** Where a row sits: `sections.2`, `menu.0._children.1`. */
+export const placeOf = (row: Row) => `${row.path}.${row.position}`;
 
 /** A row the store holds: a string id that is not a temporary one. */
 export const isSaved = <R extends Row>(row: R): row is SavedRow<R> =>
@@ -36,7 +43,8 @@ const changesRow = (stored: Dic, incoming: Dic) =>
 
 /**
  * What a save does to the stored rows: add the new ones, delete the stored ones it no longer sends,
- * update the ones whose values changed. `stored` holds the rows inside the saved paths only.
+ * update the ones whose values changed, and where each kept row moved. `stored` holds the rows
+ * inside the saved paths only.
  */
 export function diffRepeatables<R extends Row>(stored: R[], incoming: R[]): RepeatablesDiff<R> {
   const sentIds = new Set(incoming.filter(isSaved).map((row) => row.id));
@@ -46,9 +54,31 @@ export function diffRepeatables<R extends Row>(stored: R[], incoming: R[]): Repe
     toUpdate: incoming.filter(isSaved).filter((row) => {
       const match = stored.find((candidate) => candidate.id === row.id);
       return !!match && changesRow(match, row);
+    }),
+    moved: incoming.filter(isSaved).flatMap((row) => {
+      const match = stored.find((candidate) => candidate.id === row.id);
+      return match && placeOf(match) !== placeOf(row)
+        ? [{ path: row.path!, from: placeOf(match), to: placeOf(row) }]
+        : [];
     })
   };
 }
+
+/**
+ * Where `path` lies once the rows above it have moved: the deepest move holding it decides, since
+ * its `to` already carries the moves of the rows above it. `null` under no moved row.
+ *
+ * ```ts
+ * movedPath('sections.2.image', [{ path: 'sections', from: 'sections.2', to: 'sections.1' }]);
+ * // 'sections.1.image'
+ * ```
+ */
+export const movedPath = (path: string, moves: RowMove[]) => {
+  const deepest = moves
+    .filter((move) => isWithin(path, move.from))
+    .sort((a, b) => b.from.length - a.from.length)[0];
+  return deepest ? deepest.to + path.slice(deepest.from.length) : null;
+};
 
 /** The rows inside one of the paths a save writes. */
 export const withinPaths = <R extends Row>(rows: R[], paths: string[]) =>

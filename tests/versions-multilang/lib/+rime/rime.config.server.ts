@@ -133,7 +133,9 @@ const Pages = Collection.create('pages', {
         //
         relation('image').to('medias'),
         text('legent').localized()
-      )
+      ),
+      // An image per locale in a shared list: locales.test.ts
+      block('photo').fields(relation('photo').to('medias').localized())
     ])
   ],
   $url: ({ path, locale }) => `${SITE_URL}/${locale}/${path.join('/')}`,

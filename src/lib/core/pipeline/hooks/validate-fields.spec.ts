@@ -721,7 +721,7 @@ describe('validateFields: a denied field inside a list row', () => {
       update: vi.fn(async () => true),
       create: vi.fn(async () => true)
     };
-    const noDiff = { toAdd: [], toDelete: [], toUpdate: [] };
+    const noDiff = { toAdd: [], toDelete: [], toUpdate: [], moved: [] };
     await saveRelations({
       data: result.data,
       configMap: result.context.configMap!,

@@ -1,7 +1,7 @@
 import { select, text, tree } from '#lib/fields/index.js';
 import { describe, expect, test } from 'vitest';
 import { buildConfigMap } from '../config-map/index.js';
-import { diffRepeatables, withinPaths } from './repeatable.server.js';
+import { diffRepeatables, movedPath, withinPaths } from './repeatable.server.js';
 import { extractTreeBlocks } from './tree/extract.server.js';
 
 const fields = [
@@ -89,5 +89,47 @@ describe('diffRepeatables, add and delete', () => {
       { id: '2', path: 'navigation' }
     ];
     expect(withinPaths(list, ['nav']).map((row) => row.id)).toEqual(['1']);
+  });
+});
+
+describe('diffRepeatables, moved', () => {
+  const a = { id: 'a', path: 'nav', position: 0, label: 'A', _children: [] };
+  const b = { id: 'b', path: 'nav', position: 1, label: 'B', _children: [] };
+
+  test('a reorder moves both rows', () => {
+    const incoming = [
+      { ...b, position: 0 },
+      { ...a, position: 1 }
+    ];
+    expect(diffRepeatables([a, b], incoming).moved).toEqual([
+      { path: 'nav', from: 'nav.1', to: 'nav.0' },
+      { path: 'nav', from: 'nav.0', to: 'nav.1' }
+    ]);
+  });
+
+  test('an unchanged list moves nothing', () => {
+    expect(diffRepeatables([a, b], [a, b]).moved).toEqual([]);
+  });
+
+  test('an item moved under another moves into its children', () => {
+    const data = stored();
+    const [t1, t3] = data.menu;
+    t1._children.push(t3);
+    data.menu = [t1];
+    const { moved } = diffRepeatables(
+      extractTreeBlocks({ data: stored(), configMap: buildConfigMap(stored(), fields) }),
+      extractTreeBlocks({ data, configMap: buildConfigMap(data, fields) })
+    );
+    expect(moved).toEqual([{ path: 'menu.0._children', from: 'menu.1', to: 'menu.0._children.1' }]);
+  });
+
+  test('movedPath follows the innermost move holding the path', () => {
+    const moves = [
+      { path: 'menu', from: 'menu.0', to: 'menu.1' },
+      { path: 'menu.1._children', from: 'menu.0._children.0', to: 'menu.1._children.2' }
+    ];
+    expect(movedPath('menu.0._children.0.image', moves)).toBe('menu.1._children.2.image');
+    expect(movedPath('menu.0.image', moves)).toBe('menu.1.image');
+    expect(movedPath('menu.2.image', moves)).toBeNull();
   });
 });
