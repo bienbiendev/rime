@@ -139,6 +139,31 @@ function rewriteSpecifiers(distDir: string, pkgName: string, pairs: RuntimeRegis
 }
 
 /**
+ * Whether an `exports` entry has the shape this command writes: `./X/module` pointing, through
+ * `types`, `browser` and `default` alone, at module files of `./dist/X/`.
+ *
+ * ```jsonc
+ * "./ui/module": { "browser": "./dist/ui/module.js", "default": "./dist/ui/module.server.js" } // written
+ * "./widgets/module": { "default": "./dist/ui/widgets/module.js" } // the author's alias
+ * "./widgets/module": "./src/widgets/module.js" // the author's
+ * ```
+ */
+function isWritten(key: string, value: unknown): boolean {
+  const subpath = key.match(/^\.\/(.+)\/module$/)?.[1];
+  if (!subpath || typeof value !== 'object' || value === null || !('default' in value)) {
+    return false;
+  }
+  const dir = './' + path.posix.join('dist', subpath);
+  return Object.entries(value).every(
+    ([condition, target]) =>
+      ['types', 'browser', 'default'].includes(condition) &&
+      typeof target === 'string' &&
+      path.posix.dirname(target) === dir &&
+      /^module(\.server|\.browser)?\.(js|ts|d\.ts)$/.test(path.posix.basename(target))
+  );
+}
+
+/**
  * One `exports` entry per pair, plus a `default` for every other entry that lacks one: an entry
  * with no `default` fails to resolve through the map.
  */
@@ -152,10 +177,10 @@ function writeExports(
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
   const exportsMap: Record<string, unknown> = pkg.exports ?? {};
 
-  // Idempotent: this command runs on every `rime package`, and a pair that disappeared must not leave
-  // its entry behind pointing at a file dist/ no longer has.
-  for (const key of Object.keys(exportsMap)) {
-    if (key.endsWith('/module')) delete exportsMap[key];
+  // Idempotent: the entries a previous run wrote go, so a pair that disappeared leaves none
+  // behind. The author's own `/module` entries stay.
+  for (const [key, value] of Object.entries(exportsMap)) {
+    if (isWritten(key, value)) delete exportsMap[key];
   }
 
   for (const [subpath, entry] of pairs) {
