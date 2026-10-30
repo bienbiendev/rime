@@ -818,6 +818,46 @@ test('The list in the document adds, duplicates, moves and deletes its blocks', 
     .toEqual(['', 'columns', '']);
 });
 
+test('Two types with one label are two tiles in the picker, each picked on its own', async ({
+  page,
+  request
+}) => {
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signInSuperAdmin(request),
+    data: { title: 'Twins' }
+  });
+  expect(response.status()).toBe(200);
+  const docId = (await response.json()).doc.id as string;
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', docId));
+
+  // `twins` takes heroA and heroB, both labelled "Hero"
+  await page
+    .locator('fieldset[data-path="twins"] > .rz-blocks__actions-bottom')
+    .getByRole('button', { name: 'Add a block' })
+    .click();
+  const tiles = dialog(page).locator('.rz-block-tile');
+  await expect(tiles.filter({ hasText: 'Hero' })).toHaveCount(2);
+
+  // One tile lit at a time: the arrow moves the light from the first to the second
+  await expect(tiles.nth(0)).toHaveAttribute('data-selected', '');
+  await expect(tiles.nth(1)).not.toHaveAttribute('data-selected');
+  await page.keyboard.press('ArrowRight');
+  await expect(tiles.nth(1)).toHaveAttribute('data-selected', '');
+  await expect(tiles.nth(0)).not.toHaveAttribute('data-selected');
+
+  // Enter adds the lit type
+  await page.keyboard.press('Enter');
+  await expect(dialog(page)).toHaveCount(0);
+  await save(page);
+  await expect
+    .poll(async () => {
+      const read = await page.request.get(`${API_BASE_URL}/pages/${docId}`);
+      return ((await read.json()).doc.twins ?? []).map((block: any) => block.type);
+    })
+    .toEqual(['heroB']);
+});
+
 test.describe('On a narrow screen', () => {
   test.use({ viewport: { width: 700, height: 900 } });
 

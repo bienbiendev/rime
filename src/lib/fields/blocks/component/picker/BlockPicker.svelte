@@ -36,8 +36,8 @@
         {@const block = builder.block}
         <CommandPrimitive.Item
           class="rz-block-tile"
-          value={block.label || capitalize(block.name)}
-          keywords={[block.name, block.description ?? '']}
+          value={builder.name}
+          keywords={[block.label || capitalize(block.name), block.description ?? '']}
           onSelect={() => pick(block)}
         >
           <BlockTile {block} />

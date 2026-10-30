@@ -68,6 +68,10 @@ const blockGrid = block('grid')
 const blockNote = block('note').fields(text('text'));
 const blockColumns = block('columns').fields(text('title'), blocks('cells', [blockNote]));
 
+// Two types with one label: the picker tells them apart by name.
+const blockHeroA = block('heroA').label('Hero').fields(text('title'));
+const blockHeroB = block('heroB').label('Hero').fields(text('title'));
+
 // A block name with an underscore: its fields sit at `layout.0.title`, `layout.0.image`
 const blockCallToAction = block('call_to_action').fields(
   text('title').required(),
@@ -169,6 +173,7 @@ export const Pages = Collection.create('pages', {
     // One row in the form, edited in focus mode.
     blocks('extras', [blockParagraph, blockImage]).layout('summary'),
     blocks('plain', [blockNote, blockColumns]),
+    blocks('twins', [blockHeroA, blockHeroB]),
     blocks('layout', [blockCallToAction]),
 
     // Titled by their label; one without a label reads `Links 1.2`.
