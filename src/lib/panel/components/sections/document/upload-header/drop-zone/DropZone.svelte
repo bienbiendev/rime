@@ -7,6 +7,7 @@
   import { toast } from 'svelte-sonner';
 
   import type { WithUpload } from '#lib/core/prototype/collection/upload/util/config.js';
+  import { uploadType } from '#lib/core/prototype/collection/upload/util/mime.js';
   import type { ChangeEventHandler } from 'svelte/elements';
 
   type Props = {
@@ -63,25 +64,32 @@
     if (dropped) processFile(dropped);
   };
 
+  /**
+   * Hands the file to the header. An image, by the type the server stores it as, is first read as
+   * a data URL for its preview; a read that fails hands nothing over.
+   */
   const processFile = (value: File) => {
+    if (!uploadType(value.name).mimeType.startsWith('image/')) {
+      preview = null;
+      file = value;
+      return;
+    }
     processingFile = true;
     onGeneratingPreviewStart();
     const reader = new FileReader();
-
-    reader.onloadend = () => {
+    reader.onload = () => {
       preview = typeof reader.result === 'string' ? reader.result : null;
       file = value;
-      processingFile = false;
-      onGeneratingPreviewEnd();
     };
-
     reader.onerror = (err) => {
-      processingFile = false;
-      onGeneratingPreviewEnd();
-      toast.error('There was an issue reading the file.');
+      toast.error(t__('common.file_read_error'));
       console.error(err);
     };
-
+    // After `load` and after `error` alike: Save is free again
+    reader.onloadend = () => {
+      processingFile = false;
+      onGeneratingPreviewEnd();
+    };
     reader.readAsDataURL(value);
   };
 </script>

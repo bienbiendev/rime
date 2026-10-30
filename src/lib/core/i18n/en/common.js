@@ -38,6 +38,7 @@ export default {
   draft: 'Draft',
   drop_file: 'Drop your file here',
   drop_files: 'Drop your files here',
+  file_read_error: 'The file could not be read',
   folder_deleted: 'Folder deleted',
   forgotPassword: 'Forgot password',
   generatingPreview: 'Generating preview',

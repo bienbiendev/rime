@@ -322,3 +322,16 @@ test('A picked file with no type is shown as picked, and a refused one with its 
     'application/octet-stream'
   );
 });
+
+/** Only an image is read for a preview: a text file is handed to the header as it is. */
+test('A picked text file shows with no image preview', async ({ page }) => {
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(`${panelUrl('medias', 'create')}?uploadPath=root`);
+
+  await page
+    .locator('input[name="file"]')
+    .setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('notes') });
+  await expect(page.locator('.rz-doc-upload-header__info p').first()).toHaveText('notes.txt');
+  await expect(page.locator('.rz-doc-upload-header__prewiew-file span')).toHaveText('text/plain');
+  await expect(page.locator('.rz-doc-upload-header__prewiew-grid img')).toHaveCount(0);
+});

@@ -39,6 +39,7 @@ export default {
   draft: 'Brouillon',
   drop_file: 'Déposez votre fichier ici',
   drop_files: 'Déposez vos fichiers ici',
+  file_read_error: "Le fichier n'a pas pu être lu",
   folder_deleted: 'Dossier supprimé',
   forgotPassword: 'Mot de passe oublié',
   generatingPreview: "Création de l'aperçu",
