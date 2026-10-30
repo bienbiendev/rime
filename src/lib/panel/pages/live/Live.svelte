@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import type { BuiltConfigClient } from '#lib/core/config/types.js';
   import { t__ } from '#lib/core/i18n/index.js';
+  import { updateURI } from '#lib/live/context.svelte.js';
   import { API_PREFIX } from '#lib/core/routes/constants.js';
   import { panelPath } from '#lib/core/routes/util.js';
   import LiveEditPanel from '#lib/panel/components/sections/live/LiveEditPanel.svelte';
@@ -54,8 +55,10 @@
   let panelStack = $state<ActivePanel[]>([]);
   // The active panel is the last entry in the stack, or null if the stack is empty
   const activePanel = $derived(panelStack.at(-1) ?? null);
-  // The root document panel is the first panel activated with fieldPath === ''
+  // The root document panel: the whole-document panel of the document the live page is for
   let rootDocumentPanel = $state<ActivePanel>();
+  // The API path of the document the live page was opened for: `/pages/p1`, `/infos`
+  const rootPath = $derived(updateURI(data.doc).split('?')[0]);
 
   let paneLeft: ReturnType<typeof Pane>;
   // An update key is an API path without `/api`: `/blog-posts/123?locale=fr`, `/infos`
@@ -103,20 +106,29 @@
   });
 
   /**
-   * Opens the panel `key` on top of the stack. On its first opening, the document is read and the
-   * page is seeded with it.
+   * Opens the panel `key`. A click puts it on top of the stack; a panel opened as its LiveEdit
+   * mounts goes under the others, except the root's, which goes on top. On its first opening, the
+   * document is read and the page is seeded with it.
    */
-  async function activatePanel(key: string, update: string, fieldPath: string) {
+  async function activatePanel(key: string, update: string, fieldPath: string, mount = false) {
     if (!VALID_UPDATE.test(update)) {
       return console.warn(
         `Invalid update key: ${update} (expected an API path such as /blog-posts/123)`
       );
     }
 
+    const panel = { key, update, fieldPath };
+    const isRoot = fieldPath === '' && update.split('?')[0] === rootPath;
+    if (isRoot && !rootDocumentPanel) rootDocumentPanel = panel;
+    const others = panelStack.filter((item) => item.key !== key);
+    panelStack = mount && !isRoot ? [panel, ...others] : [...others, panel];
+
     if (!panelContexts[update]) {
       // The key's own locale stays
       const res = await fetch(withLocale(`${API_PREFIX}${update}`, locale.code));
       if (!res.ok) {
+        // A panel with nothing to show leaves the stack
+        panelStack = panelStack.filter((item) => item.key !== key);
         toast.error(t__('common.generic_error'));
         return;
       }
@@ -129,13 +141,6 @@
         );
       }
     }
-
-    if (!rootDocumentPanel && fieldPath === '') {
-      rootDocumentPanel = { key, update, fieldPath };
-    }
-
-    // Push onto the stack — each nested LivePanel click adds a level
-    panelStack = [...panelStack.filter((item) => item.key !== key), { key, update, fieldPath }];
   }
 
   /** The page's messages: its handshake answer, a navigation, a panel to open or to close. */
@@ -155,8 +160,8 @@
 
     // Handle custom panel activation
     if (e.data.activatePanel) {
-      const { key, update, fieldPath } = e.data.activatePanel;
-      activatePanel(key, update, fieldPath);
+      const { key, update, fieldPath, mount } = e.data.activatePanel;
+      activatePanel(key, update, fieldPath, mount === true);
     }
 
     if (e.data.deactivatePanel) {

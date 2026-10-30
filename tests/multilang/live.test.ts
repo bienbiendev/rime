@@ -142,3 +142,53 @@ test('A live save writes the locale of the live link', async ({ page, request })
   const { doc } = await request.get(`${API_BASE_URL}/infos?locale=fr`).then((r) => r.json());
   expect(doc.instagram).toBe('instagram-live');
 });
+
+/**
+ * A page's front holds its own `LiveEdit`, then a `LiveConsumer` of `infos`: both open their panel
+ * on mount. The page's form is the one on top, and the root button's, whichever read answers last.
+ */
+for (const slow of ['page', 'infos'] as const) {
+  test(`A page's live link opens the page's form above the area's, the ${slow} read answering last`, async ({
+    page,
+    request
+  }) => {
+    const headers = await signInSuperAdmin(request);
+    const created = await request.post(`${API_BASE_URL}/pages?locale=fr`, {
+      headers,
+      data: { attributes: { title: 'Pile live', slug: `pile-live-${slow}-${Date.now()}` } }
+    });
+    expect(created.status()).toBe(200);
+    const { id } = (await created.json()).doc;
+    const read = await request.get(`${API_BASE_URL}/pages/${id}?locale=fr`, { headers });
+    const pageLive = (await read.json()).doc._live;
+
+    await loginAs(page, ADMIN_EMAIL, PASSWORD);
+    const slowPath = new URL(
+      slow === 'page' ? `${API_BASE_URL}/pages/${id}` : `${API_BASE_URL}/infos`
+    ).pathname;
+    await page.route(
+      (url) => url.pathname === slowPath,
+      async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await route.continue();
+      }
+    );
+    await page.goto(pageLive);
+
+    // The page's form is open, its tabs on screen, and the area's form is under it
+    const pageTabs = page.getByRole('tab', { name: 'attributes' });
+    const instagram = page.locator('input[name="instagram"]');
+    await expect(pageTabs).toBeVisible();
+    await expect(instagram).toHaveCount(0);
+    await pageTabs.click();
+    await expect(page.locator('input[name="attributes.title"]')).toHaveValue('Pile live');
+
+    // The root button closes the page's form, showing the area's, then opens the page's again
+    const root = page.getByRole('button', { name: 'Formulaire du document' });
+    await root.click();
+    await expect(pageTabs).toHaveCount(0);
+    await expect(instagram).toBeVisible();
+    await root.click();
+    await expect(pageTabs).toBeVisible();
+  });
+}

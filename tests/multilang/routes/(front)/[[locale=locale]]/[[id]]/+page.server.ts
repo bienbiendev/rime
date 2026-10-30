@@ -2,7 +2,8 @@ import { error, redirect, type ServerLoadEvent } from '@sveltejs/kit';
 
 /**
  * Serves the page whose slug, in the request's locale, is `id`, or the page marked home when
- * there is none. A first segment that is not a locale is read as the slug:
+ * there is none, with the `infos` area its footer shows. A first segment that is not a locale is
+ * read as the slug:
  *
  *   /fr/about-us → slug `about-us`, locale fr
  *   /about-us    → slug `about-us`, the default locale
@@ -25,5 +26,5 @@ export const load = async (event: ServerLoadEvent) => {
     return redirect(302, docs[0]._live);
   }
 
-  return { doc: docs[0] };
+  return { doc: docs[0], infos: await rime.area('infos').find({ locale }) };
 };

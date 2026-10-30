@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { LiveEdit, Relation, RichText } from '#lib/public.js';
+  import { LiveConsumer, LiveEdit, Relation, RichText } from '#lib/public.js';
 
   let { data } = $props();
 </script>
@@ -40,6 +40,14 @@
     </div>
   {/snippet}
 </LiveEdit>
+
+<!-- Mounted after the page's LiveEdit: the live page keeps the page's form on top -->
+<LiveConsumer data={{ doc: data.infos }}>
+  {#snippet child(infos)}
+    {/* @ts-ignore */ null}
+    <footer>{infos.instagram}</footer>
+  {/snippet}
+</LiveConsumer>
 
 <style>
   :global(body) {

@@ -32,10 +32,13 @@
   // The update URI: the prop, else the page document's own
   const update = $derived(incomingUpdate || live?.documentUpdateURI);
 
-  // A LiveEdit for the whole document opens its panel once the page is in live view
+  // A LiveEdit for the whole document opens its panel once the page is in live view. `mount`
+  // tells the panel it is no click: the panel keeps the page's own form on top.
   $effect(() => {
     if (path === '' && live?.enabled) {
-      window.top?.postMessage({ activatePanel: { key, path, update, fieldPath: path } });
+      window.top?.postMessage({
+        activatePanel: { key, path, update, fieldPath: path, mount: true }
+      });
     }
   });
 
