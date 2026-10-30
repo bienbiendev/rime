@@ -90,4 +90,14 @@ describe('rime init', () => {
     await init({ name: 'shop' });
     expect(existsSync(join(root, CONFIG_DIR, 'rime.config.server.ts'))).toBe(true);
   });
+
+  it('ignores every declaration file rime generates', async () => {
+    const init = await project({ '.gitignore': 'node_modules\n' });
+    await init({ name: 'shop' });
+
+    const lines = readFileSync(join(root, '.gitignore'), 'utf8').split('\n');
+    expect(lines).toContain('src/app.generated.d.ts');
+    expect(lines).toContain('src/rime.generated.d.ts');
+    expect(lines).toContain('src/rime.modules.generated.d.ts');
+  });
 });

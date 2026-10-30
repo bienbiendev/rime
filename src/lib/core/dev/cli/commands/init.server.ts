@@ -146,7 +146,8 @@ export const init = async ({
       '/storage',
       OUTPUT_DIR,
       'src/app.generated.d.ts',
-      'src/rime.generated.d.ts'
+      'src/rime.generated.d.ts',
+      'src/rime.modules.generated.d.ts'
     ];
     if (!gitignoreContent.includes('# rime')) gitignoreContent += '\n# rime';
     for (const line of updates) {
