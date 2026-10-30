@@ -115,9 +115,7 @@ export const init = async ({
     const configPath = path.join(configDirPath, 'rime.config.server.ts');
 
     if (!existsSync(configPath)) {
-      if (!existsSync(configDirPath)) {
-        mkdirSync(configDirPath);
-      }
+      mkdirSync(configDirPath, { recursive: true });
       writeFileSync(configPath, templates.defaultConfig(adapter));
       logger.debug(`[✓] Config created at ${configDirPath}/rime.config.server.ts`);
     } else {

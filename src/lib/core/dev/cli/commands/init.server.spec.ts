@@ -3,7 +3,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import devCache from '#lib/core/dev/cache.server.js';
-import { CONFIG_DIR } from '../../constants.server.js';
 import { importAdapterHooks } from '../util/adapter-hooks.server.js';
 import { installDependencies } from '../util/package-manager.server.js';
 
@@ -25,31 +24,47 @@ const ADAPTER_INIT = {
   devDependencies: ['@types/pg']
 };
 
+/** The config folder of every test project; src/cms is missing. */
+const CONFIG_DIR = 'src/cms/config';
+
 const cwd = process.cwd();
 let root: string;
 afterEach(() => {
   process.chdir(cwd);
   rmSync(root, { recursive: true, force: true });
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
+
+/**
+ * A fresh SvelteKit project with an empty `src/`, plus `files`, made the current directory.
+ * Returns `init` loaded from there, as it reads the project root and RIME_CONFIG_DIR when it loads.
+ */
+async function project(files: Record<string, string> = {}) {
+  root = mkdtempSync(join(tmpdir(), 'rime-init-'));
+  mkdirSync(join(root, 'src'));
+  writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'shop' }));
+  writeFileSync(
+    join(root, 'vite.config.ts'),
+    "import { sveltekit } from '@sveltejs/kit/vite';\nimport { defineConfig } from 'vite';\n\nexport default defineConfig({\n  plugins: [sveltekit()]\n});\n"
+  );
+  for (const [file, content] of Object.entries(files)) {
+    writeFileSync(join(root, file), content);
+  }
+  process.chdir(root);
+  vi.stubEnv('RIME_CONFIG_DIR', CONFIG_DIR);
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  vi.mocked(importAdapterHooks).mockResolvedValue({ init: async () => ADAPTER_INIT } as never);
+  vi.resetModules();
+  return (await import('./init.server.js')).init;
+}
 
 describe('rime init --adapter', () => {
   it('records the hooks module, then writes the starter config and the install from its answer', async () => {
-    // A fresh SvelteKit project, the current directory when init loads
-    root = mkdtempSync(join(tmpdir(), 'rime-init-'));
-    // The parent of the config folder, `src/lib` in this repo
-    mkdirSync(join(root, CONFIG_DIR, '..'), { recursive: true });
-    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'shop' }));
-    writeFileSync(
-      join(root, 'vite.config.ts'),
-      "import { sveltekit } from '@sveltejs/kit/vite';\nimport { defineConfig } from 'vite';\n\nexport default defineConfig({\n  plugins: [sveltekit()]\n});\n"
-    );
-    process.chdir(root);
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const init = await project();
     const adapterInit = vi.fn(async () => ADAPTER_INIT);
     vi.mocked(importAdapterHooks).mockResolvedValue({ init: adapterInit } as never);
 
-    const { init } = await import('./init.server.js');
     await init({ name: 'shop', adapter: '@acme/rime-postgres' });
 
     expect(devCache.set).toHaveBeenCalledWith('adapter-hooks', '@acme/rime-postgres/hooks');
@@ -66,5 +81,13 @@ describe('rime init --adapter', () => {
     expect(installDependencies).toHaveBeenCalledWith(ADAPTER_INIT);
     // static/ is the app's alone: the panel fonts come from the package
     expect(existsSync(join(root, 'static'))).toBe(false);
+  });
+});
+
+describe('rime init', () => {
+  it('writes the config in a folder whose parents are missing', async () => {
+    const init = await project();
+    await init({ name: 'shop' });
+    expect(existsSync(join(root, CONFIG_DIR, 'rime.config.server.ts'))).toBe(true);
   });
 });
