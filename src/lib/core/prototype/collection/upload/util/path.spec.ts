@@ -103,6 +103,12 @@ test('validatePath refuses a missing separator, an empty segment and a non-strin
   expect(validatePath(4)).not.toBe(true);
 });
 
+test('a folder name has no outer space', () => {
+  expect(validatePath('root:my docs')).toBe(true);
+  expect(validatePath('root: docs')).not.toBe(true);
+  expect(validatePath('root:docs ')).not.toBe(true);
+});
+
 test('buildUploadAria links each folder, and the last one loses its link', () => {
   const aria = buildUploadAria({ path: 'root:a:b', slug: 'medias' as any, panelSegment: 'panel' });
   expect(aria.map((route) => route.url)).toEqual([

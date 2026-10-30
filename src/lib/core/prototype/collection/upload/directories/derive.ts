@@ -6,7 +6,7 @@ import { text } from '#lib/fields/text/index.js';
 import type { CollectionSlug } from '#lib/types.js';
 import { withDirectoriesSuffix } from '../naming.js';
 import type { WithUpload } from '../util/config.js';
-import { validatePath } from '../util/path.js';
+import { FOLDER_NAME, validatePath } from '../util/path.js';
 
 /**
  * Derives the directories collection of an upload collection: `medias` -> `$mediasDirectories`.
@@ -32,7 +32,7 @@ export function makeUploadDirectoriesCollectionClient<C extends WithUpload<Built
       text('id').validate(validatePath).unique().required().hidden(),
       text('name')
         .validate((value) => {
-          const pattern = /^[a-zA-Z0-9-_ ]+$/;
+          const pattern = new RegExp(`^${FOLDER_NAME}$`);
           if (typeof value !== 'string' || !pattern.test(value)) {
             return 'Incorrect folder name';
           }

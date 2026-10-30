@@ -117,14 +117,18 @@ export function removePathFromLastAria(aria: Partial<Route>[]) {
   });
 }
 
+/** A folder name: letters, digits, `-`, `_`, and spaces inside it — `my docs`, never ` docs `. */
+export const FOLDER_NAME = '[a-zA-Z0-9\\-_](?:[a-zA-Z0-9\\-_ ]*[a-zA-Z0-9\\-_])?';
+
 /**
  * Validates that a path string follows the required format:
  * - Must start with ROOT_NAME
- * - Only allows alphanumeric characters, hyphens, underscores, spaces, and the separator
+ * - Each folder name follows `FOLDER_NAME`
  * - Can only use the defined separator
  * @example
  * validatePath("root:folder:subfolder") // valid
  * validatePath("root:folder with spaces:sub-folder_name") // valid
+ * validatePath("root: folder") // invalid
  * validatePath("root/folder") // invalid
  * validatePath("root:folder$") // invalid
  */
@@ -150,16 +154,13 @@ export const validatePath = (value: unknown): string | true => {
     normalizedPath = normalizedPath.slice(0, -1);
   }
 
-  // Only allow alphanumeric characters, hyphens, underscores, spaces, and the separator
-  // The regex ensures:
-  // 1. Starts with ROOT_NAME
-  // 2. Followed by zero or more segments (each segment starts with separator followed by valid chars)
+  // ROOT_NAME, then zero or more `:<folder name>` segments
   const validPathRegex = new RegExp(
-    `^${UPLOAD_PATH.ROOT_NAME}(${UPLOAD_PATH.SEPARATOR}[a-zA-Z0-9\\-_ ]+)*$`
+    `^${UPLOAD_PATH.ROOT_NAME}(${UPLOAD_PATH.SEPARATOR}${FOLDER_NAME})*$`
   );
 
   if (!validPathRegex.test(normalizedPath)) {
-    return 'Path contains invalid characters. Only alphanumeric characters, hyphens, underscores, and spaces are allowed.';
+    return 'Path contains invalid characters. Only alphanumeric characters, hyphens, underscores, and spaces inside a folder name are allowed.';
   }
 
   return true;
