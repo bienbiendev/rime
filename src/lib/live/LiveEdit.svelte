@@ -17,6 +17,7 @@
 
   type PanelProps = {
     onclick?: null | ((e: MouseEvent) => void);
+    onkeydown?: null | ((e: KeyboardEvent) => void);
     role?: 'button' | null;
     tabindex?: 0 | null;
     'data-live-panel-trigger'?: '' | null;
@@ -84,6 +85,15 @@
     return {
       onclick: !isActive
         ? (e: MouseEvent) => {
+            e.stopPropagation();
+            e.preventDefault();
+            activate();
+          }
+        : null,
+      // Enter and Space open the panel, as a click does
+      onkeydown: !isActive
+        ? (e: KeyboardEvent) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
             e.stopPropagation();
             e.preventDefault();
             activate();
