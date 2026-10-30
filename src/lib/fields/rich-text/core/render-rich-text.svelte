@@ -8,6 +8,7 @@
   <RenderRichText json={page.body} components={{ link: SiteLink, fields: Cta }} />
 -->
 <script lang="ts">
+  import { dev } from '$app/env';
   import { isSafeUrl } from '#lib/util/url.js';
   import type { JSONContent } from '@tiptap/core';
   import RenderRichText from './render-rich-text.svelte';
@@ -162,7 +163,7 @@
         </components.media>
       {:else if node.attrs?.url && node.attrs.mimeType?.startsWith('image/')}
         <img alt={node.attrs?.alt || ''} style="width:100%;height:auto;" src={node.attrs?.url} />
-      {:else if node.attrs?.url}
+      {:else if node.attrs?.url && dev}
         [Provide a media component to render this node]
       {/if}
       <!--  -->
@@ -172,7 +173,7 @@
         <components.resource {components} {node}>
           <RenderRichText {components} json={node} />
         </components.resource>
-      {:else if node.attrs?._type}
+      {:else if node.attrs?._type && dev}
         [Provide a resource component to render this node]
       {/if}
     {:else if node.type?.startsWith('rich-text-fields-')}
@@ -180,7 +181,7 @@
         <components.fields {components} {node}>
           <RenderRichText {components} json={node} />
         </components.fields>
-      {:else}
+      {:else if dev}
         [Provide a fields component to render this node]
       {/if}
       <!--  -->
