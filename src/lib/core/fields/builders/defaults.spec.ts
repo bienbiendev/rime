@@ -29,7 +29,7 @@ const ctx = {} as any;
 
 describe('text', () => {
   it('rejects a non-string and starts empty', () => {
-    expect(text('title').use.validate(5, ctx)).toBe('Should be a string');
+    expect(text('title').use.validate(5, ctx)).toBe('not_a_string');
     expect(text('title').use.validate('5', ctx)).toBe(true);
     expect(text('title').use.defaultValue()).toBe(null);
     expect(text('title').use.isEmpty('')).toBe(true);
@@ -38,7 +38,7 @@ describe('text', () => {
 
 describe('textarea', () => {
   it('rejects a non-string', () => {
-    expect(textarea('notes').use.validate(5, ctx)).toBe('Should be a string');
+    expect(textarea('notes').use.validate(5, ctx)).toBe('not_a_string');
     expect(textarea('notes').use.validate('a\nb', ctx)).toBe(true);
   });
 });
@@ -68,8 +68,10 @@ describe('slug', () => {
 
 describe('number', () => {
   it('rejects a non-number, keeps a 0 default, and has no default of its own', () => {
-    expect(number('n').use.validate('3', ctx)).toBe('Should be a number');
+    expect(number('n').use.validate('3', ctx)).toBe('not_a_number');
     expect(number('n').use.validate(3, ctx)).toBe(true);
+    expect(number('n').max(10).use.validate(12, ctx)).toBe('number_too_large');
+    expect(number('n').min(2).use.validate(1, ctx)).toBe('number_too_small');
     expect(number('n').min(-5).defaultValue(0).use.defaultValue()).toBe(0);
     expect(number('n').min(2).use.defaultValue()).toBe(null);
     expect(number('n').use.isEmpty(0)).toBe(false);
@@ -220,7 +222,7 @@ describe('time', () => {
   it('starts at 08:00 and refuses a time that does not exist', () => {
     expect(time('openAt').use.defaultValue()).toBe('08:00');
     expect(time('openAt').use.validate('09:30', ctx)).toBe(true);
-    expect(time('openAt').use.validate('25:00', ctx)).not.toBe(true);
+    expect(time('openAt').use.validate('25:00', ctx)).toBe('invalid_time');
   });
 
   it('refuses a one-digit hour, which the time input cannot show', () => {

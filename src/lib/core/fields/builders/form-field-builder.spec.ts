@@ -32,7 +32,7 @@ describe('validate', () => {
     const age = number('age')
       .min(0)
       .validate((value) => Number.isInteger(value) || 'Whole years');
-    expect(age.use.validate(-5, ctx)).toBe('Should be greater than 0');
+    expect(age.use.validate(-5, ctx)).toBe('number_too_small');
     expect(age.use.validate(2.5, ctx)).toBe('Whole years');
     expect(age.use.validate(7, ctx)).toBe(true);
     expect(

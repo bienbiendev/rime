@@ -1,16 +1,15 @@
 import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FormField } from '#lib/fields/types.js';
+import validate from '#lib/core/fields/validate.js';
 import { duplicateText } from '$rime/modules:fields/text';
 import Text from './component/Text.svelte';
-
-const isString = (value: unknown) => typeof value === 'string' || 'Should be a string';
 
 /****************************************************/
 export class TextFieldBuilder extends FormFieldBuilder<TextField> {
   constructor(name: string) {
     super(name, 'text');
-    this.field.validate = isString;
+    this.field.validate = validate.string;
     this.$beforeDuplicate(duplicateText);
   }
 

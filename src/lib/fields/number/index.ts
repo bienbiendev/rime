@@ -1,3 +1,4 @@
+import { RimeFormError } from '#lib/core/errors/index.js';
 import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FieldValidationFunc, FormField } from '#lib/fields/types.js';
@@ -8,13 +9,13 @@ export const number = (name: string) => new NumberFieldBuilder(name);
 /** A number within the field's `min` and `max`, both included. */
 const validateNumber: FieldValidationFunc<NumberField> = (value, { config }) => {
   if (typeof value !== 'number') {
-    return 'Should be a number';
+    return RimeFormError.NOT_A_NUMBER;
   }
   if (config.min !== undefined && value < config.min) {
-    return 'Should be greater than ' + config.min;
+    return RimeFormError.NUMBER_TOO_SMALL;
   }
   if (config.max !== undefined && value > config.max) {
-    return 'Should be lower than ' + config.max;
+    return RimeFormError.NUMBER_TOO_LARGE;
   }
   return true;
 };

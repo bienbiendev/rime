@@ -1,3 +1,4 @@
+import { RimeFormError } from '#lib/core/errors/index.js';
 import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FormField } from '#lib/fields/types.js';
@@ -10,12 +11,9 @@ export class TimeFieldBuilder extends FormFieldBuilder<TimeField> {
   constructor(name: string) {
     super(name, 'time');
     this.field.defaultValue = '08:00';
-    this.field.validate = (value) => {
-      if (typeof value === 'string' && /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
-        return true;
-      }
-      return 'incorrect time format ' + value;
-    };
+    this.field.validate = (value) =>
+      (typeof value === 'string' && /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(value)) ||
+      RimeFormError.INVALID_TIME;
   }
 
   get component() {

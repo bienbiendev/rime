@@ -130,7 +130,7 @@ export class FormFieldBuilder<T extends FormField = FormField> extends FieldBuil
    *
    * ```ts
    * number('age').min(0).validate((value) => Number.isInteger(value) || 'Whole years');
-   * // -5 -> 'Should be greater than 0'   2.5 -> 'Whole years'   7 -> true
+   * // -5 -> 'number_too_small'   2.5 -> 'Whole years'   7 -> true
    * ```
    */
   validate(rule: FieldValidationFunc<T>) {

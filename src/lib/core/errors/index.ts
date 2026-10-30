@@ -56,8 +56,12 @@ class RimeFormError extends RimeError {
   static INVALID_FIELD = 'invalid_field';
   static INVALID_PHONE = 'invalid_phone';
   static INVALID_SLUG = 'invalid_slug';
+  static INVALID_TIME = 'invalid_time';
   static INVALID_URL = 'invalid_url';
+  static NOT_A_NUMBER = 'not_a_number';
   static NOT_A_STRING = 'not_a_string';
+  static NUMBER_TOO_LARGE = 'number_too_large';
+  static NUMBER_TOO_SMALL = 'number_too_small';
   static PASSWORD_LOWERCASE_MISSING = 'password_lowercase_missing';
   static PASSWORD_MIN_8 = 'password_min_8';
   static PASSWORD_MISMATCH = 'password_mismatch';

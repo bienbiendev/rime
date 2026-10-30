@@ -1,17 +1,16 @@
 import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
 import type { DefaultValueFn, FormField } from '#lib/fields/types.js';
+import validate from '#lib/core/fields/validate.js';
 import TextArea from './component/TextArea.svelte';
 
 /** A text of several lines, stored as text. */
 export const textarea = (name: string) => new TextAreaFieldBuilder(name);
 
-const isString = (value: unknown) => typeof value === 'string' || 'Should be a string';
-
 export class TextAreaFieldBuilder extends FormFieldBuilder<TextAreaField> {
   constructor(name: string) {
     super(name, 'textarea');
-    this.field.validate = isString;
+    this.field.validate = validate.string;
   }
 
   get component() {

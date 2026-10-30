@@ -123,6 +123,9 @@ export const slug = (value: unknown) => {
   return true;
 };
 
+/** A string, or the `not_a_string` error. */
+export const string = (value: unknown) => typeof value === 'string' || RimeFormError.NOT_A_STRING;
+
 /**
  * Validates a link object with different validation based on link type.
  * Supports tel, email, url, and anchor link types. A value that is not an object is refused, and
@@ -172,6 +175,7 @@ const validate = {
   password,
   email,
   slug,
+  string,
   url,
   tel,
   link
