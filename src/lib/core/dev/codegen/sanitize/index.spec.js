@@ -127,6 +127,11 @@ test('a .$method() call is stripped from its chain and a .server import removed'
   expect(code).not.toContain('trim');
 });
 
+test('a side-effect import stays in the client copy', () => {
+  const code = clientCopy(`import './register.js'; export const a = { $b: 1 };`);
+  expect(code).toContain("import './register.js'");
+});
+
 test('a declaration inside a function keeps its name, whatever a $ property reads', () => {
   const code = clientCopy(`
     const format = (doc) => { const id = doc.id; return id; };

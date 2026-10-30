@@ -697,11 +697,16 @@ const moduleSources = (body) =>
       t.isStringLiteral(node.source)
   );
 
-/** `ast` without the import specifiers its code does not read; an import left with none goes. */
+/**
+ * `ast` without the import specifiers its code does not read; an import left with none goes. A
+ * bare side-effect import stays.
+ */
 function removeUnusedImports(ast) {
   const used = referencedNames(ast);
   ast.body = ast.body.filter((node) => {
     if (!t.isImportDeclaration(node)) return true;
+    // A bare `import './x.js'` runs for its side effect: it stays
+    if (!node.specifiers.length) return true;
     node.specifiers = node.specifiers.filter((spec) => used.has(spec.local.name));
     return node.specifiers.length > 0;
   });
