@@ -200,6 +200,11 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
    * removes it. A create runs them, newest first, when it fails before its row exists.
    */
   undo?: UndoStep[];
+  /**
+   * The documents a read builds, for their beforeRead hooks, and what a hook read once for all of
+   * them (`forList`). Absent outside a read.
+   */
+  list?: { docs: RawDoc[]; reads: Map<string, Promise<unknown>> };
 };
 
 /** Removes one write a hook made outside rime's tables. */

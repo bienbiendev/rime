@@ -3,7 +3,30 @@ import { setDocumentThumbnail } from './set-document-thumbnail.server.js';
 
 const REF = { relationTo: 'medias', documentId: 'm1' };
 
-/** A read of `doc`, a page whose cover is its thumbnail; `medias` answers findByIds with `found`. */
+/** A `medias` collection that answers findByIds with `found`, and the calls it got. */
+const mediasWith = (found: object[]) => {
+  const calls: { system: boolean; ids: string[] }[] = [];
+  const api = (system: boolean) => ({
+    system: (isSystem = true) => api(isSystem),
+    findByIds: async ({ ids }: { ids: string[] }) => {
+      calls.push({ system, ids });
+      return found;
+    }
+  });
+  return { rime: { collection: () => api(false) }, calls };
+};
+
+/** The hook's arguments for `doc`, a page whose cover is its thumbnail. */
+const argsFor = (doc: Record<string, unknown>, rime: object, context: object) =>
+  ({
+    doc,
+    config: { type: 'collection', slug: 'pages', asThumbnail: 'cover' },
+    event: { locals: { rime } },
+    context,
+    operation: 'read'
+  }) as any;
+
+/** A read of `doc`; `medias` answers findByIds with `found`. */
 const read = ({
   doc = { id: 'p1', cover: [REF] },
   found = [],
@@ -15,21 +38,8 @@ const read = ({
   isSystemOperation?: boolean;
   select?: string[];
 }) => {
-  const calls: { system: boolean }[] = [];
-  const api = (system: boolean) => ({
-    system: (isSystem = true) => api(isSystem),
-    findByIds: async () => {
-      calls.push({ system });
-      return found;
-    }
-  });
-  const run = setDocumentThumbnail({
-    doc,
-    config: { type: 'collection', slug: 'pages', asThumbnail: 'cover' },
-    event: { locals: { rime: { collection: () => api(false) } } },
-    context: { params: { select }, isSystemOperation },
-    operation: 'read'
-  } as any);
+  const { rime, calls } = mediasWith(found);
+  const run = setDocumentThumbnail(argsFor(doc, rime, { params: { select }, isSystemOperation }));
   return { run, calls };
 };
 
@@ -52,11 +62,29 @@ describe('setDocumentThumbnail', () => {
   it('reads the media as the read runs', async () => {
     const asRime = readPage([], true);
     await asRime.run;
-    expect(asRime.calls).toEqual([{ system: true }]);
+    expect(asRime.calls).toEqual([{ system: true, ids: ['m1'] }]);
 
     const asCaller = readPage([]);
     await asCaller.run;
-    expect(asCaller.calls).toEqual([{ system: false }]);
+    expect(asCaller.calls).toEqual([{ system: false, ids: ['m1'] }]);
+  });
+
+  it('reads the media of a whole list once, each document taking its own', async () => {
+    const { rime, calls } = mediasWith([
+      { id: 'm1', _thumbnail: '/medias/m1.jpg' },
+      { id: 'm2', _thumbnail: '/medias/m2.jpg' }
+    ]);
+    const docs = [
+      { id: 'p1', cover: [REF] },
+      { id: 'p2', cover: [{ relationTo: 'medias', documentId: 'm2' }] }
+    ];
+    const context = { params: {}, list: { docs, reads: new Map() } };
+    const [p1, p2] = await Promise.all(
+      docs.map((doc) => setDocumentThumbnail(argsFor(doc, rime, context)))
+    );
+    expect(calls).toEqual([{ system: false, ids: ['m1', 'm2'] }]);
+    expect(p1.doc._thumbnail).toBe('/medias/m1.jpg');
+    expect(p2.doc._thumbnail).toBe('/medias/m2.jpg');
   });
 
   it('reads no media for a select without `_thumbnail`', async () => {

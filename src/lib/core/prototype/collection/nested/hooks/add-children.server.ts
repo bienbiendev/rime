@@ -1,5 +1,6 @@
 import { isStaff } from '#lib/core/auth/access.js';
 import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { forList } from '#lib/core/pipeline/run.server.js';
 import { versionsReadQuery } from '#lib/core/prototype/shared/versions/read-query.js';
 
 /**
@@ -23,19 +24,23 @@ export const addChildrenProperty = Hooks.beforeRead(async function addChildrenPr
   const { rime, user } = args.event.locals;
 
   // Children by `_parent`, ordered by `_position`: the published ones, every real one for staff
-  // and rime.
+  // and rime. One read for every listed document: parent id -> child ids
   const latest = args.context.isSystemOperation || isStaff(user);
-  const children = await rime.adapter.collection(args.config.slug).findMany({
-    query: { where: { _parent: { equals: args.doc.id } } },
-    sort: '_position',
-    select: ['id'],
-    content: versionsReadQuery({ config: args.config, params: { latest } })
+  const childrenOf = await forList(args, 'nested.children', async (docs) => {
+    const children = await rime.adapter.collection(args.config.slug).findMany({
+      query: { where: { _parent: { in_array: docs.map((doc) => doc.id) } } },
+      sort: '_position',
+      select: ['id', '_parent'],
+      content: versionsReadQuery({ config: args.config, params: { latest } })
+    });
+    const byParent = new Map<string, string[]>();
+    for (const child of children) {
+      const parent = child._parent as string;
+      byParent.set(parent, [...(byParent.get(parent) ?? []), child.id]);
+    }
+    return byParent;
   });
 
-  args.doc = {
-    ...args.doc,
-    _children: children.map((child) => child.id)
-  };
-
+  args.doc = { ...args.doc, _children: childrenOf.get(args.doc.id) ?? [] };
   return args;
 });

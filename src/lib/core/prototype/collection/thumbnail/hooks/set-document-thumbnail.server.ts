@@ -1,6 +1,7 @@
 import { Hooks } from '#lib/core/pipeline/define-hook.js';
+import { forList } from '#lib/core/pipeline/run.server.js';
+import type { RawDoc } from '#lib/core/prototype/types.js';
 import { Relation } from '#lib/fields/relation/relation.js';
-import type { RelationRef } from '#lib/fields/types.js';
 import {
   type BuiltCollection,
   type CollectionSlug,
@@ -36,20 +37,27 @@ export const setDocumentThumbnail = Hooks.beforeRead(async function setDocumentT
 
   if (shouldSetThumbnail) {
     // At depth 0 the relation holds a ref to the media; at depth 1 or more, the media itself.
-    const [first] = getValueAtPath<RelationValue<UploadDoc>>(config.asThumbnail, doc) ?? [];
+    const firstOf = (listed: RawDoc) =>
+      getValueAtPath<RelationValue<UploadDoc>>(config.asThumbnail, listed)?.[0];
+    const first = firstOf(doc);
     if (!first) return args;
 
-    // Read as the read runs. A media the reader may not read gives no thumbnail, and the document
-    // itself is still read.
-    const readMedia = async (ref: RelationRef) => {
-      const [media] = await args.event.locals.rime
-        .collection(ref.relationTo as CollectionSlug)
+    // The media every listed document names, in one read as the read runs. One relation field
+    // points at one collection, so the first ref names it. A media the reader may not read is
+    // left out: that document gets no thumbnail, and is still read.
+    const readMedia = async (docs: RawDoc[]) => {
+      const refs = docs.map(firstOf).filter(Relation.isRef);
+      if (!refs.length) return new Map<string, UploadDoc>();
+      const media = await args.event.locals.rime
+        .collection(refs[0].relationTo as CollectionSlug)
         .system(!!args.context.isSystemOperation)
-        .findByIds({ ids: [ref.documentId] });
-      return media as UploadDoc | undefined;
+        .findByIds({ ids: [...new Set(refs.map((ref) => ref.documentId))] });
+      return new Map((media as UploadDoc[]).map((item) => [item.id, item]));
     };
 
-    const media = Relation.isRef(first) ? await readMedia(first) : first;
+    const media = Relation.isRef(first)
+      ? (await forList(args, 'thumbnail.media', readMedia)).get(first.documentId)
+      : first;
     if (media) doc = { _thumbnail: media._thumbnail, ...doc };
   }
 

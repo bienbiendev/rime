@@ -25,4 +25,30 @@ describe('addChildrenProperty', () => {
     expect(await childrenRead({ user: { id: 's1', isStaff: true } })).toBeUndefined();
     expect(await childrenRead({ system: true })).toBeUndefined();
   });
+
+  it('reads the children of a whole list once, each document taking its own', async () => {
+    const findMany = vi.fn(async () => [
+      { id: 'c1', _parent: 'p2' },
+      { id: 'c2', _parent: 'p1' },
+      { id: 'c3', _parent: 'p2' }
+    ]);
+    const docs = [{ id: 'p1' }, { id: 'p2' }];
+    const context = { params: {}, list: { docs, reads: new Map() } };
+    const [p1, p2] = await Promise.all(
+      docs.map((doc) =>
+        addChildrenProperty({
+          config: { slug: 'pages' },
+          doc,
+          event: { locals: { rime: { adapter: { collection: () => ({ findMany }) } } } },
+          context
+        } as any)
+      )
+    );
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect((findMany.mock.calls[0] as Dic[])[0].query).toEqual({
+      where: { _parent: { in_array: ['p1', 'p2'] } }
+    });
+    expect(p1.doc._children).toEqual(['c2']);
+    expect(p2.doc._children).toEqual(['c1', 'c3']);
+  });
 });

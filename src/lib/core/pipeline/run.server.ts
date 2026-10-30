@@ -289,11 +289,11 @@ export const readDocuments = async <S extends DocType, T extends GenericDoc>(
         )
       : undefined;
 
-  return Promise.allSettled(
+  const built = await Promise.allSettled(
     rows.map(async (row) => {
       if (row.status === 'rejected') throw row.reason;
 
-      const document = await buildDocument(row.value, {
+      return buildDocument(row.value, {
         config,
         locale,
         depth,
@@ -306,17 +306,47 @@ export const readDocuments = async <S extends DocType, T extends GenericDoc>(
          */
         withRowMeta: event.params.panel !== undefined
       });
+    })
+  );
+
+  // Each document's chain sees the whole list, so a hook reads once for it: `forList`
+  const docs = built.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
+  const context = { ...args.context, list: { docs, reads: new Map() } };
+
+  return Promise.allSettled(
+    built.map(async (result) => {
+      if (result.status === 'rejected') throw result.reason;
 
       return runDocHooks<S, T>({
         hooks: config.$hooks?.beforeRead,
-        doc: document as T,
+        doc: result.value as T,
         config,
         event,
         operation: 'read',
-        context: args.context
+        context
       });
     })
   );
+};
+
+/**
+ * What `read` answers for the list a document is read in: run by the first hook that asks, and
+ * shared with the other documents' hooks under `key`. Outside a list read, `read` runs for the
+ * document alone.
+ *
+ * ```ts
+ * const childrenOf = await forList(args, 'nested.children', (docs) => readChildren(docs));
+ * ```
+ */
+export const forList = <T>(
+  args: { doc: RawDoc; context: OperationContext<any> },
+  key: string,
+  read: (docs: RawDoc[]) => Promise<T>
+): Promise<T> => {
+  const list = args.context.list;
+  if (!list) return read([args.doc]);
+  if (!list.reads.has(key)) list.reads.set(key, read(list.docs));
+  return list.reads.get(key) as Promise<T>;
 };
 
 /** The read tail of a single document: `readDocuments` over one raw row, its failure thrown. */
