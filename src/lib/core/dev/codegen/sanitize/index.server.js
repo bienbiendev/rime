@@ -409,6 +409,9 @@ function collectIdentifiers(node, names) {
   }
 }
 
+/** What `sanitizeNode` returns for a node to delete; `null` already means an array hole. */
+const REMOVED = Symbol('removed');
+
 /**
  * The client copy of a config file's AST: `.server` imports, `$` members and `.$method()` calls
  * removed (a call keeps the object it was called on), `rime` imported as `rimeClient`, then the
@@ -424,7 +427,7 @@ function sanitizeClientAst(ast, analysis) {
     if (t.isImportDeclaration(node)) {
       const source = node.source.value;
       if (source.includes('.server')) {
-        return null; // Mark for removal
+        return REMOVED;
       }
     }
 
@@ -462,10 +465,10 @@ function sanitizeClientAst(ast, analysis) {
       if (Object.prototype.hasOwnProperty.call(node, key) && key !== 'parent') {
         const child = node[key];
         if (Array.isArray(child)) {
-          node[key] = child.map(sanitizeNode).filter((item) => item !== null);
+          node[key] = child.map(sanitizeNode).filter((item) => item !== REMOVED);
         } else if (child && typeof child === 'object') {
           const sanitized = sanitizeNode(child);
-          if (sanitized === null) {
+          if (sanitized === REMOVED) {
             delete node[key];
           } else {
             node[key] = sanitized;

@@ -136,6 +136,11 @@ test('a .$method() call is stripped from its chain and a .server import removed'
   expect(code).not.toContain('trim');
 });
 
+test('an array hole stays in the client copy', () => {
+  const code = clientCopy(`export const a = [1, , 2]; export const b = { $c: 1 };`);
+  expect(code).toContain('[1,, 2]');
+});
+
 test('a side-effect import stays in the client copy', () => {
   const code = clientCopy(`import './register.js'; export const a = { $b: 1 };`);
   expect(code).toContain("import './register.js'");
