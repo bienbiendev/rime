@@ -5,8 +5,8 @@
   import Button from '#lib/panel/components/ui/button/button.svelte';
   import PickDialog from '../../pick-dialog.svelte';
   import Input from '#lib/panel/components/ui/input/input.svelte';
-  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
-  import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { useCandidates, useRead } from '#lib/panel/util/candidates.svelte.js';
   import CornerDownLeft from '@lucide/svelte/icons/corner-down-left';
   import ExternalLink from '@lucide/svelte/icons/external-link';
   import Link2 from '@lucide/svelte/icons/link-2';
@@ -38,19 +38,44 @@
     (editor && editor.getAttributes('link').target === '_blank') || false
   );
 
-  // The documents a link can point to: one request per source, in the panel's locale, made once
-  const APIProxy = getAPIProxyContext();
-  const locale = getLocaleContext();
-  const transformData = (data: any) =>
-    'docs' in data ? data.docs : 'doc' in data ? [data.doc] : data;
+  // The documents a link can point to, read while the dialog is open: per collection source, the
+  // first that match the search; per area source, its one document
+  const { getCollection } = getConfigContext();
+  let search = $state('');
   // svelte-ignore state_referenced_locally
-  const resources = (options?.sources ?? []).map((source) => {
+  const sources = (options?.sources ?? []).map((source) => {
     const [slug, query] = source.split('?');
-    const params = `${query ? `?${query}&` : '?'}select=title,url`;
-    const url = `${apiUrl(slug)}${params}${locale.code ? `&locale=${locale.code}` : ''}`;
-    return APIProxy.getRessource<LinkResource[]>(url, { transformData });
+    return { slug, query, config: getCollection(slug) };
   });
-  const resourcesFlatMap = $derived(resources.flatMap((r) => r.data ?? []).filter((r) => !!r.url));
+  const collections = sources
+    .filter((source) => source.config)
+    .map((source) =>
+      useCandidates(() => ({
+        open: resourceDialogOpen,
+        config: source.config,
+        query: source.query,
+        search
+      }))
+    );
+  const areas = sources
+    .filter((source) => !source.config)
+    .map((source) =>
+      useRead<{ doc: LinkResource }>(() => ({
+        url: resourceDialogOpen ? `${apiUrl(source.slug)}?select=title,url` : null
+      }))
+    );
+  const resourcesFlatMap = $derived(
+    [
+      ...collections.flatMap((found) => (found.docs ?? []) as LinkResource[]),
+      ...areas.flatMap((area) => area.data?.doc ?? [])
+    ].filter((resource) => !!resource.url)
+  );
+  /** How many documents match in all the sources; none until every collection has counted. */
+  const count = $derived(
+    collections.every((found) => found.count !== null)
+      ? collections.reduce((sum, found) => sum + (found.count ?? 0), areas.length)
+      : null
+  );
 
   /**
    * Whenever the url input opened and the selection is active
@@ -195,7 +220,9 @@
 
 <PickDialog
   bind:open={resourceDialogOpen}
+  bind:search
   items={resourcesFlatMap}
+  {count}
   label={(item) => item.title}
   onPick={(item) => {
     // https://site.com/about -> /about

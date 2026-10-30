@@ -5,7 +5,8 @@
   import { byKeywords } from '#lib/panel/components/ui/command/filter.js';
   import * as Command from '#lib/panel/components/ui/command/index.js';
   import Tag from '#lib/panel/components/ui/tag/tag.svelte';
-  import { getAPIProxyContext, type Resource } from '#lib/panel/context/api-proxy.svelte.js';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { useCandidates, usePicks, useRead } from '#lib/panel/util/candidates.svelte.js';
   import type { PrototypeSlug } from '#lib/types.js';
   import { toKebabCase } from '#lib/util/string.js';
 
@@ -27,8 +28,6 @@
   let search = $state('');
   let inputFocused = $state(false);
 
-  const APIProxy = getAPIProxyContext();
-
   /** A fetched document as a choice: a collection document by its title, an area by its type. */
   function convertDocToResource(doc: GenericDoc): Ressource {
     return {
@@ -38,25 +37,50 @@
     };
   }
 
-  // The documents of `ressourceType`, fetched once and shared through the API proxy.
-  const resource: Resource = $derived(APIProxy.getRessource(apiUrl(toKebabCase(ressourceType))));
-
-  const resources = $derived.by(() => {
-    const data = resource?.data;
-    if (!data) return [];
-    const docs: GenericDoc[] = 'docs' in data ? data.docs : [data.doc];
-    return docs.map(convertDocToResource);
-  });
-
-  /** The picked document, once the list holding it has arrived. */
-  const selected = $derived(resources.find((r) => r.id === ressourceId) ?? null);
+  const { getCollection } = getConfigContext();
+  /** The collection of `ressourceType`; none for an area. */
+  const collection = $derived(getCollection(ressourceType));
+  const isArea = $derived(!collection);
 
   // An area has one document: it is the pick as soon as it arrives.
+  const area = useRead<{ doc: GenericDoc }>(() => ({
+    url: isArea ? apiUrl(toKebabCase(ressourceType)) : null
+  }));
   $effect(() => {
-    if (!ressourceId && resources[0]?._prototype === 'area') {
-      ressourceId = resources[0].id;
+    if (!ressourceId && area.data) {
+      ressourceId = area.data.doc.id;
     }
   });
+
+  /** The doc picked from the list, drawn until the pick's read answers. */
+  let known = $state.raw<GenericDoc[]>([]);
+  const picks = usePicks(() => ({
+    config: collection,
+    ids: !isArea && ressourceId ? [ressourceId] : [],
+    known
+  }));
+
+  /** The picked document. */
+  const selected = $derived.by(() => {
+    const doc = isArea ? area.data?.doc : picks.docs[0];
+    return doc && doc.id === ressourceId ? convertDocToResource(doc) : null;
+  });
+
+  /** The documents the search offers, read while it has the focus. */
+  const found = useCandidates(() => ({
+    open: !isArea && inputFocused,
+    config: collection,
+    search
+  }));
+  /** The list under the search: the area's one document, or the collection's found. */
+  const listed = $derived(isArea ? (area.data ? [area.data.doc] : []) : (found.docs ?? []));
+
+  /** Picks a document of the list, and holds it until its read answers. */
+  function pick(doc: GenericDoc) {
+    known = [doc];
+    ressourceId = doc.id;
+    search = '';
+  }
 
   /** Empties the pick: the search shows again. */
   function removeRessource() {
@@ -87,19 +111,18 @@
         />
         {#if inputFocused}
           <Command.List>
-            {#each resources as ressource, index (index)}
+            {#each listed as doc (doc.id)}
+              {@const ressource = convertDocToResource(doc)}
               <Command.Item
                 value={ressource.id}
                 keywords={[ressource.label]}
-                onSelect={() => {
-                  ressourceId = ressource.id;
-                  search = '';
-                }}
+                onSelect={() => pick(doc)}
               >
                 <span>{ressource.label}</span>
               </Command.Item>
             {/each}
             <Command.Empty>{t__('common.nothing_found')}</Command.Empty>
+            <Command.Count shown={found.docs?.length ?? 0} count={found.count} />
           </Command.List>
         {/if}
       {/if}

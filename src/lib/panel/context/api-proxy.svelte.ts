@@ -9,6 +9,7 @@ import { getContext, setContext } from 'svelte';
  * its url with that locale, so after a switch the same url is a new resource.
  */
 function createAPIProxy(getLocale: () => string | undefined) {
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- a cache: each resource is reactive on its own
   const resources = new Map<string, Resource>();
 
   /**
@@ -88,9 +89,15 @@ function createAPIProxy(getLocale: () => string | undefined) {
     });
   }
 
+  /** Removes the cached read of `url`: `invalidate` skips it, and the next read fetches it anew. */
+  function drop(url: string) {
+    resources.delete(withLocale(url, getLocale()));
+  }
+
   return {
     getRessource,
-    invalidate
+    invalidate,
+    drop
   };
 }
 

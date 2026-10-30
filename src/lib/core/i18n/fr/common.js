@@ -69,6 +69,7 @@ export default {
   show_as_list: 'Afficher en liste',
   show_as_grid: 'Afficher en grille',
   show_as_tree: 'Afficher en arbre',
+  shown_of: '$1 sur $2',
   mark_as: 'Marquer comme $1',
   type_a_command: 'Une commande, un document…',
   nothing_found: 'Rien trouvé',

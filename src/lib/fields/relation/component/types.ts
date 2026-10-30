@@ -27,13 +27,13 @@ export type RelationComponentProps = {
   readOnly: boolean;
   nothingToSelect: boolean;
   many: boolean;
-  addValue: (documentId: string) => void;
+  /** Picks a document the search found. */
+  addValue: (doc: GenericDoc) => void;
   /** The whole selection, in order; `seen` are the docs the picker has shown. */
   setValue: (ids: string[], seen: GenericDoc[]) => void;
   /** Documents just made from files: added after the others, or in place of the one. */
   addUploaded: (docs: GenericDoc[]) => void;
   removeValue: (documentId: string) => void;
-  availableItems: RelationFieldItem[];
   selectedItems: RelationFieldItem[];
   formNestedLevel: number;
   onOrderChange: (oldIndex: number, newIndex: number) => void;

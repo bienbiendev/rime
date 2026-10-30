@@ -92,6 +92,38 @@ test('A link holds the last document picked', async ({ page, request }) => {
   await expect.poll(() => savedLink(request, id)).toEqual({ type: 'pages', value: secondId });
 });
 
+test('A link to a page shows its title on load', async ({ page, request }) => {
+  const title = `Linked ${Date.now()}`;
+  const linkedId = await createPage(request, title);
+  const id = await createPage(request, 'Link on load', [
+    { label: 'Item', url: { type: 'pages', value: linkedId }, _children: [] }
+  ]);
+  const fieldset = await openLink(page, id);
+  await expect(fieldset.locator('.rz-tag')).toHaveText(title);
+});
+
+test('A page picked from the search shows its title before the read of the pick answers', async ({
+  page,
+  request
+}) => {
+  const title = `Held ${Date.now()}`;
+  await createPage(request, title);
+  const id = await createPage(request, 'Link held', [{ label: 'Item', _children: [] }]);
+  // The pick's read never answers
+  await page.route(
+    (url) => decodeURIComponent(url.search).includes('[id][in_array]'),
+    () => {}
+  );
+  const fieldset = await openLink(page, id);
+
+  await pickType(page, fieldset, 'Page');
+  const search = fieldset.locator('.rz-ressource-input input');
+  await search.click();
+  await search.pressSequentially(title, { delay: 30 });
+  await page.getByRole('option', { name: title }).click();
+  await expect(fieldset.locator('.rz-tag')).toHaveText(title);
+});
+
 test('Of two documents with the same title, the keyboard picks the highlighted one', async ({
   page,
   request

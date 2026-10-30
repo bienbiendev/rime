@@ -3,17 +3,16 @@
   import type { UploadDoc } from '#lib/core/prototype/collection/upload/types.js';
   import { isUploadConfig } from '#lib/core/prototype/collection/upload/util/config.js';
   import { apiUrl } from '#lib/core/routes/util.js';
-  import { Relation } from '#lib/fields/relation/relation.js';
   import FileDrop from '#lib/panel/components/sections/collection/bulk-upload/FileDrop.svelte';
   import SpinLoader from '#lib/panel/components/ui/spin-loader/SpinLoader.svelte';
   import { getConfigContext } from '#lib/panel/context/config.svelte.js';
   import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { usePicks } from '#lib/panel/util/candidates.svelte.js';
   import { createUploader, uploadingLabel } from '#lib/panel/util/uploader.svelte.js';
   import ImageIcon from '@lucide/svelte/icons/image';
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import type { Snippet } from 'svelte';
-  import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import type { RelationFieldBuilder, RelationRow } from '../index.js';
   import { namedByQuery, queryOf } from '../query.js';
   import { toRelationValue } from '../value.js';
@@ -46,27 +45,13 @@
   /** Files and the library only reach an editable field to an upload collection. */
   const canPick = $derived(field.editable && isUpload);
 
-  /** The docs drawn: a pick brings its own, a relation there on load is resolved once. */
-  const known = new SvelteMap<string, UploadDoc>();
-  /** The ids whose document could not be fetched: nothing to draw for them. */
-  const unreadable = new SvelteSet<string>();
-  $effect(() => {
-    for (const ref of refs) {
-      if (known.has(ref.documentId) || unreadable.has(ref.documentId)) continue;
-      const lookup = { relationTo: ref.relationTo, documentId: ref.documentId };
-      const resolved = Relation.resolve<UploadDoc>([lookup], { locale: locale.code });
-      Promise.resolve(resolved.first()).then((doc) => {
-        if (doc) {
-          known.set(ref.documentId, doc);
-        } else {
-          unreadable.add(ref.documentId);
-        }
-      });
-    }
-  });
-  const docs = $derived(ids.flatMap((id) => known.get(id) ?? []));
-  /** A document is still on its way: one neither drawn nor known to be unreadable. */
-  const loading = $derived(ids.some((id) => !known.has(id) && !unreadable.has(id)));
+  /** The docs this render picks itself: in the library, or uploaded here. */
+  let known = $state.raw<UploadDoc[]>([]);
+  const picks = usePicks(() => ({ config: relationConfig, ids, known }));
+  /** The docs drawn, in order; a pick that cannot be read is left out. */
+  const docs = $derived(picks.docs as UploadDoc[]);
+  /** A pick is neither in hand nor answered by the read yet. */
+  const loading = $derived(docs.length < ids.length && !picks.ready);
 
   let browsing = $state(false);
   /** Opens the library, on a field that may change only. */
@@ -80,7 +65,7 @@
 
   /** The picker's selection, written the way the relation field writes it. */
   function onChange(next: string[], seen: UploadDoc[]) {
-    for (const doc of seen) if (next.includes(doc.id)) known.set(doc.id, doc);
+    known = [...known, ...seen.filter((doc) => next.includes(doc.id))];
     const items = next.map((documentId) => ({
       documentId,
       id: refs.find((ref) => ref.documentId === documentId)?.id

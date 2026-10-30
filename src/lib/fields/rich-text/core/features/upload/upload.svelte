@@ -1,14 +1,14 @@
 <script lang="ts">
   import { t__ } from '#lib/core/i18n/index.js';
   import type { UploadDoc } from '#lib/core/prototype/collection/upload/types.js';
-  import { apiUrl } from '#lib/core/routes/util.js';
   import UploadThumbCell from '#lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
   import { mediaMeta } from '#lib/panel/util/upload-file.js';
   import Button from '#lib/panel/components/ui/button/button.svelte';
   import PickDialog from '../pick-dialog.svelte';
   import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
   import Input from '#lib/panel/components/ui/input/input.svelte';
-  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { useCandidates } from '#lib/panel/util/candidates.svelte.js';
   import X from '@lucide/svelte/icons/x';
   import type { NodeViewProps } from '@tiptap/core';
   import { onMount } from 'svelte';
@@ -57,19 +57,18 @@
     }
   });
 
-  const APIProxy = getAPIProxyContext();
-
+  const { getCollection } = getConfigContext();
   // svelte-ignore state_referenced_locally
-  const url = apiUrl(extension.options.source);
+  const [slug, query] = extension.options.source.split('?');
+  let search = $state('');
 
-  const ressource = APIProxy.getRessource<{ docs: UploadDoc[] }>(url);
-  let docs = $state<UploadDoc[]>([]);
-
-  $effect(() => {
-    if (ressource.data) {
-      docs = ressource.data.docs;
-    }
-  });
+  /** The media the dialog offers, read while it is open. */
+  const found = useCandidates(() => ({
+    open: isDialogOpen,
+    config: getCollection(slug),
+    query,
+    search
+  }));
 
   // The picked media replaces the node's, without a legend
   function pickMedia(doc: UploadDoc) {
@@ -150,7 +149,9 @@
 
 <PickDialog
   bind:open={isDialogOpen}
-  items={docs}
+  bind:search
+  items={(found.docs ?? []) as UploadDoc[]}
+  count={found.count}
   label={(doc) => doc.filename}
   onPick={pickMedia}
   row={dialogItem}

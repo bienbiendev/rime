@@ -99,6 +99,19 @@ async function save(page: Page) {
   await page.locator('.rz-blocks-focus button[type="submit"]').first().click();
 }
 
+/** The read of a field's saved picks: `?where[id][in_array]=…`. */
+const isPicksRead = (url: URL) => decodeURIComponent(url.search).includes('[id][in_array]');
+
+/** A target titled `title`; answers its id. */
+async function createTarget(request: APIRequestContext, title: string) {
+  const response = await request.post(`${API_BASE_URL}/targets`, {
+    headers: await signInSuperAdmin(request),
+    data: { title }
+  });
+  expect(response.status()).toBe(200);
+  return (await response.json()).doc.id as string;
+}
+
 test('The library reads its folder once it opens, not before', async ({ page, request }) => {
   const docId = await createPage(request, 'Photos closed');
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
@@ -122,6 +135,182 @@ test('The library reads its folder once it opens, not before', async ({ page, re
   await choose.click();
   await expect(card(page, medias[0])).toBeVisible();
   expect(reads.length).toBeGreaterThan(0);
+});
+
+test('A page reads its picks by id and counts the rest, never a whole collection', async ({
+  page,
+  request
+}) => {
+  const run = Date.now();
+  const tags = [
+    await createTarget(request, `Read ${run} a`),
+    await createTarget(request, `Read ${run} b`)
+  ];
+  const created = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      title: 'Picks by id',
+      slug: `picks-by-id-${run}`,
+      tags,
+      photos: [medias[0], medias[1]]
+    }
+  });
+  expect(created.status()).toBe(200);
+  const docId = (await created.json()).doc.id as string;
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+
+  // Every list read of targets or medias: a whole collection holds neither an id nor a count
+  const wholeReads: string[] = [];
+  page.on('request', (sent) => {
+    const url = new URL(sent.url());
+    if (!/\/api\/(targets|medias)$/.test(url.pathname)) return;
+    if (!isPicksRead(url)) wholeReads.push(sent.url());
+  });
+
+  await page.goto(panelUrl('pages', docId));
+  const chips = page.locator('fieldset[data-path="tags"] .rz-relation__item');
+  await expect(chips).toHaveText([`Read ${run} a`, `Read ${run} b`]);
+  await expect(
+    page.locator('fieldset[data-path="photos"] .rz-relation-upload__thumb img')
+  ).toHaveCount(2);
+  await page.waitForLoadState('networkidle');
+  expect(wholeReads).toEqual([]);
+});
+
+test('The search of a relation reads 20 matches and their count once typing pauses', async ({
+  page,
+  request
+}) => {
+  const title = `Searched ${Date.now()}`;
+  await createTarget(request, title);
+  const docId = await createPage(request, 'Tags search');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', docId));
+
+  // The reads that name a title
+  const searches: URL[] = [];
+  page.on('request', (sent) => {
+    const url = new URL(sent.url());
+    if (
+      url.pathname.includes('/api/targets') &&
+      decodeURIComponent(url.search).includes('[like]')
+    ) {
+      searches.push(url);
+    }
+  });
+
+  const tags = page.locator('fieldset[data-path="tags"]');
+  await tags.getByRole('button', { name: 'Choose', exact: true }).click();
+  await tags.locator('input').pressSequentially(title, { delay: 30 });
+  await expect(tags.getByRole('option', { name: title })).toBeVisible();
+
+  const lists = searches.filter((url) => url.pathname.endsWith('/api/targets'));
+  const counts = searches.filter((url) => url.pathname.endsWith('/api/targets/count'));
+  expect(lists).toHaveLength(1);
+  expect(lists[0].searchParams.get('limit')).toBe('20');
+  expect(counts).toHaveLength(1);
+});
+
+test('A relation of one offers Choose while empty, and neither Choose nor the search once full', async ({
+  page,
+  request
+}) => {
+  const title = `Thumbnail ${Date.now()}`;
+  await createTarget(request, title);
+  const docId = await createPage(request, 'Thumbnail full');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', docId));
+
+  const thumbnail = page.locator('fieldset[data-path="thumbnail"]');
+  const choose = thumbnail.getByRole('button', { name: 'Choose', exact: true });
+  await choose.click();
+  await thumbnail.locator('input').pressSequentially(title, { delay: 30 });
+  await thumbnail.getByRole('option', { name: title }).click();
+
+  await expect(thumbnail.locator('.rz-relation__item')).toHaveText(title);
+  await expect(choose).toHaveCount(0);
+  await expect(thumbnail.locator('.rz-relation__search')).toHaveCount(0);
+});
+
+test('A new pick in the form shows at once, before the read of the picks answers', async ({
+  page,
+  request
+}) => {
+  const title = `At once ${Date.now()}`;
+  await createTarget(request, title);
+  const docId = await createPage(request, 'Picks at once');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  // The picks' reads never answer
+  await page.route(isPicksRead, () => {});
+  await page.goto(panelUrl('pages', docId));
+
+  // A target picked from the search of tags
+  const tags = page.locator('fieldset[data-path="tags"]');
+  await tags.getByRole('button', { name: 'Choose', exact: true }).click();
+  await tags.locator('input').pressSequentially(title, { delay: 30 });
+  await tags.getByRole('option', { name: title }).click();
+  await expect(tags.locator('.rz-relation__item')).toHaveText(title);
+
+  // An image picked from the library of photos
+  const photos = page.locator('fieldset[data-path="photos"]');
+  await photos.getByRole('button', { name: 'Choose from the library' }).click();
+  await card(page, medias[0]).click();
+  await dialog(page)
+    .getByRole('button', { name: /^Add \d/ })
+    .click();
+  await expect(photos.locator('.rz-relation-upload__thumb img')).toHaveCount(1);
+});
+
+test('An image picked in a render shows at once, before the read of the picks answers', async ({
+  page,
+  request
+}) => {
+  const docId = await createPage(request, 'Render at once');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  // The picks' reads never answer
+  await page.route(isPicksRead, () => {});
+  await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
+
+  await add(page, 'Image');
+  const block = page.locator('.rz-renders__item[data-type="image"]');
+  await block
+    .locator('.rz-relation-inline__empty')
+    .getByRole('button', { name: 'choose from the library' })
+    .click();
+  await card(page, medias[1]).click();
+  await expect(block.locator('.site-image')).toBeVisible();
+  await expect(block.locator('.rz-relation-inline__loading')).toHaveCount(0);
+});
+
+test('A target renamed and saved shows its new title in the page that holds it', async ({
+  page,
+  request
+}) => {
+  const run = Date.now();
+  const targetId = await createTarget(request, `Before ${run}`);
+  const created = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signInSuperAdmin(request),
+    data: { title: 'Rename', slug: `rename-${run}`, tags: [targetId] }
+  });
+  expect(created.status()).toBe(200);
+  const docId = (await created.json()).doc.id as string;
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', docId));
+
+  const chip = page.locator('fieldset[data-path="tags"] .rz-relation__item');
+  await expect(chip).toHaveText(`Before ${run}`);
+  await chip.locator('a').click();
+  await page.locator('input[name="title"]').fill(`After ${run}`);
+  await page.locator('button[data-submit]').click();
+  await expect
+    .poll(async () => {
+      const read = await page.request.get(`${API_BASE_URL}/targets/${targetId}`);
+      return (await read.json()).doc.title;
+    })
+    .toBe(`After ${run}`);
+
+  await page.goBack();
+  await expect(chip).toHaveText(`After ${run}`);
 });
 
 test('Many: a click picks or unpicks, the picks are marked, Add closes and the pick is saved', async ({
@@ -390,6 +579,35 @@ test('Inline, many: the render picks several, the inspector lists the same', asy
     .toEqual([medias[0], medias[1]]);
 });
 
+test('Inline, many: the picks the render makes show in an inspector already open', async ({
+  page,
+  request
+}) => {
+  const docId = await createPage(request, 'Gallery inspector open');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
+
+  await add(page, 'Gallery');
+  const panel = page.locator('.rz-blocks-focus__panel');
+  await panel.getByRole('tab', { name: 'Inspector' }).click();
+  const thumbs = panel.locator('.rz-relation-upload__list .rz-relation-upload__thumb');
+  await expect(thumbs).toHaveCount(0);
+
+  const block = page.locator('.rz-renders__item[data-type="gallery"]');
+  await block
+    .locator('.rz-relation-inline__empty')
+    .getByRole('button', { name: 'choose from the library' })
+    .click();
+  await card(page, medias[0]).click();
+  await card(page, medias[1]).click();
+  await dialog(page)
+    .getByRole('button', { name: /^Add \d/ })
+    .click();
+
+  // The inspector reads the two picks by id
+  await expect(thumbs).toHaveCount(2);
+});
+
 test('Many, not an upload: a document created from the field is picked and saved, with no error', async ({
   page,
   request
@@ -442,9 +660,9 @@ test('Inline: an image whose fetch fails gives the empty state, not a loading bo
   const docId = (await response.json()).doc.id;
 
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
-  // The panel names its locale on the read: match the document, whatever the query string
+  // The read of the image's picks fails
   await page.route(
-    (url) => url.pathname.endsWith(`/api/medias/${medias[0]}`),
+    (url) => url.pathname.endsWith('/api/medias') && isPicksRead(url),
     (route) => route.abort()
   );
   await page.goto(`${panelUrl('pages', docId)}?focus=sections`);

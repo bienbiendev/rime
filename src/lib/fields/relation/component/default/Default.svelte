@@ -10,7 +10,7 @@
   import { dataFocused } from '#lib/panel/util/dataFocused.js';
   import { useSortable } from '#lib/panel/util/Sortable.js';
   import X from '@lucide/svelte/icons/x';
-  import type { RelationComponentProps, RelationFieldItem } from '../types.js';
+  import type { RelationComponentProps } from '../types.js';
 
   /**
    * A well of the picked documents, as chips, then a search to pick more.
@@ -21,16 +21,25 @@
   type Props = RelationComponentProps & {
     /** A new document of the related collection may be created from here. */
     canCreate?: boolean;
+    /** The query names a document the field does not hold. */
+    hasCandidate: boolean;
+    /** The documents the search found, the first 20; `null` until the first read answers. */
+    candidates: GenericDoc[] | null;
+    /** How many documents the search matches in all. */
+    count: number | null;
+    /** The text typed in the search. */
+    search?: string;
+    /** The search has the focus: its list is open. */
+    searching?: boolean;
   };
 
-  const {
+  let {
     isFull,
     hasError,
     addValue,
     many,
     selectedItems,
     removeValue,
-    availableItems,
     readOnly,
     nothingToSelect,
     relationConfig,
@@ -39,12 +48,15 @@
     onRelationCreated,
     onRelationCreation,
     onRelationCreationCanceled,
-    canCreate = false
+    canCreate = false,
+    hasCandidate,
+    candidates,
+    count,
+    search = $bindable(''),
+    searching = $bindable(false)
   }: Props = $props();
 
-  let search = $state('');
   let relationList = $state<HTMLElement>();
-  let inputFocused = $state(false);
   let creating = $state(false);
   let commandInput = $state<HTMLInputElement | null>(null);
 
@@ -82,12 +94,17 @@
     return () => instance.destroy();
   });
 
-  const onSelect = (item: RelationFieldItem) => {
-    addValue(item.documentId);
+  const onSelect = (doc: GenericDoc) => {
+    addValue(doc);
     search = '';
   };
 
-  const canSearch = $derived(!readOnly && !isFull && availableItems.length > 0);
+  const canSearch = $derived(!readOnly && !isFull && hasCandidate);
+
+  /** The documents found, less those picked since the read. */
+  const available = $derived(
+    (candidates ?? []).filter((doc) => !selectedItems.some((item) => item.documentId === doc.id))
+  );
 </script>
 
 <div class="rz-relation">
@@ -95,7 +112,7 @@
     <div
       class="rz-relation__list"
       use:dataError={hasError}
-      use:dataFocused={inputFocused}
+      use:dataFocused={searching}
       bind:this={relationList}
       class:rz-relation__list--readonly={readOnly}
       data-many={many ? '' : null}
@@ -124,8 +141,8 @@
 
       {#if canSearch}
         <Command.InputSelect
-          onfocus={() => (inputFocused = true)}
-          onblur={() => setTimeout(() => (inputFocused = false), 150)}
+          onfocus={() => (searching = true)}
+          onblur={() => setTimeout(() => (searching = false), 150)}
           bind:ref={commandInput}
           class="rz-relation__search"
           bind:value={search}
@@ -133,18 +150,15 @@
             t__(`common.search_a`, relationConfig.label.singular)}
         />
 
-        {#if inputFocused}
+        {#if searching && candidates}
           <Command.List>
-            {#each availableItems as item (item.documentId)}
-              <Command.Item
-                value={item.documentId}
-                keywords={[item.title]}
-                onSelect={() => onSelect(item)}
-              >
-                <span>{item.title}</span>
+            {#each available as doc (doc.id)}
+              <Command.Item value={doc.id} keywords={[doc.title]} onSelect={() => onSelect(doc)}>
+                <span>{doc.title}</span>
               </Command.Item>
             {/each}
             <Command.Empty>{t__('common.nothing_found')}</Command.Empty>
+            <Command.Count shown={candidates.length} {count} />
           </Command.List>
         {/if}
       {/if}

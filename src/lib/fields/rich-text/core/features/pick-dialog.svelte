@@ -6,7 +6,11 @@
 
   type Props = {
     open: boolean;
+    /** The text typed in the search, for the caller to read its list with. */
+    search?: string;
     items: T[];
+    /** How many items match in all, when `items` holds the first of them. */
+    count?: number | null;
     /** The text the search matches, and the row's content when no `row` snippet is given. */
     label: (item: T) => string | null | undefined;
     onPick: (item: T) => void;
@@ -16,7 +20,9 @@
 
   let {
     open = $bindable(false),
+    search = $bindable(''),
     items,
+    count = null,
     label,
     onPick,
     placeholder = t__('common.search'),
@@ -29,7 +35,7 @@
 
 <!-- A searchable list of fetched documents; picking one calls `onPick`. -->
 <Command.Dialog bind:open preventScroll={false}>
-  <Command.Input {placeholder} />
+  <Command.Input {placeholder} bind:value={search} />
   <Command.List>
     <Command.Empty>{t__('common.nothing_found')}</Command.Empty>
     {#each items as item, index (index)}
@@ -42,5 +48,6 @@
         {/if}
       </Command.Item>
     {/each}
+    <Command.Count shown={items.length} {count} />
   </Command.List>
 </Command.Dialog>

@@ -1,0 +1,6 @@
+/* One quiet line under the list. */
+.rz-command-count {
+  padding: var(--rz-size-2) var(--rz-size-2-5);
+  color: var(--rz-fg-subtle);
+  font-size: var(--rz-text-sm);
+}

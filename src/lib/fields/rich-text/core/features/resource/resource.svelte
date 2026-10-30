@@ -1,11 +1,11 @@
 <script lang="ts">
   import { t__ } from '#lib/core/i18n/index.js';
   import type { GenericDoc } from '#lib/core/prototype/types.js';
-  import { apiUrl } from '#lib/core/routes/util.js';
   import Button from '#lib/panel/components/ui/button/button.svelte';
   import CardResource from '#lib/panel/components/ui/card-resource/card-resource.svelte';
   import PickDialog from '../pick-dialog.svelte';
-  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { useCandidates } from '#lib/panel/util/candidates.svelte.js';
   import type { NodeViewProps } from '@tiptap/core';
   import { onMount } from 'svelte';
   import NodeViewWrapper from '../../svelte/node-view-wrapper.svelte';
@@ -44,19 +44,18 @@
     }
   });
 
-  const APIProxy = getAPIProxyContext();
-
+  const { getCollection } = getConfigContext();
   // svelte-ignore state_referenced_locally
-  const url = apiUrl(extension.options.source);
+  const [slug, query] = extension.options.source.split('?');
+  let search = $state('');
 
-  const ressource = APIProxy.getRessource<{ docs: GenericDoc[] }>(url);
-  let docs = $state<GenericDoc[]>([]);
-
-  $effect(() => {
-    if (ressource.data) {
-      docs = ressource.data.docs;
-    }
-  });
+  /** The documents the dialog offers, read while it is open. */
+  const found = useCandidates(() => ({
+    open: isDialogOpen,
+    config: getCollection(slug),
+    query,
+    search
+  }));
 
   // The picked document replaces the node's
   function handleResourceSelection(doc: GenericDoc) {
@@ -95,7 +94,9 @@
 
 <PickDialog
   bind:open={isDialogOpen}
-  items={docs}
+  bind:search
+  items={found.docs ?? []}
+  count={found.count}
   label={(doc) => doc.title}
   onPick={handleResourceSelection}
 />

@@ -67,6 +67,7 @@ export default {
   show_as_list: 'Show as a list',
   show_as_grid: 'Show as a grid',
   show_as_tree: 'Show as a tree',
+  shown_of: '$1 of $2',
   mark_as: 'Mark as $1',
   type_a_command: 'A command, a document…',
   nothing_found: 'Nothing found',
