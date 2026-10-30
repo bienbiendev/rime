@@ -92,16 +92,17 @@ export { RimeError, RimeFormError };
 const CODES = new Set<string>([...Object.values(RimeError), ...Object.values(RimeFormError)]);
 
 /**
- * The text of a field or form error. The part after the last `::` is read; a rime error code is
+ * The text of a field or form error. A leading `kind::` is dropped; a rime error code is
  * translated, any other string is a validator's own message and is shown as is.
  *
  * ```ts
  * errorText('required::required_field'); // 'Required'
  * errorText('url::invalid_url'); // 'Invalid URL'
  * errorText('Starts with a capital'); // 'Starts with a capital'
+ * errorText('Format HH::MM'); // 'Format HH::MM'
  * ```
  */
 export function errorText(error: string): string {
-  const code = error.split('::').at(-1) ?? '';
+  const code = error.replace(/^[a-z]+::/, '');
   return CODES.has(code) ? t__(`errors.${code}`) : code;
 }
