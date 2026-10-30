@@ -45,7 +45,7 @@ if (!isValidSlug(PANEL_ROUTE)) {
  * with `./` or `../` so it never gets mistaken for a bare package specifier. */
 export function relativeImportSpecifier(fromDir: string, toAbsolutePath: string): string {
   const rel = path.relative(fromDir, toAbsolutePath).split(path.sep).join('/');
-  return rel.startsWith('.') ? rel : `./${rel}`;
+  return rel.startsWith('../') ? rel : `./${rel}`;
 }
 
 /** A `#lib/...` specifier for a file under src/lib, null for any other file. Ambient
