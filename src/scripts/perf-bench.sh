@@ -423,7 +423,11 @@ scaffold_app() {
   rm -rf db storage/sqlite
   # The handler reads the env var before the config's own function; false by default.
   if [[ $CACHE -eq 1 ]]; then
-    grep -q '^RIME_CACHE_ENABLED=' .env && sed -i '' 's/^RIME_CACHE_ENABLED=.*/RIME_CACHE_ENABLED=true/' .env || echo 'RIME_CACHE_ENABLED=true' >> .env
+    if grep -q '^RIME_CACHE_ENABLED=' .env; then
+      sed -i.bak 's/^RIME_CACHE_ENABLED=.*/RIME_CACHE_ENABLED=true/' .env && rm -f .env.bak
+    else
+      echo 'RIME_CACHE_ENABLED=true' >> .env
+    fi
   fi
 }
 
