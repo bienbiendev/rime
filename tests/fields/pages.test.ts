@@ -101,6 +101,30 @@ test('Each field label names its control', async ({ page }) => {
   await expect.soft(page.getByRole('radiogroup', { name: 'LayoutStyle' })).toBeVisible();
 });
 
+/** ---------------- SELECT ONCHANGE ON OPEN ---------------- */
+
+test('Opening a document runs no select onChange', async ({ page, request }) => {
+  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  // A slug, so the page opens with nothing to save
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: {
+      title: 'Select on open',
+      slug: `select-on-open-${Date.now()}`,
+      category: 'news',
+      categoryLabel: 'Kept'
+    }
+  });
+  expect(response.status()).toBe(200);
+  const id = (await response.json()).doc.id as string;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', id));
+  await expect(page.locator('fieldset[data-path="category"] .rz-tag')).toHaveText('News');
+  await expect(page.locator('input[name="categoryLabel"]')).toHaveValue('Kept');
+  await expect(page.locator('button[data-submit]')).toBeDisabled();
+});
+
 /** ---------------- GROUP WITH MANY FIELDS: SAVE + RELOAD ---------------- */
 
 test('Should persist the text, textarea, checkbox, toggle, select and number of the meta group after save and reload', async ({

@@ -43,17 +43,20 @@
     return () => instance.destroy();
   });
 
+  // Once, when the field mounts: drop the stored values that are not among the options. A value
+  // that needs no change is not written back, since a write runs the field's onChange.
   $effect(() => {
-    if (config.get.many) {
-      if (field.value && Array.isArray(field.value) && !initialized) {
-        field.value = field.value.filter((val: string) => validValues.includes(val));
-      }
-    } else if (typeof field.value === 'string') {
-      if (field.value && !initialized) {
-        field.value = validValues.includes(field.value) ? field.value : null;
-      }
-    }
+    if (initialized) return;
     initialized = true;
+    const value = field.value;
+    if (config.get.many && Array.isArray(value)) {
+      const kept = value.filter((val) => validValues.includes(val));
+      if (kept.length !== value.length) {
+        field.value = kept;
+      }
+    } else if (typeof value === 'string' && value && !validValues.includes(value)) {
+      field.value = null;
+    }
   });
 
   /** A many-select lists only the options not picked yet. */
