@@ -1,13 +1,14 @@
-import { dev } from '$app/env';
 import { formFailure } from '#lib/core/errors/handler.server.js';
 import { RimeFormError } from '#lib/core/errors/index.js';
 import { redirect, type Actions } from '@sveltejs/kit';
+import { parseSetCookieHeader, toCookieOptions } from 'better-auth/cookies';
 
 export const signInActions: Actions = {
   /**
-   * Signs in through better-auth's email and password sign-in, copies the cookie it sets onto the
-   * panel's answer, and goes to the panel; a refused sign-in, a rate-limited one included, answers
-   * the form with `invalid_credentials`.
+   * Signs in through better-auth's email and password sign-in, copies the cookies it sets onto the
+   * panel's answer, and goes to the panel. A refused sign-in, a rate-limited one included, answers
+   * the form with `invalid_credentials`; a sign-in that opens no session, like a two-factor step,
+   * with `unauthorized`.
    */
   default: async ({ cookies, request, locals, params }) => {
     const { rime } = locals;
@@ -29,31 +30,25 @@ export const signInActions: Actions = {
       })
     );
 
-    const authenticated = response && response.status === 200;
+    // A session answers { user } (rime's after hook), a two-factor step { twoFactorRedirect: true }
+    const body = response.status === 200 ? await response.json() : null;
 
-    if (!authenticated) {
-      const invalid = new RimeFormError({
-        _form: RimeFormError.INVALID_CREDENTIALS,
-        email: RimeFormError.INVALID_CREDENTIALS,
-        password: RimeFormError.INVALID_CREDENTIALS
-      });
-      return formFailure(invalid, { email });
+    if (!body?.user) {
+      const refused = body
+        ? new RimeFormError({ _form: RimeFormError.UNAUTHORIZED })
+        : new RimeFormError({
+            _form: RimeFormError.INVALID_CREDENTIALS,
+            email: RimeFormError.INVALID_CREDENTIALS,
+            password: RimeFormError.INVALID_CREDENTIALS
+          });
+      return formFailure(refused, { email });
     }
 
-    const setCookieHeader = response.headers.get('set-cookie') as string;
-
-    if (setCookieHeader) {
-      const parsedCookie = setCookieHeader.split(';')[0];
-      const [name, encodedValue] = parsedCookie.split('=');
-      const decodedValue = decodeURIComponent(encodedValue);
-
-      cookies.set(name, decodedValue, {
-        path: '/',
-        httpOnly: true,
-        sameSite: 'strict',
-        maxAge: 604800,
-        secure: !dev
-      });
+    // Every cookie better-auth set, the session's and any plugin's, with its own attributes
+    for (const line of response.headers.getSetCookie()) {
+      for (const [name, cookie] of parseSetCookieHeader(line)) {
+        cookies.set(name, cookie.value, { ...toCookieOptions(cookie), path: cookie.path ?? '/' });
+      }
     }
 
     throw redirect(302, `/${params.panel}`);
