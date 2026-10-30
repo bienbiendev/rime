@@ -1,5 +1,5 @@
 import test, { expect, type Page } from '@playwright/test';
-import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
+import { API_BASE_URL, loginAs, panelUrl, panelUrlRe, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -31,13 +31,10 @@ async function createHooksTestDoc(page: Page) {
   await page.locator('fieldset[data-path="agree"] .rz-checkbox-field__input').click();
 }
 
+/** Saves the form, waits for the saved document's URL, and reloads it from the server. */
 async function save(page: Page) {
   await page.locator('button[type="submit"]').click();
-  // Not just [^/]+$ — that also matches the create route itself
-  // ("create" satisfies [^/]+), which resolved this instantly before the
-  // real redirect happened and made the follow-up reload() just reload the
-  // still-blank create form.
-  await page.waitForURL(/\/panel\/hooks-test\/(?!create$)[^/]+$/);
+  await page.waitForURL(panelUrlRe('hooks-test'));
   await page.reload();
 }
 

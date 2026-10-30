@@ -1,5 +1,5 @@
 import test, { expect } from '@playwright/test';
-import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
+import { API_BASE_URL, loginAs, panelUrl, panelUrlRe, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -164,11 +164,8 @@ test('Should persist the text, textarea, checkbox, toggle, select and number of 
   await page.locator('fieldset[data-path="meta.metaPriority"] input[type="number"]').fill('4');
 
   await page.locator('button[type="submit"]').click();
-  // Not just [^/]+$ — that also matches the create route itself
-  // ("create" satisfies [^/]+), which resolved this instantly before the
-  // real redirect happened and made the follow-up reload() just reload the
-  // still-blank create form.
-  await page.waitForURL(/\/panel\/pages\/(?!create$)[^/]+$/);
+  // The saved document's URL, not /create
+  await page.waitForURL(panelUrlRe('pages'));
 
   // Reload from the server: every field of the group comes back
   await page.reload();
