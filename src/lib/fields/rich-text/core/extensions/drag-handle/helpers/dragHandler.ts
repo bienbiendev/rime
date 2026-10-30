@@ -48,11 +48,11 @@ export function dragHandler(event: DragEvent, editor: Editor) {
   const dragHandleRanges = getDragHandleRanges(event, editor);
 
   const selectionRanges = getSelectionRanges($from, $to, 0);
-  const isDragHandleWithinSelection = selectionRanges.some((range) => {
-    return dragHandleRanges.find((dragHandleRange) => {
-      return dragHandleRange.$from === range.$from && dragHandleRange.$to === range.$to;
-    });
-  });
+  const isDragHandleWithinSelection = selectionRanges.some((range) =>
+    dragHandleRanges.some(
+      (handle) => handle.$from.pos === range.$from.pos && handle.$to.pos === range.$to.pos
+    )
+  );
 
   const ranges = empty || !isDragHandleWithinSelection ? dragHandleRanges : selectionRanges;
 
