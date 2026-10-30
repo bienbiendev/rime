@@ -3,6 +3,7 @@
   import { t__ } from '#lib/core/i18n/index.js';
   import type { GenericDoc } from '#lib/core/prototype/types.js';
   import Document from '#lib/panel/components/sections/document/Document.svelte';
+  import { byKeywords } from '#lib/panel/components/ui/command/filter.js';
   import * as Command from '#lib/panel/components/ui/command/index.js';
   import * as Sheet from '#lib/panel/components/ui/sheet/index.js';
   import { dataError } from '#lib/panel/util/dataError.js';
@@ -90,7 +91,7 @@
 </script>
 
 <div class="rz-relation">
-  <Command.Root>
+  <Command.Root filter={byKeywords}>
     <div
       class="rz-relation__list"
       use:dataError={hasError}
@@ -134,8 +135,12 @@
 
         {#if inputFocused}
           <Command.List>
-            {#each availableItems as item, index (item.documentId)}
-              <Command.Item value="{item.title}-{index}" onSelect={() => onSelect(item)}>
+            {#each availableItems as item (item.documentId)}
+              <Command.Item
+                value={item.documentId}
+                keywords={[item.title]}
+                onSelect={() => onSelect(item)}
+              >
                 <span>{item.title}</span>
               </Command.Item>
             {/each}

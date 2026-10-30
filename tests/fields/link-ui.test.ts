@@ -135,3 +135,20 @@ test('A link search that finds no document says so in the panel language', async
   await expect(page.getByRole('option')).toHaveCount(0);
   await expect(fieldset.locator('.rz-command-empty')).toHaveText('Nothing found');
 });
+
+test('A link search matches the document titles, not their ids', async ({ page, request }) => {
+  // No hexadecimal letter and no digit: the title cannot match a piece of an id
+  const pageId = await createPage(request, 'Sunny hills');
+  const id = await createPage(request, 'Link search ids', [{ label: 'Item', _children: [] }]);
+  const fieldset = await openLink(page, id);
+
+  await pickType(page, fieldset, 'Page');
+  const search = fieldset.locator('.rz-ressource-input input');
+  await search.click();
+  await search.pressSequentially('Sunny', { delay: 30 });
+  await expect(page.locator(`[role="option"][data-value="${pageId}"]`)).toHaveCount(1);
+
+  await search.fill('');
+  await search.pressSequentially(pageId.slice(0, 4), { delay: 30 });
+  await expect(page.locator(`[role="option"][data-value="${pageId}"]`)).toHaveCount(0);
+});

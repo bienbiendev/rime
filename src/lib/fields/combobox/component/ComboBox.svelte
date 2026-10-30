@@ -4,6 +4,7 @@
   import { Field } from '#lib/panel/index.js';
   import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
   import { Button } from '#lib/panel/components/ui/button/index.js';
+  import { byKeywords } from '#lib/panel/components/ui/command/filter.js';
   import * as Command from '#lib/panel/components/ui/command/index.js';
   import * as Popover from '#lib/panel/components/ui/popover/index.js';
   import Check from '@lucide/svelte/icons/check';
@@ -55,7 +56,7 @@
     </Popover.Trigger>
     <Popover.Portal>
       <Popover.Content class="rz-combobox__content">
-        <Command.Root>
+        <Command.Root filter={byKeywords}>
           {#if options.length > 4}
             <Command.Input
               bind:value={search}

@@ -133,6 +133,11 @@ test('The create form renders its components and separator, clears a switched li
   await search.pressSequentially('Fran', { delay: 30 });
   await expect.soft(page.getByRole('option', { name: 'France' })).toBeVisible();
   await expect.soft(page.getByRole('option', { name: 'Germany' })).toHaveCount(0);
+
+  // The search reads the label only: `de` is Germany's value, not in its label
+  await search.fill('');
+  await search.pressSequentially('de', { delay: 30 });
+  await expect.soft(page.getByRole('option', { name: 'Germany' })).toHaveCount(0);
 });
 
 /** Inserts the `fields()` node a palette entry names, in the rich text of the open document. */

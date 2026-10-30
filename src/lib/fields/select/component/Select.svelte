@@ -2,6 +2,7 @@
   import { t__ } from '#lib/core/i18n/index.js';
   import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '#lib/panel/components/fields/index.js';
+  import { byKeywords } from '#lib/panel/components/ui/command/filter.js';
   import * as Command from '#lib/panel/components/ui/command/index.js';
   import Tag from '#lib/panel/components/ui/tag/tag.svelte';
   import { useSortable } from '#lib/panel/util/Sortable.js';
@@ -99,7 +100,7 @@
   <Field.Error error={field.error} />
 
   <div class="rz-select">
-    <Command.Root>
+    <Command.Root filter={byKeywords}>
       <div
         bind:this={listHTMLElement}
         class="rz-select__list"

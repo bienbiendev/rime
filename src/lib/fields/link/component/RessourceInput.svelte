@@ -2,6 +2,7 @@
   import { t__ } from '#lib/core/i18n/index.js';
   import type { GenericDoc } from '#lib/core/prototype/types.js';
   import { apiUrl } from '#lib/core/routes/util.js';
+  import { byKeywords } from '#lib/panel/components/ui/command/filter.js';
   import * as Command from '#lib/panel/components/ui/command/index.js';
   import Tag from '#lib/panel/components/ui/tag/tag.svelte';
   import { getAPIProxyContext, type Resource } from '#lib/panel/context/api-proxy.svelte.js';
@@ -64,7 +65,7 @@
 </script>
 
 <div class="rz-ressource-input">
-  <Command.Root>
+  <Command.Root filter={byKeywords}>
     <div
       class="rz-ressource-input__wrapper"
       class:rz-ressource-input__wrapper--readonly={readOnly}
