@@ -241,12 +241,14 @@ export function setBlocksFocusContext(form: DocumentFormContext) {
       if (/^\d+$/.test(part)) {
         const index = parseInt(part);
         const block = form.blocks.list(list)[index];
-        if (!block) continue;
-        crumbs.push({
-          label: titleOf(configOf(list, block), block, index),
-          list,
-          block: `${list}.${index}`
-        });
+        if (block) {
+          crumbs.push({
+            label: titleOf(configOf(list, block), block, index),
+            list,
+            block: `${list}.${index}`
+          });
+        }
+        list = `${list}.${part}`;
         continue;
       }
       list = list ? `${list}.${part}` : part;

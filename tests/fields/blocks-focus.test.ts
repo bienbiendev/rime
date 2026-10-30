@@ -718,6 +718,23 @@ test('Opened from a nested list in the document, focus narrows to its block, sel
   await expect(panel.locator('input.rz-input')).toHaveValue('Cols');
 });
 
+test('A nested block opened in the editor shows the whole way down', async ({ page, request }) => {
+  const docId = await createPlainPage(request);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', docId));
+  await page.waitForLoadState('networkidle');
+
+  await page.locator('.rz-block__title-button', { hasText: 'Columns' }).click();
+  const cells = page.locator('fieldset[data-path="plain.1.cells"]');
+  await cells.locator('.rz-repeatable-actions button').first().click();
+  await page.locator('[data-focus-block]').click();
+
+  const crumbs = page.locator('.rz-blocks-focus__crumbs');
+  await expect(crumbs.locator('.rz-blocks-focus__crumb--current')).toHaveText(/Cells/);
+  await expect(crumbs.getByRole('button', { name: 'Columns' })).toBeVisible();
+  await expect(page.locator('.rz-layers__root-title')).toHaveText('Columns');
+});
+
 test('The list in the document adds, duplicates, moves and deletes its blocks', async ({
   page,
   request
