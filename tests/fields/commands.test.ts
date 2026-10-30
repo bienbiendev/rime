@@ -182,3 +182,33 @@ test('In focus mode, ⌘K in the editor lists the text first, and Escape closes 
   await page.keyboard.press('Escape');
   await expect(focus).toHaveCount(0);
 });
+
+test('⌘K in a "Create new" sheet lists one Save, which saves the sheet\'s document', async ({
+  page,
+  request
+}) => {
+  const docId = await createPage(request, 'Sheet commands');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', docId));
+  await expect(page.locator('main')).toBeVisible();
+
+  const tags = page.locator('fieldset[data-path="tags"]');
+  await tags.getByRole('button', { name: /Create new/ }).click();
+  const title = `Sheet target ${Date.now()}`;
+  await page.locator('.rz-sheet-content input[name="title"]').fill(title);
+
+  // Both documents offer Save: the palette lists the sheet's only
+  await page.keyboard.press('Control+k');
+  const palette = dialog(page).filter({ has: page.locator('.rz-command-palette__list') });
+  await expect(palette).toBeVisible();
+  await expect(line(page, 'Document', /^Save$/)).toHaveCount(1);
+  await line(page, 'Document', /^Save$/).click();
+
+  await expect(tags.locator('.rz-relation__item', { hasText: title })).toHaveCount(1);
+  const response = await request.get(
+    `${API_BASE_URL}/targets?where[title][equals]=${encodeURIComponent(title)}`,
+    { headers: await signInSuperAdmin(request) }
+  );
+  expect(response.status()).toBe(200);
+  expect((await response.json()).docs).toHaveLength(1);
+});

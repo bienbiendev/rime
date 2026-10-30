@@ -90,8 +90,13 @@
     run: () => command.run()
   });
 
+  /**
+   * The commands listed at `show()`, one per id: the innermost scope's, as a key would run it. A
+   * nested document's Save hides its parent's. Narrowed to `palette.group` when one is asked.
+   */
   const commandLines = $derived(
     commands.palette.commands
+      .filter((command, index, all) => all.findIndex((other) => other.id === command.id) === index)
       .filter((command) => !commands.palette.group || command.group === commands.palette.group)
       .map(toLine)
   );
