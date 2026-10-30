@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // @ts-nocheck
 
-// Finds the imports of the .ts and .js files under src/ that start with `.`, `$` or `#` and end
-// in no .js, .ts, .svelte or .json, suggests the specifier Node resolves, and offers to write it.
+// Finds the imports of the .ts, .js and .svelte files under src/ that start with `.`, `$` or `#`
+// and end in no .js, .ts, .svelte, .json or .css, suggests the specifier Node resolves, and
+// offers to write it.
 
 import fs from 'fs';
 import path from 'path';
@@ -11,21 +12,37 @@ import { createInterface } from 'readline';
 const SRC = path.join(process.cwd(), 'src');
 const SRC_LIB = path.join(SRC, 'lib');
 
-const IMPORT = /import\s+.*?\s+from\s+['"`]([.$#][^'"`]*?)['"`]/g;
-const HAS_EXTENSION = /\.(js|svelte|ts|json)$/;
+// `import x from '…'`, `export { x } from '…'` and `import '…'`, on one line or several
+const IMPORT = /^[ \t]*(?:import|export)\s+(?:[^'"`;]*?\s+from\s+)?['"]([.$#][^'"]*)['"]/gm;
+const HAS_EXTENSION = /\.(js|svelte|ts|json|css)$/;
+// SvelteKit's own modules, and rime's generated ones
+const SKIPPED = ['$app/', '$env/', '$rime/', '${'];
 
-/** Every .ts and .js file under `dir`. */
+/** Every .ts, .js and .svelte file under `dir`. */
 const listFiles = (dir) =>
   fs.readdirSync(dir, { withFileTypes: true }).flatMap((item) => {
     const fullPath = path.join(dir, item.name);
     if (item.isDirectory()) {
       return listFiles(fullPath);
     }
-    if (item.isFile() && (item.name.endsWith('.ts') || item.name.endsWith('.js'))) {
+    if (item.isFile() && /\.(ts|js|svelte)$/.test(item.name)) {
       return [fullPath];
     }
     return [];
   });
+
+/** The file with everything outside its <script> blocks turned to spaces, newlines kept. */
+const scriptsOnly = (content) => {
+  const blank = (text) => text.replace(/[^\n]/g, ' ');
+  let out = '';
+  let last = 0;
+  for (const match of content.matchAll(/(<script\b[^>]*>)([\s\S]*?)<\/script>/g)) {
+    const start = match.index + match[1].length;
+    out += blank(content.slice(last, start)) + match[2];
+    last = start + match[2].length;
+  }
+  return out + blank(content.slice(last));
+};
 
 const getLineNumber = (content, index) => content.substring(0, index).split('\n').length;
 
@@ -94,7 +111,8 @@ const resolveSpecifier = (importPath, filePath) => {
 
 /** The imports of one file that miss an extension, with what to write instead. */
 const scanFile = (filePath) => {
-  const content = fs.readFileSync(filePath, 'utf-8');
+  const source = fs.readFileSync(filePath, 'utf-8');
+  const content = filePath.endsWith('.svelte') ? scriptsOnly(source) : source;
   const file = path.relative(process.cwd(), filePath);
   const stringRanges = computeStringRanges(content);
   const found = [];
@@ -105,20 +123,15 @@ const scanFile = (filePath) => {
     if (isInsideStringRange(stringRanges, match.index)) continue;
 
     const importPath = match[1];
-    // SvelteKit's own modules
-    if (
-      importPath.startsWith('$app/') ||
-      importPath.startsWith('$env/') ||
-      importPath.startsWith('${')
-    ) {
-      continue;
-    }
+    if (SKIPPED.some((prefix) => importPath.startsWith(prefix))) continue;
     if (HAS_EXTENSION.test(importPath)) continue;
 
     found.push({
       file,
       import: importPath,
       replacement: importPath === '.' ? './index.js' : resolveSpecifier(importPath, filePath),
+      // Where the specifier starts, for applyFixes
+      offset: match.index + match[0].length - 1 - importPath.length,
       line: getLineNumber(content, match.index)
     });
   }
@@ -145,18 +158,16 @@ const report = (results) => {
   });
 };
 
-const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-/** Writes each suggestion in place of its import, file by file. */
+/** Writes each suggestion at the offset of its import, file by file. */
 function applyFixes(results) {
   const fileChanges = new Map();
 
   // Group changes by file
-  results.forEach(({ file, import: importPath, replacement }) => {
+  results.forEach(({ file, import: importPath, replacement, offset }) => {
     if (!fileChanges.has(file)) {
       fileChanges.set(file, []);
     }
-    fileChanges.get(file).push({ importPath, replacement });
+    fileChanges.get(file).push({ importPath, replacement, offset });
   });
 
   // Apply changes file by file
@@ -164,24 +175,12 @@ function applyFixes(results) {
     let content = fs.readFileSync(filePath, 'utf-8');
     let changeCount = 0;
 
-    changes.forEach(({ importPath, replacement }) => {
-      // Skip if couldn't resolve
-      if (!replacement || replacement.includes('(could not resolve)')) {
-        return;
-      }
-
-      // Create regex to match the import statement
-      const importRegex = new RegExp(
-        `(import\\s+.*?\\s+from\\s+['"\`])${escapeRegex(importPath)}(['"\`])`,
-        'g'
-      );
-
-      const newContent = content.replace(importRegex, `$1${replacement}$2`);
-      if (newContent !== content) {
-        content = newContent;
-        changeCount++;
-      }
-    });
+    // The last offset first, so earlier offsets stay valid
+    for (const { importPath, replacement, offset } of changes.sort((a, b) => b.offset - a.offset)) {
+      if (!replacement) continue;
+      content = content.slice(0, offset) + replacement + content.slice(offset + importPath.length);
+      changeCount++;
+    }
 
     if (changeCount > 0) {
       fs.writeFileSync(filePath, content);
