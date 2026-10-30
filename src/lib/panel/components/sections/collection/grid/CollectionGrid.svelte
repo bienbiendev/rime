@@ -8,7 +8,11 @@
   import Folders from '../folder/Folders.svelte';
   import GridItem from './grid-item/GridItem.svelte';
 
-  type Props = { collection: CollectionContext; oncreatefolder: () => void };
+  type Props = {
+    collection: CollectionContext;
+    /** Opens the new-folder dialog; without it, the grid offers no right-click menu. */
+    oncreatefolder?: () => void;
+  };
   const { collection, oncreatefolder }: Props = $props();
 
   const hasContentUnfiltered = $derived(
@@ -48,8 +52,9 @@
       <Empty config={collection.config} />
     {/if}
 
-    <!-- A right click on the empty space around the items offers a new folder. -->
-    {#if collection.isUpload}
+    <!-- A right click on the empty space around the items offers a new folder, when the page
+    passes `oncreatefolder`. -->
+    {#if collection.isUpload && oncreatefolder}
       <ContextMenu>
         {#snippet trigger()}
           <div class="rz-collection-grid__context-menu-trigger"></div>

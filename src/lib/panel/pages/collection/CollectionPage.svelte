@@ -28,6 +28,8 @@
   import { DISPLAY_MODE, setCollectionContext } from '#lib/panel/context/collection.svelte.js';
   import { useCommands } from '#lib/panel/context/commands.svelte.js';
   import { getConfigContext } from '#lib/panel/context/config.svelte.js';
+  import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import { withDirectoriesSuffix } from '#lib/core/prototype/collection/upload/naming.js';
   import { getTitleContext } from '#lib/panel/context/title.js';
   import CirclePlus from '@lucide/svelte/icons/circle-plus';
   import FolderPlus from '@lucide/svelte/icons/folder-plus';
@@ -65,6 +67,14 @@
     canCreate: data.canCreate,
     upload: data.upload
   });
+
+  const user = getUserContext();
+  /** Folders follow the folders' own access, the collection's by default. */
+  const canCreateFolder = $derived(
+    collection.isUpload &&
+      config.getCollection(withDirectoriesSuffix(slug)).access.create(user.attributes, {})
+  );
+  const openFolderDialog = () => (folderDialogOpen = true);
 
   $effect(() => {
     collection.upload = {
@@ -175,7 +185,8 @@
               label: t__('common.create_folder'),
               group,
               icon: FolderPlus,
-              run: () => (folderDialogOpen = true)
+              when: () => canCreateFolder,
+              run: openFolderDialog
             },
             {
               id: 'collection.bulk_upload',
@@ -211,15 +222,17 @@
           <LanguageSwitcher onLocalClick={switchLocale} />
 
           {#if collection.isUpload}
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={FolderPlus}
-              aria-label={t__('common.create_folder')}
-              onclick={() => (folderDialogOpen = true)}
-            >
-              <span class="rz-collection__folder-label">{t__('common.create_folder')}</span>
-            </Button>
+            {#if canCreateFolder}
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={FolderPlus}
+                aria-label={t__('common.create_folder')}
+                onclick={openFolderDialog}
+              >
+                <span class="rz-collection__folder-label">{t__('common.create_folder')}</span>
+              </Button>
+            {/if}
             {#if collection.canCreate}
               <Button size="sm" icon={Upload} onclick={() => (bulkDialogOpen = true)}>
                 {t__('common.collection_upload')}
@@ -269,7 +282,10 @@
         {#if collection.isNested()}
           <CollectionTree {collection} />
         {:else if collection.isGrid()}
-          <CollectionGrid {collection} oncreatefolder={() => (folderDialogOpen = true)} />
+          <CollectionGrid
+            {collection}
+            oncreatefolder={canCreateFolder ? openFolderDialog : undefined}
+          />
         {:else}
           <CollectionList {collection} />
         {/if}

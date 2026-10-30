@@ -127,3 +127,23 @@ test('Should not remove the file of a read-only upload document', async ({ page,
   await expect(page.locator('.rz-doc-upload-header__actions')).toHaveCount(0);
   await expect(page.locator('.rz-doc-upload-dropzone')).toHaveCount(0);
 });
+
+test('Should offer no new folder to a user who may not create folders', async ({ page }) => {
+  // The file above makes the grid show, with its right-click menu for who may create
+  await loginAs(page, EDITOR_EMAIL, PASSWORD);
+  await page.goto(panelUrl('bulletin-files'));
+  await page
+    .locator('.rz-header-display-mode')
+    .getByRole('button', { name: 'Show as a grid' })
+    .click();
+  await expect(page.locator('.rz-page-collection__grid')).toBeVisible();
+
+  await expect(page.getByRole('button', { name: 'New folder' })).toHaveCount(0);
+  await expect(page.locator('.rz-collection-grid__context-menu-trigger')).toHaveCount(0);
+});
+
+test('Should offer a new folder to a user who may create folders', async ({ page }) => {
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('bulletin-files'));
+  await expect(page.getByRole('button', { name: 'New folder' })).toBeVisible();
+});
