@@ -12,8 +12,8 @@ test.use({ viewport: { width: 1600, height: 900 } });
 
 /**
  * The upload picker, in the plain form and in a block render: the `pages` fixture has `photos`, a
- * many relation to `medias`, an `image` block with one and a `gallery` block with many, both drawn
- * by renders that pick in place.
+ * many relation to the images of `medias`, an `image` block with one and a `gallery` block with
+ * many, both drawn by renders that pick in place.
  */
 
 const richTextOf = (text: string) => ({
@@ -24,6 +24,8 @@ const richTextOf = (text: string) => ({
 let medias: string[] = [];
 // In every file name, so a search in the picker lists these three and no upload of another file
 const run = `pick-${Date.now()}`;
+// A PDF of `medias`, which the query of `photos` leaves out
+let pdf: { id: string; filename: string };
 
 // Runs again in a fresh worker after a failure, so every test finds its medias
 test.beforeAll(async ({ request }) => {
@@ -38,6 +40,18 @@ test.beforeAll(async ({ request }) => {
     expect(response.status()).toBe(200);
     medias.push((await response.json()).doc.id);
   }
+  const response = await request.post(`${API_BASE_URL}/medias`, {
+    headers,
+    data: {
+      file: {
+        base64: `data:application/pdf;base64,${Buffer.from('%PDF-1.4\n%%EOF\n').toString('base64')}`,
+        filename: `doc-${Date.now()}.pdf`
+      },
+      alt: 'A PDF'
+    }
+  });
+  expect(response.status()).toBe(200);
+  pdf = (await response.json()).doc;
 });
 
 /** A page with a slug, so it opens with nothing to save, and one paragraph. */
@@ -124,6 +138,25 @@ test('Many: a click picks or unpicks, the picks are marked, Add closes and the p
   await expect
     .poll(async () => (await readPage(page, docId)).photos.map((ref: any) => ref.documentId))
     .toEqual([medias[1]]);
+});
+
+test("The picker lists the medias the field's query names, in the folder and in a search", async ({
+  page,
+  request
+}) => {
+  const docId = await createPage(request, 'Photos query');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', docId));
+
+  const photos = page.locator('fieldset[data-path="photos"]');
+  await photos.getByRole('button', { name: 'Choose from the library' }).click();
+  await expect(card(page, medias[0])).toBeVisible();
+  await expect(card(page, pdf.id)).toHaveCount(0);
+
+  // A search for the PDF's name finds nothing: the query still holds
+  await dialog(page).locator('.rz-relation-browse__search input').fill(pdf.filename);
+  await expect(dialog(page).locator('.rz-relation-browse__item')).toHaveCount(0);
+  await expect(card(page, pdf.id)).toHaveCount(0);
 });
 
 test('Many: a press dragged across the images picks them all, and unpicks them back', async ({

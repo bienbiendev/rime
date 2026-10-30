@@ -25,6 +25,7 @@
     selectedItems,
     removeValue,
     relationConfig,
+    query,
     onOrderChange,
     formNestedLevel,
     onRelationCreation,
@@ -225,6 +226,7 @@
 <Browse
   bind:open={browsing}
   config={relationConfig}
+  {query}
   {many}
   {selected}
   nestedLevel={formNestedLevel + 1}

@@ -99,9 +99,12 @@
     return item;
   }
 
-  /** The candidates' URL: the collection, with the field's query for the values on screen. */
+  /** The field's `query()` for the values on screen. */
+  const query = $derived(queryOf(config.get, form.values));
+
+  /** The candidates' URL: the collection, with the field's query. */
   function makeRessourceURL() {
-    const params = new URLSearchParams(queryOf(config.get, form.values));
+    const params = new URLSearchParams(query);
     if ('isLive' in form && form.isLive) params.set('depth', '1');
     const path = apiUrl(relationConfig.kebab);
     const search = params.toString();
@@ -279,6 +282,7 @@
     selectedItems,
     removeValue,
     relationConfig,
+    query,
     onOrderChange
   });
 </script>

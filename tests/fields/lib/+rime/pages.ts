@@ -134,8 +134,8 @@ export const Pages = Collection.create('pages', {
     relation('tags').to('targets').many(),
     // A relation to a slug holding `Id`: its junction column is `productIdeasId`
     relation('idea').to('productIdeas'),
-    // Many medias in the plain form: the picker's toggle, marks and sweep.
-    relation('photos').to('medias').many(),
+    // Many medias in the plain form: the picker's toggle, marks and sweep, its images only.
+    relation('photos').to('medias').many().query('where[mimeType][like]=image%'),
     richText('intro'),
     date('publishDate'),
     time('publishTime'),

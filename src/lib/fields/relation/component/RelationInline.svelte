@@ -15,6 +15,7 @@
   import type { Snippet } from 'svelte';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import type { RelationFieldBuilder, RelationRow } from '../index.js';
+  import { queryOf } from '../query.js';
   import { toRelationValue } from '../value.js';
   import Browse from './upload/Browse.svelte';
 
@@ -188,6 +189,7 @@
   <Browse
     bind:open={browsing}
     config={relationConfig}
+    query={queryOf(config.get, form.values)}
     {many}
     selected={ids}
     {onChange}

@@ -28,6 +28,7 @@
   import Search from '@lucide/svelte/icons/search';
   import Upload from '@lucide/svelte/icons/upload';
   import X from '@lucide/svelte/icons/x';
+  import qs from 'qs';
   import { untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import Create from './Create.svelte';
@@ -35,6 +36,8 @@
   type Props = {
     open: boolean;
     config: BuiltCollection;
+    /** The relation field's `query()` for the form values: every request ANDs its `where`. */
+    query?: string;
     many: boolean;
     /** Document ids, in the order they were picked. */
     selected: string[];
@@ -52,6 +55,7 @@
   let {
     open = $bindable(),
     config,
+    query,
     many,
     selected,
     onChange,
@@ -69,31 +73,24 @@
     return searchValue.trim() !== '' || typeFilterValue !== '';
   });
 
-  const encodedMime = $derived.by(() => {
-    if (typeFilterValue) {
-      return encodeURIComponent(typeFilterValue);
-    }
-    return '';
-  });
-
-  /** The search as a `like` value: the text anywhere in the file name. */
-  const encodedSearch = $derived(encodeURIComponent(`%${searchValue.trim()}%`));
-
   const parentPath = $derived(getParentPath(path));
 
-  /** The files of the open folder, or, with a type or a search, the files matching them. */
+  /** The field's own condition, `{ mimeType: { like: 'image' } }`, or none. */
+  const fieldWhere = $derived(qs.parse(query ?? '').where);
+
+  /**
+   * The files on screen: the open folder, or, while searching or filtering, the whole collection;
+   * always within the field's query.
+   */
   const filesURL = $derived.by(() => {
-    if (!isFiltered) {
-      return `${apiUrl(config.kebab)}?where[_path][equals]=${path}`;
-    } else {
-      if (typeFilterValue && searchValue.trim()) {
-        return `${apiUrl(config.kebab)}?where[and][0][mimeType][equals]=${encodedMime}&where[and][1][filename][like]=${encodedSearch}`;
-      } else if (typeFilterValue) {
-        return `${apiUrl(config.kebab)}?where[mimeType][equals]=${encodedMime}`;
-      } else {
-        return `${apiUrl(config.kebab)}?where[filename][like]=${encodedSearch}`;
-      }
-    }
+    const search = searchValue.trim();
+    const conditions = [
+      fieldWhere,
+      !isFiltered && { _path: { equals: path } },
+      typeFilterValue && { mimeType: { equals: typeFilterValue } },
+      search && { filename: { like: `%${search}%` } }
+    ].filter(Boolean);
+    return `${apiUrl(config.kebab)}?${qs.stringify({ where: { and: conditions } })}`;
   });
 
   /** The folders inside the open folder. */

@@ -19,6 +19,8 @@ export type RelationFieldItem = {
 
 export type RelationComponentProps = {
   relationConfig: BuiltCollection;
+  /** The field's `query()` for the form values, `where[mimeType][like]=image`, or `''`. */
+  query: string;
   stamp: string;
   hasError: boolean;
   isFull: boolean;
