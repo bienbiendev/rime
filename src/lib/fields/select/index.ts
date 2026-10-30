@@ -27,6 +27,6 @@ export const select = (name: string) => new SelectFieldBuilder(name, 'select');
 export type SelectField = FormField & {
   type: 'select';
   options: Option[];
-  defaultValue?: string[] | DefaultValueFn<string[]>;
+  defaultValue?: string | string[] | DefaultValueFn<string | string[]>;
   many?: boolean;
 };

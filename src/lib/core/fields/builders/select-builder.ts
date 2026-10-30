@@ -25,7 +25,7 @@ const ensureSelectIsOption: FieldValidationFunc<FieldWithOptions> = (value, { co
 
 type FieldWithOptions = FormField & {
   options: Option[];
-  defaultValue?: (string | DefaultValueFn<string>) | (string[] | DefaultValueFn<string[]>);
+  defaultValue?: string | string[] | DefaultValueFn<string | string[]>;
   many?: boolean;
   validate?: FieldValidationFunc<FieldWithOptions>;
 };
@@ -98,7 +98,10 @@ export class PickManyFieldBuilder<
     );
   }
 
-  defaultValue(value: string[] | DefaultValueFn<string[]>, options?: DefaultOptions) {
+  defaultValue(
+    value: string | string[] | DefaultValueFn<string | string[]>,
+    options?: DefaultOptions
+  ) {
     this.field.defaultValue = value;
     this.field.defaultFill = options?.fill;
     return this;

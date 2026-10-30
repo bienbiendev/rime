@@ -148,6 +148,14 @@ describe('select', () => {
     expect(radio('season').options("l'été").use.generateType()).toBe(`season?: "l'été"`);
   });
 
+  it('takes one option as its default, or a list with many', () => {
+    expect(select('status').options('draft', 'live').defaultValue('draft').use.defaultValue()).toBe(
+      'draft'
+    );
+    const tags = select('tags').options('news', 'events').many().defaultValue(['news']);
+    expect(tags.use.defaultValue()).toEqual(['news']);
+  });
+
   it('refuses a value that is not an option', () => {
     expect(select('kind').options('a', 'b').use.validate('c', ctx)).not.toBe(true);
     expect(select('kind').options('a', 'b').use.validate('a', ctx)).toBe(true);
