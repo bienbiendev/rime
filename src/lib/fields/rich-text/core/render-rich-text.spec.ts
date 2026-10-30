@@ -1,6 +1,7 @@
 import type { JSONContent } from '@tiptap/core';
 import { render } from 'svelte/server';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+import Keys from './render-rich-text.spec.svelte';
 import RenderRichText from './render-rich-text.svelte';
 
 const env = vi.hoisted(() => ({ dev: false }));
@@ -39,4 +40,13 @@ describe('a node without its component', () => {
         '[Provide a fields component to render this node]'
     );
   });
+});
+
+test('a custom node gets `components`, as a custom mark does', () => {
+  const components = { callout: Keys, highlight: Keys };
+  const callout = { type: 'callout', content: [{ type: 'text', text: 'Hi' }] };
+  const highlighted = { type: 'text', text: 'Hi', marks: [{ type: 'highlight' }] };
+  expect(html([callout, highlighted], components)).toBe(
+    '<aside>callout,highlight</aside><aside>callout,highlight</aside>'
+  );
 });

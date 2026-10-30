@@ -187,7 +187,7 @@
       <!--  -->
     {:else if components && node.type && node.type in components}
       {@const CustomNode = components[node.type]}
-      <CustomNode {node}>
+      <CustomNode {components} {node}>
         <RenderRichText {components} json={node} />
       </CustomNode>
     {:else if node.type === 'hardBreak'}
