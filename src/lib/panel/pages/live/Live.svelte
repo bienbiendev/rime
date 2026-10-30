@@ -94,18 +94,6 @@
     };
   }
 
-  // Posts `{ handshake: true }` to the iframe every 300 ms until it answers.
-  function handshake() {
-    if (sync === false) {
-      requestAnimationFrame(() => {
-        if (iframe?.contentWindow) {
-          iframe.contentWindow.postMessage({ handshake: true });
-        }
-        setTimeout(handshake, 300);
-      });
-    }
-  }
-
   const iframeOrigin = $derived.by(() => {
     try {
       return new URL(data.src).origin;
@@ -185,18 +173,23 @@
     return () => window.removeEventListener('message', onIframeMessage);
   });
 
+  let reachable = $state(false);
+
+  // Whether the preview's URL answers: the handshake waits for it
   $effect(() => {
-    // Check whether the iframe src has a 200 status code and is reachable
     trycatchFetch(data.src, { method: 'HEAD' }).then(([error, response]) => {
-      if (error || !response?.ok) {
-        console.error(`Error loading iframe, check your routes for ${data.src}`);
-      } else {
-        // Start handshake process when not synced
-        if (!sync) {
-          handshake();
-        }
-      }
+      reachable = !error && !!response?.ok;
+      if (!reachable) console.error(`Error loading iframe, check your routes for ${data.src}`);
     });
+  });
+
+  // Asks the preview for its URL at once, then every 300 ms, until it answers with the one shown
+  $effect(() => {
+    if (!reachable || sync) return;
+    const ask = () => iframe?.contentWindow?.postMessage({ handshake: true });
+    ask();
+    const timer = setInterval(ask, 300);
+    return () => clearInterval(timer);
   });
 
   $effect(() => {
