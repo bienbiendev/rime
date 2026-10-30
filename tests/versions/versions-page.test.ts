@@ -96,6 +96,14 @@ test('Should list both versions and mark the one on screen', async ({ page }) =>
   await expect(page.locator(TITLE)).toHaveValue('Versioned news, draft');
 });
 
+test('Should link "View page" to the version on screen', async ({ page }) => {
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(documentUrl(draftVersionId));
+
+  const href = await page.locator('.rz-document-actions__open').getAttribute('href');
+  expect(new URL(href!).searchParams.get(PARAMS.VERSION_ID)).toBe(draftVersionId);
+});
+
 test('Should save a draft in place, leaving the published version alone', async ({
   page,
   request

@@ -75,13 +75,13 @@
     return capitalize(parts.join(' · '));
   });
 
+  /** The page's url with `?versionId=`, so "View page" previews the row on screen. */
   function buildDocumentURL() {
-    let url = form.values.url;
-    if (url && form.values.versionId) {
-      url = url.includes('?') ? `${url}&` : `${url}?`;
-      url += `${PARAMS.VERSION_ID}=${form.values.versionId}`;
-    }
-    return url;
+    const url = form.values.url;
+    if (!url || !form.values.versionId) return url;
+    const preview = new URL(url);
+    preview.searchParams.set(PARAMS.VERSION_ID, String(form.values.versionId));
+    return preview.href;
   }
 </script>
 
