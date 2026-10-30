@@ -9,10 +9,7 @@ import { PARAMS } from '#lib/core/constants.js';
 import type { FormFieldBuilder } from '#lib/core/fields/builders/index.js';
 import { getFieldAtPath } from '#lib/core/fields/util.js';
 import { buildConfigMap } from '#lib/core/pipeline/config-map/index.js';
-import {
-  AUTO_SAVE_DELAY_MS,
-  VERSIONS_STATUS
-} from '#lib/core/prototype/shared/versions/constant.js';
+import { AUTO_SAVE_DELAY_MS } from '#lib/core/prototype/shared/versions/constant.js';
 import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '#lib/core/prototype/types.js';
 import { apiUrl, panelUrl } from '#lib/core/routes/util.js';
 import type { BlocksBuilder } from '#lib/fields/blocks/index.js';
@@ -326,16 +323,12 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   /** A copy of another locale's value, as new rows in this locale: the save creates them. */
   const asNewRows = <V>(value: V): V => withFreshIds(value, { locale: locale.code });
 
-  /** The document in the default locale, its newest row for a draft; `undefined` when none. */
+  /** The row on screen in the default locale: `/api/pages/1?locale=en&versionId=v2`. */
   const fetchDefaultLocaleDoc = async (): Promise<T | undefined> => {
-    const draftParam = doc.status === VERSIONS_STATUS.DRAFT ? `&${PARAMS.LATEST}=true` : '';
-    const query = isCollection
-      ? `?where[id][equals]=${doc.id}&locale=${locale.defaultCode}${draftParam}`
-      : `?locale=${locale.defaultCode}${draftParam}`;
-    const result = await fetch(`${apiUrl(documentConfig.kebab)}${query}`).then((r) => r.json());
-    if ((isCollection && Array.isArray(result.docs) && result.docs.length) || result.doc) {
-      return isCollection ? result.docs[0] : result.doc;
-    }
+    const versionParam = doc.versionId ? `&${PARAMS.VERSION_ID}=${doc.versionId}` : '';
+    const url = `${apiUrl(...documentSegments(documentConfig.kebab, doc))}?${PARAMS.LOCALE}=${locale.defaultCode}${versionParam}`;
+    const result = await fetch(url).then((r) => r.json());
+    return result.doc ?? undefined;
   };
 
   /**
