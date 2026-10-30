@@ -36,10 +36,11 @@
     isDialogOpen = true;
   };
 
-  // A node just inserted opens its dialog
+  // A node just inserted opens its picker, once
   onMount(() => {
     if (node.attrs._fresh) {
       isDialogOpen = true;
+      updateAttributes({ _fresh: false });
     }
   });
 
