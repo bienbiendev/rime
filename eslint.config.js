@@ -13,6 +13,8 @@ const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 
 export default ts.config(
   includeIgnoreFile(gitignorePath),
+  // The test fixtures, as tsconfig.json leaves them out
+  { ignores: ['tests/*/routes/**', 'tests/*/lib/**', 'tests/**/+rime/**', 'tests/*/params.ts'] },
   js.configs.recommended,
   ...ts.configs.recommended,
   ...svelte.configs.recommended,
