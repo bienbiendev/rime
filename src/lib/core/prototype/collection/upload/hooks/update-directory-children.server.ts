@@ -72,7 +72,10 @@ export const updateDirectoryChildren = Hooks.afterUpdate<'directory'>(
     for (const update of updates) {
       const [error] = await trycatch(() => collection.updateById(update));
       if (error) {
-        throw new RimeError(RimeError.OPERATION_ERROR, 'Error when updating child directories');
+        throw new RimeError(
+          RimeError.OPERATION_ERROR,
+          `Error when moving child directory ${update.id}: ${error.message}`
+        );
       }
     }
 
