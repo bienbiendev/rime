@@ -21,11 +21,12 @@
   // svelte-ignore state_referenced_locally
   const form = createFormStore(values);
 
-  // Each change in the form goes to `onchange`; the values it starts from are not sent back
+  // Each valid change in the form goes to `onchange`; the values it starts from are not sent
+  // back, and a field with an error keeps the node's last valid values
   let started = false;
   $effect(() => {
     const current = form.values;
-    if (started) {
+    if (started && !form.errors.length) {
       onchange(current);
     }
     started = true;

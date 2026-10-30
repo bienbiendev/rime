@@ -89,6 +89,38 @@ test.describe('Login form', () => {
     await expect(sonner).toHaveText('The operation failed');
   });
 
+  test('should keep an invalid email in error while the password is typed', async ({ page }) => {
+    await page.goto(panelUrl('sign-in'));
+
+    const email = page.locator('input[name="email"]');
+    await email.fill(ADMIN_EMAIL);
+    await email.fill('a@b');
+    await page.locator('input[name="password"]').fill(PASSWORD);
+
+    const emailError = page.locator('.rz-auth form .rz-field-root:first-of-type .rz-field-error');
+    await expect(emailError).toHaveText('Invalid email address');
+    await expect(page.locator('button[type="submit"]')).toBeDisabled();
+  });
+
+  test('should check a reset confirmation typed first once the password is typed', async ({
+    page
+  }) => {
+    // The page renders with any token: the token is checked when the reset is sent
+    await page.goto(`${panelUrl('reset-password')}?token=test`);
+
+    const password = page.locator('input[name="password"]');
+    const confirm = page.locator('input[name="confirmPassword"]');
+    const reset = page.getByRole('button', { name: 'Reset password' });
+
+    await confirm.fill('Secret-123!');
+    await password.fill('Secret-123!');
+    await expect(reset).toBeEnabled();
+
+    await confirm.fill('Secret-124!');
+    await expect(page.locator('.rz-field-error')).toHaveText('The passwords do not match');
+    await expect(reset).toBeDisabled();
+  });
+
   // basic sets `$smtp`, so the panel can send a reset mail
   test('should display the forgot password link when mail is configured', async ({ page }) => {
     await page.goto(panelUrl('sign-in'));
