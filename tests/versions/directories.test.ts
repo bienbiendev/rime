@@ -237,3 +237,24 @@ test('Deleting a folder deletes its sub-folders, their documents and their files
   expect((await request.get(`${BASE_URL}${top.url}`)).status()).toBe(404);
   expect((await request.get(`${BASE_URL}${nested.url}`)).status()).toBe(404);
 });
+
+test('The upload veil goes when a file drag leaves the window from the navigation', async ({
+  page
+}) => {
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('medias'));
+
+  const files = await page.evaluateHandle(() => {
+    const data = new DataTransfer();
+    data.items.add(new File(['x'], 'a.txt'));
+    return data;
+  });
+  const nav = page.locator('.rz-nav');
+  const veil = page.locator('.rz-page-drop');
+
+  await nav.dispatchEvent('dragenter', { dataTransfer: files });
+  await expect(veil).toBeVisible();
+  // No relatedTarget: the drag left the window, or ended there
+  await nav.dispatchEvent('dragleave', { dataTransfer: files });
+  await expect(veil).toHaveCount(0);
+});

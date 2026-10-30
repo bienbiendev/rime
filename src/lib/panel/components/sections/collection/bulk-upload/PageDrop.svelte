@@ -43,18 +43,27 @@
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
   }
 
+  /** Files released outside the veil are refused; the veil goes. */
   function onWindowDrop(event: DragEvent) {
     if (disabled || !carriesFiles(event) || event.defaultPrevented) return;
     event.preventDefault();
     over = false;
   }
 
+  /** The drag left the window, was cancelled, or ended on the navigation: the veil goes. */
+  function onWindowDragLeave(event: DragEvent) {
+    if (event.relatedTarget === null) over = false;
+  }
+
+  /** Over the veil, the files are taken as a copy. */
   function onDragOver(event: DragEvent) {
     event.preventDefault();
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
   }
 
-  /** Leaving the window, or onto the navigation, lowers the veil. */
+  /**
+   * Leaving the veil for the outside of the window lowers it; the navigation raises it again.
+   */
   function onDragLeave(event: DragEvent) {
     const veil = event.currentTarget as HTMLElement;
     if (!veil.contains(event.relatedTarget as Node | null)) over = false;
@@ -75,6 +84,7 @@
 <svelte:window
   ondragenter={onWindowDragEnter}
   ondragover={onWindowDragOver}
+  ondragleave={onWindowDragLeave}
   ondrop={onWindowDrop}
 />
 
