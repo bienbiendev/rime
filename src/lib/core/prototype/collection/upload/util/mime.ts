@@ -115,12 +115,12 @@ export const servedMimeType = (extension: string) =>
 
 /**
  * The types an upload takes only when `upload.accept` lists them: a page or a script a browser
- * runs from the site, and a script a server runs.
+ * runs from the site, and a script a server runs. Every image, video and audio type is taken,
+ * SVG included: an `<img>` runs no script of it, and `handleUploads` serves it sandboxed.
  */
 export const RISKY_MIME_TYPES = [
   'text/html',
   'application/xhtml+xml',
-  'image/svg+xml',
   'application/xml',
   'application/xslt+xml',
   'text/javascript',
@@ -137,9 +137,10 @@ export const RISKY_MIME_TYPES = [
  *
  * ```ts
  * isAcceptedType('image/png');                        // true
+ * isAcceptedType('image/svg+xml');                    // true
  * isAcceptedType('text/html');                        // false
  * isAcceptedType('application/octet-stream');         // true: no extension, or an unknown one
- * isAcceptedType('image/svg+xml', ['image/svg+xml']); // true
+ * isAcceptedType('text/html', ['text/html']);         // true
  * isAcceptedType('image/png', ['image/jpeg']);        // false
  * ```
  */

@@ -1283,17 +1283,45 @@ test('Should delete the file from disk when the last document referencing it is 
   expect(afterDelete.status()).toBe(404);
 });
 
-/** A collection without `accept` refuses the types a browser runs. */
-test('Should refuse an SVG file in a collection without accept', async ({ request }) => {
+/** A collection without `accept` refuses the types a browser runs as a page. */
+test('Should refuse an HTML file in a collection without accept', async ({ request }) => {
   const response = await request.post(`${API_BASE_URL}/pdf`, {
     headers: await signInSuperAdmin(request),
     data: {
-      file: { base64: 'data:image/jpeg;base64,PHN2Zy8+', filename: 'x.svg' },
+      file: {
+        base64: 'data:image/jpeg;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==',
+        filename: 'x.html'
+      },
       alt: 'x',
       status: VERSIONS_STATUS.PUBLISHED
     }
   });
   expect(response.status()).toBe(400);
+});
+
+/** An SVG is taken like any image, and served sandboxed: opened at its URL, it runs no script. */
+test('Should take an SVG file in a collection without accept, and serve it sandboxed', async ({
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg"><script>alert(${Date.now()})</script></svg>`;
+  const base64 = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+
+  const created = await request.post(`${API_BASE_URL}/pdf`, {
+    headers,
+    data: { file: { base64, filename: 'x.svg' }, alt: 'x', status: VERSIONS_STATUS.PUBLISHED }
+  });
+  expect(created.status()).toBe(200);
+  const { doc } = await created.json();
+  expect(doc.mimeType).toBe('image/svg+xml');
+
+  const served = await request.get(`${BASE_URL}${doc.url}`);
+  expect(served.status()).toBe(200);
+  expect(served.headers()['content-type']).toBe('image/svg+xml');
+  expect(served.headers()['content-security-policy']).toBe('sandbox');
+  expect(served.headers()['x-content-type-options']).toBe('nosniff');
+
+  await request.delete(`${API_BASE_URL}/pdf/${doc.id}`, { headers });
 });
 
 /*********************************************************

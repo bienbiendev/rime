@@ -92,8 +92,8 @@ export type UploadConfig = {
   /**
    * The types a file may have, by the extension it is saved under. Without it, every type is
    * taken but the risky ones: pages and scripts a browser or a server runs, such as `.html`,
-   * `.svg`, `.xml`, `.js` and `.php` (`RISKY_MIME_TYPES`). A risky type is taken only when it is
-   * listed here.
+   * `.xml`, `.js` and `.php` (`RISKY_MIME_TYPES`). A risky type is taken only when it is listed
+   * here. Images, SVG included, video and audio are never risky.
    * @example
    * ```typescript
    * accept: ['image/jpeg', 'image/svg+xml']

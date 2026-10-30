@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { isAcceptedType, servedMimeType } from './mime.js';
+import { isAcceptedType, mimeTypesMap, servedMimeType } from './mime.js';
 
 describe('servedMimeType', () => {
   test('a known extension is served as its type, any other as a download', () => {
@@ -14,13 +14,24 @@ describe('isAcceptedType', () => {
   test('without `accept`, every type but the risky ones', () => {
     expect(isAcceptedType('image/png')).toBe(true);
     expect(isAcceptedType('application/octet-stream')).toBe(true);
-    for (const extension of ['html', 'xhtml', 'svg', 'xml', 'xsl', 'mjs', 'php', 'php8', 'phar']) {
+    for (const extension of ['html', 'xhtml', 'xml', 'xsl', 'mjs', 'php', 'php8', 'phar', 'aspx']) {
       expect(isAcceptedType(servedMimeType(extension)), extension).toBe(false);
     }
   });
 
+  test('without `accept`, every image, video and audio type, SVG included', () => {
+    const media = Object.keys(mimeTypesMap).filter((type) => /^(image|video|audio)\//.test(type));
+    expect(media).toContain('image/svg+xml');
+    expect(media).toContain('video/mp4');
+    for (const type of media) {
+      expect(isAcceptedType(type), type).toBe(true);
+    }
+    expect(isAcceptedType(servedMimeType('svgz'))).toBe(true);
+  });
+
   test('with `accept`, the listed types only', () => {
-    expect(isAcceptedType('image/svg+xml', ['image/svg+xml'])).toBe(true);
+    expect(isAcceptedType('text/html', ['text/html'])).toBe(true);
+    expect(isAcceptedType('image/svg+xml', ['image/png'])).toBe(false);
     expect(isAcceptedType('image/png', ['image/jpeg'])).toBe(false);
     expect(isAcceptedType('application/octet-stream', ['image/jpeg'])).toBe(false);
   });
