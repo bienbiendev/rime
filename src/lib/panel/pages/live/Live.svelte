@@ -178,6 +178,7 @@
 
   onMount(() => {
     window.addEventListener('message', onIframeMessage);
+    return () => window.removeEventListener('message', onIframeMessage);
   });
 
   $effect(() => {

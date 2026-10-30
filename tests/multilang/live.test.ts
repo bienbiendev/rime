@@ -59,6 +59,44 @@ test('The close button of an area lands on the area page', async ({ page }) => {
   await page.waitForURL(panelUrl('infos'));
 });
 
+test('The live page stops listening to the preview once it is left', async ({ page }) => {
+  // The window's `message` listeners, kept in `window.messageListeners`
+  await page.addInitScript(() => {
+    const listeners = new Set<unknown>();
+    const add = window.addEventListener.bind(window);
+    const remove = window.removeEventListener.bind(window);
+    window.addEventListener = (...args: Parameters<typeof add>) => {
+      if (args[0] === 'message') listeners.add(args[1]);
+      add(...args);
+    };
+    window.removeEventListener = (...args: Parameters<typeof remove>) => {
+      if (args[0] === 'message') listeners.delete(args[1]);
+      remove(...args);
+    };
+    Object.assign(window, { messageListeners: listeners });
+  });
+  const countListeners = () =>
+    page.evaluate(
+      () => (window as unknown as { messageListeners: Set<unknown> }).messageListeners.size
+    );
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(live);
+  await expect(page.locator('input[name="instagram"]')).toBeVisible();
+  const before = await countListeners();
+
+  // Leave live edit for the area page, then come back, both without a reload
+  const close = page.locator('.rz-live-floating-ui button').first();
+  await close.click();
+  await expect(page.locator('input[name="instagram"]')).toHaveCount(0);
+  await close.click();
+  await page.waitForURL(panelUrl('infos'));
+  await page.goBack();
+  await expect(page.locator('input[name="instagram"]')).toBeVisible();
+
+  expect(await countListeners()).toBe(before);
+});
+
 /**
  * The live link names its locale: the save writes that row, whatever locale the panel cookie
  * holds. `instagram` is not localized, so the request is what tells which locale was written;
