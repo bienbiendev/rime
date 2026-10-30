@@ -3,6 +3,7 @@ import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
 import { invalidateAll } from '$app/navigation';
 import type { BuiltCollection } from '#lib/core/config/types.js';
 import { PARAMS } from '#lib/core/constants.js';
+import { t__ } from '#lib/core/i18n/index.js';
 import type { FieldBuilder } from '#lib/core/fields/builders/index.js';
 import { isFormField } from '#lib/core/fields/util.js';
 import { walkFields } from '#lib/core/fields/walk.js';
@@ -221,11 +222,11 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
 
     if (error) {
       console.error(error);
-      toast.error('An error occured while deleting documents');
+      toast.error(t__('common.generic_error'));
     } else {
       // The answer lists what went: a row the caller may not delete stays
       const { docs: deleted = [] } = await response.json();
-      const told = deletedToast(toDelete.length, deleted.length);
+      const told = deletedToast(toDelete.length, deleted.length, isUploadConfig(config));
       toast[told.kind](told.message);
     }
     // The API proxy's reads of the collection (a page's children) drop the deleted documents.

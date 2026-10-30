@@ -38,6 +38,9 @@ export default {
   duplicate: 'Dupliquer',
   duplicate_success: 'Dupliqué avec succès',
   doc_deleted: 'Document supprimé',
+  docs_deleted: '$1 {supprimé|supprimée|supprimés|supprimées}',
+  docs_not_deleted:
+    '$1 sur $2 {n’a pas pu être supprimé|n’a pas pu être supprimée|n’ont pas pu être supprimés|n’ont pas pu être supprimées}',
   doc_created: 'Document enregistré',
   doc_updated: 'Document mis à jour',
   draft_infos:

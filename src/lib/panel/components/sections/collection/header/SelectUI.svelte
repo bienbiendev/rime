@@ -3,6 +3,7 @@
   import Button from '#lib/panel/components/ui/button/button.svelte';
   import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
   import { getCollectionContext } from '#lib/panel/context/collection.svelte.js';
+  import { documentsCounted } from '#lib/panel/util/count.js';
   import SquareCheck from '@lucide/svelte/icons/square-check';
   import SquareMinus from '@lucide/svelte/icons/square-minus';
   import Trash from '@lucide/svelte/icons/trash';
@@ -11,10 +12,7 @@
   const selectedCount = $derived(collection.selected.length);
 
   // 2 documents, 1 file
-  const countLabel = $derived.by(() => {
-    const key = collection.isUpload ? 'common.collection_count_files' : 'common.collection_count';
-    return t__(selectedCount === 1 ? key : `${key}|m|p`, String(selectedCount));
-  });
+  const countLabel = $derived(documentsCounted(selectedCount, collection.isUpload));
 
   let confirmOpen = $state(false);
 

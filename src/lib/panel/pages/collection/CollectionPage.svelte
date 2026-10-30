@@ -17,6 +17,7 @@
   import SearchInput from '#lib/panel/components/sections/collection/header/SearchInput.svelte';
   import SelectUI from '#lib/panel/components/sections/collection/header/SelectUI.svelte';
   import type { KindFilter, StatusFilter } from '#lib/panel/context/collection.svelte.js';
+  import { counted, documentsCounted } from '#lib/panel/util/count.js';
   import { fileSizeLabel, type UploadTarget } from '#lib/panel/util/upload-file.js';
   import { switchLocale } from '#lib/panel/util/locale-cookie.js';
   import CollectionList from '#lib/panel/components/sections/collection/list/CollectionList.svelte';
@@ -94,16 +95,9 @@
     titleContext.value = collection.config.label.plural;
   });
 
-  /** A count in words: `1 file`, `24 documents`, `3 drafts`. */
-  const counted = (key: string, count: number) =>
-    t__(count === 1 ? key : `${key}|m|p`, String(count));
-
   // 24 documents · 3 drafts, or 486 files · 1.2 GB · drop files anywhere to upload them
   const metaLine = $derived.by(() => {
-    const countKey = collection.isUpload
-      ? 'common.collection_count_files'
-      : 'common.collection_count';
-    const parts = [counted(countKey, collection.total)];
+    const parts = [documentsCounted(collection.total, collection.isUpload)];
     if (collection.draftsCount) {
       parts.push(counted('common.collection_count_drafts', collection.draftsCount));
     }

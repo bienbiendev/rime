@@ -38,6 +38,8 @@ export default {
   duplicate: 'Duplicate',
   duplicate_success: 'Duplicated successfully',
   doc_deleted: 'Document deleted',
+  docs_deleted: '$1 deleted',
+  docs_not_deleted: '$1 of $2 could not be deleted',
   doc_created: 'Document created',
   doc_updated: 'Document updated',
   draft_infos: 'The document is in draft mode, only panel users can read it',

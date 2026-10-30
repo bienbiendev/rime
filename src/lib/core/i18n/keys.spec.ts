@@ -43,7 +43,13 @@ const RUNTIME_KEYS = [
     `common.${status}_infos`
   ]),
   ...MEDIA_KINDS.map((kind) => `common.media_kind_${kind}`),
-  ...['url', 'email', 'tel', 'anchor'].map((type) => `fields.link_${type}`)
+  ...['url', 'email', 'tel', 'anchor'].map((type) => `fields.link_${type}`),
+  // Said through panel/util/count.ts, which takes the key as a value
+  ...['collection_count', 'collection_count_files', 'collection_count_drafts'].map(
+    (key) => `common.${key}`
+  ),
+  'common.docs_deleted',
+  'common.docs_not_deleted'
 ];
 
 // Keys of another namespace belong to an app, as in the createI18n example: t__('site.hello')
