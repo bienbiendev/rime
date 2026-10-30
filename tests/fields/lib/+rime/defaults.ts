@@ -32,10 +32,7 @@ export const Defaults = Collection.create('defaults', {
     checkbox('checkboxSave').defaultValue(true, { fill: 'save' }),
     date('dateCreate').defaultValue(() => new Date()),
     date('dateSave').defaultValue(() => new Date(), { fill: 'save' }),
-    // A single select's default is one value; the builder types it as a list
-    // @ts-expect-error
     select('selectCreate').options('a', 'b').defaultValue('a'),
-    // @ts-expect-error
     select('selectSave').options('a', 'b').defaultValue('a', { fill: 'save' }),
     select('selectManyCreate').options('a', 'b').many().defaultValue(['a']),
     select('selectManySave').options('a', 'b').many().defaultValue(['a'], { fill: 'save' }),
