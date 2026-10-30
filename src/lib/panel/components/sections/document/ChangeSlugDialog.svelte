@@ -59,6 +59,12 @@
     saving = false;
 
     if (response?.ok) {
+      const row: { slug: string; path: string; url: string | null } = await response.json();
+      // The form holds the address the header shows: the server's answer replaces it.
+      form.sync('_slug', row.slug);
+      form.sync('_urlPath', row.path);
+      form.sync('url', row.url);
+      syncLiveLink(row.url);
       toast.success(t__('common.url_changed'));
       open = false;
       invalidateAll();
@@ -66,6 +72,15 @@
     }
     // A slug the client already checked is refused for one reason: a sibling holds it.
     error = response?.status === 400 ? t__('common.url_slug_taken') : t__('common.generic_error');
+  }
+
+  /** The live-edit link opens the page at its url: `…/live-edit?src=<url>&slug=…&id=…`. */
+  function syncLiveLink(url: string | null) {
+    const live = form.values._live;
+    if (typeof live !== 'string' || !url) return;
+    const link = new URL(live);
+    link.searchParams.set('src', url);
+    form.sync('_live', link.href);
   }
 </script>
 

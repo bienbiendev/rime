@@ -1,6 +1,14 @@
 import { toKebabCase } from '#lib/util/string.js';
 import test, { expect } from '@playwright/test';
-import { API_BASE_URL, loginAs, panelPath, panelUrl, panelUrlRe } from '../util.js';
+import {
+  API_BASE_URL,
+  BASE_URL,
+  loginAs,
+  panelPath,
+  panelUrl,
+  panelUrlRe,
+  signIn
+} from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -328,6 +336,47 @@ test.describe('API Key dialog', () => {
     await expect(page.locator('input.rz-input[name="name"]')).toHaveValue('CI App');
     await expect(page.locator('.rz-dialog-content')).toHaveCount(0);
     await expect(page.getByText(keyText)).toHaveCount(0);
+  });
+});
+
+test.describe('Change url', () => {
+  test('Should show and link the new address once the url is changed, with no reload', async ({
+    page,
+    request
+  }) => {
+    const stamp = Date.now();
+    const response = await request.post(`${API_BASE_URL}/pages`, {
+      headers: await signIn(ADMIN_EMAIL, PASSWORD)(request),
+      data: { attributes: { title: 'Change url', slug: `change-url-${stamp}` } }
+    });
+    expect(response.status()).toBe(200);
+    const id = (await response.json()).doc.id as string;
+
+    await loginAs(page, ADMIN_EMAIL, PASSWORD);
+    await page.goto(panelUrl('pages', id));
+
+    const next = `new-url-${stamp}`;
+    await page.locator('.rz-document-url').getByRole('button', { name: 'Change url' }).click();
+    const dialog = page.locator('.rz-dialog-content');
+    await dialog.locator('#rz-change-slug-input').fill(next);
+    await dialog.getByRole('button', { name: 'Change url' }).click();
+    await expect(page.getByText('Url changed')).toBeVisible();
+
+    // The url line, "View page" and the live-edit link read the new address
+    const host = BASE_URL.replace(/^https?:\/\//, '');
+    await expect(page.locator('.rz-document-url__text')).toHaveText(`${host}/${next}`);
+    await expect(page.locator('.rz-document-actions__open')).toHaveAttribute(
+      'href',
+      new RegExp(`/${next}(\\?|$)`)
+    );
+    await expect(page.locator('.rz-button-live')).toHaveAttribute(
+      'href',
+      new RegExp(encodeURIComponent(`/${next}`))
+    );
+
+    // The dialog opens on the new slug
+    await page.locator('.rz-document-url').getByRole('button', { name: 'Change url' }).click();
+    await expect(dialog.locator('#rz-change-slug-input')).toHaveValue(next);
   });
 });
 
