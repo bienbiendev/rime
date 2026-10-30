@@ -57,6 +57,12 @@
 
   let status = $derived(form.values.status);
 
+  /** Closes the dialog without Validate: the radio shows the document's status again. */
+  function cancel() {
+    status = form.values.status;
+    dialogOpen = false;
+  }
+
   /** The other statuses, one line each. */
   useCommands(() =>
     statusList
@@ -70,7 +76,12 @@
   );
 </script>
 
-<Dialog.Root bind:open={dialogOpen}>
+<Dialog.Root
+  bind:open={dialogOpen}
+  onOpenChange={(open) => {
+    if (!open) cancel();
+  }}
+>
   <Dialog.Trigger>
     {#snippet child({ props })}
       <Button size="sm" variant="ghost" class="rz-status__button" {...props}>
@@ -93,7 +104,7 @@
     </Radio.Root>
     <Dialog.Footer>
       <Button onclick={() => handleValidateStatus()} variant="outline" kbd="enter">Validate</Button>
-      <Button onclick={() => (dialogOpen = false)} variant="secondary" kbd="escape">
+      <Button onclick={cancel} variant="secondary" kbd="escape">
         {t__('common.cancel')}
       </Button>
     </Dialog.Footer>

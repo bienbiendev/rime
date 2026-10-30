@@ -510,3 +510,39 @@ test('Deleting the version opened from the plain address lands on the newest row
   await expect(page.locator(TITLE)).toHaveValue('Delete from plain');
   await saveTitle(page, request, id, 'Delete from plain, saved');
 });
+
+test('A status dialog closed without Validate shows the document status again', async ({
+  page,
+  request
+}) => {
+  const created = await request.post(`${API_BASE_URL}/news`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      attributes: { title: 'Status cancel', slug: 'status-cancel' },
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { id } = (await created.json()).doc;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('news', id));
+  const statusButton = page.getByRole('button', { name: 'Published' });
+  const dialog = page.getByRole('dialog');
+  const published = page.locator('[id="document.published"]');
+
+  // Cancel
+  await statusButton.click();
+  await page.locator('label[for="document.draft"]').click();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toBeHidden();
+  await statusButton.click();
+  await expect(published).toHaveAttribute('aria-checked', 'true');
+
+  // Escape
+  await page.locator('label[for="document.draft"]').click();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await statusButton.click();
+  await expect(published).toHaveAttribute('aria-checked', 'true');
+});
