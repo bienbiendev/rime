@@ -12,10 +12,9 @@
   const { path, config, form }: Props = $props();
 
   const field = $derived(form.useField(path, config));
-  let isFocused = false;
+  /** The slug follows its source while the document opened with no slug, until the user types one. */
   // svelte-ignore state_referenced_locally
-  const initialValue = form.getRawValue(path);
-  const initialEmpty = !initialValue;
+  let follows = $state(!form.getRawValue(path));
   const slugifySource = $derived(
     config.get.slugify ? form.useField<string>(config.get.slugify) : null
   );
@@ -28,19 +27,23 @@
   });
 
   $effect(() => {
-    if (!isFocused && initialEmpty && slugifiedValue && field.value !== slugifiedValue) {
+    if (follows && slugifiedValue && field.value !== slugifiedValue) {
       field.value = slugifiedValue;
     }
   });
 
+  /**
+   * Rewrites what is typed to its slug form. The first space becomes `-` before `slugify`, so a
+   * space typed at the end survives its trim: "my page" reads "my-page" while typing.
+   */
   const onInput = (event: Event) => {
-    const inputElement = event.target as HTMLInputElement;
-    const inputValue = inputElement.value;
-    const slugifiedValue = slugify(inputValue.replace(' ', '-'));
-    if (inputValue !== slugifiedValue) {
-      inputElement.value = slugifiedValue;
+    follows = false;
+    const input = event.target as HTMLInputElement;
+    const typed = slugify(input.value.replace(' ', '-'));
+    if (input.value !== typed) {
+      input.value = typed;
     }
-    field.value = inputElement.value;
+    field.value = input.value;
   };
 
   /** The field the slug is built from, by its last name: `attributes.title` → `title`. */
@@ -64,8 +67,6 @@
     value={field.value}
     name={path || config.name}
     oninput={onInput}
-    onfocus={() => (isFocused = true)}
-    onblur={() => (isFocused = false)}
   />
 
   <Field.Hint {config}>

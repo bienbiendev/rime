@@ -289,10 +289,16 @@ test.describe('Live Edit', () => {
     const tabAttribute = page.locator('.rz-tabs-trigger[data-value="attributes"]');
     await tabAttribute.click();
     const inputTitle = page.locator(`input.rz-input[name="attributes.title"]`);
-    await inputTitle.fill('Live test');
+    await inputTitle.fill('Live');
 
+    // The slug follows the title until one is typed in it
     const inputSlug = page.locator(`input.rz-input[name="attributes.slug"]`);
-    await inputSlug.fill('live-test');
+    await expect(inputSlug).toHaveValue('live');
+    await inputSlug.fill('');
+    await inputSlug.pressSequentially('welcome', { delay: 30 });
+    await inputTitle.pressSequentially(' test', { delay: 30 });
+    await expect(inputTitle).toHaveValue('Live test');
+    await expect(inputSlug).toHaveValue('welcome');
 
     await expect(saveButton).toBeEnabled();
     await saveButton.click();
