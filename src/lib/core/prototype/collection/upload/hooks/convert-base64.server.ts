@@ -5,21 +5,15 @@ import { isFile } from '#lib/util/file.js';
 
 /**
  * Runs before a create or an update on an upload collection: turns a file sent as JSON
- * (`{ base64, filename }`) into a `File` for `processFileUpload`. The body's own `filename`,
- * `filesize` and `mimeType` win over the ones read from the JSON file.
+ * (`{ base64, filename }`) into a `File` for `processFileUpload`, which writes the row's
+ * `filename`, `mimeType` and `filesize`.
  */
 export const castBase64ToFile = Hooks.beforeUpsert<'upload'>(async function castBase64ToFile(args) {
   let data = args.data;
   if (data?.file && !isFile(data.file)) {
     try {
-      const { file, filename, filesize, mimeType } = jsonFileToFile(data.file);
-      data = {
-        ...data,
-        file,
-        filename: data.filename || filename,
-        filesize: data.filesize || filesize,
-        mimeType: data.mimeType || mimeType
-      };
+      const { file } = jsonFileToFile(data.file);
+      data = { ...data, file };
     } catch (err: any) {
       if (err instanceof RimeError) throw err;
       args.event.locals.rime.logger.error(

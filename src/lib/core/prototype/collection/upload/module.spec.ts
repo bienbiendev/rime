@@ -41,20 +41,9 @@ describe('augmentUpload', () => {
     } as any);
     expect(files.upload!.imageSizes).toEqual([{ name: 'thumbnail', width: 120 }]);
   });
-
-  test('`accept` checks the mime type', () => {
-    const files = augmentUpload({
-      slug: 'files',
-      fields: [],
-      upload: { accept: ['image/png'] }
-    } as any);
-    const mimeType = files.fields.find((field: any) => field.name === 'mimeType') as any;
-    expect(mimeType.use.validate('image/png', {} as never)).toBe(true);
-    expect(mimeType.use.validate('text/html', {} as never)).not.toBe(true);
-  });
 });
 
-describe('the stored file names', () => {
+describe('the stored file columns', () => {
   const config = augmentUpload({ slug: 'medias', fields: [text('alt')], upload: {} } as any);
 
   /** `data` through a staff request's field checks, as `operation`. */
@@ -81,7 +70,13 @@ describe('the stored file names', () => {
   };
 
   test.each(['create', 'update'] as const)('%s: a request cannot write them', async (operation) => {
-    const data = { alt: 'x', filename: '../../.env', thumbnail: '../../src/hooks.server.ts' };
+    const data = {
+      alt: 'x',
+      filename: '../../.env',
+      thumbnail: '../../src/hooks.server.ts',
+      mimeType: 'image/jpeg',
+      filesize: '1 B'
+    };
     expect(await written(operation, data)).toEqual({ alt: 'x' });
   });
 });

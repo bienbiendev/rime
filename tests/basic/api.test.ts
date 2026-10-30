@@ -1,7 +1,7 @@
 import { filePathToBase64 } from '#lib/core/prototype/collection/upload/util/converter.server.js';
 import { EDIT_LOCK_TTL_AFTER_CLOSE_MS } from '#lib/core/prototype/shared/metas/constant.js';
 import test, { expect, type APIRequestContext } from '@playwright/test';
-import { readFileSync, rmSync } from 'fs';
+import { existsSync, readFileSync, rmSync } from 'fs';
 import path from 'path';
 import { API_BASE_URL, BASE_URL, panelUrl, signIn } from '../util.js';
 
@@ -389,6 +389,17 @@ test('Should create a Media', async ({ request }) => {
   expect(doc.sizes.xl).toBe('/uploads/medias/landscape-3-xl-2048.webp');
   expect(doc.sizes.thumbnail).toBe('/uploads/medias/landscape-3-thumbnail-400.jpg');
   expect(doc._path).toBe('root');
+});
+
+test('Should refuse an HTML file sent as a JPEG', async ({ request }) => {
+  // The bytes are `<script>alert(1)</script>`
+  const base64 = 'data:image/jpeg;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==';
+  const response = await request.post(`${API_BASE_URL}/medias`, {
+    headers: await signInSuperAdmin(request),
+    data: { file: { base64, filename: 'x.html' }, alt: 'x' }
+  });
+  expect(response.status()).toBe(400);
+  expect(existsSync(path.resolve(process.cwd(), 'storage/uploads/medias/x.html'))).toBe(false);
 });
 
 test("Should update a media path (path doesn't exists)", async ({ request }) => {

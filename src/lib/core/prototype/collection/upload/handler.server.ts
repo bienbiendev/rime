@@ -12,7 +12,7 @@ import {
   isUploadConfig,
   type WithUpload
 } from '#lib/core/prototype/collection/upload/util/config.js';
-import { getMimeTypeFromExtension } from '#lib/core/prototype/collection/upload/util/mime.js';
+import { servedMimeType } from '#lib/core/prototype/collection/upload/util/mime.js';
 import type { CollectionSlug } from '#lib/core/prototype/types.js';
 import { trycatch, trycatchSync } from '#lib/util/function.js';
 import type { RequestEvent } from '@sveltejs/kit';
@@ -88,8 +88,7 @@ export const fileResponse = async (request: Request, filePath: string, cacheCont
   }
 
   const { start, end } = range ?? { start: 0, end: stats.size - 1 };
-  const type = getMimeTypeFromExtension(path.extname(filePath).slice(1));
-  headers.set('content-type', type ?? 'application/octet-stream');
+  headers.set('content-type', servedMimeType(path.extname(filePath).slice(1)));
   headers.set('content-length', String(end - start + 1));
   if (range) {
     headers.set('content-range', `bytes ${start}-${end}/${stats.size}`);

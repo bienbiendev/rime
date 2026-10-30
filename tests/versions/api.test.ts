@@ -1270,6 +1270,7 @@ test('Should delete the file from disk when the last document referencing it is 
   expect(createResponse.status()).toBe(200);
   const { doc } = await createResponse.json();
   expect(doc.filename).toBe(filename);
+  expect(doc.mimeType).toBe('text/plain');
 
   // On disk, and served.
   const beforeDelete = await request.get(`${BASE_URL}/uploads/pdf/${filename}`);
@@ -1280,6 +1281,19 @@ test('Should delete the file from disk when the last document referencing it is 
 
   const afterDelete = await request.get(`${BASE_URL}/uploads/pdf/${filename}`);
   expect(afterDelete.status()).toBe(404);
+});
+
+/** A collection without `accept` refuses the types a browser runs. */
+test('Should refuse an SVG file in a collection without accept', async ({ request }) => {
+  const response = await request.post(`${API_BASE_URL}/pdf`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      file: { base64: 'data:image/jpeg;base64,PHN2Zy8+', filename: 'x.svg' },
+      alt: 'x',
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(response.status()).toBe(400);
 });
 
 /*********************************************************

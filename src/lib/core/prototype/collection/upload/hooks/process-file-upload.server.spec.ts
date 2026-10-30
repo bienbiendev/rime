@@ -63,4 +63,19 @@ describe('processFileUpload', () => {
     const result = await update({ alt: 'x' });
     expect(result.context.replacedFiles).toEqual([]);
   });
+
+  test('the type and size are read from the saved file, not from the request', async () => {
+    const file = new File(['new'], 'new.txt', { type: 'image/jpeg' });
+
+    const result = await update({ file, mimeType: 'image/jpeg', filesize: '1 B' });
+
+    expect(result.data).toMatchObject({ mimeType: 'text/plain', filesize: '0.00KB' });
+  });
+
+  test('a risky file is refused, and nothing is saved', async () => {
+    const file = new File(['<script>alert(1)</script>'], 'x.html', { type: 'image/jpeg' });
+
+    await expect(update({ file })).rejects.toThrow('.html is not an accepted file type');
+    expect(existsSync(mediaFilePath(config, 'x.html'))).toBe(false);
+  });
 });

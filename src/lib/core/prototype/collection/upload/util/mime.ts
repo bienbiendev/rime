@@ -8,7 +8,7 @@ export const mimeTypesMap: Record<string, string[]> = {
   'image/png': ['png'],
   'image/gif': ['gif'],
   'image/webp': ['webp'],
-  'image/svg+xml': ['svg'],
+  'image/svg+xml': ['svg', 'svgz'],
   'image/bmp': ['bmp'],
   'image/tiff': ['tif', 'tiff'],
 
@@ -22,7 +22,8 @@ export const mimeTypesMap: Record<string, string[]> = {
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['pptx'],
   'text/plain': ['txt'],
   'text/csv': ['csv'],
-  'text/html': ['html', 'htm'],
+  'text/html': ['html', 'htm', 'shtml'],
+  'application/xhtml+xml': ['xhtml', 'xht'],
 
   // Audio
   'audio/mpeg': ['mp3'],
@@ -48,9 +49,24 @@ export const mimeTypesMap: Record<string, string[]> = {
   // Code
   'application/json': ['json'],
   'application/xml': ['xml'],
-  'text/javascript': ['js'],
+  'application/xslt+xml': ['xsl', 'xslt'],
+  'text/javascript': ['js', 'mjs', 'cjs'],
   'text/css': ['css'],
-  'application/x-httpd-php': ['php'],
+  'application/x-httpd-php': [
+    'php',
+    'phtml',
+    'pht',
+    'phps',
+    'phar',
+    'php3',
+    'php4',
+    'php5',
+    'php7',
+    'php8'
+  ],
+  'application/x-asp': ['asp', 'aspx'],
+  'application/x-jsp': ['jsp', 'jspx'],
+  'application/x-perl': ['pl', 'cgi'],
   'application/x-python-code': ['py'],
 
   // Fonts
@@ -84,3 +100,48 @@ export function getMimeTypeFromExtension(extension: string): string | null {
   }
   return null;
 }
+
+/**
+ * The type a file is served as, by its extension: `application/octet-stream`, which a browser
+ * downloads, for an unknown one.
+ *
+ * ```ts
+ * servedMimeType('JPG'); // 'image/jpeg'
+ * servedMimeType('');    // 'application/octet-stream'
+ * ```
+ */
+export const servedMimeType = (extension: string) =>
+  getMimeTypeFromExtension(extension) ?? 'application/octet-stream';
+
+/**
+ * The types an upload takes only when `upload.accept` lists them: a page or a script a browser
+ * runs from the site, and a script a server runs.
+ */
+export const RISKY_MIME_TYPES = [
+  'text/html',
+  'application/xhtml+xml',
+  'image/svg+xml',
+  'application/xml',
+  'application/xslt+xml',
+  'text/javascript',
+  'application/x-httpd-php',
+  'application/x-asp',
+  'application/x-jsp',
+  'application/x-perl',
+  'application/x-python-code'
+];
+
+/**
+ * Whether an upload of this type may be stored. With `accept`, the listed types only; without
+ * it, every type but the risky ones.
+ *
+ * ```ts
+ * isAcceptedType('image/png');                        // true
+ * isAcceptedType('text/html');                        // false
+ * isAcceptedType('application/octet-stream');         // true: no extension, or an unknown one
+ * isAcceptedType('image/svg+xml', ['image/svg+xml']); // true
+ * isAcceptedType('image/png', ['image/jpeg']);        // false
+ * ```
+ */
+export const isAcceptedType = (mimeType: string, accept?: string[]) =>
+  accept?.length ? accept.includes(mimeType) : !RISKY_MIME_TYPES.includes(mimeType);

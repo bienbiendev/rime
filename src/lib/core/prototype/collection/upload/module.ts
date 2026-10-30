@@ -45,9 +45,9 @@ const withNormalizedUpload = <T extends { upload?: boolean | UploadConfig }>(
 
 /**
  * Adds what an upload collection stores beside the author's fields: one hidden column per image
- * size (a 400px `thumbnail` first, unless the config names one), `mimeType` (checked against
- * `accept` when it is set), `filename`, `filesize` and `_path`. Documents are named by their
- * `filename`, and the dashboard shows the collection as a grid.
+ * size (a 400px `thumbnail` first, unless the config names one), `mimeType`, `filename`,
+ * `filesize` and `_path`. Documents are named by their `filename`, and the dashboard shows the
+ * collection as a grid.
  */
 export const augmentUpload = <T extends Collection<any>>(config: T): WithNormalizedUpload<T> => {
   const normalizedUploadConfig = withNormalizedUpload(config);
@@ -74,24 +74,12 @@ export const augmentUpload = <T extends Collection<any>>(config: T): WithNormali
   const sizesFields = upload.imageSizes.map((size) => text(size.name).hidden().access(serverOnly));
   fields = [...fields, ...sizesFields];
 
-  const mimeType = text('mimeType').table({ sort: true, position: 99 }).hidden();
-
-  if ('accept' in upload && Array.isArray(upload.accept)) {
-    const allowedMimeTypes = upload.accept;
-    mimeType.validate((value) => {
-      return (
-        (typeof value === 'string' && allowedMimeTypes.includes(value)) ||
-        `File should be the type of ${allowedMimeTypes.toString()}`
-      );
-    });
-  }
-
   const _pathField = text('_path').$root().hidden().validate(validatePath);
 
   fields.push(
-    mimeType,
+    text('mimeType').table({ sort: true, position: 99 }).hidden().access(serverOnly),
     text('filename').hidden().access(serverOnly),
-    text('filesize').hidden(),
+    text('filesize').hidden().access(serverOnly),
     _pathField
   );
 

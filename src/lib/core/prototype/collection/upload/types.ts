@@ -90,10 +90,13 @@ export type UploadConfig = {
    */
   imageSizes?: ImageSizesConfig[];
   /**
-   * Allowed mimeTypes
+   * The types a file may have, by the extension it is saved under. Without it, every type is
+   * taken but the risky ones: pages and scripts a browser or a server runs, such as `.html`,
+   * `.svg`, `.xml`, `.js` and `.php` (`RISKY_MIME_TYPES`). A risky type is taken only when it is
+   * listed here.
    * @example
    * ```typescript
-   * accept: ['image/jpeg', 'image/svg']
+   * accept: ['image/jpeg', 'image/svg+xml']
    * ```
    */
   accept?: string[];
