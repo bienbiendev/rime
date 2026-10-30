@@ -6,8 +6,8 @@ import { redirect, type Actions } from '@sveltejs/kit';
 export const signInActions: Actions = {
   /**
    * Signs in through better-auth's email and password sign-in, copies the cookie it sets onto the
-   * panel's answer, and goes to the panel; a refused sign-in answers the form with
-   * `invalid_credentials`.
+   * panel's answer, and goes to the panel; a refused sign-in, a rate-limited one included, answers
+   * the form with `invalid_credentials`.
    */
   default: async ({ cookies, request, locals, params }) => {
     const { rime } = locals;
@@ -16,10 +16,18 @@ export const signInActions: Actions = {
     const email = data.get('email')?.toString() || '';
     const password = data.get('password')?.toString() || '';
 
-    const response = await rime.auth.api.signInEmail({
-      body: { email, password },
-      asResponse: true
-    });
+    // Through better-auth's router, as /api/auth/sign-in/email: its rate limiter runs there only.
+    // The visitor's headers go along, so the limiter and the session read the client's address.
+    const headers = new Headers(request.headers);
+    headers.set('content-type', 'application/json');
+    headers.delete('content-length');
+    const response = await rime.auth.handler(
+      new Request(new URL('/api/auth/sign-in/email', request.url), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ email, password })
+      })
+    );
 
     const authenticated = response && response.status === 200;
 
