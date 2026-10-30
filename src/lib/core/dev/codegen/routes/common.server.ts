@@ -47,7 +47,7 @@ const error = (): string => `
     gap: 1rem;
     h1 {
       font-size: 1.5rem;
-      font-weight: semibold;
+      font-weight: 600;
     }
   }
 </style>
