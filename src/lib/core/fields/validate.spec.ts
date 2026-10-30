@@ -35,3 +35,10 @@ describe('tel', () => {
     expect(tel('1+2')).toBe(RimeFormError.INVALID_PHONE);
   });
 });
+
+describe('link placeholders', () => {
+  it('pass as typed: the panel shows them as sample values', () => {
+    expect(validate.tel('+1 555 0100')).toBe(true);
+    expect(validate.email('name@example.com')).toBe(true);
+  });
+});

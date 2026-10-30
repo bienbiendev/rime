@@ -27,10 +27,11 @@
     anchor: Anchor
   };
 
+  // Samples from the reserved example domain and number range
   const placeholders: Record<string, string> = {
     url: 'https://',
-    email: 'email@zola.fr',
-    tel: '+330700000000',
+    email: 'name@example.com',
+    tel: '+1 555 0100',
     anchor: 'my-anchor'
   };
 
