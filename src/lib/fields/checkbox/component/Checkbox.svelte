@@ -24,6 +24,7 @@
     <div class="rz-setting__text">
       <Field.LabelFor {config} for={inputId} />
       <Field.Hint {config} />
+      <Field.Error error={field.error} />
     </div>
     <Checkbox
       class="rz-checkbox-field__input {checkboxErrorClass}"

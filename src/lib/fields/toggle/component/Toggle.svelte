@@ -21,6 +21,7 @@
     <div class="rz-setting__text">
       <Field.LabelFor {config} for={inputId} />
       <Field.Hint {config} />
+      <Field.Error error={field.error} />
     </div>
     <Switch
       data-error={field.error ? '' : null}

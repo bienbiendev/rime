@@ -30,6 +30,13 @@
   margin-top: var(--rz-size-0-5);
 }
 
+/* The error reads under the name, not over the control. */
+.rz-setting .rz-setting__text .rz-field-error {
+  position: static;
+  display: inline-block;
+  margin-top: var(--rz-size-1);
+}
+
 /* Inside a group, a block, a tree item or the inspector: a hairline, no second fill. */
 :is(.rz-group-field__content, .rz-block__fields, .rz-tree-item__fields, .rz-inspector__fields)
   .rz-setting {

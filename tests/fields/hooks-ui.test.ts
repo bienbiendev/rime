@@ -85,8 +85,11 @@ test('Should block the create form when agree is left unchecked', async ({ page,
 
   await page.locator('button[type="submit"]').click();
 
-  // The box shows the error, and nothing was stored
+  // The box shows the error and its message, and nothing was stored
   await expect(page.locator('fieldset[data-path="agree"] .rz-checkbox--error')).toBeVisible();
+  await expect(page.locator('fieldset[data-path="agree"] .rz-field-error')).toHaveText(
+    'must accept terms'
+  );
   const { docs } = await request
     .get(
       `${API_BASE_URL}/hooks-test?where[title][equals]=${encodeURIComponent('Should not save')}`,
