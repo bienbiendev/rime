@@ -6,8 +6,8 @@ const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
 /**
- * A move in the tree of `pages`, a nested collection, that the server refuses: the panel says so
- * and shows the stored order again.
+ * Moves in the tree of `pages`, a nested collection. A move the server refuses: the panel says so
+ * and shows the stored order again. A row released where it was taken: nothing is sent.
  */
 
 /** The titles of the tree's rows, top to bottom. */
@@ -51,4 +51,37 @@ test('A refused move shows an error and keeps the stored order', async ({ page, 
 
   await expect(page.getByText('An error occurred')).toBeVisible();
   await expect.poll(() => titles(page)).toEqual(before);
+});
+
+test('A row released where it was taken sends nothing', async ({ page, request }) => {
+  const headers = await signInSuperAdmin(request);
+  const created = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { attributes: { title: 'Stay put', slug: 'stay-put' } }
+  });
+  expect(created.status()).toBe(200);
+
+  await page.addInitScript(() =>
+    localStorage.setItem('collection.pages.display', 'display_nested')
+  );
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages'));
+  await expect.poll(() => titles(page)).toEqual(expect.arrayContaining(['Stay put']));
+  const before = await titles(page);
+
+  const patches: string[] = [];
+  page.on('request', (sent) => {
+    if (sent.method() === 'PATCH') patches.push(sent.url());
+  });
+
+  const row = page.locator('.rz-collection-node__row', {
+    has: page.getByText('Stay put', { exact: true })
+  });
+  await row.locator('.rz-collection-node__grip').dragTo(row);
+
+  // A save would answer well within this time.
+  await page.waitForTimeout(1000);
+  expect(patches).toEqual([]);
+  await expect(page.getByText('Order updated')).toHaveCount(0);
+  expect(await titles(page)).toEqual(before);
 });

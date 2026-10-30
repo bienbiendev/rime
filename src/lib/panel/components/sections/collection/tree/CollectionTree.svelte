@@ -28,6 +28,9 @@
       name: `list-nested`
     },
     onEnd: function (evt) {
+      // Released where it was taken: nothing to save.
+      if (evt.from === evt.to && evt.oldIndex === evt.newIndex) return;
+
       const { newIndex } = evt;
 
       const fromParentId = evt.item.getAttribute('data-parent');
