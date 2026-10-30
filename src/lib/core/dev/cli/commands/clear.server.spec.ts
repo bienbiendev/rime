@@ -5,6 +5,7 @@ import { RIME_DEV_CACHE_DIR } from '#lib/core/constants.server.js';
 import { logger } from '#lib/core/logger.server.js';
 import { CONFIG_DIR, GENERATED_DIR } from '../../constants.server.js';
 import { importAdapterHooks } from '../util/adapter-hooks.server.js';
+import { prompt } from '../util/prompt.server.js';
 import { clear } from './clear.server.js';
 
 // A temporary project, whose .rime cache this is: the real one under node_modules is not touched
@@ -19,6 +20,7 @@ vi.mock('../util/adapter-hooks.server.js', async (original) => ({
   ...(await original<object>()),
   importAdapterHooks: vi.fn()
 }));
+vi.mock('../util/prompt.server.js', () => ({ prompt: vi.fn() }));
 
 /** The temporary project's root, two levels above its cache. */
 const root = dirname(dirname(RIME_DEV_CACHE_DIR));
@@ -45,6 +47,7 @@ afterEach(() => {
   process.chdir(cwd);
   vi.restoreAllMocks();
   vi.mocked(importAdapterHooks).mockReset();
+  vi.mocked(prompt).mockReset();
 });
 
 const coreRemoved = () => {
@@ -106,5 +109,19 @@ describe('rime clear', () => {
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("The database adapter's files are left: Cannot find module")
     );
+  });
+
+  it('asks once, with no as the default, and removes nothing on an empty answer', async () => {
+    vi.mocked(prompt).mockResolvedValue('');
+
+    await clear({});
+
+    const [question] = vi.mocked(prompt).mock.calls[0];
+    expect(question).toMatch(/\(y\/N\)$/);
+    expect(question).not.toContain('(Y/n)');
+    expect(importAdapterHooks).not.toHaveBeenCalled();
+    for (const file of ['src/routes/(rime)', CONFIG_DIR, GENERATED_DIR, 'storage/sqlite']) {
+      expect(exists(file), file).toBe(true);
+    }
   });
 });

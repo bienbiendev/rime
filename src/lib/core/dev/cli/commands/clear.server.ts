@@ -8,7 +8,7 @@ import { CONFIG_DIR, GENERATED_DIR } from '../../constants.server.js';
 import { importAdapterHooks, recordedHooksModule } from '../util/adapter-hooks.server.js';
 import { prompt } from '../util/prompt.server.js';
 
-const clearMessage = `Are you sure you want to delete all related rime files (Y/n):
+const clearMessage = `Are you sure you want to delete all related rime files:
 - the files of the database adapter
 - ./storage/uploads
 - ./src/routes/(rime)
@@ -31,7 +31,7 @@ export const clear = async (args: { force?: boolean }) => {
   let shouldProceed = true;
 
   if (!args.force) {
-    const response = await prompt(`${clearMessage} (Y/n)`, 'n');
+    const response = await prompt(`${clearMessage}(y/N)`, 'n');
     shouldProceed = response.trim().toLowerCase() === 'y';
   }
 
