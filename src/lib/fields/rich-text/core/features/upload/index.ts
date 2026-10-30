@@ -9,7 +9,7 @@ export const UploadFeature = (args: UploadFeatureExtensionOptions): RichTextFeat
     extension: Upload.configure(args).extend({ name: 'rich-text-upload-' + slug }),
     nodes: [
       {
-        label: 'Media',
+        label: args.label || slug,
         icon: Images,
         isActive: ({ editor }) => editor.isActive('rich-text-upload-' + slug),
         suggestion: {

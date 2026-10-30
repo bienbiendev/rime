@@ -76,5 +76,11 @@ export default {
   file_type: 'Type',
   select_date: 'Select a date',
   rich_text_unsupported:
-    'This text holds $1, which this field does not offer. It is read-only, so the stored value is kept.'
+    'This text holds $1, which this field does not offer. It is read-only, so the stored value is kept.',
+  rich_text_add_media: 'Add a media',
+  rich_text_add_resource: 'Add a resource',
+  rich_text_set_legend: 'Set legend',
+  rich_text_media_legend: 'Media legend',
+  rich_text_paragraph: 'Paragraph',
+  rich_text_multiple: 'Multiple'
 };

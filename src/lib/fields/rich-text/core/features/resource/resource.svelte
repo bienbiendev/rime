@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t__ } from '#lib/core/i18n/index.js';
   import type { GenericDoc } from '#lib/core/prototype/types.js';
   import { apiUrl } from '#lib/core/routes/util.js';
   import Button from '#lib/panel/components/ui/button/button.svelte';
@@ -97,7 +98,7 @@
   >
     {#if !selected}
       <Button class="rz-richtext-resource__add" variant="outline" size="sm" onclick={handleClick}>
-        Add a resource
+        {t__('fields.rich_text_add_resource')}
       </Button>
     {:else}
       <CardResource resource={selected as RequiredNodeAttributes} onCloseClick={removeResource} />

@@ -76,5 +76,11 @@ export default {
   file_type: 'Type',
   select_date: 'Choisir une date',
   rich_text_unsupported:
-    'Ce texte contient $1, que ce champ ne propose pas. Il est en lecture seule pour garder la valeur enregistrée.'
+    'Ce texte contient $1, que ce champ ne propose pas. Il est en lecture seule pour garder la valeur enregistrée.',
+  rich_text_add_media: 'Ajouter un média',
+  rich_text_add_resource: 'Ajouter une ressource',
+  rich_text_set_legend: 'Ajouter une légende',
+  rich_text_media_legend: 'Légende du média',
+  rich_text_paragraph: 'Paragraphe',
+  rich_text_multiple: 'Plusieurs'
 };

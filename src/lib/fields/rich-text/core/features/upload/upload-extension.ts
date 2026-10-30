@@ -5,6 +5,8 @@ import { jsonAttribute } from '../json-attribute.js';
 import UploadView from './upload.svelte';
 
 export interface UploadFeatureExtensionOptions {
+  /** The palette entry's label; the collection slug when none is given. */
+  label?: string;
   /**
    * The collection slug, with an optional query that filters the picker:
    * `'medias?where[mimeType][like]=image'`.

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t__ } from '#lib/core/i18n/index.js';
   import type { UploadDoc } from '#lib/core/prototype/collection/upload/types.js';
   import { apiUrl } from '#lib/core/routes/util.js';
   import UploadThumbCell from '#lib/panel/components/sections/collection/upload-thumb-cell/UploadThumbCell.svelte';
@@ -125,7 +126,7 @@
   <div data-drag-handle class="rz-richtext-media" class:rz-richtext-media--selected={!!selected}>
     {#if !selected}
       <Button class="rz-richtext-media__add" variant="outline" onclick={handleClick}>
-        Add a media
+        {t__('fields.rich_text_add_media')}
       </Button>
     {:else}
       <div class="rz-richtext-media__actions">
@@ -135,7 +136,7 @@
           type="button"
           onclick={() => (dialogLegendOpen = true)}
         >
-          {legend || 'set legend'}
+          {legend || t__('fields.rich_text_set_legend')}
         </Button>
         <Button
           size="icon-sm"
@@ -169,7 +170,7 @@
 {#snippet media(attributes: Omit<NodeAttributes, 'legend' | '_fresh'>)}
   <div class="rz-richtext-media__media">
     {#if attributes.mimeType?.includes('image')}
-      <img src={attributes.url} alt="rich text" />
+      <img src={attributes.url} alt={legend} />
     {:else if attributes.mimeType?.includes('video')}
       <video muted src={attributes.url}></video>
     {/if}
@@ -186,7 +187,7 @@
 
 <Dialog.Root bind:open={dialogLegendOpen}>
   <Dialog.Content>
-    <Dialog.Title>Media legend</Dialog.Title>
+    <Dialog.Title>{t__('fields.rich_text_media_legend')}</Dialog.Title>
     <Input bind:value={legend} oninput={updateNodeAttributes} />
   </Dialog.Content>
 </Dialog.Root>
