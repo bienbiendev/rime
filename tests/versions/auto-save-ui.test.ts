@@ -441,3 +441,72 @@ test('Saving works again after an auto-save that got no answer', async ({ page, 
   });
   expect((await response.json()).doc.attributes.title).toBe('Offline news, typed');
 });
+
+/**
+ * A published news opened at its plain address, then typed into until an auto-save moves the
+ * address bar to `?versionId=<auto-save>`: the loaded address stays the plain one.
+ */
+async function autoSaveFromPlainAddress(page: Page, request: APIRequestContext, title: string) {
+  const created = await request.post(`${API_BASE_URL}/news`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      attributes: { title, slug: title.toLowerCase().replace(/\W+/g, '-') },
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { id } = (await created.json()).doc;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('news', id));
+  const autoSaved = page.waitForResponse(isAutoSavePost);
+  await page.locator(TITLE).fill(`${title}, typing`);
+  expect((await autoSaved).status()).toBe(200);
+  await page.waitForURL((url) => !!url.searchParams.get(PARAMS.VERSION_ID));
+  return id as string;
+}
+
+/** Saves `title` from the form, and reads it back over the API. */
+async function saveTitle(page: Page, request: APIRequestContext, id: string, title: string) {
+  await page.locator(TITLE).fill(title);
+  const saved = page.waitForResponse(isSavePost);
+  await page.locator(SAVE).click();
+  expect((await saved).status()).toBe(200);
+  const response = await request.get(`${API_BASE_URL}/news/${id}`, {
+    headers: await signInSuperAdmin(request)
+  });
+  expect((await response.json()).doc.attributes.title).toBe(title);
+}
+
+test('Discarding the own auto-save opened from the plain address lands on the newest row', async ({
+  page,
+  request
+}) => {
+  const id = await autoSaveFromPlainAddress(page, request, 'Discard from plain');
+
+  await openHistory(page);
+  await page.locator(OWN_VERSION_ROW).getByRole('button', { name: 'Discard' }).click();
+
+  // The form is on the published row again, and its save writes it
+  await page.waitForURL((url) => !url.searchParams.get(PARAMS.VERSION_ID));
+  await expect(page.locator(TITLE)).toHaveValue('Discard from plain');
+  await saveTitle(page, request, id, 'Discard from plain, saved');
+});
+
+test('Deleting the version opened from the plain address lands on the newest row', async ({
+  page,
+  request
+}) => {
+  const id = await autoSaveFromPlainAddress(page, request, 'Delete from plain');
+
+  await page.getByRole('button', { name: 'Document actions' }).click();
+  await page.getByRole('menuitem', { name: 'Delete this version' }).click();
+  const removed = page.waitForResponse((response) => response.request().method() === 'DELETE');
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+  expect((await removed).status()).toBe(200);
+
+  // The form is on the published row again, and its save writes it
+  await page.waitForURL((url) => !url.searchParams.get(PARAMS.VERSION_ID));
+  await expect(page.locator(TITLE)).toHaveValue('Delete from plain');
+  await saveTitle(page, request, id, 'Delete from plain, saved');
+});

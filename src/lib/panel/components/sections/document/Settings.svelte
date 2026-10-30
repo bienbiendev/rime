@@ -66,7 +66,8 @@
     // The version history drops the deleted row. `apiUrl(kebab)` reaches `/api/<kebab>--versions`
     // because `invalidate` matches by substring (api-proxy.svelte.ts).
     APIProxy.invalidate(apiUrl(form.config.kebab));
-    await goto(documentPath);
+    // The plain address may be the one loaded: the loads rerun so the page lands on the newest row.
+    await goto(documentPath, { refreshAll: true });
   }
 
   /** Sets a `data-*` attribute, or removes it when the value is `undefined`. */

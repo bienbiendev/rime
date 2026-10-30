@@ -74,7 +74,7 @@
       return;
     }
     APIProxy.invalidate(versionsApiUrl(doc._type));
-    if (activeId === version.id) await goto(resolve(documentPath()));
+    if (activeId === version.id) await goto(resolve(documentPath()), { refreshAll: true });
     else await invalidateAll();
   }
 </script>
