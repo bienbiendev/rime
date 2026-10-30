@@ -89,6 +89,6 @@ export function dragHandler(event: DragEvent, editor: Editor) {
 
   view.dispatch(tr);
 
-  // clean up
-  document.addEventListener('drop', () => removeNode(wrapper), { once: true });
+  // The drag image goes when the drag ends, dropped or cancelled
+  document.addEventListener('dragend', () => removeNode(wrapper), { once: true });
 }
