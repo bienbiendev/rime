@@ -48,8 +48,13 @@
     }
   }
 
-  .rz-rich-text__editor[data-error]:has(.ProseMirror-focused) {
-    border-color: var(--rz-danger);
+  /** An invalid field: the nodes' edges turn red, also on hover. */
+  .rz-rich-text__editor[data-error] .ProseMirror > *:not(.ProseMirror-gapcursor) {
+    &,
+    &:first-child,
+    &:last-child {
+      border-color: var(--rz-danger);
+    }
   }
 
   .ProseMirror ul.is-empty::before,
