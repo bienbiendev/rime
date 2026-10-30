@@ -1,7 +1,7 @@
 import { filePathToBase64 } from '#lib/core/prototype/collection/upload/util/converter.server.js';
 import test, { expect, type APIRequestContext } from '@playwright/test';
 import path from 'path';
-import { API_BASE_URL, signIn } from '../util.js';
+import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
 const PASSWORD = process.env.TESTS_ADMIN_PASSWORD || 'a&1Aa&1A';
 const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
@@ -102,4 +102,30 @@ test('Duplicate: an auth or an upload document is refused, and no copy is made',
   const copy = await request.post(`${API_BASE_URL}/medias/${mediaId}/duplicate`, { headers });
   expect(copy.status()).toBe(400);
   expect(await count('medias')).toBe(mediasBefore);
+});
+
+test('Duplicate: a refused copy keeps the unsaved edits in the form', async ({ page, request }) => {
+  const response = await request.post(`${API_BASE_URL}/articles`, {
+    headers,
+    data: { title: `Refused ${run}`, slug: `refused-${run}`, code: 'B2' }
+  });
+  expect(response.status()).toBe(200);
+  const { id } = (await response.json()).doc;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('articles', id));
+  // The copy is refused
+  await page.route(
+    (url) => url.pathname.endsWith(`/api/articles/${id}/duplicate`),
+    (route) => route.fulfill({ status: 403, json: { message: 'Not allowed' } })
+  );
+
+  const code = page.locator('input[name="code"]');
+  await code.fill('B2, unsaved');
+  await page.getByRole('button', { name: 'Document actions' }).click();
+  await page.getByRole('menuitem', { name: 'Duplicate' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Duplicate' }).click();
+
+  await expect(page.getByText('Not allowed')).toBeVisible();
+  await expect(code).toHaveValue('B2, unsaved');
 });

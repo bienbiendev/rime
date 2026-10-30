@@ -122,22 +122,24 @@
     goto(panelPath(form.config.kebab));
   }
 
-  /** Copies the row on screen, an auto-saved one included. */
+  /**
+   * Copies the row on screen, an auto-saved one included, then opens the copy without the unsaved
+   * changes.
+   */
   async function duplicate() {
-    form.reset();
     const versionId = form.values.versionId;
     const url = `${apiUrl(form.config.kebab, form.values.id)}/duplicate${versionId ? `?${PARAMS.VERSION_ID}=${versionId}` : ''}`;
-
-    const [error, success] = await trycatchFetch(url, {
-      method: 'POST'
-    });
-
+    const [error, success] = await trycatchFetch(url, { method: 'POST' });
     if (error) {
       toast.error(error.message);
-      return console.log(error);
+      return;
     }
     const { id } = await success.json();
+    // The dialog warned about the unsaved changes: they go, so the navigation does not ask again.
+    form.reset();
     toast.success(t__('common.duplicate_success'));
+    // The panel's cached reads of the collection list the copy.
+    APIProxy.invalidate(apiUrl(form.config.kebab));
     await goto(panelPath(form.config.kebab, id));
   }
 
