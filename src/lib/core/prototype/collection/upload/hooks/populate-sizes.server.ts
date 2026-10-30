@@ -28,20 +28,22 @@ export const populateSizes = Hooks.beforeRead(async function populateSizes(args)
   if ('imageSizes' in config.upload && config.upload.imageSizes && doc.filename) {
     doc.sizes = {};
     for (const size of config.upload.imageSizes) {
-      if (doc[size.name]) {
-        const formats = doc[size.name].split('|') as string[];
-        if (formats.length > 1) {
-          formats.forEach((format) => {
-            const extension = format.split('.').pop()!;
-            doc.sizes[`${size.name}_${extension}`] = mediaUrl(format);
-          });
-        } else {
-          doc.sizes[size.name] = mediaUrl(formats[0]);
-        }
-        delete doc[size.name];
-      } else {
+      const stored: string | null = doc[size.name];
+      delete doc[size.name];
+
+      if (!stored) {
         // A size with no file of its own: the original
         doc.sizes[size.name] = mediaUrl(doc.filename);
+        continue;
+      }
+      const formats = stored.split('|');
+      if (formats.length > 1) {
+        formats.forEach((format) => {
+          const extension = format.split('.').pop()!;
+          doc.sizes[`${size.name}_${extension}`] = mediaUrl(format);
+        });
+      } else {
+        doc.sizes[size.name] = mediaUrl(formats[0]);
       }
     }
 

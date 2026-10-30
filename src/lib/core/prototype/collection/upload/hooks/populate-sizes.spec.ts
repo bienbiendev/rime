@@ -30,9 +30,12 @@ test('names one key per format, and takes the thumbnail', async () => {
 });
 
 test('points a size never generated at the file itself', async () => {
-  const { doc } = await read({ filename: 'a.pdf' }, [{ name: 'thumbnail', width: 400 }]);
+  const { doc } = await read({ filename: 'a.pdf', thumbnail: null }, [
+    { name: 'thumbnail', width: 400 }
+  ]);
   expect(doc.sizes).toEqual({ thumbnail: '/uploads/medias/a.pdf' });
   expect(doc._thumbnail).toBe('/uploads/medias/a.pdf');
+  expect(doc).not.toHaveProperty('thumbnail');
 });
 
 test('gives a document with no file no url', async () => {
