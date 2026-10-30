@@ -99,18 +99,19 @@
   });
 
   const APIProxy = getAPIProxyContext();
-  let files = $derived(APIProxy.getRessource<{ docs: UploadDoc[] }>(filesURL));
-  let folders = $derived(APIProxy.getRessource<{ docs: Directory[] }>(foldersURL));
+  /** The open folder's files and folders, asked for while the dialog is open only. */
+  const files = $derived(open ? APIProxy.getRessource<{ docs: UploadDoc[] }>(filesURL) : null);
+  const folders = $derived(open ? APIProxy.getRessource<{ docs: Directory[] }>(foldersURL) : null);
 
   $effect(() => {
-    if (!initialDocs.length && files.data?.docs.length) {
+    if (!initialDocs.length && files?.data?.docs.length) {
       initialDocs = files.data.docs;
     }
   });
 
   /** Nothing uploaded yet: no file and no folder at the root. */
   const isEmpty = $derived(
-    !isFiltered && !parentPath && files.data?.docs.length === 0 && !folders.data?.docs.length
+    !isFiltered && !parentPath && files?.data?.docs.length === 0 && !folders?.data?.docs.length
   );
 
   /* ------------------------------------------------------------ picking */
@@ -118,7 +119,7 @@
   /** Every doc the grid has shown, so a pick made in another folder can still be written. */
   const seen = new SvelteMap<string, UploadDoc>();
   $effect(() => {
-    for (const doc of files.data?.docs ?? []) seen.set(doc.id, doc);
+    for (const doc of files?.data?.docs ?? []) seen.set(doc.id, doc);
   });
 
   /** The picks while the dialog is open: "Add" writes them, closing drops them. */
@@ -156,7 +157,7 @@
    * last one in the grid, it toggles the doc.
    */
   function range(id: string) {
-    const order = (files.data?.docs ?? []).map((doc) => doc.id);
+    const order = (files?.data?.docs ?? []).map((doc) => doc.id);
     const from = last ? order.indexOf(last) : -1;
     const to = order.indexOf(id);
     if (from === -1 || to === -1) return toggle(id);
@@ -380,11 +381,11 @@
           </FileDrop>
         {/if}
 
-        {#if isFiltered && files.data?.docs.length === 0}
+        {#if isFiltered && files?.data?.docs.length === 0}
           <Empty {config} />
         {/if}
 
-        {#if !isFiltered && (parentPath || folders.data?.docs.length)}
+        {#if !isFiltered && (parentPath || folders?.data?.docs.length)}
           <div class="rz-relation-browse__folders">
             {#if parentPath}
               <button type="button" class="rz-browse__folder" onclick={() => (path = parentPath)}>
@@ -392,7 +393,7 @@
                 <b>..</b>
               </button>
             {/if}
-            {#each folders.data?.docs ?? [] as doc (doc.id)}
+            {#each folders?.data?.docs ?? [] as doc (doc.id)}
               <button type="button" class="rz-browse__folder" onclick={() => (path = doc.id)}>
                 <Folder size={15} />
                 <b>{doc.name}</b>
@@ -401,7 +402,7 @@
           </div>
         {/if}
 
-        {#if files.data?.docs.length}
+        {#if files?.data?.docs.length}
           <div class="rz-relation-browse__grid">
             {#each files.data.docs as doc (doc.id)}
               {@const position = draft.indexOf(doc.id)}

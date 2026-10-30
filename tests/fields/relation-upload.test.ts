@@ -98,6 +98,31 @@ async function save(page: Page) {
   await page.locator('.rz-blocks-focus button[type="submit"]').first().click();
 }
 
+test('The library reads its folder once it opens, not before', async ({ page, request }) => {
+  const docId = await createPage(request, 'Photos closed');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+
+  // The library's own reads: the open folder's files, and its folders
+  const reads: string[] = [];
+  page.on('request', (sent) => {
+    const url = new URL(sent.url());
+    const folderFiles = decodeURIComponent(url.search).includes('[_path]');
+    if (folderFiles || url.pathname.endsWith('/medias-directories')) reads.push(sent.url());
+  });
+
+  await page.goto(panelUrl('pages', docId));
+  const choose = page
+    .locator('fieldset[data-path="photos"]')
+    .getByRole('button', { name: 'Choose from the library' });
+  await expect(choose).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  expect(reads).toEqual([]);
+
+  await choose.click();
+  await expect(card(page, medias[0])).toBeVisible();
+  expect(reads.length).toBeGreaterThan(0);
+});
+
 test('Many: a click picks or unpicks, the picks are marked, Add closes and the pick is saved', async ({
   page,
   request
