@@ -428,25 +428,17 @@ function sanitizeClientAst(ast, analysis) {
       }
     }
 
-    // Replace rime with rimeClient in imports
+    // `rime` becomes `rimeClient` under the local name the file uses: `import { rimeClient as rime }`
     if (t.isImportDeclaration(node)) {
-      node.specifiers.forEach((spec) => {
+      for (const spec of node.specifiers) {
         if (
           t.isImportSpecifier(spec) &&
           t.isIdentifier(spec.imported) &&
           spec.imported.name === 'rime'
         ) {
-          spec.imported.name = 'rimeClient';
-          if (t.isIdentifier(spec.local)) {
-            spec.local.name = 'rimeClient';
-          }
+          spec.imported = t.identifier('rimeClient');
         }
-      });
-    }
-
-    // Replace rime function calls with rimeClient
-    if (t.isCallExpression(node) && t.isIdentifier(node.callee) && node.callee.name === 'rime') {
-      node.callee.name = 'rimeClient';
+      }
     }
 
     // Remove $ prefixed object properties

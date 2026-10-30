@@ -132,6 +132,12 @@ test('a side-effect import stays in the client copy', () => {
   expect(code).toContain("import './register.js'");
 });
 
+test('rime imported under another name becomes rimeClient under that name', () => {
+  const code = clientCopy(`import { rime as r } from '$rime/config'; export default r({});`);
+  expect(code).toContain('rimeClient as r');
+  expect(code).toContain('r({');
+});
+
 test('a declaration inside a function keeps its name, whatever a $ property reads', () => {
   const code = clientCopy(`
     const format = (doc) => { const id = doc.id; return id; };
