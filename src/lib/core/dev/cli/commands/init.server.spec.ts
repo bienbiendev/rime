@@ -100,4 +100,14 @@ describe('rime init', () => {
     expect(lines).toContain('src/rime.generated.d.ts');
     expect(lines).toContain('src/rime.modules.generated.d.ts');
   });
+
+  it('adds an entry that a longer line starts with, and never one already there', async () => {
+    const init = await project({ '.gitignore': '/storage-backup\n.cache-loader\n/logs\n' });
+    await init({ name: 'shop' });
+
+    const lines = readFileSync(join(root, '.gitignore'), 'utf8').split('\n');
+    expect(lines.filter((line) => line === '/storage')).toHaveLength(1);
+    expect(lines.filter((line) => line === '.cache')).toHaveLength(1);
+    expect(lines.filter((line) => line === '/logs')).toHaveLength(1);
+  });
 });

@@ -151,7 +151,7 @@ export const init = async ({
     ];
     if (!gitignoreContent.includes('# rime')) gitignoreContent += '\n# rime';
     for (const line of updates) {
-      const exists = gitignoreContent.match(new RegExp(`^${escapeRegExp(line)}`, 'm'));
+      const exists = gitignoreContent.match(new RegExp(`^${escapeRegExp(line)}[ \\t]*$`, 'm'));
       if (!exists) {
         // Add new value if doesn't exist
         gitignoreContent += `\n${line}`;
