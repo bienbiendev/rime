@@ -145,9 +145,9 @@ export function parseSharedTypes(content: string): { content: string; shared: st
   return { content: remaining, shared: [...bodies.values()].join('\n\n') };
 }
 
-/** Writes `content` to `filePath` when it differs from the last write under `key`. */
+/** Writes `content` to `filePath` unless the file holds the content stored under `key`. */
 function write(key: string, content: string, filePath: string) {
-  if (cache.matches(key, content)) return;
+  if (fs.existsSync(filePath) && cache.matches(key, content)) return;
   fs.writeFileSync(filePath, content);
   cache.remember(key, content);
 }

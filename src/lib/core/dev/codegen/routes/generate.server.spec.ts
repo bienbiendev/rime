@@ -1,6 +1,6 @@
-import { mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 // A temporary project root, made the working directory before any module of rime loads: the
 // generator writes under process.cwd(), which it reads when its module loads.
@@ -13,11 +13,12 @@ const root = await vi.hoisted(async () => {
   return dir;
 });
 
-// No memo is ever stored, so every call writes the tree
+// No memo is ever stored, so every call writes the tree, unless a test says the memo matches
 vi.mock('#lib/core/dev/cache.server.js', () => ({
-  default: { matches: () => false, remember: () => {} }
+  default: { matches: vi.fn(() => false), remember: () => {} }
 }));
 
+import cache from '#lib/core/dev/cache.server.js';
 import { GENERATED_DIR } from '../../constants.server.js';
 import { collection } from '#lib/core/prototype/collection/definition.server.js';
 import generateRoutes from './index.server.js';
@@ -65,6 +66,22 @@ describe('generateRoutes', () => {
       expect(exported).toEqual(Object.keys(routeConfig));
       expect(server).toContain(`rest('collection', '${routePath}', event)`);
     }
+  });
+
+  it('writes the tree again when it was removed, though the memo matches', () => {
+    expect(process.cwd()).toBe(root);
+    mkdirSync(join(root, GENERATED_DIR), { recursive: true });
+    generateRoutes(config);
+    rmSync(join(root, 'src/routes/(rime)'), { recursive: true });
+
+    vi.mocked(cache.matches).mockReturnValue(true);
+    onTestFinished(() => {
+      vi.mocked(cache.matches).mockReturnValue(false);
+    });
+    generateRoutes(config);
+
+    const list = join(root, 'src/routes/(rime)/[panel=panel]/[slug=collection]/+page.svelte');
+    expect(existsSync(list)).toBe(true);
   });
 
   it.each(['pages', 'live-edit'])(

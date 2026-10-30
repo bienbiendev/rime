@@ -85,18 +85,19 @@ const assertFreeRouteKeys = (config: Config) => {
 function generateRoutes<T extends Config>(config: T): void {
   logger.debug('Routes generation...');
 
-  // 1. Skip when the route tree already matches the config and the package
+  const rootRoutes = path.resolve(projectRoot, 'src', 'routes');
+  const rimeRoutes = path.join(rootRoutes, '(rime)');
+  const panelRoute = path.join(rimeRoutes, '[panel=panel]');
+
+  // 1. Skip when the route tree is on disk and matches the config and the package
   const memo = routesMemo(config);
-  if (cache.matches('routes', memo)) {
+  if (fs.existsSync(rimeRoutes) && cache.matches('routes', memo)) {
     return;
   }
 
   // 2. Refuse a custom route the panel already serves, then ensure base directories exist. The
   // check runs first, so a refused config leaves the previous tree in place.
   assertFreeRouteKeys(config);
-  const rootRoutes = path.resolve(projectRoot, 'src', 'routes');
-  const rimeRoutes = path.join(rootRoutes, '(rime)');
-  const panelRoute = path.join(rimeRoutes, '[panel=panel]');
 
   fs.rmSync(rimeRoutes, { recursive: true, force: true });
 

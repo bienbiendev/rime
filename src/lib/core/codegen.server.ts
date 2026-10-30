@@ -1,5 +1,7 @@
 import devCache from '#lib/core/dev/cache.server.js';
 import type { Config } from '#lib/core/config/types.js';
+import fs from 'node:fs';
+import path from 'node:path';
 import { regenerateHooks, regenerateParams } from './dev/cli/templates/init.js';
 import generateRoutes from './dev/codegen/routes/index.server.js';
 import generateTypes from './dev/codegen/types/index.server.js';
@@ -64,9 +66,13 @@ export const runCodegen = async <const C extends Config>(args: {
   }
 
   // 1. Has anything changed since the last run? Steps 3 to 8 are skipped if not; the validation
-  //    below runs either way.
+  //    below runs either way. A generated file deleted by hand is written again, even with an
+  //    unchanged config.
+  const outputs = ['src/routes/(rime)', 'src/app.generated.d.ts', 'src/rime.generated.d.ts'];
   const memo = configMemo(config);
-  const changed = !devCache.matches('config', memo);
+  const changed =
+    !devCache.matches('config', memo) ||
+    !outputs.every((file) => fs.existsSync(path.resolve(process.cwd(), file)));
 
   // 2. Reject a config that cannot produce a coherent schema, before writing any of it.
   if (!validate(config)) {

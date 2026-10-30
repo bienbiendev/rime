@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { runCodegen } from './codegen.server.js';
 import validate from './config/validate.server.js';
@@ -21,6 +24,21 @@ vi.mock('./dev/cli/templates/init.js', () => ({
 vi.mock('./dev/codegen/routes/index.server.js', () => ({ default: vi.fn() }));
 vi.mock('./dev/codegen/types/index.server.js', () => ({ default: vi.fn(async () => {}) }));
 vi.mock('./config/validate.server.js', () => ({ default: vi.fn(() => true) }));
+// The version the memo holds, fixed: the real one reads package.json in the working directory
+vi.mock('./dev/version.server.js', () => ({ rimeVersion: () => '0.0.0' }));
+
+// A project holding every file codegen writes, made the working directory of each test
+beforeEach(() => {
+  const root = mkdtempSync(join(tmpdir(), 'rime-codegen-'));
+  mkdirSync(join(root, 'src/routes/(rime)'), { recursive: true });
+  writeFileSync(join(root, 'src/app.generated.d.ts'), '');
+  writeFileSync(join(root, 'src/rime.generated.d.ts'), '');
+  const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
+  return () => {
+    cwd.mockRestore();
+    rmSync(root, { recursive: true, force: true });
+  };
+});
 
 /** Sets RIME_CLI for the current test, and puts the previous value back after it. */
 const withRimeCli = (value: string | undefined) => {
@@ -64,6 +82,15 @@ describe('runCodegen', () => {
     // The next boot, same config: nothing to generate
     await runCodegen({ config, generateSchema });
     expect(generateSchema).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs the steps again when a generated file was deleted, though the config is the same', async () => {
+    const generateSchema = vi.fn(async () => {});
+    await runCodegen({ config, generateSchema });
+    rmSync(join(process.cwd(), 'src/app.generated.d.ts'));
+
+    await runCodegen({ config, generateSchema });
+    expect(generateSchema).toHaveBeenCalledTimes(2);
   });
 
   it('throws on an invalid config, changed or not, and writes no schema', async () => {
