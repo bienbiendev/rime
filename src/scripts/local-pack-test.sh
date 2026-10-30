@@ -75,7 +75,12 @@ done
 # $RUN_DIR/consumer-npm   the npm pass's app, WORK_DIR while that pass runs
 # $RUN_DIR/npm.log        everything the pass prints
 # $RUN_DIR/npm.status     its exit code, once it ends
+# $RUN_DIR/.local-pack-test  marks the folder as made by this script; one without it stays
 RUN_DIR="$BASE_DIR/$APP_NAME"
+if [[ -d "$RUN_DIR" && ! -f "$RUN_DIR/.local-pack-test" ]]; then
+  echo "$RUN_DIR exists and was not made by this script: move it, or pass --base-dir"
+  exit 1
+fi
 WORK_DIR=""
 ADMIN_EMAIL="${TESTS_ADMIN_EMAIL:-admin@email.com}"
 ADMIN_PASSWORD="${TESTS_ADMIN_PASSWORD:-a&1Aa&1A}"
@@ -450,6 +455,7 @@ echo "  field:  $FIELD_PACKAGE"
 
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
+touch "$RUN_DIR/.local-pack-test"
 for pass in ${ONLY//,/ }; do
   while (( $(jobs -rp | wc -l) >= JOBS )); do sleep 1; done
   start_pass "$pass"
