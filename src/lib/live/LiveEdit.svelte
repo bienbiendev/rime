@@ -29,15 +29,13 @@
   const data = $derived(incomingData ?? page.data.doc);
   const live = getLiveContext();
 
-  // Fallback to doc api url if prop not present
-  const update = $derived(incomingUpdate ? incomingUpdate : live.documentUpdateURI);
+  // The update URI: the prop, else the page document's own
+  const update = $derived(incomingUpdate || live?.documentUpdateURI);
 
-  // A LiveEdit for the whole document opens its panel as soon as it mounts in the live view
+  // A LiveEdit for the whole document opens its panel once the page is in live view
   $effect(() => {
-    if (path === '') {
-      window.top?.postMessage({
-        activatePanel: { key, path, update, fieldPath: path }
-      });
+    if (path === '' && live?.enabled) {
+      window.top?.postMessage({ activatePanel: { key, path, update, fieldPath: path } });
     }
   });
 
