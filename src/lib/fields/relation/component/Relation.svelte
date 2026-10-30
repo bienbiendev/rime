@@ -19,6 +19,7 @@
   import { untrack } from 'svelte';
   import { getAPIProxyContext } from '../../../panel/context/api-proxy.svelte.js';
   import type { RelationFieldBuilder, RelationRow } from '../index.js';
+  import { queryOf } from '../query.js';
   import { Relation } from '../relation.js';
   import { toRelationValue } from '../value.js';
   import Default from './default/Default.svelte';
@@ -98,31 +99,18 @@
     return item;
   }
 
-  // Build the API URL for fetching the collection
+  /** The candidates' URL: the collection, with the field's query for the values on screen. */
   function makeRessourceURL() {
-    const params: [string, string][] = [];
-
-    // Add depth parameter if in live context
-    if ('isLive' in form && form.isLive) {
-      params.push(['depth', '1']);
-    }
-
-    // Add custom query parameters if provided
-    if (config.get.query) {
-      const query =
-        typeof config.get.query === 'function' ? config.get.query(form.values) : config.get.query;
-      new URLSearchParams(query).forEach((value, key) => params.push([key, value]));
-    }
-
+    const params = new URLSearchParams(queryOf(config.get, form.values));
+    if ('isLive' in form && form.isLive) params.set('depth', '1');
     const path = apiUrl(relationConfig.kebab);
-    const search = new URLSearchParams(params).toString();
+    const search = params.toString();
     return search ? `${path}?${search}` : path;
   }
 
-  const ressourceURL = makeRessourceURL();
-
-  // Every document of the related collection the query names, no limit.
-  const ressource = APIProxy.getRessource<{ docs: GenericDoc[] }>(ressourceURL);
+  // Every document the query names, no limit; a new URL reads a new resource.
+  const ressourceURL = $derived(makeRessourceURL());
+  const ressource = $derived(APIProxy.getRessource<{ docs: GenericDoc[] }>(ressourceURL));
 
   // Initialize the initial items and selected items
   $effect(() => {

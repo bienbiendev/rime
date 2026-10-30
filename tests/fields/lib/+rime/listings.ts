@@ -3,6 +3,7 @@ import {
   group,
   link,
   number,
+  relation,
   richText,
   select,
   separator,
@@ -16,7 +17,8 @@ import { Collection } from '$rime/config';
 
 /**
  * What the list page and the field components read by path or by label: a title inside a group,
- * a sortable column inside a group placed first, a select whose labels are not its values.
+ * a sortable column inside a group placed first, a select whose labels are not its values, a
+ * relation whose candidates follow that select.
  */
 export const Listings = Collection.create('listings', {
   fields: [
@@ -24,6 +26,10 @@ export const Listings = Collection.create('listings', {
     text('note').table({ position: 1 }),
     group('meta').fields(number('score').table({ sort: true, position: 0 })),
     select('country').options({ value: 'fr', label: 'France' }, { value: 'de', label: 'Germany' }),
+    // Its candidates follow `country`: the targets whose title opens with its value
+    relation('city')
+      .to('targets')
+      .query((doc) => `where[title][like]=${doc.country}%`),
     link('website').types('url', 'email'),
     // Two `fields()` nodes: each palette entry inserts its own
     richText('body').features(

@@ -312,3 +312,39 @@ test('Two checked rows are deleted together, and the other rows stay', async ({
   await expect.poll(() => rowTitles(page)).not.toContain('Doomed one');
   expect(await rowTitles(page)).not.toContain('Doomed two');
 });
+
+test("A relation's candidates follow the form values its query reads", async ({
+  page,
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const run = Date.now();
+  const paris = `fr Paris ${run}`;
+  const berlin = `de Berlin ${run}`;
+  for (const title of [paris, berlin]) {
+    const response = await request.post(`${API_BASE_URL}/targets`, { headers, data: { title } });
+    expect(response.status()).toBe(200);
+  }
+  const response = await request.post(`${API_BASE_URL}/listings`, {
+    headers,
+    data: { attributes: { heading: 'City listing' }, country: 'fr' }
+  });
+  expect(response.status()).toBe(200);
+  const id = (await response.json()).doc.id as string;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('listings', id));
+  const city = page.locator('fieldset[data-path="city"]');
+
+  // `country` is fr: the French targets only
+  await city.locator('input').click();
+  await expect(city.getByRole('option', { name: paris })).toBeVisible();
+  await expect(city.getByRole('option', { name: berlin })).toHaveCount(0);
+
+  // `country` turns de: the candidates follow, with no reload
+  await page.locator('fieldset[data-path="country"] input').click();
+  await page.getByRole('option', { name: 'Germany' }).click();
+  await city.locator('input').click();
+  await expect(city.getByRole('option', { name: berlin })).toBeVisible();
+  await expect(city.getByRole('option', { name: paris })).toHaveCount(0);
+});
