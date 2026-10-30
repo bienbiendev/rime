@@ -6,6 +6,7 @@
   import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
   import * as Sheet from '#lib/panel/components/ui/sheet/index.js';
   import * as Tabs from '#lib/panel/components/ui/tabs/index.js';
+  import { parseBlockPath } from '#lib/panel/context/blocks-ops.js';
   import { useCommands } from '#lib/panel/context/commands.svelte.js';
   import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
@@ -123,13 +124,19 @@
   /** A dialog is open: the arrow, copy and delete keys are its own then. */
   const dialogOpen = () => !!document.querySelector('[role="dialog"][data-state="open"]');
 
-  /** Removes the selection, after asking when the block holds blocks of its own. */
+  /** Removes the selection, after asking when one of the selected blocks holds blocks. */
   function requestRemove() {
-    const row = focus.currentRow;
-    if (!row || focus.locked) return;
-    const holdsBlocks = row.children.some((child) => form.blocks.list(child.list).length > 0);
-    if (holdsBlocks) confirmRemove = true;
-    else focus.removeSelection();
+    if (!focus.selection.length || focus.locked) return;
+    const holdsBlocks = focus.selection.some((rowPath) => {
+      const at = parseBlockPath(rowPath);
+      const row = focus.rowsOf(at.list).find((candidate) => candidate.index === at.index);
+      return !!row?.children.some((child) => form.blocks.list(child.list).length > 0);
+    });
+    if (holdsBlocks) {
+      confirmRemove = true;
+    } else {
+      focus.removeSelection();
+    }
   }
 
   /** Escape goes back one step: the selection, then one level up. The sheet closes itself. */

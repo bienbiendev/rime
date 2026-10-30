@@ -207,6 +207,46 @@ test('Removing a selection that holds a block under a folded row removes that bl
     ]);
 });
 
+test('Removing a selection asks first when any selected block holds blocks', async ({
+  page,
+  request
+}) => {
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      title: 'Removal asks',
+      sections: [
+        { type: 'paragraph', text: richTextOf('Alpha') },
+        {
+          type: 'grid',
+          title: 'A',
+          items: [
+            { type: 'paragraph', text: richTextOf('P1') },
+            { type: 'paragraph', text: richTextOf('P2') }
+          ]
+        }
+      ]
+    }
+  });
+  expect(response.status()).toBe(200);
+  const docId = (await response.json()).doc.id as string;
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
+
+  // Rows: Alpha, A, P1, P2. Select A, then add Alpha, which comes first in the selection.
+  await expect(rows(page)).toHaveCount(4);
+  await rows(page).nth(1).click();
+  await rows(page)
+    .first()
+    .click({ modifiers: ['Shift'] });
+  await selectedRow(page).first().press('Backspace');
+
+  await expect(dialog(page)).toContainText('Remove this block?');
+  await dialog(page).getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog(page)).toHaveCount(0);
+  await expect(rows(page)).toHaveCount(4);
+});
+
 test('⌘K moves a block into a nested list, and never into one that refuses its type', async ({
   page,
   request
