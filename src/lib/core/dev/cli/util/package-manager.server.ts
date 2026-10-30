@@ -5,13 +5,13 @@ import path from 'path';
 
 type PackageManagerName = 'yarn' | 'pnpm' | 'bun' | 'npm' | 'deno';
 
-const packageManagersMap = {
-  yarn: 'yarn.lock',
-  pnpm: 'pnpm-lock.yaml',
-  bun: 'bun.lock',
-  npm: 'package-lock.json',
-  deno: 'deno.lock'
-} as const;
+const lockFiles: Record<PackageManagerName, string[]> = {
+  yarn: ['yarn.lock'],
+  pnpm: ['pnpm-lock.yaml'],
+  bun: ['bun.lock', 'bun.lockb'],
+  npm: ['package-lock.json'],
+  deno: ['deno.lock']
+};
 
 type PMConfig = Record<
   Exclude<PackageManagerName, 'yarn' | 'deno'>,
@@ -49,9 +49,8 @@ const packageManagerConfigs: PMConfig = {
  * generate-schema runs drizzle-kit through it.
  */
 export function getPackageManager(): PackageManagerName {
-  for (const [packageManager, lockFile] of Object.entries(packageManagersMap)) {
-    const pathToLockFile = path.resolve(process.cwd(), lockFile);
-    if (existsSync(pathToLockFile)) {
+  for (const [packageManager, files] of Object.entries(lockFiles)) {
+    if (files.some((file) => existsSync(path.resolve(process.cwd(), file)))) {
       return packageManager as PackageManagerName;
     }
   }
