@@ -4,7 +4,7 @@
   import { apiUrl } from '#lib/core/routes/util.js';
   import * as Command from '#lib/panel/components/ui/command/index.js';
   import Tag from '#lib/panel/components/ui/tag/tag.svelte';
-  import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
+  import { getAPIProxyContext, type Resource } from '#lib/panel/context/api-proxy.svelte.js';
   import type { PrototypeSlug } from '#lib/types.js';
   import { toKebabCase } from '#lib/util/string.js';
 
@@ -25,13 +25,12 @@
 
   let search = $state('');
   let inputFocused = $state(false);
-  let resources = $state<Ressource[]>([]);
-  let selected = $state<Ressource | null>();
+  let resource = $state<Resource | null>(null);
 
   const APIProxy = getAPIProxyContext();
-  let resource = $state<any>(null);
 
-  function convertDocToResource(doc: GenericDoc) {
+  /** A fetched document as a choice: a collection document by its title, an area by its type. */
+  function convertDocToResource(doc: GenericDoc): Ressource {
     return {
       id: doc.id,
       label: doc._prototype === 'collection' ? doc.title : doc._type,
@@ -39,46 +38,30 @@
     };
   }
 
-  // Fetch the documents of `ressourceType`.
+  // The documents of `ressourceType`, fetched once and shared through the API proxy.
   $effect(() => {
     resource = APIProxy.getRessource(apiUrl(toKebabCase(ressourceType)));
   });
 
-  // Turn the fetched documents into choices.
+  const resources = $derived.by(() => {
+    const data = resource?.data;
+    if (!data) return [];
+    const docs: GenericDoc[] = 'docs' in data ? data.docs : [data.doc];
+    return docs.map(convertDocToResource);
+  });
+
+  /** The picked document, once the list holding it has arrived. */
+  const selected = $derived(resources.find((r) => r.id === ressourceId) ?? null);
+
+  // An area has one document: it is the pick as soon as it arrives.
   $effect(() => {
-    if (resource && resource.data) {
-      const docs = 'docs' in resource.data ? resource.data.docs : [resource.data.doc];
-      resources = docs.map(convertDocToResource);
+    if (!ressourceId && resources[0]?._prototype === 'area') {
+      ressourceId = resources[0].id;
     }
   });
 
-  // If none selected but it's an area resource, auto-select area
-  $effect(() => {
-    if (!selected && resources.length && resources[0]._prototype === 'area') {
-      selected = resources[0];
-    }
-  });
-
-  // On select set resourceId
-  $effect(() => {
-    if (selected) {
-      ressourceId = selected.id;
-    }
-  });
-
-  // Whenever bindable ressourceId change set internal selected
-  $effect(() => {
-    if (!ressourceId) {
-      selected = null;
-    } else {
-      if (!selected) {
-        selected = resources.find((ressource) => ressource.id === ressourceId) || null;
-      }
-    }
-  });
-
+  /** Empties the pick: the search shows again. */
   function removeRessource() {
-    selected = null;
     ressourceId = null;
   }
 </script>
@@ -110,7 +93,7 @@
               <Command.Item
                 value={ressource.label}
                 onSelect={() => {
-                  selected = ressource;
+                  ressourceId = ressource.id;
                   search = '';
                 }}
               >

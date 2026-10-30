@@ -171,12 +171,15 @@
         oninput={onInput}
       />
     {:else}
-      <RessourceInput
-        error={isLinkValueError}
-        type={linkType as PrototypeSlug}
-        bind:ressourceId
-        readOnly={form.readOnly}
-      />
+      <!-- One instance per type: its document list never holds another type's documents. -->
+      {#key linkType}
+        <RessourceInput
+          error={isLinkValueError}
+          type={linkType as PrototypeSlug}
+          bind:ressourceId
+          readOnly={form.readOnly}
+        />
+      {/key}
     {/if}
 
     {#if hasTarget}

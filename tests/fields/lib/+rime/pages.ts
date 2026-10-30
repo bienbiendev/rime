@@ -175,7 +175,7 @@ export const Pages = Collection.create('pages', {
     tree('links')
       .fields(
         text('label'),
-        link('url').types('url', 'email', 'pages'),
+        link('url').types('url', 'email', 'homepage', 'pages'),
         relation('target').to('targets')
       )
       .renderTitle(({ values }) => values.label)
