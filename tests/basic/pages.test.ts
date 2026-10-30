@@ -55,6 +55,32 @@ test.describe('Login form', () => {
     await expect(errorMessage).toHaveText('Invalid credentials');
   });
 
+  test('should toast the error of a sign-in that throws on the server', async ({ page }) => {
+    await page.goto(panelUrl('sign-in'));
+
+    // The sign-in action throws: SvelteKit answers an `error` result
+    await page.route(
+      (url) => url.pathname === panelPath('sign-in'),
+      (route) =>
+        route.fulfill({
+          contentType: 'application/json',
+          body: JSON.stringify({
+            type: 'error',
+            status: 500,
+            error: { message: 'operation_error' }
+          })
+        }),
+      { times: 1 }
+    );
+
+    await page.locator('input[name="email"]').fill(ADMIN_EMAIL);
+    await page.locator('input[name="password"]').fill(PASSWORD);
+    await page.locator('button[type="submit"]').click();
+
+    const sonner = page.locator('[data-sonner-toast] [data-title]');
+    await expect(sonner).toHaveText('The operation failed');
+  });
+
   // basic sets `$smtp`, so the panel can send a reset mail
   test('should display the forgot password link when mail is configured', async ({ page }) => {
     await page.goto(panelUrl('sign-in'));

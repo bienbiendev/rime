@@ -1,11 +1,14 @@
 import { applyAction } from '$app/forms';
+import { errorText } from '#lib/core/errors/index.js';
 import type { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
+import { t__ } from '#lib/core/i18n/index.js';
 import type { FormField } from '#lib/fields/types.js';
 import { getValueAtPath } from '#lib/util/object.js';
 import { snapshot } from '#lib/util/state.js';
 import type { Dic } from '#lib/util/types.js';
 import type { SubmitFunction } from '$app/forms';
 import { diff } from 'deep-object-diff';
+import { toast } from 'svelte-sonner';
 import { createErrorsStore } from './errors.svelte';
 
 /**
@@ -122,6 +125,10 @@ export function createFormStore(initial: Dic) {
           break;
         case 'redirect':
           await applyAction(result);
+          break;
+        // A `RimeError` out of the action arrives with its message; a 5xx carries its code alone
+        case 'error':
+          toast.error(errorText(result.error?.message ?? '') || t__('common.generic_error'));
           break;
       }
     };
