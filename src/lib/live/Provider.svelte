@@ -9,11 +9,12 @@
 
   const { children }: { children: Snippet } = $props();
 
-  let live = setLiveContext(page.url.href);
+  const live = setLiveContext(page.url.href);
   beforeNavigate(live.beforeNavigate);
 
   onMount(() => {
     window.addEventListener('message', live.onMessage);
+    return () => window.removeEventListener('message', live.onMessage);
   });
 </script>
 
