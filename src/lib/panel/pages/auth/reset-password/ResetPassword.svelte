@@ -6,7 +6,7 @@
   import Button from '#lib/panel/components/ui/button/button.svelte';
   import { createFormStore } from '#lib/panel/context/form.svelte.js';
   import { confirmPasswordField, newPasswordField } from '#lib/panel/pages/auth/fields.js';
-  import { authClient } from '#lib/panel/util/auth.js';
+  import { authClient, authRequest } from '#lib/panel/util/auth.js';
   import { toast } from 'svelte-sonner';
 
   let success = $state(false);
@@ -26,20 +26,25 @@
     form.canSubmit && !!form.values.password && form.values.password === form.values.confirmPassword
   );
 
-  async function resetPassword() {
+  let sending = $state(false);
+
+  /** Sets the new password, once: a second submit while it runs does nothing. */
+  async function resetPassword(event: SubmitEvent) {
+    event.preventDefault();
+    if (sending) return;
     const token = new URLSearchParams(window.location.search).get('token');
     if (!token) {
       return toast.error(t__('common.generic_error'));
     }
-    const { data, error } = await authClient.resetPassword({
-      newPassword: form.values.password,
-      token
-    });
-    if (error) {
-      console.error(error);
-      return toast.error(error.message || t__('common.generic_error'));
+    sending = true;
+    try {
+      const answer = await authRequest(() =>
+        authClient.resetPassword({ newPassword: form.values.password, token })
+      );
+      if (answer?.status) success = true;
+    } finally {
+      sending = false;
     }
-    success = data?.status;
   }
 </script>
 
@@ -48,11 +53,13 @@
     <p>{t__('common.reset_password_success')}</p>
     <Button size="xl" href={panelUrl('sign-in')}>{t__('common.signin')}</Button>
   {:else}
-    <Text type="password" config={passwordConfig} {form} />
-    <Text type="password" config={confirmPasswordConfig} {form} />
+    <form onsubmit={resetPassword}>
+      <Text type="password" config={passwordConfig} {form} />
+      <Text type="password" config={confirmPasswordConfig} {form} />
 
-    <Button size="xl" disabled={!canReset} onclick={resetPassword}>
-      {t__('common.resetPassword')}
-    </Button>
+      <Button size="xl" type="submit" disabled={!canReset || sending}>
+        {t__('common.resetPassword')}
+      </Button>
+    </form>
   {/if}
 </AuthForm>

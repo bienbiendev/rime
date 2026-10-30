@@ -77,6 +77,7 @@ export default {
   requestPasswordReset: 'Request a password reset link',
   resetPassword: 'Reset password',
   reset_password_success: 'Your password has been reset successfully',
+  reset_link_invalid: 'This reset link is invalid or has expired',
   save_new_draft: 'Save in a new draft',
   save: 'Save',
   search_a: 'Search a $1...',

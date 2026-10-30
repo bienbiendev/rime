@@ -80,6 +80,7 @@ export default {
   requestPasswordReset: 'Demander un lien de réinitialisation',
   resetPassword: 'Réinitialiser le mot de passe',
   reset_password_success: 'Mot de passe réinitialisé avec succès',
+  reset_link_invalid: "Ce lien de réinitialisation n'est plus valable",
   save_new_draft: 'Enregistrer dans un nouveau brouillon',
   save: 'Enregistrer',
   search: 'Rechercher $1...',

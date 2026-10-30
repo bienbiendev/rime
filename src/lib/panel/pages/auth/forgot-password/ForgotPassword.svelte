@@ -6,8 +6,7 @@
   import Button from '#lib/panel/components/ui/button/button.svelte';
   import { createFormStore } from '#lib/panel/context/form.svelte.js';
   import { emailField } from '#lib/panel/pages/auth/fields.js';
-  import { authClient } from '#lib/panel/util/auth.js';
-  import { toast } from 'svelte-sonner';
+  import { authClient, authRequest } from '#lib/panel/util/auth.js';
 
   type Props = {
     data: {
@@ -19,17 +18,23 @@
   const context = createFormStore({});
 
   let success = $state(false);
+  let sending = $state(false);
 
-  async function sendResetPasswordMail() {
-    const { data, error } = await authClient.requestPasswordReset({
-      email: context.values.email,
-      redirectTo: panelUrl('reset-password')
-    });
-    if (error && error.message) {
-      toast.error(error.message);
-    }
-    if (data && data.status) {
-      success = data.status;
+  /** Asks for the reset mail, once: a second submit while it runs does nothing. */
+  async function sendResetPasswordMail(event: SubmitEvent) {
+    event.preventDefault();
+    if (sending) return;
+    sending = true;
+    try {
+      const answer = await authRequest(() =>
+        authClient.requestPasswordReset({
+          email: context.values.email,
+          redirectTo: panelUrl('reset-password')
+        })
+      );
+      if (answer?.status) success = true;
+    } finally {
+      sending = false;
     }
   }
 </script>
@@ -38,10 +43,12 @@
   {#if success}
     <p>{t__('common.passwordResetLinkSent', context.values.email)}</p>
   {:else}
-    <Email config={emailField()} form={context} />
-    <Button size="xl" disabled={!context.canSubmit} onclick={sendResetPasswordMail}>
-      {t__('common.requestPasswordReset')}
-    </Button>
+    <form onsubmit={sendResetPasswordMail}>
+      <Email config={emailField()} form={context} />
+      <Button size="xl" type="submit" disabled={!context.canSubmit || sending}>
+        {t__('common.requestPasswordReset')}
+      </Button>
+    </form>
   {/if}
 </AuthForm>
 

@@ -121,6 +121,46 @@ test.describe('Login form', () => {
     await expect(reset).toBeDisabled();
   });
 
+  test('should ask for one reset mail from the forgot-password form', async ({ page }) => {
+    const sent: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/api/auth/request-password-reset')) sent.push(request.url());
+    });
+    await page.goto(panelUrl('forgot-password'));
+
+    await page.locator('input[name="email"]').fill(ADMIN_EMAIL);
+    const button = page.getByRole('button', { name: 'Request a password reset link' });
+    await button.dblclick();
+
+    await expect(page.getByText(`An email has been sent to ${ADMIN_EMAIL}`)).toBeVisible();
+    expect(sent).toHaveLength(1);
+  });
+
+  test('should send the forgot-password form with Enter', async ({ page }) => {
+    await page.goto(panelUrl('forgot-password'));
+    await page.locator('input[name="email"]').fill(ADMIN_EMAIL);
+    await page.locator('input[name="email"]').press('Enter');
+    await expect(page.getByText(`An email has been sent to ${ADMIN_EMAIL}`)).toBeVisible();
+  });
+
+  test('should send the reset form with Enter, and say when its link is invalid', async ({
+    page
+  }) => {
+    const sent: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/api/auth/reset-password')) sent.push(request.url());
+    });
+    await page.goto(`${panelUrl('reset-password')}?token=test`);
+
+    await page.locator('input[name="password"]').fill('Secret-123!');
+    await page.locator('input[name="confirmPassword"]').fill('Secret-123!');
+    await page.locator('input[name="confirmPassword"]').press('Enter');
+
+    const sonner = page.locator('[data-sonner-toast] [data-title]');
+    await expect(sonner).toHaveText('This reset link is invalid or has expired');
+    expect(sent).toHaveLength(1);
+  });
+
   // basic sets `$smtp`, so the panel can send a reset mail
   test('should display the forgot password link when mail is configured', async ({ page }) => {
     await page.goto(panelUrl('sign-in'));
@@ -337,6 +377,33 @@ test.describe('Tabs without storage', () => {
     await layout.click();
     await expect(layout).toHaveAttribute('data-state', 'active');
     await expect(page.locator('input[name="attributes.title"]')).toBeHidden();
+  });
+});
+
+test.describe('Password reset link', () => {
+  test('Should wait for a staff email to be saved before sending it a reset link', async ({
+    page,
+    request
+  }) => {
+    const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+    const found = await request.get(`${API_BASE_URL}/staff?where[email][equals]=${ADMIN_EMAIL}`, {
+      headers
+    });
+    const [admin] = (await found.json()).docs;
+
+    await loginAs(page, ADMIN_EMAIL, PASSWORD);
+    await page.goto(panelUrl('staff', admin.id));
+
+    const email = page.locator('input[name="email"]');
+    const send = page.getByRole('button', { name: 'Send a password reset link' });
+    await expect(send).toBeEnabled();
+
+    // The link would go to an address nobody saved
+    await email.fill('new@site.com');
+    await expect(send).toBeDisabled();
+
+    await email.fill(ADMIN_EMAIL);
+    await expect(send).toBeEnabled();
   });
 });
 

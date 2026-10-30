@@ -7,7 +7,7 @@
   import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import { confirmPasswordField, newPasswordField } from '#lib/panel/pages/auth/fields.js';
   import { getUserContext } from '#lib/panel/context/user.svelte.js';
-  import { authClient } from '#lib/panel/util/auth.js';
+  import { authClient, authRequest } from '#lib/panel/util/auth.js';
   import { toast } from 'svelte-sonner';
   import Button from '../../ui/button/button.svelte';
 
@@ -26,20 +26,27 @@
     }
   });
 
+  let sending = $state(false);
+
   /**
-   * Asks better-auth to mail a reset link to the account's email, the link leading to the
-   * panel's `reset-password` page.
+   * Asks better-auth to mail a reset link to the account's saved email, the link leading to the
+   * panel's `reset-password` page. A second click while it runs does nothing.
    */
   async function sendPasswordResetLink() {
-    const { data, error } = await authClient.requestPasswordReset({
-      email: form.values.email,
-      redirectTo: panelUrl('reset-password')
-    });
-    if (error && error.message) {
-      toast.error(error.message);
-    }
-    if (data && data.status) {
-      toast.success(t__('common.passwordResetLinkSent', form.values.email));
+    if (sending) return;
+    sending = true;
+    try {
+      const answer = await authRequest(() =>
+        authClient.requestPasswordReset({
+          email: form.values.email,
+          redirectTo: panelUrl('reset-password')
+        })
+      );
+      if (answer?.status) {
+        toast.success(t__('common.passwordResetLinkSent', form.values.email));
+      }
+    } finally {
+      sending = false;
     }
   }
 
@@ -61,7 +68,13 @@
 {:else if user.attributes.isStaff && page.data?.hasMailer}
   <div class="rz-document-auth">
     <div>
-      <Button onclick={sendPasswordResetLink} variant="secondary" size="sm">
+      <!-- The link goes to the saved email: while the email has unsaved changes, the button waits -->
+      <Button
+        onclick={sendPasswordResetLink}
+        variant="secondary"
+        size="sm"
+        disabled={'email' in form.changes || sending}
+      >
         {t__('common.sendPasswordResetLink')}
       </Button>
     </div>
