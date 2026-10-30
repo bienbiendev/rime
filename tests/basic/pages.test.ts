@@ -237,6 +237,35 @@ test.describe('Layout tab: group + separator + blocks persistence', () => {
   });
 });
 
+test.describe('Tabs without storage', () => {
+  // Storage is blocked for the tabs' keys: each read and write throws a SecurityError.
+  test('Should show the first tab, and change tabs without remembering them', async ({ page }) => {
+    await page.addInitScript(() => {
+      const blocked = (key: string) => {
+        if (key.startsWith('rime.Tabs:')) throw new DOMException('Blocked', 'SecurityError');
+      };
+      const { getItem, setItem } = Storage.prototype;
+      Storage.prototype.getItem = function (key) {
+        blocked(key);
+        return getItem.call(this, key);
+      };
+      Storage.prototype.setItem = function (key, value) {
+        blocked(key);
+        return setItem.call(this, key, value);
+      };
+    });
+    await loginAs(page, ADMIN_EMAIL, PASSWORD);
+    await page.goto(panelUrl('pages', 'create'));
+
+    await expect(page.locator('input[name="attributes.title"]')).toBeVisible();
+
+    const layout = page.locator('.rz-tabs-trigger[data-value="layout"]');
+    await layout.click();
+    await expect(layout).toHaveAttribute('data-state', 'active');
+    await expect(page.locator('input[name="attributes.title"]')).toBeHidden();
+  });
+});
+
 test.describe('API Key dialog', () => {
   test('Should show the api key once on creation, block the redirect until closed, then never show it again', async ({
     page

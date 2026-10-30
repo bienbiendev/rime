@@ -25,7 +25,7 @@
   let activeTabName = $derived.by(() => {
     const first = config.get.tabs[0].name;
     if (typeof window === 'undefined') return first;
-    const stored = localStorage.getItem(storageActiveKey);
+    const stored = storedTab();
     const tab = config.get.tabs.find((tab) => tab.name === stored);
     if (!tab || !isTabVisible(tab)) return first;
     return tab.name;
@@ -36,8 +36,21 @@
     return form.isLive ? tab.get.live === true : true;
   }
 
+  /** The tab stored for this document and path; nothing where storage is blocked. */
+  function storedTab() {
+    try {
+      return localStorage.getItem(storageActiveKey);
+    } catch {
+      return null;
+    }
+  }
+
   function onActiveTabChange(value: string): void {
-    localStorage.setItem(storageActiveKey, value);
+    try {
+      localStorage.setItem(storageActiveKey, value);
+    } catch {
+      // Storage blocked: the tab changes, it is just not remembered
+    }
     activeTabName = value;
   }
 
