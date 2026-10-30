@@ -172,3 +172,29 @@ test('The site renders a paragraph without its stored style', async ({ request }
 
   await request.delete(`${API_BASE_URL}/news/${doc.id}`, { headers });
 });
+
+/** A heading's tag comes from its level only when it is 1 to 6. */
+test('The site renders a heading of a stray level as an h2', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const heading = {
+    type: 'doc',
+    content: [{ type: 'heading', attrs: { level: '1 x' }, content: [{ type: 'text', text: 'Hi' }] }]
+  };
+
+  const created = await request.post(`${API_BASE_URL}/news`, {
+    headers,
+    data: {
+      attributes: { title: 'Stray heading', slug: 'stray-heading' },
+      writer: { text: heading },
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { doc } = await created.json();
+
+  const response = await request.get(`${BASE_URL}/news/stray-heading`);
+  expect(response.status()).toBe(200);
+  expect(await response.text()).toMatch(/<h2>(<!--[^>]*-->)*Hi/);
+
+  await request.delete(`${API_BASE_URL}/news/${doc.id}`, { headers });
+});

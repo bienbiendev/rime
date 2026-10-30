@@ -117,7 +117,8 @@
           <RenderRichText {components} json={node} />
         </components.heading>
       {:else}
-        {@const tag = `h${node.attrs?.level || 2}`}
+        {@const level = Number(node.attrs?.level)}
+        {@const tag = [1, 2, 3, 4, 5, 6].includes(level) ? `h${level}` : 'h2'}
         <svelte:element this={tag}><RenderRichText {components} json={node} /></svelte:element>
       {/if}
       <!--  -->

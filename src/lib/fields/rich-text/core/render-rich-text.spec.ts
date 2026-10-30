@@ -75,3 +75,14 @@ test('a default element writes only the attributes it knows', () => {
       '<ul></ul>'
   );
 });
+
+test('a heading level outside 1 to 6 renders an h2', () => {
+  const heading = (level: unknown) => ({
+    type: 'heading',
+    attrs: { level },
+    content: [{ type: 'text', text: 'Hi' }]
+  });
+  expect(html([heading('1 x'), heading(7), heading(null), heading('4')])).toBe(
+    '<h2>Hi</h2><h2>Hi</h2><h2>Hi</h2><h4>Hi</h4>'
+  );
+});
