@@ -5,6 +5,9 @@
   nodes), `resource` (resource nodes), `fields` (fields nodes), and any other node or mark type
   by its own name.
 
+  A default element writes no stored attribute, except `href`, `target` and `rel` on a link and
+  `start` on an ordered list.
+
   <RenderRichText json={page.body} components={{ link: SiteLink, fields: Cta }} />
 -->
 <script lang="ts">
@@ -57,7 +60,7 @@
           {@render renderMarks(processedNode)}
         </components.bold>
       {:else}
-        <strong {...mark.attrs}>{@render renderMarks(processedNode)}</strong>
+        <strong>{@render renderMarks(processedNode)}</strong>
       {/if}
       <!--  -->
     {:else if mark.type === 'italic'}
@@ -66,7 +69,7 @@
           {@render renderMarks(processedNode)}
         </components.italic>
       {:else}
-        <em {...mark.attrs}>{@render renderMarks(processedNode)}</em>
+        <em>{@render renderMarks(processedNode)}</em>
       {/if}
 
       <!--  -->
@@ -76,7 +79,8 @@
           {@render renderMarks(processedNode)}
         </components.link>
       {:else}
-        <a {...mark.attrs} href={safeHref(mark.attrs?.href)}>{@render renderMarks(processedNode)}</a
+        <a href={safeHref(mark.attrs?.href)} target={mark.attrs?.target} rel={mark.attrs?.rel}
+          >{@render renderMarks(processedNode)}</a
         >
       {/if}
     {:else if components && mark.type && mark.type in components}
@@ -104,7 +108,7 @@
           <RenderRichText {components} json={node} />
         </components.paragraph>
       {:else}
-        <p {...node.attrs}><RenderRichText {components} json={node} /></p>
+        <p><RenderRichText {components} json={node} /></p>
       {/if}
       <!--  -->
     {:else if node.type === 'heading'}
@@ -114,9 +118,7 @@
         </components.heading>
       {:else}
         {@const tag = `h${node.attrs?.level || 2}`}
-        <svelte:element this={tag} {...node.attrs}
-          ><RenderRichText {components} json={node} /></svelte:element
-        >
+        <svelte:element this={tag}><RenderRichText {components} json={node} /></svelte:element>
       {/if}
       <!--  -->
     {:else if node.type === 'blockquote'}
@@ -125,7 +127,7 @@
           <RenderRichText {components} json={node} />
         </components.blockquote>
       {:else}
-        <blockquote {...node.attrs}><RenderRichText {components} json={node} /></blockquote>
+        <blockquote><RenderRichText {components} json={node} /></blockquote>
       {/if}
       <!--  -->
     {:else if node.type === 'bulletList'}
@@ -134,7 +136,7 @@
           <RenderRichText {components} json={node} />
         </components.ul>
       {:else}
-        <ul {...node.attrs}><RenderRichText {components} json={node} /></ul>
+        <ul><RenderRichText {components} json={node} /></ul>
       {/if}
       <!--  -->
     {:else if node.type === 'orderedList'}
@@ -143,7 +145,7 @@
           <RenderRichText {components} json={node} />
         </components.ol>
       {:else}
-        <ol {...node.attrs}><RenderRichText {components} json={node} /></ol>
+        <ol start={node.attrs?.start}><RenderRichText {components} json={node} /></ol>
       {/if}
       <!--  -->
     {:else if node.type === 'listItem'}
@@ -152,7 +154,7 @@
           <RenderRichText {components} json={node} />
         </components.li>
       {:else}
-        <li {...node.attrs}><RenderRichText {components} json={node} /></li>
+        <li><RenderRichText {components} json={node} /></li>
       {/if}
       <!--  -->
     {:else if node.type?.startsWith('rich-text-upload-')}

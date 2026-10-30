@@ -138,3 +138,37 @@ test('A new version keeps the media an upload node points at', async ({ request 
 
   await request.delete(`${API_BASE_URL}/news/${doc.id}`, { headers });
 });
+
+/** The site's default elements write only the attributes they know, not every stored one. */
+test('The site renders a paragraph without its stored style', async ({ request }) => {
+  const headers = await signInSuperAdmin(request);
+  const styled = {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        attrs: { style: 'position:fixed;inset:0' },
+        content: [{ type: 'text', text: 'styled paragraph' }]
+      }
+    ]
+  };
+
+  const created = await request.post(`${API_BASE_URL}/news`, {
+    headers,
+    data: {
+      attributes: { title: 'Styled paragraph', slug: 'styled-paragraph' },
+      writer: { text: styled },
+      status: VERSIONS_STATUS.PUBLISHED
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { doc } = await created.json();
+
+  const response = await request.get(`${BASE_URL}/news/styled-paragraph`);
+  expect(response.status()).toBe(200);
+  const html = await response.text();
+  // The paragraph has no attribute; the style stays only in the load data serialized into the page
+  expect(html).toMatch(/<p>(<!--[^>]*-->)*styled paragraph/);
+
+  await request.delete(`${API_BASE_URL}/news/${doc.id}`, { headers });
+});

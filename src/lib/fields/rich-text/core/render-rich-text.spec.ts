@@ -50,3 +50,28 @@ test('a custom node gets `components`, as a custom mark does', () => {
     '<aside>callout,highlight</aside><aside>callout,highlight</aside>'
   );
 });
+
+test('a default element writes only the attributes it knows', () => {
+  const style = { style: 'position:fixed', class: 'x', id: 'y' };
+  const text = (marks: JSONContent['marks']) => [{ type: 'text', text: 'Hi', marks }];
+  const link = { type: 'link', attrs: { ...style, href: '/a', target: '_blank', rel: 'noopener' } };
+  expect(
+    html([
+      { type: 'paragraph', attrs: style, content: text([{ type: 'bold', attrs: style }]) },
+      { type: 'heading', attrs: { ...style, level: 3 }, content: text([link]) },
+      { type: 'blockquote', attrs: style, content: text([{ type: 'italic', attrs: style }]) },
+      {
+        type: 'orderedList',
+        attrs: { ...style, start: 3 },
+        content: [{ type: 'listItem', attrs: style, content: text([]) }]
+      },
+      { type: 'bulletList', attrs: style, content: [] }
+    ])
+  ).toBe(
+    '<p><strong>Hi</strong></p>' +
+      '<h3><a href="/a" target="_blank" rel="noopener">Hi</a></h3>' +
+      '<blockquote><em>Hi</em></blockquote>' +
+      '<ol start="3"><li>Hi</li></ol>' +
+      '<ul></ul>'
+  );
+});
