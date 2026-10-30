@@ -194,3 +194,43 @@ test('Import from default locale copies the French values into the English row',
 
   await request.delete(`${API_BASE_URL}/pages/${id}`, { headers });
 });
+
+/** A default-locale read that fails: an error toast, and the English form as it was. */
+test('Import from default locale that fails says so and keeps the form', async ({
+  page,
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const created = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { attributes: { title: 'Import en échec', slug: 'import-en-echec' } }
+  });
+  expect(created.status()).toBe(200);
+  const id = (await created.json()).doc.id;
+  const english = await request.patch(`${API_BASE_URL}/pages/${id}?locale=en`, {
+    headers,
+    data: { attributes: { title: 'Failed import' } }
+  });
+  expect(english.status()).toBe(200);
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', id));
+  await page.getByRole('button', { name: 'Français' }).click();
+  await page.getByRole('menuitem', { name: 'English' }).click();
+  await expect(page.getByRole('button', { name: 'English' })).toBeVisible();
+  await page.getByRole('tab', { name: 'attributes' }).click();
+  await expect(page.locator(TITLE)).toHaveValue('Failed import');
+
+  // The read of the French row answers 500
+  await page.route(
+    (url) => url.pathname.endsWith(`/api/pages/${id}`) && url.searchParams.get('locale') === 'fr',
+    (route) => route.fulfill({ status: 500, json: { message: 'Server error' } })
+  );
+  await page.getByRole('button', { name: 'Actions du document' }).click();
+  await page.getByRole('menuitem', { name: 'Importer les données depuis fr' }).click();
+
+  await expect(page.getByText('Une erreur est survenue')).toBeVisible();
+  await expect(page.locator(TITLE)).toHaveValue('Failed import');
+
+  await request.delete(`${API_BASE_URL}/pages/${id}`, { headers });
+});

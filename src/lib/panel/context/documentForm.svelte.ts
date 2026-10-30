@@ -17,6 +17,7 @@ import { isJSONContent } from '#lib/fields/rich-text/json.js';
 import type { FormField } from '#lib/types.js';
 import { isObjectLiteral, omit } from '#lib/util/object.js';
 import { writeFormData } from '#lib/util/form-data.js';
+import { trycatchFetch } from '#lib/util/function.js';
 import { normalizeFieldPath } from '#lib/util/string.js';
 import type { Dic, WithOptional } from '#lib/util/types.js';
 import type { ActionResult } from '$app/forms';
@@ -323,11 +324,19 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   /** A copy of another locale's value, as new rows in this locale: the save creates them. */
   const asNewRows = <V>(value: V): V => withFreshIds(value, { locale: locale.code });
 
-  /** The row on screen in the default locale: `/api/pages/1?locale=en&versionId=v2`. */
+  /**
+   * The row on screen in the default locale: `/api/pages/1?locale=en&versionId=v2`. A read that
+   * fails toasts an error and answers `undefined`.
+   */
   const fetchDefaultLocaleDoc = async (): Promise<T | undefined> => {
     const versionParam = doc.versionId ? `&${PARAMS.VERSION_ID}=${doc.versionId}` : '';
     const url = `${apiUrl(...documentSegments(documentConfig.kebab, doc))}?${PARAMS.LOCALE}=${locale.defaultCode}${versionParam}`;
-    const result = await fetch(url).then((r) => r.json());
+    const [error, response] = await trycatchFetch(url);
+    if (error) {
+      toast.error(t__('common.generic_error'));
+      return undefined;
+    }
+    const result = await response.json();
     return result.doc ?? undefined;
   };
 
