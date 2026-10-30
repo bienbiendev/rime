@@ -69,6 +69,26 @@ test('Should sync, validate and hide fields on the create form', async ({ page }
   await expect.soft(slugField).toBeHidden();
 });
 
+/** ---------------- EMAIL ERROR: AT ONCE FROM A SAVE, AFTER THE BLUR WHILE TYPING ---------------- */
+
+test('An email shows the error of a save at once, and a typed one after the blur', async ({
+  page
+}) => {
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('subscribers', 'create'));
+  await page.locator('input[name="name"]').fill('Ann');
+  await page.locator('button[type="submit"]').click();
+
+  const error = page.locator('fieldset[data-path="email"] .rz-field-error');
+  await expect(error).toHaveText('Required');
+
+  const input = page.locator('input[name="email"]');
+  await input.pressSequentially('ann@', { delay: 30 });
+  await expect(error).toHaveCount(0);
+  await input.blur();
+  await expect(error).toHaveText('Invalid email address');
+});
+
 /** ---------------- LABELS NAME THEIR CONTROL ---------------- */
 
 test('Each field label names its control', async ({ page }) => {

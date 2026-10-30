@@ -8,7 +8,7 @@ import { Defaults } from './defaults';
 import { Homepage } from './homepage';
 import { HooksTest } from './hooks-test';
 import { Medias } from './medias';
-import { Pages } from './pages';
+import { Pages, Subscribers } from './pages';
 import { Bulletins } from './read-only';
 import { Listings } from './listings';
 import { ProductIdeas, Targets } from './targets';
@@ -31,7 +31,8 @@ export default rime({
     Notices,
     Reports,
     Bulletins,
-    Listings
+    Listings,
+    Subscribers
   ],
   areas: [Homepage],
 

@@ -8,16 +8,19 @@
   const { path, config, form }: EmailFieldProps = $props();
 
   const field = $derived(form.useField(path || config.name, config));
-  let showError = $state(false);
+  /** While the user types, the error waits for the blur: a half-typed address is not wrong yet. */
+  let typing = $state(false);
 
   const onInput = (event: Event) => {
-    showError = false;
+    typing = true;
     field.value = (event.target as HTMLInputElement).value;
   };
 
   const onBlur = () => {
-    showError = true;
+    typing = false;
   };
+
+  const error = $derived(!typing && field.error);
 </script>
 
 <fieldset
@@ -33,14 +36,14 @@
       name={path || config.name}
       autocomplete="off"
       placeholder={config.get.placeholder || config.get.label}
-      data-error={showError && field.error ? '' : null}
+      data-error={error ? '' : null}
       value={field.value}
       onblur={onBlur}
       oninput={onInput}
     />
   </div>
   <Field.Hint {config} />
-  <Field.Error error={(showError && field.error) || false} />
+  <Field.Error {error} />
 </fieldset>
 
 <style>

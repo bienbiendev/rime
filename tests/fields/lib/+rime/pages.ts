@@ -181,3 +181,8 @@ export const Pages = Collection.create('pages', {
       .renderTitle(({ values }) => values.label)
   ]
 });
+
+// A required email: a save that leaves it untouched shows the error on the field.
+export const Subscribers = Collection.create('subscribers', {
+  fields: [text('name').isTitle(), email('email').required()]
+});
