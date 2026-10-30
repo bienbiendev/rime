@@ -5,7 +5,7 @@ import { rimeVersion } from '#lib/core/dev/version.server.js';
 import { slugify } from '#lib/util/string.js';
 import fs from 'fs';
 import path from 'path';
-import { templatesSurface } from './common.server.js';
+import { componentFilename, templatesSurface } from './common.server.js';
 
 /**
  * Types for route definitions
@@ -42,7 +42,9 @@ export function routesMemo<T extends Config>(config: T): string {
     custom:${
       config.panel?.routes
         ? Object.entries(config.panel.routes)
-            .map(([k, v]) => `${k}-${slugify(v.component.toString())}`)
+            .map(
+              ([k, v]) => `${k}-${componentFilename(v.component) ?? slugify(String(v.component))}`
+            )
             .join(',')
         : ''
     }

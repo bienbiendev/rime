@@ -60,3 +60,14 @@ describe('matcherValues', () => {
     expect(routesMemo(localized)).not.toBe(routesMemo({} as any));
   });
 });
+
+describe('routesMemo', () => {
+  it('rewrites the routes when a route component moves to another file', () => {
+    // A component compiled in dev mode carries its file under Symbol('filename')
+    const component = (file: string) =>
+      Object.assign(function Stats() {}, { [Symbol('filename')]: file });
+    const memo = (file: string) =>
+      routesMemo({ panel: { routes: { stats: { component: component(file) } } } } as any);
+    expect(memo('src/+rime/Stats.svelte')).not.toBe(memo('src/+rime/pages/Stats.svelte'));
+  });
+});

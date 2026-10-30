@@ -392,7 +392,7 @@ export const fallback = async () => {
  * componentFilename(Stats); // 'src/+rime/Stats.svelte'
  * ```
  */
-const componentFilename = (component: object): string | undefined => {
+export const componentFilename = (component: object): string | undefined => {
   const key = Object.getOwnPropertySymbols(component).find((s) => s.description === 'filename');
   return key ? (component as Record<symbol, string>)[key] : undefined;
 };

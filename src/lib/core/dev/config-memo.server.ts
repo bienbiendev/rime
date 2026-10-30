@@ -1,7 +1,7 @@
 import type { Dic } from '#lib/util/types.js';
 import { CONFIG_DIR, PANEL_ROUTE } from './constants.server.js';
 import { restSurface } from './prototype-routes.server.js';
-import { templatesSurface } from './codegen/routes/common.server.js';
+import { componentFilename, templatesSurface } from './codegen/routes/common.server.js';
 import { rimeVersion } from './version.server.js';
 
 /**
@@ -14,10 +14,10 @@ const serializeValue = (value: any): string => {
 
   switch (typeof value) {
     case 'function':
-      // A Svelte component (its dev SSR build carries a `render` stub) serializes by name; any
-      // other function by its source.
+      // A Svelte component (its dev SSR build carries a `render` stub) serializes by name and file:
+      // a page imports it from that file. Any other function serializes by its source.
       if (Object.prototype.hasOwnProperty.call(value, 'render')) {
-        return `func:${value.name}`;
+        return `func:${value.name}:${componentFilename(value) ?? ''}`;
       }
       return `func:${value.toString()}`;
 

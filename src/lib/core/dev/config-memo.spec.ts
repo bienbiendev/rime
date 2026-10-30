@@ -30,6 +30,15 @@ describe('configMemo', () => {
     const memo = configMemo({ fields: [tabs(tab('seo').fields(text('title')))] });
     expect(memo).toContain('"name":"seo"');
   });
+
+  it('changes when a component moves to another file', () => {
+    // A component compiled in dev mode: a `render` stub and its file under Symbol('filename')
+    const component = (file: string) =>
+      Object.assign(function Stats() {}, { render: () => {}, [Symbol('filename')]: file });
+    const memo = (file: string) =>
+      configMemo({ panel: { routes: { stats: { component: component(file) } } } });
+    expect(memo('src/+rime/Stats.svelte')).not.toBe(memo('src/+rime/pages/Stats.svelte'));
+  });
 });
 
 describe('flattenConfig', () => {
