@@ -70,6 +70,12 @@ export const build = async (args: {
     return;
   }
 
+  if (!existsSync('./build')) {
+    logger.error('[✗] ./build not found: the SvelteKit adapter writes elsewhere, nothing packaged');
+    process.exitCode = 1;
+    return;
+  }
+
   // Create app directory
   mkdirSync('./app', { recursive: true });
 
@@ -92,8 +98,12 @@ export const build = async (args: {
   }
 
   if (args.withStatic) {
-    cpSync('./static', './app/static', { recursive: true });
-    logger.debug('[✓] static directory copied');
+    if (existsSync('./static')) {
+      cpSync('./static', './app/static', { recursive: true });
+      logger.debug('[✓] static directory copied');
+    } else {
+      logger.warn('No static directory to copy (skip)');
+    }
   }
 
   // Create main entry server file

@@ -1,3 +1,4 @@
+import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -9,10 +10,10 @@ import { build } from './build.js';
 vi.mock('child_process', async () => {
   const { mkdirSync } = await import('node:fs');
   return {
-    spawnSync: () => {
+    spawnSync: vi.fn(() => {
       mkdirSync('./build', { recursive: true });
       return { status: 0 };
-    }
+    })
   };
 });
 vi.mock('../util/package.server.js', () => ({ usesBunScripts: () => false }));
@@ -66,6 +67,26 @@ describe('rime build', () => {
 
     expect(exists('app/static/favicon.png')).toBe(true);
     expect(exists('app/storage')).toBe(false);
+  });
+
+  it('packs the app with no static/, with --with-static', async () => {
+    rmSync(join(root, 'static'), { recursive: true });
+    vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+    await build({ withStatic: true });
+
+    expect(exists('app/index.js')).toBe(true);
+    expect(exists('app/static')).toBe(false);
+  });
+
+  it('packs nothing when the adapter writes no ./build', async () => {
+    vi.mocked(spawnSync).mockImplementationOnce(() => ({ status: 0 }) as never);
+    vi.spyOn(logger, 'error').mockImplementation(() => {});
+
+    await build({});
+
+    expect(process.exitCode).toBe(1);
+    expect(exists('app')).toBe(false);
   });
 
   it.each([
