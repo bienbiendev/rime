@@ -61,8 +61,11 @@
       content: opened.doc
     });
 
+    // A read-only editor writes nothing back: it may hold a rewritten copy of the value
     editor.on('update', ({ editor }) => {
-      onUpdate?.(editor.getJSON());
+      if (editor.isEditable) {
+        onUpdate?.(editor.getJSON());
+      }
     });
 
     return () => editor?.destroy();

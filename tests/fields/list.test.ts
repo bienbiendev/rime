@@ -198,6 +198,42 @@ test('A fields node stores what its sheet holds', async ({ page, request }) => {
     .toEqual({ heroTitle: 'Welcome' });
 });
 
+test('A fields node shows what an undo restores, and its sheet edits from it', async ({
+  page,
+  request
+}) => {
+  const response = await request.post(`${API_BASE_URL}/listings`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      attributes: { heading: 'Hero undo' },
+      body: {
+        type: 'doc',
+        content: [{ type: 'rich-text-fields-hero', attrs: { json: { heroTitle: 'One' } } }]
+      }
+    }
+  });
+  expect(response.status()).toBe(200);
+  const id = (await response.json()).doc.id as string;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('listings', id));
+
+  const preview = page.locator('.rz-rich-text-fields-preview');
+  const sheet = page.locator('.rz-rich-text-sheet');
+  await preview.click();
+  await sheet.locator('input[name="heroTitle"]').fill('Two');
+  await page.keyboard.press('Escape');
+  await expect(sheet).toHaveCount(0);
+  await expect(preview).toContainText('Two');
+
+  await page.locator('fieldset[data-path="body"] .ProseMirror').focus();
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(preview).toContainText('One');
+
+  await preview.click();
+  await expect(sheet.locator('input[name="heroTitle"]')).toHaveValue('One');
+});
+
 test('A stored tab that exists opens', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('rime.Tabs:create:', 'second'));
   await loginAs(page, ADMIN_EMAIL, PASSWORD);

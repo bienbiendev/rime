@@ -28,31 +28,29 @@
 
   let { node, updateAttributes, extension }: NodeViewProps = $props();
   let isDialogOpen = $state(false);
-  let selected = $state<Omit<NodeAttributes, 'legend' | '_fresh'> | null>();
-  let legend = $state('');
   let dialogLegendOpen = $state(false);
+
+  // What the node holds: the media, or null when none is picked yet
+  const selected = $derived<Omit<NodeAttributes, 'legend' | '_fresh'> | null>(
+    node.attrs.id
+      ? {
+          id: node.attrs.id,
+          title: node.attrs.title,
+          url: node.attrs.url,
+          sizes: node.attrs.sizes,
+          mimeType: node.attrs.mimeType,
+          filename: node.attrs.filename
+        }
+      : null
+  );
+  const legend = $derived<string>(node.attrs.legend || '');
 
   const handleClick = () => {
     isDialogOpen = true;
   };
 
+  // A node just inserted opens its dialog
   onMount(() => {
-    if (node.attrs.id) {
-      selected = {
-        id: node.attrs.id,
-        title: node.attrs.title,
-        url: node.attrs.url,
-        sizes: node.attrs.sizes,
-        mimeType: node.attrs.mimeType,
-        filename: node.attrs.filename
-      };
-
-      // Initialize legend from node attributes
-      legend = node.attrs.legend || '';
-    } else {
-      selected = null;
-    }
-    // A node just inserted opens its dialog.
     if (node.attrs._fresh) {
       isDialogOpen = true;
     }
@@ -72,27 +70,15 @@
     }
   });
 
-  // Handle dialog selection
-  function handleMediaSelection(doc: UploadDoc) {
-    // Close the dialog
+  // The picked media replaces the node's, without a legend
+  function pickMedia(doc: UploadDoc) {
     isDialogOpen = false;
-
-    // Update the selected media
-    selected = doc;
-
-    // Reset legend
-    legend = '';
-
-    // Update node attributes
-    updateNodeAttributes();
+    const { id, title, url, sizes, mimeType, filename } = doc;
+    updateAttributes({ id, title, url, sizes, mimeType, filename, legend: null, _fresh: false });
   }
 
-  // Handle removing media
+  // The node keeps its place and holds no media
   function removeMedia() {
-    selected = null;
-    legend = '';
-
-    // Update node attributes with empty values
     updateAttributes({
       id: null,
       title: null,
@@ -103,22 +89,6 @@
       legend: null,
       _fresh: false
     });
-  }
-
-  // Update node attributes based on current state
-  function updateNodeAttributes() {
-    if (!selected) return;
-
-    updateAttributes({
-      id: selected.id,
-      title: selected.title,
-      url: selected.url,
-      sizes: selected.sizes,
-      mimeType: selected.mimeType,
-      filename: selected.filename,
-      legend,
-      _fresh: false
-    } as NodeAttributes);
   }
 </script>
 
@@ -181,14 +151,14 @@
   bind:open={isDialogOpen}
   items={docs}
   label={(doc) => doc.filename}
-  onPick={handleMediaSelection}
+  onPick={pickMedia}
   row={dialogItem}
 />
 
 <Dialog.Root bind:open={dialogLegendOpen}>
   <Dialog.Content>
     <Dialog.Title>{t__('fields.rich_text_media_legend')}</Dialog.Title>
-    <Input bind:value={legend} oninput={updateNodeAttributes} />
+    <Input value={legend} oninput={(e) => updateAttributes({ legend: e.currentTarget.value })} />
   </Dialog.Content>
 </Dialog.Root>
 

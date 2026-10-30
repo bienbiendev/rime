@@ -19,24 +19,25 @@
 
   let { node, updateAttributes, extension }: NodeViewProps = $props();
   let isDialogOpen = $state(false);
-  let selected = $state<RichTextResource | null>();
+
+  // What the node holds: the document, or null when none is picked yet
+  const selected = $derived<RichTextResource | null>(
+    node.attrs.id
+      ? {
+          id: node.attrs.id,
+          title: node.attrs.title,
+          _type: node.attrs._type,
+          _thumbnail: node.attrs._thumbnail
+        }
+      : null
+  );
 
   const handleClick = () => {
     isDialogOpen = true;
   };
 
+  // A node just inserted opens its dialog
   onMount(() => {
-    if (node.attrs.id) {
-      selected = {
-        id: node.attrs.id,
-        title: node.attrs.title,
-        _type: node.attrs._type,
-        _thumbnail: node.attrs._thumbnail
-      };
-    } else {
-      selected = null;
-    }
-    // A node just inserted opens its dialog.
     if (node.attrs._fresh) {
       isDialogOpen = true;
     }
@@ -56,35 +57,20 @@
     }
   });
 
-  // Handle dialog selection
-  function handleResourceSelection(doc: RequiredNodeAttributes) {
+  // The picked document replaces the node's
+  function handleResourceSelection(doc: GenericDoc) {
     isDialogOpen = false;
-    selected = doc;
-    updateNodeAttributes();
+    const { id, title, _type, _thumbnail } = doc;
+    updateAttributes({ id, title, _type, _thumbnail, _fresh: false });
   }
 
-  // Handle removing resource
+  // The node keeps its place and holds no document
   function removeResource() {
-    selected = null;
-    // Update node attributes with empty values
     updateAttributes({
       id: null,
       title: null,
       _type: null,
       _thumbnail: null,
-      _fresh: false
-    });
-  }
-
-  // Update node attributes based on current state
-  function updateNodeAttributes() {
-    if (!selected) return;
-
-    updateAttributes({
-      id: selected.id,
-      title: selected.title,
-      _type: selected._type,
-      _thumbnail: selected._thumbnail,
       _fresh: false
     });
   }

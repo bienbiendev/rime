@@ -173,6 +173,11 @@ class SvelteNodeView extends NodeView<
     }
   }
 
+  /**
+   * Takes a new version of the node. A node of the same type keeps the component, which gets the
+   * new `node` prop: a component that shows the node's attributes reads them from `node`, never
+   * from a copy made on mount.
+   */
   update(
     node: ProseMirrorNode,
     decorations: readonly Decoration[],

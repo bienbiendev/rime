@@ -1,13 +1,11 @@
 <script lang="ts">
   import { FieldBuilder, FormFieldBuilder } from '#lib/core/fields/builders/index.js';
   import type { FieldsPreviewProps } from '#lib/fields/types.js';
-  import FieldsPreview from '#lib/panel/components/fields/FieldsPreview.svelte';
-  import FieldsPreviewTrigger from '#lib/panel/components/fields/FieldsPreviewTrigger.svelte';
-  import * as Sheet from '#lib/panel/components/ui/sheet/index.js';
-  import { createFormStore } from '#lib/panel/context/form.svelte.js';
+  import type { Dic } from '#lib/util/types.js';
   import type { NodeViewProps } from '@tiptap/core';
   import { onMount, type Component } from 'svelte';
   import NodeViewWrapper from '../../svelte/node-view-wrapper.svelte';
+  import FieldsForm from './fields-form.svelte';
   import './fields.css';
 
   type Props = Omit<NodeViewProps, 'extension'> & {
@@ -19,53 +17,50 @@
     };
   };
 
-  let { node, extension, updateAttributes }: Props = $props();
+  let { node, editor, extension, updateAttributes }: Props = $props();
   let isSheetOpen = $state(false);
 
+  // The values this view wrote last. A node holding other values changed from outside (undo,
+  // another editor on the same path), and the form is built again from them.
   // svelte-ignore state_referenced_locally
-  const form = createFormStore(node.attrs.json || {});
-
-  onMount(() => {
-    if (!node.attrs.json) {
-      isSheetOpen = true;
+  let written: unknown = node.attrs.json;
+  let generation = $state(0);
+  $effect(() => {
+    if (node.attrs.json !== written) {
+      written = node.attrs.json;
+      generation += 1;
     }
   });
 
-  $effect(() => {
-    if (form.values) {
-      updateAttributes({
-        json: form.values
-      });
+  function write(values: Dic) {
+    written = values;
+    updateAttributes({ json: values });
+  }
+
+  // A new node opens its sheet, and holds an empty set of values so it opens it only once
+  onMount(() => {
+    if (node.attrs.json) {
+      return;
+    }
+    isSheetOpen = true;
+    if (editor.isEditable) {
+      write({});
     }
   });
 
   const previewFields = $derived.by(() => {
     return extension.options.fields.filter((field) => field instanceof FormFieldBuilder);
   });
-
-  const classModifiers = $derived(
-    extension.options.preview ? 'rz-rich-text-fields-preview--custom' : ''
-  );
 </script>
 
 <NodeViewWrapper>
-  <FieldsPreviewTrigger
-    class="rz-rich-text-fields-preview {classModifiers}"
-    onclick={() => (isSheetOpen = true)}
-  >
-    <FieldsPreview
+  {#key generation}
+    <FieldsForm
+      values={node.attrs.json || {}}
       fields={previewFields}
-      getField={(field) => form.useField(field.name, field)}
       preview={extension.options.preview}
+      bind:isSheetOpen
+      onchange={write}
     />
-  </FieldsPreviewTrigger>
+  {/key}
 </NodeViewWrapper>
-
-<Sheet.Root bind:open={isSheetOpen}>
-  <Sheet.Content preventScroll={false} side="right" class="rz-rich-text-sheet">
-    {#each previewFields as field, index (index)}
-      {@const FieldComponent = field.component}
-      <FieldComponent path={field.name} config={field} {form} />
-    {/each}
-  </Sheet.Content>
-</Sheet.Root>
