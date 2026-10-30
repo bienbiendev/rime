@@ -23,6 +23,7 @@
   import { withLocale } from '#lib/panel/util/url.js';
   import { toKebabCase } from '#lib/util/string.js';
   import { onMount } from 'svelte';
+  import { toast } from 'svelte-sonner';
   import { fade } from 'svelte/transition';
 
   type Data = {
@@ -127,7 +128,10 @@
     if (!panelContexts[update]) {
       // The key's own locale stays
       const res = await fetch(withLocale(`${API_PREFIX}${update}`, locale.code));
-      if (!res.ok) return;
+      if (!res.ok) {
+        toast.error(t__('common.generic_error'));
+        return;
+      }
       panelContexts[update] = { doc: (await res.json()).doc };
 
       // Seed liveStore only on FIRST activation — never overwrite live edits on re-click

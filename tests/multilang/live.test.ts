@@ -59,6 +59,21 @@ test('The close button of an area lands on the area page', async ({ page }) => {
   await page.waitForURL(panelUrl('infos'));
 });
 
+test('A panel whose document cannot be read toasts an error', async ({ page }) => {
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  // The panel's read of infos is refused
+  await page.route(
+    (url) => url.pathname === new URL(`${API_BASE_URL}/infos`).pathname,
+    (route) => route.fulfill({ status: 403, json: { error: 'unauthorized' } })
+  );
+  await page.goto(live);
+
+  // The panel speaks French
+  const sonner = page.locator('[data-sonner-toast] [data-title]');
+  await expect(sonner).toHaveText('Une erreur est survenue');
+  await expect(page.locator('input[name="instagram"]')).toHaveCount(0);
+});
+
 test('The live page stops listening to the preview once it is left', async ({ page }) => {
   // The window's `message` listeners, kept in `window.messageListeners`
   await page.addInitScript(() => {
