@@ -15,8 +15,9 @@ import type { Route } from '#lib/panel/types.js';
 import { error, type ServerLoadEvent } from '@sveltejs/kit';
 
 /**
- * The document page, `/panel/[slug]/[id]`. `id` `create` opens a blank document; otherwise
- * `?versionId` picks the row, and `?uploadPath` names the folder for the breadcrumb.
+ * The document page, `/panel/[slug]/[id]`. `id` `create` opens a blank document, and
+ * `?uploadPath` names the folder it goes in; otherwise `?versionId` picks the row, and the
+ * breadcrumb shows the document's own folder.
  */
 export async function documentLoad(event: ServerLoadEvent) {
   const { locale, user, rime } = event.locals;
@@ -61,8 +62,12 @@ export async function documentLoad(event: ServerLoadEvent) {
     url: rime.routes.panelUrl(collection.config.kebab)
   };
   if (collection.config.upload) {
-    const paramUploadPath = event.url.searchParams.get(PARAMS.UPLOAD_PATH) as UploadPath | null;
-    const currentDirectoryPath = paramUploadPath || UPLOAD_PATH.ROOT_NAME;
+    // A new document goes in the folder the URL names; an existing one is in its own
+    const folder =
+      operation === 'create'
+        ? (event.url.searchParams.get(PARAMS.UPLOAD_PATH) as UploadPath | null)
+        : (doc._path as UploadPath | undefined);
+    const currentDirectoryPath = folder || UPLOAD_PATH.ROOT_NAME;
     aria = [
       dashboardCrumb(rime),
       collectionAria,

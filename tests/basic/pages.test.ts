@@ -459,3 +459,46 @@ test.describe('Live Edit', () => {
     await expect(frame.locator('h1')).toHaveText('Live test');
   });
 });
+
+/**
+ * A media opened from outside its folder, as a relation's link or the dashboard opens it, shows
+ * its own folder, and a save leaves it there.
+ */
+test('A media opened without its folder in the URL stays in its folder when saved', async ({
+  page,
+  request
+}) => {
+  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  const run = Date.now();
+  const folder = `news-${run}`;
+  const payload = Buffer.from(`in-${folder}`).toString('base64');
+  const created = await request.post(`${API_BASE_URL}/medias`, {
+    headers,
+    data: {
+      file: { base64: `data:text/plain;base64,${payload}`, filename: `${folder}.txt` },
+      alt: 'before',
+      _path: `root:${folder}`
+    }
+  });
+  expect(created.status()).toBe(200);
+  const { doc } = await created.json();
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(`${panelUrl('medias')}/${doc.id}?uploadPath=root`);
+  await expect(page.locator('.rz-aria__link', { hasText: folder })).toBeVisible();
+
+  const alt = page.locator('input.rz-input[name="alt"]');
+  await alt.fill('after');
+  const saveButton = page.locator('.rz-page-header__row button[type="submit"]');
+  await expect(saveButton).toBeEnabled();
+  const saved = page.waitForResponse(
+    (response) => response.request().method() === 'POST' && response.url().includes(doc.id)
+  );
+  await saveButton.click();
+  expect((await saved).status()).toBe(200);
+
+  const read = await request.get(`${API_BASE_URL}/medias/${doc.id}`, { headers });
+  const stored = (await read.json()).doc;
+  expect(stored.alt).toBe('after');
+  expect(stored._path).toBe(`root:${folder}`);
+});

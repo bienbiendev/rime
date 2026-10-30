@@ -465,13 +465,14 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
   /** The values, nested as they are, as FormData the server reads with their types. */
   const toFormData = (data: Dic) => {
-    // An upload names its folder. The file's name stays on the form for the header to show: the
-    // server names the saved file itself.
+    // An upload: the file's name stays on the form for the header to show, the server names the
+    // saved file itself. A new one goes in the folder the URL names; an update leaves the folder
+    // alone.
     if (isCollection && documentConfig.upload) {
-      data = {
-        ...omit(['filename'], data),
-        _path: page.url.searchParams.get(PARAMS.UPLOAD_PATH) || UPLOAD_PATH.ROOT_NAME
-      };
+      data = omit(['filename'], data);
+      if (operation === 'create') {
+        data._path = page.url.searchParams.get(PARAMS.UPLOAD_PATH) || UPLOAD_PATH.ROOT_NAME;
+      }
     }
     return writeFormData(data);
   };
