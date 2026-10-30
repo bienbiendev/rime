@@ -82,5 +82,10 @@ export default {
   rich_text_set_legend: 'Set legend',
   rich_text_media_legend: 'Media legend',
   rich_text_paragraph: 'Paragraph',
-  rich_text_multiple: 'Multiple'
+  rich_text_multiple: 'Multiple',
+  rich_text_heading: 'Heading $1',
+  rich_text_blockquote: 'Blockquote',
+  rich_text_bullet_list: 'Bullet list',
+  rich_text_ordered_list: 'Ordered list',
+  rich_text_horizontal_rule: 'Horizontal Rule'
 };

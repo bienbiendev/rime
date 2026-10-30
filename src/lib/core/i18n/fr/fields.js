@@ -82,5 +82,10 @@ export default {
   rich_text_set_legend: 'Ajouter une légende',
   rich_text_media_legend: 'Légende du média',
   rich_text_paragraph: 'Paragraphe',
-  rich_text_multiple: 'Plusieurs'
+  rich_text_multiple: 'Plusieurs',
+  rich_text_heading: 'Titre $1',
+  rich_text_blockquote: 'Citation',
+  rich_text_bullet_list: 'Liste à puces',
+  rich_text_ordered_list: 'Liste numérotée',
+  rich_text_horizontal_rule: 'Ligne horizontale'
 };

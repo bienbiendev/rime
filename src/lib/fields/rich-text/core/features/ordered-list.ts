@@ -1,9 +1,13 @@
+import { t__ } from '#lib/core/i18n/index.js';
 import ListOrdered from '@lucide/svelte/icons/list-ordered';
 import { OrderedList } from '@tiptap/extension-list';
 import type { RichTextFeature, RichTextFeatureNode } from '../types.js';
 
 const orderedListFeatureNode: RichTextFeatureNode = {
-  label: 'Ordered list',
+  // Read on each use: the panel loads its dictionaries after this module runs
+  get label() {
+    return t__('fields.rich_text_ordered_list');
+  },
   icon: ListOrdered,
   isActive: ({ editor }) => editor.isActive('orderedList'),
   bubbleMenu: {

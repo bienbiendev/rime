@@ -1,3 +1,4 @@
+import { t__ } from '#lib/core/i18n/index.js';
 import Heading1Icon from '@lucide/svelte/icons/heading-1';
 import Heading2Icon from '@lucide/svelte/icons/heading-2';
 import Heading3Icon from '@lucide/svelte/icons/heading-3';
@@ -32,7 +33,10 @@ const ICONS = [Heading1Icon, Heading2Icon, Heading3Icon, Heading4Icon, Heading5I
 
 // The node-selector and palette entries of one heading level
 const headingItem = (level: Level): RichTextFeatureNode => ({
-  label: `Heading ${level}`,
+  // Read on each use: the panel loads its dictionaries after this module runs
+  get label() {
+    return t__('fields.rich_text_heading', String(level));
+  },
   icon: ICONS[level - 1],
   isActive: ({ editor }) => editor.isActive('heading', { level }),
   nodeSelector: {
