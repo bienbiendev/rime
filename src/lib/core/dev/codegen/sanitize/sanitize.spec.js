@@ -130,6 +130,39 @@ test('sanitize() refuses a news.ts with a $url beside a news.server.ts', async (
   await expect(sanitize()).rejects.toThrow('news.server.ts');
 });
 
+test('sanitize() refuses a config file it cannot parse, naming it, and writes nothing', async () => {
+  write(`${CONFIG_DIR}/rime.config.server.ts`, 'export default rime({});\n');
+  write(`${CONFIG_DIR}/news.ts`, "export const News = Collection.create('news', {\n");
+  write(`${GENERATED_DIR}/news.ts`, '// previous\n');
+
+  await expect(sanitize()).rejects.toThrow(/^Cannot parse news\.ts, so its server content/);
+
+  expect(read(`${GENERATED_DIR}/news.ts`)).toBe('// previous\n');
+  expect(existsSync(join(root, GENERATED_DIR, 'rime.config.ts'))).toBe(false);
+});
+
+test('sanitize() still splits a config file written with TypeScript syntax', async () => {
+  write(`${CONFIG_DIR}/rime.config.server.ts`, 'export default rime({});\n');
+  write(
+    `${CONFIG_DIR}/news.ts`,
+    `import type { Doc } from 'rimecms';
+type Slug = 'news' | 'pages';
+enum Kind { Post = 'post' }
+const slugs = ['news', 'pages'] as const satisfies readonly Slug[];
+export const pick = <T>(value: T): T => value;
+export const News = Collection.create(slugs[0]!, {
+  label: Kind.Post,
+  $url: (doc: Doc) => doc?.id
+});
+`
+  );
+
+  await sanitize();
+
+  expect(read(`${GENERATED_DIR}/news.ts`)).not.toContain('$url');
+  expect(read(`${GENERATED_DIR}/news.server.ts`)).toContain('$url');
+});
+
 test('sanitize() copies a binary file byte for byte', async () => {
   write(`${CONFIG_DIR}/rime.config.server.ts`, 'export default rime({});\n');
   const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0xff]);

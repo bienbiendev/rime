@@ -88,7 +88,10 @@ export async function sanitize() {
         moduleSources(ast.body).map((node) => node.source.value)
       );
     } catch (err) {
-      logger.warn(`Failed to analyze ${relativePath} during pre-scan: ${err.message}`);
+      // Copied unparsed, its `$` content would reach the client copy
+      throw new Error(
+        `Cannot parse ${relativePath}, so its server content cannot be removed: ${err.message}`
+      );
     }
   }
 
