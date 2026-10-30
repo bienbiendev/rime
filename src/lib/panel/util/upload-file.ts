@@ -1,6 +1,9 @@
 import { PARAMS } from '#lib/core/constants.js';
 import type { UploadDoc } from '#lib/core/prototype/collection/upload/types.js';
-import { getExtensionFromMimeType } from '#lib/core/prototype/collection/upload/util/mime.js';
+import {
+  getExtensionFromMimeType,
+  uploadType
+} from '#lib/core/prototype/collection/upload/util/mime.js';
 import { trycatchFetch } from '#lib/util/function.js';
 
 /** Where files go: the collection's API url, the folder, and the mime types it takes. */
@@ -15,16 +18,6 @@ export type UploadProgress = {
   /** The name of the file on its way, `null` once the last one is done. */
   current: string | null;
 };
-
-/**
- * Whether the collection takes this file. No `accept` takes anything.
- *
- * ```ts
- * isAccepted(photo, ['image/jpeg', 'image/png']) // true for a .jpg
- * ```
- */
-export const isAccepted = (file: Pick<File, 'type'>, accept?: string[]) =>
-  !accept?.length || accept.includes(file.type);
 
 /**
  * A mime type as people read it.
@@ -141,15 +134,17 @@ const readAsDataURL = (file: File) =>
 /**
  * Creates one document of an upload collection from a file, and answers it.
  * `?skipValidation=true` lets a staff request leave required fields empty, so a required field the
- * file cannot fill, like an `alt`, never blocks it.
+ * file cannot fill, like an `alt`, never blocks it. A file the server would refuse, by the
+ * extension it is saved under, is refused first, in the server's words (`uploadType`).
  *
  * ```ts
  * const doc = await uploadFile(file, { url: '/api/medias', path: 'root:press' });
  * ```
  */
 async function uploadFile(file: File, target: UploadTarget): Promise<UploadDoc> {
-  if (!isAccepted(file, target.accept)) {
-    throw new Error(`${file.name} is not of an accepted type`);
+  const { refusal } = uploadType(file.name, target.accept);
+  if (refusal) {
+    throw new Error(refusal);
   }
   const base64 = await readAsDataURL(file);
   const [error, response] = await trycatchFetch(`${target.url}?${PARAMS.SKIP_VALIDATION}=true`, {

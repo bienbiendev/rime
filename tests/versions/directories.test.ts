@@ -296,3 +296,29 @@ test('The upload veil goes when a file drag leaves the window from the navigatio
   await nav.dispatchEvent('dragleave', { dataTransfer: files });
   await expect(veil).toHaveCount(0);
 });
+
+/**
+ * The upload header shows a picked file by the type the server stores it as, read from its
+ * extension: a file the browser cannot type is shown as picked, and a file the server would
+ * refuse is refused with the server's words.
+ */
+test('A picked file with no type is shown as picked, and a refused one with its reason', async ({
+  page
+}) => {
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(`${panelUrl('medias', 'create')}?uploadPath=root`);
+  const input = page.locator('input[name="file"]');
+  const buffer = Buffer.from('scanned');
+
+  await input.setInputFiles({ name: 'x.html', mimeType: '', buffer });
+  await expect(page.locator('[data-sonner-toast] [data-title]')).toHaveText(
+    '.html is not an accepted file type'
+  );
+  await expect(page.locator('.rz-doc-upload-dropzone')).toBeVisible();
+
+  await input.setInputFiles({ name: 'scan', mimeType: '', buffer });
+  await expect(page.locator('.rz-doc-upload-header__info p').first()).toHaveText('scan');
+  await expect(page.locator('.rz-doc-upload-header__prewiew-file span')).toHaveText(
+    'application/octet-stream'
+  );
+});

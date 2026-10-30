@@ -1,3 +1,5 @@
+import { normalizeFileName } from '#lib/util/file.js';
+
 /**
  * The file types rime knows, each with its extensions, the canonical one first. A base64 upload
  * of a type outside this map is refused (`jsonFileToFile`).
@@ -146,3 +148,25 @@ export const RISKY_MIME_TYPES = [
  */
 export const isAcceptedType = (mimeType: string, accept?: string[]) =>
   accept?.length ? accept.includes(mimeType) : !RISKY_MIME_TYPES.includes(mimeType);
+
+/**
+ * The type an upload named `filename` is stored and served as, from the extension it is saved
+ * under, and why it is refused: `null` when `accept` takes it. The server and the panel both ask
+ * it, so a file the server refuses is refused in the panel with the same words.
+ *
+ * ```ts
+ * uploadType('Photo.JPEG');           // { mimeType: 'image/jpeg', refusal: null }
+ * uploadType('scan');                 // { mimeType: 'application/octet-stream', refusal: null }
+ * uploadType('x.html');               // { mimeType: 'text/html', refusal: '.html is not an accepted file type' }
+ * uploadType('scan', ['image/jpeg']); // { …, refusal: 'A file with no extension is not an accepted file type' }
+ * ```
+ */
+export const uploadType = (filename: string, accept?: string[]) => {
+  const { extension } = normalizeFileName(filename);
+  const mimeType = servedMimeType(extension);
+  if (isAcceptedType(mimeType, accept)) {
+    return { mimeType, refusal: null };
+  }
+  const what = extension ? `.${extension}` : 'A file with no extension';
+  return { mimeType, refusal: `${what} is not an accepted file type` };
+};

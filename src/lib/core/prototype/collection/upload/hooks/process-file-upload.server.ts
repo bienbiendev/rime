@@ -4,15 +4,15 @@ import { filesOwner } from '#lib/core/prototype/collection/upload/disk/medias.se
 import { saveFile } from '#lib/core/prototype/collection/upload/disk/save.server.js';
 import { omit } from '#lib/util/object.js';
 import { isUploadConfig } from '#lib/core/prototype/collection/upload/util/config.js';
-import { isAcceptedType, servedMimeType } from '#lib/core/prototype/collection/upload/util/mime.js';
+import { uploadType } from '#lib/core/prototype/collection/upload/util/mime.js';
 import { RimeError } from '#lib/core/errors/index.js';
-import { fileSizeToString, normalizeFileName } from '#lib/util/file.js';
+import { fileSizeToString } from '#lib/util/file.js';
 import type { Dic } from '#lib/util/types.js';
 
 /**
  * Saves the file a write sends, with its image sizes, in the collection's folder, and puts its
  * name, type and size on the row. The type is the one its extension is served as, and a type
- * `upload.accept` does not take answers 400 before anything is saved (`isAcceptedType`).
+ * `upload.accept` does not take answers 400 before anything is saved (`uploadType`).
  *
  * ```
  * file: x.html  400 ".html is not an accepted file type", unless `accept` lists `text/html`
@@ -42,11 +42,9 @@ export const processFileUpload = Hooks.beforeUpsert<'upload'>(
 
     if (data.file) {
       // The type the file is served as, from the extension it is saved under
-      const { extension } = normalizeFileName(data.file.name);
-      const mimeType = servedMimeType(extension);
-      if (!isAcceptedType(mimeType, config.upload.accept)) {
-        const what = extension ? `.${extension}` : 'A file with no extension';
-        throw new RimeError(RimeError.INVALID_DATA, `${what} is not an accepted file type`);
+      const { mimeType, refusal } = uploadType(data.file.name, config.upload.accept);
+      if (refusal) {
+        throw new RimeError(RimeError.INVALID_DATA, refusal);
       }
 
       const owner = filesOwner(args.event.locals.rime.config, config);

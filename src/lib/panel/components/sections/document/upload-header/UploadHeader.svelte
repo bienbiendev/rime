@@ -2,11 +2,12 @@
   import type { BuiltCollection } from '#lib/core/config/types.js';
   import { t__ } from '#lib/core/i18n/index.js';
   import type { WithUpload } from '#lib/core/prototype/collection/upload/util/config.js';
+  import { uploadType } from '#lib/core/prototype/collection/upload/util/mime.js';
   import Button from '#lib/panel/components/ui/button/button.svelte';
   import { type DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import { mimeTypeToIcon } from '#lib/panel/util/upload.js';
   import * as util from '#lib/util/file.js';
-  import { fileSizeLabel, isAccepted } from '#lib/panel/util/upload-file.js';
+  import { fileSizeLabel } from '#lib/panel/util/upload-file.js';
   import { toast } from 'svelte-sonner';
   import DropZone from './drop-zone/DropZone.svelte';
 
@@ -14,7 +15,7 @@
     form: DocumentFormContext;
     /** Creating: the file name shows as text, the file has no address yet. */
     create: boolean;
-    /** The mime types the collection takes; none means any. */
+    /** The mime types the collection takes; none means any but the risky ones (`uploadType`). */
     accept: WithUpload<BuiltCollection>['upload']['accept'];
   };
   const { form, create, accept }: Props = $props();
@@ -47,16 +48,21 @@
   const onGeneratingPreviewStart = () => (form.isDisabled = true);
   const onGeneratingPreviewEnd = () => (form.isDisabled = false);
 
-  /** A picked file of a type the collection refuses is dropped, with an error on `mimeType`. */
+  /** The picked file's type as the server stores it, from its extension, never empty. */
+  const picked = $derived(file ? uploadType(file.name, accept) : null);
+
+  /**
+   * A picked file the server would refuse is dropped, with the server's words as an error on
+   * `mimeType`.
+   */
   $effect(() => {
-    if (!file) return;
-    if (isAccepted(file, accept)) {
+    if (!file || !picked) return;
+    if (!picked.refusal) {
       form.errors.delete('mimeType');
       isValidFile = true;
     } else {
-      const error = `File should be type of ${(accept ?? []).join(' | ')}, received ${file.type}`;
-      form.errors.set('mimeType', error);
-      toast.error(error);
+      form.errors.set('mimeType', picked.refusal);
+      toast.error(picked.refusal);
       isValidFile = false;
       file = null;
     }
@@ -64,10 +70,10 @@
 
   /** A picked file's facts go into the form: name, size, type and the file itself. */
   $effect(() => {
-    if (file && isValidFile && form.values.filename !== file.name) {
+    if (file && picked && isValidFile && form.values.filename !== file.name) {
       form.setValue('filename', file.name);
       form.setValue('filesize', util.fileSizeToString(file.size));
-      form.setValue('mimeType', file.type);
+      form.setValue('mimeType', picked.mimeType);
       form.setValue('file', file);
     }
   });

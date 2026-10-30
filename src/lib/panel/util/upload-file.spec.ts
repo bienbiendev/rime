@@ -3,7 +3,6 @@ import {
   acceptLabel,
   fileSizeBytes,
   fileSizeLabel,
-  isAccepted,
   mediaKind,
   mediaMeta,
   typeLabel,
@@ -68,6 +67,18 @@ describe('uploadFiles', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('decides by the extension a file is saved under, as the server does', async () => {
+    const typeless = new File(['x'], 'e.jpg', { type: '' });
+    const page = new File(['x'], 'x.html', { type: 'image/jpeg' });
+    const { docs, failed } = await uploadFiles([typeless, page], { url: '/api/medias' });
+    expect(docs.map((doc) => doc.id)).toEqual(['e.jpg']);
+    expect(failed).toEqual(['x.html']);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const accepted = await uploadFiles([typeless], { url: '/api/medias', accept: ['image/jpeg'] });
+    expect(accepted.failed).toEqual([]);
+  });
+
   it('reports each step', async () => {
     const steps: unknown[] = [];
     await uploadFiles([jpg('a.jpg'), jpg('broken.jpg')], { url: '/api/medias' }, (progress) =>
@@ -92,11 +103,6 @@ describe('labels', () => {
   it('lists the accepted types', () => {
     expect(acceptLabel(['image/jpeg', 'image/png', 'image/webp'], 'or')).toBe('JPG, PNG or WEBP');
     expect(acceptLabel(['image/png'], 'or')).toBe('PNG');
-  });
-
-  it('takes anything without accept', () => {
-    expect(isAccepted({ type: 'application/pdf' })).toBe(true);
-    expect(isAccepted({ type: 'application/pdf' }, ['image/png'])).toBe(false);
   });
 });
 
