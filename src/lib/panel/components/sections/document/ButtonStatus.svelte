@@ -72,14 +72,8 @@
 
 <Dialog.Root bind:open={dialogOpen}>
   <Dialog.Trigger>
-    {#snippet child(props)}
-      <Button
-        size="sm"
-        variant="ghost"
-        class="rz-status__button"
-        onclick={() => (dialogOpen = true)}
-        {...props}
-      >
+    {#snippet child({ props })}
+      <Button size="sm" variant="ghost" class="rz-status__button" {...props}>
         <StatusDot status={form.values.status} />
         <span class="rz-status__text">{t__(`common.${form.values.status}`)}</span>
       </Button>

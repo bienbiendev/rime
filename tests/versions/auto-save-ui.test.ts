@@ -255,7 +255,11 @@ test('Changing the status is not typing: no auto-save follows', async ({ page, r
   await page.goto(documentUrl(autoSaveId));
   const before = (await versionsOf(request)).length;
 
-  await page.getByRole('button', { name: 'Published' }).click();
+  // The status button is the dialog's trigger: it carries the trigger's attributes and opens it.
+  const statusButton = page.getByRole('button', { name: 'Published' });
+  await expect(statusButton).toHaveAttribute('aria-haspopup', 'dialog');
+  await statusButton.click();
+  await expect(page.getByRole('dialog')).toBeVisible();
   await page.locator('label[for="document.draft"]').click();
   const changed = page.waitForResponse((response) => response.request().method() === 'PATCH');
   await page.getByRole('button', { name: 'Validate' }).click();
