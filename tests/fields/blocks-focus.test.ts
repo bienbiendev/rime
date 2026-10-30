@@ -247,6 +247,22 @@ test('Removing a selection asks first when any selected block holds blocks', asy
   await expect(rows(page)).toHaveCount(4);
 });
 
+test('Space selects a block on the stage, as Enter does', async ({ page, request }) => {
+  const docId = await createPage(request);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
+
+  const top = page.locator('.rz-blocks-focus__renders > .rz-renders > .rz-renders__item');
+  await top.nth(2).focus();
+  await page.keyboard.press('Space');
+  await expect(top.nth(2)).toHaveAttribute('data-selected', '');
+
+  await top.nth(0).focus();
+  await page.keyboard.press('Enter');
+  await expect(top.nth(0)).toHaveAttribute('data-selected', '');
+  await expect(top.nth(2)).not.toHaveAttribute('data-selected');
+});
+
 test('⌘K moves a block into a nested list, and never into one that refuses its type', async ({
   page,
   request

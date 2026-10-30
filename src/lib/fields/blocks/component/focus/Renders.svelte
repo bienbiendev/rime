@@ -160,7 +160,7 @@
       tabindex="0"
       onclick={(event) => select(event, row.path)}
       onkeydown={(event) => {
-        if (event.key === 'Enter' && event.target === event.currentTarget) {
+        if ((event.key === 'Enter' || event.key === ' ') && event.target === event.currentTarget) {
           event.preventDefault();
           focus.select(row.path);
         }
