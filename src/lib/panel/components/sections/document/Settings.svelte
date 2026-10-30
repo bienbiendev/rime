@@ -107,17 +107,19 @@
     }
   }
 
+  /** Deletes the document, then lists the collection; a request that fails shows an error. */
   async function handleDelete() {
-    await fetch(`${apiUrl(form.config.kebab)}/${form.values.id}`, {
+    const [error] = await trycatchFetch(`${apiUrl(form.config.kebab)}/${form.values.id}`, {
       method: 'DELETE'
-    }).then((response) => {
-      if (response.ok) {
-        toast.success(t__('common.doc_deleted'));
-        goto(panelPath(form.config.kebab));
-      } else {
-        toast.error(t__('common.generic_error'));
-      }
     });
+    if (error) {
+      toast.error(t__('common.generic_error'));
+      return;
+    }
+    toast.success(t__('common.doc_deleted'));
+    // The panel's cached reads of the collection drop the deleted document.
+    APIProxy.invalidate(apiUrl(form.config.kebab));
+    goto(panelPath(form.config.kebab));
   }
 
   /** Copies the row on screen, an auto-saved one included. */

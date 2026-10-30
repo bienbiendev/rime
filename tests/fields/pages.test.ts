@@ -174,6 +174,38 @@ test('Confirming a leave towards another origin goes there', async ({ page, requ
   await expect(page.locator('h1')).toHaveText('Other site');
 });
 
+/** ---------------- DELETE THAT FAILS ---------------- */
+
+test('A delete whose request fails shows an error and keeps the document', async ({
+  page,
+  request
+}) => {
+  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { title: 'Delete offline', slug: `delete-offline-${Date.now()}` }
+  });
+  expect(response.status()).toBe(200);
+  const id = (await response.json()).doc.id as string;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', id));
+  // The connection drops under the DELETE
+  await page.route(
+    (url) => url.pathname.endsWith(`/api/pages/${id}`),
+    (route) => (route.request().method() === 'DELETE' ? route.abort() : route.fallback())
+  );
+
+  await page.getByRole('button', { name: 'Document actions' }).click();
+  await page.getByRole('menuitem', { name: 'Delete the document' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+
+  await expect(page.getByText('An error occurred')).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe(new URL(panelUrl('pages', id)).pathname);
+  const read = await request.get(`${API_BASE_URL}/pages/${id}`, { headers });
+  expect(read.status()).toBe(200);
+});
+
 /** ---------------- GROUP WITH MANY FIELDS: SAVE + RELOAD ---------------- */
 
 test('Should persist the text, textarea, checkbox, toggle, select and number of the meta group after save and reload', async ({
