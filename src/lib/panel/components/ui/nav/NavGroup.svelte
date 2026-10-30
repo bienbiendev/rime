@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { readStored, writeStored } from '#lib/panel/util/storage.js';
   import type { IconProps } from '@lucide/svelte';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import type { Component, Snippet } from 'svelte';
@@ -11,16 +12,15 @@
   };
   const { children, name, navCollapsed, icon }: Props = $props();
 
-  let folded = $state(false);
+  /** The browser keeps a folded group: `NavGroupCollapsed:<name>` is `true` while it is folded. */
+  // svelte-ignore state_referenced_locally
+  const storageKey = `NavGroupCollapsed:${name}`;
+  let folded = $state(readStored(storageKey) === 'true');
 
   const toggleFolded = () => {
     folded = !folded;
-    localStorage.setItem(`NavGroupCollapsed:${name}`, folded.toString());
+    writeStored(storageKey, String(folded));
   };
-
-  $effect(() => {
-    folded = localStorage.getItem(`NavGroupCollapsed:${name}`) === 'true';
-  });
 </script>
 
 <div

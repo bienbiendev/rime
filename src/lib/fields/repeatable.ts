@@ -1,6 +1,7 @@
 import { localizeFields } from '#lib/core/fields/localize.js';
 import type { FieldBuilder } from '#lib/core/fields/builders/field-builder.js';
 import type { Field } from '#lib/fields/types.js';
+import { readStored, writeStored } from '#lib/panel/util/storage.js';
 import { text } from './text/index.js';
 
 /** An empty list, or no list at all. */
@@ -42,23 +43,8 @@ export function repeatableTitle<A>(
 const openKey = (id: string) => `rz-open:${id}`;
 
 /** Whether the browser remembers the row open. */
-export const isRememberedOpen = (id: string) => {
-  try {
-    return localStorage.getItem(openKey(id)) === '1';
-  } catch {
-    return false;
-  }
-};
+export const isRememberedOpen = (id: string) => readStored(openKey(id)) === '1';
 
 /** Remembers the row open, or forgets it when closed. */
-export const rememberOpen = (id: string, open: boolean) => {
-  try {
-    if (open) {
-      localStorage.setItem(openKey(id), '1');
-    } else {
-      localStorage.removeItem(openKey(id));
-    }
-  } catch {
-    // Storage blocked: the row still opens, it is just not remembered
-  }
-};
+export const rememberOpen = (id: string, open: boolean) =>
+  writeStored(openKey(id), open ? '1' : null);

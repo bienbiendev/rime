@@ -74,7 +74,7 @@
             <NavItem href={route.url} {isCollapsed} {route} />
           {/each}
         </div>
-        {#each Object.entries(routesGroups) as [groupName, routes], index (index)}
+        {#each Object.entries(routesGroups) as [groupName, routes] (groupName)}
           {#if groupName !== 'none'}
             {@const icon = getGroupIcon(groupName)}
             <NavGroup name={groupName} {icon} navCollapsed={isCollapsed}>

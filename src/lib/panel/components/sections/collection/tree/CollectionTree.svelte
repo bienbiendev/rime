@@ -110,7 +110,7 @@
         data-id="root"
         style:--rz-tree-depth="0"
       >
-        {#each collection.nested as doc, index (index)}
+        {#each collection.nested as doc (doc.id)}
           <CollectionTreeNode {collection} parentId="root" {doc} />
         {/each}
       </div>

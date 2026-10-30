@@ -8,7 +8,6 @@
   import { useSortable } from '#lib/panel/util/Sortable.js';
   import { normalizeFieldPath } from '#lib/util/string.js';
   import Maximize2 from '@lucide/svelte/icons/maximize-2';
-  import { onMount } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import DefaultLocaleButton from '../../repeatable/DefaultLocaleButton.svelte';
   import AddBlockButton from './AddBlockButton.svelte';
@@ -44,14 +43,11 @@
    * The blocks shown open, by id; the others are rows. The browser remembers a saved block open,
    * by its id.
    */
-  const opened = new SvelteSet<string>();
+  // svelte-ignore state_referenced_locally
+  const opened = new SvelteSet<string>(
+    blockState.blocks.map((block) => block.id).filter(isRememberedOpen)
+  );
   const anyOpen = $derived(blockState.blocks.some((block) => opened.has(block.id)));
-
-  onMount(() => {
-    for (const block of blockState.blocks) {
-      if (isRememberedOpen(block.id)) opened.add(block.id);
-    }
-  });
 
   function setOpen(id: string, open: boolean) {
     if (open) {

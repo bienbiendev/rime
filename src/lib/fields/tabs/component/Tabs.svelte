@@ -4,6 +4,7 @@
   import RenderFields from '#lib/panel/components/fields/RenderFields.svelte';
   import * as Tabs from '#lib/panel/components/ui/tabs/index.js';
   import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
+  import { readStored, writeStored } from '#lib/panel/util/storage.js';
   import type { TabBuilder, TabsBuilder } from '../index.js';
 
   type Props = { config: TabsBuilder; path: string; form: DocumentFormContext };
@@ -20,14 +21,10 @@
   );
 
   // The stored tab when it still exists and is shown, else the first tab.
-  // The server has no storage: it renders the first tab. Node 25+ warns on any read of its
-  // `localStorage`, so the check is on `window`.
   let activeTabName = $derived.by(() => {
-    const first = config.get.tabs[0].name;
-    if (typeof window === 'undefined') return first;
-    const stored = storedTab();
+    const stored = readStored(storageActiveKey);
     const tab = config.get.tabs.find((tab) => tab.name === stored);
-    if (!tab || !isTabVisible(tab)) return first;
+    if (!tab || !isTabVisible(tab)) return config.get.tabs[0].name;
     return tab.name;
   });
 
@@ -36,21 +33,8 @@
     return form.isLive ? tab.get.live === true : true;
   }
 
-  /** The tab stored for this document and path; nothing where storage is blocked. */
-  function storedTab() {
-    try {
-      return localStorage.getItem(storageActiveKey);
-    } catch {
-      return null;
-    }
-  }
-
   function onActiveTabChange(value: string): void {
-    try {
-      localStorage.setItem(storageActiveKey, value);
-    } catch {
-      // Storage blocked: the tab changes, it is just not remembered
-    }
+    writeStored(storageActiveKey, value);
     activeTabName = value;
   }
 

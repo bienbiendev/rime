@@ -3,6 +3,7 @@
   import type { GenericDoc } from '#lib/core/prototype/types.js';
   import { panelPath } from '#lib/core/routes/util.js';
   import type { CollectionContext } from '#lib/panel/context/collection.svelte.js';
+  import { readStored, writeStored } from '#lib/panel/util/storage.js';
   import { titleOrUntitled } from '#lib/panel/util/title.js';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -27,17 +28,13 @@
   const firstName = $derived(author.split(/\s+/)[0]);
 
   /** The browser keeps the folded ones: `rz-tree-folded:<id>` is set while one is folded. */
-  const FOLDED_KEY = 'rz-tree-folded:';
-  let folded = $state(false);
-
-  $effect(() => {
-    folded = localStorage.getItem(FOLDED_KEY + doc.id) === '1';
-  });
+  // svelte-ignore state_referenced_locally
+  const storageKey = `rz-tree-folded:${doc.id}`;
+  let folded = $state(readStored(storageKey) === '1');
 
   function toggleFolded() {
     folded = !folded;
-    if (folded) localStorage.setItem(FOLDED_KEY + doc.id, '1');
-    else localStorage.removeItem(FOLDED_KEY + doc.id);
+    writeStored(storageKey, folded ? '1' : null);
   }
 </script>
 

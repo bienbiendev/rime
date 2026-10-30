@@ -8,8 +8,8 @@
   import RenderFields from '#lib/panel/components/fields/RenderFields.svelte';
   import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import { readStored, writeStored } from '#lib/panel/util/storage.js';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
-  import { onMount } from 'svelte';
 
   type Props = {
     path: string;
@@ -18,24 +18,21 @@
   };
   const { config, path, form }: Props = $props();
 
-  let groupOpen = $state(true);
   const key = $derived(
     `group-${config.get.fields
       .filter(isFormField)
       .map((f) => f.name)
       .join('-')}`
   );
+  // svelte-ignore state_referenced_locally
+  let groupOpen = $state(readStored(key) === 'true');
 
   const field = $derived(form.useField(path));
 
   function handleClick() {
     groupOpen = !groupOpen;
-    localStorage.setItem(key, groupOpen.toString());
+    writeStored(key, String(groupOpen));
   }
-
-  onMount(() => {
-    groupOpen = localStorage.getItem(key) === 'true';
-  });
 
   const user = getUserContext();
 

@@ -22,13 +22,14 @@ import {
   MEDIA_KINDS,
   type MediaKind
 } from '#lib/panel/util/upload-file.js';
+import { readStored, writeStored } from '#lib/panel/util/storage.js';
 import { titleText } from '#lib/panel/util/title.js';
 import { withLocale } from '#lib/panel/util/url.js';
 import { trycatchFetch } from '#lib/util/function.js';
 import { getValueAtPath, hasProp } from '#lib/util/object.js';
 import type { WithRequired } from '#lib/util/types.js';
 import { computeCommandScore } from 'bits-ui';
-import { getContext, onMount, setContext, untrack, type Component } from 'svelte';
+import { getContext, setContext, untrack, type Component } from 'svelte';
 import { toast } from 'svelte-sonner';
 
 type TableColumn = {
@@ -56,15 +57,24 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
   const { initial, config, canCreate, upload: incomingUpload } = args;
   const locale = getLocaleContext();
 
-  // The latest edit first, until another order is picked.
-  let sortingOrder = $state<SortMode>('dsc');
-  let sortingBy = $state<string>('updatedAt');
+  /** The browser keeps each list's display and sort: `collection.<slug>.display`. */
+  const storageKey = (name: 'display' | 'sortBy' | 'sortOrder') =>
+    `collection.${config.slug}.${name}`;
+  const storedDisplay = readStored(storageKey('display'));
+
+  // The stored order, else the latest edit first.
+  let sortingOrder = $state<SortMode>((readStored(storageKey('sortOrder')) as SortMode) || 'dsc');
+  let sortingBy = $state<string>(readStored(storageKey('sortBy')) || 'updatedAt');
   let initialDocs = $state.raw(initial);
   let docs = $state(sorted([...initial]));
   let selected = $state<string[]>([]);
   let statusFilter = $state<StatusFilter>('all');
   let kindFilter = $state<KindFilter>('all');
-  let displayMode = $state<DisplayMode>(DISPLAY_MODE.LIST);
+  let displayMode = $state<DisplayMode>(
+    storedDisplay && (storedDisplay !== DISPLAY_MODE.NESTED || config.nested)
+      ? (storedDisplay as DisplayMode)
+      : DISPLAY_MODE.LIST
+  );
   let upload = $state({
     directories: incomingUpload?.directories || [],
     currentPath: incomingUpload?.currentPath || UPLOAD_PATH.ROOT_NAME,
@@ -76,21 +86,6 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
   // A new stamp remounts the tree (the {#key} in CollectionTree.svelte).
   let stamp = $state(Date.now());
   const hasDraft = $derived(config.versions && config.versions.draft);
-
-  onMount(() => {
-    const storedDisplay = localStorage.getItem(`collection.${config.slug}.display`) as DisplayMode;
-    displayMode =
-      storedDisplay && (storedDisplay !== DISPLAY_MODE.NESTED || config.nested)
-        ? storedDisplay
-        : DISPLAY_MODE.LIST;
-    const localSortBy = localStorage.getItem(`collection.${config.slug}.sortBy`);
-    sortingBy = localSortBy || 'updatedAt';
-    const localSortOrder = localStorage.getItem(`collection.${config.slug}.sortOrder`) as SortMode;
-    sortingOrder = localSortOrder || 'dsc';
-    if (localSortBy) {
-      sortBy(sortingBy, false);
-    }
-  });
 
   const nested = $derived.by(() => {
     return toNestedStructure(docs);
@@ -186,8 +181,8 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
   }
 
   /**
-   * Sorts by `fieldName`. The same field again flips the order, unless `toggle` is false: the
-   * stored choice is re-applied on mount that way. The choice is kept in localStorage.
+   * Sorts by `fieldName`. The same field again flips the order, unless `toggle` is false. The
+   * browser keeps the choice for the list's next opening.
    */
   const sortBy = (fieldName: string, toggle: boolean = true) => {
     if (sortingBy === fieldName) {
@@ -199,8 +194,8 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       sortingBy = fieldName;
     }
     docs = sorted(docs);
-    localStorage.setItem(`collection.${config.slug}.sortBy`, fieldName);
-    localStorage.setItem(`collection.${config.slug}.sortOrder`, sortingOrder);
+    writeStored(storageKey('sortBy'), fieldName);
+    writeStored(storageKey('sortOrder'), sortingOrder);
   };
 
   /**
@@ -403,7 +398,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
     isNested,
 
     set display(mode: DisplayMode) {
-      localStorage.setItem(`collection.${config.slug}.display`, mode);
+      writeStored(storageKey('display'), mode);
       displayMode = mode;
     },
 

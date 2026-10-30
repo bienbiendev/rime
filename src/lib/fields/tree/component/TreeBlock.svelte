@@ -2,7 +2,6 @@
   import { t__ } from '#lib/core/i18n/index.js';
   import type { TreeBlock } from '#lib/core/prototype/types.js';
   import RenderFields from '#lib/panel/components/fields/RenderFields.svelte';
-  import { useOnce } from '#lib/panel/util/once.svelte.js';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import GripVertical from '@lucide/svelte/icons/grip-vertical';
@@ -39,16 +38,12 @@
   /** The item's place in the tree, counted from 1: `links.0._children.2` → `1.3`. */
   const place = $derived(indexes.map((index) => index + 1).join('.'));
 
-  /** Open: its fields, then the items inside it, under its header. */
-  let isOpen = $state(true);
-
-  const { once } = useOnce();
-
-  // A new item opens, its fields ready to fill; a saved one as it was left.
-  once(() => {
-    if (!itemValue) return;
-    isOpen = isTempId(itemValue.id) || isRememberedOpen(itemValue.id);
-  });
+  /**
+   * Open: its fields, then the items inside it, under its header. A new item opens, its fields
+   * ready to fill; a saved one as it was left.
+   */
+  // svelte-ignore state_referenced_locally
+  let isOpen = $state(!itemValue || isTempId(itemValue.id) || isRememberedOpen(itemValue.id));
 
   const toggleOpen = () => {
     isOpen = !isOpen;

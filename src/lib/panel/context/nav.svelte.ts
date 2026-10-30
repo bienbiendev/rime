@@ -1,3 +1,4 @@
+import { readStored, writeStored } from '#lib/panel/util/storage.js';
 import { getContext, setContext } from 'svelte';
 
 const NAV_CTX = 'rime.nav';
@@ -13,32 +14,22 @@ const NARROW_PX = 1024;
  * narrow window folds it regardless, and gives the choice back when it widens.
  */
 export function setNavContext() {
-  let collapsed = $state(true);
-  let chosen: boolean | null = null;
+  /** The user's choice, kept across visits; null until they make one. */
+  const stored = readStored(STORAGE_KEY);
+  let chosen: boolean | null = stored === null ? null : stored === 'true';
+
+  /** The window's width decides first, the choice second, open by default. */
+  const fitted = () => (window.innerWidth < NARROW_PX ? true : (chosen ?? false));
+  let collapsed = $state(fitted());
 
   function setCollapsed(value: boolean) {
     collapsed = value;
     chosen = value;
-    try {
-      localStorage.setItem(STORAGE_KEY, String(value));
-    } catch {
-      // A browser without storage keeps the choice for the visit.
-    }
-  }
-
-  /** The window's width decides first, the choice second, open by default. */
-  function fit() {
-    collapsed = window.innerWidth < NARROW_PX ? true : (chosen ?? false);
+    writeStored(STORAGE_KEY, String(value));
   }
 
   $effect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored !== null) chosen = stored === 'true';
-    } catch {
-      // No storage, no remembered choice.
-    }
-    fit();
+    const fit = () => (collapsed = fitted());
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
   });
