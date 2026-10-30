@@ -154,7 +154,7 @@ test('Should show the overlay to a second person on the same version', async ({
 
   const editor = await openAs(browser, LOCK_EDITOR_EMAIL, versionUrl(draftVersionId));
   await expectOverlay(editor.page, true);
-  await expect(editor.page.locator(OVERLAY)).toContainText(ADMIN_EMAIL);
+  await expect(editor.page.locator(OVERLAY)).toContainText('Admin is editing the document');
 
   await leave(editor);
   await leave(admin);
@@ -172,7 +172,7 @@ test('Should not lock one version because somebody holds another', async ({ brow
   // The row the admin is in: held.
   await editor.page.goto(versionUrl(publishedVersionId));
   await expectOverlay(editor.page, true);
-  await expect(editor.page.locator(OVERLAY)).toContainText(ADMIN_EMAIL);
+  await expect(editor.page.locator(OVERLAY)).toContainText('Admin is editing the document');
 
   await leave(editor);
   await leave(admin);
@@ -225,7 +225,7 @@ test('Should hand a version over on Take control, and leave its authorship alone
   await reloaded;
   await expectOverlay(editor.page, false);
   // The admin's page hears the claim and shows the overlay without a reload
-  await expect(admin.page.locator(OVERLAY)).toContainText(LOCK_EDITOR_EMAIL);
+  await expect(admin.page.locator(OVERLAY)).toContainText('Lock Editor is editing the document');
 
   await leave(editor);
   await leave(admin);

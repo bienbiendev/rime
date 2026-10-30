@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t__ } from '#lib/core/i18n/index.js';
   import { Button } from '../../ui/button/index.js';
 
   type Props = {
@@ -9,12 +10,12 @@
   };
   const { holder, takeControl }: Props = $props();
 
-  const label = $derived(holder?.email ?? holder?.name ?? 'Someone');
+  const label = $derived(holder?.name || holder?.email || t__('common.someone'));
 </script>
 
 <div class="rz-document-read-only">
-  <p>{label} is editing the document</p>
-  <Button variant="outline" onclick={takeControl}>Take control</Button>
+  <p>{t__('common.is_editing', label)}</p>
+  <Button variant="outline" onclick={takeControl}>{t__('common.take_control')}</Button>
 </div>
 
 <style lang="postcss">

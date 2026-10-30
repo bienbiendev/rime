@@ -134,7 +134,7 @@ test('Should show the overlay to a second person while the first holds it', asyn
 
   const editor = await openAs(browser, LOCK_EDITOR_EMAIL, url);
   await expectOverlay(editor.page, true);
-  await expect(editor.page.locator(OVERLAY)).toContainText(ADMIN_EMAIL);
+  await expect(editor.page.locator(OVERLAY)).toContainText('Admin is editing the document');
 
   await leave(editor, id);
   await leave(admin, id);
@@ -158,7 +158,7 @@ test('Should hand the document over on Take control, and leave its authorship al
   await reloaded;
   await expectOverlay(editor.page, false);
   // The admin's page hears the claim and shows the overlay without a reload
-  await expect(admin.page.locator(OVERLAY)).toContainText(LOCK_EDITOR_EMAIL);
+  await expect(admin.page.locator(OVERLAY)).toContainText('Lock Editor is editing the document');
 
   await leave(editor, id);
   await leave(admin, id);

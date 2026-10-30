@@ -276,6 +276,43 @@ test('A folder tile shows what it holds, read from the count route', async ({ pa
   expect(lists).toEqual([]);
 });
 
+test('The folder delete dialog names the folder, then says what it holds once counted', async ({
+  page,
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const folder = `doomed-${Date.now()}`;
+  await uploadText(request, headers, `${folder}-one`, `root:${folder}`);
+  await uploadText(request, headers, `${folder}-inner`, `root:${folder}:inner`);
+
+  // The count of the folder's files waits until released
+  let release = () => {};
+  const released = new Promise<void>((resolve) => (release = resolve));
+  await page.route(
+    (url) =>
+      url.pathname === '/api/medias/count' &&
+      url.searchParams.get('where[_path][equals]') === `root:${folder}`,
+    async (route) => {
+      await released;
+      await route.continue();
+    }
+  );
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('medias'));
+  await page.locator('.rz-folder', { hasText: folder }).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Delete' }).click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText(
+    `You are about to delete ${folder}, press delete to confirm the operation.`
+  );
+  await expect(dialog).not.toContainText('It holds');
+
+  release();
+  await expect(dialog).toContainText('It holds 1 file(s) and 1 folder(s).');
+});
+
 test('The upload veil goes when a file drag leaves the window from the navigation', async ({
   page
 }) => {

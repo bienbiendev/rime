@@ -50,7 +50,7 @@
         })
         .then((success) => {
           if (success) {
-            toast.success('Order updated');
+            toast.success(t__('common.order_updated'));
             resetSortable();
           } else {
             toast.error(t__('common.generic_error'));

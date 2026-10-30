@@ -103,7 +103,9 @@
       {/each}
     </Radio.Root>
     <Dialog.Footer>
-      <Button onclick={() => handleValidateStatus()} variant="outline" kbd="enter">Validate</Button>
+      <Button onclick={() => handleValidateStatus()} variant="outline" kbd="enter"
+        >{t__('common.validate')}</Button
+      >
       <Button onclick={cancel} variant="secondary" kbd="escape">
         {t__('common.cancel')}
       </Button>

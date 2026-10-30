@@ -285,7 +285,7 @@
     </Dialog.Header>
     <p>{t__('common.delete_dialog_text', titleOrUntitled(form.title))}</p>
     <Dialog.Footer>
-      <Button onclick={handleDelete} kbd="enter">Delete</Button>
+      <Button onclick={handleDelete} kbd="enter">{t__('common.delete_confirm')}</Button>
       <Button onclick={() => (deleteConfirmOpen = false)} variant="secondary" kbd="escape">
         {t__('common.cancel')}
       </Button>
@@ -300,7 +300,7 @@
     </Dialog.Header>
     <p>{t__('common.delete_version_dialog_text')}</p>
     <Dialog.Footer>
-      <Button onclick={handleDeleteVersion} kbd="enter">Delete</Button>
+      <Button onclick={handleDeleteVersion} kbd="enter">{t__('common.delete_confirm')}</Button>
       <Button onclick={() => (deleteVersionConfirmOpen = false)} variant="secondary" kbd="escape">
         {t__('common.cancel')}
       </Button>

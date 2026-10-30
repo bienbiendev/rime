@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t__ } from '#lib/core/i18n/index.js';
   import X from '@lucide/svelte/icons/x';
   import { Dialog as SheetPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
   import type { Snippet } from 'svelte';
@@ -37,7 +38,7 @@
     {#if showCloseButton}
       <SheetPrimitive.Close class="rz-sheet-content__close">
         <X size="15" />
-        <span class="rz-sr-only">Close</span>
+        <span class="rz-sr-only">{t__('common.close')}</span>
       </SheetPrimitive.Close>
     {/if}
   </SheetPrimitive.Content>

@@ -32,7 +32,6 @@
 
   let deleteConfirmOpen = $state(false);
   let editFolderDialogOpen = $state(false);
-  let message = $state('');
   let rootElement = $state<HTMLButtonElement>();
   let isDragging = $state(false);
   const isFolderUpperPath = $derived(folder.name === '...');
@@ -57,21 +56,19 @@
     childFiles?.data && childFolders?.data ? childFilesCount + childFoldersCount : null
   );
 
-  /** Opens the delete dialog with the folder's counts. */
-  function handleGetDeleteInfos() {
-    message = t__(
-      'common.delete_dialog_text',
-      `wich contains ${childFilesCount} file(s) and ${childFoldersCount} folder(s)`
-    );
-    deleteConfirmOpen = true;
-  }
+  /** The delete dialog's text: the folder's name, then what it holds once both counts are in. */
+  const message = $derived.by(() => {
+    const named = t__('common.delete_dialog_text', folder.name);
+    if (itemsCount === null) return named;
+    return `${named} ${t__('common.folder_holds', String(childFilesCount), String(childFoldersCount))}`;
+  });
 
   /** Deletes the folder, then lets the list drop its tile. */
   async function handleDelete() {
     const url = `${baseFolderApiURL}/${folder.id}`;
     const [error] = await trycatchFetch(url, { method: 'DELETE' });
     if (error) {
-      return toast.error('Error deleting folder');
+      return toast.error(t__('common.folder_delete_error'));
     }
     toast.success(t__('common.folder_deleted'));
     deleteConfirmOpen = false;
@@ -94,10 +91,10 @@
 
     if (error) {
       console.error(error);
-      return toast.error('Error moving folder');
+      return toast.error(t__('common.folder_move_error'));
     }
 
-    toast.success('Folder moved successfully');
+    toast.success(t__('common.folder_moved'));
     childFolders?.refresh();
     return invalidateAll();
   }
@@ -111,9 +108,9 @@
     });
     if (error) {
       console.error(error);
-      return toast.error('Error moving document');
+      return toast.error(t__('common.document_move_error'));
     }
-    toast.success('Document moved successfully');
+    toast.success(t__('common.document_moved'));
     onDocumentDrop({ documentId: docId, path: folder.id });
     childFiles?.refresh();
   }
@@ -196,11 +193,13 @@
         {@render tile()}
       {/snippet}
       {#snippet content()}
-        <ContextMenuItem onclick={handleGetDeleteInfos}>
-          <Trash2 size="12" /> Delete
+        <ContextMenuItem onclick={() => (deleteConfirmOpen = true)}>
+          <Trash2 size="12" />
+          {t__('common.delete_confirm')}
         </ContextMenuItem>
         <ContextMenuItem onclick={() => (editFolderDialogOpen = true)}>
-          <Pencil size="12" /> Edit
+          <Pencil size="12" />
+          {t__('common.edit')}
         </ContextMenuItem>
       {/snippet}
     </ContextMenu>
@@ -216,7 +215,7 @@
     </Dialog.Header>
     <p>{message}</p>
     <Dialog.Footer>
-      <Button onclick={handleDelete} kbd="enter">Delete</Button>
+      <Button onclick={handleDelete} kbd="enter">{t__('common.delete_confirm')}</Button>
       <Button onclick={() => (deleteConfirmOpen = false)} variant="secondary" kbd="escape">
         {t__('common.cancel')}
       </Button>
