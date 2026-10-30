@@ -51,6 +51,25 @@ export const matcherValues = (config: Config, kebabsByPrototype: Record<string, 
 };
 
 /**
+ * Throws when a `panel.routes` key is a segment the panel already serves: a fixed page
+ * (`sign-in`, `live-edit`, …) or the kebab of a collection or an area.
+ */
+const assertFreeRouteKeys = (config: Config) => {
+  const panelPrefix = '(rime)/[panel=panel]/';
+  const taken = new Set([
+    ...Object.keys(commonRoutes)
+      .filter((pattern) => pattern.startsWith(panelPrefix) && !pattern.includes('[slug='))
+      .map((pattern) => pattern.slice(panelPrefix.length)),
+    ...[...(config.collections || []), ...(config.areas || [])].map((prototype) => prototype.kebab)
+  ]);
+  for (const route of Object.keys(config.panel?.routes ?? {})) {
+    if (taken.has(route)) {
+      throw new Error(`panel.routes: "${route}" is already a panel page, choose another key`);
+    }
+  }
+};
+
+/**
  * Writes the (rime) route tree — panel pages and /api — and the generated params.ts.
  *
  * The fixed files do not grow with the number of collections or areas, only with the prototype
@@ -72,7 +91,9 @@ function generateRoutes<T extends Config>(config: T): void {
     return;
   }
 
-  // 2. Ensure base directories exist
+  // 2. Refuse a custom route the panel already serves, then ensure base directories exist. The
+  // check runs first, so a refused config leaves the previous tree in place.
+  assertFreeRouteKeys(config);
   const rootRoutes = path.resolve(projectRoot, 'src', 'routes');
   const rimeRoutes = path.join(rootRoutes, '(rime)');
   const panelRoute = path.join(rimeRoutes, '[panel=panel]');

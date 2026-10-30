@@ -66,4 +66,14 @@ describe('generateRoutes', () => {
       expect(server).toContain(`rest('collection', '${routePath}', event)`);
     }
   });
+
+  it.each(['pages', 'live-edit'])(
+    'refuses a panel.routes key the panel already serves: %s',
+    (route) => {
+      const Report = () => {};
+      const withRoute = { ...config, panel: { routes: { [route]: { component: Report } } } };
+
+      expect(() => generateRoutes(withRoute)).toThrow(`panel.routes: "${route}"`);
+    }
+  );
 });
