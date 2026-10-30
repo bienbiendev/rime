@@ -46,6 +46,15 @@ test('server imports find a split .js file', () => {
   expect(result).toContain("from './news.server.js'");
 });
 
+test("server imports handle a folder's own index as '.' and '..'", () => {
+  expect(updateServerImports("import { A } from '.';", new Set(['index.ts']), '.')).toContain(
+    "from './index.server.js'"
+  );
+  expect(updateServerImports("import { A } from '..';", new Set(['index.ts']), 'blocks')).toContain(
+    "from '../index.server.js'"
+  );
+});
+
 test('server imports with no matching split files remain unchanged', () => {
   const content = "import { X } from './missing';";
   const splitFiles = new Set();

@@ -629,7 +629,8 @@ export function clientCopy(content) {
  * ```
  */
 function serverImportOf(importPath, currentDir, splitFiles) {
-  if (!importPath.startsWith('./') && !importPath.startsWith('../')) return null;
+  // Relative only: './x', '../x', and a folder's own index as '.' or '..'
+  if (!/^\.\.?(\/|$)/.test(importPath)) return null;
   if (importPath.includes('.server')) return null;
 
   const importNoExt = importPath.replace(/\/+$/, '').replace(/(\.js|\.ts)$/, '');
