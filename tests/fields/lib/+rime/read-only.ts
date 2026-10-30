@@ -7,14 +7,16 @@ import Image from './renders/Image.svelte';
 /**
  * Read by any staff member, updated by an admin only: an editor opens it read-only. Live, so
  * read-only.test.ts can check that the live button is disabled; no front route serves its url.
- * Its image block is drawn on the stage of focus mode, where a click never opens the library.
+ * Its image block is drawn on the stage of focus mode, where a click never opens the library;
+ * its blocks open in focus mode, read-only too.
  */
 export const Bulletins = Collection.create('bulletins', {
   fields: [
     text('title').isTitle(),
     select('topics').options('news', 'events', 'jobs').many(),
     blocks('sections', [
-      block('image').fields(relation('image').to('medias')).render(Image, { controls: false })
+      block('image').fields(relation('image').to('medias')).render(Image, { controls: false }),
+      block('note').fields(text('text'))
     ])
   ],
   live: true,

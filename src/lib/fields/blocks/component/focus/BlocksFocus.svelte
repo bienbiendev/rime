@@ -81,12 +81,12 @@
     return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
   }
 
-  // The selection changed. With nothing selected, an Inspector tab turns to Add; a pick from the
-  // Layers tab closes the sheet, so the block shows.
+  // The selection changed. With nothing selected, an Inspector tab turns to Add, or to Layers in a
+  // locked form; a pick from the Layers tab closes the sheet, so the block shows.
   $effect(() => {
     const picked = !!focus.current;
     untrack(() => {
-      if (focus.tab === 'inspector' && !picked) focus.tab = 'add';
+      if (focus.tab === 'inspector' && !picked) focus.tab = focus.locked ? 'layers' : 'add';
       if (focus.tab === 'layers') panelOpen = false;
     });
   });

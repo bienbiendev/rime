@@ -9,7 +9,8 @@ const EDITOR_EMAIL = 'ro-editor@email.com';
 
 /**
  * A `bulletins` document opened by an editor, who may read it but not update it: no control
- * changes the value, the media library does not open, and the live editor does not open.
+ * changes the value, the media library does not open, the live editor does not open, and focus
+ * mode offers no types to add.
  */
 
 // The tests open the bulletin and sign in the editor the first test creates: one failing skips the
@@ -31,7 +32,10 @@ test('Should create a bulletin and an editor', async ({ request }) => {
     data: {
       title: 'Weekly',
       topics: ['news', 'events'],
-      sections: [{ type: 'image', image: (await media.json()).doc.id }]
+      sections: [
+        { type: 'image', image: (await media.json()).doc.id },
+        { type: 'note', text: 'Read me' }
+      ]
     }
   });
   expect(created.status()).toBe(200);
@@ -85,4 +89,25 @@ test('Should not open the live editor from a read-only document', async ({ page 
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl);
   await expect(page.locator('.rz-button-live')).toHaveAttribute('href', /.+/);
+});
+
+test('Should turn the focus panel to Layers when the selection empties', async ({ page }) => {
+  await loginAs(page, EDITOR_EMAIL, PASSWORD);
+  await page.goto(`${documentUrl}?focus=sections`);
+
+  const panel = page.locator('.rz-blocks-focus__panel');
+  const note = page.locator(
+    '.rz-blocks-focus__renders > .rz-renders > .rz-renders__item[data-type="note"]'
+  );
+  await note.first().click();
+  await expect(panel.getByRole('tab', { name: 'Inspector' })).toHaveAttribute(
+    'data-state',
+    'active'
+  );
+
+  // No Add tab in a locked form: the panel shows the layers
+  await page.keyboard.press('Escape');
+  await expect(note.first()).not.toHaveAttribute('data-selected');
+  await expect(panel.getByRole('tab', { name: 'Layers' })).toHaveAttribute('data-state', 'active');
+  await expect(page.locator('.rz-layers__row')).toHaveCount(2);
 });
