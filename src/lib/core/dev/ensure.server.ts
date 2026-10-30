@@ -6,6 +6,7 @@ import {
   generatedConfigServerPath,
   schemaPath
 } from './constants.server.js';
+import { env } from './env.server.js';
 
 const projectRoot = process.cwd();
 
@@ -53,12 +54,12 @@ function ensureSchema() {
   }
 }
 
-/**
- * Ensure .env exists
- */
+/** The variables the app refuses to start without, read from the shell or the .env files. */
 function ensureEnv() {
-  const envFile = path.resolve(projectRoot, './.env');
-  if (!existsSync(envFile)) throw new Error('Missing .env file');
+  const missing = ['SITE_URL', 'BETTER_AUTH_SECRET'].filter((name) => !env[name]);
+  if (missing.length) {
+    throw new Error(`Missing ${missing.join(', ')}: set them in .env or in the environment`);
+  }
 }
 
 /**
@@ -70,9 +71,9 @@ function ensureHooks() {
 }
 
 /**
- * Throws on the first piece `rime init` should have written and is missing: .env,
- * src/hooks.server.ts, the config, its generated copy, the schema. Runs in dev when the dev
- * server starts listening (vite.server.ts).
+ * Throws on the first piece `rime init` should have set up and is missing: the required
+ * variables, src/hooks.server.ts, the config, its generated copy, the schema. Runs in dev when the
+ * dev server starts listening (vite.server.ts).
  */
 export const ensureHasInit = () => {
   ensureEnv();
