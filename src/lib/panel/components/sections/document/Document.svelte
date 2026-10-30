@@ -110,7 +110,18 @@
       }
     }
 
-    interceptedLeave = { proceed: () => goto(to.url.href as ResolvedPathname) };
+    // A link that unloads the page (another origin, data-sveltekit-reload) leaves through the
+    // browser: `goto` only follows the app's own routes.
+    interceptedLeave = {
+      proceed: () => {
+        isRedirect = true;
+        if (willUnload) {
+          window.location.href = to.url.href;
+        } else {
+          goto(to.url.href as ResolvedPathname);
+        }
+      }
+    };
   });
 
   function confirmLeave() {

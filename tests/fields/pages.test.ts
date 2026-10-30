@@ -136,6 +136,44 @@ test('A slug without a className gets no stray class', async ({ page }) => {
   await expect(slug).not.toHaveClass(/\bundefined\b/);
 });
 
+/** ---------------- LEAVE TOWARDS ANOTHER ORIGIN ---------------- */
+
+test('Confirming a leave towards another origin goes there', async ({ page, request }) => {
+  const OTHER = 'https://other-origin.test/';
+  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  // A slug, so the page opens with nothing to save
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { title: 'Leave elsewhere', slug: `leave-elsewhere-${Date.now()}` }
+  });
+  expect(response.status()).toBe(200);
+  const id = (await response.json()).doc.id as string;
+
+  await page.route(`${OTHER}**`, (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<h1>Other site</h1>' })
+  );
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', id));
+
+  // A link to another site inside the document, as a rich text would hold one
+  await page.evaluate((href) => {
+    const link = document.createElement('a');
+    link.href = href;
+    link.id = 'rz-test-other-origin';
+    link.textContent = 'Other site';
+    document.querySelector('form')!.append(link);
+  }, OTHER);
+
+  await page.locator('input[name="firstName"]').fill('Unsaved');
+  await page.locator('#rz-test-other-origin').click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Confirm' }).click();
+
+  await page.waitForURL(OTHER);
+  await expect(page.locator('h1')).toHaveText('Other site');
+});
+
 /** ---------------- GROUP WITH MANY FIELDS: SAVE + RELOAD ---------------- */
 
 test('Should persist the text, textarea, checkbox, toggle, select and number of the meta group after save and reload', async ({
