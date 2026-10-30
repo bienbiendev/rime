@@ -463,6 +463,35 @@ test('A text field is edited where the render draws it', async ({ page, request 
     .toBe('Grid one!');
 });
 
+test('A paste into a text drawn by the render keeps one line, and Ctrl+Z removes it', async ({
+  page,
+  request
+}) => {
+  const docId = await createPage(request);
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(`${panelUrl('pages', docId)}?focus=sections`);
+
+  const focus = page.locator('.rz-blocks-focus');
+  const title = focus.locator('.site-grid__title');
+  await expect(title).toHaveText('Grid');
+
+  await title.click();
+  await page.keyboard.press('End');
+  // A paste of two lines: { 'text/plain': ' a\nb' }
+  await title.evaluate((element) => {
+    const clipboardData = new DataTransfer();
+    clipboardData.setData('text/plain', ' a\nb');
+    element.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true })
+    );
+  });
+  await expect(title).toHaveText('Grid a b');
+  await expect(focus.locator('.rz-blocks-focus__panel input.rz-input')).toHaveValue('Grid a b');
+
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(title).toHaveText('Grid');
+});
+
 test('An empty list opens the panel on the types to add', async ({ page, request }) => {
   const response = await request.post(`${API_BASE_URL}/pages`, {
     headers: await signInSuperAdmin(request),

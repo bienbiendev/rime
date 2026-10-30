@@ -40,20 +40,21 @@
     if (!multiline && event.key === 'Enter') event.preventDefault();
   }
 
-  /** Pasted into a text, line breaks become spaces. */
+  /** In a text, a drop that carries line breaks is refused: a paste of the same text flattens them. */
+  function onbeforeinput(event: InputEvent) {
+    if (multiline || event.inputType !== 'insertFromDrop') return;
+    if (event.dataTransfer?.getData('text/plain').includes('\n')) event.preventDefault();
+  }
+
+  /**
+   * Pasted into a text, line breaks become spaces. The paste goes in as typing does: Ctrl+Z
+   * removes it, and `input` fires.
+   */
   function onpaste(event: ClipboardEvent) {
     if (multiline) return;
     event.preventDefault();
     const text = (event.clipboardData?.getData('text/plain') ?? '').replace(/\s*\r?\n\s*/g, ' ');
-    const selection = window.getSelection();
-    if (!selection?.rangeCount) return;
-    const range = selection.getRangeAt(0);
-    range.deleteContents();
-    range.insertNode(document.createTextNode(text));
-    range.collapse(false);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    oninput();
+    document.execCommand('insertText', false, text);
   }
 </script>
 
@@ -73,6 +74,7 @@
   {oninput}
   {onkeydown}
   {onpaste}
+  {onbeforeinput}
 ></svelte:element>
 
 <style lang="postcss">
