@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import { program } from 'commander';
-import { existsSync } from 'fs';
+import { cpSync, existsSync, rmSync } from 'fs';
 import path from 'path';
 
 program.version('0.1');
@@ -14,17 +14,17 @@ program
   .argument('<name>', 'Specify the name')
   .action((name) => {
     try {
-      const frontRoutesPath = path.join(projectRoot, 'src', 'routes', '\\(front\\)');
+      const frontRoutesPath = path.join(projectRoot, 'src', 'routes', '(front)');
+      const paramsPath = path.join(projectRoot, 'src', 'params.ts');
 
       // Delete previous, including a previous fixture's src/params.ts, so init writes a fresh one
       execSync('bun ./src/lib/core/dev/cli/index.ts clear --force', { stdio: 'inherit' });
-      execSync(`rm -f ${path.join(projectRoot, 'src', 'params.ts')}`);
+      rmSync(paramsPath, { force: true });
       // Removes the previous fixture's database, its drizzle config and any `db/` folder, so each
       // fixture starts on a database of its own and init never stops to ask for `rime db:move`.
-      const previous = ['storage', 'db', 'drizzle.config.ts'].map((entry) =>
-        path.join(projectRoot, entry)
-      );
-      execSync(`rm -rf ${previous.join(' ')}`);
+      for (const entry of ['storage', 'db', 'drizzle.config.ts']) {
+        rmSync(path.join(projectRoot, entry), { recursive: true, force: true });
+      }
 
       // tests/<name>/lib/ mirrors src/lib/ exactly (its +rime/ subfolder and any local
       // $rime/<name> split folders alike) — a straight copy is correct.
@@ -32,22 +32,23 @@ program
       const libDirPath = path.join(projectRoot, 'src', 'lib');
 
       if (existsSync(testLibDirPath)) {
-        execSync(`cp -rf ${testLibDirPath}/* ${libDirPath}/`);
+        cpSync(testLibDirPath, libDirPath, { recursive: true });
       } else {
         console.warn(`Warning: lib directory not found for ${name}`);
       }
 
       // Init files and DB
-      execSync(`bun ./src/lib/core/dev/cli/index.ts init -s --name ${name}`, { stdio: 'inherit' });
+      execSync(`bun ./src/lib/core/dev/cli/index.ts init -s --name ${JSON.stringify(name)}`, {
+        stdio: 'inherit'
+      });
 
-      // The routes are removed right before the copy: `cp -rf A B` nests as B/(front) when B
-      // exists, and `init` above regenerates the routes.
-      const testFrontRoutesPath = path.join(projectRoot, 'tests', name, 'routes', '\\(front\\)');
+      // The (front) routes `init` wrote are removed before the fixture's are copied.
+      const testFrontRoutesPath = path.join(projectRoot, 'tests', name, 'routes', '(front)');
 
-      execSync(`rm -fr ${frontRoutesPath}`);
+      rmSync(frontRoutesPath, { recursive: true, force: true });
 
-      if (existsSync(testFrontRoutesPath.replace(/\\/g, ''))) {
-        execSync(`cp -rf ${testFrontRoutesPath} ${frontRoutesPath}`);
+      if (existsSync(testFrontRoutesPath)) {
+        cpSync(testFrontRoutesPath, frontRoutesPath, { recursive: true });
       }
 
       // Copy the fixture's own src/params.ts when its front routes name another matcher (e.g.
@@ -58,7 +59,7 @@ program
       const testParamsPath = path.join(projectRoot, 'tests', name, 'params.ts');
 
       if (existsSync(testParamsPath)) {
-        execSync(`cp -f ${testParamsPath} ${path.join(projectRoot, 'src', 'params.ts')}`);
+        cpSync(testParamsPath, paramsPath);
       }
     } catch (error) {
       console.error('Error setting configuration:', error);
