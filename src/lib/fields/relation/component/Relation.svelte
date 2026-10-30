@@ -104,6 +104,7 @@
 
   /** The candidates' URL: the collection, with the field's query. */
   function makeRessourceURL() {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- a local copy turned into a string, not state
     const params = new URLSearchParams(query);
     if ('isLive' in form && form.isLive) params.set('depth', '1');
     const path = apiUrl(relationConfig.kebab);

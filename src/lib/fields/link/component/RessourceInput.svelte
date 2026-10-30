@@ -25,7 +25,6 @@
 
   let search = $state('');
   let inputFocused = $state(false);
-  let resource = $state<Resource | null>(null);
 
   const APIProxy = getAPIProxyContext();
 
@@ -39,9 +38,7 @@
   }
 
   // The documents of `ressourceType`, fetched once and shared through the API proxy.
-  $effect(() => {
-    resource = APIProxy.getRessource(apiUrl(toKebabCase(ressourceType)));
-  });
+  const resource: Resource = $derived(APIProxy.getRessource(apiUrl(toKebabCase(ressourceType))));
 
   const resources = $derived.by(() => {
     const data = resource?.data;
