@@ -49,7 +49,7 @@
   <Field.Label {config} for={path || config.name} />
 
   <Button
-    id="foo"
+    id={path || config.name}
     variant="secondary"
     data-empty={!calendarDate ? '' : null}
     data-error={field.error ? '' : null}

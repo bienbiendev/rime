@@ -30,6 +30,7 @@
   <Field.Label {config} for={path || config.name} />
   <div class="rz-number-field__input-wrapper">
     <input
+      id={path || config.name}
       class="rz-number-field__input"
       min={config.get.min ?? undefined}
       max={config.get.max ?? undefined}

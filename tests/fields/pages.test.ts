@@ -69,6 +69,18 @@ test('Should sync, validate and hide fields on the create form', async ({ page }
   await expect.soft(slugField).toBeHidden();
 });
 
+/** ---------------- LABELS NAME THEIR CONTROL ---------------- */
+
+test('Each field label names its control', async ({ page }) => {
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', 'create'));
+
+  await expect.soft(page.getByLabel('Priority', { exact: true })).toHaveAttribute('type', 'number');
+  await expect.soft(page.getByLabel('Tag', { exact: true })).toHaveAttribute('role', 'combobox');
+  await expect.soft(page.getByLabel('PublishDate', { exact: true })).toHaveClass(/rz-date__button/);
+  await expect.soft(page.getByRole('radiogroup', { name: 'LayoutStyle' })).toBeVisible();
+});
+
 /** ---------------- GROUP WITH MANY FIELDS: SAVE + RELOAD ---------------- */
 
 test('Should persist the text, textarea, checkbox, toggle, select and number of the meta group after save and reload', async ({

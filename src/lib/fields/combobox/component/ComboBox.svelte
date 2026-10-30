@@ -35,7 +35,7 @@
   <Field.Label {config} for={path || config.name} />
 
   <Popover.Root bind:open>
-    <Popover.Trigger>
+    <Popover.Trigger id={path || config.name}>
       {#snippet child({ props })}
         <Button
           variant="outline"
