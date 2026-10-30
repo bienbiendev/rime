@@ -23,6 +23,13 @@ export function parseExportNames(filePath: string): string[] {
   const names: string[] = [];
 
   for (const node of ast.body) {
+    // The names behind `export *` live in another file, out of the stub's reach
+    if (t.isExportAllDeclaration(node) && node.exportKind !== 'type') {
+      throw new Error(
+        `${filePath}: \`export * from '${node.source.value}'\` hides its names from the other half's ` +
+          `stub — name them: export { a, b } from '${node.source.value}'`
+      );
+    }
     if (t.isExportNamedDeclaration(node)) {
       // `export type { Foo }` — the whole statement is type-only.
       if (node.exportKind === 'type') continue;
@@ -30,7 +37,8 @@ export function parseExportNames(filePath: string): string[] {
       if (node.declaration) {
         if (t.isVariableDeclaration(node.declaration)) {
           for (const decl of node.declaration.declarations) {
-            if (t.isIdentifier(decl.id)) names.push(decl.id.name);
+            // `export const { a, b } = o` declares a and b
+            names.push(...Object.keys(t.getBindingIdentifiers(decl.id)));
           }
         } else if (
           // A type alias or an interface declares an `id` just like a function does, so the
@@ -47,7 +55,11 @@ export function parseExportNames(filePath: string): string[] {
       for (const spec of node.specifiers) {
         // `export { type Foo, bar }` — only this specifier is type-only.
         if (t.isExportSpecifier(spec) && spec.exportKind === 'type') continue;
-        if (t.isExportSpecifier(spec) && t.isIdentifier(spec.exported)) {
+        // `export { a }`, and `export * as ns from './x'`
+        if (
+          (t.isExportSpecifier(spec) || t.isExportNamespaceSpecifier(spec)) &&
+          t.isIdentifier(spec.exported)
+        ) {
           names.push(spec.exported.name);
         }
       }
