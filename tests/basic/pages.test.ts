@@ -502,3 +502,13 @@ test('A media opened without its folder in the URL stays in its folder when save
   expect(stored.alt).toBe('after');
   expect(stored._path).toBe(`root:${folder}`);
 });
+
+/** A folder that does not exist sends back to the root, and a browser keeps no cached redirect. */
+test('An unknown upload folder redirects to the root with a 302', async ({ page }) => {
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  const response = await page.request.get(`${panelUrl('medias')}?uploadPath=root:missing`, {
+    maxRedirects: 0
+  });
+  expect(response.status()).toBe(302);
+  expect(new URL(response.headers()['location'], BASE_URL).pathname).toBe(panelPath('medias'));
+});

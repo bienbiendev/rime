@@ -1,5 +1,6 @@
 import { Hooks } from '#lib/core/pipeline/define-hook.js';
 import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
+import { createDirectory } from '#lib/core/prototype/collection/upload/directories/create.server.js';
 import { directoriesOf } from '#lib/core/prototype/collection/upload/naming.js';
 import { trycatch } from '#lib/util/function.js';
 import { getSegments } from '#lib/core/prototype/collection/upload/util/path.js';
@@ -63,25 +64,13 @@ export const handlePathCreation = Hooks.beforeUpsert<'upload'>(
       );
 
       if (!segExists) {
-        const [createError] = await trycatch(() =>
-          directories.create({
-            data: {
-              id: currentPath,
-              parent: parentPath,
-              name: segment,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            }
-          })
-        );
-
-        if (createError) {
-          // Another request may have created it between the read and the create
-          const [, createdMeanwhile] = await trycatch(() =>
-            directories.findById({ select: ['id'], id: currentPath })
-          );
-          if (!createdMeanwhile) throw createError;
-        }
+        await createDirectory(directories, {
+          id: currentPath,
+          parent: parentPath,
+          name: segment,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
       }
     }
 

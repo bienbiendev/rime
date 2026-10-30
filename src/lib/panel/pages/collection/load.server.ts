@@ -3,6 +3,7 @@ import { PARAMS } from '#lib/core/constants.js';
 import { RimeError } from '#lib/core/errors/index.js';
 import { logger } from '#lib/core/logger.server.js';
 import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
+import { createDirectory } from '#lib/core/prototype/collection/upload/directories/create.server.js';
 import { withDirectoriesSuffix } from '#lib/core/prototype/collection/upload/naming.js';
 import type { Directory } from '#lib/core/prototype/collection/upload/types.js';
 import {
@@ -46,8 +47,9 @@ export async function collectionLoad(event: ServerLoadEvent): Promise<Data> {
 }
 
 /**
- * The folder in `?uploadPath` (root by default, created on the first visit), its sub-folders, its
- * parent, and the breadcrumb down to it; an unknown folder redirects to the root.
+ * The folder in `?uploadPath` (root by default, created as rime on the first visit), its
+ * sub-folders, its parent, and the breadcrumb down to it. An unknown folder redirects to the root
+ * with a 302; any other failure to read it is thrown.
  */
 async function uploadListing(
   event: ServerLoadEvent,
@@ -62,10 +64,13 @@ async function uploadListing(
   );
 
   if (!currentDirectory && currentPath === UPLOAD_PATH.ROOT_NAME) {
-    await directoryCollection.create({ data: { id: UPLOAD_PATH.ROOT_NAME } });
+    // As rime, whoever visits first; a visit at the same moment may have made it already
+    await createDirectory(directoryCollection.system(), { id: UPLOAD_PATH.ROOT_NAME });
+  } else if (error instanceof RimeError && error.code === RimeError.NOT_FOUND) {
+    logger.warn(`Upload folder ${paramUploadPath} does not exist`);
+    redirect(302, event.url.pathname);
   } else if (error) {
-    logger.error(`${paramUploadPath} doesn't exists`);
-    return redirect(301, event.url.pathname);
+    throw error;
   }
 
   const directories = await directoryCollection.find({
