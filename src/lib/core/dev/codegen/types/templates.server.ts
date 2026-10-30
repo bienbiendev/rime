@@ -24,32 +24,16 @@ export const templateRegister = <T extends Config>(config: T): string => {
   const collections = (config.collections || []).filter((c) => c._generateTypes !== false);
   const areas = (config.areas || []).filter((c) => c._generateTypes !== false);
 
-  /**
-   * The slug a config's content lives under, when a feature gives it a second table.
-   *
-   * A versions collection is registered as a collection in its own right but carries
-   * `_generateTypes: false`, because it has no doc type of its own — it shares its parent's. So
-   * it is filtered out above and its `RegisterCollection` entry added back here, pointing at the
-   * parent's type.
-   *
-   * Collections only: a versions table is registered as a collection in its own right, and this map is
-   * read nowhere but in `RegisterCollection` below.
-   */
-  const versionsSlugs = new Map((config.collections ?? []).map((c) => [c.slug, c._versions?.slug]));
-
-  const registerCollections = collections.length
+  // A versions table is a collection of its own with the doc type of the config it versions,
+  // a collection's or an area's.
+  const entries = [
+    ...collections.map((c) => [c.slug, c.slug]),
+    ...[...collections, ...areas].filter((c) => c._versions).map((c) => [c._versions!.slug, c.slug])
+  ];
+  const registerCollections = entries.length
     ? [
         '\tinterface RegisterCollection {',
-        `${collections
-          .map((collection) => {
-            let collectionRegister = `\t\t'${collection.slug}': ${makeDocTypeName(collection.slug)}`;
-            const versionsSlug = versionsSlugs.get(collection.slug);
-            if (versionsSlug) {
-              collectionRegister += `\n\t\t'${versionsSlug}': ${makeDocTypeName(collection.slug)}`;
-            }
-            return collectionRegister;
-          })
-          .join('\n')};`,
+        ...entries.map(([slug, owner]) => `\t\t'${slug}': ${makeDocTypeName(owner)};`),
         '\t}'
       ]
     : [];
