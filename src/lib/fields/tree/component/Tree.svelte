@@ -3,7 +3,6 @@
   import { Field } from '#lib/panel/components/fields/index.js';
   import type { Dic } from '#lib/util/types.js';
   import Sortable from 'sortablejs';
-  import { onDestroy, untrack } from 'svelte';
   import DefaultLocaleButton from '../../repeatable/DefaultLocaleButton.svelte';
   import AddItemButton from './AddItemButton.svelte';
   import type { TreeProps } from './props.js';
@@ -13,15 +12,12 @@
 
   const treeState = $derived(form.useTree(path));
   const field = $derived(form.useField(path, config));
-  let sortingInitialized = $state(false);
   let fieldElement = $state<HTMLFieldSetElement>();
-  let sortableInstances = $state<ReturnType<typeof Sortable.create>[]>([]);
 
   const hasBlocks = $derived(treeState.items.length > 0);
   // Unique per tree: two trees mounted together keep their drag lists apart
   const key = $props.id();
   const nested = $derived(path.split('.').length > 1);
-  const shouldInit = $derived(!sortingInitialized && treeState.items.length > 0);
 
   /**
    * A card drags by its header, and shows only its header while it moves; where it lands is a
@@ -64,7 +60,6 @@
 
       if (initialPath !== undefined && initialPath !== targetPath) {
         treeState.moveItem(initialPath.replace(`${path}.`, ''), targetPath.replace(`${path}.`, ''));
-        resetSortable();
       }
     }
   };
@@ -78,39 +73,13 @@
     fieldElement.style.minHeight = hold ? `${fieldElement.offsetHeight}px` : '';
   }
 
-  const resetSortable = () => {
-    destroySortable();
-    sortingInitialized = false;
-  };
+  /** Makes one list of this tree sortable, for as long as the list is on the page. */
+  function sortableList(node: HTMLElement) {
+    const instance = Sortable.create(node, sortableOptions);
+    return { destroy: () => instance.destroy() };
+  }
 
-  const destroySortable = () => {
-    sortableInstances.forEach((instance) => instance.destroy());
-    sortableInstances = [];
-  };
-
-  const add = (emptyValues: Dic) => {
-    treeState.addItem(emptyValues);
-    resetSortable();
-  };
-
-  $effect(() => {
-    void treeState.stamp;
-    untrack(resetSortable);
-  });
-
-  $effect(() => {
-    if (shouldInit) {
-      const lists = document.querySelectorAll(`.rz-tree__list[data-tree-key="${key}"]`);
-      for (const [index, list] of lists.entries()) {
-        sortableInstances[index] = Sortable.create(list as HTMLElement, sortableOptions);
-      }
-      sortingInitialized = true;
-    }
-  });
-
-  onDestroy(() => {
-    destroySortable();
-  });
+  const add = (emptyValues: Dic) => treeState.addItem(emptyValues);
 </script>
 
 <fieldset
@@ -125,14 +94,14 @@
   {#key treeState.stamp}
     <div
       class="rz-tree__list rz-tree__list--root"
-      data-tree-key={key}
+      use:sortableList
       data-tree-depth="0"
       data-path={path}
       data-empty={!hasBlocks ? '' : null}
     >
       {#if hasBlocks}
         {#each treeState.items as item, index (item.id)}
-          <TreeBlock {treeState} treeKey={key} path="{path}.{index}" {form} {config} />
+          <TreeBlock {treeState} {sortableList} path="{path}.{index}" {form} {config} />
         {/each}
       {/if}
     </div>

@@ -14,7 +14,7 @@
   import { isTempId } from '#lib/util/random.js';
   import type { TreeBlockProps } from './props.js';
 
-  const { config, treeKey, treeState, form, path }: TreeBlockProps = $props();
+  const { config, sortableList, treeState, form, path }: TreeBlockProps = $props();
 
   /** The item's index at each level, from the root: `links.0._children.2` → `[0, 2]`. */
   const indexes = $derived(
@@ -136,13 +136,19 @@
 
         <div
           class="rz-tree__list"
+          use:sortableList
           data-path={path}
           data-tree-depth={depth}
-          data-tree-key={treeKey}
           data-empty-label={t__('fields.nothing_inside')}
         >
           {#each children as child, index (child.id)}
-            <TreeBlockComp {treeState} {form} {treeKey} path="{path}._children.{index}" {config} />
+            <TreeBlockComp
+              {treeState}
+              {form}
+              {sortableList}
+              path="{path}._children.{index}"
+              {config}
+            />
           {/each}
         </div>
       </div>
