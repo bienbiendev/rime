@@ -40,7 +40,7 @@ export function setBunScripts(): boolean {
   let changed = false;
   for (const key of VITE_SCRIPTS) {
     const script = json.scripts?.[key];
-    if (typeof script === 'string' && script.startsWith('vite ')) {
+    if (typeof script === 'string' && (script === 'vite' || script.startsWith('vite '))) {
       json.scripts[key] = BUN_PREFIX + script;
       changed = true;
     }
