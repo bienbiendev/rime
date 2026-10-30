@@ -1,7 +1,5 @@
-import { PANEL_AUTH_IMAGE } from '#lib/core/constants.server.js';
 import { error, redirect, type ServerLoadEvent } from '@sveltejs/kit';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
+import { panelAuthImage } from '../image.server.js';
 
 /**
  * 404 without a mailer. A link with no query goes to the site root, one without `?token` is a 400.
@@ -17,7 +15,6 @@ export const resetPasswordLoad = async ({ locals, url }: ServerLoadEvent) => {
     throw redirect(302, '/');
   }
 
-  const imageExist = existsSync(path.join(process.cwd(), 'static', PANEL_AUTH_IMAGE));
   const token = url.searchParams.get('token');
 
   if (!token) {
@@ -25,6 +22,6 @@ export const resetPasswordLoad = async ({ locals, url }: ServerLoadEvent) => {
   }
 
   return {
-    image: imageExist ? PANEL_AUTH_IMAGE : null
+    image: panelAuthImage()
   };
 };
