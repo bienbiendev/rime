@@ -119,3 +119,19 @@ test('Of two documents with the same title, the keyboard picks the highlighted o
   await page.locator(SAVE).click();
   await expect.poll(() => savedLink(request, id)).toEqual({ type: 'pages', value: secondId });
 });
+
+test('A link search that finds no document says so in the panel language', async ({
+  page,
+  request
+}) => {
+  const id = await createPage(request, 'Link empty', [{ label: 'Item', _children: [] }]);
+  const fieldset = await openLink(page, id);
+
+  await pickType(page, fieldset, 'Page');
+  const search = fieldset.locator('.rz-ressource-input input');
+  await search.click();
+  // No title holds these letters, and no id either: an id is hexadecimal
+  await search.pressSequentially('qqqzzz', { delay: 30 });
+  await expect(page.getByRole('option')).toHaveCount(0);
+  await expect(fieldset.locator('.rz-command-empty')).toHaveText('Nothing found');
+});

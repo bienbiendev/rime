@@ -101,9 +101,7 @@
                 <span>{ressource.label}</span>
               </Command.Item>
             {/each}
-            {#if resources.length === 0}
-              <Command.Empty>No {ressourceType}</Command.Empty>
-            {/if}
+            <Command.Empty>{t__('common.nothing_found')}</Command.Empty>
           </Command.List>
         {/if}
       {/if}
