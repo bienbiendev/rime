@@ -16,7 +16,6 @@ import type { FormField } from '#lib/fields/types.js';
 import type { FieldPanelTableConfig } from '#lib/panel/types.js';
 import { getAPIProxyContext } from '#lib/panel/context/api-proxy.svelte.js';
 import { deletedToast } from '#lib/panel/context/bulk-delete.js';
-import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
 import {
   fileSizeBytes,
   mediaKind,
@@ -25,7 +24,6 @@ import {
 } from '#lib/panel/util/upload-file.js';
 import { readStored, writeStored } from '#lib/panel/util/storage.js';
 import { titleText } from '#lib/panel/util/title.js';
-import { withLocale } from '#lib/panel/util/url.js';
 import { trycatchFetch } from '#lib/util/function.js';
 import { getValueAtPath, hasProp } from '#lib/util/object.js';
 import type { WithRequired } from '#lib/util/types.js';
@@ -56,7 +54,6 @@ export const DISPLAY_MODE = {
 /** The state of one collection's list page: its documents, order, search, filters and selection. */
 function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>) {
   const { initial, config, canCreate, upload: incomingUpload } = args;
-  const locale = getLocaleContext();
   const APIProxy = getAPIProxyContext();
 
   /** The browser keeps each list's display and sort: `collection.<slug>.display`. */
@@ -230,7 +227,7 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
 
   /**
    * Moves `documentId` under `to.parent` at `to.index`, renumbers its new siblings, and saves the
-   * changed documents.
+   * changed documents. The page data reloads after, whether the server took the move or not.
    */
   const handleNestedDocumentMove = async ({
     from,
@@ -296,15 +293,12 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
       return true;
     } catch (error) {
       console.error('Failed to update documents:', error);
-      // Revert to the stored docs, read as the page loads them: drafts included
-      docs = await fetch(withLocale(`${apiUrl(config.kebab)}?${PARAMS.LATEST}=true`, locale.code))
-        .then((r) => r.json())
-        .then((r) => r.docs);
-      stamp = Date.now();
       return false;
     } finally {
       // A refused move may have saved some rows: the proxy's reads of the collection read again.
       APIProxy.invalidate(apiUrl(config.kebab));
+      // The stored order, drafts included, becomes the list's documents, as after a delete
+      await invalidateAll();
     }
   };
 

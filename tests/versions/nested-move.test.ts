@@ -7,7 +7,8 @@ const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
 
 /**
  * Moves in the tree of `pages`, a nested collection. A move the server refuses: the panel says so
- * and shows the stored order again. A row released where it was taken: nothing is sent.
+ * and shows the stored order again. A move it takes stays after a search is cleared. A row
+ * released where it was taken: nothing is sent.
  */
 
 /** The titles of the tree's rows, top to bottom. */
@@ -51,6 +52,59 @@ test('A refused move shows an error and keeps the stored order', async ({ page, 
 
   await expect(page.getByText('An error occurred')).toBeVisible();
   await expect.poll(() => titles(page)).toEqual(before);
+});
+
+test('A moved row keeps its place once a search is cleared', async ({ page, request }) => {
+  const headers = await signInSuperAdmin(request);
+  const create = async (title: string, under?: { parent: string; position: number }) => {
+    const response = await request.post(`${API_BASE_URL}/pages`, {
+      headers,
+      data: {
+        attributes: { title, slug: title.toLowerCase().replace(' ', '-') },
+        ...(under && { _parent: under.parent, _position: under.position })
+      }
+    });
+    expect(response.status()).toBe(200);
+    return (await response.json()).doc.id as string;
+  };
+  const parent = await create('Order parent');
+  await create('Order first', { parent, position: 0 });
+  await create('Order second', { parent, position: 1 });
+
+  await page.addInitScript(() =>
+    localStorage.setItem('collection.pages.display', 'display_nested')
+  );
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages'));
+
+  /** The titles under the parent, top to bottom. */
+  const children = () =>
+    page
+      .locator(`.rz-collection-sortable[data-id="${parent}"] .rz-collection-node__title`)
+      .allTextContents();
+  await expect.poll(children).toEqual(['Order first', 'Order second']);
+
+  const row = (title: string) =>
+    page.locator('.rz-collection-node__row', { has: page.getByText(title, { exact: true }) });
+  await row('Order second')
+    .locator('.rz-collection-node__grip')
+    .dragTo(row('Order first'), { targetPosition: { x: 20, y: 2 } });
+  await expect(page.getByText('Order updated')).toBeVisible();
+  await expect.poll(children).toEqual(['Order second', 'Order first']);
+
+  // A cleared search starts again from the list's documents: the moved order, as stored
+  const search = page.locator('.rz-header-search-input input');
+  await search.fill('Order');
+  await search.fill('');
+  await expect.poll(children).toEqual(['Order second', 'Order first']);
+
+  const stored = await request.get(
+    `${API_BASE_URL}/pages?where[_parent][equals]=${parent}&sort=_position&latest=true`,
+    { headers }
+  );
+  expect(
+    (await stored.json()).docs.map((doc: { attributes: { title: string } }) => doc.attributes.title)
+  ).toEqual(['Order second', 'Order first']);
 });
 
 test('A row released where it was taken sends nothing', async ({ page, request }) => {
