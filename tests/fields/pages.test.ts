@@ -352,6 +352,34 @@ test('Should show field labels and values in the group preview when collapsed', 
   );
 });
 
+test('A group inside a folded group reads `…` in the preview', async ({ page, request }) => {
+  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { title: 'Nested group', meta: { card: { cardTitle: 'Stored' } } }
+  });
+  expect(response.status()).toBe(200);
+  const id = (await response.json()).doc.id as string;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', id));
+  const metaTrigger = page.locator('.rz-group-field__trigger').filter({ hasText: 'Meta' });
+  await expect(metaTrigger).toBeVisible();
+  if ((await page.locator('input[name="meta.metaTitle"]').count()) > 0) {
+    await metaTrigger.click();
+  }
+
+  const preview = page
+    .locator('.rz-group-field__wrapper')
+    .filter({ has: metaTrigger })
+    .locator('.rz-render-fields-preview');
+  const cardRow = preview
+    .locator('.rz-render-fields-preview__row')
+    .filter({ has: page.getByText('Card', { exact: true }) });
+  await expect(cardRow.locator('.rz-render-fields-preview__value')).toHaveText('…');
+  await expect(preview).not.toContainText('[object Object]');
+});
+
 /** ---------------- FIELD DISABLED VIA .access() ---------------- */
 
 test('Should disable restrictedField for a non-admin editor, enable it for the super admin', async ({

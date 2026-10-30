@@ -166,7 +166,9 @@ export const Pages = Collection.create('pages', {
         tab('social').fields(text('ogTitle'))
       ),
       // Blocks inside a group: a save that sends another member of the group keeps them
-      blocks('gallery', [blockImage])
+      blocks('gallery', [blockImage]),
+      // A group inside a group: the folded summary of meta reads `…` for it
+      group('card').fields(text('cardTitle'))
     ),
 
     blocks('sections', [blockParagraph, blockImage, blockKeyFacts, blockGrid, blockGallery]),

@@ -10,6 +10,14 @@
   };
 
   const { fields, getField, preview }: Props = $props();
+
+  /** A raw value as one line: `['a', 'b']` -> `a, b`, an object -> `…`, nothing -> ``. */
+  const previewText = (value: unknown): string => {
+    if (value === null || value === undefined) return '';
+    if (Array.isArray(value)) return value.map(previewText).join(', ');
+    if (typeof value === 'object') return '…';
+    return String(value);
+  };
 </script>
 
 <!--
@@ -42,7 +50,7 @@
               {@const Cell = builder.cell}
               <span><Cell value={field.value} /></span>
             {:else}
-              <span>{field.value}</span>
+              <span>{previewText(field.value)}</span>
             {/if}
           </div>
         </div>
