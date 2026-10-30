@@ -195,7 +195,15 @@ export type OperationContext<S extends DocType = 'raw'> = Dic & {
    * a call that operation makes through the plain accessor starts without it.
    */
   isSystemOperation?: boolean;
+  /**
+   * The writes hooks made outside rime's tables, such as a better-auth user, each as the step that
+   * removes it. A create runs them, newest first, when it fails before its row exists.
+   */
+  undo?: UndoStep[];
 };
+
+/** Removes one write a hook made outside rime's tables. */
+export type UndoStep = () => Promise<void>;
 
 /** A REST-style query string, or its parsed form. */
 export type OperationQuery = string | ParsedOperationQuery;

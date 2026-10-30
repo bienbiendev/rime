@@ -63,8 +63,8 @@ export const setAuthUserRole = async (
  * the user's `$apikey` rows and the api-key documents they created, whose `authUserId` is theirs,
  * with no rime hook. No session is left behind that would still authenticate.
  *
- * Used to undo a half-made signup and after an auth document is deleted. Better-auth's
- * `removeUser` refuses both when the caller is the user being removed
+ * Used to undo a half-made sign-up or create, and after an auth document is deleted. Better-auth's
+ * `removeUser` refuses these when the caller is the user being removed
  * (`YOU_CANNOT_REMOVE_YOURSELF`), and refuses any caller without its `user: ['delete']` statement.
  */
 export const deleteAuthUser = async (

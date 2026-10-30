@@ -2,13 +2,19 @@ import { describe, expect, it, vi } from 'vitest';
 import { RimeFormError } from '#lib/core/errors/index.js';
 import { createBetterAuthUser } from './create-better-auth-user.server.js';
 
-/** A create on `slug` by `user`, with better-auth's api and the mailer as spies. */
+/**
+ * A create on `slug` by `user`, with better-auth's api, the mailer and the adapter's deletes as
+ * spies. `undo` collects the steps the hook adds.
+ */
 const setup = (args: { slug: string; auth: object; user?: object; data: object }) => {
   const api = {
     createUser: vi.fn(async () => ({ user: { id: 'ba-new' } })),
     createApiKey: vi.fn(async () => ({ id: 'k1', key: 'secret' }))
   };
   const sendMail = vi.fn(async () => {});
+  const remove = vi.fn(async (_query: object) => {});
+  const adapter = { table: vi.fn((_slug: string) => ({ delete: remove })) };
+  const undo: (() => Promise<void>)[] = [];
   const run = () =>
     createBetterAuthUser({
       config: { slug: args.slug, auth: args.auth },
@@ -17,14 +23,14 @@ const setup = (args: { slug: string; auth: object; user?: object; data: object }
         locals: {
           user: args.user,
           betterAuthUser: args.user && { id: 'ba1' },
-          rime: { auth: { api }, mailer: { sendMail } }
+          rime: { auth: { api }, mailer: { sendMail }, adapter }
         }
       },
       data: args.data,
-      context: {},
+      context: { undo },
       operation: 'create'
     } as never);
-  return { api, sendMail, run };
+  return { api, sendMail, adapter, remove, undo, run };
 };
 
 describe('createBetterAuthUser', () => {
@@ -128,7 +134,7 @@ describe('createBetterAuthUser', () => {
     expect(api.createUser).not.toHaveBeenCalled();
   });
 
-  it('mails a staff member their api key and puts its ids on the document', async () => {
+  it('makes a staff member their api key and puts its ids on the document, mailing nothing yet', async () => {
     const { api, sendMail, run } = setup({
       slug: 'apiKeys',
       auth: { type: 'apiKey' },
@@ -140,8 +146,42 @@ describe('createBetterAuthUser', () => {
     expect(api.createApiKey).toHaveBeenCalledWith({
       body: { name: 'Mobile app', userId: 'ba1', permissions: { roles: ['user'] } }
     });
-    expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({ to: 'u1@site.com' }));
+    expect(sendMail).not.toHaveBeenCalled();
     expect(result.context.apiKey).toBe('secret');
     expect(result.data).toMatchObject({ apiKeyId: 'k1', authUserId: 'ba1', ownerId: 'u1' });
+  });
+
+  it('adds the step that removes the api key it made', async () => {
+    const { adapter, remove, undo, run } = setup({
+      slug: 'apiKeys',
+      auth: { type: 'apiKey' },
+      user: { id: 'u1', email: 'u1@site.com', isStaff: true, roles: ['staff'] },
+      data: { name: 'Mobile app' }
+    });
+
+    await run();
+    expect(undo).toHaveLength(1);
+    await undo[0]();
+    expect(adapter.table).toHaveBeenCalledWith('$apikey');
+    expect(remove).toHaveBeenCalledWith({ where: { id: 'k1' } });
+  });
+
+  it('adds the step that removes the better-auth user it made', async () => {
+    const { adapter, remove, undo, run } = setup({
+      slug: 'staff',
+      auth: { type: 'password', roles: ['admin', 'staff'] },
+      user: { id: 'u1', email: 'u1@site.com', isStaff: true, roles: ['admin'] },
+      data: { email: 'new@site.com', name: 'New', password: 'secret', roles: ['staff'] }
+    });
+
+    await run();
+    expect(undo).toHaveLength(1);
+    await undo[0]();
+    expect(adapter.table.mock.calls.map(([table]) => table)).toEqual([
+      '$authSessions',
+      '$authAccounts',
+      '$authUsers'
+    ]);
+    expect(remove).toHaveBeenLastCalledWith({ where: { id: 'ba-new' } });
   });
 });

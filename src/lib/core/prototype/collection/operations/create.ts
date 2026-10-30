@@ -5,10 +5,11 @@ import {
   persistRelational,
   runBeforeOperation,
   runDataHooks,
-  runDocHooks
+  runDocHooks,
+  undoOnError
 } from '#lib/core/pipeline/run.server.js';
 import { seenBy } from '#lib/core/pipeline/seen-by.server.js';
-import type { OperationContext } from '#lib/core/pipeline/types.js';
+import type { OperationContext, UndoStep } from '#lib/core/pipeline/types.js';
 import type { PrototypeApiContext } from '#lib/core/prototype/define.js';
 import type { CollectionSlug } from '#lib/core/prototype/types.js';
 import type { RegisterCollection } from '#lib/index.js';
@@ -36,7 +37,8 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
   const { config, event, isSystemOperation } = ctx;
   const { rime } = event.locals;
 
-  let context: OperationContext<CollectionSlug> = { params: { locale }, isSystemOperation };
+  const undo: UndoStep[] = [];
+  let context: OperationContext<CollectionSlug> = { params: { locale }, isSystemOperation, undo };
 
   context = await runBeforeOperation<CollectionSlug>({
     config,
@@ -45,40 +47,46 @@ export const create = async <T extends RegisterCollection[CollectionSlug]>(args:
     context
   });
 
-  const before = await runDataHooks<
-    CollectionSlug,
-    DeepPartial<WithRelationInput<T>>,
-    BuiltCollection
-  >({
-    hooks: config.$hooks?.beforeCreate,
-    data: args.data,
-    config,
-    event,
-    operation: 'create',
-    context
-  });
-  const data = before.data;
-  context = before.context;
+  // Up to the insert, a failure removes what the hooks wrote outside rime: no document holds it
+  const { data, created } = await undoOnError(undo, async () => {
+    const before = await runDataHooks<
+      CollectionSlug,
+      DeepPartial<WithRelationInput<T>>,
+      BuiltCollection
+    >({
+      hooks: config.$hooks?.beforeCreate,
+      data: args.data,
+      config,
+      event,
+      operation: 'create',
+      context
+    });
+    context = before.context;
 
-  assertUpsertContext(context, 'create', ['configMap']);
+    assertUpsertContext(context, 'create', ['configMap']);
+
+    /**
+     * Which rows this create writes, decided here rather than in the adapter.
+     *
+     * The same call `runUpdate` makes at its step 3.5, and for the same reason: whether a
+     * document's content lands on its own row or a second one is versions' statement, not the
+     * database layer's. `operation: 'create'` is what lets it answer differently — an insert
+     * names no content row, because there is none yet.
+     */
+    const plan = versionsWritePlan(
+      { data: before.data as Dic },
+      { config, context, operation: 'create' }
+    );
+
+    const created = await rime.adapter.collection(config.slug).insert({
+      data: plan.data,
+      content: plan.content && { data: plan.content.data },
+      locale
+    });
+    return { data: before.data, created };
+  });
 
   const incomingPaths = Object.keys(context.configMap!);
-
-  /**
-   * Which rows this create writes, decided here rather than in the adapter.
-   *
-   * The same call `runUpdate` makes at its step 3.5, and for the same reason: whether a document's
-   * content lands on its own row or a second one is versions' statement, not the database layer's.
-   * `operation: 'create'` is what lets it answer differently — an insert names no content row,
-   * because there is none yet.
-   */
-  const plan = versionsWritePlan({ data: data as Dic }, { config, context, operation: 'create' });
-
-  const created = await rime.adapter.collection(config.slug).insert({
-    data: plan.data,
-    content: plan.content && { data: plan.content.data },
-    locale
-  });
 
   // Blocks, trees and relations hang off the row the content landed on, which is the document's
   // own row unless it is versioned.

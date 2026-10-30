@@ -4,6 +4,8 @@ import { RimeError } from '#lib/core/errors/index.js';
 import type { WritePlan } from '#lib/core/adapter.js';
 import { versionsWritePlan } from '#lib/core/prototype/shared/versions/write-plan.js';
 import type { DocType, GenericDoc, PrototypeSlug, RawDoc } from '#lib/core/prototype/types.js';
+import { logger } from '#lib/core/logger.server.js';
+import { trycatch } from '#lib/util/function.js';
 import type { Dic } from '#lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import { buildDocument } from './build-document.server.js';
@@ -12,7 +14,7 @@ import { saveBlocks } from './persist/blocks/index.server.js';
 import { saveRelations } from './persist/relations/index.server.js';
 import { saveTreeBlocks } from './persist/tree/index.server.js';
 import { seenBy } from './seen-by.server.js';
-import type { Operation, OperationContext } from './types.js';
+import type { Operation, OperationContext, UndoStep } from './types.js';
 
 // The steps every document operation shares, written once.
 //
@@ -167,6 +169,20 @@ export const assertUpsertContext = (
       throw new RimeError(RimeError.OPERATION_ERROR, `missing ${name} @${where}`);
     }
   }
+};
+
+/**
+ * Runs `write`. When it throws, runs the `undo` steps, newest first, then throws the same error.
+ * A step that fails is logged, and the steps after it still run.
+ */
+export const undoOnError = async <T>(undo: UndoStep[], write: () => Promise<T>): Promise<T> => {
+  const [error, result] = await trycatch(write);
+  if (!error) return result;
+  for (const step of [...undo].reverse()) {
+    const [undoError] = await trycatch(step);
+    if (undoError) logger.error(undoError);
+  }
+  throw error;
 };
 
 /**

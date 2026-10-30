@@ -20,9 +20,13 @@ export function apiUrl(...args: string[]): string {
   return `${API_PREFIX}/${args.join('/')}`;
 }
 
-/** Prefixes `SITE_URL` to a root-relative path. */
+/**
+ * Prefixes `SITE_URL` to a root-relative path, with or without its trailing slash.
+ * @example
+ * absolute('/panel') // SITE_URL https://site.com/ -> https://site.com/panel
+ */
 export function absolute(path: string): string {
-  return `${SITE_URL}${path}`;
+  return `${SITE_URL.replace(/\/+$/, '')}${path}`;
 }
 
 /** `/api` and the paths under it: `/api/pages` is one, `/apiary` is not. */

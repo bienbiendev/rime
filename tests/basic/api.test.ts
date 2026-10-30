@@ -632,6 +632,20 @@ test('Admin should create a user', async ({ request }) => {
   editor3Id = data.doc.id;
 });
 
+// lib/+rime/users/module.server.ts fails the create after the better-auth user exists
+test('A failed create should remove the better-auth user it made', async ({ request }) => {
+  const headers = await signInAdmin(request);
+  const data = { email: 'undo@foo.com', name: 'undo', password: PASSWORD };
+
+  const failed = await request.post(`${API_BASE_URL}/users?throw=after-auth`, { headers, data });
+  expect(failed.status()).toBe(400);
+
+  const created = await request.post(`${API_BASE_URL}/users`, { headers, data });
+  expect(created.status()).toBe(200);
+  const { doc } = await created.json();
+  await request.delete(`${API_BASE_URL}/users/${doc.id}`, { headers });
+});
+
 test('Default role should be editor', async ({ request }) => {
   const response = await request.get(`${API_BASE_URL}/staff/${editor3Id}`, {
     headers: await signInAdmin(request)
@@ -2130,6 +2144,17 @@ test('Should allow credentials on a preflight from a trusted origin', async ({ r
   });
   expect(response.status()).toBe(204);
   expect(response.headers()['access-control-allow-credentials']).toBe('true');
+  expect(response.headers()['access-control-allow-origin']).toBe(BASE_URL);
+});
+
+test('Should answer the preflight of a better-auth route from a trusted origin', async ({
+  request
+}) => {
+  const response = await request.fetch(`${API_BASE_URL}/auth/sign-in/email`, {
+    method: 'OPTIONS',
+    headers: { origin: BASE_URL, 'access-control-request-method': 'POST' }
+  });
+  expect(response.status()).toBe(204);
   expect(response.headers()['access-control-allow-origin']).toBe(BASE_URL);
 });
 

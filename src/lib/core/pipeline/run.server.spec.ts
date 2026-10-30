@@ -1,6 +1,6 @@
 import { RimeError } from '#lib/core/errors/index.js';
-import { describe, expect, it } from 'vitest';
-import { runBeforeOperation, runDataHooks, runDocHooks } from './run.server.js';
+import { describe, expect, it, vi } from 'vitest';
+import { runBeforeOperation, runDataHooks, runDocHooks, undoOnError } from './run.server.js';
 
 const base = { config: {} as any, event: {} as any, context: { params: {} } };
 
@@ -41,5 +41,30 @@ describe('a hook that answers without its arguments', () => {
       operation: 'read'
     });
     expect((await run).doc).toEqual({ id: 'd' });
+  });
+});
+
+describe('undoOnError', () => {
+  it('runs the undo steps, newest first, then throws the same error', async () => {
+    const ran: string[] = [];
+    const undo = [async () => void ran.push('user'), async () => void ran.push('key')];
+    const failure = new Error('insert failed');
+
+    await expect(undoOnError(undo, () => Promise.reject(failure))).rejects.toBe(failure);
+    expect(ran).toEqual(['key', 'user']);
+  });
+
+  it('runs no step when the write succeeds', async () => {
+    const step = vi.fn(async () => {});
+    await expect(undoOnError([step], async () => 'row')).resolves.toBe('row');
+    expect(step).not.toHaveBeenCalled();
+  });
+
+  it('runs the steps after one that fails', async () => {
+    const last = vi.fn(async () => {});
+    const undo = [last, () => Promise.reject(new Error('undo failed'))];
+
+    await expect(undoOnError(undo, () => Promise.reject(new Error('x')))).rejects.toThrow('x');
+    expect(last).toHaveBeenCalled();
   });
 });

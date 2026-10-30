@@ -1,6 +1,7 @@
 import { text } from '#lib/fields/index.js';
 import { access } from '#lib/core/auth/access.js';
 import { Collection } from '$rime/config';
+import { hooks } from '$rime/modules:+rime/users';
 
 export const Users = Collection.create('users', {
   auth: {
@@ -13,5 +14,6 @@ export const Users = Collection.create('users', {
     read: () => true,
     update: (user, { id }) => access.isAdminOrMe(user, id),
     delete: (user, { id }) => access.isAdminOrMe(user, id)
-  }
+  },
+  $hooks: hooks
 });

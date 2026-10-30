@@ -4,7 +4,7 @@ import type { HookContext } from '#lib/core/pipeline/types.js';
 import { dev } from '$app/env';
 import { RimeError, RimeFormError } from '#lib/core/errors/index.js';
 import { access } from '#lib/core/auth/access.js';
-import { t__ } from '#lib/core/i18n/index.js';
+import { deleteAuthApiKey, deleteAuthUser } from '#lib/core/auth/better-auth-tables.server.js';
 import { BETTER_AUTH_ROLES } from '#lib/core/auth/constant.server.js';
 import type { Dic } from '#lib/util/types.js';
 
@@ -123,13 +123,17 @@ const createAuthUser = async (
       role
     }
   });
+  // A failed create removes the user again, as a failed sign-up does
+  args.context.undo?.push(() =>
+    deleteAuthUser(args.event.locals.rime.adapter, { authUserId: result.user.id })
+  );
   return result.user.id;
 };
 
 /**
- * Makes the api key for the caller's better-auth user, with the document's roles, and mails it to
- * the caller. The document gets the key's id, the caller's better-auth user, and the caller as
- * its owner; `context.apiKey` holds the key for this request only.
+ * Makes the api key for the caller's better-auth user, with the document's roles. The document
+ * gets the key's id, the caller's better-auth user, and the caller as its owner; `context.apiKey`
+ * holds the key for this request only, and `populateAPIKey` mails it once the document exists.
  */
 const createKeyDocument = async (args: Args): Promise<Args> => {
   const { event } = args;
@@ -159,12 +163,8 @@ const createKeyDocument = async (args: Args): Promise<Args> => {
     }
   });
 
-  // `rime.mailer` is typed `never` when the app has no smtp config.
-  await (rime.mailer as any).sendMail({
-    to: event.locals.user.email,
-    subject: t__(`mail.api_key_created_subject`, args.data.name),
-    text: t__(`mail.api_key_created_text`, args.data.name, apiKey.key)
-  });
+  // A failed create removes the key
+  args.context.undo?.push(() => deleteAuthApiKey(rime.adapter, { apiKeyId: apiKey.id }));
 
   return {
     ...args,

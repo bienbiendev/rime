@@ -1,6 +1,7 @@
 // rimecms: what a config and the panel import. A site page imports rimecms/public.
 import i18n, { t__ } from '#lib/core/i18n/index.js';
 
+export { RimeError, RimeFormError } from '#lib/core/errors/index.js';
 export type { Dictionaries, I18n, PanelLanguage, Translate } from '#lib/core/i18n/index.js';
 export { definePlugin } from '#lib/core/plugins/index.js';
 export { i18n, t__ };

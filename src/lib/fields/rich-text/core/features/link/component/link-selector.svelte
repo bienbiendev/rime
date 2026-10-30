@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { SITE_URL } from '$app/env/public';
   import validate from '#lib/core/fields/validate.js';
-  import { apiUrl } from '#lib/core/routes/util.js';
+  import { absolute, apiUrl } from '#lib/core/routes/util.js';
   import IconButton from '#lib/fields/rich-text/component/bubble-menu/icon-button/icon-button.svelte';
   import Button from '#lib/panel/components/ui/button/button.svelte';
   import PickDialog from '../../pick-dialog.svelte';
@@ -100,7 +99,7 @@
     }
     // relative url
     else if (value.startsWith('/')) {
-      isValid = validate.url(`${SITE_URL}${value}`) === true;
+      isValid = validate.url(absolute(value)) === true;
     }
     // Only validate if it already has a protocol
     else {
@@ -209,7 +208,8 @@
   items={resourcesFlatMap}
   label={(item) => item.title}
   onPick={(item) => {
-    value = item.url.replace(SITE_URL, '');
+    // https://site.com/about -> /about
+    value = item.url.replace(absolute(''), '');
     resourceDialogOpen = false;
     onSubmit();
   }}

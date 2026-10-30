@@ -20,21 +20,18 @@ function logResponse(event: RequestEvent, status: number) {
 
 /**
  * The first handle: puts the request's `rime` on `event.locals`, gives every `$url` page its
- * address once per process, lets better-auth answer `/api/auth/*`, and logs the status of every
- * response.
+ * address once per process, and logs the status of every response.
  */
 function createCMSHandler<const C extends Config>(rime: Rime<C>) {
   const handleCMS: Handle = async ({ event, resolve }) => {
     event.locals.rime = rime.createRimeContext(event) as any;
     // Once per process: every `$url` page missing an address gets one.
     if (!building) await ensureAddresses(event);
-    const response = await svelteKitHandler({ event, resolve, auth: rime.auth, building }).catch(
-      (err) => {
-        // Thrown by a later handle step, as handleAuth does: SvelteKit answers it
-        logResponse(event, isHttpError(err) || isRedirect(err) ? err.status : 500);
-        throw err;
-      }
-    );
+    const response = await resolve(event).catch((err) => {
+      // Thrown by a later handle step, as handleAuth does: SvelteKit answers it
+      logResponse(event, isHttpError(err) || isRedirect(err) ? err.status : 500);
+      throw err;
+    });
     logResponse(event, response.status);
     return response;
   };
@@ -42,15 +39,21 @@ function createCMSHandler<const C extends Config>(rime: Rime<C>) {
   return handleCMS;
 }
 
+/** Lets better-auth answer its own routes, `/api/auth/*`. Every other request goes on. */
+function createBetterAuthHandler<const C extends Config>(rime: Rime<C>): Handle {
+  return ({ event, resolve }) => svelteKitHandler({ event, resolve, auth: rime.auth, building });
+}
+
 /**
  * The handle list an app spreads into `sequence()` in `src/hooks.server.ts`. The order matters:
- * CORS before auth, auth before the uploads, the plugins and the routes that read
- * `event.locals.user`.
+ * CORS before better-auth and auth, so `/api/auth/*` gets the same CORS as the rest of the API;
+ * auth before the uploads, the plugins and the routes that read `event.locals.user`.
  */
 export default async function <const C extends Config>(rime: Promise<Rime<C>>) {
   return [
     createCMSHandler(await rime),
     handleCORS,
+    createBetterAuthHandler(await rime),
     handleAuth,
     // After the user is known: a private collection's file goes to its readers only
     handleUploads,
