@@ -52,7 +52,7 @@
   const classNameCompact = $derived(
     config.get.layout === 'compact' ? 'rz-slug-field--compact' : ''
   );
-  const classNames = $derived(`rz-slug-field ${classNameCompact || ''} ${config.get.className}`);
+  const classNames = $derived(`rz-slug-field ${classNameCompact} ${config.get.className || ''}`);
 </script>
 
 <fieldset class={classNames} use:fieldset={field}>

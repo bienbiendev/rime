@@ -125,6 +125,17 @@ test('Opening a document runs no select onChange', async ({ page, request }) => 
   await expect(page.locator('button[data-submit]')).toBeDisabled();
 });
 
+/** ---------------- SLUG CLASS ---------------- */
+
+test('A slug without a className gets no stray class', async ({ page }) => {
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', 'create'));
+
+  const slug = page.locator('fieldset[data-path="slug"]');
+  await expect(slug).toHaveClass(/\brz-slug-field\b/);
+  await expect(slug).not.toHaveClass(/\bundefined\b/);
+});
+
 /** ---------------- GROUP WITH MANY FIELDS: SAVE + RELOAD ---------------- */
 
 test('Should persist the text, textarea, checkbox, toggle, select and number of the meta group after save and reload', async ({
