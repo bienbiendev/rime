@@ -239,13 +239,10 @@
 
   /* ------------------------------------------------------------- labels */
 
-  const fileTypes = $derived.by(() => {
-    if (initialDocs.length) {
-      const types = new Set(initialDocs.map((doc) => doc.mimeType));
-      return Array.from(types);
-    }
-    return [];
-  });
+  /** The types of every doc the grid has shown: a folder opened or a file uploaded adds its own. */
+  const fileTypes = $derived([
+    ...new Set([...seen.values()].map((doc) => doc.mimeType).filter(Boolean))
+  ]);
 
   const searchPlaceholder = $derived(
     t__('common.search', `${initialDocs.length || 0} document(s)`)

@@ -159,6 +159,45 @@ test("The picker lists the medias the field's query names, in the folder and in 
   await expect(card(page, pdf.id)).toHaveCount(0);
 });
 
+test('The type filter lists a type the grid has shown only in a folder', async ({
+  page,
+  request
+}) => {
+  // One PNG of one pixel, in a folder of its own: the root holds JPEGs only
+  const folder = `types${Date.now()}`;
+  const png =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const uploaded = await request.post(`${API_BASE_URL}/medias`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      file: { base64: png, filename: `${run}-pixel.png` },
+      alt: 'A pixel',
+      _path: `root:${folder}`
+    }
+  });
+  expect(uploaded.status()).toBe(200);
+
+  const docId = await createPage(request, 'Photos types');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', docId));
+  await page
+    .locator('fieldset[data-path="photos"]')
+    .getByRole('button', { name: 'Choose from the library' })
+    .click();
+  await expect(card(page, medias[0])).toBeVisible();
+
+  // One type at the root: nothing to filter
+  const filter = dialog(page).getByRole('button', { name: 'All types' });
+  await expect(filter).toBeDisabled();
+
+  await dialog(page).locator('.rz-browse__folder', { hasText: folder }).click();
+  await expect(dialog(page).locator('.rz-relation-browse__item')).toHaveCount(1);
+  await expect(filter).toBeEnabled();
+  await filter.click();
+  await expect(page.getByRole('menuitem', { name: 'image/jpeg' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'image/png' })).toBeVisible();
+});
+
 test('Many: a press dragged across the images picks them all, and unpicks them back', async ({
   page,
   request
