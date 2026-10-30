@@ -7,7 +7,7 @@
   import * as Dialog from '#lib/panel/components/ui/dialog/index.js';
   import { type DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
-  import { CalendarDate, getLocalTimeZone, type DateValue } from '@internationalized/date';
+  import { CalendarDate, type DateValue } from '@internationalized/date';
   import CalendarIcon from '@lucide/svelte/icons/calendar';
   import type { DateFieldBuilder } from '../index.js';
 
@@ -15,7 +15,6 @@
 
   const { path, config, form }: Props = $props();
   const locale = getLocaleContext();
-  const timeZone = getLocalTimeZone();
   let dialogOpen = $state(false);
   const field = $derived(form.useField(path, config));
 
@@ -30,10 +29,14 @@
     return undefined;
   });
 
+  /**
+   * Stores the picked day, or `null` when the calendar is cleared. The day is kept at 12:00 UTC,
+   * which reads as the same day from UTC-11 to UTC+11.
+   */
   function handleCalendarChange(newCalendarDate: DateValue | undefined) {
     if (newCalendarDate) {
-      const newDate = newCalendarDate.toDate(timeZone);
-      // Only update if the date actually changed
+      const { year, month, day } = newCalendarDate;
+      const newDate = new Date(Date.UTC(year, month - 1, day, 12));
       if (!date || date.getTime() !== newDate.getTime()) {
         field.value = newDate;
       }

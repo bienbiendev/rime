@@ -178,6 +178,41 @@ test('A date cleared in the calendar is saved empty', async ({ page, request }) 
     .toBeNull();
 });
 
+/** ---------------- PICKED DATE AT 12:00 UTC ---------------- */
+
+test.describe('In an editor at UTC+1', () => {
+  test.use({ timezoneId: 'Europe/Paris' });
+
+  test('A picked day is saved at 12:00 UTC', async ({ page, request }) => {
+    const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+    const response = await request.post(`${API_BASE_URL}/pages`, {
+      headers,
+      data: { title: 'Picked date', publishDate: '2026-03-14T12:00:00.000Z' }
+    });
+    expect(response.status()).toBe(200);
+    const id = (await response.json()).doc.id as string;
+
+    await loginAs(page, ADMIN_EMAIL, PASSWORD);
+    await page.goto(panelUrl('pages', id));
+    await page.locator('fieldset[data-path="publishDate"] .rz-date__button').click();
+    await page
+      .locator('[data-bits-day]:not([data-outside-month])')
+      .filter({ hasText: /^15$/ })
+      .click();
+    await page.keyboard.press('Escape');
+    await page.locator('button[type="submit"]').click();
+
+    await expect
+      .poll(async () => {
+        const { doc } = await request
+          .get(`${API_BASE_URL}/pages/${id}`, { headers })
+          .then((r) => r.json());
+        return doc.publishDate;
+      })
+      .toBe('2026-03-15T12:00:00.000Z');
+  });
+});
+
 /** ---------------- DIGIT-ONLY TEXT ---------------- */
 
 test('A text made only of digits is saved as text through the panel', async ({ page, request }) => {
