@@ -244,6 +244,8 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
 
     const docsToUpdate = new Map<string, GenericDoc>();
 
+    // The parents' `_children` change on screen, for the tree; the server derives them, so the
+    // parents are not saved.
     if (from.parent !== null) {
       const oldParent = updatedDocs.find((d) => d.id === from.parent);
       if (oldParent) {
@@ -252,7 +254,6 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
         if (childIndex > -1) {
           oldChildren.splice(childIndex, 1);
           oldParent._children = oldChildren;
-          docsToUpdate.set(oldParent.id, oldParent);
         }
       }
     }
@@ -263,7 +264,6 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
         const newChildren = [...(newParent._children || [])];
         newChildren.splice(to.index, 0, documentId);
         newParent._children = newChildren;
-        docsToUpdate.set(newParent.id, newParent);
       }
     }
 

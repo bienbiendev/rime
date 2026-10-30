@@ -107,6 +107,59 @@ test('A moved row keeps its place once a search is cleared', async ({ page, requ
   ).toEqual(['Order second', 'Order first']);
 });
 
+test('A move under another parent saves the moved row only, not the parents', async ({
+  page,
+  request
+}) => {
+  const headers = await signInSuperAdmin(request);
+  const create = async (title: string, parent?: string) => {
+    const response = await request.post(`${API_BASE_URL}/pages`, {
+      headers,
+      data: {
+        attributes: { title, slug: title.toLowerCase().replace(' ', '-') },
+        ...(parent && { _parent: parent, _position: 0 })
+      }
+    });
+    expect(response.status()).toBe(200);
+    return (await response.json()).doc.id as string;
+  };
+  const home = await create('Patch home');
+  const about = await create('Patch about', home);
+  const team = await create('Patch team');
+
+  await page.addInitScript(() =>
+    localStorage.setItem('collection.pages.display', 'display_nested')
+  );
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages'));
+  await expect(page.getByText('Patch about', { exact: true })).toBeVisible();
+
+  const patches: string[] = [];
+  page.on('request', (sent) => {
+    if (sent.method() === 'PATCH') patches.push(new URL(sent.url()).pathname);
+  });
+
+  // A drop just under a childless row lands in its empty list (CollectionTree.svelte's
+  // emptyInsertThreshold)
+  const row = (title: string) =>
+    page.locator('.rz-collection-node__row', { has: page.getByText(title, { exact: true }) });
+  const grip = (await row('Patch about').locator('.rz-collection-node__grip').boundingBox())!;
+  const target = (await row('Patch team').boundingBox())!;
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(target.x + 40, target.y + target.height + 2, { steps: 12 });
+  await page.mouse.up();
+  await expect(page.getByText('Order updated')).toBeVisible();
+
+  // The moved row alone: neither `home` nor `team` is saved
+  expect(patches).toEqual([`/api/pages/${about}`]);
+
+  await page.reload();
+  await expect(
+    page.locator(`.rz-collection-sortable[data-id="${team}"] .rz-collection-node__title`)
+  ).toHaveText(['Patch about']);
+});
+
 test('A row released where it was taken sends nothing', async ({ page, request }) => {
   const headers = await signInSuperAdmin(request);
   const created = await request.post(`${API_BASE_URL}/pages`, {
