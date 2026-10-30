@@ -11,7 +11,7 @@ import type { RelationField } from './index.js';
  * ```
  */
 export const queryOf = (field: Pick<RelationField, 'query'>, values: Dic): string =>
-  typeof field.query === 'function' ? field.query(values as never) : (field.query ?? '');
+  typeof field.query === 'function' ? field.query(values) : (field.query ?? '');
 
 /**
  * The docs among `docs` that the query names, read back from the collection at `url`; every doc

@@ -5,9 +5,8 @@ import {
 } from '#lib/core/fields/builders/form-field-builder.js';
 import type { CollectionSlug, GenericDoc } from '#lib/core/prototype/types.js';
 import type { DefaultOptions, DefaultValueFn, FormField, RelationRef } from '#lib/fields/types.js';
-import type { RegisterCollection } from '#lib/index.js';
 import { makeDocTypeName } from '#lib/core/prototype/naming.js';
-import type { WithOptional } from '#lib/util/types.js';
+import type { Dic } from '#lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import dedent from 'dedent';
 import { isEmptyList } from '../repeatable.js';
@@ -15,9 +14,7 @@ import Cell from './component/Cell.svelte';
 import RelationComponent from './component/Relation.svelte';
 
 /** A link to documents of another collection, stored as `{ relationTo, documentId }` refs. */
-export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends FormFieldBuilder<
-  RelationField<Doc>
-> {
+export class RelationFieldBuilder extends FormFieldBuilder<RelationField> {
   constructor(name: string) {
     super(name, 'relation');
     this.field.isEmpty = isEmptyList;
@@ -28,7 +25,7 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
    * The default as refs, as a read answers them: the panel's form and a new block hold
    * `[{ relationTo, documentId }]`, not the ids the default was written with.
    */
-  override get use(): Omit<FormFieldUse<RelationField<Doc>>, 'defaultValue'> & {
+  override get use(): Omit<FormFieldUse<RelationField>, 'defaultValue'> & {
     defaultValue(context?: { event?: RequestEvent }): RelationRef[];
   } {
     const use = super.use;
@@ -67,15 +64,15 @@ export class RelationFieldBuilder<Doc extends GenericDoc = GenericDoc> extends F
    * Narrows the documents the panel offers: a query string, `where[mimeType][like]=image%`, or a
    * function of the form values that answers one. The server does not apply it to a write.
    */
-  query(query: string | QueryResolver<Doc>) {
-    (this.field as RelationField<Doc>).query = query;
+  query(query: string | QueryResolver) {
+    this.field.query = query;
     return this;
   }
 
   /** The collection the relation points to. */
-  to<Slug extends CollectionSlug>(slug: Slug): RelationFieldBuilder<RegisterCollection[Slug]> {
+  to(slug: CollectionSlug) {
     this.field.relationTo = slug;
-    return this as unknown as RelationFieldBuilder<RegisterCollection[Slug]>;
+    return this;
   }
 
   /** Takes several documents, in order; one without it. */
@@ -131,12 +128,12 @@ export const isRelationField = (
 /* Type
 /****************************************************/
 
-export type RelationField<Doc extends GenericDoc = GenericDoc> = FormField & {
+export type RelationField = FormField & {
   type: 'relation';
   relationTo: CollectionSlug;
   many?: boolean;
   defaultValue?: string | string[] | DefaultValueFn<string | string[]>;
-  query?: string | ((doc: WithOptional<Doc, 'id'>) => string);
+  query?: string | QueryResolver;
   isThumbnail?: boolean;
 };
 
@@ -161,4 +158,5 @@ export type RelationRow = {
  */
 export type BeforeOperationRelation = Omit<RelationRow, 'ownerId'> & { ownerId?: string };
 
-type QueryResolver<Doc extends GenericDoc = GenericDoc> = (doc: WithOptional<Doc, 'id'>) => string;
+/** A query string built from the values of the form the relation sits in. */
+type QueryResolver = (values: Dic) => string;
