@@ -31,6 +31,7 @@
   import qs from 'qs';
   import { untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
+  import { namedByQuery } from '../../query.js';
   import Create from './Create.svelte';
 
   type Props = {
@@ -226,9 +227,9 @@
   let uploadInput = $state<HTMLInputElement>();
   const uploader = createUploader(() => ({ url: apiUrl(config.kebab), path, accept }));
 
-  /** Files land in the folder on screen, then show there, picked. */
+  /** Files land in the folder on screen; those the field's query names are picked. */
   async function upload(list: File[]) {
-    const docs = await uploader.upload(list);
+    const docs = await namedByQuery(apiUrl(config.kebab), query ?? '', await uploader.upload(list));
     if (!docs.length) return;
     for (const doc of docs) seen.set(doc.id, doc);
     searchValue = '';

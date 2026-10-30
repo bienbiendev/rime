@@ -1,5 +1,6 @@
 import { filePathToBase64 } from '#lib/core/prototype/collection/upload/util/converter.server.js';
 import test, { expect, type APIRequestContext, type Page } from '@playwright/test';
+import { readFileSync } from 'fs';
 import path from 'path';
 import { API_BASE_URL, loginAs, panelUrl, signIn } from '../util.js';
 
@@ -221,6 +222,40 @@ test('The type filter lists a type the grid has shown only in a folder', async (
   await filter.click();
   await expect(page.getByRole('menuitem', { name: 'image/jpeg' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'image/png' })).toBeVisible();
+});
+
+test('Files uploaded from the picker are picked only when the field query names them', async ({
+  page,
+  request
+}) => {
+  const docId = await createPage(request, 'Photos upload query');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', docId));
+
+  const photos = page.locator('fieldset[data-path="photos"]');
+  await photos.getByRole('button', { name: 'Choose from the library' }).click();
+  const stamp = Date.now();
+  await dialog(page)
+    .locator('input[type="file"]')
+    .setInputFiles([
+      {
+        name: `query-${stamp}.jpg`,
+        mimeType: 'image/jpeg',
+        buffer: readFileSync(path.resolve(process.cwd(), 'tests/basic/landscape.jpg'))
+      },
+      {
+        name: `query-${stamp}.pdf`,
+        mimeType: 'application/pdf',
+        buffer: Buffer.from('%PDF-1.4\n%%EOF\n')
+      }
+    ]);
+
+  // The image is picked, the PDF is not
+  const add = dialog(page).getByRole('button', { name: /^Add/ });
+  await expect(add).toHaveText('Add 1 file');
+  await add.click();
+  await page.locator('button[data-submit]').click();
+  await expect.poll(async () => (await readPage(page, docId)).photos.length).toBe(1);
 });
 
 test('Many: a press dragged across the images picks them all, and unpicks them back', async ({

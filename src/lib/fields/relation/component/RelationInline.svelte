@@ -15,7 +15,7 @@
   import type { Snippet } from 'svelte';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import type { RelationFieldBuilder, RelationRow } from '../index.js';
-  import { queryOf } from '../query.js';
+  import { namedByQuery, queryOf } from '../query.js';
   import { toRelationValue } from '../value.js';
   import Browse from './upload/Browse.svelte';
 
@@ -99,9 +99,14 @@
     accept: relationConfig.upload?.accept
   }));
 
-  /** Each file becomes a media of the library, then the pick: after the others, or in place. */
+  /**
+   * Each file becomes a media of the library; those the field's query names become the pick, after
+   * the others or in place.
+   */
   async function upload(files: File[]) {
-    const docs = await uploader.upload(files);
+    const uploaded = await uploader.upload(files);
+    const query = queryOf(config.get, form.values);
+    const docs = await namedByQuery(apiUrl(relationConfig.kebab), query, uploaded);
     if (!docs.length) return;
     const added = docs.map((doc) => doc.id);
     onChange(many ? [...ids, ...added] : added.slice(0, 1), docs);

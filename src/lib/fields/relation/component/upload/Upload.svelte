@@ -8,6 +8,7 @@
   import Upload from '@lucide/svelte/icons/upload';
   import X from '@lucide/svelte/icons/x';
   import Sortable from 'sortablejs';
+  import { namedByQuery } from '../../query.js';
   import type { RelationComponentProps } from '../types.js';
   import Browse from './Browse.svelte';
 
@@ -44,9 +45,10 @@
 
   const uploader = createUploader(() => ({ url: apiUrl(relationConfig.kebab), accept }));
 
-  /** Each file becomes a media of the library, then a pick of the field. */
+  /** Each file becomes a media of the library; those the field's query names become picks. */
   async function upload(files: File[]) {
-    const docs = await uploader.upload(files);
+    const uploaded = await uploader.upload(files);
+    const docs = await namedByQuery(apiUrl(relationConfig.kebab), query, uploaded);
     if (docs.length) addUploaded(docs);
   }
 
