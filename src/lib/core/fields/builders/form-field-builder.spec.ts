@@ -39,7 +39,7 @@ describe('validate', () => {
       checkbox('agree')
         .validate(() => true)
         .use.validate('yes', ctx)
-    ).toBe('Should be true/false');
+    ).toBe('not_a_boolean');
   });
 });
 

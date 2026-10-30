@@ -1,3 +1,4 @@
+import { RimeFormError } from '#lib/core/errors/index.js';
 import type { DataType } from '#lib/core/fields/builders/form-field-builder.js';
 import { FormFieldBuilder } from '#lib/core/fields/builders/form-field-builder.js';
 import type {
@@ -20,7 +21,7 @@ const ensureSelectIsOption: FieldValidationFunc<FieldWithOptions> = (value, { co
     candidate.every(isOption) &&
     new Set(candidate).size === candidate.length;
   const valid = config.many ? isOptionList(value) : isOption(value);
-  return valid || `Value should be one of these, each once : ${allowed.join('|')}`;
+  return valid || RimeFormError.NOT_AN_OPTION;
 };
 
 type FieldWithOptions = FormField & {

@@ -93,7 +93,7 @@ describe('checkbox', () => {
   });
 
   it('rejects a non-boolean, starts unchecked, and false is a value', () => {
-    expect(checkbox('agree').use.validate('yes', ctx)).toBe('Should be true/false');
+    expect(checkbox('agree').use.validate('yes', ctx)).toBe('not_a_boolean');
     expect(checkbox('agree').use.validate(false, ctx)).toBe(true);
     expect(checkbox('agree').use.defaultValue()).toBe(false);
     expect(checkbox('agree').use.isEmpty(false)).toBe(false);
@@ -109,7 +109,7 @@ describe('checkbox', () => {
 
 describe('toggle', () => {
   it('rejects a non-boolean and starts off', () => {
-    expect(toggle('on').use.validate(3, ctx)).toBe('Should be true/false');
+    expect(toggle('on').use.validate(3, ctx)).toBe('not_a_boolean');
     expect(toggle('on').use.validate(true, ctx)).toBe(true);
     expect(toggle('on').use.defaultValue()).toBe(false);
   });
@@ -128,7 +128,7 @@ describe('radio', () => {
   });
 
   it('refuses a value that is not an option', () => {
-    expect(radio('size').options('s', 'm').use.validate('xl', ctx)).not.toBe(true);
+    expect(radio('size').options('s', 'm').use.validate('xl', ctx)).toBe('not_an_option');
   });
 
   it('starts on an option of the list a second options() gives', () => {
@@ -157,7 +157,7 @@ describe('select', () => {
   });
 
   it('refuses a value that is not an option', () => {
-    expect(select('kind').options('a', 'b').use.validate('c', ctx)).not.toBe(true);
+    expect(select('kind').options('a', 'b').use.validate('c', ctx)).toBe('not_an_option');
     expect(select('kind').options('a', 'b').use.validate('a', ctx)).toBe(true);
   });
 
@@ -165,7 +165,7 @@ describe('select', () => {
     const tags = select('tags').options('a', 'b').many();
     expect(tags.use.isEmpty([])).toBe(true);
     expect(tags.use.isEmpty(['a'])).toBe(false);
-    expect(tags.use.validate(['a', 'x'], ctx)).not.toBe(true);
+    expect(tags.use.validate(['a', 'x'], ctx)).toBe('not_an_option');
   });
 
   it('takes one option as a string, and many as a list of distinct options', () => {
@@ -175,7 +175,7 @@ describe('select', () => {
     expect(kind.use.validate(['a'], ctx)).not.toBe(true);
 
     const tags = select('tags').options('news', 'events').many();
-    expect(tags.use.validate(['news', 'news'], ctx)).not.toBe(true);
+    expect(tags.use.validate(['news', 'news'], ctx)).toBe('not_an_option');
     expect(tags.use.validate('news', ctx)).not.toBe(true);
     expect(tags.use.validate(['news', 'events'], ctx)).toBe(true);
   });
@@ -191,7 +191,7 @@ describe('select', () => {
 
 describe('combobox', () => {
   it('refuses a value that is not an option', () => {
-    expect(combobox('tag').options('x', 'y').use.validate('z', ctx)).not.toBe(true);
+    expect(combobox('tag').options('x', 'y').use.validate('z', ctx)).toBe('not_an_option');
     expect(combobox('tag').options('x', 'y').use.validate('x', ctx)).toBe(true);
   });
 });

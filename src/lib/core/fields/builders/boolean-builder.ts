@@ -1,3 +1,4 @@
+import { RimeFormError } from '#lib/core/errors/index.js';
 import type { DefaultValueFn, FieldValidationFunc, FormField } from '#lib/fields/types.js';
 import { FormFieldBuilder } from './form-field-builder.js';
 
@@ -20,7 +21,8 @@ export class BooleanFieldBuilder<
     this.field.defaultValue = false;
     // `false` is a value: only a missing one is empty.
     this.field.isEmpty = (value) => typeof value !== 'boolean';
-    this.field.validate = (value: unknown) => typeof value === 'boolean' || 'Should be true/false';
+    this.field.validate = (value: unknown) =>
+      typeof value === 'boolean' || RimeFormError.NOT_A_BOOLEAN;
     // A form sends a checked box as 'true' or 'on', and 'false' for an explicit no
     this.beforeValidate((value) =>
       value === 'true' || value === 'on' ? true : value === 'false' ? false : value
