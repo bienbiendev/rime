@@ -1,6 +1,6 @@
 <script lang="ts">
   import { STAFF_SLUG } from '#lib/core/auth/constant.js';
-  import { panelUrl } from '#lib/core/routes/util.js';
+  import { panelPath } from '#lib/core/routes/util.js';
   import { t__ } from '#lib/core/i18n/index.js';
   import * as DropdownMenu from '#lib/panel/components/ui/dropdown-menu/index.js';
   import { getUserContext } from '#lib/panel/context/user.svelte.js';
@@ -29,7 +29,7 @@
   async function signout() {
     const result = await authClient.signOut();
     if (result.data?.success) {
-      window.location.href = panelUrl('sign-in');
+      window.location.href = panelPath('sign-in');
     } else {
       toast.error(`Can't sign-out, please try again`);
     }
@@ -63,7 +63,7 @@
     <DropdownMenu.Content side="top" align="start" sideOffset={6} class="rz-user__menu">
       <DropdownMenu.Item>
         {#snippet child({ props })}
-          <a {...props} href={panelUrl(STAFF_SLUG, user.attributes.id)}>
+          <a {...props} href={panelPath(STAFF_SLUG, user.attributes.id)}>
             <UserRound size="14" />
             {t__('common.profile')}
           </a>

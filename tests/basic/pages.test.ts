@@ -208,6 +208,14 @@ test.describe('Admin panel', () => {
     expect(page.url()).toBe(panelUrl('sign-in'));
   });
 
+  test('The user menu links a path, on the origin the panel is on', async ({ page }) => {
+    await loginAs(page, ADMIN_EMAIL, PASSWORD);
+    await page.goto(panelUrl());
+
+    await page.click('button.rz-user');
+    await expect(page.getByRole('menuitem', { name: 'Profile' })).toHaveAttribute('href', /^\//);
+  });
+
   test('Should show the page a nav link leads to on the first click', async ({ page }) => {
     await loginAs(page, ADMIN_EMAIL, PASSWORD);
     await page.goto(panelUrl());
