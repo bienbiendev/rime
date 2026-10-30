@@ -14,6 +14,18 @@ if (!['TRACE', 'DEBUG'].includes(logger.getLevel() ?? '')) logger.setLevel('DEBU
 
 program.version(rimeVersion()).description('Rime utilities');
 
+/** A command's action: a failure prints one error line and sets the exit code. */
+const action =
+  <A>(command: (args: A) => unknown) =>
+  async (args: A) => {
+    try {
+      await command(args);
+    } catch (error: any) {
+      logger.error(error?.message ?? String(error));
+      process.exitCode = 1;
+    }
+  };
+
 program
   .command('init')
   .option('-n, --name <name>', 'Will be the database name')
@@ -25,28 +37,19 @@ program
     'The database adapter: sqlite, or a package with a hooks entry',
     DEFAULT_ADAPTER
   )
-  .action(async (args) => {
-    const init = await import('./commands/init.server.js').then((m) => m.init);
-    init(args);
-  });
+  .action(action(async (args) => (await import('./commands/init.server.js')).init(args)));
 
 program
   .command('build')
   .option('-e, --with-env', 'Create the /app/.env file from the production template', false)
   .option('-s, --with-static', 'Copy the static directory', false)
   .option('-w, --with-storage', 'Copy storage/: the database and the uploads', false)
-  .action(async (args) => {
-    const build = await import('./commands/build.js').then((m) => m.build);
-    await build(args);
-  });
+  .action(action(async (args) => (await import('./commands/build.js')).build(args)));
 
 program
   .command('clear')
   .option('-f, --force', 'Force clear without prompt', false)
-  .action(async (args) => {
-    const clear = await import('./commands/clear.server.js').then((m) => m.clear);
-    clear(args);
-  });
+  .action(action(async (args) => (await import('./commands/clear.server.js')).clear(args)));
 
 program
   .command('generate')
@@ -160,4 +163,4 @@ program
     }
   });
 
-program.parse(process.argv);
+program.parseAsync(process.argv);
