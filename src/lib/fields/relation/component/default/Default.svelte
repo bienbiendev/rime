@@ -101,6 +101,13 @@
 
   const canSearch = $derived(!readOnly && !isFull && hasCandidate);
 
+  // A search that goes takes its focus with it: a browser may not blur an input it removes.
+  $effect(() => {
+    if (!canSearch) {
+      searching = false;
+    }
+  });
+
   /** The documents found, less those picked since the read. */
   const available = $derived(
     (candidates ?? []).filter((doc) => !selectedItems.some((item) => item.documentId === doc.id))
@@ -142,7 +149,7 @@
       {#if canSearch}
         <Command.InputSelect
           onfocus={() => (searching = true)}
-          onblur={() => setTimeout(() => (searching = false), 150)}
+          onblur={() => (searching = false)}
           bind:ref={commandInput}
           class="rz-relation__search"
           bind:value={search}
@@ -151,7 +158,13 @@
         />
 
         {#if searching && candidates}
-          <Command.List>
+          <!-- A press keeps the focus in the search, so the list stays until the click picks its
+               line; then the search lets go of the focus and the list closes. Enter picks through
+               a click of no press (`detail` 0): the search keeps the focus for the next pick. -->
+          <Command.List
+            onmousedown={(event: MouseEvent) => event.preventDefault()}
+            onclick={(event: MouseEvent) => event.detail && commandInput?.blur()}
+          >
             {#each available as doc (doc.id)}
               <Command.Item value={doc.id} keywords={[doc.title]} onSelect={() => onSelect(doc)}>
                 <span>{doc.title}</span>

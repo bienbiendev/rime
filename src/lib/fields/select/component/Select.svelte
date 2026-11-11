@@ -26,6 +26,17 @@
 
   let search = $state('');
   let inputFocused = $state(false);
+  let input = $state<HTMLInputElement | null>(null);
+
+  /** The search shows until the field is full. */
+  const canSearch = $derived(!form.readOnly && !isFull);
+
+  // A search that goes takes its focus with it: a browser may not blur an input it removes.
+  $effect(() => {
+    if (!canSearch) {
+      inputFocused = false;
+    }
+  });
 
   const { sortable } = useSortable({
     animation: 150,
@@ -128,18 +139,26 @@
           {/if}
         {/if}
 
-        {#if !form.readOnly && !isFull}
-          <!-- The list closes 200 ms after the blur, so a click on an item lands first. -->
+        {#if canSearch}
+          <!-- The list shows while the search has the focus. -->
           <Command.InputSelect
             name={path || config.name}
             autocomplete="off"
             onfocus={() => (inputFocused = true)}
-            onblur={() => setTimeout(() => (inputFocused = false), 200)}
+            onblur={() => (inputFocused = false)}
+            bind:ref={input}
             bind:value={search}
             placeholder={t__('common.search')}
           />
           {#if inputFocused}
-            <Command.List>
+            <!-- A press keeps the focus in the search, so the list stays until the click picks
+                 its line; then the search lets go of the focus and the list closes. Enter picks
+                 through a click of no press (`detail` 0): the search keeps the focus for the
+                 next pick. -->
+            <Command.List
+              onmousedown={(event: MouseEvent) => event.preventDefault()}
+              onclick={(event: MouseEvent) => event.detail && input?.blur()}
+            >
               {#each options as option, index (index)}
                 <Command.Item
                   value={option.value}

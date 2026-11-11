@@ -27,6 +27,7 @@
 
   let search = $state('');
   let inputFocused = $state(false);
+  let input = $state<HTMLInputElement | null>(null);
 
   /** A fetched document as a choice: a collection document by its title, an area by its type. */
   function convertDocToResource(doc: GenericDoc): Ressource {
@@ -66,6 +67,16 @@
     return doc && doc.id === ressourceId ? convertDocToResource(doc) : null;
   });
 
+  /** The search shows until a document is picked. */
+  const canSearch = $derived(!readOnly && !selected);
+
+  // A search that goes takes its focus with it: a browser may not blur an input it removes.
+  $effect(() => {
+    if (!canSearch) {
+      inputFocused = false;
+    }
+  });
+
   /** The documents the search offers, read while it has the focus. */
   const found = useCandidates(() => ({
     open: !isArea && inputFocused,
@@ -102,15 +113,22 @@
         </Tag>
       {/if}
 
-      {#if !readOnly && !selected}
+      {#if canSearch}
         <Command.InputSelect
           onfocus={() => (inputFocused = true)}
-          onblur={() => setTimeout(() => (inputFocused = false), 200)}
+          onblur={() => (inputFocused = false)}
+          bind:ref={input}
           bind:value={search}
           placeholder={t__('common.search_a', ressourceType)}
         />
         {#if inputFocused}
-          <Command.List>
+          <!-- A press keeps the focus in the search, so the list stays until the click picks its
+               line; then the search lets go of the focus and the list closes. Enter picks through
+               a click of no press (`detail` 0): the search keeps the focus. -->
+          <Command.List
+            onmousedown={(event: MouseEvent) => event.preventDefault()}
+            onclick={(event: MouseEvent) => event.detail && input?.blur()}
+          >
             {#each listed as doc (doc.id)}
               {@const ressource = convertDocToResource(doc)}
               <Command.Item
