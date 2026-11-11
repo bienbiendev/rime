@@ -4,7 +4,8 @@
   position: fixed;
   left: calc(50% - var(--gutter));
   top: 40%;
-  z-index: 1010;
+  /* Its overlay's level: after it in the page, the content is drawn over it. */
+  z-index: calc(var(--rz-z-modal) + var(--rz-modal-level, 0));
   display: grid;
   width: calc(100% - 2 * var(--gutter));
   transform: translate(-50%, -50%);

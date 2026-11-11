@@ -2,6 +2,7 @@
   background-color: var(--rz-bg-overlay);
   position: fixed;
   inset: 0;
-  z-index: 1010;
+  /* One level per open modal, the last opened on top (ui/layer/layer.svelte.ts). */
+  z-index: calc(var(--rz-z-modal) + var(--rz-modal-level, 0));
   backdrop-filter: blur(var(--rz-overlay-blur));
 }

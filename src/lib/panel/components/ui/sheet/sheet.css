@@ -4,7 +4,8 @@
 
 .rz-sheet-content {
   position: fixed;
-  z-index: 1010;
+  /* Its overlay's level: after it in the page, the content is drawn over it. */
+  z-index: calc(var(--rz-z-modal) + var(--rz-modal-level, 0));
   @mixin surface float;
   overflow-y: auto;
 
@@ -48,9 +49,11 @@
   }
 }
 
+/* Over everything inside the sheet, its editors' menus included: the sheet is a stacking context,
+   so this level counts among its own children only. */
 .rz-sheet-content__close {
   position: absolute;
-  z-index: 1010;
+  z-index: var(--rz-z-modal);
   right: var(--rz-size-4);
   top: var(--rz-size-4);
 }
@@ -80,6 +83,7 @@
   background-color: var(--rz-bg-overlay);
   position: fixed;
   inset: 0;
-  z-index: 1010;
+  /* One level per open modal, the last opened on top (ui/layer/layer.svelte.ts). */
+  z-index: calc(var(--rz-z-modal) + var(--rz-modal-level, 0));
   backdrop-filter: blur(var(--rz-overlay-blur));
 }

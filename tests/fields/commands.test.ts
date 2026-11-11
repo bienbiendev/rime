@@ -155,7 +155,8 @@ test('In focus mode, ⌘K in the editor lists the text first, and Escape closes 
   await expect(dialog(page).locator('.rz-command-group__heading').first()).toHaveText('Text');
   await expect(line(page, 'Add', /^Paragraph$/)).toHaveCount(1);
 
-  // The arrows move in the list, not in the layers.
+  // The arrows move in the list, not in the layers, once the palette's search has the focus.
+  await expect(dialog(page).locator('input')).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(lines(page).nth(1)).toHaveAttribute('data-selected', '');
   await expect(row).toHaveClass(/rz-layers__row--selected/);
@@ -211,4 +212,44 @@ test('⌘K in a "Create new" sheet lists one Save, which saves the sheet\'s docu
   );
   expect(response.status()).toBe(200);
   expect((await response.json()).docs).toHaveLength(1);
+});
+
+test('⌘K in a "Create new" sheet opens the page\'s delete dialog over the sheet, and Escape closes the dialog alone', async ({
+  page,
+  request
+}) => {
+  const docId = await createPage(request, 'Sheet delete');
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', docId));
+  await expect(page.locator('main')).toBeVisible();
+
+  const tags = page.locator('fieldset[data-path="tags"]');
+  await tags.getByRole('button', { name: /Create new/ }).click();
+  const sheet = page.locator('.rz-sheet-content[data-state="open"]');
+  await expect(sheet).toBeVisible();
+
+  // The page's Delete, from the sheet's palette
+  await page.keyboard.press('Control+k');
+  await line(page, 'Document', /^Delete the document$/).click();
+
+  // The dialog is drawn over the sheet: the point at its centre is inside it
+  const confirm = page.locator('.rz-dialog-content[data-state="open"]', {
+    hasText: 'Delete Sheet delete'
+  });
+  await expect(confirm).toBeVisible();
+  await expect
+    .poll(() =>
+      confirm.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        return !!hit && element.contains(hit);
+      })
+    )
+    .toBe(true);
+
+  // Escape closes the dialog; the sheet stays, and so does the page
+  await page.keyboard.press('Escape');
+  await expect(confirm).toHaveCount(0);
+  await expect(sheet).toBeVisible();
+  expect((await page.request.get(`${API_BASE_URL}/pages/${docId}`)).status()).toBe(200);
 });

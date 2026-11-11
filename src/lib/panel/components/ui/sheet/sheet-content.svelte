@@ -3,6 +3,7 @@
   import X from '@lucide/svelte/icons/x';
   import { Dialog as SheetPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
   import type { Snippet } from 'svelte';
+  import { createLayer } from '../layer/layer.svelte.js';
   import { SheetOverlay, SheetPortal, type Side } from './index.js';
 
   type Props = WithoutChildrenOrChild<SheetPrimitive.ContentProps> & {
@@ -18,19 +19,25 @@
   let {
     ref = $bindable(null),
     class: className,
+    style,
     side = 'right',
     size = 'default',
     children,
     showCloseButton = true,
     ...restProps
   }: Props = $props();
+
+  const layer = createLayer();
 </script>
 
+<!-- The content raises the sheet above the modals open before it; the overlay shares its level. -->
 <SheetPortal>
-  <SheetOverlay />
+  <SheetOverlay style="--rz-modal-level: {layer.level}" />
   <SheetPrimitive.Content
+    {@attach layer.raise}
     bind:ref
     class="rz-sheet-content rz-sheet-content--{side} rz-sheet-content--{size} {className}"
+    style="--rz-modal-level: {layer.level}; {style}"
     {...restProps}
   >
     {@render children?.()}

@@ -5,12 +5,14 @@
     type WithoutChildrenOrChild
   } from 'bits-ui';
   import type { Snippet } from 'svelte';
+  import { createLayer } from '../layer/layer.svelte.js';
   import './dialog-content.css';
   import * as Dialog from './index.js';
 
   let {
     ref = $bindable(null),
     class: className,
+    style,
     size = 'default',
     children,
     onkeydown,
@@ -43,13 +45,18 @@
     event.preventDefault();
     button.click();
   }
+
+  const layer = createLayer();
 </script>
 
+<!-- The content raises the dialog above the modals open before it; the overlay shares its level. -->
 <Dialog.Portal>
-  <Dialog.Overlay />
+  <Dialog.Overlay style="--rz-modal-level: {layer.level}" />
   <DialogPrimitive.Content
+    {@attach layer.raise}
     bind:ref
     class="rz-dialog-content rz-dialog-content--{size} {className}"
+    style="--rz-modal-level: {layer.level}; {style}"
     onkeydown={enter}
     {...restProps}
   >

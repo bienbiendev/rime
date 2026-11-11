@@ -1,6 +1,6 @@
 .rz-popover {
-  /* Over a dialog (1010) and a menu (1100), which a popover can open from. */
-  z-index: 500000;
+  /* Over the open modals and a menu, which a popover can open from. */
+  z-index: var(--rz-z-popover);
   position: relative;
   border-radius: var(--rz-radius-lg);
   @mixin surface float;

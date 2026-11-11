@@ -1,0 +1,18 @@
+/*
+ * The panel's stacking levels, low to high. Each open modal, sheet or dialog, takes the next level
+ * up from `--rz-z-modal` in the order it opened (ui/layer/layer.svelte.ts):
+ *
+ *   a sheet                  1010
+ *   the palette over it      1011
+ *   a confirm dialog on top  1012
+ *
+ * A tooltip sits over the page and the sidebar, under the modals. A menu sits over every open
+ * modal, a popover over the menu it opens from, and a toast over everything.
+ */
+:root {
+  --rz-z-tooltip: 400;
+  --rz-z-modal: 1010;
+  --rz-z-menu: 1100;
+  --rz-z-popover: 500000;
+  --rz-z-toast: 999999999;
+}

@@ -2,8 +2,8 @@
   position: relative;
   @mixin surface float;
   outline: none;
-  /* Over the sidebar (300) and a dialog (1010), which a menu can open from. */
-  z-index: 1100;
+  /* Over the sidebar and the open modals, which a menu can open from. */
+  z-index: var(--rz-z-menu);
   min-width: 8rem;
   border-radius: var(--rz-radius-lg);
   padding: var(--rz-size-1);

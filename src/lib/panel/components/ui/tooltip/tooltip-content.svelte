@@ -35,7 +35,7 @@
     color: var(--rz-tooltip-color-fg);
     padding: var(--rz-size-1-5) var(--rz-size-3);
     font-size: var(--rz-text-xs);
-    z-index: 400;
+    z-index: var(--rz-z-tooltip);
     border-radius: var(--rz-radius-md);
     position: relative;
     &:before {

@@ -1,3 +1,8 @@
+/* The toasts' level, over everything; the class outranks svelte-sonner's own rule. */
+.rz-toaster[data-sonner-toaster] {
+  z-index: var(--rz-z-toast);
+}
+
 /* `[data-sonner-toast]` twice outranks svelte-sonner's own rules. */
 .rz-toaster__toast[data-sonner-toast][data-sonner-toast][data-styled='true'] {
   @mixin surface float;
