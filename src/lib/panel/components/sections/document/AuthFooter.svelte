@@ -68,13 +68,8 @@
 {:else if user.attributes.isStaff && page.data?.hasMailer}
   <div class="rz-document-auth">
     <div>
-      <!-- The link goes to the saved email: while the email has unsaved changes, the button waits -->
-      <Button
-        onclick={sendPasswordResetLink}
-        variant="secondary"
-        size="sm"
-        disabled={'email' in form.changes || sending}
-      >
+      <!-- The link goes to the saved email: an account's email cannot be edited once it exists -->
+      <Button onclick={sendPasswordResetLink} variant="secondary" size="sm" disabled={sending}>
         {t__('common.sendPasswordResetLink')}
       </Button>
     </div>
