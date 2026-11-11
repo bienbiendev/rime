@@ -124,6 +124,19 @@ describe('validate: field rules', () => {
     expect(errorsOf('specUnderscore', [text('_title')]).valid).toBe(true);
   });
 
+  test('a field named id is refused, at any level', () => {
+    const reserved = '"id" is reserved for the document\'s and each row\'s id';
+    expect(errorsOf('specIdRoot', [text('id')]).messages).toEqual([
+      `Field id of collection specIdRoot: ${reserved}`
+    ]);
+    expect(errorsOf('specIdGroup', [group('video').fields(text('id'))]).messages).toEqual([
+      `Field id of collection specIdGroup: ${reserved}`
+    ]);
+    expect(
+      errorsOf('specIdBlock', [blocks('layout', [block('embed').fields(text('id'))])]).messages
+    ).toEqual([`Field id of collection specIdBlock: ${reserved}`]);
+  });
+
   test('two blocks of one name and different fields are refused, at any level', () => {
     const fields = [
       blocks('layout', [block('hero').fields(text('title'))]),

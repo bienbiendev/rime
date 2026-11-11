@@ -170,6 +170,14 @@ const fieldRules = (field: FieldBuilder, scope: Scope): string[] => {
     );
   }
 
+  // `id` is the document's own column, and each block's and tree row's: no field takes it. A
+  // config rime derives (a `$` slug) may: the upload folders' id is their path.
+  if (field.name === 'id' && !scope.prototype.slug.startsWith('$')) {
+    errors.push(
+      `Field id of ${where(scope)}: "id" is reserved for the document's and each row's id`
+    );
+  }
+
   if (!FIELD_NAME.test(field.name)) {
     errors.push(
       `Field ${field.name} of ${where(scope)} should hold only letters, digits and underscores, with a letter first after any leading underscore`
