@@ -14,10 +14,10 @@
   const versions = setVersionsContext();
 </script>
 
-<!-- One document: its form, keyed on the row on screen, and its versions history. -->
+<!-- One document: its form, keyed on the row the page holds, and its versions history. -->
 <Page>
   {#snippet main()}
-    {#key `${data.doc.id}|${data.doc.versionId ?? ''}|${data.doc.locale ?? ''}`}
+    {#key `${data.doc.id}|${data.doc.versionId ?? ''}|${data.doc.locale ?? ''}|${versions.stamp}`}
       <Document
         class={className}
         doc={data.doc}

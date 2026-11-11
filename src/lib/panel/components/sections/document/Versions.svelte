@@ -10,6 +10,7 @@
   import { getConfigContext } from '#lib/panel/context/config.svelte.js';
   import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
   import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import { getVersionsContext } from '#lib/panel/context/versions.svelte.js';
   import type { DocVersion } from '#lib/panel/index.js';
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import X from '@lucide/svelte/icons/x';
@@ -37,6 +38,7 @@
   const user = getUserContext();
   const APIProxy = getAPIProxyContext();
   const config = getConfigContext();
+  const history = getVersionsContext();
 
   const Icon = $derived(
     config.getDocumentConfig({ prototype: doc._prototype, slug: doc._type }).icon
@@ -74,8 +76,15 @@
       return;
     }
     APIProxy.invalidate(versionsApiUrl(doc._type));
-    if (activeId === version.id) await goto(resolve(documentPath()), { refreshAll: true });
-    else await invalidateAll();
+    if (activeId === version.id) {
+      // The form was on the discarded row: the history closes, as for a version picked, and the
+      // form is rebuilt on the row the page lands on
+      open = false;
+      await goto(resolve(documentPath()), { refreshAll: true });
+      history?.rebuildForm();
+    } else {
+      await invalidateAll();
+    }
   }
 </script>
 
