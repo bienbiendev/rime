@@ -12,6 +12,7 @@
   import DocStatus from '../DocStatus.svelte';
   import When from '../When.svelte';
   import CollectionTreeNode from './CollectionTreeNode.svelte';
+  import { sortableList } from './sortable.js';
 
   type Props = {
     parentId: string;
@@ -51,7 +52,7 @@
      dragging, and the remount puts the DOM back in step with the data. -->
 {#key `${parentId}-${doc.id}-${doc._position}`}
   <!-- A row, then the list of its children: the depth is the list's, so a dragged row takes the depth of the list it is over. -->
-  <div data-parent={parentId} data-id={doc.id} class="rz-collection-node">
+  <div data-id={doc.id} class="rz-collection-node">
     <div class="rz-tree-row rz-collection-node__row">
       <span class="rz-tree-row__grip rz-collection-node__grip" aria-hidden="true">
         <GripVertical size={12} />
@@ -105,6 +106,7 @@
       data-id={doc.id}
       style:--rz-tree-depth={depth + 1}
       hidden={folded}
+      {@attach sortableList(collection)}
     >
       {#each children as child (child.id)}
         <CollectionTreeNode {collection} doc={child} parentId={doc.id} depth={depth + 1} />

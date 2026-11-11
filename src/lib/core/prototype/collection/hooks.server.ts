@@ -72,6 +72,8 @@ export const collectionHooks: Partial<Record<HookTiming, AnyHook[]>> = {
     // First, on the submission as sent. Unconditional: the derived versions collection carries
     // the flag and is not itself versioned.
     versions.stripAutoSaveFlag,
+    // Above the merge, which gives an unsent `_position` its default 0.
+    when(isNested, nested.placeAtEnd),
     mergeWithInitialDocument,
     // A new block or tree item: the fields it did not send, as the merge above does for the document
     completeNewRows,

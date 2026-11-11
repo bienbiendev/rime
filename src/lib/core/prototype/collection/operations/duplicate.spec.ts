@@ -208,6 +208,27 @@ describe('duplicate', () => {
     ]);
   });
 
+  it('creates the copy of a nested page under the same parent, with no position', async () => {
+    const created: Dic[] = [];
+    const collection = {
+      findById: async () => ({ id: 'doc', title: 'Team', _parent: 'p', _position: 3 }),
+      create: async ({ data }: Dic) => {
+        created.push(data);
+        return { id: 'copy' };
+      }
+    };
+    const rime = {
+      collection: () => collection,
+      config: { getDefaultLocale: () => undefined, getLocalesCodes: () => [] }
+    };
+    const fields = [text('title'), text('_parent').$root(), number('_position').$root()];
+    const config = { type: 'collection', slug: 'pages', nested: true, fields } as any;
+
+    await duplicate({ id: 'doc', ctx: { config, event: { locals: { rime } } } as any });
+
+    expect(created).toEqual([{ title: 'Team', _parent: 'p' }]);
+  });
+
   it("names the default locale on its reads and writes, and leaves the request's locale alone", async () => {
     const calls: Dic[] = [];
     const collection = {

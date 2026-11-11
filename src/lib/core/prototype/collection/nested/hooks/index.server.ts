@@ -7,4 +7,5 @@
  * one import line per hook.
  */
 export { addChildrenProperty } from './add-children.server.js';
+export { placeAtEnd } from './place-at-end.server.js';
 export { refuseCyclicParent } from './refuse-cyclic-parent.server.js';

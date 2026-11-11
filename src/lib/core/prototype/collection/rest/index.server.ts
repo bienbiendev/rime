@@ -7,6 +7,7 @@ import { restDuplicate } from './duplicate.server.js';
 import { restGet } from './get.server.js';
 import { restGetById } from './get-by-id.server.js';
 import { restLock, restUnlock } from './lock.server.js';
+import { restMove } from './move.server.js';
 import { restUpdateById } from './update-by-id.server.js';
 import { restUpdateSlugById } from './update-slug-by-id.server.js';
 
@@ -27,5 +28,6 @@ export const rest: Record<string, RouteConfig> = {
   '[id]': { GET: restGetById, PATCH: restUpdateById, DELETE: restDeleteById },
   '[id]/duplicate': { POST: restDuplicate },
   '[id]/lock': { POST: restLock, DELETE: restUnlock },
+  '[id]/move': { POST: restMove },
   '[id]/slug': { PATCH: restUpdateSlugById }
 };

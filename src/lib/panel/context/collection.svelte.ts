@@ -10,7 +10,7 @@ import { walkFields } from '#lib/core/fields/walk.js';
 import type { Directory } from '#lib/core/prototype/collection/upload/types.js';
 import { isUploadConfig } from '#lib/core/prototype/collection/upload/util/config.js';
 import { toNestedStructure } from '#lib/core/prototype/collection/nested/tree.js';
-import type { GenericDoc, GenericNestedDoc } from '#lib/core/prototype/types.js';
+import type { GenericDoc } from '#lib/core/prototype/types.js';
 import { apiUrl } from '#lib/core/routes/util.js';
 import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
 import type { FormField } from '#lib/fields/types.js';
@@ -235,104 +235,39 @@ function createCollectionStore<T extends GenericDoc = GenericDoc>(args: Args<T>)
   };
 
   /**
-   * Moves `documentId` under `to.parent` at `to.index`, renumbers its new siblings, and saves the
-   * changed documents. The page data reloads after, whether the server took the move or not.
+   * Saves a move of the tree in one request: `documentId` under `parent`, `null` for the top, and
+   * its new list in `order`, the ids as dropped on screen. The tree shows the drop until the page
+   * data reloads, whether the server took the move or not. Answers whether it did.
+   *
+   * ```ts
+   * await handleNestedDocumentMove({ documentId: 'c', parent: 'p', order: ['c', 'a', 'b'] });
+   * ```
    */
-  const handleNestedDocumentMove = async ({
-    from,
-    to,
-    documentId
-  }: {
+  const handleNestedDocumentMove = async (move: {
     documentId: string;
-    from: { parent: string | null };
-    to: { parent: string | null; index: number };
+    parent: string | null;
+    order: string[];
   }) => {
-    const updatedDocs = [...docs] as GenericNestedDoc[];
-    const docToMove = updatedDocs.find((d) => d.id === documentId);
-    if (!docToMove) return;
+    const moved = docs.find((doc) => doc.id === move.documentId);
+    if (!moved) return false;
 
-    const docsToUpdate = new Map<string, GenericDoc>();
-
-    // The parents' `_children` change on screen, for the tree; the server derives them, so the
-    // parents are not saved.
-    if (from.parent !== null) {
-      const oldParent = updatedDocs.find((d) => d.id === from.parent);
-      if (oldParent) {
-        const oldChildren = [...(oldParent._children || [])];
-        const childIndex = oldChildren.indexOf(documentId);
-        if (childIndex > -1) {
-          oldChildren.splice(childIndex, 1);
-          oldParent._children = oldChildren;
-        }
-      }
+    // The row on screen, as a save names it
+    let url = `${apiUrl(config.kebab, moved.id)}/move`;
+    if (moved.versionId) {
+      url += `?${PARAMS.VERSION_ID}=${moved.versionId}`;
     }
+    const [error] = await trycatchFetch(url, {
+      method: 'POST',
+      body: JSON.stringify({ parent: move.parent, order: move.order }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (error) console.error(error);
 
-    if (to.parent !== null) {
-      const newParent = updatedDocs.find((d) => d.id === to.parent);
-      if (newParent) {
-        const newChildren = [...(newParent._children || [])];
-        newChildren.splice(to.index, 0, documentId);
-        newParent._children = newChildren;
-      }
-    }
-
-    docToMove._parent = to.parent;
-    docToMove._position = to.index;
-    docsToUpdate.set(docToMove.id, docToMove);
-
-    const siblings = updatedDocs
-      .filter((doc) => doc._parent === to.parent && doc.id !== documentId)
-      .sort((a, b) => (a._position || 0) - (b._position || 0));
-
-    let position = 0;
-    for (const sibling of siblings) {
-      if (position === to.index) position++;
-      if (sibling._position !== position) {
-        sibling._position = position;
-        docsToUpdate.set(sibling.id, sibling);
-      }
-      position++;
-    }
-
-    docs = updatedDocs as T[];
-    stamp = Date.now();
-
-    try {
-      await apiUpdateNestedStructure(Array.from(docsToUpdate.values()));
-      return true;
-    } catch (error) {
-      console.error('Failed to update documents:', error);
-      return false;
-    } finally {
-      // A refused move may have saved some rows: the proxy's reads of the collection read again.
-      APIProxy.invalidate(apiUrl(config.kebab));
-      // The stored order, drafts included, becomes the list's documents, as after a delete
-      await invalidateAll();
-    }
-  };
-
-  /** PATCHes each document's `_parent` and `_position`; throws when one fails. */
-  const apiUpdateNestedStructure = async (docsToUpdate: GenericDoc[]) => {
-    const responses = await Promise.all(
-      docsToUpdate.map((doc) => {
-        let url = apiUrl(config.kebab, doc.id);
-        if (doc.versionId) {
-          url += `?${PARAMS.VERSION_ID}=${doc.versionId}`;
-        }
-        return fetch(url, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            _parent: doc._parent,
-            _position: doc._position
-          }),
-          headers: { 'Content-Type': 'application/json' }
-        });
-      })
-    );
-    // A refused PATCH (403, 500) throws too
-    const refused = responses.find((response) => !response.ok);
-    if (refused) throw new Error(`${refused.url} answered ${refused.status}`);
-    return true;
+    // The proxy's reads of the collection (a page's children) read again.
+    APIProxy.invalidate(apiUrl(config.kebab));
+    // The stored order, drafts included, becomes the list's documents, as after a delete
+    await invalidateAll();
+    return !error;
   };
 
   function isGrid() {

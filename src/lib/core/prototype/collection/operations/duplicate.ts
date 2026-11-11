@@ -10,6 +10,7 @@ import { buildConfigMap } from '#lib/core/pipeline/config-map/index.js';
 import { withReferenceIds } from '#lib/core/pipeline/hooks/normalize-resolved-references.server.js';
 import { withoutRowKeys } from '#lib/core/pipeline/without-row-keys.js';
 import { canDuplicate } from '#lib/core/prototype/collection/can-duplicate.js';
+import { isNested } from '#lib/core/prototype/collection/nested/enabled.js';
 import type { PrototypeApiContext } from '#lib/core/prototype/define.js';
 import type { GenericDoc } from '#lib/types.js';
 import { getValueAtPath, isObjectLiteral, setValueAtPath } from '#lib/util/object.js';
@@ -129,6 +130,8 @@ const prepareDuplicate = async (doc: Dic, args: CopyArgs) => {
    * author's own `status` field, on a config without drafts, is copied as any other.
    */
   if (args.config.versions?.draft) delete data.status;
+  // A copy of a nested page goes to the end of its list, as a new page does (`placeAtEnd`).
+  if (isNested(args.config)) delete data._position;
   return data;
 };
 

@@ -2,94 +2,15 @@
   import { t__ } from '#lib/core/i18n/index.js';
   import '#lib/panel/components/ui/tree/tree-rows.css';
   import type { CollectionContext } from '#lib/panel/context/collection.svelte.js';
-  import Sortable from 'sortablejs';
-  import { onDestroy } from 'svelte';
-  import { toast } from 'svelte-sonner';
   import Empty from '../Empty.svelte';
   import CollectionTreeNode from './CollectionTreeNode.svelte';
+  import { sortableList } from './sortable.js';
 
   type Props = { collection: CollectionContext };
   const { collection }: Props = $props();
 
-  // A new stamp remounts the tree and its Sortable lists (the {#key} at :97).
+  // A new stamp remounts the tree, its lists and their Sortable instances (the {#key} below).
   const collectionStamp = $derived(collection.stamp);
-
-  let sortingInitialized = $state(false);
-  let sortableInstances = $state<ReturnType<typeof Sortable.create>[]>([]);
-  const shouldInit = $derived(!sortingInitialized && collection.docs.length > 0);
-
-  const sortableOptions: Sortable.Options = {
-    handle: '.rz-collection-node__grip',
-    animation: 150,
-    swapThreshold: 0.93,
-    // A childless node's list has no height: a drop this close to it nests under that node.
-    emptyInsertThreshold: 8,
-    group: {
-      name: `list-nested`
-    },
-    onEnd: function (evt) {
-      // Released where it was taken: nothing to save.
-      if (evt.from === evt.to && evt.oldIndex === evt.newIndex) return;
-
-      const { newIndex } = evt;
-
-      const fromParentId = evt.item.getAttribute('data-parent');
-      const toParentId = evt.to.getAttribute('data-id');
-      const nodeId = evt.item.getAttribute('data-id') as string;
-
-      collection
-        .handleNestedDocumentMove({
-          documentId: nodeId,
-          from: {
-            parent: fromParentId === 'root' ? null : fromParentId
-          },
-          to: {
-            parent: toParentId === 'root' ? null : toParentId,
-            index: newIndex || 0
-          }
-        })
-        .then((success) => {
-          if (success) {
-            toast.success(t__('common.order_updated'));
-            resetSortable();
-          } else {
-            toast.error(t__('common.generic_error'));
-          }
-        });
-    }
-  };
-
-  const initSortable = () => {
-    // Get all sortable containers including the root and nested ones
-    const sortableContainers = document.querySelectorAll('.rz-collection-sortable');
-
-    // Create Sortable instance for each container
-    sortableContainers.forEach((container) => {
-      const instance = Sortable.create(container as HTMLElement, sortableOptions);
-      sortableInstances.push(instance);
-    });
-  };
-
-  const resetSortable = () => {
-    destroySortable();
-    sortingInitialized = false;
-  };
-
-  const destroySortable = () => {
-    sortableInstances.forEach((instance) => instance.destroy());
-    sortableInstances = [];
-  };
-
-  $effect(() => {
-    if (shouldInit) {
-      initSortable();
-      sortingInitialized = true;
-    }
-  });
-
-  onDestroy(() => {
-    destroySortable();
-  });
 </script>
 
 {#key `${collectionStamp}`}
@@ -109,6 +30,7 @@
         class="rz-collection-sortable rz-tree-rows rz-tree-rows--root"
         data-id="root"
         style:--rz-tree-depth="0"
+        {@attach sortableList(collection)}
       >
         {#each collection.nested as doc (doc.id)}
           <CollectionTreeNode {collection} parentId="root" {doc} />

@@ -23,11 +23,6 @@ export type BaseDoc = {
 };
 
 export type GenericDoc = BaseDoc & Dic;
-export type GenericNestedDoc = BaseDoc & {
-  _children: string[];
-  _parent: string | null;
-  _position: number;
-} & Dic;
 
 export type TreeBlock = {
   id: string;
