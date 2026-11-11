@@ -74,6 +74,9 @@ const modulesOf = (id) => {
   /** @param {string} key */
   const visit = (key) => {
     if (chunks.has(key) || !manifest[key]) return;
+    // Rolldown's own helpers for the CommonJS packages a chunk bundles (clone-deep, kind-of…):
+    // code it writes itself, from no module, so it has no source map and nothing to check
+    if (manifest[key].name === 'rolldown-runtime') return;
     chunks.add(key);
     for (const next of manifest[key].imports ?? []) visit(next);
   };
