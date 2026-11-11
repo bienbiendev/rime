@@ -26,6 +26,9 @@ const ADMIN_EMAIL = process.env.TESTS_ADMIN_EMAIL || 'admin@email.com';
 const SUFFIX = process.env.CONSUMER_TEST_SUFFIX || 'run';
 
 let adminId: string | undefined;
+// One session for the API tests and the sidebar's: the production pass rate-limits sign-ins, and
+// a fourth from one address within 10 seconds answers 429. The form is tested once, below.
+let adminHeaders: { cookie: string };
 
 test.beforeAll(async ({ request }) => {
   const initResponse = await request.post(`${BASE_URL}/api/init`, {
@@ -37,6 +40,7 @@ test.beforeAll(async ({ request }) => {
   if (initResponse.status() === 200) {
     adminId = (await initResponse.json()).user?.id;
   }
+  adminHeaders = await signIn(ADMIN_EMAIL, PASSWORD)(request);
 });
 
 test('the database is in storage/sqlite, which no URL reaches', async ({ request }) => {
@@ -150,7 +154,7 @@ test('sign in, create a page, create a staff member, no errors', async ({ page }
 // The junction rows pointing at a deleted page go by cascade, which only happens with foreign
 // keys on: libsql opens a database with them, the Bun driver turns them on.
 test('deleting a page removes the relations pointing at it', async ({ request }) => {
-  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  const headers = adminHeaders;
   const create = async (title: string, related: string[] = []) => {
     const response = await request.post(`${API_BASE_URL}/pages`, {
       headers,
@@ -172,7 +176,7 @@ test('deleting a page removes the relations pointing at it', async ({ request })
 
 // A new slug rewrites the paths under the page by cascade: foreign keys again.
 test('renaming a page carries its child url', async ({ request }) => {
-  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  const headers = adminHeaders;
   const create = async (data: Record<string, unknown>) => {
     const response = await request.post(`${API_BASE_URL}/pages`, { headers, data });
     expect(response.status()).toBe(200);
@@ -199,7 +203,7 @@ test('renaming a page carries its child url', async ({ request }) => {
 // 12 s is past the 10 s a server's idle timeout may default to, and short of the keep-alive.
 test('a quiet SSE stream still carries the lock event', async ({ request }) => {
   test.setTimeout(45_000);
-  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  const headers = adminHeaders;
   const created = await request.post(`${API_BASE_URL}/pages`, {
     headers,
     data: { title: `Stream ${SUFFIX}` }
@@ -224,14 +228,16 @@ test('a quiet SSE stream still carries the lock event', async ({ request }) => {
 test('the sidebar lists a custom page with no group, leaves out an area with panel: false, and a collection list shows its header', async ({
   page
 }) => {
-  await page.goto(panelUrl('sign-in'));
-  await page.waitForLoadState();
-  await page.locator('input[name="email"]').pressSequentially(ADMIN_EMAIL, { delay: 50 });
-  await page.locator('input[name="password"]').pressSequentially(PASSWORD, { delay: 50 });
-  const signInButton = page.locator('button[type="submit"]');
-  await expect(signInButton).toBeEnabled();
-  await signInButton.click();
-  await page.waitForURL(panelUrl());
+  // The file's session, "name=value": the browser comes in signed in
+  const split = adminHeaders.cookie.indexOf('=');
+  await page.context().addCookies([
+    {
+      name: adminHeaders.cookie.slice(0, split),
+      value: adminHeaders.cookie.slice(split + 1),
+      url: BASE_URL
+    }
+  ]);
+  await page.goto(panelUrl());
 
   const nav = page.locator('.rz-nav__nav');
   await expect(nav.locator(`a[href="${panelPath('settings')}"]`)).toBeVisible();
