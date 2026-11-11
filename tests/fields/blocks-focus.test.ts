@@ -910,6 +910,8 @@ test('Two types with one label are two tiles in the picker, each picked on its o
   // One tile lit at a time: the arrow moves the light from the first to the second
   await expect(tiles.nth(0)).toHaveAttribute('data-selected', '');
   await expect(tiles.nth(1)).not.toHaveAttribute('data-selected');
+  // The tiles show before the dialog has moved the focus into its search, which takes the keys
+  await expect(dialog(page).locator('input')).toBeFocused();
   await page.keyboard.press('ArrowRight');
   await expect(tiles.nth(1)).toHaveAttribute('data-selected', '');
   await expect(tiles.nth(0)).not.toHaveAttribute('data-selected');

@@ -155,13 +155,14 @@ test('Confirming a leave towards another origin goes there', async ({ page, requ
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('pages', id));
 
-  // A link to another site inside the document, as a rich text would hold one
-  await page.evaluate((href) => {
+  // A link to another site inside the document, as a rich text would hold one. The panel renders
+  // in the browser: the locator waits for the form.
+  await page.locator('form.rz-document').evaluate((form, href) => {
     const link = document.createElement('a');
     link.href = href;
     link.id = 'rz-test-other-origin';
     link.textContent = 'Other site';
-    document.querySelector('form')!.append(link);
+    form.append(link);
   }, OTHER);
 
   await page.locator('input[name="firstName"]').fill('Unsaved');
@@ -556,7 +557,12 @@ test("A child moved out in the tree leaves its old parent's list", async ({ page
   const title = `Move parent ${run}`;
   const parent = await createPage(request, title);
   await createPage(request, `Stays under ${run}`, { parent, position: 0 });
-  await createPage(request, `Moves out ${run}`, { parent, position: 1 });
+  const child = await createPage(request, `Moves out ${run}`, { parent, position: 1 });
+  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  /** The page `id` as stored. */
+  const stored = async (id: string) =>
+    (await (await request.get(`${API_BASE_URL}/pages/${id}`, { headers })).json()).doc;
+  const { updatedAt } = await stored(parent);
 
   await page.addInitScript(() =>
     localStorage.setItem('collection.pages.display', 'display_nested')
@@ -574,6 +580,14 @@ test("A child moved out in the tree leaves its old parent's list", async ({ page
     .locator('.rz-collection-node__grip')
     .dragTo(row(title), { targetPosition: { x: 20, y: 2 } });
   await expect(page.getByText('Order updated')).toBeVisible();
+
+  // The child sits just above the parent among the root pages. The parent keeps its `updatedAt`:
+  // the pages around the moved one get their position and nothing else.
+  const moved = await stored(child);
+  const after = await stored(parent);
+  expect(moved._parent ?? null).toBeNull();
+  expect(moved._position).toBe(after._position - 1);
+  expect(after.updatedAt).toBe(updatedAt);
 
   await page.goBack();
   await expect(childCount(page)).toHaveText('1');

@@ -381,7 +381,7 @@ test.describe('Tabs without storage', () => {
 });
 
 test.describe('Password reset link', () => {
-  test('Should wait for a staff email to be saved before sending it a reset link', async ({
+  test('Should send a reset link to the saved email, which cannot be edited', async ({
     page,
     request
   }) => {
@@ -394,16 +394,10 @@ test.describe('Password reset link', () => {
     await loginAs(page, ADMIN_EMAIL, PASSWORD);
     await page.goto(panelUrl('staff', admin.id));
 
-    const email = page.locator('input[name="email"]');
-    const send = page.getByRole('button', { name: 'Send a password reset link' });
-    await expect(send).toBeEnabled();
-
-    // The link would go to an address nobody saved
-    await email.fill('new@site.com');
-    await expect(send).toBeDisabled();
-
-    await email.fill(ADMIN_EMAIL);
-    await expect(send).toBeEnabled();
+    // An account's email is set once: the link can only go to the saved one
+    await expect(page.locator('input[name="email"]')).toBeDisabled();
+    await expect(page.locator('input[name="email"]')).toHaveValue(ADMIN_EMAIL);
+    await expect(page.getByRole('button', { name: 'Send a password reset link' })).toBeEnabled();
   });
 });
 
@@ -536,7 +530,8 @@ test.describe('Live Edit', () => {
     await expect(inputSlug).toHaveValue('live');
     await inputSlug.fill('');
     await inputSlug.pressSequentially('welcome', { delay: 30 });
-    await inputTitle.pressSequentially(' test', { delay: 30 });
+    // The title changes again; the typed slug stays
+    await inputTitle.fill('Live test');
     await expect(inputTitle).toHaveValue('Live test');
     await expect(inputSlug).toHaveValue('welcome');
 
@@ -602,12 +597,15 @@ test('A media opened without its folder in the URL stays in its folder when save
   expect(stored._path).toBe(`root:${folder}`);
 });
 
-/** A folder that does not exist sends back to the root, and a browser keeps no cached redirect. */
-test('An unknown upload folder redirects to the root with a 302', async ({ page }) => {
+/**
+ * A folder that does not exist sends back to the root. The panel renders in the browser: its page
+ * answers 200 with the app, and the redirect comes with the page's data.
+ */
+test('An unknown upload folder sends back to the root', async ({ page }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
-  const response = await page.request.get(`${panelUrl('medias')}?uploadPath=root:missing`, {
-    maxRedirects: 0
-  });
-  expect(response.status()).toBe(302);
-  expect(new URL(response.headers()['location'], BASE_URL).pathname).toBe(panelPath('medias'));
+  await page.goto(`${panelUrl('medias')}?uploadPath=root:missing`);
+  await page.waitForURL(
+    (url) => url.pathname === panelPath('medias') && !url.searchParams.has('uploadPath')
+  );
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });

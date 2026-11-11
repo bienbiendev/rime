@@ -256,7 +256,8 @@ test('Changing the status is not typing: no auto-save follows', async ({ page, r
   const before = (await versionsOf(request)).length;
 
   // The status button is the dialog's trigger: it carries the trigger's attributes and opens it.
-  const statusButton = page.getByRole('button', { name: 'Published' });
+  // The news' date field is labelled "Published" too: the class names the status one.
+  const statusButton = page.locator('.rz-status__button', { hasText: 'Published' });
   await expect(statusButton).toHaveAttribute('aria-haspopup', 'dialog');
   await statusButton.click();
   await expect(page.getByRole('dialog')).toBeVisible();
@@ -527,7 +528,8 @@ test('A status dialog closed without Validate shows the document status again', 
 
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(panelUrl('news', id));
-  const statusButton = page.getByRole('button', { name: 'Published' });
+  // The news' date field is labelled "Published" too: the class names the status one.
+  const statusButton = page.locator('.rz-status__button', { hasText: 'Published' });
   const dialog = page.getByRole('dialog');
   const published = page.locator('[id="document.published"]');
 

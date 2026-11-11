@@ -107,9 +107,12 @@ test('The live page stops listening to the preview once it is left', async ({ pa
   await close.click();
   await page.waitForURL(panelUrl('infos'));
   await page.goBack();
+  // The area page holds an `instagram` input too: the live page is back once its preview is
+  await expect(page.locator('iframe[title="edit"]')).toBeVisible();
   await expect(page.locator('input[name="instagram"]')).toBeVisible();
 
-  expect(await countListeners()).toBe(before);
+  // The live page adds its listener once mounted: one again, not two
+  await expect.poll(countListeners).toBe(before);
 });
 
 /**

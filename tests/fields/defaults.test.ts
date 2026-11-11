@@ -26,7 +26,7 @@ const signInSuperAdmin = signIn(ADMIN_EMAIL, PASSWORD);
  * `src/lib/core/pipeline/hooks/default-values.spec.ts`.
  */
 
-// The ids the fixture's relation defaults name.
+// The ids the fixture's relation defaults name. A target takes such a title as its id.
 const TARGET_ID = 'defaults-target-1';
 const OTHER_TARGET_ID = 'defaults-target-2';
 
@@ -135,7 +135,7 @@ test.beforeAll(async ({ playwright }) => {
     if (exists.ok()) continue;
     const response = await api.post(`${API_BASE_URL}/targets`, {
       headers,
-      data: { id, title: id }
+      data: { title: id }
     });
     expect(response.status()).toBe(200);
     expect((await response.json()).doc.id).toBe(id);

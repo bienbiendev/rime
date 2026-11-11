@@ -17,7 +17,8 @@ const memo = block('memo').fields(text('text'));
 
 /**
  * Each kind of field twice, once per fill, for `tests/fields/defaults.test.ts`. A relation's
- * default names targets the test creates with these ids.
+ * default names targets by id: the test creates them titled with those ids, and a hook of
+ * `targets` (targets.ts) gives them their title as id.
  */
 export const Defaults = Collection.create('defaults', {
   fields: [

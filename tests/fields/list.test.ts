@@ -358,9 +358,12 @@ test("A relation's candidates follow the form values its query reads", async ({
   await expect(city.getByRole('option', { name: paris })).toBeVisible();
   await expect(city.getByRole('option', { name: berlin })).toHaveCount(0);
 
-  // `country` turns de: the candidates follow, with no reload
-  await page.locator('fieldset[data-path="country"] input').click();
-  await page.getByRole('option', { name: 'Germany' }).click();
+  // `country` turns de: the candidates follow, with no reload. A single select that holds a
+  // value shows no search, so France goes first.
+  const country = page.locator('fieldset[data-path="country"]');
+  await country.getByRole('button', { name: 'Remove' }).click();
+  await country.getByRole('combobox').click();
+  await country.getByRole('option', { name: 'Germany' }).click();
   await city.locator('input').click();
   await expect(city.getByRole('option', { name: berlin })).toBeVisible();
   await expect(city.getByRole('option', { name: paris })).toHaveCount(0);

@@ -200,9 +200,11 @@ test('The search of a relation reads 20 matches and their count once typing paus
   });
 
   const tags = page.locator('fieldset[data-path="tags"]');
-  await tags.getByRole('button', { name: 'Choose', exact: true }).click();
+  await tags.getByRole('button', { name: 'Choose…', exact: true }).click();
   await tags.locator('input').pressSequentially(title, { delay: 30 });
   await expect(tags.getByRole('option', { name: title })).toBeVisible();
+  // The option shows at once from the list read on focus; the search's two reads follow the pause
+  await expect.poll(() => searches.length).toBe(2);
 
   const lists = searches.filter((url) => url.pathname.endsWith('/api/targets'));
   const counts = searches.filter((url) => url.pathname.endsWith('/api/targets/count'));
@@ -222,7 +224,7 @@ test('A relation of one offers Choose while empty, and neither Choose nor the se
   await page.goto(panelUrl('pages', docId));
 
   const thumbnail = page.locator('fieldset[data-path="thumbnail"]');
-  const choose = thumbnail.getByRole('button', { name: 'Choose', exact: true });
+  const choose = thumbnail.getByRole('button', { name: 'Choose…', exact: true });
   await choose.click();
   await thumbnail.locator('input').pressSequentially(title, { delay: 30 });
   await thumbnail.getByRole('option', { name: title }).click();
@@ -246,7 +248,7 @@ test('A new pick in the form shows at once, before the read of the picks answers
 
   // A target picked from the search of tags
   const tags = page.locator('fieldset[data-path="tags"]');
-  await tags.getByRole('button', { name: 'Choose', exact: true }).click();
+  await tags.getByRole('button', { name: 'Choose…', exact: true }).click();
   await tags.locator('input').pressSequentially(title, { delay: 30 });
   await tags.getByRole('option', { name: title }).click();
   await expect(tags.locator('.rz-relation__item')).toHaveText(title);
@@ -300,8 +302,13 @@ test('A target renamed and saved shows its new title in the page that holds it',
   const chip = page.locator('fieldset[data-path="tags"] .rz-relation__item');
   await expect(chip).toHaveText(`Before ${run}`);
   await chip.locator('a').click();
-  await page.locator('input[name="title"]').fill(`After ${run}`);
+  // Waits for the target's page: the page left behind has a title input too
+  const title = page.locator('input[name="title"]');
+  await expect(title).toHaveValue(`Before ${run}`);
+  await title.fill(`After ${run}`);
   await page.locator('button[data-submit]').click();
+  // Save turns off once the form has the save's answer; a back press before it asks to confirm
+  await expect(page.locator('button[data-submit]')).toBeDisabled();
   await expect
     .poll(async () => {
       const read = await page.request.get(`${API_BASE_URL}/targets/${targetId}`);
@@ -385,7 +392,7 @@ test('The type filter lists a type the grid has shown only in a folder', async (
   const uploaded = await request.post(`${API_BASE_URL}/medias`, {
     headers: await signInSuperAdmin(request),
     data: {
-      file: { base64: png, filename: `${run}-pixel.png` },
+      file: { base64: png, filename: `pixel-${Date.now()}.png` },
       alt: 'A pixel',
       _path: `root:${folder}`
     }

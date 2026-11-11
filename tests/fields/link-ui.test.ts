@@ -61,7 +61,7 @@ test('A link switched from an area to a collection holds no document', async ({
   await pickType(page, fieldset, 'Homepage');
   await expect(fieldset.locator('.rz-tag')).toHaveText('homepage');
 
-  await pickType(page, fieldset, 'Page');
+  await pickType(page, fieldset, 'Pages');
   await expect(fieldset.locator('.rz-tag')).toHaveCount(0);
 
   await page.locator(SAVE).click();
@@ -75,7 +75,7 @@ test('A link holds the last document picked', async ({ page, request }) => {
   const id = await createPage(request, 'Link repick', [{ label: 'Item', _children: [] }]);
   const fieldset = await openLink(page, id);
 
-  await pickType(page, fieldset, 'Page');
+  await pickType(page, fieldset, 'Pages');
   const search = fieldset.locator('.rz-ressource-input input');
   await search.click();
   await search.pressSequentially(`First ${stamp}`, { delay: 30 });
@@ -116,7 +116,7 @@ test('A page picked from the search shows its title before the read of the pick 
   );
   const fieldset = await openLink(page, id);
 
-  await pickType(page, fieldset, 'Page');
+  await pickType(page, fieldset, 'Pages');
   const search = fieldset.locator('.rz-ressource-input input');
   await search.click();
   await search.pressSequentially(title, { delay: 30 });
@@ -134,7 +134,7 @@ test('Of two documents with the same title, the keyboard picks the highlighted o
   const id = await createPage(request, 'Link same title', [{ label: 'Item', _children: [] }]);
   const fieldset = await openLink(page, id);
 
-  await pickType(page, fieldset, 'Page');
+  await pickType(page, fieldset, 'Pages');
   const search = fieldset.locator('.rz-ressource-input input');
   await search.click();
   await search.pressSequentially(title, { delay: 30 });
@@ -159,7 +159,7 @@ test('A link search that finds no document says so in the panel language', async
   const id = await createPage(request, 'Link empty', [{ label: 'Item', _children: [] }]);
   const fieldset = await openLink(page, id);
 
-  await pickType(page, fieldset, 'Page');
+  await pickType(page, fieldset, 'Pages');
   const search = fieldset.locator('.rz-ressource-input input');
   await search.click();
   // No title holds these letters, and no id either: an id is hexadecimal
@@ -174,7 +174,7 @@ test('A link search matches the document titles, not their ids', async ({ page, 
   const id = await createPage(request, 'Link search ids', [{ label: 'Item', _children: [] }]);
   const fieldset = await openLink(page, id);
 
-  await pickType(page, fieldset, 'Page');
+  await pickType(page, fieldset, 'Pages');
   const search = fieldset.locator('.rz-ressource-input input');
   await search.click();
   await search.pressSequentially('Sunny', { delay: 30 });

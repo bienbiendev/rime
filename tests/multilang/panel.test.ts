@@ -112,7 +112,8 @@ test('The panel locale stays in the panel', async ({ page, context, request }) =
   const api = await context.request.get(`${API_BASE_URL}/pages/${pageId}`);
   expect((await api.json()).doc.locale).toBe('fr');
   const site = await context.newPage();
-  await site.goto(`${BASE_URL}/${doc.attributes.slug}`);
+  // Its address with no locale: the site reads the default one
+  await site.goto(`${BASE_URL}/${doc._slug}`);
   await expect(site.locator('h1')).toHaveText(doc.attributes.title);
 
   await page.reload();
