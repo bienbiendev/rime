@@ -14,6 +14,7 @@ import { joinMemberTypes, toPascalCase } from '#lib/util/string.js';
 import type { Dic } from '#lib/util/types.js';
 import type { RequestEvent } from '@sveltejs/kit';
 import dedent from 'dedent';
+import type { Component } from 'svelte';
 import { number } from '../number/index.js';
 import { text } from '../text/index.js';
 import Cell from './component/Cell.svelte';
@@ -41,7 +42,7 @@ export class TreeBuilder extends FormFieldBuilder<TreeField> {
   get component() {
     return Tree;
   }
-  get cell() {
+  get cell(): Component<{ value: any }> {
     return Cell;
   }
 
