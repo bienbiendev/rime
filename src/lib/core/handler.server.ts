@@ -25,8 +25,10 @@ function logResponse(event: RequestEvent, status: number) {
 function createCMSHandler<const C extends Config>(rime: Rime<C>) {
   const handleCMS: Handle = async ({ event, resolve }) => {
     event.locals.rime = rime.createRimeContext(event) as any;
-    // Once per process: every `$url` page missing an address gets one.
-    if (!building) await ensureAddresses(event);
+    // Once per process: every `$url` page missing an address gets one. A sub-request, an
+    // `event.fetch` of one of the app's own routes, skips it: it runs inside a request that is
+    // already awaiting it, so a `beforeRead` hook that fetches would otherwise wait on itself.
+    if (!building && !event.isSubRequest) await ensureAddresses(event);
     const response = await resolve(event).catch((err) => {
       // Thrown by a later handle step, as handleAuth does: SvelteKit answers it
       logResponse(event, isHttpError(err) || isRedirect(err) ? err.status : 500);
