@@ -67,6 +67,8 @@ const blockGrid = block('grid')
 // Blocks without a render: rows on the focus stage, a columns block holding notes of its own.
 const blockNote = block('note').fields(text('text'));
 const blockColumns = block('columns').fields(text('title'), blocks('cells', [blockNote]));
+// A group inside a block: the inspector draws it folded, its preview reading `source.author`
+const blockQuote = block('quote').fields(text('text'), group('source').fields(text('author')));
 
 // Two types with one label: the picker tells them apart by name.
 const blockHeroA = block('heroA').label('Hero').fields(text('title'));
@@ -174,7 +176,7 @@ export const Pages = Collection.create('pages', {
     blocks('sections', [blockParagraph, blockImage, blockKeyFacts, blockGrid, blockGallery]),
     // One row in the form, edited in focus mode.
     blocks('extras', [blockParagraph, blockImage]).layout('summary'),
-    blocks('plain', [blockNote, blockColumns]),
+    blocks('plain', [blockNote, blockColumns, blockQuote]),
     blocks('twins', [blockHeroA, blockHeroB]),
     blocks('layout', [blockCallToAction]),
 

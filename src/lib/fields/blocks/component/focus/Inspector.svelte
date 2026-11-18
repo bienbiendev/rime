@@ -20,7 +20,7 @@
   const rendered = $derived.by(() => {
     if (!row) return null;
     const { fields, path } = getFieldListAtPath(
-      withBlockTypes(row.path, form.values),
+      withBlockTypes(row.path, form.values, form.config.fields),
       form.config.fields
     );
     return { fields: fields.filter((field) => field.type !== 'blocks'), path };

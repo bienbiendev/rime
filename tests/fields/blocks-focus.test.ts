@@ -687,6 +687,32 @@ test('A list without renders is rows, its nested lists under them, its fields in
   ).toBeVisible();
 });
 
+test('A block holding a group shows the group folded in the inspector', async ({
+  page,
+  request
+}) => {
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers: await signInSuperAdmin(request),
+    data: {
+      title: 'Quote focus',
+      plain: [{ type: 'quote', text: 'Hello', source: { author: 'Ann' } }]
+    }
+  });
+  expect(response.status()).toBe(200);
+  const docId = (await response.json()).doc.id as string;
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(`${panelUrl('pages', docId)}?focus=plain`);
+
+  const focus = page.locator('.rz-blocks-focus');
+  const panel = focus.locator('.rz-blocks-focus__panel');
+  await focus.locator('.rz-blocks-focus__renders > .rz-renders > .rz-renders__item').click();
+
+  // The group is folded, its preview reads the author
+  const group = panel.locator('.rz-group-field__wrapper');
+  await expect(group.locator('.rz-group-field__trigger')).toHaveAttribute('aria-expanded', 'false');
+  await expect(group.locator('.rz-group-field__preview')).toContainText('Ann');
+});
+
 test('A list of one type adds it at once, without the picker', async ({ page, request }) => {
   const docId = await createPlainPage(request);
   await loginAs(page, ADMIN_EMAIL, PASSWORD);

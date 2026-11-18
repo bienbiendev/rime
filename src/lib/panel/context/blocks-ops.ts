@@ -1,3 +1,5 @@
+import type { FieldBuilder } from '#lib/core/fields/builders/index.js';
+import { getFieldAtPath } from '#lib/core/fields/util.js';
 import type { GenericBlock } from '#lib/core/prototype/types.js';
 import type { FormErrors } from '#lib/panel/types.js';
 import { getValueAtPath, isObjectLiteral, setValueAtPath } from '#lib/util/object.js';
@@ -59,20 +61,23 @@ export const shiftListPath = (list: string, removed: BlockAt) => {
 
 /**
  * The path with each block index carrying its type, read off the document: what
- * `getFieldAtPath` wants.
+ * `getFieldAtPath` wants. Only an index in a list of blocks takes a type; a tree row keeps its
+ * bare index, even when it holds a field named `type`.
  *
  * ```
- * withBlockTypes('sections.0.items.1', doc) // 'sections.0:grid.items.1:paragraph'
+ * withBlockTypes('sections.0.items.1', doc, fields) // 'sections.0:grid.items.1:paragraph'
+ * withBlockTypes('links.0.label', doc, fields) // 'links.0.label'
  * ```
  */
-export const withBlockTypes = (path: string, doc: Dic) => {
+export const withBlockTypes = (path: string, doc: Dic, fields: FieldBuilder[]) => {
   const parts = normalizeFieldPath(path).split('.');
   const typed: string[] = [];
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
-    const isIndex = /^\d+$/.test(part);
-    if (isIndex) {
-      const item = getValueAtPath<Dic>([...parts.slice(0, i), part].join('.'), doc);
+    const isBlockIndex =
+      /^\d+$/.test(part) && getFieldAtPath(typed.join('.'), fields)?.type === 'blocks';
+    if (isBlockIndex) {
+      const item = getValueAtPath<Dic>(parts.slice(0, i + 1).join('.'), doc);
       const type = item && isObjectLiteral(item) && typeof item.type === 'string' ? item.type : '';
       typed.push(type ? `${part}:${type}` : part);
     } else {

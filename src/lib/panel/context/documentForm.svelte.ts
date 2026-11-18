@@ -216,7 +216,8 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
     /** The `BlocksBuilder` a list path names, read through the document for the block types. */
     builder(list: string) {
-      const field = getFieldAtPath(withBlockTypes(list, doc), documentConfig.fields);
+      const typed = withBlockTypes(list, doc, documentConfig.fields);
+      const field = getFieldAtPath(typed, documentConfig.fields);
       return field && field.type === 'blocks' ? (field as BlocksBuilder) : undefined;
     },
 
@@ -343,11 +344,13 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
   /**
    * The field at `path`, read and written through the form. `config` is the field's builder;
-   * without it, the builder is looked up in the document's fields by `path`.
+   * without it, the builder is looked up in the document's fields by `path`, the block types read
+   * off the document: `sections.0.title` -> `sections.0:hero.title`.
    */
   function useField<TValue>(path: string, config?: FormFieldBuilder<FormField>) {
     if (!config) {
-      const resolved = getFieldAtPath(path, documentConfig.fields);
+      const typed = withBlockTypes(path, doc, documentConfig.fields);
+      const resolved = getFieldAtPath(typed, documentConfig.fields);
       if (!resolved) throw new Error(`can't find config for field : ${path}`);
       config = resolved;
     }

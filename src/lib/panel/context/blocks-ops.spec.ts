@@ -1,3 +1,4 @@
+import { block, blocks, text, tree } from '#lib/fields/index.js';
 import { describe, expect, it } from 'vitest';
 import {
   duplicateBlock,
@@ -22,6 +23,14 @@ type Block = {
   text?: string;
   items?: Block[];
 };
+
+// The fields of `doc()`, and a tree whose rows hold a field named `type`
+const paragraph = block('paragraph').fields(text('text'));
+const fields = [
+  text('title'),
+  blocks('sections', [paragraph, block('grid').fields(blocks('items', [paragraph]))]),
+  tree('links').fields(text('type'), text('label'))
+];
 
 const doc = (): { title: string; sections: Block[] } => ({
   title: 'Page',
@@ -60,9 +69,16 @@ describe('paths', () => {
   });
 
   it('puts the block types back on a path from the document', () => {
-    expect(withBlockTypes('sections.1.items.0', doc())).toBe('sections.1:grid.items.0:paragraph');
-    expect(withBlockTypes('sections.1.items', doc())).toBe('sections.1:grid.items');
-    expect(withBlockTypes('title', doc())).toBe('title');
+    expect(withBlockTypes('sections.1.items.0', doc(), fields)).toBe(
+      'sections.1:grid.items.0:paragraph'
+    );
+    expect(withBlockTypes('sections.1.items', doc(), fields)).toBe('sections.1:grid.items');
+    expect(withBlockTypes('title', doc(), fields)).toBe('title');
+  });
+
+  it('leaves a tree row its bare index, even when it holds a field named type', () => {
+    const page = { links: [{ id: 'l1', type: 'external', label: 'Home', _children: [] }] };
+    expect(withBlockTypes('links.0.label', page, fields)).toBe('links.0.label');
   });
 });
 

@@ -27,7 +27,7 @@
   // svelte-ignore state_referenced_locally
   let groupOpen = $state(readStored(key) === 'true');
 
-  const field = $derived(form.useField(path));
+  const field = $derived(form.useField(path, config));
 
   function handleClick() {
     groupOpen = !groupOpen;
@@ -73,7 +73,7 @@
       <FieldsPreview
         preview={config.get.preview}
         fields={previewFields}
-        getField={(field) => form.useField(basePath + field.name)}
+        getField={(field) => form.useField(basePath + field.name, field)}
       />
     </FieldsPreviewTrigger>
   {:else}
