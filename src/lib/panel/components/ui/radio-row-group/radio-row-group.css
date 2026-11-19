@@ -1,12 +1,12 @@
 .rz-radio-row-group {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-self: flex-start;
   width: auto;
   @mixin well;
   border-radius: var(--rz-radius-lg);
-  max-height: var(--rz-input-height);
-  height: var(--rz-input-height);
+  min-height: var(--rz-input-height);
   padding: var(--rz-size-0-5);
 
   &[data-disabled] {
@@ -29,7 +29,9 @@
   padding: 0 var(--rz-size-4);
   background-color: transparent;
   border-radius: var(--rz-radius-md);
-  height: 100%;
+  /* One line of the row: the input height less the well's padding. */
+  height: var(--rz-size-8);
+  white-space: nowrap;
   color: var(--rz-fg-muted);
   @mixin font-medium;
   cursor: pointer;
