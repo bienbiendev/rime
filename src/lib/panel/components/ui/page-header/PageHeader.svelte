@@ -68,7 +68,7 @@
     height: var(--rz-size-11);
     margin-bottom: var(--rz-size-6);
     padding-inline: var(--rz-size-5) var(--rz-size-3);
-    /* See-through, so the page's glow reaches the top; what scrolls under it blurs. */
+    /* See-through: what scrolls under it blurs. */
     background: oklch(from var(--rz-bg-page) l c h / 0.8);
     backdrop-filter: blur(12px);
     box-shadow: inset 0 -1px 0 var(--rz-border);
@@ -91,16 +91,10 @@
     justify-content: flex-end;
   }
 
-  /*
-   * The title and the toolbar line up with a page's content. A page narrows it with
-   * `--rz-page-width`; else it runs the full width, inside the gutter.
-   */
+  /* The title and the toolbar line up with a page's content: the full width, inside the gutter. */
   .rz-page-header__head,
   .rz-page-header__toolbar {
-    padding-inline: max(
-      var(--rz-page-gutter, var(--rz-size-6)),
-      calc((100% - var(--rz-page-width, 100%)) / 2)
-    );
+    padding-inline: var(--rz-page-gutter, var(--rz-size-6));
   }
 
   .rz-page-header__head {

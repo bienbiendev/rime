@@ -94,7 +94,7 @@
     display: grid;
     gap: var(--rz-size-2);
     padding-block: var(--rz-size-3);
-    padding-inline: max(var(--rz-page-gutter), calc((100% - var(--rz-page-width, 40rem)) / 2));
+    padding-inline: var(--rz-page-gutter);
     background-color: var(--rz-bg-page);
   }
   .rz-auto-save-banner {

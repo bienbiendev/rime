@@ -91,7 +91,7 @@
     display: grid;
     gap: var(--rz-size-3);
     padding-block: var(--rz-size-6) var(--rz-size-10);
-    padding-inline: max(var(--rz-page-gutter), calc((100% - var(--rz-page-width)) / 2));
+    padding-inline: var(--rz-page-gutter);
     border-top: 1px solid var(--rz-border);
   }
 

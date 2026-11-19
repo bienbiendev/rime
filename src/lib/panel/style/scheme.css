@@ -42,13 +42,6 @@
 
   /* shadows: only what floats over the page casts one */
   --rz-shadow-float: 0 16px 36px -12px oklch(from var(--rz-gray-0) l c h / 0.16);
-
-  /* gradients */
-  --rz-glow: radial-gradient(
-    70% 38% at 50% 0%,
-    oklch(from var(--rz-accent-solid) l c h / 0.035),
-    transparent
-  );
 }
 
 @media (prefers-color-scheme: dark) {
@@ -79,10 +72,5 @@
     --rz-ring: oklch(from var(--rz-accent-soft) l c h / 0.2);
 
     --rz-shadow-float: 0 16px 40px -12px oklch(from var(--rz-gray-0) l c h / 0.6);
-    --rz-glow: radial-gradient(
-      70% 38% at 50% 0%,
-      oklch(from var(--rz-accent-solid) l c h / 0.07),
-      transparent
-    );
   }
 }

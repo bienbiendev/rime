@@ -413,32 +413,23 @@
 </form>
 
 <style type="postcss">
-  /**
-   * The document: a centred column, its heading lined up with its fields.
-   *
-   *   --rz-document-width: the column, 40rem
-   */
+  /* The document: its heading lined up with its fields. */
   .rz-document {
-    --rz-page-width: var(--rz-document-width, 40rem);
     container: rz-document / inline-size;
     position: relative;
     display: flex;
     flex-direction: column;
   }
 
-  /* A page of its own is at least the window's height, so the metas sit at its bottom. Its top
-     edge glows, as tall as the window whatever the page's length. */
+  /* A page of its own is at least the window's height, so the metas sit at its bottom. */
   .rz-document:not([data-nested]) {
     min-height: 100svh;
-    background-image: var(--rz-glow);
-    background-repeat: no-repeat;
-    background-size: 100% 100svh;
   }
 
-  /* The column stops growing and centres itself; the gutter is the floor. */
+  /* The full width inside the page's gutter, where the dashboard and the collection list start. */
   .rz-document__fields,
   .rz-document__infos {
-    padding-inline: max(var(--rz-page-gutter), calc((100% - var(--rz-page-width)) / 2));
+    padding-inline: var(--rz-page-gutter);
   }
 
   .rz-document__fields {
