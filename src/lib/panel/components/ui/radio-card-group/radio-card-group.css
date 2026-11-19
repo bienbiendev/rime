@@ -1,0 +1,75 @@
+/* As many cards per line as fit, each at least --rz-size-40 wide. */
+.rz-radio-card-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--rz-size-40), 1fr));
+  gap: var(--rz-size-2-5);
+
+  &[data-disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+    button {
+      cursor: not-allowed;
+    }
+  }
+}
+
+/* A raised card, muted until hovered or checked. */
+.rz-radio-card-group-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rz-size-1-5);
+  min-width: 0;
+  padding: var(--rz-size-1-5) var(--rz-size-1-5) var(--rz-size-2);
+  @mixin surface raised;
+  border-radius: var(--rz-radius-xl);
+  color: var(--rz-fg-muted);
+  font-size: var(--rz-text-sm);
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+
+  &:hover,
+  &[data-state='checked'] {
+    @mixin hover;
+    color: var(--rz-fg);
+  }
+
+  &[data-state='checked'] {
+    box-shadow: 0 0 0 1px var(--rz-accent-border);
+  }
+
+  &:focus-visible {
+    @mixin focus-ring;
+  }
+
+  /* Without a thumbnail, the label spans the card's width, its text in the middle. */
+  &:not([data-thumbnail]) {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+/* 16:10, the thumbnail filling it. */
+.rz-radio-card-group-item__frame {
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: var(--rz-radius-lg);
+  background-color: var(--rz-bg-well);
+  color: var(--rz-fg-subtle);
+
+  > svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.rz-radio-card-group-item:is(:hover, [data-state='checked']) .rz-radio-card-group-item__frame {
+  color: var(--rz-fg-muted);
+}
+
+.rz-radio-card-group-item__label {
+  padding-inline: var(--rz-size-1);
+  @mixin font-medium;
+}

@@ -147,6 +147,14 @@ export const Pages = Collection.create('pages', {
     time('publishTime'),
     email('contactEmail'),
     radio('layoutStyle').options('a', 'b', 'c'),
+    // Cards: a thumbnail above each label, and one option with a label alone
+    radio('heroLayout')
+      .layout('cards')
+      .options(
+        { value: 'grid', label: 'Grid', thumbnail: GridThumbnail },
+        { value: 'gallery', label: 'Gallery', thumbnail: GalleryThumbnail },
+        { value: 'plain', label: 'Plain' }
+      ),
     combobox('tag').options('x', 'y', 'z'),
 
     // A field with no name beside a group: the group's values stay an object through a form save

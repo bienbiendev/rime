@@ -1,4 +1,5 @@
 import type { DefaultValueFn, FormField, Option } from '#lib/fields/types.js';
+import type { Component } from 'svelte';
 import { PickOneFieldBuilder } from '../../core/fields/builders/select-builder.js';
 import Radio from './component/Radio.svelte';
 
@@ -13,13 +14,25 @@ export class RadioFieldBuilder extends PickOneFieldBuilder<RadioField> {
     return Radio;
   }
 
-  /** `row` shows the options as one segmented row, `default` as a list of radios. */
-  layout(value: 'default' | 'row') {
+  /**
+   * `row` shows the options as one segmented row, `default` as a list of radios, `cards` as a grid
+   * of cards, each option's thumbnail above its label.
+   */
+  layout(value: 'default' | 'row' | 'cards') {
     this.field.layout = value;
     return this;
   }
 
-  override options(...options: (Option | string)[]) {
+  /**
+   * The options to pick from. With the `cards` layout, an option may carry a thumbnail: a Svelte
+   * component drawn above its label.
+   *
+   * ```ts
+   * import HeroSplit from './thumbnails/HeroSplit.svelte'
+   * radio('layout').layout('cards').options({ value: 'split', label: 'Côte à côte', thumbnail: HeroSplit })
+   * ```
+   */
+  override options(...options: (RadioOption | string)[]) {
     super.options(...options);
     // A radio starts on one of its options: its first, unless its default is one of them
     const current = this.field.defaultValue;
@@ -41,10 +54,13 @@ export const radio = (name: string) => new RadioFieldBuilder(name);
 /* Type
 /****************************************************/
 
+/** An option, with the thumbnail its card shows in the `cards` layout. */
+export type RadioOption = Option & { thumbnail?: Component };
+
 export type RadioField = FormField & {
   type: 'radio';
-  options: Option[];
-  layout: 'row' | 'default';
+  options: RadioOption[];
+  layout: 'row' | 'default' | 'cards';
   defaultValue: string | DefaultValueFn<string>;
   many: false;
 };

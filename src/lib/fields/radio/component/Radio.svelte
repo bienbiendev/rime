@@ -2,6 +2,7 @@
   import { fieldset } from '#lib/panel/components/fields/fieldset.svelte.js';
   import { Field } from '#lib/panel/components/fields/index.js';
   import { Label } from '#lib/panel/components/ui/label/index.js';
+  import * as RadioCardGroup from '#lib/panel/components/ui/radio-card-group/index.js';
   import * as RadioGroup from '#lib/panel/components/ui/radio-group/index.js';
   import * as RadioRowGroup from '#lib/panel/components/ui/radio-row-group/index.js';
   import { capitalize, slugify } from '#lib/util/string.js';
@@ -33,6 +34,23 @@
         </div>
       {/each}
     </RadioRowGroup.Root>
+  {:else if config.get.layout === 'cards'}
+    <RadioCardGroup.Root
+      aria-label={config.get.label}
+      bind:value={field.value}
+      disabled={!field.editable}
+    >
+      {#each config.get.options as option, index (index)}
+        <RadioCardGroup.Item
+          value={option.value}
+          id="{fieldId}-{index}"
+          thumbnail={option.thumbnail}
+          class="rz-radio__input"
+        >
+          {option.label || capitalize(option.value)}
+        </RadioCardGroup.Item>
+      {/each}
+    </RadioCardGroup.Root>
   {:else}
     <RadioGroup.Root
       aria-label={config.get.label}
@@ -56,7 +74,7 @@
 </fieldset>
 
 <style lang="postcss">
-  .rz-field-radio:not(.rz-field-radio--row) {
+  .rz-field-radio--default {
     display: flex;
     flex-direction: column;
 

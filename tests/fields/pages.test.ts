@@ -101,6 +101,50 @@ test('Each field label names its control', async ({ page }) => {
   await expect.soft(page.getByRole('radiogroup', { name: 'LayoutStyle' })).toBeVisible();
 });
 
+/** ---------------- RADIO CARDS ---------------- */
+
+test('A radio in cards shows a card per option and saves the one picked', async ({
+  page,
+  request
+}) => {
+  const headers = await signIn(ADMIN_EMAIL, PASSWORD)(request);
+  const response = await request.post(`${API_BASE_URL}/pages`, {
+    headers,
+    data: { title: 'Radio cards' }
+  });
+  expect(response.status()).toBe(200);
+  const id = (await response.json()).doc.id as string;
+
+  await loginAs(page, ADMIN_EMAIL, PASSWORD);
+  await page.goto(panelUrl('pages', id));
+
+  const group = page.getByRole('radiogroup', { name: 'HeroLayout' });
+  await expect.soft(group.getByRole('radio')).toHaveCount(3);
+  // A card draws its thumbnail above its label; one without a thumbnail shows its label alone
+  await expect.soft(group.getByRole('radio', { name: 'Grid' }).locator('svg')).toBeVisible();
+  await expect.soft(group.getByRole('radio', { name: 'Plain' }).locator('svg')).toHaveCount(0);
+  // The first option is the default
+  await expect
+    .soft(group.getByRole('radio', { name: 'Grid' }))
+    .toHaveAttribute('data-state', 'checked');
+
+  await group.getByRole('radio', { name: 'Gallery' }).click();
+  await expect(group.getByRole('radio', { name: 'Gallery' })).toHaveAttribute(
+    'data-state',
+    'checked'
+  );
+  await page.locator('button[type="submit"]').click();
+
+  await expect
+    .poll(async () => {
+      const { doc } = await request
+        .get(`${API_BASE_URL}/pages/${id}`, { headers })
+        .then((r) => r.json());
+      return doc.heroLayout;
+    })
+    .toBe('gallery');
+});
+
 /** ---------------- SELECT ONCHANGE ON OPEN ---------------- */
 
 test('Opening a document runs no select onChange', async ({ page, request }) => {
