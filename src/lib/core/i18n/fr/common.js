@@ -137,7 +137,7 @@ export default {
   sort_by: 'Trier par $1',
   collection_count_drafts: '$1 {brouillon|brouillon|brouillons}',
   drafts_waiting: '$1 {brouillon|brouillon|brouillons} en attente',
-  drop_anywhere: 'déposez des fichiers n’importe où pour les importer',
+  drop_anywhere: 'Déposez des fichiers n’importe où pour les importer',
   drop_to_upload_into: 'Déposez pour importer dans $1',
   media_kind_image: 'Images',
   media_kind_video: 'Vidéos',

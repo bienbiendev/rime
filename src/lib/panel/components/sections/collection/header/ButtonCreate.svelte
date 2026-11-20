@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { createPath } from '#lib/panel/util/url.js';
   import { t__ } from '#lib/core/i18n/index.js';
   import Button from '#lib/panel/components/ui/button/button.svelte';
+  import { createPath } from '#lib/panel/util/url.js';
   import type { BuiltCollection } from '#lib/types.js';
   import Plus from '@lucide/svelte/icons/plus';
 
@@ -10,7 +10,7 @@
     /** `sm`: an icon alone. `default`: an icon and the label. */
     size?: 'sm' | 'default';
     /** The labelled button's look; `default` is the primary one. */
-    variant?: 'default' | 'secondary' | 'ghost';
+    variant?: 'default' | 'outline' | 'secondary' | 'ghost';
   };
   const { config, size = 'default', variant = 'default' }: Props = $props();
 
@@ -23,7 +23,7 @@
 
 {#if size === 'sm'}
   <Button
-    variant="ghost"
+    {variant}
     size="icon-sm"
     class="rz-button-create--icon"
     href={createPathname}

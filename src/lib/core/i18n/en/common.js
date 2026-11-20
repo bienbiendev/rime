@@ -134,7 +134,7 @@ export default {
   sort_by: 'Sort by $1',
   collection_count_drafts: '$1 {draft|draft|drafts}',
   drafts_waiting: '$1 {draft|draft|drafts} waiting',
-  drop_anywhere: 'drop files anywhere to upload them',
+  drop_anywhere: 'Drop files anywhere to upload them',
   drop_to_upload_into: 'Drop to upload into $1',
   media_kind_image: 'Images',
   media_kind_video: 'Videos',

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { CollectionContext } from '#lib/panel/context/collection.svelte.js';
+  import DropHint from '../DropHint.svelte';
   import Empty from '../Empty.svelte';
   import Folders from '../folder/Folders.svelte';
   import { listColumns } from './columns.js';
@@ -24,6 +25,9 @@
     collection.isUpload &&
       !!(collection.upload.directories.length || collection.upload.parentDirectory)
   );
+
+  // A strip under the rows says files dropped on the page upload; a search hides it.
+  const dropHint = $derived(collection.isUpload && collection.canCreate && !collection.isFiltered);
 
   // The tracks, wide; then without the author; then the title and the date alone.
   const columns = $derived(collection.columns.length);
@@ -59,6 +63,10 @@
     </div>
   {:else if !hasFolders}
     <Empty config={collection.config} />
+  {/if}
+
+  {#if dropHint}
+    <DropHint shape="row" />
   {/if}
 </div>
 

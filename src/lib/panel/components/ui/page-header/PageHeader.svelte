@@ -4,17 +4,22 @@
 
   type Props = {
     title?: Snippet;
+    /** Right after the title, on its line: a collection's create buttons. */
+    titleEnd?: Snippet;
     /** A line under the title: a count, a date. */
     meta?: Snippet;
     /** Under the meta line: a document's url. */
     aside?: Snippet;
     /** The toolbar under the title, its left side. */
     bottomLeft?: Snippet;
+    /** The toolbar's right end: a collection's count. */
+    bottomRight?: Snippet;
     /** Replaces the breadcrumb, top left: a nested document's Close. */
     topLeft?: Snippet;
     topRight?: Snippet;
   };
-  const { bottomLeft, topRight, topLeft, title, meta, aside }: Props = $props();
+  const { bottomLeft, bottomRight, topRight, topLeft, title, titleEnd, meta, aside }: Props =
+    $props();
 </script>
 
 <div class="rz-page-header__row rz-page-header__row-top">
@@ -33,7 +38,12 @@
 
 {#if title || meta || aside}
   <div class="rz-page-header__head">
-    {#if title}
+    {#if title && titleEnd}
+      <div class="rz-page-header__title-row">
+        <h1 class="rz-page-header__title">{@render title()}</h1>
+        <div class="rz-page-header__title-end">{@render titleEnd()}</div>
+      </div>
+    {:else if title}
       <h1 class="rz-page-header__title">{@render title()}</h1>
     {/if}
     {#if meta}
@@ -43,11 +53,16 @@
   </div>
 {/if}
 
-{#if bottomLeft}
+{#if bottomLeft || bottomRight}
   <div class="rz-page-header__toolbar">
     <div class="rz-page-header__bottom-left">
       {@render bottomLeft?.()}
     </div>
+    {#if bottomRight}
+      <div class="rz-page-header__bottom-right">
+        {@render bottomRight()}
+      </div>
+    {/if}
   </div>
 {/if}
 
@@ -80,7 +95,8 @@
   }
 
   .rz-page-header__row-top > div,
-  .rz-page-header__bottom-left {
+  .rz-page-header__bottom-left,
+  .rz-page-header__bottom-right {
     display: flex;
     align-items: center;
     gap: var(--rz-size-2);
@@ -103,8 +119,24 @@
     gap: var(--rz-size-1-5);
   }
 
+  /* The title takes the room it needs, the buttons follow it. */
+  .rz-page-header__title-row {
+    display: flex;
+    align-items: center;
+    gap: var(--rz-size-4);
+    min-width: 0;
+  }
+
+  .rz-page-header__title-end {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--rz-size-1);
+  }
+
   .rz-page-header__title {
     @mixin line-clamp 1;
+    min-width: 0;
     @mixin font-semibold;
     font-size: var(--rz-text-4xl);
     line-height: 1.15;

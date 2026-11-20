@@ -4,6 +4,7 @@
   import ContextMenuItem from '#lib/panel/components/ui/context-menu/ContextMenuItem.svelte';
   import type { CollectionContext } from '#lib/panel/context/collection.svelte.js';
   import FolderPlus from '@lucide/svelte/icons/folder-plus';
+  import DropHint from '../DropHint.svelte';
   import Empty from '../Empty.svelte';
   import Folders from '../folder/Folders.svelte';
   import GridItem from './grid-item/GridItem.svelte';
@@ -24,6 +25,11 @@
 
   const hasDocsFiltered = $derived(collection.isFiltered && collection.docs.length);
 
+  const filtersOn = $derived(collection.statusFilter !== 'all' || collection.kindFilter !== 'all');
+
+  // The last cell says files dropped on the page upload; a search hides it.
+  const dropHint = $derived(collection.isUpload && collection.canCreate && !collection.isFiltered);
+
   // An item is dragged onto a folder only when there is one to drop it on.
   const dragEnabled = $derived(
     collection.isUpload &&
@@ -35,7 +41,7 @@
   <div class="rz-page-collection__grid">
     <Folders {collection} />
 
-    {#if collection.shown.length}
+    {#if collection.shown.length || (dropHint && !filtersOn)}
       <div class="rz-page-collection__grid-inner">
         {#each collection.shown as doc (doc.id)}
           <GridItem
@@ -47,8 +53,11 @@
             checked={collection.selected.includes(doc.id)}
           />
         {/each}
+        {#if dropHint}
+          <DropHint shape="tile" />
+        {/if}
       </div>
-    {:else if collection.statusFilter !== 'all' || collection.kindFilter !== 'all'}
+    {:else if filtersOn}
       <Empty config={collection.config} />
     {/if}
 
@@ -69,7 +78,12 @@
     {/if}
   </div>
 {:else}
-  <Empty config={collection.config} />
+  <div class="rz-page-collection__grid-empty">
+    <Empty config={collection.config} />
+    {#if dropHint}
+      <DropHint shape="row" />
+    {/if}
+  </div>
 {/if}
 
 <style lang="postcss">
@@ -86,6 +100,12 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(--size(34), 1fr));
     gap: --size(4.5) var(--rz-size-3-5);
+  }
+
+  .rz-page-collection__grid-empty {
+    display: flex;
+    flex-direction: column;
+    gap: var(--rz-size-5);
   }
 
   .rz-collection-grid__context-menu-trigger {

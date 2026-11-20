@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { createPath } from '#lib/panel/util/url.js';
-  import type { UploadPath } from '#lib/core/prototype/collection/upload/util/path.js';
-  import { goto } from '$app/navigation';
   import { t__ } from '#lib/core/i18n/index.js';
   import { UPLOAD_PATH } from '#lib/core/prototype/collection/upload/constant.js';
+  import { withDirectoriesSuffix } from '#lib/core/prototype/collection/upload/naming.js';
   import type { Directory } from '#lib/core/prototype/collection/upload/types.js';
+  import type { UploadPath } from '#lib/core/prototype/collection/upload/util/path.js';
   import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
   import type { GenericDoc } from '#lib/core/prototype/types.js';
   import BulkUploadDialog from '#lib/panel/components/sections/collection/bulk-upload/BulkUploadDialog.svelte';
@@ -16,22 +15,23 @@
   import FilterMenu from '#lib/panel/components/sections/collection/header/FilterMenu.svelte';
   import SearchInput from '#lib/panel/components/sections/collection/header/SearchInput.svelte';
   import SelectUI from '#lib/panel/components/sections/collection/header/SelectUI.svelte';
-  import type { KindFilter, StatusFilter } from '#lib/panel/context/collection.svelte.js';
-  import { counted, documentsCounted } from '#lib/panel/util/count.js';
-  import { fileSizeLabel, type UploadTarget } from '#lib/panel/util/upload-file.js';
-  import { switchLocale } from '#lib/panel/util/locale-cookie.js';
   import CollectionList from '#lib/panel/components/sections/collection/list/CollectionList.svelte';
   import CollectionTree from '#lib/panel/components/sections/collection/tree/CollectionTree.svelte';
   import Page from '#lib/panel/components/sections/page-layout/Page.svelte';
   import Button from '#lib/panel/components/ui/button/button.svelte';
   import LanguageSwitcher from '#lib/panel/components/ui/language-switcher/LanguageSwitcher.svelte';
   import PageHeader from '#lib/panel/components/ui/page-header/PageHeader.svelte';
+  import type { KindFilter, StatusFilter } from '#lib/panel/context/collection.svelte.js';
   import { DISPLAY_MODE, setCollectionContext } from '#lib/panel/context/collection.svelte.js';
   import { useCommands } from '#lib/panel/context/commands.svelte.js';
   import { getConfigContext } from '#lib/panel/context/config.svelte.js';
-  import { getUserContext } from '#lib/panel/context/user.svelte.js';
-  import { withDirectoriesSuffix } from '#lib/core/prototype/collection/upload/naming.js';
   import { getTitleContext } from '#lib/panel/context/title.js';
+  import { getUserContext } from '#lib/panel/context/user.svelte.js';
+  import { counted, documentsCounted } from '#lib/panel/util/count.js';
+  import { switchLocale } from '#lib/panel/util/locale-cookie.js';
+  import { fileSizeLabel, type UploadTarget } from '#lib/panel/util/upload-file.js';
+  import { createPath } from '#lib/panel/util/url.js';
+  import { goto } from '$app/navigation';
   import CirclePlus from '@lucide/svelte/icons/circle-plus';
   import FolderPlus from '@lucide/svelte/icons/folder-plus';
   import LayoutGrid from '@lucide/svelte/icons/layout-grid';
@@ -95,7 +95,7 @@
     titleContext.value = collection.config.label.plural;
   });
 
-  // 24 documents · 3 drafts, or 486 files · 1.2 GB · drop files anywhere to upload them
+  // 24 documents · 3 drafts, or 486 files · 1.2 GB
   const metaLine = $derived.by(() => {
     const parts = [documentsCounted(collection.total, collection.isUpload)];
     if (collection.draftsCount) {
@@ -103,9 +103,6 @@
     }
     if (collection.isUpload && collection.totalSize) {
       parts.push(fileSizeLabel(collection.totalSize));
-    }
-    if (collection.isUpload && collection.canCreate) {
-      parts.push(t__('common.drop_anywhere'));
     }
     return parts.join(' · ');
   });
@@ -214,8 +211,24 @@
           {/each}
 
           <LanguageSwitcher onLocalClick={switchLocale} />
+        {/snippet}
 
+        {#snippet title()}
+          {collection.title}
+        {/snippet}
+
+        {#snippet titleEnd()}
           {#if collection.isUpload}
+            {#if collection.canCreate}
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Upload}
+                onclick={() => (bulkDialogOpen = true)}
+              >
+                {t__('common.collection_upload')}
+              </Button>
+            {/if}
             {#if canCreateFolder}
               <Button
                 variant="ghost"
@@ -227,22 +240,9 @@
                 <span class="rz-collection__folder-label">{t__('common.create_folder')}</span>
               </Button>
             {/if}
-            {#if collection.canCreate}
-              <Button size="sm" icon={Upload} onclick={() => (bulkDialogOpen = true)}>
-                {t__('common.collection_upload')}
-              </Button>
-            {/if}
           {:else if collection.canCreate}
-            <ButtonCreate config={collection.config} variant="default" />
+            <ButtonCreate config={collection.config} variant="outline" />
           {/if}
-        {/snippet}
-
-        {#snippet title()}
-          {collection.title}
-        {/snippet}
-
-        {#snippet meta()}
-          {metaLine}
         {/snippet}
 
         {#snippet bottomLeft()}
@@ -269,6 +269,10 @@
           {#if !collection.isNested()}
             <SelectUI />
           {/if}
+        {/snippet}
+
+        {#snippet bottomRight()}
+          <span class="rz-collection__meta">{metaLine}</span>
         {/snippet}
       </PageHeader>
 
@@ -305,6 +309,12 @@
     padding-top: var(--rz-size-2);
     padding-bottom: var(--rz-size-20);
     padding-inline: var(--rz-page-gutter);
+  }
+
+  .rz-collection__meta {
+    color: var(--rz-fg-subtle);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   /* On a narrow page, "New folder" keeps its icon alone. */
