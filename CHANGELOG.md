@@ -1,5 +1,15 @@
 # rimecms
 
+## 1.5.1
+
+### Patch Changes
+
+- Changed: on a collection page, the create buttons (Create, Upload, New folder) sit right after the title instead of in the top bar, and the count ("24 documents · 3 drafts") moves to the right end of the search row. On an upload collection, the "drop files anywhere" hint is a dashed tile at the end of the grid, or a strip under the list.
+
+- Changed: on a document page, the top bar holds the language, a version menu, Save and, on a draft, Publish. The version menu opens from the status ("Draft", "Published", or "History" without drafts). It lists the newest versions, marks the live one, previews the version on screen when the site shows another, and holds "All versions", "Save in a new draft", "Unpublish" and the version's deletion. The status dialog is gone. The document's menu (⋯) sits after the title and opens on Live edit, then Duplicate, Copy the ID, the default locale import and the deletion.
+
+- Added: `text('title').isTitle('inline')` makes a collection document's heading the title field. The title is typed in the heading, and the form leaves the field out. A plain `isTitle()` keeps the field in the form, and a title that is not a text field (an email, a file name, an area's label) stays plain text in the heading. In live edit, which has no heading, the field stays in the panel.
+
 ## 1.5.0
 
 ### Minor Changes
