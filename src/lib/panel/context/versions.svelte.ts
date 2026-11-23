@@ -1,7 +1,7 @@
 import { getContext, setContext } from 'svelte';
 
 /**
- * The version history's state, shared between the document page that shows it, the settings
+ * The version history's state, shared between the document page that shows it, the version
  * menu that opens it, and the form that says which row it is on.
  *
  * The page sets it outside the block that remounts the document on every version, so picking a

@@ -211,7 +211,7 @@ test.describe('Admin panel', () => {
       await expect(saveButton).toBeDisabled();
 
       if (slug === 'pages') {
-        const inputTitle = page.locator(`input.rz-input[name="attributes.title"]`);
+        const inputTitle = page.locator(`input[name="attributes.title"]`);
         await inputTitle.fill('Home');
         await expect(saveButton).toBeEnabled();
         await saveButton.click();
@@ -371,12 +371,13 @@ test.describe('Tabs without storage', () => {
     await loginAs(page, ADMIN_EMAIL, PASSWORD);
     await page.goto(panelUrl('pages', 'create'));
 
-    await expect(page.locator('input[name="attributes.title"]')).toBeVisible();
+    // The title sits in the heading, out of the tabs: the slug stands for the first tab
+    await expect(page.locator('input[name="attributes.slug"]')).toBeVisible();
 
     const layout = page.locator('.rz-tabs-trigger[data-value="layout"]');
     await layout.click();
     await expect(layout).toHaveAttribute('data-state', 'active');
-    await expect(page.locator('input[name="attributes.title"]')).toBeHidden();
+    await expect(page.locator('input[name="attributes.slug"]')).toBeHidden();
   });
 });
 
@@ -492,17 +493,19 @@ test.describe('Change url', () => {
     await dialog.getByRole('button', { name: 'Change url' }).click();
     await expect(page.getByText('Url changed')).toBeVisible();
 
-    // The url line, "View page" and the live-edit link read the new address
+    // The url line and the live-edit link, in the document's menu, read the new address
     const host = BASE_URL.replace(/^https?:\/\//, '');
     await expect(page.locator('.rz-document-url__text')).toHaveText(`${host}/${next}`);
-    await expect(page.locator('.rz-document-actions__open')).toHaveAttribute(
+    await expect(page.locator('.rz-document-url__link')).toHaveAttribute(
       'href',
-      new RegExp(`/${next}(\\?|$)`)
+      new RegExp(`/${next}$`)
     );
-    await expect(page.locator('.rz-button-live')).toHaveAttribute(
+    await page.getByRole('button', { name: 'Document actions' }).click();
+    await expect(page.locator('.rz-document-menu__live')).toHaveAttribute(
       'href',
       new RegExp(encodeURIComponent(`/${next}`))
     );
+    await page.keyboard.press('Escape');
 
     // The dialog opens on the new slug
     await page.locator('.rz-document-url').getByRole('button', { name: 'Change url' }).click();
@@ -522,7 +525,7 @@ test.describe('Live Edit', () => {
 
     const tabAttribute = page.locator('.rz-tabs-trigger[data-value="attributes"]');
     await tabAttribute.click();
-    const inputTitle = page.locator(`input.rz-input[name="attributes.title"]`);
+    const inputTitle = page.locator(`input[name="attributes.title"]`);
     await inputTitle.fill('Live');
 
     // The slug follows the title until one is typed in it
@@ -539,9 +542,9 @@ test.describe('Live Edit', () => {
     await saveButton.click();
     await page.waitForURL(panelUrlRe('pages'));
 
-    // The icon-only live button is named by its action
-    const liveEditButton = page.getByRole('link', { name: 'Live edit' });
-    await liveEditButton.click();
+    // Live edit opens from the document's menu
+    await page.getByRole('button', { name: 'Document actions' }).click();
+    await page.getByRole('menuitem', { name: 'Live edit' }).click();
     await page.waitForURL((url) => url.pathname === panelPath('live-edit'));
 
     const liveContainer = page.locator('.rz-live-container');

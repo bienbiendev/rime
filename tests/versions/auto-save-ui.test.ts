@@ -20,6 +20,7 @@ const OTHER_BANNER = '[data-auto-save="other"]';
 const ANY_BANNER = '[data-auto-save]';
 const OWN_VERSION_ROW = '[data-version-auto-save="own"]';
 const HISTORY = '.rz-document-versions';
+const VERSION_MENU = '.rz-version-menu__trigger';
 
 /**
  * Auto-save in the browser, on `news`.
@@ -32,10 +33,10 @@ const HISTORY = '.rz-document-versions';
 // The tests share ids and rows: one failing skips the rest
 test.describe.configure({ mode: 'serial' });
 
-/** The version history, from the settings menu. */
+/** The version history, from the version menu. */
 async function openHistory(page: Page) {
-  await page.getByRole('button', { name: 'Document actions' }).click();
-  await page.getByRole('menuitem', { name: 'Versions history' }).click();
+  await page.locator(VERSION_MENU).click();
+  await page.getByRole('menuitem', { name: 'All versions' }).click();
   await expect(page.locator(HISTORY)).toBeVisible();
 }
 
@@ -255,15 +256,12 @@ test('Changing the status is not typing: no auto-save follows', async ({ page, r
   await page.goto(documentUrl(autoSaveId));
   const before = (await versionsOf(request)).length;
 
-  // The status button is the dialog's trigger: it carries the trigger's attributes and opens it.
-  // The news' date field is labelled "Published" too: the class names the status one.
-  const statusButton = page.locator('.rz-status__button', { hasText: 'Published' });
-  await expect(statusButton).toHaveAttribute('aria-haspopup', 'dialog');
-  await statusButton.click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.locator('label[for="document.draft"]').click();
+  // The status is the version menu's trigger: it carries the trigger's attributes and opens it.
+  const trigger = page.locator(VERSION_MENU, { hasText: 'Published' });
+  await expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+  await trigger.click();
   const changed = page.waitForResponse((response) => response.request().method() === 'PATCH');
-  await page.getByRole('button', { name: 'Validate' }).click();
+  await page.getByRole('menuitem', { name: 'Unpublish' }).click();
   expect((await changed).status()).toBe(200);
 
   // Longer than the auto-save delay: nothing followed the status change.
@@ -314,13 +312,14 @@ test('The versions history labels the auto-saved row', async ({ page }) => {
   await expect(page.locator('[data-version-auto-save="own"]')).toHaveCount(0);
 });
 
-test('Deleting a version from the settings keeps the document', async ({ page, request }) => {
+test('Deleting a version from the version menu keeps the document', async ({ page, request }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl(autoSaveId));
   const before = (await versionsOf(request)).length;
 
-  await page.getByRole('button', { name: 'Document actions' }).click();
-  await page.getByRole('menuitem', { name: 'Delete this version' }).click();
+  // The status test above turned the row back into a draft: the menu names it so.
+  await page.locator(VERSION_MENU).click();
+  await page.getByRole('menuitem', { name: 'Delete this draft' }).click();
   const removed = page.waitForResponse((response) => response.request().method() === 'DELETE');
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
   expect((await removed).status()).toBe(200);
@@ -348,7 +347,7 @@ test('The last version of a document cannot be deleted', async ({ page, request 
   // The menu says so, and the server refuses regardless.
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(`${panelUrl('news', doc.id)}?${PARAMS.VERSION_ID}=${doc.versionId}`);
-  await page.getByRole('button', { name: 'Document actions' }).click();
+  await page.locator(VERSION_MENU).click();
   await expect(page.getByRole('menuitem', { name: 'Delete this version' })).toBeDisabled();
 
   const response = await request.delete(`${API_BASE_URL}/news--versions/${doc.versionId}`, {
@@ -500,7 +499,7 @@ test('Deleting the version opened from the plain address lands on the newest row
 }) => {
   const id = await autoSaveFromPlainAddress(page, request, 'Delete from plain');
 
-  await page.getByRole('button', { name: 'Document actions' }).click();
+  await page.locator(VERSION_MENU).click();
   await page.getByRole('menuitem', { name: 'Delete this version' }).click();
   const removed = page.waitForResponse((response) => response.request().method() === 'DELETE');
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
@@ -510,41 +509,4 @@ test('Deleting the version opened from the plain address lands on the newest row
   await page.waitForURL((url) => !url.searchParams.get(PARAMS.VERSION_ID));
   await expect(page.locator(TITLE)).toHaveValue('Delete from plain');
   await saveTitle(page, request, id, 'Delete from plain, saved');
-});
-
-test('A status dialog closed without Validate shows the document status again', async ({
-  page,
-  request
-}) => {
-  const created = await request.post(`${API_BASE_URL}/news`, {
-    headers: await signInSuperAdmin(request),
-    data: {
-      attributes: { title: 'Status cancel', slug: 'status-cancel' },
-      status: VERSIONS_STATUS.PUBLISHED
-    }
-  });
-  expect(created.status()).toBe(200);
-  const { id } = (await created.json()).doc;
-
-  await loginAs(page, ADMIN_EMAIL, PASSWORD);
-  await page.goto(panelUrl('news', id));
-  // The news' date field is labelled "Published" too: the class names the status one.
-  const statusButton = page.locator('.rz-status__button', { hasText: 'Published' });
-  const dialog = page.getByRole('dialog');
-  const published = page.locator('[id="document.published"]');
-
-  // Cancel
-  await statusButton.click();
-  await page.locator('label[for="document.draft"]').click();
-  await dialog.getByRole('button', { name: 'Cancel' }).click();
-  await expect(dialog).toBeHidden();
-  await statusButton.click();
-  await expect(published).toHaveAttribute('aria-checked', 'true');
-
-  // Escape
-  await page.locator('label[for="document.draft"]').click();
-  await page.keyboard.press('Escape');
-  await expect(dialog).toBeHidden();
-  await statusButton.click();
-  await expect(published).toHaveAttribute('aria-checked', 'true');
 });

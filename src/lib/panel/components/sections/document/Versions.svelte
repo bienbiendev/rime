@@ -22,7 +22,7 @@
   import { versionsApiUrl, versionsListUrl } from './versions-list.js';
 
   /**
-   * The document's version history, opened from the settings menu.
+   * The document's version history, opened from the version menu.
    *
    * `doc` is the row on screen: its `versionId` marks the active entry, and picking another entry
    * loads that row into the same page by `?versionId=`. The list comes from the API proxy, so an

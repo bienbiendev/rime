@@ -9,6 +9,7 @@ import { PARAMS } from '#lib/core/constants.js';
 import type { FormFieldBuilder } from '#lib/core/fields/builders/index.js';
 import { getFieldAtPath } from '#lib/core/fields/util.js';
 import { buildConfigMap } from '#lib/core/pipeline/config-map/index.js';
+import { findInlineTitle } from '#lib/core/prototype/shared/title/find-title.js';
 import { AUTO_SAVE_DELAY_MS } from '#lib/core/prototype/shared/versions/constant.js';
 import type { AreaSlug, GenericBlock, GenericDoc, TreeBlock } from '#lib/core/prototype/types.js';
 import { apiUrl, panelUrl } from '#lib/core/routes/util.js';
@@ -90,6 +91,14 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
   const nestedLevel = initLevel();
   /** onDataChange is only used to trigger action on live-edit so determine if this is a live-edit form */
   const isLiveEdit = !!onDataChange;
+  /**
+   * The path of the title the page's heading edits, `isTitle('inline')`, on a collection. Live edit
+   * has no heading: there the field stays in the form.
+   */
+  const inlineTitle =
+    documentConfig.type === 'collection' && !isLiveEdit
+      ? findInlineTitle(documentConfig.fields)
+      : null;
   /**
    * Whether typing here lands in the user's own auto-saved row: a config that opts in, an
    * existing document, a writable form, and the root form — a relation's nested create is never
@@ -885,6 +894,11 @@ function createDocumentFormState<T extends WithOptional<GenericDoc, 'id'> = Gene
 
     get isLive() {
       return isLiveEdit;
+    },
+
+    /** The path of the title the page's heading edits, or `null`: the form leaves that field out. */
+    get inlineTitle() {
+      return inlineTitle;
     },
 
     /** Puts the document back as it was loaded or last saved. The errors stay. */

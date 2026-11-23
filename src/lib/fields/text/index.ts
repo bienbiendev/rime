@@ -34,9 +34,17 @@ export class TextFieldBuilder extends FormFieldBuilder<TextField> {
     return 'text';
   }
 
-  /** The document's title in the panel and its lists; a duplicate gets ` (copy)`. */
-  isTitle() {
-    this.field.isTitle = true;
+  /**
+   * The document's title in the panel and its lists; a duplicate gets ` (copy)`. `'inline'` makes
+   * the document's heading the field: it is edited there, and the form leaves it out.
+   *
+   * ```ts
+   * text('title').isTitle()          // a field in the form, the heading shows its text
+   * text('title').isTitle('inline')  // edited in the heading
+   * ```
+   */
+  isTitle(mode?: 'inline') {
+    this.field.isTitle = mode ?? true;
     return this;
   }
 
@@ -66,7 +74,7 @@ export type TextField = {
   type: 'text';
   defaultValue?: string | DefaultValueFn<string>;
   unique?: boolean;
-  isTitle?: true;
+  isTitle?: true | 'inline';
   placeholder?: string;
   layout?: 'compact';
 } & FormField;

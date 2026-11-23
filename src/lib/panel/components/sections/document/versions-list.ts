@@ -6,7 +6,7 @@ import { apiUrl } from '#lib/core/routes/util.js';
 export const versionsApiUrl = (type: string) => apiUrl(prototypeKebab(withVersionsSuffix(type)));
 
 /**
- * One document's history, as the version history (Versions.svelte) and the settings menu read
+ * One document's history, as the version history (Versions.svelte) and the version menu read
  * it. One URL, so the API proxy serves both from the same cache and one invalidation refreshes
  * both.
  */

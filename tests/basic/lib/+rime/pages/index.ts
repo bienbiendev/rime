@@ -30,7 +30,7 @@ const tabSEO = tab('metas')
 const tabAttributes = tab('attributes')
   .label('Attributes')
   .fields(
-    text('title').isTitle().required().layout('compact'),
+    text('title').isTitle('inline').required(),
     component(URL),
     toggle('isHome').label('Homepage').live(false).table(2),
     slug('slug')

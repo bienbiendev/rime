@@ -13,9 +13,10 @@ const LIST_ITEM = '.rz-document-versions__list-item';
 const ACTIVE_LINK = '.rz-document-versions__list-item--active a';
 const TITLE = 'input[name="attributes.title"]';
 const SAVE = 'button[data-submit]';
+const VERSION_MENU = '.rz-version-menu__trigger';
 
 /**
- * The version history, opened from the document's settings menu.
+ * The version history, opened from the document's version menu.
  *
  * Picking a version loads that row into the form on the same page; saving writes that row and no
  * other. The rows are created over the API so each test starts from a known history, and read
@@ -28,8 +29,8 @@ test.describe.configure({ mode: 'serial' });
 /** The history stays open across picks; a reload closes it. */
 async function openHistory(page: Page) {
   if (await page.locator(HISTORY).count()) return;
-  await page.getByRole('button', { name: 'Document actions' }).click();
-  await page.getByRole('menuitem', { name: 'Versions history' }).click();
+  await page.locator(VERSION_MENU).click();
+  await page.getByRole('menuitem', { name: 'All versions' }).click();
   await expect(page.locator(HISTORY)).toBeVisible();
 }
 
@@ -96,11 +97,14 @@ test('Should list both versions and mark the one on screen', async ({ page }) =>
   await expect(page.locator(TITLE)).toHaveValue('Versioned news, draft');
 });
 
-test('Should link "View page" to the version on screen', async ({ page }) => {
+test('Should preview the draft on screen from the version menu', async ({ page }) => {
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl(draftVersionId));
 
-  const href = await page.locator('.rz-document-actions__open').getAttribute('href');
+  await page.locator(VERSION_MENU).click();
+  const href = await page
+    .getByRole('menuitem', { name: 'Preview this draft' })
+    .getAttribute('href');
   expect(new URL(href!).searchParams.get(PARAMS.VERSION_ID)).toBe(draftVersionId);
 });
 
@@ -174,7 +178,7 @@ test('Should branch a new draft from the published version and land on it', asyn
   await page.goto(documentUrl(publishedVersionId));
 
   await page.locator(TITLE).fill('Versioned news, third');
-  await page.getByRole('button', { name: 'Document actions' }).click();
+  await page.locator(VERSION_MENU).click();
   await page.getByRole('menuitem', { name: 'Save in a new draft' }).click();
 
   // The action answers with a redirect to the new row on this same page.
@@ -275,7 +279,7 @@ test('Should leave the Save button as it was after a new draft that got no answe
       times: 1
     }
   );
-  await page.getByRole('button', { name: 'Document actions' }).click();
+  await page.locator(VERSION_MENU).click();
   await page.getByRole('menuitem', { name: 'Save in a new draft' }).click();
 
   await expect(page.locator(SAVE)).toBeEnabled();
@@ -328,10 +332,8 @@ test('Should show a status change in the history of a camelCase collection', asy
   await page.keyboard.press('Escape');
   await expect(page.locator(HISTORY)).toHaveCount(0);
 
-  await page.locator('.rz-status__button').click();
-  await page.locator('[id="document.published"]').click();
-  await page.getByRole('button', { name: 'Validate' }).click();
-  await expect(page.locator('.rz-status__text')).toHaveText('Published');
+  await page.getByRole('button', { name: 'Publish', exact: true }).click();
+  await expect(page.locator('.rz-version-menu__status')).toHaveText('Published');
 
   await openHistory(page);
   await expect(dot).toHaveAttribute('style', /--rz-success/);

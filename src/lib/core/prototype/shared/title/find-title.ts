@@ -13,12 +13,30 @@ const hasMaybeTitle = (
 ): field is TextField | DateField | SlugField | EmailField | RichTextField =>
   ['text', 'date', 'slug', 'email', 'richText'].includes(field.type);
 
-/** The path of the first field marked `isTitle()`, a path a config alone can name. */
-export function findTitleField(fields: FieldBuilder<Field>[] = []): string | null {
+/** The first field marked `isTitle()`: its path, a path a config alone can name, and its mark. */
+function findTitle(fields: FieldBuilder<Field>[]) {
   for (const { field, path } of walkFields(fields, { determinate: true })) {
-    if (isFormField(field) && hasMaybeTitle(field.get) && field.get.isTitle === true) {
-      return path;
+    if (isFormField(field) && hasMaybeTitle(field.get) && field.get.isTitle) {
+      return { path, isTitle: field.get.isTitle };
     }
   }
   return null;
+}
+
+/** The path of the first field marked `isTitle()`, a path a config alone can name. */
+export function findTitleField(fields: FieldBuilder<Field>[] = []): string | null {
+  return findTitle(fields)?.path ?? null;
+}
+
+/**
+ * The path of the title the document's heading edits, `isTitle('inline')`, or `null`.
+ *
+ * ```ts
+ * [tabs(tab('attributes').fields(text('title').isTitle('inline')))]  // 'attributes.title'
+ * [text('title').isTitle()]                                           // null
+ * ```
+ */
+export function findInlineTitle(fields: FieldBuilder<Field>[] = []): string | null {
+  const title = findTitle(fields);
+  return title?.isTitle === 'inline' ? title.path : null;
 }

@@ -1,24 +1,25 @@
 <script lang="ts">
   import type { BuiltArea, BuiltCollection } from '#lib/core/config/types.js';
-  import { PARAMS } from '#lib/core/constants.js';
+  import { getFieldAtPath } from '#lib/core/fields/util.js';
   import { t__ } from '#lib/core/i18n/index.js';
+  import { VERSIONS_STATUS } from '#lib/core/prototype/shared/versions/constant.js';
   import { titleOrUntitled } from '#lib/panel/util/title.js';
   import { getConfigContext } from '#lib/panel/context/config.svelte.js';
   import type { DocumentFormContext } from '#lib/panel/context/documentForm.svelte.js';
   import { getLocaleContext } from '#lib/panel/context/locale.svelte.js';
+  import { errorText } from '#lib/panel/util/error-text.js';
   import { formatWhen, isRelative } from '#lib/panel/util/time.js';
   import { capitalize } from '#lib/util/string.js';
-  import ExternalLink from '@lucide/svelte/icons/external-link';
-  import PencilRuler from '@lucide/svelte/icons/pencil-ruler';
   import X from '@lucide/svelte/icons/x';
   import { Button } from '../../ui/button';
   import LanguageSwitcher from '../../ui/language-switcher/LanguageSwitcher.svelte';
   import PageHeader from '../../ui/page-header/PageHeader.svelte';
   import SpinLoader from '../../ui/spin-loader/SpinLoader.svelte';
+  import ButtonPublish from './ButtonPublish.svelte';
   import ButtonSave from './ButtonSave.svelte';
-  import ButtonStatus from './ButtonStatus.svelte';
   import DocumentUrl from './DocumentUrl.svelte';
   import Settings from './Settings.svelte';
+  import VersionMenu from './VersionMenu.svelte';
 
   // Props
   type Props = {
@@ -49,6 +50,12 @@
   const untitled = $derived(!form.title);
   const heading = $derived(titleOrUntitled(form.title));
 
+  /** The title field the heading edits, `isTitle('inline')`; its label names the input. */
+  const titleField = $derived(form.inlineTitle ? form.useField<string>(form.inlineTitle) : null);
+  const titleLabel = $derived(
+    form.inlineTitle ? getFieldAtPath(form.inlineTitle, config.fields)?.get.label : undefined
+  );
+
   /**
    * The line under the heading: what the document is, then who edited it last, and when.
    *
@@ -75,14 +82,10 @@
     return capitalize(parts.join(' · '));
   });
 
-  /** The page's url with `?versionId=`, so "View page" previews the row on screen. */
-  function buildDocumentURL() {
-    const url = form.values.url;
-    if (!url || !form.values.versionId) return url;
-    const preview = new URL(url);
-    preview.searchParams.set(PARAMS.VERSION_ID, String(form.values.versionId));
-    return preview.href;
-  }
+  /** A saved draft gets Publish, the primary button, and Save steps back beside it. */
+  const canPublish = $derived(
+    !!config.versions?.draft && !!form.values.id && form.values.status !== VERSIONS_STATUS.PUBLISHED
+  );
 </script>
 
 {#snippet topLeft()}
@@ -90,26 +93,57 @@
 {/snippet}
 
 {#snippet title()}
-  <span class="rz-document-title" data-empty={untitled ? '' : null}>{heading}</span>
+  {#if titleField}
+    <input
+      class="rz-document-title-input"
+      id={form.inlineTitle}
+      name={form.inlineTitle}
+      aria-label={titleLabel}
+      aria-invalid={titleField.error ? 'true' : undefined}
+      aria-describedby={titleField.error ? 'rz-document-title-error' : undefined}
+      placeholder={t__('common.untitled')}
+      autocomplete="off"
+      size={Math.max((titleField.value || t__('common.untitled')).length, 1)}
+      value={titleField.value ?? ''}
+      readonly={!titleField.editable}
+      oninput={(event) => (titleField.value = event.currentTarget.value)}
+    />
+  {:else}
+    <span class="rz-document-title" data-empty={untitled ? '' : null}>{heading}</span>
+  {/if}
+{/snippet}
+
+{#snippet titleEnd()}
+  {/* @ts-ignore form doc is GenericDoc as form.values.id is defined */ null}
+  <Settings {form} />
 {/snippet}
 
 {#snippet metaLine()}
-  <span class="rz-document-meta">{meta}</span>
+  {#if titleField?.error}
+    <span id="rz-document-title-error" class="rz-document-title-error">
+      {errorText(titleField.error)}
+    </span>
+  {:else}
+    <span class="rz-document-meta">{meta}</span>
+  {/if}
 {/snippet}
 
 {#snippet urlLine()}
   <DocumentUrl {form} {config} />
 {/snippet}
 
-<!-- The bar: the breadcrumb, then the actions. Under it, the heading and the meta line. -->
+<!--
+  The bar: the breadcrumb, then the language, the version menu and the save buttons. Under it, the
+  heading with the document's menu, the meta line and the url.
+-->
 <PageHeader
   topLeft={onCloseIsDefined ? topLeft : undefined}
   {title}
-  meta={meta ? metaLine : undefined}
+  titleEnd={form.values.id ? titleEnd : undefined}
+  meta={meta || titleField?.error ? metaLine : undefined}
   aside={form.values.url ? urlLine : undefined}
 >
   {#snippet topRight()}
-    <!-- Ghost buttons, then the primary one: open, language, status, menu, save. -->
     <div class="rz-document-actions">
       {#if showAutoSave}
         <span class="rz-auto-save-state" data-auto-save-state={form.autoSaveState}>
@@ -126,45 +160,20 @@
         </span>
       {/if}
 
-      {#if form.values.url}
-        <Button
-          icon={ExternalLink}
-          target="_blank"
-          href={buildDocumentURL()}
-          size="icon-sm"
-          variant="ghost"
-          class="rz-document-actions__open"
-          aria-label={t__('common.view_page')}
-        />
-      {/if}
-
-      {#if config.live && form.values._live}
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          disabled={form.readOnly}
-          class="rz-button-live"
-          icon={PencilRuler}
-          href={form.values._live}
-          aria-label={t__('common.live_edit')}
-          title={t__('common.live_edit')}
-        ></Button>
-      {/if}
-
       {#if form.nestedLevel === 0}
         <LanguageSwitcher onLocalClick={onLocaleSwitch} />
       {/if}
 
-      {#if form.config.versions?.draft && form.values.id}
-        <ButtonStatus {form} />
-      {/if}
-
-      {#if form.values.id}
+      {#if config.versions && form.values.id}
         {/* @ts-ignore form doc is GenericDoc as form.values.id is defined */ null}
-        <Settings {form} />
+        <VersionMenu {form} />
       {/if}
 
-      <ButtonSave {form} size="sm" />
+      <ButtonSave {form} size="sm" variant={canPublish ? 'secondary' : 'default'} />
+
+      {#if canPublish}
+        <ButtonPublish {form} />
+      {/if}
     </div>
   {/snippet}
 </PageHeader>
@@ -172,7 +181,7 @@
 <style lang="postcss">
   /*
    * The bar's buttons, 28px high: ghost ones in the muted ink, their icons subtler, both
-   * darkening on hover or while their menu is open; the primary one last, a little apart.
+   * darkening on hover or while their menu is open; the save buttons last, a little apart.
    */
   .rz-document-actions {
     --rz-button-ghost-fg: var(--rz-fg-muted);
@@ -184,16 +193,6 @@
       height: var(--rz-size-7);
       gap: var(--rz-size-1-5);
       padding-inline: var(--rz-size-2-5);
-    }
-
-    :global(.rz-button--size-icon-sm) {
-      width: var(--rz-size-7);
-      padding: 0;
-    }
-
-    :global(.rz-button__icon) {
-      width: auto;
-      height: auto;
     }
 
     :global(.rz-button--ghost svg) {
@@ -213,9 +212,12 @@
       color: var(--rz-fg);
     }
 
-    :global(.rz-button--default) {
-      margin-left: var(--rz-size-1-5);
+    :global(:is(.rz-button--default, .rz-button--secondary)) {
       padding-inline: var(--rz-size-3);
+    }
+
+    :global([data-submit]) {
+      margin-left: var(--rz-size-1-5);
     }
   }
 
@@ -231,16 +233,57 @@
     color: var(--rz-warn);
   }
 
-  /* On a narrow page the auto-save note and the open button go. */
+  /* On a narrow page the auto-save note goes. */
   @container main (max-width: 30rem) {
-    .rz-auto-save-state,
-    .rz-document-actions :global(.rz-document-actions__open) {
+    .rz-auto-save-state {
       display: none;
     }
   }
 
   .rz-document-title[data-empty] {
     color: var(--rz-fg-subtle);
+  }
+
+  /*
+   * The title field as the heading: the heading's type and no box, as wide as its text. A line
+   * under it on hover, the accent's while typing, the danger's on an error.
+   */
+  .rz-document-title-input {
+    /* One line of the heading, empty with its placeholder or filled. */
+    display: block;
+    height: 1lh;
+    field-sizing: content;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    line-height: inherit;
+    outline: none;
+    transition: box-shadow 0.15s;
+
+    &::placeholder {
+      color: var(--rz-fg-subtle);
+    }
+
+    &:hover:not(:read-only) {
+      box-shadow: inset 0 -1px 0 var(--rz-border-strong);
+    }
+
+    &:focus-visible {
+      box-shadow: inset 0 -2px 0 var(--rz-accent);
+    }
+
+    &[aria-invalid] {
+      box-shadow: inset 0 -2px 0 var(--rz-danger);
+    }
+  }
+
+  .rz-document-title-error {
+    color: var(--rz-danger);
+    font-size: var(--rz-text-sm);
   }
 
   .rz-document-meta {

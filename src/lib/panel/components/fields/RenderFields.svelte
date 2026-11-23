@@ -32,7 +32,8 @@
 
 <!--
   A list of fields on a 12-column grid, each in the width its config asks. Only the fields the
-  user may read render; in live edit, only the `live` ones.
+  user may read render; in live edit, only the `live` ones. The title the heading edits,
+  `isTitle('inline')`, is left out.
 
   `path` is where the list sits in the document: `''` at the root, `meta` inside the group
   `meta`. A form field gets its full path (`meta.title`); a component field gets the prefix
@@ -58,7 +59,7 @@
         <div data-type="tabs" class="rz-render-fields__field rz-render-fields__field--full">
           <Tabs config={field} {path} {form} />
         </div>
-      {:else if isFormField(field) && isNotHidden(field)}
+      {:else if isFormField(field) && isNotHidden(field) && prefix + field.name !== form.inlineTitle}
         {@const isCompact = 'layout' in field.get && field.get.layout === 'compact'}
         {@const FieldComponent = field.component}
         <div

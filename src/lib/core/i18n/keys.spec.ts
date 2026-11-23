@@ -38,10 +38,7 @@ const keysOf = (file: string) =>
 
 // Keys built at runtime, each family written out
 const RUNTIME_KEYS = [
-  ...Object.values(VERSIONS_STATUS).flatMap((status) => [
-    `common.${status}`,
-    `common.${status}_infos`
-  ]),
+  ...Object.values(VERSIONS_STATUS).map((status) => `common.${status}`),
   ...MEDIA_KINDS.map((kind) => `common.media_kind_${kind}`),
   ...['url', 'email', 'tel', 'anchor'].map((type) => `fields.link_${type}`),
   // Said through panel/util/count.ts, which takes the key as a value

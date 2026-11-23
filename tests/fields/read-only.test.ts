@@ -81,14 +81,17 @@ test('Should not open the live editor from a read-only document', async ({ page 
   await loginAs(page, EDITOR_EMAIL, PASSWORD);
   await page.goto(documentUrl);
 
-  const live = page.locator('.rz-button-live');
+  // The live editor sits in the document's menu
+  const live = page.locator('.rz-document-menu__live');
+  await page.getByRole('button', { name: 'Document actions' }).click();
   await expect(live).toHaveAttribute('aria-disabled', 'true');
   await expect(live).not.toHaveAttribute('href');
 
   // An admin, who may update it, gets the link
   await loginAs(page, ADMIN_EMAIL, PASSWORD);
   await page.goto(documentUrl);
-  await expect(page.locator('.rz-button-live')).toHaveAttribute('href', /.+/);
+  await page.getByRole('button', { name: 'Document actions' }).click();
+  await expect(live).toHaveAttribute('href', /.+/);
 });
 
 test('Should turn the focus panel to Layers when the selection empties', async ({ page }) => {

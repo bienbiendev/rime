@@ -36,16 +36,17 @@
 
   const user = getUserContext();
 
+  const basePath = $derived(path ? `${path}.` : '');
+
   // The preview shows the values of the form fields the user can read, and in live mode the
-  // live ones.
+  // live ones. The title the heading edits, `isTitle('inline')`, is left out, as in the form.
   const previewFields = $derived.by(() => {
     return config.get.fields
       .filter((field) => field instanceof FormFieldBuilder)
+      .filter((field) => basePath + field.name !== form.inlineTitle)
       .filter((field) => !form.isLive || (form.isLive && field.get.live))
       .filter((field) => field.use.accessRead(user.attributes, { id: form.values.id }));
   });
-
-  const basePath = $derived(path ? `${path}.` : '');
 </script>
 
 <!-- A card: its name and a chevron, then its fields, or a preview of their values when folded. -->
