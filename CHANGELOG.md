@@ -1,5 +1,11 @@
 # rimecms
 
+## 1.5.2
+
+### Patch Changes
+
+- Added: `rime.mailer.sendMail` takes an optional `replyTo`, the address the recipient's "Reply" answers. The mail still comes from `$smtp.from`.
+
 ## 1.5.1
 
 ### Patch Changes
