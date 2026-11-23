@@ -34,6 +34,22 @@ describe('mailer', () => {
     expect(secureFor({ port: 465, secure: false })).toBe(false);
   });
 
+  it('sends from $smtp.from, with replyTo only when given', async () => {
+    const { sendMail } = mailer(smtp({})).actions;
+
+    await sendMail({ to: 'owner@x.io', subject: 'Booking', text: 'Hi', replyTo: 'guest@y.io' });
+    expect(transport.sendMail).toHaveBeenLastCalledWith({
+      from: 'site@x.io',
+      to: 'owner@x.io',
+      subject: 'Booking',
+      text: 'Hi',
+      replyTo: 'guest@y.io'
+    });
+
+    await sendMail({ to: 'owner@x.io', subject: 'Booking', text: 'Hi' });
+    expect(transport.sendMail.mock.lastCall![0]).not.toHaveProperty('replyTo');
+  });
+
   it('answers a failed mail with a generic message, and logs the transport error', async () => {
     const failure = new Error('535 Authentication failed');
     transport.sendMail.mockRejectedValue(failure);

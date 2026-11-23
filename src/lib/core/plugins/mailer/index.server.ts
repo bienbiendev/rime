@@ -24,8 +24,17 @@ export const mailer = definePlugin((smtpConfig: SMTPConfig) => {
   /**
    * Sends one mail from `$smtp.from`. A failure answers a generic MAIL_ERROR, whose `cause` is the
    * transport's error, and logs that error on the server.
+   *
+   * `replyTo` is the address the recipient's "Reply" answers. `from` stays `$smtp.from`, since a
+   * mail sent as another domain's address fails SPF and DMARC.
    */
-  const sendMail = async (args: { to: string; subject: string; text: string; html?: string }) => {
+  const sendMail = async (args: {
+    to: string;
+    subject: string;
+    text: string;
+    html?: string;
+    replyTo?: string;
+  }) => {
     try {
       return await mailer.sendMail({ from: smtpConfig.from, ...args });
     } catch (error) {
